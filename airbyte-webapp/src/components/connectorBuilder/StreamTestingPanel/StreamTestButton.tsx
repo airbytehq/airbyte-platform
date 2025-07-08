@@ -8,7 +8,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./StreamTestButton.module.scss";
 import { HotkeyLabel, getCtrlOrCmdKey } from "../HotkeyLabel";
@@ -48,7 +48,6 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   const mode = useBuilderWatch("mode");
   const testStreamId = useBuilderWatch("testStreamId");
   const { hasErrors, validateAndTouch } = useBuilderErrors();
-  const relevantViews: BuilderView[] = [{ type: "global" }, { type: "inputs" }, testStreamId];
 
   useHotkeys(
     ["ctrl+enter", "meta+enter"],
@@ -92,7 +91,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlTest" />;
   }
 
-  if ((mode === "ui" && hasErrors(relevantViews)) || (mode === "yaml" && hasTestingValuesErrors)) {
+  if ((mode === "ui" && hasErrors()) || (mode === "yaml" && hasTestingValuesErrors)) {
     showWarningIcon = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.configErrorsTest" />;
   } else if (hasResolveErrors) {
@@ -110,7 +109,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
       return;
     }
 
-    validateAndTouch(queueStreamRead, relevantViews);
+    validateAndTouch(queueStreamRead);
   };
 
   const testButton = (

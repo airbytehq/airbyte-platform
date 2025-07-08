@@ -2292,6 +2292,8 @@
   "connectorBuilder.streamSchema.noStreamName": "A stream name must be set in order to configure the schema",
   "connectorBuilder.streamName.placeholder": "Enter stream name",
   "connectorBuilder.streamTemplateName.placeholder": "Enter stream template name",
+  "connectorBuilder.parentStream.label": "Parent Stream",
+  "connectorBuilder.parentStream.tooltip": "The stream to use as the parent of this stream.",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

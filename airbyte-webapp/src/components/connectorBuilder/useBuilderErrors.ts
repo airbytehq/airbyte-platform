@@ -58,21 +58,23 @@ function doesViewHaveErrors(errorReport: ErrorReport, view: BuilderView): boolea
 }
 
 function getFirstErrorViewFromReport(errorReport: ErrorReport): BuilderView | undefined {
-  const reportEntries = Object.entries(errorReport);
-  for (const [_viewType, entries] of reportEntries) {
-    const viewType = _viewType as BuilderView["type"];
-    if (viewType === "global" || viewType === "inputs" || viewType === "components") {
-      if (entries.length > 0) {
-        return { type: viewType };
-      }
-    } else if (viewType === "generated_stream") {
-      if (entries.length > 0) {
-        return { type: viewType, dynamicStreamName: entries[0].dynamicStreamName, index: entries[0].index };
-      }
-    } else if (entries.length > 0) {
-      return { type: viewType, index: entries[0].index };
-    }
+  if (errorReport.global.length > 0) {
+    return { type: "global" };
   }
+  if (errorReport.inputs.length > 0) {
+    return { type: "inputs" };
+  }
+  if (errorReport.components.length > 0) {
+    return { type: "components" };
+  }
+  if (Object.keys(errorReport.stream).length > 0) {
+    return { type: "stream", index: Number(Object.keys(errorReport.stream)[0]) };
+  }
+  if (Object.keys(errorReport.dynamic_stream).length > 0) {
+    return { type: "dynamic_stream", index: Number(Object.keys(errorReport.dynamic_stream)[0]) };
+  }
+  // explicitly don't handle generated_stream case because we don't show generated stream errors
+
   return undefined;
 }
 

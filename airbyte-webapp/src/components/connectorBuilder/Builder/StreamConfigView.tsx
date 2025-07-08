@@ -2,10 +2,12 @@ import classNames from "classnames";
 import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useFormContext, useWatch } from "react-hook-form";
+import { get, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useEffectOnce } from "react-use";
 
 import { FormControl } from "components/forms";
+import { FormControlErrorMessage, FormControlFooter, FormLabel } from "components/forms/FormControl";
 import { SchemaFormControl } from "components/forms/SchemaForm/Controls/SchemaFormControl";
 import { SchemaFormRemainingFields } from "components/forms/SchemaForm/SchemaFormRemainingFields";
 import Indicator from "components/Indicator";
@@ -51,7 +53,7 @@ import { StreamId, BuilderStreamTab } from "../types";
 import { useAutoImportSchema } from "../useAutoImportSchema";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderWatch } from "../useBuilderWatch";
-import { formatJson, getStreamFieldPath } from "../utils";
+import { formatJson, getStreamFieldPath, getStreamName } from "../utils";
 
 interface StreamConfigViewProps {
   streamId: StreamId;
@@ -103,7 +105,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
           return;
         }
         const streams: DeclarativeComponentSchemaStreamsItem[] = getValues("manifest.streams");
-        const updatedStreams = streams.filter((_, index) => index !== streamId.index);
+        const updatedStreams = updateStreamsAndRefsAfterDelete(streams, streamId.index);
         const streamToSelect = streamId.index >= updatedStreams.length ? updatedStreams.length - 1 : streamId.index;
         const viewToSelect: BuilderView =
           updatedStreams.length === 0 ? { type: "global" } : { type: "stream", index: streamToSelect };
@@ -309,7 +311,17 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
             />
           </StreamCard>
           <StreamCard>
-            <SchemaFormControl path={streamFieldPath("retriever.partition_router")} />
+            <SchemaFormControl
+              path={streamFieldPath("retriever.partition_router")}
+              overrideByPath={{
+                [streamFieldPath("retriever.partition_router.*.parent_stream_configs.*.stream")]: (path) => (
+                  <ParentStreamSelector path={path} currentStreamName={name} />
+                ),
+                [streamFieldPath("retriever.partition_router.parent_stream_configs.*.stream")]: (path) => (
+                  <ParentStreamSelector path={path} currentStreamName={name} />
+                ),
+              }}
+            />
           </StreamCard>
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.requester.error_handler")} />
@@ -457,14 +469,21 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
             />
           </StreamCard>
           <StreamCard>
-            <SchemaFormControl path={streamFieldPath("retriever.partition_router")} />
+            <SchemaFormControl
+              path={streamFieldPath("retriever.partition_router")}
+              overrideByPath={{
+                [streamFieldPath("retriever.partition_router.*.parent_stream_configs.*.stream")]: (path) => (
+                  <ParentStreamSelector path={path} currentStreamName={name} />
+                ),
+                [streamFieldPath("retriever.partition_router.parent_stream_configs.*.stream")]: (path) => (
+                  <ParentStreamSelector path={path} currentStreamName={name} />
+                ),
+              }}
+            />
           </StreamCard>
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.creation_requester.error_handler")} />
           </StreamCard>
-          {/* {streamId.type === "stream" && (
-              <ParentStreamsSection streamFieldPath={creationRequesterPath} currentStreamIndex={streamId.index} />
-            )} */}
           <Card>
             <CollapsedControls streamId={streamId}>
               <SchemaFormRemainingFields path={streamFieldPath("retriever.creation_requester")} />
@@ -871,4 +890,127 @@ const CollapsedControls: React.FC<React.PropsWithChildren<CollapsedControlsProps
       </Collapsible>
     </div>
   );
+};
+
+const ParentStreamSelector = ({ path, currentStreamName }: { path: string; currentStreamName?: string }) => {
+  const { formatMessage } = useIntl();
+  const { setValue } = useFormContext();
+
+  const streams = useBuilderWatch("manifest.streams");
+  const streamNameToIndex = useMemo(() => {
+    return (
+      streams?.reduce(
+        (acc, stream, index) => {
+          acc[getStreamName(stream, index)] = index;
+          return acc;
+        },
+        {} as Record<string, number>
+      ) ?? {}
+    );
+  }, [streams]);
+
+  const value = useBuilderWatch(path) as { $ref?: string } | undefined;
+
+  // The normal default value for this field is an empty stream definition, which is invalid for the UI,
+  // so do a one-time check for this and set it to undefined if so, as that is the "empty" value that the
+  // UI handles well.
+  useEffectOnce(() => {
+    if (value && !("$ref" in value)) {
+      setValue(path, undefined);
+    }
+  });
+
+  const selectedValue = useMemo(() => {
+    if (value && value.$ref) {
+      const match = value.$ref.match(/#\/streams\/(\d+)/);
+      if (match) {
+        const streamIndex = Number(match[1]);
+        return getStreamName(streams?.[streamIndex], streamIndex);
+      }
+    }
+    return undefined;
+  }, [value, streams]);
+
+  const options = useMemo(() => {
+    return (
+      streams
+        ?.map((stream, index) => ({ label: getStreamName(stream, index), value: getStreamName(stream, index) }))
+        ?.filter(({ value }) => value !== currentStreamName) ?? []
+    );
+  }, [streams, currentStreamName]);
+
+  const { errors } = useFormState({ name: path });
+  const hasError = useMemo(() => !!get(errors, path), [errors, path]);
+
+  return (
+    <FlexContainer direction="column" gap="none" className={styles.parentStreamSelector} data-field-path={path}>
+      <FormLabel
+        htmlFor={path}
+        label={formatMessage({ id: "connectorBuilder.parentStream.label" })}
+        labelTooltip={formatMessage({ id: "connectorBuilder.parentStream.tooltip" })}
+      />
+      <ListBox
+        id={path}
+        options={options}
+        selectedValue={selectedValue}
+        onSelect={(value) => {
+          setValue(path, {
+            $ref: `#/streams/${streamNameToIndex[value]}`,
+          });
+        }}
+        hasError={hasError}
+      />
+      <FormControlFooter>
+        <FormControlErrorMessage name={path} />
+      </FormControlFooter>
+    </FlexContainer>
+  );
+};
+
+/**
+ * Removes the stream at the given index from the streams array, and updates $refs accordingly:
+ * - If the $ref points to the deleted stream, it is replaced with undefined
+ * - If the $ref points to a stream after the deleted stream, the $ref is updated to point to one stream index lower,
+ *   as that will now hold the stream that was previously pointed to.
+ */
+const updateStreamsAndRefsAfterDelete = (
+  streams: DeclarativeComponentSchemaStreamsItem[],
+  deletedStreamIndex: number
+) => {
+  function updateRefs<T>(obj: T): T | undefined {
+    if (!obj || typeof obj !== "object") {
+      return obj;
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map(updateRefs) as T;
+    }
+
+    if ("$ref" in obj && typeof obj.$ref === "string") {
+      // check if $ref points to a stream index and capture the index and the suffix
+      const match = obj.$ref.match(/#\/streams\/(\d+)(?:\/(.*)|$)/);
+      if (match) {
+        const streamIndex = Number(match[1]);
+        if (streamIndex === deletedStreamIndex) {
+          return undefined;
+        }
+        if (streamIndex > deletedStreamIndex) {
+          const newRef = match[2] ? `#/streams/${streamIndex - 1}/${match[2]}` : `#/streams/${streamIndex - 1}`;
+          return {
+            ...obj,
+            $ref: newRef,
+          };
+        }
+      }
+      return obj;
+    }
+
+    const result = {} as Record<string, unknown>;
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = updateRefs(value);
+    }
+    return result as T;
+  }
+
+  return streams.filter((_, index) => index !== deletedStreamIndex).map(updateRefs);
 };

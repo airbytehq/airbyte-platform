@@ -586,12 +586,6 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     testStream = manifest.streams?.[testStreamId.index];
   }
 
-  const filteredManifest = {
-    ...manifest,
-    streams: [testStream],
-    dynamic_streams: [],
-  };
-
   const DEFAULT_PAGE_LIMIT = 5;
   const DEFAULT_SLICE_LIMIT = 5;
   const DEFAULT_RECORD_LIMIT = 1000;
@@ -682,7 +676,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const streamRead = useBuilderProjectReadStream(
     {
       builderProjectId: projectId,
-      manifest: filteredManifest,
+      manifest,
       customComponentsCode: streamUsesCustomCode ? customComponentsCode : undefined,
       streamName,
       recordLimit,

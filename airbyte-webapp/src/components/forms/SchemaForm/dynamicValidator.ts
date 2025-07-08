@@ -91,6 +91,9 @@ export const convertJsonSchemaToZodSchema = (
       }
 
       return z.any().superRefine((value, ctx) => {
+        if (valueContainsRef(value)) {
+          return;
+        }
         const selectedSchema = getSelectedOptionSchema(optionSchemas, value, rootSchema);
         if (!selectedSchema) {
           if (isRequired) {
@@ -121,6 +124,9 @@ export const convertJsonSchemaToZodSchema = (
 
     if (schema.type === "object" && !schema.properties && schema.additionalProperties === true) {
       return z.any().superRefine((value, ctx) => {
+        if (valueContainsRef(value)) {
+          return;
+        }
         if (value === undefined || value === "") {
           if (isRequired) {
             ctx.addIssue({
@@ -140,6 +146,10 @@ export const convertJsonSchemaToZodSchema = (
     const properties = schema.properties;
     if (properties && (!schema.type || schema.type === "object")) {
       return z.any().superRefine((value, ctx) => {
+        if (valueContainsRef(value)) {
+          return;
+        }
+
         if (isRequired && !value) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -352,4 +362,11 @@ export const convertJsonSchemaToZodSchema = (
     // Default to accepting any value if conversion fails
     return z.any();
   }
+};
+
+const valueContainsRef = (value: unknown) => {
+  if (typeof value === "object" && value !== null && "$ref" in value) {
+    return true;
+  }
+  return false;
 };

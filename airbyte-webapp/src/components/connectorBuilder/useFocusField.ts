@@ -9,9 +9,6 @@ import { useBuilderWatch } from "./useBuilderWatch";
 export const useFocusField = () => {
   const { setValue } = useFormContext();
   const [focusPath, setFocusPath] = useState<string | undefined>(undefined);
-  // undefined means that the tab that should be focused is not yet known
-  // null means that there is no tab that needs to first be focused
-  const [focusTab, setFocusTab] = useState<BuilderStreamTab | null | undefined>(undefined);
   const streamTab = useBuilderWatch("streamTab");
 
   useEffect(() => {
@@ -38,35 +35,28 @@ export const useFocusField = () => {
       fieldToFocus = baseFieldToFocus;
     }
 
-    if (focusTab === undefined) {
-      const tabContainer = fieldToFocus.closest("[data-stream-tab]");
-      if (tabContainer) {
-        const streamTab = tabContainer.getAttribute("data-stream-tab") as BuilderStreamTab;
-        setFocusTab(streamTab);
-        setValue("streamTab", streamTab);
-      } else {
-        setFocusTab(null);
+    const tabContainer = fieldToFocus.closest("[data-stream-tab]");
+    if (tabContainer) {
+      const streamTabToFocus = tabContainer.getAttribute("data-stream-tab") as BuilderStreamTab;
+      if (streamTabToFocus !== streamTab) {
+        setValue("streamTab", streamTabToFocus);
       }
-      return;
     }
 
-    if (focusTab === null || streamTab === focusTab) {
-      fieldToFocus.scrollIntoView({ behavior: "smooth", block: "center" });
-      setTimeout(() => {
-        if (fieldToFocus instanceof HTMLElement) {
-          fieldToFocus?.focus();
+    fieldToFocus.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => {
+      if (fieldToFocus instanceof HTMLElement) {
+        fieldToFocus?.focus();
 
-          // Place cursor at the end for input and textarea elements
-          if (fieldToFocus instanceof HTMLInputElement || fieldToFocus instanceof HTMLTextAreaElement) {
-            const valueLength = fieldToFocus.value.length;
-            fieldToFocus.setSelectionRange(valueLength, valueLength);
-          }
+        // Place cursor at the end for input and textarea elements
+        if (fieldToFocus instanceof HTMLInputElement || fieldToFocus instanceof HTMLTextAreaElement) {
+          const valueLength = fieldToFocus.value.length;
+          fieldToFocus.setSelectionRange(valueLength, valueLength);
         }
-      }, 500);
-      setFocusPath(undefined);
-      setFocusTab(undefined);
-    }
-  }, [focusPath, focusTab, setValue, streamTab]);
+      }
+    }, 500);
+    setFocusPath(undefined);
+  }, [focusPath, setValue, streamTab]);
 
   const focusField = useCallback(
     (path: string) => {
@@ -76,7 +66,6 @@ export const useFocusField = () => {
       }
 
       setFocusPath(path);
-      setFocusTab(undefined);
     },
     [setValue]
   );
