@@ -11267,6 +11267,10 @@ components:
           type: string
           format: uuid
           nullable: true
+        workspaceId:
+          type: string
+          format: uuid
+          nullable: true
     ConnectorBuilderProjectRead:
       type: object
       required:

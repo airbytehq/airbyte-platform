@@ -557,10 +557,20 @@ public class ConnectorBuilderProjectsHandler {
   }
 
   public BuilderProjectForDefinitionResponse getConnectorBuilderProjectForDefinitionId(final BuilderProjectForDefinitionRequestBody requestBody)
-      throws IOException {
+      throws IOException, ConfigNotFoundException {
     final Optional<UUID> builderProjectId =
         connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(requestBody.getActorDefinitionId());
-    return new BuilderProjectForDefinitionResponse().builderProjectId(builderProjectId.orElse(null));
+
+    Optional<UUID> workspaceId = Optional.empty();
+    if (builderProjectId.isPresent()) {
+      workspaceId = Optional.ofNullable(connectorBuilderService
+          .getConnectorBuilderProject(builderProjectId.get(), false))
+          .map(ConnectorBuilderProject::getWorkspaceId);
+    }
+
+    return new BuilderProjectForDefinitionResponse()
+        .builderProjectId(builderProjectId.orElse(null))
+        .workspaceId(workspaceId.orElse(null));
   }
 
   /**

@@ -5,19 +5,62 @@ import { Button } from "components/ui/Button";
 import { Link } from "components/ui/Link";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useCurrentWorkspaceLink } from "area/workspace/utils";
+import { useCurrentWorkspaceLink, useWorkspaceLink } from "area/workspace/utils";
 import { useCreateSourceDefForkedBuilderProject, useGetBuilderProjectIdByDefinitionId } from "core/api";
 import { ConnectorBuilderProjectIdWithWorkspaceId, SourceDefinitionRead } from "core/api/types/AirbyteClient";
+import { useIntent } from "core/utils/rbac";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./ForkInBuilderButton.module.scss";
 import { isBuilderCompatible } from "./useBuilderCompatibleSourceDefinitions";
 import { getEditPath } from "../ConnectorBuilderRoutes";
 
+const EditBuilderProjectButton = ({
+  builderProjectId,
+  builderProjectWorkspaceId,
+  sourceDefinition,
+}: {
+  builderProjectId: string;
+  builderProjectWorkspaceId: string;
+  sourceDefinition: SourceDefinitionRead;
+}) => {
+  // Check if the user has permission to edit the project in the builder workspace,
+  // custom connectors are scoped to the Organization, but Builder projects are scoped to the Workspace.
+  const canEditInBuilder = useIntent("UpdateCustomConnector", { workspaceId: builderProjectWorkspaceId });
+  const createWorkspaceLink = useWorkspaceLink(builderProjectWorkspaceId);
+  const createProjectEditLink = useCallback(
+    (projectId: string) => createWorkspaceLink(`/${RoutePaths.ConnectorBuilder}/${getEditPath(projectId)}`),
+    [createWorkspaceLink]
+  );
+
+  return canEditInBuilder ? (
+    <Tooltip
+      control={
+        // Explicitly render a Button instead of using Link variant="button" to ensure that the styles stay
+        // consistent with the non-Link buttons below
+        <Link to={createProjectEditLink(builderProjectId)} opensInNewTab>
+          <InnerButton label="edit" />
+        </Link>
+      }
+      placement="bottom"
+    >
+      <FormattedMessage id="onboarding.sourceSetUp.editInBuilder.tooltip" values={{ name: sourceDefinition.name }} />
+    </Tooltip>
+  ) : (
+    <Tooltip control={<InnerButton label="edit" disabled />} placement="bottom">
+      <FormattedMessage
+        id="onboarding.sourceSetUp.editInBuilder.tooltip.forbidden"
+        values={{ workspace: builderProjectWorkspaceId }}
+      />
+    </Tooltip>
+  );
+};
+
 export const ForkConnectorButton = ({ sourceDefinition }: { sourceDefinition: SourceDefinitionRead }) => {
   const createLink = useCurrentWorkspaceLink();
   const { data: builderProjectIdResponse } = useGetBuilderProjectIdByDefinitionId(sourceDefinition?.sourceDefinitionId);
   const builderProjectId = builderProjectIdResponse?.builderProjectId;
+  const builderProjectWorkspaceId = builderProjectIdResponse?.workspaceId;
 
   const createProjectEditLink = useCallback(
     (projectId: string) => createLink(`/${RoutePaths.ConnectorBuilder}/${getEditPath(projectId)}`),
@@ -37,20 +80,13 @@ export const ForkConnectorButton = ({ sourceDefinition }: { sourceDefinition: So
     return null;
   }
 
-  if (builderProjectId) {
+  if (builderProjectId && builderProjectWorkspaceId) {
     return (
-      <Tooltip
-        control={
-          // Explicitly render a Button instead of using Link variant="button" to ensure that the styles stay
-          // consistent with the non-Link buttons below
-          <Link to={createProjectEditLink(builderProjectId)} opensInNewTab>
-            <InnerButton label="edit" />
-          </Link>
-        }
-        placement="bottom"
-      >
-        <FormattedMessage id="onboarding.sourceSetUp.editInBuilder.tooltip" values={{ name: sourceDefinition.name }} />
-      </Tooltip>
+      <EditBuilderProjectButton
+        builderProjectId={builderProjectId}
+        builderProjectWorkspaceId={builderProjectWorkspaceId}
+        sourceDefinition={sourceDefinition}
+      />
     );
   }
 

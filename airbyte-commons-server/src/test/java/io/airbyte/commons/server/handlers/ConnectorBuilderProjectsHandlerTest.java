@@ -957,20 +957,23 @@ class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  void testGetConnectorBuilderProjectIdBySourceDefinitionId() throws IOException {
+  void testGetConnectorBuilderProjectIdBySourceDefinitionId() throws IOException, ConfigNotFoundException {
     final UUID actorDefinitionId = UUID.randomUUID();
     final UUID projectId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     when(connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(actorDefinitionId)).thenReturn(Optional.of(projectId));
+    when(connectorBuilderService.getConnectorBuilderProject(projectId, false))
+        .thenReturn(new ConnectorBuilderProject().withBuilderProjectId(projectId).withWorkspaceId(workspaceId));
 
     final BuilderProjectForDefinitionResponse response = connectorBuilderProjectsHandler.getConnectorBuilderProjectForDefinitionId(
         new BuilderProjectForDefinitionRequestBody().actorDefinitionId(actorDefinitionId).workspaceId(workspaceId));
 
     assertEquals(projectId, response.getBuilderProjectId());
+    assertEquals(workspaceId, response.getWorkspaceId());
   }
 
   @Test
-  void testGetConnectorBuilderProjectIdBySourceDefinitionIdWhenNotFound() throws IOException {
+  void testGetConnectorBuilderProjectIdBySourceDefinitionIdWhenNotFound() throws IOException, ConfigNotFoundException {
     final UUID actorDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     when(connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(actorDefinitionId)).thenReturn(Optional.empty());
@@ -979,6 +982,22 @@ class ConnectorBuilderProjectsHandlerTest {
         new BuilderProjectForDefinitionRequestBody().actorDefinitionId(actorDefinitionId).workspaceId(workspaceId));
 
     assertNull(response.getBuilderProjectId());
+    assertNull(response.getWorkspaceId());
+  }
+
+  @Test
+  void testGetConnectorBuilderProjectIdBySourceDefinitionIdWhenProjectNotFound() throws IOException, ConfigNotFoundException {
+    final UUID actorDefinitionId = UUID.randomUUID();
+    final UUID projectId = UUID.randomUUID();
+    final UUID workspaceId = UUID.randomUUID();
+    when(connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(actorDefinitionId)).thenReturn(Optional.of(projectId));
+    when(connectorBuilderService.getConnectorBuilderProject(projectId, false)).thenReturn(null);
+
+    final BuilderProjectForDefinitionResponse response = connectorBuilderProjectsHandler.getConnectorBuilderProjectForDefinitionId(
+        new BuilderProjectForDefinitionRequestBody().actorDefinitionId(actorDefinitionId).workspaceId(workspaceId));
+
+    assertEquals(projectId, response.getBuilderProjectId());
+    assertNull(response.getWorkspaceId());
   }
 
   private static ConnectorBuilderPublishRequestBody anyConnectorBuilderProjectRequest() {
