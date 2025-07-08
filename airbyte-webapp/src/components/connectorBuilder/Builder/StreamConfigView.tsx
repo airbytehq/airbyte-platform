@@ -2,12 +2,10 @@ import classNames from "classnames";
 import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { get, useFormContext, useFormState, useWatch } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import { useEffectOnce } from "react-use";
 
 import { FormControl } from "components/forms";
-import { FormControlErrorMessage, FormControlFooter, FormLabel } from "components/forms/FormControl";
 import { SchemaFormControl } from "components/forms/SchemaForm/Controls/SchemaFormControl";
 import { SchemaFormRemainingFields } from "components/forms/SchemaForm/SchemaFormRemainingFields";
 import Indicator from "components/Indicator";
@@ -41,6 +39,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderConfigView } from "./BuilderConfigView";
+import { ParentStreamSelector } from "./overrides";
 import styles from "./StreamConfigView.module.scss";
 import {
   DEFAULT_SYNC_STREAM,
@@ -53,7 +52,7 @@ import { StreamId, BuilderStreamTab } from "../types";
 import { useAutoImportSchema } from "../useAutoImportSchema";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderWatch } from "../useBuilderWatch";
-import { formatJson, getStreamFieldPath, getStreamName } from "../utils";
+import { formatJson, getStreamFieldPath } from "../utils";
 
 interface StreamConfigViewProps {
   streamId: StreamId;
@@ -889,81 +888,6 @@ const CollapsedControls: React.FC<React.PropsWithChildren<CollapsedControlsProps
         {children}
       </Collapsible>
     </div>
-  );
-};
-
-const ParentStreamSelector = ({ path, currentStreamName }: { path: string; currentStreamName?: string }) => {
-  const { formatMessage } = useIntl();
-  const { setValue } = useFormContext();
-
-  const streams = useBuilderWatch("manifest.streams");
-  const streamNameToIndex = useMemo(() => {
-    return (
-      streams?.reduce(
-        (acc, stream, index) => {
-          acc[getStreamName(stream, index)] = index;
-          return acc;
-        },
-        {} as Record<string, number>
-      ) ?? {}
-    );
-  }, [streams]);
-
-  const value = useBuilderWatch(path) as { $ref?: string } | undefined;
-
-  // The normal default value for this field is an empty stream definition, which is invalid for the UI,
-  // so do a one-time check for this and set it to undefined if so, as that is the "empty" value that the
-  // UI handles well.
-  useEffectOnce(() => {
-    if (value && !("$ref" in value)) {
-      setValue(path, undefined);
-    }
-  });
-
-  const selectedValue = useMemo(() => {
-    if (value && value.$ref) {
-      const match = value.$ref.match(/#\/streams\/(\d+)/);
-      if (match) {
-        const streamIndex = Number(match[1]);
-        return getStreamName(streams?.[streamIndex], streamIndex);
-      }
-    }
-    return undefined;
-  }, [value, streams]);
-
-  const options = useMemo(() => {
-    return (
-      streams
-        ?.map((stream, index) => ({ label: getStreamName(stream, index), value: getStreamName(stream, index) }))
-        ?.filter(({ value }) => value !== currentStreamName) ?? []
-    );
-  }, [streams, currentStreamName]);
-
-  const { errors } = useFormState({ name: path });
-  const hasError = useMemo(() => !!get(errors, path), [errors, path]);
-
-  return (
-    <FlexContainer direction="column" gap="none" className={styles.parentStreamSelector} data-field-path={path}>
-      <FormLabel
-        htmlFor={path}
-        label={formatMessage({ id: "connectorBuilder.parentStream.label" })}
-        labelTooltip={formatMessage({ id: "connectorBuilder.parentStream.tooltip" })}
-      />
-      <ListBox
-        id={path}
-        options={options}
-        selectedValue={selectedValue}
-        onSelect={(value) => {
-          setValue(path, {
-            $ref: `#/streams/${streamNameToIndex[value]}`,
-          });
-        }}
-        hasError={hasError}
-      />
-      <FormControlFooter>
-        <FormControlErrorMessage name={path} />
-      </FormControlFooter>
-    </FlexContainer>
   );
 };
 

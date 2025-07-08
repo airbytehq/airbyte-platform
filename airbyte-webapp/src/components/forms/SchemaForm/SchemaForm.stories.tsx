@@ -359,6 +359,48 @@ export const OverrideByPath = () => {
 };
 
 /**
+ * Shows how to override specific types with custom components
+ */
+export const OverrideByObjectField = () => {
+  return (
+    <Card>
+      <SchemaForm
+        schema={{
+          type: "object",
+          properties: {
+            user: {
+              type: "object",
+              properties: {
+                type: { type: "string", enum: ["User"] },
+                name: { type: "string" },
+                email: { type: "string", format: "email" },
+              },
+            },
+            location: {
+              type: "object",
+              properties: {
+                type: { type: "string", enum: ["Location"] },
+                address: { type: "string" },
+              },
+            },
+          },
+        }}
+        onSubmit={onSubmit}
+        overrideByObjectField={{
+          User: {
+            email: () => <div>My user email override</div>,
+          },
+        }}
+      >
+        <SchemaFormControl />
+        <FormSubmissionButtons />
+        <ShowFormValues />
+      </SchemaForm>
+    </Card>
+  );
+};
+
+/**
  * Shows how fields can be linked via reference handling
  */
 export const RefHandling = () => {

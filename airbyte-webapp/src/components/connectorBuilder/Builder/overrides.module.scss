@@ -1,0 +1,18 @@
+@use "scss/variables";
+
+.parentStreamSelector {
+  position: relative;
+  padding-bottom: 30px;
+}
+
+.editorContainer {
+  padding-bottom: 30px;
+  position: relative;
+}
+
+.editor {
+  min-height: 50px;
+  height: 150px;
+  overflow: hidden;
+  resize: vertical;
+}

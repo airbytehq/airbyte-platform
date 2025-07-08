@@ -16,8 +16,11 @@ export type AirbyteJsonSchema = Exclude<ExtendedJSONSchema<AirbyteJsonSchemaExte
 
 export const getDeclarativeSchemaTypeValue = (
   propertyName: string,
-  property: ExtendedJSONSchema<AirbyteJsonSchemaExtention>
+  property: ExtendedJSONSchema<AirbyteJsonSchemaExtention> | undefined
 ) => {
+  if (!property) {
+    return undefined;
+  }
   if (propertyName !== "type") {
     return undefined;
   }

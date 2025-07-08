@@ -2294,6 +2294,12 @@
   "connectorBuilder.streamTemplateName.placeholder": "Enter stream template name",
   "connectorBuilder.parentStream.label": "Parent Stream",
   "connectorBuilder.parentStream.tooltip": "The stream to use as the parent of this stream.",
+  "connectorBuilder.graphQL.query.title": "GraphQL Query",
+  "connectorBuilder.graphQL.query.tooltip": "The GraphQL query to send to the API.",
+  "connectorBuilder.graphQL.query.enterValid": "Enter a valid GraphQL query",
+  "connectorBuilder.graphQL.query.invalidSyntax": "Invalid GraphQL syntax. Please check your query for syntax errors.",
+  "connectorBuilder.graphQL.additionalProperties.title": "Additional Properties",
+  "connectorBuilder.graphQL.additionalProperties.tooltip": "Additional properties to be sent in the GraphQL request body.",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

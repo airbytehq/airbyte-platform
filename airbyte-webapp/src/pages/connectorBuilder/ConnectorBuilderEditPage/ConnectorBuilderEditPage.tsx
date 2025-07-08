@@ -3,6 +3,7 @@ import React, { useMemo } from "react";
 import { DefaultValues, useFormContext } from "react-hook-form";
 
 import { Builder } from "components/connectorBuilder/Builder/Builder";
+import { RequestBodyGraphQL } from "components/connectorBuilder/Builder/overrides";
 import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "components/connectorBuilder/constants";
 import { MenuBar } from "components/connectorBuilder/MenuBar";
 import { StreamTestingPanel } from "components/connectorBuilder/StreamTestingPanel";
@@ -91,6 +92,11 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
       refBasePath="manifest"
       disableFormControlsUnderPath="generatedStreams"
       onlyShowErrorIfTouched
+      overrideByObjectField={{
+        RequestBodyGraphQL: {
+          value: (path) => <RequestBodyGraphQL path={path} />,
+        },
+      }}
     >
       <BaseForm />
     </SchemaForm>

@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useMemo, useRef } from "react";
 import { DefaultValues, FieldValues, FormProvider, get, useForm, useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
+import { OverrideByObjectField } from "./Controls/types";
 import { dynamicValidator } from "./dynamicValidator";
 import { RefsHandlerProvider } from "./RefsHandler";
 import {
@@ -28,6 +29,7 @@ interface SchemaFormProps<JsonSchema extends AirbyteJsonSchema, TsSchema extends
   onlyShowErrorIfTouched?: boolean;
   disableFormControlsUnderPath?: string;
   disableValidation?: boolean;
+  overrideByObjectField?: OverrideByObjectField;
 }
 
 export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extends FieldValues>({
@@ -42,6 +44,7 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
   refTargetPath,
   onlyShowErrorIfTouched,
   disableFormControlsUnderPath,
+  overrideByObjectField,
 }: React.PropsWithChildren<SchemaFormProps<JsonSchema, TsSchema>>) => {
   const { formatMessage } = useIntl();
   const rawStartingValues = useMemo(
@@ -86,6 +89,7 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
         schema={schema}
         onlyShowErrorIfTouched={onlyShowErrorIfTouched}
         disableFormControlsUnderPath={disableFormControlsUnderPath}
+        overrideByObjectField={overrideByObjectField}
       >
         <RefsHandlerProvider values={rawStartingValues} refBasePath={refBasePath} refTargetPath={refTargetPath}>
           <form className={formClassName} onSubmit={methods.handleSubmit(processSubmission)}>
@@ -117,6 +121,7 @@ interface SchemaFormContextValue {
   isPathRendered: (path: string) => boolean;
   isRequired: (path: string) => boolean;
   disableFormControlsUnderPath?: string;
+  overrideByObjectField?: OverrideByObjectField;
 }
 const SchemaFormContext = createContext<SchemaFormContextValue | undefined>(undefined);
 export const useSchemaForm = () => {
@@ -131,12 +136,14 @@ interface SchemaFormProviderProps {
   schema: AirbyteJsonSchema;
   onlyShowErrorIfTouched?: boolean;
   disableFormControlsUnderPath?: string;
+  overrideByObjectField?: OverrideByObjectField;
 }
 const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderProps>> = ({
   children,
   schema,
   onlyShowErrorIfTouched,
   disableFormControlsUnderPath,
+  overrideByObjectField,
 }) => {
   const { getValues } = useFormContext();
   // Use a ref instead of state for rendered paths to prevent temporarily rendering fields twice
@@ -219,6 +226,7 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
         isPathRendered,
         isRequired,
         disableFormControlsUnderPath,
+        overrideByObjectField,
       }}
     >
       {children}

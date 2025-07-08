@@ -103,6 +103,11 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           { token: JINJA_OTHER_TOKEN, foreground: cssCustomPropToHex(colorValues[styles.jinja]) },
           { token: JINJA_FIRST_BRACKET_TOKEN, foreground: cssCustomPropToHex(colorValues[styles.jinja]) },
           { token: JINJA_CLOSING_BRACKET_TOKEN, foreground: cssCustomPropToHex(colorValues[styles.jinja]) },
+          { token: "keyword.gql", foreground: cssCustomPropToHex(colorValues[styles.keyword]) },
+          { token: "key.identifier.gql", foreground: cssCustomPropToHex(colorValues[styles.type]) },
+          { token: "number.gql", foreground: cssCustomPropToHex(colorValues[styles.number]) },
+          { token: "delimiter.curly.gql", foreground: cssCustomPropToHex(colorValues[styles.delimiter]) },
+          { token: "invalid.gql", foreground: cssCustomPropToHex(colorValues[styles.invalid]) },
         ],
         colors: {
           "editor.background": "#00000000", // transparent, so that parent background is shown instead
