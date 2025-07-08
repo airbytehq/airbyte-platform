@@ -153,7 +153,7 @@ const ConnectionsListCardPrev = () => {
             <LookbackControl selected={graphLookback} setSelected={setGraphLookback} />
           </Box>
         </FlexContainer>
-        <ConnectionsGraph lookback={graphLookback} connections={filteredConnectionsByTags} />
+        <ConnectionsGraph lookback={graphLookback} />
       </Box>
       <div className={styles.table}>
         <ConnectionsTable connections={filteredConnectionsByTags} variant="white" />
@@ -291,7 +291,7 @@ export const ConnectionsListCardNext: React.FC<{
             <LookbackControl selected={graphLookback} setSelected={setGraphLookback} />
           </Box>
         </FlexContainer>
-        <ConnectionsGraph lookback={graphLookback} connections={filteredConnectionsByTags} />
+        <ConnectionsGraph lookback={graphLookback} />
       </Box>
       <div className={styles.table}>
         <ConnectionsTable connections={filteredConnectionsByTags} variant="white" />

@@ -40,12 +40,13 @@ interface ConnectionTimelineEventRepository : PageableRepository<ConnectionTimel
 
   @Query(
     """
-      SELECT id, connection_id, event_type, created_at
-      FROM connection_timeline_event
-      WHERE connection_id IN (:connectionIds)
-      AND event_type IN (:eventTypes)
-      AND (created_at >= :createdAtStart)
-      AND (created_at <= :createdAtEnd)
+      SELECT cte.id, cte.connection_id, cte.event_type, cte.created_at, c.name AS connection_name
+      FROM connection_timeline_event cte
+      LEFT JOIN connection c ON c.id = cte.connection_id
+      WHERE cte.connection_id IN (:connectionIds)
+      AND cte.event_type IN (:eventTypes)
+      AND (cte.created_at >= :createdAtStart)
+      AND (cte.created_at <= :createdAtEnd)
     """,
   )
   fun findByConnectionIdsMinimal(

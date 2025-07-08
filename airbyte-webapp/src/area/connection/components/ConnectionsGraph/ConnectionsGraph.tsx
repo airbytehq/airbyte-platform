@@ -9,12 +9,9 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { CONNECTIONS_GRAPH_EVENT_TYPES, useGetConnectionsGraphData } from "core/api";
-import {
-  ConnectionEventMinimal,
-  WebBackendConnectionListItem,
-  ConnectionEventType,
-} from "core/api/types/AirbyteClient";
+import { ConnectionEventMinimal, ConnectionEventType } from "core/api/types/AirbyteClient";
 import { DefaultErrorBoundary } from "core/errors";
 import { useDrawerActions } from "core/services/ui/DrawerService";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
@@ -24,36 +21,20 @@ import styles from "./ConnectionsGraph.module.scss";
 import { ConnectionsGraphTooltip } from "./ConnectionsGraphTooltip";
 import { getStartOfFirstWindow } from "./getStartOfFirstWindow";
 import { LookbackConfiguration, LookbackWindow, lookbackConfigs } from "./lookbackConfiguration";
-import { RunningJobEvent, useCurrentlyRunningSyncs } from "./useCurrentlyRunningSyncs";
 import { useTrackConnectionsGraph, useTrackConnectionsGraphLoaded } from "./useTrackConnectionGraph";
 import { tooltipConfig } from "../HistoricalOverview/ChartConfig";
 
 interface ConnectionsGraphProps {
   lookback: LookbackWindow;
-  connections: WebBackendConnectionListItem[];
 }
 
-interface BackendEvent extends ConnectionEventMinimal {
-  eventType: (typeof CONNECTIONS_GRAPH_EVENT_TYPES)[number];
-}
-
-export type GraphEvent = BackendEvent | RunningJobEvent;
-
-const isGraphEvent = (event: ConnectionEventMinimal | RunningJobEvent): event is GraphEvent => {
-  return (
-    event.eventType === "RUNNING_JOB" ||
-    CONNECTIONS_GRAPH_EVENT_TYPES.includes(event.eventType as (typeof CONNECTIONS_GRAPH_EVENT_TYPES)[number])
-  );
-};
-
-export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, connections }) => {
+export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback }) => {
   const { openDrawer } = useDrawerActions();
 
   const { formatDate } = useIntl();
-  const connectionIds = connections.map((connection) => connection.connectionId);
-  const currentlyRunningEvents = useCurrentlyRunningSyncs(connectionIds);
+  const workspaceId = useCurrentWorkspaceId();
   const { data: timelineData } = useGetConnectionsGraphData({
-    connectionIds,
+    workspaceId,
     eventTypes: [...CONNECTIONS_GRAPH_EVENT_TYPES],
     createdAtStart: getStartOfFirstWindow(lookback).format(),
     // Intentionally overshooting to the end of the day so we get all current events and so that this query key does
@@ -63,14 +44,6 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
 
   const { trackConnectionGraphDrawerOpened } = useTrackConnectionsGraph();
   useTrackConnectionsGraphLoaded();
-
-  const combinedEvents = useMemo(() => {
-    if (timelineData === undefined || currentlyRunningEvents === undefined) {
-      return undefined;
-    }
-
-    return [...timelineData.events, ...currentlyRunningEvents];
-  }, [timelineData, currentlyRunningEvents]);
 
   const [colorMap, setColorMap] = useState<ColorMap>({
     success: "",
@@ -108,15 +81,15 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
 
   const barChartCategories: BarChartCategory[] = useMemo(() => {
     const windows = createBarCategories(lookback);
-    if (combinedEvents) {
-      combinedEvents.forEach((syncEvent) => {
+    if (timelineData?.events) {
+      timelineData.events.forEach((syncEvent) => {
         const syncDate = dayjs(syncEvent.createdAt);
         const window = windows.find((window) => {
           // "[)" means inclusive start, exclusive end: https://day.js.org/docs/en/plugin/is-between
           return syncDate.isBetween(window.windowStart, window.windowEnd, null, "[)");
         });
 
-        if (window && isGraphEvent(syncEvent)) {
+        if (window) {
           window.events.push(syncEvent);
           switch (syncEvent.eventType) {
             case ConnectionEventType.REFRESH_SUCCEEDED:
@@ -131,15 +104,12 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
             case ConnectionEventType.SYNC_FAILED:
               window.failure++;
               break;
-            case "RUNNING_JOB":
-              window.running++;
-              break;
           }
         }
       });
     }
     return windows;
-  }, [lookback, combinedEvents]);
+  }, [lookback, timelineData?.events]);
 
   const ticks = useMemo(
     () =>
@@ -180,7 +150,7 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
     }
   };
 
-  if (combinedEvents === undefined) {
+  if (timelineData?.events === undefined) {
     return (
       <FlexContainer direction="column" justifyContent="center" className={styles.connectionsGraph__loadingSkeleton}>
         <LoadingSkeleton />
@@ -260,7 +230,7 @@ type BarChartCategory = {
   windowId: number;
   windowStart: Date;
   windowEnd: Date;
-  events: GraphEvent[];
+  events: ConnectionEventMinimal[];
 } & StackedBarSections;
 
 interface StackedBarSections {

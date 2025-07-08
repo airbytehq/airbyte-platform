@@ -1539,9 +1539,12 @@ public class ConnectionsHandler {
     });
   }
 
-  public ConnectionEventListMinimal listConnectionEventsMinimal(ConnectionEventsListMinimalRequestBody requestBody) {
+  public ConnectionEventListMinimal listConnectionEventsMinimal(ConnectionEventsListMinimalRequestBody requestBody) throws IOException {
+    // Get all connection IDs for the workspace using the lightweight method
+    final List<UUID> connectionIds = connectionService.listConnectionIdsForWorkspace(requestBody.getWorkspaceId());
+
     final List<ConnectionTimelineEventMinimal> events = connectionTimelineEventService.listEventsMinimal(
-        requestBody.getConnectionIds(),
+        connectionIds,
         convertConnectionType(requestBody.getEventTypes()),
         requestBody.getCreatedAtStart(),
         requestBody.getCreatedAtEnd());
@@ -1551,6 +1554,7 @@ public class ConnectionsHandler {
   private ConnectionEventMinimal minimalTimelineEventToApiResponse(final ConnectionTimelineEventMinimal timelineEvent) {
     return new ConnectionEventMinimal()
         .connectionId(timelineEvent.getConnectionId())
+        .connectionName(timelineEvent.getConnectionName())
         .createdAt(timelineEvent.getCreatedAt())
         .eventType(ConnectionEventType.fromString(timelineEvent.getEventType()))
         .eventId(timelineEvent.getId());

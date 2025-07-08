@@ -30,6 +30,8 @@ data class ConnectionTimelineEvent(
 @Introspected
 data class ConnectionTimelineEventMinimal(
   val id: UUID,
+  @MappedProperty("connection_name")
+  val connectionName: String?,
   @MappedProperty("connection_id")
   val connectionId: UUID,
   @MappedProperty("created_at")

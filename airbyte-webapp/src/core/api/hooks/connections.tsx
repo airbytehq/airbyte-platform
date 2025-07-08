@@ -95,7 +95,7 @@ export const connectionsKeys = {
     [
       ...connectionsKeys.all,
       "eventsListMinimal",
-      ...requestBody.connectionIds,
+      requestBody.workspaceId,
       ...requestBody.eventTypes,
       requestBody.createdAtStart,
       requestBody.createdAtEnd,

@@ -13507,12 +13507,15 @@ components:
       type: object
       required:
         - eventId
+        - connectionName
         - connectionId
         - createdAt
         - eventType
       properties:
         eventId:
           $ref: "#/components/schemas/ConnectionEventId"
+        connectionName:
+          type: string
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
         createdAt:
@@ -13589,15 +13592,13 @@ components:
     ConnectionEventsListMinimalRequestBody:
       type: object
       required:
-        - connectionIds
+        - workspaceId
         - eventTypes
         - createdAtStart
         - createdAtEnd
       properties:
-        connectionIds:
-          type: array
-          items:
-            $ref: "#/components/schemas/ConnectionId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
         eventTypes:
           description: filter events by event types
           type: array
