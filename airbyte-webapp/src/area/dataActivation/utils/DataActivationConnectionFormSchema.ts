@@ -72,7 +72,23 @@ const DataActivationStreamSchema = z
     ),
   })
   .and(sourceSyncMode)
-  .and(destinationSyncMode);
+  .and(destinationSyncMode)
+  // Validate that each destination field name is unique
+  .superRefine((stream, ctx) => {
+    const seen = new Set<string>();
+    stream.fields.forEach((field, i) => {
+      const name = field.destinationFieldName;
+      if (seen.has(name)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Duplicate destinationFieldName",
+          path: ["fields", i, "destinationFieldName"],
+        });
+      } else {
+        seen.add(name);
+      }
+    });
+  });
 
 export const DataActivationConnectionFormSchema = z.object({
   streams: z.array(DataActivationStreamSchema),
