@@ -14,7 +14,7 @@ import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.domain.models.OrganizationId
-import io.airbyte.featureflag.FeatureFlagServiceClient
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseSonarServer
 import io.airbyte.persistence.job.WorkspaceHelper
@@ -50,12 +50,12 @@ class ConfigTemplateControllerTest {
       } returns Unit
     }
 
-  private val featureFlagServiceClient =
-    mockk<FeatureFlagServiceClient> {
+  private val featureFlagClient =
+    mockk<FeatureFlagClient> {
       every { boolVariation(UseSonarServer, Organization(organizationId)) } returns false
     }
 
-  val controller = ConfigTemplateController(configTemplateService, workspaceHelper, licenseEntitlementChecker, featureFlagServiceClient)
+  val controller = ConfigTemplateController(configTemplateService, workspaceHelper, licenseEntitlementChecker, featureFlagClient)
 
   @Nested
   inner class ListEndpointTests {

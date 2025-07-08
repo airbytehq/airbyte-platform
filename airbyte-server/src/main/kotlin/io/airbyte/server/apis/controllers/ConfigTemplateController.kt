@@ -20,7 +20,7 @@ import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
 import io.airbyte.domain.models.OrganizationId
-import io.airbyte.featureflag.FeatureFlagServiceClient
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseSonarServer
 import io.airbyte.persistence.job.WorkspaceHelper
@@ -33,7 +33,7 @@ open class ConfigTemplateController(
   private val configTemplateService: ConfigTemplateService,
   val workspaceHelper: WorkspaceHelper,
   private val licenseEntitlementChecker: LicenseEntitlementChecker,
-  private val featureFlagServiceClient: FeatureFlagServiceClient,
+  private val featureFlagClient: FeatureFlagClient,
 ) : ConfigTemplateApi {
   @RequiresIntent(Intent.ViewConfigTemplates)
   override fun getConfigTemplate(req: ConfigTemplateRequestBody): ConfigTemplateRead {
@@ -74,7 +74,7 @@ open class ConfigTemplateController(
   }
 
   private fun throwIfSonarServerEnabled(organizationId: UUID) {
-    if (featureFlagServiceClient.boolVariation(UseSonarServer, Organization(organizationId))) {
+    if (featureFlagClient.boolVariation(UseSonarServer, Organization(organizationId))) {
       throw EmbeddedEndpointMovedProblem()
     }
   }

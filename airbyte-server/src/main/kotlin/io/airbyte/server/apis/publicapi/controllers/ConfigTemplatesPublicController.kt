@@ -19,7 +19,7 @@ import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.OrganizationId
-import io.airbyte.featureflag.FeatureFlagServiceClient
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseSonarServer
 import io.airbyte.publicApi.server.generated.apis.PublicConfigTemplatesApi
@@ -51,7 +51,7 @@ open class ConfigTemplatesPublicController(
   private val trackingHelper: TrackingHelper,
   private val licenseEntitlementChecker: LicenseEntitlementChecker,
   private val organizationsHandler: OrganizationsHandler,
-  private val featureFlagServiceClient: FeatureFlagServiceClient,
+  private val featureFlagClient: FeatureFlagClient,
 ) : PublicConfigTemplatesApi {
   private val logger = KotlinLogging.logger {}
 
@@ -206,7 +206,7 @@ open class ConfigTemplatesPublicController(
     )
 
   private fun throwIfSonarServerEnabled(organizationId: UUID) {
-    if (featureFlagServiceClient.boolVariation(UseSonarServer, Organization(organizationId))) {
+    if (featureFlagClient.boolVariation(UseSonarServer, Organization(organizationId))) {
       throw EmbeddedEndpointMovedProblem()
     }
   }

@@ -24,7 +24,7 @@ import io.airbyte.config.PartialUserConfigWithActorDetails
 import io.airbyte.config.PartialUserConfigWithFullDetails
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
-import io.airbyte.featureflag.FeatureFlagServiceClient
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseSonarServer
 import io.airbyte.persistence.job.WorkspaceHelper
@@ -41,7 +41,7 @@ import java.util.UUID
 class PartialUserConfigController(
   private val partialUserConfigHandler: PartialUserConfigHandler,
   private val partialUserConfigService: PartialUserConfigService,
-  private val featureFlagServiceClient: FeatureFlagServiceClient,
+  private val featureFlagClient: FeatureFlagClient,
   private val licenseEntitlementChecker: LicenseEntitlementChecker,
   private val workspaceHelper: WorkspaceHelper,
 ) : PartialUserConfigsApi {
@@ -52,7 +52,6 @@ class PartialUserConfigController(
   ): PartialUserConfigReadList {
     val organizationId = workspaceHelper.getOrganizationForWorkspace(listPartialUserConfigRequestBody.workspaceId)
 
-    throwIfSonarServerEnabled(workspaceHelper.getOrganizationForWorkspace(organizationId))
     licenseEntitlementChecker.ensureEntitled(
       organizationId,
       Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
@@ -183,7 +182,7 @@ class PartialUserConfigController(
   }
 
   private fun throwIfSonarServerEnabled(organizationId: UUID) {
-    if (featureFlagServiceClient.boolVariation(UseSonarServer, Organization(organizationId))) {
+    if (featureFlagClient.boolVariation(UseSonarServer, Organization(organizationId))) {
       throw EmbeddedEndpointMovedProblem()
     }
   }
