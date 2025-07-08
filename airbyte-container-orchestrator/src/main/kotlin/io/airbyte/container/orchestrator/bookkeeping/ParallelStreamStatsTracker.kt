@@ -262,6 +262,13 @@ class ParallelStreamStatsTracker(
     return getTotalStats(streamSyncStats, hasReplicationCompleted)
       .withEstimatedBytes(estimatedBytes)
       .withEstimatedRecords(estimatedRecords)
+      .apply {
+        recordsRejected?.let {
+          if (it > 0) {
+            withRecordsRejected(it)
+          }
+        }
+      }
   }
 
   override fun getTotalSourceStateMessagesEmitted(): Long = streamTrackers.values.sumOf { it.streamStats.sourceStateCount.get() }

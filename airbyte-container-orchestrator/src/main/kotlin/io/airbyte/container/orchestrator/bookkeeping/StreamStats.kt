@@ -13,6 +13,7 @@ interface StreamStats {
   val recordsEmitted: Long
   val recordsEstimated: Long?
   val recordsFilteredOut: Long
+  val recordsRejected: Long
 }
 
 class StreamStatsView(
@@ -45,6 +46,9 @@ class StreamStatsView(
       streamStatsTracker.streamStats.estimatedRecordsCount
         .get()
         .takeIf { !hasEstimatesError }
+
+  override val recordsRejected: Long
+    get() = streamStatsTracker.streamStats.rejectedRecordsCount.get()
 
   override val recordsFilteredOut: Long
     get() = streamStatsTracker.streamStats.filteredOutRecords.get()

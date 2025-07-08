@@ -19,6 +19,7 @@ fun SyncStatsTracker.getPerStreamStats(hasReplicationCompleted: Boolean): List<S
     .map { (stream, stats) ->
       val syncStats =
         SyncStats()
+          // TODO Handle Rejected Records when Available
           .withBytesCommitted(stats.bytesCommitted)
           .withBytesEmitted(stats.bytesEmitted)
           .withBytesFilteredOut(stats.bytesFilteredOut)
@@ -27,10 +28,11 @@ fun SyncStatsTracker.getPerStreamStats(hasReplicationCompleted: Boolean): List<S
           .withRecordsCommitted(stats.recordsCommitted)
           .withRecordsEmitted(stats.recordsEmitted)
           .withRecordsFilteredOut(stats.recordsFilteredOut)
+          .withRecordsRejected(stats.recordsRejected.takeIf { it > 0 })
           .apply {
             if (hasReplicationCompleted) {
               bytesCommitted = stats.bytesEmitted - stats.bytesFilteredOut
-              recordsCommitted = stats.recordsEmitted - stats.recordsFilteredOut
+              recordsCommitted = stats.recordsEmitted - stats.recordsFilteredOut - stats.recordsRejected
             } else {
               bytesCommitted = stats.bytesCommitted
               recordsCommitted = stats.recordsCommitted
@@ -47,6 +49,7 @@ private data class TotalStats(
   var recordsCommitted: Long = 0,
   var recordsEmitted: Long = 0,
   var recordsFilteredOut: Long = 0,
+  var recordsRejected: Long = 0,
   var bytesCommitted: Long = 0,
   var bytesEmitted: Long = 0,
   var bytesFilteredOut: Long = 0,
@@ -55,6 +58,7 @@ private data class TotalStats(
     recordsCommitted += other.recordsCommitted
     recordsEmitted += other.recordsEmitted
     recordsFilteredOut += other.recordsFilteredOut
+    recordsRejected += other.recordsRejected ?: 0
     bytesCommitted += other.bytesCommitted
     bytesEmitted += other.bytesEmitted
     bytesFilteredOut += other.bytesFilteredOut
@@ -86,9 +90,14 @@ fun SyncStatsTracker.getTotalStats(
     .withMaxSecondsBetweenStateMessageEmittedandCommitted(getMaxSecondsBetweenStateMessageEmittedAndCommitted())
     .withMeanSecondsBetweenStateMessageEmittedandCommitted(getMeanSecondsBetweenStateMessageEmittedAndCommitted())
     .apply {
+      if (totalStats.recordsRejected > 0) {
+        recordsRejected = totalStats.recordsRejected
+      }
+
+      // TODO Handle Rejected Records when Available
       if (hasReplicationCompleted) {
         bytesCommitted = bytesEmitted.minus(bytesFilteredOut)
-        recordsCommitted = recordsEmitted.minus(recordsFilteredOut)
+        recordsCommitted = recordsEmitted.minus(recordsFilteredOut).minus(totalStats.recordsRejected)
       } else {
         bytesCommitted = totalStats.bytesCommitted
         recordsCommitted = totalStats.recordsCommitted

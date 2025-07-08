@@ -217,6 +217,7 @@ class StateCheckSumCountEventHandler(
     if (stats != null) {
       stats.recordCount?.let { stateRecordCount ->
         if (origin == AirbyteMessageOrigin.DESTINATION) {
+          val destinationTotalCount = stateRecordCount + (stats.rejectedRecordCount ?: 0.0)
           val sourceStats: AirbyteStateStats? = stateMessage.sourceStats
           if (sourceStats != null) {
             sourceStats.recordCount?.let { sourceRecordCount ->
@@ -224,18 +225,18 @@ class StateCheckSumCountEventHandler(
                   sourceRecordCount.minus(
                     filteredOutRecords,
                   )
-                ) != stateRecordCount ||
-                (platformRecordCount.minus(filteredOutRecords)) != stateRecordCount
+                ) != destinationTotalCount ||
+                (platformRecordCount.minus(filteredOutRecords)) != destinationTotalCount
               ) {
                 misMatchWhenAllThreeCountsArePresent(
-                  origin,
-                  sourceRecordCount,
-                  stateRecordCount,
-                  platformRecordCount,
-                  includeStreamInLogs,
-                  stateMessage,
-                  failOnInvalidChecksum,
-                  checksumValidationEnabled,
+                  origin = origin,
+                  sourceRecordCount = sourceRecordCount,
+                  destinationRecordCount = destinationTotalCount,
+                  platformRecordCount = platformRecordCount,
+                  includeStreamInLogs = includeStreamInLogs,
+                  stateMessage = stateMessage,
+                  failOnInvalidChecksum = failOnInvalidChecksum,
+                  validData = checksumValidationEnabled,
                 )
               } else {
                 val shouldIncludeStreamInLogs = includeStreamInLogs || featureFlagClient.boolVariation(LogStateMsgs, Connection(connectionId))
@@ -243,10 +244,10 @@ class StateCheckSumCountEventHandler(
               }
             }
           } else {
-            if (platformRecordCount != stateRecordCount) {
+            if (platformRecordCount != destinationTotalCount) {
               misMatchBetweenStateCountAndPlatformCount(
                 origin = origin,
-                stateRecordCount = stateRecordCount,
+                stateRecordCount = destinationTotalCount,
                 platformRecordCount = platformRecordCount,
                 includeStreamInLogs = includeStreamInLogs,
                 stateMessage = stateMessage,
@@ -255,7 +256,7 @@ class StateCheckSumCountEventHandler(
                 streamPlatformRecordCounts = streamPlatformRecordCounts,
               )
             }
-            sourceIsMissingButDestinationIsPresent(stateRecordCount, platformRecordCount, stateMessage, checksumValidationEnabled)
+            sourceIsMissingButDestinationIsPresent(destinationTotalCount, platformRecordCount, stateMessage, checksumValidationEnabled)
           }
         } else if (stateRecordCount != platformRecordCount) {
           misMatchBetweenStateCountAndPlatformCount(

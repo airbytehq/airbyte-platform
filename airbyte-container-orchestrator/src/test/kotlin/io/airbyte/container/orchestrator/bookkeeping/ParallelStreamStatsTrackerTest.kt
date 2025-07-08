@@ -116,6 +116,86 @@ class ParallelStreamStatsTrackerTest {
   }
 
   @Test
+  fun `it should track and report rejected records`() {
+    statsTracker.updateStats(stream1Message1)
+    statsTracker.updateStats(stream1Message2)
+    val sourceS1State1 = createStreamState(STREAM1_NAME, 2)
+    statsTracker.updateSourceStatesStats(sourceS1State1)
+    // This is so that we keep track of the state Ids, otherwise we do not enter the stats computation if the state id from destination is not known
+    val destS1State1 =
+      sourceS1State1.also {
+        it.withDestinationStats(
+          AirbyteStateStats()
+            .withRecordCount(1.0)
+            .withRejectedRecordCount(1.0),
+        )
+      }
+    statsTracker.updateDestinationStateStats(destS1State1)
+    statsTracker.updateStats(stream1Message3)
+
+    statsTracker.updateStats(stream2Message1)
+    statsTracker.updateStats(stream2Message2)
+    statsTracker.updateStats(stream2Message3)
+
+    val actualSyncStats = statsTracker.getTotalStats(false)
+    val actualStreamSyncStats = statsTracker.getPerStreamStats(false)
+
+    val expectedSyncStats = buildSyncStats(6L, 1L, recordsRejected = 1L)
+    assertSyncStatsCoreStatsEquals(expectedSyncStats, actualSyncStats)
+
+    val expectedStreamSyncStats =
+      listOf(
+        StreamSyncStats()
+          .withStreamName(STREAM1_NAME)
+          .withStats(buildSyncStats(3L, 1L, recordsRejected = 1L)),
+        StreamSyncStats()
+          .withStreamName(STREAM2_NAME)
+          .withStats(buildSyncStats(3L, 0L)),
+      )
+    assertStreamSyncStatsCoreStatsEquals(expectedStreamSyncStats, actualStreamSyncStats)
+  }
+
+  @Test
+  fun `the completed stats reporting logic should take rejected records into account`() {
+    statsTracker.updateStats(stream1Message1)
+    statsTracker.updateStats(stream1Message2)
+    val sourceS1State1 = createStreamState(STREAM1_NAME, 2)
+    statsTracker.updateSourceStatesStats(sourceS1State1)
+    // This is so that we keep track of the state Ids, otherwise we do not enter the stats computation if the state id from destination is not known
+    val destS1State1 =
+      sourceS1State1.also {
+        it.withDestinationStats(
+          AirbyteStateStats()
+            .withRecordCount(1.0)
+            .withRejectedRecordCount(1.0),
+        )
+      }
+    statsTracker.updateDestinationStateStats(destS1State1)
+    statsTracker.updateStats(stream1Message3)
+
+    statsTracker.updateStats(stream2Message1)
+    statsTracker.updateStats(stream2Message2)
+    statsTracker.updateStats(stream2Message3)
+
+    val actualSyncStats = statsTracker.getTotalStats(true)
+    val actualStreamSyncStats = statsTracker.getPerStreamStats(true)
+
+    val expectedSyncStats = buildSyncStats(6L, 5L, recordsRejected = 1L)
+    assertSyncStatsCoreStatsEquals(expectedSyncStats, actualSyncStats)
+
+    val expectedStreamSyncStats =
+      listOf(
+        StreamSyncStats()
+          .withStreamName(STREAM1_NAME)
+          .withStats(buildSyncStats(3L, 2L, recordsRejected = 1L)),
+        StreamSyncStats()
+          .withStreamName(STREAM2_NAME)
+          .withStats(buildSyncStats(3L, 3L)),
+      )
+    assertStreamSyncStatsCoreStatsEquals(expectedStreamSyncStats, actualStreamSyncStats)
+  }
+
+  @Test
   fun testSerialStreamStatsTracking() {
     statsTracker.updateStats(stream1Message1)
     statsTracker.updateStats(stream1Message2)
@@ -1232,6 +1312,7 @@ class ParallelStreamStatsTrackerTest {
       .withBytesEmitted(syncStats.bytesEmitted)
       .withRecordsCommitted(syncStats.recordsCommitted)
       .withRecordsEmitted(syncStats.recordsEmitted)
+      .withRecordsRejected(syncStats.recordsRejected)
 
   private fun extractCoreStats(streamSyncStatsList: List<StreamSyncStats>): Map<AirbyteStreamNameNamespacePair, SyncStats> {
     val filterStats: MutableMap<AirbyteStreamNameNamespacePair, SyncStats> = HashMap()
@@ -1256,6 +1337,7 @@ class ParallelStreamStatsTrackerTest {
   private fun buildSyncStats(
     recordsEmitted: Long,
     recordsCommitted: Long,
+    recordsRejected: Long? = null,
   ): SyncStats =
     SyncStats()
       .withRecordsEmitted(recordsEmitted)
@@ -1263,7 +1345,8 @@ class ParallelStreamStatsTrackerTest {
       .withRecordsCommitted(recordsCommitted)
       .withRecordsFilteredOut(0)
       .withBytesFilteredOut(0)
-      .withBytesCommitted(recordsCommitted * MESSAGE_SIZE)
+      .withBytesCommitted((recordsCommitted + (recordsRejected ?: 0)) * MESSAGE_SIZE)
+      .withRecordsRejected(recordsRejected)
 
   private fun createEstimate(
     streamName: String,
