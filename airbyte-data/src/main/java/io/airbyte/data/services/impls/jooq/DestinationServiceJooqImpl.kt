@@ -10,12 +10,14 @@ import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.DestinationConnection
+import io.airbyte.config.JobStatus
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.shared.DestinationAndDefinition
+import io.airbyte.data.services.shared.DestinationConnectionWithCount
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
 import io.airbyte.db.ContextQueryFunction
 import io.airbyte.db.Database
@@ -792,6 +794,93 @@ class DestinationServiceJooqImpl
         return Optional.empty()
       }
     }
+
+    override fun listWorkspaceDestinationConnectionsWithCounts(workspaceId: UUID): List<DestinationConnectionWithCount> =
+      database.query { ctx: DSLContext ->
+        val connectionCount = DSL.field("connection_count", Long::class.java)
+        val lastSync = DSL.field("last_sync", OffsetDateTime::class.java)
+        val succeededCount = DSL.field("succeeded_count", Long::class.java)
+        val failedCount = DSL.field("failed_count", Long::class.java)
+        val runningCount = DSL.field("running_count", Long::class.java)
+        val pendingCount = DSL.field("pending_count", Long::class.java)
+        val incompleteCount = DSL.field("incomplete_count", Long::class.java)
+        val cancelledCount = DSL.field("cancelled_count", Long::class.java)
+
+        // Use raw SQL for the complex query with CTEs
+        val sql =
+          """
+          WITH workspace_connections AS (
+            SELECT c.id, c.destination_id, c.status
+            FROM connection c
+            INNER JOIN actor a ON c.destination_id = a.id
+            WHERE a.workspace_id = ?
+              AND a.actor_type = 'destination'
+              AND a.tombstone = false
+              AND c.status != 'deprecated'
+          ),
+          connection_data AS (
+            SELECT 
+              wc.destination_id,
+              COUNT(wc.id) AS connection_count,
+              MAX(lj.job_created_at) AS last_sync,
+              COUNT(CASE WHEN lj.job_status = 'succeeded' THEN 1 END) AS succeeded_count,
+              COUNT(CASE WHEN lj.job_status = 'failed' THEN 1 END) AS failed_count,
+              COUNT(CASE WHEN lj.job_status = 'running' THEN 1 END) AS running_count,
+              COUNT(CASE WHEN lj.job_status = 'pending' THEN 1 END) AS pending_count,
+              COUNT(CASE WHEN lj.job_status = 'incomplete' THEN 1 END) AS incomplete_count,
+              COUNT(CASE WHEN lj.job_status = 'cancelled' THEN 1 END) AS cancelled_count
+            FROM workspace_connections wc
+            LEFT JOIN LATERAL (
+              SELECT j.created_at AS job_created_at, j.status AS job_status
+              FROM jobs j
+              WHERE j.config_type = 'sync'
+                AND j.scope = wc.id::text
+              ORDER BY j.created_at DESC
+              LIMIT 1
+            ) lj ON TRUE
+            GROUP BY wc.destination_id
+          )
+          SELECT 
+            a.*,
+            COALESCE(cd.connection_count, 0) AS connection_count,
+            cd.last_sync,
+            COALESCE(cd.succeeded_count, 0) AS succeeded_count,
+            COALESCE(cd.failed_count, 0) AS failed_count,
+            COALESCE(cd.running_count, 0) AS running_count,
+            COALESCE(cd.pending_count, 0) AS pending_count,
+            COALESCE(cd.incomplete_count, 0) AS incomplete_count,
+            COALESCE(cd.cancelled_count, 0) AS cancelled_count
+          FROM actor a
+          LEFT JOIN connection_data cd ON a.id = cd.destination_id
+          WHERE a.actor_type = 'destination' 
+            AND a.workspace_id = ?
+            AND a.tombstone = false
+          ORDER BY a.created_at DESC;
+          """.trimIndent()
+
+        val results = ctx.fetch(sql, workspaceId, workspaceId)
+
+        results.map { record ->
+          val destination = DbConverter.buildDestinationConnection(record)
+          val count = record.get(connectionCount).toInt()
+          val lastSyncTime = record.get(lastSync)
+
+          val statusCounts = mutableMapOf<JobStatus, Int>()
+          statusCounts[JobStatus.SUCCEEDED] = record.get(succeededCount).toInt()
+          statusCounts[JobStatus.FAILED] = record.get(failedCount).toInt()
+          statusCounts[JobStatus.RUNNING] = record.get(runningCount).toInt()
+          statusCounts[JobStatus.PENDING] = record.get(pendingCount).toInt()
+          statusCounts[JobStatus.INCOMPLETE] = record.get(incompleteCount).toInt()
+          statusCounts[JobStatus.CANCELLED] = record.get(cancelledCount).toInt()
+
+          DestinationConnectionWithCount(
+            destination,
+            count,
+            lastSyncTime,
+            statusCounts,
+          )
+        }
+      }
 
     companion object {
       private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())

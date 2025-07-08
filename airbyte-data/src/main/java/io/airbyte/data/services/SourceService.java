@@ -11,6 +11,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.data.services.shared.SourceAndDefinition;
+import io.airbyte.data.services.shared.SourceConnectionWithCount;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -78,5 +79,7 @@ public interface SourceService {
                        final UUID workspaceId,
                        final UUID sourceId)
       throws ConfigNotFoundException, JsonValidationException, IOException;
+
+  List<SourceConnectionWithCount> listWorkspaceSourceConnectionsWithCounts(UUID workspaceId) throws IOException;
 
 }

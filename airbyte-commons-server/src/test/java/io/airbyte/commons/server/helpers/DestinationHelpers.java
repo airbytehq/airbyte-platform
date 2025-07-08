@@ -12,6 +12,7 @@ import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.StandardDestinationDefinition;
+import io.airbyte.data.services.shared.DestinationConnectionWithCount;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -62,6 +63,10 @@ public class DestinationHelpers {
         .withConfiguration(implementationJson)
         .withTombstone(tombstone)
         .withResourceRequirements(resourceRequirements);
+  }
+
+  public static DestinationConnectionWithCount generateDestinationWithCount(final DestinationConnection destination) {
+    return new DestinationConnectionWithCount(destination, 0, null, java.util.Map.of());
   }
 
   public static ScopedResourceRequirements getResourceRequirementsForDestination() {

@@ -1,60 +1,40 @@
-import React, { useMemo } from "react";
-import { useIntl } from "react-intl";
+import React from "react";
+import { FormattedMessage } from "react-intl";
 
-import { StatusIcon, StatusIconProps } from "components/ui/StatusIcon";
-import { StatusIconStatus } from "components/ui/StatusIcon/StatusIcon";
-
-import { Status } from "../types";
-
-const _statusConfig: Array<{ status: Status; statusIconStatus?: StatusIconStatus; titleId: string }> = [
-  { status: Status.ACTIVE, statusIconStatus: "success", titleId: "connection.successSync" },
-  { status: Status.INACTIVE, statusIconStatus: "inactive", titleId: "connection.disabledConnection" },
-  { status: Status.FAILED, statusIconStatus: "error", titleId: "connection.failedSync" },
-  { status: Status.EMPTY, statusIconStatus: "sleep", titleId: "connection.noSyncData" },
-];
-
-interface AllConnectionStatusConnectEntity {
-  name: string;
-  connector: string;
-  status: string;
-  lastSyncStatus: string | null;
-}
-
+import { FlexContainer } from "components/ui/Flex";
+import { StatusIcon, StatusIconStatus } from "components/ui/StatusIcon";
+import { Text } from "components/ui/Text";
 interface AllConnectionsStatusCellProps {
-  connectEntities: AllConnectionStatusConnectEntity[];
+  statuses?: Record<string, number>;
 }
 
-const AllConnectionsStatusCell: React.FC<AllConnectionsStatusCellProps> = ({ connectEntities }) => {
-  const { formatMessage } = useIntl();
+// The API just returns Record<string, number>, so we use this map to convert to supported statuses
+const responseToStatusIconMap: Map<string, StatusIconStatus> = new Map([
+  ["succeeded", "success"],
+  ["failed", "error"],
+]);
 
-  const propsForStatusIcons: StatusIconProps[] = useMemo(() => {
-    const allIconProps: StatusIconProps[] = [];
-    for (const { status, statusIconStatus, titleId } of _statusConfig) {
-      const filteredEntities = connectEntities.filter((entity) => entity.lastSyncStatus === status);
-      if (filteredEntities.length) {
-        allIconProps.push({
-          status: statusIconStatus,
-          value: filteredEntities.length,
-          title: titleId,
-        });
-      }
+export const AllConnectionsStatusCell: React.FC<AllConnectionsStatusCellProps> = ({ statuses }) => {
+  const statusesToDisplay: Array<{ status: StatusIconStatus; count: number }> = [];
+  Object.entries(statuses || {}).forEach(([key, value]) => {
+    const statusKey = responseToStatusIconMap.get(key);
+    if (statusKey !== undefined && value > 0) {
+      statusesToDisplay.push({
+        status: statusKey,
+        count: value,
+      });
     }
+  });
 
-    return allIconProps;
-  }, [connectEntities]);
-
-  return (
-    <>
-      {propsForStatusIcons.map((statusIconProps) => (
-        <StatusIcon
-          key={statusIconProps.title}
-          {...statusIconProps}
-          title={formatMessage({ id: statusIconProps.title })}
-          size="sm"
-        />
+  return statusesToDisplay.length === 0 ? (
+    <Text>
+      <FormattedMessage id="general.dash" />
+    </Text>
+  ) : (
+    <FlexContainer>
+      {statusesToDisplay.map(({ status, count }) => (
+        <StatusIcon status={status} value={count} size="sm" />
       ))}
-    </>
+    </FlexContainer>
   );
 };
-
-export default AllConnectionsStatusCell;

@@ -32,6 +32,7 @@ import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Configs;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.JobStatus;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
@@ -45,6 +46,7 @@ import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.shared.DestinationConnectionWithCount;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.domain.models.SecretStorage;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
@@ -59,7 +61,9 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -295,10 +299,47 @@ public class DestinationHandler {
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
     final List<DestinationRead> destinationReads = new ArrayList<>();
-    final List<DestinationConnection> destinationConnections =
-        destinationService.listWorkspaceDestinationConnection(workspaceIdRequestBody.getWorkspaceId());
-    for (final DestinationConnection destinationConnection : destinationConnections) {
-      destinationReads.add(buildDestinationReadWithStatus(destinationConnection));
+    final List<DestinationConnectionWithCount> destinationConnectionsWithCounts =
+        destinationService.listWorkspaceDestinationConnectionsWithCounts(workspaceIdRequestBody.getWorkspaceId());
+    for (final DestinationConnectionWithCount destinationConnectionWithCount : destinationConnectionsWithCounts) {
+      final DestinationRead destinationRead = buildDestinationReadWithStatus(destinationConnectionWithCount.destination());
+      destinationRead.numConnections(destinationConnectionWithCount.connectionCount());
+
+      if (destinationConnectionWithCount.lastSync() != null) {
+        destinationRead.lastSync(destinationConnectionWithCount.lastSync().toEpochSecond());
+      }
+
+      // Convert Map<JobStatus, Integer> to Map<String, Integer> for API
+      final Map<String, Integer> statusCountsMap = new HashMap<>();
+      for (Map.Entry<JobStatus, Integer> entry : destinationConnectionWithCount.connectionJobStatuses().entrySet()) {
+        String statusKey;
+        switch (entry.getKey()) {
+          case SUCCEEDED:
+            statusKey = "succeeded";
+            break;
+          case FAILED:
+            statusKey = "failed";
+            break;
+          case RUNNING:
+            statusKey = "running";
+            break;
+          case PENDING:
+            statusKey = "pending";
+            break;
+          case INCOMPLETE:
+            statusKey = "incomplete";
+            break;
+          case CANCELLED:
+            statusKey = "cancelled";
+            break;
+          default:
+            continue; // Skip unknown statuses
+        }
+        statusCountsMap.put(statusKey, entry.getValue());
+      }
+      destinationRead.connectionJobStatuses(statusCountsMap);
+
+      destinationReads.add(destinationRead);
     }
 
     return new DestinationReadList().destinations(destinationReads);

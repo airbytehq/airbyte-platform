@@ -10,6 +10,7 @@ import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.shared.DestinationAndDefinition;
+import io.airbyte.data.services.shared.DestinationConnectionWithCount;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -81,5 +82,7 @@ public interface DestinationService {
                             final UUID workspaceId,
                             final UUID destinationId)
       throws ConfigNotFoundException, JsonValidationException, IOException;
+
+  List<DestinationConnectionWithCount> listWorkspaceDestinationConnectionsWithCounts(UUID workspaceId) throws IOException;
 
 }

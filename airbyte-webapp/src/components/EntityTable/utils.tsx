@@ -19,65 +19,28 @@ const getConnectorTypeName = (connectorSpec: DestinationSnippetRead | SourceSnip
   return "sourceName" in connectorSpec ? connectorSpec.sourceName : connectorSpec.destinationName;
 };
 
-const getConnectorTypeId = (connectorSpec: DestinationSnippetRead | SourceSnippetRead) => {
-  return "sourceId" in connectorSpec ? connectorSpec.sourceId : connectorSpec.destinationId;
-};
-
 // TODO: types in next methods look a bit ugly
 export function getEntityTableData<
   S extends "source" | "destination",
   SoD extends S extends "source" ? SourceRead : DestinationRead,
->(entities: SoD[], connections: WebBackendConnectionListItem[], type: S): EntityTableDataItem[] {
-  const connectType = type === "source" ? "destination" : "source";
-
+>(entities: SoD[], type: S): EntityTableDataItem[] {
   const mappedEntities = entities.map((entityItem) => {
     const entitySoDId = entityItem[`${type}Id` as keyof SoD] as unknown as string;
     const entitySoDName = entityItem[`${type}Name` as keyof SoD] as unknown as string;
-    const entityConnections = connections.filter(
-      (connectionItem) => getConnectorTypeId(connectionItem[type]) === entitySoDId
-    );
-
-    if (!entityConnections.length) {
-      return {
-        entityId: entitySoDId,
-        entityName: entityItem.name,
-        enabled: true,
-        connectorName: entitySoDName,
-        connectorIcon: entityItem.icon,
-        lastSync: null,
-        connectEntities: [],
-        isActive: entityItem.status === ActorStatus.active,
-        breakingChanges: entityItem.breakingChanges,
-        isVersionOverrideApplied: entityItem.isVersionOverrideApplied ?? false,
-        supportState: entityItem.supportState,
-      };
-    }
-
-    const connectEntities = entityConnections.map((connection) => ({
-      name: connection[connectType]?.name || "",
-      connector: getConnectorTypeName(connection[connectType]),
-      status: connection.status,
-      lastSyncStatus: getConnectionSyncStatus(connection.status, connection.latestSyncJobStatus),
-    }));
-
-    const sortBySync = entityConnections.sort((item1, item2) =>
-      item1.latestSyncJobCreatedAt && item2.latestSyncJobCreatedAt
-        ? item2.latestSyncJobCreatedAt - item1.latestSyncJobCreatedAt
-        : 0
-    );
 
     return {
       entityId: entitySoDId,
       entityName: entityItem.name,
       enabled: true,
       connectorName: entitySoDName,
-      lastSync: sortBySync?.[0].latestSyncJobCreatedAt,
-      connectEntities,
+      numConnections: entityItem.numConnections ?? 0,
       connectorIcon: entityItem.icon,
       isActive: entityItem.status === ActorStatus.active,
       breakingChanges: entityItem.breakingChanges,
       isVersionOverrideApplied: entityItem.isVersionOverrideApplied ?? false,
       supportState: entityItem.supportState,
+      connectionJobStatuses: entityItem.connectionJobStatuses,
+      lastSync: entityItem.lastSync,
     };
   });
 

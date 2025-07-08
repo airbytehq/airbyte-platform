@@ -11,11 +11,11 @@ import { getHumanReadableUpgradeDeadline, shouldDisplayBreakingChangeBanner } fr
 import { FeatureItem, useFeature } from "core/services/features";
 import { getBreakingChangeErrorMessage } from "pages/connections/StreamStatusPage/ConnectionStatusMessages";
 
-import AllConnectionsStatusCell from "./components/AllConnectionsStatusCell";
-import ConnectEntitiesCell from "./components/ConnectEntitiesCell";
+import { AllConnectionsStatusCell } from "./components/AllConnectionsStatusCell";
 import { ConnectorName } from "./components/ConnectorName";
 import { EntityNameCell } from "./components/EntityNameCell";
-import { LastSync } from "./components/LastSync";
+import { LastSyncCell } from "./components/LastSyncCell";
+import { NumberOfConnectionsCell } from "./components/NumberOfConnectionsCell";
 import styles from "./ImplementationTable.module.scss";
 import { EntityTableDataItem } from "./types";
 import { ScrollParentContext } from "../ui/ScrollParent";
@@ -64,8 +64,8 @@ const ImplementationTable: React.FC<ImplementationTableProps> = ({ data, entity,
         ),
         sortingFn: "alphanumeric",
       }),
-      columnHelper.accessor("connectEntities", {
-        header: () => <FormattedMessage id={`tables.${entity}ConnectWith`} />,
+      columnHelper.accessor("numConnections", {
+        header: () => <FormattedMessage id="tables.connector.connections" />,
         meta: {
           noPadding: true,
           thClassName: styles.thConnectEntities,
@@ -73,7 +73,7 @@ const ImplementationTable: React.FC<ImplementationTableProps> = ({ data, entity,
         },
         cell: (props) => (
           <Link to={props.row.original.entityId} variant="primary" className={styles.cellContent}>
-            <ConnectEntitiesCell values={props.cell.getValue()} entity={entity} enabled={props.row.original.enabled} />
+            <NumberOfConnectionsCell numConnections={props.cell.getValue()} enabled={props.row.original.enabled} />
           </Link>
         ),
         enableSorting: false,
@@ -85,12 +85,12 @@ const ImplementationTable: React.FC<ImplementationTableProps> = ({ data, entity,
         },
         cell: (props) => (
           <Link to={props.row.original.entityId} variant="primary" className={styles.cellContent}>
-            <LastSync timeInSeconds={props.cell.getValue() || 0} enabled={props.row.original.enabled} />
+            <LastSyncCell timeInSeconds={props.cell.getValue() || 0} enabled={props.row.original.enabled} />
           </Link>
         ),
         sortUndefined: 1,
       }),
-      columnHelper.accessor("connectEntities", {
+      columnHelper.accessor("connectionJobStatuses", {
         header: () => <FormattedMessage id="sources.status" />,
         id: "status",
         meta: {
@@ -99,7 +99,7 @@ const ImplementationTable: React.FC<ImplementationTableProps> = ({ data, entity,
         },
         cell: (props) => (
           <Link to={props.row.original.entityId} variant="primary" className={styles.cellContent}>
-            <AllConnectionsStatusCell connectEntities={props.cell.getValue()} />
+            <AllConnectionsStatusCell statuses={props.cell.getValue()} />
           </Link>
         ),
         enableSorting: false,

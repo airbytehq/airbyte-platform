@@ -13,7 +13,7 @@ import { ConnectionStatus } from "./components/ConnectionStatus";
 import { ConnectorName } from "./components/ConnectorName";
 import { EntityWarningsCell } from "./components/EntityWarningsCell";
 import { FrequencyCell } from "./components/FrequencyCell";
-import { LastSync } from "./components/LastSync";
+import { LastSyncCell } from "./components/LastSyncCell";
 import { StateSwitchCell } from "./components/StateSwitchCell";
 import { TagsCell } from "./components/TagsCell";
 import styles from "./ConnectionTable.module.scss";
@@ -110,7 +110,7 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
       }),
       columnHelper.accessor("lastSync", {
         header: () => <FormattedMessage id="tables.lastSync" />,
-        cell: LastSyncCell,
+        cell: LastSyncCellWithLink,
         meta: {
           thClassName: styles.lastSync,
           noPadding: true,
@@ -193,7 +193,9 @@ const ConnectorNameCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, 
   );
 };
 
-const LastSyncCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, number | null | undefined>> = (props) => {
+const LastSyncCellWithLink: ColumnDefTemplate<CellContext<ConnectionTableDataItem, number | null | undefined>> = (
+  props
+) => {
   const createLink = useCurrentWorkspaceLink();
   return (
     <Link
@@ -201,7 +203,7 @@ const LastSyncCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, numbe
       variant="primary"
       className={styles.cellContent}
     >
-      <LastSync timeInSeconds={props.cell.getValue()} enabled={props.row.original.enabled} />
+      <LastSyncCell timeInSeconds={props.cell.getValue()} enabled={props.row.original.enabled} />
     </Link>
   );
 };
