@@ -136,8 +136,10 @@ create table "public"."sync_stats" (
 create index "airbyte_jobs_migrations_s_idx" on "public"."airbyte_jobs_migrations"("success" asc);
 create index "attempts_status_idx" on "public"."attempts"("status" asc);
 create unique index "job_attempt_idx" on "public"."attempts"("job_id" asc, "attempt_number" asc);
+create index "jobs_config_scope_created_at_idx" on "public"."jobs"("config_type" asc, "scope" asc, "created_at" desc, "status" asc);
 create index "jobs_config_type_idx" on "public"."jobs"("config_type" asc);
 create index "jobs_scope_idx" on "public"."jobs"("scope" asc);
+create index "jobs_status_config_scope_idx" on "public"."jobs"("status" asc, "config_type" asc, "scope" asc);
 create index "jobs_status_idx" on "public"."jobs"("status" asc);
 create index "jobs_updated_at_idx" on "public"."jobs"("updated_at" asc);
 create index "scope_created_at_covering_idx" on "public"."jobs"("scope" asc, "created_at" desc, "status" asc, "config_type" asc);
