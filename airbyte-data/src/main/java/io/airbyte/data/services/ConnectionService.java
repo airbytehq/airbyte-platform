@@ -86,4 +86,23 @@ public interface ConnectionService {
 
   List<StreamDescriptorForDestination> listStreamsForDestination(UUID destinationId, UUID connectionId) throws IOException;
 
+  /**
+   * Get aggregated connection status counts for a workspace.
+   *
+   * @param workspaceId workspace id
+   * @return connection status counts
+   * @throws IOException if there is an issue while interacting with db.
+   */
+  ConnectionStatusCounts getConnectionStatusCounts(UUID workspaceId) throws IOException;
+
+  /**
+   * Record representing connection status counts for a workspace.
+   */
+  record ConnectionStatusCounts(
+                                int running,
+                                int healthy,
+                                int failed,
+                                int paused,
+                                int notSynced) {}
+
 }

@@ -46,10 +46,12 @@ import io.airbyte.api.model.generated.WebBackendConnectionListRequestBody;
 import io.airbyte.api.model.generated.WebBackendConnectionRead;
 import io.airbyte.api.model.generated.WebBackendConnectionReadList;
 import io.airbyte.api.model.generated.WebBackendConnectionRequestBody;
+import io.airbyte.api.model.generated.WebBackendConnectionStatusCounts;
 import io.airbyte.api.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.model.generated.WebBackendOperationCreateOrUpdate;
 import io.airbyte.api.model.generated.WebBackendWorkspaceState;
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult;
+import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.converters.ApiConverters;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
@@ -186,6 +188,17 @@ public class WebBackendConnectionsHandler {
         .hasConnections(connectionCount > 0)
         .hasDestinations(destinationCount > 0)
         .hasSources(sourceCount > 0);
+  }
+
+  public WebBackendConnectionStatusCounts webBackendGetConnectionStatusCounts(final WorkspaceIdRequestBody workspaceIdRequestBody)
+      throws IOException {
+    final var statusCounts = connectionService.getConnectionStatusCounts(workspaceIdRequestBody.getWorkspaceId());
+    return new WebBackendConnectionStatusCounts()
+        .running(statusCounts.running())
+        .healthy(statusCounts.healthy())
+        .failed(statusCounts.failed())
+        .paused(statusCounts.paused())
+        .notSynced(statusCounts.notSynced());
   }
 
   public ConnectionStateType getStateType(final ConnectionIdRequestBody connectionIdRequestBody) throws IOException {

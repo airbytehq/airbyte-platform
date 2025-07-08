@@ -1214,4 +1214,38 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
     });
   }
 
+  @Override
+  public ConnectionStatusCounts getConnectionStatusCounts(final UUID workspaceId) throws IOException {
+    final String sql = """
+                       SELECT
+                         COALESCE(SUM(CASE WHEN lj.latest_status = 'running' THEN 1 ELSE 0 END), 0) AS running,
+                         COALESCE(SUM(CASE WHEN lj.latest_status = 'succeeded' THEN 1 ELSE 0 END), 0) AS healthy,
+                         COALESCE(SUM(CASE WHEN lj.latest_status IN ('failed', 'cancelled', 'incomplete') THEN 1 ELSE 0 END), 0) AS failed,
+                         COALESCE(SUM(CASE WHEN c.status = 'inactive' THEN 1 ELSE 0 END), 0) AS paused,
+                         COALESCE(SUM(CASE WHEN lj.latest_status IS NULL AND c.status != 'inactive' THEN 1 ELSE 0 END), 0) AS not_synced
+                       FROM connection c
+                       JOIN actor a ON c.source_id = a.id
+                       LEFT JOIN LATERAL (
+                         SELECT j.status AS latest_status, scope as connection_id
+                         FROM jobs j
+                         WHERE j.config_type = 'sync'
+                           AND j.scope = c.id::text
+                         ORDER BY j.created_at DESC
+                         LIMIT 1
+                       ) lj on lj.connection_id = c.id::text
+                       WHERE a.workspace_id = ?
+                         AND c.status != 'deprecated'
+                       """;
+
+    return database.query(ctx -> {
+      final var result = ctx.fetch(sql, workspaceId).get(0);
+      return new ConnectionStatusCounts(
+          result.get("running", Integer.class),
+          result.get("healthy", Integer.class),
+          result.get("failed", Integer.class),
+          result.get("paused", Integer.class),
+          result.get("not_synced", Integer.class));
+    });
+  }
+
 }

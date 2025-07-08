@@ -38,6 +38,7 @@ import {
   webBackendGetConnection,
   webBackendListConnectionsForWorkspace,
   webBackendUpdateConnection,
+  webBackendGetConnectionStatusCounts,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
@@ -101,6 +102,7 @@ export const connectionsKeys = {
       requestBody.createdAtEnd,
     ] as const,
   event: (eventId: string) => [...connectionsKeys.all, "event", eventId] as const,
+  statusCounts: () => [...connectionsKeys.all, "statusCounts"] as const,
 };
 
 export interface ConnectionValues {
@@ -783,5 +785,14 @@ export const useGetConnectionsGraphData = (requestBody: ConnectionEventsListMini
     {
       refetchInterval: CONNECTION_STATUS_REFETCH_INTERVAL,
     }
+  );
+};
+
+export const useGetConnectionStatusesCounts = () => {
+  const workspaceId = useCurrentWorkspaceId();
+  const requestOptions = useRequestOptions();
+
+  return useQuery(connectionsKeys.statusCounts(), () =>
+    webBackendGetConnectionStatusCounts({ workspaceId }, requestOptions)
   );
 };

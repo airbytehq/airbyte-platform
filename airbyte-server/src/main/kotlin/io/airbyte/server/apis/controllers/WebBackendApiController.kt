@@ -13,6 +13,7 @@ import io.airbyte.api.model.generated.WebBackendConnectionListRequestBody
 import io.airbyte.api.model.generated.WebBackendConnectionRead
 import io.airbyte.api.model.generated.WebBackendConnectionReadList
 import io.airbyte.api.model.generated.WebBackendConnectionRequestBody
+import io.airbyte.api.model.generated.WebBackendConnectionStatusCounts
 import io.airbyte.api.model.generated.WebBackendConnectionUpdate
 import io.airbyte.api.model.generated.WebBackendCronExpressionDescription
 import io.airbyte.api.model.generated.WebBackendDescribeCronExpressionRequestBody
@@ -21,6 +22,7 @@ import io.airbyte.api.model.generated.WebBackendValidateMappersResponse
 import io.airbyte.api.model.generated.WebBackendWorkspaceState
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult
 import io.airbyte.api.model.generated.WebappConfigResponse
+import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
@@ -123,6 +125,17 @@ open class WebBackendApiController(
     execute {
       TracingHelper.addWorkspace(webBackendConnectionListRequestBody.workspaceId)
       webBackendConnectionsHandler.webBackendListConnectionsForWorkspace(webBackendConnectionListRequestBody)
+    }
+
+  @Post("/connections/status_counts")
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun webBackendGetConnectionStatusCounts(
+    @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
+  ): WebBackendConnectionStatusCounts? =
+    execute {
+      TracingHelper.addWorkspace(workspaceIdRequestBody.workspaceId)
+      webBackendConnectionsHandler.webBackendGetConnectionStatusCounts(workspaceIdRequestBody)
     }
 
   @Post("/connections/update")

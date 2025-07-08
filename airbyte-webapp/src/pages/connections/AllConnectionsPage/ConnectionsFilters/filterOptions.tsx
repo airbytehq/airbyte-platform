@@ -4,7 +4,7 @@ import { FormattedMessage } from "react-intl";
 import { ConnectorIcon } from "components/ConnectorIcon";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-import { Text } from "components/ui/Text";
+import { Text, TextColor } from "components/ui/Text";
 
 import {
   DestinationDefinitionId,
@@ -13,15 +13,15 @@ import {
 } from "core/api/types/AirbyteClient";
 import { naturalComparatorBy } from "core/utils/objects";
 
-import { connectionStatColors, SummaryKey } from "../ConnectionsSummary";
+import { SummaryKey } from "../ConnectionsSummary";
 
 type filterIconType = "successFilled" | "errorFilled" | "sync" | "pauseFilled";
 
-const generateStatusFilterOption = (value: SummaryKey, id: string, iconType: filterIconType, color: SummaryKey) => ({
+const generateStatusFilterOption = (value: SummaryKey, id: string, iconType: filterIconType, color: TextColor) => ({
   label: (
     <FlexContainer gap="sm" alignItems="center">
       <FlexItem>
-        <Text color={connectionStatColors[color]} as="span">
+        <Text color={color} as="span">
           <Icon type={iconType} size="md" />
         </Text>
       </FlexItem>
@@ -53,9 +53,9 @@ export const statusFilterOptions = [
     ),
     value: null,
   },
-  generateStatusFilterOption("healthy", "tables.connections.filters.status.healthy", "successFilled", "healthy"),
-  generateStatusFilterOption("failed", "tables.connections.filters.status.failed", "errorFilled", "failed"),
-  generateStatusFilterOption("running", "tables.connections.filters.status.running", "sync", "running"),
+  generateStatusFilterOption("healthy", "tables.connections.filters.status.healthy", "successFilled", "green600"),
+  generateStatusFilterOption("failed", "tables.connections.filters.status.failed", "errorFilled", "red"),
+  generateStatusFilterOption("running", "tables.connections.filters.status.running", "sync", "blue"),
 ];
 
 export const stateFilterOptions = [

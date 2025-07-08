@@ -6,7 +6,7 @@ import { HeadingElementType } from "components/ui/Heading";
 import styles from "./Text.module.scss";
 
 export type TextSize = "xs" | "sm" | "md" | "lg" | "xl";
-type TextColor =
+export type TextColor =
   | "darkBlue"
   | "grey"
   | "grey300"

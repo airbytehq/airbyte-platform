@@ -1197,6 +1197,7 @@
   "tables.connections.filters.status.failed": "Failed",
   "tables.connections.filters.status.running": "Running",
   "tables.connections.filters.status.paused": "Paused",
+  "tables.connections.filters.status.notSynced": "Not synced",
   "tables.connections.filters.source.all": "All sources",
   "tables.connections.filters.destination.all": "All destinations",
   "tables.connections.filters.state.all": "All connections",

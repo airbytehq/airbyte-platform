@@ -3399,6 +3399,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/web_backend/connections/status_counts:
+    post:
+      tags:
+        - web_backend
+      summary: Returns aggregated connection status counts for a workspace.
+      operationId: webBackendGetConnectionStatusCounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebBackendConnectionStatusCounts"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/web_backend/connections/get:
     post:
       tags:
@@ -11077,6 +11100,30 @@ components:
           type: boolean
         hasDestinations:
           type: boolean
+    WebBackendConnectionStatusCounts:
+      type: object
+      required:
+        - running
+        - healthy
+        - failed
+        - paused
+        - notSynced
+      properties:
+        running:
+          type: integer
+          description: Number of connections currently running/syncing
+        healthy:
+          type: integer
+          description: Number of connections with last sync succeeded
+        failed:
+          type: integer
+          description: Number of connections with last sync failed/cancelled/incomplete
+        paused:
+          type: integer
+          description: Number of connections that are inactive
+        notSynced:
+          type: integer
+          description: Number of connections that have not yet synced
     # SLUG
     SlugRequestBody:
       type: object
