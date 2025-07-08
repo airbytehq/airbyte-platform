@@ -19,8 +19,7 @@ import io.airbyte.api.client.model.generated.WorkspaceCreate
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.json.Jsons
 import io.airbyte.test.utils.AcceptanceTestHarness
-import io.airbyte.test.utils.AcceptanceTestUtils
-import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient
+import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteAdminApiClient
 import io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog
 import io.airbyte.test.utils.TestConnectionCreate
 import org.junit.jupiter.api.AfterEach
@@ -111,7 +110,7 @@ internal class SchemaManagementTests {
   @Throws(URISyntaxException::class, IOException::class, InterruptedException::class, GeneralSecurityException::class)
   private fun init() {
     // Set up the API client.
-    val airbyteApiClient = createAirbyteApiClient(AcceptanceTestUtils.getAirbyteApiUrl(), mapOf(GATEWAY_AUTH_HEADER to AIRBYTE_AUTH_HEADER))
+    val airbyteApiClient = createAirbyteAdminApiClient()
 
     val workspaceId =
       if (System.getenv()[AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID] == null) {
