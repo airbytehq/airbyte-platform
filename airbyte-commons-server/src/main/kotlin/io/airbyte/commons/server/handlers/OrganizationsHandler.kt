@@ -170,10 +170,14 @@ open class OrganizationsHandler(
     // org list, we need to select those as well. This can happen when the nameFilter filters out
     // all orgs, but includes a workspace. I suspect that this list will be quite small.
     val orgSet = orgListResp.organizations.map { it.organizationId }.toSet()
-    val orgsToRetrieve = workspaceListResp.workspaces.filter { !orgSet.contains(it.organizationId) }
+    val orgIdsToRetrieve =
+      workspaceListResp.workspaces
+        .filter { !orgSet.contains(it.organizationId) }
+        .map { it.organizationId }
+        .toSet()
 
-    for (org in orgsToRetrieve) {
-      val retrieved = this.getOrganization(OrganizationIdRequestBody().organizationId(org.organizationId))
+    for (orgId in orgIdsToRetrieve) {
+      val retrieved = this.getOrganization(OrganizationIdRequestBody().organizationId(orgId))
       orgListResp.addOrganizationsItem(retrieved)
     }
 
