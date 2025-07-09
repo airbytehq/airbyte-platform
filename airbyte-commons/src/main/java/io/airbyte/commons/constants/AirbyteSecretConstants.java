@@ -17,7 +17,7 @@ public final class AirbyteSecretConstants {
   /**
    * A prefix to return before all secret coordinate response values.
    */
-  public static final String AIRBYTE_SECRET_COORDINATE_PREFIX = "airbyte_secret_coordinate::";
+  public static final String AIRBYTE_SECRET_COORDINATE_PREFIX = "secret_coordinate::";
 
   /**
    * Mask value that is displayed in place of a value associated with an airbyte secret.
