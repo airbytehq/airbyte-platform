@@ -58,4 +58,5 @@ export enum SettingsRoutePaths {
   Applications = "applications",
   License = "license",
   User = "user",
+  Embedded = "embedded",
 }

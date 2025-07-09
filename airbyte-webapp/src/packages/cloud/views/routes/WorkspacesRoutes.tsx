@@ -9,7 +9,7 @@ import { usePrefetchWorkspaceData } from "core/api/cloud";
 import { useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
-import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
+import { useExperimentContext } from "hooks/services/Experiment";
 import OrganizationBillingPage from "packages/cloud/views/billing/OrganizationBillingPage";
 import OrganizationUsagePage from "packages/cloud/views/billing/OrganizationUsagePage";
 import { CloudSettingsPage } from "packages/cloud/views/settings/CloudSettingsPage";
@@ -55,8 +55,6 @@ export const WorkspacesRoutes: React.FC = () => {
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
-  const allowConfigTemplateEndpoints = useExperiment("platform.allow-config-template-endpoints");
-  const canManageEmbedded = useIntent("CreateConfigTemplate", { organizationId: workspace.organizationId });
 
   useExperimentContext("organization", workspace.organizationId);
 
@@ -101,9 +99,7 @@ export const WorkspacesRoutes: React.FC = () => {
         <Route path={CloudSettingsRoutePaths.Source} element={<SettingsSourcesPage />} />
         <Route path={CloudSettingsRoutePaths.Destination} element={<SettingsDestinationsPage />} />
         <Route path={CloudSettingsRoutePaths.Notifications} element={<NotificationPage />} />
-        {allowConfigTemplateEndpoints && canManageEmbedded && (
-          <Route path={RoutePaths.EmbeddedOnboarding} element={<EmbeddedSettingsPage />} />
-        )}
+        <Route path={SettingsRoutePaths.Embedded} element={<EmbeddedSettingsPage />} />
         {supportsCloudDbtIntegration && (
           <Route path={CloudSettingsRoutePaths.DbtCloud} element={<DbtCloudSettingsView />} />
         )}
