@@ -137,44 +137,51 @@ class JobHistoryHandlerTest {
       .withRecordsEmitted(55L)
       .withBytesEmitted(22L)
       .withRecordsCommitted(55L)
-      .withBytesCommitted(22L),
+      .withBytesCommitted(22L)
+      .withRecordsRejected(3L),
       List.of(
           new StreamSyncStats().withStreamNamespace("ns1").withStreamName("stream1")
               .withStats(new SyncStats()
                   .withRecordsEmitted(5L)
                   .withBytesEmitted(2L)
                   .withRecordsCommitted(5L)
-                  .withBytesCommitted(2L)),
+                  .withBytesCommitted(2L)
+                  .withRecordsRejected(1L)),
           new StreamSyncStats().withStreamName("stream2")
               .withStats(new SyncStats()
                   .withRecordsEmitted(50L)
                   .withBytesEmitted(20L)
                   .withRecordsCommitted(50L)
-                  .withBytesCommitted(20L))));
+                  .withBytesCommitted(20L)
+                  .withRecordsRejected(2L))));
 
   private static final AttemptStats SECOND_ATTEMPT_STATS = new AttemptStats(new SyncStats()
       .withRecordsEmitted(5500L)
       .withBytesEmitted(2200L)
       .withRecordsCommitted(5500L)
-      .withBytesCommitted(2200L),
+      .withBytesCommitted(2200L)
+      .withRecordsRejected(150L),
       List.of(
           new StreamSyncStats().withStreamNamespace("ns1").withStreamName("stream1")
               .withStats(new SyncStats()
                   .withRecordsEmitted(500L)
                   .withBytesEmitted(200L)
                   .withRecordsCommitted(500L)
-                  .withBytesCommitted(200L)),
+                  .withBytesCommitted(200L)
+                  .withRecordsRejected(50L)),
           new StreamSyncStats().withStreamName("stream2")
               .withStats(new SyncStats()
                   .withRecordsEmitted(5000L)
                   .withBytesEmitted(2000L)
                   .withRecordsCommitted(5000L)
-                  .withBytesCommitted(2000L))));
+                  .withBytesCommitted(2000L)
+                  .withRecordsRejected(100L))));
 
   private static final io.airbyte.api.model.generated.AttemptStats FIRST_ATTEMPT_STATS_API = new io.airbyte.api.model.generated.AttemptStats()
       .recordsEmitted(55L)
       .bytesEmitted(22L)
-      .recordsCommitted(55L);
+      .recordsCommitted(55L)
+      .recordsRejected(3L);
 
   private static final List<AttemptStreamStats> FIRST_ATTEMPT_STREAM_STATS = List.of(
       new AttemptStreamStats()
@@ -183,18 +190,21 @@ class JobHistoryHandlerTest {
           .stats(new io.airbyte.api.model.generated.AttemptStats()
               .recordsEmitted(5L)
               .bytesEmitted(2L)
-              .recordsCommitted(5L)),
+              .recordsCommitted(5L)
+              .recordsRejected(1L)),
       new AttemptStreamStats()
           .streamName("stream2")
           .stats(new io.airbyte.api.model.generated.AttemptStats()
               .recordsEmitted(50L)
               .bytesEmitted(20L)
-              .recordsCommitted(50L)));
+              .recordsCommitted(50L)
+              .recordsRejected(2L)));
 
   private static final io.airbyte.api.model.generated.AttemptStats SECOND_ATTEMPT_STATS_API = new io.airbyte.api.model.generated.AttemptStats()
       .recordsEmitted(5500L)
       .bytesEmitted(2200L)
-      .recordsCommitted(5500L);
+      .recordsCommitted(5500L)
+      .recordsRejected(150L);
 
   private static final List<AttemptStreamStats> SECOND_ATTEMPT_STREAM_STATS = List.of(
       new AttemptStreamStats()
@@ -203,13 +213,15 @@ class JobHistoryHandlerTest {
           .stats(new io.airbyte.api.model.generated.AttemptStats()
               .recordsEmitted(500L)
               .bytesEmitted(200L)
-              .recordsCommitted(500L)),
+              .recordsCommitted(500L)
+              .recordsRejected(50L)),
       new AttemptStreamStats()
           .streamName("stream2")
           .stats(new io.airbyte.api.model.generated.AttemptStats()
               .recordsEmitted(5000L)
               .bytesEmitted(2000L)
-              .recordsCommitted(5000L)));
+              .recordsCommitted(5000L)
+              .recordsRejected(100L)));
 
   private ConnectionService connectionService;
   private SourceHandler sourceHandler;
@@ -356,28 +368,32 @@ class JobHistoryHandlerTest {
               .recordsEmitted(5550L)
               .bytesEmitted(2220L)
               .recordsCommitted(5550L)
-              .bytesCommitted(2220L))
+              .bytesCommitted(2220L)
+              .recordsRejected(152L))
           .streamAggregatedStats(List.of(
               new StreamStats()
                   .streamName("stream2")
                   .recordsEmitted(5050L)
                   .bytesEmitted(2020L)
                   .recordsCommitted(5050L)
-                  .bytesCommitted(2020L),
+                  .bytesCommitted(2020L)
+                  .recordsRejected(102L),
               new StreamStats()
                   .streamName("stream1")
                   .streamNamespace("ns1")
                   .recordsEmitted(500L)
                   .bytesEmitted(200L)
                   .recordsCommitted(500L)
-                  .bytesCommitted(200L))))
+                  .bytesCommitted(200L)
+                  .recordsRejected(50L))))
           .attempts(List.of(expectedAttemptRead1, expectedAttemptRead2));
       final var latestJobWithAttemptRead = new JobWithAttemptsRead().job(toJobInfo(latestJobNoAttempt)
           .aggregatedStats(new JobAggregatedStats()
               .recordsEmitted(0L)
               .bytesEmitted(0L)
               .recordsCommitted(0L)
-              .bytesCommitted(0L))
+              .bytesCommitted(0L)
+              .recordsRejected(0L))
           .streamAggregatedStats(Collections.emptyList()))
           .attempts(Collections.emptyList());
       final JobReadList expectedJobReadList =
@@ -433,21 +449,24 @@ class JobHistoryHandlerTest {
                   .recordsEmitted(55L)
                   .bytesEmitted(22L)
                   .recordsCommitted(55L)
-                  .bytesCommitted(22L))
+                  .bytesCommitted(22L)
+                  .recordsRejected(3L))
               .streamAggregatedStats(List.of(
                   new StreamStats()
                       .streamName("stream2")
                       .recordsEmitted(50L)
                       .bytesEmitted(20L)
                       .recordsCommitted(50L)
-                      .bytesCommitted(20L),
+                      .bytesCommitted(20L)
+                      .recordsRejected(2L),
                   new StreamStats()
                       .streamName("stream1")
                       .streamNamespace("ns1")
                       .recordsEmitted(5L)
                       .bytesEmitted(2L)
                       .recordsCommitted(5L)
-                      .bytesCommitted(2L))))
+                      .bytesCommitted(2L)
+                      .recordsRejected(1L))))
               .attempts(List.of(toAttemptRead(testJobAttempt).totalStats(FIRST_ATTEMPT_STATS_API).streamStats(FIRST_ATTEMPT_STREAM_STATS)));
       final var secondJobWithAttemptRead =
           new JobWithAttemptsRead().job(toJobInfo(secondJob)
@@ -455,21 +474,24 @@ class JobHistoryHandlerTest {
                   .recordsEmitted(55L)
                   .bytesEmitted(22L)
                   .recordsCommitted(55L)
-                  .bytesCommitted(22L))
+                  .bytesCommitted(22L)
+                  .recordsRejected(3L))
               .streamAggregatedStats(List.of(
                   new StreamStats()
                       .streamName("stream2")
                       .recordsEmitted(50L)
                       .bytesEmitted(20L)
                       .recordsCommitted(50L)
-                      .bytesCommitted(20L),
+                      .bytesCommitted(20L)
+                      .recordsRejected(2L),
                   new StreamStats()
                       .streamName("stream1")
                       .streamNamespace("ns1")
                       .recordsEmitted(5L)
                       .bytesEmitted(2L)
                       .recordsCommitted(5L)
-                      .bytesCommitted(2L))))
+                      .bytesCommitted(2L)
+                      .recordsRejected(1L))))
               .attempts(
                   List.of(toAttemptRead(secondJobAttempt).totalStats(FIRST_ATTEMPT_STATS_API).streamStats(FIRST_ATTEMPT_STREAM_STATS)));
       final var latestJobWithAttemptRead = new JobWithAttemptsRead().job(toJobInfo(latestJob)
@@ -477,7 +499,8 @@ class JobHistoryHandlerTest {
               .recordsEmitted(0L)
               .bytesEmitted(0L)
               .recordsCommitted(0L)
-              .bytesCommitted(0L))
+              .bytesCommitted(0L)
+              .recordsRejected(0L))
           .streamAggregatedStats(Collections.emptyList())).attempts(Collections.emptyList());
       final JobReadList expectedJobReadList =
           new JobReadList().jobs(List.of(latestJobWithAttemptRead, secondJobWithAttemptRead, firstJobWithAttemptRead)).totalJobCount(3L);
@@ -522,21 +545,24 @@ class JobHistoryHandlerTest {
               .recordsEmitted(55L)
               .bytesEmitted(22L)
               .recordsCommitted(55L)
-              .bytesCommitted(22L))
+              .bytesCommitted(22L)
+              .recordsRejected(3L))
           .streamAggregatedStats(List.of(
               new StreamStats()
                   .streamName("stream2")
                   .recordsEmitted(50L)
                   .bytesEmitted(20L)
                   .recordsCommitted(50L)
-                  .bytesCommitted(20L),
+                  .bytesCommitted(20L)
+                  .recordsRejected(2L),
               new StreamStats()
                   .streamName("stream1")
                   .streamNamespace("ns1")
                   .recordsEmitted(5L)
                   .bytesEmitted(2L)
                   .recordsCommitted(5L)
-                  .bytesCommitted(2L))))
+                  .bytesCommitted(2L)
+                  .recordsRejected(1L))))
           .attempts(List.of(toAttemptRead(
               testJobAttempt).totalStats(FIRST_ATTEMPT_STATS_API).streamStats(FIRST_ATTEMPT_STREAM_STATS)));
       final var latestJobWithAttemptRead = new JobWithAttemptsRead().job(toJobInfo(latestJobNoAttempt)
@@ -544,7 +570,8 @@ class JobHistoryHandlerTest {
               .recordsEmitted(0L)
               .bytesEmitted(0L)
               .recordsCommitted(0L)
-              .bytesCommitted(0L))
+              .bytesCommitted(0L)
+              .recordsRejected(0L))
           .streamAggregatedStats(Collections.emptyList()))
           .attempts(Collections.emptyList());
       final JobReadList expectedJobReadList =
@@ -900,6 +927,7 @@ class JobHistoryHandlerTest {
     final JobInfoRead resultingJobInfo = jobHistoryHandler.getJobInfoWithoutLogs(JOB_ID);
     assertEquals(resultingJobInfo.getJob().getAggregatedStats().getBytesCommitted(), FIRST_ATTEMPT_STATS.combinedStats().getBytesCommitted());
     assertEquals(resultingJobInfo.getJob().getAggregatedStats().getRecordsCommitted(), FIRST_ATTEMPT_STATS.combinedStats().getRecordsCommitted());
+    assertEquals(resultingJobInfo.getJob().getAggregatedStats().getRecordsRejected(), FIRST_ATTEMPT_STATS.combinedStats().getRecordsRejected());
 
   }
 

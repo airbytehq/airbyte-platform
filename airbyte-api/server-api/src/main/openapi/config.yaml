@@ -15444,6 +15444,7 @@ components:
         - bytesEmitted
         - recordsCommitted
         - bytesCommitted
+        - recordsRejected
       properties:
         recordsEmitted:
           type: integer
@@ -15455,6 +15456,9 @@ components:
           type: integer
           format: int64
         bytesCommitted:
+          type: integer
+          format: int64
+        recordsRejected:
           type: integer
           format: int64
     StreamAggregatedStats:
@@ -15469,6 +15473,7 @@ components:
         - bytesEmitted
         - recordsCommitted
         - bytesCommitted
+        - recordsRejected
       properties:
         streamName:
           type: string
@@ -15484,6 +15489,9 @@ components:
           type: integer
           format: int64
         bytesCommitted:
+          type: integer
+          format: int64
+        recordsRejected:
           type: integer
           format: int64
         wasBackfilled:
