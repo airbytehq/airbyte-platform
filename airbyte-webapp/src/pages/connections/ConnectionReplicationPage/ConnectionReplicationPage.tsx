@@ -95,7 +95,8 @@ export const ConnectionReplicationPage: React.FC = () => {
   const { connection, updateConnection, discardRefreshedSchema } = useConnectionEditService();
   const { setSubmitError, refreshSchema } = useConnectionFormService();
   const { mode } = useFormMode();
-  const initialValues = useInitialFormValues(connection, mode);
+  const destinationDefinitionVersion = useDestinationDefinitionVersion(connection.destination.destinationId);
+  const initialValues = useInitialFormValues(connection, mode, destinationDefinitionVersion.supportsFileTransfer);
 
   const { supportsRefreshes: destinationSupportsRefreshes } = useDestinationDefinitionVersion(
     connection.destination.destinationId

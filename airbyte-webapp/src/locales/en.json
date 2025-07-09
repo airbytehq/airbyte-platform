@@ -415,6 +415,11 @@
   "connectionForm.backfillColumns.description": "Backfill values for new or renamed columns. May incur increased destination costs.",
   "connectionForm.backfillColumns.descriptionCloud": "Backfill values for new or renamed columns for free. May incur increased destination costs.",
 
+  "connectionForm.fileStream.badge": "File stream",
+  "connectionForm.fileStream.tooltip.supported": "A file stream contains file attachments and all of their metadata. Enabling this stream will send all files to the destination.",
+  "connectionForm.fileStream.tooltip.supported.note": "Note: this stream may be very large.",
+  "connectionForm.fileStream.tooltip.unsupported": "{destinationName} does not support sending file.",
+
   "connectorForm.authenticate": "Authenticate your {connector} account",
   "connectorForm.signInWithGoogle": "Sign in with Google",
   "connectorForm.authenticate.succeeded": "Authentication succeeded!",

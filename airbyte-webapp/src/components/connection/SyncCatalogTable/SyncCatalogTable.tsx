@@ -8,6 +8,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 
+import { useDestinationDefinitionVersion } from "core/api";
 import { AirbyteStreamAndConfiguration, AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaField } from "core/domain/catalog";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -82,7 +83,12 @@ export interface SyncCatalogUIModel {
 export const SyncCatalogTable: FC = () => {
   const { connection } = useConnectionFormService();
   const { mode } = useFormMode();
-  const initialValues = useInitialFormValues(connection, mode);
+
+  const destinationDefinitionVersion = useDestinationDefinitionVersion(connection.destination.destinationId);
+  const destinationSupportsFileTransfer = destinationDefinitionVersion.supportsFileTransfer;
+  const destinationName = connection.destination.name;
+
+  const initialValues = useInitialFormValues(connection, mode, destinationSupportsFileTransfer);
   const { control, trigger } = useFormContext<FormConnectionFormValues>();
   const {
     fields: streams,
@@ -149,6 +155,7 @@ export const SyncCatalogTable: FC = () => {
             namespaceFormat={watchedNamespaceFormat}
             namespaceDefinition={watchedNamespaceDefinition}
             columnFilters={columnFilters}
+            destinationSupportsFileTransfer={destinationSupportsFileTransfer}
           />
         ),
       cell: ({ row, getValue, table }) => (
@@ -167,6 +174,7 @@ export const SyncCatalogTable: FC = () => {
               namespaceFormat={watchedNamespaceFormat}
               namespaceDefinition={watchedNamespaceDefinition}
               columnFilters={columnFilters}
+              destinationSupportsFileTransfer={destinationSupportsFileTransfer}
             />
           ) : isStreamRow(row) ? (
             <StreamNameCell
@@ -174,12 +182,15 @@ export const SyncCatalogTable: FC = () => {
               row={row}
               updateStreamField={onUpdateStreamConfigWithStreamNode}
               globalFilterValue={table.getState().globalFilter}
+              destinationName={destinationName}
+              destinationSupportsFileTransfer={destinationSupportsFileTransfer}
             />
           ) : (
             <StreamFieldNameCell
               row={row}
               updateStreamField={onUpdateStreamConfigWithStreamNode}
               globalFilterValue={table.getState().globalFilter}
+              destinationSupportsFileTransfer={destinationSupportsFileTransfer}
             />
           )}
         </div>

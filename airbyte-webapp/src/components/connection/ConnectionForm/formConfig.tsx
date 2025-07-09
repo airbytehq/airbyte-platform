@@ -74,7 +74,8 @@ export const SUPPORTED_MODES: Array<[SyncMode, DestinationSyncMode]> = [
 // react-hook-form form values type for the connection form.
 export const useInitialFormValues = (
   connection: ConnectionOrPartialConnection,
-  mode: ConnectionFormMode
+  mode: ConnectionFormMode,
+  destinationSupportsFileTransfer?: boolean
 ): FormConnectionFormValues => {
   const workspace = useCurrentWorkspace();
   const destDefinitionSpecification = useGetDestinationDefinitionSpecification(connection.destination.destinationId);
@@ -118,6 +119,25 @@ export const useInitialFormValues = (
 
   const defaultNonBreakingChangesPreference = NonBreakingChangesPreference.propagate_columns;
   const { getDataplaneGroup } = useGetDataplaneGroup();
+
+  // Handle file-based streams selection and file inclusion based on destination file transfer support.
+  if (destinationSupportsFileTransfer !== undefined) {
+    syncCatalog.streams.forEach((airbyteStream) => {
+      const isFileBased = airbyteStream?.stream?.isFileBased;
+      const config = airbyteStream?.config;
+      if (!isFileBased || !config) {
+        return;
+      }
+
+      if (!destinationSupportsFileTransfer) {
+        config.selected = false;
+        config.includeFiles = false;
+        return;
+      }
+
+      config.includeFiles = true;
+    });
+  }
 
   return useMemo(() => {
     const dataplaneGroupId = workspace.dataplaneGroupId;

@@ -859,16 +859,20 @@ exports[`CreateConnectionForm should render 1`] = `
                                           class="<removed-for-snapshot-test>"
                                         />
                                       </button>
-                                      <span
+                                      <div
                                         class="<removed-for-snapshot-test>"
                                       >
-                                        <p
+                                        <span
                                           class="<removed-for-snapshot-test>"
-                                          data-type="text"
                                         >
-                                          another_stream
-                                        </p>
-                                      </span>
+                                          <p
+                                            class="<removed-for-snapshot-test>"
+                                            data-type="text"
+                                          >
+                                            another_stream
+                                          </p>
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
                                 </td>
@@ -1016,16 +1020,20 @@ exports[`CreateConnectionForm should render 1`] = `
                                           class="<removed-for-snapshot-test>"
                                         />
                                       </button>
-                                      <span
+                                      <div
                                         class="<removed-for-snapshot-test>"
                                       >
-                                        <p
+                                        <span
                                           class="<removed-for-snapshot-test>"
-                                          data-type="text"
                                         >
-                                          pokemon
-                                        </p>
-                                      </span>
+                                          <p
+                                            class="<removed-for-snapshot-test>"
+                                            data-type="text"
+                                          >
+                                            pokemon
+                                          </p>
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
                                 </td>
@@ -1167,16 +1175,20 @@ exports[`CreateConnectionForm should render 1`] = `
                                           class="<removed-for-snapshot-test>"
                                         />
                                       </button>
-                                      <span
+                                      <div
                                         class="<removed-for-snapshot-test>"
                                       >
-                                        <p
+                                        <span
                                           class="<removed-for-snapshot-test>"
-                                          data-type="text"
                                         >
-                                          pokemon2
-                                        </p>
-                                      </span>
+                                          <p
+                                            class="<removed-for-snapshot-test>"
+                                            data-type="text"
+                                          >
+                                            pokemon2
+                                          </p>
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
                                 </td>
