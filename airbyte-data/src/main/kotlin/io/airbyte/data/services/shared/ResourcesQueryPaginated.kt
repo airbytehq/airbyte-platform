@@ -19,8 +19,8 @@ import java.util.UUID
 @JvmRecord
 data class ResourcesQueryPaginated(
   @field:Nonnull @param:Nonnull val workspaceIds: List<UUID>,
-  val includeDeleted: Boolean,
-  val pageSize: Int,
-  val rowOffset: Int,
-  val nameContains: String,
+  val includeDeleted: Boolean = false,
+  val pageSize: Int = 20,
+  val rowOffset: Int = 0,
+  val nameContains: String?,
 )
