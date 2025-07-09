@@ -72,9 +72,9 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
 
     assertNotNull(result);
     assertEquals(1, result.size()); // Should have the destination from setup, but with 0 connections
-    assertEquals(0, result.get(0).connectionCount());
-    assertEquals(helper.getDestination().getDestinationId(), result.get(0).destination().getDestinationId());
-    assertNull(result.get(0).lastSync(), "Should have no last sync when no connections exist");
+    assertEquals(0, result.get(0).connectionCount);
+    assertEquals(helper.getDestination().getDestinationId(), result.get(0).destination.getDestinationId());
+    assertNull(result.get(0).lastSync, "Should have no last sync when no connections exist");
   }
 
   @Test
@@ -104,18 +104,18 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
 
     assertNotNull(result);
     assertEquals(1, result.size());
-    assertEquals(3, result.get(0).connectionCount());
-    assertEquals(destination.getDestinationId(), result.get(0).destination().getDestinationId());
-    assertTrue(Math.abs(result.get(0).lastSync().toEpochSecond() - newestJobTime.toEpochSecond()) < 2,
+    assertEquals(3, result.get(0).connectionCount);
+    assertEquals(destination.getDestinationId(), result.get(0).destination.getDestinationId());
+    assertTrue(Math.abs(result.get(0).lastSync.toEpochSecond() - newestJobTime.toEpochSecond()) < 2,
         "Last sync should be the most recent job time");
 
     // All 3 connections have SUCCEEDED as their most recent job status
-    assertEquals(3, result.get(0).connectionJobStatuses().get(JobStatus.SUCCEEDED), "Should have 3 SUCCEEDED jobs");
-    assertEquals(0, result.get(0).connectionJobStatuses().get(JobStatus.FAILED), "Should have 0 FAILED jobs");
-    assertEquals(0, result.get(0).connectionJobStatuses().get(JobStatus.PENDING), "Should have 0 PENDING jobs");
-    assertEquals(0, result.get(0).connectionJobStatuses().get(JobStatus.INCOMPLETE), "Should have 0 INCOMPLETE jobs");
-    assertEquals(0, result.get(0).connectionJobStatuses().get(JobStatus.CANCELLED), "Should have 0 CANCELLED jobs");
-    assertEquals(0, result.get(0).connectionJobStatuses().get(JobStatus.RUNNING), "Should have 0 RUNNING jobs");
+    assertEquals(3, result.get(0).connectionJobStatuses.get(JobStatus.SUCCEEDED), "Should have 3 SUCCEEDED jobs");
+    assertEquals(0, result.get(0).connectionJobStatuses.get(JobStatus.FAILED), "Should have 0 FAILED jobs");
+    assertEquals(0, result.get(0).connectionJobStatuses.get(JobStatus.PENDING), "Should have 0 PENDING jobs");
+    assertEquals(0, result.get(0).connectionJobStatuses.get(JobStatus.INCOMPLETE), "Should have 0 INCOMPLETE jobs");
+    assertEquals(0, result.get(0).connectionJobStatuses.get(JobStatus.CANCELLED), "Should have 0 CANCELLED jobs");
+    assertEquals(0, result.get(0).connectionJobStatuses.get(JobStatus.RUNNING), "Should have 0 RUNNING jobs");
   }
 
   @Test
@@ -137,8 +137,8 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
 
     assertNotNull(result);
     assertEquals(1, result.size());
-    assertEquals(2, result.get(0).connectionCount()); // Should only count active connections, not deprecated
-    assertEquals(destination.getDestinationId(), result.get(0).destination().getDestinationId());
+    assertEquals(2, result.get(0).connectionCount); // Should only count active connections, not deprecated
+    assertEquals(destination.getDestinationId(), result.get(0).destination.getDestinationId());
   }
 
   @Test
@@ -167,11 +167,11 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
     boolean found1 = false;
     boolean found2 = false;
     for (final DestinationConnectionWithCount destWithCount : result) {
-      if (destWithCount.destination().getDestinationId().equals(destination1.getDestinationId())) {
-        assertEquals(2, destWithCount.connectionCount());
+      if (destWithCount.destination.getDestinationId().equals(destination1.getDestinationId())) {
+        assertEquals(2, destWithCount.connectionCount);
         found1 = true;
-      } else if (destWithCount.destination().getDestinationId().equals(destination2.getDestinationId())) {
-        assertEquals(1, destWithCount.connectionCount());
+      } else if (destWithCount.destination.getDestinationId().equals(destination2.getDestinationId())) {
+        assertEquals(1, destWithCount.connectionCount);
         found2 = true;
       }
     }
@@ -238,26 +238,26 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
     boolean found1 = false;
     boolean found2 = false;
     for (final DestinationConnectionWithCount destinationWithCount : result) {
-      if (destinationWithCount.destination().getDestinationId().equals(destination1.getDestinationId())) {
+      if (destinationWithCount.destination.getDestinationId().equals(destination1.getDestinationId())) {
         // destination1 has 2 non-deprecated connections (1 active, 1 inactive)
-        assertEquals(2, destinationWithCount.connectionCount());
-        assertNotNull(destinationWithCount.lastSync(), "Should have last sync when connections with jobs exist");
+        assertEquals(2, destinationWithCount.connectionCount);
+        assertNotNull(destinationWithCount.lastSync, "Should have last sync when connections with jobs exist");
         // Should be the newer job time (from inactive connection)
-        assertEquals(jobTimeInactive1.toEpochSecond(), destinationWithCount.lastSync().toEpochSecond(),
+        assertEquals(jobTimeInactive1.toEpochSecond(), destinationWithCount.lastSync.toEpochSecond(),
             "Last sync should be the most recent job time");
         // destination1 has 1 SUCCEEDED job (from active connection) and 1 FAILED job (from inactive
         // connection)
-        assertEquals(1, destinationWithCount.connectionJobStatuses().get(JobStatus.SUCCEEDED),
+        assertEquals(1, destinationWithCount.connectionJobStatuses.get(JobStatus.SUCCEEDED),
             "Should have 1 succeeded job (from active connection)");
-        assertEquals(1, destinationWithCount.connectionJobStatuses().get(JobStatus.FAILED),
+        assertEquals(1, destinationWithCount.connectionJobStatuses.get(JobStatus.FAILED),
             "Should have 1 failed job (from inactive connection)");
         found1 = true;
-      } else if (destinationWithCount.destination().getDestinationId().equals(destination2.getDestinationId())) {
+      } else if (destinationWithCount.destination.getDestinationId().equals(destination2.getDestinationId())) {
         // destination2 has 1 non-deprecated connection (1 active)
-        assertEquals(1, destinationWithCount.connectionCount());
-        assertNotNull(destinationWithCount.lastSync(), "Should have last sync when connections with jobs exist");
+        assertEquals(1, destinationWithCount.connectionCount);
+        assertNotNull(destinationWithCount.lastSync, "Should have last sync when connections with jobs exist");
         // Should have 1 RUNNING job (most recent for the connection)
-        assertEquals(1, destinationWithCount.connectionJobStatuses().get(JobStatus.RUNNING),
+        assertEquals(1, destinationWithCount.connectionJobStatuses.get(JobStatus.RUNNING),
             "Should have 1 running job");
         found2 = true;
       }
@@ -284,9 +284,9 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
 
     assertNotNull(result);
     assertEquals(1, result.size());
-    assertEquals(2, result.get(0).connectionCount());
-    assertEquals(destination.getDestinationId(), result.get(0).destination().getDestinationId());
-    assertNull(result.get(0).lastSync(), "Should have no last sync when no jobs exist");
+    assertEquals(2, result.get(0).connectionCount);
+    assertEquals(destination.getDestinationId(), result.get(0).destination.getDestinationId());
+    assertNull(result.get(0).lastSync, "Should have no last sync when no jobs exist");
 
   }
 
@@ -310,8 +310,8 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
     assertNotNull(result);
     assertEquals(1, result.size());
     // Should count all non-deprecated connections (2 active + 1 inactive)
-    assertEquals(3, result.get(0).connectionCount());
-    assertEquals(destination.getDestinationId(), result.get(0).destination().getDestinationId());
+    assertEquals(3, result.get(0).connectionCount);
+    assertEquals(destination.getDestinationId(), result.get(0).destination.getDestinationId());
   }
 
   @Test
@@ -358,20 +358,20 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
 
     assertNotNull(result);
     assertEquals(1, result.size());
-    assertEquals(6, result.get(0).connectionCount());
-    assertEquals(destination.getDestinationId(), result.get(0).destination().getDestinationId());
+    assertEquals(6, result.get(0).connectionCount);
+    assertEquals(destination.getDestinationId(), result.get(0).destination.getDestinationId());
 
     // Verify all job statuses are correctly counted (1 connection per status)
-    assertEquals(1, result.get(0).connectionJobStatuses().get(JobStatus.SUCCEEDED), "Should have 1 SUCCEEDED job");
-    assertEquals(1, result.get(0).connectionJobStatuses().get(JobStatus.FAILED), "Should have 1 FAILED job");
-    assertEquals(1, result.get(0).connectionJobStatuses().get(JobStatus.RUNNING), "Should have 1 RUNNING job");
-    assertEquals(1, result.get(0).connectionJobStatuses().get(JobStatus.PENDING), "Should have 1 PENDING job");
-    assertEquals(1, result.get(0).connectionJobStatuses().get(JobStatus.INCOMPLETE), "Should have 1 INCOMPLETE job");
-    assertEquals(1, result.get(0).connectionJobStatuses().get(JobStatus.CANCELLED), "Should have 1 CANCELLED job");
+    assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.SUCCEEDED), "Should have 1 SUCCEEDED job");
+    assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.FAILED), "Should have 1 FAILED job");
+    assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.RUNNING), "Should have 1 RUNNING job");
+    assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.PENDING), "Should have 1 PENDING job");
+    assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.INCOMPLETE), "Should have 1 INCOMPLETE job");
+    assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.CANCELLED), "Should have 1 CANCELLED job");
 
     // Verify last sync time is the most recent across all connections
-    assertNotNull(result.get(0).lastSync(), "Should have last sync when connections with jobs exist");
-    assertTrue(Math.abs(result.get(0).lastSync().toEpochSecond() - baseTime.toEpochSecond()) < 2,
+    assertNotNull(result.get(0).lastSync, "Should have last sync when connections with jobs exist");
+    assertTrue(Math.abs(result.get(0).lastSync.toEpochSecond() - baseTime.toEpochSecond()) < 2,
         "Last sync should be the most recent job time across all connections");
   }
 

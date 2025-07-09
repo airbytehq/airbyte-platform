@@ -648,11 +648,11 @@ class DestinationHandlerTest {
   void testListDestinationForWorkspace()
       throws JsonValidationException, IOException, io.airbyte.data.ConfigNotFoundException {
     final DestinationRead expectedDestinationRead = new DestinationRead()
-        .name(destinationConnectionWithCount.destination().getName())
+        .name(destinationConnectionWithCount.destination.getName())
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-        .workspaceId(destinationConnectionWithCount.destination().getWorkspaceId())
-        .destinationId(destinationConnectionWithCount.destination().getDestinationId())
-        .connectionConfiguration(destinationConnectionWithCount.destination().getConfiguration())
+        .workspaceId(destinationConnectionWithCount.destination.getWorkspaceId())
+        .destinationId(destinationConnectionWithCount.destination.getDestinationId())
+        .connectionConfiguration(destinationConnectionWithCount.destination.getConfiguration())
         .destinationName(standardDestinationDefinition.getName())
         .icon(ICON_URL)
         .isEntitled(IS_ENTITLED)
@@ -662,21 +662,21 @@ class DestinationHandlerTest {
         .resourceAllocation(RESOURCE_ALLOCATION)
         .numConnections(0);
     final WorkspaceIdRequestBody workspaceIdRequestBody =
-        new WorkspaceIdRequestBody().workspaceId(destinationConnectionWithCount.destination().getWorkspaceId());
+        new WorkspaceIdRequestBody().workspaceId(destinationConnectionWithCount.destination.getWorkspaceId());
 
-    when(destinationService.getDestinationConnection(destinationConnectionWithCount.destination().getDestinationId()))
-        .thenReturn(destinationConnectionWithCount.destination());
-    when(destinationService.listWorkspaceDestinationConnectionsWithCounts(destinationConnectionWithCount.destination().getWorkspaceId()))
+    when(destinationService.getDestinationConnection(destinationConnectionWithCount.destination.getDestinationId()))
+        .thenReturn(destinationConnectionWithCount.destination);
+    when(destinationService.listWorkspaceDestinationConnectionsWithCounts(destinationConnectionWithCount.destination.getWorkspaceId()))
         .thenReturn(Lists.newArrayList(destinationConnectionWithCount));
     when(destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId()))
         .thenReturn(standardDestinationDefinition);
     when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition,
-        destinationConnectionWithCount.destination().getWorkspaceId(),
-        destinationConnectionWithCount.destination().getDestinationId()))
+        destinationConnectionWithCount.destination.getWorkspaceId(),
+        destinationConnectionWithCount.destination.getDestinationId()))
             .thenReturn(destinationDefinitionVersion);
-    when(secretsProcessor.prepareSecretsForOutput(destinationConnectionWithCount.destination().getConfiguration(),
+    when(secretsProcessor.prepareSecretsForOutput(destinationConnectionWithCount.destination.getConfiguration(),
         destinationDefinitionSpecificationRead.getConnectionSpecification()))
-            .thenReturn(destinationConnectionWithCount.destination().getConfiguration());
+            .thenReturn(destinationConnectionWithCount.destination.getConfiguration());
     when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
         .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
@@ -684,10 +684,10 @@ class DestinationHandlerTest {
 
     assertEquals(expectedDestinationRead, actualDestinationRead.getDestinations().get(0));
     verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition,
-        destinationConnectionWithCount.destination().getWorkspaceId(),
-        destinationConnectionWithCount.destination().getDestinationId());
+        destinationConnectionWithCount.destination.getWorkspaceId(),
+        destinationConnectionWithCount.destination.getDestinationId());
     verify(secretsProcessor)
-        .prepareSecretsForOutput(destinationConnectionWithCount.destination().getConfiguration(),
+        .prepareSecretsForOutput(destinationConnectionWithCount.destination.getConfiguration(),
             destinationDefinitionSpecificationRead.getConnectionSpecification());
   }
 

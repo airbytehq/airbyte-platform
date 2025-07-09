@@ -679,41 +679,41 @@ class SourceHandlerTest {
       throws JsonValidationException, ConfigNotFoundException, IOException {
     final SourceRead expectedSourceRead =
         SourceHelpers
-            .getSourceRead(sourceConnectionWithCount.source(), standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
+            .getSourceRead(sourceConnectionWithCount.source, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
                 RESOURCE_ALLOCATION)
             .numConnections(0);
     expectedSourceRead.setStatus(ActorStatus.INACTIVE); // set inactive by default
     final WorkspaceIdRequestBody workspaceIdRequestBody =
-        new WorkspaceIdRequestBody().workspaceId(sourceConnectionWithCount.source().getWorkspaceId());
+        new WorkspaceIdRequestBody().workspaceId(sourceConnectionWithCount.source.getWorkspaceId());
 
-    when(sourceService.getSourceConnection(sourceConnectionWithCount.source().getSourceId())).thenReturn(sourceConnectionWithCount.source());
-    when(sourceService.getSourceConnection(sourceConnectionWithCount.source().getSourceId())).thenReturn(sourceConnectionWithCount.source());
+    when(sourceService.getSourceConnection(sourceConnectionWithCount.source.getSourceId())).thenReturn(sourceConnectionWithCount.source);
+    when(sourceService.getSourceConnection(sourceConnectionWithCount.source.getSourceId())).thenReturn(sourceConnectionWithCount.source);
 
-    when(sourceService.listWorkspaceSourceConnectionsWithCounts(sourceConnectionWithCount.source().getWorkspaceId()))
+    when(sourceService.listWorkspaceSourceConnectionsWithCounts(sourceConnectionWithCount.source.getWorkspaceId()))
         .thenReturn(Lists.newArrayList(sourceConnectionWithCount));
     when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
-    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnectionWithCount.source().getWorkspaceId(),
-        sourceConnectionWithCount.source().getSourceId()))
+    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnectionWithCount.source.getWorkspaceId(),
+        sourceConnectionWithCount.source.getSourceId()))
             .thenReturn(sourceDefinitionVersion);
-    when(sourceService.getSourceDefinitionFromSource(sourceConnectionWithCount.source().getSourceId())).thenReturn(standardSourceDefinition);
+    when(sourceService.getSourceDefinitionFromSource(sourceConnectionWithCount.source.getSourceId())).thenReturn(standardSourceDefinition);
     when(
-        secretsProcessor.prepareSecretsForOutput(sourceConnectionWithCount.source().getConfiguration(),
+        secretsProcessor.prepareSecretsForOutput(sourceConnectionWithCount.source.getConfiguration(),
             sourceDefinitionSpecificationRead.getConnectionSpecification()))
-                .thenReturn(sourceConnectionWithCount.source().getConfiguration());
+                .thenReturn(sourceConnectionWithCount.source.getConfiguration());
     when(
-        actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnectionWithCount.source().getWorkspaceId(),
-            sourceConnectionWithCount.source().getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
+        actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnectionWithCount.source.getWorkspaceId(),
+            sourceConnectionWithCount.source.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
     when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
         .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     final SourceReadList actualSourceReadList = sourceHandler.listSourcesForWorkspace(workspaceIdRequestBody);
 
     assertEquals(expectedSourceRead, actualSourceReadList.getSources().get(0));
-    verify(secretsProcessor).prepareSecretsForOutput(sourceConnectionWithCount.source().getConfiguration(),
+    verify(secretsProcessor).prepareSecretsForOutput(sourceConnectionWithCount.source.getConfiguration(),
         sourceDefinitionSpecificationRead.getConnectionSpecification());
-    verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnectionWithCount.source().getWorkspaceId(),
-        sourceConnectionWithCount.source().getSourceId());
+    verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnectionWithCount.source.getWorkspaceId(),
+        sourceConnectionWithCount.source.getSourceId());
   }
 
   @Test

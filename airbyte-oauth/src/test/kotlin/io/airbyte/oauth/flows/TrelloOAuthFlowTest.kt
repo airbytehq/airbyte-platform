@@ -20,7 +20,6 @@ import io.airbyte.validation.json.JsonValidationException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import java.io.IOException
 import java.util.Map
@@ -74,7 +73,7 @@ internal class TrelloOAuthFlowTest {
           ),
         )
     Mockito
-      .`when`(oauthService!!.getSourceOAuthParameterOptional(ArgumentMatchers.any(), ArgumentMatchers.any()))
+      .`when`(oauthService!!.getSourceOAuthParameterOptional(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull()))
       .thenReturn(Optional.of(sourceOAuthParameter!!))
     trelloOAuthFlow = TrelloOAuthFlow(transport!!)
   }

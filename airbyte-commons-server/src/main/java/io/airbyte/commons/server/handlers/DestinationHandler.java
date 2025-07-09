@@ -302,16 +302,16 @@ public class DestinationHandler {
     final List<DestinationConnectionWithCount> destinationConnectionsWithCounts =
         destinationService.listWorkspaceDestinationConnectionsWithCounts(workspaceIdRequestBody.getWorkspaceId());
     for (final DestinationConnectionWithCount destinationConnectionWithCount : destinationConnectionsWithCounts) {
-      final DestinationRead destinationRead = buildDestinationReadWithStatus(destinationConnectionWithCount.destination());
-      destinationRead.numConnections(destinationConnectionWithCount.connectionCount());
+      final DestinationRead destinationRead = buildDestinationReadWithStatus(destinationConnectionWithCount.destination);
+      destinationRead.numConnections(destinationConnectionWithCount.connectionCount);
 
-      if (destinationConnectionWithCount.lastSync() != null) {
-        destinationRead.lastSync(destinationConnectionWithCount.lastSync().toEpochSecond());
+      if (destinationConnectionWithCount.lastSync != null) {
+        destinationRead.lastSync(destinationConnectionWithCount.lastSync.toEpochSecond());
       }
 
       // Convert Map<JobStatus, Integer> to Map<String, Integer> for API
       final Map<String, Integer> statusCountsMap = new HashMap<>();
-      for (Map.Entry<JobStatus, Integer> entry : destinationConnectionWithCount.connectionJobStatuses().entrySet()) {
+      for (Map.Entry<JobStatus, Integer> entry : destinationConnectionWithCount.connectionJobStatuses.entrySet()) {
         String statusKey;
         switch (entry.getKey()) {
           case SUCCEEDED:

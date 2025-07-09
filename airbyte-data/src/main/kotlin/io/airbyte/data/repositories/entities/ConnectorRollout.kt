@@ -23,7 +23,7 @@ data class ConnectorRollout(
   var workflowRunId: String? = null,
   var actorDefinitionId: UUID,
   var releaseCandidateVersionId: UUID,
-  var initialVersionId: UUID? = null,
+  var initialVersionId: UUID,
   var state: ConnectorRolloutStateType,
   @Nullable
   var initialRolloutPct: Int? = 0,

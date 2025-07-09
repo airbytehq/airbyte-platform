@@ -620,9 +620,7 @@ internal class ConnectorRolloutHandlerManualTest {
 
     every { actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, dockerImageTag) } returns Optional.of(actorDefinitionVersion)
     every { connectorRolloutService.listConnectorRollouts(actorDefinitionId, actorDefinitionVersion.versionId) } returns listOf(connectorRollout)
-    every {
-      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
-    } returns null
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any()) } returns Optional.empty()
 
     assertThrows<ConnectorRolloutInvalidRequestProblem> {
       connectorRolloutHandler.getOrCreateAndValidateManualStartInput(

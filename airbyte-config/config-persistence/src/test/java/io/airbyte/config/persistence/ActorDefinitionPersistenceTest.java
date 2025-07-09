@@ -16,6 +16,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Organization;
@@ -228,6 +229,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withDestinationId(dest.getDestinationId())
         .withConnectionId(connectionId)
         .withSourceId(source.getSourceId())
+        .withCatalog(new ConfiguredAirbyteCatalog())
         .withBreakingChange(false);
 
     connectionService.writeStandardSync(connection);
@@ -317,6 +319,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withDestinationId(dest.getDestinationId())
         .withConnectionId(connectionId)
         .withSourceId(source.getSourceId())
+        .withCatalog(new ConfiguredAirbyteCatalog())
         .withBreakingChange(false);
 
     connectionService.writeStandardSync(connection);

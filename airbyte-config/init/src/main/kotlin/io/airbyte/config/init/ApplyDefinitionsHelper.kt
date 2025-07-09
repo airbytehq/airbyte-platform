@@ -98,8 +98,8 @@ class ApplyDefinitionsHelper(
     val airbyteCompatibleDestinationDefinitions =
       filterOutIncompatibleDestinationDefsWithCurrentAirbyteVersion(protocolCompatibleDestinationDefinitions)
     val actorDefinitionIdsToDefaultVersionsMap =
-      actorDefinitionService.actorDefinitionIdsToDefaultVersionsMap
-    val actorDefinitionIdsInUse = actorDefinitionService.actorDefinitionIdsInUse
+      actorDefinitionService.getActorDefinitionIdsToDefaultVersionsMap()
+    val actorDefinitionIdsInUse = actorDefinitionService.getActorDefinitionIdsInUse()
 
     newConnectorCount = 0
     changedConnectorCount = 0

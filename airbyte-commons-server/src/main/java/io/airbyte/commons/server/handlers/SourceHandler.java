@@ -342,16 +342,16 @@ public class SourceHandler {
 
     final List<SourceRead> reads = Lists.newArrayList();
     for (final SourceConnectionWithCount sourceConnectionWithCount : sourceConnectionsWithCounts) {
-      final SourceRead sourceRead = buildSourceReadWithStatus(sourceConnectionWithCount.source());
-      sourceRead.numConnections(sourceConnectionWithCount.connectionCount());
+      final SourceRead sourceRead = buildSourceReadWithStatus(sourceConnectionWithCount.source);
+      sourceRead.numConnections(sourceConnectionWithCount.connectionCount);
 
-      if (sourceConnectionWithCount.lastSync() != null) {
-        sourceRead.lastSync(sourceConnectionWithCount.lastSync().toEpochSecond());
+      if (sourceConnectionWithCount.lastSync != null) {
+        sourceRead.lastSync(sourceConnectionWithCount.lastSync.toEpochSecond());
       }
 
       // Convert Map<JobStatus, Integer> to Map<String, Integer> for API
       final Map<String, Integer> statusCountsMap = new HashMap<>();
-      for (Map.Entry<JobStatus, Integer> entry : sourceConnectionWithCount.connectionJobStatuses().entrySet()) {
+      for (Map.Entry<JobStatus, Integer> entry : sourceConnectionWithCount.connectionJobStatuses.entrySet()) {
         String statusKey;
         switch (entry.getKey()) {
           case SUCCEEDED:

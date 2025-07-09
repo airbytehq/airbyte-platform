@@ -61,6 +61,7 @@ class ConnectorRolloutClientTest {
       actorDefinitionId = UUID.randomUUID(),
       releaseCandidateVersionId = UUID.randomUUID(),
       state = ConnectorEnumRolloutState.INITIALIZED,
+      initialVersionId = UUID.randomUUID(),
       createdAt = Instant.now().toEpochMilli(),
       updatedAt = Instant.now().toEpochMilli(),
       hasBreakingChanges = false,

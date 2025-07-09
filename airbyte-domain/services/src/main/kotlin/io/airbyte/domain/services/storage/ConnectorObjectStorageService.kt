@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
@@ -84,7 +85,11 @@ class ConnectorObjectStorageService(
     if (job.config?.configType != JobConfig.ConfigType.SYNC) return null
 
     val destinationVersionId = job.config.sync.destinationDefinitionVersionId
-    return actorDefinitionService.getActorDefinitionVersion(destinationVersionId)
+    return try {
+      actorDefinitionService.getActorDefinitionVersion(destinationVersionId)
+    } catch (e: ConfigNotFoundException) {
+      null
+    }
   }
 
   private fun getObjectStorageConfigProperty(destinationVersion: ActorDefinitionVersion): String? {

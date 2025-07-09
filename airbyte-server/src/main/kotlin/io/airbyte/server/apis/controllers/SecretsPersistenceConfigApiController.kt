@@ -107,7 +107,7 @@ class SecretsPersistenceConfigApiController(
     }
     return execute {
       val secretPersistenceConfig =
-        secretPersistenceConfigService[io.airbyte.config.ScopeType.ORGANIZATION, requestBody.scopeId]
+        secretPersistenceConfigService.get(io.airbyte.config.ScopeType.ORGANIZATION, requestBody.scopeId)
       secretPersistenceConfigHandler.buildSecretPersistenceConfigResponse(secretPersistenceConfig)
     }
   }

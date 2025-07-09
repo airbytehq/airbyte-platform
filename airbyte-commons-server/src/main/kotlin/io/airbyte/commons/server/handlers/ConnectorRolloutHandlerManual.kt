@@ -99,10 +99,14 @@ open class ConnectorRolloutHandlerManual
 
       val initializedRollouts = connectorRollouts.filter { it.state == ConnectorEnumRolloutState.INITIALIZED }
       val initialVersion =
-        actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId)
-          ?: throw ConnectorRolloutInvalidRequestProblem(
-            ProblemMessageData().message("Could not find initial version for actor definition id: $actorDefinitionId"),
-          )
+        actorDefinitionService
+          .getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId)
+          .orElseThrow {
+            ConnectorRolloutInvalidRequestProblem(
+              ProblemMessageData()
+                .message("Could not find initial version for actor definition id: $actorDefinitionId"),
+            )
+          }
 
       if (rolloutStrategy == ConnectorRolloutStrategy.AUTOMATED) {
         validateAutomatedInitialRolloutPercent(initialRolloutPct)
@@ -119,7 +123,7 @@ open class ConnectorRolloutHandlerManual
             id = UUID.randomUUID(),
             actorDefinitionId = actorDefinitionId,
             releaseCandidateVersionId = actorDefinitionVersion.get().versionId,
-            initialVersionId = initialVersion.get().versionId,
+            initialVersionId = initialVersion.versionId,
             createdAt = currentTime,
             updatedAt = currentTime,
             updatedBy = updatedBy,

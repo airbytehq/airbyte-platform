@@ -260,15 +260,15 @@ public class WebBackendConnectionsHandler {
   private Map<UUID, SourceSnippetRead> getSourceSnippetReadById(final List<UUID> sourceIds) throws IOException {
     return sourceService.getSourceAndDefinitionsFromSourceIds(sourceIds)
         .stream()
-        .map(sourceAndDefinition -> sourceHandler.toSourceSnippetRead(sourceAndDefinition.source(), sourceAndDefinition.definition()))
+        .map(sourceAndDefinition -> sourceHandler.toSourceSnippetRead(sourceAndDefinition.source, sourceAndDefinition.definition))
         .collect(Collectors.toMap(SourceSnippetRead::getSourceId, Function.identity()));
   }
 
   private Map<UUID, DestinationSnippetRead> getDestinationSnippetReadById(final List<UUID> destinationIds) throws IOException {
     return destinationService.getDestinationAndDefinitionsFromDestinationIds(destinationIds)
         .stream()
-        .map(destinationAndDefinition -> destinationHandler.toDestinationSnippetRead(destinationAndDefinition.destination(),
-            destinationAndDefinition.definition()))
+        .map(destinationAndDefinition -> destinationHandler.toDestinationSnippetRead(destinationAndDefinition.destination,
+            destinationAndDefinition.definition))
         .collect(Collectors.toMap(DestinationSnippetRead::getDestinationId, Function.identity()));
   }
 

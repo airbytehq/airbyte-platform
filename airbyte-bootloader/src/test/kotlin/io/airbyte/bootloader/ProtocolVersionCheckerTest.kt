@@ -99,7 +99,7 @@ internal class ProtocolVersionCheckerTest {
         dest2 to (ActorType.DESTINATION to V0_0_0).toMapEntry(),
       )
     every {
-      actorDefinitionService.actorDefinitionToProtocolVersionMap
+      actorDefinitionService.getActorDefinitionToProtocolVersionMap()
     } returns initialActorDefinitions
 
     val protocolVersionChecker =
@@ -134,7 +134,7 @@ internal class ProtocolVersionCheckerTest {
         dest1 to (ActorType.DESTINATION to V1_0_0).toMapEntry(),
       )
     every {
-      actorDefinitionService.actorDefinitionToProtocolVersionMap
+      actorDefinitionService.getActorDefinitionToProtocolVersionMap()
     } returns initialActorDefinitions
 
     val protocolVersionChecker =
@@ -264,7 +264,7 @@ internal class ProtocolVersionCheckerTest {
         dest3 to (ActorType.DESTINATION to V2_0_0).toMapEntry(),
       )
     every {
-      actorDefinitionService.actorDefinitionToProtocolVersionMap
+      actorDefinitionService.getActorDefinitionToProtocolVersionMap()
     } returns initialActorDefinitions
 
     setNewSourceDefinitions(
@@ -325,7 +325,7 @@ internal class ProtocolVersionCheckerTest {
         dest2 to (ActorType.DESTINATION to V0_0_0).toMapEntry(),
       )
     every {
-      actorDefinitionService.actorDefinitionToProtocolVersionMap
+      actorDefinitionService.getActorDefinitionToProtocolVersionMap()
     } returns initialActorDefinitions
 
     setNewSourceDefinitions(
@@ -373,7 +373,7 @@ internal class ProtocolVersionCheckerTest {
         dest2 to (ActorType.DESTINATION to V0_0_0).toMapEntry(),
       )
     every {
-      actorDefinitionService.actorDefinitionToProtocolVersionMap
+      actorDefinitionService.getActorDefinitionToProtocolVersionMap()
     } returns initialActorDefinitions
 
     setNewSourceDefinitions(

@@ -73,9 +73,9 @@ class SourceServiceJooqImplTest extends BaseConfigDatabaseTest {
 
     assertNotNull(result);
     assertEquals(1, result.size()); // Should have the source from setup, but with 0 connections
-    assertEquals(0, result.get(0).connectionCount());
-    assertEquals(helper.getSource().getSourceId(), result.get(0).source().getSourceId());
-    assertNull(result.get(0).lastSync(), "Should have no last sync when no connections exist");
+    assertEquals(0, result.get(0).connectionCount);
+    assertEquals(helper.getSource().getSourceId(), result.get(0).source.getSourceId());
+    assertNull(result.get(0).lastSync, "Should have no last sync when no connections exist");
   }
 
   @Test
@@ -105,18 +105,18 @@ class SourceServiceJooqImplTest extends BaseConfigDatabaseTest {
 
     assertNotNull(result);
     assertEquals(1, result.size());
-    assertEquals(3, result.get(0).connectionCount());
-    assertEquals(source.getSourceId(), result.get(0).source().getSourceId());
-    assertTrue(Math.abs(result.get(0).lastSync().toEpochSecond() - newestJobTime.toEpochSecond()) < 2,
+    assertEquals(3, result.get(0).connectionCount);
+    assertEquals(source.getSourceId(), result.get(0).source.getSourceId());
+    assertTrue(Math.abs(result.get(0).lastSync.toEpochSecond() - newestJobTime.toEpochSecond()) < 2,
         "Last sync should be the most recent job time");
 
     // All 3 connections have SUCCEEDED as their most recent job status
-    assertEquals(3, result.get(0).connectionJobStatuses().get(JobStatus.SUCCEEDED), "Should have 3 SUCCEEDED jobs");
-    assertEquals(0, result.get(0).connectionJobStatuses().get(JobStatus.FAILED), "Should have 0 FAILED jobs");
-    assertEquals(0, result.get(0).connectionJobStatuses().get(JobStatus.PENDING), "Should have 0 PENDING jobs");
-    assertEquals(0, result.get(0).connectionJobStatuses().get(JobStatus.INCOMPLETE), "Should have 0 INCOMPLETE jobs");
-    assertEquals(0, result.get(0).connectionJobStatuses().get(JobStatus.CANCELLED), "Should have 0 CANCELLED jobs");
-    assertEquals(0, result.get(0).connectionJobStatuses().get(JobStatus.RUNNING), "Should have 0 RUNNING jobs");
+    assertEquals(3, result.get(0).connectionJobStatuses.get(JobStatus.SUCCEEDED), "Should have 3 SUCCEEDED jobs");
+    assertEquals(0, result.get(0).connectionJobStatuses.get(JobStatus.FAILED), "Should have 0 FAILED jobs");
+    assertEquals(0, result.get(0).connectionJobStatuses.get(JobStatus.PENDING), "Should have 0 PENDING jobs");
+    assertEquals(0, result.get(0).connectionJobStatuses.get(JobStatus.INCOMPLETE), "Should have 0 INCOMPLETE jobs");
+    assertEquals(0, result.get(0).connectionJobStatuses.get(JobStatus.CANCELLED), "Should have 0 CANCELLED jobs");
+    assertEquals(0, result.get(0).connectionJobStatuses.get(JobStatus.RUNNING), "Should have 0 RUNNING jobs");
 
   }
 
@@ -141,8 +141,8 @@ class SourceServiceJooqImplTest extends BaseConfigDatabaseTest {
     assertNotNull(result);
     assertEquals(1, result.size());
     // Should only count active & inactive connections, not deprecated
-    assertEquals(2, result.get(0).connectionCount());
-    assertEquals(source.getSourceId(), result.get(0).source().getSourceId());
+    assertEquals(2, result.get(0).connectionCount);
+    assertEquals(source.getSourceId(), result.get(0).source.getSourceId());
   }
 
   @Test
@@ -171,11 +171,11 @@ class SourceServiceJooqImplTest extends BaseConfigDatabaseTest {
     boolean found1 = false;
     boolean found2 = false;
     for (final SourceConnectionWithCount sourceWithCount : result) {
-      if (sourceWithCount.source().getSourceId().equals(source1.getSourceId())) {
-        assertEquals(3, sourceWithCount.connectionCount());
+      if (sourceWithCount.source.getSourceId().equals(source1.getSourceId())) {
+        assertEquals(3, sourceWithCount.connectionCount);
         found1 = true;
-      } else if (sourceWithCount.source().getSourceId().equals(source2.getSourceId())) {
-        assertEquals(1, sourceWithCount.connectionCount());
+      } else if (sourceWithCount.source.getSourceId().equals(source2.getSourceId())) {
+        assertEquals(1, sourceWithCount.connectionCount);
         found2 = true;
       }
     }
@@ -239,25 +239,25 @@ class SourceServiceJooqImplTest extends BaseConfigDatabaseTest {
     boolean found1 = false;
     boolean found2 = false;
     for (final SourceConnectionWithCount sourceWithCount : result) {
-      if (sourceWithCount.source().getSourceId().equals(source1.getSourceId())) {
+      if (sourceWithCount.source.getSourceId().equals(source1.getSourceId())) {
         // source1 has 2 non-deprecated connections (1 active, 1 inactive)
-        assertEquals(2, sourceWithCount.connectionCount());
-        assertNotNull(sourceWithCount.lastSync(), "Should have last sync when connections with jobs exist");
+        assertEquals(2, sourceWithCount.connectionCount);
+        assertNotNull(sourceWithCount.lastSync, "Should have last sync when connections with jobs exist");
         // Should be the newer job time (from inactive connection)
-        assertEquals(jobTimeInactive1.toEpochSecond(), sourceWithCount.lastSync().toEpochSecond(),
+        assertEquals(jobTimeInactive1.toEpochSecond(), sourceWithCount.lastSync.toEpochSecond(),
             "Last sync should be the most recent job time");
         // source1 has 1 SUCCEEDED job (from active connection) and 1 FAILED job (from inactive connection)
-        assertEquals(1, sourceWithCount.connectionJobStatuses().get(JobStatus.SUCCEEDED),
+        assertEquals(1, sourceWithCount.connectionJobStatuses.get(JobStatus.SUCCEEDED),
             "Should have 1 succeeded job (from active connection)");
-        assertEquals(1, sourceWithCount.connectionJobStatuses().get(JobStatus.FAILED),
+        assertEquals(1, sourceWithCount.connectionJobStatuses.get(JobStatus.FAILED),
             "Should have 1 failed job (from inactive connection)");
         found1 = true;
-      } else if (sourceWithCount.source().getSourceId().equals(source2.getSourceId())) {
+      } else if (sourceWithCount.source.getSourceId().equals(source2.getSourceId())) {
         // source2 has 1 non-deprecated connection (1 active)
-        assertEquals(1, sourceWithCount.connectionCount());
-        assertNotNull(sourceWithCount.lastSync(), "Should have last sync when connections with jobs exist");
+        assertEquals(1, sourceWithCount.connectionCount);
+        assertNotNull(sourceWithCount.lastSync, "Should have last sync when connections with jobs exist");
         // Should have 1 RUNNING job (most recent for the connection)
-        assertEquals(1, sourceWithCount.connectionJobStatuses().get(JobStatus.RUNNING),
+        assertEquals(1, sourceWithCount.connectionJobStatuses.get(JobStatus.RUNNING),
             "Should have 1 running job");
         found2 = true;
       }
@@ -284,9 +284,9 @@ class SourceServiceJooqImplTest extends BaseConfigDatabaseTest {
 
     assertNotNull(result);
     assertEquals(1, result.size());
-    assertEquals(2, result.get(0).connectionCount());
-    assertEquals(source.getSourceId(), result.get(0).source().getSourceId());
-    assertNull(result.get(0).lastSync(), "Should have no last sync when no jobs exist");
+    assertEquals(2, result.get(0).connectionCount);
+    assertEquals(source.getSourceId(), result.get(0).source.getSourceId());
+    assertNull(result.get(0).lastSync, "Should have no last sync when no jobs exist");
   }
 
   @Test
@@ -309,8 +309,8 @@ class SourceServiceJooqImplTest extends BaseConfigDatabaseTest {
     assertNotNull(result);
     assertEquals(1, result.size());
     // Should count all non-deprecated connections (2 active + 1 inactive)
-    assertEquals(3, result.get(0).connectionCount());
-    assertEquals(source.getSourceId(), result.get(0).source().getSourceId());
+    assertEquals(3, result.get(0).connectionCount);
+    assertEquals(source.getSourceId(), result.get(0).source.getSourceId());
   }
 
   @Test
@@ -357,20 +357,20 @@ class SourceServiceJooqImplTest extends BaseConfigDatabaseTest {
 
     assertNotNull(result);
     assertEquals(1, result.size());
-    assertEquals(6, result.get(0).connectionCount());
-    assertEquals(source.getSourceId(), result.get(0).source().getSourceId());
+    assertEquals(6, result.get(0).connectionCount);
+    assertEquals(source.getSourceId(), result.get(0).source.getSourceId());
 
     // Verify all job statuses are correctly counted (1 connection per status)
-    assertEquals(1, result.get(0).connectionJobStatuses().get(JobStatus.SUCCEEDED), "Should have 1 SUCCEEDED job");
-    assertEquals(1, result.get(0).connectionJobStatuses().get(JobStatus.FAILED), "Should have 1 FAILED job");
-    assertEquals(1, result.get(0).connectionJobStatuses().get(JobStatus.RUNNING), "Should have 1 RUNNING job");
-    assertEquals(1, result.get(0).connectionJobStatuses().get(JobStatus.PENDING), "Should have 1 PENDING job");
-    assertEquals(1, result.get(0).connectionJobStatuses().get(JobStatus.INCOMPLETE), "Should have 1 INCOMPLETE job");
-    assertEquals(1, result.get(0).connectionJobStatuses().get(JobStatus.CANCELLED), "Should have 1 CANCELLED job");
+    assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.SUCCEEDED), "Should have 1 SUCCEEDED job");
+    assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.FAILED), "Should have 1 FAILED job");
+    assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.RUNNING), "Should have 1 RUNNING job");
+    assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.PENDING), "Should have 1 PENDING job");
+    assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.INCOMPLETE), "Should have 1 INCOMPLETE job");
+    assertEquals(1, result.get(0).connectionJobStatuses.get(JobStatus.CANCELLED), "Should have 1 CANCELLED job");
 
     // Verify last sync time is the most recent across all connections
-    assertNotNull(result.get(0).lastSync(), "Should have last sync when connections with jobs exist");
-    assertTrue(Math.abs(result.get(0).lastSync().toEpochSecond() - baseTime.toEpochSecond()) < 2,
+    assertNotNull(result.get(0).lastSync, "Should have last sync when connections with jobs exist");
+    assertTrue(Math.abs(result.get(0).lastSync.toEpochSecond() - baseTime.toEpochSecond()) < 2,
         "Last sync should be the most recent job time across all connections");
   }
 
