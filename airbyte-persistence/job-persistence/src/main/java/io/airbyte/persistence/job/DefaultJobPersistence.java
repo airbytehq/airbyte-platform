@@ -167,6 +167,7 @@ public class DefaultJobPersistence implements JobPersistence {
           .set(SYNC_STATS.ESTIMATED_BYTES, syncStats.getEstimatedBytes())
           .set(SYNC_STATS.RECORDS_COMMITTED, syncStats.getRecordsCommitted())
           .set(SYNC_STATS.BYTES_COMMITTED, syncStats.getBytesCommitted())
+          .set(SYNC_STATS.RECORDS_REJECTED, syncStats.getRecordsRejected())
           .set(SYNC_STATS.SOURCE_STATE_MESSAGES_EMITTED, syncStats.getSourceStateMessagesEmitted())
           .set(SYNC_STATS.DESTINATION_STATE_MESSAGES_EMITTED, syncStats.getDestinationStateMessagesEmitted())
           .set(SYNC_STATS.MAX_SECONDS_BEFORE_SOURCE_STATE_MESSAGE_EMITTED, syncStats.getMaxSecondsBeforeSourceStateMessageEmitted())
@@ -189,6 +190,7 @@ public class DefaultJobPersistence implements JobPersistence {
         .set(SYNC_STATS.ESTIMATED_BYTES, syncStats.getEstimatedBytes())
         .set(SYNC_STATS.RECORDS_COMMITTED, syncStats.getRecordsCommitted())
         .set(SYNC_STATS.BYTES_COMMITTED, syncStats.getBytesCommitted())
+        .set(SYNC_STATS.RECORDS_REJECTED, syncStats.getRecordsRejected())
         .set(SYNC_STATS.SOURCE_STATE_MESSAGES_EMITTED, syncStats.getSourceStateMessagesEmitted())
         .set(SYNC_STATS.DESTINATION_STATE_MESSAGES_EMITTED, syncStats.getDestinationStateMessagesEmitted())
         .set(SYNC_STATS.MAX_SECONDS_BEFORE_SOURCE_STATE_MESSAGE_EMITTED, syncStats.getMaxSecondsBeforeSourceStateMessageEmitted())
@@ -232,6 +234,7 @@ public class DefaultJobPersistence implements JobPersistence {
                     .set(STREAM_STATS.ESTIMATED_BYTES, stats.getEstimatedBytes())
                     .set(STREAM_STATS.BYTES_COMMITTED, stats.getBytesCommitted())
                     .set(STREAM_STATS.RECORDS_COMMITTED, stats.getRecordsCommitted())
+                    .set(STREAM_STATS.RECORDS_REJECTED, stats.getRecordsRejected())
                     .where(
                         STREAM_STATS.ATTEMPT_ID.eq(attemptId),
                         PersistenceHelpers.isNullOrEquals(STREAM_STATS.STREAM_NAME, streamStats.getStreamName()),
@@ -251,7 +254,8 @@ public class DefaultJobPersistence implements JobPersistence {
                     .set(STREAM_STATS.ESTIMATED_RECORDS, stats.getEstimatedRecords())
                     .set(STREAM_STATS.ESTIMATED_BYTES, stats.getEstimatedBytes())
                     .set(STREAM_STATS.BYTES_COMMITTED, stats.getBytesCommitted())
-                    .set(STREAM_STATS.RECORDS_COMMITTED, stats.getRecordsCommitted()));
+                    .set(STREAM_STATS.RECORDS_COMMITTED, stats.getRecordsCommitted())
+                    .set(STREAM_STATS.RECORDS_REJECTED, stats.getRecordsRejected()));
           }
         });
 
@@ -263,7 +267,7 @@ public class DefaultJobPersistence implements JobPersistence {
     final var syncResults = ctx.fetch(
         "SELECT atmpt.attempt_number, atmpt.job_id,"
             + "stats.estimated_bytes, stats.estimated_records, stats.bytes_emitted, stats.records_emitted, "
-            + "stats.bytes_committed, stats.records_committed "
+            + "stats.bytes_committed, stats.records_committed, stats.records_rejected "
             + "FROM sync_stats stats "
             + "INNER JOIN attempts atmpt ON stats.attempt_id = atmpt.id "
             + "WHERE job_id IN ( " + jobIdsStr + ");");
@@ -275,7 +279,8 @@ public class DefaultJobPersistence implements JobPersistence {
           .withEstimatedRecords(r.get(SYNC_STATS.ESTIMATED_RECORDS))
           .withEstimatedBytes(r.get(SYNC_STATS.ESTIMATED_BYTES))
           .withBytesCommitted(r.get(SYNC_STATS.BYTES_COMMITTED))
-          .withRecordsCommitted(r.get(SYNC_STATS.RECORDS_COMMITTED));
+          .withRecordsCommitted(r.get(SYNC_STATS.RECORDS_COMMITTED))
+          .withRecordsRejected(r.get(SYNC_STATS.RECORDS_REJECTED));
       attemptStats.put(key, new AttemptStats(syncStats, Lists.newArrayList()));
     });
     return attemptStats;
@@ -283,7 +288,7 @@ public class DefaultJobPersistence implements JobPersistence {
 
   private static final String STREAM_STAT_SELECT_STATEMENT = "SELECT atmpt.id, atmpt.attempt_number, atmpt.job_id, "
       + "stats.stream_name, stats.stream_namespace, stats.estimated_bytes, stats.estimated_records, stats.bytes_emitted, stats.records_emitted,"
-      + "stats.bytes_committed, stats.records_committed, sam.was_backfilled, sam.was_resumed "
+      + "stats.bytes_committed, stats.records_committed, stats.records_rejected, sam.was_backfilled, sam.was_resumed "
       + "FROM stream_stats stats "
       + "INNER JOIN attempts atmpt ON atmpt.id = stats.attempt_id "
       + "LEFT JOIN stream_attempt_metadata sam ON ("
@@ -352,7 +357,8 @@ public class DefaultJobPersistence implements JobPersistence {
               .withEstimatedRecords(r.get(STREAM_STATS.ESTIMATED_RECORDS))
               .withEstimatedBytes(r.get(STREAM_STATS.ESTIMATED_BYTES))
               .withBytesCommitted(r.get(STREAM_STATS.BYTES_COMMITTED))
-              .withRecordsCommitted(r.get(STREAM_STATS.RECORDS_COMMITTED)))
+              .withRecordsCommitted(r.get(STREAM_STATS.RECORDS_COMMITTED))
+              .withRecordsRejected(r.get(STREAM_STATS.RECORDS_REJECTED)))
           .withWasBackfilled(wasBackfilled)
           .withWasResumed(wasResumed);
 
@@ -387,7 +393,8 @@ public class DefaultJobPersistence implements JobPersistence {
             .withEstimatedRecords(record.get(STREAM_STATS.ESTIMATED_RECORDS))
             .withEstimatedBytes(record.get(STREAM_STATS.ESTIMATED_BYTES))
             .withBytesCommitted(record.get(STREAM_STATS.BYTES_COMMITTED))
-            .withRecordsCommitted(record.get(STREAM_STATS.RECORDS_COMMITTED)))
+            .withRecordsCommitted(record.get(STREAM_STATS.RECORDS_COMMITTED))
+            .withRecordsRejected(record.get(STREAM_STATS.RECORDS_REJECTED)))
         .withWasBackfilled(wasBackfilled)
         .withWasResumed(wasResumed);
   }
@@ -415,6 +422,7 @@ public class DefaultJobPersistence implements JobPersistence {
         .withDestinationStateMessagesEmitted(record.get(SYNC_STATS.DESTINATION_STATE_MESSAGES_EMITTED))
         .withBytesCommitted(record.get(SYNC_STATS.BYTES_COMMITTED))
         .withRecordsCommitted(record.get(SYNC_STATS.RECORDS_COMMITTED))
+        .withRecordsRejected(record.get(SYNC_STATS.RECORDS_REJECTED))
         .withMeanSecondsBeforeSourceStateMessageEmitted(record.get(SYNC_STATS.MEAN_SECONDS_BEFORE_SOURCE_STATE_MESSAGE_EMITTED))
         .withMaxSecondsBeforeSourceStateMessageEmitted(record.get(SYNC_STATS.MAX_SECONDS_BEFORE_SOURCE_STATE_MESSAGE_EMITTED))
         .withMeanSecondsBetweenStateMessageEmittedandCommitted(record.get(SYNC_STATS.MEAN_SECONDS_BETWEEN_STATE_MESSAGE_EMITTED_AND_COMMITTED))
@@ -426,7 +434,8 @@ public class DefaultJobPersistence implements JobPersistence {
       final var stats = new SyncStats()
           .withEstimatedRecords(record.get(STREAM_STATS.ESTIMATED_RECORDS)).withEstimatedBytes(record.get(STREAM_STATS.ESTIMATED_BYTES))
           .withRecordsEmitted(record.get(STREAM_STATS.RECORDS_EMITTED)).withBytesEmitted(record.get(STREAM_STATS.BYTES_EMITTED))
-          .withRecordsCommitted(record.get(STREAM_STATS.RECORDS_COMMITTED)).withBytesCommitted(record.get(STREAM_STATS.BYTES_COMMITTED));
+          .withRecordsCommitted(record.get(STREAM_STATS.RECORDS_COMMITTED)).withBytesCommitted(record.get(STREAM_STATS.BYTES_COMMITTED))
+          .withRecordsRejected(record.get(STREAM_STATS.RECORDS_REJECTED));
       return new StreamSyncStats()
           .withStreamName(record.get(STREAM_STATS.STREAM_NAME)).withStreamNamespace(record.get(STREAM_STATS.STREAM_NAMESPACE))
           .withStats(stats);
@@ -804,6 +813,7 @@ public class DefaultJobPersistence implements JobPersistence {
                          final Long bytesEmitted,
                          final Long recordsCommitted,
                          final Long bytesCommitted,
+                         final Long recordsRejected,
                          final UUID connectionId,
                          final List<StreamSyncStats> streamStats)
       throws IOException {
@@ -817,7 +827,8 @@ public class DefaultJobPersistence implements JobPersistence {
           .withRecordsEmitted(recordsEmitted)
           .withBytesEmitted(bytesEmitted)
           .withRecordsCommitted(recordsCommitted)
-          .withBytesCommitted(bytesCommitted);
+          .withBytesCommitted(bytesCommitted)
+          .withRecordsRejected(recordsRejected);
       saveToSyncStatsTable(now, syncStats, attemptId, ctx);
 
       saveToStreamStatsTableBatch(now, streamStats, attemptId, connectionId, ctx);

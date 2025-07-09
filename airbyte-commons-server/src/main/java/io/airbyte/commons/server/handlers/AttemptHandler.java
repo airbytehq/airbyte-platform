@@ -254,6 +254,7 @@ public class AttemptHandler {
         .bytesEmitted(stats.getBytesEmitted())
         .bytesCommitted(stats.getBytesCommitted())
         .recordsCommitted(stats.getRecordsCommitted())
+        .recordsRejected(stats.getRecordsRejected())
         .estimatedRecords(stats.getEstimatedRecords())
         .estimatedBytes(stats.getEstimatedBytes());
   }
@@ -270,6 +271,7 @@ public class AttemptHandler {
                   .withRecordsEmitted(s.getStats().getRecordsEmitted())
                   .withBytesCommitted(s.getStats().getBytesCommitted())
                   .withRecordsCommitted(s.getStats().getRecordsCommitted())
+                  .withRecordsRejected(s.getStats().getRecordsRejected())
                   .withEstimatedBytes(s.getStats().getEstimatedBytes())
                   .withEstimatedRecords(s.getStats().getEstimatedRecords())))
           .collect(Collectors.toList());
@@ -278,6 +280,7 @@ public class AttemptHandler {
           stats.getEstimatedRecords(), stats.getEstimatedBytes(),
           stats.getRecordsEmitted(), stats.getBytesEmitted(),
           stats.getRecordsCommitted(), stats.getBytesCommitted(),
+          stats.getRecordsRejected(),
           requestBody.getConnectionId(),
           streamStats);
 
