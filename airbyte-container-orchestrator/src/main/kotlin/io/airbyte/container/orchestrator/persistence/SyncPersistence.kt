@@ -335,6 +335,7 @@ private fun SyncStats.toAttemptStats(): AttemptStats =
     estimatedRecords = estimatedRecords,
     bytesCommitted = bytesCommitted,
     recordsCommitted = recordsCommitted,
+    recordsRejected = recordsRejected,
   )
 
 private fun MetricClient.emitFailedStateCloseMetrics(connectionId: UUID?) {
