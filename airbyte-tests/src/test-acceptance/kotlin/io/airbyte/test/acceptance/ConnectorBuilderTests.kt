@@ -45,6 +45,8 @@ import java.sql.SQLException
 import java.util.Optional
 import java.util.UUID
 
+// todo (cgardens) - I would hope consolidating builder endpoints into the server would remove the need for this to be tested at the acceptance test level.
+
 /**
  * Connector Builder-only acceptance tests.
  */

@@ -27,6 +27,7 @@ import io.airbyte.api.client.model.generated.WorkspaceCreate
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.json.Jsons
 import io.airbyte.featureflag.tests.TestFlagsSetter
+import io.airbyte.test.acceptance.SyncAcceptanceTests.Companion.assertDestinationDbEmpty
 import io.airbyte.test.utils.AcceptanceTestHarness
 import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteAdminApiClient
 import io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog
@@ -257,6 +258,7 @@ class AcceptanceTestsResources {
     testHarness.waitWhileJobIsRunning(jobInfoRead.job, Duration.ofMinutes(1))
 
     LOGGER.info("state after reset: {}", testHarness.getConnectionState(connectionId))
+    assertDestinationDbEmpty(testHarness.getDestinationDatabase())
 
     // TODO enable once stream status for resets has been fixed
     // testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE,

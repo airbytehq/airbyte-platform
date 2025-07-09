@@ -56,19 +56,6 @@ internal class ApiAcceptanceTests {
   }
 
   @Test
-  @Throws(IOException::class)
-  fun testGetDestinationSpec() {
-    val destinationDefinitionId = testHarness.postgresDestinationDefinitionId
-    val spec =
-      testHarness.getDestinationDefinitionSpec(
-        destinationDefinitionId,
-        workspaceId,
-      )
-    Assertions.assertEquals(destinationDefinitionId, spec.destinationDefinitionId)
-    Assertions.assertNotNull(spec.connectionSpecification)
-  }
-
-  @Test
   fun testFailedGet404() {
     val e: ClientException =
       assertThrows<ClientException> {
@@ -79,9 +66,7 @@ internal class ApiAcceptanceTests {
 
   @Test
   @DisabledIfEnvironmentVariable(named = IS_GKE, matches = AcceptanceTestsResources.TRUE, disabledReason = DUPLICATE_TEST_IN_GKE)
-  @Throws(
-    IOException::class,
-  )
+  @Throws(IOException::class)
   fun testGetSourceSpec() {
     val sourceDefId = testHarness.postgresSourceDefinitionId
     val spec =
@@ -90,81 +75,6 @@ internal class ApiAcceptanceTests {
         workspaceId,
       )
     Assertions.assertNotNull(spec.connectionSpecification)
-  }
-
-  @Test
-  @DisabledIfEnvironmentVariable(named = IS_GKE, matches = AcceptanceTestsResources.TRUE, disabledReason = DUPLICATE_TEST_IN_GKE)
-  @Throws(
-    IOException::class,
-  )
-  fun testCreateDestination() {
-    val destinationDefId = testHarness.postgresDestinationDefinitionId
-    val destinationConfig = testHarness.getDestinationDbConfig()
-    val name = "AccTestDestinationDb-" + UUID.randomUUID()
-
-    val createdDestination =
-      testHarness.createDestination(
-        name,
-        workspaceId,
-        destinationDefId,
-        destinationConfig,
-      )
-    val expectedConfig = testHarness.getDestinationDbConfigWithHiddenPassword()
-    val configKeys = listOf("schema", "password", "database", "port", "host", "ssl", "username")
-
-    Assertions.assertEquals(name, createdDestination.name)
-    Assertions.assertEquals(destinationDefId, createdDestination.destinationDefinitionId)
-    Assertions.assertEquals(workspaceId, createdDestination.workspaceId)
-    configKeys.forEach(
-      Consumer { key: String? ->
-        if (expectedConfig[key].isNumber) {
-          Assertions.assertEquals(expectedConfig[key].asInt(), createdDestination.connectionConfiguration[key].asInt())
-        } else {
-          Assertions.assertEquals(expectedConfig[key].asText(), createdDestination.connectionConfiguration[key].asText())
-        }
-      },
-    )
-  }
-
-  @Test
-  @DisabledIfEnvironmentVariable(named = IS_GKE, matches = AcceptanceTestsResources.TRUE, disabledReason = DUPLICATE_TEST_IN_GKE)
-  @Throws(
-    IOException::class,
-  )
-  fun testUpdateDestination() {
-    val destinationDefId = testHarness.postgresDestinationDefinitionId
-    val destinationConfig = testHarness.getDestinationDbConfig()
-    val name = "AccTestDestinationDb-" + UUID.randomUUID()
-
-    val createdDestination =
-      testHarness.createDestination(
-        name,
-        workspaceId,
-        destinationDefId,
-        destinationConfig,
-      )
-    val expectedConfig = testHarness.getDestinationDbConfigWithHiddenPassword()
-    val configKeys = listOf("schema", "password", "database", "port", "host", "ssl", "username")
-
-    val updatedDestination =
-      testHarness.updateDestination(
-        createdDestination.destinationId,
-        expectedConfig,
-        "$name-updated",
-      )
-
-    Assertions.assertEquals("$name-updated", updatedDestination.name)
-    Assertions.assertEquals(destinationDefId, updatedDestination.destinationDefinitionId)
-    Assertions.assertEquals(workspaceId, updatedDestination.workspaceId)
-    configKeys.forEach(
-      Consumer { key: String? ->
-        if (expectedConfig[key].isNumber) {
-          Assertions.assertEquals(expectedConfig[key].asInt(), updatedDestination.connectionConfiguration[key].asInt())
-        } else {
-          Assertions.assertEquals(expectedConfig[key].asText(), updatedDestination.connectionConfiguration[key].asText())
-        }
-      },
-    )
   }
 
   @Test
@@ -244,9 +154,7 @@ internal class ApiAcceptanceTests {
 
   @Test
   @DisabledIfEnvironmentVariable(named = IS_GKE, matches = AcceptanceTestsResources.TRUE, disabledReason = DUPLICATE_TEST_IN_GKE)
-  @Throws(
-    IOException::class,
-  )
+  @Throws(IOException::class)
   fun testDiscoverSourceSchema() {
     val sourceId = testHarness.createPostgresSource().sourceId
 

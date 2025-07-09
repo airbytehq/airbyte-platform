@@ -39,6 +39,8 @@ import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
+// todo (cgardens) - It is not good that this is tested at the acceptance test level. This is testing an internal state machine. We need to figure out how to delete this test suite, but first we need to make sure there is adequate coverage at the unit test level.
+
 /**
  * Tests for the various schema management functionalities e.g., auto-detect, auto-propagate.
  *
