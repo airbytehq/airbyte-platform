@@ -13,6 +13,7 @@ import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrga
 import { useCreateWorkspace, useListDataplaneGroups } from "core/api";
 import { DataplaneGroupRead } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
+import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -27,6 +28,7 @@ const OrganizationCreateWorkspaceFormValidationSchema = z.object({
 type CreateWorkspaceFormValues = z.infer<typeof OrganizationCreateWorkspaceFormValidationSchema>;
 
 export const OrganizationWorkspacesCreateControl: React.FC<{ disabled?: boolean }> = ({ disabled = false }) => {
+  const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
   const { organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
   const dataplaneGroups = useListDataplaneGroups();
   const { openModal } = useModalService();
@@ -38,20 +40,21 @@ export const OrganizationWorkspacesCreateControl: React.FC<{ disabled?: boolean 
   }
 
   const handleButtonClick = () => {
-    openModal({
-      title: null,
-      content: () => (
-        <TeamsFeaturesWarnModal
-          onClose={() => {
-            openModal({
-              title: formatMessage({ id: "workspaces.create.title" }),
-              content: ({ onCancel }) => <CreateWorkspaceModal dataplaneGroups={dataplaneGroups} onCancel={onCancel} />,
-            });
-          }}
-        />
-      ),
-      size: "xl",
-    });
+    const openCreateWorkspaceModal = () =>
+      openModal({
+        title: formatMessage({ id: "workspaces.create.title" }),
+        content: ({ onCancel }) => <CreateWorkspaceModal dataplaneGroups={dataplaneGroups} onCancel={onCancel} />,
+      });
+
+    if (showTeamsFeaturesWarnModal) {
+      openModal({
+        title: null,
+        content: () => <TeamsFeaturesWarnModal onClose={openCreateWorkspaceModal} />,
+        size: "xl",
+      });
+    } else {
+      openCreateWorkspaceModal();
+    }
   };
 
   return (
