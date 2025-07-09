@@ -60,9 +60,9 @@ public class SynchronousJobMetadata {
         configId,
         createdAt,
         endedAt,
-        jobMetadata.isSucceeded(),
+        jobMetadata.succeeded(),
         jobOutput != null ? jobOutput.getConnectorConfigurationUpdated() : false,
-        jobMetadata.getLogPath(),
+        jobMetadata.logPath(),
         jobOutput != null ? jobOutput.getFailureReason() : null);
   }
 

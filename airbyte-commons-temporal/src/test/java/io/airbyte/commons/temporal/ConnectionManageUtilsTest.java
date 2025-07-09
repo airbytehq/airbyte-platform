@@ -30,7 +30,7 @@ class ConnectionManageUtilsTest {
     when(mWorkflow.newSignalWithStartRequest()).thenReturn(mock(BatchRequest.class));
 
     final var utils = new ConnectionManagerUtils(mWorkflow, mMetric);
-    utils.signalWorkflowAndRepairIfNecessary(cid, (workflow) -> null);
+    utils.signalWorkflowAndRepairIfNecessary(cid, (workflow) -> () -> {});
     // Because we do not mock the getConnectionManagerWorkflow call, the underlying call throws an
     // exception
     // and the logic recreates it.

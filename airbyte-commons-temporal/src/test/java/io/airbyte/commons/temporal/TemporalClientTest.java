@@ -198,8 +198,8 @@ public class TemporalClientTest {
       assertNotNull(response);
       assertTrue(response.getOutput().isPresent());
       assertEquals("hello", response.getOutput().get());
-      assertTrue(response.getMetadata().isSucceeded());
-      assertEquals(logPath, response.getMetadata().getLogPath());
+      assertTrue(response.metadata().succeeded());
+      assertEquals(logPath, response.metadata().logPath());
     }
 
     @SuppressWarnings(UNCHECKED)
@@ -212,8 +212,8 @@ public class TemporalClientTest {
 
       assertNotNull(response);
       assertFalse(response.getOutput().isPresent());
-      assertFalse(response.getMetadata().isSucceeded());
-      assertEquals(logPath, response.getMetadata().getLogPath());
+      assertFalse(response.metadata().succeeded());
+      assertEquals(logPath, response.metadata().logPath());
     }
 
     @Test
@@ -229,8 +229,8 @@ public class TemporalClientTest {
       assertNotNull(response);
       assertTrue(response.getOutput().isPresent());
       assertEquals(connectorJobOutput, response.getOutput().get());
-      assertFalse(response.getMetadata().isSucceeded());
-      assertEquals(logPath, response.getMetadata().getLogPath());
+      assertFalse(response.metadata().succeeded());
+      assertEquals(logPath, response.metadata().logPath());
     }
 
   }

@@ -452,11 +452,11 @@ class AcceptanceTestHarness
           TemporalUtils(
             null,
             null,
+            false,
             null,
             null,
             null,
-            null,
-            null,
+            10,
             Optional.empty(),
           )
         val temporalService =
