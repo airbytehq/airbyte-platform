@@ -80,7 +80,7 @@ class JobServiceDataImpl(
         try {
           it.toConfigModel()
         } catch (e: Exception) {
-          logger.info(e) { "Failed to convert job to config model configTypes=$configTypes scopes=$scopes createdAtStart=$createdAtStart" }
+          logger.info(e) { "Failed to convert job to config model id=${it.id} configType=${it.configType} scope=${it.scope}" }
           null
         }
       }
