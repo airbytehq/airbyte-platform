@@ -11,8 +11,11 @@ import io.airbyte.commons.converters.StateConverter;
 import io.airbyte.commons.server.errors.SyncIsRunningException;
 import io.airbyte.config.StateWrapper;
 import io.airbyte.config.persistence.StatePersistence;
+import io.airbyte.metrics.lib.ApmTraceUtils;
+import io.airbyte.metrics.lib.MetricTags;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -38,6 +41,7 @@ public class StateHandler {
 
   public ConnectionState createOrUpdateState(final ConnectionStateCreateOrUpdate connectionStateCreateOrUpdate) throws IOException {
     final UUID connectionId = connectionStateCreateOrUpdate.getConnectionId();
+    ApmTraceUtils.addTagsToTrace(Map.of(MetricTags.CONNECTION_ID, connectionId));
 
     final StateWrapper convertedCreateOrUpdate = StateConverter.toInternal(connectionStateCreateOrUpdate.getConnectionState());
     statePersistence.updateOrCreateState(connectionId, convertedCreateOrUpdate);
