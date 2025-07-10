@@ -27,7 +27,7 @@ Renders the keycloak.url environment variable
 Renders the keycloak.host value
 */}}
 {{- define "airbyte.keycloak.host" }}
-    {{- (get (urlParse .Values.global.airbyteUrl) "host") }}
+    {{- .Values.keycloak.host | default (get (urlParse .Values.global.airbyteUrl) "host") }}
 {{- end }}
 
 {{/*

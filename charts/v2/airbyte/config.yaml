@@ -618,7 +618,7 @@ keycloak:
 
     - env: KEYCLOAK_HOST
       key: host
-      valueExp: (get (urlParse .Values.global.airbyteUrl) "host")
+      defaultValueExp: (get (urlParse .Values.global.airbyteUrl) "host")
 
     - env: KEYCLOAK_PORT
       key: service.port
