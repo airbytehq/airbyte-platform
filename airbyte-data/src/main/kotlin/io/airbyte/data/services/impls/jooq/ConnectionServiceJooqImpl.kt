@@ -2235,11 +2235,12 @@ class ConnectionServiceJooqImpl
             """.trimIndent(),
           )
         if (connectionId != null) {
-          sql.append(" AND c.id != ?")
+          sql.append(" AND c.id != ? ")
         }
 
         sql.append(
           """
+            
           GROUP BY
               c.namespace_definition,
               c.namespace_format,
