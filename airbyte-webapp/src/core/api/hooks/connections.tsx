@@ -3,6 +3,7 @@ import {
   useInfiniteQuery,
   useIsMutating,
   useMutation,
+  useQueries,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -110,7 +111,7 @@ export const connectionsKeys = {
       requestBody.createdAtEnd,
     ] as const,
   event: (eventId: string) => [...connectionsKeys.all, "event", eventId] as const,
-  statusCounts: () => [...connectionsKeys.all, "statusCounts"] as const,
+  statusCounts: (workspaceId: string) => [...connectionsKeys.all, "statusCounts", workspaceId] as const,
 };
 
 export interface ConnectionValues {
@@ -895,7 +896,24 @@ export const useGetConnectionStatusesCounts = () => {
   const workspaceId = useCurrentWorkspaceId();
   const requestOptions = useRequestOptions();
 
-  return useQuery(connectionsKeys.statusCounts(), () =>
+  return useQuery(connectionsKeys.statusCounts(workspaceId), () =>
     webBackendGetConnectionStatusCounts({ workspaceId }, requestOptions)
   );
+};
+
+export const useGetWorkspacesStatusesCounts = (workspaceIds: string[], options?: { refetchInterval?: boolean }) => {
+  const requestOptions = useRequestOptions();
+
+  return useQueries({
+    queries: workspaceIds.map((workspaceId) => ({
+      queryKey: connectionsKeys.statusCounts(workspaceId),
+      queryFn: async () => ({
+        workspaceId,
+        statusCounts: await webBackendGetConnectionStatusCounts({ workspaceId }, requestOptions),
+      }),
+      staleTime: 1000 * 60, // 1 minute
+      cacheTime: 1000 * 60 * 2, // 2 minutes
+      refetchInterval: options?.refetchInterval ? 1000 * 60 : undefined, // 1 minute if enabled
+    })),
+  });
 };

@@ -14,15 +14,16 @@ export const ListboxOptions = React.forwardRef<
   HTMLElement,
   ExtractProps<typeof HeadlessUIListboxOptions> & ListboxOptionsProps
 >((props, ref) => {
+  const { fullWidth, ...restProps } = props;
   const mergedClassNames = classNames(
     styles.listboxOptions,
     {
-      [styles["listboxOptions--fullWidth"]]: !!props.fullWidth,
+      [styles["listboxOptions--fullWidth"]]: !!fullWidth,
     },
     props.className
   );
   return (
-    <HeadlessUIListboxOptions {...props} className={mergedClassNames} ref={ref}>
+    <HeadlessUIListboxOptions {...restProps} className={mergedClassNames} ref={ref}>
       {props.children}
     </HeadlessUIListboxOptions>
   );

@@ -19,10 +19,20 @@
   top: calc(variables.$spacing-xl * 3);
 }
 
+.loadingPage {
+  height: 100%;
+}
+
 .workspacesPage__loadingSpinner {
   margin-left: auto;
   margin-right: auto;
   text-align: center;
+}
+
+.footerLoading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .headerRow {
@@ -36,6 +46,10 @@
 
 .filterButtonsRow {
   margin-bottom: variables.$spacing-md;
+}
+
+.statusFilterButton {
+  width: 170px;
 }
 
 .emptyStateIconBackground {

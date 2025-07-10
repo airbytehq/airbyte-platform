@@ -24,3 +24,7 @@
     border: none;
   }
 }
+
+.footerLoading {
+  border-top: variables.$border-thin solid colors.$grey-200;
+}

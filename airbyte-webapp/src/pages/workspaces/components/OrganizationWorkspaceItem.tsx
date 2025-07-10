@@ -1,11 +1,12 @@
 import classNames from "classnames";
 import React from "react";
+import { useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
 
-import { useWorkspaceConnectionStatusCounts } from "core/api";
+import { WebBackendConnectionStatusCounts } from "core/api/types/AirbyteClient";
 
 import styles from "./OrganizationWorkspaceItem.module.scss";
 
@@ -13,41 +14,15 @@ interface OrganizationWorkspaceItemProps {
   workspace: {
     workspaceId: string;
     name: string;
+    statusCounts?: WebBackendConnectionStatusCounts;
   };
-  filterUnhealthyWorkspaces?: boolean;
-  filterRunningSyncs?: boolean;
 }
 
-export const OrganizationWorkspaceItem: React.FC<OrganizationWorkspaceItemProps> = ({
-  workspace,
-  filterUnhealthyWorkspaces = false,
-  filterRunningSyncs = false,
-}) => {
-  const connectionStatusCounts = useWorkspaceConnectionStatusCounts(workspace.workspaceId);
-  const pendingCount = connectionStatusCounts?.pendingCount || 0;
-  const successCount = connectionStatusCounts?.successCount || 0;
-  const failedCount = connectionStatusCounts?.failedCount || 0;
-
-  // If filtering is active, check if this workspace should be shown
-  if (filterUnhealthyWorkspaces || filterRunningSyncs) {
-    const hasUnhealthyConnections = failedCount > 0;
-    const hasRunningSyncs = pendingCount > 0;
-
-    // If both filters are active, show workspaces that match at least one criteria
-    if (filterUnhealthyWorkspaces && filterRunningSyncs) {
-      if (!hasUnhealthyConnections && !hasRunningSyncs) {
-        return null;
-      }
-    }
-    // If only unhealthy filter is active, show only workspaces with failed connections
-    else if (filterUnhealthyWorkspaces && !hasUnhealthyConnections) {
-      return null;
-    }
-    // If only running syncs filter is active, show only workspaces with pending connections
-    else if (filterRunningSyncs && !hasRunningSyncs) {
-      return null;
-    }
-  }
+export const OrganizationWorkspaceItem: React.FC<OrganizationWorkspaceItemProps> = ({ workspace }) => {
+  const { formatMessage } = useIntl();
+  const runningCount = workspace.statusCounts?.running || 0;
+  const healthyCount = workspace.statusCounts?.healthy || 0;
+  const failedCount = workspace.statusCounts?.failed || 0;
 
   return (
     <Box pb="md" key={workspace.workspaceId}>
@@ -56,24 +31,27 @@ export const OrganizationWorkspaceItem: React.FC<OrganizationWorkspaceItemProps>
           <span className={styles.orgWorkspaceItem__name}>{workspace.name}</span>
           <div className={styles.orgWorkspaceItem__meta}>
             <span
+              title={formatMessage({ id: "workspaces.status.runningSyncs" })}
               className={classNames(styles.orgWorkspaceItem__badge, {
-                [styles["orgWorkspaceItem__badge--sync"]]: pendingCount > 0,
-                [styles["orgWorkspaceItem__badge--disabled"]]: pendingCount === 0,
+                [styles["orgWorkspaceItem__badge--sync"]]: runningCount > 0,
+                [styles["orgWorkspaceItem__badge--disabled"]]: runningCount === 0,
               })}
             >
               <Icon type="statusInProgress" size="xs" />
-              {pendingCount}
+              {runningCount}
             </span>
             <span
+              title={formatMessage({ id: "workspaces.status.successfulSyncs" })}
               className={classNames(styles.orgWorkspaceItem__badge, {
-                [styles["orgWorkspaceItem__badge--success"]]: successCount > 0,
-                [styles["orgWorkspaceItem__badge--disabled"]]: successCount === 0,
+                [styles["orgWorkspaceItem__badge--success"]]: healthyCount > 0,
+                [styles["orgWorkspaceItem__badge--disabled"]]: healthyCount === 0,
               })}
             >
               <Icon type="check" size="xs" />
-              {successCount}
+              {healthyCount}
             </span>
             <span
+              title={formatMessage({ id: "workspaces.status.failedSyncs" })}
               className={classNames(styles.orgWorkspaceItem__badge, {
                 [styles["orgWorkspaceItem__badge--error"]]: failedCount > 0,
                 [styles["orgWorkspaceItem__badge--disabled"]]: failedCount === 0,

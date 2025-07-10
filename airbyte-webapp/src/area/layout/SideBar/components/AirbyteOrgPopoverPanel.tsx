@@ -11,9 +11,9 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Text } from "components/ui/Text";
 
 import { useListOrganizationSummaries } from "core/api";
+import { OrganizationSummary } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth/AuthContext";
 import { useFeature, FeatureItem } from "core/services/features";
-import { isNonNullable } from "core/utils/isNonNullable";
 
 import styles from "./AirbyteOrgPopoverPanel.module.scss";
 import { OrganizationWithWorkspaces } from "./OrganizationWithWorkspaces";
@@ -36,13 +36,13 @@ export const AirbyteOrgPopoverPanel: React.FC<{ closePopover: () => void }> = ({
     },
   });
 
-  const organizationSummaries =
+  const organizationSummaries: OrganizationSummary[] =
     data?.pages.flatMap((page) => {
       if (showOSSWorkspaceName && page.organizationSummaries?.[0]?.workspaces?.[0]) {
         page.organizationSummaries[0].workspaces[0].name = formatMessage({ id: "sidebar.myWorkspace" });
       }
-      return page.organizationSummaries;
-    }) || [];
+      return page.organizationSummaries ?? [];
+    }) ?? [];
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
@@ -115,14 +115,16 @@ export const AirbyteOrgPopoverPanel: React.FC<{ closePopover: () => void }> = ({
           <Virtuoso
             ref={virtuosoRef}
             style={{ height: estimatedHeight }}
-            data={organizationSummaries?.filter(isNonNullable)}
+            data={organizationSummaries}
             endReached={handleEndReached}
             computeItemKey={(index, item) => item.organization.organizationId + index}
-            itemContent={OrganizationWithWorkspaces}
+            itemContent={(index, item) => (
+              <OrganizationWithWorkspaces {...item} lastItem={index === organizationSummaries.length - 1} />
+            )}
             components={{
               Footer: isFetchingNextPage
                 ? () => (
-                    <Box pt="md" pb="sm">
+                    <Box pt="md" pb="sm" className={styles.footerLoading}>
                       <LoadingSpinner />
                     </Box>
                   )

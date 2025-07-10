@@ -27,7 +27,10 @@ const OrganizationCreateWorkspaceFormValidationSchema = z.object({
 
 type CreateWorkspaceFormValues = z.infer<typeof OrganizationCreateWorkspaceFormValidationSchema>;
 
-export const OrganizationWorkspacesCreateControl: React.FC<{ disabled?: boolean }> = ({ disabled = false }) => {
+export const OrganizationWorkspacesCreateControl: React.FC<{ disabled?: boolean; secondary?: boolean }> = ({
+  disabled = false,
+  secondary = false,
+}) => {
   const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
   const { organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
   const dataplaneGroups = useListDataplaneGroups();
@@ -60,7 +63,7 @@ export const OrganizationWorkspacesCreateControl: React.FC<{ disabled?: boolean 
   return (
     <Button
       onClick={handleButtonClick}
-      variant="primary"
+      variant={secondary ? "secondary" : "primary"}
       data-testid="workspaces.createNew"
       size="sm"
       // TODO: show lock icon if the user is on a trial plan

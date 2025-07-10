@@ -9,7 +9,8 @@ import { useListWorkspacesInOrganization, useGetDataplaneGroup } from "core/api"
 
 export const RegionsTable = () => {
   const organizationId = useCurrentOrganizationId();
-  const { workspaces } = useListWorkspacesInOrganization({ organizationId });
+  const { data: workspacesData } = useListWorkspacesInOrganization({ organizationId });
+  const workspaces = workspacesData?.pages[0].workspaces ?? [];
   const { getDataplaneGroup } = useGetDataplaneGroup();
   const { formatMessage } = useIntl();
 

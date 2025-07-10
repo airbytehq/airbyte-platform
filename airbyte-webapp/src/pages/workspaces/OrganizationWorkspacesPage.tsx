@@ -1,47 +1,117 @@
 import capitalize from "lodash/capitalize";
-import React, { useDeferredValue, useState, Suspense } from "react";
-import { useIntl } from "react-intl";
-import { useToggle } from "react-use";
+import React, { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
+import { useDebounce } from "react-use";
+import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
 
 import { Box } from "components/ui/Box";
-import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { Icon } from "components/ui/Icon";
+import { ListBox } from "components/ui/ListBox";
 import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
-import { useListWorkspacesInOrganization, useOrganization, useListUsersInOrganization } from "core/api";
+import { NoWorkspacePermissionsContent } from "area/workspace/components/NoWorkspacesPermissionWarning";
+import {
+  useOrganization,
+  useListUsersInOrganization,
+  useListWorkspacesInOrganization,
+  useGetWorkspacesStatusesCounts,
+} from "core/api";
+import { WorkspaceRead, WebBackendConnectionStatusCounts } from "core/api/types/AirbyteClient";
 import { useWebappConfig } from "core/config";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 
+import OrganizationWorkspaceItem from "./components/OrganizationWorkspaceItem";
 import { OrganizationWorkspacesCreateControl } from "./components/OrganizationWorkspacesCreateControl";
-import { OrganizationWorkspacesList } from "./components/OrganizationWorkspacesList";
 import { useOrganizationsToCreateWorkspaces } from "./components/useOrganizationsToCreateWorkspaces";
 import styles from "./OrganizationWorkspacesPage.module.scss";
 
-export const WORKSPACE_LIST_LENGTH = 50;
+export const WORKSPACE_LIST_LENGTH = 10;
 
-const WorkspacesContent: React.FC = () => {
-  const [searchValue, setSearchValue] = useState("");
-  const [filterUnhealthyWorkspaces, setFilterUnhealthyWorkspaces] = useToggle(false);
-  const [filterRunningSyncs, setFilterRunningSyncs] = useToggle(false);
-  const { organizationsMemberOnly } = useOrganizationsToCreateWorkspaces();
-  const deferredSearchValue = useDeferredValue(searchValue);
-  const currentOrganizationId = useCurrentOrganizationId();
-  const organization = useOrganization(currentOrganizationId);
-  const { edition } = useWebappConfig();
-  const { users } = useListUsersInOrganization(currentOrganizationId);
+type StatusFilter = "all" | "running" | "healthy" | "paused" | "failed";
+
+const OrganizationWorkspacesPage: React.FC = () => {
+  useTrackPage(PageTrackingCodes.WORKSPACES);
   const { formatMessage } = useIntl();
+  const { edition } = useWebappConfig();
+  const { organizationsMemberOnly } = useOrganizationsToCreateWorkspaces();
 
-  const { workspaces } = useListWorkspacesInOrganization({ organizationId: currentOrganizationId });
-  const showNoWorkspacesYet = workspaces.length === 0;
+  const organizationId = useCurrentOrganizationId();
+  const organization = useOrganization(organizationId);
+  const memberCount = useListUsersInOrganization(organizationId).users.length;
 
-  // Filter workspaces based on search value
-  const filteredWorkspaces = workspaces.filter((workspace) =>
-    workspace.name.toLowerCase().includes(deferredSearchValue.toLowerCase())
+  const [searchValue, setSearchValue] = useState("");
+  const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useListWorkspacesInOrganization({
+    organizationId,
+    nameContains: debouncedSearchValue,
+    pagination: {
+      pageSize: 10,
+    },
+  });
+
+  const allWorkspaces = useMemo(() => data?.pages.flatMap((page) => page.workspaces) ?? [], [data]);
+  const workspaceIds = allWorkspaces.map((workspace) => workspace.workspaceId);
+
+  // Get status counts for all workspaces
+  const statusCountsResults = useGetWorkspacesStatusesCounts(workspaceIds, { refetchInterval: true });
+
+  const enrichedWorkspaces = useMemo(() => {
+    const statusCountsMap = new Map<string, WebBackendConnectionStatusCounts | undefined>();
+    statusCountsResults.forEach((result) => {
+      const workspaceId = result.data?.workspaceId;
+      if (workspaceId && result.data) {
+        statusCountsMap.set(workspaceId, result.data.statusCounts);
+      }
+    });
+    return allWorkspaces.map((workspace) => {
+      const statusCounts = statusCountsMap.get(workspace.workspaceId);
+      return { ...workspace, statusCounts };
+    });
+  }, [allWorkspaces, statusCountsResults]);
+
+  const filteredWorkspaces = useMemo(() => {
+    if (statusFilter === "all") {
+      return enrichedWorkspaces;
+    }
+
+    return enrichedWorkspaces.filter((workspace) => (workspace.statusCounts?.[statusFilter] ?? 0) > 0);
+  }, [enrichedWorkspaces, statusFilter]);
+
+  const virtuosoRef = useRef<VirtuosoHandle | null>(null);
+
+  useDebounce(
+    () => {
+      setDebouncedSearchValue(searchValue);
+      virtuosoRef.current?.scrollTo({ top: 0 });
+    },
+    250,
+    [searchValue]
   );
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, fetchNextPage]);
+
+  const statusFilterOptions = [
+    { label: "All sync statuses", value: "all" as StatusFilter },
+    { label: "Successful syncs", value: "healthy" as StatusFilter },
+    { label: "Running syncs", value: "running" as StatusFilter },
+    { label: "Incomplete syncs", value: "paused" as StatusFilter },
+    { label: "Failed syncs", value: "failed" as StatusFilter },
+  ];
+
+  useEffect(() => {
+    setStatusFilter("all");
+  }, [organizationId]);
 
   /**
    * Check if we should show the "You don't have permission to anything" message, if:
@@ -50,6 +120,11 @@ const WorkspacesContent: React.FC = () => {
   const showNoWorkspacesPermission = organizationsMemberOnly.some(
     (org) => org.organizationId === organization.organizationId
   );
+
+  const showNoWorkspacesYet =
+    filteredWorkspaces.length === 0 && !isLoading && debouncedSearchValue === "" && statusFilter === "all";
+
+  const showNoWorkspacesFound = filteredWorkspaces.length === 0 && !isLoading;
 
   return (
     <div className={styles.background}>
@@ -61,7 +136,10 @@ const WorkspacesContent: React.FC = () => {
                 {organization.organizationName}
               </Heading>
               <Text color="grey400" size="sm">
-                {capitalize(edition)} &bull; {formatMessage({ id: "organization.members" }, { count: users.length })}
+                {formatMessage(
+                  { id: "organization.members" },
+                  { subscriptionName: capitalize(edition), count: memberCount }
+                )}
               </Text>
             </Box>
             <Box pb="lg">
@@ -71,54 +149,75 @@ const WorkspacesContent: React.FC = () => {
           <Box pb="sm">
             <SearchInput value={searchValue} onChange={setSearchValue} data-testid="workspaces-page-search" />
           </Box>
-          {!showNoWorkspacesYet && (
-            <FlexContainer gap="md" alignItems="center" className={styles.filterButtonsRow}>
-              <Button
-                variant={filterUnhealthyWorkspaces ? "primary" : "secondary"}
-                type="button"
-                onClick={setFilterUnhealthyWorkspaces}
-              >
-                {formatMessage({ id: "organization.unhealthyWorkspaces" })}
-              </Button>
-              <Button
-                variant={filterRunningSyncs ? "primary" : "secondary"}
-                type="button"
-                onClick={setFilterRunningSyncs}
-              >
-                {formatMessage({ id: "organization.runningSyncs" })}
-              </Button>
-            </FlexContainer>
-          )}
-          <Box pb="2xl">
-            <OrganizationWorkspacesList
-              workspaces={filteredWorkspaces}
-              isLoading={false}
-              filterUnhealthyWorkspaces={filterUnhealthyWorkspaces}
-              filterRunningSyncs={filterRunningSyncs}
-              showNoWorkspacesPermission={showNoWorkspacesPermission}
-              showNoWorkspacesYet={showNoWorkspacesYet}
-              showNoWorkspacesFound={filteredWorkspaces.length === 0 && searchValue.length > 0}
+          <Box pb="sm">
+            <ListBox
+              options={statusFilterOptions}
+              selectedValue={statusFilter}
+              onSelect={setStatusFilter}
+              placeholder={formatMessage({ id: "workspaces.statusFilter.placeholder" })}
+              data-testid="workspaces-status-filter"
+              buttonClassName={styles.statusFilterButton}
             />
+          </Box>
+          <Box pb="2xl">
+            {isLoading ? (
+              <Box p="md" pb="sm">
+                <LoadingSpinner />
+              </Box>
+            ) : showNoWorkspacesPermission ? (
+              <NoWorkspacePermissionsContent organizations={[organization]} />
+            ) : showNoWorkspacesYet ? (
+              <FlexContainer direction="column" alignItems="center" justifyContent="flex-start">
+                <Box mb="sm" mt="xl">
+                  <FlexContainer
+                    alignItems="center"
+                    justifyContent="center"
+                    className={styles.emptyStateIconBackground}
+                  >
+                    <Icon type="grid" size="xl" className={styles.emptyStateIcon} />
+                  </FlexContainer>
+                </Box>
+                <Box mb="sm">
+                  <Text size="md" color="grey500">
+                    <FormattedMessage id="workspaces.noWorkspacesYet" />
+                  </Text>
+                </Box>
+                <OrganizationWorkspacesCreateControl secondary />
+              </FlexContainer>
+            ) : showNoWorkspacesFound ? (
+              <Box mt="xl">
+                <FlexContainer direction="column" alignItems="center" justifyContent="flex-start">
+                  <Text size="md">
+                    <FormattedMessage id="workspaces.noWorkspaces" />
+                  </Text>
+                </FlexContainer>
+              </Box>
+            ) : (
+              <Virtuoso
+                ref={virtuosoRef}
+                style={{ height: "600px" }}
+                data={filteredWorkspaces}
+                endReached={handleEndReached}
+                computeItemKey={(index, item) => item.workspaceId + index}
+                itemContent={(
+                  _: number,
+                  workspace: WorkspaceRead & { statusCounts: WebBackendConnectionStatusCounts | undefined }
+                ) => <OrganizationWorkspaceItem key={workspace.workspaceId} workspace={workspace} />}
+                components={{
+                  Footer: isFetchingNextPage
+                    ? () => (
+                        <Box pt="md" pb="sm" className={styles.footerLoading}>
+                          <LoadingSpinner />
+                        </Box>
+                      )
+                    : undefined,
+                }}
+              />
+            )}
           </Box>
         </div>
       </FlexContainer>
     </div>
-  );
-};
-
-export const OrganizationWorkspacesPage: React.FC = () => {
-  useTrackPage(PageTrackingCodes.WORKSPACES);
-
-  return (
-    <Suspense
-      fallback={
-        <Box py="2xl" className={styles.workspacesPage__loadingSpinner}>
-          <LoadingSpinner />
-        </Box>
-      }
-    >
-      <WorkspacesContent />
-    </Suspense>
   );
 };
 

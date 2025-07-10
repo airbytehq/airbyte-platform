@@ -28,9 +28,10 @@ import {
   OrganizationRead,
   OrganizationTrialStatusRead,
   OrganizationUserReadList,
-  WorkspaceReadList,
   OrganizationInfoRead,
   ListOrganizationSummariesResponse,
+  WorkspaceReadList,
+  ListWorkspacesInOrganizationRequestBody,
 } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
@@ -46,7 +47,8 @@ export const organizationKeys = {
   trialStatus: (organizationId: string) => [SCOPE_ORGANIZATION, "trial", organizationId] as const,
   usage: (organizationId: string, timeWindow: string) =>
     [SCOPE_ORGANIZATION, "usage", organizationId, timeWindow] as const,
-  workspaces: (organizationId: string) => [SCOPE_ORGANIZATION, "workspaces", "list", organizationId] as const,
+  workspaces: (organizationId: string, pageSize: number, nameContains?: string) =>
+    [SCOPE_ORGANIZATION, "workspaces", "list", organizationId, pageSize, nameContains] as const,
   listByUser: (requestBody: ListOrganizationsByUserRequestBody) =>
     [...organizationKeys.all, "byUser", requestBody] as const,
   summaries: (requestBody: ListOrganizationSummariesRequestBody) =>
@@ -150,11 +152,43 @@ export const useOrganizationUsage = ({ timeWindow }: { timeWindow: ConsumptionTi
   );
 };
 
-export const useListWorkspacesInOrganization = ({ organizationId }: { organizationId: string }): WorkspaceReadList => {
+export const useListWorkspacesInOrganization = ({
+  organizationId,
+  pagination,
+  nameContains,
+}: ListWorkspacesInOrganizationRequestBody): UseInfiniteQueryResult<WorkspaceReadList, unknown> => {
   const requestOptions = useRequestOptions();
-  const queryKey = organizationKeys.workspaces(organizationId);
+  const pageSize = pagination?.pageSize ?? 10;
+  const queryKey = organizationKeys.workspaces(organizationId, pageSize, nameContains?.trim());
 
-  return useSuspenseQuery(queryKey, () => listWorkspacesInOrganization({ organizationId }, requestOptions));
+  const listWorkspacesQueryFn = async ({ pageParam = 0 }) => {
+    const rowOffset = pageParam * pageSize;
+    return listWorkspacesInOrganization(
+      {
+        organizationId,
+        pagination: pagination ? { pageSize, rowOffset } : undefined,
+        nameContains,
+      },
+      requestOptions
+    );
+  };
+
+  return useInfiniteQuery({
+    queryKey,
+    queryFn: listWorkspacesQueryFn,
+    staleTime: 1000 * 60 * 5,
+    cacheTime: 1000 * 60 * 30,
+    getNextPageParam: (lastPage, allPages) => {
+      const pageSize = pagination?.pageSize ?? 10;
+      const workspaces = lastPage.workspaces ?? [];
+      return workspaces.length < pageSize ? undefined : allPages.length;
+    },
+    getPreviousPageParam: (firstPage, allPages) => {
+      const pageSize = pagination?.pageSize ?? 10;
+      const workspaces = firstPage.workspaces ?? [];
+      return workspaces.length < pageSize ? undefined : allPages.length - 1;
+    },
+  });
 };
 
 export const useListOrganizationsByUser = (requestBody: ListOrganizationsByUserRequestBody) => {

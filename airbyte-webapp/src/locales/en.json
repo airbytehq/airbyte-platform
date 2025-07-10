@@ -34,6 +34,9 @@
   "workspaces.sourceLimitReached.description": "You have {count} sources in this workspace. If you would like to add more, please change the limits for your instance.",
   "workspaces.destinationLimitReached.title": "You've reached the limit for destinations in a workspace.",
   "workspaces.destinationLimitReached.description": "You have {count} destinations in this workspace. If you would like to add more, please change the limits for your instance.",
+  "workspaces.status.runningSyncs": "Running syncs",
+  "workspaces.status.successfulSyncs": "Successful syncs",
+  "workspaces.status.failedSyncs": "Failed syncs",
 
   "teamsFeatures.modal.title": "Continue to experience Teams features",
   "teamsFeatures.modal.featuresTitle": "You're about to use one of the following Teams features:",
@@ -42,7 +45,7 @@
   "teamsFeatures.modal.features.sso": "SSO",
   "teamsFeatures.modal.features.rbac": "Role-based access control (RBAC)",
   "teamsFeatures.modal.features.mappers": "Mappers",
-  "teamsFeatures.modal.warningMessage": "Please note you will lost access to these features once your trial ends unless you upgrade to Teams. All syncs using these features will be disabled and all members invited will be deleted.",
+  "teamsFeatures.modal.warningMessage": "Please note you will lose access to these features once your trial ends unless you upgrade to Teams. All syncs using these features will be disabled and all members invited will be deleted.",
   "teamsFeatures.modal.button.continue": "Continue",
 
   "role.admin": "Admin",
@@ -2614,7 +2617,8 @@
   "embedded.onboarding.upsell.description": "Harness the power of Airbyte Embedded and add hundreds of integrations into your product instantly.",
   "embedded.onboarding.talkToSales": "Talk to sales",
 
-  "organization.members": "{count, plural, one {# member} other {# members}}",
+  "organization.members": "{subscriptionName} \u2022 {count, plural, one {# member} other {# members}}",
   "organization.unhealthyWorkspaces": "Unhealthy workspaces",
-  "organization.runningSyncs": "Running syncs"
+  "organization.runningSyncs": "Running syncs",
+  "workspaces.statusFilter.placeholder": "Filter by status"
 }
