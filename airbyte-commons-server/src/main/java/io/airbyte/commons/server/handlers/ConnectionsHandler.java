@@ -1540,6 +1540,10 @@ public class ConnectionsHandler {
   }
 
   public ConnectionEventListMinimal listConnectionEventsMinimal(ConnectionEventsListMinimalRequestBody requestBody) throws IOException {
+    if (requestBody.getWorkspaceId() == null) {
+      return new ConnectionEventListMinimal();
+    }
+
     // Get all connection IDs for the workspace using the lightweight method
     final List<UUID> connectionIds = connectionService.listConnectionIdsForWorkspace(requestBody.getWorkspaceId());
 
