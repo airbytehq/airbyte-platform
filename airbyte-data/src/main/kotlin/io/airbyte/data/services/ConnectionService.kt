@@ -10,6 +10,10 @@ import io.airbyte.config.StandardSync
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.StreamDescriptorForDestination
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.services.shared.ConnectionFilters
+import io.airbyte.data.services.shared.ConnectionListCursorPagination
+import io.airbyte.data.services.shared.ConnectionSortKey
+import io.airbyte.data.services.shared.ConnectionWithJobInfo
 import io.airbyte.data.services.shared.StandardSyncQuery
 import io.airbyte.data.services.shared.StandardSyncsQueryPaginated
 import io.airbyte.validation.json.JsonValidationException
@@ -45,7 +49,19 @@ interface ConnectionService {
   fun listWorkspaceStandardSyncs(standardSyncQuery: StandardSyncQuery): List<StandardSync>
 
   @Throws(IOException::class)
-  fun listWorkspaceStandardSyncsPaginated(
+  fun listWorkspaceStandardSyncsCursorPaginated(
+    standardSyncQuery: StandardSyncQuery,
+    connectionListCursorPagination: ConnectionListCursorPagination,
+  ): List<ConnectionWithJobInfo>
+
+  @Throws(IOException::class)
+  fun countWorkspaceStandardSyncs(
+    standardSyncQuery: StandardSyncQuery,
+    filters: ConnectionFilters?,
+  ): Int
+
+  @Throws(IOException::class)
+  fun listWorkspaceStandardSyncsLimitOffsetPaginated(
     workspaceIds: List<UUID>,
     tagIds: List<UUID>,
     includeDeleted: Boolean,
@@ -53,8 +69,18 @@ interface ConnectionService {
     rowOffset: Int,
   ): Map<UUID, List<StandardSync>>
 
+  @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class)
+  fun buildCursorPagination(
+    cursor: UUID?,
+    internalSortKey: ConnectionSortKey?,
+    connectionFilters: ConnectionFilters?,
+    query: StandardSyncQuery?,
+    ascending: Boolean?,
+    pageSize: Int?,
+  ): ConnectionListCursorPagination?
+
   @Throws(IOException::class)
-  fun listWorkspaceStandardSyncsPaginated(standardSyncsQueryPaginated: StandardSyncsQueryPaginated): Map<UUID, List<StandardSync>>
+  fun listWorkspaceStandardSyncsLimitOffsetPaginated(standardSyncsQueryPaginated: StandardSyncsQueryPaginated): Map<UUID, List<StandardSync>>
 
   @Throws(IOException::class)
   fun listConnectionsBySource(

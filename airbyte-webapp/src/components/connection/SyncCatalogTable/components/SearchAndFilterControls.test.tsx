@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
 
 import { TestWrapper } from "test-utils/testutils";
@@ -103,13 +103,17 @@ describe("SearchAndFilterControls", () => {
     expect(screen.getByTestId("sync-catalog-search")).toBeInTheDocument();
   });
 
-  it("should call setFiltering when search input changes", () => {
+  it("should call setFiltering when search input changes", async () => {
+    const NEW_VALUE = "test";
+
     renderComponent();
 
     const searchInput = screen.getByTestId("sync-catalog-search");
-    fireEvent.change(searchInput, { target: { value: "test" } });
+    fireEvent.change(searchInput, { target: { value: NEW_VALUE } });
 
-    expect(defaultProps.setFiltering).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(defaultProps.setFiltering).toHaveBeenCalledWith(NEW_VALUE);
+    });
   });
 
   it("should render RefreshSchemaControl and ExpandCollapseAllControl in create mode", () => {

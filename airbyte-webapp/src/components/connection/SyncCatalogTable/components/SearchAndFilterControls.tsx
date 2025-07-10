@@ -58,7 +58,7 @@ export const SearchAndFilterControls: FC<SearchAndFilterControlsProps> = ({
                 id: "form.streamOrFieldSearch",
               })}
               containerClassName={styles.searchInputContainer}
-              onChange={(e) => setFiltering(e.target.value)}
+              onChange={setFiltering}
               onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                 // We do not want to submit the connection form when pressing Enter in the search field
                 e.key === "Enter" && e.preventDefault();

@@ -69,11 +69,7 @@ const WorkspacesContent: React.FC = () => {
             </Box>
           </FlexContainer>
           <Box pb="sm">
-            <SearchInput
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              data-testid="workspaces-page-search"
-            />
+            <SearchInput value={searchValue} onChange={setSearchValue} data-testid="workspaces-page-search" />
           </Box>
           {!showNoWorkspacesYet && (
             <FlexContainer gap="md" alignItems="center" className={styles.filterButtonsRow}>

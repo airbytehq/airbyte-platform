@@ -90,12 +90,7 @@ export const WorkspacesPickerList: React.FC<WorkspacePickerListProps> = ({ close
 
   return (
     <>
-      <SearchInput
-        value={searchValue}
-        onChange={(e) => setSearchValue(e.target.value)}
-        inline
-        data-testid="workspaces-picker-input"
-      />
+      <SearchInput value={searchValue} onChange={setSearchValue} inline data-testid="workspaces-picker-input" />
 
       {isLoading ? (
         <Box p="lg">

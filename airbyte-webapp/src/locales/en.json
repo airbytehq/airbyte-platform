@@ -1196,6 +1196,7 @@
   "tables.connections": "Connections",
   "tables.connections.pluralized": "{value, plural, one {# connection} other {# connections}}",
   "tables.connections.filters.empty": "No connections match your filters",
+  "tables.connections.loadingMore": "Loading more connections...",
   "tables.connections.filters.clear": "Clear all",
   "tables.connections.filters.status.all": "All statuses",
   "tables.connections.filters.status.healthy": "Healthy",

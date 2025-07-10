@@ -16825,6 +16825,65 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DestinationId"
+        cursor:
+          $ref: "#/components/schemas/ConnectionId"
+        sortKey:
+          $ref: "#/components/schemas/WebBackendConnectionListSortKey"
+          description: Sort key that determines the order of results
+        filters:
+          $ref: "#/components/schemas/WebBackendConnectionListFilters"
+          description: Filters for list of of results
+        pageSize:
+          type: integer
+          description: Number of connections to return in the list
+    WebBackendConnectionListSortKey:
+      type: string
+      enum:
+        - connectionName_asc
+        - connectionName_desc
+        - sourceName_asc
+        - sourceName_desc
+        - destinationName_asc
+        - destinationName_desc
+        - lastSync_asc
+        - lastSync_desc
+      description: Available sort keys for connection list pagination
+    WebBackendConnectionListFilters:
+      type: object
+      properties:
+        sourceDefinitionIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/SourceDefinitionId"
+          description: Filter connections by source connector definition types
+        destinationDefinitionIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/DestinationDefinitionId"
+          description: Filter connections by destination connector definition types
+        statuses:
+          type: array
+          items:
+            type: string
+            enum:
+              - healthy
+              - failed
+              - running
+              - paused
+          description: Filter connections by their current sync status
+        states:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActorStatus"
+          description: Filter connections by their active/inactive state
+        tagIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/TagId"
+          description: Filter connections by tags
+        searchTerm:
+          type: string
+          description: Search term to filter connections by name, source name, destination name, etc.
     WebBackendConnectionListItem:
       type: object
       description: Information about a connection that shows up in the connection list view.
@@ -17017,6 +17076,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebBackendConnectionListItem"
+        page_size:
+          type: integer
+        num_connections:
+          type: integer
     SyncMode:
       type: string
       enum:

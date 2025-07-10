@@ -88,7 +88,7 @@ const AllDestinationsPageInner: React.FC<{ destinations: DestinationRead[] }> = 
               <Box p="lg">
                 <FlexContainer justifyContent="flex-start" direction="column">
                   <FlexItem grow>
-                    <SearchInput value={search} onChange={({ target: { value } }) => setFilterValue("search", value)} />
+                    <SearchInput value={search} onChange={(value) => setFilterValue("search", value)} />
                   </FlexItem>
                   <FlexContainer gap="sm" alignItems="center">
                     <FlexItem>

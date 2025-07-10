@@ -88,6 +88,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                 class="<removed-for-snapshot-test>"
                                 data-testid="sync-catalog-search"
                                 placeholder="Search stream or field name"
+                                role="search"
                                 type="search"
                                 value=""
                               />
@@ -925,6 +926,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                 class="<removed-for-snapshot-test>"
                                 data-testid="sync-catalog-search"
                                 placeholder="Search stream or field name"
+                                role="search"
                                 type="search"
                                 value=""
                               />

@@ -1255,7 +1255,7 @@ public class ConnectionsHandler {
 
     final List<ConnectionRead> connectionReads = Lists.newArrayList();
 
-    final Map<UUID, List<StandardSync>> workspaceIdToStandardSyncsMap = connectionService.listWorkspaceStandardSyncsPaginated(
+    final Map<UUID, List<StandardSync>> workspaceIdToStandardSyncsMap = connectionService.listWorkspaceStandardSyncsLimitOffsetPaginated(
         listConnectionsForWorkspacesRequestBody.getWorkspaceIds(),
         listConnectionsForWorkspacesRequestBody.getTagIds(),
         listConnectionsForWorkspacesRequestBody.getIncludeDeleted(),

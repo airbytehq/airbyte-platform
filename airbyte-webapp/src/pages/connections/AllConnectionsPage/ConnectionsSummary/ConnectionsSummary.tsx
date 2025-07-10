@@ -59,10 +59,7 @@ export const isStatusFailed = (
   connectionStatus?.connectionSyncStatus === ConnectionSyncStatus.failed ||
   connectionStatus?.connectionSyncStatus === ConnectionSyncStatus.incomplete;
 
-export const ConnectionsSummary: React.FC<{
-  connections: WebBackendConnectionListItem[];
-  statuses?: ConnectionStatusRead[];
-}> = () => {
+export const ConnectionsSummary: React.FC = () => {
   const { isLoading, data: statuses } = useGetConnectionStatusesCounts();
 
   if (isLoading || !statuses) {

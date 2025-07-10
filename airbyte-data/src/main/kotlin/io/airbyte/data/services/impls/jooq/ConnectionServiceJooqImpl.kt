@@ -7,6 +7,7 @@ package io.airbyte.data.services.impls.jooq
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.Sets
 import datadog.trace.api.Trace
+import io.airbyte.api.model.generated.ActorStatus
 import io.airbyte.commons.enums.Enums
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfigNotFoundType
@@ -23,6 +24,13 @@ import io.airbyte.config.helpers.CatalogHelpers
 import io.airbyte.config.helpers.ScheduleHelpers
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ConnectionService
+import io.airbyte.data.services.impls.jooq.DbConverter.buildStandardSync
+import io.airbyte.data.services.shared.ConnectionFilters
+import io.airbyte.data.services.shared.ConnectionJobStatus
+import io.airbyte.data.services.shared.ConnectionListCursor
+import io.airbyte.data.services.shared.ConnectionListCursorPagination
+import io.airbyte.data.services.shared.ConnectionSortKey
+import io.airbyte.data.services.shared.ConnectionWithJobInfo
 import io.airbyte.data.services.shared.StandardSyncQuery
 import io.airbyte.data.services.shared.StandardSyncsQueryPaginated
 import io.airbyte.db.Database
@@ -39,15 +47,22 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.TagRecord
+import io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS
+import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
+import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
 import io.airbyte.validation.json.JsonValidationException
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import org.jooq.Condition
 import org.jooq.DSLContext
+import org.jooq.Field
 import org.jooq.JSONB
 import org.jooq.Record
+import org.jooq.Record3
 import org.jooq.Record5
 import org.jooq.Result
 import org.jooq.SelectJoinStep
+import org.jooq.SortField
 import org.jooq.TableField
 import org.jooq.impl.DSL
 import org.jooq.impl.TableImpl
@@ -55,8 +70,11 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.lang.invoke.MethodHandles
+import java.time.Instant
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.Arrays
+import java.util.Collections
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Collectors
@@ -305,18 +323,597 @@ class ConnectionServiceJooqImpl
       )
     }
 
+    @Trace
+    @Throws(IOException::class, ConfigNotFoundException::class)
+    fun getWorkspaceStandardSyncWithJobInfo(connectionId: UUID): ConnectionWithJobInfo {
+      val connectionAndOperationIdsResult =
+        database.query({ ctx: DSLContext ->
+          ctx
+            .select(
+              Tables.CONNECTION.asterisk(),
+              Tables.ACTOR.NAME.`as`(SOURCE_NAME),
+              Tables.ACTOR
+                .`as`(DEST_ACTOR_ALIAS)
+                .NAME
+                .`as`(DESTINATION_NAME),
+              DSL.groupConcat(Tables.CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).`as`(OPERATION_IDS_AGG_FIELD),
+              Tables.SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS,
+              Tables.SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE,
+              DSL
+                .field(
+                  DSL.name(LATEST_JOBS, STATUS),
+                  JobStatus::class.java,
+                ).`as`(LATEST_JOB_STATUS),
+              DSL
+                .field(DSL.name(LATEST_JOBS, CREATED_AT))
+                .`as`(LATEST_JOB_CREATED_AT),
+            ).from(Tables.CONNECTION)
+            .leftJoin(Tables.CONNECTION_OPERATION)
+            .on(Tables.CONNECTION_OPERATION.CONNECTION_ID.eq(Tables.CONNECTION.ID))
+            .leftJoin(Tables.SCHEMA_MANAGEMENT)
+            .on(Tables.SCHEMA_MANAGEMENT.CONNECTION_ID.eq(Tables.CONNECTION.ID))
+            .join(Tables.ACTOR)
+            .on(Tables.CONNECTION.SOURCE_ID.eq(Tables.ACTOR.ID))
+            .join(Tables.ACTOR.`as`(DEST_ACTOR_ALIAS))
+            .on(
+              Tables.CONNECTION.DESTINATION_ID.eq(Tables.ACTOR.`as`(DEST_ACTOR_ALIAS).ID),
+            ).leftJoin(Tables.CONNECTION_TAG)
+            .on(Tables.CONNECTION_TAG.CONNECTION_ID.eq(Tables.CONNECTION.ID))
+            .leftJoin(
+              DSL
+                .lateral<Record3<String, JobStatus, OffsetDateTime>>(
+                  ctx
+                    .select(
+                      JOBS.SCOPE,
+                      JOBS.STATUS,
+                      JOBS.CREATED_AT,
+                    ).from(JOBS)
+                    .where(
+                      JOBS.CONFIG_TYPE
+                        .eq(JobConfigType.sync)
+                        .and(
+                          JOBS.SCOPE.eq(
+                            Tables.CONNECTION.ID.cast(
+                              String::class.java,
+                            ),
+                          ),
+                        ),
+                    ).orderBy(JOBS.UPDATED_AT.desc())
+                    .limit(1),
+                ).asTable(LATEST_JOBS),
+            ).on(DSL.trueCondition())
+            // group by connection.id and sort fields so that the groupConcat above works
+            .where(Tables.CONNECTION.ID.eq(connectionId))
+            .groupBy(buildGroupByFields())
+            .fetch()
+        })
+
+      val connectionIds =
+        connectionAndOperationIdsResult.stream().map { record: Record -> record.get(Tables.CONNECTION.ID) }.collect(Collectors.toList())
+
+      val result =
+        getStandardSyncsWithJobInfoFromResult(
+          connectionAndOperationIdsResult,
+          getNotificationConfigurationByConnectionIds(connectionIds),
+          getTagsByConnectionIds(listOf(connectionId)),
+        )
+      if (result.isEmpty()) {
+        throw ConfigNotFoundException(ConfigNotFoundType.STANDARD_SYNC, connectionId.toString())
+      }
+      return result.first()
+    }
+
+    @Trace
+    @Throws(IOException::class)
+    override fun listWorkspaceStandardSyncsCursorPaginated(
+      standardSyncQuery: StandardSyncQuery,
+      connectionListCursorPagination: ConnectionListCursorPagination,
+    ): List<ConnectionWithJobInfo> {
+      val orderByFields = buildOrderByClause(connectionListCursorPagination.cursor)
+
+      val filterCondition =
+        buildConnectionFilterConditions(
+          standardSyncQuery,
+          if (connectionListCursorPagination.cursor != null) connectionListCursorPagination.cursor!!.filters else null,
+        )
+      val cursorCondition = buildCursorCondition(connectionListCursorPagination.cursor)
+      val whereCondition = cursorCondition.and(filterCondition)
+
+      val connectionAndOperationIdsResult =
+        database.query({ ctx: DSLContext ->
+          ctx
+            .select(
+              Tables.CONNECTION.asterisk(),
+              Tables.ACTOR.NAME.`as`(SOURCE_NAME),
+              Tables.ACTOR
+                .`as`(DEST_ACTOR_ALIAS)
+                .NAME
+                .`as`(DESTINATION_NAME),
+              DSL.groupConcat(Tables.CONNECTION_OPERATION.OPERATION_ID).separator(OPERATION_IDS_AGG_DELIMITER).`as`(OPERATION_IDS_AGG_FIELD),
+              Tables.SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS,
+              Tables.SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE,
+              DSL
+                .field(
+                  DSL.name(LATEST_JOBS, STATUS),
+                  JobStatus::class.java,
+                ).`as`(LATEST_JOB_STATUS),
+              DSL
+                .field(DSL.name(LATEST_JOBS, CREATED_AT))
+                .`as`(LATEST_JOB_CREATED_AT),
+            ).from(Tables.CONNECTION)
+            .leftJoin(Tables.CONNECTION_OPERATION)
+            .on(Tables.CONNECTION_OPERATION.CONNECTION_ID.eq(Tables.CONNECTION.ID))
+            .leftJoin(Tables.SCHEMA_MANAGEMENT)
+            .on(Tables.SCHEMA_MANAGEMENT.CONNECTION_ID.eq(Tables.CONNECTION.ID))
+            .join(Tables.ACTOR)
+            .on(Tables.CONNECTION.SOURCE_ID.eq(Tables.ACTOR.ID))
+            .join(Tables.ACTOR.`as`(DEST_ACTOR_ALIAS))
+            .on(
+              Tables.CONNECTION.DESTINATION_ID.eq(
+                Tables.ACTOR
+                  .`as`(
+                    DEST_ACTOR_ALIAS,
+                  ).ID,
+              ),
+            ).leftJoin(Tables.CONNECTION_TAG)
+            .on(Tables.CONNECTION_TAG.CONNECTION_ID.eq(Tables.CONNECTION.ID))
+            .leftJoin(
+              DSL
+                .lateral<Record3<String, JobStatus, OffsetDateTime>>(
+                  ctx
+                    .select(
+                      JOBS.SCOPE,
+                      JOBS.STATUS,
+                      JOBS.CREATED_AT,
+                    ).from(JOBS)
+                    .where(
+                      JOBS.CONFIG_TYPE
+                        .eq(JobConfigType.sync)
+                        .and(
+                          JOBS.SCOPE.eq(
+                            Tables.CONNECTION.ID.cast(
+                              String::class.java,
+                            ),
+                          ),
+                        ),
+                    ).orderBy(JOBS.UPDATED_AT.desc())
+                    .limit(1),
+                ).asTable(LATEST_JOBS),
+            ).on(DSL.trueCondition())
+            // group by connection.id and sort fields so that the groupConcat above works
+            .where(whereCondition)
+            .groupBy(buildGroupByFields())
+            .orderBy(orderByFields)
+            .limit(connectionListCursorPagination.pageSize)
+            .fetch()
+        })
+
+      val connectionIds =
+        connectionAndOperationIdsResult.stream().map { record: Record -> record.get(Tables.CONNECTION.ID) }.collect(Collectors.toList())
+
+      return getStandardSyncsWithJobInfoFromResult(
+        connectionAndOperationIdsResult,
+        getNotificationConfigurationByConnectionIds(connectionIds),
+        getTagsByConnectionIds(connectionIds),
+      )
+    }
+
+    /**
+     * Build ORDER BY clause based on sort keys.
+     */
+    fun buildOrderByClause(cursor: ConnectionListCursor?): List<SortField<*>> {
+      val orderByFields: MutableList<SortField<*>> = java.util.ArrayList()
+
+      if (cursor == null) {
+        return orderByFields
+      }
+
+      val sortKey = cursor.sortKey
+      val ascending = cursor.ascending
+
+      when (sortKey) {
+        ConnectionSortKey.CONNECTION_NAME -> orderByFields.add(if (ascending) Tables.CONNECTION.NAME.asc() else Tables.CONNECTION.NAME.desc())
+        ConnectionSortKey.SOURCE_NAME ->
+          orderByFields.add(
+            if (ascending) {
+              DSL.field(SOURCE_NAME).asc()
+            } else {
+              DSL
+                .field(
+                  SOURCE_NAME,
+                ).desc()
+            },
+          )
+
+        ConnectionSortKey.DESTINATION_NAME ->
+          orderByFields.add(
+            if (ascending) {
+              DSL.field(DESTINATION_NAME).asc()
+            } else {
+              DSL
+                .field(
+                  DESTINATION_NAME,
+                ).desc()
+            },
+          )
+
+        ConnectionSortKey.LAST_SYNC -> {
+          if (ascending) {
+            orderByFields.add(DSL.field(DSL.name(LATEST_JOBS, CREATED_AT)).asc().nullsFirst())
+          } else {
+            orderByFields.add(DSL.field(DSL.name(LATEST_JOBS, CREATED_AT)).desc().nullsLast())
+          }
+        }
+      }
+
+      // Always add connection ID as the final sort field for consistent pagination
+      orderByFields.add(if (ascending) Tables.CONNECTION.ID.asc() else Tables.CONNECTION.ID.desc())
+
+      return orderByFields
+    }
+
+    /**
+     * Build GROUP BY fields based on sort key to ensure all ORDER BY fields are included.
+     */
+    fun buildGroupByFields(): List<Field<*>> {
+      val groupByFields: MutableList<Field<*>> = java.util.ArrayList()
+
+      groupByFields.add(Tables.CONNECTION.ID)
+      groupByFields.add(Tables.CONNECTION.NAME)
+      groupByFields.add(Tables.ACTOR.NAME)
+      groupByFields.add(Tables.ACTOR.`as`(DEST_ACTOR_ALIAS).NAME)
+      groupByFields.add(Tables.SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)
+      groupByFields.add(Tables.SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
+      groupByFields.add(DSL.field(DSL.name(LATEST_JOBS, STATUS)))
+      groupByFields.add(DSL.field(DSL.name(LATEST_JOBS, CREATED_AT)))
+
+      return groupByFields
+    }
+
+    /**
+     * Build cursor WHERE condition based on sort keys and cursor values.
+     */
+    fun buildCursorCondition(cursor: ConnectionListCursor?): Condition {
+      if (cursor == null) {
+        return DSL.noCondition()
+      }
+
+      val sortKey = cursor.sortKey
+      val cursorValues: MutableList<Any?> = java.util.ArrayList()
+      val sortFields: MutableList<Field<*>> = java.util.ArrayList()
+
+      when (sortKey) {
+        ConnectionSortKey.CONNECTION_NAME -> {
+          if (cursor.connectionName != null) {
+            cursorValues.add(cursor.connectionName)
+            sortFields.add(Tables.CONNECTION.NAME)
+          }
+        }
+
+        ConnectionSortKey.SOURCE_NAME -> {
+          if (cursor.sourceName != null) {
+            cursorValues.add(cursor.sourceName)
+            sortFields.add(Tables.ACTOR.NAME)
+          }
+        }
+
+        ConnectionSortKey.DESTINATION_NAME -> {
+          if (cursor.destinationName != null) {
+            cursorValues.add(cursor.destinationName)
+            sortFields.add(Tables.ACTOR.`as`(DEST_ACTOR_ALIAS).NAME)
+          }
+        }
+
+        ConnectionSortKey.LAST_SYNC -> {
+          if (cursor.ascending) {
+            if (cursor.lastSync != null) {
+              cursorValues.add(OffsetDateTime.ofInstant(Instant.ofEpochSecond(cursor.lastSync!!), ZoneOffset.UTC))
+              sortFields.add(DSL.field(DSL.name(LATEST_JOBS, CREATED_AT)))
+            }
+          } else {
+            return buildCursorConditionLastSyncDesc(cursor)
+          }
+        }
+      }
+
+      // Always add connection ID for consistent pagination
+      if (cursor.connectionId != null) {
+        cursorValues.add(cursor.connectionId)
+        sortFields.add(Tables.CONNECTION.ID)
+      }
+
+      // If no cursor values, no condition needed (first page)
+      if (cursorValues.isEmpty()) {
+        return DSL.noCondition()
+      }
+
+      // Build row comparison for cursor pagination
+      return if (cursor.ascending) {
+        DSL.row(*sortFields.toTypedArray<Field<*>>()).gt(*cursorValues.toTypedArray())
+      } else {
+        DSL.row(*sortFields.toTypedArray<Field<*>>()).lt(*cursorValues.toTypedArray())
+      }
+    }
+
+    /**
+     * Build cursor condition for sorting by last sync desc.
+     */
+    fun buildCursorConditionLastSyncDesc(cursor: ConnectionListCursor?): Condition {
+      if (cursor == null || cursor.connectionId == null) {
+        log.info("First page; cursor == null || cursor.connectionId == null")
+        return DSL.noCondition()
+      }
+
+      val cursorId = cursor.connectionId
+      val cursorLastSyncEpoch = cursor.lastSync ?: 0L
+      val cursorLastSyncDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(cursorLastSyncEpoch), ZoneOffset.UTC)
+
+      val rowLastSync = DSL.field(DSL.name(LATEST_JOBS, CREATED_AT), OffsetDateTime::class.java)
+      val rowId = Tables.CONNECTION.ID
+
+      return if (cursor.lastSync != null) {
+        (rowLastSync.isNotNull.and(rowLastSync.lt(cursorLastSyncDateTime)))
+          .or(rowLastSync.isNull.and(rowId.lt(cursorId)))
+      } else {
+        rowLastSync.isNull.and(rowId.lt(cursorId))
+      }
+    }
+
+    /**
+     * Builds cursor pagination based on the new API structure with connection ID cursor. When a cursor
+     * is provided, finds the connection and extracts the sort key value for pagination.
+     */
+    override fun buildCursorPagination(
+      cursor: UUID?,
+      internalSortKey: ConnectionSortKey?,
+      connectionFilters: ConnectionFilters?,
+      query: StandardSyncQuery?,
+      ascending: Boolean?,
+      pageSize: Int?,
+    ): ConnectionListCursorPagination {
+      if (cursor == null) {
+        // No cursor - return pagination for first page with filters
+        return ConnectionListCursorPagination.fromValues(
+          internalSortKey,
+          null,
+          null,
+          null,
+          null,
+          null,
+          pageSize,
+          ascending,
+          connectionFilters,
+        )
+      }
+
+      // Cursor provided - find the connection and extract the sort key value
+      val cursorConnection =
+        getWorkspaceStandardSyncWithJobInfo(cursor)
+          ?: throw ConfigNotFoundException("Connection", cursor.toString())
+
+      // Extract cursor values based on sort key
+      val connectionName = cursorConnection.connection().name
+
+      val lastSync =
+        cursorConnection
+          .latestJobCreatedAt()
+          .map { obj: OffsetDateTime -> obj.toEpochSecond() }
+          .orElse(null)
+
+      return ConnectionListCursorPagination.fromValues(
+        internalSortKey,
+        connectionName,
+        cursorConnection.sourceName(),
+        cursorConnection.destinationName(),
+        lastSync,
+        cursor,
+        pageSize,
+        ascending,
+        connectionFilters,
+      )
+    }
+
+    /**
+     * Apply state filters to the query.
+     */
+    fun applyStateFilters(stateFilters: List<ActorStatus>): Condition {
+      var condition: Condition = DSL.falseCondition()
+      for (stateFilter in stateFilters) {
+        condition =
+          when (stateFilter) {
+            ActorStatus.ACTIVE -> condition.or(Tables.CONNECTION.STATUS.eq(StatusType.active))
+            ActorStatus.INACTIVE -> condition.or(Tables.CONNECTION.STATUS.eq(StatusType.inactive))
+          }
+      }
+      return condition
+    }
+
+    /**
+     * Apply status filters to the query using the joined latest job data.
+     */
+    fun applyStatusFilters(statusFilters: List<ConnectionJobStatus>): Condition {
+      var condition: Condition = DSL.falseCondition()
+      for (statusFilter in statusFilters) {
+        val statusField: Field<JobStatus> =
+          DSL.field<JobStatus>(
+            DSL.name(LATEST_JOBS, STATUS),
+            JobStatus::class.java,
+          )
+        condition =
+          when (statusFilter) {
+            ConnectionJobStatus.FAILED ->
+              condition.or(
+                statusField.`in`(JobStatus.failed, JobStatus.cancelled, JobStatus.incomplete),
+              )
+
+            ConnectionJobStatus.RUNNING ->
+              condition.or(
+                statusField.eq(JobStatus.running),
+              )
+
+            ConnectionJobStatus.HEALTHY ->
+              condition.or(
+                Tables.CONNECTION.STATUS
+                  .eq(StatusType.active)
+                  .and(
+                    statusField
+                      .isNull()
+                      .or(statusField.`in`(JobStatus.succeeded, JobStatus.pending)),
+                  ),
+              )
+          }
+      }
+      return condition
+    }
+
+    /**
+     * Build common WHERE conditions for connection queries. This ensures identical filtering logic
+     * between listing and counting operations.
+     */
+    fun buildConnectionFilterConditions(
+      standardSyncQuery: StandardSyncQuery,
+      filters: ConnectionFilters?,
+    ): Condition {
+      var condition =
+        Tables.ACTOR.WORKSPACE_ID
+          .eq(standardSyncQuery.workspaceId)
+          .and(
+            if (standardSyncQuery.destinationId.isNullOrEmpty()) {
+              DSL.noCondition()
+            } else {
+              Tables.CONNECTION.DESTINATION_ID.`in`(standardSyncQuery.destinationId)
+            },
+          ).and(
+            if (standardSyncQuery.sourceId.isNullOrEmpty()) {
+              DSL.noCondition()
+            } else {
+              Tables.CONNECTION.SOURCE_ID.`in`(standardSyncQuery.sourceId)
+            },
+          ).and(
+            if (standardSyncQuery.includeDeleted) {
+              DSL.noCondition()
+            } else {
+              Tables.CONNECTION.STATUS.notEqual(StatusType.deprecated)
+            },
+          )
+
+      // Add dynamic filter conditions from cursor if present
+      if (filters != null) {
+        condition =
+          condition
+            // searchTerm searches across connection, source, and destination names
+            .and(
+              if (filters.searchTerm.isNullOrBlank()) {
+                DSL.noCondition()
+              } else {
+                Tables.CONNECTION.NAME
+                  .containsIgnoreCase(filters.searchTerm)
+                  .or(Tables.ACTOR.NAME.containsIgnoreCase(filters.searchTerm))
+                  .or(
+                    Tables.ACTOR
+                      .`as`(DEST_ACTOR_ALIAS)
+                      .NAME
+                      .containsIgnoreCase(filters.searchTerm),
+                  )
+              },
+            ).and(
+              if (filters.sourceDefinitionIds.isNullOrEmpty()) {
+                DSL.noCondition()
+              } else {
+                Tables.ACTOR.ACTOR_DEFINITION_ID.`in`(filters.sourceDefinitionIds)
+              },
+            ).and(
+              if (filters.destinationDefinitionIds.isNullOrEmpty()) {
+                DSL.noCondition()
+              } else {
+                Tables.ACTOR
+                  .`as`(DEST_ACTOR_ALIAS)
+                  .ACTOR_DEFINITION_ID
+                  .`in`(filters.destinationDefinitionIds)
+              },
+            ).and(
+              if (filters.statuses.isNullOrEmpty()) {
+                DSL.noCondition()
+              } else {
+                applyStatusFilters(filters.statuses)
+              },
+            ).and(
+              if (filters.states.isNullOrEmpty()) {
+                DSL.noCondition()
+              } else {
+                applyStateFilters(filters.states)
+              },
+            ).and(
+              if (filters.tagIds.isNullOrEmpty()) {
+                DSL.noCondition()
+              } else {
+                Tables.CONNECTION_TAG.TAG_ID.`in`(filters.tagIds)
+              },
+            )
+      }
+
+      return condition
+    }
+
+    /**
+     * Count connections for workspace using the same filters as
+     * listWorkspaceStandardSyncsCursorPaginated, including dynamic filters from cursor.
+     *
+     * @param standardSyncQuery query with structural filters
+     * @param filters cursor pagination filters
+     * @return count of connections matching the query
+     * @throws IOException if there is an issue while interacting with db.
+     */
+    @Throws(IOException::class)
+    override fun countWorkspaceStandardSyncs(
+      standardSyncQuery: StandardSyncQuery,
+      filters: ConnectionFilters?,
+    ): Int =
+      database.query({ ctx: DSLContext ->
+        ctx
+          .selectCount()
+          .from(
+            ctx
+              .selectDistinct(Tables.CONNECTION.ID)
+              .from(Tables.CONNECTION)
+              .join(Tables.ACTOR)
+              .on(Tables.CONNECTION.SOURCE_ID.eq(Tables.ACTOR.ID))
+              .join(Tables.ACTOR.`as`(DEST_ACTOR_ALIAS))
+              .on(Tables.CONNECTION.DESTINATION_ID.eq(Tables.ACTOR.`as`(DEST_ACTOR_ALIAS).ID))
+              .leftJoin(Tables.CONNECTION_TAG)
+              .on(Tables.CONNECTION_TAG.CONNECTION_ID.eq(Tables.CONNECTION.ID))
+              .leftJoin(
+                DSL
+                  .lateral(
+                    ctx
+                      .select(JOBS.SCOPE, JOBS.STATUS, JOBS.CREATED_AT)
+                      .from(JOBS)
+                      .where(
+                        JOBS.CONFIG_TYPE
+                          .eq(JobConfigType.sync)
+                          .and(JOBS.SCOPE.eq(Tables.CONNECTION.ID.cast(String::class.java))),
+                      ).orderBy(JOBS.UPDATED_AT.desc())
+                      .limit(1),
+                  ).asTable(LATEST_JOBS),
+              ).on(DSL.trueCondition())
+              .where(buildConnectionFilterConditions(standardSyncQuery, filters))
+              .asTable("filtered_connections"),
+          ).fetchSingle()
+          .value1()
+      })
+
     /**
      * List connections. Paginated.
      */
     @Throws(IOException::class)
-    override fun listWorkspaceStandardSyncsPaginated(
+    override fun listWorkspaceStandardSyncsLimitOffsetPaginated(
       workspaceIds: List<UUID>,
       tagIds: List<UUID>,
       includeDeleted: Boolean,
       pageSize: Int,
       rowOffset: Int,
     ): Map<UUID, MutableList<StandardSync>> =
-      listWorkspaceStandardSyncsPaginated(
+      listWorkspaceStandardSyncsLimitOffsetPaginated(
         StandardSyncsQueryPaginated(
           workspaceIds,
           tagIds,
@@ -336,7 +933,9 @@ class ConnectionServiceJooqImpl
      * @throws IOException if there is an issue while interacting with db.
      */
     @Throws(IOException::class)
-    override fun listWorkspaceStandardSyncsPaginated(standardSyncsQueryPaginated: StandardSyncsQueryPaginated): Map<UUID, MutableList<StandardSync>> {
+    override fun listWorkspaceStandardSyncsLimitOffsetPaginated(
+      standardSyncsQueryPaginated: StandardSyncsQueryPaginated,
+    ): Map<UUID, MutableList<StandardSync>> {
       val connectionAndOperationIdsResult =
         database
           .query { ctx: DSLContext ->
@@ -650,8 +1249,7 @@ class ConnectionServiceJooqImpl
                       )
                     },
                   ),
-              ) // Close parentheses properly here
-              .groupBy(
+              ).groupBy(
                 Tables.CONNECTION.ID,
                 Tables.SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS,
                 Tables.SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE,
@@ -1444,6 +2042,51 @@ class ConnectionServiceJooqImpl
         )
       }
 
+    private fun getStandardSyncsWithJobInfoFromResult(
+      connectionAndOperationIdsResult: Result<Record>,
+      allNeededNotificationConfigurations: List<NotificationConfigurationRecord>,
+      tagsByConnectionId: Map<UUID, List<TagRecord>>,
+    ): List<ConnectionWithJobInfo> {
+      val connectionWithJobInfoList: MutableList<ConnectionWithJobInfo> = ArrayList()
+
+      for (record in connectionAndOperationIdsResult) {
+        val operationIdsFromRecord = record[OPERATION_IDS_AGG_FIELD, String::class.java]
+
+        // can be null when connection has no connectionOperations
+        val operationIds =
+          if (operationIdsFromRecord == null) {
+            Collections.emptyList()
+          } else {
+            Arrays
+              .stream(operationIdsFromRecord.split(OPERATION_IDS_AGG_DELIMITER.toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
+              .map { name: String? -> UUID.fromString(name) }
+              .toList()
+          }
+
+        val connectionId = record.get(Tables.CONNECTION.ID)
+        val notificationConfigurationsForConnection =
+          allNeededNotificationConfigurations
+            .stream()
+            .filter { notificationConfiguration -> notificationConfiguration.connectionId.equals(connectionId) }
+            .toList()
+
+        val standardSync =
+          buildStandardSync(record, operationIds, notificationConfigurationsForConnection, tagsByConnectionId[connectionId]!!)
+
+        // Extract source & destination names
+        val sourceName: String = record.get(SOURCE_NAME, String::class.java)
+        val destinationName: String = record.get(DESTINATION_NAME, String::class.java)
+
+        // Extract job data
+        val latestJobStatus: JobStatus? = record.get(LATEST_JOB_STATUS, JobStatus::class.java)
+        val latestJobCreatedAt: OffsetDateTime? = record.get(LATEST_JOB_CREATED_AT, OffsetDateTime::class.java)
+
+        connectionWithJobInfoList.add(ConnectionWithJobInfo.of(standardSync, sourceName, destinationName, latestJobStatus, latestJobCreatedAt))
+      }
+
+      return connectionWithJobInfoList
+    }
+
     private fun getStandardSyncsFromResult(
       connectionAndOperationIdsResult: Result<Record>,
       allNeededNotificationConfigurations: List<NotificationConfigurationRecord>,
@@ -1646,6 +2289,14 @@ class ConnectionServiceJooqImpl
 
       private const val OPERATION_IDS_AGG_DELIMITER = ","
       private const val OPERATION_IDS_AGG_FIELD = "operation_ids_agg"
+      private const val CREATED_AT: String = "created_at"
+      private const val DEST_ACTOR_ALIAS: String = "dest_actor"
+      private const val LATEST_JOBS: String = "latest_jobs"
+      private const val LATEST_JOB_STATUS: String = "latest_job_status"
+      private const val LATEST_JOB_CREATED_AT: String = "latest_job_created_at"
+      private const val STATUS: String = "status"
+      private const val SOURCE_NAME: String = "source_name"
+      private const val DESTINATION_NAME: String = "destination_name"
 
       /**
        * This query retrieves billable sync jobs (jobs in a terminal status - succeeded, cancelled,

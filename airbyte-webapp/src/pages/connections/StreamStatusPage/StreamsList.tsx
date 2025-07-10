@@ -129,7 +129,7 @@ export const StreamsList: React.FC = () => {
             />
           </FlexContainer>
           <div className={styles.search}>
-            <SearchInput value={filtering} onChange={({ target: { value } }) => setFiltering(value)} />
+            <SearchInput value={filtering} onChange={setFiltering} />
           </div>
         </FlexContainer>
       </Box>

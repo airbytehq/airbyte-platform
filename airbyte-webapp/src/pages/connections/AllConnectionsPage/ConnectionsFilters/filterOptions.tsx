@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { ConnectorIcon } from "components/ConnectorIcon";
@@ -6,11 +6,8 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text, TextColor } from "components/ui/Text";
 
-import {
-  DestinationDefinitionId,
-  SourceDefinitionId,
-  WebBackendConnectionListItem,
-} from "core/api/types/AirbyteClient";
+import { useDestinationList, useSourceList } from "core/api";
+import { DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
 import { naturalComparatorBy } from "core/utils/objects";
 
 import { SummaryKey } from "../ConnectionsSummary";
@@ -19,7 +16,7 @@ type filterIconType = "successFilled" | "errorFilled" | "sync" | "pauseFilled";
 
 const generateStatusFilterOption = (value: SummaryKey, id: string, iconType: filterIconType, color: TextColor) => ({
   label: (
-    <FlexContainer gap="sm" alignItems="center">
+    <FlexContainer gap="md" alignItems="center">
       <FlexItem>
         <Text color={color} as="span">
           <Icon type={iconType} size="md" />
@@ -27,7 +24,7 @@ const generateStatusFilterOption = (value: SummaryKey, id: string, iconType: fil
       </FlexItem>
       <FlexItem>
         <Text color="grey" bold as="span">
-          &nbsp; <FormattedMessage id={id} />
+          <FormattedMessage id={id} />
         </Text>
       </FlexItem>
     </FlexContainer>
@@ -35,7 +32,7 @@ const generateStatusFilterOption = (value: SummaryKey, id: string, iconType: fil
   value,
 });
 
-const generateStateFilterOption = (value: "enabled" | "disabled" | "all", id: string) => ({
+const generateStateFilterOption = (value: "active" | "inactive" | null, id: string) => ({
   label: (
     <Text color="grey" bold as="span">
       <FormattedMessage id={id} />
@@ -67,8 +64,8 @@ export const stateFilterOptions = [
     ),
     value: null,
   },
-  generateStateFilterOption("enabled", "tables.connections.filters.state.enabled"),
-  generateStateFilterOption("disabled", "tables.connections.filters.state.disabled"),
+  generateStateFilterOption("active", "tables.connections.filters.state.enabled"),
+  generateStateFilterOption("inactive", "tables.connections.filters.state.disabled"),
 ];
 
 interface FilterOption {
@@ -78,110 +75,82 @@ interface FilterOption {
 
 type SortableFilterOption = FilterOption & { sortValue: string };
 
-export const getAvailableSourceOptions = (
-  connections: WebBackendConnectionListItem[],
-  selectedDestination: DestinationDefinitionId | null
-) =>
-  connections
-    .reduce<{
-      foundSourceIds: Set<string>;
-      options: SortableFilterOption[];
-    }>(
-      (acc, connection) => {
-        const {
-          source: { sourceName, sourceDefinitionId, icon },
-          destination: { destinationDefinitionId },
-        } = connection;
+export const useAvailableSourceOptions = (): SortableFilterOption[] => {
+  const { sources } = useSourceList();
 
-        if (
-          !acc.foundSourceIds.has(sourceDefinitionId) &&
-          (!selectedDestination || destinationDefinitionId === selectedDestination)
-        ) {
-          acc.foundSourceIds.add(sourceDefinitionId);
-          acc.options.push({
-            label: (
-              <FlexContainer gap="sm" alignItems="center" as="span">
-                <FlexItem>
-                  <ConnectorIcon icon={icon} />
-                </FlexItem>
-                <FlexItem>
-                  <Text size="sm">{sourceName}</Text>
-                </FlexItem>
-              </FlexContainer>
-            ),
-            value: sourceDefinitionId,
-            sortValue: sourceName,
-          });
-        }
-        return acc;
-      },
-      {
-        foundSourceIds: new Set(),
-        options: [
-          {
-            label: (
-              <Text bold color="grey">
-                <FormattedMessage id="tables.connections.filters.source.all" />
-              </Text>
-            ),
-            value: null,
-            sortValue: "",
-          },
-        ],
+  return useMemo(() => {
+    const dedupedSourceDefinitions = new Map<string, SourceRead>();
+    sources.forEach((source) => {
+      if (!dedupedSourceDefinitions.has(source.sourceDefinitionId)) {
+        dedupedSourceDefinitions.set(source.sourceDefinitionId, source);
       }
-    )
-    .options.sort(naturalComparatorBy((option) => option.sortValue));
-
-export const getAvailableDestinationOptions = (
-  connections: WebBackendConnectionListItem[],
-  selectedSource?: SourceDefinitionId | null
-) =>
-  connections
-    .reduce<{
-      foundDestinationIds: Set<string>;
-      options: SortableFilterOption[];
-    }>(
-      (acc, connection) => {
-        const {
-          destination: { destinationName, destinationDefinitionId, icon },
-          source: { sourceDefinitionId },
-        } = connection;
-
-        if (
-          !acc.foundDestinationIds.has(destinationDefinitionId) &&
-          (!selectedSource || sourceDefinitionId === selectedSource)
-        ) {
-          acc.foundDestinationIds.add(connection.destination.destinationDefinitionId);
-          acc.options.push({
-            label: (
-              <FlexContainer gap="sm" alignItems="center" as="span">
-                <FlexItem>
-                  <ConnectorIcon icon={icon} />
-                </FlexItem>
-                <FlexItem>
-                  <Text size="sm">{destinationName}</Text>
-                </FlexItem>
-              </FlexContainer>
-            ),
-            value: destinationDefinitionId,
-            sortValue: destinationName,
-          });
-        }
-        return acc;
-      },
+    });
+    return [
       {
-        foundDestinationIds: new Set(),
-        options: [
-          {
-            label: (
-              <Text bold color="grey">
-                <FormattedMessage id="tables.connections.filters.destination.all" />
-              </Text>
-            ),
-            value: null,
-            sortValue: "",
-          },
-        ],
+        label: (
+          <Text bold color="grey">
+            <FormattedMessage id="tables.connections.filters.source.all" />
+          </Text>
+        ),
+        value: null,
+        sortValue: "",
+      },
+      ...Array.from(dedupedSourceDefinitions).map(([, source]) => {
+        return {
+          label: (
+            <FlexContainer gap="sm" alignItems="center" as="span">
+              <FlexItem>
+                <ConnectorIcon icon={source.icon} />
+              </FlexItem>
+              <FlexItem>
+                <Text size="sm">{source.sourceName}</Text>
+              </FlexItem>
+            </FlexContainer>
+          ),
+          value: source.sourceDefinitionId,
+          sortValue: source.sourceName,
+        };
+      }),
+    ].sort(naturalComparatorBy((option) => option.sortValue));
+  }, [sources]);
+};
+
+export const useAvailableDestinationOptions = (): SortableFilterOption[] => {
+  const { destinations } = useDestinationList();
+
+  return useMemo(() => {
+    const dedupedDestinationDefinitions = new Map<string, DestinationRead>();
+    destinations.forEach((destination) => {
+      if (!dedupedDestinationDefinitions.has(destination.destinationDefinitionId)) {
+        dedupedDestinationDefinitions.set(destination.destinationDefinitionId, destination);
       }
-    )
-    .options.sort(naturalComparatorBy((option) => option.sortValue));
+    });
+    return [
+      {
+        label: (
+          <Text bold color="grey">
+            <FormattedMessage id="tables.connections.filters.destination.all" />
+          </Text>
+        ),
+        value: null,
+        sortValue: "",
+      },
+      ...Array.from(dedupedDestinationDefinitions).map(([, destination]) => {
+        return {
+          label: (
+            <FlexContainer gap="sm" alignItems="center" as="span">
+              <FlexItem>
+                <ConnectorIcon icon={destination.icon} />
+              </FlexItem>
+              <FlexItem>
+                <Text size="sm">{destination.destinationName}</Text>
+              </FlexItem>
+            </FlexContainer>
+          ),
+          value: destination.destinationDefinitionId,
+          sortValue: destination.destinationName,
+        };
+      }),
+    ].sort(naturalComparatorBy((option) => option.sortValue));
+  }, [destinations]);
+};

@@ -348,7 +348,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
       >
         <SearchInput
           value={searchTerm}
-          onChange={(e) => setFilterValue(searchFilterName, e.target.value)}
+          onChange={(value) => setFilterValue(searchFilterName, value)}
           placeholder={formatMessage(
             { id: "connector.searchPlaceholder" },
             { tabName: getTabDisplayName(selectedTab) }
