@@ -18,11 +18,12 @@ open class FinalStatusEvent(
   private val endTimeEpochSeconds: Long,
   private val bytesLoaded: Long,
   private val recordsLoaded: Long,
+  private val recordsRejected: Long? = null,
   private val attemptsCount: Int,
   private val jobType: String,
   private val statusType: String,
   private val streams: List<StreamDescriptor>? = null,
-  private val rejectedRecords: RejectedRecordsMetadata? = null,
+  private val rejectedRecordsMeta: RejectedRecordsMetadata? = null,
 ) : ConnectionEvent {
   fun getJobId(): Long = jobId
 
@@ -36,7 +37,9 @@ open class FinalStatusEvent(
 
   fun getAttemptsCount(): Int = attemptsCount
 
-  fun getRejectedRecords(): RejectedRecordsMetadata? = rejectedRecords
+  fun getRecordsRejected(): Long? = recordsRejected
+
+  fun getRejectedRecordsMeta(): RejectedRecordsMetadata? = rejectedRecordsMeta
 
   fun getStreams(): List<StreamDescriptor>? = streams
 

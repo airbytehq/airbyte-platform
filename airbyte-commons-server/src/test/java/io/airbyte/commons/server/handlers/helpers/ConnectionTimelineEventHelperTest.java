@@ -80,7 +80,7 @@ class ConnectionTimelineEventHelperTest {
   }
 
   @Test
-  void testGetLoadedStats() {
+  void testGetTimelineJobStats() {
 
     connectionTimelineEventHelper = new ConnectionTimelineEventHelper(Set.of(),
         currentUserService, organizationPersistence, permissionHandler, userPersistence, connectorObjectStorageService,
@@ -107,25 +107,25 @@ class ConnectionTimelineEventHelperTest {
         new Job(100L, SYNC, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.SUCCEEDED, 0L, 0L, 0L, true);
 
     /*
-     * on a per stream basis, the stats are "users" -> (100L, 1L), (500L, 8L), (200L, 7L) "purchase" ->
-     * (1000L, 10L), (5000L, 80L), (2000L, 70L) "vendor" -> (10000L, 100L), (50000L, 800L), (20000L,
-     * 700L)
+     * on a per stream basis, the stats are "users" -> (100L, 1L, 0L), (500L, 8L, 0L), (200L, 7L, 0L)
+     * "purchase" -> (1000L, 10L, 1L), (5000L, 80L, 8L), (2000L, 70L, 7L) "vendor" -> (10000L, 100L,
+     * 10L), (50000L, 800L, 80L), (20000L, 700L, 70L)
      */
 
     final List<Map<String, SyncStats>> perAttemptStreamStats = List.of(
         Map.of(
-            userStreamName, new SyncStats().withBytesCommitted(100L).withRecordsCommitted(1L),
-            purchaseStreamName, new SyncStats().withBytesCommitted(1000L).withRecordsCommitted(10L),
-            vendorStreamName, new SyncStats().withBytesCommitted(10000L).withRecordsCommitted(100L)),
+            userStreamName, new SyncStats().withBytesCommitted(100L).withRecordsCommitted(1L).withRecordsRejected(0L),
+            purchaseStreamName, new SyncStats().withBytesCommitted(1000L).withRecordsCommitted(10L).withRecordsRejected(1L),
+            vendorStreamName, new SyncStats().withBytesCommitted(10000L).withRecordsCommitted(100L).withRecordsRejected(10L)),
 
         Map.of(
-            userStreamName, new SyncStats().withBytesCommitted(500L).withRecordsCommitted(8L),
-            purchaseStreamName, new SyncStats().withBytesCommitted(5000L).withRecordsCommitted(80L),
-            vendorStreamName, new SyncStats().withBytesCommitted(50000L).withRecordsCommitted(800L)),
+            userStreamName, new SyncStats().withBytesCommitted(500L).withRecordsCommitted(8L).withRecordsRejected(0L),
+            purchaseStreamName, new SyncStats().withBytesCommitted(5000L).withRecordsCommitted(80L).withRecordsRejected(8L),
+            vendorStreamName, new SyncStats().withBytesCommitted(50000L).withRecordsCommitted(800L).withRecordsRejected(80L)),
         Map.of(
-            userStreamName, new SyncStats().withBytesCommitted(200L).withRecordsCommitted(7L),
-            purchaseStreamName, new SyncStats().withBytesCommitted(2000L).withRecordsCommitted(70L),
-            vendorStreamName, new SyncStats().withBytesCommitted(20000L).withRecordsCommitted(700L)));
+            userStreamName, new SyncStats().withBytesCommitted(200L).withRecordsCommitted(7L).withRecordsRejected(0L),
+            purchaseStreamName, new SyncStats().withBytesCommitted(2000L).withRecordsCommitted(70L).withRecordsRejected(7L),
+            vendorStreamName, new SyncStats().withBytesCommitted(20000L).withRecordsCommitted(700L).withRecordsRejected(70L)));
 
     final List<JobPersistence.AttemptStats> attemptStatsList = perAttemptStreamStats
         .stream().map(dict -> new JobPersistence.AttemptStats(
@@ -140,9 +140,11 @@ class ConnectionTimelineEventHelperTest {
     // across syncs
     final long expectedBytesLoaded = 200L + (1000L + 5000L + 2000L) + (10000L + 50000L + 20000L);
     final long expectedRecordsLoaded = 7L + (10L + 80L + 70L) + (100L + 800L + 700L);
-    final var result = connectionTimelineEventHelper.buildLoadedStats(job, attemptStatsList);
-    assertEquals(expectedBytesLoaded, result.bytes());
-    assertEquals(expectedRecordsLoaded, result.records());
+    final long expectedRecordsRejected = (1L + 8L + 7L) + (10L + 80L + 70L);
+    final var result = connectionTimelineEventHelper.buildTimelineJobStats(job, attemptStatsList);
+    assertEquals(expectedBytesLoaded, result.loadedBytes());
+    assertEquals(expectedRecordsLoaded, result.loadedRecords());
+    assertEquals(expectedRecordsRejected, result.rejectedRecords());
   }
 
   @Nested

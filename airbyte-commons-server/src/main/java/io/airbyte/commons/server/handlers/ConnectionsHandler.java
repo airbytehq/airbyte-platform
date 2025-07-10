@@ -1507,6 +1507,7 @@ public class ConnectionsHandler {
             jobRead.getAttempts().stream()
                 .mapToLong(attempt -> attempt.getRecordsSynced() != null ? attempt.getRecordsSynced() : 0)
                 .sum(),
+            null,
             job.getAttemptsCount(),
             job.configType.name(),
             job.status.name(),
@@ -1527,6 +1528,7 @@ public class ConnectionsHandler {
             jobRead.getAttempts().stream()
                 .mapToLong(attempt -> attempt.getRecordsSynced() != null ? attempt.getRecordsSynced() : 0)
                 .sum(),
+            null,
             job.getAttemptsCount(),
             job.configType.name(),
             job.status.name(),

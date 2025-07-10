@@ -17,11 +17,12 @@ class FailedEvent(
   endTimeEpochSeconds: Long,
   bytesLoaded: Long,
   recordsLoaded: Long,
+  recordsRejected: Long? = null,
   attemptsCount: Int,
   jobType: String,
   statusType: String,
   streams: List<StreamDescriptor>? = null,
-  rejectedRecords: RejectedRecordsMetadata? = null,
+  rejectedRecordsMeta: RejectedRecordsMetadata? = null,
   private val failureReason: Optional<FailureReason>,
 ) : FinalStatusEvent(
     jobId,
@@ -29,11 +30,12 @@ class FailedEvent(
     endTimeEpochSeconds,
     bytesLoaded,
     recordsLoaded,
+    recordsRejected,
     attemptsCount,
     jobType,
     statusType,
     streams,
-    rejectedRecords,
+    rejectedRecordsMeta,
   ) {
   fun getFailureReason(): Optional<FailureReason> = failureReason
 }

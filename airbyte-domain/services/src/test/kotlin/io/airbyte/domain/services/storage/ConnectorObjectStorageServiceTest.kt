@@ -102,7 +102,7 @@ class ConnectorObjectStorageServiceTest {
 
     @Test
     fun `returns metadata for valid storage config`() {
-      val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job)
+      val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job, 100L)
 
       assertNotNull(result)
       assertEquals("s3://my-bucket/my/path/$jobId", result!!.storageUri)
@@ -110,6 +110,12 @@ class ConnectorObjectStorageServiceTest {
         "https://us-east-1.console.aws.amazon.com/s3/buckets/my-bucket?prefix=my/path/$jobId",
         result.cloudConsoleUrl,
       )
+    }
+
+    @Test
+    fun `returns null when rejected record count is zero`() {
+      val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job, 0L)
+      assertNull(result)
     }
 
     @Test
@@ -122,7 +128,7 @@ class ConnectorObjectStorageServiceTest {
             },
         )
 
-      val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job)
+      val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job, 100L)
 
       assertNull(result)
     }
@@ -130,7 +136,7 @@ class ConnectorObjectStorageServiceTest {
     @Test
     fun `returns null when destination version is not found`() {
       every { actorDefinitionService.getActorDefinitionVersion(destinationVersionId) } throws ConfigNotFoundException("", "")
-      val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job)
+      val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job, 100L)
       assertNull(result)
     }
 
@@ -139,7 +145,7 @@ class ConnectorObjectStorageServiceTest {
       val destinationVersion = ActorDefinitionVersion().withSupportsDataActivation(false)
       every { actorDefinitionService.getActorDefinitionVersion(destinationVersionId) } returns destinationVersion
 
-      val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job)
+      val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job, 100L)
 
       assertNull(result)
     }
@@ -155,7 +161,7 @@ class ConnectorObjectStorageServiceTest {
       every { destinationService.getDestinationConnection(destinationId) } returns destination
 
       // When
-      val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job)
+      val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job, 100L)
 
       // Then
       assertNull(result)
@@ -173,7 +179,7 @@ class ConnectorObjectStorageServiceTest {
       val destination = createDestinationWithStorageConfig(objectStorageConfig)
       every { destinationService.getDestinationConnection(destinationId) } returns destination
 
-      val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job)
+      val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job, 100L)
 
       assertNull(result)
     }
@@ -189,7 +195,7 @@ class ConnectorObjectStorageServiceTest {
       val destination = createDestinationWithStorageConfig(objectStorageConfig)
       every { destinationService.getDestinationConnection(destinationId) } returns destination
 
-      val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job)
+      val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job, 100L)
 
       assertNull(result)
     }

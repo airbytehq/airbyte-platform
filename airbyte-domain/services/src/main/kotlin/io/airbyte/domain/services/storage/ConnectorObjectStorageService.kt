@@ -32,7 +32,12 @@ class ConnectorObjectStorageService(
   fun getRejectedRecordsForJob(
     connectionId: ConnectionId,
     job: Job,
+    rejectedRecordCount: Long,
   ): RejectedRecordsMetadata? {
+    if (rejectedRecordCount <= 0) {
+      return null
+    }
+
     val destinationVersion = getJobDestinationVersion(job)
     if (destinationVersion == null) {
       log.warn { "Job ${job.id} does not have a valid destination version, cannot retrieve rejected records metadata." }

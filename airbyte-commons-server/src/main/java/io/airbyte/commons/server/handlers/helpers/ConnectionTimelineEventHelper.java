@@ -143,15 +143,16 @@ public class ConnectionTimelineEventHelper {
     }
   }
 
-  record LoadedStats(long bytes, long records) {}
+  record TimelineJobStats(long loadedBytes, long loadedRecords, long rejectedRecords) {}
 
   @VisibleForTesting
-  LoadedStats buildLoadedStats(final Job job, final List<AttemptStats> attemptStats) {
+  TimelineJobStats buildTimelineJobStats(final Job job, final List<AttemptStats> attemptStats) {
     final var configuredCatalog = new JobConfigProxy(job.config).getConfiguredCatalog();
     final List<ConfiguredAirbyteStream> streams = configuredCatalog != null ? configuredCatalog.getStreams() : List.of();
 
     long bytesLoaded = 0;
     long recordsLoaded = 0;
+    long recordsRejected = 0;
 
     for (final var stream : streams) {
       final AirbyteStream currentStream = stream.getStream();
@@ -165,25 +166,27 @@ public class ConnectionTimelineEventHelper {
         final StreamStatsRecord records = StatsAggregationHelper.getAggregatedStats(stream.getSyncMode(), streamStats);
         recordsLoaded += records.recordsCommitted();
         bytesLoaded += records.bytesCommitted();
+        recordsRejected += records.recordsRejected();
       }
     }
-    return new LoadedStats(bytesLoaded, recordsLoaded);
+    return new TimelineJobStats(bytesLoaded, recordsLoaded, recordsRejected);
   }
 
   public void logJobSuccessEventInConnectionTimeline(final Job job, final UUID connectionId, final List<AttemptStats> attemptStats) {
     try {
-      final LoadedStats stats = buildLoadedStats(job, attemptStats);
+      final TimelineJobStats stats = buildTimelineJobStats(job, attemptStats);
       final FinalStatusEvent event = new FinalStatusEvent(
           job.id,
           job.createdAtInSecond,
           job.updatedAtInSecond,
-          stats.bytes,
-          stats.records,
+          stats.loadedBytes,
+          stats.loadedRecords,
+          stats.rejectedRecords,
           job.getAttemptsCount(),
           job.configType.name(),
           JobStatus.SUCCEEDED.name(),
           JobConverter.getStreamsAssociatedWithJob(job),
-          connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job)); // TODO only include if there are rejected records
+          connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job, stats.rejectedRecords));
       connectionTimelineEventService.writeEvent(connectionId, event, null);
     } catch (final Exception e) {
       LOGGER.error("Failed to persist timeline event for job: {}", job.id, e);
@@ -192,23 +195,24 @@ public class ConnectionTimelineEventHelper {
 
   public void logJobFailureEventInConnectionTimeline(final Job job, final UUID connectionId, final List<AttemptStats> attemptStats) {
     try {
-      final LoadedStats stats = buildLoadedStats(job, attemptStats);
+      final TimelineJobStats stats = buildTimelineJobStats(job, attemptStats);
 
       final Optional<AttemptFailureSummary> lastAttemptFailureSummary = job.getLastAttempt().flatMap(Attempt::getFailureSummary);
       final Optional<FailureReason> firstFailureReasonOfLastAttempt =
           lastAttemptFailureSummary.flatMap(summary -> summary.getFailures().stream().findFirst());
-      final String jobEventFailureStatus = stats.bytes > 0 ? FinalStatus.INCOMPLETE.name() : FinalStatus.FAILED.name();
+      final String jobEventFailureStatus = stats.loadedBytes > 0 ? FinalStatus.INCOMPLETE.name() : FinalStatus.FAILED.name();
       final FailedEvent event = new FailedEvent(
           job.id,
           job.createdAtInSecond,
           job.updatedAtInSecond,
-          stats.bytes,
-          stats.records,
+          stats.loadedBytes,
+          stats.loadedRecords,
+          stats.rejectedRecords,
           job.getAttemptsCount(),
           job.configType.name(),
           jobEventFailureStatus,
           JobConverter.getStreamsAssociatedWithJob(job),
-          connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job), // TODO only include if there are rejected records
+          connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job, stats.rejectedRecords),
           firstFailureReasonOfLastAttempt);
       connectionTimelineEventService.writeEvent(connectionId, event, null);
     } catch (final Exception e) {
@@ -219,19 +223,20 @@ public class ConnectionTimelineEventHelper {
   public void logJobCancellationEventInConnectionTimeline(final Job job,
                                                           final List<AttemptStats> attemptStats) {
     try {
-      final LoadedStats stats = buildLoadedStats(job, attemptStats);
+      final TimelineJobStats stats = buildTimelineJobStats(job, attemptStats);
       final UUID connectionId = UUID.fromString(job.scope);
       final FinalStatusEvent event = new FinalStatusEvent(
           job.id,
           job.createdAtInSecond,
           job.updatedAtInSecond,
-          stats.bytes,
-          stats.records,
+          stats.loadedBytes,
+          stats.loadedRecords,
+          stats.rejectedRecords,
           job.getAttemptsCount(),
           job.configType.name(),
           io.airbyte.config.JobStatus.CANCELLED.name(),
           JobConverter.getStreamsAssociatedWithJob(job),
-          connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job)); // TODO only include if there are rejected records
+          connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job, stats.rejectedRecords));
       connectionTimelineEventService.writeEvent(connectionId, event, getCurrentUserIdIfExist());
     } catch (final Exception e) {
       LOGGER.error("Failed to persist job cancelled event for job: {}", job.id, e);
