@@ -37,7 +37,7 @@ class TemporalProxyHelperTest {
         .build();
 
     final BeanIdentifier activityOptionsBeanIdentifier = mock(BeanIdentifier.class);
-    final BeanRegistration activityOptionsBeanRegistration = mock(BeanRegistration.class);
+    final BeanRegistration<ActivityOptions> activityOptionsBeanRegistration = mock();
     when(activityOptionsBeanIdentifier.getName()).thenReturn("activityOptions");
     when(activityOptionsBeanRegistration.getIdentifier()).thenReturn(activityOptionsBeanIdentifier);
     when(activityOptionsBeanRegistration.getBean()).thenReturn(activityOptions);
