@@ -57,7 +57,6 @@ class DestinationReader(
       }
     } catch (e: Exception) {
       logger.error(e) { "DestinationReader error: " }
-      replicationWorkerState.abort()
       if (e is DestinationException) {
         throw e
       } else if (e !is CancellationException) {
@@ -105,7 +104,6 @@ class DestinationWriter(
       }
     } catch (e: Exception) {
       logger.error(e) { "DestinationWriter error: " }
-      replicationWorkerState.abort()
       handleException(e)
     } finally {
       notifyEndOfInput()
@@ -118,7 +116,6 @@ class DestinationWriter(
     try {
       destination.notifyEndOfInput()
     } catch (e: Exception) {
-      replicationWorkerState.abort()
       handleException(e)
     }
   }
@@ -210,7 +207,6 @@ class SourceReader(
       }
     } catch (e: Exception) {
       logger.error(e) { "SourceReader error: " }
-      replicationWorkerState.abort()
       if (e is SourceException) {
         throw e
       } else if (e !is CancellationException) {
