@@ -42,7 +42,7 @@ internal fun <T> execute(call: Callable<T>): T? {
       )
       is OperationNotAllowedException -> throw e
       is IOException -> throw RuntimeException(e)
-      is DataAccessException -> throw ConflictException("Failed to access database. Check the server logs for more information")
+      is DataAccessException -> throw ConflictException("Failed to access database. Check the server logs for more information", e)
       else -> {
         logger.error(e) { "Unexpected Exception" }
         throw e
