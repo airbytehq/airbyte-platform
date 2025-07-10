@@ -1671,9 +1671,8 @@ class DefaultJobPersistenceTest {
     void testGetFirstSyncJobForConnectionId() throws IOException {
       final long jobId1 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true).orElseThrow();
       jobPersistence.succeedAttempt(jobId1, jobPersistence.createAttempt(jobId1, LOG_PATH));
-      final List<AttemptWithJobInfo> attemptsWithJobInfo =
-          jobPersistence.listAttemptsWithJobInfo(SYNC_JOB_CONFIG.getConfigType(), Instant.EPOCH, 1000);
-      final List<Attempt> attempts = Collections.singletonList(attemptsWithJobInfo.get(0).attempt);
+      final List<Attempt> attemptsWithJobInfo = jobPersistence.getJob(jobId1).attempts;
+      final List<Attempt> attempts = Collections.singletonList(attemptsWithJobInfo.get(0));
 
       final Instant afterNow = NOW.plusSeconds(1000);
       when(timeSupplier.get()).thenReturn(afterNow);
@@ -2257,40 +2256,6 @@ class DefaultJobPersistenceTest {
               true);
 
       assertEquals(Sets.newHashSet(expectedDesiredJob1, expectedDesiredJob2, expectedDesiredJob3, expectedDesiredJob4), Sets.newHashSet(actualJobs));
-    }
-
-  }
-
-  @Nested
-  @DisplayName("When resetting job")
-  class ResetJob {
-
-    @Test
-    @DisplayName("Should reset job and put job in pending state")
-    void testResetJob() throws IOException {
-      final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow();
-      final int attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH);
-      final Job created = jobPersistence.getJob(jobId);
-
-      jobPersistence.failAttempt(jobId, attemptNumber);
-      when(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242));
-      jobPersistence.resetJob(jobId);
-
-      final Job updated = jobPersistence.getJob(jobId);
-      assertEquals(JobStatus.PENDING, updated.status);
-      assertNotEquals(created.updatedAtInSecond, updated.updatedAtInSecond);
-    }
-
-    @Test
-    @DisplayName("Should not be able to reset a cancelled job")
-    void testResetJobCancelled() throws IOException {
-      final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow();
-
-      jobPersistence.cancelJob(jobId);
-      assertDoesNotThrow(() -> jobPersistence.resetJob(jobId));
-
-      final Job updated = jobPersistence.getJob(jobId);
-      assertEquals(JobStatus.CANCELLED, updated.status);
     }
 
   }

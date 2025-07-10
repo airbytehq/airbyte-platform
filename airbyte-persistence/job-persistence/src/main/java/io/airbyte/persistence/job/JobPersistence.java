@@ -89,15 +89,6 @@ public interface JobPersistence {
    */
   Optional<Long> enqueueJob(String scope, JobConfig jobConfig, boolean isScheduled) throws IOException;
 
-  /**
-   * Set job status from current status to PENDING. Throws {@link IllegalStateException} if the job is
-   * in a terminal state.
-   *
-   * @param jobId job to reset
-   * @throws IOException exception due to interaction with persistence
-   */
-  void resetJob(long jobId) throws IOException;
-
   //
   // JOB LIFECYCLE
   //

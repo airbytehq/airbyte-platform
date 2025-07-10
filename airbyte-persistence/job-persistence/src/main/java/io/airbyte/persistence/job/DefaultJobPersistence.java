@@ -638,17 +638,6 @@ public class DefaultJobPersistence implements JobPersistence {
         .map(r -> r.getValue("id", Long.class));
   }
 
-  // TODO: This is unused outside of test. Need to remove it.
-  @Override
-  public void resetJob(final long jobId) throws IOException {
-    // TODO: stop using LocalDateTime
-    // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    jobDatabase.query(ctx -> {
-      updateJobStatus(ctx, jobId, JobStatus.PENDING);
-      return null;
-    });
-  }
-
   @Override
   public void cancelJob(final long jobId) throws IOException {
     // TODO: stop using LocalDateTime
@@ -960,7 +949,7 @@ public class DefaultJobPersistence implements JobPersistence {
         .fetchOne().into(Long.class));
   }
 
-  public Result<Record> listJobsQuery(final Set<ConfigType> configTypes, final String configId, final int pagesize, String orderByString)
+  private Result<Record> listJobsQuery(final Set<ConfigType> configTypes, final String configId, final int pagesize, String orderByString)
       throws IOException {
     return jobDatabase.query(ctx -> {
       final String jobsSubquery = "(" + ctx.select(DSL.asterisk()).from(JOBS)
@@ -1393,19 +1382,6 @@ public class DefaultJobPersistence implements JobPersistence {
         .stream()
         .findFirst()
         .flatMap(r -> getJobOptional(ctx, r.get("id", Long.class))));
-  }
-
-  @VisibleForTesting
-  List<AttemptWithJobInfo> listAttemptsWithJobInfo(final ConfigType configType, final Instant attemptEndedAtTimestamp, final int limit)
-      throws IOException {
-    // TODO: stop using LocalDateTime
-    // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime timeConvertedIntoLocalDateTime = convertInstantToLocalDataTime(attemptEndedAtTimestamp);
-    return jobDatabase.query(ctx -> getAttemptsWithJobsFromResult(ctx.fetch(
-        BASE_JOB_SELECT_AND_JOIN + WHERE + "CAST(config_type AS VARCHAR) =  ? AND " + " attempts.ended_at > ? ORDER BY attempts.ended_at ASC LIMIT ?",
-        toSqlName(configType),
-        timeConvertedIntoLocalDateTime,
-        limit)));
   }
 
   @Override
