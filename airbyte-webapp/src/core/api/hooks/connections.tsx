@@ -1,4 +1,11 @@
-import { useInfiniteQuery, useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  InfiniteData,
+  useInfiniteQuery,
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -38,6 +45,7 @@ import {
   webBackendGetConnection,
   webBackendListConnectionsForWorkspace,
   webBackendUpdateConnection,
+  webBackendGetConnectionStatusCounts,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
@@ -59,6 +67,7 @@ import {
   RefreshMode,
   SourceDefinitionRead,
   SourceRead,
+  WebBackendConnectionListFiltersStatusesItem,
   WebBackendConnectionListItem,
   WebBackendConnectionListRequestBody,
   WebBackendConnectionRead,
@@ -71,7 +80,7 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const connectionsKeys = {
   all: [SCOPE_WORKSPACE, "connections"] as const,
-  lists: (filters: string[] = []) => [...connectionsKeys.all, "list", ...filters],
+  lists: (filters: Array<string | string[]> = []) => [...connectionsKeys.all, "list", ...filters],
   detail: (connectionId: string) => [...connectionsKeys.all, "details", connectionId] as const,
   dataHistory: (connectionId: string, jobCount?: number) =>
     [...connectionsKeys.all, "dataHistory", connectionId, ...(jobCount == null ? [] : [jobCount])] as const,
@@ -95,12 +104,13 @@ export const connectionsKeys = {
     [
       ...connectionsKeys.all,
       "eventsListMinimal",
-      ...requestBody.connectionIds,
+      requestBody.workspaceId,
       ...requestBody.eventTypes,
       requestBody.createdAtStart,
       requestBody.createdAtEnd,
     ] as const,
   event: (eventId: string) => [...connectionsKeys.all, "event", eventId] as const,
+  statusCounts: () => [...connectionsKeys.all, "statusCounts"] as const,
 };
 
 export interface ConnectionValues {
@@ -360,9 +370,15 @@ export const useCreateConnection = () => {
     },
     {
       onSuccess: (data) => {
-        queryClient.setQueriesData<WebBackendConnectionReadList>(connectionsKeys.lists(), (lst) => ({
-          connections: [data, ...(lst?.connections ?? [])],
-        }));
+        queryClient.setQueryData(
+          connectionsKeys.lists(),
+          (connectionList: WebBackendConnectionReadList | undefined) => ({
+            ...connectionList,
+            // TODO: not sure this is correct, as we would need to place the new connection in the right place in the
+            // list. Might be easier to just invalidate the query
+            connections: [{ ...(data as WebBackendConnectionListItem) }, ...(connectionList?.connections ?? [])],
+          })
+        );
 
         invalidateWorkspaceSummary();
       },
@@ -376,7 +392,7 @@ export const useDeleteConnection = () => {
   const analyticsService = useAnalyticsService();
 
   return useMutation(
-    (connection: WebBackendConnectionRead) =>
+    async (connection: WebBackendConnectionRead) =>
       deleteConnection({ connectionId: connection.connectionId }, requestOptions),
     {
       onSuccess: (_data, connection) => {
@@ -404,7 +420,13 @@ export const useUpdateConnectionOptimistically = () => {
   const { formatMessage } = useIntl();
 
   return useMutation(async (connectionTagsUpdate: WebBackendConnectionUpdate) => {
-    queryClient.setQueriesData<WebBackendConnectionReadList>(connectionsKeys.lists(), (oldData) => {
+    // Using setQueriesData here because we want to update all cached lists regardless of applied filters
+    queryClient.setQueriesData<
+      InfiniteData<{
+        connections: WebBackendConnectionListItem[];
+        connectionsByConnectorId: Map<string, WebBackendConnectionListItem[]>;
+      }>
+    >(connectionsKeys.lists(), (oldData) => {
       if (!oldData) {
         return oldData;
       }
@@ -417,11 +439,17 @@ export const useUpdateConnectionOptimistically = () => {
       );
 
       return {
-        connections: oldData.connections.map((connection) =>
-          connection.connectionId === connectionTagsUpdate.connectionId
-            ? { ...connection, ...nonNullConnectionTagsUpdateProperties }
-            : connection
-        ),
+        pageParams: oldData.pageParams,
+        pages: oldData.pages.map((page) => {
+          return {
+            connectionsByConnectorId: page.connectionsByConnectorId,
+            connections: page.connections.map((connection) =>
+              connection.connectionId === connectionTagsUpdate.connectionId
+                ? { ...connection, ...nonNullConnectionTagsUpdateProperties }
+                : connection
+            ),
+          };
+        }),
       };
     });
 
@@ -483,18 +511,21 @@ export const useUpdateConnection = () => {
       onSuccess: (updatedConnection) => {
         queryClient.setQueryData(connectionsKeys.detail(updatedConnection.connectionId), updatedConnection);
         // Update the connection inside the connections list response
-        queryClient.setQueriesData<WebBackendConnectionReadList>(connectionsKeys.lists(), (ls) => {
-          return {
-            ...ls,
-            connections:
-              ls?.connections.map((conn) => {
-                if (conn.connectionId === updatedConnection.connectionId) {
-                  return updatedConnection;
-                }
-                return conn;
-              }) ?? [],
-          };
-        });
+        queryClient.setQueryData(
+          connectionsKeys.lists(),
+          (connectionList: WebBackendConnectionReadList | undefined) => {
+            return {
+              ...connectionList,
+              connections:
+                connectionList?.connections.map((connection) => {
+                  if (connection.connectionId === updatedConnection.connectionId) {
+                    return updatedConnection as WebBackendConnectionListItem;
+                  }
+                  return connection;
+                }) ?? [],
+            };
+          }
+        );
       },
       onError: (error: Error) => {
         // catch error when credits are not enough to enable the connection
@@ -566,48 +597,122 @@ export const useRemoveConnectionsFromList = (): ((connectionIds: string[]) => vo
   );
 };
 
-interface ConnectionListTransformed {
-  connections: WebBackendConnectionListItem[];
-  connectionsByConnectorId: Map<string, WebBackendConnectionListItem[]>;
+interface ConnectionListFilters {
+  search: string;
+  status: WebBackendConnectionListFiltersStatusesItem | null;
+  state: "active" | "inactive" | null;
+  sourceDefinitionIds: string[];
+  destinationDefinitionIds: string[];
+  tagIds: string[];
 }
 
 export const useConnectionList = ({
   sourceId,
   destinationId,
-}: Pick<WebBackendConnectionListRequestBody, "destinationId" | "sourceId"> = {}) => {
-  const workspace = useCurrentWorkspace();
+  filters,
+  sortKey,
+  pageSize = 25,
+}: Pick<WebBackendConnectionListRequestBody, "destinationId" | "sourceId" | "sortKey" | "pageSize"> & {
+  filters?: ConnectionListFilters;
+} = {}) => {
+  const { workspaceId } = useCurrentWorkspace();
   const requestOptions = useRequestOptions();
-  const REFETCH_CONNECTION_LIST_INTERVAL = 60_000;
-  const connectorIds = [...(destinationId ? destinationId : []), ...(sourceId ? sourceId : [])];
 
-  return useQuery(
-    connectionsKeys.lists(connectorIds.length > 0 ? connectorIds : ["no-filter"]),
-    async (): Promise<ConnectionListTransformed> => {
-      const { connections } = await webBackendListConnectionsForWorkspace(
-        { workspaceId: workspace.workspaceId, sourceId, destinationId },
-        requestOptions
-      );
+  // Create a comprehensive query key that includes all filter parameters
+  const queryKey = connectionsKeys.lists([
+    ...(sourceId ? [`source-${sourceId.join(",")}`] : []),
+    ...(destinationId ? [`destination-${destinationId.join(",")}`] : []),
+    ...(filters?.search ? [`search-${filters.search}`] : []),
+    ...(filters?.status ? [`status-${filters.status}`] : []),
+    ...(filters?.state ? [`state-${filters.state}`] : []),
+    ...(filters?.sourceDefinitionIds?.length ? [`sourceDef-${filters.sourceDefinitionIds.join(",")}`] : []),
+    ...(filters?.destinationDefinitionIds?.length ? [`destDef-${filters.destinationDefinitionIds.join(",")}`] : []),
+    ...(filters?.tagIds?.length ? [`tags-${filters.tagIds.join(",")}`] : []),
+    `sort-${sortKey}`,
+    `pageSize-${pageSize}`,
+  ]);
+
+  const query = useInfiniteQuery(
+    queryKey,
+    async ({ pageParam: cursor }) => {
+      // Build the new API request structure
+      const requestBody: WebBackendConnectionListRequestBody = {
+        workspaceId,
+        sourceId,
+        destinationId,
+        cursor,
+        sortKey,
+        pageSize,
+        filters: filters
+          ? {
+              searchTerm: filters.search,
+              sourceDefinitionIds: filters.sourceDefinitionIds,
+              destinationDefinitionIds: filters.destinationDefinitionIds,
+              statuses: filters.status ? [filters.status] : undefined,
+              states: filters.state ? [filters.state] : undefined,
+              tagIds: filters.tagIds,
+            }
+          : undefined,
+      };
+
+      const { connections, page_size } = await webBackendListConnectionsForWorkspace(requestBody, requestOptions);
+
       const connectionsByConnectorId = new Map<string, WebBackendConnectionListItem[]>();
-      connections.forEach((connection) => {
-        connectionsByConnectorId.set(connection.source.sourceId, [
-          ...(connectionsByConnectorId.get(connection.source.sourceId) || []),
-          connection,
-        ]);
-        connectionsByConnectorId.set(connection.destination.destinationId, [
-          ...(connectionsByConnectorId.get(connection.destination.destinationId) || []),
-          connection,
-        ]);
-      });
+
+      for (const connection of connections) {
+        const sourceId = connection.source.sourceDefinitionId;
+        const destinationId = connection.destination.destinationDefinitionId;
+
+        if (!connectionsByConnectorId.has(sourceId)) {
+          connectionsByConnectorId.set(sourceId, []);
+        }
+        connectionsByConnectorId.get(sourceId)?.push(connection);
+        if (!connectionsByConnectorId.has(destinationId)) {
+          connectionsByConnectorId.set(destinationId, []);
+        }
+        connectionsByConnectorId.get(destinationId)?.push(connection);
+      }
+
       return {
         connections,
         connectionsByConnectorId,
+        pageSize: page_size,
       };
     },
     {
-      refetchInterval: REFETCH_CONNECTION_LIST_INTERVAL,
-      suspense: true,
+      getNextPageParam: (lastPage) => {
+        if (lastPage.pageSize !== undefined) {
+          if (lastPage.connections.length < lastPage.pageSize) {
+            return undefined;
+          }
+        } else if (lastPage.connections.length === 0) {
+          return undefined;
+        }
+
+        const lastConnection = lastPage.connections[lastPage.connections.length - 1];
+        if (!lastConnection) {
+          return undefined;
+        }
+
+        return lastConnection.connectionId;
+      },
     }
-  ).data;
+  );
+
+  // TODO: this needs to move into the component, we should return the query from this hook
+  const connections = query.data?.pages.flatMap((page) => page.connections) ?? [];
+  const connectionsByConnectorId =
+    query.data?.pages
+      .flatMap((page) => Array.from(page.connectionsByConnectorId.entries()))
+      .reduce((acc, [connectorId, connections]) => {
+        if (!acc.has(connectorId)) {
+          acc.set(connectorId, []);
+        }
+        acc.get(connectorId)?.push(...connections);
+        return acc;
+      }, new Map<string, WebBackendConnectionListItem[]>()) ?? new Map();
+
+  return { ...query, connections, connectionsByConnectorId };
 };
 
 export const useWorkspaceConnectionStatusCounts = (workspaceId: string) => {
@@ -783,5 +888,14 @@ export const useGetConnectionsGraphData = (requestBody: ConnectionEventsListMini
     {
       refetchInterval: CONNECTION_STATUS_REFETCH_INTERVAL,
     }
+  );
+};
+
+export const useGetConnectionStatusesCounts = () => {
+  const workspaceId = useCurrentWorkspaceId();
+  const requestOptions = useRequestOptions();
+
+  return useQuery(connectionsKeys.statusCounts(), () =>
+    webBackendGetConnectionStatusCounts({ workspaceId }, requestOptions)
   );
 };

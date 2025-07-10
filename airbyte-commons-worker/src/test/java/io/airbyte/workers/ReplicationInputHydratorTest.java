@@ -188,6 +188,9 @@ class ReplicationInputHydratorTest {
       null,
       null,
       null,
+      null,
+      null,
+      null,
       null);
 
   private static MapperSecretHydrationHelper mapperSecretHydrationHelper;

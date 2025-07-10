@@ -11,6 +11,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
+import io.airbyte.data.services.shared.SourceConnectionWithCount;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -59,6 +60,10 @@ public class SourceHelpers {
   public static JsonNode getTestImplementationJson() throws IOException {
     final Path path = Paths.get(SourceHelpers.class.getClassLoader().getResource("json/TestImplementation.json").getPath());
     return Jsons.deserialize(Files.readString(path));
+  }
+
+  public static SourceConnectionWithCount generateSourceWithCount(final SourceConnection source) {
+    return new SourceConnectionWithCount(source, 0, null, java.util.Map.of());
   }
 
   public static SourceRead getSourceRead(final SourceConnection source, final StandardSourceDefinition standardSourceDefinition) {

@@ -39,6 +39,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderConfigView } from "./BuilderConfigView";
+import { ParentStreamSelector } from "./overrides";
 import styles from "./StreamConfigView.module.scss";
 import {
   DEFAULT_SYNC_STREAM,
@@ -103,7 +104,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
           return;
         }
         const streams: DeclarativeComponentSchemaStreamsItem[] = getValues("manifest.streams");
-        const updatedStreams = streams.filter((_, index) => index !== streamId.index);
+        const updatedStreams = updateStreamsAndRefsAfterDelete(streams, streamId.index);
         const streamToSelect = streamId.index >= updatedStreams.length ? updatedStreams.length - 1 : streamId.index;
         const viewToSelect: BuilderView =
           updatedStreams.length === 0 ? { type: "global" } : { type: "stream", index: streamToSelect };
@@ -309,7 +310,17 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
             />
           </StreamCard>
           <StreamCard>
-            <SchemaFormControl path={streamFieldPath("retriever.partition_router")} />
+            <SchemaFormControl
+              path={streamFieldPath("retriever.partition_router")}
+              overrideByPath={{
+                [streamFieldPath("retriever.partition_router.*.parent_stream_configs.*.stream")]: (path) => (
+                  <ParentStreamSelector path={path} currentStreamName={name} />
+                ),
+                [streamFieldPath("retriever.partition_router.parent_stream_configs.*.stream")]: (path) => (
+                  <ParentStreamSelector path={path} currentStreamName={name} />
+                ),
+              }}
+            />
           </StreamCard>
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.requester.error_handler")} />
@@ -457,14 +468,21 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
             />
           </StreamCard>
           <StreamCard>
-            <SchemaFormControl path={streamFieldPath("retriever.partition_router")} />
+            <SchemaFormControl
+              path={streamFieldPath("retriever.partition_router")}
+              overrideByPath={{
+                [streamFieldPath("retriever.partition_router.*.parent_stream_configs.*.stream")]: (path) => (
+                  <ParentStreamSelector path={path} currentStreamName={name} />
+                ),
+                [streamFieldPath("retriever.partition_router.parent_stream_configs.*.stream")]: (path) => (
+                  <ParentStreamSelector path={path} currentStreamName={name} />
+                ),
+              }}
+            />
           </StreamCard>
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.creation_requester.error_handler")} />
           </StreamCard>
-          {/* {streamId.type === "stream" && (
-              <ParentStreamsSection streamFieldPath={creationRequesterPath} currentStreamIndex={streamId.index} />
-            )} */}
           <Card>
             <CollapsedControls streamId={streamId}>
               <SchemaFormRemainingFields path={streamFieldPath("retriever.creation_requester")} />
@@ -749,7 +767,7 @@ const SchemaEditor = ({
       <SchemaFormControl
         path={schemaLoaderPath}
         overrideByPath={{
-          [schemaLoaderPath]: (
+          [schemaLoaderPath]: () => (
             <Message type="warning" text={formatMessage({ id: "connectorBuilder.streamSchema.noStreamName" })} />
           ),
         }}
@@ -785,7 +803,7 @@ const SchemaEditor = ({
           !Array.isArray(schemaLoader) &&
           schemaLoader?.type === InlineSchemaLoaderType.InlineSchemaLoader
             ? {
-                [schemaLoaderPath]: (
+                [schemaLoaderPath]: () => (
                   <div className={styles.autoSchemaContainer}>
                     <Pre>{formatJson(schemaLoader.schema, true)}</Pre>
                   </div>
@@ -871,4 +889,52 @@ const CollapsedControls: React.FC<React.PropsWithChildren<CollapsedControlsProps
       </Collapsible>
     </div>
   );
+};
+
+/**
+ * Removes the stream at the given index from the streams array, and updates $refs accordingly:
+ * - If the $ref points to the deleted stream, it is replaced with undefined
+ * - If the $ref points to a stream after the deleted stream, the $ref is updated to point to one stream index lower,
+ *   as that will now hold the stream that was previously pointed to.
+ */
+const updateStreamsAndRefsAfterDelete = (
+  streams: DeclarativeComponentSchemaStreamsItem[],
+  deletedStreamIndex: number
+) => {
+  function updateRefs<T>(obj: T): T | undefined {
+    if (!obj || typeof obj !== "object") {
+      return obj;
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map(updateRefs) as T;
+    }
+
+    if ("$ref" in obj && typeof obj.$ref === "string") {
+      // check if $ref points to a stream index and capture the index and the suffix
+      const match = obj.$ref.match(/#\/streams\/(\d+)(?:\/(.*)|$)/);
+      if (match) {
+        const streamIndex = Number(match[1]);
+        if (streamIndex === deletedStreamIndex) {
+          return undefined;
+        }
+        if (streamIndex > deletedStreamIndex) {
+          const newRef = match[2] ? `#/streams/${streamIndex - 1}/${match[2]}` : `#/streams/${streamIndex - 1}`;
+          return {
+            ...obj,
+            $ref: newRef,
+          };
+        }
+      }
+      return obj;
+    }
+
+    const result = {} as Record<string, unknown>;
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = updateRefs(value);
+    }
+    return result as T;
+  }
+
+  return streams.filter((_, index) => index !== deletedStreamIndex).map(updateRefs);
 };

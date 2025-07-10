@@ -321,7 +321,7 @@ describe("SchemaForm", () => {
       <SchemaForm schema={basicSchema} onSubmit={() => Promise.resolve()}>
         <SchemaFormControl
           overrideByPath={{
-            name: <FormControl name="name" label="Custom Name Label" fieldType="input" />,
+            name: () => <FormControl name="name" label="Custom Name Label" fieldType="input" />,
           }}
         />
         <FormSubmissionButtons />
@@ -690,7 +690,7 @@ describe("SchemaForm", () => {
         <SchemaFormControl
           path="age"
           overrideByPath={{
-            age: <FormControl name="age" label="Age (in years)" fieldType="input" type="number" />,
+            age: () => <FormControl name="age" label="Age (in years)" fieldType="input" type="number" />,
           }}
         />
         <FormSubmissionButtons />
@@ -916,7 +916,7 @@ describe("SchemaForm", () => {
           <SchemaFormControl path="name" />
           <SchemaFormRemainingFields
             overrideByPath={{
-              age: <FormControl name="age" label="Custom Age" fieldType="input" type="number" />,
+              age: () => <FormControl name="age" label="Custom Age" fieldType="input" type="number" />,
             }}
           />
           <FormSubmissionButtons />

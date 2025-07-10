@@ -163,6 +163,13 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         connectionTimelineEventService);
     catalogService = spy(new CatalogServiceJooqImpl(database));
 
+    workspaceService = spy(new WorkspaceServiceJooqImpl(
+        database,
+        featureFlagClient,
+        secretsRepositoryReader,
+        secretsRepositoryWriter,
+        secretPersistenceConfigService,
+        metricClient));
     oauthService = spy(new OAuthServiceJooqImpl(database,
         featureFlagClient,
         secretsRepositoryReader,
@@ -181,14 +188,6 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         featureFlagClient,
         connectionService,
         actorDefinitionVersionUpdater,
-        metricClient));
-
-    workspaceService = spy(new WorkspaceServiceJooqImpl(
-        database,
-        featureFlagClient,
-        secretsRepositoryReader,
-        secretsRepositoryWriter,
-        secretPersistenceConfigService,
         metricClient));
     operationService = spy(new OperationServiceJooqImpl(database));
 
@@ -510,8 +509,8 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final StandardSyncQuery query = new StandardSyncQuery(workspaceId, List.of(MockData.SOURCE_ID_1), List.of(MockData.DESTINATION_ID_1), false);
     final List<StandardSync> expectedSyncs =
         MockData.standardSyncs().subList(0, 3).stream()
-            .filter(sync -> query.destinationId().contains(sync.getDestinationId()))
-            .filter(sync -> query.sourceId().contains(sync.getSourceId()))
+            .filter(sync -> query.destinationId.contains(sync.getDestinationId()))
+            .filter(sync -> query.sourceId.contains(sync.getSourceId()))
             .toList();
     final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(query);
 
@@ -524,7 +523,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final StandardSyncQuery query = new StandardSyncQuery(workspaceId, null, List.of(MockData.DESTINATION_ID_1), false);
     final List<StandardSync> expectedSyncs =
         MockData.standardSyncs().subList(0, 3).stream()
-            .filter(sync -> query.destinationId().contains(sync.getDestinationId()))
+            .filter(sync -> query.destinationId.contains(sync.getDestinationId()))
             .toList();
     final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(query);
 
@@ -537,7 +536,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final StandardSyncQuery query = new StandardSyncQuery(workspaceId, List.of(MockData.SOURCE_ID_2), null, false);
     final List<StandardSync> expectedSyncs =
         MockData.standardSyncs().subList(0, 3).stream()
-            .filter(sync -> query.sourceId().contains(sync.getSourceId()))
+            .filter(sync -> query.sourceId.contains(sync.getSourceId()))
             .toList();
     final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(query);
 
@@ -901,9 +900,9 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
     final List<SourceAndDefinition> actual = sourceService.getSourceAndDefinitionsFromSourceIds(sourceIds);
     final List<SourceAndDefinition> result = actual.stream().map(sourceAndDefinition -> {
-      final SourceAndDefinition copy = new SourceAndDefinition(sourceAndDefinition.source(), sourceAndDefinition.definition());
-      copy.source().setCreatedAt(null);
-      copy.source().setUpdatedAt(null);
+      final SourceAndDefinition copy = new SourceAndDefinition(sourceAndDefinition.source, sourceAndDefinition.definition);
+      copy.source.setCreatedAt(null);
+      copy.source.setUpdatedAt(null);
       return copy;
     }).toList();
 
@@ -922,9 +921,9 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
     final List<DestinationAndDefinition> result = actual.stream().map(destinationAndDefinition -> {
       final DestinationAndDefinition copy =
-          new DestinationAndDefinition(destinationAndDefinition.destination(), destinationAndDefinition.definition());
-      copy.destination().setCreatedAt(null);
-      copy.destination().setUpdatedAt(null);
+          new DestinationAndDefinition(destinationAndDefinition.destination, destinationAndDefinition.definition);
+      copy.destination.setCreatedAt(null);
+      copy.destination.setUpdatedAt(null);
       return copy;
     }).toList();
 

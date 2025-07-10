@@ -103,7 +103,7 @@ Renders the workloadLauncher.dataPlane.clientId value
 Renders the workloadLauncher.dataPlane.clientId secret key
 */}}
 {{- define "airbyte.workloadLauncher.dataPlane.clientId.secretKey" }}
-	{{- .Values.workloadLauncher.dataPlane.clientIdSecretKey | default "DATAPLANE_CLIENT_ID" }}
+	{{- .Values.workloadLauncher.dataPlane.clientIdSecretKey | default (include "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey" .) }}
 {{- end }}
 
 {{/*
@@ -139,7 +139,7 @@ Renders the workloadLauncher.dataPlane.clientIdSecretName environment variable
 Renders the workloadLauncher.dataPlane.clientIdSecretKey value
 */}}
 {{- define "airbyte.workloadLauncher.dataPlane.clientIdSecretKey" }}
-    {{- .Values.workloadLauncher.dataPlane.clientIdSecretKey | default (include "airbyte.workloadLauncher.dataPlane.clientId.secretKey" .) }}
+    {{- .Values.workloadLauncher.dataPlane.clientIdSecretKey | default (include "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey" .) }}
 {{- end }}
 
 {{/*
@@ -164,7 +164,7 @@ Renders the workloadLauncher.dataPlane.clientSecret value
 Renders the workloadLauncher.dataPlane.clientSecret secret key
 */}}
 {{- define "airbyte.workloadLauncher.dataPlane.clientSecret.secretKey" }}
-	{{- .Values.workloadLauncher.dataPlane.clientSecretSecretKey | default "DATAPLANE_CLIENT_SECRET" }}
+	{{- .Values.workloadLauncher.dataPlane.clientSecretSecretKey | default (include "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey" .) }}
 {{- end }}
 
 {{/*
@@ -200,7 +200,7 @@ Renders the workloadLauncher.dataPlane.clientSecretSecretName environment variab
 Renders the workloadLauncher.dataPlane.clientSecretSecretKey value
 */}}
 {{- define "airbyte.workloadLauncher.dataPlane.clientSecretSecretKey" }}
-    {{- .Values.workloadLauncher.dataPlane.clientSecretSecretKey | default (include "airbyte.workloadLauncher.dataPlane.clientSecret.secretKey" .) }}
+    {{- .Values.workloadLauncher.dataPlane.clientSecretSecretKey | default (include "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey" .) }}
 {{- end }}
 
 {{/*

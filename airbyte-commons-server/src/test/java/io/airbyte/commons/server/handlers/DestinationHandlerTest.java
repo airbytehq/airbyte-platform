@@ -63,6 +63,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.shared.DestinationConnectionWithCount;
 import io.airbyte.domain.models.SecretStorage;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
@@ -89,6 +90,7 @@ class DestinationHandlerTest {
   private ActorDefinitionVersionWithOverrideStatus destinationDefinitionVersionWithOverrideStatus;
   private DestinationDefinitionSpecificationRead destinationDefinitionSpecificationRead;
   private DestinationConnection destinationConnection;
+  private DestinationConnectionWithCount destinationConnectionWithCount;
   private DestinationHandler destinationHandler;
   private ConnectionsHandler connectionsHandler;
   private ConfigurationUpdate configurationUpdate;
@@ -167,6 +169,8 @@ class DestinationHandlerTest {
 
     destinationConnection = DestinationHelpers.generateDestination(standardDestinationDefinition.getDestinationDefinitionId(),
         apiPojoConverters.scopedResourceReqsToInternal(RESOURCE_ALLOCATION));
+
+    destinationConnectionWithCount = DestinationHelpers.generateDestinationWithCount(destinationConnection);
 
     destinationHandler =
         new DestinationHandler(
@@ -642,43 +646,49 @@ class DestinationHandlerTest {
 
   @Test
   void testListDestinationForWorkspace()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.ConfigNotFoundException {
+      throws JsonValidationException, IOException, io.airbyte.data.ConfigNotFoundException {
     final DestinationRead expectedDestinationRead = new DestinationRead()
-        .name(destinationConnection.getName())
+        .name(destinationConnectionWithCount.destination.getName())
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-        .workspaceId(destinationConnection.getWorkspaceId())
-        .destinationId(destinationConnection.getDestinationId())
-        .connectionConfiguration(destinationConnection.getConfiguration())
+        .workspaceId(destinationConnectionWithCount.destination.getWorkspaceId())
+        .destinationId(destinationConnectionWithCount.destination.getDestinationId())
+        .connectionConfiguration(destinationConnectionWithCount.destination.getConfiguration())
         .destinationName(standardDestinationDefinition.getName())
         .icon(ICON_URL)
         .isEntitled(IS_ENTITLED)
         .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
         .supportState(SUPPORT_STATE)
         .status(ActorStatus.INACTIVE)
-        .resourceAllocation(RESOURCE_ALLOCATION);
-    final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(destinationConnection.getWorkspaceId());
+        .resourceAllocation(RESOURCE_ALLOCATION)
+        .numConnections(0);
+    final WorkspaceIdRequestBody workspaceIdRequestBody =
+        new WorkspaceIdRequestBody().workspaceId(destinationConnectionWithCount.destination.getWorkspaceId());
 
-    when(destinationService.getDestinationConnection(destinationConnection.getDestinationId())).thenReturn(destinationConnection);
-    when(destinationService.listWorkspaceDestinationConnection(destinationConnection.getWorkspaceId()))
-        .thenReturn(Lists.newArrayList(destinationConnection));
+    when(destinationService.getDestinationConnection(destinationConnectionWithCount.destination.getDestinationId()))
+        .thenReturn(destinationConnectionWithCount.destination);
+    when(destinationService.listWorkspaceDestinationConnectionsWithCounts(destinationConnectionWithCount.destination.getWorkspaceId()))
+        .thenReturn(Lists.newArrayList(destinationConnectionWithCount));
     when(destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId()))
         .thenReturn(standardDestinationDefinition);
-    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
-        destinationConnection.getDestinationId()))
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition,
+        destinationConnectionWithCount.destination.getWorkspaceId(),
+        destinationConnectionWithCount.destination.getDestinationId()))
             .thenReturn(destinationDefinitionVersion);
-    when(secretsProcessor.prepareSecretsForOutput(destinationConnection.getConfiguration(),
+    when(secretsProcessor.prepareSecretsForOutput(destinationConnectionWithCount.destination.getConfiguration(),
         destinationDefinitionSpecificationRead.getConnectionSpecification()))
-            .thenReturn(destinationConnection.getConfiguration());
+            .thenReturn(destinationConnectionWithCount.destination.getConfiguration());
     when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
         .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     final DestinationReadList actualDestinationRead = destinationHandler.listDestinationsForWorkspace(workspaceIdRequestBody);
 
     assertEquals(expectedDestinationRead, actualDestinationRead.getDestinations().get(0));
-    verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
-        destinationConnection.getDestinationId());
+    verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition,
+        destinationConnectionWithCount.destination.getWorkspaceId(),
+        destinationConnectionWithCount.destination.getDestinationId());
     verify(secretsProcessor)
-        .prepareSecretsForOutput(destinationConnection.getConfiguration(), destinationDefinitionSpecificationRead.getConnectionSpecification());
+        .prepareSecretsForOutput(destinationConnectionWithCount.destination.getConfiguration(),
+            destinationDefinitionSpecificationRead.getConnectionSpecification());
   }
 
   @Test

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Controller, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { FormControlErrorMessage } from "components/forms/FormControl";
 import { Button } from "components/ui/Button";
 import { ComboBox } from "components/ui/ComboBox";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
@@ -94,6 +95,8 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
     );
   }, [destinationCatalog, destinationObjectName, destinationSyncMode]);
 
+  const additionalPropertiesSupported = !!selectedDestinationOperation?.schema.additionalProperties;
+
   const availableDestinationFieldOptions = useMemo(() => {
     const topLevelFields = selectedDestinationOperation?.schema?.properties ?? [];
     return Object.keys(topLevelFields)
@@ -119,13 +122,17 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
       <div className={styles.fieldMapping__source}>
         <Controller
           name={`streams.${streamIndex}.fields.${fieldIndex}.sourceFieldName`}
-          render={({ field }) => (
-            <ComboBox
-              value={field.value}
-              onChange={field.onChange}
-              options={availableSourceFieldOptions}
-              placeholder={formatMessage({ id: "connection.sourceFieldNamePlaceholder" })}
-            />
+          render={({ field, fieldState }) => (
+            <FlexContainer direction="column" gap="xs">
+              <ComboBox
+                error={!!fieldState.error}
+                value={field.value}
+                onChange={field.onChange}
+                options={availableSourceFieldOptions}
+                placeholder={formatMessage({ id: "connection.sourceFieldNamePlaceholder" })}
+              />
+              {!!fieldState.error && <FormControlErrorMessage name={field.name} />}
+            </FlexContainer>
           )}
         />
       </div>
@@ -141,13 +148,18 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
                 <FlexItem grow>
                   <Controller
                     name={`streams.${streamIndex}.fields.${fieldIndex}.destinationFieldName`}
-                    render={({ field }) => (
-                      <ComboBox
-                        value={field.value}
-                        onChange={field.onChange}
-                        options={availableDestinationFieldOptions}
-                        placeholder={formatMessage({ id: "connection.destinationFieldNamePlaceholder" })}
-                      />
+                    render={({ field, fieldState }) => (
+                      <FlexContainer direction="column" gap="xs">
+                        <ComboBox
+                          error={!!fieldState.error}
+                          value={field.value}
+                          onChange={field.onChange}
+                          options={availableDestinationFieldOptions}
+                          placeholder={formatMessage({ id: "connection.destinationFieldNamePlaceholder" })}
+                          allowCustomValue={additionalPropertiesSupported}
+                        />
+                        {!!fieldState.error && <FormControlErrorMessage name={field.name} />}
+                      </FlexContainer>
                     )}
                   />
                 </FlexItem>

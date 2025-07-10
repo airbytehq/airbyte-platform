@@ -49,6 +49,7 @@ $border-radius: variables.$border-radius-sm;
   text-align: left;
   font-size: 10px;
   line-height: 12px;
+  height: variables.$table-header-height;
   font-weight: 600;
   width: auto;
   padding: variables.$spacing-md variables.$spacing-lg;

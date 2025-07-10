@@ -348,17 +348,17 @@ class ConnectionManagerWorkflowTest {
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.RUNNING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.RUNNING && changedStateEvent.isValue())
           .hasSizeGreaterThan(0);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.DONE_WAITING && changedStateEvent.isValue())
           .hasSizeGreaterThan(0);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> (changedStateEvent.getField() != StateField.RUNNING
-              && changedStateEvent.getField() != StateField.SUCCESS
-              && changedStateEvent.getField() != StateField.DONE_WAITING)
+          .filteredOn(changedStateEvent -> (changedStateEvent.field != StateField.RUNNING
+              && changedStateEvent.field != StateField.SUCCESS
+              && changedStateEvent.field != StateField.DONE_WAITING)
               && changedStateEvent.isValue())
           .isEmpty();
     }
@@ -390,17 +390,17 @@ class ConnectionManagerWorkflowTest {
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.RUNNING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.RUNNING && changedStateEvent.isValue())
           .hasSizeGreaterThan(0);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.DONE_WAITING && changedStateEvent.isValue())
           .hasSizeGreaterThan(0);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> (changedStateEvent.getField() != StateField.RUNNING
-              && changedStateEvent.getField() != StateField.SUCCESS
-              && changedStateEvent.getField() != StateField.DONE_WAITING)
+          .filteredOn(changedStateEvent -> (changedStateEvent.field != StateField.RUNNING
+              && changedStateEvent.field != StateField.SUCCESS
+              && changedStateEvent.field != StateField.DONE_WAITING)
               && changedStateEvent.isValue())
           .isEmpty();
     }
@@ -435,23 +435,23 @@ class ConnectionManagerWorkflowTest {
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.RUNNING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.RUNNING && changedStateEvent.isValue())
           .hasSize(1);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.SKIPPED_SCHEDULING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.SKIPPED_SCHEDULING && changedStateEvent.isValue())
           .hasSize(1);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.DONE_WAITING && changedStateEvent.isValue())
           .hasSize(1);
 
       Assertions.assertThat(events)
           .filteredOn(
-              changedStateEvent -> (changedStateEvent.getField() != StateField.RUNNING
-                  && changedStateEvent.getField() != StateField.SKIPPED_SCHEDULING
-                  && changedStateEvent.getField() != StateField.SUCCESS
-                  && changedStateEvent.getField() != StateField.DONE_WAITING)
+              changedStateEvent -> (changedStateEvent.field != StateField.RUNNING
+                  && changedStateEvent.field != StateField.SKIPPED_SCHEDULING
+                  && changedStateEvent.field != StateField.SUCCESS
+                  && changedStateEvent.field != StateField.DONE_WAITING)
                   && changedStateEvent.isValue())
           .isEmpty();
     }
@@ -494,21 +494,21 @@ class ConnectionManagerWorkflowTest {
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.RUNNING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.RUNNING && changedStateEvent.isValue())
           .isEmpty();
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.UPDATED && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.UPDATED && changedStateEvent.isValue())
           .hasSize(1);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.DONE_WAITING && changedStateEvent.isValue())
           .hasSize(1);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> (changedStateEvent.getField() != StateField.UPDATED
-              && changedStateEvent.getField() != StateField.SUCCESS
-              && changedStateEvent.getField() != StateField.DONE_WAITING)
+          .filteredOn(changedStateEvent -> (changedStateEvent.field != StateField.UPDATED
+              && changedStateEvent.field != StateField.SUCCESS
+              && changedStateEvent.field != StateField.DONE_WAITING)
               && changedStateEvent.isValue())
           .isEmpty();
 
@@ -543,16 +543,16 @@ class ConnectionManagerWorkflowTest {
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.RUNNING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.RUNNING && changedStateEvent.isValue())
           .isEmpty();
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.CANCELLED && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.CANCELLED && changedStateEvent.isValue())
           .isEmpty();
 
       Assertions.assertThat(events)
           .filteredOn(
-              changedStateEvent -> (changedStateEvent.getField() != StateField.CANCELLED && changedStateEvent.getField() != StateField.SUCCESS)
+              changedStateEvent -> (changedStateEvent.field != StateField.CANCELLED && changedStateEvent.field != StateField.SUCCESS)
                   && changedStateEvent.isValue())
           .isEmpty();
 
@@ -589,22 +589,22 @@ class ConnectionManagerWorkflowTest {
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.RUNNING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.RUNNING && changedStateEvent.isValue())
           .isEmpty();
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DELETED && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.DELETED && changedStateEvent.isValue())
           .hasSizeGreaterThan(1);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.DONE_WAITING && changedStateEvent.isValue())
           .hasSizeGreaterThan(1);
 
       Assertions.assertThat(events)
           .filteredOn(
-              changedStateEvent -> changedStateEvent.getField() != StateField.DELETED
-                  && changedStateEvent.getField() != StateField.SUCCESS
-                  && changedStateEvent.getField() != StateField.DONE_WAITING
+              changedStateEvent -> changedStateEvent.field != StateField.DELETED
+                  && changedStateEvent.field != StateField.SUCCESS
+                  && changedStateEvent.field != StateField.DONE_WAITING
                   && changedStateEvent.isValue())
           .isEmpty();
     }
@@ -678,7 +678,7 @@ class ConnectionManagerWorkflowTest {
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.SKIPPED_SCHEDULING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.SKIPPED_SCHEDULING && changedStateEvent.isValue())
           .isEmpty();
 
     }
@@ -728,7 +728,7 @@ class ConnectionManagerWorkflowTest {
       }
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.CANCELLED && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.CANCELLED && changedStateEvent.isValue())
           .hasSizeGreaterThanOrEqualTo(1);
     }
 
@@ -776,11 +776,11 @@ class ConnectionManagerWorkflowTest {
       }
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.CANCELLED && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.CANCELLED && changedStateEvent.isValue())
           .hasSizeGreaterThanOrEqualTo(1);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DELETED && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.DELETED && changedStateEvent.isValue())
           .hasSizeGreaterThanOrEqualTo(1);
     }
 
@@ -813,7 +813,7 @@ class ConnectionManagerWorkflowTest {
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.SKIPPED_SCHEDULING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.SKIPPED_SCHEDULING && changedStateEvent.isValue())
           .hasSizeGreaterThanOrEqualTo(1);
 
     }
@@ -847,11 +847,11 @@ class ConnectionManagerWorkflowTest {
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.SKIPPED_SCHEDULING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.SKIPPED_SCHEDULING && changedStateEvent.isValue())
           .hasSizeGreaterThanOrEqualTo(1);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.SKIP_SCHEDULING_NEXT_WORKFLOW && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.SKIP_SCHEDULING_NEXT_WORKFLOW && changedStateEvent.isValue())
           .hasSizeGreaterThanOrEqualTo(1);
     }
 
@@ -895,7 +895,7 @@ class ConnectionManagerWorkflowTest {
       }
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.CANCELLED_FOR_RESET && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.CANCELLED_FOR_RESET && changedStateEvent.isValue())
           .hasSizeGreaterThanOrEqualTo(1);
     }
 
@@ -944,11 +944,11 @@ class ConnectionManagerWorkflowTest {
       }
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.RUNNING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.RUNNING && changedStateEvent.isValue())
           .hasSizeGreaterThanOrEqualTo(1);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.UPDATED && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.UPDATED && changedStateEvent.isValue())
           .hasSizeGreaterThanOrEqualTo(1);
 
       Mockito.verify(mJobCreationAndStatusUpdateActivity).jobSuccessWithAttemptNumber(Mockito.any(JobSuccessInputWithAttemptNumber.class));
@@ -1324,7 +1324,7 @@ class ConnectionManagerWorkflowTest {
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
       final var filteredAssertionList = Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.RUNNING && changedStateEvent.isValue());
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.RUNNING && changedStateEvent.isValue());
 
       if (expectedEventsCount == 0) {
         filteredAssertionList.isEmpty();
@@ -1537,7 +1537,7 @@ class ConnectionManagerWorkflowTest {
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.DONE_WAITING && changedStateEvent.isValue())
           .hasSizeGreaterThan(0);
     }
 
@@ -1577,13 +1577,13 @@ class ConnectionManagerWorkflowTest {
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.DONE_WAITING && changedStateEvent.isValue())
           .hasSize(0);
 
       testEnv.sleep(timeTilNextScheduledRun.plus(Duration.ofSeconds(5)));
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.DONE_WAITING && changedStateEvent.isValue())
           .hasSizeGreaterThan(0);
     }
 
@@ -1617,13 +1617,13 @@ class ConnectionManagerWorkflowTest {
       final Queue<ChangedStateEvent> events = testStateListener.events(testId);
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.DONE_WAITING && changedStateEvent.isValue())
           .hasSize(0);
 
       testEnv.sleep(backoff.plus(Duration.ofSeconds(5)));
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.DONE_WAITING && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.DONE_WAITING && changedStateEvent.isValue())
           .hasSizeGreaterThan(0);
     }
 
@@ -1670,7 +1670,7 @@ class ConnectionManagerWorkflowTest {
           .jobCancelledWithAttemptNumber(Mockito.argThat(new HasCancellationFailure(jobId, attemptNo - 1))); // input attempt number is 1 based
 
       Assertions.assertThat(events)
-          .filteredOn(changedStateEvent -> changedStateEvent.getField() == StateField.CANCELLED && changedStateEvent.isValue())
+          .filteredOn(changedStateEvent -> changedStateEvent.field == StateField.CANCELLED && changedStateEvent.isValue())
           .hasSizeGreaterThan(0);
     }
 

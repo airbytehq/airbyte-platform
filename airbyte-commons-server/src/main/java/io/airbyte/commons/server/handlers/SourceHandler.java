@@ -40,6 +40,7 @@ import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
 import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Configs;
+import io.airbyte.config.JobStatus;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
@@ -59,6 +60,7 @@ import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.PartialUserConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
+import io.airbyte.data.services.shared.SourceConnectionWithCount;
 import io.airbyte.domain.models.SecretStorage;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
@@ -73,6 +75,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -334,11 +337,49 @@ public class SourceHandler {
   public SourceReadList listSourcesForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
-    final List<SourceConnection> sourceConnections = sourceService.listWorkspaceSourceConnection(workspaceIdRequestBody.getWorkspaceId());
+    final List<SourceConnectionWithCount> sourceConnectionsWithCounts =
+        sourceService.listWorkspaceSourceConnectionsWithCounts(workspaceIdRequestBody.getWorkspaceId());
 
     final List<SourceRead> reads = Lists.newArrayList();
-    for (final SourceConnection sc : sourceConnections) {
-      reads.add(buildSourceReadWithStatus(sc));
+    for (final SourceConnectionWithCount sourceConnectionWithCount : sourceConnectionsWithCounts) {
+      final SourceRead sourceRead = buildSourceReadWithStatus(sourceConnectionWithCount.source);
+      sourceRead.numConnections(sourceConnectionWithCount.connectionCount);
+
+      if (sourceConnectionWithCount.lastSync != null) {
+        sourceRead.lastSync(sourceConnectionWithCount.lastSync.toEpochSecond());
+      }
+
+      // Convert Map<JobStatus, Integer> to Map<String, Integer> for API
+      final Map<String, Integer> statusCountsMap = new HashMap<>();
+      for (Map.Entry<JobStatus, Integer> entry : sourceConnectionWithCount.connectionJobStatuses.entrySet()) {
+        String statusKey;
+        switch (entry.getKey()) {
+          case SUCCEEDED:
+            statusKey = "succeeded";
+            break;
+          case FAILED:
+            statusKey = "failed";
+            break;
+          case RUNNING:
+            statusKey = "running";
+            break;
+          case PENDING:
+            statusKey = "pending";
+            break;
+          case INCOMPLETE:
+            statusKey = "incomplete";
+            break;
+          case CANCELLED:
+            statusKey = "cancelled";
+            break;
+          default:
+            continue; // Skip unknown statuses
+        }
+        statusCountsMap.put(statusKey, entry.getValue());
+      }
+      sourceRead.connectionJobStatuses(statusCountsMap);
+
+      reads.add(sourceRead);
     }
 
     return new SourceReadList().sources(reads);

@@ -51,7 +51,7 @@ class ExternalUserServiceKeycloakImpl(
           logger.info { "Auth user found in realm ${realm.realm} (id: ${user.id})" }
           return realm.realm
         }
-      } catch (e: NotFoundException) {
+      } catch (_: NotFoundException) {
         continue
       }
     }

@@ -24,7 +24,8 @@ class StatsAggregationHelperTest {
           .withRecordsEmitted(40L)
           .withBytesEmitted(30L)
           .withRecordsCommitted(20L)
-          .withBytesCommitted(10L))
+          .withBytesCommitted(10L)
+          .withRecordsRejected(1L))
       .withWasBackfilled(true);
 
   private static final StreamSyncStats STREAM_SYNC_STATS_2 = new StreamSyncStats()
@@ -32,7 +33,8 @@ class StatsAggregationHelperTest {
           .withRecordsEmitted(400L)
           .withBytesEmitted(300L)
           .withRecordsCommitted(200L)
-          .withBytesCommitted(100L))
+          .withBytesCommitted(100L)
+          .withRecordsRejected(10L))
       .withWasBackfilled(false);
 
   private static final StreamSyncStats STREAM_SYNC_STATS_3 = new StreamSyncStats()
@@ -40,14 +42,16 @@ class StatsAggregationHelperTest {
           .withRecordsEmitted(4000L)
           .withBytesEmitted(3000L)
           .withRecordsCommitted(2000L)
-          .withBytesCommitted(1000L));
+          .withBytesCommitted(1000L)
+          .withRecordsRejected(100L));
 
   private static final StreamSyncStats STREAM_SYNC_STATS_4_RESUMED = new StreamSyncStats()
       .withStats(new SyncStats()
           .withRecordsEmitted(40000L)
           .withBytesEmitted(30000L)
           .withRecordsCommitted(20000L)
-          .withBytesCommitted(10000L))
+          .withBytesCommitted(10000L)
+          .withRecordsRejected(1000L))
       .withWasResumed(true);
 
   private static final StreamSyncStats STREAM_SYNC_STATS_5_RESUMED = new StreamSyncStats()
@@ -55,7 +59,8 @@ class StatsAggregationHelperTest {
           .withRecordsEmitted(400000L)
           .withBytesEmitted(300000L)
           .withRecordsCommitted(200000L)
-          .withBytesCommitted(100000L))
+          .withBytesCommitted(100000L)
+          .withRecordsRejected(10000L))
       .withWasResumed(true);
 
   private static final StreamSyncStats STREAM_SYNC_STATS_WITH_NULL_FIELDS = new StreamSyncStats()
@@ -63,7 +68,8 @@ class StatsAggregationHelperTest {
           .withRecordsEmitted(null)
           .withBytesEmitted(30000L)
           .withRecordsCommitted(null)
-          .withBytesCommitted(10000L));
+          .withBytesCommitted(10000L)
+          .withRecordsRejected(null));
 
   @Test
   void testAggregatedStatsFullRefresh() {
@@ -77,6 +83,7 @@ class StatsAggregationHelperTest {
     assertEquals(300L, aggregatedStats.bytesEmitted());
     assertEquals(200L, aggregatedStats.recordsCommitted());
     assertEquals(100L, aggregatedStats.bytesCommitted());
+    assertEquals(10L, aggregatedStats.recordsRejected());
   }
 
   @Test
@@ -92,6 +99,7 @@ class StatsAggregationHelperTest {
     assertEquals(330030L, aggregatedStats.bytesEmitted());
     assertEquals(220020L, aggregatedStats.recordsCommitted());
     assertEquals(110010L, aggregatedStats.bytesCommitted());
+    assertEquals(11001L, aggregatedStats.recordsRejected());
   }
 
   @Test
@@ -108,6 +116,7 @@ class StatsAggregationHelperTest {
     assertEquals(330300L, aggregatedStats.bytesEmitted());
     assertEquals(220200L, aggregatedStats.recordsCommitted());
     assertEquals(110100L, aggregatedStats.bytesCommitted());
+    assertEquals(11010L, aggregatedStats.recordsRejected());
   }
 
   @Test
@@ -124,6 +133,7 @@ class StatsAggregationHelperTest {
     assertEquals(300L, aggregatedStats.bytesEmitted());
     assertEquals(200L, aggregatedStats.recordsCommitted());
     assertEquals(100L, aggregatedStats.bytesCommitted());
+    assertEquals(10L, aggregatedStats.recordsRejected());
   }
 
   @Test
@@ -138,6 +148,7 @@ class StatsAggregationHelperTest {
     assertEquals(330L, aggregatedStats.bytesEmitted());
     assertEquals(220L, aggregatedStats.recordsCommitted());
     assertEquals(110L, aggregatedStats.bytesCommitted());
+    assertEquals(11L, aggregatedStats.recordsRejected());
   }
 
   @Test
@@ -154,6 +165,7 @@ class StatsAggregationHelperTest {
     assertEquals(330330L, aggregatedStats.bytesEmitted());
     assertEquals(220220L, aggregatedStats.recordsCommitted());
     assertEquals(110110L, aggregatedStats.bytesCommitted());
+    assertEquals(11011L, aggregatedStats.recordsRejected());
   }
 
   @Test
@@ -169,6 +181,7 @@ class StatsAggregationHelperTest {
     assertEquals(30330L, aggregatedStats.bytesEmitted());
     assertEquals(220L, aggregatedStats.recordsCommitted());
     assertEquals(10110L, aggregatedStats.bytesCommitted());
+    assertEquals(11L, aggregatedStats.recordsRejected());
   }
 
   @Test
@@ -184,6 +197,7 @@ class StatsAggregationHelperTest {
     assertEquals(30000L, aggregatedStats.bytesEmitted());
     assertEquals(0, aggregatedStats.recordsCommitted());
     assertEquals(10000L, aggregatedStats.bytesCommitted());
+    assertEquals(0, aggregatedStats.recordsRejected());
   }
 
   @Test

@@ -6,6 +6,13 @@
 */}}
 
 {{/*
+Renders the minio.rootUser value
+*/}}
+{{- define "airbyte.minio.rootUser" }}
+    {{- .Values.minio.rootUser }}
+{{- end }}
+
+{{/*
 Renders the minio.rootUser secret key
 */}}
 {{- define "airbyte.minio.rootUser.secretKey" }}
@@ -21,6 +28,13 @@ Renders the minio.rootUser environment variable
     secretKeyRef:
       name: {{ include "airbyte.storage.secretName" . }}
       key: {{ include "airbyte.minio.rootUser.secretKey" . }}
+{{- end }}
+
+{{/*
+Renders the minio.rootPassword value
+*/}}
+{{- define "airbyte.minio.rootPassword" }}
+    {{- .Values.minio.rootPassword }}
 {{- end }}
 
 {{/*

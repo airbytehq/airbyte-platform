@@ -21,7 +21,8 @@ export const createFormDefaultValues = (syncCatalog: AirbyteCatalog): DataActiva
         if (!stream.config) {
           throw new Error("Stream config is undefined");
         }
-
+        // Binding to a block scoped variable to help typescript understand that stream.config is defined
+        const config = stream.config;
         return {
           sourceStreamDescriptor: {
             name: stream.stream.name,
@@ -31,7 +32,18 @@ export const createFormDefaultValues = (syncCatalog: AirbyteCatalog): DataActiva
           sourceSyncMode: stream.config.syncMode,
           destinationSyncMode: stream.config.destinationSyncMode,
           fields: inferFieldsFromConfig(stream.config),
-          matchingKeys: stream.config.primaryKey !== undefined ? stream.config.primaryKey.flat() : null,
+          // matchingKeys refers to the destinaiton field names, but primaryKey refers to the source field names. We
+          // need to check the content of the renaming mappers to construct the matchingKeys array from the persisted
+          // primaryKey.
+          matchingKeys:
+            stream.config.mappers && stream.config.primaryKey !== undefined
+              ? stream.config.mappers
+                  .filter(isFieldRenamingMapper)
+                  .filter((mapper) => {
+                    return config.primaryKey?.flat().includes(mapper.mapperConfiguration.originalFieldName);
+                  })
+                  .map((mapper) => mapper.mapperConfiguration.newFieldName)
+              : null,
           cursorField: stream.config.cursorField ? stream.config.cursorField[0] || null : null,
         };
       }),

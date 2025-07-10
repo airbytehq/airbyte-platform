@@ -13,19 +13,15 @@ interface EntityTableDataItem {
   entityId: string;
   entityName: string;
   connectorName: string;
-  connectEntities: Array<{
-    name: string;
-    connector: string;
-    status: string;
-    lastSyncStatus: string | null;
-  }>;
   enabled: boolean;
-  lastSync?: number | null;
   connectorIcon?: string;
   isActive: boolean;
   breakingChanges?: ActorDefinitionVersionBreakingChanges;
   isVersionOverrideApplied: boolean;
   supportState?: SupportState;
+  numConnections?: number;
+  lastSync?: number;
+  connectionJobStatuses?: Record<string, number>;
 }
 
 interface ConnectionTableDataItem {

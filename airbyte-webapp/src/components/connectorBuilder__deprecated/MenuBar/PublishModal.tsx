@@ -108,8 +108,8 @@ const PublishTypeSwitcher: React.FC<{
         options={[
           {
             value: "workspace",
-            label: <FormattedMessage id="connectorBuilder.publishModal.toWorkspace.label" />,
-            description: <FormattedMessage id="connectorBuilder.publishModal.toWorkspace.description" />,
+            label: <FormattedMessage id="connectorBuilder.publishModal.toOrganization.label" />,
+            description: <FormattedMessage id="connectorBuilder.publishModal.toOrganization.description" />,
           },
           {
             value: "marketplace",

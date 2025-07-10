@@ -80,12 +80,12 @@ public class WorkspacePersistence {
       throws IOException {
     return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
         .from(WORKSPACE)
-        .where(WORKSPACE.ORGANIZATION_ID.eq(query.organizationId()))
+        .where(WORKSPACE.ORGANIZATION_ID.eq(query.organizationId))
         .and(keyword.isPresent() ? WORKSPACE.NAME.containsIgnoreCase(keyword.get()) : noCondition())
-        .and(query.includeDeleted() ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
+        .and(query.includeDeleted ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
         .orderBy(WORKSPACE.NAME.asc())
-        .limit(query.pageSize())
-        .offset(query.rowOffset())
+        .limit(query.pageSize)
+        .offset(query.rowOffset)
         .fetch())
         .stream()
         .map(DbConverter::buildStandardWorkspace)
@@ -155,11 +155,11 @@ public class WorkspacePersistence {
     return database
         .query(ctx -> ctx.fetch(
             workspaceQuery,
-            query.userId(),
+            query.userId,
             PermissionPersistenceHelper.getGrantingPermissionTypeArray(PermissionType.WORKSPACE_READER),
             searchKeyword,
-            query.pageSize(),
-            query.rowOffset()))
+            query.pageSize,
+            query.rowOffset))
         .stream()
         .map(DbConverter::buildStandardWorkspace)
         .toList();

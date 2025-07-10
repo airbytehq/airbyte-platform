@@ -10,7 +10,14 @@ import { ExternalLink } from "components/ui/Link";
 import { ScrollParent } from "components/ui/ScrollParent";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
-import { connectionsKeys, HttpError, HttpProblem, useCreateConnection, useDiscoverSchema } from "core/api";
+import {
+  connectionsKeys,
+  HttpError,
+  HttpProblem,
+  useCreateConnection,
+  useDestinationDefinitionVersion,
+  useDiscoverSchema,
+} from "core/api";
 import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
 import { FormModeProvider, useFormMode } from "core/services/ui/FormModeContext";
 import {
@@ -37,7 +44,8 @@ const CreateConnectionFormInner: React.FC = () => {
   const { mutateAsync: createConnection } = useCreateConnection();
   const { connection, setSubmitError } = useConnectionFormService();
   const { mode } = useFormMode();
-  const initialValues = useInitialFormValues(connection, mode);
+  const destinationDefinitionVersion = useDestinationDefinitionVersion(connection.destination.destinationId);
+  const initialValues = useInitialFormValues(connection, mode, destinationDefinitionVersion.supportsFileTransfer);
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const { formatMessage } = useIntl();
   useExperimentContext("source-definition", connection.source?.sourceDefinitionId);

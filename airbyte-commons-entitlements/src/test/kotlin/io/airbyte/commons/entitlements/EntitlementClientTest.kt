@@ -135,7 +135,7 @@ class EntitlementClientTest {
     @Test
     fun `addOrganizationToPlan with no org throws`() {
       val organizationId = UUID.randomUUID()
-      every { organizationService.getOrganization(organizationId) } returns null
+      every { organizationService.getOrganization(organizationId) } returns Optional.empty()
 
       assertThrows<IllegalStateException> { client.addOrganizationToPlan(organizationId, null) }
     }

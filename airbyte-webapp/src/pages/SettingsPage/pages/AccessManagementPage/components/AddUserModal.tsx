@@ -92,7 +92,7 @@ export const AddUserModal: React.FC<{ onSubmit: () => void; scope: ScopeType }> 
       <Box p="md">
         <SearchInput
           value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
+          onChange={setSearchValue}
           placeholder={formatMessage({ id: "userInvitations.create.modal.search" })}
         />
       </Box>

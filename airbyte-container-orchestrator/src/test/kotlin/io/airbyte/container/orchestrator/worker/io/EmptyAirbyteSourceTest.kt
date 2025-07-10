@@ -23,8 +23,10 @@ import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
+import io.airbyte.workers.internal.NamespacingMapper
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -580,7 +582,7 @@ internal class EmptyAirbyteSourceTest {
   private fun testReceiveResetStatusMessage(
     streamDescriptor: StreamDescriptor,
     status: AirbyteStreamStatusTraceMessage.AirbyteStreamStatus,
-  ) {
+  ): io.airbyte.protocol.models.v0.StreamDescriptor {
     val maybeMessage: Optional<AirbyteMessage> = emptyAirbyteSource.attemptRead()
     assertEquals(true, maybeMessage.isPresent)
 
@@ -595,9 +597,11 @@ internal class EmptyAirbyteSourceTest {
         .withName(streamDescriptor.name)
         .withNamespace(streamDescriptor.namespace)
     assertEquals(expectedStreamDescriptor, message.trace.streamStatus.streamDescriptor)
+    mutateStreamDescriptor(message.trace.streamStatus.streamDescriptor)
+    return message.trace.streamStatus.streamDescriptor
   }
 
-  private fun testReceiveNullStreamStateMessage(streamDescriptor: StreamDescriptor) {
+  private fun testReceiveNullStreamStateMessage(streamDescriptor: StreamDescriptor): io.airbyte.protocol.models.v0.StreamDescriptor {
     val maybeMessage: Optional<AirbyteMessage> = emptyAirbyteSource.attemptRead()
     assertEquals(true, maybeMessage.isPresent)
 
@@ -612,25 +616,43 @@ internal class EmptyAirbyteSourceTest {
     val stateMessage = message.state
     assertEquals(AirbyteStateMessage.AirbyteStateType.STREAM, stateMessage.type)
     assertEquals(expectedStreamDescriptor, stateMessage.stream.streamDescriptor)
+    mutateStreamDescriptor(stateMessage.stream.streamDescriptor)
     assertEquals(null, stateMessage.stream.streamState)
+    return stateMessage.stream.streamDescriptor
   }
 
   private fun testReceiveExpectedPerStreamMessages(
     s: StreamDescriptor,
     includeStatus: Boolean,
   ) {
+    // validate that each streamdescriptor is a new instance
+    val seenDescriptors = mutableListOf<io.airbyte.protocol.models.v0.StreamDescriptor>()
     if (includeStatus) {
-      testReceiveResetStatusMessage(s, AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.STARTED)
+      testReceiveResetStatusMessage(s, AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.STARTED).also {
+        seenDescriptors.add(it)
+      }
     }
-    testReceiveNullStreamStateMessage(s)
+    testReceiveNullStreamStateMessage(s).also {
+      seenDescriptors.add(it)
+    }
     if (includeStatus) {
-      testReceiveResetStatusMessage(s, AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE)
+      testReceiveResetStatusMessage(s, AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE).also {
+        seenDescriptors.add(it)
+      }
     }
+    seenDescriptors.assertAllItemsUnique()
   }
 
   private fun testReceiveResetMessageTupleForSingleStateTypes(s: StreamDescriptor) {
-    testReceiveResetStatusMessage(s, AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.STARTED)
-    testReceiveResetStatusMessage(s, AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE)
+    // validate that each streamdescriptor is a new instance
+    val seenDescriptors = mutableListOf<io.airbyte.protocol.models.v0.StreamDescriptor>()
+    testReceiveResetStatusMessage(s, AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.STARTED).also {
+      seenDescriptors.add(it)
+    }
+    testReceiveResetStatusMessage(s, AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE).also {
+      seenDescriptors.add(it)
+    }
+    seenDescriptors.assertAllItemsUnique()
   }
 
   private fun getProtocolStreamDescriptorFromName(names: MutableList<String>): MutableList<StreamDescriptor> =
@@ -706,5 +728,30 @@ internal class EmptyAirbyteSourceTest {
     testReceiveResetMessageTupleForSingleStateTypes(streamDescriptor)
     assertEquals(true, emptyAirbyteSource.attemptRead().isEmpty)
     assertEquals(true, emptyAirbyteSource.isFinished)
+  }
+
+  /**
+   * Modify the stream descriptor in a way that mimics [NamespacingMapper]. This simulates real sync
+   * behavior, where we apply modifications to each message produced by the EmptySource.
+   *
+   * In practice, this will catch any errors where the same StreamDescriptor instance is shared
+   * across multiple AirbyteMessages, because these mutations will cause failed assertions. We also
+   * have assertions on actual instance identity, but this serves as a backstop in case we forgot to
+   * test a specific case.
+   */
+  private fun mutateStreamDescriptor(streamDescriptor: io.airbyte.protocol.models.v0.StreamDescriptor) {
+    streamDescriptor.name = "prefix_${streamDescriptor.name}"
+    streamDescriptor.namespace = "overridden_namespace"
+  }
+}
+
+private fun <T> Collection<T>.assertAllItemsUnique() {
+  val seenItems = mutableListOf<T>()
+  this.forEach { item ->
+    // note: we use triple-equals for object identity, rather than equality
+    if (seenItems.any { it === item }) {
+      fail<Unit>("Expected every message to have a new StreamDescriptor instance")
+    }
+    seenItems.add(item)
   }
 }

@@ -515,8 +515,12 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
         .withManifestDraft(new ObjectMapper().readTree("{\"the_id\": \"" + projectId + "\"}"))
         .withHasDraft(true)
         .withWorkspaceId(workspace);
-    connectorBuilderService.writeBuilderProjectDraft(project.getBuilderProjectId(), project.getWorkspaceId(), project.getName(),
-        project.getManifestDraft(), project.getComponentsFileContent(), project.getBaseActorDefinitionVersionId(),
+    connectorBuilderService.writeBuilderProjectDraft(project.getBuilderProjectId(),
+        project.getWorkspaceId(),
+        project.getName(),
+        project.getManifestDraft(),
+        project.getComponentsFileContent(),
+        project.getBaseActorDefinitionVersionId(),
         project.getContributionPullRequestUrl(),
         project.getContributionActorDefinitionId());
     if (deleted) {

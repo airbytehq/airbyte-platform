@@ -311,8 +311,8 @@ private fun buildSaveStatsRequest(
   attemptNumber: Int,
   connectionId: UUID,
 ): SaveStatsRequestBody {
-  val totalSyncStats = syncStatsTracker.getTotalStats(false)
   val streamSyncStats = syncStatsTracker.getPerStreamStats(false)
+  val totalSyncStats = syncStatsTracker.getTotalStats(streamSyncStats, false)
 
   return SaveStatsRequestBody(
     jobId = jobId,
@@ -335,6 +335,7 @@ private fun SyncStats.toAttemptStats(): AttemptStats =
     estimatedRecords = estimatedRecords,
     bytesCommitted = bytesCommitted,
     recordsCommitted = recordsCommitted,
+    recordsRejected = recordsRejected,
   )
 
 private fun MetricClient.emitFailedStateCloseMetrics(connectionId: UUID?) {

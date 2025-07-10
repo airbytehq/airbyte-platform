@@ -88,7 +88,7 @@ export const OrganizationAccessManagementSection: React.FC = () => {
       </FlexContainer>
       <FlexContainer justifyContent="space-between" alignItems="center">
         <FlexItem className={styles.searchInputWrapper}>
-          <SearchInput value={userFilter} onChange={(e) => setUserFilter(e.target.value)} />
+          <SearchInput value={userFilter} onChange={setUserFilter} />
         </FlexItem>
         <FlexContainer alignItems="baseline">
           {organization?.ssoRealm && (

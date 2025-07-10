@@ -85,6 +85,10 @@ import io.airbyte.commons.temporal.scheduling.state.WorkflowState
 import io.airbyte.db.Database
 import io.airbyte.db.factory.DataSourceFactory.close
 import io.airbyte.db.jdbc.JdbcUtils
+import io.airbyte.featureflag.Context
+import io.airbyte.featureflag.Flag
+import io.airbyte.featureflag.tests.TestFlagsSetter
+import io.airbyte.featureflag.tests.TestFlagsSetter.FlagOverride
 import io.airbyte.test.utils.AcceptanceTestHarness
 import io.airbyte.test.utils.Databases.createDataSource
 import io.airbyte.test.utils.Databases.createDslContext
@@ -145,6 +149,7 @@ class AcceptanceTestHarness
     @JvmField val apiClient: AirbyteApiClient,
     private val defaultWorkspaceId: UUID,
     private val postgresSqlInitFile: String? = DEFAULT_POSTGRES_INIT_SQL_FILE,
+    val testFlagsSetter: TestFlagsSetter? = null,
   ) {
     @JvmField
     val dataplaneGroupId: UUID
@@ -447,11 +452,11 @@ class AcceptanceTestHarness
           TemporalUtils(
             null,
             null,
+            false,
             null,
             null,
             null,
-            null,
-            null,
+            10,
             Optional.empty(),
           )
         val temporalService =
@@ -1345,6 +1350,16 @@ class AcceptanceTestHarness
     fun compareCatalog(actual: AirbyteCatalog?) {
       Assertions.assertEquals(expectedAirbyteCatalog, actual)
     }
+
+    // don't delete this even if it's unused!
+    // this is only useful for testing feature flags, so if we do a good job of cleaning up flags,
+    // this function should have no usages most of the time.
+    // but we should keep it around regardless, so that we can always test flags easily.
+    fun <T> withFlag(
+      flag: Flag<T>,
+      context: Context?,
+      value: T,
+    ): FlagOverride<T> = testFlagsSetter!!.withFlag(flag, value, context)
 
     /**
      * Validates that job logs exist, are in the correct format and contain entries from various

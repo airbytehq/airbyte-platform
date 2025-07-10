@@ -5,26 +5,18 @@ import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
-import { Box } from "components/ui/Box";
+import { TeamsFeaturesWarnModal } from "components/TeamsFeaturesWarnModal";
 import { Button } from "components/ui/Button";
-import { FlexContainer } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
-import { ExternalLink } from "components/ui/Link";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
-import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useCreateWorkspace, useListDataplaneGroups } from "core/api";
 import { DataplaneGroupRead } from "core/api/types/AirbyteClient";
-import { FeatureItem, useFeature } from "core/services/features";
 import { trackError } from "core/utils/datadog";
-import { links } from "core/utils/links";
+import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
-import { BrandingBadge } from "views/layout/SideBar/AirbyteHomeLink";
 
-import styles from "./OrganizationWorkspacesCreateControl.module.scss";
-import TeamsUpsellGraphic from "./TeamsUpsellGraphic";
 import { useOrganizationsToCreateWorkspaces } from "./useOrganizationsToCreateWorkspaces";
 
 const OrganizationCreateWorkspaceFormValidationSchema = z.object({
@@ -36,9 +28,9 @@ const OrganizationCreateWorkspaceFormValidationSchema = z.object({
 type CreateWorkspaceFormValues = z.infer<typeof OrganizationCreateWorkspaceFormValidationSchema>;
 
 export const OrganizationWorkspacesCreateControl: React.FC<{ disabled?: boolean }> = ({ disabled = false }) => {
+  const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
   const { organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
   const dataplaneGroups = useListDataplaneGroups();
-  const hasMultiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const { openModal } = useModalService();
   const { formatMessage } = useIntl();
 
@@ -48,34 +40,35 @@ export const OrganizationWorkspacesCreateControl: React.FC<{ disabled?: boolean 
   }
 
   const handleButtonClick = () => {
-    if (hasMultiWorkspaceUI) {
+    const openCreateWorkspaceModal = () =>
       openModal({
         title: formatMessage({ id: "workspaces.create.title" }),
         content: ({ onCancel }) => <CreateWorkspaceModal dataplaneGroups={dataplaneGroups} onCancel={onCancel} />,
       });
-    } else {
+
+    if (showTeamsFeaturesWarnModal) {
       openModal({
         title: null,
-        content: () => <UnlockWorkspacesModalBody />,
+        content: () => <TeamsFeaturesWarnModal onClose={openCreateWorkspaceModal} />,
         size: "xl",
       });
+    } else {
+      openCreateWorkspaceModal();
     }
   };
 
   return (
-    <Box>
-      <Button
-        onClick={handleButtonClick}
-        variant="primary"
-        data-testid="workspaces.createNew"
-        size="sm"
-        icon={hasMultiWorkspaceUI ? "plus" : "lock"}
-        className={styles.createButton}
-        disabled={disabled}
-      >
-        <FormattedMessage id="workspaces.createNew" />
-      </Button>
-    </Box>
+    <Button
+      onClick={handleButtonClick}
+      variant="primary"
+      data-testid="workspaces.createNew"
+      size="sm"
+      // TODO: show lock icon if the user is on a trial plan
+      icon="plus"
+      disabled={disabled}
+    >
+      <FormattedMessage id="workspaces.createNew" />
+    </Button>
   );
 };
 
@@ -147,45 +140,5 @@ export const CreateWorkspaceModal: React.FC<{ dataplaneGroups: DataplaneGroupRea
         <FormSubmissionButtons submitKey="form.createWorkspace" onCancelClickCallback={onCancel} allowNonDirtyCancel />
       </ModalFooter>
     </Form>
-  );
-};
-
-export const UnlockWorkspacesModalBody: React.FC = () => {
-  const { formatMessage } = useIntl();
-  return (
-    <ModalBody className={styles.modalBody}>
-      <FlexContainer direction="row" gap="none">
-        <FlexContainer direction="column" gap="lg" className={styles.modalBody__content}>
-          <BrandingBadge product="cloudForTeams" />
-          <Text size="xl" bold>
-            {formatMessage({ id: "workspaces.unlock.title" })}
-          </Text>
-          <Box>
-            <Text size="lg" align="left">
-              {formatMessage({ id: "workspaces.unlock.featuresTitle" })}
-            </Text>
-            <ul className={styles.modalBody__list}>
-              <li>{formatMessage({ id: "workspaces.unlock.features.multipleWorkspaces" })}</li>
-              <li>{formatMessage({ id: "workspaces.unlock.features.subHourSyncs" })}</li>
-              <li>{formatMessage({ id: "workspaces.unlock.features.sso" })}</li>
-              <li>{formatMessage({ id: "workspaces.unlock.features.rbac" })}</li>
-              <li>{formatMessage({ id: "workspaces.unlock.features.mappers" })}</li>
-            </ul>
-          </Box>
-          <Text size="lg" align="left">
-            {formatMessage({ id: "workspaces.unlock.upgradeMessage" })}
-          </Text>
-          <ExternalLink href={links.contactSales} opensInNewTab variant="buttonPrimary">
-            <Icon type="lock" size="sm" />
-            <Box ml="sm">
-              <FormattedMessage id="workspaces.unlock.button" />
-            </Box>
-          </ExternalLink>
-        </FlexContainer>
-        <Box className={styles.modalBody__imgWrapper}>
-          <TeamsUpsellGraphic />
-        </Box>
-      </FlexContainer>
-    </ModalBody>
   );
 };

@@ -9,7 +9,7 @@
 Renders the global.connectorRollout.expirationSeconds value
 */}}
 {{- define "airbyte.connectorRollout.expirationSeconds" }}
-    {{- .Values.global.connectorRollout.expirationSeconds | default 7200 }}
+    {{- .Values.global.connectorRollout.expirationSeconds | default 604800 }}
 {{- end }}
 
 {{/*
@@ -27,7 +27,7 @@ Renders the connectorRollout.expirationSeconds environment variable
 Renders the global.connectorRollout.waitBetweenRolloutSeconds value
 */}}
 {{- define "airbyte.connectorRollout.waitBetweenRolloutSeconds" }}
-    {{- .Values.global.connectorRollout.waitBetweenRolloutSeconds | default 60 }}
+    {{- .Values.global.connectorRollout.waitBetweenRolloutSeconds | default 10800 }}
 {{- end }}
 
 {{/*
@@ -45,7 +45,7 @@ Renders the connectorRollout.waitBetweenRolloutSeconds environment variable
 Renders the global.connectorRollout.waitBetweenSyncResultsQueriesSeconds value
 */}}
 {{- define "airbyte.connectorRollout.waitBetweenSyncResultsQueriesSeconds" }}
-    {{- .Values.global.connectorRollout.waitBetweenSyncResultsQueriesSeconds | default 10 }}
+    {{- .Values.global.connectorRollout.waitBetweenSyncResultsQueriesSeconds | default 3600 }}
 {{- end }}
 
 {{/*

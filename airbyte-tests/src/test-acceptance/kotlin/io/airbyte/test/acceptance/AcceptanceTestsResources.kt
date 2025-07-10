@@ -11,10 +11,12 @@ import com.google.common.collect.Sets
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.function.CheckedRunnable
+import io.airbyte.api.client.model.generated.ConnectionEventsRequestBody
 import io.airbyte.api.client.model.generated.ConnectionScheduleData
 import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody
 import io.airbyte.api.client.model.generated.DestinationSyncMode
+import io.airbyte.api.client.model.generated.JobIdRequestBody
 import io.airbyte.api.client.model.generated.JobRead
 import io.airbyte.api.client.model.generated.JobStatus
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody
@@ -24,9 +26,10 @@ import io.airbyte.api.client.model.generated.SyncMode
 import io.airbyte.api.client.model.generated.WorkspaceCreate
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.json.Jsons
+import io.airbyte.featureflag.tests.TestFlagsSetter
+import io.airbyte.test.acceptance.SyncAcceptanceTests.Companion.assertDestinationDbEmpty
 import io.airbyte.test.utils.AcceptanceTestHarness
-import io.airbyte.test.utils.AcceptanceTestUtils
-import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient
+import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteAdminApiClient
 import io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog
 import io.airbyte.test.utils.Asserts.assertRawDestinationContains
 import io.airbyte.test.utils.Asserts.assertSourceAndDestinationDbRawRecordsInSync
@@ -41,7 +44,6 @@ import java.net.URISyntaxException
 import java.security.GeneralSecurityException
 import java.sql.SQLException
 import java.time.Duration
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 
@@ -131,6 +133,55 @@ class AcceptanceTestsResources {
 
     LOGGER.info(STATE_AFTER_SYNC_ONE, testHarness.getConnectionState(connectionId))
 
+    // postgres_init.sql inserts 5 records. Assert that we wrote stats correctly.
+    // (this is a bit sketchy, in that theoretically the source could emit a state message,
+    // then fail an attempt, and a subsequent attempt would then not read all the records.
+    // But with just 5 records, that seems unlikely.)
+    val lastAttempt =
+      testHarness
+        .getJobInfoRead(connectionSyncRead1.job.id)
+        .attempts
+        .last()
+        .attempt
+    testHarness.apiClient.jobsApi.getJobDebugInfo(JobIdRequestBody(connectionSyncRead1.job.id))
+    Assertions.assertAll(
+      "totalStats were incorrect",
+      { Assertions.assertEquals(5, lastAttempt.totalStats!!.recordsEmitted, "totalStats.recordsEmitted was incorrect") },
+      { Assertions.assertEquals(118, lastAttempt.totalStats!!.bytesEmitted, "totalStats.bytesEmitted was incorrect") },
+      { Assertions.assertEquals(1, lastAttempt.totalStats!!.stateMessagesEmitted, "totalStats.stateMessagesEmitted was incorrect") },
+      // the API doesn't return records/bytes committed on totalStats, so don't assert against them
+      // { Assertions.assertEquals(5, lastAttempt.totalStats!!.recordsCommitted, "totalStats.recordsCommitted was incorrect") },
+      // { Assertions.assertEquals(118, lastAttempt.totalStats!!.bytesCommitted, "totalStats.bytesCommitted was incorrect") },
+    )
+    Assertions.assertEquals(1, lastAttempt.streamStats!!.size, "Expected to see stats for exactly one stream. Got ${lastAttempt.streamStats}")
+    val lastAttemptStreamStats = lastAttempt.streamStats!!.first()
+    Assertions.assertAll(
+      "streamStats were incorrect",
+      { Assertions.assertEquals("id_and_name", lastAttemptStreamStats.streamName) },
+      { Assertions.assertNull(lastAttemptStreamStats.streamNamespace) },
+    )
+    Assertions.assertAll(
+      "streamStats were incorrect",
+      { Assertions.assertEquals(5, lastAttemptStreamStats.stats.recordsEmitted, "streamStats.recordsEmitted was incorrect") },
+      { Assertions.assertEquals(118, lastAttemptStreamStats.stats.bytesEmitted, "streamStats.bytesEmitted was incorrect") },
+      { Assertions.assertEquals(5, lastAttemptStreamStats.stats.recordsCommitted, "streamStats.recordsCommitted was incorrect") },
+      // the API doesn't return stateMessagesEmitted / bytesCommitted on streamStats, so don't assert against them
+      // { Assertions.assertEquals(1, lastAttemptStreamStats.stats.stateMessagesEmitted, "streamStats.stateMessagesEmitted was incorrect") },
+      // { Assertions.assertEquals(118, lastAttemptStreamStats.stats.bytesCommitted, "streamStats.bytesCommitted was incorrect") },
+    )
+    // this was the only way I found to get to bytesLoaded (conceptually equivalent to bytesCommitted)
+    val lastConnectionEventSummary =
+      testHarness
+        .apiClient
+        .connectionApi
+        .listConnectionEvents(ConnectionEventsRequestBody(connectionId))
+        .events
+        .first()
+        // summary is declared as Any, so we need to explicitly cast here.
+        .summary as Map<String, Int>
+    // would you believe "bytesLoaded" isn't declared as a constant anywhere?
+    Assertions.assertEquals(118, lastConnectionEventSummary["bytesLoaded"])
+
     val src = testHarness.getSourceDatabase()
     val dst = testHarness.getDestinationDatabase()
     assertSourceAndDestinationDbRawRecordsInSync(
@@ -207,6 +258,7 @@ class AcceptanceTestsResources {
     testHarness.waitWhileJobIsRunning(jobInfoRead.job, Duration.ofMinutes(1))
 
     LOGGER.info("state after reset: {}", testHarness.getConnectionState(connectionId))
+    assertDestinationDbEmpty(testHarness.getDestinationDatabase())
 
     // TODO enable once stream status for resets has been fixed
     // testHarness.assertStreamStatuses(workspaceId, connectionId, StreamStatusRunState.COMPLETE,
@@ -343,11 +395,8 @@ class AcceptanceTestsResources {
 
   @Throws(URISyntaxException::class, IOException::class, InterruptedException::class, GeneralSecurityException::class)
   fun init() {
-    val airbyteApiClient =
-      createAirbyteApiClient(
-        AcceptanceTestUtils.getAirbyteApiUrl(),
-        Map.of(GATEWAY_AUTH_HEADER, CLOUD_API_USER_HEADER_VALUE),
-      )
+    val airbyteApiClient = createAirbyteAdminApiClient()
+    val testFlagsSetter = TestFlagsSetter(AIRBYTE_SERVER_HOST)
 
     // If a workspace id is passed, use that. Otherwise, create a new workspace.
     // NOTE: we want to sometimes use a pre-configured workspace e.g., if we run against a production
@@ -393,7 +442,7 @@ class AcceptanceTestsResources {
     LOGGER.info("pg source definition: {}", sourceDef.dockerImageTag)
     LOGGER.info("pg destination definition: {}", destinationDef.dockerImageTag)
 
-    testHarness = AcceptanceTestHarness(apiClient = airbyteApiClient, defaultWorkspaceId = workspaceId)
+    testHarness = AcceptanceTestHarness(apiClient = airbyteApiClient, defaultWorkspaceId = workspaceId, testFlagsSetter = testFlagsSetter)
 
     testHarness.ensureCleanSlate()
   }
@@ -424,6 +473,7 @@ class AcceptanceTestsResources {
     // NOTE: this is just a base64 encoding of a jwt representing a test user in some deployments.
     const val CLOUD_API_USER_HEADER_VALUE: String = "eyJ1c2VyX2lkIjogImNsb3VkLWFwaSIsICJlbWFpbF92ZXJpZmllZCI6ICJ0cnVlIn0K"
     const val AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID: String = "AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID"
+    val AIRBYTE_SERVER_HOST: String = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001")
     val POSTGRES_SOURCE_DEF_ID: UUID = UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750")
     val POSTGRES_DEST_DEF_ID: UUID = UUID.fromString("25c5221d-dce2-4163-ade9-739ef790f503")
     const val KUBE: String = "KUBE"

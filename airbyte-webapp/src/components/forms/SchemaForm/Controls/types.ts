@@ -15,7 +15,11 @@ export interface BaseControlProps {
   disabled?: boolean;
 }
 
-export type OverrideByPath = Record<string, ReactElement | null>;
+export type OverrideByPath = Record<string, (path: string) => ReactElement | null>;
+
+type FieldName = string;
+type ObjectType = string;
+export type OverrideByObjectField = Record<ObjectType, Record<FieldName, (path: string) => ReactElement | null>>;
 
 export interface BaseControlComponentProps {
   fieldSchema: AirbyteJsonSchema;

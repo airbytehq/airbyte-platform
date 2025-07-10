@@ -1,4 +1,4 @@
-import { AirbyteCatalog } from "core/api/types/AirbyteClient";
+import { AirbyteCatalog, StreamMapperType } from "core/api/types/AirbyteClient";
 
 import { createFormDefaultValues } from "./createFormDefaultValues";
 
@@ -48,14 +48,68 @@ describe(`${createFormDefaultValues.name}`, () => {
           destinationObjectName: "",
           sourceSyncMode: "full_refresh",
           destinationSyncMode: "append",
-          fields: [],
-          matchingKeys: ["id"],
+          fields: [{ sourceFieldName: "id", destinationFieldName: "destination_id" }],
+          matchingKeys: ["destination_id"],
           cursorField: "lastUpdatedTime",
         },
       ],
     };
 
     expect(createFormDefaultValues(PARTIAL_HUBSPOT_SYNC_CATALOG)).toEqual(expectedDefaultValues);
+  });
+
+  it("returns correct composite matching key", () => {
+    const expectedDefaultValues = {
+      streams: [
+        {
+          sourceStreamDescriptor: {
+            name: "campaigns",
+            namespace: undefined,
+          },
+          destinationObjectName: "",
+          sourceSyncMode: "full_refresh",
+          destinationSyncMode: "append",
+          fields: [
+            { sourceFieldName: "id", destinationFieldName: "destination_id" },
+            { sourceFieldName: "name", destinationFieldName: "destination_name" },
+          ],
+          matchingKeys: ["destination_id", "destination_name"],
+          cursorField: "lastUpdatedTime",
+        },
+      ],
+    };
+
+    const SYNC_CATALOG_WITH_COMPOSITE_KEY: AirbyteCatalog = {
+      streams: [
+        {
+          stream: PARTIAL_HUBSPOT_SYNC_CATALOG.streams[0].stream,
+          config: {
+            ...PARTIAL_HUBSPOT_SYNC_CATALOG.streams[0].config!,
+            primaryKey: [["id"], ["name"]],
+            mappers: [
+              {
+                id: "mapper1",
+                type: StreamMapperType["field-renaming"],
+                mapperConfiguration: {
+                  originalFieldName: "id",
+                  newFieldName: "destination_id",
+                },
+              },
+              {
+                id: "mapper2",
+                type: StreamMapperType["field-renaming"],
+                mapperConfiguration: {
+                  originalFieldName: "name",
+                  newFieldName: "destination_name",
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    expect(createFormDefaultValues(SYNC_CATALOG_WITH_COMPOSITE_KEY)).toEqual(expectedDefaultValues);
   });
 });
 
@@ -282,7 +336,16 @@ const PARTIAL_HUBSPOT_SYNC_CATALOG: AirbyteCatalog = {
         suggested: false,
         selectedFields: [],
         hashedFields: [],
-        mappers: [],
+        mappers: [
+          {
+            id: "mapper1",
+            type: StreamMapperType["field-renaming"],
+            mapperConfiguration: {
+              originalFieldName: "id",
+              newFieldName: "destination_id",
+            },
+          },
+        ],
       },
     },
     {

@@ -4,7 +4,6 @@
 
 package io.airbyte.container.orchestrator.bookkeeping
 
-import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum
@@ -121,7 +120,7 @@ class ParallelStreamStatsTracker(
           origin = AirbyteMessageOrigin.SOURCE,
           failOnInvalidChecksum = failOnInvalidChecksum,
           checksumValidationEnabled = checksumValidationEnabled,
-          streamPlatformRecordCounts = getStreamToEmittedRecords(),
+          streamPlatformRecordCounts = getStats().mapValues { it.value.recordsEmitted },
         )
       }
     }
@@ -158,13 +157,18 @@ class ParallelStreamStatsTracker(
           origin = AirbyteMessageOrigin.DESTINATION,
           failOnInvalidChecksum = failOnInvalidChecksum,
           checksumValidationEnabled = checksumValidationEnabled,
-          streamPlatformRecordCounts = getStreamToCommittedRecords(),
+          streamPlatformRecordCounts = getStats().mapValues { it.value.recordsCommitted },
           filteredOutRecords = filteredOutRecords.toDouble(),
         )
         statsTracker.trackStateFromDestination(stateMessage)
       }
     }
   }
+
+  override fun getStats(): Map<AirbyteStreamNameNamespacePair, StreamStats> =
+    streamTrackers
+      .filterValues { it.nameNamespacePair.name != null }
+      .mapValues { StreamStatsView(it.value, hasEstimatesErrors) }
 
   fun isChecksumValidationEnabled(): Boolean = checksumValidationEnabled
 
@@ -202,7 +206,7 @@ class ParallelStreamStatsTracker(
       failOnInvalidChecksum = failOnInvalidChecksum,
       checksumValidationEnabled = checksumValidationEnabled,
       includeStreamInLogs = false,
-      streamPlatformRecordCounts = getStreamToEmittedRecords(),
+      streamPlatformRecordCounts = getStats().mapValues { it.value.recordsEmitted },
       filteredOutRecords = filteredOutRecords.toDouble(),
     )
   }
@@ -223,29 +227,23 @@ class ParallelStreamStatsTracker(
    *
    * @param hasReplicationCompleted defines whether a stream has completed. If the stream has
    *        completed, emitted counts/bytes will be used as committed counts/bytes.
-   * TODO make internal?
+   * TODO the notion of hasReplicationCompleted feels obsolete, we should simplify and always return the count
    */
   fun getTotalStats(hasReplicationCompleted: Boolean = false): SyncStats {
     // For backwards compatibility with existing code which treats null and 0 differently,
     // if [getAllStreamSyncStats] is empty then treat it as a null itself.
     // [sumOf] methods handle null values as 0, which is a change that we don't want to make at this time.
-    val streamSyncStats = getAllStreamSyncStats(hasReplicationCompleted).takeIf { it.isNotEmpty() }
-    val bytesCommitted = streamSyncStats?.sumOf { it.stats.bytesCommitted }
-    val recordsFilteredOut = streamSyncStats?.sumOf { it.stats.recordsFilteredOut }
-    val bytesFilteredOut = streamSyncStats?.sumOf { it.stats.bytesFilteredOut }
-    val recordsCommitted = streamSyncStats?.sumOf { it.stats.recordsCommitted }
-    val bytesEmitted = streamSyncStats?.sumOf { it.stats.bytesEmitted }
-    val recordsEmitted = streamSyncStats?.sumOf { it.stats.recordsEmitted }
+    val streamSyncStats = getPerStreamStats(hasReplicationCompleted)
     val estimatedBytes =
       if (!hasEstimatesErrors && expectedEstimateType == Type.SYNC) {
         syncStatsCounters.estimatedBytesCount.get()
       } else {
         streamSyncStats
-          ?.mapNotNull { it.stats.estimatedBytes }
+          .mapNotNull { it.stats.estimatedBytes }
           // mapNotNull with return an empty list if there are no non-null results
           // we want to treat an empty list as null for backwards compatability reasons,
           // specifically around treating a 0 and null differently
-          ?.takeIf { it.isNotEmpty() }
+          .takeIf { it.isNotEmpty() }
           ?.sumOf { it }
       }
     val estimatedRecords =
@@ -253,128 +251,25 @@ class ParallelStreamStatsTracker(
         syncStatsCounters.estimatedRecordCount.get()
       } else {
         streamSyncStats
-          ?.mapNotNull { it.stats.estimatedRecords }
+          .mapNotNull { it.stats.estimatedRecords }
           // mapNotNull with return an empty list if there are no non-null results
           // we want to treat an empty list as null for backwards compatability reasons,
           // specifically around treating a 0 and null differently
-          ?.takeIf { it.isNotEmpty() }
+          .takeIf { it.isNotEmpty() }
           ?.sumOf { it }
       }
 
-    return SyncStats()
-      .withBytesCommitted(bytesCommitted)
-      .withRecordsCommitted(recordsCommitted)
-      .withBytesEmitted(bytesEmitted)
-      .withRecordsEmitted(recordsEmitted)
-      .withRecordsFilteredOut(recordsFilteredOut)
-      .withBytesFilteredOut(bytesFilteredOut)
+    return getTotalStats(streamSyncStats, hasReplicationCompleted)
       .withEstimatedBytes(estimatedBytes)
       .withEstimatedRecords(estimatedRecords)
+      .apply {
+        recordsRejected?.let {
+          if (it > 0) {
+            withRecordsRejected(it)
+          }
+        }
+      }
   }
-
-  /**
-   * Return all the [StreamSyncStats] for the sync.
-   *
-   * @param hasReplicationCompleted defines whether a stream has completed. If the stream has
-   *        completed, emitted counts/bytes will be used as committed counts/bytes.
-   * TODO make internal?
-   */
-  fun getAllStreamSyncStats(hasReplicationCompleted: Boolean): List<StreamSyncStats> =
-    streamTrackers.values
-      // null name means that those are stats from global states or legacy states. We should not
-      // report them as stream stats because a null stream doesn't exist.
-      // We should still track them as this is how we track stats for legacy states, but they
-      // should end up being reported as global sync stats only.
-      .filter { it.nameNamespacePair.name != null }
-      .map { it.toStreamSyncStats(hasReplicationCompleted) }
-
-  override fun getStreamToCommittedBytes(): Map<AirbyteStreamNameNamespacePair, Long> =
-    streamTrackers
-      .filterValues { it.nameNamespacePair.name != null }
-      .mapValues {
-        it.value.streamStats.committedBytesCount
-          .get()
-      }
-
-  override fun getStreamToCommittedRecords(): Map<AirbyteStreamNameNamespacePair, Long> =
-    streamTrackers
-      .filterValues { it.nameNamespacePair.name != null }
-      .mapValues {
-        it.value.streamStats.committedRecordsCount
-          .get()
-      }
-
-  override fun getStreamToEmittedBytes(): Map<AirbyteStreamNameNamespacePair, Long> =
-    streamTrackers
-      .filterValues { it.nameNamespacePair.name != null }
-      .mapValues {
-        it.value.streamStats.emittedBytesCount
-          .get()
-      }
-
-  override fun getStreamToEmittedRecords(): Map<AirbyteStreamNameNamespacePair, Long> =
-    streamTrackers
-      .filterValues { it.nameNamespacePair.name != null }
-      .mapValues {
-        it.value.streamStats.emittedRecordsCount
-          .get()
-      }
-
-  override fun getStreamToFilteredOutRecords(): Map<AirbyteStreamNameNamespacePair, Long> =
-    streamTrackers
-      .filterValues { it.nameNamespacePair.name != null }
-      .mapValues {
-        it.value.streamStats.filteredOutRecords
-          .get()
-      }
-
-  override fun getStreamToFilteredOutBytes(): Map<AirbyteStreamNameNamespacePair, Long> =
-    streamTrackers
-      .filterValues { it.nameNamespacePair.name != null }
-      .mapValues {
-        it.value.streamStats.filteredOutBytesCount
-          .get()
-      }
-
-  override fun getStreamToEstimatedRecords(): Map<AirbyteStreamNameNamespacePair, Long> =
-    if (hasEstimatesErrors) {
-      mapOf()
-    } else {
-      streamTrackers
-        .filterValues { it.nameNamespacePair.name != null }
-        .mapValues {
-          it.value.streamStats.estimatedRecordsCount
-            .get()
-        }
-    }
-
-  override fun getStreamToEstimatedBytes(): Map<AirbyteStreamNameNamespacePair, Long> =
-    if (hasEstimatesErrors) {
-      mapOf()
-    } else {
-      streamTrackers
-        .filterValues { it.nameNamespacePair.name != null }
-        .mapValues {
-          it.value.streamStats.estimatedBytesCount
-            .get()
-        }
-    }
-
-  override fun getTotalRecordsEmitted(): Long = getTotalStats().recordsEmitted ?: 0
-
-  override fun getTotalRecordsFilteredOut(): Long = getTotalStats().recordsFilteredOut ?: 0
-
-  override fun getTotalBytesFilteredOut(): Long = getTotalStats().bytesFilteredOut ?: 0
-
-  override fun getTotalRecordsEstimated(): Long = getTotalStats().estimatedRecords ?: 0
-
-  override fun getTotalBytesEmitted(): Long = getTotalStats().bytesEmitted ?: 0
-
-  override fun getTotalBytesEstimated(): Long = getTotalStats().estimatedBytes ?: 0
-
-  override fun getTotalBytesCommitted(): Long? = getTotalStats().bytesCommitted
-
-  override fun getTotalRecordsCommitted(): Long? = getTotalStats().recordsCommitted
 
   override fun getTotalSourceStateMessagesEmitted(): Long = streamTrackers.values.sumOf { it.streamStats.sourceStateCount.get() }
 
@@ -427,42 +322,6 @@ class ParallelStreamStatsTracker(
       it.value.streamStats.unreliableStateOperations
         .get()
     }
-
-  /**
-   * Converts a [StreamStatsTracker] into a [StreamSyncStats].
-   */
-  private fun StreamStatsTracker.toStreamSyncStats(hasReplicationCompleted: Boolean): StreamSyncStats {
-    // to avoid having to do `this@toStreamSyncStats.streamStats` within the apply function
-    val streamStats = this.streamStats
-
-    return StreamSyncStats()
-      .withStreamName(nameNamespacePair.name)
-      .withStreamNamespace(nameNamespacePair.namespace)
-      .withStats(
-        SyncStats()
-          .withBytesEmitted(streamStats.emittedBytesCount.get())
-          .withRecordsEmitted(streamStats.emittedRecordsCount.get())
-          .withRecordsFilteredOut(streamStats.filteredOutRecords.get())
-          .withBytesFilteredOut(streamStats.filteredOutBytesCount.get())
-          .apply {
-            if (hasReplicationCompleted) {
-              withBytesCommitted(streamStats.emittedBytesCount.get().minus(bytesFilteredOut))
-              withRecordsCommitted(streamStats.emittedRecordsCount.get().minus(recordsFilteredOut))
-            } else {
-              withBytesCommitted(streamStats.committedBytesCount.get())
-              withRecordsCommitted(streamStats.committedRecordsCount.get())
-            }
-
-            if (hasEstimatesErrors) {
-              withEstimatedBytes(null)
-              withEstimatedRecords(null)
-            } else {
-              withEstimatedBytes(streamStats.estimatedBytesCount.get())
-              withEstimatedRecords(streamStats.estimatedRecordsCount.get())
-            }
-          },
-      )
-  }
 
   /**
    * Get the [StreamStatsTracker] for a given stream. If this tracker doesn't exist, create it.

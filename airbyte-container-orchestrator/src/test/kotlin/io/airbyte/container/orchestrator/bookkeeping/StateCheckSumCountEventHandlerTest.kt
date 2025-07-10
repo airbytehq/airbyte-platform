@@ -422,6 +422,27 @@ internal class StateCheckSumCountEventHandlerTest {
     }
 
     @Test
+    internal fun `destination count is present and equals source count and platform count when considering rejected counts`() {
+      val stateMessage =
+        airbyteStateMessageWithOutAnyCounts()
+          .withDestinationStats(AirbyteStateStats().withRecordCount(5.0).withRejectedRecordCount(1.0))
+          .withSourceStats(AirbyteStateStats().withRecordCount(6.0))
+
+      handler.validateStateChecksum(
+        stateMessage = stateMessage,
+        platformRecordCount = 6.0,
+        origin = AirbyteMessageOrigin.DESTINATION,
+        failOnInvalidChecksum = true,
+        checksumValidationEnabled = true,
+      )
+
+      handler.close(true)
+
+      verify(exactly = 1) { pubSubWriter.close() }
+      verify(exactly = 0) { pubSubWriter.publishEvent(any()) }
+    }
+
+    @Test
     internal fun `all 3 counts present but none match each other`() {
       val stateMessage =
         airbyteStateMessageWithOutAnyCounts()

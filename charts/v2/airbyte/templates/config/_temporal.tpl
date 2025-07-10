@@ -533,6 +533,13 @@ Renders the temporal.database.engine environment variable
 {{- end }}
 
 {{/*
+Renders the temporal.database.host value
+*/}}
+{{- define "airbyte.temporal.database.host" }}
+    {{- .Values.temporal.database.host }}
+{{- end }}
+
+{{/*
 Renders the temporal.database.host environment variable
 */}}
 {{- define "airbyte.temporal.database.host.env" }}
@@ -544,6 +551,13 @@ Renders the temporal.database.host environment variable
 {{- end }}
 
 {{/*
+Renders the temporal.database.port value
+*/}}
+{{- define "airbyte.temporal.database.port" }}
+    {{- .Values.temporal.database.port }}
+{{- end }}
+
+{{/*
 Renders the temporal.database.port environment variable
 */}}
 {{- define "airbyte.temporal.database.port.env" }}
@@ -552,6 +566,13 @@ Renders the temporal.database.port environment variable
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
       key: DATABASE_PORT
+{{- end }}
+
+{{/*
+Renders the temporal.database.user value
+*/}}
+{{- define "airbyte.temporal.database.user" }}
+    {{- .Values.temporal.database.user }}
 {{- end }}
 
 {{/*
@@ -570,6 +591,13 @@ Renders the temporal.database.user environment variable
     secretKeyRef:
       name: {{ include "airbyte.database.secretName" . }}
       key: {{ include "airbyte.temporal.database.user.secretKey" . }}
+{{- end }}
+
+{{/*
+Renders the temporal.database.password value
+*/}}
+{{- define "airbyte.temporal.database.password" }}
+    {{- .Values.temporal.database.password }}
 {{- end }}
 
 {{/*

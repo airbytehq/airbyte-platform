@@ -46,7 +46,7 @@ const convertedEmbeddedListPartialUserConfigs = async (
   return {
     partialUserConfigs: response.data.map((item) => ({
       configTemplateId: item.source_config_template_id,
-      partialUserConfigId: item.partial_user_config_id,
+      partialUserConfigId: item.id,
       configTemplateName: item.config_template_name,
       configTemplateIcon: item.config_template_icon === null ? "" : item.config_template_icon,
     })),
@@ -64,7 +64,7 @@ const convertedEmbeddedGetPartialUserConfig = async (
       id: response.source_config_template.id,
       name: response.source_config_template.name,
       icon: response.source_config_template.icon as string, // Icon should be optional. It's not in the legacy API, but I'm not worried about it because it's being deprecated.
-      sourceDefinitionId: response.source_config_template.source_definition_id,
+      sourceDefinitionId: response.source_config_template.actor_definition_id,
       configTemplateSpec: response.source_config_template.user_config_spec as unknown as SourceDefinitionSpecification,
     },
     actorId: response.actor_id,

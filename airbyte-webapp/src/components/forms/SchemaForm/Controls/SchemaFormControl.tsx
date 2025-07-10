@@ -5,6 +5,7 @@ import { ReactMarkdown } from "react-markdown/lib/react-markdown";
 
 import { LabelInfo } from "components/Label";
 import { Badge } from "components/ui/Badge";
+import { FlexContainer } from "components/ui/Flex";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { ArrayOfObjectsControl } from "./ArrayOfObjectsControl";
@@ -106,8 +107,9 @@ export const SchemaFormControl = ({
   }
 
   // Check if there's an override for this path
-  if (overrideByPath[path] !== undefined) {
-    return overrideByPath[path];
+  const matchingOverride = getMatchingOverrideForPath(overrideByPath, path);
+  if (matchingOverride !== undefined) {
+    return matchingOverride(path);
   }
 
   if (targetSchema.deprecated && value === undefined) {
@@ -122,10 +124,11 @@ export const SchemaFormControl = ({
         <LabelInfo description={targetSchema.description} examples={targetSchema.examples} />
       ) : undefined,
     optional: isOptional,
-    header: targetSchema.deprecated ? (
-      <DeprecatedBadge message={targetSchema.deprecation_message} />
-    ) : (
-      <LinkComponentsToggle path={path} fieldSchema={targetSchema} />
+    header: (
+      <FlexContainer alignItems="center">
+        {targetSchema.deprecated && <DeprecatedBadge message={targetSchema.deprecation_message} />}
+        <LinkComponentsToggle path={path} fieldSchema={targetSchema} />
+      </FlexContainer>
     ),
     containerControlClassName: className,
     onlyShowErrorIfTouched,
@@ -212,4 +215,18 @@ const DeprecatedBadge = ({ message }: { message?: string }) => {
       <FormattedMessage id="form.deprecated" />
     </Badge>
   );
+};
+
+export const getMatchingOverrideForPath = (overrideByPath: OverrideByPath, path: string) => {
+  const matchingOverridePath = Object.keys(overrideByPath).find((overridePath) => {
+    // if overridePath contains a * then it is a wildcard that should match any character besides .
+    if (overridePath.includes("*")) {
+      const regex = new RegExp(`^${overridePath.replace("*", "[^.]+")}$`);
+      return regex.test(path);
+    }
+
+    return overridePath === path;
+  });
+
+  return matchingOverridePath ? overrideByPath[matchingOverridePath] : undefined;
 };

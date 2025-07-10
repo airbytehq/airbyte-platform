@@ -294,7 +294,8 @@ class ConnectorRegistryConvertersTest {
     assertEquals(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(registrySourceDef), Collections.emptyList());
 
     registrySourceDef =
-        new ConnectorRegistrySourceDefinition().withReleases(new ConnectorReleasesSource().withBreakingChanges(new BreakingChanges()));
+        new ConnectorRegistrySourceDefinition().withReleases(new ConnectorReleasesSource().withBreakingChanges(new BreakingChanges()))
+            .withSourceDefinitionId(UUID.randomUUID());
     assertEquals(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(registrySourceDef), Collections.emptyList());
   }
 
@@ -308,7 +309,8 @@ class ConnectorRegistryConvertersTest {
 
     registryDestinationDef =
         new ConnectorRegistryDestinationDefinition()
-            .withReleases(new ConnectorReleasesDestination().withBreakingChanges(new BreakingChanges()));
+            .withReleases(new ConnectorReleasesDestination().withBreakingChanges(new BreakingChanges()))
+            .withDestinationDefinitionId(UUID.randomUUID());
     assertEquals(ConnectorRegistryConverters.toActorDefinitionBreakingChanges(registryDestinationDef), Collections.emptyList());
   }
 

@@ -132,13 +132,25 @@ class EmptyAirbyteSource(
     if (perStreamMessages.isEmpty()) {
       // Per stream, we emit one 'started', one null state and one 'complete' message.
       // Since there's only 1 state message we move directly from 'started' to 'complete'.
-      val s: io.airbyte.protocol.models.v0.StreamDescriptor = streamsToReset.poll().toProtocol()
+      // We mutate the StreamDescriptor downstream, so we need to create a new instance of it per message.
+      // so just get the descriptor once here, and call `toProtocol()` on it for each message.
+      val descriptor = streamsToReset.poll()
       if (!hasCustomNamespace.get()) {
-        perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.STARTED))
+        perStreamMessages.add(
+          AirbyteMessageUtils.createStatusTraceMessage(
+            descriptor.toProtocol(),
+            AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.STARTED,
+          ),
+        )
       }
-      perStreamMessages.add(buildNullStreamStateMessage(s))
+      perStreamMessages.add(buildNullStreamStateMessage(descriptor.toProtocol()))
       if (!hasCustomNamespace.get()) {
-        perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE))
+        perStreamMessages.add(
+          AirbyteMessageUtils.createStatusTraceMessage(
+            descriptor.toProtocol(),
+            AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE,
+          ),
+        )
       }
     }
 
@@ -179,10 +191,22 @@ class EmptyAirbyteSource(
     if (perStreamMessages.isEmpty()) {
       // Per stream, we emit one 'started' and one 'complete' message.
       // The single null state message is to be emitted by the caller.
-      val s: io.airbyte.protocol.models.v0.StreamDescriptor = streamsToReset.poll().toProtocol()
+      // We mutate the StreamDescriptor downstream, so we need to create a new instance of it per message.
+      // so just get the descriptor once here, and call `toProtocol()` on it for each message.
+      val descriptor = streamsToReset.poll()
       if (!hasCustomNamespace.get()) {
-        perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.STARTED))
-        perStreamMessages.add(AirbyteMessageUtils.createStatusTraceMessage(s, AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE))
+        perStreamMessages.add(
+          AirbyteMessageUtils.createStatusTraceMessage(
+            descriptor.toProtocol(),
+            AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.STARTED,
+          ),
+        )
+        perStreamMessages.add(
+          AirbyteMessageUtils.createStatusTraceMessage(
+            descriptor.toProtocol(),
+            AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE,
+          ),
+        )
       }
     }
 

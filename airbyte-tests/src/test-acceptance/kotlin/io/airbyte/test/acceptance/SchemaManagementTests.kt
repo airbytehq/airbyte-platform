@@ -19,8 +19,7 @@ import io.airbyte.api.client.model.generated.WorkspaceCreate
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.json.Jsons
 import io.airbyte.test.utils.AcceptanceTestHarness
-import io.airbyte.test.utils.AcceptanceTestUtils
-import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient
+import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteAdminApiClient
 import io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog
 import io.airbyte.test.utils.TestConnectionCreate
 import org.junit.jupiter.api.AfterEach
@@ -39,6 +38,8 @@ import java.security.GeneralSecurityException
 import java.util.Optional
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+
+// todo (cgardens) - It is not good that this is tested at the acceptance test level. This is testing an internal state machine. We need to figure out how to delete this test suite, but first we need to make sure there is adequate coverage at the unit test level.
 
 /**
  * Tests for the various schema management functionalities e.g., auto-detect, auto-propagate.
@@ -111,7 +112,7 @@ internal class SchemaManagementTests {
   @Throws(URISyntaxException::class, IOException::class, InterruptedException::class, GeneralSecurityException::class)
   private fun init() {
     // Set up the API client.
-    val airbyteApiClient = createAirbyteApiClient(AcceptanceTestUtils.getAirbyteApiUrl(), mapOf(GATEWAY_AUTH_HEADER to AIRBYTE_AUTH_HEADER))
+    val airbyteApiClient = createAirbyteAdminApiClient()
 
     val workspaceId =
       if (System.getenv()[AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID] == null) {

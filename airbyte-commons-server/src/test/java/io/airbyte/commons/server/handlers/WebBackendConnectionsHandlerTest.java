@@ -8,6 +8,8 @@ import static io.airbyte.commons.server.helpers.ConnectionHelpers.SECOND_FIELD_N
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -23,6 +25,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead;
+import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
@@ -67,8 +70,10 @@ import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.api.model.generated.SynchronousJobRead;
 import io.airbyte.api.model.generated.Tag;
 import io.airbyte.api.model.generated.WebBackendConnectionCreate;
+import io.airbyte.api.model.generated.WebBackendConnectionListFilters;
 import io.airbyte.api.model.generated.WebBackendConnectionListItem;
 import io.airbyte.api.model.generated.WebBackendConnectionListRequestBody;
+import io.airbyte.api.model.generated.WebBackendConnectionListSortKey;
 import io.airbyte.api.model.generated.WebBackendConnectionRead;
 import io.airbyte.api.model.generated.WebBackendConnectionReadList;
 import io.airbyte.api.model.generated.WebBackendConnectionRequestBody;
@@ -119,6 +124,8 @@ import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.PartialUserConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.shared.ConnectionFilters;
+import io.airbyte.data.services.shared.ConnectionSortKey;
 import io.airbyte.data.services.shared.DestinationAndDefinition;
 import io.airbyte.data.services.shared.SourceAndDefinition;
 import io.airbyte.data.services.shared.StandardSyncQuery;
@@ -150,6 +157,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
@@ -331,8 +339,10 @@ class WebBackendConnectionsHandlerTest {
     final StandardSync brokenStandardSync =
         ConnectionHelpers.generateSyncWithSourceAndDestinationId(source.getSourceId(), destination.getDestinationId(), true, Status.INACTIVE);
 
-    when(connectionService.listWorkspaceStandardSyncs(new StandardSyncQuery(sourceRead.getWorkspaceId(), List.of(), List.of(), false)))
+    when(connectionService.listWorkspaceStandardSyncs(any(StandardSyncQuery.class)))
         .thenReturn(Collections.singletonList(standardSync));
+    when(connectionService.countWorkspaceStandardSyncs(any(StandardSyncQuery.class), any()))
+        .thenReturn(1);
     when(sourceService.getSourceAndDefinitionsFromSourceIds(Collections.singletonList(source.getSourceId())))
         .thenReturn(Collections.singletonList(new SourceAndDefinition(source, sourceDefinition)));
     when(destinationService.getDestinationAndDefinitionsFromDestinationIds(Collections.singletonList(destination.getDestinationId())))
@@ -375,6 +385,17 @@ class WebBackendConnectionsHandlerTest {
             .name("Test Operation")));
 
     final Instant now = Instant.now();
+
+    // Mock cursor pagination with job info using the fixed timestamp
+    when(connectionService.listWorkspaceStandardSyncsCursorPaginated(any(StandardSyncQuery.class), any()))
+        .thenReturn(Collections.singletonList(
+            new io.airbyte.data.services.shared.ConnectionWithJobInfo(
+                standardSync,
+                "source",
+                "destination",
+                Optional.of(io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.succeeded),
+                Optional.of(java.time.OffsetDateTime.ofInstant(now, java.time.ZoneOffset.UTC)))));
+
     final JobWithAttemptsRead jobRead = new JobWithAttemptsRead()
         .job(new JobRead()
             .configId(connectionRead.getConnectionId().toString())
@@ -1670,6 +1691,137 @@ class WebBackendConnectionsHandlerTest {
 
     assertEquals(SchemaChange.NON_BREAKING, WebBackendConnectionsHandler.getSchemaChange(connectionReadWithSourceId,
         Optional.of(catalogId), Optional.of(new ActorCatalogFetchEvent().withActorCatalogId(differentCatalogId))));
+  }
+
+  @Test
+  void testParseSortKeyAllValues() {
+    // Test null sort key defaults to CONNECTION_NAME ascending
+    final WebBackendConnectionsHandler.SortKeyInfo result = wbHandler.parseSortKey(null);
+    assertEquals(ConnectionSortKey.CONNECTION_NAME, result.sortKey());
+    assertTrue(result.ascending());
+
+    // Test all sort key enum values
+    assertEquals(new WebBackendConnectionsHandler.SortKeyInfo(ConnectionSortKey.CONNECTION_NAME, true),
+        wbHandler.parseSortKey(WebBackendConnectionListSortKey.CONNECTION_NAME_ASC));
+    assertEquals(new WebBackendConnectionsHandler.SortKeyInfo(ConnectionSortKey.CONNECTION_NAME, false),
+        wbHandler.parseSortKey(WebBackendConnectionListSortKey.CONNECTION_NAME_DESC));
+    assertEquals(new WebBackendConnectionsHandler.SortKeyInfo(ConnectionSortKey.SOURCE_NAME, true),
+        wbHandler.parseSortKey(WebBackendConnectionListSortKey.SOURCE_NAME_ASC));
+    assertEquals(new WebBackendConnectionsHandler.SortKeyInfo(ConnectionSortKey.SOURCE_NAME, false),
+        wbHandler.parseSortKey(WebBackendConnectionListSortKey.SOURCE_NAME_DESC));
+    assertEquals(new WebBackendConnectionsHandler.SortKeyInfo(ConnectionSortKey.DESTINATION_NAME, true),
+        wbHandler.parseSortKey(WebBackendConnectionListSortKey.DESTINATION_NAME_ASC));
+    assertEquals(new WebBackendConnectionsHandler.SortKeyInfo(ConnectionSortKey.DESTINATION_NAME, false),
+        wbHandler.parseSortKey(WebBackendConnectionListSortKey.DESTINATION_NAME_DESC));
+    assertEquals(new WebBackendConnectionsHandler.SortKeyInfo(ConnectionSortKey.LAST_SYNC, true),
+        wbHandler.parseSortKey(WebBackendConnectionListSortKey.LAST_SYNC_ASC));
+    assertEquals(new WebBackendConnectionsHandler.SortKeyInfo(ConnectionSortKey.LAST_SYNC, false),
+        wbHandler.parseSortKey(WebBackendConnectionListSortKey.LAST_SYNC_DESC));
+  }
+
+  @Test
+  void testBuildConnectionFiltersNull() {
+    assertNull(wbHandler.buildConnectionFilters(null));
+  }
+
+  @Test
+  void testBuildConnectionFiltersEmpty() {
+    final WebBackendConnectionListFilters filters = new WebBackendConnectionListFilters();
+    final ConnectionFilters result = wbHandler.buildConnectionFilters(filters);
+
+    assertNotNull(result);
+    assertNull(result.getSearchTerm());
+
+    // Empty lists are returned instead of null for collection fields
+    assertTrue(result.getSourceDefinitionIds().isEmpty());
+    assertTrue(result.getDestinationDefinitionIds().isEmpty());
+    assertTrue(result.getStatuses().isEmpty());
+    assertTrue(result.getStates().isEmpty());
+    assertTrue(result.getTagIds().isEmpty());
+  }
+
+  @ParameterizedTest
+  @MethodSource("provideFilterTestCases")
+  void testBuildConnectionFiltersWithAllFields(String testName,
+                                               WebBackendConnectionListFilters filters,
+                                               String expectedSearchTerm,
+                                               int expectedSourceDefIds,
+                                               int expectedDestDefIds,
+                                               int expectedStatuses,
+                                               int expectedStates,
+                                               int expectedTagIds) {
+    final ConnectionFilters result = wbHandler.buildConnectionFilters(filters);
+
+    assertNotNull(result);
+    assertEquals(expectedSearchTerm, result.getSearchTerm());
+    assertEquals(expectedSourceDefIds, result.getSourceDefinitionIds().size());
+    assertEquals(expectedDestDefIds, result.getDestinationDefinitionIds().size());
+    assertEquals(expectedStatuses, result.getStatuses().size());
+    assertEquals(expectedStates, result.getStates().size());
+    assertEquals(expectedTagIds, result.getTagIds().size());
+  }
+
+  static Object[][] provideFilterTestCases() {
+    final UUID sourceDefId1 = UUID.randomUUID();
+    final UUID sourceDefId2 = UUID.randomUUID();
+    final UUID destDefId = UUID.randomUUID();
+    final UUID tagId1 = UUID.randomUUID();
+    final UUID tagId2 = UUID.randomUUID();
+
+    return new Object[][] {
+      // Search term only
+      {
+        "Search term only",
+        new WebBackendConnectionListFilters().searchTerm("test search"),
+        "test search", 0, 0, 0, 0, 0
+      },
+      // Source definition IDs only
+      {
+        "Source definition IDs only",
+        new WebBackendConnectionListFilters().sourceDefinitionIds(List.of(sourceDefId1, sourceDefId2)),
+        null, 2, 0, 0, 0, 0
+      },
+      // Destination definition IDs only
+      {
+        "Destination definition IDs only",
+        new WebBackendConnectionListFilters().destinationDefinitionIds(List.of(destDefId)),
+        null, 0, 1, 0, 0, 0
+      },
+      // Tag IDs only
+      {
+        "Tag IDs only",
+        new WebBackendConnectionListFilters().tagIds(List.of(tagId1, tagId2)),
+        null, 0, 0, 0, 0, 2
+      },
+      // Statuses only
+      {
+        "Statuses only",
+        new WebBackendConnectionListFilters().statuses(List.of(
+            WebBackendConnectionListFilters.StatusesEnum.HEALTHY,
+            WebBackendConnectionListFilters.StatusesEnum.FAILED)),
+        null, 0, 0, 2, 0, 0
+      },
+      // States only
+      {
+        "States only",
+        new WebBackendConnectionListFilters().states(List.of(
+            ActorStatus.ACTIVE,
+            ActorStatus.INACTIVE)),
+        null, 0, 0, 0, 2, 0
+      },
+      // Multiple filters combined
+      {
+        "Multiple filters combined",
+        new WebBackendConnectionListFilters()
+            .searchTerm("production")
+            .sourceDefinitionIds(List.of(sourceDefId1))
+            .destinationDefinitionIds(List.of(destDefId))
+            .statuses(List.of(WebBackendConnectionListFilters.StatusesEnum.HEALTHY))
+            .states(List.of(ActorStatus.ACTIVE))
+            .tagIds(List.of(tagId1)),
+        "production", 1, 1, 1, 1, 1
+      }
+    };
   }
 
 }

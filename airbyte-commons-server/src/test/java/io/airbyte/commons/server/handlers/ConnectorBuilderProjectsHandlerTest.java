@@ -649,6 +649,47 @@ class ConnectorBuilderProjectsHandlerTest {
     final ConnectorBuilderProject project = generateBuilderProject().withBuilderProjectId(A_BUILDER_PROJECT_ID).withWorkspaceId(workspaceId);
     when(connectorBuilderService.getConnectorBuilderProject(any(UUID.class), any(boolean.class))).thenReturn(project);
 
+    UUID organizationId = UUID.randomUUID();
+    when(workspaceService.getOrganizationIdFromWorkspaceId(any(UUID.class))).thenReturn(Optional.of(organizationId));
+
+    connectorBuilderProjectsHandler.publishConnectorBuilderProject(
+        anyConnectorBuilderProjectRequest().builderProjectId(A_BUILDER_PROJECT_ID).workspaceId(workspaceId).name(A_SOURCE_NAME)
+            .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC)));
+
+    verify(manifestInjector, times(1)).addInjectedDeclarativeManifest(A_SPEC);
+    verify(sourceService, times(1)).writeCustomConnectorMetadata(eq(new StandardSourceDefinition()
+        .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
+        .withName(A_SOURCE_NAME)
+        .withSourceType(SourceType.CUSTOM)
+        .withTombstone(false)
+        .withPublic(false)
+        .withCustom(true)), eq(
+            new ActorDefinitionVersion()
+                .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+                .withDockerRepository(AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE)
+                .withDockerImageTag(A_DECLARATIVE_MANIFEST_IMAGE_VERSION.getImageVersion())
+                .withSpec(adaptedConnectorSpecification)
+                .withSupportLevel(SupportLevel.NONE)
+                .withInternalSupportLevel(100L)
+                .withReleaseStage(ReleaseStage.CUSTOM)
+                .withDocumentationUrl(A_DOCUMENTATION_URL)
+                .withProtocolVersion("0.2.0")),
+        eq(organizationId),
+        eq(ScopeType.ORGANIZATION));
+    verify(connectorBuilderService, times(1)).writeActorDefinitionConfigInjectionsForPath(eq(List.of(A_CONFIG_INJECTION)));
+  }
+
+  @Test
+  void whenNoOrganizationFoundShouldUseWorkspaceScope() throws ConfigNotFoundException, IOException, JsonValidationException {
+    when(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID);
+    when(manifestInjector.getManifestConnectorInjections(A_SOURCE_DEFINITION_ID, A_MANIFEST, null)).thenReturn(List.of(A_CONFIG_INJECTION));
+    setupConnectorSpecificationAdapter(A_SPEC, A_DOCUMENTATION_URL);
+
+    final ConnectorBuilderProject project = generateBuilderProject().withBuilderProjectId(A_BUILDER_PROJECT_ID).withWorkspaceId(workspaceId);
+    when(connectorBuilderService.getConnectorBuilderProject(any(UUID.class), any(boolean.class))).thenReturn(project);
+
+    when(workspaceService.getOrganizationIdFromWorkspaceId(any(UUID.class))).thenReturn(Optional.empty());
+
     connectorBuilderProjectsHandler.publishConnectorBuilderProject(
         anyConnectorBuilderProjectRequest().builderProjectId(A_BUILDER_PROJECT_ID).workspaceId(workspaceId).name(A_SOURCE_NAME)
             .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC)));
@@ -916,20 +957,23 @@ class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  void testGetConnectorBuilderProjectIdBySourceDefinitionId() throws IOException {
+  void testGetConnectorBuilderProjectIdBySourceDefinitionId() throws IOException, ConfigNotFoundException {
     final UUID actorDefinitionId = UUID.randomUUID();
     final UUID projectId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     when(connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(actorDefinitionId)).thenReturn(Optional.of(projectId));
+    when(connectorBuilderService.getConnectorBuilderProject(projectId, false))
+        .thenReturn(new ConnectorBuilderProject().withBuilderProjectId(projectId).withWorkspaceId(workspaceId));
 
     final BuilderProjectForDefinitionResponse response = connectorBuilderProjectsHandler.getConnectorBuilderProjectForDefinitionId(
         new BuilderProjectForDefinitionRequestBody().actorDefinitionId(actorDefinitionId).workspaceId(workspaceId));
 
     assertEquals(projectId, response.getBuilderProjectId());
+    assertEquals(workspaceId, response.getWorkspaceId());
   }
 
   @Test
-  void testGetConnectorBuilderProjectIdBySourceDefinitionIdWhenNotFound() throws IOException {
+  void testGetConnectorBuilderProjectIdBySourceDefinitionIdWhenNotFound() throws IOException, ConfigNotFoundException {
     final UUID actorDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     when(connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(actorDefinitionId)).thenReturn(Optional.empty());
@@ -938,6 +982,22 @@ class ConnectorBuilderProjectsHandlerTest {
         new BuilderProjectForDefinitionRequestBody().actorDefinitionId(actorDefinitionId).workspaceId(workspaceId));
 
     assertNull(response.getBuilderProjectId());
+    assertNull(response.getWorkspaceId());
+  }
+
+  @Test
+  void testGetConnectorBuilderProjectIdBySourceDefinitionIdWhenProjectNotFound() throws IOException, ConfigNotFoundException {
+    final UUID actorDefinitionId = UUID.randomUUID();
+    final UUID projectId = UUID.randomUUID();
+    final UUID workspaceId = UUID.randomUUID();
+    when(connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(actorDefinitionId)).thenReturn(Optional.of(projectId));
+    when(connectorBuilderService.getConnectorBuilderProject(projectId, false)).thenReturn(null);
+
+    final BuilderProjectForDefinitionResponse response = connectorBuilderProjectsHandler.getConnectorBuilderProjectForDefinitionId(
+        new BuilderProjectForDefinitionRequestBody().actorDefinitionId(actorDefinitionId).workspaceId(workspaceId));
+
+    assertEquals(projectId, response.getBuilderProjectId());
+    assertNull(response.getWorkspaceId());
   }
 
   private static ConnectorBuilderPublishRequestBody anyConnectorBuilderProjectRequest() {

@@ -87,6 +87,28 @@ components:
             detail:
               type: string
               default: Your email domain requires SSO sign-in. Please sign in using your SSO provider.
+    EmbeddedEndpointMovedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 301
+            type:
+              type: string
+              default: error:embedded/endpoint-moved
+            title:
+              type: string
+              default: Airbyte Embedded Endpoint Moved
+            detail:
+              type: string
+              default: This endpoint for Airbyte Embedded has moved.  Please see https://api.airbyte.ai/api/v1/redoc for the latest Airbyte Embedded API documentation and update your configuration.
+            documentationUrl:
+              type: string
+              default: "https://api.airbyte.ai/api/v1/redoc"
     LicenseEntitlementProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -1618,3 +1640,127 @@ components:
           type: string
           format: uuid
           description: The ID of the destination
+    SSOConfigRetrievalProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 500
+            type:
+              type: string
+              default: error:sso-config-retrieval
+            title:
+              type: string
+              default: SSO config retrieval error
+            detail:
+              type: string
+              default: An error occurred when attempting to retrieve sso config data
+            data:
+              $ref: "#/components/schemas/ProblemSSOConfigRetrievalData"
+    ProblemSSOConfigRetrievalData:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+        errorMessage:
+          type: string
+    SSOSetupProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 500
+            type:
+              type: string
+              default: error:sso-setup
+            title:
+              type: string
+              default: SSO setup configuration error
+            detail:
+              type: string
+              default: An error occurred when performing a SSO setup
+            data:
+              $ref: "#/components/schemas/ProblemSSOSetupData"
+    ProblemSSOSetupData:
+      type: object
+      required:
+        - companyIdentifier
+      properties:
+        companyIdentifier:
+          type: string
+        errorMessage:
+          type: string
+    SSODeletionProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 500
+            type:
+              type: string
+              default: error:sso-deletion
+            title:
+              type: string
+              default: SSO deletion failed
+            detail:
+              type: string
+              default: An error occurred when performing an SSO config delete
+            data:
+              $ref: "#/components/schemas/ProblemSSODeletionData"
+    ProblemSSODeletionData:
+      type: object
+      required:
+        - organizationId
+        - companyIdentifier
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        companyIdentifier:
+          type: string
+        errorMessage:
+          type: string
+    SSOCredentialUpdateProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 500
+            type:
+              type: string
+              default: error:sso-credential-update
+            title:
+              type: string
+              default: SSO credential update failed
+            detail:
+              type: string
+              default: An error occurred when performing an SSO IDP credentials update
+            data:
+              $ref: "#/components/schemas/ProblemSSOCredentialUpdateData"
+    ProblemSSOCredentialUpdateData:
+      type: object
+      required:
+        - companyIdentifier
+      properties:
+        companyIdentifier:
+          type: string
+        errorMessage:
+          type: string

@@ -1,4 +1,4 @@
-import { CellContext, ColumnDefTemplate, createColumnHelper } from "@tanstack/react-table";
+import { CellContext, ColumnDefTemplate, ColumnSort, createColumnHelper } from "@tanstack/react-table";
 import React, { useContext, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 
@@ -7,13 +7,14 @@ import { ScrollParentContext } from "components/ui/ScrollParent";
 import { Table } from "components/ui/Table";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
+import { WebBackendConnectionListSortKey } from "core/api/types/AirbyteClient";
 import { RoutePaths } from "pages/routePaths";
 
 import { ConnectionStatus } from "./components/ConnectionStatus";
 import { ConnectorName } from "./components/ConnectorName";
 import { EntityWarningsCell } from "./components/EntityWarningsCell";
 import { FrequencyCell } from "./components/FrequencyCell";
-import { LastSync } from "./components/LastSync";
+import { LastSyncCell } from "./components/LastSyncCell";
 import { StateSwitchCell } from "./components/StateSwitchCell";
 import { TagsCell } from "./components/TagsCell";
 import styles from "./ConnectionTable.module.scss";
@@ -23,9 +24,21 @@ interface ConnectionTableProps {
   data: ConnectionTableDataItem[];
   entity: "source" | "destination" | "connection";
   variant?: React.ComponentProps<typeof Table>["variant"];
+  sortKey?: WebBackendConnectionListSortKey;
+  setSortKey?: (sortState: WebBackendConnectionListSortKey) => void;
+  hasNextPage?: boolean;
+  fetchNextPage?: () => void;
 }
 
-const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant }) => {
+const ConnectionTable: React.FC<ConnectionTableProps> = ({
+  data,
+  entity,
+  variant,
+  hasNextPage,
+  fetchNextPage,
+  setSortKey,
+  sortKey,
+}) => {
   const createLink = useCurrentWorkspaceLink();
 
   const columnHelper = createColumnHelper<ConnectionTableDataItem>();
@@ -63,7 +76,6 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
           noPadding: true,
         },
         cell: NameCell,
-        sortingFn: "alphanumeric",
       }),
       columnHelper.accessor("entityName", {
         header: () => (
@@ -77,7 +89,6 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
           noPadding: true,
         },
         cell: EntityNameCell,
-        sortingFn: "alphanumeric",
       }),
       columnHelper.accessor("connectorName", {
         header: () => (
@@ -89,7 +100,6 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
           noPadding: true,
         },
         cell: ConnectorNameCell,
-        sortingFn: "alphanumeric",
       }),
       columnHelper.accessor("scheduleData", {
         header: () => <FormattedMessage id="tables.frequency" />,
@@ -110,12 +120,11 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
       }),
       columnHelper.accessor("lastSync", {
         header: () => <FormattedMessage id="tables.lastSync" />,
-        cell: LastSyncCell,
+        cell: LastSyncCellWithLink,
         meta: {
           thClassName: styles.lastSync,
           noPadding: true,
         },
-        sortUndefined: 1,
       }),
       columnHelper.accessor("enabled", {
         header: () => <FormattedMessage id="tables.enabled" />,
@@ -137,6 +146,24 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
     [columnHelper, EntityNameCell, entity]
   );
 
+  const sortingKeyToColumnId: Record<WebBackendConnectionListSortKey, ColumnSort> = {
+    connectionName_asc: { id: "name", desc: false },
+    connectionName_desc: { id: "name", desc: true },
+    sourceName_asc: { id: "entityName", desc: false },
+    sourceName_desc: { id: "entityName", desc: true },
+    destinationName_asc: { id: "connectorName", desc: false },
+    destinationName_desc: { id: "connectorName", desc: true },
+    lastSync_asc: { id: "lastSync", desc: false },
+    lastSync_desc: { id: "lastSync", desc: true },
+  };
+
+  const columnIdToSortingKey: Record<string, "connectionName" | "sourceName" | "destinationName" | "lastSync"> = {
+    name: "connectionName",
+    entityName: "sourceName",
+    connectorName: "destinationName",
+    lastSync: "lastSync",
+  };
+
   const customScrollParent = useContext(ScrollParentContext);
   return (
     <Table
@@ -146,10 +173,28 @@ const ConnectionTable: React.FC<ConnectionTableProps> = ({ data, entity, variant
       data={data}
       testId="connectionsTable"
       className={styles.connectionsTable}
-      initialSortBy={[{ id: "entityName", desc: false }]}
+      manualSorting
+      sortingState={sortKey ? [sortingKeyToColumnId[sortKey]] : []}
+      onSortingChange={(sortingUpdater) => {
+        if (typeof sortingUpdater === "function") {
+          const newSortingState = sortKey ? sortingUpdater([sortingKeyToColumnId[sortKey]]) : [];
+          const column = columnIdToSortingKey[newSortingState[0]?.id];
+          const direction = newSortingState[0]?.desc ? "desc" : "asc";
+          if (column && direction) {
+            setSortKey?.(`${column}_${direction}`);
+          }
+        }
+      }}
+      showEmptyPlaceholder={false}
       virtualized={!!customScrollParent}
       virtualizedProps={{
+        overscan: 250,
         customScrollParent: customScrollParent ?? undefined,
+        endReached: () => {
+          if (hasNextPage && fetchNextPage) {
+            fetchNextPage();
+          }
+        },
       }}
     />
   );
@@ -193,7 +238,9 @@ const ConnectorNameCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, 
   );
 };
 
-const LastSyncCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, number | null | undefined>> = (props) => {
+const LastSyncCellWithLink: ColumnDefTemplate<CellContext<ConnectionTableDataItem, number | null | undefined>> = (
+  props
+) => {
   const createLink = useCurrentWorkspaceLink();
   return (
     <Link
@@ -201,7 +248,7 @@ const LastSyncCell: ColumnDefTemplate<CellContext<ConnectionTableDataItem, numbe
       variant="primary"
       className={styles.cellContent}
     >
-      <LastSync timeInSeconds={props.cell.getValue()} enabled={props.row.original.enabled} />
+      <LastSyncCell timeInSeconds={props.cell.getValue()} enabled={props.row.original.enabled} />
     </Link>
   );
 };

@@ -74,6 +74,7 @@ public class StatsAggregationHelper {
     long bytesEmitted = 0;
     long recordsCommitted = 0;
     long bytesCommitted = 0;
+    long recordsRejected = 0;
 
     for (StreamSyncStats streamStat : streamStats) {
       SyncStats syncStats = streamStat.getStats();
@@ -81,6 +82,7 @@ public class StatsAggregationHelper {
       bytesEmitted += syncStats.getBytesEmitted() == null ? 0 : syncStats.getBytesEmitted();
       recordsCommitted += syncStats.getRecordsCommitted() == null ? 0 : syncStats.getRecordsCommitted();
       bytesCommitted += syncStats.getBytesCommitted() == null ? 0 : syncStats.getBytesCommitted();
+      recordsRejected += syncStats.getRecordsRejected() == null ? 0 : syncStats.getRecordsRejected();
     }
 
     return new StreamStatsRecord(
@@ -90,6 +92,7 @@ public class StatsAggregationHelper {
         bytesEmitted,
         recordsCommitted,
         bytesCommitted,
+        recordsRejected,
         wasBackfilled(streamStats),
         wasResumed(streamStats));
   }
@@ -199,7 +202,8 @@ public class StatsAggregationHelper {
         .estimatedRecords(combinedStats.getEstimatedRecords())
         .bytesEmitted(combinedStats.getBytesEmitted())
         .recordsEmitted(combinedStats.getRecordsEmitted())
-        .recordsCommitted(combinedStats.getRecordsCommitted());
+        .recordsCommitted(combinedStats.getRecordsCommitted())
+        .recordsRejected(combinedStats.getRecordsRejected());
 
     final var streamStats = attemptStats.perStreamStats().stream().map(s -> new AttemptStreamStats()
         .streamName(s.getStreamName())
@@ -208,6 +212,7 @@ public class StatsAggregationHelper {
             .bytesEmitted(s.getStats().getBytesEmitted())
             .recordsEmitted(s.getStats().getRecordsEmitted())
             .recordsCommitted(s.getStats().getRecordsCommitted())
+            .recordsRejected(s.getStats().getRecordsRejected())
             .estimatedBytes(s.getStats().getEstimatedBytes())
             .estimatedRecords(s.getStats().getEstimatedRecords())))
         .collect(Collectors.toList());
@@ -243,6 +248,7 @@ public class StatsAggregationHelper {
         .bytesEmitted(s.bytesEmitted())
         .recordsCommitted(s.recordsCommitted())
         .bytesCommitted(s.bytesCommitted())
+        .recordsRejected(s.recordsRejected())
         .wasBackfilled(s.wasBackfilled().orElse(null))
         .wasResumed(s.wasResumed().orElse(null)))
         .collect(Collectors.toList()));
@@ -253,7 +259,8 @@ public class StatsAggregationHelper {
         .recordsEmitted(streamStats.stream().mapToLong(StreamStatsRecord::recordsEmitted).sum())
         .bytesEmitted(streamStats.stream().mapToLong(StreamStatsRecord::bytesEmitted).sum())
         .recordsCommitted(streamStats.stream().mapToLong(StreamStatsRecord::recordsCommitted).sum())
-        .bytesCommitted(streamStats.stream().mapToLong(StreamStatsRecord::bytesCommitted).sum());
+        .bytesCommitted(streamStats.stream().mapToLong(StreamStatsRecord::bytesCommitted).sum())
+        .recordsRejected(streamStats.stream().mapToLong(StreamStatsRecord::recordsRejected).sum());
   }
 
   public static Map<Long, JobWithAttemptsRead> getJobIdToJobWithAttemptsReadMap(final List<Job> jobs, final JobPersistence jobPersistence) {
@@ -276,6 +283,7 @@ public class StatsAggregationHelper {
                                   Long bytesEmitted,
                                   Long recordsCommitted,
                                   Long bytesCommitted,
+                                  Long recordsRejected,
                                   Optional<Boolean> wasBackfilled,
                                   Optional<Boolean> wasResumed) {}
 

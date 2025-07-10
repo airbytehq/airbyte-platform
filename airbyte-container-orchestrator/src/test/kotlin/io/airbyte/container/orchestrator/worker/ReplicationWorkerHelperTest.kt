@@ -29,6 +29,7 @@ import io.airbyte.protocol.models.v0.AirbyteMessage.Type.LOG
 import io.airbyte.protocol.models.v0.AirbyteMessage.Type.RECORD
 import io.airbyte.protocol.models.v0.AirbyteMessage.Type.TRACE
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
+import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage.Type.ANALYTICS
 import io.airbyte.workers.internal.AirbyteMapper
@@ -109,9 +110,6 @@ class ReplicationWorkerHelperTest {
     every { destinationCatalogGenerator.generateDestinationCatalog(configuredCatalog) } answers {
       DestinationCatalogGenerator.CatalogGenerationResult(configuredCatalog, emptyMap())
     }
-
-    every { syncStatsTracker.getTotalBytesEmitted() } returns 0L
-    every { syncStatsTracker.getTotalRecordsEmitted() } returns 0L
   }
 
   @Test
@@ -119,8 +117,17 @@ class ReplicationWorkerHelperTest {
     every { replicationWorkerState.cancelled } returns false
     every { replicationWorkerState.hasFailed } returns false
 
-    every { syncStatsTracker.getTotalBytesCommitted() } returns 50L
-    every { syncStatsTracker.getTotalRecordsCommitted() } returns 5L
+    every { syncStatsTracker.getStats() } returns
+      mapOf(
+        AirbyteStreamNameNamespacePair("stream", "namespace") to
+          mockk(relaxed = true) {
+            every { bytesCommitted } returns 50L
+            every { recordsCommitted } returns 5L
+            // This is because for completed syncs, we currently assume committed == emitted
+            every { bytesEmitted } returns 50L
+            every { recordsEmitted } returns 5L
+          },
+      )
     every { syncStatsTracker.getUnreliableStateTimingMetrics() } returns false
 
     val output = helper.getReplicationOutput()

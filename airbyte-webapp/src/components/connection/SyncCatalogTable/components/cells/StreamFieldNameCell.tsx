@@ -16,6 +16,7 @@ import { SyncSchemaFieldObject } from "core/domain/catalog";
 import { useFormMode } from "core/services/ui/FormModeContext";
 import { useExperiment } from "hooks/services/Experiment";
 
+import styles from "./StreamFieldNameCell.module.scss";
 import { SyncStreamFieldWithId } from "../../../ConnectionForm/formConfig";
 import { SyncCatalogUIModel } from "../../SyncCatalogTable";
 import {
@@ -34,12 +35,14 @@ interface StreamFieldNameCellProps {
   row: Row<SyncCatalogUIModel>;
   updateStreamField: (streamNode: SyncStreamFieldWithId, updatedConfig: Partial<AirbyteStreamConfiguration>) => void;
   globalFilterValue?: string;
+  destinationSupportsFileTransfer: boolean;
 }
 
 export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   row,
   updateStreamField,
   globalFilterValue = "",
+  destinationSupportsFileTransfer,
 }) => {
   const isMappingsUIEnabled = useExperiment("connection.mappingsUI");
   const isColumnSelectionEnabled = useExperiment("connection.columnSelection");
@@ -71,6 +74,9 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
     ((config.syncMode === SyncMode.incremental && (isCursor || isChildFieldCursor)) ||
       (config.destinationSyncMode === DestinationSyncMode.append_dedup && (isPrimaryKey || isChildFieldPrimaryKey)) ||
       (config.destinationSyncMode === DestinationSyncMode.overwrite_dedup && (isPrimaryKey || isChildFieldPrimaryKey)));
+
+  const isUnsupportedFileBasedStream = stream?.isFileBased && !destinationSupportsFileTransfer;
+
   const showTooltip = isDisabled && mode !== "readonly";
 
   const isFieldSelected = checkIsFieldSelected(field, config);
@@ -116,14 +122,14 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   };
 
   return (
-    <FlexContainer alignItems="center">
+    <FlexContainer alignItems="center" {...(isUnsupportedFileBasedStream && { className: styles.disabled })}>
       <FlexContainer alignItems="center" gap="xs">
         {isNestedField && <Icon type="nested" color="disabled" size="lg" />}
         {!showTooltip && !isNestedField && isColumnSelectionEnabled && (
           <CheckBox
             checkboxSize="sm"
             checked={isFieldSelected}
-            disabled={isDisabled || mode === "readonly"}
+            disabled={isDisabled || isUnsupportedFileBasedStream || mode === "readonly"}
             onChange={() => onToggleFieldSelected(field.path, !isFieldSelected)}
             data-testid="sync-field-checkbox"
           />

@@ -1,1 +1,1 @@
-export { ConnectionsSummary, type SummaryKey, connectionStatColors } from "./ConnectionsSummary";
+export { ConnectionsSummary, type SummaryKey } from "./ConnectionsSummary";

@@ -48,7 +48,7 @@ class BreakingChangeScopeFactoryTest {
 
   @Test
   void testValidateBreakingChangeScopeWithEmptyScope() {
-    assertThrows(NullPointerException.class, () -> BreakingChangeScopeFactory.validateBreakingChangeScope(new BreakingChangeScope()));
+    assertThrows(IllegalArgumentException.class, () -> BreakingChangeScopeFactory.validateBreakingChangeScope(new BreakingChangeScope()));
   }
 
 }

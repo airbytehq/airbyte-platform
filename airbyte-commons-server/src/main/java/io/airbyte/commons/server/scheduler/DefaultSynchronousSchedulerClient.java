@@ -323,7 +323,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
       track(jobId, configType, connectorDefinitionId, workspaceId, actorId, actorType, JobState.STARTED, null);
       final TemporalResponse<ConnectorJobOutput> temporalResponse = executor.get();
       final Optional<ConnectorJobOutput> jobOutput = temporalResponse.getOutput();
-      final JobState outputState = temporalResponse.getMetadata().isSucceeded() ? JobState.SUCCEEDED : JobState.FAILED;
+      final JobState outputState = temporalResponse.metadata().succeeded() ? JobState.SUCCEEDED : JobState.FAILED;
 
       track(jobId, configType, connectorDefinitionId, workspaceId, actorId, actorType, outputState, jobOutput.orElse(null));
 

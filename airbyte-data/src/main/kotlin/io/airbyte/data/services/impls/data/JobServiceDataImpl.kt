@@ -4,6 +4,7 @@
 
 package io.airbyte.data.services.impls.data
 
+import io.airbyte.commons.logging.LogUtils
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
 import io.airbyte.config.JobStatus
@@ -14,6 +15,7 @@ import io.airbyte.data.services.JobService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.data.model.Pageable
 import io.micronaut.data.model.Sort
 import io.micronaut.data.model.Sort.Order
@@ -21,12 +23,15 @@ import jakarta.inject.Singleton
 import java.time.OffsetDateTime
 import kotlin.jvm.optionals.getOrNull
 
+private val logger = KotlinLogging.logger {}
+
 const val DEFAULT_SORT_FIELD = "createdAt"
 
 @Singleton
 class JobServiceDataImpl(
   private val jobsWithAttemptsRepository: JobsWithAttemptsRepository,
   private val jobsRepository: JobsRepository,
+  private val logUtils: LogUtils,
 ) : JobService {
   override fun findById(id: Long): Job? = jobsRepository.findById(id).getOrNull()?.toConfigModel()
 
@@ -71,7 +76,14 @@ class JobServiceDataImpl(
         JobConfigType.sync.toString(),
         scopes,
         createdAtStart,
-      ).map { it.toConfigModel() }
+      ).mapNotNull {
+        try {
+          it.toConfigModel()
+        } catch (e: Exception) {
+          logger.info(e) { "Failed to convert job to config model id=${it.id} configType=${it.configType} scope=${it.scope}" }
+          null
+        }
+      }
 
   override fun firstSuccessfulJobForScope(scope: String): Job? = jobsRepository.firstSuccessfulJobForScope(scope)?.toConfigModel()
 

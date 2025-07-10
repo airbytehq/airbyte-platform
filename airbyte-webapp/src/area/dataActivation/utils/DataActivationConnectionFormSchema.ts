@@ -32,34 +32,24 @@ const noDestinationSyncModeSelected = z.object({
   destinationSyncMode: z.null().refine((val) => val !== null, {
     message: "form.empty.error",
   }),
+  matchingKeys: z.null(),
 });
 
-const destinationAppendSyncMode = z.object({
-  destinationSyncMode: z.literal(DestinationSyncMode.append),
-  matchingKeys: z.array(z.string()).optional(),
-});
+const AllowedDestinationSyncModes = z.enum([
+  DestinationSyncMode.append,
+  DestinationSyncMode.append_dedup,
+  DestinationSyncMode.update,
+  DestinationSyncMode.soft_delete,
+]);
 
-const destinationAppendDedupSyncMode = z.object({
-  destinationSyncMode: z.literal(DestinationSyncMode.append_dedup),
-  matchingKeys: z.array(z.string()).optional(),
-});
-
-const destinationUpdateSyncMode = z.object({
-  destinationSyncMode: z.literal(DestinationSyncMode.update),
-  matchingKeys: z.array(z.string()).optional(),
-});
-
-const destinationSoftDeleteSyncMode = z.object({
-  destinationSyncMode: z.literal(DestinationSyncMode.soft_delete),
-  matchingKeys: z.array(z.string()).optional(),
+const someDestinationSyncMode = z.object({
+  destinationSyncMode: AllowedDestinationSyncModes,
+  matchingKeys: z.array(z.string()).nullable(),
 });
 
 const destinationSyncMode = z.discriminatedUnion("destinationSyncMode", [
   noDestinationSyncModeSelected,
-  destinationAppendSyncMode,
-  destinationAppendDedupSyncMode,
-  destinationUpdateSyncMode,
-  destinationSoftDeleteSyncMode,
+  someDestinationSyncMode,
 ]);
 
 const DataActivationStreamSchema = z
@@ -82,7 +72,23 @@ const DataActivationStreamSchema = z
     ),
   })
   .and(sourceSyncMode)
-  .and(destinationSyncMode);
+  .and(destinationSyncMode)
+  // Validate that each destination field name is unique
+  .superRefine((stream, ctx) => {
+    const seen = new Set<string>();
+    stream.fields.forEach((field, i) => {
+      const name = field.destinationFieldName;
+      if (seen.has(name)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Duplicate destinationFieldName",
+          path: ["fields", i, "destinationFieldName"],
+        });
+      } else {
+        seen.add(name);
+      }
+    });
+  });
 
 export const DataActivationConnectionFormSchema = z.object({
   streams: z.array(DataActivationStreamSchema),

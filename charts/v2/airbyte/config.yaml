@@ -312,15 +312,15 @@ connectorRollout:
   config:
     - env: CONNECTOR_ROLLOUT_EXPIRATION_SECONDS
       key: expirationSeconds
-      defaultValue: 7200
+      defaultValue: 604800
 
     - env: CONNECTOR_ROLLOUT_WAIT_BETWEEN_ROLLOUTS_SECONDS
       key: waitBetweenRolloutSeconds
-      defaultValue: 60
+      defaultValue: 10800
 
     - env: CONNECTOR_ROLLOUT_WAIT_BETWEEN_SYNC_RESULTS_QUERIES_SECONDS
       key: waitBetweenSyncResultsQueriesSeconds
-      defaultValue: 10
+      defaultValue: 3600
 
 connectorRollout.temporal:
   keyBasePath: global.temporal.cloud.connectorRollout
@@ -1454,8 +1454,9 @@ workloadLauncher.dataPlane:
   config:
     - env: DATAPLANE_CLIENT_ID
       key: clientId
-      sensitive: true
+      refKeyExp: (include "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey" .)
       secretRefExp: (ternary (include "airbyte.auth.bootstrap.managedSecretName" .) (include "airbyte.workloadLauncher.dataPlane.secretName" .) (eq (include "airbyte.common.cluster.type" .) "hybrid"))
+      sensitive: true
               
     - env: DATAPLANE_CLIENT_ID_SECRET_NAME
       key: clientIdSecretName
@@ -1463,12 +1464,13 @@ workloadLauncher.dataPlane:
 
     - env: DATAPLANE_CLIENT_ID_SECRET_KEY
       key: clientIdSecretKey
-      defaultValueExp: (include "airbyte.workloadLauncher.dataPlane.clientId.secretKey" .)
+      defaultValueExp: (include "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey" .)
 
     - env: DATAPLANE_CLIENT_SECRET
       key: clientSecret
-      sensitive: true
+      refKeyExp: (include "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey" .)
       secretRefExp: (ternary (include "airbyte.auth.bootstrap.managedSecretName" .) (include "airbyte.workloadLauncher.dataPlane.secretName" .) (eq (include "airbyte.common.cluster.type" .) "hybrid"))
+      sensitive: true
 
     - env: DATAPLANE_CLIENT_SECRET_SECRET_NAME
       key: clientSecretSecretName
@@ -1476,7 +1478,7 @@ workloadLauncher.dataPlane:
 
     - env: DATAPLANE_CLIENT_SECRET_SECRET_KEY
       key: clientSecretSecretKey
-      defaultValueExp: (include "airbyte.workloadLauncher.dataPlane.clientSecret.secretKey" .)
+      defaultValueExp: (include "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey" .)
 
 workloadLauncher.images:
   keyBasePath: workloadLauncher

@@ -19,7 +19,7 @@ import { Text } from "components/ui/Text";
 
 import { DestinationLimitReachedModal } from "area/workspace/components/DestinationLimitReachedModal";
 import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorkspaceLimits";
-import { useConnectionList, useDestinationList, useFilters } from "core/api";
+import { useDestinationList, useFilters } from "core/api";
 import { DestinationRead } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
@@ -35,10 +35,7 @@ const AllDestinationsPageInner: React.FC<{ destinations: DestinationRead[] }> = 
   const { formatMessage } = useIntl();
   const { openModal } = useModalService();
   const canCreateDestination = useGeneratedIntent(Intent.CreateOrEditConnector);
-
-  const connectionList = useConnectionList({ destinationId: destinations.map(({ destinationId }) => destinationId) });
-  const connections = connectionList?.connections ?? [];
-  const data = getEntityTableData(destinations, connections, "destination");
+  const data = getEntityTableData(destinations, "destination");
 
   const [{ search, status }, setFilterValue] = useFilters<{ search: string; status: string | null }>({
     search: "",
@@ -91,7 +88,7 @@ const AllDestinationsPageInner: React.FC<{ destinations: DestinationRead[] }> = 
               <Box p="lg">
                 <FlexContainer justifyContent="flex-start" direction="column">
                   <FlexItem grow>
-                    <SearchInput value={search} onChange={({ target: { value } }) => setFilterValue("search", value)} />
+                    <SearchInput value={search} onChange={(value) => setFilterValue("search", value)} />
                   </FlexItem>
                   <FlexContainer gap="sm" alignItems="center">
                     <FlexItem>

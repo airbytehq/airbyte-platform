@@ -43,7 +43,7 @@ export const LogSearchInput = React.forwardRef<HTMLInputElement, LogSearchInputP
         <SearchInput
           ref={ref}
           value={inputValue}
-          onChange={(e) => onSearchTermChange(e.target.value)}
+          onChange={onSearchTermChange}
           onKeyDown={onSearchInputKeydown}
           placeholder={formatMessage({ id: "jobHistory.logs.searchPlaceholder" })}
           style={{ paddingRight: (hasHighlightedMatch ? width : 0) + 15 }}

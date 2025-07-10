@@ -91,8 +91,8 @@ internal class ApplyDefinitionsHelperTest {
         connectorRolloutService,
       )
 
-    every { actorDefinitionService.actorDefinitionIdsInUse } returns emptySet()
-    every { actorDefinitionService.actorDefinitionIdsToDefaultVersionsMap } returns emptyMap()
+    every { actorDefinitionService.getActorDefinitionIdsInUse() } returns emptySet()
+    every { actorDefinitionService.getActorDefinitionIdsToDefaultVersionsMap() } returns emptyMap()
     every { definitionsProvider.getDestinationDefinitions() } returns emptyList()
     every { definitionsProvider.getSourceDefinitions() } returns emptyList()
     every { airbyteCompatibleConnectorsValidator.validate(any(), any()) } returns ConnectorPlatformCompatibilityValidationResult(true, null)
@@ -118,13 +118,13 @@ internal class ApplyDefinitionsHelperTest {
       ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES)
     seededDefinitionsAndDefaultVersions[S3_ID] =
       ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3)
-    every { actorDefinitionService.actorDefinitionIdsToDefaultVersionsMap } returns seededDefinitionsAndDefaultVersions
+    every { actorDefinitionService.getActorDefinitionIdsToDefaultVersionsMap() } returns seededDefinitionsAndDefaultVersions
   }
 
   @Throws(IOException::class)
   private fun verifyActorDefinitionServiceInteractions() {
-    verify { actorDefinitionService.actorDefinitionIdsToDefaultVersionsMap }
-    verify { actorDefinitionService.actorDefinitionIdsInUse }
+    verify { actorDefinitionService.getActorDefinitionIdsToDefaultVersionsMap() }
+    verify { actorDefinitionService.getActorDefinitionIdsInUse() }
   }
 
   @ParameterizedTest
@@ -197,6 +197,7 @@ internal class ApplyDefinitionsHelperTest {
         id = UUID.randomUUID(),
         workflowRunId = "fake-workflow-run-id",
         actorDefinitionId = UUID.randomUUID(),
+        initialVersionId = UUID.randomUUID(),
         releaseCandidateVersionId = UUID.randomUUID(),
         hasBreakingChanges = false,
         createdAt = Instant.now().toEpochMilli(),
@@ -320,6 +321,7 @@ internal class ApplyDefinitionsHelperTest {
           workflowRunId = "fake-workflow-run-id",
           actorDefinitionId = UUID.randomUUID(),
           releaseCandidateVersionId = UUID.randomUUID(),
+          initialVersionId = UUID.randomUUID(),
           hasBreakingChanges = false,
           createdAt = Instant.now().toEpochMilli(),
           updatedAt = Instant.now().toEpochMilli(),
@@ -385,6 +387,7 @@ internal class ApplyDefinitionsHelperTest {
           workflowRunId = "fake-workflow-run-id",
           actorDefinitionId = UUID.randomUUID(),
           releaseCandidateVersionId = UUID.randomUUID(),
+          initialVersionId = UUID.randomUUID(),
           hasBreakingChanges = false,
           createdAt = Instant.now().toEpochMilli(),
           updatedAt = Instant.now().toEpochMilli(),
@@ -398,6 +401,7 @@ internal class ApplyDefinitionsHelperTest {
         workflowRunId = "fake-workflow-run-id",
         actorDefinitionId = UUID.randomUUID(),
         releaseCandidateVersionId = UUID.randomUUID(),
+        initialVersionId = UUID.randomUUID(),
         hasBreakingChanges = false,
         createdAt = Instant.now().toEpochMilli(),
         updatedAt = Instant.now().toEpochMilli(),
@@ -522,6 +526,7 @@ internal class ApplyDefinitionsHelperTest {
         workflowRunId = "fake-workflow-run-id",
         actorDefinitionId = UUID.randomUUID(),
         releaseCandidateVersionId = UUID.randomUUID(),
+        initialVersionId = UUID.randomUUID(),
         hasBreakingChanges = false,
         createdAt = Instant.now().toEpochMilli(),
         updatedAt = Instant.now().toEpochMilli(),
@@ -563,7 +568,7 @@ internal class ApplyDefinitionsHelperTest {
     reImport: Boolean,
   ) {
     mockSeedInitialDefinitions()
-    every { actorDefinitionService.actorDefinitionIdsInUse } returns emptySet()
+    every { actorDefinitionService.getActorDefinitionIdsInUse() } returns emptySet()
 
     // New definitions come in
     every { definitionsProvider.getSourceDefinitions() } returns listOf(SOURCE_POSTGRES_2)
@@ -606,7 +611,7 @@ internal class ApplyDefinitionsHelperTest {
   @Test
   fun `reImport should refresh the existing definition`() {
     mockSeedInitialDefinitions()
-    every { actorDefinitionService.actorDefinitionIdsInUse } returns setOf(POSTGRES_ID, S3_ID)
+    every { actorDefinitionService.getActorDefinitionIdsInUse() } returns setOf(POSTGRES_ID, S3_ID)
 
     every { definitionsProvider.getSourceDefinitions() } returns listOf(SOURCE_POSTGRES_2)
     every { definitionsProvider.getDestinationDefinitions() } returns listOf(DESTINATION_S3_2)
@@ -638,7 +643,7 @@ internal class ApplyDefinitionsHelperTest {
     reImport: Boolean,
   ) {
     mockSeedInitialDefinitions()
-    every { actorDefinitionService.actorDefinitionIdsInUse } returns setOf(POSTGRES_ID, S3_ID)
+    every { actorDefinitionService.getActorDefinitionIdsInUse() } returns setOf(POSTGRES_ID, S3_ID)
 
     every { definitionsProvider.getSourceDefinitions() } returns listOf(SOURCE_POSTGRES_2)
     every { definitionsProvider.getDestinationDefinitions() } returns listOf(DESTINATION_S3_2)

@@ -3,6 +3,12 @@ import React, { useMemo } from "react";
 import { DefaultValues, useFormContext } from "react-hook-form";
 
 import { Builder } from "components/connectorBuilder/Builder/Builder";
+import {
+  RequestBodyGraphQL,
+  RequestOptionFieldPath,
+  RequestOptionFieldName,
+  RequestOptionInjectSelector,
+} from "components/connectorBuilder/Builder/overrides";
 import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "components/connectorBuilder/constants";
 import { MenuBar } from "components/connectorBuilder/MenuBar";
 import { StreamTestingPanel } from "components/connectorBuilder/StreamTestingPanel";
@@ -55,16 +61,17 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
 
   const hasDynamicStreams = Array.isArray(dynamicStreams) && dynamicStreams.length > 0;
   const hasStreams = Array.isArray(streams) && streams.length > 0;
-  const initialTestStreamId = hasStreams
-    ? { type: "stream" as const, index: 0 }
-    : areDynamicStreamsEnabled && hasDynamicStreams
-    ? { type: "dynamic_stream" as const, index: 0 }
-    : { type: "stream" as const, index: 0 };
+  const initialTestStreamId =
+    !hasStreams && areDynamicStreamsEnabled && hasDynamicStreams
+      ? { type: "dynamic_stream" as const, index: 0 }
+      : { type: "stream" as const, index: 0 };
 
   const initialView =
     initialTestStreamId.type === "dynamic_stream"
       ? { type: "dynamic_stream" as const, index: 0 }
-      : { type: "stream" as const, index: 0 };
+      : hasStreams
+      ? { type: "stream" as const, index: 0 }
+      : { type: "global" as const };
 
   const values: BuilderState = {
     mode: initialResolvedManifest !== null ? getStoredMode(projectId) : "yaml",
@@ -87,8 +94,19 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
       initialValues={values as unknown as DefaultValues<BuilderState>}
       formClassName={styles.form}
       refTargetPath="manifest.definitions.linked"
+      refBasePath="manifest"
       disableFormControlsUnderPath="generatedStreams"
       onlyShowErrorIfTouched
+      overrideByObjectField={{
+        RequestBodyGraphQL: {
+          value: (path) => <RequestBodyGraphQL path={path} />,
+        },
+        RequestOption: {
+          field_name: () => <RequestOptionFieldName />,
+          field_path: (path) => <RequestOptionFieldPath path={path} />,
+          inject_into: (path) => <RequestOptionInjectSelector path={path} />,
+        },
+      }}
     >
       <BaseForm />
     </SchemaForm>

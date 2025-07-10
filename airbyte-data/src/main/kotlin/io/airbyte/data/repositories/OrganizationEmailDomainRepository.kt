@@ -13,4 +13,8 @@ import java.util.UUID
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface OrganizationEmailDomainRepository : PageableRepository<OrganizationEmailDomain, UUID> {
   fun findByEmailDomain(emailDomain: String): List<OrganizationEmailDomain>
+
+  fun deleteByOrganizationId(organizationId: UUID)
+
+  fun findByOrganizationId(organizationId: UUID): List<OrganizationEmailDomain>
 }

@@ -13,6 +13,7 @@ import styles from "./ObjectControl.module.scss";
 import { SchemaFormControl } from "./SchemaFormControl";
 import { BaseControlComponentProps, BaseControlProps } from "./types";
 import { useToggleConfig } from "./useToggleConfig";
+import { useSchemaForm } from "../SchemaForm";
 import { useErrorAtPath } from "../useErrorAtPath";
 import { AirbyteJsonSchema, getDeclarativeSchemaTypeValue, displayName } from "../utils";
 
@@ -24,6 +25,7 @@ export const ObjectControl = ({
   hideBorder = false,
   nonAdvancedFields,
 }: BaseControlComponentProps) => {
+  const { overrideByObjectField } = useSchemaForm();
   const value = useWatch({ name: baseProps.name });
   const toggleConfig = useToggleConfig(baseProps.name, fieldSchema);
   const error = useErrorAtPath(baseProps.name);
@@ -56,6 +58,8 @@ export const ObjectControl = ({
   const advancedElements: JSX.Element[] = [];
   let hasAdvancedValue = false;
 
+  const declarativeSchemaType = getDeclarativeSchemaTypeValue("type", fieldSchema.properties.type);
+
   Object.entries(fieldSchema.properties)
     .filter(([propertyName]) => propertyName !== "$parameters")
     .forEach(([propertyName, property]) => {
@@ -78,7 +82,7 @@ export const ObjectControl = ({
         return;
       }
 
-      const element = (
+      const element = overrideByObjectField?.[declarativeSchemaType]?.[propertyName]?.(fullPath) ?? (
         <SchemaFormControl
           key={fullPath}
           path={fullPath}

@@ -71,7 +71,7 @@ const WorkspaceAccessManagementSection: React.FC = () => {
       </FlexContainer>
       <FlexContainer justifyContent="space-between" alignItems="center">
         <FlexItem className={styles.searchInputWrapper}>
-          <SearchInput value={userFilter} onChange={(e) => setUserFilter(e.target.value)} />
+          <SearchInput value={userFilter} onChange={setUserFilter} />
         </FlexItem>
         <Button onClick={onOpenInviteUsersModal} disabled={!canUpdateWorkspacePermissions} icon="plus">
           <FormattedMessage id="userInvitations.newMember" />

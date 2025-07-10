@@ -42,7 +42,7 @@ open class PartialUserConfigServiceDataImpl(
 
   override fun listPartialUserConfigs(workspaceId: UUID): List<PartialUserConfigWithActorDetails> {
     val partialUserConfigs = repository.findByWorkspaceIdAndTombstoneFalse(workspaceId).map { it.toConfigModel() }
-    val sourceDefinitions = partialUserConfigs.map { partialUserConfig -> sourceService.getSourceDefinitionFromSource(partialUserConfig.actorId) }
+    val sourceDefinitions = partialUserConfigs.map { partialUserConfig -> sourceService.getSourceDefinitionFromSource(partialUserConfig.actorId!!) }
 
     return partialUserConfigs.mapIndexed { index, partialUserConfig ->
       PartialUserConfigWithActorDetails(
@@ -56,7 +56,7 @@ open class PartialUserConfigServiceDataImpl(
 
   override fun createPartialUserConfig(partialUserConfigCreate: PartialUserConfig): PartialUserConfigWithActorDetails {
     val storedPartialUserConfig = repository.save(partialUserConfigCreate.toEntity()).toConfigModel()
-    val sourceDefinition = sourceService.getSourceDefinitionFromSource(storedPartialUserConfig.actorId)
+    val sourceDefinition = sourceService.getSourceDefinitionFromSource(storedPartialUserConfig.actorId!!)
     return PartialUserConfigWithActorDetails(
       partialUserConfig = storedPartialUserConfig,
       actorName = sourceDefinition.name,
@@ -74,7 +74,7 @@ open class PartialUserConfigServiceDataImpl(
       }
 
     val updatedPartialUserConfig = repository.update(partialUserConfig.toEntity()).toConfigModel()
-    val sourceDefinition = sourceService.getSourceDefinitionFromSource(updatedPartialUserConfig.actorId)
+    val sourceDefinition = sourceService.getSourceDefinitionFromSource(updatedPartialUserConfig.actorId!!)
 
     return PartialUserConfigWithActorDetails(
       partialUserConfig = updatedPartialUserConfig,

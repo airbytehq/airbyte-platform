@@ -4,24 +4,17 @@ import { FormattedMessage } from "react-intl";
 import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 import { Text } from "components/ui/Text";
 
+import { useGetConnectionStatusesCounts } from "core/api";
 import {
   ConnectionStatusRead,
   ConnectionSyncStatus,
   JobStatus,
   WebBackendConnectionListItem,
 } from "core/api/types/AirbyteClient";
-import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./ConnectionsSummary.module.scss";
 
-export type SummaryKey = "healthy" | "failed" | "paused" | "running";
-
-export const connectionStatColors: Record<SummaryKey, React.ComponentPropsWithoutRef<typeof Text>["color"]> = {
-  healthy: "green600",
-  failed: "red",
-  paused: "grey",
-  running: "blue",
-};
+export type SummaryKey = "healthy" | "failed" | "paused" | "running" | "notSynced";
 
 export const isConnectionEnabled = (
   connection: WebBackendConnectionListItem
@@ -66,99 +59,67 @@ export const isStatusFailed = (
   connectionStatus?.connectionSyncStatus === ConnectionSyncStatus.failed ||
   connectionStatus?.connectionSyncStatus === ConnectionSyncStatus.incomplete;
 
-const getSummaryFromStatuses = (statuses: ConnectionStatusRead[]) =>
-  statuses.reduce<Record<SummaryKey, number>>(
-    (acc, status) => {
-      let statusSummary: SummaryKey;
+export const ConnectionsSummary: React.FC = () => {
+  const { isLoading, data: statuses } = useGetConnectionStatusesCounts();
 
-      if (isStatusPaused(status)) {
-        statusSummary = "paused";
-      } else if (isStatusRunning(status)) {
-        statusSummary = "running";
-      } else if (isStatusFailed(status)) {
-        statusSummary = "failed";
-      } else {
-        statusSummary = "healthy";
-      }
-
-      acc[statusSummary] += 1;
-      return acc;
-    },
-    {
-      // order here governs render order
-      running: 0,
-      healthy: 0,
-      failed: 0,
-      paused: 0,
-    }
-  );
-
-const getSummaryFromConnections = (connections: WebBackendConnectionListItem[]) =>
-  connections.reduce<Record<SummaryKey, number>>(
-    (acc, connection) => {
-      let statusSummary: SummaryKey;
-
-      if (isConnectionPaused(connection)) {
-        statusSummary = "paused";
-      } else if (isConnectionRunning(connection)) {
-        statusSummary = "running";
-      } else if (isConnectionFailed(connection)) {
-        statusSummary = "failed";
-      } else {
-        statusSummary = "healthy";
-      }
-
-      acc[statusSummary] += 1;
-      return acc;
-    },
-    {
-      // order here governs render order
-      running: 0,
-      healthy: 0,
-      failed: 0,
-      paused: 0,
-    }
-  );
-
-export const ConnectionsSummary: React.FC<{
-  connections: WebBackendConnectionListItem[];
-  statuses?: ConnectionStatusRead[];
-}> = ({ connections, statuses = [] }) => {
-  const isAllConnectionsStatusEnabled = useExperiment("connections.connectionsStatusesEnabled");
-
-  const connectionsSummary = isAllConnectionsStatusEnabled
-    ? getSummaryFromStatuses(statuses)
-    : getSummaryFromConnections(connections);
-
-  const areStatusesLoading =
-    connections.length > 0 && // are there connections
-    Object.values(connectionsSummary).reduce((count, acc) => acc + count, 0) === 0; // but no summary counts;
-
-  if (areStatusesLoading) {
+  if (isLoading || !statuses) {
     return <LoadingSkeleton className={styles.fixedHeight} />;
   }
 
-  const keys = Object.keys(connectionsSummary) as SummaryKey[];
-  const parts: React.ReactNode[] = [];
-  const connectionsCount = keys.reduce((total, value) => total + connectionsSummary[value], 0);
-  let consumedConnections = 0;
+  const statusItems: Array<{
+    key: SummaryKey;
+    count: number;
+    color: React.ComponentProps<typeof Text>["color"];
+    labelId: string;
+  }> = [
+    {
+      key: "running",
+      count: statuses.running,
+      color: "blue",
+      labelId: "tables.connections.filters.status.running",
+    } as const,
+    {
+      key: "healthy",
+      count: statuses.healthy,
+      color: "green600",
+      labelId: "tables.connections.filters.status.healthy",
+    } as const,
+    {
+      key: "failed",
+      count: statuses.failed,
+      color: "red",
+      labelId: "tables.connections.filters.status.failed",
+    } as const,
+    {
+      key: "paused",
+      count: statuses.paused,
+      color: "grey",
+      labelId: "tables.connections.filters.status.paused",
+    } as const,
+    {
+      key: "notSynced",
+      count: statuses.notSynced,
+      color: "grey300",
+      labelId: "tables.connections.filters.status.notSynced",
+    } as const,
+  ].filter((item) => item.count > 0);
 
-  for (const key of keys) {
-    const value = connectionsSummary[key];
-    if (value) {
-      consumedConnections += value;
-      parts.push(
-        <Text key={key} as="span" size="lg" color={connectionStatColors[key]} className={styles.lowercase}>
-          {value} <FormattedMessage id={`tables.connections.filters.status.${key}`} />
-        </Text>,
-        consumedConnections < connectionsCount && (
-          <Text key={`${key}-middot`} as="span" size="lg" bold color="grey">
-            &nbsp;&middot;&nbsp;
+  return (
+    <div className={styles.fixedHeight}>
+      {statusItems.map((item, index) => (
+        <React.Fragment key={item.key}>
+          <Text as="span" size="lg" color={item.color} className={styles.lowercase}>
+            {item.count} <FormattedMessage id={item.labelId} />
           </Text>
-        )
-      );
-    }
-  }
-
-  return <div className={styles.fixedHeight}>{parts}</div>;
+          {index < statusItems.length - 1 && <SeparatorDot />}
+        </React.Fragment>
+      ))}
+    </div>
+  );
 };
+
+const SeparatorDot = () => (
+  <Text as="span" size="lg" bold color="grey">
+    &nbsp;&middot;&nbsp;
+  </Text>
+);

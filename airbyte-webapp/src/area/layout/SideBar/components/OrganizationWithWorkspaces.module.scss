@@ -1,12 +1,16 @@
 @use "scss/colors";
 @use "scss/variables";
 
+.container {
+  border-bottom: 1px solid colors.$grey-200;
+}
+
 .organizationName {
   display: flex;
   align-items: center;
   text-decoration: none;
   color: colors.$dark-blue;
-  padding: variables.$spacing-sm variables.$spacing-md;
+  padding: variables.$spacing-sm variables.$spacing-sm variables.$spacing-sm variables.$spacing-md;
   min-height: 32px;
   white-space: nowrap;
   overflow: hidden;
@@ -43,6 +47,23 @@
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: variables.$spacing-xl;
+  max-width: calc(variables.$width-org-picker-popover - variables.$spacing-2xl);
+}
+
+.gearIconLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 50px;
+
+  &:hover {
+    background-color: colors.$blue-40;
+  }
+
+  &:focus-visible {
+    outline-offset: -1px;
+  }
 }
 
 .gearIcon {

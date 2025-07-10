@@ -3399,6 +3399,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/web_backend/connections/status_counts:
+    post:
+      tags:
+        - web_backend
+      summary: Returns aggregated connection status counts for a workspace.
+      operationId: webBackendGetConnectionStatusCounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebBackendConnectionStatusCounts"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/web_backend/connections/get:
     post:
       tags:
@@ -6928,6 +6951,78 @@ paths:
       responses:
         "204":
           description: The resource was deleted successfully.
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sso_config/get:
+    post:
+      summary: Retrieve the sso config for an organization
+      tags:
+        - sso_config
+      operationId: getSsoConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetSSOConfigRequestBody"
+        required: true
+      responses:
+        "200":
+          description: SSO config retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SSOConfigRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sso_config/create:
+    post:
+      summary: Onboard a cloud customer to SSO
+      tags:
+        - sso_config
+      operationId: createSsoConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSSOConfigRequestBody"
+        required: true
+      responses:
+        "204":
+          description: "Org successfully onboarded to sso"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sso_config/delete:
+    post:
+      summary: Remove an SSO config
+      tags:
+        - sso_config
+      operationId: deleteSsoConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteSSOConfigRequestBody"
+        required: true
+      responses:
+        "204":
+          description: "SSO config successfully deleted"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sso_config/update_credentials:
+    post:
+      summary: Update a client id and client secret for an SSO IDP
+      tags:
+        - sso_config
+      operationId: updateSsoCredentials
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSSOCredentialsRequestBody"
+        required: true
+      responses:
+        "204":
+          description: "SSO credentials successfully updates"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
@@ -11005,6 +11100,30 @@ components:
           type: boolean
         hasDestinations:
           type: boolean
+    WebBackendConnectionStatusCounts:
+      type: object
+      required:
+        - running
+        - healthy
+        - failed
+        - paused
+        - notSynced
+      properties:
+        running:
+          type: integer
+          description: Number of connections currently running/syncing
+        healthy:
+          type: integer
+          description: Number of connections with last sync succeeded
+        failed:
+          type: integer
+          description: Number of connections with last sync failed/cancelled/incomplete
+        paused:
+          type: integer
+          description: Number of connections that are inactive
+        notSynced:
+          type: integer
+          description: Number of connections that have not yet synced
     # SLUG
     SlugRequestBody:
       type: object
@@ -11192,6 +11311,10 @@ components:
         - builderProjectId
       properties:
         builderProjectId:
+          type: string
+          format: uuid
+          nullable: true
+        workspaceId:
           type: string
           format: uuid
           nullable: true
@@ -12041,6 +12164,16 @@ components:
           format: int64
         resourceAllocation:
           $ref: "#/components/schemas/ScopedResourceRequirements"
+        numConnections:
+          type: integer
+        lastSync:
+          type: integer
+          format: int64
+        connectionJobStatuses:
+          type: object
+          additionalProperties:
+            type: integer
+          description: "Map of job status to count of connections whose latest job has that status"
     ActorStatus:
       description: An actor(source/destination) is active if it has at least one active or manual connection.
       type: string
@@ -12512,6 +12645,16 @@ components:
           format: int64
         resourceAllocation:
           $ref: "#/components/schemas/ScopedResourceRequirements"
+        numConnections:
+          type: integer
+        lastSync:
+          type: integer
+          format: int64
+        connectionJobStatuses:
+          type: object
+          additionalProperties:
+            type: integer
+          description: "Map of job status to count of connections whose latest job has that status"
     DestinationSnippetRead:
       type: object
       required:
@@ -13456,12 +13599,15 @@ components:
       type: object
       required:
         - eventId
+        - connectionName
         - connectionId
         - createdAt
         - eventType
       properties:
         eventId:
           $ref: "#/components/schemas/ConnectionEventId"
+        connectionName:
+          type: string
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
         createdAt:
@@ -13538,15 +13684,13 @@ components:
     ConnectionEventsListMinimalRequestBody:
       type: object
       required:
-        - connectionIds
+        - workspaceId
         - eventTypes
         - createdAtStart
         - createdAtEnd
       properties:
-        connectionIds:
-          type: array
-          items:
-            $ref: "#/components/schemas/ConnectionId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
         eventTypes:
           description: filter events by event types
           type: array
@@ -15300,6 +15444,7 @@ components:
         - bytesEmitted
         - recordsCommitted
         - bytesCommitted
+        - recordsRejected
       properties:
         recordsEmitted:
           type: integer
@@ -15311,6 +15456,9 @@ components:
           type: integer
           format: int64
         bytesCommitted:
+          type: integer
+          format: int64
+        recordsRejected:
           type: integer
           format: int64
     StreamAggregatedStats:
@@ -15325,6 +15473,7 @@ components:
         - bytesEmitted
         - recordsCommitted
         - bytesCommitted
+        - recordsRejected
       properties:
         streamName:
           type: string
@@ -15340,6 +15489,9 @@ components:
           type: integer
           format: int64
         bytesCommitted:
+          type: integer
+          format: int64
+        recordsRejected:
           type: integer
           format: int64
         wasBackfilled:
@@ -15499,6 +15651,9 @@ components:
           type: integer
           format: int64
         recordsCommitted:
+          type: integer
+          format: int64
+        recordsRejected:
           type: integer
           format: int64
         estimatedRecords:
@@ -16670,6 +16825,65 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DestinationId"
+        cursor:
+          $ref: "#/components/schemas/ConnectionId"
+        sortKey:
+          $ref: "#/components/schemas/WebBackendConnectionListSortKey"
+          description: Sort key that determines the order of results
+        filters:
+          $ref: "#/components/schemas/WebBackendConnectionListFilters"
+          description: Filters for list of of results
+        pageSize:
+          type: integer
+          description: Number of connections to return in the list
+    WebBackendConnectionListSortKey:
+      type: string
+      enum:
+        - connectionName_asc
+        - connectionName_desc
+        - sourceName_asc
+        - sourceName_desc
+        - destinationName_asc
+        - destinationName_desc
+        - lastSync_asc
+        - lastSync_desc
+      description: Available sort keys for connection list pagination
+    WebBackendConnectionListFilters:
+      type: object
+      properties:
+        sourceDefinitionIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/SourceDefinitionId"
+          description: Filter connections by source connector definition types
+        destinationDefinitionIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/DestinationDefinitionId"
+          description: Filter connections by destination connector definition types
+        statuses:
+          type: array
+          items:
+            type: string
+            enum:
+              - healthy
+              - failed
+              - running
+              - paused
+          description: Filter connections by their current sync status
+        states:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActorStatus"
+          description: Filter connections by their active/inactive state
+        tagIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/TagId"
+          description: Filter connections by tags
+        searchTerm:
+          type: string
+          description: Search term to filter connections by name, source name, destination name, etc.
     WebBackendConnectionListItem:
       type: object
       description: Information about a connection that shows up in the connection list view.
@@ -16862,6 +17076,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebBackendConnectionListItem"
+        page_size:
+          type: integer
+        num_connections:
+          type: integer
     SyncMode:
       type: string
       enum:
@@ -20136,6 +20354,86 @@ components:
         permission:
           $ref: "#/components/schemas/PermissionType"
       x-sdk-component: true
+
+    GetSSOConfigRequestBody:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+
+    SSOConfigRead:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        companyIdentifier:
+          type: string
+        clientId:
+          type: string
+        clientSecret:
+          type: string
+        emailDomains:
+          type: array
+          items:
+            type: string
+
+    CreateSSOConfigRequestBody:
+      type: object
+      required:
+        - organizationId
+        - companyIdentifier
+        - clientId
+        - clientSecret
+        - discoveryUrl
+        - emailDomain
+      properties:
+        organizationId:
+          type: string
+          format: UUID
+        companyIdentifier:
+          type: string
+          description: Used to name the keycloak realm
+        clientId:
+          type: string
+        clientSecret:
+          type: string
+        discoveryUrl:
+          type: string
+          format: url
+        emailDomain:
+          type: string
+
+    DeleteSSOConfigRequestBody:
+      type: object
+      required:
+        - organizationId
+        - companyIdentifier
+      properties:
+        organizationId:
+          type: string
+          format: UUID
+        companyIdentifier:
+          type: string
+          description: Matches the keycloak realm to be removed
+
+    UpdateSSOCredentialsRequestBody:
+      type: object
+      required:
+        - organizationId
+        - clientId
+        - clientSecret
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+        clientSecret:
+          type: string
 
   responses:
     NotFoundResponse:

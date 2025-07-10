@@ -459,7 +459,11 @@ public class ConnectorBuilderProjectsHandler {
         .withInternalSupportLevel(100L)
         .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
 
-    sourceService.writeCustomConnectorMetadata(source, defaultVersion, workspaceId, ScopeType.WORKSPACE);
+    // Scope connector to the organization if present, otherwise scope to the workspace.
+    final Optional<UUID> organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId);
+    final UUID scopeId = organizationId.orElse(workspaceId);
+    final ScopeType scopeType = organizationId.isPresent() ? ScopeType.ORGANIZATION : ScopeType.WORKSPACE;
+    sourceService.writeCustomConnectorMetadata(source, defaultVersion, scopeId, scopeType);
 
     final List<ActorDefinitionConfigInjection> configInjectionsToCreate =
         manifestInjector.getManifestConnectorInjections(source.getSourceDefinitionId(), manifest, componentFileContent);
@@ -553,10 +557,20 @@ public class ConnectorBuilderProjectsHandler {
   }
 
   public BuilderProjectForDefinitionResponse getConnectorBuilderProjectForDefinitionId(final BuilderProjectForDefinitionRequestBody requestBody)
-      throws IOException {
+      throws IOException, ConfigNotFoundException {
     final Optional<UUID> builderProjectId =
         connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(requestBody.getActorDefinitionId());
-    return new BuilderProjectForDefinitionResponse().builderProjectId(builderProjectId.orElse(null));
+
+    Optional<UUID> workspaceId = Optional.empty();
+    if (builderProjectId.isPresent()) {
+      workspaceId = Optional.ofNullable(connectorBuilderService
+          .getConnectorBuilderProject(builderProjectId.get(), false))
+          .map(ConnectorBuilderProject::getWorkspaceId);
+    }
+
+    return new BuilderProjectForDefinitionResponse()
+        .builderProjectId(builderProjectId.orElse(null))
+        .workspaceId(workspaceId.orElse(null));
   }
 
   /**

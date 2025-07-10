@@ -41,6 +41,7 @@ import io.airbyte.featureflag.LogStateMsgs
 import io.airbyte.featureflag.PrintLongRecordPks
 import io.airbyte.featureflag.RemoveValidationLimit
 import io.airbyte.featureflag.ReplicationBufferOverride
+import io.airbyte.featureflag.ShouldFailSyncIfHeartbeatFailure
 import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout
 import io.airbyte.featureflag.WorkloadHeartbeatRate
 import io.airbyte.featureflag.WorkloadHeartbeatTimeout
@@ -258,6 +259,7 @@ class ApplicationBeanFactory {
         PrintLongRecordPks,
         RemoveValidationLimit,
         ReplicationBufferOverride,
+        ShouldFailSyncIfHeartbeatFailure,
         ShouldFailSyncOnDestinationTimeout,
         WorkloadHeartbeatRate,
         WorkloadHeartbeatTimeout,

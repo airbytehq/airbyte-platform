@@ -129,7 +129,7 @@ class ProtocolVersionChecker(
     get() = jobPersistence.version.map { version: String? -> AirbyteVersion(version) }
 
   fun getConflictingActorDefinitions(targetRange: AirbyteProtocolVersionRange): Map<ActorType, MutableSet<UUID>> {
-    val actorDefIdToProtocolVersion = actorDefinitionService.actorDefinitionToProtocolVersionMap
+    val actorDefIdToProtocolVersion = actorDefinitionService.getActorDefinitionToProtocolVersionMap()
     val conflicts: Map<ActorType, MutableSet<UUID>> =
       actorDefIdToProtocolVersion
         .filter { !targetRange.isSupported(it.value.value) } // Keep unsupported protocol versions

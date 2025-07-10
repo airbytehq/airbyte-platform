@@ -80,4 +80,31 @@ internal class OrganizationEmailDomainRepositoryTest : AbstractConfigRepositoryT
     assert(orgEmailDomains[0].organizationId == organizationId)
     assert(orgEmailDomains[0].emailDomain == "airbyte.io")
   }
+
+  @Test
+  fun `delete by organization id removes all related rows`() {
+    val organizationId = UUID.randomUUID()
+    val orgEmailDomain1 =
+      OrganizationEmailDomain(
+        organizationId = organizationId,
+        emailDomain = "airbyte.io",
+      )
+    organizationEmailDomainRepository.save(orgEmailDomain1)
+
+    val orgEmailDomain2 =
+      OrganizationEmailDomain(
+        organizationId = organizationId,
+        emailDomain = "airbyte.com",
+      )
+    organizationEmailDomainRepository.save(orgEmailDomain2)
+
+    organizationEmailDomainRepository.deleteByOrganizationId(organizationId)
+
+    // both of the inserted domains should be deleted
+    val emailDomains = organizationEmailDomainRepository.findByEmailDomain("airbyte.io")
+    assert(emailDomains.isEmpty())
+
+    val otherEmailDomains = organizationEmailDomainRepository.findByEmailDomain("airbyte.com")
+    assert(otherEmailDomains.isEmpty())
+  }
 }

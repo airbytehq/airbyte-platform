@@ -5,12 +5,15 @@
   width: fit-content;
   font-size: variables.$font-size-xs;
   border-radius: variables.$border-radius-pill;
-  text-transform: uppercase;
   padding: variables.$spacing-xs variables.$spacing-sm;
   display: inline-block;
   line-height: 1;
   white-space: nowrap;
   font-weight: 500;
+
+  &--uppercase {
+    text-transform: uppercase;
+  }
 
   &--blue {
     color: colors.$blue-600;

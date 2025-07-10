@@ -14,6 +14,7 @@ import io.airbyte.config.JobConfig
 import io.airbyte.config.JobStatus
 import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.StandardSync
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
@@ -128,7 +129,7 @@ class ConnectorObjectStorageServiceTest {
 
     @Test
     fun `returns null when destination version is not found`() {
-      every { actorDefinitionService.getActorDefinitionVersion(destinationVersionId) } returns null
+      every { actorDefinitionService.getActorDefinitionVersion(destinationVersionId) } throws ConfigNotFoundException("", "")
       val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job)
       assertNull(result)
     }

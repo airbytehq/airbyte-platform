@@ -58,10 +58,10 @@ public class SynchronousResponse<T> {
     final Optional<ConnectorJobOutput> jobOutput = temporalResponse.getOutput();
     final T responseOutput = jobOutput.map(outputMapper).orElse(null);
 
-    final Path logPath = temporalResponse.getMetadata() == null ? null : temporalResponse.getMetadata().getLogPath();
+    final Path logPath = temporalResponse.metadata() == null ? null : temporalResponse.metadata().logPath();
     final JobMetadata metadataResponse = responseOutput == null
         ? new JobMetadata(false, logPath)
-        : temporalResponse.getMetadata();
+        : temporalResponse.metadata();
 
     final SynchronousJobMetadata metadata = SynchronousJobMetadata.fromJobMetadata(
         metadataResponse,

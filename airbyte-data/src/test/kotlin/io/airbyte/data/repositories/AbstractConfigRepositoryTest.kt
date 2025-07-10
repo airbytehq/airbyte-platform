@@ -106,4 +106,5 @@ abstract class AbstractConfigRepositoryTest {
   val secretReferenceWithConfigRepository = context.getBean(SecretReferenceWithConfigRepository::class.java)!!
   val actorRepository = context.getBean(ActorRepository::class.java)!!
   val actorDefinitionRepository = context.getBean(ActorDefinitionRepository::class.java)!!
+  val ssoConfigRepository = context.getBean(SsoConfigRepository::class.java)!!
 }

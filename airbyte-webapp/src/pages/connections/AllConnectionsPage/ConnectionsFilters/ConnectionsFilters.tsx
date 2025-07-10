@@ -17,28 +17,27 @@ import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useTagsList } from "core/api";
-import { Tag, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
+import { Tag, WebBackendConnectionListFiltersStatusesItem } from "core/api/types/AirbyteClient";
 import { naturalComparatorBy } from "core/utils/objects";
 import { useHeadlessUiOnClose } from "core/utils/useHeadlessUiOnClose";
 
 import styles from "./ConnectionsFilters.module.scss";
 import {
-  getAvailableDestinationOptions,
-  getAvailableSourceOptions,
+  useAvailableSourceOptions,
   stateFilterOptions,
   statusFilterOptions,
+  useAvailableDestinationOptions,
 } from "./filterOptions";
 
 export interface FilterValues {
   search: string;
-  status: string | null;
-  state: string | null;
+  status: WebBackendConnectionListFiltersStatusesItem | null;
+  state: "active" | "inactive" | null;
   source: string | null;
   destination: string | null;
 }
 
 interface ConnectionsTableFiltersProps {
-  connections: WebBackendConnectionListItem[];
   searchFilter: string;
   setSearchFilter: (value: string) => void;
   filterValues: FilterValues;
@@ -49,7 +48,6 @@ interface ConnectionsTableFiltersProps {
 }
 
 export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
-  connections,
   searchFilter,
   setSearchFilter,
   filterValues,
@@ -58,14 +56,8 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
   tagFilters,
   setTagFilters,
 }) => {
-  const availableSourceOptions = useMemo(
-    () => getAvailableSourceOptions(connections, filterValues.destination),
-    [connections, filterValues.destination]
-  );
-  const availableDestinationOptions = useMemo(
-    () => getAvailableDestinationOptions(connections, filterValues.source),
-    [connections, filterValues.source]
-  );
+  const availableSourceOptions = useAvailableSourceOptions();
+  const availableDestinationOptions = useAvailableDestinationOptions();
 
   const hasAnyFilterSelected =
     !!filterValues.status ||
@@ -79,7 +71,7 @@ export const ConnectionsFilters: React.FC<ConnectionsTableFiltersProps> = ({
     <Box px="lg" pt="lg">
       <FlexContainer justifyContent="flex-start" direction="column">
         <FlexItem grow>
-          <SearchInput value={searchFilter} onChange={({ target: { value } }) => setSearchFilter(value)} />
+          <SearchInput value={searchFilter} onChange={setSearchFilter} debounceTimeout={300} />
         </FlexItem>
         <FlexContainer gap="sm" alignItems="center">
           <FlexItem>

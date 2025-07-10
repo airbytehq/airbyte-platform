@@ -57,6 +57,7 @@ data class StreamStatsCounters(
   val maxSecondsBetweenStateEmittedAndCommitted: LongAccumulator = LongAccumulator(Math::max, 0),
   val meanSecondsBetweenStateEmittedAndCommitted: AtomicDouble = AtomicDouble(),
   val unreliableStateOperations: AtomicBoolean = AtomicBoolean(false),
+  val rejectedRecordsCount: AtomicLong = AtomicLong(),
 )
 
 /**
@@ -96,6 +97,8 @@ private const val DEST_COMMITTED_RECORDS_COUNT = "committedRecordsCount"
 private const val DEST_EMITTED_RECORDS_COUNT = "emittedRecordsCount"
 
 private const val DEST_COMMITTED_BYTES_COUNT = "committedBytesCount"
+
+private const val DEST_REJECTED_RECORDS_COUNT = "rejectedRecordsCount"
 
 /**
  * Track Stats for a specific stream.
@@ -326,6 +329,7 @@ class StreamStatsTracker(
       if (isBookkeeperMode) {
         val totalCommittedRecords = (stateMessage.additionalProperties[DEST_COMMITTED_RECORDS_COUNT] as? Number)?.toLong() ?: 0
         val totalCommittedBytes = (stateMessage.additionalProperties[DEST_COMMITTED_BYTES_COUNT] as? Number)?.toLong() ?: 0
+        val totalRejectedRecords = (stateMessage.additionalProperties[DEST_REJECTED_RECORDS_COUNT] as? Number)?.toLong() ?: 0
         // TODO(Subodh): Remove these logs once testing is complete for Bookkeeper mode
         logger.info { "TOTAL_COMMITTED_RECORDS $totalCommittedRecords" }
         logger.info { "TOTAL_COMMITTED_BYTES $totalCommittedBytes" }
@@ -338,6 +342,7 @@ class StreamStatsTracker(
           }
           committedRecordsCount.set(totalCommittedRecords)
           committedBytesCount.set(totalCommittedBytes)
+          rejectedRecordsCount.set(totalRejectedRecords)
           // TODO(Subodh): Once destination starts applying mappers, channel the filtered records count` as well
           filteredOutRecords.set(0)
           filteredOutBytesCount.set(0)
@@ -354,6 +359,20 @@ class StreamStatsTracker(
             .get()
             .minus(stagedStats.emittedStatsCounters.filteredOutRecords.get()),
         )
+
+        // If rejected records, we should decrement the record count and increment rejected
+        // The destinationStats contains the recordCount however we're continuing to the "record" count from the platform for
+        // checksum purpose. Otherwise, it would be the same as just trusting counts from the destination.
+        // RejectedRecords is an edge case because the counter is the only way for the platform to be aware of record rejection.
+        if (stagedStats.stateId == stateId) {
+          stateMessage.destinationStats?.rejectedRecordCount?.let { rejectedCount ->
+            if (rejectedCount > 0) {
+              val rejectedCountLong = rejectedCount.toLong()
+              streamStats.rejectedRecordsCount.addAndGet(rejectedCountLong)
+              streamStats.committedRecordsCount.addAndGet(0 - rejectedCountLong)
+            }
+          }
+        }
       }
 
       if (stagedStats.stateId == stateId) {

@@ -11,6 +11,7 @@ import io.airbyte.api.model.generated.ConfigTemplateListItem
 import io.airbyte.api.model.generated.ConfigTemplateRead
 import io.airbyte.api.model.generated.ConfigTemplateRequestBody
 import io.airbyte.api.model.generated.ListConfigTemplatesRequestBody
+import io.airbyte.api.problems.throwable.generated.EmbeddedEndpointMovedProblem
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.entitlements.Entitlement
@@ -19,19 +20,26 @@ import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Organization
+import io.airbyte.featureflag.UseSonarServer
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.server.helpers.ConfigTemplateAdvancedAuthHelper
 import io.micronaut.http.annotation.Controller
+import java.util.UUID
 
 @Controller
 open class ConfigTemplateController(
   private val configTemplateService: ConfigTemplateService,
   val workspaceHelper: WorkspaceHelper,
   private val licenseEntitlementChecker: LicenseEntitlementChecker,
+  private val featureFlagClient: FeatureFlagClient,
 ) : ConfigTemplateApi {
   @RequiresIntent(Intent.ViewConfigTemplates)
   override fun getConfigTemplate(req: ConfigTemplateRequestBody): ConfigTemplateRead {
     val organizationId = workspaceHelper.getOrganizationForWorkspace(req.workspaceId)
+
+    throwIfSonarServerEnabled(organizationId)
 
     licenseEntitlementChecker.ensureEntitled(
       organizationId,
@@ -47,6 +55,8 @@ open class ConfigTemplateController(
   override fun listConfigTemplates(req: ListConfigTemplatesRequestBody): ConfigTemplateList {
     val organizationId = workspaceHelper.getOrganizationForWorkspace(req.workspaceId)
 
+    throwIfSonarServerEnabled(organizationId)
+
     licenseEntitlementChecker.ensureEntitled(
       organizationId,
       Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
@@ -61,6 +71,12 @@ open class ConfigTemplateController(
             ),
           ).map { it.toListItem() },
       )
+  }
+
+  private fun throwIfSonarServerEnabled(organizationId: UUID) {
+    if (featureFlagClient.boolVariation(UseSonarServer, Organization(organizationId))) {
+      throw EmbeddedEndpointMovedProblem()
+    }
   }
 }
 

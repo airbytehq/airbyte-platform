@@ -19,6 +19,7 @@ import {
   listOrganizationSummaries,
 } from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
+import { embeddedGetCurrentScopedOrganization } from "../generated/SonarClient";
 import { SCOPE_ORGANIZATION, SCOPE_USER } from "../scopes";
 import {
   ConsumptionTimeWindow,
@@ -50,6 +51,7 @@ export const organizationKeys = {
     [...organizationKeys.all, "byUser", requestBody] as const,
   summaries: (requestBody: ListOrganizationSummariesRequestBody) =>
     [...organizationKeys.all, "summaries", requestBody] as const,
+  scopedTokenOrganization: () => [...organizationKeys.all, "scopedTokenOrganization"] as const,
 };
 
 /**
@@ -239,5 +241,17 @@ export const useOrganizationUserCount = (organizationId: string): number | null 
         select: (data) => data.users.length,
       }
     ).data ?? null
+  );
+};
+
+export const useGetScopedOrganization = () => {
+  const requestOptions = useRequestOptions();
+
+  return useSuspenseQuery(
+    organizationKeys.scopedTokenOrganization(),
+    () => embeddedGetCurrentScopedOrganization(requestOptions),
+    {
+      staleTime: Infinity,
+    }
   );
 };

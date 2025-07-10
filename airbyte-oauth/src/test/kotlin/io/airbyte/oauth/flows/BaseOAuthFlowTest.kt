@@ -52,7 +52,7 @@ abstract class BaseOAuthFlowTest {
         .withSourceDefinitionId(definitionId)
         .withConfiguration(oAuthParamConfig)
     Mockito
-      .`when`(oAuthService.getSourceOAuthParameterOptional(ArgumentMatchers.any(), ArgumentMatchers.any()))
+      .`when`(oAuthService.getSourceOAuthParameterOptional(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull()))
       .thenReturn(Optional.of(sourceOAuthParameter))
     destinationOAuthParameter =
       DestinationOAuthParameter()
@@ -60,7 +60,7 @@ abstract class BaseOAuthFlowTest {
         .withDestinationDefinitionId(definitionId)
         .withConfiguration(oAuthParamConfig)
     Mockito
-      .`when`(oAuthService.getDestinationOAuthParameterOptional(ArgumentMatchers.any(), ArgumentMatchers.any()))
+      .`when`(oAuthService.getDestinationOAuthParameterOptional(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull()))
       .thenReturn(Optional.of(destinationOAuthParameter))
   }
 
@@ -294,9 +294,12 @@ abstract class BaseOAuthFlowTest {
   @Test
   @Throws(JsonValidationException::class, IOException::class)
   fun testGetConsentUrlEmptyOAuthParameters() {
-    Mockito.`when`(oAuthService.getSourceOAuthParameterOptional(ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(Optional.empty())
     Mockito
-      .`when`(oAuthService.getDestinationOAuthParameterOptional(ArgumentMatchers.any(), ArgumentMatchers.any()))
+      .`when`(
+        oAuthService.getSourceOAuthParameterOptional(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull()),
+      ).thenReturn(Optional.empty())
+    Mockito
+      .`when`(oAuthService.getDestinationOAuthParameterOptional(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull()))
       .thenReturn(Optional.empty())
     Assertions.assertThrows(
       ResourceNotFoundProblem::class.java,
@@ -333,7 +336,7 @@ abstract class BaseOAuthFlowTest {
         .withSourceDefinitionId(definitionId)
         .withConfiguration(Jsons.emptyObject())
     Mockito
-      .`when`(oAuthService.getSourceOAuthParameterOptional(ArgumentMatchers.any(), ArgumentMatchers.any()))
+      .`when`(oAuthService.getSourceOAuthParameterOptional(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull()))
       .thenReturn(Optional.of(sourceOAuthParameter))
     val destinationOAuthParameter =
       DestinationOAuthParameter()
@@ -341,7 +344,7 @@ abstract class BaseOAuthFlowTest {
         .withDestinationDefinitionId(definitionId)
         .withConfiguration(Jsons.emptyObject())
     Mockito
-      .`when`(oAuthService.getDestinationOAuthParameterOptional(ArgumentMatchers.any(), ArgumentMatchers.any()))
+      .`when`(oAuthService.getDestinationOAuthParameterOptional(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull()))
       .thenReturn(Optional.of(destinationOAuthParameter))
     Assertions.assertThrows(
       IllegalArgumentException::class.java,

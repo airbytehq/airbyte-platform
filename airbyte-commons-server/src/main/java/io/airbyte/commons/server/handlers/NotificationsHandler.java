@@ -118,7 +118,7 @@ public class NotificationsHandler {
     try {
       switch (notificationTrigger) {
         case SYNC_SUCCESS -> {
-          isNotificationSent = notificationClient.notifyJobSuccess(TEST_SUCCESS_SUMMARY, null);
+          isNotificationSent = notificationClient.notifyJobSuccess(TEST_SUCCESS_SUMMARY, "");
         }
         case SYNC_FAILURE -> {
           isNotificationSent = notificationClient.notifyJobFailure(TEST_FAILURE_SUMMARY, "");

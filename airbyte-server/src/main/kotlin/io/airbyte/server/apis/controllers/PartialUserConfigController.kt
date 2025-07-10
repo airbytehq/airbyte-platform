@@ -13,14 +13,21 @@ import io.airbyte.api.model.generated.PartialUserConfigReadList
 import io.airbyte.api.model.generated.PartialUserConfigRequestBody
 import io.airbyte.api.model.generated.PartialUserConfigUpdate
 import io.airbyte.api.model.generated.SourceRead
+import io.airbyte.api.problems.throwable.generated.EmbeddedEndpointMovedProblem
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
+import io.airbyte.commons.entitlements.Entitlement
+import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithActorDetails
 import io.airbyte.config.PartialUserConfigWithFullDetails
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Organization
+import io.airbyte.featureflag.UseSonarServer
+import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.server.handlers.PartialUserConfigHandler
 import io.airbyte.server.helpers.ConfigTemplateAdvancedAuthHelper
 import io.micronaut.http.annotation.Body
@@ -34,38 +41,84 @@ import java.util.UUID
 class PartialUserConfigController(
   private val partialUserConfigHandler: PartialUserConfigHandler,
   private val partialUserConfigService: PartialUserConfigService,
+  private val featureFlagClient: FeatureFlagClient,
+  private val licenseEntitlementChecker: LicenseEntitlementChecker,
+  private val workspaceHelper: WorkspaceHelper,
 ) : PartialUserConfigsApi {
   @Post("/list")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listPartialUserConfigs(
     @Body listPartialUserConfigRequestBody: ListPartialUserConfigsRequest,
-  ): PartialUserConfigReadList = partialUserConfigService.listPartialUserConfigs(listPartialUserConfigRequestBody.workspaceId).toApiModel()
+  ): PartialUserConfigReadList {
+    val organizationId = workspaceHelper.getOrganizationForWorkspace(listPartialUserConfigRequestBody.workspaceId)
+
+    licenseEntitlementChecker.ensureEntitled(
+      organizationId,
+      Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
+    )
+    return partialUserConfigService.listPartialUserConfigs(listPartialUserConfigRequestBody.workspaceId).toApiModel()
+  }
 
   @Post("/create")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun createPartialUserConfig(
     @Body partialUserConfigCreate: PartialUserConfigCreate,
-  ): SourceRead =
-    partialUserConfigHandler.createSourceFromPartialConfig(partialUserConfigCreate.toConfigModel(), partialUserConfigCreate.connectionConfiguration)
+  ): SourceRead {
+    val organizationId = workspaceHelper.getOrganizationForWorkspace(partialUserConfigCreate.workspaceId)
+
+    throwIfSonarServerEnabled(workspaceHelper.getOrganizationForWorkspace(organizationId))
+    licenseEntitlementChecker.ensureEntitled(
+      organizationId,
+      Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
+    )
+    return partialUserConfigHandler.createSourceFromPartialConfig(
+      partialUserConfigCreate.toConfigModel(),
+      partialUserConfigCreate.connectionConfiguration,
+    )
+  }
 
   @Post("/update")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun updatePartialUserConfig(
     @Body partialUserConfigUpdate: PartialUserConfigUpdate,
-  ): SourceRead =
-    partialUserConfigHandler.updateSourceFromPartialConfig(partialUserConfigUpdate.toConfigModel(), partialUserConfigUpdate.connectionConfiguration)
+  ): SourceRead {
+    throwIfSonarServerEnabled(workspaceHelper.getOrganizationForWorkspace(partialUserConfigUpdate.workspaceId))
+    return partialUserConfigHandler.updateSourceFromPartialConfig(
+      partialUserConfigUpdate.toConfigModel(),
+      partialUserConfigUpdate.connectionConfiguration,
+    )
+  }
 
   @Post("/get")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getPartialUserConfig(
     @Body partialUserConfigRequestBody: PartialUserConfigRequestBody,
-  ): PartialUserConfigRead = partialUserConfigHandler.getPartialUserConfig(partialUserConfigRequestBody.partialUserConfigId).toApiModel()
+  ): PartialUserConfigRead {
+    val organizationId = workspaceHelper.getOrganizationForWorkspace(partialUserConfigRequestBody.workspaceId)
+
+    throwIfSonarServerEnabled(workspaceHelper.getOrganizationForWorkspace(organizationId))
+    licenseEntitlementChecker.ensureEntitled(
+      organizationId,
+      Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
+    )
+    return partialUserConfigHandler.getPartialUserConfig(partialUserConfigRequestBody.partialUserConfigId).toApiModel()
+  }
 
   @Post("/delete")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun deletePartialUserConfig(
     @Body partialUserConfigIdRequestBody: PartialUserConfigRequestBody,
-  ) = partialUserConfigHandler.deletePartialUserConfig(partialUserConfigIdRequestBody.partialUserConfigId)
+  ) {
+    val organizationId = workspaceHelper.getOrganizationForWorkspace(partialUserConfigIdRequestBody.workspaceId)
+
+    throwIfSonarServerEnabled(workspaceHelper.getOrganizationForWorkspace(organizationId))
+    licenseEntitlementChecker.ensureEntitled(
+      organizationId,
+      Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
+    )
+
+    return partialUserConfigHandler.deletePartialUserConfig(partialUserConfigIdRequestBody.partialUserConfigId)
+  }
 
   private fun PartialUserConfigCreate.toConfigModel(): PartialUserConfig =
     PartialUserConfig(
@@ -126,5 +179,11 @@ class PartialUserConfigController(
     }
 
     return partialUserConfig
+  }
+
+  private fun throwIfSonarServerEnabled(organizationId: UUID) {
+    if (featureFlagClient.boolVariation(UseSonarServer, Organization(organizationId))) {
+      throw EmbeddedEndpointMovedProblem()
+    }
   }
 }

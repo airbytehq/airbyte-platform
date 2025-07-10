@@ -26,6 +26,7 @@ interface NamespaceNameCellProps extends Pick<FormConnectionFormValues, "namespa
   onStreamsChanged: (streams: SyncStreamFieldWithId[]) => void;
   syncCheckboxDisabled?: boolean;
   columnFilters: ColumnFilter[];
+  destinationSupportsFileTransfer: boolean;
 }
 
 export const NamespaceNameCell: React.FC<NamespaceNameCellProps> = ({
@@ -36,6 +37,7 @@ export const NamespaceNameCell: React.FC<NamespaceNameCellProps> = ({
   namespaceDefinition,
   namespaceFormat,
   columnFilters,
+  destinationSupportsFileTransfer,
 }) => {
   const { mode } = useFormMode();
   const { name: namespaceName } = row.original;
@@ -44,9 +46,14 @@ export const NamespaceNameCell: React.FC<NamespaceNameCellProps> = ({
 
   const [allEnabled, partiallyEnabled, countedStreams, totalCount, showTotalCount] = useMemo(() => {
     const subRows = row.original.subRows || [];
-    const enabledCount = subRows.filter(({ streamNode }) => streamNode?.config?.selected).length;
-    const totalCount = subRows.length;
-    const allEnabled = totalCount === enabledCount;
+
+    // filter out file-based streams that cannot be toggled when destination doesn't support file transfer
+    const toggleableSubRows = subRows.filter(
+      ({ streamNode }) => !(streamNode?.stream?.isFileBased && !destinationSupportsFileTransfer)
+    );
+    const enabledCount = toggleableSubRows.filter(({ streamNode }) => streamNode?.config?.selected).length;
+    const totalCount = toggleableSubRows.length;
+    const allEnabled = totalCount > 0 && totalCount === enabledCount;
     const columnFilterValue = getColumnFilterValue(columnFilters, "stream.selected");
     const counted =
       columnFilterValue === undefined ? totalCount : columnFilterValue ? enabledCount : totalCount - enabledCount;
@@ -54,14 +61,20 @@ export const NamespaceNameCell: React.FC<NamespaceNameCellProps> = ({
     const showTotalCount = columnFilterValue === undefined || totalCount === counted;
 
     return [allEnabled, partiallyEnabled, counted, totalCount, showTotalCount];
-  }, [row.original.subRows, columnFilters]);
+  }, [row.original.subRows, columnFilters, destinationSupportsFileTransfer]);
 
   const onToggleAllStreamsInNamespace = ({ target: { checked } }: React.ChangeEvent<HTMLInputElement>) => {
-    const updateStream = (stream: SyncStreamFieldWithId) =>
-      ({
+    const updateStream = (stream: SyncStreamFieldWithId) => {
+      if (stream.stream?.isFileBased && !destinationSupportsFileTransfer) {
+        // don't update file-based streams that cannot be toggled when destination doesn't support file transfer, leave the initial state
+        return stream;
+      }
+
+      return {
         ...stream,
         config: { ...stream.config, selected: checked },
-      }) as SyncStreamFieldWithId;
+      } as SyncStreamFieldWithId;
+    };
 
     // if we have the only one namespace
     if (totalCount === streams.length) {

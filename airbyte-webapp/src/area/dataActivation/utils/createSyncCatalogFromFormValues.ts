@@ -38,7 +38,7 @@ export function createSyncCatalogFromFormValues(
           })) ?? [];
 
         const primaryKey: string[][] = [];
-        if (mappedStream.destinationSyncMode === "append_dedup") {
+        if (mappedStream.matchingKeys) {
           mappedStream.matchingKeys?.forEach((key) => {
             const sourceFieldName = mappedStream.fields.find((f) => f.destinationFieldName === key)?.sourceFieldName;
             if (sourceFieldName) {

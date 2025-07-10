@@ -11,6 +11,7 @@ import { ConnectorBuilderProjectTestingValues } from "core/api/types/AirbyteClie
 import { Spec } from "core/api/types/ConnectorManifest";
 import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { FormGroupItem } from "core/form/types";
+import { removeEmptyProperties } from "core/utils/form";
 import { useConnectorBuilderFormState } from "services/connectorBuilder__deprecated/ConnectorBuilderStateService";
 import { setDefaultValues } from "views/Connector/ConnectorForm/useBuildForm";
 
@@ -43,7 +44,7 @@ export const useUpdateTestingValuesOnChange = () => {
   const formValues = useBuilderWatch("formValues");
   const mode = useBuilderWatch("mode");
   const { setValue, getValues } = useFormContext();
-  const testingValues = useBuilderWatch("testingValues");
+  const testingValues = removeEmptyProperties(useBuilderWatch("testingValues"));
   const spec = useMemo(
     () => (mode === "ui" ? builderInputsToSpec(formValues.inputs) : jsonManifest.spec),
     [formValues.inputs, jsonManifest.spec, mode]
@@ -54,7 +55,7 @@ export const useUpdateTestingValuesOnChange = () => {
   const [testingValuesDirty, setTestingValuesDirty] = useState(false);
   const { mutateAsync: updateTestingValues, isLoading: testingValuesUpdating } = useBuilderProjectUpdateTestingValues(
     projectId,
-    () => setTestingValuesDirty(!isEqual(testingValuesRef.current, getValues("testingValues")))
+    () => setTestingValuesDirty(!isEqual(testingValuesRef.current, removeEmptyProperties(getValues("testingValues"))))
   );
 
   // apply default values on spec change in YAML mode (in UI mode this is handled by InputsForm)

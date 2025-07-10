@@ -7,9 +7,12 @@ package io.airbyte.container.orchestrator.persistence
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.AttemptApi
 import io.airbyte.api.client.generated.StateApi
+import io.airbyte.api.client.model.generated.AttemptStats
+import io.airbyte.api.client.model.generated.AttemptStreamStats
 import io.airbyte.api.client.model.generated.ConnectionState
 import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate
 import io.airbyte.api.client.model.generated.ConnectionStateType
+import io.airbyte.api.client.model.generated.SaveStatsRequestBody
 import io.airbyte.api.client.model.generated.StreamDescriptor
 import io.airbyte.api.client.model.generated.StreamState
 import io.airbyte.commons.json.Jsons
@@ -24,6 +27,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
+import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.workers.models.ArchitectureConstants
 import io.mockk.CapturingSlot
@@ -31,6 +35,7 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import io.mockk.spyk
 import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -84,10 +89,12 @@ internal class SyncPersistenceImplTest {
       }
 
     syncStatsTracker =
-      ParallelStreamStatsTracker(
-        metricClient = metricClient,
-        stateCheckSumEventHandler = mockk<StateCheckSumCountEventHandler>(relaxed = true),
-        ArchitectureConstants.ORCHESTRATOR,
+      spyk(
+        ParallelStreamStatsTracker(
+          metricClient = metricClient,
+          stateCheckSumEventHandler = mockk<StateCheckSumCountEventHandler>(relaxed = true),
+          ArchitectureConstants.ORCHESTRATOR,
+        ),
       )
 
     // Setting syncPersistence
@@ -221,6 +228,84 @@ internal class SyncPersistenceImplTest {
     actualFlushMethod.captured.run()
     verify(exactly = 0) { stateApiClient.createOrUpdateState(any()) }
     verify(exactly = 1) { attemptApiClient.saveStats(any()) }
+  }
+
+  @Test
+  fun testStatsFlush() {
+    // Setup so that the flush does something
+    syncPersistence.updateStats(AirbyteRecordMessage())
+    syncPersistence.accept(connectionId, getStreamState("s1", 1))
+
+    val sd1 = AirbyteStreamNameNamespacePair("s1", "ns1")
+    val sd2 = AirbyteStreamNameNamespacePair("s2", "ns1")
+
+    every { syncStatsTracker.getStats() } returns
+      mapOf(
+        sd1 to
+          mockk(relaxed = true) {
+            every { bytesCommitted } returns 10
+            every { bytesEmitted } returns 30
+            every { recordsCommitted } returns 1
+            every { recordsEmitted } returns 3
+            every { recordsRejected } returns 2
+          },
+        sd2 to
+          mockk(relaxed = true) {
+            every { bytesCommitted } returns 1000
+            every { bytesEmitted } returns 3000
+            every { recordsCommitted } returns 100
+            every { recordsEmitted } returns 300
+            every { recordsRejected } returns 200
+          },
+      )
+
+    actualFlushMethod.captured.run()
+    val expectedSaveStats =
+      SaveStatsRequestBody(
+        jobId = jobId,
+        attemptNumber = attemptNumber,
+        stats =
+          AttemptStats(
+            bytesCommitted = 1010,
+            bytesEmitted = 3030,
+            recordsCommitted = 101,
+            recordsEmitted = 303,
+            recordsRejected = 202,
+          ),
+        streamStats =
+          listOf(
+            AttemptStreamStats(
+              streamName = sd1.name,
+              streamNamespace = sd1.namespace,
+              stats =
+                AttemptStats(
+                  bytesCommitted = 10,
+                  bytesEmitted = 30,
+                  estimatedBytes = 0,
+                  estimatedRecords = 0,
+                  recordsCommitted = 1,
+                  recordsEmitted = 3,
+                  recordsRejected = 2,
+                ),
+            ),
+            AttemptStreamStats(
+              streamName = sd2.name,
+              streamNamespace = sd2.namespace,
+              stats =
+                AttemptStats(
+                  bytesCommitted = 1000,
+                  bytesEmitted = 3000,
+                  estimatedBytes = 0,
+                  estimatedRecords = 0,
+                  recordsCommitted = 100,
+                  recordsEmitted = 300,
+                  recordsRejected = 200,
+                ),
+            ),
+          ),
+        connectionId = connectionId,
+      )
+    verify(exactly = 1) { attemptApiClient.saveStats(expectedSaveStats) }
   }
 
   @Test
@@ -505,54 +590,6 @@ internal class SyncPersistenceImplTest {
 
     syncPersistence.updateSourceStatesStats(AirbyteStateMessage())
     verify(exactly = 1) { syncStatsTracker.updateSourceStatesStats(any()) }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getStreamToCommittedBytes()
-    verify(exactly = 1) { syncStatsTracker.getStreamToCommittedBytes() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getStreamToCommittedRecords()
-    verify(exactly = 1) { syncStatsTracker.getStreamToCommittedRecords() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getStreamToEmittedRecords()
-    verify(exactly = 1) { syncStatsTracker.getStreamToEmittedRecords() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getStreamToEstimatedRecords()
-    verify(exactly = 1) { syncStatsTracker.getStreamToEstimatedRecords() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getStreamToEmittedBytes()
-    verify(exactly = 1) { syncStatsTracker.getStreamToEmittedBytes() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getStreamToEstimatedBytes()
-    verify(exactly = 1) { syncStatsTracker.getStreamToEstimatedBytes() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getTotalRecordsEmitted()
-    verify(exactly = 1) { syncStatsTracker.getTotalRecordsEmitted() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getTotalRecordsEstimated()
-    verify(exactly = 1) { syncStatsTracker.getTotalRecordsEstimated() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getTotalBytesEmitted()
-    verify(exactly = 1) { syncStatsTracker.getTotalBytesEmitted() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getTotalBytesEstimated()
-    verify(exactly = 1) { syncStatsTracker.getTotalBytesEstimated() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getTotalBytesCommitted()
-    verify(exactly = 1) { syncStatsTracker.getTotalBytesCommitted() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getTotalRecordsCommitted()
-    verify(exactly = 1) { syncStatsTracker.getTotalRecordsCommitted() }
     clearInvocations(listOf(syncStatsTracker))
 
     syncPersistence.getTotalSourceStateMessagesEmitted()

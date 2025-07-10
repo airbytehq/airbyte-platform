@@ -4,12 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useWatch, useFormContext, get } from "react-hook-form";
 import { useUpdateEffect } from "react-use";
 
-import {
-  CheckDynamicStreamType,
-  CheckStreamType,
-  ConnectorManifest,
-  DynamicStreamCheckConfigType,
-} from "core/api/types/ConnectorManifest";
+import { CheckDynamicStreamType, CheckStreamType, ConnectorManifest } from "core/api/types/ConnectorManifest";
 import { useConnectorBuilderSchema } from "core/services/connectorBuilder/ConnectorBuilderSchemaContext";
 import { assertNever } from "core/utils/asserts";
 import {
@@ -236,33 +231,19 @@ const UpdateCheckStreams = () => {
 
     const filteredCheckStaticStreamNames =
       checkStreams.stream_names?.filter((streamName) => streamNames.includes(streamName)) ?? [];
-    const filteredCheckDynamicStreams =
-      checkStreams.dynamic_streams_check_configs?.filter((config) =>
-        dynamicStreamNames.includes(config.dynamic_stream_name)
-      ) ?? [];
 
     if (
       filteredCheckStaticStreamNames.length > 0 &&
       filteredCheckStaticStreamNames.length !== checkStreams.stream_names?.length
     ) {
       setValue("manifest.check.stream_names", filteredCheckStaticStreamNames);
-    } else if (filteredCheckStaticStreamNames.length === 0 && streamNames.length > 0) {
-      setValue("manifest.check.stream_names", [streamNames[0]]);
-    }
-
-    if (
-      filteredCheckDynamicStreams.length > 0 &&
-      filteredCheckDynamicStreams.length !== checkStreams.dynamic_streams_check_configs?.length
-    ) {
-      setValue("manifest.check.dynamic_streams_check_configs", filteredCheckDynamicStreams);
-    } else if (filteredCheckDynamicStreams.length === 0 && dynamicStreamNames.length > 0) {
-      setValue("manifest.check.dynamic_streams_check_configs", [
-        {
-          type: DynamicStreamCheckConfigType.DynamicStreamCheckConfig,
-          dynamic_stream_name: dynamicStreamNames[0],
-          stream_count: 1,
-        },
-      ]);
+    } else if (filteredCheckStaticStreamNames.length === 0) {
+      const nonEmptyStreamNames = streamNames.filter((streamName) => streamName.trim() !== "");
+      if (nonEmptyStreamNames.length > 0) {
+        setValue("manifest.check.stream_names", [nonEmptyStreamNames[0]]);
+      } else {
+        setValue("manifest.check.stream_names", []);
+      }
     }
   }, [streamNames, dynamicStreamNames]);
 

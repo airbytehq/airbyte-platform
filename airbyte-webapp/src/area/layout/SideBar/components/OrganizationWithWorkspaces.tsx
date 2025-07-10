@@ -17,22 +17,29 @@ export const OrganizationWithWorkspaces: ItemContent<OrganizationSummary, null> 
   { organization, workspaces = [], memberCount, subscription }
 ) => {
   return (
-    <FlexContainer direction="column" gap="none">
-      <NavLink
-        to={`${RoutePaths.Organization}/${organization.organizationId}/${RoutePaths.Settings}/${CloudSettingsRoutePaths.Organization}`}
-        className={styles.organizationName}
-      >
-        <div className={styles.orgTextBlock}>
-          <Text size="sm" color="darkBlue" bold className={styles.orgTitle}>
-            {organization.organizationName}
-          </Text>
-          <Text size="sm" color="grey400" className={styles.orgMeta}>
-            {subscription && <>{subscription.name} &bull; </>}
-            <FormattedMessage id="organization.members" values={{ count: memberCount || 0 }} />
-          </Text>
-        </div>
-        <Icon type="gear" className={styles.gearIcon} aria-hidden="true" />
-      </NavLink>
+    <FlexContainer direction="column" gap="none" className={styles.container}>
+      <FlexContainer direction="row" gap="xs" alignItems="center" justifyContent="space-between">
+        <NavLink
+          to={`${RoutePaths.Organization}/${organization.organizationId}/${RoutePaths.Workspaces}`}
+          className={styles.organizationName}
+        >
+          <div className={styles.orgTextBlock}>
+            <Text size="sm" color="darkBlue" bold className={styles.orgTitle}>
+              {organization.organizationName}
+            </Text>
+            <Text size="sm" color="grey400" className={styles.orgMeta}>
+              {subscription && <>{subscription.name} &bull; </>}
+              <FormattedMessage id="organization.members" values={{ count: memberCount || 0 }} />
+            </Text>
+          </div>
+        </NavLink>
+        <NavLink
+          to={`${RoutePaths.Organization}/${organization.organizationId}/${RoutePaths.Settings}/${CloudSettingsRoutePaths.Organization}`}
+          className={styles.gearIconLink}
+        >
+          <Icon type="gear" className={styles.gearIcon} aria-hidden="true" />
+        </NavLink>
+      </FlexContainer>
       <FlexContainer direction="column" gap="none">
         {workspaces.map((workspace) => (
           <NavLink
