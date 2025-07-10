@@ -12,11 +12,16 @@ object PlatformSubOneHourSyncFrequency : FeatureEntitlement(
   featureId = "feature-platform-sub-one-hour-sync-frequency",
 )
 
+object DestinationObjectStorageEntitlement : FeatureEntitlement(
+  featureId = "feature-destination-object-storage",
+)
+
 object Entitlements {
   private val ALL =
     listOf(
       PlatformLlmSyncJobFailureExplanation,
       PlatformSubOneHourSyncFrequency,
+      DestinationObjectStorageEntitlement,
     )
 
   private val byId = ALL.associateBy { it.featureId }

@@ -214,4 +214,6 @@ object UseSyncV2 : Temporary<Boolean>(key = "platform.use-sync-v2", default = fa
 
 object EnableDestinationCatalogValidation : Temporary<Boolean>(key = "platform.enable-destination-catalog-validation", default = false)
 
+object LicenseAllowDestinationObjectStorageConfig : Permanent<Boolean>(key = "license.allow-destination-object-storage-config", default = false)
+
 object UseSonarServer : Temporary<Boolean>(key = "embedded.useSonarServer", default = false)

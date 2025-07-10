@@ -4,7 +4,10 @@
 
 package io.airbyte.commons.entitlements
 
+import io.airbyte.api.problems.model.generated.ProblemLicenseEntitlementData
+import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.commons.entitlements.models.ConnectorEntitlement
+import io.airbyte.commons.entitlements.models.DestinationObjectStorageEntitlement
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.config.ActorType
@@ -19,7 +22,24 @@ class EntitlementService(
   fun checkEntitlement(
     organizationId: UUID,
     entitlement: Entitlement,
-  ): EntitlementResult = entitlementClient.checkEntitlement(organizationId, entitlement)
+  ): EntitlementResult =
+    when (entitlement) {
+      // TODO: Remove once we've migrated the entitlement to Stigg
+      DestinationObjectStorageEntitlement -> hasDestinationObjectStorageEntitlement(organizationId)
+      else -> entitlementClient.checkEntitlement(organizationId, entitlement)
+    }
+
+  fun ensureEntitled(
+    organizationId: UUID,
+    entitlement: Entitlement,
+  ) {
+    if (!checkEntitlement(organizationId, entitlement).isEntitled) {
+      throw LicenseEntitlementProblem(
+        ProblemLicenseEntitlementData()
+          .entitlement(entitlement.featureId),
+      )
+    }
+  }
 
   fun getEntitlements(organizationId: UUID): List<EntitlementResult> = entitlementClient.getEntitlements(organizationId)
 
@@ -41,6 +61,12 @@ class EntitlementService(
     // Until we're 100% on Stigg, provider results (from LD) overwrite any overlapping client results
     return clientResults.toMutableMap().apply { putAll(providerResults) }
   }
+
+  private fun hasDestinationObjectStorageEntitlement(organizationId: UUID): EntitlementResult =
+    EntitlementResult(
+      isEntitled = entitlementProvider.hasDestinationObjectStorageEntitlement(organizationId),
+      featureId = DestinationObjectStorageEntitlement.featureId,
+    )
 
   internal fun hasConfigTemplateEntitlements(organizationId: UUID): Boolean = entitlementProvider.hasConfigTemplateEntitlements(organizationId)
 }

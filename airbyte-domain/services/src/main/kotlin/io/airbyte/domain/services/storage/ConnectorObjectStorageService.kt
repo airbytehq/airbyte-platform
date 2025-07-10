@@ -92,7 +92,7 @@ class ConnectorObjectStorageService(
     }
   }
 
-  private fun getObjectStorageConfigProperty(destinationVersion: ActorDefinitionVersion): String? {
+  fun getObjectStorageConfigProperty(destinationVersion: ActorDefinitionVersion): String? {
     // In the future, we may want to grab the specific field from the spec, once we do bucket injection
     // For now, we assume all data activation destination will have the bucket config at `objectStorageConfig`
     if (destinationVersion.supportsDataActivation) {

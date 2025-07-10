@@ -195,6 +195,7 @@ import io.airbyte.data.services.PartialUserConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.StreamStatusesService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.domain.services.secrets.SecretStorageService;
@@ -327,6 +328,7 @@ class ConnectionsHandlerTest {
   private DestinationCatalogGenerator destinationCatalogGenerator;
   private ConnectionScheduleHelper connectionSchedulerHelper;
   private LicenseEntitlementChecker licenseEntitlementChecker;
+  private ConnectorConfigEntitlementService connectorConfigEntitlementService;
   private ContextBuilder contextBuilder;
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), List.of(new HashingMapper(MoreMappers.initMapper())));
   private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
@@ -451,6 +453,7 @@ class ConnectionsHandlerTest {
     statePersistence = mock(StatePersistence.class);
     mapperSecretHelper = mock(MapperSecretHelper.class);
     licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
+    connectorConfigEntitlementService = mock(ConnectorConfigEntitlementService.class);
     contextBuilder = mock(ContextBuilder.class);
 
     featureFlagClient = mock(TestClient.class);
@@ -481,7 +484,8 @@ class ConnectionsHandlerTest {
             secretPersistenceService,
             secretStorageService,
             secretReferenceService,
-            currentUserService);
+            currentUserService,
+            connectorConfigEntitlementService);
     sourceHandler = new SourceHandler(
         catalogService,
         secretsRepositoryReader,
@@ -498,6 +502,7 @@ class ConnectionsHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
+        connectorConfigEntitlementService,
         catalogConverter,
         apiPojoConverters,
         Configs.AirbyteEdition.COMMUNITY,

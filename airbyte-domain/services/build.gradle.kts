@@ -10,6 +10,7 @@ dependencies {
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-config:config-persistence"))
   implementation(project(":oss:airbyte-config:config-secrets"))
+  implementation(project(":oss:airbyte-commons-entitlements"))
   implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-domain:models"))
   implementation(project(":oss:airbyte-featureflag"))

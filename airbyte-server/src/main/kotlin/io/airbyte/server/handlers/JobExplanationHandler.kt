@@ -195,7 +195,7 @@ class JobExplanationHandler(
   }
 
   private fun getSourceConfiguration(source: SourceConnection): String {
-    val sourceSpec = sourceHandler.getSpecFromSourceDefinitionIdForWorkspace(source.sourceDefinitionId, source.workspaceId)
+    val sourceSpec = sourceHandler.getSourceVersionForWorkspaceId(source.sourceDefinitionId, source.workspaceId).spec
     val maskedSourceConfig = secretsProcessor.prepareSecretsForOutput(source.configuration, sourceSpec.connectionSpecification)
 
     return """
@@ -207,11 +207,12 @@ class JobExplanationHandler(
 
   private fun getDestinationConfiguration(destination: DestinationConnection): String {
     val destinationSpec =
-      destinationHandler.getSpecForDestinationId(
-        destination.destinationDefinitionId,
-        destination.workspaceId,
-        destination.destinationId,
-      )
+      destinationHandler
+        .getDestinationVersionForDestinationId(
+          destination.destinationDefinitionId,
+          destination.workspaceId,
+          destination.destinationId,
+        ).spec
     val maskedDestinationConfig = secretsProcessor.prepareSecretsForOutput(destination.configuration, destinationSpec.connectionSpecification)
 
     return """

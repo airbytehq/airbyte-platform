@@ -76,6 +76,7 @@ import io.airbyte.data.services.PartialUserConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.shared.SourceConnectionWithCount;
 import io.airbyte.domain.models.SecretStorage;
+import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.domain.services.secrets.SecretStorageService;
@@ -141,6 +142,7 @@ class SourceHandlerTest {
   private WorkspaceHelper workspaceHelper;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private LicenseEntitlementChecker licenseEntitlementChecker;
+  private ConnectorConfigEntitlementService connectorConfigEntitlementService;
   private CatalogService catalogService;
   private SecretsRepositoryWriter secretsRepositoryWriter;
   private SecretPersistenceService secretPersistenceService;
@@ -170,6 +172,7 @@ class SourceHandlerTest {
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
+    connectorConfigEntitlementService = mock(ConnectorConfigEntitlementService.class);
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     secretStorageService = mock(SecretStorageService.class);
     secretReferenceService = mock(SecretReferenceService.class);
@@ -223,6 +226,7 @@ class SourceHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
+        connectorConfigEntitlementService,
         catalogConverter,
         apiPojoConverters,
         Configs.AirbyteEdition.COMMUNITY,
@@ -336,6 +340,34 @@ class SourceHandlerTest {
   }
 
   @Test
+  void testCreateSourceChecksConfigEntitlements()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+    final SourceCreate sourceCreate = new SourceCreate()
+        .name(sourceConnection.getName())
+        .workspaceId(sourceConnection.getWorkspaceId())
+        .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
+        .connectionConfiguration(sourceConnection.getConfiguration())
+        .resourceAllocation(RESOURCE_ALLOCATION);
+
+    when(uuidGenerator.get()).thenReturn(sourceConnection.getSourceId());
+    when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
+        .thenReturn(standardSourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId()))
+        .thenReturn(sourceDefinitionVersion);
+
+    // Not entitled
+    doThrow(new LicenseEntitlementProblem())
+        .when(connectorConfigEntitlementService)
+        .ensureEntitledConfig(any(), eq(sourceDefinitionVersion), eq(sourceConnection.getConfiguration()));
+
+    assertThrows(LicenseEntitlementProblem.class, () -> sourceHandler.createSource(sourceCreate));
+
+    verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId());
+    verify(validator).ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), sourceConnection.getConfiguration());
+  }
+
+  @Test
   void testCreateSourceNoEntitlementThrows()
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final SourceCreate sourceCreate = new SourceCreate()
@@ -382,6 +414,7 @@ class SourceHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
+        connectorConfigEntitlementService,
         catalogConverter,
         apiPojoConverters,
         Configs.AirbyteEdition.CLOUD,
@@ -539,6 +572,53 @@ class SourceHandlerTest {
   }
 
   @Test
+  void testUpdateSourceChecksConfigEntitlements()
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+    final String updatedSourceName = "my updated source name for config entitlements";
+    final JsonNode newConfiguration = sourceConnection.getConfiguration();
+    ((ObjectNode) newConfiguration).put(API_KEY_FIELD, API_KEY_VALUE);
+    final ScopedResourceRequirements newResourceAllocation = getResourceRequirementsForSourceRequest("1", "1 GB");
+
+    final SourceConnection expectedSourceConnection = Jsons.clone(sourceConnection)
+        .withName(updatedSourceName)
+        .withConfiguration(newConfiguration)
+        .withTombstone(false)
+        .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(newResourceAllocation));
+
+    final SourceUpdate sourceUpdate = new SourceUpdate()
+        .name(updatedSourceName)
+        .sourceId(sourceConnection.getSourceId())
+        .connectionConfiguration(newConfiguration)
+        .resourceAllocation(newResourceAllocation);
+
+    when(secretsProcessor
+        .copySecrets(sourceConnection.getConfiguration(), newConfiguration, sourceDefinitionSpecificationRead.getConnectionSpecification()))
+            .thenReturn(newConfiguration);
+    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
+        .thenReturn(standardSourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId()))
+        .thenReturn(sourceDefinitionVersion);
+    when(sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId()))
+        .thenReturn(standardSourceDefinition);
+    when(sourceService.getSourceConnection(sourceConnection.getSourceId()))
+        .thenReturn(sourceConnection)
+        .thenReturn(expectedSourceConnection);
+    when(configurationUpdate.source(sourceConnection.getSourceId(), updatedSourceName, newConfiguration))
+        .thenReturn(expectedSourceConnection);
+
+    // Not entitled
+    doThrow(new LicenseEntitlementProblem())
+        .when(connectorConfigEntitlementService)
+        .ensureEntitledConfig(any(), eq(sourceDefinitionVersion), eq(newConfiguration));
+
+    assertThrows(LicenseEntitlementProblem.class, () -> sourceHandler.updateSource(sourceUpdate));
+
+    verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(),
+        sourceConnection.getSourceId());
+    verify(validator).ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), newConfiguration);
+  }
+
+  @Test
   void testUpdateSourceNoEntitlementThrows()
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final String updatedSourceName = "my updated source name";
@@ -603,6 +683,7 @@ class SourceHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
+        connectorConfigEntitlementService,
         catalogConverter,
         apiPojoConverters,
         Configs.AirbyteEdition.CLOUD,

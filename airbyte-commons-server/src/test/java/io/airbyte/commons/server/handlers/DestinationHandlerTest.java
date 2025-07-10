@@ -65,6 +65,7 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.shared.DestinationConnectionWithCount;
 import io.airbyte.domain.models.SecretStorage;
+import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.domain.services.secrets.SecretStorageService;
@@ -103,6 +104,7 @@ class DestinationHandlerTest {
   private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private LicenseEntitlementChecker licenseEntitlementChecker;
+  private ConnectorConfigEntitlementService connectorConfigEntitlementService;
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   private static final String API_KEY_FIELD = "apiKey";
@@ -141,6 +143,7 @@ class DestinationHandlerTest {
     actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     workspaceHelper = mock(WorkspaceHelper.class);
     licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
+    connectorConfigEntitlementService = mock(ConnectorConfigEntitlementService.class);
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     secretPersistenceService = mock(SecretPersistenceService.class);
     secretStorageService = mock(SecretStorageService.class);
@@ -192,7 +195,8 @@ class DestinationHandlerTest {
             secretPersistenceService,
             secretStorageService,
             secretReferenceService,
-            currentUserService);
+            currentUserService,
+            connectorConfigEntitlementService);
 
     when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
         destinationConnection.getDestinationId())).thenReturn(destinationDefinitionVersionWithOverrideStatus);
@@ -332,6 +336,36 @@ class DestinationHandlerTest {
   }
 
   @Test
+  void testCreateDestinationChecksConfigEntitlements()
+      throws JsonValidationException, io.airbyte.data.ConfigNotFoundException, IOException {
+    when(uuidGenerator.get())
+        .thenReturn(destinationConnection.getDestinationId());
+    when(destinationService.getDestinationConnection(destinationConnection.getDestinationId()))
+        .thenReturn(destinationConnection);
+    when(destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId()))
+        .thenReturn(standardDestinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId()))
+        .thenReturn(destinationDefinitionVersion);
+
+    final DestinationCreate destinationCreate = new DestinationCreate()
+        .name(destinationConnection.getName())
+        .workspaceId(destinationConnection.getWorkspaceId())
+        .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
+        .connectionConfiguration(DestinationHelpers.getTestDestinationJson())
+        .resourceAllocation(RESOURCE_ALLOCATION);
+
+    // Not entitled
+    doThrow(new LicenseEntitlementProblem())
+        .when(connectorConfigEntitlementService)
+        .ensureEntitledConfig(any(), eq(destinationDefinitionVersion), eq(destinationConnection.getConfiguration()));
+
+    assertThrows(LicenseEntitlementProblem.class, () -> destinationHandler.createDestination(destinationCreate));
+
+    verify(validator).ensure(destinationDefinitionSpecificationRead.getConnectionSpecification(), destinationConnection.getConfiguration());
+    verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId());
+  }
+
+  @Test
   void testNonNullCreateDestinationThrowsOnInvalidResourceAllocation()
       throws IOException {
     DestinationHandler cloudDestinationHandler =
@@ -354,7 +388,8 @@ class DestinationHandlerTest {
             secretPersistenceService,
             secretStorageService,
             secretReferenceService,
-            currentUserService);
+            currentUserService,
+            connectorConfigEntitlementService);
 
     final DestinationCreate destinationCreate = new DestinationCreate()
         .name(destinationConnection.getName())
@@ -501,6 +536,52 @@ class DestinationHandlerTest {
   }
 
   @Test
+  void testUpdateDestinationChecksConfigEntitlements()
+      throws JsonValidationException, io.airbyte.data.ConfigNotFoundException, IOException, ConfigNotFoundException {
+    final String updatedDestName = "my updated dest name for config entitlements";
+    final JsonNode newConfiguration = destinationConnection.getConfiguration();
+    ((ObjectNode) newConfiguration).put(API_KEY_FIELD, API_KEY_VALUE);
+    final ScopedResourceRequirements newResourceAllocation = getResourceRequirementsForDestinationRequest("1", "1 GB");
+    final DestinationUpdate destinationUpdate = new DestinationUpdate()
+        .name(updatedDestName)
+        .destinationId(destinationConnection.getDestinationId())
+        .connectionConfiguration(newConfiguration)
+        .resourceAllocation(newResourceAllocation);
+
+    final DestinationConnection expectedDestinationConnection = Jsons.clone(destinationConnection)
+        .withName(updatedDestName)
+        .withConfiguration(newConfiguration)
+        .withTombstone(false)
+        .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(newResourceAllocation));
+
+    when(secretsProcessor
+        .copySecrets(destinationConnection.getConfiguration(), newConfiguration, destinationDefinitionSpecificationRead.getConnectionSpecification()))
+            .thenReturn(newConfiguration);
+    when(destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId()))
+        .thenReturn(standardDestinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
+        destinationConnection.getDestinationId()))
+            .thenReturn(destinationDefinitionVersion);
+    when(destinationService.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId()))
+        .thenReturn(standardDestinationDefinition);
+    when(destinationService.getDestinationConnection(destinationConnection.getDestinationId()))
+        .thenReturn(expectedDestinationConnection);
+    when(configurationUpdate.destination(destinationConnection.getDestinationId(), updatedDestName, newConfiguration))
+        .thenReturn(expectedDestinationConnection);
+
+    // Not entitled
+    doThrow(new LicenseEntitlementProblem())
+        .when(connectorConfigEntitlementService)
+        .ensureEntitledConfig(any(), eq(destinationDefinitionVersion), eq(newConfiguration));
+
+    assertThrows(LicenseEntitlementProblem.class, () -> destinationHandler.updateDestination(destinationUpdate));
+
+    verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
+        destinationConnection.getDestinationId());
+    verify(validator).ensure(destinationDefinitionSpecificationRead.getConnectionSpecification(), newConfiguration);
+  }
+
+  @Test
   void testUpdateDestinationNoEntitlementThrows()
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.ConfigNotFoundException {
     final String updatedDestName = "my updated dest name";
@@ -568,7 +649,8 @@ class DestinationHandlerTest {
             secretPersistenceService,
             secretStorageService,
             secretReferenceService,
-            currentUserService);
+            currentUserService,
+            connectorConfigEntitlementService);
 
     final String updatedDestName = "my updated dest name";
     final JsonNode newConfiguration = destinationConnection.getConfiguration();

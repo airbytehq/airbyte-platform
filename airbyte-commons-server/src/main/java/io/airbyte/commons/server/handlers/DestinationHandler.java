@@ -49,6 +49,7 @@ import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.shared.DestinationConnectionWithCount;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.domain.models.SecretStorage;
+import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.domain.services.secrets.SecretStorageService;
@@ -94,6 +95,7 @@ public class DestinationHandler {
   private final SecretStorageService secretStorageService;
   private final SecretReferenceService secretReferenceService;
   private final CurrentUserService currentUserService;
+  private final ConnectorConfigEntitlementService connectorConfigEntitlementService;
 
   @VisibleForTesting
   public DestinationHandler(final JsonSchemaValidator integrationSchemaValidation,
@@ -114,7 +116,8 @@ public class DestinationHandler {
                             final SecretPersistenceService secretPersistenceService,
                             final SecretStorageService secretStorageService,
                             final SecretReferenceService secretReferenceService,
-                            final CurrentUserService currentUserService) {
+                            final CurrentUserService currentUserService,
+                            final ConnectorConfigEntitlementService connectorConfigEntitlementService) {
     this.validator = integrationSchemaValidation;
     this.connectionsHandler = connectionsHandler;
     this.uuidGenerator = uuidGenerator;
@@ -134,6 +137,7 @@ public class DestinationHandler {
     this.secretStorageService = secretStorageService;
     this.secretReferenceService = secretReferenceService;
     this.currentUserService = currentUserService;
+    this.connectorConfigEntitlementService = connectorConfigEntitlementService;
   }
 
   public DestinationRead createDestination(final DestinationCreate destinationCreate)
@@ -143,7 +147,9 @@ public class DestinationHandler {
     }
 
     // validate configuration
-    final ConnectorSpecification spec = getSpecForWorkspaceId(destinationCreate.getDestinationDefinitionId(), destinationCreate.getWorkspaceId());
+    final ActorDefinitionVersion destinationVersion =
+        getDestinationVersionForWorkspaceId(destinationCreate.getDestinationDefinitionId(), destinationCreate.getWorkspaceId());
+    final ConnectorSpecification spec = destinationVersion.getSpec();
     validateDestination(spec, destinationCreate.getConnectionConfiguration());
 
     // persist
@@ -155,7 +161,7 @@ public class DestinationHandler {
         destinationId,
         destinationCreate.getConnectionConfiguration(),
         false,
-        spec,
+        destinationVersion,
         destinationCreate.getResourceAllocation());
 
     // read configuration from db
@@ -215,9 +221,10 @@ public class DestinationHandler {
     final DestinationConnection updatedDestination = configurationUpdate.destination(destinationUpdate.getDestinationId(),
         destinationUpdate.getName(), destinationUpdate.getConnectionConfiguration());
 
-    final ConnectorSpecification spec =
-        getSpecForDestinationId(updatedDestination.getDestinationDefinitionId(), updatedDestination.getWorkspaceId(),
+    final ActorDefinitionVersion destinationVersion =
+        getDestinationVersionForDestinationId(updatedDestination.getDestinationDefinitionId(), updatedDestination.getWorkspaceId(),
             updatedDestination.getDestinationId());
+    final ConnectorSpecification spec = destinationVersion.getSpec();
 
     validateDestinationUpdate(destinationUpdate.getConnectionConfiguration(), updatedDestination, spec);
 
@@ -229,7 +236,7 @@ public class DestinationHandler {
         updatedDestination.getDestinationId(),
         updatedDestination.getConfiguration(),
         updatedDestination.getTombstone(),
-        spec,
+        destinationVersion,
         destinationUpdate.getResourceAllocation());
 
     // read configuration from db
@@ -248,9 +255,10 @@ public class DestinationHandler {
         .partialDestination(partialDestinationUpdate.getDestinationId(), partialDestinationUpdate.getName(),
             partialDestinationUpdate.getConnectionConfiguration());
 
-    final ConnectorSpecification spec =
-        getSpecForDestinationId(updatedDestination.getDestinationDefinitionId(), updatedDestination.getWorkspaceId(),
+    final ActorDefinitionVersion destinationVersion =
+        getDestinationVersionForDestinationId(updatedDestination.getDestinationDefinitionId(), updatedDestination.getWorkspaceId(),
             updatedDestination.getDestinationId());
+    final ConnectorSpecification spec = destinationVersion.getSpec();
 
     OAuthSecretHelper.validateNoSecretsInConfiguration(spec, partialDestinationUpdate.getConnectionConfiguration());
 
@@ -264,7 +272,7 @@ public class DestinationHandler {
         updatedDestination.getDestinationId(),
         updatedDestination.getConfiguration(),
         updatedDestination.getTombstone(),
-        spec,
+        destinationVersion,
         partialDestinationUpdate.getResourceAllocation());
 
     // read configuration from db
@@ -430,19 +438,18 @@ public class DestinationHandler {
     validateDestination(spec, mergedConfig);
   }
 
-  public ConnectorSpecification getSpecForDestinationId(final UUID destinationDefinitionId, final UUID workspaceId, final UUID destinationId)
+  public ActorDefinitionVersion getDestinationVersionForDestinationId(final UUID destinationDefinitionId,
+                                                                      final UUID workspaceId,
+                                                                      final UUID destinationId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final StandardDestinationDefinition destinationDefinition = destinationService.getStandardDestinationDefinition(destinationDefinitionId);
-    final ActorDefinitionVersion destinationVersion =
-        actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId);
-    return destinationVersion.getSpec();
+    return actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId);
   }
 
-  public ConnectorSpecification getSpecForWorkspaceId(final UUID destinationDefinitionId, final UUID workspaceId)
+  public ActorDefinitionVersion getDestinationVersionForWorkspaceId(final UUID destinationDefinitionId, final UUID workspaceId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final StandardDestinationDefinition destinationDefinition = destinationService.getStandardDestinationDefinition(destinationDefinitionId);
-    final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId);
-    return destinationVersion.getSpec();
+    return actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId);
   }
 
   /**
@@ -457,12 +464,14 @@ public class DestinationHandler {
                                             final UUID destinationId,
                                             final JsonNode configurationJson,
                                             final boolean tombstone,
-                                            final ConnectorSpecification spec,
+                                            final ActorDefinitionVersion destinationVersion,
                                             final io.airbyte.api.model.generated.ScopedResourceRequirements resourceRequirements)
       throws JsonValidationException, IOException {
     final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId);
     licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.DESTINATION_CONNECTOR, destinationDefinitionId);
+    connectorConfigEntitlementService.ensureEntitledConfig(organizationId, destinationVersion, configurationJson);
 
+    final ConnectorSpecification spec = destinationVersion.getSpec();
     final JsonNode maskedConfig = oAuthConfigSupplier.maskDestinationOAuthParameters(destinationDefinitionId, workspaceId, configurationJson, spec);
     final Optional<UUID> secretStorageId = Optional.ofNullable(secretStorageService.getByWorkspaceId(workspaceId)).map(SecretStorage::getIdJava);
 
@@ -546,8 +555,8 @@ public class DestinationHandler {
   private DestinationRead buildDestinationRead(final DestinationConnection destinationConnection, final Boolean includeSecretCoordinates)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final ConnectorSpecification spec =
-        getSpecForDestinationId(destinationConnection.getDestinationDefinitionId(), destinationConnection.getWorkspaceId(),
-            destinationConnection.getDestinationId());
+        getDestinationVersionForDestinationId(destinationConnection.getDestinationDefinitionId(), destinationConnection.getWorkspaceId(),
+            destinationConnection.getDestinationId()).getSpec();
     return buildDestinationRead(destinationConnection, spec, includeSecretCoordinates);
   }
 

@@ -129,6 +129,7 @@ import io.airbyte.data.services.shared.ConnectionSortKey;
 import io.airbyte.data.services.shared.DestinationAndDefinition;
 import io.airbyte.data.services.shared.SourceAndDefinition;
 import io.airbyte.data.services.shared.StandardSyncQuery;
+import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.domain.services.secrets.SecretStorageService;
@@ -192,6 +193,7 @@ class WebBackendConnectionsHandlerTest {
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private DestinationCatalogGenerator destinationCatalogGenerator;
   private LicenseEntitlementChecker licenseEntitlementChecker;
+  private ConnectorConfigEntitlementService connectorConfigEntitlementService;
   private final FieldGenerator fieldGenerator = new FieldGenerator();
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
   private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
@@ -228,6 +230,7 @@ class WebBackendConnectionsHandlerTest {
     connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
     catalogConfigDiffHelper = mock(CatalogConfigDiffHelper.class);
     licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
+    connectorConfigEntitlementService = mock(ConnectorConfigEntitlementService.class);
     partialUserConfigService = mock(PartialUserConfigService.class);
 
     final JsonSchemaValidator validator = mock(JsonSchemaValidator.class);
@@ -271,7 +274,8 @@ class WebBackendConnectionsHandlerTest {
         secretPersistenceService,
         secretStorageService,
         secretReferenceService,
-        currentUserService);
+        currentUserService,
+        connectorConfigEntitlementService);
 
     sourceHandler = new SourceHandler(
         catalogService,
@@ -289,6 +293,7 @@ class WebBackendConnectionsHandlerTest {
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
+        connectorConfigEntitlementService,
         catalogConverter,
         apiPojoConverters,
         Configs.AirbyteEdition.COMMUNITY,

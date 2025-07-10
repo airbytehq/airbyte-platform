@@ -9,6 +9,7 @@ import io.airbyte.commons.license.AirbyteLicense
 import io.airbyte.config.ActorType
 import io.airbyte.featureflag.AllowConfigTemplateEndpoints
 import io.airbyte.featureflag.DestinationDefinition
+import io.airbyte.featureflag.LicenseAllowDestinationObjectStorageConfig
 import io.airbyte.featureflag.LicenseAllowEnterpriseConnector
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Organization
@@ -49,6 +50,13 @@ class EntitlementProviderTest {
     fun `test hasConfigTemplateEntitlements`() {
       val organizationId = UUID.randomUUID()
       val res = entitlementProvider.hasConfigTemplateEntitlements(organizationId)
+      assertFalse(res)
+    }
+
+    @Test
+    fun `test hasDestinationObjectStorageEntitlement`() {
+      val organizationId = UUID.randomUUID()
+      val res = entitlementProvider.hasDestinationObjectStorageEntitlement(organizationId)
       assertFalse(res)
     }
   }
@@ -93,6 +101,13 @@ class EntitlementProviderTest {
       val res = entitlementProvider.hasConfigTemplateEntitlements(organizationId)
       assertEquals(res, license.isEmbedded)
     }
+
+    @Test
+    fun `test hasDestinationObjectStorageEntitlement always returns true`() {
+      val organizationId = UUID.randomUUID()
+      val res = entitlementProvider.hasDestinationObjectStorageEntitlement(organizationId)
+      assertEquals(true, res)
+    }
   }
 
   @Nested
@@ -129,6 +144,16 @@ class EntitlementProviderTest {
       every { featureFlagClient.boolVariation(AllowConfigTemplateEndpoints, Organization(organizationId)) } returns isEntitled
 
       val res = entitlementProvider.hasConfigTemplateEntitlements(organizationId)
+      assertEquals(res, isEntitled)
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun `test hasDestinationObjectStorageEntitlement returns value from feature flag`(isEntitled: Boolean) {
+      val organizationId = UUID.randomUUID()
+      every { featureFlagClient.boolVariation(LicenseAllowDestinationObjectStorageConfig, Organization(organizationId)) } returns isEntitled
+
+      val res = entitlementProvider.hasDestinationObjectStorageEntitlement(organizationId)
       assertEquals(res, isEntitled)
     }
 

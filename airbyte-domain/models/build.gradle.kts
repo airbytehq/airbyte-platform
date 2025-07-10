@@ -4,4 +4,5 @@ plugins {
 
 dependencies {
   implementation(libs.jackson.databind)
+  implementation(libs.airbyte.protocol)
 }

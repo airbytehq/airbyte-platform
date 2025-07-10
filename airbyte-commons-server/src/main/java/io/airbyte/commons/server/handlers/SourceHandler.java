@@ -62,6 +62,7 @@ import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.data.services.shared.SourceConnectionWithCount;
 import io.airbyte.domain.models.SecretStorage;
+import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.domain.services.secrets.SecretStorageService;
@@ -104,6 +105,7 @@ public class SourceHandler {
   private final SecretPersistenceService secretPersistenceService;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private final LicenseEntitlementChecker licenseEntitlementChecker;
+  private final ConnectorConfigEntitlementService connectorConfigEntitlementService;
   private final CatalogConverter catalogConverter;
   private final ApiPojoConverters apiPojoConverters;
   private final Configs.AirbyteEdition airbyteEdition;
@@ -129,6 +131,7 @@ public class SourceHandler {
                        final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                        final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater,
                        final LicenseEntitlementChecker licenseEntitlementChecker,
+                       final ConnectorConfigEntitlementService connectorConfigEntitlementService,
                        final CatalogConverter catalogConverter,
                        final ApiPojoConverters apiPojoConverters,
                        final Configs.AirbyteEdition airbyteEdition,
@@ -152,6 +155,7 @@ public class SourceHandler {
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
     this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
     this.licenseEntitlementChecker = licenseEntitlementChecker;
+    this.connectorConfigEntitlementService = connectorConfigEntitlementService;
     this.catalogConverter = catalogConverter;
     this.apiPojoConverters = apiPojoConverters;
     this.airbyteEdition = airbyteEdition;
@@ -167,7 +171,7 @@ public class SourceHandler {
     if (sourceCreate.getSecretId() != null && !sourceCreate.getSecretId().isBlank()) {
       final JsonNode hydratedSecret = hydrateOAuthResponseSecret(sourceCreate.getSecretId(), sourceCreate.getWorkspaceId());
       final ConnectorSpecification spec =
-          getSpecFromSourceDefinitionIdForWorkspace(sourceCreate.getSourceDefinitionId(), sourceCreate.getWorkspaceId());
+          getSourceVersionForWorkspaceId(sourceCreate.getSourceDefinitionId(), sourceCreate.getWorkspaceId()).getSpec();
       // add OAuth Response data to connection configuration
       sourceCreate.setConnectionConfiguration(
           OAuthSecretHelper.setSecretsInConnectionConfiguration(spec, hydratedSecret,
@@ -180,7 +184,7 @@ public class SourceHandler {
   @Trace
   public SourceRead updateSourceWithOptionalSecret(final PartialSourceUpdate partialSourceUpdate)
       throws JsonValidationException, ConfigNotFoundException, IOException {
-    final ConnectorSpecification spec = getSpecFromSourceId(partialSourceUpdate.getSourceId());
+    final ConnectorSpecification spec = getSourceVersionForSourceId(partialSourceUpdate.getSourceId()).getSpec();
     ApmTraceUtils.addTagsToTrace(
         Map.of(
             SOURCE_ID, partialSourceUpdate.getSourceId().toString()));
@@ -215,8 +219,9 @@ public class SourceHandler {
     }
 
     // validate configuration
-    final ConnectorSpecification spec = getSpecFromSourceDefinitionIdForWorkspace(
+    final ActorDefinitionVersion sourceVersion = getSourceVersionForWorkspaceId(
         sourceCreate.getSourceDefinitionId(), sourceCreate.getWorkspaceId());
+    final ConnectorSpecification spec = sourceVersion.getSpec();
     validateSource(spec, sourceCreate.getConnectionConfiguration());
 
     // persist
@@ -228,7 +233,7 @@ public class SourceHandler {
         sourceId,
         false,
         sourceCreate.getConnectionConfiguration(),
-        spec,
+        sourceVersion,
         sourceCreate.getResourceAllocation());
 
     // read configuration from db
@@ -246,7 +251,8 @@ public class SourceHandler {
     final SourceConnection updatedSource = configurationUpdate
         .partialSource(sourceId, partialSourceUpdate.getName(),
             partialSourceUpdate.getConnectionConfiguration());
-    final ConnectorSpecification spec = getSpecFromSourceId(sourceId);
+    final ActorDefinitionVersion sourceVersion = getSourceVersionForSourceId(sourceId);
+    final ConnectorSpecification spec = sourceVersion.getSpec();
 
     validateSourceUpdate(partialSourceUpdate.getConnectionConfiguration(), updatedSource, spec);
 
@@ -260,7 +266,7 @@ public class SourceHandler {
         updatedSource.getSourceId(),
         updatedSource.getTombstone(),
         updatedSource.getConfiguration(),
-        spec,
+        sourceVersion,
         partialSourceUpdate.getResourceAllocation());
 
     // read configuration from db
@@ -277,7 +283,8 @@ public class SourceHandler {
     final UUID sourceId = sourceUpdate.getSourceId();
     final SourceConnection updatedSource = configurationUpdate
         .source(sourceId, sourceUpdate.getName(), sourceUpdate.getConnectionConfiguration());
-    final ConnectorSpecification spec = getSpecFromSourceId(sourceId);
+    final ActorDefinitionVersion sourceVersion = getSourceVersionForSourceId(sourceId);
+    final ConnectorSpecification spec = sourceVersion.getSpec();
 
     validateSourceUpdate(sourceUpdate.getConnectionConfiguration(), updatedSource, spec);
 
@@ -294,7 +301,7 @@ public class SourceHandler {
         updatedSource.getSourceId(),
         updatedSource.getTombstone(),
         updatedSource.getConfiguration(),
-        spec,
+        sourceVersion,
         sourceUpdate.getResourceAllocation());
 
     // read configuration from db
@@ -588,19 +595,17 @@ public class SourceHandler {
     validateSource(spec, mergedConfig);
   }
 
-  private ConnectorSpecification getSpecFromSourceId(final UUID sourceId)
+  private ActorDefinitionVersion getSourceVersionForSourceId(final UUID sourceId)
       throws IOException, JsonValidationException, ConfigNotFoundException {
     final SourceConnection source = sourceService.getSourceConnection(sourceId);
     final StandardSourceDefinition sourceDef = sourceService.getStandardSourceDefinition(source.getSourceDefinitionId());
-    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
-    return sourceVersion.getSpec();
+    return actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
   }
 
-  public ConnectorSpecification getSpecFromSourceDefinitionIdForWorkspace(final UUID sourceDefId, final UUID workspaceId)
+  public ActorDefinitionVersion getSourceVersionForWorkspaceId(final UUID sourceDefId, final UUID workspaceId)
       throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final StandardSourceDefinition sourceDef = sourceService.getStandardSourceDefinition(sourceDefId);
-    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, workspaceId);
-    return sourceVersion.getSpec();
+    return actorDefinitionVersionHelper.getSourceVersion(sourceDef, workspaceId);
   }
 
   /**
@@ -615,12 +620,14 @@ public class SourceHandler {
                                        final UUID sourceId,
                                        final boolean tombstone,
                                        final JsonNode configurationJson,
-                                       final ConnectorSpecification spec,
+                                       final ActorDefinitionVersion sourceVersion,
                                        final io.airbyte.api.model.generated.ScopedResourceRequirements resourceRequirements)
       throws JsonValidationException, IOException {
     final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId);
     licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.SOURCE_CONNECTOR, sourceDefinitionId);
+    connectorConfigEntitlementService.ensureEntitledConfig(organizationId, sourceVersion, configurationJson);
 
+    final ConnectorSpecification spec = sourceVersion.getSpec();
     final JsonNode maskedConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, configurationJson, spec);
     final Optional<UUID> secretStorageId = Optional.ofNullable(secretStorageService.getByWorkspaceId(workspaceId)).map(SecretStorage::getIdJava);
 

@@ -5,6 +5,7 @@
 package io.airbyte.commons.server.handlers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -31,6 +32,9 @@ import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.SourceService;
+import io.airbyte.domain.models.EntitledConnectorSpec;
+import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService;
+import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.protocol.models.v0.AdvancedAuth;
 import io.airbyte.protocol.models.v0.AdvancedAuth.AuthFlowType;
 import io.airbyte.protocol.models.v0.ConnectorSpecification;
@@ -75,6 +79,8 @@ class ConnectorDefinitionSpecificationHandlerTest {
   private SourceService sourceService;
   private DestinationService destinationService;
   private OAuthService oAuthService;
+  private WorkspaceHelper workspaceHelper;
+  private ConnectorConfigEntitlementService connectorEntitlementSerivce;
 
   @BeforeEach
   void setup() {
@@ -83,9 +89,15 @@ class ConnectorDefinitionSpecificationHandlerTest {
     sourceService = mock(SourceService.class);
     destinationService = mock(DestinationService.class);
     oAuthService = mock(OAuthService.class);
+    workspaceHelper = mock(WorkspaceHelper.class);
+    connectorEntitlementSerivce = mock(ConnectorConfigEntitlementService.class);
+
+    when(connectorEntitlementSerivce.getEntitledConnectorSpec(any(), any()))
+        .thenAnswer(invocation -> new EntitledConnectorSpec(((ActorDefinitionVersion) invocation.getArgument(1)).getSpec(), List.of()));
 
     connectorDefinitionSpecificationHandler =
-        new ConnectorDefinitionSpecificationHandler(actorDefinitionVersionHelper, jobConverter, sourceService, destinationService, oAuthService);
+        new ConnectorDefinitionSpecificationHandler(actorDefinitionVersionHelper, jobConverter, sourceService, destinationService, workspaceHelper,
+            oAuthService, connectorEntitlementSerivce);
   }
 
   @Test
@@ -93,6 +105,7 @@ class ConnectorDefinitionSpecificationHandlerTest {
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final UUID destinationId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
+    final UUID organizationId = UUID.randomUUID();
     final UUID destinationDefinitionId = UUID.randomUUID();
     final DestinationIdRequestBody destinationIdRequestBody =
         new DestinationIdRequestBody()
@@ -101,6 +114,9 @@ class ConnectorDefinitionSpecificationHandlerTest {
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withName(NAME)
         .withDestinationDefinitionId(destinationDefinitionId);
+    final ActorDefinitionVersion destinationVersion = new ActorDefinitionVersion()
+        .withDockerImageTag(DESTINATION_DOCKER_TAG)
+        .withSpec(CONNECTOR_SPECIFICATION);
     when(destinationService.getDestinationConnection(destinationId)).thenReturn(
         new DestinationConnection()
             .withDestinationId(destinationId)
@@ -109,14 +125,14 @@ class ConnectorDefinitionSpecificationHandlerTest {
     when(destinationService.getStandardDestinationDefinition(destinationDefinitionId))
         .thenReturn(destinationDefinition);
     when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId))
-        .thenReturn(new ActorDefinitionVersion()
-            .withDockerImageTag(DESTINATION_DOCKER_TAG)
-            .withSpec(CONNECTOR_SPECIFICATION));
+        .thenReturn(destinationVersion);
+    when(workspaceHelper.getOrganizationForWorkspace(workspaceId)).thenReturn(organizationId);
 
     final DestinationDefinitionSpecificationRead response =
         connectorDefinitionSpecificationHandler.getSpecificationForDestinationId(destinationIdRequestBody);
 
     verify(actorDefinitionVersionHelper).getDestinationVersion(destinationDefinition, workspaceId, destinationId);
+    verify(connectorEntitlementSerivce).getEntitledConnectorSpec(organizationId, destinationVersion);
     assertEquals(CONNECTOR_SPECIFICATION.getConnectionSpecification(), response.getConnectionSpecification());
   }
 
@@ -184,16 +200,21 @@ class ConnectorDefinitionSpecificationHandlerTest {
     final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId =
         new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
 
+    final UUID organizationId = UUID.randomUUID();
+    when(workspaceHelper.getOrganizationForWorkspace(destinationDefinitionIdWithWorkspaceId.getWorkspaceId()))
+        .thenReturn(organizationId);
+
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withName(NAME)
         .withDestinationDefinitionId(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
+    final ActorDefinitionVersion destinationVersion = new ActorDefinitionVersion()
+        .withDockerImageTag(DESTINATION_DOCKER_TAG)
+        .withSpec(CONNECTOR_SPECIFICATION);
     when(destinationService.getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
     when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition,
         destinationDefinitionIdWithWorkspaceId.getWorkspaceId()))
-            .thenReturn(new ActorDefinitionVersion()
-                .withDockerImageTag(DESTINATION_DOCKER_TAG)
-                .withSpec(CONNECTOR_SPECIFICATION));
+            .thenReturn(destinationVersion);
 
     final DestinationDefinitionSpecificationRead response =
         connectorDefinitionSpecificationHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId);
@@ -201,6 +222,7 @@ class ConnectorDefinitionSpecificationHandlerTest {
     verify(destinationService).getStandardDestinationDefinition(destinationDefinitionIdWithWorkspaceId.getDestinationDefinitionId());
     verify(actorDefinitionVersionHelper).getDestinationVersion(destinationDefinition,
         destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
+    verify(connectorEntitlementSerivce).getEntitledConnectorSpec(organizationId, destinationVersion);
     assertEquals(CONNECTOR_SPECIFICATION.getConnectionSpecification(), response.getConnectionSpecification());
   }
 
@@ -325,8 +347,10 @@ class ConnectorDefinitionSpecificationHandlerTest {
         .withConnectionSpecification(Jsons.jsonNode(new HashMap<>()))
         .withAdvancedAuth(new AdvancedAuth().withAuthFlowType(AuthFlowType.OAUTH_2_0).withOauthConfigSpecification(new OAuthConfigSpecification()));
 
+    final EntitledConnectorSpec entitledConnectorSpec = new EntitledConnectorSpec(connectorSpecification, List.of());
+
     final DestinationDefinitionSpecificationRead response =
-        connectorDefinitionSpecificationHandler.getDestinationSpecificationRead(destinationDefinition, connectorSpecification, true, workspaceId);
+        connectorDefinitionSpecificationHandler.getDestinationSpecificationRead(destinationDefinition, entitledConnectorSpec, true, workspaceId);
 
     verify(oAuthService).getDestinationOAuthParameterOptional(workspaceId, destinationDefinitionId);
     assertEquals(advancedAuthGlobalCredentialsAvailable, response.getAdvancedAuthGlobalCredentialsAvailable());
@@ -352,8 +376,10 @@ class ConnectorDefinitionSpecificationHandlerTest {
         .withConnectionSpecification(Jsons.jsonNode(new HashMap<>()))
         .withAdvancedAuth(new AdvancedAuth().withAuthFlowType(AuthFlowType.OAUTH_2_0).withOauthConfigSpecification(new OAuthConfigSpecification()));
 
+    final EntitledConnectorSpec entitledConnectorSpec = new EntitledConnectorSpec(connectorSpecification, List.of());
+
     final SourceDefinitionSpecificationRead response =
-        connectorDefinitionSpecificationHandler.getSourceSpecificationRead(sourceDefinition, connectorSpecification, workspaceId);
+        connectorDefinitionSpecificationHandler.getSourceSpecificationRead(sourceDefinition, entitledConnectorSpec, workspaceId);
 
     verify(oAuthService).getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId);
     assertEquals(advancedAuthGlobalCredentialsAvailable, response.getAdvancedAuthGlobalCredentialsAvailable());
