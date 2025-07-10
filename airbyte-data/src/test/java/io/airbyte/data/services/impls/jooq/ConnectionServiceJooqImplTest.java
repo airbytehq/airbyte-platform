@@ -364,6 +364,11 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
         .withStatus(StandardSync.Status.ACTIVE);
     connectionServiceJooqImpl.writeStandardSync(notSyncedConnection);
 
+    // Connection 4: Inactive but last job succeeded
+    final StandardSync pausedWithJobSucceededConnection = createStandardSync(source, destination, streams)
+        .withStatus(StandardSync.Status.INACTIVE);
+    connectionServiceJooqImpl.writeStandardSync(pausedWithJobSucceededConnection);
+
     // Insert job records using raw SQL since we need to work with the jobs database
     database.query(ctx -> {
       final var now = OffsetDateTime.now();
@@ -452,6 +457,18 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
           .set(io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS.CONFIG, org.jooq.impl.DSL.field("'{}'::jsonb", org.jooq.JSONB.class))
           .execute();
 
+      // Job for successful sync but paused connection
+      ctx.insertInto(io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS)
+          .set(io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS.ID, 8L)
+          .set(io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS.CONFIG_TYPE,
+              io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType.sync)
+          .set(io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS.SCOPE, pausedWithJobSucceededConnection.getConnectionId().toString())
+          .set(io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS.STATUS, io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus.succeeded)
+          .set(io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS.CREATED_AT, now.minusHours(2))
+          .set(io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS.UPDATED_AT, now.minusHours(2))
+          .set(io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS.CONFIG, org.jooq.impl.DSL.field("'{}'::jsonb", org.jooq.JSONB.class))
+          .execute();
+
       return null;
     });
 
@@ -461,7 +478,7 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
     assertEquals(1, result.healthy());
     // failedConnection + cancelledConnection + incompleteConnection
     assertEquals(3, result.failed());
-    assertEquals(1, result.paused());
+    assertEquals(2, result.paused());
     // notSyncedConnection (active connection with no jobs)
     assertEquals(1, result.notSynced());
   }

@@ -1775,11 +1775,11 @@ class ConnectionServiceJooqImpl
       val sql =
         """
         SELECT
-          COALESCE(SUM(CASE WHEN lj.latest_status = 'running' THEN 1 ELSE 0 END), 0) AS running,
-          COALESCE(SUM(CASE WHEN lj.latest_status = 'succeeded' THEN 1 ELSE 0 END), 0) AS healthy,
-          COALESCE(SUM(CASE WHEN lj.latest_status IN ('failed', 'cancelled', 'incomplete') THEN 1 ELSE 0 END), 0) AS failed,
+          COALESCE(SUM(CASE WHEN c.status != 'inactive' AND lj.latest_status = 'running' THEN 1 ELSE 0 END), 0) AS running,
+          COALESCE(SUM(CASE WHEN c.status != 'inactive' AND lj.latest_status = 'succeeded' THEN 1 ELSE 0 END), 0) AS healthy,
+          COALESCE(SUM(CASE WHEN c.status != 'inactive' AND lj.latest_status IN ('failed', 'cancelled', 'incomplete') THEN 1 ELSE 0 END), 0) AS failed,
           COALESCE(SUM(CASE WHEN c.status = 'inactive' THEN 1 ELSE 0 END), 0) AS paused,
-          COALESCE(SUM(CASE WHEN lj.latest_status IS NULL AND c.status != 'inactive' THEN 1 ELSE 0 END), 0) AS not_synced
+          COALESCE(SUM(CASE WHEN c.status != 'inactive' AND lj.latest_status IS NULL THEN 1 ELSE 0 END), 0) AS not_synced
         FROM connection c
         JOIN actor a ON c.source_id = a.id
         LEFT JOIN LATERAL (
