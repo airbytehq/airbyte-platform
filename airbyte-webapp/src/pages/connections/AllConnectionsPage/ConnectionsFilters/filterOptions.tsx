@@ -6,8 +6,7 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text, TextColor } from "components/ui/Text";
 
-import { useDestinationList, useSourceList } from "core/api";
-import { DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
+import { useDestinationDefinitionList, useSourceDefinitionList } from "core/api";
 import { naturalComparatorBy } from "core/utils/objects";
 
 import { SummaryKey } from "../ConnectionsSummary";
@@ -76,81 +75,73 @@ interface FilterOption {
 type SortableFilterOption = FilterOption & { sortValue: string };
 
 export const useAvailableSourceOptions = (): SortableFilterOption[] => {
-  const { sources } = useSourceList();
+  const { sourceDefinitions } = useSourceDefinitionList();
 
-  return useMemo(() => {
-    const dedupedSourceDefinitions = new Map<string, SourceRead>();
-    sources.forEach((source) => {
-      if (!dedupedSourceDefinitions.has(source.sourceDefinitionId)) {
-        dedupedSourceDefinitions.set(source.sourceDefinitionId, source);
-      }
-    });
-    return [
-      {
-        label: (
-          <Text bold color="grey">
-            <FormattedMessage id="tables.connections.filters.source.all" />
-          </Text>
-        ),
-        value: null,
-        sortValue: "",
-      },
-      ...Array.from(dedupedSourceDefinitions).map(([, source]) => {
-        return {
+  return useMemo(
+    () =>
+      [
+        {
           label: (
-            <FlexContainer gap="sm" alignItems="center" as="span">
-              <FlexItem>
-                <ConnectorIcon icon={source.icon} />
-              </FlexItem>
-              <FlexItem>
-                <Text size="sm">{source.sourceName}</Text>
-              </FlexItem>
-            </FlexContainer>
+            <Text bold color="grey">
+              <FormattedMessage id="tables.connections.filters.source.all" />
+            </Text>
           ),
-          value: source.sourceDefinitionId,
-          sortValue: source.sourceName,
-        };
-      }),
-    ].sort(naturalComparatorBy((option) => option.sortValue));
-  }, [sources]);
+          value: null,
+          sortValue: "",
+        },
+        ...sourceDefinitions.map((definition) => {
+          return {
+            label: (
+              <FlexContainer gap="sm" alignItems="center" as="span">
+                <FlexItem>
+                  <ConnectorIcon icon={definition.icon} />
+                </FlexItem>
+                <FlexItem>
+                  <Text size="sm">{definition.name}</Text>
+                </FlexItem>
+              </FlexContainer>
+            ),
+            value: definition.sourceDefinitionId,
+            sortValue: definition.name,
+          };
+        }),
+      ].sort(naturalComparatorBy((option) => option.sortValue)),
+    [sourceDefinitions]
+  );
 };
 
 export const useAvailableDestinationOptions = (): SortableFilterOption[] => {
-  const { destinations } = useDestinationList();
+  const { destinationDefinitions } = useDestinationDefinitionList();
 
-  return useMemo(() => {
-    const dedupedDestinationDefinitions = new Map<string, DestinationRead>();
-    destinations.forEach((destination) => {
-      if (!dedupedDestinationDefinitions.has(destination.destinationDefinitionId)) {
-        dedupedDestinationDefinitions.set(destination.destinationDefinitionId, destination);
-      }
-    });
-    return [
-      {
-        label: (
-          <Text bold color="grey">
-            <FormattedMessage id="tables.connections.filters.destination.all" />
-          </Text>
-        ),
-        value: null,
-        sortValue: "",
-      },
-      ...Array.from(dedupedDestinationDefinitions).map(([, destination]) => {
-        return {
+  return useMemo(
+    () =>
+      [
+        {
           label: (
-            <FlexContainer gap="sm" alignItems="center" as="span">
-              <FlexItem>
-                <ConnectorIcon icon={destination.icon} />
-              </FlexItem>
-              <FlexItem>
-                <Text size="sm">{destination.destinationName}</Text>
-              </FlexItem>
-            </FlexContainer>
+            <Text bold color="grey">
+              <FormattedMessage id="tables.connections.filters.destination.all" />
+            </Text>
           ),
-          value: destination.destinationDefinitionId,
-          sortValue: destination.destinationName,
-        };
-      }),
-    ].sort(naturalComparatorBy((option) => option.sortValue));
-  }, [destinations]);
+          value: null,
+          sortValue: "",
+        },
+        ...destinationDefinitions.map((definition) => {
+          return {
+            label: (
+              <FlexContainer gap="sm" alignItems="center" as="span">
+                <FlexItem>
+                  <ConnectorIcon icon={definition.icon} />
+                </FlexItem>
+                <FlexItem>
+                  <Text size="sm">{definition.name}</Text>
+                </FlexItem>
+              </FlexContainer>
+            ),
+            value: definition.destinationDefinitionId,
+            sortValue: definition.name,
+          };
+        }),
+      ].sort(naturalComparatorBy((option) => option.sortValue)),
+    [destinationDefinitions]
+  );
 };

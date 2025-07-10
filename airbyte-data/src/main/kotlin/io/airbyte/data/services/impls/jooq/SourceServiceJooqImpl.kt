@@ -4,6 +4,7 @@
 
 package io.airbyte.data.services.impls.jooq
 
+import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.enums.Enums
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorDefinitionBreakingChange
@@ -172,6 +173,41 @@ class SourceServiceJooqImpl(
       includeTombstones(Tables.ACTOR_DEFINITION.TOMBSTONE, includeTombstone),
       Tables.ACTOR_DEFINITION.PUBLIC.eq(true),
     )
+
+  /**
+   * List source definitions used by the given workspace.
+   *
+   * @param workspaceId workspace id
+   * @param includeTombstone include tombstoned sources
+   * @return source definitions used by workspace
+   * @throws IOException - you never know when you IO
+   */
+  @Throws(IOException::class)
+  override fun listSourceDefinitionsForWorkspace(
+    workspaceId: UUID,
+    includeTombstone: Boolean,
+  ): List<StandardSourceDefinition> =
+    database
+      .query<Result<Record>> { ctx: DSLContext ->
+        ctx
+          .selectDistinct(Tables.ACTOR_DEFINITION.asterisk())
+          .from(Tables.ACTOR_DEFINITION)
+          .join(Tables.ACTOR)
+          .on(Tables.ACTOR.ACTOR_DEFINITION_ID.eq(Tables.ACTOR_DEFINITION.ID))
+          .where(Tables.ACTOR.WORKSPACE_ID.eq(workspaceId))
+          .and(Tables.ACTOR_DEFINITION.ACTOR_TYPE.eq(ActorType.source))
+          .and(if (includeTombstone) DSL.noCondition() else Tables.ACTOR.TOMBSTONE.notEqual(true))
+          .and(if (includeTombstone) DSL.noCondition() else Tables.ACTOR_DEFINITION.TOMBSTONE.notEqual(true))
+          .fetch()
+      }.stream()
+      .map { record: Record ->
+        DbConverter.buildStandardSourceDefinition(
+          record,
+          retrieveDefaultMaxSecondsBetweenMessages(
+            record.get(Tables.ACTOR_DEFINITION.ID),
+          ),
+        )
+      }.toList()
 
   /**
    * List granted source definitions for workspace.
@@ -599,7 +635,8 @@ class SourceServiceJooqImpl(
    * @param sourceDefinitionId to retrieve the default max seconds between messages for.
    * @return
    */
-  private fun retrieveDefaultMaxSecondsBetweenMessages(sourceDefinitionId: UUID): Long =
+  @VisibleForTesting
+  fun retrieveDefaultMaxSecondsBetweenMessages(sourceDefinitionId: UUID): Long =
     featureFlagClient.stringVariation(HeartbeatMaxSecondsBetweenMessages, SourceDefinition(sourceDefinitionId)).toLong()
 
   private fun writeActorDefinitionWorkspaceGrant(

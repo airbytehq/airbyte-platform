@@ -184,6 +184,35 @@ class DestinationServiceJooqImpl
       )
 
     /**
+     * List destination definitions used by the given workspace.
+     *
+     * @param workspaceId workspace id
+     * @param includeTombstone include tombstoned destinations
+     * @return public destination definitions
+     * @throws IOException - you never know when you IO
+     */
+    @Throws(IOException::class)
+    override fun listDestinationDefinitionsForWorkspace(
+      workspaceId: UUID,
+      includeTombstone: Boolean,
+    ): List<StandardDestinationDefinition> =
+      database
+        .query<Result<Record>> { ctx: DSLContext ->
+          ctx
+            .selectDistinct(Tables.ACTOR_DEFINITION.asterisk())
+            .from(Tables.ACTOR_DEFINITION)
+            .join(Tables.ACTOR)
+            .on(Tables.ACTOR.ACTOR_DEFINITION_ID.eq(Tables.ACTOR_DEFINITION.ID))
+            .where(Tables.ACTOR.WORKSPACE_ID.eq(workspaceId))
+            .and(Tables.ACTOR_DEFINITION.ACTOR_TYPE.eq(ActorType.destination))
+            .and(if (includeTombstone) DSL.noCondition() else Tables.ACTOR.TOMBSTONE.notEqual(true))
+            .and(if (includeTombstone) DSL.noCondition() else Tables.ACTOR_DEFINITION.TOMBSTONE.notEqual(true))
+            .fetch()
+        }.stream()
+        .map { record: Record -> DbConverter.buildStandardDestinationDefinition(record) }
+        .toList()
+
+    /**
      * List granted destination definitions for workspace.
      *
      * @param workspaceId workspace id

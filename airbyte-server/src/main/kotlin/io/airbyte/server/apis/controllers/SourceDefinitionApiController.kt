@@ -16,6 +16,7 @@ import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId
 import io.airbyte.api.model.generated.SourceDefinitionRead
 import io.airbyte.api.model.generated.SourceDefinitionReadList
 import io.airbyte.api.model.generated.SourceDefinitionUpdate
+import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
@@ -177,7 +178,7 @@ open class SourceDefinitionApiController(
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listSourceDefinitionsForWorkspace(
-    @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
+    @Body workspaceIdRequestBody: WorkspaceIdActorDefinitionRequestBody,
   ): io.airbyte.api.model.generated.SourceDefinitionReadList? =
     execute {
       sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(

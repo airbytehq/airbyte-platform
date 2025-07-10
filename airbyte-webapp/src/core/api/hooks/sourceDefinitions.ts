@@ -25,7 +25,7 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const sourceDefinitionKeys = {
   all: [SCOPE_WORKSPACE, "sourceDefinition"] as const,
-  lists: () => [...sourceDefinitionKeys.all, "list"] as const,
+  lists: (filterByUsed: boolean = false) => [...sourceDefinitionKeys.all, "list", filterByUsed] as const,
   listLatest: () => [...sourceDefinitionKeys.all, "listLatest"] as const,
   detail: (id: string) => [...sourceDefinitionKeys.all, "details", id] as const,
 };
@@ -35,18 +35,19 @@ interface SourceDefinitions {
   sourceDefinitionMap: Map<string, SourceDefinitionRead>;
 }
 
-export const useSourceDefinitionList = (): SourceDefinitions => {
+export const useSourceDefinitionList = ({ filterByUsed }: { filterByUsed?: boolean } = {}): SourceDefinitions => {
   const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
   return useQuery(
-    sourceDefinitionKeys.lists(),
+    sourceDefinitionKeys.lists(filterByUsed),
     async () => {
-      const { sourceDefinitions } = await listSourceDefinitionsForWorkspace({ workspaceId }, requestOptions).then(
-        ({ sourceDefinitions }) => ({
-          sourceDefinitions: sourceDefinitions.sort((a, b) => a.name.localeCompare(b.name)),
-        })
-      );
+      const { sourceDefinitions } = await listSourceDefinitionsForWorkspace(
+        { workspaceId, filterByUsed },
+        requestOptions
+      ).then(({ sourceDefinitions }) => ({
+        sourceDefinitions: sourceDefinitions.sort((a, b) => a.name.localeCompare(b.name)),
+      }));
       const sourceDefinitionMap = new Map<string, SourceDefinitionRead>();
       sourceDefinitions.forEach((sourceDefinition) => {
         sourceDefinitionMap.set(sourceDefinition.sourceDefinitionId, sourceDefinition);

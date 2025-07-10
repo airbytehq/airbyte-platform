@@ -45,6 +45,12 @@ interface DestinationService {
   fun listPublicDestinationDefinitions(includeTombstone: Boolean): List<StandardDestinationDefinition>
 
   @Throws(IOException::class)
+  fun listDestinationDefinitionsForWorkspace(
+    workspaceId: UUID,
+    includeTombstone: Boolean,
+  ): List<StandardDestinationDefinition>
+
+  @Throws(IOException::class)
   fun listGrantedDestinationDefinitions(
     workspaceId: UUID,
     includeTombstones: Boolean,

@@ -16,6 +16,7 @@ import io.airbyte.api.model.generated.SourceDefinitionRead.SourceTypeEnum;
 import io.airbyte.api.model.generated.SourceDefinitionReadList;
 import io.airbyte.api.model.generated.SourceDefinitionUpdate;
 import io.airbyte.api.model.generated.SourceRead;
+import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
@@ -205,12 +206,32 @@ public class SourceDefinitionsHandler {
     return toSourceDefinitionReadList(validSourceDefs, sourceDefVersionMap);
   }
 
-  public SourceDefinitionReadList listSourceDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
+  public SourceDefinitionReadList listSourceDefinitionsForWorkspace(final WorkspaceIdActorDefinitionRequestBody workspaceIdActorDefinitionRequestBody)
       throws IOException, JsonValidationException, ConfigNotFoundException {
 
+    if (workspaceIdActorDefinitionRequestBody.getFilterByUsed() != null && workspaceIdActorDefinitionRequestBody.getFilterByUsed()) {
+      return listSourceDefinitionsUsedByWorkspace(workspaceIdActorDefinitionRequestBody.getWorkspaceId());
+    } else {
+      return listAllowedSourceDefinitions(workspaceIdActorDefinitionRequestBody.getWorkspaceId());
+    }
+  }
+
+  SourceDefinitionReadList listSourceDefinitionsUsedByWorkspace(final UUID workspaceId)
+      throws IOException {
+
+    final List<StandardSourceDefinition> sourceDefs = sourceService.listSourceDefinitionsForWorkspace(workspaceId, false);
+
+    final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap =
+        actorDefinitionVersionHelper.getSourceVersions(sourceDefs, workspaceId);
+
+    return toSourceDefinitionReadList(sourceDefs, sourceDefVersionMap);
+  }
+
+  SourceDefinitionReadList listAllowedSourceDefinitions(final UUID workspaceId)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final List<StandardSourceDefinition> publicSourceDefs = sourceService.listPublicSourceDefinitions(false);
 
-    final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceIdRequestBody.getWorkspaceId(), true);
+    final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true);
     final Map<UUID, Boolean> publicSourceEntitlements = licenseEntitlementChecker.checkEntitlements(
         workspace.getOrganizationId(),
         Entitlement.SOURCE_CONNECTOR,
@@ -221,16 +242,16 @@ public class SourceDefinitionsHandler {
 
     final List<StandardSourceDefinition> sourceDefs = Stream.concat(
         entitledPublicSourceDefs,
-        sourceService.listGrantedSourceDefinitions(workspaceIdRequestBody.getWorkspaceId(), false).stream()).toList();
+        sourceService.listGrantedSourceDefinitions(workspaceId, false).stream()).toList();
 
     // Hide source definitions from the list via feature flag
     final List<StandardSourceDefinition> shownSourceDefs = sourceDefs.stream().filter((sourceDefinition) -> !featureFlagClient.boolVariation(
         HideActorDefinitionFromList.INSTANCE,
-        new Multi(List.of(new SourceDefinition(sourceDefinition.getSourceDefinitionId()), new Workspace(workspaceIdRequestBody.getWorkspaceId())))))
+        new Multi(List.of(new SourceDefinition(sourceDefinition.getSourceDefinitionId()), new Workspace(workspaceId)))))
         .toList();
 
     final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap =
-        actorDefinitionVersionHelper.getSourceVersions(shownSourceDefs, workspaceIdRequestBody.getWorkspaceId());
+        actorDefinitionVersionHelper.getSourceVersions(shownSourceDefs, workspaceId);
     return toSourceDefinitionReadList(shownSourceDefs, sourceDefVersionMap);
   }
 

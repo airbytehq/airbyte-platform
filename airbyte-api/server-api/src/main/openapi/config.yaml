@@ -644,7 +644,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+              $ref: "#/components/schemas/WorkspaceIdActorDefinitionRequestBody"
       responses:
         "200":
           description: Successful operation
@@ -1682,7 +1682,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+              $ref: "#/components/schemas/WorkspaceIdActorDefinitionRequestBody"
       responses:
         "200":
           description: Successful operation
@@ -10698,6 +10698,18 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         includeTombstone:
           type: boolean
+    WorkspaceIdActorDefinitionRequestBody:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        includeTombstone:
+          type: boolean
+        filterByUsed:
+          type: boolean
+          default: false
     ListConnectionsForWorkspacesRequestBody:
       type: object
       required:

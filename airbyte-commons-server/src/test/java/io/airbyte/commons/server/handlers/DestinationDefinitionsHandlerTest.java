@@ -31,6 +31,7 @@ import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList;
 import io.airbyte.api.model.generated.ReleaseStage;
 import io.airbyte.api.model.generated.SupportLevel;
+import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
 import io.airbyte.commons.entitlements.Entitlement;
@@ -308,7 +309,7 @@ class DestinationDefinitionsHandlerTest {
         .supportsDataActivation(destinationDefinitionVersion.getSupportsDataActivation());
 
     final DestinationDefinitionReadList actualDestinationDefinitionReadList = destinationDefinitionsHandler
-        .listDestinationDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
+        .listDestinationDefinitionsForWorkspace(new WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId));
 
     assertEquals(
         List.of(expectedDestinationDefinitionRead1),
@@ -334,7 +335,7 @@ class DestinationDefinitionsHandlerTest {
         .thenReturn(Map.of(destinationDefinitionVersion.getActorDefinitionId(), destinationDefinitionVersion));
 
     final DestinationDefinitionReadList actualDestinationDefinitionReadList = destinationDefinitionsHandler
-        .listDestinationDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
+        .listDestinationDefinitionsForWorkspace(new WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId));
 
     final List<UUID> expectedIds =
         List.of(destinationDefinition.getDestinationDefinitionId());
@@ -366,7 +367,7 @@ class DestinationDefinitionsHandlerTest {
         .thenReturn(Map.of(destinationDefinitionVersion.getActorDefinitionId(), destinationDefinitionVersion));
 
     final DestinationDefinitionReadList actualDestinationDefinitionReadList = destinationDefinitionsHandler
-        .listDestinationDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
+        .listDestinationDefinitionsForWorkspace(new WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId));
 
     final List<UUID> expectedIds =
         List.of(destinationDefinition.getDestinationDefinitionId());
@@ -374,6 +375,76 @@ class DestinationDefinitionsHandlerTest {
     assertEquals(expectedIds.size(), actualDestinationDefinitionReadList.getDestinationDefinitions().size());
     assertTrue(expectedIds.containsAll(actualDestinationDefinitionReadList.getDestinationDefinitions().stream()
         .map(DestinationDefinitionRead::getDestinationDefinitionId).toList()));
+  }
+
+  @Test
+  @DisplayName("listDestinationDefinitionsUsedByWorkspace should return the right list")
+  void testListDestinationDefinitionsUsedByWorkspace() throws IOException, URISyntaxException, ConfigNotFoundException, JsonValidationException {
+    final StandardDestinationDefinition usedDestinationDefinition = generateDestinationDefinition();
+    final ActorDefinitionVersion usedDestinationDefinitionVersion = generateVersionFromDestinationDefinition(usedDestinationDefinition);
+
+    when(destinationService.listDestinationDefinitionsForWorkspace(workspaceId, false)).thenReturn(List.of(usedDestinationDefinition));
+    when(actorDefinitionVersionHelper.getDestinationVersions(List.of(usedDestinationDefinition), workspaceId))
+        .thenReturn(Map.of(usedDestinationDefinitionVersion.getActorDefinitionId(), usedDestinationDefinitionVersion));
+
+    final DestinationDefinitionReadList actualDestinationDefinitionReadList = destinationDefinitionsHandler
+        .listDestinationDefinitionsForWorkspace(new WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId).filterByUsed(true));
+
+    final List<UUID> expectedIds =
+        List.of(usedDestinationDefinition.getDestinationDefinitionId());
+
+    assertEquals(expectedIds.size(), actualDestinationDefinitionReadList.getDestinationDefinitions().size());
+    assertTrue(expectedIds.containsAll(actualDestinationDefinitionReadList.getDestinationDefinitions().stream()
+        .map(DestinationDefinitionRead::getDestinationDefinitionId).toList()));
+  }
+
+  @Test
+  @DisplayName("listDestinationDefinitionsUsedByWorkspace should return all definitions when filterByUsed is false")
+  void testListDestinationDefinitionsUsedByWorkspaceWithFilterByUsedFalse() throws IOException, JsonValidationException, ConfigNotFoundException {
+    final StandardDestinationDefinition destinationDefinition2 = generateDestinationDefinition();
+    final ActorDefinitionVersion destinationDefinitionVersion2 = generateVersionFromDestinationDefinition(destinationDefinition2);
+
+    when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
+    when(destinationService.listPublicDestinationDefinitions(false)).thenReturn(List.of(destinationDefinition));
+    when(destinationService.listGrantedDestinationDefinitions(workspaceId, false)).thenReturn(List.of(destinationDefinition2));
+    when(actorDefinitionVersionHelper.getDestinationVersions(List.of(destinationDefinition, destinationDefinition2), workspaceId))
+        .thenReturn(
+            Map.of(
+                destinationDefinitionVersion.getActorDefinitionId(), destinationDefinitionVersion,
+                destinationDefinitionVersion2.getActorDefinitionId(), destinationDefinitionVersion2));
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+    when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.DESTINATION_CONNECTOR),
+        eq(List.of(destinationDefinition.getDestinationDefinitionId()))))
+            .thenReturn(Map.of(destinationDefinition.getDestinationDefinitionId(), true));
+
+    final DestinationDefinitionReadList actualDestinationDefinitionReadList = destinationDefinitionsHandler
+        .listDestinationDefinitionsForWorkspace(new WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId).filterByUsed(false));
+
+    final List<UUID> expectedIds = List.of(destinationDefinition.getDestinationDefinitionId(), destinationDefinition2.getDestinationDefinitionId());
+    assertEquals(expectedIds.size(), actualDestinationDefinitionReadList.getDestinationDefinitions().size());
+    assertTrue(expectedIds.containsAll(actualDestinationDefinitionReadList.getDestinationDefinitions().stream()
+        .map(DestinationDefinitionRead::getDestinationDefinitionId)
+        .toList()));
+  }
+
+  @Test
+  @DisplayName("listDestinationDefinitionsUsedByWorkspace should return only used definitions when filterByUsed is true")
+  void testListDestinationDefinitionsUsedByWorkspaceWithFilterByUsedTrue() throws IOException, ConfigNotFoundException, JsonValidationException {
+    final StandardDestinationDefinition usedDestinationDefinition = generateDestinationDefinition();
+    final ActorDefinitionVersion usedDestinationDefinitionVersion = generateVersionFromDestinationDefinition(usedDestinationDefinition);
+
+    when(destinationService.listDestinationDefinitionsForWorkspace(workspaceId, false)).thenReturn(List.of(usedDestinationDefinition));
+    when(actorDefinitionVersionHelper.getDestinationVersions(List.of(usedDestinationDefinition), workspaceId))
+        .thenReturn(Map.of(usedDestinationDefinitionVersion.getActorDefinitionId(), usedDestinationDefinitionVersion));
+
+    final DestinationDefinitionReadList actualDestinationDefinitionReadList = destinationDefinitionsHandler
+        .listDestinationDefinitionsForWorkspace(new WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId).filterByUsed(true));
+
+    final List<UUID> expectedIds = List.of(usedDestinationDefinition.getDestinationDefinitionId());
+    assertEquals(expectedIds.size(), actualDestinationDefinitionReadList.getDestinationDefinitions().size());
+    assertTrue(expectedIds.containsAll(actualDestinationDefinitionReadList.getDestinationDefinitions().stream()
+        .map(DestinationDefinitionRead::getDestinationDefinitionId)
+        .toList()));
   }
 
   @Test

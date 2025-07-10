@@ -22,7 +22,7 @@ import io.airbyte.api.model.generated.DestinationDefinitionUpdate
 import io.airbyte.api.model.generated.SourceDefinitionCreate
 import io.airbyte.api.model.generated.SourceDefinitionRead
 import io.airbyte.api.model.generated.SourceDefinitionUpdate
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
@@ -224,7 +224,7 @@ class DefinitionsController(
     // and other details are taken into account.
     val defs =
       sourceDefinitionsHandler
-        .listSourceDefinitionsForWorkspace(WorkspaceIdRequestBody().workspaceId(workspaceId))
+        .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId))
         .sourceDefinitions
 
     val def = defs.firstOrNull { it.sourceDefinitionId == definitionId }
@@ -263,7 +263,7 @@ class DefinitionsController(
     // and other details are taken into account.
     val defs =
       destinationDefinitionsHandler
-        .listDestinationDefinitionsForWorkspace(WorkspaceIdRequestBody().workspaceId(workspaceId))
+        .listDestinationDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId))
         .destinationDefinitions
 
     val def = defs.firstOrNull { it.destinationDefinitionId == definitionId }
@@ -280,7 +280,7 @@ class DefinitionsController(
 
       DefinitionsResponse(
         sourceDefinitionsHandler
-          .listSourceDefinitionsForWorkspace(WorkspaceIdRequestBody().workspaceId(workspaceId))
+          .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId))
           .sourceDefinitions
           .filter { it.dockerRepository != AirbyteCatalogConstants.AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE }
           .map { it.toPublicApiModel() },
@@ -293,7 +293,7 @@ class DefinitionsController(
 
       DeclarativeSourceDefinitionsResponse(
         sourceDefinitionsHandler
-          .listSourceDefinitionsForWorkspace(WorkspaceIdRequestBody().workspaceId(workspaceId))
+          .listSourceDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId))
           .sourceDefinitions
           .filter { it.dockerRepository == AirbyteCatalogConstants.AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE }
           .map {
@@ -314,7 +314,7 @@ class DefinitionsController(
 
       DefinitionsResponse(
         destinationDefinitionsHandler
-          .listDestinationDefinitionsForWorkspace(WorkspaceIdRequestBody().workspaceId(workspaceId))
+          .listDestinationDefinitionsForWorkspace(WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId))
           .destinationDefinitions
           .map { it.toPublicApiModel() },
       ).ok()

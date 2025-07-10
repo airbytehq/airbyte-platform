@@ -33,6 +33,7 @@ import io.airbyte.api.model.generated.SourceDefinitionUpdate;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceReadList;
 import io.airbyte.api.model.generated.SupportLevel;
+import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
 import io.airbyte.commons.entitlements.Entitlement;
@@ -353,7 +354,7 @@ class SourceDefinitionsHandlerTest {
         .language(sourceDefinitionVersion2.getLanguage());
 
     final SourceDefinitionReadList actualSourceDefinitionReadList =
-        sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
+        sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(new WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId));
 
     assertEquals(
         Lists.newArrayList(expectedSourceDefinitionRead1, expectedSourceDefinitionRead2),
@@ -385,7 +386,7 @@ class SourceDefinitionsHandlerTest {
                 hiddenSourceDefinition.getSourceDefinitionId(), true));
 
     final SourceDefinitionReadList actualSourceDefinitionReadList =
-        sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
+        sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(new WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId));
 
     final List<UUID> expectedIds = Lists.newArrayList(sourceDefinition.getSourceDefinitionId(), sourceDefinition2.getSourceDefinitionId());
     assertEquals(expectedIds.size(), actualSourceDefinitionReadList.getSourceDefinitions().size());
@@ -417,7 +418,7 @@ class SourceDefinitionsHandlerTest {
                 unentitledSourceDefinition.getSourceDefinitionId(), false));
 
     final SourceDefinitionReadList actualSourceDefinitionReadList =
-        sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
+        sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(new WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId));
 
     final List<UUID> expectedIds = Lists.newArrayList(sourceDefinition.getSourceDefinitionId(), sourceDefinition2.getSourceDefinitionId());
     assertEquals(expectedIds.size(), actualSourceDefinitionReadList.getSourceDefinitions().size());
@@ -1151,6 +1152,115 @@ class SourceDefinitionsHandlerTest {
       assertEquals(0, sourceDefinitionsHandler.listLatestSourceDefinitions().getSourceDefinitions().size());
     }
 
+  }
+
+  @Test
+  @DisplayName("listSourceDefinitionsUsedByWorkspace should return the right list")
+  void testListSourceDefinitionsUsedByWorkspace() throws IOException, URISyntaxException, JsonValidationException, ConfigNotFoundException {
+    final StandardSourceDefinition sourceDefinition2 = generateSourceDefinition();
+    final ActorDefinitionVersion sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2);
+
+    when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
+    when(sourceService.listPublicSourceDefinitions(false)).thenReturn(Lists.newArrayList(sourceDefinition));
+    when(sourceService.listGrantedSourceDefinitions(workspaceId, false)).thenReturn(Lists.newArrayList(sourceDefinition2));
+    when(actorDefinitionVersionHelper.getSourceVersions(List.of(sourceDefinition, sourceDefinition2), workspaceId))
+        .thenReturn(
+            Map.of(
+                sourceDefinitionVersion.getActorDefinitionId(), sourceDefinitionVersion,
+                sourceDefinitionVersion2.getActorDefinitionId(), sourceDefinitionVersion2));
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+    when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.SOURCE_CONNECTOR),
+        eq(List.of(sourceDefinition.getSourceDefinitionId()))))
+            .thenReturn(Map.of(sourceDefinition.getSourceDefinitionId(), true));
+
+    final SourceDefinitionRead expectedSourceDefinitionRead1 = new SourceDefinitionRead()
+        .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .name(sourceDefinition.getName())
+        .dockerRepository(sourceDefinitionVersion.getDockerRepository())
+        .dockerImageTag(sourceDefinitionVersion.getDockerImageTag())
+        .documentationUrl(new URI(sourceDefinitionVersion.getDocumentationUrl()))
+        .icon(ICON_URL)
+        .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion.getSupportLevel().value()))
+        .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion.getReleaseStage().value()))
+        .releaseDate(LocalDate.parse(sourceDefinitionVersion.getReleaseDate()))
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
+            ._default(new io.airbyte.api.model.generated.ResourceRequirements()
+                .cpuRequest(sourceDefinition.getResourceRequirements().getDefault().getCpuRequest()))
+            .jobSpecific(Collections.emptyList()))
+        .language(sourceDefinitionVersion.getLanguage());
+
+    final SourceDefinitionRead expectedSourceDefinitionRead2 = new SourceDefinitionRead()
+        .sourceDefinitionId(sourceDefinition2.getSourceDefinitionId())
+        .name(sourceDefinition2.getName())
+        .dockerRepository(sourceDefinitionVersion2.getDockerRepository())
+        .dockerImageTag(sourceDefinitionVersion2.getDockerImageTag())
+        .documentationUrl(new URI(sourceDefinitionVersion2.getDocumentationUrl()))
+        .icon(ICON_URL)
+        .supportLevel(SupportLevel.fromValue(sourceDefinitionVersion2.getSupportLevel().value()))
+        .releaseStage(ReleaseStage.fromValue(sourceDefinitionVersion2.getReleaseStage().value()))
+        .releaseDate(LocalDate.parse(sourceDefinitionVersion2.getReleaseDate()))
+        .resourceRequirements(new io.airbyte.api.model.generated.ScopedResourceRequirements()
+            ._default(new io.airbyte.api.model.generated.ResourceRequirements()
+                .cpuRequest(sourceDefinition2.getResourceRequirements().getDefault().getCpuRequest()))
+            .jobSpecific(Collections.emptyList()))
+        .language(sourceDefinitionVersion2.getLanguage());
+
+    final SourceDefinitionReadList actualSourceDefinitionReadList =
+        sourceDefinitionsHandler
+            .listSourceDefinitionsForWorkspace(new WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId).filterByUsed(false));
+
+    assertEquals(
+        Lists.newArrayList(expectedSourceDefinitionRead1, expectedSourceDefinitionRead2),
+        actualSourceDefinitionReadList.getSourceDefinitions());
+  }
+
+  @Test
+  @DisplayName("listSourceDefinitionsUsedByWorkspace should return only used definitions when filterByUsed is true")
+  void testListSourceDefinitionsUsedByWorkspaceWithFilterByUsedTrue() throws IOException, ConfigNotFoundException, JsonValidationException {
+    final StandardSourceDefinition usedSourceDefinition = generateSourceDefinition();
+    final ActorDefinitionVersion usedSourceDefinitionVersion = generateVersionFromSourceDefinition(usedSourceDefinition);
+
+    when(sourceService.listSourceDefinitionsForWorkspace(workspaceId, false)).thenReturn(List.of(usedSourceDefinition));
+    when(actorDefinitionVersionHelper.getSourceVersions(List.of(usedSourceDefinition), workspaceId))
+        .thenReturn(Map.of(usedSourceDefinitionVersion.getActorDefinitionId(), usedSourceDefinitionVersion));
+
+    final SourceDefinitionReadList actualSourceDefinitionReadList = sourceDefinitionsHandler
+        .listSourceDefinitionsForWorkspace(new WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId).filterByUsed(true));
+
+    final List<UUID> expectedIds = List.of(usedSourceDefinition.getSourceDefinitionId());
+    assertEquals(expectedIds.size(), actualSourceDefinitionReadList.getSourceDefinitions().size());
+    assertTrue(expectedIds.containsAll(actualSourceDefinitionReadList.getSourceDefinitions().stream()
+        .map(SourceDefinitionRead::getSourceDefinitionId)
+        .toList()));
+  }
+
+  @Test
+  @DisplayName("listSourceDefinitionsUsedByWorkspace should return all definitions when filterByUsed is false")
+  void testListSourceDefinitionsUsedByWorkspaceWithFilterByUsedFalse() throws IOException, JsonValidationException, ConfigNotFoundException {
+    final StandardSourceDefinition sourceDefinition2 = generateSourceDefinition();
+    final ActorDefinitionVersion sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2);
+
+    when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
+    when(sourceService.listPublicSourceDefinitions(false)).thenReturn(Lists.newArrayList(sourceDefinition));
+    when(sourceService.listGrantedSourceDefinitions(workspaceId, false)).thenReturn(Lists.newArrayList(sourceDefinition2));
+    when(actorDefinitionVersionHelper.getSourceVersions(List.of(sourceDefinition, sourceDefinition2), workspaceId))
+        .thenReturn(
+            Map.of(
+                sourceDefinitionVersion.getActorDefinitionId(), sourceDefinitionVersion,
+                sourceDefinitionVersion2.getActorDefinitionId(), sourceDefinitionVersion2));
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+    when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.SOURCE_CONNECTOR),
+        eq(List.of(sourceDefinition.getSourceDefinitionId()))))
+            .thenReturn(Map.of(sourceDefinition.getSourceDefinitionId(), true));
+
+    final SourceDefinitionReadList actualSourceDefinitionReadList = sourceDefinitionsHandler
+        .listSourceDefinitionsForWorkspace(new WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId).filterByUsed(false));
+
+    final List<UUID> expectedIds = Lists.newArrayList(sourceDefinition.getSourceDefinitionId(), sourceDefinition2.getSourceDefinitionId());
+    assertEquals(expectedIds.size(), actualSourceDefinitionReadList.getSourceDefinitions().size());
+    assertTrue(expectedIds.containsAll(actualSourceDefinitionReadList.getSourceDefinitions().stream()
+        .map(SourceDefinitionRead::getSourceDefinitionId)
+        .toList()));
   }
 
 }

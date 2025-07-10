@@ -8,7 +8,7 @@ import io.airbyte.api.model.generated.DestinationDefinitionRead
 import io.airbyte.api.model.generated.DestinationDefinitionReadList
 import io.airbyte.api.model.generated.SourceDefinitionRead
 import io.airbyte.api.model.generated.SourceDefinitionReadList
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler
 import io.airbyte.publicApi.server.generated.models.ConnectorDefinitionResponse
@@ -38,7 +38,10 @@ class ConnectorDefinitionsServiceImpl(
     when (type) {
       ConnectorType.SOURCE -> {
         if (workspaceId != null) {
-          return sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(WorkspaceIdRequestBody().workspaceId(workspaceId)).toPublicApiModel()
+          return sourceDefinitionsHandler
+            .listSourceDefinitionsForWorkspace(
+              WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId),
+            ).toPublicApiModel()
         }
         return sourceDefinitionsHandler.listPublicSourceDefinitions().toPublicApiModel()
       }
@@ -46,7 +49,7 @@ class ConnectorDefinitionsServiceImpl(
         if (workspaceId != null) {
           return destinationDefinitionsHandler
             .listDestinationDefinitionsForWorkspace(
-              WorkspaceIdRequestBody().workspaceId(workspaceId),
+              WorkspaceIdActorDefinitionRequestBody().workspaceId(workspaceId),
             ).toPublicApiModel()
         }
         return destinationDefinitionsHandler.listPublicDestinationDefinitions().toPublicApiModel()

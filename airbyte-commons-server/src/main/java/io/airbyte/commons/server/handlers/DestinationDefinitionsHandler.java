@@ -15,6 +15,7 @@ import io.airbyte.api.model.generated.DestinationDefinitionUpdate;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead;
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList;
+import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
@@ -196,12 +197,31 @@ public class DestinationDefinitionsHandler {
     return toDestinationDefinitionReadList(validDestinationDefs, destinationDefVersions);
   }
 
-  public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
+  public DestinationDefinitionReadList listDestinationDefinitionsForWorkspace(final WorkspaceIdActorDefinitionRequestBody workspaceIdActorDefinitionRequestBody)
       throws IOException, JsonValidationException, ConfigNotFoundException {
+    if (workspaceIdActorDefinitionRequestBody.getFilterByUsed() != null && workspaceIdActorDefinitionRequestBody.getFilterByUsed()) {
+      return listDestinationDefinitionsUsedByWorkspace(workspaceIdActorDefinitionRequestBody.getWorkspaceId());
+    } else {
+      return listAllowedDestinationDefinitions(workspaceIdActorDefinitionRequestBody.getWorkspaceId());
+    }
+  }
 
+  DestinationDefinitionReadList listDestinationDefinitionsUsedByWorkspace(final UUID workspaceId)
+      throws IOException {
+
+    final List<StandardDestinationDefinition> destinationDefs = destinationService.listDestinationDefinitionsForWorkspace(workspaceId, false);
+
+    final Map<UUID, ActorDefinitionVersion> destinationDefVersionMap =
+        actorDefinitionVersionHelper.getDestinationVersions(destinationDefs, workspaceId);
+
+    return toDestinationDefinitionReadList(destinationDefs, destinationDefVersionMap);
+  }
+
+  DestinationDefinitionReadList listAllowedDestinationDefinitions(final UUID workspaceId)
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final List<StandardDestinationDefinition> publicDestinationDefs = destinationService.listPublicDestinationDefinitions(false);
 
-    final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceIdRequestBody.getWorkspaceId(), true);
+    final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true);
     final Map<UUID, Boolean> publicDestinationEntitlements = licenseEntitlementChecker.checkEntitlements(
         workspace.getOrganizationId(),
         Entitlement.DESTINATION_CONNECTOR,
@@ -212,18 +232,18 @@ public class DestinationDefinitionsHandler {
 
     final List<StandardDestinationDefinition> destinationDefs = Stream.concat(
         entitledPublicDestinationDefs,
-        destinationService.listGrantedDestinationDefinitions(workspaceIdRequestBody.getWorkspaceId(), false).stream()).toList();
+        destinationService.listGrantedDestinationDefinitions(workspaceId, false).stream()).toList();
 
     // Hide destination definitions from the list via feature flag
     final List<StandardDestinationDefinition> shownDestinationDefs = destinationDefs
         .stream().filter((destinationDefinition) -> !featureFlagClient.boolVariation(
             HideActorDefinitionFromList.INSTANCE,
             new Multi(List.of(new DestinationDefinition(destinationDefinition.getDestinationDefinitionId()),
-                new Workspace(workspaceIdRequestBody.getWorkspaceId())))))
+                new Workspace(workspaceId)))))
         .toList();
 
     final Map<UUID, ActorDefinitionVersion> sourceDefVersionMap =
-        actorDefinitionVersionHelper.getDestinationVersions(shownDestinationDefs, workspaceIdRequestBody.getWorkspaceId());
+        actorDefinitionVersionHelper.getDestinationVersions(shownDestinationDefs, workspaceId);
     return toDestinationDefinitionReadList(shownDestinationDefs, sourceDefVersionMap);
   }
 

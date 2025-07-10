@@ -15,6 +15,7 @@ import io.airbyte.api.model.generated.DestinationDefinitionUpdate
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList
 import io.airbyte.api.model.generated.ScopeType
+import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
@@ -136,7 +137,7 @@ open class DestinationDefinitionApiController(
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listDestinationDefinitionsForWorkspace(
-    @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
+    @Body workspaceIdRequestBody: WorkspaceIdActorDefinitionRequestBody,
   ): io.airbyte.api.model.generated.DestinationDefinitionReadList? =
     execute {
       destinationDefinitionsHandler.listDestinationDefinitionsForWorkspace(

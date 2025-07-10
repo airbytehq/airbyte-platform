@@ -42,6 +42,12 @@ interface SourceService {
   fun listPublicSourceDefinitions(includeTombstone: Boolean): List<StandardSourceDefinition>
 
   @Throws(IOException::class)
+  fun listSourceDefinitionsForWorkspace(
+    workspaceId: UUID,
+    includeTombstone: Boolean,
+  ): List<StandardSourceDefinition>
+
+  @Throws(IOException::class)
   fun listGrantedSourceDefinitions(
     workspaceId: UUID,
     includeTombstones: Boolean,

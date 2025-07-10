@@ -26,7 +26,7 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const destinationDefinitionKeys = {
   all: [SCOPE_WORKSPACE, "destinationDefinition"] as const,
-  lists: () => [...destinationDefinitionKeys.all, "list"] as const,
+  lists: (filterByUsed: boolean = false) => [...destinationDefinitionKeys.all, "list", filterByUsed] as const,
   listLatest: () => [...destinationDefinitionKeys.all, "listLatest"] as const,
   detail: (id: string) => [...destinationDefinitionKeys.all, "details", id] as const,
 };
@@ -49,16 +49,18 @@ interface DestinationDefinitions {
   destinationDefinitionMap: Map<string, DestinationDefinitionRead>;
 }
 
-export const useDestinationDefinitionList = (): DestinationDefinitions => {
+export const useDestinationDefinitionList = ({
+  filterByUsed,
+}: { filterByUsed?: boolean } = {}): DestinationDefinitions => {
   const requestOptions = useRequestOptions();
 
   const workspaceId = useCurrentWorkspaceId();
 
   return useQuery(
-    destinationDefinitionKeys.lists(),
+    destinationDefinitionKeys.lists(filterByUsed),
     async () => {
       const { destinationDefinitions } = await listDestinationDefinitionsForWorkspace(
-        { workspaceId },
+        { workspaceId, filterByUsed },
         requestOptions
       ).then(({ destinationDefinitions }) => ({
         destinationDefinitions: destinationDefinitions.sort((a, b) => a.name.localeCompare(b.name)),

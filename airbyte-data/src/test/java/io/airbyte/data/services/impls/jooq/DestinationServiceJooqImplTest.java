@@ -12,23 +12,28 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.SourceConnection;
+import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.Status;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ConnectionService;
+import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.shared.DestinationConnectionWithCount;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.protocol.models.v0.Field;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
@@ -37,6 +42,7 @@ import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -46,6 +52,7 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
   private static final CatalogHelpers catalogHelpers = new CatalogHelpers(new FieldGenerator());
 
   private final DestinationServiceJooqImpl destinationServiceJooqImpl;
+  private final SourceServiceJooqImpl sourceServiceJooqImpl;
   private final ConnectionServiceJooqImpl connectionServiceJooqImpl;
 
   public DestinationServiceJooqImplTest() {
@@ -53,9 +60,13 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
     final MetricClient metricClient = mock(MetricClient.class);
     final ConnectionService connectionService = mock(ConnectionService.class);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
+    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
     this.destinationServiceJooqImpl =
         new DestinationServiceJooqImpl(database, featureFlagClient, connectionService, actorDefinitionVersionUpdater, metricClient);
+    this.sourceServiceJooqImpl =
+        new SourceServiceJooqImpl(database, featureFlagClient, secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater,
+            metricClient);
     this.connectionServiceJooqImpl = new ConnectionServiceJooqImpl(database);
   }
 
@@ -375,6 +386,166 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
         "Last sync should be the most recent job time across all connections");
   }
 
+  DestinationConnection createDestination(UUID workspaceId, StandardDestinationDefinition destinationDefinition, Boolean withTombstone)
+      throws IOException {
+    DestinationConnection destination = new DestinationConnection()
+        .withDestinationId(UUID.randomUUID())
+        .withWorkspaceId(workspaceId)
+        .withName("source")
+        .withDestinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
+        .withTombstone(withTombstone);
+    destinationServiceJooqImpl.writeDestinationConnectionNoSecrets(destination);
+    return destination;
+  }
+
+  @Test
+  void testListDestinationDefinitionsForWorkspace_ReturnsUsedDestinations()
+      throws IOException, JsonValidationException, ConfigNotFoundException, SQLException {
+    final JooqTestDbSetupHelper helper = new JooqTestDbSetupHelper();
+    helper.setUpDependencies();
+
+    final List<StandardDestinationDefinition> result =
+        destinationServiceJooqImpl.listDestinationDefinitionsForWorkspace(helper.getWorkspace().getWorkspaceId(), false);
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+    assertEquals(helper.getDestinationDefinition().getDestinationDefinitionId(),
+        result.get(0).getDestinationDefinitionId());
+    assertEquals("Test destination def", result.get(0).getName());
+  }
+
+  @Test
+  void testListDestinationDefinitionsForWorkspace_ExcludesTombstonedActors()
+      throws IOException, JsonValidationException, ConfigNotFoundException, SQLException {
+    final JooqTestDbSetupHelper helper = new JooqTestDbSetupHelper();
+    helper.setUpDependencies();
+
+    final UUID workspaceId = helper.getWorkspace().getWorkspaceId();
+
+    // Create an additional destination and tombstone it
+    final DestinationConnection additionalDestination = createAdditionalDestination(workspaceId, helper);
+    final DestinationConnection tombstonedDestination = additionalDestination.withTombstone(true);
+    destinationServiceJooqImpl.writeDestinationConnectionNoSecrets(tombstonedDestination);
+
+    // Should only return the non-tombstoned destination
+    final List<StandardDestinationDefinition> result =
+        destinationServiceJooqImpl.listDestinationDefinitionsForWorkspace(workspaceId, false);
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+    assertEquals(helper.getDestinationDefinition().getDestinationDefinitionId(),
+        result.get(0).getDestinationDefinitionId());
+  }
+
+  @Test
+  void testListDestinationDefinitionsForWorkspace_IncludesTombstonedActorsWhenRequested()
+      throws IOException, JsonValidationException, ConfigNotFoundException, SQLException {
+    final JooqTestDbSetupHelper helper = new JooqTestDbSetupHelper();
+    helper.setUpDependencies();
+
+    final UUID workspaceId = helper.getWorkspace().getWorkspaceId();
+
+    // Create an additional destination and tombstone it
+    final DestinationConnection additionalDestination = createAdditionalDestination(workspaceId, helper);
+
+    // Tombstone the additional destination
+    final DestinationConnection tombstonedDestination = additionalDestination.withTombstone(true);
+    destinationServiceJooqImpl.writeDestinationConnectionNoSecrets(tombstonedDestination);
+
+    // Should return the definition when including tombstones
+    final List<StandardDestinationDefinition> result =
+        destinationServiceJooqImpl.listDestinationDefinitionsForWorkspace(workspaceId, true);
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+
+    // Should be the same definition used by both active and tombstoned destinations
+    assertEquals(helper.getDestinationDefinition().getDestinationDefinitionId(),
+        result.get(0).getDestinationDefinitionId());
+  }
+
+  @Test
+  void testListDestinationDefinitionsForWorkspace_EmptyWhenNoDestinationsInWorkspace()
+      throws IOException, JsonValidationException, ConfigNotFoundException, SQLException {
+    final JooqTestDbSetupHelper helper = new JooqTestDbSetupHelper();
+    helper.setUpDependencies();
+
+    // Use a different workspace that has no destinations
+    final UUID emptyWorkspaceId = UUID.randomUUID();
+
+    final List<StandardDestinationDefinition> result =
+        destinationServiceJooqImpl.listDestinationDefinitionsForWorkspace(emptyWorkspaceId, false);
+
+    assertNotNull(result);
+    assertEquals(0, result.size());
+  }
+
+  @Test
+  void testListDestinationDefinitionsForWorkspace_MultipleDestinationsWithSameDefinition()
+      throws IOException, JsonValidationException, ConfigNotFoundException, SQLException {
+    final JooqTestDbSetupHelper helper = new JooqTestDbSetupHelper();
+    helper.setUpDependencies();
+
+    final UUID workspaceId = helper.getWorkspace().getWorkspaceId();
+
+    // Create additional destinations using the same definition
+    createAdditionalDestination(workspaceId, helper);
+    createAdditionalDestination(workspaceId, helper);
+
+    // Should return the definition only once, even though multiple destinations use it
+    final List<StandardDestinationDefinition> result =
+        destinationServiceJooqImpl.listDestinationDefinitionsForWorkspace(workspaceId, false);
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+    assertEquals(helper.getDestinationDefinition().getDestinationDefinitionId(),
+        result.get(0).getDestinationDefinitionId());
+  }
+
+  @Test
+  void testListDestinationDefinitionsForWorkspace_MultipleDestinationsWithDifferentDefinitions()
+      throws IOException, JsonValidationException, ConfigNotFoundException, SQLException {
+    final JooqTestDbSetupHelper helper = new JooqTestDbSetupHelper();
+    helper.setUpDependencies();
+
+    final UUID workspaceId = helper.getWorkspace().getWorkspaceId();
+
+    // Create a second destination definition
+    final UUID secondDestinationDefinitionId = UUID.randomUUID();
+    final StandardDestinationDefinition secondDestinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(secondDestinationDefinitionId)
+        .withName("Second destination def")
+        .withTombstone(false);
+    final ActorDefinitionVersion secondDestinationDefinitionVersion =
+        createBaseActorDefVersion(secondDestinationDefinitionId, "0.0.2");
+    helper.createActorDefinition(secondDestinationDefinition, secondDestinationDefinitionVersion);
+
+    // Create a destination using the second definition
+    final UUID secondDestinationId = UUID.randomUUID();
+    final DestinationConnection secondDestination = new DestinationConnection()
+        .withDestinationId(secondDestinationId)
+        .withDestinationDefinitionId(secondDestinationDefinitionId)
+        .withWorkspaceId(workspaceId)
+        .withName("test-destination-" + secondDestinationId)
+        .withConfiguration(io.airbyte.commons.json.Jsons.emptyObject())
+        .withTombstone(false);
+    destinationServiceJooqImpl.writeDestinationConnectionNoSecrets(secondDestination);
+
+    // Should return both definitions
+    final List<StandardDestinationDefinition> result =
+        destinationServiceJooqImpl.listDestinationDefinitionsForWorkspace(workspaceId, false);
+
+    assertNotNull(result);
+    assertEquals(2, result.size());
+
+    final List<UUID> definitionIds = result.stream()
+        .map(StandardDestinationDefinition::getDestinationDefinitionId)
+        .toList();
+
+    assertTrue(definitionIds.contains(helper.getDestinationDefinition().getDestinationDefinitionId()));
+    assertTrue(definitionIds.contains(secondDestinationDefinitionId));
+  }
+
   private StandardSync createConnection(final SourceConnection source, final DestinationConnection destination, final Status status)
       throws IOException, JsonValidationException {
     final UUID connectionId = UUID.randomUUID();
@@ -458,6 +629,19 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
           .execute();
       return null;
     });
+  }
+
+  private static ActorDefinitionVersion createBaseActorDefVersion(final UUID actorDefId, final String dockerImageTag) {
+    final ConnectorSpecification spec = new ConnectorSpecification()
+        .withConnectionSpecification(io.airbyte.commons.json.Jsons.jsonNode(Map.of("type", "object")));
+
+    return new ActorDefinitionVersion()
+        .withActorDefinitionId(actorDefId)
+        .withDockerRepository("airbyte/test")
+        .withDockerImageTag(dockerImageTag)
+        .withSpec(spec)
+        .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(200L);
   }
 
 }

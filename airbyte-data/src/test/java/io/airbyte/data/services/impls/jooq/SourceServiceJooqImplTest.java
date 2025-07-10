@@ -10,16 +10,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.SourceConnection;
+import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.Status;
+import io.airbyte.config.SupportLevel;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.data.ConfigNotFoundException;
@@ -30,6 +35,7 @@ import io.airbyte.data.services.shared.SourceConnectionWithCount;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.protocol.models.v0.Field;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
@@ -38,6 +44,7 @@ import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -48,9 +55,9 @@ class SourceServiceJooqImplTest extends BaseConfigDatabaseTest {
 
   private final SourceServiceJooqImpl sourceServiceJooqImpl;
   private final ConnectionServiceJooqImpl connectionServiceJooqImpl;
+  private final TestClient featureFlagClient = mock(TestClient.class);
 
   public SourceServiceJooqImplTest() {
-    final TestClient featureFlagClient = mock(TestClient.class);
     final MetricClient metricClient = mock(MetricClient.class);
     final ConnectionService connectionService = mock(ConnectionService.class);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
@@ -374,6 +381,170 @@ class SourceServiceJooqImplTest extends BaseConfigDatabaseTest {
         "Last sync should be the most recent job time across all connections");
   }
 
+  @Test
+  void testListSourceDefinitionsForWorkspace_ReturnsUsedSources()
+      throws IOException, JsonValidationException, ConfigNotFoundException, SQLException {
+    final JooqTestDbSetupHelper helper = new JooqTestDbSetupHelper();
+    helper.setUpDependencies();
+
+    final UUID workspaceId = helper.getWorkspace().getWorkspaceId();
+
+    when(featureFlagClient.stringVariation(any(), any())).thenReturn("60");
+
+    // The setup creates a source in the workspace, so we should get 1 definition
+    final List<StandardSourceDefinition> result =
+        sourceServiceJooqImpl.listSourceDefinitionsForWorkspace(workspaceId, false);
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+    assertEquals(helper.getSourceDefinition().getSourceDefinitionId(),
+        result.get(0).getSourceDefinitionId());
+    assertEquals("Test source def", result.get(0).getName());
+  }
+
+  @Test
+  void testListSourceDefinitionsForWorkspace_ExcludesTombstonedActors()
+      throws IOException, JsonValidationException, ConfigNotFoundException, SQLException {
+    final JooqTestDbSetupHelper helper = new JooqTestDbSetupHelper();
+    helper.setUpDependencies();
+
+    final UUID workspaceId = helper.getWorkspace().getWorkspaceId();
+
+    when(featureFlagClient.stringVariation(any(), any())).thenReturn("60");
+
+    // Create an additional source and tombstone it
+    final SourceConnection additionalSource = createAdditionalSource(workspaceId, helper);
+
+    // Tombstone the additional source
+    final SourceConnection tombstonedSource = additionalSource.withTombstone(true);
+    sourceServiceJooqImpl.writeSourceConnectionNoSecrets(tombstonedSource);
+
+    // Should only return the non-tombstoned source
+    final List<StandardSourceDefinition> result =
+        sourceServiceJooqImpl.listSourceDefinitionsForWorkspace(workspaceId, false);
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+    assertEquals(helper.getSourceDefinition().getSourceDefinitionId(),
+        result.get(0).getSourceDefinitionId());
+  }
+
+  @Test
+  void testListSourceDefinitionsForWorkspace_IncludesTombstonedActorsWhenRequested()
+      throws IOException, JsonValidationException, ConfigNotFoundException, SQLException {
+    final JooqTestDbSetupHelper helper = new JooqTestDbSetupHelper();
+    helper.setUpDependencies();
+
+    final UUID workspaceId = helper.getWorkspace().getWorkspaceId();
+
+    when(featureFlagClient.stringVariation(any(), any())).thenReturn("60");
+
+    // Create an additional source and tombstone it
+    final SourceConnection additionalSource = createAdditionalSource(workspaceId, helper);
+
+    // Tombstone the additional source
+    final SourceConnection tombstonedSource = additionalSource.withTombstone(true);
+    sourceServiceJooqImpl.writeSourceConnectionNoSecrets(tombstonedSource);
+
+    // Should return the definition when including tombstones
+    final List<StandardSourceDefinition> result =
+        sourceServiceJooqImpl.listSourceDefinitionsForWorkspace(workspaceId, true);
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+
+    // Should still be the same definition
+    assertEquals(helper.getSourceDefinition().getSourceDefinitionId(),
+        result.get(0).getSourceDefinitionId());
+  }
+
+  @Test
+  void testListSourceDefinitionsForWorkspace_EmptyWhenNoSourcesInWorkspace()
+      throws IOException, JsonValidationException, ConfigNotFoundException, SQLException {
+    final JooqTestDbSetupHelper helper = new JooqTestDbSetupHelper();
+    helper.setUpDependencies();
+
+    // Use a different workspace that has no sources
+    final UUID emptyWorkspaceId = UUID.randomUUID();
+
+    final List<StandardSourceDefinition> result =
+        sourceServiceJooqImpl.listSourceDefinitionsForWorkspace(emptyWorkspaceId, false);
+
+    assertNotNull(result);
+    assertEquals(0, result.size());
+  }
+
+  @Test
+  void testListSourceDefinitionsForWorkspace_MultipleSourcesWithSameDefinition()
+      throws IOException, JsonValidationException, ConfigNotFoundException, SQLException {
+    final JooqTestDbSetupHelper helper = new JooqTestDbSetupHelper();
+    helper.setUpDependencies();
+
+    final UUID workspaceId = helper.getWorkspace().getWorkspaceId();
+
+    when(featureFlagClient.stringVariation(any(), any())).thenReturn("60");
+
+    // Create additional sources using the same definition
+    createAdditionalSource(workspaceId, helper);
+    createAdditionalSource(workspaceId, helper);
+
+    // Should return the definition only once, even though multiple sources use it
+    final List<StandardSourceDefinition> result =
+        sourceServiceJooqImpl.listSourceDefinitionsForWorkspace(workspaceId, false);
+
+    assertNotNull(result);
+    assertEquals(1, result.size());
+    assertEquals(helper.getSourceDefinition().getSourceDefinitionId(),
+        result.get(0).getSourceDefinitionId());
+  }
+
+  @Test
+  void testListSourceDefinitionsForWorkspace_MultipleSourcesWithDifferentDefinitions()
+      throws IOException, JsonValidationException, ConfigNotFoundException, SQLException {
+    final JooqTestDbSetupHelper helper = new JooqTestDbSetupHelper();
+    helper.setUpDependencies();
+
+    final UUID workspaceId = helper.getWorkspace().getWorkspaceId();
+
+    when(featureFlagClient.stringVariation(any(), any())).thenReturn("60");
+
+    // Create a second source definition
+    final UUID secondSourceDefinitionId = UUID.randomUUID();
+    final StandardSourceDefinition secondSourceDefinition = new StandardSourceDefinition()
+        .withSourceDefinitionId(secondSourceDefinitionId)
+        .withName("Second source def")
+        .withTombstone(false)
+        .withMaxSecondsBetweenMessages(3600L);
+    final ActorDefinitionVersion secondSourceDefinitionVersion =
+        createBaseActorDefVersion(secondSourceDefinitionId, "0.0.2");
+    helper.createActorDefinition(secondSourceDefinition, secondSourceDefinitionVersion);
+
+    // Create a source using the second definition
+    final UUID secondSourceId = UUID.randomUUID();
+    final SourceConnection secondSource = new SourceConnection()
+        .withSourceId(secondSourceId)
+        .withSourceDefinitionId(secondSourceDefinitionId)
+        .withWorkspaceId(workspaceId)
+        .withName("test-source-" + secondSourceId)
+        .withConfiguration(io.airbyte.commons.json.Jsons.emptyObject())
+        .withTombstone(false);
+    sourceServiceJooqImpl.writeSourceConnectionNoSecrets(secondSource);
+
+    // Should return both definitions
+    final List<StandardSourceDefinition> result =
+        sourceServiceJooqImpl.listSourceDefinitionsForWorkspace(workspaceId, false);
+
+    assertNotNull(result);
+    assertEquals(2, result.size());
+
+    final List<UUID> definitionIds = result.stream()
+        .map(StandardSourceDefinition::getSourceDefinitionId)
+        .toList();
+
+    assertTrue(definitionIds.contains(helper.getSourceDefinition().getSourceDefinitionId()));
+    assertTrue(definitionIds.contains(secondSourceDefinitionId));
+  }
+
   private StandardSync createConnection(final SourceConnection source, final DestinationConnection destination, final Status status)
       throws IOException {
     final UUID connectionId = UUID.randomUUID();
@@ -457,6 +628,19 @@ class SourceServiceJooqImplTest extends BaseConfigDatabaseTest {
           .execute();
       return null;
     });
+  }
+
+  private static ActorDefinitionVersion createBaseActorDefVersion(final UUID actorDefId, final String dockerImageTag) {
+    final ConnectorSpecification spec = new ConnectorSpecification()
+        .withConnectionSpecification(io.airbyte.commons.json.Jsons.jsonNode(Map.of("type", "object")));
+
+    return new ActorDefinitionVersion()
+        .withActorDefinitionId(actorDefId)
+        .withDockerRepository("airbyte/test")
+        .withDockerImageTag(dockerImageTag)
+        .withSpec(spec)
+        .withSupportLevel(SupportLevel.COMMUNITY)
+        .withInternalSupportLevel(200L);
   }
 
 }
