@@ -75,7 +75,7 @@ interface FilterOption {
 type SortableFilterOption = FilterOption & { sortValue: string };
 
 export const useAvailableSourceOptions = (): SortableFilterOption[] => {
-  const { sourceDefinitions } = useSourceDefinitionList();
+  const { sourceDefinitions } = useSourceDefinitionList({ filterByUsed: true });
 
   return useMemo(
     () =>
@@ -111,7 +111,7 @@ export const useAvailableSourceOptions = (): SortableFilterOption[] => {
 };
 
 export const useAvailableDestinationOptions = (): SortableFilterOption[] => {
-  const { destinationDefinitions } = useDestinationDefinitionList();
+  const { destinationDefinitions } = useDestinationDefinitionList({ filterByUsed: true });
 
   return useMemo(
     () =>
