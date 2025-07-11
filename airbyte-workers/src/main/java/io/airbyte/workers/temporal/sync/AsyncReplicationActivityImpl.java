@@ -26,9 +26,7 @@ import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
-import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.WriteOutputCatalogToObjectStorage;
 import io.airbyte.metrics.MetricAttribute;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
@@ -230,16 +228,14 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
       LOGGER.debug("Sync summary length: {}", standardSyncOutputString.length());
     }
 
-    if (featureFlagClient.boolVariation(WriteOutputCatalogToObjectStorage.INSTANCE, new Connection(tracingContext.connectionId))) {
-      final var uri = catalogStorageClient.persist(
-          attemptOutput.getOutputCatalog(),
-          tracingContext.connectionId,
-          Long.parseLong(tracingContext.jobId),
-          tracingContext.attemptNumber.intValue(),
-          metricAttributes);
+    final var uri = catalogStorageClient.persist(
+        attemptOutput.getOutputCatalog(),
+        tracingContext.connectionId,
+        Long.parseLong(tracingContext.jobId),
+        tracingContext.attemptNumber.intValue(),
+        metricAttributes);
 
-      standardSyncOutput.setCatalogUri(uri);
-    }
+    standardSyncOutput.setCatalogUri(uri);
 
     payloadChecker.validatePayloadSize(standardSyncOutput, metricAttributes);
 

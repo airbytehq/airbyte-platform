@@ -19,9 +19,7 @@ import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.helpers.log
-import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.WriteOutputCatalogToObjectStorage
 import io.airbyte.workers.models.ReplicationApiInput
 import io.airbyte.workers.storage.activities.OutputStorageClient
 import jakarta.inject.Singleton
@@ -105,17 +103,15 @@ class ReplicationCommand(
 
     val replicationApiInput = Jsons.deserialize(commandInput.toString(), ReplicationCommandApiInput.ReplicationApiInput::class.java)
 
-    if (featureFlagClient.boolVariation(WriteOutputCatalogToObjectStorage, Connection(replicationApiInput.connectionId))) {
-      val uri =
-        catalogStorageClient.persist(
-          catalog,
-          replicationApiInput.connectionId,
-          replicationApiInput.jobId.toLong(),
-          replicationApiInput.attemptId.toInt(),
-          emptyArray(),
-        )
-      standardSyncOutput.catalogUri = uri
-    }
+    val uri =
+      catalogStorageClient.persist(
+        catalog,
+        replicationApiInput.connectionId,
+        replicationApiInput.jobId.toLong(),
+        replicationApiInput.attemptId.toInt(),
+        emptyArray(),
+      )
+    standardSyncOutput.catalogUri = uri
 
     val standardSyncOutputString = standardSyncOutput.toString()
     log.debug { "sync summary: $standardSyncOutputString" }

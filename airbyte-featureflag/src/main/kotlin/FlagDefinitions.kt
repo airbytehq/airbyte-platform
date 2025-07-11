@@ -143,8 +143,6 @@ object FailSyncOnInvalidChecksum : Temporary<Boolean>(key = "platform.fail-sync-
 
 object HydrateAggregatedStats : Temporary<Boolean>(key = "platform.hydrate-aggregated-stats", default = true)
 
-object WriteOutputCatalogToObjectStorage : Temporary<Boolean>(key = "platform.write-output-catalog-to-object-storage", default = false)
-
 object ConnectionFieldLimitOverride : Permanent<Int>(key = "connection-field-limit-override", default = -1)
 
 object EnableResumableFullRefresh : Temporary<Boolean>(key = "platform.enable-resumable-full-refresh", default = false)

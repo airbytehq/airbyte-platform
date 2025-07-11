@@ -21,16 +21,13 @@ import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.ReplicationAttemptSummary
-import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.WriteOutputCatalogToObjectStorage
 import io.airbyte.workers.models.ReplicationApiInput
 import io.airbyte.workers.storage.activities.OutputStorageClient
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
@@ -84,12 +81,14 @@ class ReplicationCommandTest {
       )
 
     every { commandApi.getReplicateCommandOutput(ReplicateCommandOutputRequest(commandId)) } returns replicateCommandOutputResponse
+
+    // Mock the catalog storage
+    val expectedUri = "s3://bucket/path/to/catalog.json"
+    val expectedActivityPayloadURI = ActivityPayloadURI().withId(expectedUri)
     every {
-      featureFlagClient.boolVariation(
-        WriteOutputCatalogToObjectStorage,
-        Connection(connectionId),
-      )
-    } returns false // Don't persist to object storage in this test.
+      catalogStorageClient.persist(any(), connectionId, jobId, attemptId.toInt(), emptyArray())
+    } returns expectedActivityPayloadURI
+
     every {
       commandApi.getCommand(CommandGetRequest(commandId))
     } returns
@@ -146,12 +145,14 @@ class ReplicationCommandTest {
 
     every { commandApi.getReplicateCommandOutput(ReplicateCommandOutputRequest(commandId)) } returns replicateCommandOutputResponse
     every { failureConverter.getFailureType(FailureType.SYSTEM_ERROR) } returns FailureReason.FailureType.SYSTEM_ERROR
+
+    // Mock the catalog storage
+    val expectedUri = "s3://bucket/path/to/catalog.json"
+    val expectedActivityPayloadURI = ActivityPayloadURI().withId(expectedUri)
     every {
-      featureFlagClient.boolVariation(
-        WriteOutputCatalogToObjectStorage,
-        Connection(connectionId),
-      )
-    } returns false
+      catalogStorageClient.persist(any(), connectionId, jobId, attemptId.toInt(), emptyArray())
+    } returns expectedActivityPayloadURI
+
     every {
       commandApi.getCommand(CommandGetRequest(commandId))
     } returns
@@ -188,7 +189,7 @@ class ReplicationCommandTest {
   }
 
   @Test
-  fun `finalizeOutput should persist catalog to object storage when feature flag is enabled`() {
+  fun `finalizeOutput should persist catalog to object storage`() {
     val outputCatalog =
       ConfiguredAirbyteCatalog()
         .withStreams(
@@ -213,12 +214,6 @@ class ReplicationCommandTest {
     val expectedUri = "s3://bucket/path/to/catalog.json"
     val expectedActivityPayloadURI = ActivityPayloadURI().withId(expectedUri)
 
-    every {
-      featureFlagClient.boolVariation(
-        WriteOutputCatalogToObjectStorage,
-        Connection(connectionId),
-      )
-    } returns true
     every {
       catalogStorageClient.persist(outputCatalog, connectionId, jobId, attemptId.toInt(), emptyArray())
     } returns expectedActivityPayloadURI
@@ -247,48 +242,5 @@ class ReplicationCommandTest {
     }
 
     assertEquals(expectedActivityPayloadURI, output.catalogUri)
-  }
-
-  @Test
-  fun `finalizeOutput should not persist catalog to object storage when feature flag is disabled`() {
-    val replicationOutput =
-      ReplicationAttemptSummary()
-        .withBytesSynced(100L)
-        .withRecordsSynced(10L)
-        .withStartTime(0L)
-        .withEndTime(1000L)
-        .withStatus(io.airbyte.config.StandardSyncSummary.ReplicationStatus.COMPLETED)
-
-    every {
-      featureFlagClient.boolVariation(
-        WriteOutputCatalogToObjectStorage,
-        Connection(connectionId),
-      )
-    } returns false
-
-    every {
-      commandApi.getCommand(CommandGetRequest(commandId))
-    } returns
-      CommandGetResponse(
-        id = commandId,
-        workspaceId = workspaceId,
-        commandType = "replicate",
-        commandInput =
-          Jsons
-            .serialize(
-              ReplicationCommandApiInput.ReplicationApiInput(connectionId, jobId.toString(), attemptId, CatalogDiff()),
-            ),
-        workloadId = workloadId,
-        organizationId = organizationId,
-        createdAt = java.time.OffsetDateTime.now(),
-        updatedAt = java.time.OffsetDateTime.now(),
-      )
-    val output = replicationCommand.finalizeOutput(commandId, replicationOutput, null, null)
-
-    verify(exactly = 0) {
-      catalogStorageClient.persist(any(), any(), any(), any(), any())
-    }
-
-    assertNull(output.catalogUri)
   }
 }
