@@ -56,6 +56,7 @@ const generatePlaceholderHistory = (
       jobUpdatedAt: dayjs().unix(),
       recordsCommitted: connectionSyncProgress.recordsCommitted ?? 0,
       recordsEmitted: connectionSyncProgress.recordsEmitted ?? 0,
+      recordsRejected: connectionSyncProgress.recordsRejected ?? 0,
       streamStatuses: connectionSyncProgress.streams.map((syncProgressItem) => {
         return {
           status: "running",

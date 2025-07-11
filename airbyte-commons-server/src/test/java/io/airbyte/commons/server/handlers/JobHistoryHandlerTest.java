@@ -734,12 +734,12 @@ class JobHistoryHandlerTest {
           new StreamDescriptor().name("stream3")));
 
       jobRead.setStreamAggregatedStats(List.of(
-          new StreamStats().streamName("stream2").recordsEmitted(50L).bytesEmitted(20L).recordsCommitted(45L).bytesCommitted(15L),
+          new StreamStats().streamName("stream2").recordsEmitted(50L).bytesEmitted(20L).recordsCommitted(45L).bytesCommitted(15L).recordsRejected(2L),
           new StreamStats().streamName("stream1").streamNamespace("ns1").recordsEmitted(5L).bytesEmitted(2L).recordsCommitted(5L)
               .bytesCommitted(2L)));
 
       final JobAggregatedStats jobAggregatedStats =
-          new JobAggregatedStats().bytesCommitted(17L).recordsCommitted(50L).bytesEmitted(22L).recordsEmitted(55L);
+          new JobAggregatedStats().bytesCommitted(17L).recordsCommitted(50L).bytesEmitted(22L).recordsEmitted(55L).recordsRejected(2L);
       jobRead.setAggregatedStats(jobAggregatedStats);
 
       final JobWithAttemptsRead firstJobWithAttemptRead = new JobWithAttemptsRead()
@@ -755,6 +755,7 @@ class JobHistoryHandlerTest {
             .connectionId(connectionId)
             .bytesCommitted(jobAggregatedStats.getBytesCommitted())
             .recordsCommitted(jobAggregatedStats.getRecordsCommitted())
+            .recordsRejected(jobAggregatedStats.getRecordsRejected())
             .bytesEmitted(jobAggregatedStats.getBytesEmitted())
             .recordsEmitted(jobAggregatedStats.getRecordsEmitted())
             .configType(JobConfigType.SYNC)
@@ -774,6 +775,7 @@ class JobHistoryHandlerTest {
                     .bytesEmitted(20L)
                     .recordsCommitted(45L)
                     .bytesCommitted(15L)
+                    .recordsRejected(2L)
                     .configType(JobConfigType.SYNC),
                 new StreamSyncProgressReadItem()
                     .streamName("stream3")

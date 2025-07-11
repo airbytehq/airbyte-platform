@@ -202,6 +202,7 @@ internal class StreamStatusesHandlerTest {
     val jobTwoBytesEmmitted = 87654L
     val jobTwoRecordsCommitted = 50L
     val jobTwoRecordsEmittted = 60L
+    val jobTwoRecordsRejected = 10L
     Mockito.mockStatic(StatsAggregationHelper::class.java).use { mockStatsAggregationHelper ->
       mockStatsAggregationHelper
         .`when`<Any> {
@@ -228,13 +229,14 @@ internal class StreamStatusesHandlerTest {
                   .bytesCommitted(jobTwoBytesCommitted)
                   .bytesEmitted(jobTwoBytesEmmitted)
                   .recordsCommitted(jobTwoRecordsCommitted)
-                  .recordsEmitted(jobTwoRecordsEmittted),
+                  .recordsEmitted(jobTwoRecordsEmittted)
+                  .recordsRejected(jobTwoRecordsRejected),
               ),
             ),
           ),
         )
       val expected =
-        List.of(
+        listOf(
           JobSyncResultRead()
             .configType(JobConfigType.SYNC)
             .jobId(jobOneId)
@@ -245,7 +247,7 @@ internal class StreamStatusesHandlerTest {
             .jobCreatedAt(jobOneCreatedAt)
             .jobUpdatedAt(jobOneUpdatedAt)
             .streamStatuses(
-              List.of<@Valid ConnectionSyncResultRead?>(
+              listOf<@Valid ConnectionSyncResultRead?>(
                 ConnectionSyncResultRead()
                   .status(io.airbyte.api.model.generated.JobStatus.SUCCEEDED)
                   .streamName("streamOne")
@@ -263,10 +265,11 @@ internal class StreamStatusesHandlerTest {
             .bytesEmitted(jobTwoBytesEmmitted)
             .recordsCommitted(jobTwoRecordsCommitted)
             .recordsEmitted(jobTwoRecordsEmittted)
+            .recordsRejected(jobTwoRecordsRejected)
             .jobCreatedAt(jobTwoCreatedAt)
             .jobUpdatedAt(jobTwoUpdatedAt)
             .streamStatuses(
-              List.of<@Valid ConnectionSyncResultRead?>(
+              listOf<@Valid ConnectionSyncResultRead?>(
                 ConnectionSyncResultRead()
                   .status(io.airbyte.api.model.generated.JobStatus.SUCCEEDED)
                   .streamName("streamThree")

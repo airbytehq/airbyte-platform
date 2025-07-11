@@ -2625,6 +2625,7 @@ class ConnectionsHandlerTest {
         final long jobTwoBytesEmmitted = 87654L;
         final long jobTwoRecordsCommitted = 50L;
         final long jobTwoRecordsEmittted = 60L;
+        final long jobTwoRecordsRejected = 10L;
         try (final MockedStatic<StatsAggregationHelper> mockStatsAggregationHelper = Mockito.mockStatic(StatsAggregationHelper.class)) {
           mockStatsAggregationHelper.when(() -> StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap(Mockito.any(), Mockito.any()))
               .thenReturn(Map.of(
@@ -2641,6 +2642,7 @@ class ConnectionsHandlerTest {
                               .bytesCommitted(jobTwoBytesCommitted)
                               .bytesEmitted(jobTwoBytesEmmitted)
                               .recordsCommitted(jobTwoRecordsCommitted)
+                              .recordsRejected(jobTwoRecordsRejected)
                               .recordsEmitted(jobTwoRecordsEmittted)))));
 
           final List<JobSyncResultRead> expected = List.of(
@@ -2660,6 +2662,7 @@ class ConnectionsHandlerTest {
                   .bytesEmitted(jobTwoBytesEmmitted)
                   .recordsCommitted(jobTwoRecordsCommitted)
                   .recordsEmitted(jobTwoRecordsEmittted)
+                  .recordsRejected(jobTwoRecordsRejected)
                   .jobCreatedAt(jobTwoCreatedAt)
                   .jobUpdatedAt(jobTwoUpdatedAt));
 

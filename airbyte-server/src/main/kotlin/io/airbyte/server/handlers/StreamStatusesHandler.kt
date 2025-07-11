@@ -131,6 +131,7 @@ open class StreamStatusesHandler(
           .bytesCommitted(aggregatedStats.bytesCommitted)
           .recordsEmitted(aggregatedStats.recordsEmitted)
           .recordsCommitted(aggregatedStats.recordsCommitted)
+          .recordsRejected(aggregatedStats.recordsRejected)
       result.add(jobResult)
     }
 

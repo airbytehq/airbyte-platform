@@ -1599,7 +1599,8 @@ public class ConnectionsHandler {
           .bytesEmitted(aggregatedStats.getBytesEmitted())
           .bytesCommitted(aggregatedStats.getBytesCommitted())
           .recordsEmitted(aggregatedStats.getRecordsEmitted())
-          .recordsCommitted(aggregatedStats.getRecordsCommitted());
+          .recordsCommitted(aggregatedStats.getRecordsCommitted())
+          .recordsRejected(aggregatedStats.getRecordsRejected());
       result.add(jobResult);
     });
 

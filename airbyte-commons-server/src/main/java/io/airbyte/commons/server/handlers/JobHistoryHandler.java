@@ -415,7 +415,8 @@ public class JobHistoryHandler {
               item.recordsEmitted(streamStats.getRecordsEmitted())
                   .recordsCommitted(streamStats.getRecordsCommitted())
                   .bytesEmitted(streamStats.getBytesEmitted())
-                  .bytesCommitted(streamStats.getBytesCommitted());
+                  .bytesCommitted(streamStats.getBytesCommitted())
+                  .recordsRejected(streamStats.getRecordsRejected());
             }
 
             return item;
@@ -431,6 +432,7 @@ public class JobHistoryHandler {
         .bytesCommitted(aggregatedStats == null ? null : aggregatedStats.getBytesCommitted())
         .recordsEmitted(aggregatedStats == null ? null : aggregatedStats.getRecordsEmitted())
         .recordsCommitted(aggregatedStats == null ? null : aggregatedStats.getRecordsCommitted())
+        .recordsRejected(aggregatedStats == null ? null : aggregatedStats.getRecordsRejected())
         .configType(runningJobConfigType)
         .streams(finalStreamsWithStats);
   }

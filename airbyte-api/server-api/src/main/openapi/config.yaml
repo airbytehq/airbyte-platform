@@ -13360,6 +13360,9 @@ components:
         recordsCommitted:
           type: integer
           format: int64
+        recordsRejected:
+          type: integer
+          format: int64
         bytesEmitted:
           type: integer
           format: int64
@@ -13425,6 +13428,9 @@ components:
         bytesCommitted:
           type: integer
           format: int64
+        recordsRejected:
+          type: integer
+          format: int64
         configType:
           $ref: "#/components/schemas/JobConfigType"
     ConnectionUptimeHistoryRead:
@@ -13441,6 +13447,7 @@ components:
         - configType
         - recordsEmitted
         - recordsCommitted
+        - recordsRejected
         - bytesEmitted
         - bytesCommitted
       properties:
@@ -13468,6 +13475,9 @@ components:
           type: integer
           format: int64
         bytesCommitted:
+          type: integer
+          format: int64
+        recordsRejected:
           type: integer
           format: int64
     ConnectionSyncResultRead:
