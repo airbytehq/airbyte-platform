@@ -137,7 +137,7 @@ open class SyncWorkflowV2Impl : SyncWorkflowV2 {
   ): ConnectorJobOutput {
     val workflowId = "replication_$jobId"
     val taskQueue = getTaskQueue(TemporalJobType.SYNC)
-    val childCheck =
+    val childReplicate =
       Workflow.newChildWorkflowStub(
         ConnectorCommandWorkflow::class.java,
         ChildWorkflowOptions
@@ -148,7 +148,7 @@ open class SyncWorkflowV2Impl : SyncWorkflowV2 {
           .build(),
       )
 
-    return childCheck.run(
+    return childReplicate.run(
       ReplicationCommandApiInput(
         ReplicationCommandApiInput.ReplicationApiInput(
           connectionId = connectionId,
