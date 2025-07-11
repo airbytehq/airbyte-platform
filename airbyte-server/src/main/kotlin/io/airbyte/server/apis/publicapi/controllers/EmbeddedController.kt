@@ -82,7 +82,7 @@ class EmbeddedController(
     val organizationsListItems =
       entitledOrganizations.map { organization ->
         val organizationId = OrganizationId(organization.organizationId)
-        val permissionForOrg = permissions.find { OrganizationId(it.organizationId) == organizationId }
+        val permissionForOrg = permissions.find { it.organizationId != null && OrganizationId(it.organizationId) == organizationId }
 
         if (permissionForOrg == null) {
           throw IllegalStateException(

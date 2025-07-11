@@ -208,4 +208,70 @@ class EmbeddedControllerTest {
     assertEquals("Entitled Org", item.organizationName)
     assertEquals(PermissionType.ORGANIZATION_ADMIN.toString(), item.permission.toString())
   }
+
+  @Test
+  fun listEmbeddedOrganizations_handlesNullOrganizationId() {
+    val entitledOrgId = UUID.randomUUID()
+    val userId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+
+    val currentUser = AuthenticatedUser().withUserId(userId)
+
+    val ctrl =
+      EmbeddedController(
+        jwtTokenGenerator = mockk(),
+        tokenExpirationConfig = TokenExpirationConfig(),
+        currentUserService =
+          mockk {
+            every { getCurrentUser() } returns currentUser
+          },
+        organizationsHandler =
+          mockk {
+            every {
+              listOrganizationsByUser(any())
+            } returns
+              OrganizationReadList().organizations(
+                mutableListOf(
+                  OrganizationRead()
+                    .organizationId(entitledOrgId)
+                    .organizationName("Entitled Org")
+                    .email("entitled@airbyte.io")
+                    .ssoRealm("entitled"),
+                ),
+              )
+          },
+        permissionHandler =
+          mockk {
+            every { listPermissionsForUser(userId) } returns
+              listOf(
+                // Workspace permission with null organizationId appears first
+                Permission()
+                  .withWorkspaceId(workspaceId)
+                  .withPermissionType(PermissionType.WORKSPACE_ADMIN),
+                // Organization permission appears second
+                Permission()
+                  .withOrganizationId(entitledOrgId)
+                  .withPermissionType(PermissionType.ORGANIZATION_ADMIN),
+              )
+          },
+        embeddedWorkspacesHandler = mockk(),
+        licenseEntitlementChecker =
+          mockk {
+            every { checkEntitlements(entitledOrgId, Entitlement.CONFIG_TEMPLATE_ENDPOINTS) } returns true
+          },
+        airbyteUrl = "http://my.airbyte.com/",
+        tokenIssuer = "test-issuer",
+      )
+
+    val res = ctrl.listEmbeddedOrganizationsByUser()
+
+    val data = res.entity as EmbeddedOrganizationsList
+    val result = data.organizations
+
+    assertEquals(1, result.size)
+    val item = result.first()
+    assertEquals(entitledOrgId, item.organizationId)
+    assertEquals("Entitled Org", item.organizationName)
+    assertEquals(PermissionType.ORGANIZATION_ADMIN.toString(), item.permission.toString())
+  }
 }
