@@ -125,11 +125,11 @@ export const SubscribeCards: React.FC = () => {
           <TeamsCard />
         </FlexContainer>
         <FlexItem>
-          <Text size="lg">
-            <ExternalLink href={links.pricingPage} opensInNewTab withIcon>
+          <ExternalLink href={links.pricingPage} opensInNewTab>
+            <Button variant="clear" size="sm" icon="share" iconPosition="right" iconSize="sm">
               <FormattedMessage id="settings.organization.billing.pricingFeatureComparison" />
-            </ExternalLink>
-          </Text>
+            </Button>
+          </ExternalLink>
         </FlexItem>
       </FlexContainer>
     </Box>
