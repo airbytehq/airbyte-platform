@@ -13,6 +13,8 @@ import io.airbyte.api.server.generated.models.UpdateSSOCredentialsRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.SsoConfigUpdateEntitlement
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
@@ -21,15 +23,17 @@ import io.airbyte.server.apis.execute
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
-import java.util.UUID
 
 @Controller
 open class SSOConfigApiController(
   private val ssoConfigDomainService: SsoConfigDomainService,
+  private val entitlementService: EntitlementService,
 ) : SsoConfigApi {
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getSsoConfig(getSSOConfigRequestBody: GetSSOConfigRequestBody): SSOConfigRead {
+    entitlementService.ensureEntitled(getSSOConfigRequestBody.organizationId, SsoConfigUpdateEntitlement)
+
     val ssoConfig = ssoConfigDomainService.retrieveSsoConfig(getSSOConfigRequestBody.organizationId)
     return SSOConfigRead(
       organizationId = getSSOConfigRequestBody.organizationId,
@@ -44,10 +48,12 @@ open class SSOConfigApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   override fun createSsoConfig(createSSOConfigRequestBody: CreateSSOConfigRequestBody) {
+    entitlementService.ensureEntitled(createSSOConfigRequestBody.organizationId, SsoConfigUpdateEntitlement)
+
     execute<Any?> {
       ssoConfigDomainService.createAndStoreSsoConfig(
         SsoConfig(
-          UUID.fromString(createSSOConfigRequestBody.organizationId),
+          createSSOConfigRequestBody.organizationId,
           createSSOConfigRequestBody.companyIdentifier,
           createSSOConfigRequestBody.clientId,
           createSSOConfigRequestBody.clientSecret,
@@ -63,9 +69,11 @@ open class SSOConfigApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   override fun deleteSsoConfig(deleteSSOConfigRequestBody: DeleteSSOConfigRequestBody) {
+    entitlementService.ensureEntitled(deleteSSOConfigRequestBody.organizationId, SsoConfigUpdateEntitlement)
+
     execute<Any?> {
       ssoConfigDomainService.deleteSsoConfig(
-        UUID.fromString(deleteSSOConfigRequestBody.organizationId),
+        deleteSSOConfigRequestBody.organizationId,
         deleteSSOConfigRequestBody.companyIdentifier,
       )
     }
@@ -75,6 +83,8 @@ open class SSOConfigApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   override fun updateSsoCredentials(updateSSOCredentialsRequestBody: UpdateSSOCredentialsRequestBody) {
+    entitlementService.ensureEntitled(updateSSOCredentialsRequestBody.organizationId, SsoConfigUpdateEntitlement)
+
     execute<Any?> {
       ssoConfigDomainService.updateClientCredentials(
         SsoKeycloakIdpCredentials(

@@ -16,12 +16,17 @@ object DestinationObjectStorageEntitlement : FeatureEntitlement(
   featureId = "feature-destination-object-storage",
 )
 
+object SsoConfigUpdateEntitlement : FeatureEntitlement(
+  featureId = "feature-platform-sso-config-update",
+)
+
 object Entitlements {
   private val ALL =
     listOf(
       PlatformLlmSyncJobFailureExplanation,
       PlatformSubOneHourSyncFrequency,
       DestinationObjectStorageEntitlement,
+      SsoConfigUpdateEntitlement,
     )
 
   private val byId = ALL.associateBy { it.featureId }

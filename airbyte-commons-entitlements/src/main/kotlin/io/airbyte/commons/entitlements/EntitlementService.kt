@@ -10,6 +10,7 @@ import io.airbyte.commons.entitlements.models.ConnectorEntitlement
 import io.airbyte.commons.entitlements.models.DestinationObjectStorageEntitlement
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
+import io.airbyte.commons.entitlements.models.SsoConfigUpdateEntitlement
 import io.airbyte.config.ActorType
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -26,6 +27,7 @@ class EntitlementService(
     when (entitlement) {
       // TODO: Remove once we've migrated the entitlement to Stigg
       DestinationObjectStorageEntitlement -> hasDestinationObjectStorageEntitlement(organizationId)
+      SsoConfigUpdateEntitlement -> hasSsoConfigUpdateEntitlement(organizationId)
       else -> entitlementClient.checkEntitlement(organizationId, entitlement)
     }
 
@@ -66,6 +68,12 @@ class EntitlementService(
     EntitlementResult(
       isEntitled = entitlementProvider.hasDestinationObjectStorageEntitlement(organizationId),
       featureId = DestinationObjectStorageEntitlement.featureId,
+    )
+
+  private fun hasSsoConfigUpdateEntitlement(organizationId: UUID): EntitlementResult =
+    EntitlementResult(
+      isEntitled = entitlementProvider.hasSsoConfigUpdateEntitlement(organizationId),
+      featureId = SsoConfigUpdateEntitlement.featureId,
     )
 
   internal fun hasConfigTemplateEntitlements(organizationId: UUID): Boolean = entitlementProvider.hasConfigTemplateEntitlements(organizationId)

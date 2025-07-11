@@ -20415,7 +20415,7 @@ components:
       properties:
         organizationId:
           type: string
-          format: UUID
+          format: uuid
         companyIdentifier:
           type: string
           description: Used to name the keycloak realm
@@ -20437,7 +20437,7 @@ components:
       properties:
         organizationId:
           type: string
-          format: UUID
+          format: uuid
         companyIdentifier:
           type: string
           description: Matches the keycloak realm to be removed

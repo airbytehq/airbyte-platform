@@ -9,6 +9,7 @@ import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled
 import io.airbyte.config.ActorType
 import io.airbyte.featureflag.AllowConfigTemplateEndpoints
 import io.airbyte.featureflag.DestinationDefinition
+import io.airbyte.featureflag.EnableSsoConfigUpdate
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.LicenseAllowDestinationObjectStorageConfig
 import io.airbyte.featureflag.LicenseAllowEnterpriseConnector
@@ -31,6 +32,8 @@ interface EntitlementProvider {
   fun hasConfigTemplateEntitlements(organizationId: UUID): Boolean
 
   fun hasDestinationObjectStorageEntitlement(organizationId: UUID): Boolean
+
+  fun hasSsoConfigUpdateEntitlement(organizationId: UUID): Boolean
 }
 
 /**
@@ -47,6 +50,8 @@ class DefaultEntitlementProvider : EntitlementProvider {
   override fun hasConfigTemplateEntitlements(organizationId: UUID): Boolean = false
 
   override fun hasDestinationObjectStorageEntitlement(organizationId: UUID): Boolean = false
+
+  override fun hasSsoConfigUpdateEntitlement(organizationId: UUID): Boolean = false
 }
 
 /**
@@ -75,6 +80,8 @@ class EnterpriseEntitlementProvider(
   override fun hasConfigTemplateEntitlements(organizationId: UUID): Boolean = activeLicense.license?.isEmbedded ?: false
 
   override fun hasDestinationObjectStorageEntitlement(organizationId: UUID): Boolean = true
+
+  override fun hasSsoConfigUpdateEntitlement(organizationId: UUID): Boolean = false
 }
 
 /**
@@ -114,4 +121,7 @@ class CloudEntitlementProvider(
 
   override fun hasDestinationObjectStorageEntitlement(organizationId: UUID): Boolean =
     featureFlagClient.boolVariation(flag = LicenseAllowDestinationObjectStorageConfig, Organization(organizationId))
+
+  override fun hasSsoConfigUpdateEntitlement(organizationId: UUID): Boolean =
+    featureFlagClient.boolVariation(EnableSsoConfigUpdate, Organization(organizationId))
 }
