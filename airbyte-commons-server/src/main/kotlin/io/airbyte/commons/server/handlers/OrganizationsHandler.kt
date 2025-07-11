@@ -9,6 +9,7 @@ import io.airbyte.api.model.generated.ListOrganizationSummariesRequestBody
 import io.airbyte.api.model.generated.ListOrganizationSummariesResponse
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody
+import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody
 import io.airbyte.api.model.generated.OrganizationIdRequestBody
 import io.airbyte.api.model.generated.OrganizationInfoRead
@@ -16,6 +17,7 @@ import io.airbyte.api.model.generated.OrganizationRead
 import io.airbyte.api.model.generated.OrganizationReadList
 import io.airbyte.api.model.generated.OrganizationSummary
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
+import io.airbyte.api.model.generated.Pagination
 import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.api.model.generated.WorkspaceReadList
 import io.airbyte.config.ConfigNotFoundType
@@ -148,6 +150,25 @@ open class OrganizationsHandler(
     return OrganizationReadList().organizations(organizationReadList)
   }
 
+  /**
+   * This function makes several calls and aggregates results from multiple areas to provide a more comprehensive
+   * summary of an organizations state. This is meant to serve the org/workspace picker for the org landing page.
+   * The logic is relatively confusing: we accept a filter value that applied to both the organization name AND
+   * the workspace name, which can result in what appears to be missing data. I've tried to summarize some of this here:
+   *
+   *   1. When nameContains filters out all orgs but results in workspaces: in this case, we go through the workspace
+   *      id set and select the orgs for each workspace so we can associate them.
+   *   2. When nameContains filters out all the workspaces but results in orgs: here, we loop through all the org results
+   *      that do not contain workspaces in their lists and select those workspaces. ***This selection respects the original
+   *      filters and page size!***
+   *   3. We maintain a separate map of member counts, which is associated to the org id. We join this with the original org
+   *      when we create the response body.
+   * As a result, we potentially make all the following db queries:
+   *   1. get orgs by user id
+   *   2. get workspaces by user id
+   *   3. get member counts by org id
+   *   4. get workspaces by org id
+   */
   @Trace
   fun getOrganizationSummaries(request: ListOrganizationSummariesRequestBody): ListOrganizationSummariesResponse {
     val orgListReq =
@@ -187,17 +208,39 @@ open class OrganizationsHandler(
       )
     val orgIdToMemberCount = memberCounts.associate { it.organizationId to it.count }
 
-    val orgIdToWorkspace = mutableMapOf<UUID, MutableList<WorkspaceRead>>()
+    val orgIdToWorkspaceMap = mutableMapOf<UUID, MutableList<WorkspaceRead>>()
     for (workspace in workspaceListResp.workspaces) {
-      orgIdToWorkspace.getOrPut(workspace.organizationId) { mutableListOf() }.add(workspace)
+      orgIdToWorkspaceMap.getOrPut(workspace.organizationId) { mutableListOf() }.add(workspace)
     }
+
+    // It's possible, due to filtering rules, that we end up with orgs in the orgs list that do not
+    // contain workspaces. We want to show at least some workspaces here (still respecting the original filtering/pagination rules)
+    // so we attempt to get them here
+    val fullyPopulatedOrgMap: Map<UUID, List<WorkspaceRead>> =
+      orgIdToWorkspaceMap.mapValues {
+        if (it.value.isEmpty()) {
+          val req =
+            ListWorkspacesInOrganizationRequestBody()
+              .organizationId(it.key)
+              .nameContains(request.nameContains)
+              .pagination(
+                Pagination()
+                  .pageSize(request.pagination.pageSize)
+                  .rowOffset(request.pagination.rowOffset),
+              )
+          val workspaces = workspacesHandler.listWorkspacesInOrganization(req)
+          workspaces.workspaces
+        } else {
+          it.value
+        }
+      }
 
     val orgSummaries = mutableListOf<OrganizationSummary>()
     for (org in orgListResp.organizations) {
       val summary =
         OrganizationSummary()
           .organization(org)
-          .workspaces(orgIdToWorkspace[org.organizationId])
+          .workspaces(fullyPopulatedOrgMap[org.organizationId])
           .subscription(null) // will be filled in by the caller when we are in cloud
           .memberCount(orgIdToMemberCount[org.organizationId])
       orgSummaries.add(summary)
