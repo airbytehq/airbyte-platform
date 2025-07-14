@@ -1,17 +1,11 @@
-import { Listbox } from "@headlessui/react";
 import { useMemo } from "react";
 import { Controller, useFormContext } from "react-hook-form";
-import { FormattedMessage } from "react-intl";
+import { useIntl } from "react-intl";
 
 import { ConnectorIcon } from "components/ConnectorIcon";
 import { FormControlErrorMessage } from "components/forms/FormControl";
-import { Box } from "components/ui/Box";
+import { ComboBox } from "components/ui/ComboBox";
 import { FlexContainer } from "components/ui/Flex";
-import { FloatLayout } from "components/ui/ListBox/FloatLayout";
-import { ListboxButton } from "components/ui/ListBox/ListboxButton";
-import { ListboxOption } from "components/ui/ListBox/ListboxOption";
-import { ListboxOptions } from "components/ui/ListBox/ListboxOptions";
-import { Text } from "components/ui/Text";
 
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
 import { DestinationCatalog, DestinationRead, DestinationSyncMode } from "core/api/types/AirbyteClient";
@@ -29,6 +23,7 @@ export const SelectDestinationObjectName: React.FC<SelectDestinationObjectNamePr
   destinationCatalog,
   streamIndex,
 }) => {
+  const { formatMessage } = useIntl();
   const { control, setValue } = useFormContext<DataActivationConnectionFormValues>();
 
   const destinationObjectNameOptions = useMemo(() => {
@@ -61,13 +56,18 @@ export const SelectDestinationObjectName: React.FC<SelectDestinationObjectNamePr
         control={control}
         render={({ field, fieldState }) => (
           <FlexContainer direction="column" gap="xs">
-            <Listbox
+            <ComboBox
+              error={!!fieldState.error}
+              options={destinationObjectNameOptions}
+              value={field.value}
+              icon={<ConnectorIcon icon={destination.icon} className={styles.selectDestinationObjectName__icon} />}
               onChange={(value) => {
                 if (value === field.value) {
                   return;
                 }
 
                 field.onChange(value);
+                setValue(`streams.${streamIndex}.matchingKeys`, null);
                 if (syncModesByObjectName.get(value)?.size === 1) {
                   // If there is only one sync mode available for the selected object name, set it automatically
                   setValue(
@@ -76,38 +76,8 @@ export const SelectDestinationObjectName: React.FC<SelectDestinationObjectNamePr
                   );
                 }
               }}
-              value={field.value}
-            >
-              <FloatLayout adaptiveWidth>
-                <ListboxButton hasError={!!fieldState.error}>
-                  <FlexContainer alignItems="center" as="span">
-                    <ConnectorIcon icon={destination.icon} className={styles.selectDestinationObjectName__icon} />
-                    <Box py="md" as="span">
-                      {field.value ? (
-                        <Text size="lg">{field.value}</Text>
-                      ) : (
-                        <Text size="lg" color="grey">
-                          <FormattedMessage id="connection.create.selectDestinationObject" />
-                        </Text>
-                      )}
-                    </Box>
-                  </FlexContainer>
-                </ListboxButton>
-                <ListboxOptions>
-                  {destinationObjectNameOptions.map(({ label, value }, index) => {
-                    return (
-                      <ListboxOption value={value} key={index}>
-                        {() => (
-                          <Box p="md" pr="none" as="span">
-                            <Text size="lg">{label}</Text>
-                          </Box>
-                        )}
-                      </ListboxOption>
-                    );
-                  })}
-                </ListboxOptions>
-              </FloatLayout>
-            </Listbox>
+              placeholder={formatMessage({ id: "connection.create.selectDestinationObject" })}
+            />
             {fieldState.error && <FormControlErrorMessage name={field.name} />}
           </FlexContainer>
         )}

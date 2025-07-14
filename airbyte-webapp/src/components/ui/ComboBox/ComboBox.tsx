@@ -58,6 +58,7 @@ export interface ComboBoxProps extends BaseProps {
   "data-testid"?: string;
   placeholder?: string;
   className?: string;
+  icon?: ReactNode;
 }
 
 export interface MultiComboBoxProps extends BaseProps {
@@ -210,6 +211,7 @@ export const ComboBox = ({
   "data-testid": testId,
   placeholder,
   className,
+  icon,
 }: ComboBoxProps) => {
   // Stores the value that the user types in to filter the options
   const [query, setQuery] = useState("");
@@ -263,6 +265,7 @@ export const ComboBox = ({
           spellCheck={false}
           value={currentInputValue}
           error={error}
+          icon={icon}
           adornment={
             adornment ?? (
               <ComboboxButton className={styles.caretButton} data-testid={testId ? `${testId}--button` : undefined}>

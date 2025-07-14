@@ -52,10 +52,28 @@
   }
 }
 
+$input-horizontal-padding: 8px;
+$icon-width: 20px;
+
+/** The icon is positioned absolute so that it is within the bounds of the input. Other components like our ComboBox
+ * rely on the input width to position popovers, so it's important that the icon is within the input. **/
+.icon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: ($input-horizontal-padding * 2) + $icon-width;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-inline: $input-horizontal-padding;
+}
+
 .input {
   outline: none;
   width: 100%;
-  padding: 7px 8px;
+  padding: 7px $input-horizontal-padding;
   font-size: variables.$font-size-md;
   font-weight: normal;
   border: none;
@@ -75,6 +93,10 @@
   &.readOnly {
     pointer-events: none;
     color: colors.$grey-300;
+  }
+
+  &--hasIcon {
+    padding-left: calc(2 * $input-horizontal-padding + $icon-width);
   }
 }
 

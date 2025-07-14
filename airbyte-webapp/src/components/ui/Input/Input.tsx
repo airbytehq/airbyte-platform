@@ -13,10 +13,11 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
   containerClassName?: string;
   adornment?: ReactNode;
   "data-testid"?: string;
+  icon?: ReactNode;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ light, error, inline, containerClassName, adornment, "data-testid": testId, ...props }, ref) => {
+  ({ light, error, icon, inline, containerClassName, adornment, "data-testid": testId, ...props }, ref) => {
     const { formatMessage } = useIntl();
 
     const inputRef = useRef<HTMLInputElement | null>(null);
@@ -78,6 +79,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         data-testid="input-container"
         onBlur={onContainerBlur}
       >
+        {icon && <span className={styles.icon}>{icon}</span>}
         <input
           aria-invalid={error}
           data-testid={testId ?? "input"}
@@ -91,6 +93,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               [styles.readOnly]: props.readOnly,
               [styles.password]: isPassword,
               "fs-exclude": isPassword,
+              [styles["input--hasIcon"]]: !!icon,
             },
             props.className
           )}
