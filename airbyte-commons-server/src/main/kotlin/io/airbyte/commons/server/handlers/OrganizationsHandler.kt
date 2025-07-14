@@ -241,7 +241,7 @@ open class OrganizationsHandler(
         OrganizationSummary()
           .organization(org)
           .workspaces(fullyPopulatedOrgMap[org.organizationId])
-          .subscription(null) // will be filled in by the caller when we are in cloud
+          .subscriptionName(null) // will be filled in by the caller when we are in cloud
           .memberCount(orgIdToMemberCount[org.organizationId])
       orgSummaries.add(summary)
     }

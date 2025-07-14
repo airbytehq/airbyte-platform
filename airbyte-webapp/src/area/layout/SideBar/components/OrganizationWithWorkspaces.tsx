@@ -16,7 +16,7 @@ export const OrganizationWithWorkspaces: React.FC<OrganizationSummary & { lastIt
   organization,
   workspaces = [],
   memberCount,
-  subscription,
+  subscriptionName,
   lastItem,
 }) => {
   return (
@@ -31,11 +31,8 @@ export const OrganizationWithWorkspaces: React.FC<OrganizationSummary & { lastIt
               {organization.organizationName}
             </Text>
             <Text size="sm" color="grey400" className={styles.orgMeta}>
-              {subscription && (
-                <FormattedMessage
-                  id="organization.members"
-                  values={{ subscriptionName: subscription.name, count: memberCount || 0 }}
-                />
+              {subscriptionName && (
+                <FormattedMessage id="organization.members" values={{ subscriptionName, count: memberCount || 0 }} />
               )}
             </Text>
           </div>
