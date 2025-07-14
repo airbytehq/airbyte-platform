@@ -3,8 +3,7 @@ import fs from "fs";
 import path from "path";
 
 import { test, expect } from "@playwright/test";
-import { signInOrRegister } from "helpers";
-import { injectFeatureFlagsAndStyle, setFeatureFlags, setServerFeatureFlags } from "support/e2e";
+import { signIn } from "helpers";
 
 /**
  * This test suite covers the end-to-end flow of creating connection templates,
@@ -15,8 +14,6 @@ import { injectFeatureFlagsAndStyle, setFeatureFlags, setServerFeatureFlags } fr
  * The server is started with environment variables copied from the Airbyte
  * Applications UI, allowing the embedded widget to connect to the Airbyte API.
  * The test suite includes:
- * - Creating a connection template for a destination
- * - Creating a source config template
  * - Creating an application and copying environment variables
  * - Running the embedded widget flow with the copied environment variables
  * - Interacting with the embedded widget to configure a connection
@@ -27,7 +24,7 @@ const EMBEDDED_ENV_PATH = path.join(__dirname, ".embedded-env.json");
 let copiedEnvVars: Record<string, string> = {};
 let serverProcess: ReturnType<typeof spawn>;
 
-test.describe.skip("Airbyte Embedded Integration Flow", () => {
+test.describe("Airbyte Embedded Integration Flow", () => {
   test.setTimeout(5 * 60 * 1000); // Set timeout to 5 minutes for all tests in this suite
 
   test.beforeEach(async ({ page }) => {
@@ -44,50 +41,13 @@ test.describe.skip("Airbyte Embedded Integration Flow", () => {
         console.error(`[SERVER ERROR] ${response.status()} ${url}\n${body}`);
       }
     });
-
-    const flags = await setServerFeatureFlags({
-      "platform.allow-config-template-endpoints": "true",
-    });
-
-    console.log("Setting server feature flags:", flags);
-    setFeatureFlags({
-      "embedded.templateCreateButton": true,
-      "platform.allow-config-template-endpoints": true,
-    });
-    await injectFeatureFlagsAndStyle(page);
-    await signInOrRegister(page);
-  });
-
-  test("should create a new connection template", async ({ page }) => {
-    await page.goto("./");
-    await page.click("text=Destinations");
-    await page.fill('input[data-testid="input"][type="search"][placeholder^="Search Airbyte Connectors"]', "dev");
-    await page.click('button:has-text("Marketplace")');
-    await page.click('button:has-text("dev/null")');
-    await page.click('button:has-text("Create Config Template")');
-    await page.waitForSelector("text=/Connection template created/");
-  });
-
-  test("should create a new source config template", async ({ page }) => {
-    await page.goto("./");
-    await page.click("text=Sources");
-    await page.fill('input[data-testid="input"][type="search"][placeholder^="Search Airbyte Connectors"]', "pokeapi");
-    await page.click('button:has-text("Marketplace")');
-    await page.click('button:has-text("PokeAPI")');
-    await page.click('button:has-text("Create Config Template")');
-    await page.waitForSelector("text=/Config template created/");
   });
 
   test("should create an application and write env vars to file", async ({ page }) => {
     // // Create application and copy env vars
-    await page.goto("./");
+    await signIn(page, process.env.USER_EMAIL, process.env.USER_PASSWORD);
     await page.click('a:has-text("Settings")');
-    await page.click('a:has-text("Applications")');
-    await page.click('button:has-text("Create an application")');
-    await page.fill('input[data-testid="input"][name="name"]', "My Application");
-    await page.click('button:has-text("Submit")');
     await page.click('a:has-text("Embedded")');
-
     // Grant clipboard-read and clipboard-write permissions before clicking Copy
     await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: page.url() });
 
@@ -99,7 +59,6 @@ test.describe.skip("Airbyte Embedded Integration Flow", () => {
     await page.waitForTimeout(300);
 
     const copiedText = await page.evaluate(() => navigator.clipboard.readText());
-    console.log("Copied env vars text:", copiedText); // Debug log
 
     // parse as .env format (key=value per line)
     const envObj: Record<string, string> = {};
@@ -118,7 +77,6 @@ test.describe.skip("Airbyte Embedded Integration Flow", () => {
     copiedEnvVars = envObj;
     // Write to local JSON file
     fs.writeFileSync(EMBEDDED_ENV_PATH, JSON.stringify(copiedEnvVars, null, 2), { encoding: "utf-8" });
-    console.log(`Wrote embedded env vars to ${EMBEDDED_ENV_PATH}`);
   });
 
   test("should run embedded widget flow using env vars from file", async ({ page }) => {
@@ -132,16 +90,13 @@ test.describe.skip("Airbyte Embedded Integration Flow", () => {
     if (!process.env.AIRBYTE_SERVER_HOST) {
       throw new Error("AIRBYTE_SERVER_HOST is not defined in process.env. Cannot set BASE_URL.");
     }
-    console.log("AIRBYTE_SERVER_HOST:", process.env.AIRBYTE_SERVER_HOST);
 
     // Start the Express server with env vars from Applications UI + extra
     const extraEnvs = {
       EXTERNAL_USER_ID: "test-external-user",
       BASE_URL: `${process.env.AIRBYTE_SERVER_HOST}/api/public`,
     };
-    const serverPath = path.join(__dirname, "../../../support/embedded-server.js");
-    console.log(`Starting server with path: ${serverPath}`);
-    console.log(`Using env vars: ${JSON.stringify({ ...copiedEnvVars, ...extraEnvs })}`);
+    const serverPath = path.join(__dirname, "../../support/embedded-server.js");
     serverProcess = spawn("node", [serverPath], {
       env: { ...process.env, ...copiedEnvVars, ...extraEnvs, PORT: "4000" },
       stdio: ["ignore", "pipe", "pipe"],
@@ -187,18 +142,23 @@ test.describe.skip("Airbyte Embedded Integration Flow", () => {
 
     // Interact with content inside the iframe
     const frame = await widgetIframe!.contentFrame();
-    await frame?.waitForSelector('button:has-text("PokeAPI")', { timeout: 30 * 1000 });
-    await frame?.click('button:has-text("PokeAPI")');
-    await frame?.click('button[data-testid="connectionConfiguration.pokemon_name-listbox-button"]');
-    const value = "bulbasaur";
-    const option = await frame?.waitForSelector(`li[role="option"]:has-text("${value}")`, { timeout: 5000 });
-    await option?.click();
+    await frame?.waitForSelector('button:has-text("Faker")', { timeout: 30 * 1000 });
+    await frame?.click('button:has-text("Faker")');
     await frame?.click('button:has-text("Save")');
 
     // Wait for the server to log EMBEDDED_RESPONSE_RECEIVED to stdout
     await waitForEmbeddedResponse;
   });
 
+  test("should delete workspace", async ({ page }) => {
+    await signIn(page, process.env.USER_EMAIL, process.env.USER_PASSWORD);
+    await page.click('a:has-text("test-external-user")');
+    await page.click('a:has-text("Settings")');
+    await page.click('a[href*="/settings/workspace"]');
+    await page.click('button:has-text("Delete your workspace")');
+    await page.locator('input[id="confirmation-text"]').fill("test-external-user");
+    await page.click('button:has-text("Delete workspace")');
+  });
   // eslint-disable-next-line no-empty-pattern
   test.afterAll(async ({}, testInfo) => {
     if (serverProcess) {

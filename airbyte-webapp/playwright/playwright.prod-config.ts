@@ -2,16 +2,16 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
-  testIgnore: ["cloud/**", "**/cloud/**", "**/embedded/**", "embedded/**"],
+  testMatch: ["embedded/**/*.spec.ts"],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: "html",
   use: {
-    baseURL: process.env.AIRBYTE_SERVER_HOST,
+    baseURL: "https://cloud.airbyte.com",
     ignoreHTTPSErrors: true,
-    trace: "on-first-retry",
+    trace: "on",
   },
 
   /* Configure projects for major browsers */
