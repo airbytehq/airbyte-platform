@@ -112,7 +112,7 @@ export const CreateWorkspaceModal: React.FC<{ dataplaneGroups: DataplaneGroupRea
       defaultValues={{
         name: "",
         organizationId,
-        dataplaneGroupId: dataplaneGroups[0]?.dataplane_group_id || "",
+        dataplaneGroupId: dataplaneGroups.find((group) => group.name === "US")?.dataplane_group_id || "",
       }}
       zodSchema={OrganizationCreateWorkspaceFormValidationSchema}
       onSubmit={onSubmit}
@@ -127,7 +127,7 @@ export const CreateWorkspaceModal: React.FC<{ dataplaneGroups: DataplaneGroupRea
           type="text"
         />
         <FormControl<CreateWorkspaceFormValues>
-          label={formatMessage({ id: "form.dataplane" })}
+          label={formatMessage({ id: "form.region" })}
           name="dataplaneGroupId"
           fieldType="dropdown"
           adaptiveWidth={false}

@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { NavLink } from "react-router-dom";
 
 import { FlexContainer } from "components/ui/Flex";
@@ -19,9 +19,16 @@ export const OrganizationWithWorkspaces: React.FC<OrganizationSummary & { lastIt
   subscriptionName,
   lastItem,
 }) => {
+  const { formatMessage } = useIntl();
   return (
     <FlexContainer direction="column" gap="none">
-      <FlexContainer direction="row" gap="xs" alignItems="center" justifyContent="space-between">
+      <FlexContainer
+        direction="row"
+        gap="xs"
+        alignItems="center"
+        justifyContent="space-between"
+        className={styles.organizationNameContainer}
+      >
         <NavLink
           to={`${RoutePaths.Organization}/${organization.organizationId}/${RoutePaths.Workspaces}`}
           className={styles.organizationName}
@@ -30,10 +37,17 @@ export const OrganizationWithWorkspaces: React.FC<OrganizationSummary & { lastIt
             <Text size="sm" color="darkBlue" bold className={styles.orgTitle}>
               {organization.organizationName}
             </Text>
-            <Text size="sm" color="grey400" className={styles.orgMeta}>
-              {subscriptionName && (
-                <FormattedMessage id="organization.members" values={{ subscriptionName, count: memberCount || 0 }} />
-              )}
+            <Text
+              size="sm"
+              color="grey400"
+              className={styles.orgMeta}
+              title={`${formatMessage({ id: "organization.subscription" }, { subscriptionName })} ${formatMessage(
+                { id: "organization.members" },
+                { count: memberCount || 0 }
+              )}`}
+            >
+              {subscriptionName && <FormattedMessage id="organization.subscription" values={{ subscriptionName }} />}
+              <FormattedMessage id="organization.members" values={{ count: memberCount || 0 }} />
             </Text>
           </div>
         </NavLink>

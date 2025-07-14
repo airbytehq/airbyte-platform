@@ -143,7 +143,7 @@
   "form.destinationType": "Destination type",
   "form.connectionType": "Connector type",
   "form.dataType": "Data type",
-  "form.dataplane": "Dataplane",
+  "form.region": "Region",
   "form.cleanedName": "Cleaned name",
   "form.syncSettings": "Sync settings",
   "form.primaryKey": "Primary key",
@@ -2617,7 +2617,8 @@
   "embedded.onboarding.upsell.description": "Harness the power of Airbyte Embedded and add hundreds of integrations into your product instantly.",
   "embedded.onboarding.talkToSales": "Talk to sales",
 
-  "organization.members": "{subscriptionName} \u2022 {count, plural, one {# member} other {# members}}",
+  "organization.subscription": "{subscriptionName} \u2022 ",
+  "organization.members": "{count, plural, one {# member} other {# members}}",
   "organization.unhealthyWorkspaces": "Unhealthy workspaces",
   "organization.runningSyncs": "Running syncs",
   "workspaces.statusFilter.placeholder": "Filter by status"

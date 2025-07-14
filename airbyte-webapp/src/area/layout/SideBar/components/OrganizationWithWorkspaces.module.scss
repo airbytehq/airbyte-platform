@@ -1,6 +1,10 @@
 @use "scss/colors";
 @use "scss/variables";
 
+.organizationNameContainer:hover {
+  background-color: colors.$blue-40;
+}
+
 .organizationName {
   display: flex;
   align-items: center;
@@ -13,12 +17,9 @@
   text-overflow: ellipsis;
   width: 100%;
 
-  &:hover {
-    background-color: colors.$blue-40;
-  }
-
   &:focus-visible {
     outline-offset: -1px;
+    background-color: colors.$blue-40;
   }
 }
 
@@ -54,17 +55,19 @@
   width: 32px;
   align-self: stretch;
 
-  &:hover {
-    background-color: colors.$blue-40;
-  }
-
   &:focus-visible {
     outline-offset: -1px;
+    background-color: colors.$blue-40;
   }
 }
 
 .gearIcon {
   color: colors.$grey-400;
+}
+
+.gearIcon:hover,
+.gearIconLink:focus-visible .gearIcon {
+  color: colors.$dark-blue;
 }
 
 .workspaces {
