@@ -81,6 +81,7 @@ dependencies {
   testImplementation(libs.platform.testcontainers)
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.mockk)
+  testImplementation(libs.mockito.kotlin)
   testImplementation(libs.kotlin.coroutines.test)
   testImplementation(libs.assertj.core)
 

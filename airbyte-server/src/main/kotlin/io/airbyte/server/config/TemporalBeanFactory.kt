@@ -28,22 +28,22 @@ import jakarta.inject.Singleton
 class TemporalBeanFactory {
   @Singleton
   fun oAuthConfigSupplier(
-    trackingClient: TrackingClient?,
-    actorDefinitionVersionHelper: ActorDefinitionVersionHelper?,
-    oauthService: OAuthService?,
-    sourceService: SourceService?,
-    destinationService: DestinationService?,
+    trackingClient: TrackingClient,
+    actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
+    oauthService: OAuthService,
+    sourceService: SourceService,
+    destinationService: DestinationService,
   ): OAuthConfigSupplier = OAuthConfigSupplier(trackingClient, actorDefinitionVersionHelper, oauthService, sourceService, destinationService)
 
   @Singleton
   fun synchronousSchedulerClient(
-    temporalClient: TemporalClient?,
-    jobTracker: JobTracker?,
-    jobErrorReporter: JobErrorReporter?,
-    oAuthConfigSupplier: OAuthConfigSupplier?,
-    configInjector: ConfigInjector?,
-    contextBuilder: ContextBuilder?,
-    secretReferenceService: SecretReferenceService?,
+    temporalClient: TemporalClient,
+    jobTracker: JobTracker,
+    jobErrorReporter: JobErrorReporter,
+    oAuthConfigSupplier: OAuthConfigSupplier,
+    configInjector: ConfigInjector,
+    contextBuilder: ContextBuilder,
+    secretReferenceService: SecretReferenceService,
   ): SynchronousSchedulerClient =
     DefaultSynchronousSchedulerClient(
       temporalClient,

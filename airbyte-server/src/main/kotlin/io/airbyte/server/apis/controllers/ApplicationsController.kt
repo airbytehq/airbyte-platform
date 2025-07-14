@@ -70,7 +70,7 @@ open class ApplicationsController(
   override fun createApplication(
     @Body applicationCreate: ApplicationCreate,
   ): ApplicationRead {
-    val application = applicationService.createApplication(currentUserService.currentUser, applicationCreate.name)
+    val application = applicationService.createApplication(currentUserService.getCurrentUser(), applicationCreate.name)
     return toApplicationRead(application)
   }
 
@@ -85,7 +85,7 @@ open class ApplicationsController(
     @Body applicationIdRequestBody: ApplicationIdRequestBody,
   ) {
     applicationService.deleteApplication(
-      currentUserService.currentUser,
+      currentUserService.getCurrentUser(),
       applicationIdRequestBody.applicationId.toString(),
     )
   }
@@ -100,7 +100,7 @@ open class ApplicationsController(
   override fun listApplications(): ApplicationReadList? {
     val applications =
       applicationService
-        .listApplicationsByUser(currentUserService.currentUser)
+        .listApplicationsByUser(currentUserService.getCurrentUser())
         .map { application -> this.toApplicationRead(application) }
 
     val applicationReadList =

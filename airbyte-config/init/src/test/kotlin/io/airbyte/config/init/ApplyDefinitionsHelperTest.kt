@@ -96,7 +96,7 @@ internal class ApplyDefinitionsHelperTest {
     every { definitionsProvider.getDestinationDefinitions() } returns emptyList()
     every { definitionsProvider.getSourceDefinitions() } returns emptyList()
     every { airbyteCompatibleConnectorsValidator.validate(any(), any()) } returns ConnectorPlatformCompatibilityValidationResult(true, null)
-    every { jobPersistence.currentProtocolVersionRange } returns Optional.of(AirbyteProtocolVersionRange(Version("2.0.0"), Version("3.0.0")))
+    every { jobPersistence.getCurrentProtocolVersionRange() } returns Optional.of(AirbyteProtocolVersionRange(Version("2.0.0"), Version("3.0.0")))
     every { actorDefinitionVersionResolver.fetchRemoteActorDefinitionVersion(any(), any(), any()) } returns Optional.empty()
     every { seedDefinitionsProviderType.ordinal } returns SeedDefinitionsProviderType.REMOTE.ordinal
     mockVoidReturningFunctions()
@@ -711,7 +711,7 @@ internal class ApplyDefinitionsHelperTest {
     updateAll: Boolean,
     reImport: Boolean,
   ) {
-    every { jobPersistence.currentProtocolVersionRange } returns Optional.of(AirbyteProtocolVersionRange(Version("2.0.0"), Version("3.0.0")))
+    every { jobPersistence.getCurrentProtocolVersionRange() } returns Optional.of(AirbyteProtocolVersionRange(Version("2.0.0"), Version("3.0.0")))
     val postgresWithOldProtocolVersion = Jsons.clone(SOURCE_POSTGRES).withSpec(ConnectorSpecification().withProtocolVersion("1.0.0"))
     val s3withOldProtocolVersion = Jsons.clone(DESTINATION_S3).withSpec(ConnectorSpecification().withProtocolVersion("1.0.0"))
 

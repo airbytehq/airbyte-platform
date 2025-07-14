@@ -110,7 +110,7 @@ open class WorkspaceServiceImpl(
     val workspaceCreate =
       WorkspaceCreate()
         .name(workspaceCreateRequest.name)
-        .email(currentUserService.currentUser.email)
+        .email(currentUserService.getCurrentUser().email)
         .organizationId(organizationId)
         .notificationSettings(workspaceCreateRequest.notifications?.toNotificationSettings())
     if (workspaceCreateRequest.regionId != null) {
@@ -132,7 +132,7 @@ open class WorkspaceServiceImpl(
   }
 
   override fun controllerCreateWorkspace(workspaceCreateRequest: WorkspaceCreateRequest): Response {
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     val workspaceResponse: WorkspaceResponse =
       trackingHelper.callWithTracker(
@@ -190,7 +190,7 @@ open class WorkspaceServiceImpl(
     workspaceId: UUID,
     workspaceUpdateRequest: WorkspaceUpdateRequest,
   ): Response {
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     val workspaceResponse: Any =
       trackingHelper.callWithTracker(
@@ -228,7 +228,7 @@ open class WorkspaceServiceImpl(
   }
 
   override fun controllerGetWorkspace(workspaceId: UUID): Response {
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     val workspaceResponse: Any? =
       trackingHelper.callWithTracker(
@@ -269,7 +269,7 @@ open class WorkspaceServiceImpl(
   }
 
   override fun controllerDeleteWorkspace(workspaceId: UUID): Response {
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     val workspaceResponse: Any? =
       trackingHelper.callWithTracker(
@@ -299,7 +299,7 @@ open class WorkspaceServiceImpl(
   ): WorkspacesResponse {
     val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
 
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(currentUserService.currentUser.userId) }
+    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(currentUserService.getCurrentUser().userId) }
     log.debug("Workspaces to query: {}", workspaceIdsToQuery)
     val listResourcesForWorkspacesRequestBody = ListResourcesForWorkspacesRequestBody()
     listResourcesForWorkspacesRequestBody.includeDeleted = includeDeleted
@@ -332,7 +332,7 @@ open class WorkspaceServiceImpl(
     limit: Int,
     offset: Int,
   ): Response {
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     val workspaces: Any? =
       trackingHelper.callWithTracker(

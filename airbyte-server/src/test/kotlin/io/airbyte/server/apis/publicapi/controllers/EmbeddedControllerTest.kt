@@ -47,7 +47,7 @@ class EmbeddedControllerTest {
         tokenExpirationConfig = TokenExpirationConfig(),
         currentUserService =
           mockk {
-            every { currentUser } returns AuthenticatedUser().withAuthUserId("user-id-1")
+            every { getCurrentUser() } returns AuthenticatedUser().withAuthUserId("user-id-1")
           },
         licenseEntitlementChecker =
           mockk {

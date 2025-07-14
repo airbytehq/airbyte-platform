@@ -5,7 +5,7 @@
 package io.airbyte.bootloader.helpers
 
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus
-import io.airbyte.config.persistence.version_overrides.DefinitionVersionOverrideProvider
+import io.airbyte.config.persistence.versionoverrides.DefinitionVersionOverrideProvider
 import java.util.Optional
 import java.util.UUID
 

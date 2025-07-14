@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.commons.converters.ConnectionHelper.validateCatalogDoesntContainDuplicateStreamNames;
+import static io.airbyte.commons.server.converters.ConnectionHelper.validateCatalogDoesntContainDuplicateStreamNames;
 import static io.airbyte.config.Job.REPLICATION_TYPES;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -90,7 +90,6 @@ import io.airbyte.api.problems.throwable.generated.StreamDoesNotSupportFileTrans
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem;
 import io.airbyte.commons.converters.ApiConverters;
 import io.airbyte.commons.converters.CommonConvertersKt;
-import io.airbyte.commons.converters.ConnectionHelper;
 import io.airbyte.commons.entitlements.Entitlement;
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.enums.Enums;
@@ -99,6 +98,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.CatalogDiffHelpers;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.CatalogDiffConverters;
+import io.airbyte.commons.server.converters.ConnectionHelper;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
@@ -1786,10 +1786,10 @@ public class ConnectionsHandler {
         transformations,
         nonBreakingChangesPreference,
         supportedDestinationSyncModes);
-    updateObject.setSyncCatalog(propagateResult.catalog());
+    updateObject.setSyncCatalog(propagateResult.catalog);
     updateObject.setSourceCatalogId(sourceCatalogId);
     trackSchemaChange(workspaceId, connectionId, propagateResult);
-    return propagateResult.appliedDiff();
+    return propagateResult.appliedDiff;
   }
 
   private void validateCatalogSize(final AirbyteCatalog catalog, final UUID workspaceId, final String operationName) {
@@ -1808,7 +1808,7 @@ public class ConnectionsHandler {
   public void trackSchemaChange(final UUID workspaceId, final UUID connectionId, final UpdateSchemaResult propagateResult) {
     try {
       final String changeEventTimeline = Instant.now().toString();
-      for (final StreamTransform streamTransform : propagateResult.appliedDiff().getTransforms()) {
+      for (final StreamTransform streamTransform : propagateResult.appliedDiff.getTransforms()) {
         final Map<String, Object> payload = new HashMap<>();
         payload.put("workspace_id", workspaceId);
         payload.put("connection_id", connectionId);

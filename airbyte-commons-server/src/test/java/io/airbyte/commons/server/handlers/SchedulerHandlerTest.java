@@ -13,7 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -302,12 +301,19 @@ class SchedulerHandlerTest {
         1000L,
         1002L,
         true);
-    jobResponse = mock(SynchronousResponse.class, RETURNS_DEEP_STUBS);
-    final SynchronousJobMetadata synchronousJobMetadata = mock(SynchronousJobMetadata.class);
-    when(synchronousJobMetadata.getConfigType())
-        .thenReturn(ConfigType.SYNC);
-    when(jobResponse.getMetadata())
-        .thenReturn(synchronousJobMetadata);
+
+    final SynchronousJobMetadata synchronousJobMetadata = new SynchronousJobMetadata(SCOPE,
+        ConfigType.SYNC,
+        null,
+        CREATED_AT,
+        CREATED_AT,
+        false,
+        CONNECTOR_CONFIG_UPDATED,
+        LOG_PATH,
+        null);
+
+    jobResponse = new SynchronousResponse<>(null, synchronousJobMetadata);
+
     configurationUpdate = mock(ConfigurationUpdate.class);
     jsonSchemaValidator = mock(JsonSchemaValidator.class);
 
@@ -839,17 +845,21 @@ class SchedulerHandlerTest {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final SourceDiscoverSchemaRequestBody request = new SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId());
 
-    final SynchronousResponse<UUID> discoverResponse = (SynchronousResponse<UUID>) jobResponse;
-    final SynchronousJobMetadata metadata = mock(SynchronousJobMetadata.class);
-    when(discoverResponse.isSuccess()).thenReturn(true);
-    when(discoverResponse.getOutput()).thenReturn(UUID.randomUUID());
+    final SynchronousJobMetadata metadata = new SynchronousJobMetadata(SCOPE,
+        ConfigType.SYNC,
+        null,
+        CREATED_AT,
+        CREATED_AT,
+        true,
+        CONNECTOR_CONFIG_UPDATED,
+        LOG_PATH,
+        null);
+    final SynchronousResponse<UUID> discoverResponse = new SynchronousResponse<>(UUID.randomUUID(), metadata);
     final ActorCatalog actorCatalog = new ActorCatalog()
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
         .withCatalogHash("")
         .withId(UUID.randomUUID());
     when(catalogService.getActorCatalogById(any())).thenReturn(actorCatalog);
-    when(discoverResponse.getMetadata()).thenReturn(metadata);
-    when(metadata.isSucceeded()).thenReturn(true);
 
     final ConnectionRead connectionRead = new ConnectionRead();
     final ConnectionReadList connectionReadList = new ConnectionReadList().connections(List.of(connectionRead));
@@ -875,7 +885,7 @@ class SchedulerHandlerTest {
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
 
     assertNotNull(actual.getCatalog());
-    assertEquals(actual.getCatalogId(), discoverResponse.getOutput());
+    assertEquals(actual.getCatalogId(), discoverResponse.output);
     assertNotNull(actual.getJobInfo());
     assertTrue(actual.getJobInfo().getSucceeded());
     verify(sourceService).getSourceConnection(source.getSourceId());
@@ -891,13 +901,17 @@ class SchedulerHandlerTest {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final SourceDiscoverSchemaRequestBody request = new SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId());
 
-    final SynchronousResponse<UUID> discoverResponse = (SynchronousResponse<UUID>) jobResponse;
-    final SynchronousJobMetadata metadata = mock(SynchronousJobMetadata.class);
     final UUID thisCatalogId = UUID.randomUUID();
-    when(discoverResponse.isSuccess()).thenReturn(true);
-    when(discoverResponse.getOutput()).thenReturn(thisCatalogId);
-    when(discoverResponse.getMetadata()).thenReturn(metadata);
-    when(metadata.isSucceeded()).thenReturn(true);
+    final SynchronousJobMetadata synchronousJobMetadata = new SynchronousJobMetadata(SCOPE,
+        ConfigType.SYNC,
+        null,
+        CREATED_AT,
+        CREATED_AT,
+        true,
+        CONNECTOR_CONFIG_UPDATED,
+        LOG_PATH,
+        null);
+    final SynchronousResponse<UUID> discoverResponse = new SynchronousResponse<>(thisCatalogId, synchronousJobMetadata);
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(source.getSourceDefinitionId());
@@ -916,7 +930,7 @@ class SchedulerHandlerTest {
 
     assertNotNull(actual.getCatalog());
     assertNotNull(actual.getJobInfo());
-    assertEquals(actual.getCatalogId(), discoverResponse.getOutput());
+    assertEquals(actual.getCatalogId(), discoverResponse.output);
     assertTrue(actual.getJobInfo().getSucceeded());
     verify(sourceService).getSourceConnection(source.getSourceId());
     verify(catalogService).getActorCatalog(eq(request.getSourceId()), any(), any());
@@ -932,13 +946,17 @@ class SchedulerHandlerTest {
     final SourceConnection source = SourceHelpers.generateSource(UUID.randomUUID());
     final SourceDiscoverSchemaRequestBody request = new SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId()).disableCache(true);
 
-    final SynchronousResponse<UUID> discoverResponse = (SynchronousResponse<UUID>) jobResponse;
-    final SynchronousJobMetadata metadata = mock(SynchronousJobMetadata.class);
-    when(discoverResponse.isSuccess()).thenReturn(true);
     final UUID discoveredCatalogId = UUID.randomUUID();
-    when(discoverResponse.getOutput()).thenReturn(discoveredCatalogId);
-    when(discoverResponse.getMetadata()).thenReturn(metadata);
-    when(metadata.isSucceeded()).thenReturn(true);
+    final SynchronousJobMetadata synchronousJobMetadata = new SynchronousJobMetadata(SCOPE,
+        ConfigType.SYNC,
+        null,
+        CREATED_AT,
+        CREATED_AT,
+        true,
+        CONNECTOR_CONFIG_UPDATED,
+        LOG_PATH,
+        null);
+    final SynchronousResponse<UUID> discoverResponse = new SynchronousResponse<>(discoveredCatalogId, synchronousJobMetadata);
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(source.getSourceDefinitionId());
@@ -1008,12 +1026,17 @@ class SchedulerHandlerTest {
         .withConfiguration(SOURCE.getConfiguration())
         .withWorkspaceId(SOURCE.getWorkspaceId());
 
-    final SynchronousResponse<UUID> discoverResponse = (SynchronousResponse<UUID>) jobResponse;
-    final SynchronousJobMetadata metadata = mock(SynchronousJobMetadata.class);
-    when(discoverResponse.isSuccess()).thenReturn(true);
-    when(discoverResponse.getOutput()).thenReturn(UUID.randomUUID());
-    when(discoverResponse.getMetadata()).thenReturn(metadata);
-    when(metadata.isSucceeded()).thenReturn(true);
+    final SynchronousJobMetadata synchronousJobMetadata = new SynchronousJobMetadata(SCOPE,
+        ConfigType.SYNC,
+        null,
+        CREATED_AT,
+        CREATED_AT,
+        true,
+        CONNECTOR_CONFIG_UPDATED,
+        LOG_PATH,
+        null);
+
+    final SynchronousResponse<UUID> discoverResponse = new SynchronousResponse<>(UUID.randomUUID(), synchronousJobMetadata);
 
     final SourceCoreConfig sourceCoreConfig = new SourceCoreConfig()
         .sourceDefinitionId(source.getSourceDefinitionId())
@@ -1048,7 +1071,7 @@ class SchedulerHandlerTest {
 
     assertNotNull(actual.getCatalog());
     assertNotNull(actual.getJobInfo());
-    assertEquals(actual.getCatalogId(), discoverResponse.getOutput());
+    assertEquals(actual.getCatalogId(), discoverResponse.output);
     assertTrue(actual.getJobInfo().getSucceeded());
     verify(synchronousSchedulerClient).createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH);
     verify(actorDefinitionVersionHelper).getSourceVersion(sourceDefinition, source.getWorkspaceId(), null);
@@ -1566,17 +1589,25 @@ class SchedulerHandlerTest {
   private UUID mockSuccessfulDiscoverJob(final SourceConnection source, final ActorDefinitionVersion sourceVersion)
       throws ConfigNotFoundException, IOException {
     final UUID newSourceCatalogId = UUID.randomUUID();
-    final SynchronousResponse<UUID> discoverResponse = (SynchronousResponse<UUID>) jobResponse;
-    final SynchronousJobMetadata metadata = mock(SynchronousJobMetadata.class);
-    when(discoverResponse.isSuccess()).thenReturn(true);
-    when(discoverResponse.getOutput()).thenReturn(newSourceCatalogId);
+
+    final SynchronousJobMetadata synchronousJobMetadata = new SynchronousJobMetadata(SCOPE,
+        ConfigType.SYNC,
+        null,
+        CREATED_AT,
+        CREATED_AT,
+        true,
+        CONNECTOR_CONFIG_UPDATED,
+        LOG_PATH,
+        null);
+
+    final SynchronousResponse<UUID> discoverResponse = new SynchronousResponse<>(newSourceCatalogId, synchronousJobMetadata);
+
     final ActorCatalog actorCatalog = new ActorCatalog()
         .withCatalog(Jsons.jsonNode(airbyteCatalog))
         .withCatalogHash("")
         .withId(newSourceCatalogId);
+
     when(catalogService.getActorCatalogById(any())).thenReturn(actorCatalog);
-    when(discoverResponse.getMetadata()).thenReturn(metadata);
-    when(metadata.isSucceeded()).thenReturn(true);
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn(discoverResponse);
     return newSourceCatalogId;

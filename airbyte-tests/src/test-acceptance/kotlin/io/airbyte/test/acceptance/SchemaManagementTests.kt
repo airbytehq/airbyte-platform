@@ -391,7 +391,7 @@ internal class SchemaManagementTests {
         ),
       )
 
-      streams.sortWith(compareBy { it.stream!!.name })
+//      streams.sortWith(compareBy { it.stream!!.name })
       return AirbyteCatalog(streams)
     }
 

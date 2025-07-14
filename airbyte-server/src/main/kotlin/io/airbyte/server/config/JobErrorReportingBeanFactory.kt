@@ -41,14 +41,14 @@ class JobErrorReportingBeanFactory {
 
   @Singleton
   fun jobErrorReporter(
-    @Value("\${airbyte.version}") airbyteVersion: String?,
-    actorDefinitionService: ActorDefinitionService?,
-    sourceService: SourceService?,
-    destinationService: DestinationService?,
-    workspaceService: WorkspaceService?,
-    airbyteEdition: AirbyteEdition?,
+    @Value("\${airbyte.version}") airbyteVersion: String,
+    actorDefinitionService: ActorDefinitionService,
+    sourceService: SourceService,
+    destinationService: DestinationService,
+    workspaceService: WorkspaceService,
+    airbyteEdition: AirbyteEdition,
     @Named("jobErrorReportingClient") jobErrorReportingClient: Optional<JobErrorReportingClient>,
-    webUrlHelper: WebUrlHelper?,
+    webUrlHelper: WebUrlHelper,
   ): JobErrorReporter =
     JobErrorReporter(
       actorDefinitionService,

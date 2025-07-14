@@ -40,8 +40,8 @@ class ConnectionsControllerTest {
 
   @BeforeEach
   fun setUp() {
-    every { currentUserService.currentUser } returns AuthenticatedUser()
-    every { currentUserService.currentUser.userId } returns UUID.randomUUID()
+    every { currentUserService.getCurrentUser() } returns AuthenticatedUser()
+    every { currentUserService.getCurrentUser().userId } returns UUID.randomUUID()
 
     // Mock trackingHelper to just execute the passed function
     every { trackingHelper.callWithTracker<Any>(any(), any(), any(), any()) } answers {

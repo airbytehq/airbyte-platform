@@ -140,7 +140,7 @@ public class ActorDefinitionVersionHandler {
   @VisibleForTesting
   ActorDefinitionVersionRead createActorDefinitionVersionRead(final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus)
       throws IOException {
-    final ActorDefinitionVersion actorDefinitionVersion = versionWithOverrideStatus.actorDefinitionVersion();
+    final ActorDefinitionVersion actorDefinitionVersion = versionWithOverrideStatus.actorDefinitionVersion;
     final ActorDefinitionVersionRead advRead = new ActorDefinitionVersionRead()
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
@@ -149,7 +149,7 @@ public class ActorDefinitionVersionHandler {
         .supportLevel(apiPojoConverters.toApiSupportLevel(actorDefinitionVersion.getSupportLevel()))
         .cdkVersion(actorDefinitionVersion.getCdkVersion())
         .lastPublished(apiPojoConverters.toOffsetDateTime(actorDefinitionVersion.getLastPublished()))
-        .isVersionOverrideApplied(versionWithOverrideStatus.isOverrideApplied())
+        .isVersionOverrideApplied(versionWithOverrideStatus.isOverrideApplied)
         .supportsFileTransfer(actorDefinitionVersion.getSupportsFileTransfer())
         .supportsDataActivation(actorDefinitionVersion.getSupportsDataActivation())
         .connectorIPCOptions(actorDefinitionVersion.getConnectorIPCOptions());

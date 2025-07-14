@@ -91,7 +91,7 @@ class ScopedTokenSecurityRule(
   private fun resolveWorkspaceId(request: HttpRequest<*>): String? {
     val headerMap = request.headers.asMap(String::class.java, String::class.java)
     val requestedWorkspaceIds = authenticationHeaderResolver.resolveWorkspace(headerMap)
-    if (requestedWorkspaceIds.size != 1) {
+    if (requestedWorkspaceIds == null || requestedWorkspaceIds.size != 1) {
       return null
     }
     return requestedWorkspaceIds.first().toString()

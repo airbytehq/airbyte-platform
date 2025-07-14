@@ -100,9 +100,9 @@ class SupportStateUpdater(
    */
   @VisibleForTesting
   fun getSupportStateUpdate(
-    currentDefaultVersion: Version?,
+    currentDefaultVersion: Version,
     referenceDate: LocalDate?,
-    breakingChangesForDefinition: List<ActorDefinitionBreakingChange?>,
+    breakingChangesForDefinition: List<ActorDefinitionBreakingChange>,
     actorDefinitionVersions: List<ActorDefinitionVersion>,
   ): SupportStateUpdate {
     if (breakingChangesForDefinition.isEmpty()) {

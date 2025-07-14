@@ -7,6 +7,7 @@ package io.airbyte.commons.server.services
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.DestinationDiscoverNotSupportedProblem
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.server.scheduler.SynchronousResponse
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient
 import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ActorDefinitionVersion
@@ -148,9 +149,7 @@ class DestinationDiscoverServiceTest {
       every { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId.value) } returns destinationVersion
       every { catalogService.getActorCatalog(destinationId.value, "1.0.0", any()) } returns Optional.empty()
       every { synchronousSchedulerClient.createDestinationDiscoverJob(destination, destinationDefinition, destinationVersion) } returns
-        mockk {
-          every { output } returns catalogId
-        }
+        SynchronousResponse(catalogId, mockk())
       every { catalogService.getActorCatalogById(catalogId) } returns discoveredCatalog
 
       val result = service.getDestinationCatalog(destinationId)

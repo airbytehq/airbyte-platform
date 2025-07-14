@@ -8,10 +8,10 @@ import com.fasterxml.jackson.annotation.JsonInclude
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 class ConnectionSettingsChangedEvent(
-  private val patches: Map<String, Map<String, Any>>,
+  private val patches: Map<String, Map<String, Any?>>,
   private val updateReason: String? = null,
 ) : ConnectionEvent {
-  fun getPatches(): Map<String, Map<String, Any>> = patches
+  fun getPatches(): Map<String, Map<String, Any?>> = patches
 
   fun getUpdateReason(): String? = updateReason
 

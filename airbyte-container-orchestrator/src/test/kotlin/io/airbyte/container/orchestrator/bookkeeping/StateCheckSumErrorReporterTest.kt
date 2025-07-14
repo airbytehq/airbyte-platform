@@ -18,7 +18,6 @@ import io.airbyte.api.client.model.generated.SupportState
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Configs
 import io.airbyte.config.FailureReason
-import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.State
 import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
@@ -29,33 +28,20 @@ import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.ArgumentMatchers
-import org.mockito.Mock
-import org.mockito.Mockito.any
-import org.mockito.Mockito.anyMap
-import org.mockito.Mockito.anyString
-import org.mockito.Mockito.eq
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
-import org.mockito.junit.jupiter.MockitoExtension
 import java.net.URI
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
 
-@ExtendWith(MockitoExtension::class)
 class StateCheckSumErrorReporterTest {
-  @Mock
   private lateinit var jobErrorReportingClient: JobErrorReportingClient
 
   private lateinit var airbyteApiClient: AirbyteApiClient
 
-  @Mock
   private lateinit var webUrlHelper: WebUrlHelper
 
   private lateinit var stateMessage: AirbyteStateMessage
@@ -67,6 +53,9 @@ class StateCheckSumErrorReporterTest {
 
   @BeforeEach
   fun setup() {
+    jobErrorReportingClient = mockk(relaxed = true)
+    webUrlHelper = mockk(relaxed = true)
+
     airbyteApiClient = mockk<AirbyteApiClient>()
     stateCheckSumErrorReporter =
       StateCheckSumErrorReporter(
@@ -148,16 +137,15 @@ class StateCheckSumErrorReporterTest {
       stateMessage,
     )
 
-    verify(
-      jobErrorReportingClient,
-      times(1),
-    ).reportJobFailureReason(
-      any(StandardWorkspace::class.java),
-      any(FailureReason::class.java),
-      eq("source-repo:0.0.1"),
-      anyMap(),
-      ArgumentMatchers.eq(AttemptConfigReportingContext(null, null, State().withState(Jsons.jsonNode(stateMessage)))),
-    )
+    verify(exactly = 1) {
+      jobErrorReportingClient.reportJobFailureReason(
+        any(),
+        any(),
+        "source-repo:0.0.1",
+        any(),
+        AttemptConfigReportingContext(null, null, State().withState(Jsons.jsonNode(stateMessage))),
+      )
+    }
   }
 
   @Test
@@ -217,16 +205,15 @@ class StateCheckSumErrorReporterTest {
       stateMessage,
     )
 
-    verify(
-      jobErrorReportingClient,
-      times(1),
-    ).reportJobFailureReason(
-      any(StandardWorkspace::class.java),
-      any(FailureReason::class.java),
-      eq("destination-repo:0.0.1"),
-      anyMap(),
-      ArgumentMatchers.eq(AttemptConfigReportingContext(null, null, State().withState(Jsons.jsonNode(stateMessage)))),
-    )
+    verify(exactly = 1) {
+      jobErrorReportingClient.reportJobFailureReason(
+        any(),
+        any(),
+        "destination-repo:0.0.1",
+        any(),
+        AttemptConfigReportingContext(null, null, State().withState(Jsons.jsonNode(stateMessage))),
+      )
+    }
   }
 
   @Test
@@ -252,10 +239,15 @@ class StateCheckSumErrorReporterTest {
       stateMessage,
     )
 
-    verify(
-      jobErrorReportingClient,
-      times(0),
-    ).reportJobFailureReason(any(StandardWorkspace::class.java), any(FailureReason::class.java), anyString(), anyMap(), any())
+    verify(exactly = 0) {
+      jobErrorReportingClient.reportJobFailureReason(
+        any(),
+        any(),
+        any(),
+        any(),
+        any(),
+      )
+    }
   }
 
   @Test
@@ -325,7 +317,7 @@ class StateCheckSumErrorReporterTest {
     val workspaceId = UUID.randomUUID()
     val connectionId = UUID.randomUUID()
     val connectionUrl = "https://test.url/connection"
-    `when`(webUrlHelper.getConnectionUrl(workspaceId, connectionId)).thenReturn(connectionUrl)
+    every { webUrlHelper.getConnectionUrl(workspaceId, connectionId) } returns connectionUrl
 
     val metadata = stateCheckSumErrorReporter.getConnectionMetadata(workspaceId, connectionId)
 
@@ -337,7 +329,7 @@ class StateCheckSumErrorReporterTest {
   fun `test getWorkspaceMetadata`() {
     val workspaceId = UUID.randomUUID()
     val workspaceUrl = "https://test.url/workspace"
-    `when`(webUrlHelper.getWorkspaceUrl(workspaceId)).thenReturn(workspaceUrl)
+    every { webUrlHelper.getWorkspaceUrl(workspaceId) } returns workspaceUrl
 
     val metadata = stateCheckSumErrorReporter.getWorkspaceMetadata(workspaceId)
 

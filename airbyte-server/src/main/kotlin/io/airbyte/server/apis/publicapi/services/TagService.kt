@@ -52,7 +52,7 @@ class TagServiceImpl(
   }
 
   override fun listTags(workspaceIds: List<UUID>): TagsResponse {
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(currentUserService.currentUser.userId) }
+    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(currentUserService.getCurrentUser().userId) }
 
     val tags =
       kotlin

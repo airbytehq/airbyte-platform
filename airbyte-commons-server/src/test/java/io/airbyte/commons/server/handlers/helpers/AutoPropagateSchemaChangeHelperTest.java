@@ -123,8 +123,7 @@ class AutoPropagateSchemaChangeHelperTest {
     final AirbyteCatalog result =
         applySchemaChangeHelper
             .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-                SUPPORTED_DESTINATION_SYNC_MODES)
-            .catalog();
+                SUPPORTED_DESTINATION_SYNC_MODES).catalog;
 
     Assertions.assertThat(result.getStreams()).hasSize(1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getJsonSchema()).isEqualTo(newSchema);
@@ -145,8 +144,7 @@ class AutoPropagateSchemaChangeHelperTest {
     final AirbyteCatalog result =
         applySchemaChangeHelper
             .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-                SUPPORTED_DESTINATION_SYNC_MODES)
-            .catalog();
+                SUPPORTED_DESTINATION_SYNC_MODES).catalog;
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
@@ -171,8 +169,7 @@ class AutoPropagateSchemaChangeHelperTest {
     final AirbyteCatalog result =
         applySchemaChangeHelper
             .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-                SUPPORTED_DESTINATION_SYNC_MODES)
-            .catalog();
+                SUPPORTED_DESTINATION_SYNC_MODES).catalog;
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     final var stream0 = result.getStreams().get(0);
@@ -203,8 +200,7 @@ class AutoPropagateSchemaChangeHelperTest {
     final AirbyteCatalog result =
         applySchemaChangeHelper
             .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-                SUPPORTED_DESTINATION_SYNC_MODES)
-            .catalog();
+                SUPPORTED_DESTINATION_SYNC_MODES).catalog;
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     final var stream0 = result.getStreams().get(0);
@@ -235,8 +231,7 @@ class AutoPropagateSchemaChangeHelperTest {
     final AirbyteCatalog result =
         applySchemaChangeHelper
             .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-                SUPPORTED_DESTINATION_SYNC_MODES)
-            .catalog();
+                SUPPORTED_DESTINATION_SYNC_MODES).catalog;
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     final var stream1 = result.getStreams().get(1);
@@ -260,8 +255,7 @@ class AutoPropagateSchemaChangeHelperTest {
     final AirbyteCatalog result =
         applySchemaChangeHelper
             .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-                SUPPORTED_DESTINATION_SYNC_MODES)
-            .catalog();
+                SUPPORTED_DESTINATION_SYNC_MODES).catalog;
 
     Assertions.assertThat(result.getStreams()).hasSize(2);
     final var stream1 = result.getStreams().get(1);
@@ -283,8 +277,7 @@ class AutoPropagateSchemaChangeHelperTest {
     final AirbyteCatalog result =
         applySchemaChangeHelper
             .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_FULLY,
-                SUPPORTED_DESTINATION_SYNC_MODES)
-            .catalog();
+                SUPPORTED_DESTINATION_SYNC_MODES).catalog;
 
     Assertions.assertThat(result.getStreams()).hasSize(0);
   }
@@ -304,8 +297,7 @@ class AutoPropagateSchemaChangeHelperTest {
     final AirbyteCatalog result =
         applySchemaChangeHelper
             .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS,
-                SUPPORTED_DESTINATION_SYNC_MODES)
-            .catalog();
+                SUPPORTED_DESTINATION_SYNC_MODES).catalog;
 
     Assertions.assertThat(result.getStreams()).hasSize(1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
@@ -326,8 +318,7 @@ class AutoPropagateSchemaChangeHelperTest {
     final AirbyteCatalog result =
         applySchemaChangeHelper
             .getUpdatedSchema(oldAirbyteCatalog, newAirbyteCatalog, List.of(transform), NonBreakingChangesPreference.PROPAGATE_COLUMNS,
-                SUPPORTED_DESTINATION_SYNC_MODES)
-            .catalog();
+                SUPPORTED_DESTINATION_SYNC_MODES).catalog;
 
     Assertions.assertThat(result.getStreams()).hasSize(1);
     Assertions.assertThat(result.getStreams().get(0).getStream().getName()).isEqualTo(NAME1);
@@ -454,9 +445,9 @@ class AutoPropagateSchemaChangeHelperTest {
             NonBreakingChangesPreference.PROPAGATE_FULLY,
             SUPPORTED_DESTINATION_SYNC_MODES);
 
-    Assertions.assertThat(result.catalog()).isEqualTo(oldAirbyteCatalog);
-    Assertions.assertThat(result.appliedDiff().getTransforms()).isEmpty();
-    Assertions.assertThat(result.changeDescription()).isEmpty();
+    Assertions.assertThat(result.catalog).isEqualTo(oldAirbyteCatalog);
+    Assertions.assertThat(result.appliedDiff.getTransforms()).isEmpty();
+    Assertions.assertThat(result.changeDescription).isEmpty();
   }
 
   @Test
@@ -526,8 +517,8 @@ class AutoPropagateSchemaChangeHelperTest {
                       .fieldName(List.of("ssn"))))));
       final ApplySchemaChangeHelper.UpdateSchemaResult result = applySchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
           transformations, NonBreakingChangesPreference.PROPAGATE_COLUMNS, List.of());
-      assertEquals(1, fieldIsSelected(result.catalog(), List.of("id")));
-      assertEquals(1, fieldIsSelected(result.catalog(), List.of("address")));
+      assertEquals(1, fieldIsSelected(result.catalog, List.of("id")));
+      assertEquals(1, fieldIsSelected(result.catalog, List.of("address")));
     }
 
     @Test
@@ -542,7 +533,7 @@ class AutoPropagateSchemaChangeHelperTest {
                       .fieldName(List.of("ssn"))))));
       final ApplySchemaChangeHelper.UpdateSchemaResult result = applySchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
           transformations, NonBreakingChangesPreference.PROPAGATE_COLUMNS, List.of());
-      assertEquals(1, fieldIsSelected(result.catalog(), List.of("ssn")));
+      assertEquals(1, fieldIsSelected(result.catalog, List.of("ssn")));
     }
 
     @Test
@@ -556,7 +547,7 @@ class AutoPropagateSchemaChangeHelperTest {
                       .fieldName(List.of("address", "zip"))))));
       final ApplySchemaChangeHelper.UpdateSchemaResult result = applySchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
           transformations, NonBreakingChangesPreference.PROPAGATE_COLUMNS, List.of());
-      assertEquals(1, fieldIsSelected(result.catalog(), List.of("address")));
+      assertEquals(1, fieldIsSelected(result.catalog, List.of("address")));
     }
 
     @Test
@@ -570,8 +561,8 @@ class AutoPropagateSchemaChangeHelperTest {
                       .fieldName(List.of("username", "domain"))))));
       final ApplySchemaChangeHelper.UpdateSchemaResult result = applySchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
           transformations, NonBreakingChangesPreference.PROPAGATE_COLUMNS, List.of());
-      assertEquals(0, fieldIsSelected(result.catalog(), List.of("username")));
-      assertEquals(0, fieldIsSelected(result.catalog(), List.of("username", "domain")));
+      assertEquals(0, fieldIsSelected(result.catalog, List.of("username")));
+      assertEquals(0, fieldIsSelected(result.catalog, List.of("username", "domain")));
     }
 
     @Test
@@ -587,8 +578,8 @@ class AutoPropagateSchemaChangeHelperTest {
                           .fieldName(List.of("username"))))));
       final ApplySchemaChangeHelper.UpdateSchemaResult result = applySchemaChangeHelper.getUpdatedSchema(oldCatalog, newCatalog,
           transformations, NonBreakingChangesPreference.PROPAGATE_COLUMNS, List.of());
-      assertEquals(1, fieldIsSelected(result.catalog(), List.of("username")));
-      assertEquals(0, fieldIsSelected(result.catalog(), List.of("username", "domain")));
+      assertEquals(1, fieldIsSelected(result.catalog, List.of("username")));
+      assertEquals(0, fieldIsSelected(result.catalog, List.of("username", "domain")));
 
     }
 

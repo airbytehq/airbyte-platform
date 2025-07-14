@@ -66,8 +66,14 @@ internal class DestinationDefinitionApiControllerTest {
     every { destinationDefinitionsHandler.deleteDestinationDefinition(any()) } returns Unit andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/destination_definitions/delete"
-    assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, DestinationDefinitionIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, DestinationDefinitionIdRequestBody())))
+    assertStatus(
+      HttpStatus.NO_CONTENT,
+      client.status(HttpRequest.POST(path, DestinationDefinitionIdRequestBody().destinationDefinitionId(UUID.randomUUID()))),
+    )
+    assertStatus(
+      HttpStatus.NOT_FOUND,
+      client.statusException(HttpRequest.POST(path, DestinationDefinitionIdRequestBody().destinationDefinitionId(UUID.randomUUID()))),
+    )
   }
 
   @Test
@@ -166,8 +172,11 @@ internal class DestinationDefinitionApiControllerTest {
       ConfigNotFoundException("", "")
 
     val path = "/api/v1/destination_definitions/update"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, DestinationDefinitionUpdate())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, DestinationDefinitionUpdate())))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, DestinationDefinitionUpdate().destinationDefinitionId(UUID.randomUUID()))))
+    assertStatus(
+      HttpStatus.NOT_FOUND,
+      client.statusException(HttpRequest.POST(path, DestinationDefinitionUpdate().destinationDefinitionId(UUID.randomUUID()))),
+    )
   }
 
   @Test

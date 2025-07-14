@@ -94,7 +94,6 @@ import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem;
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem;
 import io.airbyte.api.problems.throwable.generated.StreamDoesNotSupportFileTransfersProblem;
 import io.airbyte.commons.converters.CommonConvertersKt;
-import io.airbyte.commons.converters.ConnectionHelper;
 import io.airbyte.commons.entitlements.Entitlement;
 import io.airbyte.commons.entitlements.EntitlementService;
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
@@ -105,6 +104,7 @@ import io.airbyte.commons.jackson.MoreMappers;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
+import io.airbyte.commons.server.converters.ConnectionHelper;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
@@ -3589,6 +3589,7 @@ class ConnectionsHandlerTest {
           .withSourceId(SOURCE_ID)
           .withDestinationId(DESTINATION_ID)
           .withCatalog(configuredAirbyteCatalog)
+          .withStatus(Status.ACTIVE)
           .withManual(true)
           .withNonBreakingChangesPreference(StandardSync.NonBreakingChangesPreference.PROPAGATE_FULLY);
 

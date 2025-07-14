@@ -176,7 +176,7 @@ internal class SecretStorageApiControllerTest {
     } returns secretStorage
 
     every {
-      currentUserService.currentUser
+      currentUserService.getCurrentUser()
     } returns
       mockk {
         every { userId } returns currentUserId

@@ -142,9 +142,9 @@ class ConnectionTimelineEventHelperTest {
     final long expectedRecordsLoaded = 7L + (10L + 80L + 70L) + (100L + 800L + 700L);
     final long expectedRecordsRejected = (1L + 8L + 7L) + (10L + 80L + 70L);
     final var result = connectionTimelineEventHelper.buildTimelineJobStats(job, attemptStatsList);
-    assertEquals(expectedBytesLoaded, result.loadedBytes());
-    assertEquals(expectedRecordsLoaded, result.loadedRecords());
-    assertEquals(expectedRecordsRejected, result.rejectedRecords());
+    assertEquals(expectedBytesLoaded, result.loadedBytes);
+    assertEquals(expectedRecordsLoaded, result.loadedRecords);
+    assertEquals(expectedRecordsRejected, result.rejectedRecords);
   }
 
   @Nested
