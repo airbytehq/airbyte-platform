@@ -19,6 +19,9 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
 import java.util.Optional
 
 class WebappFilterTest {
@@ -83,11 +86,13 @@ class WebappFilterTest {
     val requestSlot = slot<HttpRequest<*>>()
     val response =
       mockk<MutableHttpResponse<*>> {
-        every { header(CSP_HEADER, CSP_VALUE) } returns this@mockk
+        every { header(any(), any()) } returns this@mockk
       }
     val chain = mockk<ServerFilterChain> { every { proceed(capture(requestSlot)) } returns Mono.just(response) }
 
     val filter = WebappFilter()
+    val now = Instant.ofEpochMilli(10000)
+    filter.clock = Clock.fixed(now, ZoneId.of("UTC"))
 
     StepVerifier
       .create(filter.doFilter(request, chain))
@@ -95,8 +100,9 @@ class WebappFilterTest {
       .expectComplete()
       .verify()
 
-    assertEquals(PATH_INDEX_REDIRECT, requestSlot.captured.path)
+    assertEquals(PATH_INDEX, requestSlot.captured.path)
     verify { response.header(CSP_HEADER, CSP_VALUE) }
+    verify { response.header("Last-Modified", "Thu, 01 Jan 1970 00:00:10 GMT") }
   }
 
   @Test
@@ -142,6 +148,30 @@ class WebappFilterTest {
 
     assertEquals(PATH_AUTH_FLOW_REDIRECT, requestSlot.captured.path)
     verify { response.header(CSP_HEADER, CSP_VALUE) }
+  }
+
+  @Test
+  fun `index page returns correct headers`() {
+    val request = mockk<HttpRequest<*>>(relaxed = true) { every { path } returns PATH_INDEX }
+    val requestSlot = slot<HttpRequest<*>>()
+    val response =
+      mockk<MutableHttpResponse<*>> {
+        every { header(any(), any()) } returns this@mockk
+      }
+    val chain = mockk<ServerFilterChain> { every { proceed(capture(requestSlot)) } returns Mono.just(response) }
+
+    val filter = WebappFilter()
+    val now = Instant.ofEpochMilli(10000)
+    filter.clock = Clock.fixed(now, ZoneId.of("UTC"))
+
+    StepVerifier
+      .create(filter.doFilter(request, chain))
+      .expectNext(response)
+      .expectComplete()
+      .verify()
+
+    verify { response.header(CSP_HEADER, CSP_VALUE) }
+    verify { response.header("Last-Modified", "Thu, 01 Jan 1970 00:00:10 GMT") }
   }
 
   @Test
