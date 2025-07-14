@@ -47,8 +47,8 @@ internal class ProtocolVersionCheckerTest {
   @ValueSource(booleans = [true, false])
   fun testFirstInstallCheck(supportAutoUpgrade: Boolean) {
     val expectedRange = AirbyteProtocolVersionRange(V0_0_0, V1_0_0)
-    every { jobPersistence.version } returns Optional.empty()
-    every { jobPersistence.currentProtocolVersionRange } returns Optional.empty()
+    every { jobPersistence.getVersion() } returns Optional.empty()
+    every { jobPersistence.getCurrentProtocolVersionRange() } returns Optional.empty()
     val protocolVersionChecker =
       ProtocolVersionChecker(
         jobPersistence,
@@ -406,9 +406,9 @@ internal class ProtocolVersionCheckerTest {
     min: Version,
     max: Version,
   ) {
-    every { jobPersistence.currentProtocolVersionRange } returns Optional.of(AirbyteProtocolVersionRange(min, max))
-    every { jobPersistence.airbyteProtocolVersionMin } returns Optional.of(min)
-    every { jobPersistence.airbyteProtocolVersionMax } returns Optional.of(max)
+    every { jobPersistence.getCurrentProtocolVersionRange() } returns Optional.of(AirbyteProtocolVersionRange(min, max))
+    every { jobPersistence.getAirbyteProtocolVersionMin() } returns Optional.of(min)
+    every { jobPersistence.getAirbyteProtocolVersionMax() } returns Optional.of(max)
   }
 
   private fun setNewDestinationDefinitions(defs: List<Map.Entry<UUID, Version>>) {

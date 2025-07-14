@@ -20,7 +20,7 @@ enum class JobStatus {
 
   companion object {
     @JvmField
-    val TERMINAL_STATUSES: Set<JobStatus?> = setOf(FAILED, SUCCEEDED, CANCELLED)
+    val TERMINAL_STATUSES: Set<JobStatus> = setOf(FAILED, SUCCEEDED, CANCELLED)
 
     @JvmField
     val NON_TERMINAL_STATUSES: Set<JobStatus> = Sets.difference(setOf(*entries.toTypedArray()), TERMINAL_STATUSES)

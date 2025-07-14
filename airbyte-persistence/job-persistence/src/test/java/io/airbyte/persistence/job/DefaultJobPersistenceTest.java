@@ -307,7 +307,7 @@ class DefaultJobPersistenceTest {
 
     final AttemptStats attemptStats = jobPersistence.getAttemptStats(jobId, attemptNumber);
 
-    final SyncStats storedSyncStats = attemptStats.combinedStats();
+    final SyncStats storedSyncStats = attemptStats.combinedStats;
     assertEquals(100L, storedSyncStats.getBytesEmitted());
     assertEquals(9L, storedSyncStats.getRecordsEmitted());
     assertEquals(10L, storedSyncStats.getRecordsCommitted());
@@ -318,7 +318,7 @@ class DefaultJobPersistenceTest {
     assertEquals(10L, storedSyncStats.getMaxSecondsBetweenStateMessageEmittedandCommitted());
     assertEquals(3L, storedSyncStats.getMeanSecondsBetweenStateMessageEmittedandCommitted());
 
-    final List<StreamSyncStats> storedStreamSyncStats = attemptStats.perStreamStats();
+    final List<StreamSyncStats> storedStreamSyncStats = attemptStats.perStreamStats;
     assertEquals(1, storedStreamSyncStats.size());
     assertEquals(streamName, storedStreamSyncStats.get(0).getStreamName());
     assertEquals(streamNamespace, storedStreamSyncStats.get(0).getStreamNamespace());
@@ -603,7 +603,7 @@ class DefaultJobPersistenceTest {
           bytesCommitted, recordsRejected, CONNECTION_ID, streamStats);
 
       final AttemptStats stats = jobPersistence.getAttemptStats(jobId, attemptNumber);
-      final var combined = stats.combinedStats();
+      final var combined = stats.combinedStats;
       assertEquals(bytesEmitted, combined.getBytesEmitted());
       assertEquals(recordsEmitted, combined.getRecordsEmitted());
       assertEquals(estimatedBytes, combined.getEstimatedBytes());
@@ -615,7 +615,7 @@ class DefaultJobPersistenceTest {
       // As of this writing, committed and state messages are not expected.
       assertNull(combined.getDestinationStateMessagesEmitted());
 
-      final var actStreamStats = stats.perStreamStats();
+      final var actStreamStats = stats.perStreamStats;
       assertEquals(2, actStreamStats.size());
       assertEquals(streamStats, actStreamStats);
     }
@@ -644,7 +644,7 @@ class DefaultJobPersistenceTest {
 
       final AttemptStats stats = jobPersistence.getAttemptStatsWithStreamMetadata(jobId, attemptNumber);
 
-      final var actStreamStats = stats.perStreamStats();
+      final var actStreamStats = stats.perStreamStats;
       assertEquals(2, actStreamStats.size());
       assertEquals(streamStats, actStreamStats);
     }
@@ -691,7 +691,7 @@ class DefaultJobPersistenceTest {
 
       final AttemptStats stats = jobPersistence.getAttemptStatsWithStreamMetadata(jobId, attemptNumber);
 
-      final var actStreamStats = stats.perStreamStats();
+      final var actStreamStats = stats.perStreamStats;
       assertEquals(2, actStreamStats.size());
       assertEquals(streamStats, actStreamStats);
     }
@@ -716,14 +716,14 @@ class DefaultJobPersistenceTest {
       jobPersistence.writeStats(jobId, attemptNumber, 2000L, 2000L, 2000L, 2000L, 2000L, 2000L, 2000L, CONNECTION_ID, streamStats);
 
       final AttemptStats stats = jobPersistence.getAttemptStats(jobId, attemptNumber);
-      final var combined = stats.combinedStats();
+      final var combined = stats.combinedStats;
       assertEquals(2000, combined.getBytesEmitted());
       assertEquals(2000, combined.getRecordsEmitted());
       assertEquals(2000, combined.getEstimatedBytes());
       assertEquals(2000, combined.getEstimatedRecords());
       assertEquals(2000, combined.getRecordsRejected());
 
-      final var actStreamStats = stats.perStreamStats();
+      final var actStreamStats = stats.perStreamStats;
       assertEquals(1, actStreamStats.size());
       assertEquals(streamStats, actStreamStats);
 
@@ -784,13 +784,13 @@ class DefaultJobPersistenceTest {
       jobPersistence.writeStats(jobId, attemptNumber, 2000L, 2000L, 2000L, 2000L, 2000L, 2000L, 2000L, CONNECTION_ID, streamStats);
 
       final AttemptStats stats = jobPersistence.getAttemptStats(jobId, attemptNumber);
-      final var combined = stats.combinedStats();
+      final var combined = stats.combinedStats;
       assertEquals(2000, combined.getBytesEmitted());
       assertEquals(2000, combined.getRecordsEmitted());
       assertEquals(2000, combined.getEstimatedBytes());
       assertEquals(2000, combined.getEstimatedRecords());
 
-      final var actStreamStats = stats.perStreamStats();
+      final var actStreamStats = stats.perStreamStats;
       assertEquals(1, actStreamStats.size());
       assertEquals(streamStats, actStreamStats);
     }
@@ -802,8 +802,8 @@ class DefaultJobPersistenceTest {
       final int attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH);
 
       final AttemptStats stats = jobPersistence.getAttemptStats(jobId, attemptNumber);
-      assertNull(stats.combinedStats());
-      assertEquals(0, stats.perStreamStats().size());
+      assertNull(stats.combinedStats);
+      assertEquals(0, stats.perStreamStats.size());
 
     }
 
@@ -1004,7 +1004,7 @@ class DefaultJobPersistenceTest {
     }
 
     private List<StreamSyncStats> getStreamSyncStats(final AttemptStats attemptStats, final String streamName, final String namespace) {
-      return attemptStats.perStreamStats().stream()
+      return attemptStats.perStreamStats.stream()
           .filter(s -> s.getStreamName().equals(streamName) && (namespace == null || s.getStreamNamespace().equals(namespace)))
           .toList();
     }

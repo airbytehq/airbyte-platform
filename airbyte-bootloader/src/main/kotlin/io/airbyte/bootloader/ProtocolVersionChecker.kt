@@ -59,7 +59,7 @@ class ProtocolVersionChecker(
    */
   fun validate(supportAutoUpgrade: Boolean): AirbyteProtocolVersionRange? {
     val currentAirbyteVersion = currentAirbyteVersion
-    val currentRange = jobPersistence.currentProtocolVersionRange
+    val currentRange = jobPersistence.getCurrentProtocolVersionRange()
     val targetRange = targetProtocolVersionRange
 
     // Checking if there is a pre-existing version of airbyte.
@@ -126,7 +126,7 @@ class ProtocolVersionChecker(
 
   @get:Throws(IOException::class)
   protected val currentAirbyteVersion: Optional<AirbyteVersion>
-    get() = jobPersistence.version.map { version: String? -> AirbyteVersion(version) }
+    get() = jobPersistence.getVersion().map { version: String? -> AirbyteVersion(version) }
 
   fun getConflictingActorDefinitions(targetRange: AirbyteProtocolVersionRange): Map<ActorType, MutableSet<UUID>> {
     val actorDefIdToProtocolVersion = actorDefinitionService.getActorDefinitionToProtocolVersionMap()

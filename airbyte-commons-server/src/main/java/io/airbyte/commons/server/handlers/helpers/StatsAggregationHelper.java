@@ -159,7 +159,7 @@ public class StatsAggregationHelper {
 
         hydrateWithStats(attempt, stat);
         if (hydrateAggregatedStats) {
-          stat.perStreamStats().forEach(s -> {
+          stat.perStreamStats.forEach(s -> {
             final var streamNameAndNamespace = new StreamNameAndNamespace(s.getStreamName(), s.getStreamNamespace());
             streamAttemptStats.putIfAbsent(streamNameAndNamespace, new ArrayList<>());
             streamAttemptStats.get(streamNameAndNamespace).add(s);
@@ -190,7 +190,7 @@ public class StatsAggregationHelper {
   public static void hydrateWithStats(final AttemptRead a, final JobPersistence.AttemptStats attemptStats) {
     a.setTotalStats(new io.airbyte.api.model.generated.AttemptStats());
 
-    final var combinedStats = attemptStats.combinedStats();
+    final var combinedStats = attemptStats.combinedStats;
     if (combinedStats == null) {
       // If overall stats are missing, assume stream stats are also missing, since overall stats are
       // easier to produce than stream stats. Exit early.
@@ -205,7 +205,7 @@ public class StatsAggregationHelper {
         .recordsCommitted(combinedStats.getRecordsCommitted())
         .recordsRejected(combinedStats.getRecordsRejected());
 
-    final var streamStats = attemptStats.perStreamStats().stream().map(s -> new AttemptStreamStats()
+    final var streamStats = attemptStats.perStreamStats.stream().map(s -> new AttemptStreamStats()
         .streamName(s.getStreamName())
         .streamNamespace(s.getStreamNamespace())
         .stats(new io.airbyte.api.model.generated.AttemptStats()

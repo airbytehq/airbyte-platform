@@ -157,7 +157,7 @@ public class ConnectionTimelineEventHelper {
     for (final var stream : streams) {
       final AirbyteStream currentStream = stream.getStream();
       final var streamStats = attemptStats.stream()
-          .flatMap(a -> a.perStreamStats().stream()
+          .flatMap(a -> a.perStreamStats.stream()
               .filter(o -> currentStream.getName().equals(o.getStreamName())
                   && ((currentStream.getNamespace() == null && o.getStreamNamespace() == null)
                       || (currentStream.getNamespace() != null && currentStream.getNamespace().equals(o.getStreamNamespace())))))
