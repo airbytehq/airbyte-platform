@@ -79,7 +79,7 @@ const OrganizationNavItems = () => {
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
-  const canManageEmbedded = useGeneratedIntent(Intent.ViewConfigTemplates, { organizationId });
+  const canManageEmbedded = useIntent("CreateConfigTemplate", { organizationId });
   const allowConfigTemplateEndpoints = useExperiment("platform.allow-config-template-endpoints");
   const isCloudApp = useIsCloudApp();
   const basePath = `${RoutePaths.Organization}/${organizationId}/`;
