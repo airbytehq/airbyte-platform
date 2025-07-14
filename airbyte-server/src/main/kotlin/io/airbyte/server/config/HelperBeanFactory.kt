@@ -21,11 +21,11 @@ import jakarta.inject.Singleton
 class HelperBeanFactory {
   @Singleton
   fun workspaceHelper(
-    jobPersistence: JobPersistence?,
-    connectionService: ConnectionService?,
-    sourceService: SourceService?,
-    destinationService: DestinationService?,
-    operationService: OperationService?,
-    workspaceService: WorkspaceService?,
+    jobPersistence: JobPersistence,
+    connectionService: ConnectionService,
+    sourceService: SourceService,
+    destinationService: DestinationService,
+    operationService: OperationService,
+    workspaceService: WorkspaceService,
   ): WorkspaceHelper = WorkspaceHelper(jobPersistence, connectionService, sourceService, destinationService, operationService, workspaceService)
 }

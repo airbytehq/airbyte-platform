@@ -71,8 +71,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.PYTHON, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.PYTHON, parsedException.platform);
     Assertions.assertEquals(2, exceptionList.size());
 
     assertExceptionContent(exceptionList.get(0), "requests.exceptions.HTTPError", "400 Client Error: Bad Request for url: https://airbyte.com",
@@ -126,8 +126,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.PYTHON, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.PYTHON, parsedException.platform);
     Assertions.assertEquals(1, exceptionList.size());
 
     assertExceptionContent(exceptionList.get(0), "RuntimeError", null, List.of(
@@ -162,8 +162,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.PYTHON, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.PYTHON, parsedException.platform);
     Assertions.assertEquals(2, exceptionList.size());
 
     final String expectedValue =
@@ -206,8 +206,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.JAVA, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.JAVA, parsedException.platform);
     Assertions.assertEquals(1, exceptionList.size());
 
     assertExceptionContent(exceptionList.get(0), "java.lang.ArithmeticException", "/ by zero",
@@ -270,8 +270,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.JAVA, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.JAVA, parsedException.platform);
     Assertions.assertEquals(2, exceptionList.size());
 
     assertExceptionContent(exceptionList.get(0), "java.util.concurrent.CompletionException",
@@ -325,8 +325,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.JAVA, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.JAVA, parsedException.platform);
     Assertions.assertEquals(1, exceptionList.size());
 
     assertExceptionContent(exceptionList.get(0), "io.airbyte.commons.exceptions.ConfigErrorException", "Some error message",
@@ -389,8 +389,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.JAVA, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.JAVA, parsedException.platform);
     Assertions.assertEquals(2, exceptionList.size());
 
     assertExceptionContent(exceptionList.get(0), "io.temporal.failure.ApplicationFailure",
@@ -436,8 +436,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform);
     Assertions.assertEquals(1, exceptionList.size());
 
     assertExceptionContent(exceptionList.get(0), "DbtDatabaseError",
@@ -460,8 +460,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform);
     Assertions.assertEquals(1, exceptionList.size());
 
     assertExceptionContent(exceptionList.get(0), "DbtDatabaseSQLCompilationError",
@@ -495,8 +495,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform);
     Assertions.assertEquals(1, exceptionList.size());
 
     assertExceptionContent(exceptionList.get(0), "DbtDatabaseInvalidInputError",
@@ -524,8 +524,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform);
     Assertions.assertEquals(1, exceptionList.size());
 
     assertExceptionContent(exceptionList.get(0), "DbtDatabaseSyntaxError",
@@ -559,8 +559,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform);
     Assertions.assertEquals(1, exceptionList.size());
 
     assertExceptionContent(exceptionList.get(0), "DbtUnhandledError",
@@ -589,8 +589,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform);
     Assertions.assertEquals(1, exceptionList.size());
 
     assertExceptionContent(exceptionList.get(0), "DbtCompilationAmbiguousRelationError",
@@ -612,8 +612,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform);
     Assertions.assertEquals(1, exceptionList.size());
 
     assertExceptionContent(exceptionList.get(0), "DbtCompilationError",
@@ -635,8 +635,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform);
     Assertions.assertEquals(1, exceptionList.size());
 
     assertExceptionContent(exceptionList.get(0), "DbtRuntimeError",
@@ -661,8 +661,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform);
     Assertions.assertEquals(1, exceptionList.size());
 
     assertExceptionContent(exceptionList.get(0), "DbtRuntimeDatabaseError",
@@ -685,8 +685,8 @@ class SentryExceptionHelperTest {
     Assertions.assertTrue(optionalSentryExceptions.isPresent());
 
     final SentryParsedException parsedException = optionalSentryExceptions.get();
-    final List<SentryException> exceptionList = parsedException.exceptions();
-    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform());
+    final List<SentryException> exceptionList = parsedException.exceptions;
+    Assertions.assertEquals(SentryExceptionPlatform.OTHER, parsedException.platform);
     Assertions.assertEquals(1, exceptionList.size());
 
     assertExceptionContent(exceptionList.get(0), "DbtDatabaseError",

@@ -28,11 +28,11 @@ import jakarta.inject.Singleton
 class TemporalBeanFactory {
   @Singleton
   fun oAuthConfigSupplier(
-    trackingClient: TrackingClient?,
-    actorDefinitionVersionHelper: ActorDefinitionVersionHelper?,
-    oauthService: OAuthService?,
-    sourceService: SourceService?,
-    destinationService: DestinationService?,
+    trackingClient: TrackingClient,
+    actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
+    oauthService: OAuthService,
+    sourceService: SourceService,
+    destinationService: DestinationService,
   ): OAuthConfigSupplier = OAuthConfigSupplier(trackingClient, actorDefinitionVersionHelper, oauthService, sourceService, destinationService)
 
   @Singleton

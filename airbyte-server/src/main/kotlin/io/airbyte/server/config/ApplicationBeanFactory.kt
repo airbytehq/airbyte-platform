@@ -84,14 +84,14 @@ class ApplicationBeanFactory {
 
   @Singleton
   fun jobTracker(
-    jobPersistence: JobPersistence?,
-    trackingClient: TrackingClient?,
-    actorDefinitionVersionHelper: ActorDefinitionVersionHelper?,
-    sourceService: SourceService?,
-    destinationService: DestinationService?,
-    connectionService: ConnectionService?,
-    operationService: OperationService?,
-    workspaceService: WorkspaceService?,
+    jobPersistence: JobPersistence,
+    trackingClient: TrackingClient,
+    actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
+    sourceService: SourceService,
+    destinationService: DestinationService,
+    connectionService: ConnectionService,
+    operationService: OperationService,
+    workspaceService: WorkspaceService,
   ): JobTracker =
     JobTracker(
       jobPersistence,
@@ -106,15 +106,15 @@ class ApplicationBeanFactory {
 
   @Singleton
   fun jobNotifier(
-    trackingClient: TrackingClient?,
-    webUrlHelper: WebUrlHelper?,
-    workspaceHelper: WorkspaceHelper?,
-    actorDefinitionVersionHelper: ActorDefinitionVersionHelper?,
-    sourceService: SourceService?,
-    destinationService: DestinationService?,
-    connectionService: ConnectionService?,
-    workspaceService: WorkspaceService?,
-    metricClient: MetricClient?,
+    trackingClient: TrackingClient,
+    webUrlHelper: WebUrlHelper,
+    workspaceHelper: WorkspaceHelper,
+    actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
+    sourceService: SourceService,
+    destinationService: DestinationService,
+    connectionService: ConnectionService,
+    workspaceService: WorkspaceService,
+    metricClient: MetricClient,
   ): JobNotifier =
     JobNotifier(
       webUrlHelper,
@@ -130,29 +130,29 @@ class ApplicationBeanFactory {
 
   @Singleton
   fun defaultJobCreator(
-    jobPersistence: JobPersistence?,
-    workerConfigsProvider: WorkerConfigsProvider?,
-    featureFlagClient: FeatureFlagClient?,
-    streamRefreshesRepository: StreamRefreshesRepository?,
+    jobPersistence: JobPersistence,
+    workerConfigsProvider: WorkerConfigsProvider,
+    featureFlagClient: FeatureFlagClient,
+    streamRefreshesRepository: StreamRefreshesRepository,
     @Value("\${airbyte.worker.kube-job-config-variant-override}") variantOverride: String?,
   ): DefaultJobCreator = DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient, streamRefreshesRepository, variantOverride)
 
   @Singleton
   fun jobFactory(
-    jobPersistence: JobPersistence?,
+    jobPersistence: JobPersistence,
     @Property(
       name = "airbyte.connector.specific-resource-defaults-enabled",
       defaultValue = "false",
     ) connectorSpecificResourceDefaultsEnabled: Boolean,
-    jobCreator: DefaultJobCreator?,
-    oAuthConfigSupplier: OAuthConfigSupplier?,
-    configInjector: ConfigInjector?,
-    actorDefinitionVersionHelper: ActorDefinitionVersionHelper?,
-    sourceService: SourceService?,
-    destinationService: DestinationService?,
-    connectionService: ConnectionService?,
-    operationService: OperationService?,
-    workspaceService: WorkspaceService?,
+    jobCreator: DefaultJobCreator,
+    oAuthConfigSupplier: OAuthConfigSupplier,
+    configInjector: ConfigInjector,
+    actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
+    sourceService: SourceService,
+    destinationService: DestinationService,
+    connectionService: ConnectionService,
+    operationService: OperationService,
+    workspaceService: WorkspaceService,
   ): SyncJobFactory =
     DefaultSyncJobFactory(
       connectorSpecificResourceDefaultsEnabled,

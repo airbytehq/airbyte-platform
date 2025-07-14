@@ -11,8 +11,8 @@ import jakarta.inject.Singleton
 data class StreamAttemptMetadata(
   val streamName: String,
   val streamNamespace: String? = null,
-  val wasBackfilled: Boolean,
-  val wasResumed: Boolean,
+  val wasBackfilled: Boolean?,
+  val wasResumed: Boolean?,
 )
 
 @Singleton

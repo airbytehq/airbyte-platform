@@ -318,7 +318,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
                                      @Nullable final UUID actorId,
                                      @Nullable final ActorType actorType) {
     final long createdAt = Instant.now().toEpochMilli();
-    final UUID jobId = jobContext.jobId();
+    final UUID jobId = jobContext.jobId;
     try {
       track(jobId, configType, connectorDefinitionId, workspaceId, actorId, actorType, JobState.STARTED, null);
       final TemporalResponse<ConnectorJobOutput> temporalResponse = executor.get();

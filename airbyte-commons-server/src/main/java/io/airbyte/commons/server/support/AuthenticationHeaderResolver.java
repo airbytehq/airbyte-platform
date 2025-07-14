@@ -136,7 +136,7 @@ public class AuthenticationHeaderResolver {
         return List.of(workspaceHelper.getWorkspaceForDestinationId(UUID.fromString(destinationId)));
       } else if (properties.containsKey(JOB_ID_HEADER)) {
         final String jobId = properties.get(JOB_ID_HEADER);
-        return List.of(workspaceHelper.getWorkspaceForJobId(Long.valueOf(jobId)));
+        return List.of(workspaceHelper.getWorkspaceForJobId(Long.parseLong(jobId)));
       } else if (properties.containsKey(SOURCE_ID_HEADER)) {
         final String sourceId = properties.get(SOURCE_ID_HEADER);
         return List.of(workspaceHelper.getWorkspaceForSourceId(UUID.fromString(sourceId)));

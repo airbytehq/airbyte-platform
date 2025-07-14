@@ -17,6 +17,6 @@ data class StreamAttemptMetadata(
   val attemptId: Long,
   val streamNamespace: String?,
   val streamName: String,
-  val wasBackfilled: Boolean,
-  val wasResumed: Boolean,
+  val wasBackfilled: Boolean?,
+  val wasResumed: Boolean?,
 )
