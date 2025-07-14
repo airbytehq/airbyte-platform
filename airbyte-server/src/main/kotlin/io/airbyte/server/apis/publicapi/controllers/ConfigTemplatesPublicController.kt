@@ -97,7 +97,7 @@ open class ConfigTemplatesPublicController(
 
   @VisibleForTesting
   fun getConfigTemplate(configTemplateId: UUID): ConfigTemplatePublicRead {
-    val user = currentUserService.getCurrentUser()
+    val user = currentUserService.currentUser
     val userId: UUID = user.userId
 
     ensureUserBelongsToAtLeastOneEntitledOrg(userId)
@@ -217,7 +217,7 @@ open class ConfigTemplatesPublicController(
     val template = BasicHttpAttributes.getUriTemplate(currentRequest).orElse(currentRequest.path)
     val method = currentRequest.method.name
 
-    val userId: UUID = currentUserService.getCurrentUser().userId
+    val userId: UUID = currentUserService.currentUser.userId
 
     val res: Response =
       trackingHelper.callWithTracker({

@@ -927,9 +927,9 @@ class JobHistoryHandlerTest {
         .thenReturn(Map.of(new JobAttemptPair(JOB_ID, testJobAttempt.getAttemptNumber()), FIRST_ATTEMPT_STATS));
 
     final JobInfoRead resultingJobInfo = jobHistoryHandler.getJobInfoWithoutLogs(JOB_ID);
-    assertEquals(resultingJobInfo.getJob().getAggregatedStats().getBytesCommitted(), FIRST_ATTEMPT_STATS.combinedStats.getBytesCommitted());
-    assertEquals(resultingJobInfo.getJob().getAggregatedStats().getRecordsCommitted(), FIRST_ATTEMPT_STATS.combinedStats.getRecordsCommitted());
-    assertEquals(resultingJobInfo.getJob().getAggregatedStats().getRecordsRejected(), FIRST_ATTEMPT_STATS.combinedStats.getRecordsRejected());
+    assertEquals(resultingJobInfo.getJob().getAggregatedStats().getBytesCommitted(), FIRST_ATTEMPT_STATS.combinedStats().getBytesCommitted());
+    assertEquals(resultingJobInfo.getJob().getAggregatedStats().getRecordsCommitted(), FIRST_ATTEMPT_STATS.combinedStats().getRecordsCommitted());
+    assertEquals(resultingJobInfo.getJob().getAggregatedStats().getRecordsRejected(), FIRST_ATTEMPT_STATS.combinedStats().getRecordsRejected());
 
   }
 

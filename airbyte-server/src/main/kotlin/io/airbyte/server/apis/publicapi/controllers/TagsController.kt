@@ -38,7 +38,7 @@ open class TagsController(
     val tag =
       trackingHelper.callWithTracker({
         tagService.createTag(tagCreateRequest)
-      }, TAGS_PATH, POST, currentUserService.getCurrentUser().userId)
+      }, TAGS_PATH, POST, currentUserService.currentUser.userId)
 
     return Response
       .status(Response.Status.OK.statusCode)
@@ -58,7 +58,7 @@ open class TagsController(
 
     trackingHelper.callWithTracker({
       tagService.deleteTag(tagId, workspaceId)
-    }, TAGS_PATH, GET, currentUserService.getCurrentUser().userId)
+    }, TAGS_PATH, GET, currentUserService.currentUser.userId)
 
     return Response
       .status(Response.Status.NO_CONTENT)
@@ -78,7 +78,7 @@ open class TagsController(
     val tag =
       trackingHelper.callWithTracker({
         tagService.getTag(tagId)
-      }, TAGS_PATH, GET, currentUserService.getCurrentUser().userId)
+      }, TAGS_PATH, GET, currentUserService.currentUser.userId)
 
     return Response
       .status(Response.Status.OK.statusCode)
@@ -101,7 +101,7 @@ open class TagsController(
     val tags =
       trackingHelper.callWithTracker({
         tagService.listTags(workspaceIds ?: emptyList())
-      }, TAGS_PATH, GET, currentUserService.getCurrentUser().userId)
+      }, TAGS_PATH, GET, currentUserService.currentUser.userId)
 
     return Response
       .status(Response.Status.OK.statusCode)
@@ -125,7 +125,7 @@ open class TagsController(
     val tag =
       trackingHelper.callWithTracker({
         tagService.updateTag(tagId, workspaceId, tagPatchRequest)
-      }, TAGS_PATH, POST, currentUserService.getCurrentUser().userId)
+      }, TAGS_PATH, POST, currentUserService.currentUser.userId)
 
     return Response
       .status(Response.Status.OK.statusCode)

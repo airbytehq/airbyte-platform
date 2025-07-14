@@ -19,8 +19,8 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
-import io.airbyte.config.persistence.versionoverrides.ConfigurationDefinitionVersionOverrideProvider;
-import io.airbyte.config.persistence.versionoverrides.DefinitionVersionOverrideProvider;
+import io.airbyte.config.persistence.version_overrides.ConfigurationDefinitionVersionOverrideProvider;
+import io.airbyte.config.persistence.version_overrides.DefinitionVersionOverrideProvider;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
@@ -91,8 +91,8 @@ class ActorDefinitionVersionHelperTest {
 
     final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
         actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
-    assertEquals(DEFAULT_VERSION, versionWithOverrideStatus.actorDefinitionVersion);
-    assertFalse(versionWithOverrideStatus.isOverrideApplied);
+    assertEquals(DEFAULT_VERSION, versionWithOverrideStatus.actorDefinitionVersion());
+    assertFalse(versionWithOverrideStatus.isOverrideApplied());
   }
 
   @ParameterizedTest
@@ -108,8 +108,8 @@ class ActorDefinitionVersionHelperTest {
 
     final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
         actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(sourceDefinition, WORKSPACE_ID, ACTOR_ID);
-    assertEquals(OVERRIDDEN_VERSION, versionWithOverrideStatus.actorDefinitionVersion);
-    assertEquals(isOverrideApplied, versionWithOverrideStatus.isOverrideApplied);
+    assertEquals(OVERRIDDEN_VERSION, versionWithOverrideStatus.actorDefinitionVersion());
+    assertEquals(isOverrideApplied, versionWithOverrideStatus.isOverrideApplied());
 
     verify(mConfigOverrideProvider).getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID);
   }
@@ -150,8 +150,8 @@ class ActorDefinitionVersionHelperTest {
 
     final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
         actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(destinationDefinition, WORKSPACE_ID, ACTOR_ID);
-    assertEquals(DEFAULT_VERSION, versionWithOverrideStatus.actorDefinitionVersion);
-    assertFalse(versionWithOverrideStatus.isOverrideApplied);
+    assertEquals(DEFAULT_VERSION, versionWithOverrideStatus.actorDefinitionVersion());
+    assertFalse(versionWithOverrideStatus.isOverrideApplied());
   }
 
   @Test
@@ -166,8 +166,8 @@ class ActorDefinitionVersionHelperTest {
 
     final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
         actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(destinationDefinition, WORKSPACE_ID, ACTOR_ID);
-    assertEquals(OVERRIDDEN_VERSION, versionWithOverrideStatus.actorDefinitionVersion);
-    assertTrue(versionWithOverrideStatus.isOverrideApplied);
+    assertEquals(OVERRIDDEN_VERSION, versionWithOverrideStatus.actorDefinitionVersion());
+    assertTrue(versionWithOverrideStatus.isOverrideApplied());
 
     verify(mConfigOverrideProvider).getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID);
   }

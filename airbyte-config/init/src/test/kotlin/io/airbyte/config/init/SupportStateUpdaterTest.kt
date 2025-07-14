@@ -335,7 +335,7 @@ internal class SupportStateUpdaterTest {
   fun `get support state update with no breaking changes`() {
     val referenceDate = LocalDate.parse("2023-01-01")
 
-    val breakingChanges: List<ActorDefinitionBreakingChange> = listOf<ActorDefinitionBreakingChange>()
+    val breakingChanges: List<ActorDefinitionBreakingChange?> = listOf<ActorDefinitionBreakingChange>()
 
     val v0MinorADV = createActorDefinitionVersion(V0_1_0)
     val v1MajorADV = createActorDefinitionVersion(V1_0_0)

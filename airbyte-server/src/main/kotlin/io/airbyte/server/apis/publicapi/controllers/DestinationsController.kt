@@ -53,7 +53,7 @@ open class DestinationsController(
   override fun publicCreateDestination(destinationCreateRequest: DestinationCreateRequest?): Response {
     val destinationResponse: Any? =
       destinationCreateRequest?.let { request ->
-        val userId: UUID = currentUserService.getCurrentUser().userId
+        val userId: UUID = currentUserService.currentUser.userId
 
         val destinationDefinitionId: UUID =
           request.definitionId
@@ -108,7 +108,7 @@ open class DestinationsController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteDestination(destinationId: String): Response {
-    val userId: UUID = currentUserService.getCurrentUser().userId
+    val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
       .newRequest()
@@ -143,7 +143,7 @@ open class DestinationsController(
     destinationId: String,
     includeSecretCoordinates: Boolean?,
   ): Response {
-    val userId: UUID = currentUserService.getCurrentUser().userId
+    val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
       .newRequest()
@@ -181,7 +181,7 @@ open class DestinationsController(
     limit: Int,
     offset: Int,
   ): Response {
-    val userId: UUID = currentUserService.getCurrentUser().userId
+    val userId: UUID = currentUserService.currentUser.userId
 
     // If workspace IDs were given, then verify the user has access to those workspaces.
     // If none were given, then the DestinationService will determine the workspaces for the current user.
@@ -221,7 +221,7 @@ open class DestinationsController(
     destinationId: String,
     destinationPatchRequest: DestinationPatchRequest?,
   ): Response {
-    val userId: UUID = currentUserService.getCurrentUser().userId
+    val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
       .newRequest()
@@ -259,7 +259,7 @@ open class DestinationsController(
     destinationId: String,
     destinationPutRequest: DestinationPutRequest?,
   ): Response {
-    val userId: UUID = currentUserService.getCurrentUser().userId
+    val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
       .newRequest()

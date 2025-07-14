@@ -244,7 +244,6 @@ internal class JobNotifierTest {
           .withWorkspaceId(WORKSPACE_ID)
           .withCustomerId(UUID.randomUUID())
           .withNotifications(java.util.List.of(slackNotification))
-          .withEmail("")
           .withNotificationSettings(
             NotificationSettings()
               .withSendOnFailure(slackNotificationItem())

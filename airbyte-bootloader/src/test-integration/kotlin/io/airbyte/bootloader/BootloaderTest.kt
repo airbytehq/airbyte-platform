@@ -289,11 +289,11 @@ internal class BootloaderTest {
     Assertions.assertEquals(workspaces.size, 1)
     Assertions.assertEquals(workspaces[0].dataplaneGroupId, dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition).id)
 
-    Assertions.assertEquals(VERSION_0330_ALPHA, jobsPersistence.getVersion().get())
-    Assertions.assertEquals(Version(PROTOCOL_VERSION_001), jobsPersistence.getAirbyteProtocolVersionMin().get())
-    Assertions.assertEquals(Version(PROTOCOL_VERSION_124), jobsPersistence.getAirbyteProtocolVersionMax().get())
+    Assertions.assertEquals(VERSION_0330_ALPHA, jobsPersistence.version.get())
+    Assertions.assertEquals(Version(PROTOCOL_VERSION_001), jobsPersistence.airbyteProtocolVersionMin.get())
+    Assertions.assertEquals(Version(PROTOCOL_VERSION_124), jobsPersistence.airbyteProtocolVersionMax.get())
 
-    Assertions.assertNotEquals(Optional.empty<Any>(), jobsPersistence.getDeployment())
+    Assertions.assertNotEquals(Optional.empty<Any>(), jobsPersistence.deployment)
 
     if (airbyteEdition != AirbyteEdition.CLOUD) {
       Assertions.assertEquals(

@@ -265,12 +265,12 @@ class JobTrackerTest {
         ConfigType.CHECK_CONNECTION_SOURCE,
         metadata,
         true);
-    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, null)).thenReturn(sourceVersion);
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, null, null)).thenReturn(sourceVersion);
     assertCheckConnCorrectMessageForEachState(
-        (jobState, output) -> jobTracker.trackCheckConnectionSource(JOB_ID, UUID1, WORKSPACE_ID, null, jobState, output),
+        (jobState, output) -> jobTracker.trackCheckConnectionSource(JOB_ID, UUID1, null, null, jobState, output),
         ConfigType.CHECK_CONNECTION_SOURCE,
         metadata,
-        true);
+        false);
   }
 
   @Test
@@ -303,12 +303,12 @@ class JobTrackerTest {
         ConfigType.CHECK_CONNECTION_DESTINATION,
         metadata,
         true);
-    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, null)).thenReturn(destinationVersion);
+    when(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, null, null)).thenReturn(destinationVersion);
     assertCheckConnCorrectMessageForEachState(
-        (jobState, output) -> jobTracker.trackCheckConnectionDestination(JOB_ID, UUID2, WORKSPACE_ID, null, jobState, output),
+        (jobState, output) -> jobTracker.trackCheckConnectionDestination(JOB_ID, UUID2, null, null, jobState, output),
         ConfigType.CHECK_CONNECTION_DESTINATION,
         metadata,
-        true);
+        false);
   }
 
   @Test
@@ -339,9 +339,9 @@ class JobTrackerTest {
         (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, WORKSPACE_ID, SOURCE_ID, ActorType.SOURCE, jobState, output),
         metadata,
         true);
-    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, null)).thenReturn(sourceVersion);
+    when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, null, null)).thenReturn(sourceVersion);
     assertDiscoverCorrectMessageForEachState(
-        (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, WORKSPACE_ID, null, null, jobState, output),
+        (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, null, null, null, jobState, output),
         metadata,
         false);
   }

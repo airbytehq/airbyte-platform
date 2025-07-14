@@ -64,6 +64,7 @@ class ConfigRepositoryBuilderProjectUpdaterTest {
       }""";
 
   private ConnectorBuilderService connectorBuilderService;
+  private UUID workspaceId;
   private ConfigRepositoryBuilderProjectUpdater projectUpdater;
 
   @BeforeEach
@@ -81,7 +82,7 @@ class ConfigRepositoryBuilderProjectUpdaterTest {
 
     final ExistingConnectorBuilderProjectWithWorkspaceId update = new ExistingConnectorBuilderProjectWithWorkspaceId()
         .builderProject(new ConnectorBuilderProjectDetails().name(project.getName()))
-        .workspaceId(A_WORKSPACE_ID).builderProjectId(project.getBuilderProjectId());
+        .workspaceId(workspaceId).builderProjectId(project.getBuilderProjectId());
 
     projectUpdater.persistBuilderProjectUpdate(update);
 
@@ -103,7 +104,7 @@ class ConfigRepositoryBuilderProjectUpdaterTest {
         .builderProject(new ConnectorBuilderProjectDetails()
             .name(project.getName())
             .draftManifest(project.getManifestDraft()))
-        .workspaceId(A_WORKSPACE_ID)
+        .workspaceId(workspaceId)
         .builderProjectId(project.getBuilderProjectId());
 
     projectUpdater.persistBuilderProjectUpdate(update);
@@ -144,7 +145,7 @@ class ConfigRepositoryBuilderProjectUpdaterTest {
 
   private ConnectorBuilderProject generateBuilderProject() throws JsonProcessingException {
     final UUID projectId = UUID.randomUUID();
-    return new ConnectorBuilderProject().withBuilderProjectId(projectId).withWorkspaceId(A_WORKSPACE_ID).withName("Test project")
+    return new ConnectorBuilderProject().withBuilderProjectId(projectId).withWorkspaceId(workspaceId).withName("Test project")
         .withHasDraft(true).withManifestDraft(draftManifest);
   }
 

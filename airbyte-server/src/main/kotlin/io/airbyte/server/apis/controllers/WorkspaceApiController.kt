@@ -68,7 +68,7 @@ open class WorkspaceApiController(
           permissionHandler
             .checkPermissions(
               PermissionCheckRequest()
-                .userId(currentUserService.getCurrentUser().userId)
+                .userId(currentUserService.currentUser.userId)
                 .permissionType(PermissionType.ORGANIZATION_ADMIN)
                 .organizationId(workspaceCreate.organizationId),
             ).status
@@ -95,7 +95,7 @@ open class WorkspaceApiController(
           permissionHandler
             .checkPermissions(
               PermissionCheckRequest()
-                .userId(currentUserService.getCurrentUser().userId)
+                .userId(currentUserService.currentUser.userId)
                 .permissionType(PermissionType.ORGANIZATION_ADMIN)
                 .organizationId(workspaceCreateWithId.organizationId),
             ).status

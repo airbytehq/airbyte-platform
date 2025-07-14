@@ -50,7 +50,7 @@ class DataplaneServiceImpl(
   }
 
   override fun controllerListDataplanes(): Response {
-    val userId = currentUserService.getCurrentUser().userId
+    val userId = currentUserService.currentUser.userId
     val result =
       trackingHelper.callWithTracker(
         {
@@ -69,7 +69,7 @@ class DataplaneServiceImpl(
   }
 
   override fun controllerCreateDataplane(dataplaneCreateRequest: DataplaneCreateRequest): Response {
-    val userId = currentUserService.getCurrentUser().userId
+    val userId = currentUserService.currentUser.userId
 
     val newDataplane =
       io.airbyte.config.Dataplane().apply {
@@ -103,7 +103,7 @@ class DataplaneServiceImpl(
   }
 
   override fun controllerGetDataplane(dataplaneId: UUID): Response {
-    val userId = currentUserService.getCurrentUser().userId
+    val userId = currentUserService.currentUser.userId
 
     val result =
       trackingHelper.callWithTracker(
@@ -126,7 +126,7 @@ class DataplaneServiceImpl(
     dataplaneId: UUID,
     dataplanePatchRequest: DataplanePatchRequest,
   ): Response {
-    val userId = currentUserService.getCurrentUser().userId
+    val userId = currentUserService.currentUser.userId
 
     val existing = dataplaneDataService.getDataplane(dataplaneId)
     val updated =
@@ -153,7 +153,7 @@ class DataplaneServiceImpl(
   }
 
   override fun controllerDeleteDataplane(dataplaneId: UUID): Response {
-    val userId = currentUserService.getCurrentUser().userId
+    val userId = currentUserService.currentUser.userId
 
     val result =
       trackingHelper.callWithTracker(

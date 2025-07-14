@@ -426,7 +426,7 @@ class DefinitionsController(
     val template = BasicHttpAttributes.getUriTemplate(currentRequest).orElse(currentRequest.path)
     val method = currentRequest.method.name
 
-    val userId: UUID = currentUserService.getCurrentUser().userId
+    val userId: UUID = currentUserService.currentUser.userId
     val res: Response =
       trackingHelper.callWithTracker({
         try {

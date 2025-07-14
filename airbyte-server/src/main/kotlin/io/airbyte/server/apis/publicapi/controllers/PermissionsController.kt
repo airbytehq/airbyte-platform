@@ -54,7 +54,7 @@ open class PermissionsController(
 ) : PublicPermissionsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreatePermission(permissionCreateRequest: PermissionCreateRequest): Response {
-    val userId: UUID = currentUserService.getCurrentUser().userId
+    val userId: UUID = currentUserService.currentUser.userId
     val workspaceId: UUID? = permissionCreateRequest.workspaceId
     val organizationId: UUID? = permissionCreateRequest.organizationId
     // auth check before processing the request
@@ -126,7 +126,7 @@ open class PermissionsController(
       },
       PERMISSIONS_WITH_ID_PATH,
       DELETE,
-      currentUserService.getCurrentUser().userId,
+      currentUserService.currentUser.userId,
     )
     return Response
       .status(Response.Status.NO_CONTENT.statusCode)
@@ -159,7 +159,7 @@ open class PermissionsController(
         },
         PERMISSIONS_WITH_ID_PATH,
         GET,
-        currentUserService.getCurrentUser().userId,
+        currentUserService.currentUser.userId,
       )
     return Response
       .status(Response.Status.OK.statusCode)
@@ -172,7 +172,7 @@ open class PermissionsController(
     userId: String?,
     organizationId: String?,
   ): Response {
-    val currentUserId: UUID = currentUserService.getCurrentUser().userId
+    val currentUserId: UUID = currentUserService.currentUser.userId
     val permissionUserId = userId?.let { UUID.fromString(it) } ?: currentUserId // if userId is not provided, then use current user ID by default
     val permissionsResponse: PermissionsResponse
     // get someone else's permissions
@@ -254,7 +254,7 @@ open class PermissionsController(
         },
         PERMISSIONS_WITH_ID_PATH,
         PATCH,
-        currentUserService.getCurrentUser().userId,
+        currentUserService.currentUser.userId,
       )
     return Response
       .status(Response.Status.OK.statusCode)

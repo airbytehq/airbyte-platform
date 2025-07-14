@@ -127,7 +127,7 @@ class Bootloader(
     // version in the database when the server main method is called. may be empty if this is the first
     // time the server is started.
     log.info { "Checking for illegal upgrade..." }
-    val initialAirbyteDatabaseVersion = jobPersistence.getVersion().map { version: String -> AirbyteVersion(version) }
+    val initialAirbyteDatabaseVersion = jobPersistence.version.map { version: String -> AirbyteVersion(version) }
     val requiredVersionUpgrade = getRequiredVersionUpgrade(initialAirbyteDatabaseVersion.orElse(null), airbyteVersion)
     if (requiredVersionUpgrade != null) {
       val attentionBanner = MoreResources.readResource("banner/attention-banner.txt")
@@ -157,7 +157,7 @@ class Bootloader(
   }
 
   private fun createDeploymentIfNoneExists(jobPersistence: JobPersistence) {
-    val deploymentOptional = jobPersistence.getDeployment()
+    val deploymentOptional = jobPersistence.deployment
     if (deploymentOptional.isPresent) {
       log.info { "Running deployment: ${deploymentOptional.get()}" }
     } else {

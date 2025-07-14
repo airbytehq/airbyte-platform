@@ -80,7 +80,7 @@ open class RoleResolver(
 
     fun withCurrentUser() =
       apply {
-        subject = Subject(currentUserService.getCurrentUser().authUserId, TokenType.USER)
+        subject = Subject(currentUserService.currentUser.authUserId, TokenType.USER)
       }
 
     fun withSubject(
@@ -193,7 +193,7 @@ open class RoleResolver(
 
       val workspaceIds = authenticationHeaderResolver.resolveWorkspace(props)?.toSet() ?: emptySet()
       val resolvedOrgIds = authenticationHeaderResolver.resolveOrganization(props)?.toSet() ?: emptySet()
-      val authUserIds = authenticationHeaderResolver.resolveAuthUserIds(props.toMap()) ?: emptySet()
+      val authUserIds = authenticationHeaderResolver.resolveAuthUserIds(props) ?: emptySet()
       val allOrgIds = orgs + resolvedOrgIds
 
       return resolveRoles(perms, subjectId, workspaceIds, allOrgIds, authUserIds)

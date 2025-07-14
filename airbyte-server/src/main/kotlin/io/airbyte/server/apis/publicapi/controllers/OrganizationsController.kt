@@ -70,7 +70,7 @@ open class OrganizationsController(
       },
       ORGANIZATIONS_PATH,
       PUT,
-      currentUserService.getCurrentUser().userId,
+      currentUserService.currentUser.userId,
     )
     return Response
       .status(Response.Status.OK.statusCode)
@@ -79,7 +79,7 @@ open class OrganizationsController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicListOrganizationsForUser(): Response {
-    val userId: UUID = currentUserService.getCurrentUser().userId
+    val userId: UUID = currentUserService.currentUser.userId
     val organizationsResponse =
       trackingHelper.callWithTracker(
         {

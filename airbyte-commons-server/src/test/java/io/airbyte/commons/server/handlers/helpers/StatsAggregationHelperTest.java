@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 class StatsAggregationHelperTest {
 
   private static final StreamSyncStats STREAM_SYNC_STATS_1 = new StreamSyncStats()
-      .withStreamName("")
       .withStats(new SyncStats()
           .withRecordsEmitted(40L)
           .withBytesEmitted(30L)
@@ -30,7 +29,6 @@ class StatsAggregationHelperTest {
       .withWasBackfilled(true);
 
   private static final StreamSyncStats STREAM_SYNC_STATS_2 = new StreamSyncStats()
-      .withStreamName("")
       .withStats(new SyncStats()
           .withRecordsEmitted(400L)
           .withBytesEmitted(300L)
@@ -40,7 +38,6 @@ class StatsAggregationHelperTest {
       .withWasBackfilled(false);
 
   private static final StreamSyncStats STREAM_SYNC_STATS_3 = new StreamSyncStats()
-      .withStreamName("")
       .withStats(new SyncStats()
           .withRecordsEmitted(4000L)
           .withBytesEmitted(3000L)
@@ -49,7 +46,6 @@ class StatsAggregationHelperTest {
           .withRecordsRejected(100L));
 
   private static final StreamSyncStats STREAM_SYNC_STATS_4_RESUMED = new StreamSyncStats()
-      .withStreamName("")
       .withStats(new SyncStats()
           .withRecordsEmitted(40000L)
           .withBytesEmitted(30000L)
@@ -59,7 +55,6 @@ class StatsAggregationHelperTest {
       .withWasResumed(true);
 
   private static final StreamSyncStats STREAM_SYNC_STATS_5_RESUMED = new StreamSyncStats()
-      .withStreamName("")
       .withStats(new SyncStats()
           .withRecordsEmitted(400000L)
           .withBytesEmitted(300000L)
@@ -69,7 +64,6 @@ class StatsAggregationHelperTest {
       .withWasResumed(true);
 
   private static final StreamSyncStats STREAM_SYNC_STATS_WITH_NULL_FIELDS = new StreamSyncStats()
-      .withStreamName("")
       .withStats(new SyncStats()
           .withRecordsEmitted(null)
           .withBytesEmitted(30000L)
@@ -85,11 +79,11 @@ class StatsAggregationHelperTest {
             STREAM_SYNC_STATS_1,
             STREAM_SYNC_STATS_2));
 
-    assertEquals(400L, aggregatedStats.recordsEmitted);
-    assertEquals(300L, aggregatedStats.bytesEmitted);
-    assertEquals(200L, aggregatedStats.recordsCommitted);
-    assertEquals(100L, aggregatedStats.bytesCommitted);
-    assertEquals(10L, aggregatedStats.recordsRejected);
+    assertEquals(400L, aggregatedStats.recordsEmitted());
+    assertEquals(300L, aggregatedStats.bytesEmitted());
+    assertEquals(200L, aggregatedStats.recordsCommitted());
+    assertEquals(100L, aggregatedStats.bytesCommitted());
+    assertEquals(10L, aggregatedStats.recordsRejected());
   }
 
   @Test
@@ -101,11 +95,11 @@ class StatsAggregationHelperTest {
             STREAM_SYNC_STATS_4_RESUMED,
             STREAM_SYNC_STATS_5_RESUMED));
 
-    assertEquals(440040L, aggregatedStats.recordsEmitted);
-    assertEquals(330030L, aggregatedStats.bytesEmitted);
-    assertEquals(220020L, aggregatedStats.recordsCommitted);
-    assertEquals(110010L, aggregatedStats.bytesCommitted);
-    assertEquals(11001L, aggregatedStats.recordsRejected);
+    assertEquals(440040L, aggregatedStats.recordsEmitted());
+    assertEquals(330030L, aggregatedStats.bytesEmitted());
+    assertEquals(220020L, aggregatedStats.recordsCommitted());
+    assertEquals(110010L, aggregatedStats.bytesCommitted());
+    assertEquals(11001L, aggregatedStats.recordsRejected());
   }
 
   @Test
@@ -118,11 +112,11 @@ class StatsAggregationHelperTest {
             STREAM_SYNC_STATS_4_RESUMED,
             STREAM_SYNC_STATS_5_RESUMED));
 
-    assertEquals(440400L, aggregatedStats.recordsEmitted);
-    assertEquals(330300L, aggregatedStats.bytesEmitted);
-    assertEquals(220200L, aggregatedStats.recordsCommitted);
-    assertEquals(110100L, aggregatedStats.bytesCommitted);
-    assertEquals(11010L, aggregatedStats.recordsRejected);
+    assertEquals(440400L, aggregatedStats.recordsEmitted());
+    assertEquals(330300L, aggregatedStats.bytesEmitted());
+    assertEquals(220200L, aggregatedStats.recordsCommitted());
+    assertEquals(110100L, aggregatedStats.bytesCommitted());
+    assertEquals(11010L, aggregatedStats.recordsRejected());
   }
 
   @Test
@@ -135,11 +129,11 @@ class StatsAggregationHelperTest {
             STREAM_SYNC_STATS_5_RESUMED,
             STREAM_SYNC_STATS_2));
 
-    assertEquals(400L, aggregatedStats.recordsEmitted);
-    assertEquals(300L, aggregatedStats.bytesEmitted);
-    assertEquals(200L, aggregatedStats.recordsCommitted);
-    assertEquals(100L, aggregatedStats.bytesCommitted);
-    assertEquals(10L, aggregatedStats.recordsRejected);
+    assertEquals(400L, aggregatedStats.recordsEmitted());
+    assertEquals(300L, aggregatedStats.bytesEmitted());
+    assertEquals(200L, aggregatedStats.recordsCommitted());
+    assertEquals(100L, aggregatedStats.bytesCommitted());
+    assertEquals(10L, aggregatedStats.recordsRejected());
   }
 
   @Test
@@ -150,11 +144,11 @@ class StatsAggregationHelperTest {
             STREAM_SYNC_STATS_1,
             STREAM_SYNC_STATS_2));
 
-    assertEquals(440L, aggregatedStats.recordsEmitted);
-    assertEquals(330L, aggregatedStats.bytesEmitted);
-    assertEquals(220L, aggregatedStats.recordsCommitted);
-    assertEquals(110L, aggregatedStats.bytesCommitted);
-    assertEquals(11L, aggregatedStats.recordsRejected);
+    assertEquals(440L, aggregatedStats.recordsEmitted());
+    assertEquals(330L, aggregatedStats.bytesEmitted());
+    assertEquals(220L, aggregatedStats.recordsCommitted());
+    assertEquals(110L, aggregatedStats.bytesCommitted());
+    assertEquals(11L, aggregatedStats.recordsRejected());
   }
 
   @Test
@@ -167,11 +161,11 @@ class StatsAggregationHelperTest {
             STREAM_SYNC_STATS_4_RESUMED,
             STREAM_SYNC_STATS_5_RESUMED));
 
-    assertEquals(440440L, aggregatedStats.recordsEmitted);
-    assertEquals(330330L, aggregatedStats.bytesEmitted);
-    assertEquals(220220L, aggregatedStats.recordsCommitted);
-    assertEquals(110110L, aggregatedStats.bytesCommitted);
-    assertEquals(11011L, aggregatedStats.recordsRejected);
+    assertEquals(440440L, aggregatedStats.recordsEmitted());
+    assertEquals(330330L, aggregatedStats.bytesEmitted());
+    assertEquals(220220L, aggregatedStats.recordsCommitted());
+    assertEquals(110110L, aggregatedStats.bytesCommitted());
+    assertEquals(11011L, aggregatedStats.recordsRejected());
   }
 
   @Test
@@ -183,11 +177,11 @@ class StatsAggregationHelperTest {
             STREAM_SYNC_STATS_WITH_NULL_FIELDS,
             STREAM_SYNC_STATS_2));
 
-    assertEquals(440L, aggregatedStats.recordsEmitted);
-    assertEquals(30330L, aggregatedStats.bytesEmitted);
-    assertEquals(220L, aggregatedStats.recordsCommitted);
-    assertEquals(10110L, aggregatedStats.bytesCommitted);
-    assertEquals(11L, aggregatedStats.recordsRejected);
+    assertEquals(440L, aggregatedStats.recordsEmitted());
+    assertEquals(30330L, aggregatedStats.bytesEmitted());
+    assertEquals(220L, aggregatedStats.recordsCommitted());
+    assertEquals(10110L, aggregatedStats.bytesCommitted());
+    assertEquals(11L, aggregatedStats.recordsRejected());
   }
 
   @Test
@@ -199,11 +193,11 @@ class StatsAggregationHelperTest {
             STREAM_SYNC_STATS_2,
             STREAM_SYNC_STATS_WITH_NULL_FIELDS));
 
-    assertEquals(0, aggregatedStats.recordsEmitted);
-    assertEquals(30000L, aggregatedStats.bytesEmitted);
-    assertEquals(0, aggregatedStats.recordsCommitted);
-    assertEquals(10000L, aggregatedStats.bytesCommitted);
-    assertEquals(0, aggregatedStats.recordsRejected);
+    assertEquals(0, aggregatedStats.recordsEmitted());
+    assertEquals(30000L, aggregatedStats.bytesEmitted());
+    assertEquals(0, aggregatedStats.recordsCommitted());
+    assertEquals(10000L, aggregatedStats.bytesCommitted());
+    assertEquals(0, aggregatedStats.recordsRejected());
   }
 
   @Test

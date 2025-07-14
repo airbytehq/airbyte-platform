@@ -72,7 +72,7 @@ class ConnectionSchedulerHelperTest {
   void testPopulateSyncScheduleFromManualType() throws JsonValidationException, ConfigNotFoundException {
     final StandardSync actual = new StandardSync();
     connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
-        ConnectionScheduleType.MANUAL, new ConnectionScheduleData());
+        ConnectionScheduleType.MANUAL, null);
     assertTrue(actual.getManual());
     assertEquals(ScheduleType.MANUAL, actual.getScheduleType());
     assertNull(actual.getSchedule());
@@ -101,7 +101,7 @@ class ConnectionSchedulerHelperTest {
     when(entitlementService.checkEntitlement(any(), any()))
         .thenReturn(new EntitlementResult(PlatformSubOneHourSyncFrequency.INSTANCE.getFeatureId(), true, null));
 
-    final StandardSync actual = new StandardSync().withSourceId(UUID.randomUUID());
+    final StandardSync actual = new StandardSync();
     connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
         ConnectionScheduleType.CRON, new ConnectionScheduleData()
             .cron(new ConnectionScheduleDataCron()
@@ -119,7 +119,7 @@ class ConnectionSchedulerHelperTest {
     when(entitlementService.checkEntitlement(any(), any()))
         .thenReturn(new EntitlementResult(PlatformSubOneHourSyncFrequency.INSTANCE.getFeatureId(), hasEntitlement, null));
 
-    final StandardSync actual = new StandardSync().withSourceId(UUID.randomUUID());
+    final StandardSync actual = new StandardSync();
     assertThrows(JsonValidationException.class, () -> connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
         ConnectionScheduleType.CRON, null));
     assertThrows(JsonValidationException.class,
@@ -706,7 +706,7 @@ class ConnectionSchedulerHelperTest {
     };
     for (final String expectedTimezone : timezoneStrings) {
       try {
-        final StandardSync actual = new StandardSync().withSourceId(UUID.randomUUID());
+        final StandardSync actual = new StandardSync();
 
         when(entitlementService.checkEntitlement(any(), any()))
             .thenReturn(new EntitlementResult(PlatformSubOneHourSyncFrequency.INSTANCE.getFeatureId(), true, null));

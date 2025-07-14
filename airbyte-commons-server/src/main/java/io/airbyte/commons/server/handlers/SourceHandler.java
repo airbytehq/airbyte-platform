@@ -701,7 +701,7 @@ public class SourceHandler {
         standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId());
 
     final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =
-        actorDefinitionHandlerHelper.getVersionBreakingChanges(sourceVersionWithOverrideStatus.actorDefinitionVersion);
+        actorDefinitionHandlerHelper.getVersionBreakingChanges(sourceVersionWithOverrideStatus.actorDefinitionVersion());
 
     final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(sourceConnection.getWorkspaceId());
     final Boolean isEntitled =
@@ -716,10 +716,10 @@ public class SourceHandler {
         .connectionConfiguration(sourceConnection.getConfiguration())
         .name(sourceConnection.getName())
         .icon(standardSourceDefinition.getIconUrl())
-        .isVersionOverrideApplied(sourceVersionWithOverrideStatus.isOverrideApplied)
+        .isVersionOverrideApplied(sourceVersionWithOverrideStatus.isOverrideApplied())
         .isEntitled(isEntitled)
         .breakingChanges(breakingChanges.orElse(null))
-        .supportState(apiPojoConverters.toApiSupportState(sourceVersionWithOverrideStatus.actorDefinitionVersion.getSupportState()))
+        .supportState(apiPojoConverters.toApiSupportState(sourceVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()))
         .createdAt(sourceConnection.getCreatedAt())
         .resourceAllocation(apiPojoConverters.scopedResourceReqsToApi(sourceConnection.getResourceRequirements()));
   }

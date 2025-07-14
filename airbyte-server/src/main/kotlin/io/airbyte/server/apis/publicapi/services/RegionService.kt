@@ -50,7 +50,7 @@ class RegionServiceImpl(
   private val currentUserService: CurrentUserService,
 ) : RegionService {
   override fun controllerListRegions(organizationId: UUID): Response {
-    val userId = currentUserService.getCurrentUser().userId
+    val userId = currentUserService.currentUser.userId
     val regions =
       trackingHelper.callWithTracker(
         {
@@ -70,7 +70,7 @@ class RegionServiceImpl(
   }
 
   override fun controllerCreateRegion(regionCreateRequest: RegionCreateRequest): Response {
-    val userId = currentUserService.getCurrentUser().userId
+    val userId = currentUserService.currentUser.userId
 
     val regionCreate =
       DataplaneGroup()
@@ -99,7 +99,7 @@ class RegionServiceImpl(
   }
 
   override fun controllerGetRegion(regionId: UUID): Response {
-    val userId = currentUserService.getCurrentUser().userId
+    val userId = currentUserService.currentUser.userId
 
     val region =
       trackingHelper.callWithTracker(
@@ -123,7 +123,7 @@ class RegionServiceImpl(
     regionId: UUID,
     regionPatchRequest: RegionPatchRequest,
   ): Response {
-    val userId = currentUserService.getCurrentUser().userId
+    val userId = currentUserService.currentUser.userId
 
     val existing = dataplaneGroupService.getDataplaneGroup(regionId)
 
@@ -151,7 +151,7 @@ class RegionServiceImpl(
   }
 
   override fun controllerDeleteRegion(regionId: UUID): Response {
-    val userId = currentUserService.getCurrentUser().userId
+    val userId = currentUserService.currentUser.userId
 
     val delete =
       trackingHelper.callWithTracker(

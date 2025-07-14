@@ -55,7 +55,7 @@ open class ConnectionsController(
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateConnection(connectionCreateRequest: ConnectionCreateRequest): Response {
-    val userId: UUID = currentUserService.getCurrentUser().userId
+    val userId: UUID = currentUserService.currentUser.userId
 
     val validConnectionCreateRequest =
       trackingHelper.callWithTracker({
@@ -154,7 +154,7 @@ open class ConnectionsController(
   @Path("$CONNECTIONS_PATH/{connectionId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteConnection(connectionId: String): Response {
-    val userId: UUID = currentUserService.getCurrentUser().userId
+    val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
       .newRequest()
@@ -187,7 +187,7 @@ open class ConnectionsController(
   @Path("$CONNECTIONS_PATH/{connectionId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetConnection(connectionId: String): Response {
-    val userId: UUID = currentUserService.getCurrentUser().userId
+    val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
       .newRequest()
@@ -220,7 +220,7 @@ open class ConnectionsController(
     limit: Int,
     offset: Int,
   ): Response {
-    val userId: UUID = currentUserService.getCurrentUser().userId
+    val userId: UUID = currentUserService.currentUser.userId
 
     // If workspace IDs were given, then verify the user has access to those workspaces.
     // If none were given, then the ConnectionService will determine the workspaces for the current user.
@@ -263,7 +263,7 @@ open class ConnectionsController(
     @PathParam(value = "connectionId") connectionId: String,
     @Valid @Body @NotNull connectionPatchRequest: ConnectionPatchRequest,
   ): Response {
-    val userId: UUID = currentUserService.getCurrentUser().userId
+    val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
       .newRequest()

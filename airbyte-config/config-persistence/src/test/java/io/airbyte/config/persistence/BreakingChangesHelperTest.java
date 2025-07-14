@@ -219,7 +219,6 @@ class BreakingChangesHelperTest {
   @Test
   void testGetLastApplicableBreakingChange() throws ConfigNotFoundException, IOException {
     final ActorDefinitionVersion defaultVersion = new ActorDefinitionVersion()
-        .withVersionId(UUID.randomUUID())
         .withDockerImageTag("2.0.0");
 
     final ActorDefinitionBreakingChange firstBreakingChange = new ActorDefinitionBreakingChange()

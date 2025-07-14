@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.errors.handlers
 
+import io.airbyte.api.model.generated.KnownExceptionInfo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.errors.KnownException
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -30,10 +31,10 @@ class KnownExceptionHandler : ExceptionHandler<KnownException, HttpResponse<*>> 
     exception: KnownException,
   ): HttpResponse<*> {
     // Print this info in the logs, but don't send in the request.
-    log.error { "Known Exception: ${exception.getKnownExceptionInfoWithStackTrace()}" }
+    log.error { "Known Exception: ${exception.knownExceptionInfoWithStackTrace}" }
     return HttpResponse
       .status<Any>(HttpStatus.valueOf(exception.getHttpCode()))
-      .body(Jsons.serialize(exception.getKnownExceptionInfo()))
+      .body(Jsons.serialize<KnownExceptionInfo?>(exception.knownExceptionInfo))
       .contentType(MediaType.APPLICATION_JSON_TYPE)
   }
 }

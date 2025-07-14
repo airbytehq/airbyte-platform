@@ -40,7 +40,7 @@ class UserInvitationApiController(
   ): UserInvitationRead? =
     execute(
       Callable {
-        val currentUser = currentUserService.getCurrentUser()
+        val currentUser = currentUserService.currentUser
         userInvitationHandler.getByInviteCode(inviteCode, currentUser)
       },
     )
@@ -57,7 +57,7 @@ class UserInvitationApiController(
     @Body invitationCreateRequestBody: UserInvitationCreateRequestBody?,
   ): UserInvitationCreateResponse? =
     execute {
-      val currentUser = currentUserService.getCurrentUser()
+      val currentUser = currentUserService.currentUser
       userInvitationHandler.createInvitationOrPermission(invitationCreateRequestBody!!, currentUser)
     }
 
@@ -65,7 +65,7 @@ class UserInvitationApiController(
     @Body inviteCodeRequestBody: InviteCodeRequestBody,
   ): io.airbyte.api.model.generated.UserInvitationRead? =
     execute {
-      val currentUser = currentUserService.getCurrentUser()
+      val currentUser = currentUserService.currentUser
       userInvitationHandler.accept(inviteCodeRequestBody, currentUser)
     }
 
@@ -89,7 +89,7 @@ class UserInvitationApiController(
   }
 
   private fun authorizeInvitationAdmin(inviteCode: String) {
-    val currentUserId = currentUserService.getCurrentUser().userId
+    val currentUserId = currentUserService.currentUser.userId
     try {
       userInvitationAuthorizationHelper.authorizeInvitationAdmin(inviteCode, currentUserId)
     } catch (e: Exception) {

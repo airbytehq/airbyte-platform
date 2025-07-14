@@ -64,11 +64,8 @@ internal class SourceDefinitionApiControllerTest {
     every { sourceDefinitionsHandler.deleteSourceDefinition(any()) } returns Unit andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/source_definitions/delete"
-    assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, SourceDefinitionIdRequestBody().sourceDefinitionId(UUID.randomUUID()))))
-    assertStatus(
-      HttpStatus.NOT_FOUND,
-      client.statusException(HttpRequest.POST(path, SourceDefinitionIdRequestBody().sourceDefinitionId(UUID.randomUUID()))),
-    )
+    assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, SourceDefinitionIdRequestBody())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceDefinitionIdRequestBody())))
   }
 
   @Test
@@ -160,8 +157,8 @@ internal class SourceDefinitionApiControllerTest {
     every { sourceDefinitionsHandler.updateSourceDefinition(any()) } returns SourceDefinitionRead() andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/source_definitions/update"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceDefinitionUpdate().sourceDefinitionId(UUID.randomUUID()))))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceDefinitionUpdate().sourceDefinitionId(UUID.randomUUID()))))
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceDefinitionUpdate())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceDefinitionUpdate())))
   }
 
   @Test

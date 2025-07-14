@@ -52,7 +52,7 @@ open class UsersController(
         },
         USERS_PATH,
         GET,
-        currentUserService.getCurrentUser().userId,
+        currentUserService.currentUser.userId,
       )
     return Response
       .status(Response.Status.OK.statusCode)

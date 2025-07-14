@@ -367,16 +367,17 @@ class JobConverterTest {
     @BeforeEach
     public void setUp() {
       logClientManager = mock(LogClientManager.class);
-      jobConverter = new JobConverter(logClientManager, mock());
-      metadata = new SynchronousJobMetadata(JOB_ID,
-          CONFIG_TYPE,
-          null,
-          CREATED_AT,
-          CREATED_AT,
-          JOB_SUCCEEDED,
-          CONNECTOR_CONFIG_UPDATED,
-          LOG_PATH,
-          FAILURE_REASON);
+      jobConverter = new JobConverter(logClientManager, logUtils);
+      metadata = mock(SynchronousJobMetadata.class);
+      when(metadata.getId()).thenReturn(JOB_ID);
+      when(metadata.getConfigType()).thenReturn(CONFIG_TYPE);
+      when(metadata.getConfigId()).thenReturn(CONFIG_ID);
+      when(metadata.getCreatedAt()).thenReturn(CREATED_AT);
+      when(metadata.getEndedAt()).thenReturn(CREATED_AT);
+      when(metadata.isSucceeded()).thenReturn(JOB_SUCCEEDED);
+      when(metadata.isConnectorConfigurationUpdated()).thenReturn(CONNECTOR_CONFIG_UPDATED);
+      when(metadata.getLogPath()).thenReturn(LOG_PATH);
+      when(metadata.getFailureReason()).thenReturn(FAILURE_REASON);
     }
 
     @Test
