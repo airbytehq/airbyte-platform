@@ -272,7 +272,7 @@ object TrackingMetadata {
 
   private fun getFrequencyStringFromScheduleType(
     scheduleType: StandardSync.ScheduleType,
-    scheduleData: ScheduleData,
+    scheduleData: ScheduleData?,
   ): String =
     when (scheduleType) {
       StandardSync.ScheduleType.MANUAL -> {
@@ -280,7 +280,7 @@ object TrackingMetadata {
       }
 
       StandardSync.ScheduleType.BASIC_SCHEDULE -> {
-        TimeUnit.SECONDS.toMinutes(getIntervalInSecond(scheduleData.basicSchedule)).toString() + " min"
+        TimeUnit.SECONDS.toMinutes(getIntervalInSecond(scheduleData!!.basicSchedule)).toString() + " min"
       }
 
       StandardSync.ScheduleType.CRON -> {

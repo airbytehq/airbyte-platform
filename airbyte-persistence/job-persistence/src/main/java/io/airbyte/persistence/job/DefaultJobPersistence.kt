@@ -1950,11 +1950,11 @@ class DefaultJobPersistence
             output.sync.standardSyncSummary.streamStats != null
           ) {
             for (streamSyncStats in output.sync.standardSyncSummary.streamStats) {
-              if (streamSyncStats.wasBackfilled) {
+              if (streamSyncStats.wasBackfilled != null && streamSyncStats.wasBackfilled) {
                 backfilledStreams
                   .add(StreamDescriptor().withNamespace(streamSyncStats.streamNamespace).withName(streamSyncStats.streamName))
               }
-              if (streamSyncStats.wasResumed) {
+              if (streamSyncStats.wasResumed != null && streamSyncStats.wasResumed) {
                 resumedStreams.add(StreamDescriptor().withNamespace(streamSyncStats.streamNamespace).withName(streamSyncStats.streamName))
               }
             }
