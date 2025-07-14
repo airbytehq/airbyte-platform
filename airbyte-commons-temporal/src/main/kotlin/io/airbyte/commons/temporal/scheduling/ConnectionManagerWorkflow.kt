@@ -24,7 +24,7 @@ interface ConnectionManagerWorkflow {
    * for scheduling syncs. This workflow will run and then continue running until deleted.
    */
   @WorkflowMethod
-  fun run(connectionUpdaterInput: ConnectionUpdaterInput?)
+  fun run(connectionUpdaterInput: ConnectionUpdaterInput)
 
   /**
    * Send a signal that will bypass the waiting time and run a sync. Nothing will happen if a sync is

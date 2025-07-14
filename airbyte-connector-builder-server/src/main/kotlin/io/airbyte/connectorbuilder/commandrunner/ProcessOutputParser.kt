@@ -33,7 +33,7 @@ class ProcessOutputParser {
     streamFactory: AirbyteStreamFactory,
     cdkCommand: String,
   ): AirbyteRecordMessage {
-    var messagesByType: Map<AirbyteMessage.Type?, List<AirbyteMessage>>? = null
+    var messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>>? = null
     try {
       messagesByType = WorkerUtils.getMessagesByType(process, streamFactory, TIME_OUT)
     } catch (exc: NullPointerException) {
