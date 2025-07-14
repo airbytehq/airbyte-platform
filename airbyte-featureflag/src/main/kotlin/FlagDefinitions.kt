@@ -218,3 +218,5 @@ object UseSonarServer : Temporary<Boolean>(key = "embedded.useSonarServer", defa
 
 // this uses the webapp naming conventions, as the flag is used in both the frontend and platform.
 object EnableSsoConfigUpdate : Permanent<Boolean>(key = "featureService.ALLOW_UPDATE_SSO_CONFIG", default = false)
+
+object OrchestratorHardFailOnHeartbeatFailure : Temporary<Boolean>(key = "platform.orchestrator-hard-fail-on-heartbeat-failure", default = false)

@@ -6,6 +6,8 @@ package io.airbyte.test.acceptance
 
 import io.airbyte.api.client.model.generated.AirbyteCatalog
 import io.airbyte.api.client.model.generated.CheckConnectionRead
+import io.airbyte.featureflag.OrchestratorHardFailOnHeartbeatFailure
+import io.airbyte.featureflag.Workspace
 import io.airbyte.test.utils.AcceptanceTestUtils.IS_GKE
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
@@ -57,9 +59,30 @@ internal class WorkloadBasicAcceptanceTests {
   fun testSyncWithWorkload() {
     // Create workspace with static ID for test which is used in the flags.yaml to perform an
     // override in order to exercise the workload path.
-    testResources.testHarness!!.createWorkspaceWithId(REPLICATION_WORKSPACE_ID)
+    testResources.testHarness.createWorkspaceWithId(REPLICATION_WORKSPACE_ID)
 
     testResources.runSmallSyncForAWorkspaceId(REPLICATION_WORKSPACE_ID)
+  }
+
+  @Test
+  @EnabledIfEnvironmentVariable(named = AcceptanceTestsResources.KUBE, matches = AcceptanceTestsResources.TRUE)
+  @DisabledIfEnvironmentVariable(
+    named = IS_GKE,
+    matches = AcceptanceTestsResources.TRUE,
+    disabledReason = AcceptanceTestsResources.DISABLE_TEMPORAL_TESTS_IN_GKE,
+  )
+  @Throws(
+    Exception::class,
+  )
+  fun testSyncWithWorkloadAndOrchestratorHardFail() {
+    val workspaceId = UUID.randomUUID()
+    // Create workspace with static ID for test which is used in the flags.yaml to perform an
+    // override in order to exercise the workload path.
+    testResources.testHarness.createWorkspaceWithId(workspaceId)
+
+    testResources.testHarness.withFlag(OrchestratorHardFailOnHeartbeatFailure, Workspace(workspaceId), true).use {
+      testResources.runSmallSyncForAWorkspaceId(workspaceId)
+    }
   }
 
   @Test
