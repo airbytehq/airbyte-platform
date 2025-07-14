@@ -94,6 +94,23 @@ const prepareSourceConfigTemplate = (values: ConnectorFormValues, definitionId: 
   };
 };
 
+const getConnectionConfigurationDefaults = (connectorDefinitionSpecification: ConnectorDefinitionSpecificationRead) => {
+  const { properties = {}, required = [] } = connectorDefinitionSpecification.connectionSpecification ?? {};
+  const props = properties as Record<string, { default?: unknown }>;
+  return Object.fromEntries(
+    Object.entries(props)
+      .filter(
+        ([key, property]) =>
+          (required as string[]).includes(key) &&
+          property &&
+          typeof property === "object" &&
+          "default" in property &&
+          property.default !== undefined
+      )
+      .map(([key, property]) => [key, property.default])
+  );
+};
+
 export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEditProps> = ({
   onSubmit,
   onDeleteClick,
@@ -230,10 +247,16 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   // Fill form with existing connector values otherwise set the default service name
   const formValues = useMemo(() => {
     if (isEditMode && connector) {
-      return connector;
+      return {
+        ...connector,
+        connectionConfiguration: {
+          ...getConnectionConfigurationDefaults(selectedConnectorDefinitionSpecification!),
+          ...connector.connectionConfiguration,
+        },
+      };
     }
     return { name: selectedConnectorDefinition.name };
-  }, [isEditMode, connector, selectedConnectorDefinition.name]);
+  }, [isEditMode, connector, selectedConnectorDefinition.name, selectedConnectorDefinitionSpecification]);
 
   return (
     <ConnectorForm
