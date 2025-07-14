@@ -467,7 +467,6 @@ paths:
       x-sdk-alias: listWorkspaces
       x-sdk-group: Workspaces
       summary: List workspaces
-      x-sdk-entity-operation: Workspace#list
       parameters:
         - name: workspaceIds
           description: The UUIDs of the workspaces you wish to fetch. Empty list will retrieve all allowed workspaces.
