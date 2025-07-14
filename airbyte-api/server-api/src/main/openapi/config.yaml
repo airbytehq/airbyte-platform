@@ -9487,6 +9487,13 @@ paths:
 
   /public/v1/organizations/{organizationId}/oauthCredentials:
     put:
+      parameters:
+        - name: organizationId
+          schema:
+            format: UUID
+            type: string
+          in: path
+          required: true
       requestBody:
         content:
           application/json:
@@ -9513,13 +9520,6 @@ paths:
 
         In order to determine what the credential configuration needs to be, please see the connector specification of the relevant
         source/destination.
-    parameters:
-      - name: organizationId
-        schema:
-          format: UUID
-          type: string
-        in: path
-        required: true
 
   # Public APIs - Users
   /public/v1/users:
