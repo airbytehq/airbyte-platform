@@ -492,11 +492,11 @@ public class SchedulerHandler {
         .jobInfo(jobConverter.getSynchronousJobRead(response));
 
     if (response.isSuccess()) {
-      final ActorCatalog catalog = catalogService.getActorCatalogById(response.getOutput());
+      final ActorCatalog catalog = catalogService.getActorCatalogById(response.output);
       final AirbyteCatalog persistenceCatalog = Jsons.object(catalog.getCatalog(),
           io.airbyte.protocol.models.v0.AirbyteCatalog.class);
       sourceDiscoverSchemaRead.catalog(catalogConverter.toApi(persistenceCatalog, sourceVersion));
-      sourceDiscoverSchemaRead.catalogId(response.getOutput());
+      sourceDiscoverSchemaRead.catalogId(response.output);
     }
 
     return sourceDiscoverSchemaRead;
@@ -591,8 +591,8 @@ public class SchedulerHandler {
 
     if (response.isSuccess()) {
       checkConnectionRead
-          .status(Enums.convertTo(response.getOutput().getStatus(), StatusEnum.class))
-          .message(response.getOutput().getMessage());
+          .status(Enums.convertTo(response.output.getStatus(), StatusEnum.class))
+          .message(response.output.getMessage());
     }
 
     return checkConnectionRead;

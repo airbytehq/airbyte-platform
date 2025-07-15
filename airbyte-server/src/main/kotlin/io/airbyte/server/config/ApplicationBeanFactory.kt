@@ -80,7 +80,7 @@ class ApplicationBeanFactory {
   fun randomUUIDSupplier(): Supplier<UUID> = Supplier { UUID.randomUUID() }
 
   @Singleton
-  fun eventRunner(temporalClient: TemporalClient?): EventRunner = TemporalEventRunner(temporalClient)
+  fun eventRunner(temporalClient: TemporalClient): EventRunner = TemporalEventRunner(temporalClient)
 
   @Singleton
   fun jobTracker(

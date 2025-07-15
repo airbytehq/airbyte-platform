@@ -17,7 +17,7 @@ class SynchronousResponseTest {
   @Test
   fun `test that a run   without output is failed`() {
     val response =
-      SynchronousResponse.fromTemporalResponse<String>(
+      SynchronousResponse.fromTemporalResponse(
         TemporalResponse.success(ConnectorJobOutput(), JobMetadata(true, Path.of("logPath"))),
         { _ -> null },
         UUID.randomUUID(),

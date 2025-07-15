@@ -3589,6 +3589,7 @@ class ConnectionsHandlerTest {
           .withSourceId(SOURCE_ID)
           .withDestinationId(DESTINATION_ID)
           .withCatalog(configuredAirbyteCatalog)
+          .withStatus(Status.ACTIVE)
           .withManual(true)
           .withNonBreakingChangesPreference(StandardSync.NonBreakingChangesPreference.PROPAGATE_FULLY);
 

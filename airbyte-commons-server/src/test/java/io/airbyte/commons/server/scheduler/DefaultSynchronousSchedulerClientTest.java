@@ -168,12 +168,12 @@ class DefaultSynchronousSchedulerClientTest {
           .execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function, mapperFunction, WORKSPACE_ID, ACTOR_ID, ActorType.SOURCE);
 
       assertNotNull(response);
-      assertEquals(discoveredCatalogId, response.getOutput());
-      assertEquals(ConfigType.DISCOVER_SCHEMA, response.getMetadata().getConfigType());
-      assertTrue(response.getMetadata().getConfigId().isPresent());
-      assertEquals(sourceDefinitionId, response.getMetadata().getConfigId().get());
-      assertTrue(response.getMetadata().isSucceeded());
-      assertEquals(LOG_PATH, response.getMetadata().getLogPath());
+      assertEquals(discoveredCatalogId, response.output);
+      assertEquals(ConfigType.DISCOVER_SCHEMA, response.metadata.configType);
+      assertTrue(response.metadata.getConfigId().isPresent());
+      assertEquals(sourceDefinitionId, response.metadata.getConfigId().get());
+      assertTrue(response.metadata.isSucceeded());
+      assertEquals(LOG_PATH, response.metadata.logPath);
 
       verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(ActorType.SOURCE),
           eq(JobState.STARTED), eq(null));
@@ -199,12 +199,12 @@ class DefaultSynchronousSchedulerClientTest {
           .execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function, mapperFunction, WORKSPACE_ID, ACTOR_ID, ActorType.SOURCE);
 
       assertNotNull(response);
-      assertNull(response.getOutput());
-      assertEquals(ConfigType.DISCOVER_SCHEMA, response.getMetadata().getConfigType());
-      assertTrue(response.getMetadata().getConfigId().isPresent());
-      assertEquals(sourceDefinitionId, response.getMetadata().getConfigId().get());
-      assertFalse(response.getMetadata().isSucceeded());
-      assertEquals(LOG_PATH, response.getMetadata().getLogPath());
+      assertNull(response.output);
+      assertEquals(ConfigType.DISCOVER_SCHEMA, response.metadata.configType);
+      assertTrue(response.metadata.getConfigId().isPresent());
+      assertEquals(sourceDefinitionId, response.metadata.getConfigId().get());
+      assertFalse(response.metadata.isSucceeded());
+      assertEquals(LOG_PATH, response.metadata.logPath);
 
       verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(ActorType.SOURCE),
           eq(JobState.STARTED), eq(null));
@@ -256,7 +256,7 @@ class DefaultSynchronousSchedulerClientTest {
               .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<StandardCheckConnectionOutput> response =
           schedulerClient.createSourceCheckConnectionJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false, null);
-      assertEquals(mockOutput, response.getOutput());
+      assertEquals(mockOutput, response.output);
       verify(configInjector).injectConfig(any(), eq(SOURCE_CONNECTION.getSourceDefinitionId()));
     }
 
@@ -285,7 +285,7 @@ class DefaultSynchronousSchedulerClientTest {
               .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<StandardCheckConnectionOutput> response =
           schedulerClient.createSourceCheckConnectionJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false, null);
-      assertEquals(mockOutput, response.getOutput());
+      assertEquals(mockOutput, response.output);
     }
 
     @Test
@@ -305,7 +305,7 @@ class DefaultSynchronousSchedulerClientTest {
               .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<StandardCheckConnectionOutput> response =
           schedulerClient.createDestinationCheckConnectionJob(DESTINATION_CONNECTION, ACTOR_DEFINITION_VERSION, false, null);
-      assertEquals(mockOutput, response.getOutput());
+      assertEquals(mockOutput, response.output);
       verify(configInjector).injectConfig(any(), eq(DESTINATION_CONNECTION.getDestinationDefinitionId()));
     }
 
@@ -319,7 +319,7 @@ class DefaultSynchronousSchedulerClientTest {
                   .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<UUID> response =
           schedulerClient.createDiscoverSchemaJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false, null, WorkloadPriority.HIGH);
-      assertEquals(expectedCatalogId, response.getOutput());
+      assertEquals(expectedCatalogId, response.output);
       verify(configInjector).injectConfig(any(), eq(SOURCE_CONNECTION.getSourceDefinitionId()));
     }
 
@@ -333,7 +333,7 @@ class DefaultSynchronousSchedulerClientTest {
                   .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<UUID> response =
           schedulerClient.createDestinationDiscoverJob(DESTINATION_CONNECTION, DESTINATION_DEFINITION, ACTOR_DEFINITION_VERSION);
-      assertEquals(expectedCatalogId, response.getOutput());
+      assertEquals(expectedCatalogId, response.output);
     }
 
     @Test
@@ -345,7 +345,7 @@ class DefaultSynchronousSchedulerClientTest {
       when(temporalClient.submitGetSpec(any(UUID.class), eq(0), eq(WORKSPACE_ID), eq(jobSpecConfig)))
           .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
       final SynchronousResponse<ConnectorSpecification> response = schedulerClient.createGetSpecJob(DOCKER_IMAGE, false, WORKSPACE_ID);
-      assertEquals(mockOutput, response.getOutput());
+      assertEquals(mockOutput, response.output);
       verify(configInjector, never()).injectConfig(any(), any());
     }
 

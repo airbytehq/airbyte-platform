@@ -37,13 +37,13 @@ class TemporalBeanFactory {
 
   @Singleton
   fun synchronousSchedulerClient(
-    temporalClient: TemporalClient?,
-    jobTracker: JobTracker?,
-    jobErrorReporter: JobErrorReporter?,
-    oAuthConfigSupplier: OAuthConfigSupplier?,
-    configInjector: ConfigInjector?,
-    contextBuilder: ContextBuilder?,
-    secretReferenceService: SecretReferenceService?,
+    temporalClient: TemporalClient,
+    jobTracker: JobTracker,
+    jobErrorReporter: JobErrorReporter,
+    oAuthConfigSupplier: OAuthConfigSupplier,
+    configInjector: ConfigInjector,
+    contextBuilder: ContextBuilder,
+    secretReferenceService: SecretReferenceService,
   ): SynchronousSchedulerClient =
     DefaultSynchronousSchedulerClient(
       temporalClient,
