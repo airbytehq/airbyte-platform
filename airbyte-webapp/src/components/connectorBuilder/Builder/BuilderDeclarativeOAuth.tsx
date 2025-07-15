@@ -16,8 +16,8 @@ import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { extractInterpolatedConfigPath } from "../utils";
 
-const ADVANCED_AUTH_PATH = "manifest.spec.advanced_auth";
-const OAUTH_INPUT_SPEC_PATH = `${ADVANCED_AUTH_PATH}.oauth_config_specification.oauth_connector_input_specification`;
+export const ADVANCED_AUTH_PATH = "manifest.spec.advanced_auth";
+export const OAUTH_INPUT_SPEC_PATH = `${ADVANCED_AUTH_PATH}.oauth_config_specification.oauth_connector_input_specification`;
 const COMPLETE_OAUTH_OUTPUT_SPEC_PATH = `${ADVANCED_AUTH_PATH}.oauth_config_specification.complete_oauth_output_specification`;
 const COMPLETE_OAUTH_SERVER_INPUT_SPEC_PATH = `${ADVANCED_AUTH_PATH}.oauth_config_specification.complete_oauth_server_input_specification`;
 const COMPLETE_OAUTH_SERVER_OUTPUT_SPEC_PATH = `${ADVANCED_AUTH_PATH}.oauth_config_specification.complete_oauth_server_output_specification`;

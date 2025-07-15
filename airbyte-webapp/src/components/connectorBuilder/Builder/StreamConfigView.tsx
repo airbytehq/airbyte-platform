@@ -130,7 +130,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
       const newMetadata = {
         ...metadataClone,
         autoImportSchema: {
-          ...metadataClone.autoImportSchema,
+          ...metadataClone?.autoImportSchema,
           [streamName]: true,
         },
       };

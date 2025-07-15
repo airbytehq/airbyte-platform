@@ -13,6 +13,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./Builder.module.scss";
+import { OAUTH_INPUT_SPEC_PATH } from "./BuilderDeclarativeOAuth";
 import { BuilderSidebar } from "./BuilderSidebar";
 import { ComponentsView } from "./ComponentsView";
 import { DynamicStreamConfigView } from "./DynamicStreamConfigView";
@@ -21,6 +22,7 @@ import { InputModal, newInputInEditing } from "./InputModal";
 import { InputsView } from "./InputsView";
 import { StreamConfigView } from "./StreamConfigView";
 import { BuilderFormInput, BuilderState } from "../types";
+import { useAuthenticatorInputs, isHttpRequesterAuthenticator } from "../useAuthenticatorInputs";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamNames } from "../useStreamNames";
 import { useSetStreamToStale } from "../useStreamTestMetadata";
@@ -146,6 +148,8 @@ const TriggerStateEffects = () => {
   } = useConnectorBuilderFormState();
   const { watch, trigger } = useFormContext();
   const setStreamToStale = useSetStreamToStale();
+  const { updateUserInputsForAuth, updateUserInputsForDeclarativeOAuth, updateUserInputsForTokenUpdater } =
+    useAuthenticatorInputs();
   const builderState = useWatch();
   useEffect(() => {
     const subscription = watch((data, { name }) => {
@@ -168,9 +172,35 @@ const TriggerStateEffects = () => {
           } catch (error) {}
         }
       }
+      if (name?.endsWith("authenticator")) {
+        const oldValue = get(builderState, name);
+        const oldAuth = isHttpRequesterAuthenticator(oldValue) ? oldValue : undefined;
+        const newValue = get(data, name);
+        const newAuth = isHttpRequesterAuthenticator(newValue) ? newValue : undefined;
+        if (oldAuth || newAuth) {
+          updateUserInputsForAuth(name, oldAuth, newAuth);
+        }
+      }
+      if (name === OAUTH_INPUT_SPEC_PATH) {
+        const value = get(data, name);
+        updateUserInputsForDeclarativeOAuth(value);
+      }
+      if (name?.endsWith("authenticator.refresh_token_updater")) {
+        const value = get(data, name);
+        updateUserInputsForTokenUpdater(name, value);
+      }
     });
     return () => subscription.unsubscribe();
-  }, [watch, setStreamToStale, builderState, registerChange, trigger]);
+  }, [
+    watch,
+    setStreamToStale,
+    builderState,
+    registerChange,
+    trigger,
+    updateUserInputsForAuth,
+    updateUserInputsForDeclarativeOAuth,
+    updateUserInputsForTokenUpdater,
+  ]);
 
   return null;
 };
