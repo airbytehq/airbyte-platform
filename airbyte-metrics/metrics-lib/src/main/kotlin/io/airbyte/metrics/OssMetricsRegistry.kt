@@ -779,6 +779,10 @@ enum class OssMetricsRegistry(
     metricName = "producer_to_pod_started_latency_ms",
     metricDescription = "the time it takes to produce a message until it is fully processed",
   ),
+  CUSTOMER_IO_EMAIL_NOTIFICATION_SEND(
+    metricName = "customerio_email_notification_send",
+    metricDescription = "a customer io email notification was sent",
+  ),
   ;
 
   override fun getMetricName(): String = metricName

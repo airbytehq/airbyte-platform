@@ -15,14 +15,20 @@ import io.airbyte.api.common.StreamDescriptorUtils.buildFullyQualifiedName
 import io.airbyte.api.model.generated.FieldTransform
 import io.airbyte.api.model.generated.StreamAttributeTransform
 import io.airbyte.api.model.generated.StreamTransform
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.lang.Exceptions
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorType
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.notification.messages.SchemaUpdateNotification
 import io.airbyte.notification.messages.SyncSummary
 import io.github.oshai.kotlinlogging.KotlinLogging
+import jakarta.inject.Inject
 import okhttp3.Interceptor
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
@@ -59,14 +65,17 @@ class CustomerioNotificationClient : NotificationClient {
   private val okHttpClient: OkHttpClient
   private val apiToken: String?
 
+  @Inject
+  private lateinit var metricClient: MetricClient
+
   constructor() {
-    this.apiToken = System.getenv(EnvVar.CUSTOMERIO_API_KEY.name)
     this.baseUrl = CUSTOMERIO_BASE_URL
     this.okHttpClient =
       OkHttpClient
         .Builder()
         .addInterceptor(CampaignsRateLimitInterceptor())
         .build()
+    this.apiToken = System.getenv(EnvVar.CUSTOMERIO_API_KEY.name)
   }
 
   @VisibleForTesting
@@ -81,6 +90,13 @@ class CustomerioNotificationClient : NotificationClient {
         .Builder()
         .addInterceptor(CampaignsRateLimitInterceptor())
         .build()
+  }
+
+  init {
+    val dateFormat: DateFormat = SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
+    MAPPER.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+    MAPPER.setDateFormat(dateFormat)
+    MAPPER.registerModule(JavaTimeModule())
   }
 
   /**
@@ -409,12 +425,9 @@ class CustomerioNotificationClient : NotificationClient {
 
     okHttpClient.newCall(request).execute().use { response ->
       if (response.isSuccessful) {
-        log.info { "Successful notification workspaceId $workspaceId (${response.code}): ${response.body}" }
-        return true
+        return handleSendSuccess(workspaceId, response)
       } else {
-        val body = if (response.body != null) response.body!!.string() else ""
-        val errorMessage = String.format("Failed to deliver notification (%s): %s", response.code, body)
-        log.info { "Error sending notification workspaceId $workspaceId (${response.code}): $errorMessage" }
+        val errorMessage = handleSendFailure(workspaceId, response)
         throw IOException(errorMessage)
       }
     }
@@ -431,6 +444,46 @@ class CustomerioNotificationClient : NotificationClient {
     val date = LocalDate.parse(dateString)
     val formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy")
     return date.format(formatter)
+  }
+
+  private fun handleSendSuccess(
+    workspaceId: UUID?,
+    response: Response,
+  ): Boolean {
+    log.info { "Successful notification workspaceId $workspaceId (${response.code}): ${response.body}" }
+    metricClient.count(
+      OssMetricsRegistry.CUSTOMER_IO_EMAIL_NOTIFICATION_SEND,
+      attributes =
+        arrayOf(
+          MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId.toString()),
+          MetricAttribute(MetricTags.SUCCESS, "true"),
+        ),
+    )
+
+    return true
+  }
+
+  private fun handleSendFailure(
+    workspaceId: UUID?,
+    response: Response,
+  ): String {
+    val body = if (response.body != null) response.body!!.string() else ""
+    val errorMessage = String.format("Failed to deliver notification (%s): %s", response.code, body)
+    log.info { "Error sending notification workspaceId $workspaceId (${response.code}): $errorMessage" }
+    metricClient.count(
+      OssMetricsRegistry.CUSTOMER_IO_EMAIL_NOTIFICATION_SEND,
+      attributes =
+        arrayOf(
+          MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId.toString()),
+          MetricAttribute(MetricTags.SUCCESS, "false"),
+        ),
+    )
+    return errorMessage
+  }
+
+  @InternalForTesting
+  internal fun setMetricClient(metricClient: MetricClient) {
+    this.metricClient = metricClient
   }
 
   companion object {
@@ -465,13 +518,6 @@ class CustomerioNotificationClient : NotificationClient {
     const val CONNECTOR_VERSION_CHANGE_DESCRIPTION: String = "connector_version_change_description"
     const val CONNECTOR_VERSION_MIGRATION_URL: String = "connector_version_migration_url"
     const val CONNECTOR_VERSION_UPGRADE_DEADLINE: String = "connector_version_upgrade_deadline"
-
-    init {
-      val dateFormat: DateFormat = SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
-      MAPPER.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-      MAPPER.setDateFormat(dateFormat)
-      MAPPER.registerModule(JavaTimeModule())
-    }
 
     @JvmStatic
     fun buildSyncCompletedJson(

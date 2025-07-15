@@ -21,6 +21,7 @@ import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorType
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardWorkspace
+import io.airbyte.metrics.MetricClient
 import io.airbyte.notification.CustomerioNotificationClient.Companion.buildSchemaChangeJson
 import io.airbyte.notification.CustomerioNotificationClient.Companion.buildSyncCompletedJson
 import io.airbyte.notification.messages.ConnectionInfo
@@ -29,6 +30,7 @@ import io.airbyte.notification.messages.SchemaUpdateNotification
 import io.airbyte.notification.messages.SourceInfo
 import io.airbyte.notification.messages.SyncSummary
 import io.airbyte.notification.messages.WorkspaceInfo
+import io.mockk.mockk
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.apache.http.HttpHeaders
@@ -43,13 +45,15 @@ import java.util.function.Consumer
 internal class CustomerioNotificationClientTest {
   private lateinit var mockWebServer: MockWebServer
   private lateinit var customerioNotificationClient: CustomerioNotificationClient
+  private lateinit var metricClient: MetricClient
 
   @BeforeEach
   fun setUp() {
     mockWebServer = MockWebServer()
-
+    metricClient = mockk<MetricClient>(relaxed = true)
     val baseUrl = mockWebServer.url("/").toString()
     customerioNotificationClient = CustomerioNotificationClient(API_KEY, baseUrl)
+    customerioNotificationClient.setMetricClient(metricClient)
   }
 
   @Test

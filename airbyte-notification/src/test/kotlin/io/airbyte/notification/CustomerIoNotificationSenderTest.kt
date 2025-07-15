@@ -4,6 +4,7 @@
 
 package io.airbyte.notification
 
+import io.airbyte.metrics.MetricClient
 import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -17,7 +18,8 @@ import java.util.UUID
 internal class CustomerIoNotificationSenderTest {
   private val okHttpClient: OkHttpClient = Mockito.mock(OkHttpClient::class.java)
   private val apiToken = "apitoken"
-  private val customerIoEmailNotificationSender = CustomerIoEmailNotificationSender(okHttpClient, apiToken)
+  private val metricClient: MetricClient = Mockito.mock(MetricClient::class.java)
+  private val customerIoEmailNotificationSender = CustomerIoEmailNotificationSender(okHttpClient, apiToken, metricClient)
 
   @Test
   @Throws(IOException::class)

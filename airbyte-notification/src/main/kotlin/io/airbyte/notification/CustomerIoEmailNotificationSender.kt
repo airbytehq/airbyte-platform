@@ -5,6 +5,10 @@
 package io.airbyte.notification
 
 import io.airbyte.commons.resources.Resources
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
@@ -17,6 +21,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import org.apache.http.HttpHeaders
 import java.io.IOException
 import java.util.UUID
@@ -34,6 +39,7 @@ private val log = KotlinLogging.logger { }
 open class CustomerIoEmailNotificationSender(
   @param:Named("webhookHttpClient") private val okHttpClient: OkHttpClient,
   @param:Value("\${airbyte.notification.customerio.apikey}") private val apiToken: String,
+  private val metricClient: MetricClient,
 ) : NotificationSender<CustomerIoEmailConfig> {
   override fun sendNotification(
     config: CustomerIoEmailConfig,
@@ -42,7 +48,7 @@ open class CustomerIoEmailNotificationSender(
     workspaceId: UUID?,
   ) {
     val formattedMessage = message.replace("\n", "<br>")
-    val custumerIoPayload =
+    val customerIoPayload =
       renderTemplate(
         CUSTOMER_IO_DEFAULT_TEMPLATE,
         BREAKING_CHANGE_TRANSACTION_MESSAGE_ID, // to_email=
@@ -52,7 +58,7 @@ open class CustomerIoEmailNotificationSender(
         subject, // email_body=
         formattedMessage,
       )
-    callCustomerIoSendNotification(custumerIoPayload, workspaceId)
+    callCustomerIoSendNotification(customerIoPayload, workspaceId)
   }
 
   /**
@@ -65,7 +71,7 @@ open class CustomerIoEmailNotificationSender(
     workspaceName: String,
     inviteUrl: String,
   ) {
-    val custumerIoPayload =
+    val customerIoPayload =
       renderTemplate(
         INVITATION_NEW_USER_TEMPLATE,
         INVITATION_NEW_USER_TRANSACTION_MESSAGE_ID, // to_email=
@@ -75,7 +81,7 @@ open class CustomerIoEmailNotificationSender(
         workspaceName, // invite_url=
         inviteUrl,
       )
-    callCustomerIoSendNotification(custumerIoPayload, null)
+    callCustomerIoSendNotification(customerIoPayload, null)
   }
 
   fun sendInviteToUser(
@@ -104,7 +110,7 @@ open class CustomerIoEmailNotificationSender(
     inviterUserName: String?,
     workspaceName: String?,
   ) {
-    val custumerIoPayload =
+    val customerIoPayload =
       renderTemplate(
         INVITATION_EXISTING_USER_TEMPLATE,
         INVITATION_EXISTING_USER_TRANSACTION_MESSAGE_ID, // to_email=
@@ -113,7 +119,7 @@ open class CustomerIoEmailNotificationSender(
         inviterUserName!!, // workspace_name=
         workspaceName!!,
       )
-    callCustomerIoSendNotification(custumerIoPayload, null)
+    callCustomerIoSendNotification(customerIoPayload, null)
   }
 
   /**
@@ -125,7 +131,7 @@ open class CustomerIoEmailNotificationSender(
     workspaceName: String?,
     inviteUrl: String?,
   ) {
-    val custumerIoPayload =
+    val customerIoPayload =
       renderTemplate(
         INVITATION_RESEND_TEMPLATE,
         INVITATION_RESEND_TRANSACTION_MESSAGE_ID,
@@ -138,14 +144,14 @@ open class CustomerIoEmailNotificationSender(
         // invite_url=
         inviteUrl!!,
       )
-    callCustomerIoSendNotification(custumerIoPayload, null)
+    callCustomerIoSendNotification(customerIoPayload, null)
   }
 
   protected open fun callCustomerIoSendNotification(
-    custumerIoPayload: String,
+    customerIoPayload: String,
     workspaceId: UUID?,
   ) {
-    val requestBody: RequestBody = custumerIoPayload.toRequestBody(JSON)
+    val requestBody: RequestBody = customerIoPayload.toRequestBody(JSON)
 
     val request =
       Request
@@ -159,15 +165,22 @@ open class CustomerIoEmailNotificationSender(
     try {
       okHttpClient.newCall(request).execute().use { response ->
         if (response.isSuccessful) {
-          log.info("Successful notification for workspaceId {} ({}): {}", workspaceId, response.code, response.body!!.string())
+          handleSendSuccess(workspaceId, response)
         } else {
-          throw IOException(
-            String.format("Failed to  notification for workspaceIc {}: code(%s), body(%s)", workspaceId, response.code, response.body!!.string()),
-          )
+          handleSendFailure(workspaceId, response)
         }
       }
     } catch (e: Exception) {
+      metricClient.count(
+        OssMetricsRegistry.CUSTOMER_IO_EMAIL_NOTIFICATION_SEND,
+        attributes =
+          arrayOf(
+            MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId.toString()),
+            MetricAttribute(MetricTags.SUCCESS, "false"),
+          ),
+      )
       log.error(e) { "Fail to notify workspaceId $workspaceId" }
+
       throw RuntimeException(e)
     }
   }
@@ -186,6 +199,39 @@ open class CustomerIoEmailNotificationSender(
       throw RuntimeException(e)
     }
     return String.format(template, *data)
+  }
+
+  private fun handleSendSuccess(
+    workspaceId: UUID?,
+    response: Response,
+  ) {
+    metricClient.count(
+      OssMetricsRegistry.CUSTOMER_IO_EMAIL_NOTIFICATION_SEND,
+      attributes =
+        arrayOf(
+          MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId.toString()),
+          MetricAttribute(MetricTags.SUCCESS, "true"),
+        ),
+    )
+    log.info("Successful notification for workspaceId {} ({}): {}", workspaceId, response.code, response.body!!.string())
+  }
+
+  private fun handleSendFailure(
+    workspaceId: UUID?,
+    response: Response,
+  ) {
+    metricClient.count(
+      OssMetricsRegistry.CUSTOMER_IO_EMAIL_NOTIFICATION_SEND,
+      attributes =
+        arrayOf(
+          MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId.toString()),
+          MetricAttribute(MetricTags.SUCCESS, "false"),
+        ),
+    )
+
+    throw IOException(
+      String.format("Failed to send notification for workspaceId {}: code(%s), body(%s)", workspaceId, response.code, response.body!!.string()),
+    )
   }
 
   companion object {
