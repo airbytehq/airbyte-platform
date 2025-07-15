@@ -23,7 +23,7 @@ class UnprocessableEntityExceptionHandler : ExceptionHandler<UnprocessableEntity
     exception: UnprocessableEntityException,
   ): HttpResponse<*> =
     HttpResponse
-      .status<Any>(HttpStatus.valueOf(exception.httpCode))
+      .status<Any>(HttpStatus.valueOf(exception.getHttpCode()))
       .body(exception.message)
       .contentType(MediaType.TEXT_PLAIN)
 }
