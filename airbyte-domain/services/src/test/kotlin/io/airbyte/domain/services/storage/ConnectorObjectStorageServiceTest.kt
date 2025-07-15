@@ -107,7 +107,7 @@ class ConnectorObjectStorageServiceTest {
       assertNotNull(result)
       assertEquals("s3://my-bucket/my/path/$jobId", result!!.storageUri)
       assertEquals(
-        "https://us-east-1.console.aws.amazon.com/s3/buckets/my-bucket?prefix=my/path/$jobId",
+        "https://us-east-1.console.aws.amazon.com/s3/buckets/my-bucket?prefix=my%2Fpath%2F$jobId",
         result.cloudConsoleUrl,
       )
     }

@@ -6,6 +6,8 @@ package io.airbyte.domain.services.storage
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.domain.models.RejectedRecordsMetadata
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 interface ObjectStoragePathResolver {
   fun resolveRejectedRecordsPaths(jobId: Long): RejectedRecordsMetadata?
@@ -30,7 +32,8 @@ class S3ObjectStoragePathResolver(
 
     val s3ConsoleUrl =
       if (s3Endpoint == null || s3Endpoint.isNull) {
-        "https://$bucketRegion.console.aws.amazon.com/s3/buckets/$bucketName?prefix=$jobPath"
+        val prefix = URLEncoder.encode(jobPath, StandardCharsets.UTF_8.toString())
+        "https://$bucketRegion.console.aws.amazon.com/s3/buckets/$bucketName?prefix=$prefix"
       } else {
         // Custom S3 endpoints not supported for bucket links
         null

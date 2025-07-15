@@ -29,7 +29,7 @@ class ObjectStoragePathResolverTest {
       assertNotNull(result)
       assertEquals("s3://my-bucket/my/path/123", result!!.storageUri)
       assertEquals(
-        "https://us-west-2.console.aws.amazon.com/s3/buckets/my-bucket?prefix=my/path/123",
+        "https://us-west-2.console.aws.amazon.com/s3/buckets/my-bucket?prefix=my%2Fpath%2F123",
         result.cloudConsoleUrl,
       )
     }
