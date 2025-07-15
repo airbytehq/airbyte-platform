@@ -3,7 +3,8 @@ import { FormattedMessage } from "react-intl";
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
-import { useCancelUserInvitation, useCurrentWorkspace } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils";
+import { useCancelUserInvitation, useCurrentWorkspaceOrUndefined, useOrganization } from "core/api";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
 import styles from "./RemoveRoleMenuItem.module.scss";
@@ -16,7 +17,9 @@ interface CancelInvitationMenuItemProps {
 export const CancelInvitationMenuItem: React.FC<CancelInvitationMenuItemProps> = ({ user }) => {
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
-  const { name: workspaceName } = useCurrentWorkspace();
+  const workspaceName = useCurrentWorkspaceOrUndefined()?.name;
+  const organizationId = useCurrentOrganizationId();
+  const { organizationName } = useOrganization(organizationId);
 
   const { mutateAsync: cancelInvitation } = useCancelUserInvitation();
 
@@ -33,7 +36,7 @@ export const CancelInvitationMenuItem: React.FC<CancelInvitationMenuItemProps> =
             ),
             resource: (
               <Text as="span" italicized>
-                {workspaceName}
+                {workspaceName || organizationName}
               </Text>
             ),
           }}

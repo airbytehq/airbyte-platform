@@ -3,7 +3,8 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
-import { useCurrentOrganizationInfo, useCurrentWorkspace, useDeletePermissions } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils";
+import { useCurrentWorkspaceOrUndefined, useDeletePermissions, useOrganization } from "core/api";
 import { useCurrentUser } from "core/services/auth";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 
@@ -26,8 +27,9 @@ export const RemoveRoleMenuItem: React.FC<RemoveRoleMenuItemProps> = ({ user, re
     permissionToRemove = user.workspacePermission?.permissionId ?? "";
   }
 
-  const organizationName = useCurrentOrganizationInfo()?.organizationName;
-  const { name: workspaceName } = useCurrentWorkspace();
+  const organizationId = useCurrentOrganizationId();
+  const { organizationName } = useOrganization(organizationId);
+  const workspaceName = useCurrentWorkspaceOrUndefined()?.name;
   const { formatMessage } = useIntl();
   const { userId: currentUserId } = useCurrentUser();
   const resourceName = resourceType === "organization" ? organizationName : workspaceName;

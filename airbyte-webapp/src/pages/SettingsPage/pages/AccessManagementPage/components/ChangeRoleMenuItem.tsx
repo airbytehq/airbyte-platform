@@ -1,6 +1,7 @@
 import classNames from "classnames";
 
-import { useCreatePermission, useCurrentWorkspace, useUpdatePermissions } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils";
+import { useCreatePermission, useCurrentWorkspaceOrUndefined, useUpdatePermissions } from "core/api";
 import { PermissionType } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 
@@ -11,7 +12,8 @@ import { ResourceType, UnifiedUserModel } from "./util";
 const useCreateOrUpdateRole = (user: UnifiedUserModel, resourceType: ResourceType, permissionType: PermissionType) => {
   const { mutateAsync: createPermission } = useCreatePermission();
   const { mutateAsync: updatePermission } = useUpdatePermissions();
-  const { workspaceId, organizationId } = useCurrentWorkspace();
+  const workspaceId = useCurrentWorkspaceOrUndefined()?.workspaceId;
+  const organizationId = useCurrentOrganizationId();
 
   const existingPermissionIdForResourceType =
     resourceType === "organization"
