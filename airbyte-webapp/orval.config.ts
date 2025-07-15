@@ -206,7 +206,7 @@ export default defineConfig({
   ]),
   sonarApi: createApi(
     // todo: this should be an env variable probably, not a raw hardcoded url
-    "https://airbyte-sonar-prod.s3.us-east-2.amazonaws.com/openapi/latest/app.json",
+    "https://airbyte-sonar-prod.s3.us-east-2.amazonaws.com/openapi/2025-07-14T17-26-30Z/51a5183c/app.json",
     "SonarClient",
     "sonarApiCall"
   ),
