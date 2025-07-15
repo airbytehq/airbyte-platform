@@ -175,3 +175,44 @@ export const getStreamName = (stream: DeclarativeComponentSchemaStreamsItem | un
   }
   return stream.name ?? defaultName;
 };
+
+const interpolatedConfigValueRegexBracket = /^\s*{{\s*config\[(?:'|")+(\S+)(?:'|")+\]\s*}}\s*$/;
+const interpolatedConfigValueRegexDot = /^\s*{{\s*config\.(\S+)\s*}}\s*$/;
+
+export function extractInterpolatedConfigPath(str: string): string;
+export function extractInterpolatedConfigPath(str: string | undefined): string | undefined;
+export function extractInterpolatedConfigPath(str: string | undefined): string | undefined {
+  /**
+   * This method works for nested configs like `config["credentials"]["client_secret"]`
+   * and `config.credentials.client_secret` by parsing the full path and converting it to a dot notation key
+   */
+  if (str === undefined) {
+    return undefined;
+  }
+
+  const regexBracketResult = interpolatedConfigValueRegexBracket.exec(str);
+  if (regexBracketResult !== null) {
+    if (regexBracketResult[1]) {
+      return parseBracketNotation(regexBracketResult[1]);
+    }
+  }
+
+  const regexDotResult = interpolatedConfigValueRegexDot.exec(str);
+  if (regexDotResult !== null) {
+    return regexDotResult[1];
+  }
+
+  return undefined;
+}
+
+const parseBracketNotation = (bracketPath: string): string => {
+  // Remove quotes and split by '][' to handle nested brackets
+  // Example: '"credentials"]["client_secret"' -> ['credentials', 'client_secret']
+  const keys = bracketPath
+    .split(/(?:'|")+\]\[(?:'|")+/)
+    // remove outer quotes
+    .map((key) => key.replace(/^['"]+|['"]+$/g, "").trim())
+    .filter(Boolean);
+
+  return keys.join(".");
+};

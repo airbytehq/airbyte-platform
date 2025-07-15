@@ -16,3 +16,11 @@
   overflow: hidden;
   resize: vertical;
 }
+
+.declarativeOAuthSwitch {
+  & label {
+    padding-bottom: 0;
+  }
+
+  padding-bottom: variables.$spacing-xl;
+}

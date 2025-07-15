@@ -68,8 +68,9 @@ function inputInEditingToFormInput({
       enum: type === "enum" && values.definition.enum?.length ? values.definition.enum : undefined,
       default: showDefaultValueField ? values.definition.default : undefined,
       format: type === "date" ? "date" : type === "date-time" ? "date-time" : values.definition.format,
-      pattern: type === "date" ? DATE_PATTERN : type === "date-time" ? DATE_TIME_PATTERN : values.definition.pattern,
+      pattern: values.definition.pattern,
       airbyte_secret: values.definition.airbyte_secret ? true : undefined,
+      airbyte_hidden: values.definition.airbyte_hidden ? true : undefined,
     },
   };
 }
@@ -120,6 +121,8 @@ export const InputModal = ({
         .optional()
         .refine((values) => (values ? new Set(values).size === values.length : true), "connectorBuilder.enumDuplicate"),
       airbyte_secret: z.boolean().optional(),
+      airbyte_hidden: z.boolean().optional(),
+      pattern: z.string().optional(),
       default: z.any().optional(),
     }),
     showDefaultValueField: z.boolean(),
@@ -146,6 +149,8 @@ export const InputModal = ({
           type: submittedInput.type,
           allowed_enum_values: submittedInput.definition.enum,
           secret_field: submittedInput.definition.airbyte_secret,
+          hidden_field: submittedInput.definition.airbyte_hidden,
+          pattern: submittedInput.definition.pattern,
           required_field: submittedInput.definition.required,
           enable_default_value: submittedInput.showDefaultValueField,
           default_value: submittedInput.definition.default,
@@ -334,6 +339,7 @@ const InputModalContents = ({ onDelete, onClose }: { onDelete: () => void; onClo
     setValue("definition.format", undefined);
     setValue("definition.default", "");
     setValue("definition.enum", undefined);
+    setValue("definition.pattern", undefined);
     switch (values.type) {
       case "string":
         setValue("definition.type", "string");
@@ -357,10 +363,12 @@ const InputModalContents = ({ onDelete, onClose }: { onDelete: () => void; onClo
       case "date":
         setValue("definition.type", "string");
         setValue("definition.format", "date");
+        setValue("definition.pattern", DATE_PATTERN);
         break;
       case "date-time":
         setValue("definition.type", "string");
         setValue("definition.format", "date-time");
+        setValue("definition.pattern", DATE_TIME_PATTERN);
         break;
       default:
         break;
@@ -423,6 +431,22 @@ const InputModalContents = ({ onDelete, onClose }: { onDelete: () => void; onClo
             labelTooltip={formatMessage({ id: "connectorBuilder.inputModal.enumTooltip" })}
           />
         )}
+        {(values.type === "date" || values.type === "date-time") && (
+          <FormControl<InputInEditing>
+            name="definition.pattern"
+            fieldType="input"
+            optional
+            label={formatMessage({ id: "connectorBuilder.inputModal.pattern" })}
+            labelTooltip={formatMessage({ id: "connectorBuilder.inputModal.patternTooltip" })}
+          />
+        )}
+        <FormControl<InputInEditing>
+          name="required"
+          fieldType="switch"
+          optional
+          label={formatMessage({ id: "connectorBuilder.inputModal.required" })}
+          labelTooltip={formatMessage({ id: "connectorBuilder.inputModal.requiredTooltip" })}
+        />
         <FormControl<InputInEditing>
           name="definition.airbyte_secret"
           fieldType="switch"
@@ -431,11 +455,11 @@ const InputModalContents = ({ onDelete, onClose }: { onDelete: () => void; onClo
           labelTooltip={formatMessage({ id: "connectorBuilder.inputModal.secretTooltip" })}
         />
         <FormControl<InputInEditing>
-          name="required"
+          name="definition.airbyte_hidden"
           fieldType="switch"
           optional
-          label={formatMessage({ id: "connectorBuilder.inputModal.required" })}
-          labelTooltip={formatMessage({ id: "connectorBuilder.inputModal.requiredTooltip" })}
+          label={formatMessage({ id: "connectorBuilder.inputModal.hidden" })}
+          labelTooltip={formatMessage({ id: "connectorBuilder.inputModal.hiddenTooltip" })}
         />
         <FormControl<InputInEditing>
           name="showDefaultValueField"

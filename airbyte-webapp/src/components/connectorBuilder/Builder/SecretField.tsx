@@ -16,8 +16,18 @@ interface SecretFieldProps {
   disabled?: boolean;
   error?: boolean;
   label?: string;
+  "data-field-path"?: string;
 }
-export const SecretField: React.FC<SecretFieldProps> = ({ name, id, value, onUpdate, disabled, error, label }) => {
+export const SecretField: React.FC<SecretFieldProps> = ({
+  name,
+  id,
+  value,
+  onUpdate,
+  disabled,
+  error,
+  label,
+  "data-field-path": dataFieldPath,
+}) => {
   const [editingValue, setEditingValue] = useState<string | undefined>(undefined);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -38,6 +48,7 @@ export const SecretField: React.FC<SecretFieldProps> = ({ name, id, value, onUpd
           ref={inputRef}
           id={id}
           name={name}
+          data-field-path={dataFieldPath}
           onChange={(e) => {
             setEditingValue(e.target.value);
           }}

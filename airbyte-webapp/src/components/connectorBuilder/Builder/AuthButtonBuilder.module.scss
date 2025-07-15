@@ -1,0 +1,16 @@
+@use "scss/colors";
+@use "scss/mixins";
+@use "scss/variables";
+
+.container {
+  width: fit-content;
+
+  &[data-field-focused="true"] {
+    @include mixins.pulsate(variables.$spacing-lg, variables.$border-radius-sm);
+  }
+}
+
+.button {
+  position: relative;
+  z-index: 1;
+}

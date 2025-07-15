@@ -149,7 +149,7 @@ export const SchemaFormControl = ({
     );
   }
 
-  if (targetSchema.type === "object") {
+  if (targetSchema.type === "object" || targetSchema.properties) {
     return (
       <ObjectControl
         fieldSchema={targetSchema}

@@ -1871,6 +1871,8 @@
   "connectorBuilder.inputModal.typeTooltip": "The type of the input",
   "connectorBuilder.inputModal.secret": "Secret field",
   "connectorBuilder.inputModal.secretTooltip": "If this option is enabled, the form input will be masked and can't be looked at again",
+  "connectorBuilder.inputModal.hidden": "Hidden field",
+  "connectorBuilder.inputModal.hiddenTooltip": "If this option is enabled, the form input will be hidden from the end user",
   "connectorBuilder.inputModal.required": "Required field",
   "connectorBuilder.inputModal.requiredTooltip": "If this option is enabled, the user will need to provide a value when configuring a connection",
   "connectorBuilder.inputModal.showDefaultValueField": "Enable default value",
@@ -1882,6 +1884,10 @@
   "connectorBuilder.inputModal.enumTooltip": "The user will only be able to choose from one of these values. If none are provided the user will be able to enter any value",
   "connectorBuilder.inputModal.unsupportedInput": "Detailed configuration for this property type is disabled, switch to YAML view to edit",
   "connectorBuilder.inputModal.lockedInput": "Some configuration options are not shown, since this input is auto-generated and linked to the current configuration of your connector.",
+  "connectorBuilder.inputModal.pattern": "Pattern",
+  "connectorBuilder.inputModal.patternTooltip": "The regex pattern to use for validating the input value.",
+  "connectorBuilder.inputsView.hiddenBadge": "Hidden",
+  "connectorBuilder.inputsView.hiddenBadgeTooltip": "This input will be hidden from the end-user of the connector",
   "connectorBuilder.key": "Key",
   "connectorBuilder.value": "Value",
   "connectorBuilder.addKeyValue": "Add",
@@ -2320,6 +2326,7 @@
   "connectorBuilder.requestOption.injectInto.bodyData": "Body Data (url-encoded form)",
   "connectorBuilder.requestOption.injectInto.bodyJson": "Body JSON payload",
   "connectorBuilder.declarativeOAuth.label": "OAuth 2.0",
+  "connectorBuilder.missingOAuthToken": "Missing necessary OAuth token. Click the \"Authenticate your account for testing\" button to populate the token.",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

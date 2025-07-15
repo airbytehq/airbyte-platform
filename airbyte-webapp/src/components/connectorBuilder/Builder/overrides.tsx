@@ -1,5 +1,5 @@
 import { parse } from "graphql";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { get, useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
@@ -15,6 +15,7 @@ import {
   FormControl,
 } from "components/forms/FormControl";
 import { ControlGroup } from "components/forms/SchemaForm/Controls/ControlGroup";
+import { SchemaFormControl } from "components/forms/SchemaForm/Controls/SchemaFormControl";
 import { LabelInfo } from "components/Label";
 import { CodeEditor } from "components/ui/CodeEditor";
 import { GraphQLEditor } from "components/ui/CodeEditor/GraphqlEditor";
@@ -27,6 +28,7 @@ import { TagInput } from "components/ui/TagInput";
 import { RequestOptionInjectInto } from "core/api/types/ConnectorManifest";
 import { useConnectorBuilderPermission } from "services/connectorBuilder/ConnectorBuilderStateService";
 
+import { BuilderDeclarativeOAuth } from "./BuilderDeclarativeOAuth";
 import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
 import styles from "./overrides.module.scss";
 
@@ -360,6 +362,45 @@ export const RequestOptionInjectSelector = ({ path }: { path: string }) => {
       label={getLabelByManifest("RequestOption.properties.inject_into")}
       labelTooltip={getDescriptionByManifest("RequestOption.properties.inject_into")}
       onlyShowErrorIfTouched
+    />
+  );
+};
+
+export const DeclarativeOAuthWithClientId = ({ clientIdPath }: { clientIdPath: string }) => {
+  const authFieldPath = useCallback(
+    (field: string) => `${clientIdPath.split(".").slice(0, -1).join(".")}.${field}`,
+    [clientIdPath]
+  );
+
+  return (
+    <FlexContainer direction="column" gap="none">
+      <BuilderDeclarativeOAuth authFieldPath={authFieldPath} />
+      <SchemaFormControl path={clientIdPath} />
+    </FlexContainer>
+  );
+};
+
+const REFRESH_TOKEN_GRANT_TYPE = "refresh_token";
+const CLIENT_CREDENTIALS_GRANT_TYPE = "client_credentials";
+export const GrantTypeSelector = ({ path }: { path: string }) => {
+  const grantTypeOptions: Array<Option<string>> = [
+    {
+      label: REFRESH_TOKEN_GRANT_TYPE,
+      value: REFRESH_TOKEN_GRANT_TYPE,
+    },
+    {
+      label: CLIENT_CREDENTIALS_GRANT_TYPE,
+      value: CLIENT_CREDENTIALS_GRANT_TYPE,
+    },
+  ];
+
+  return (
+    <FormControl
+      fieldType="dropdown"
+      name={path}
+      options={grantTypeOptions}
+      label={getLabelByManifest("OAuthAuthenticator.properties.grant_type")}
+      labelTooltip={getDescriptionByManifest("OAuthAuthenticator.properties.grant_type")}
     />
   );
 };

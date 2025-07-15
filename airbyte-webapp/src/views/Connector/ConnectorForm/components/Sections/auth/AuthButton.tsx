@@ -105,7 +105,7 @@ export const AuthButton: React.FC<{
   );
 };
 
-export const AuthButtonBuilder = React.forwardRef<
+export const AuthButtonBuilderDeprecated = React.forwardRef<
   HTMLDivElement | null,
   {
     builderProjectId: string;
@@ -156,4 +156,4 @@ export const AuthButtonBuilder = React.forwardRef<
     </FlexContainer>
   );
 });
-AuthButtonBuilder.displayName = "AuthButtonBuilder";
+AuthButtonBuilderDeprecated.displayName = "AuthButtonBuilderDeprecated";

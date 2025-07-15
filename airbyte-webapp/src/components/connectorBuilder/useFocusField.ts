@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
-import { useFormContext } from "react-hook-form";
+import { FieldValues, UseFormGetValues, useFormContext } from "react-hook-form";
 
 import { BuilderView } from "services/connectorBuilder/ConnectorBuilderStateService";
 
+import { getFirstOAuthStreamView } from "./Builder/BuilderDeclarativeOAuth";
 import { BuilderStreamTab } from "./types";
 import { useBuilderWatch } from "./useBuilderWatch";
 
+export const DATA_FIELD_FOCUSED = "data-field-focused";
+
 export const useFocusField = () => {
-  const { setValue } = useFormContext();
+  const { setValue, getValues } = useFormContext();
   const [focusPath, setFocusPath] = useState<string | undefined>(undefined);
   const streamTab = useBuilderWatch("streamTab");
 
@@ -44,6 +47,7 @@ export const useFocusField = () => {
     }
 
     fieldToFocus.scrollIntoView({ behavior: "smooth", block: "center" });
+    fieldToFocus.setAttribute(DATA_FIELD_FOCUSED, "true");
     setTimeout(() => {
       if (fieldToFocus instanceof HTMLElement) {
         fieldToFocus?.focus();
@@ -60,21 +64,28 @@ export const useFocusField = () => {
 
   const focusField = useCallback(
     (path: string) => {
-      const view = getViewFromPath(path);
+      const view = getViewFromPath(path, getValues);
       if (view) {
         setValue("view", view);
       }
 
       setFocusPath(path);
     },
-    [setValue]
+    [setValue, getValues]
   );
 
   return focusField;
 };
 
-const getViewFromPath = (path: string): BuilderView | undefined => {
-  const streamMatch = path.match(/^manifest.streams\.(\d+)\..*$/);
+export const removeFieldFocusedAttribute = (dataFieldPath: string) => {
+  const targetField = document.querySelector(`[data-field-path="${dataFieldPath}"]`);
+  if (targetField) {
+    targetField.removeAttribute(DATA_FIELD_FOCUSED);
+  }
+};
+
+export const getViewFromPath = (path: string, getValues: UseFormGetValues<FieldValues>): BuilderView => {
+  const streamMatch = path.match(/^manifest\.streams\.(\d+)\..*$/);
   if (streamMatch) {
     return {
       type: "stream",
@@ -82,7 +93,7 @@ const getViewFromPath = (path: string): BuilderView | undefined => {
     };
   }
 
-  const dynamicStreamMatch = path.match(/^manifest.dynamic_streams\.(\d+)\..*$/);
+  const dynamicStreamMatch = path.match(/^manifest\.dynamic_streams\.(\d+)\..*$/);
   if (dynamicStreamMatch) {
     return {
       type: "dynamic_stream",
@@ -90,8 +101,22 @@ const getViewFromPath = (path: string): BuilderView | undefined => {
     };
   }
 
-  const specMatch = path.match(/^manifest.spec\..*$/);
-  if (specMatch) {
+  const advancedAuthMatch = path.match(/^manifest\.spec\.advanced_auth\..*$/);
+  if (advancedAuthMatch) {
+    const firstOAuthStreamView = getFirstOAuthStreamView(getValues);
+    if (firstOAuthStreamView) {
+      return firstOAuthStreamView;
+    }
+  }
+
+  const connectionSpecificationMatch = path.match(/^manifest\.spec\.connection_specification\..*$/);
+  if (connectionSpecificationMatch) {
+    return {
+      type: "inputs",
+    };
+  }
+
+  if (path.startsWith("testingValues")) {
     return {
       type: "inputs",
     };

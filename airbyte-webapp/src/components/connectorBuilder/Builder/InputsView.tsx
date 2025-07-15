@@ -15,12 +15,14 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { FormControl } from "components/forms";
 import { FormControlErrorMessage, FormControlFooter } from "components/forms/FormControl";
 import { ControlLabels } from "components/LabeledControl";
+import { Badge } from "components/ui/Badge";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { Spec, SpecConnectionSpecification } from "core/api/types/ConnectorManifest";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
@@ -51,10 +53,7 @@ export const InputsView: React.FC = () => {
     })
   );
 
-  const inputsWithIds = useMemo(
-    () => inputs.filter((input) => !input.definition.airbyte_hidden).map((input) => ({ input, id: input.key })),
-    [inputs]
-  );
+  const inputsWithIds = useMemo(() => inputs.map((input) => ({ input, id: input.key })), [inputs]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -184,6 +183,20 @@ const SortableInput: React.FC<SortableInputProps> = ({ input, id, setInputInEdit
               optional={!input.required}
               infoTooltipContent={input.definition.description}
               htmlFor={inputId}
+              labelAction={
+                input.definition.airbyte_hidden && (
+                  <Tooltip
+                    control={
+                      <Badge variant="grey">
+                        <FormattedMessage id="connectorBuilder.inputsView.hiddenBadge" />
+                      </Badge>
+                    }
+                    placement="top"
+                  >
+                    <FormattedMessage id="connectorBuilder.inputsView.hiddenBadgeTooltip" />
+                  </Tooltip>
+                )
+              }
             />
             <Button
               className={styles.itemButton}
@@ -273,6 +286,13 @@ export const DefinitionFormControl = ({
   const value = useWatch({ name });
   const { setValue } = useFormContext();
 
+  const defaultProps = {
+    name,
+    label,
+    id,
+    "data-field-path": name,
+  };
+
   switch (definition.type) {
     case "string": {
       if (definition.enum) {
@@ -280,20 +300,18 @@ export const DefinitionFormControl = ({
           return null;
         }
         const options = definition.enum.map((val) => ({ label: String(val), value: String(val) }));
-        return <FormControl fieldType="dropdown" options={options} name={name} label={label} id={id} />;
+        return <FormControl {...defaultProps} fieldType="dropdown" options={options} />;
       }
 
       if (definition.format === "date" || definition.format === "date-time") {
-        return <FormControl fieldType="date" format={definition.format} name={name} label={label} id={id} />;
+        return <FormControl {...defaultProps} fieldType="date" format={definition.format} />;
       }
 
       if (definition.airbyte_secret) {
         return (
           <FlexContainer direction="column" className={styles.secretField}>
             <SecretField
-              id={id}
-              label={label}
-              name={name}
+              {...defaultProps}
               value={value as string}
               onUpdate={(val) => {
                 // Remove the value instead of setting it to the empty string, as secret persistence
@@ -308,15 +326,15 @@ export const DefinitionFormControl = ({
         );
       }
 
-      return <FormControl fieldType="input" name={name} label={label} id={id} />;
+      return <FormControl {...defaultProps} fieldType="input" />;
     }
     case "integer":
     case "number":
-      return <FormControl fieldType="input" type="number" name={name} label={label} id={id} />;
+      return <FormControl {...defaultProps} fieldType="input" type="number" />;
     case "boolean":
-      return <FormControl fieldType="switch" name={name} label={label} id={id} />;
+      return <FormControl {...defaultProps} fieldType="switch" />;
     case "array":
-      return <FormControl fieldType="array" itemType="string" name={name} label={label} id={id} />;
+      return <FormControl {...defaultProps} fieldType="array" itemType="string" />;
     default:
       return unrecognizedTypeElement;
   }

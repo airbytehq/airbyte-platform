@@ -23,7 +23,7 @@ import {
   useConnectorBuilderFormState,
   useConnectorBuilderFormManagementState,
 } from "services/connectorBuilder__deprecated/ConnectorBuilderStateService";
-import { AuthButtonBuilder } from "views/Connector/ConnectorForm/components/Sections/auth/AuthButton";
+import { AuthButtonBuilderDeprecated } from "views/Connector/ConnectorForm/components/Sections/auth/AuthButton";
 
 import styles from "./AuthenticationSection.module.scss";
 import { BuilderCard } from "./BuilderCard";
@@ -486,7 +486,7 @@ const DeclarativeOAuthForm = ({ authFieldPath }: { authFieldPath: AuthFieldPathF
       <Tooltip
         disabled={canPerformOauthFlow}
         control={
-          <AuthButtonBuilder
+          <AuthButtonBuilderDeprecated
             ref={authButtonBuilderRef}
             disabled={!canPerformOauthFlow}
             builderProjectId={projectId}

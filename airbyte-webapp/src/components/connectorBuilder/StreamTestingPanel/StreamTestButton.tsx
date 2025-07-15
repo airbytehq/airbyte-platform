@@ -1,5 +1,6 @@
 import classNames from "classnames";
-import { ComponentProps } from "react";
+import { ComponentProps, useMemo } from "react";
+import { get } from "react-hook-form";
 import { useHotkeys } from "react-hotkeys-hook";
 import { FormattedMessage } from "react-intl";
 
@@ -11,9 +12,12 @@ import { Tooltip } from "components/ui/Tooltip";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./StreamTestButton.module.scss";
+import { OAUTH_BUTTON_NAME, findOAuthTokenPaths } from "../Builder/BuilderDeclarativeOAuth";
 import { HotkeyLabel, getCtrlOrCmdKey } from "../HotkeyLabel";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderWatch } from "../useBuilderWatch";
+import { useFocusField } from "../useFocusField";
+import { getStreamFieldPath } from "../utils";
 
 interface StreamTestButtonProps {
   queueStreamRead: () => void;
@@ -48,6 +52,14 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   const mode = useBuilderWatch("mode");
   const testStreamId = useBuilderWatch("testStreamId");
   const { hasErrors, validateAndTouch } = useBuilderErrors();
+  const focusField = useFocusField();
+  const streamPath = getStreamFieldPath(testStreamId);
+  const stream = useBuilderWatch(streamPath);
+  const oAuthTokenPaths = useMemo(() => {
+    const paths = findOAuthTokenPaths(stream as Record<string, unknown>);
+    return paths.accessTokenValues[0] ?? paths.refreshTokens[0] ?? undefined;
+  }, [stream]);
+  const testingValues = useBuilderWatch("testingValues");
 
   useHotkeys(
     ["ctrl+enter", "meta+enter"],
@@ -84,6 +96,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   let buttonDisabled = forceDisabled || false;
   let showWarningIcon = false;
   let tooltipContent = getTooltipContent();
+  let missingOAuthToken = false;
 
   if (mode === "yaml" && (!yamlIsValid || hasResolveErrors)) {
     buttonDisabled = true;
@@ -97,6 +110,13 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   } else if (hasResolveErrors) {
     // only disable the button on stream list errors if there are no user-fixable errors
     buttonDisabled = true;
+  } else if (oAuthTokenPaths) {
+    const { configPath } = oAuthTokenPaths;
+    if (!get(testingValues, configPath)) {
+      missingOAuthToken = true;
+      showWarningIcon = true;
+      tooltipContent = <FormattedMessage id="connectorBuilder.missingOAuthToken" />;
+    }
   }
 
   const executeTestRead = () => {
@@ -106,6 +126,16 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
     }
     if (mode === "yaml") {
       queueStreamRead();
+      return;
+    }
+
+    if (missingOAuthToken) {
+      const { objectPath } = oAuthTokenPaths;
+      const oAuthButtonPath = getStreamFieldPath(
+        testStreamId,
+        `${objectPath.split(".").slice(0, -1).join(".")}.${OAUTH_BUTTON_NAME}`
+      );
+      focusField(oAuthButtonPath);
       return;
     }
 

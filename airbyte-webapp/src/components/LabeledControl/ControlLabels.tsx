@@ -50,7 +50,7 @@ const ControlLabels = React.forwardRef<HTMLDivElement, React.PropsWithChildren<C
             )}
           </FlexContainer>
         </Label>
-        {props.labelAction && <div>{props.labelAction}</div>}
+        {props.labelAction && props.labelAction}
       </FlexContainer>
     )}
     {props.children}
