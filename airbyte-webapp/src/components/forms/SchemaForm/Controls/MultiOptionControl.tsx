@@ -1,4 +1,5 @@
 import isBoolean from "lodash/isBoolean";
+import isEqual from "lodash/isEqual";
 import { useCallback, useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
@@ -13,7 +14,6 @@ import { useToggleConfig } from "./useToggleConfig";
 import { useSchemaForm } from "../SchemaForm";
 import { useErrorAtPath } from "../useErrorAtPath";
 import { AirbyteJsonSchema, resolveTopLevelRef } from "../utils";
-
 export const MultiOptionControl = ({
   fieldSchema,
   baseProps,
@@ -23,7 +23,7 @@ export const MultiOptionControl = ({
   nonAdvancedFields,
 }: BaseControlComponentProps) => {
   const value: unknown = useWatch({ name: baseProps.name });
-  const { setValue, clearErrors } = useFormContext();
+  const { setValue, clearErrors, unregister } = useFormContext();
   const {
     schema: rootSchema,
     getSelectedOptionSchema,
@@ -131,7 +131,12 @@ export const MultiOptionControl = ({
               return;
             }
 
+            if (isEqual(selectedOption, currentlySelectedOption)) {
+              return;
+            }
+
             const defaultValues = extractDefaultValuesFromSchema(selectedOption);
+            unregister(baseProps.name);
             setValue(baseProps.name, defaultValues, { shouldValidate: false });
 
             // Only clear the error for the parent field itself, without validating
