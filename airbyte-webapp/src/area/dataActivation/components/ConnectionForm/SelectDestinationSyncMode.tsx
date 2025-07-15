@@ -14,6 +14,9 @@ import { ListboxOptions } from "components/ui/ListBox/ListboxOptions";
 import { Text } from "components/ui/Text";
 
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
+import { getDestinationOperation } from "area/dataActivation/utils/getDestinationOperation";
+import { getDestinationOperationFields } from "area/dataActivation/utils/getDestinationOperationFields";
+import { getRequiredFields } from "area/dataActivation/utils/getRequiredFields";
 import { DestinationCatalog, DestinationSyncMode } from "core/api/types/AirbyteClient";
 
 interface SelectDestinationSyncModeProps {
@@ -33,6 +36,10 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
       name: `streams.${streamIndex}.destinationObjectName`,
     }
   );
+
+  const fields = useWatch<DataActivationConnectionFormValues, `streams.${number}.fields`>({
+    name: `streams.${streamIndex}.fields`,
+  });
 
   const availableOperations = useMemo(() => {
     return destinationCatalog.operations.filter((operation) => operation.objectName === destinationObjectName);
@@ -57,6 +64,37 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
     disabled: !availableOperations.some((operation) => operation.syncMode === option.value),
   }));
 
+  // When the destination object changes, we need to do a few things:
+  // 1. Make sure any existing field mappings are still valid for the new destination object.
+  // 2. Make sure any required fields for the new destination object are added to the form.
+  const updateFieldMappings = (value: DestinationSyncMode) => {
+    const selectedOperation = getDestinationOperation(availableOperations, destinationObjectName, value);
+
+    if (!selectedOperation) {
+      return;
+    }
+
+    // Validate existing field mappings
+    const availableFields = getDestinationOperationFields(selectedOperation);
+    const existingFieldMappings = (fields ?? []).map((field) => {
+      return {
+        sourceFieldName: field.sourceFieldName,
+        destinationFieldName: availableFields.includes(field.destinationFieldName) ? field.destinationFieldName : "",
+      };
+    });
+
+    // Check for required fields in the selected operation
+    const requiredFields = getRequiredFields(selectedOperation);
+    const missingFieldNames = requiredFields.filter((field) => !fields?.some((f) => f.destinationFieldName === field));
+    const newFieldMappings = missingFieldNames.map((field) => ({
+      sourceFieldName: "",
+      destinationFieldName: field,
+    }));
+
+    // Update the form with the new field mappings
+    setValue(`streams.${streamIndex}.fields`, [...existingFieldMappings, ...newFieldMappings]);
+  };
+
   return (
     <Controller
       name={`streams.${streamIndex}.destinationSyncMode`}
@@ -75,11 +113,14 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
               if (value === DestinationSyncMode.append_dedup) {
                 setValue(`streams.${streamIndex}.matchingKeys`, null);
               }
+              if (value !== null) {
+                updateFieldMappings(value);
+              }
               field.onChange(value);
             }}
           >
             <FloatLayout adaptiveWidth>
-              <ListboxButton hasError={!!fieldState.error}>
+              <ListboxButton hasError={!!fieldState.error} data-testid="selected-destination-sync-mode-label">
                 {field.value ? (
                   <FlexContainer as="span">
                     <Text>{destinationSyncModeOptions.find((option) => option.value === field.value)?.label}</Text>

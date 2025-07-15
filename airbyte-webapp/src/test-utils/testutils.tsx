@@ -47,7 +47,13 @@ export const TestWrapper: React.FC<React.PropsWithChildren<TestWrapperOptions>> 
   features = defaultOssFeatures,
   route,
 }) => (
-  <MemoryRouter initialEntries={route ? [route] : undefined}>
+  <MemoryRouter
+    initialEntries={route ? [route] : undefined}
+    future={{
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+    }}
+  >
     <I18nProvider locale="en">
       <NotificationService>
         <FeatureService features={features}>

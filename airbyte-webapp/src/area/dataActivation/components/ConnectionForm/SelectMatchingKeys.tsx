@@ -1,8 +1,8 @@
-import { useMemo } from "react";
 import { Controller, UseFieldArrayAppend, useFormContext, useWatch } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
+import { useSelectedDestinationOperation } from "area/dataActivation/utils/useSelectedDestinationOperation";
 import { DestinationCatalog } from "core/api/types/AirbyteClient";
 
 import { LabeledListbox } from "./LabeledListbox";
@@ -63,19 +63,3 @@ export const SelectMatchingKey: React.FC<SelectMatchingKeyProps> = ({
     />
   );
 };
-
-export function useSelectedDestinationOperation(destinationCatalog: DestinationCatalog, streamIndex: number) {
-  const destinationSyncMode = useWatch<DataActivationConnectionFormValues, `streams.${number}.destinationSyncMode`>({
-    name: `streams.${streamIndex}.destinationSyncMode`,
-  });
-  const destinationObjectName = useWatch<DataActivationConnectionFormValues, `streams.${number}.destinationObjectName`>(
-    {
-      name: `streams.${streamIndex}.destinationObjectName`,
-    }
-  );
-  return useMemo(() => {
-    return destinationCatalog.operations.find(
-      (operation) => operation.syncMode === destinationSyncMode && operation.objectName === destinationObjectName
-    );
-  }, [destinationCatalog, destinationObjectName, destinationSyncMode]);
-}

@@ -11,6 +11,9 @@ import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
+import { getDestinationOperationFields } from "area/dataActivation/utils/getDestinationOperationFields";
+import { getRequiredFields } from "area/dataActivation/utils/getRequiredFields";
+import { useSelectedDestinationOperation } from "area/dataActivation/utils/useSelectedDestinationOperation";
 import { AirbyteCatalog, DestinationCatalog } from "core/api/types/AirbyteClient";
 
 import styles from "./FieldMapping.module.scss";
@@ -37,20 +40,13 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
   >({
     name: `streams.${streamIndex}.sourceStreamDescriptor`,
   });
-  const destinationObjectName = useWatch<DataActivationConnectionFormValues, `streams.${number}.destinationObjectName`>(
-    {
-      name: `streams.${streamIndex}.destinationObjectName`,
-    }
-  );
   const matchingKeys = useWatch<DataActivationConnectionFormValues, `streams.${number}.matchingKeys`>({
     name: `streams.${streamIndex}.matchingKeys`,
-  });
-  const destinationSyncMode = useWatch<DataActivationConnectionFormValues, `streams.${number}.destinationSyncMode`>({
-    name: `streams.${streamIndex}.destinationSyncMode`,
   });
   const fields = useWatch<DataActivationConnectionFormValues, `streams.${number}.fields`>({
     name: `streams.${streamIndex}.fields`,
   });
+
   const selectedFieldNames = useMemo(() => {
     const sourceFields = new Set<string>();
     const destinationFields = new Set<string>();
@@ -88,18 +84,12 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
     sourceStreamDescriptor.namespace,
   ]);
 
-  const selectedDestinationOperation = useMemo(() => {
-    // An operation is identifiable by the combination of its objectName and syncMode.
-    return destinationCatalog.operations.find(
-      (operation) => operation.objectName === destinationObjectName && operation.syncMode === destinationSyncMode
-    );
-  }, [destinationCatalog, destinationObjectName, destinationSyncMode]);
+  const selectedDestinationOperation = useSelectedDestinationOperation(destinationCatalog, streamIndex);
 
   const additionalPropertiesSupported = !!selectedDestinationOperation?.schema.additionalProperties;
 
   const availableDestinationFieldOptions = useMemo(() => {
-    const topLevelFields = selectedDestinationOperation?.schema?.properties ?? [];
-    return Object.keys(topLevelFields)
+    return getDestinationOperationFields(selectedDestinationOperation)
       .map((key) => ({
         label: key,
         value: key,
@@ -108,9 +98,19 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
       .sort((a, b) => {
         return a.label?.localeCompare(b.label ?? "", undefined, { numeric: true }) ?? 0;
       });
-  }, [selectedDestinationOperation?.schema?.properties, selectedFieldNames.destinationFields]);
+  }, [selectedDestinationOperation, selectedFieldNames.destinationFields]);
 
-  const isPartOfMatchingKey = matchingKeys?.includes(fields[fieldIndex].destinationFieldName);
+  const isPartOfMatchingKey = matchingKeys?.includes(fields[fieldIndex].destinationFieldName) ?? false;
+
+  const isRequiredBySchema = useMemo(() => {
+    if (!selectedDestinationOperation) {
+      return false;
+    }
+    const requiredFields = getRequiredFields(selectedDestinationOperation);
+    return requiredFields.includes(fields[fieldIndex].destinationFieldName);
+  }, [fields, fieldIndex, selectedDestinationOperation]);
+
+  const isRequired = isPartOfMatchingKey || isRequiredBySchema;
 
   return (
     <>
@@ -143,7 +143,7 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
         <FlexItem grow>
           <FlexContainer direction="column">
             <Tooltip
-              disabled={!!destinationSyncMode && !isPartOfMatchingKey}
+              disabled={!!selectedDestinationOperation && !isRequired}
               control={
                 <FlexItem grow>
                   <Controller
@@ -151,6 +151,7 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
                     render={({ field, fieldState }) => (
                       <FlexContainer direction="column" gap="xs">
                         <ComboBox
+                          disabled={isRequired}
                           error={!!fieldState.error}
                           value={field.value}
                           onChange={field.onChange}
@@ -165,20 +166,21 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
                 </FlexItem>
               }
             >
-              {!destinationSyncMode && (
+              {!selectedDestinationOperation && (
                 <FormattedMessage id="connection.dataActivation.selectDestinationSyncModeFirst" />
               )}
               {isPartOfMatchingKey && <FormattedMessage id="connection.dataActivation.requiredMatchingKey" />}
+              {isRequiredBySchema && <FormattedMessage id="connection.dataActivation.requiredField" />}
             </Tooltip>
           </FlexContainer>
         </FlexItem>
         {removeField && (
           <div className={styles.fieldMapping__removeField}>
             <Tooltip
-              disabled={!isPartOfMatchingKey}
+              disabled={!isRequired}
               control={
                 <Button
-                  disabled={isPartOfMatchingKey}
+                  disabled={isRequired}
                   variant="clear"
                   icon="trash"
                   type="button"
@@ -187,7 +189,8 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
                 />
               }
             >
-              <FormattedMessage id="connection.dataActivation.requiredMatchingKey" />
+              {isPartOfMatchingKey && <FormattedMessage id="connection.dataActivation.requiredMatchingKey" />}
+              {isRequiredBySchema && <FormattedMessage id="connection.dataActivation.requiredField" />}
             </Tooltip>
           </div>
         )}

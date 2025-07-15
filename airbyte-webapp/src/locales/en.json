@@ -815,6 +815,7 @@
   "connection.dataActivation.cursor": "cursor",
   "connection.dataActivation.matchingKey": "matching key",
   "connection.dataActivation.requiredMatchingKey": "This field is required because it is part of the selected matching key",
+  "connection.dataActivation.requiredField": "This field is required by the destination for the selected operation",
   "connection.selectSyncMode": "Select sync mode",
   "connection.syncMode": "sync mode",
   "connection.sourceFieldName": "Source field name",
