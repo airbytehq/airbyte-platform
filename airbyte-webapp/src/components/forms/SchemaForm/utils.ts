@@ -10,6 +10,7 @@ export class AirbyteJsonSchemaExtention implements JSONSchemaExtension {
   linkable?: boolean;
   deprecated?: boolean;
   deprecation_message?: string;
+  interpolation_context?: string[];
 }
 
 export type AirbyteJsonSchema = Exclude<ExtendedJSONSchema<AirbyteJsonSchemaExtention>, boolean>;

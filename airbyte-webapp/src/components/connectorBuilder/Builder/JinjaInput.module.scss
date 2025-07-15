@@ -62,7 +62,7 @@
       background-color: colors.$grey-50;
       border-color: colors.$grey-200;
 
-      & :global(a.label-name) {
+      & :global(div.monaco-icon-label-container) {
         color: colors.$dark-blue;
 
         & :global(.highlight) {
@@ -133,6 +133,12 @@
         white-space: pre-wrap;
         word-break: break-word;
         font-size: variables.$font-size-sm;
+      }
+    }
+
+    & :global(.monaco-editor-background) {
+      & :global(.bracket-match) {
+        border-color: colors.$grey-300;
       }
     }
   }

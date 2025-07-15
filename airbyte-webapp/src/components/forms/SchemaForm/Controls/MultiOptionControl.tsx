@@ -14,6 +14,7 @@ import { useToggleConfig } from "./useToggleConfig";
 import { useSchemaForm } from "../SchemaForm";
 import { useErrorAtPath } from "../useErrorAtPath";
 import { AirbyteJsonSchema, resolveTopLevelRef } from "../utils";
+
 export const MultiOptionControl = ({
   fieldSchema,
   baseProps,
@@ -208,6 +209,7 @@ const renderOptionContents = (
         // If the selectedOption has no title, then don't render any title for this field
         // since the parent parent MultiOptionControl is already rendering the title
         title: selectedOption.title ?? "",
+        interpolation_context: baseProps.interpolationContext,
       }}
       isRequired
     />

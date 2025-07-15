@@ -528,7 +528,7 @@ export const RefHandling = () => {
               type: "string",
             },
             examples: [["name"]],
-            interpolation_context: ["config", "parameters"],
+            interpolation_context: ["config", "parameters"] as string[],
           },
           // retriever: {
           //   description:

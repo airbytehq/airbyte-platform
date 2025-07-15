@@ -10,9 +10,10 @@ import { CodeEditor } from "components/ui/CodeEditor";
 
 import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
+import { convertToBuilderFormInputs } from "./InputsView";
 import { JINJA_TOKEN, NON_JINJA_TOKEN, conf, language } from "./jinja";
 import styles from "./JinjaInput.module.scss";
-import { getInterpolationValues, getInterpolationVariablesByManifest, InterpolationValue } from "./manifestHelpers";
+import { getInterpolationValues, InterpolationValue } from "./manifestHelpers";
 import { BuilderFormInput } from "../types";
 import { formatJson } from "../utils";
 
@@ -26,11 +27,11 @@ interface JinjaInputProps {
   name: string;
   value: string;
   onChange: (value: string | undefined) => void;
-  onBlur: (value: string) => void;
+  onBlur?: (value: string) => void;
   disabled?: boolean;
   readOnly?: boolean;
   error?: boolean;
-  manifestPath?: string;
+  interpolationContext?: string[];
   bubbleUpUndoRedo?: boolean;
 }
 
@@ -55,7 +56,7 @@ export const JinjaInput: React.FC<JinjaInputProps> = ({
   disabled,
   readOnly,
   error,
-  manifestPath,
+  interpolationContext,
   bubbleUpUndoRedo = true,
 }) => {
   const { formatMessage } = useIntl();
@@ -164,7 +165,7 @@ export const JinjaInput: React.FC<JinjaInputProps> = ({
       model: editor.ITextModel,
       position: Position,
       monaco: Monaco,
-      localManifestPath: string | undefined
+      interpolationContext?: string[]
     ): languages.CompletionItem[] => {
       // Get the non-whitespace text before and after the cursor
       const word = model.getWordAtPosition(position);
@@ -180,14 +181,13 @@ export const JinjaInput: React.FC<JinjaInputProps> = ({
         return [];
       }
 
-      const supportedVariables = localManifestPath ? getInterpolationVariablesByManifest(localManifestPath) : undefined;
       const validInterpolationValues = interpolationValues
         .filter((value) => !HIDDEN_INTERPOLATION_VALUES.includes(value.title))
         .filter(
-          (value) => value.type !== "variable" || !supportedVariables || supportedVariables.includes(value.title)
+          (value) => value.type !== "variable" || !interpolationContext || interpolationContext.includes(value.title)
         );
 
-      const userInputs: BuilderFormInput[] = getValues("formValues.inputs");
+      const userInputs: BuilderFormInput[] = convertToBuilderFormInputs(getValues("manifest.spec"));
       const suggestableNewUserInput: SuggestableValue[] = [{ suggestionType: "newUserInput" as const }];
       const suggestableValues: SuggestableValue[] = suggestableNewUserInput
         .concat(
@@ -273,7 +273,7 @@ export const JinjaInput: React.FC<JinjaInputProps> = ({
           provideCompletionItems: (model, position) => {
             // See ! HACK ! comment below for explanation
             // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unnecessary-type-assertion
-            return { suggestions: getSuggestions(model, position, monaco, (model as any).manifestPath) };
+            return { suggestions: getSuggestions(model, position, monaco, (model as any).interpolationContext) };
           },
         });
         monaco.languages.registerHoverProvider("jinja", {
@@ -308,13 +308,13 @@ export const JinjaInput: React.FC<JinjaInputProps> = ({
       }}
       onMount={(editor, monaco) => {
         const model = editor.getModel();
-        // ! HACK ! - this attaches the manifestPath to the model, so that the provideCompletionItems call
+        // ! HACK ! - this attaches the interpolationContext to the model, so that the provideCompletionItems call
         // above pulls the value from the model.
         // This is needed because the provideCompletionItems function is set on the language, not individual
         // editor instances, so it can't change from one instance to the next. Therefore the only way to have
         // it produce different results is to shove the unique value into the model itself.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (model as any).manifestPath = manifestPath;
+        (model as any).interpolationContext = interpolationContext;
 
         // Prevent newlines
         editor.onDidChangeModelContent(() => {
@@ -333,7 +333,7 @@ export const JinjaInput: React.FC<JinjaInputProps> = ({
 
           // Check suggestions length, because we don't want to trigger the suggest widget
           // when there are none, as then it would show "No suggestions"
-          const suggestions = getSuggestions(model, position, monaco, manifestPath);
+          const suggestions = getSuggestions(model, position, monaco, interpolationContext);
           if (suggestions.length > 0) {
             editor.trigger("cursorChange", "editor.action.triggerSuggest", {});
             // In order to have suggestion details shown by default, we need to manually trigger the

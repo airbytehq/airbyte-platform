@@ -13,6 +13,7 @@ export interface BaseControlProps {
   placeholder?: string;
   "data-field-path"?: string;
   disabled?: boolean;
+  interpolationContext?: string[];
 }
 
 export type OverrideByPath = Record<string, (path: string) => ReactElement | null>;
@@ -20,6 +21,11 @@ export type OverrideByPath = Record<string, (path: string) => ReactElement | nul
 type FieldName = string;
 type ObjectType = string;
 export type OverrideByObjectField = Record<ObjectType, Record<FieldName, (path: string) => ReactElement | null>>;
+
+export type OverrideByFieldSchema = Array<{
+  shouldOverride: (schema: AirbyteJsonSchema) => boolean;
+  renderOverride: (props: BaseControlProps) => ReactElement | null;
+}>;
 
 export interface BaseControlComponentProps {
   fieldSchema: AirbyteJsonSchema;

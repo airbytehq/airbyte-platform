@@ -78,6 +78,7 @@ export const SchemaFormControl = ({
     verifyArrayItems,
     isRequired: isPathRequired,
     disableFormControlsUnderPath,
+    overrideByFieldSchema,
   } = useSchemaForm();
 
   // Register this path synchronously during render
@@ -107,9 +108,9 @@ export const SchemaFormControl = ({
   }
 
   // Check if there's an override for this path
-  const matchingOverride = getMatchingOverrideForPath(overrideByPath, path);
-  if (matchingOverride !== undefined) {
-    return matchingOverride(path);
+  const matchingPathOverride = getMatchingOverrideForPath(overrideByPath, path);
+  if (matchingPathOverride !== undefined) {
+    return matchingPathOverride(path);
   }
 
   if (targetSchema.deprecated && value === undefined) {
@@ -135,7 +136,13 @@ export const SchemaFormControl = ({
     placeholder,
     "data-field-path": path,
     disabled: !!disableFormControlsUnderPath && path.startsWith(disableFormControlsUnderPath),
+    interpolationContext: targetSchema.interpolation_context,
   };
+
+  const matchingSchemaOverride = overrideByFieldSchema?.find((override) => override.shouldOverride(targetSchema));
+  if (matchingSchemaOverride) {
+    return matchingSchemaOverride.renderOverride(baseProps);
+  }
 
   if (targetSchema.oneOf || targetSchema.anyOf) {
     return (

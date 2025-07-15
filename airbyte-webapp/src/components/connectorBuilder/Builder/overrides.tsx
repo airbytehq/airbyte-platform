@@ -1,3 +1,4 @@
+import classNames from "classnames";
 import { parse } from "graphql";
 import { useCallback, useMemo, useState } from "react";
 import { get, useFormContext, useFormState } from "react-hook-form";
@@ -16,6 +17,7 @@ import {
 } from "components/forms/FormControl";
 import { ControlGroup } from "components/forms/SchemaForm/Controls/ControlGroup";
 import { SchemaFormControl } from "components/forms/SchemaForm/Controls/SchemaFormControl";
+import { BaseControlProps } from "components/forms/SchemaForm/Controls/types";
 import { LabelInfo } from "components/Label";
 import { CodeEditor } from "components/ui/CodeEditor";
 import { GraphQLEditor } from "components/ui/CodeEditor/GraphqlEditor";
@@ -29,6 +31,7 @@ import { RequestOptionInjectInto } from "core/api/types/ConnectorManifest";
 import { useConnectorBuilderPermission } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderDeclarativeOAuth } from "./BuilderDeclarativeOAuth";
+import { JinjaInput } from "./JinjaInput";
 import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
 import styles from "./overrides.module.scss";
 
@@ -402,5 +405,52 @@ export const GrantTypeSelector = ({ path }: { path: string }) => {
       label={getLabelByManifest("OAuthAuthenticator.properties.grant_type")}
       labelTooltip={getDescriptionByManifest("OAuthAuthenticator.properties.grant_type")}
     />
+  );
+};
+
+export const JinjaBuilderField = ({
+  name,
+  label,
+  labelTooltip,
+  optional,
+  header,
+  containerControlClassName,
+  onlyShowErrorIfTouched,
+  "data-field-path": dataFieldPath,
+  disabled,
+  interpolationContext,
+}: BaseControlProps) => {
+  const value = useBuilderWatch(name) as string | undefined;
+  const { setValue } = useFormContext();
+
+  const { errors, touchedFields } = useFormState({ name });
+  const error = !!get(errors, name) && (onlyShowErrorIfTouched ? !!get(touchedFields, name) : true);
+
+  return (
+    <FlexContainer
+      direction="column"
+      gap="none"
+      className={classNames(styles.controlContainer, containerControlClassName)}
+      data-field-path={dataFieldPath}
+    >
+      {label && (
+        <FormLabel htmlFor={name} label={label} labelTooltip={labelTooltip} optional={optional} header={header} />
+      )}
+      <JinjaInput
+        name={name}
+        value={value || ""}
+        onChange={(newValue) =>
+          setValue(name, newValue, { shouldValidate: true, shouldTouch: true, shouldDirty: true })
+        }
+        disabled={disabled}
+        interpolationContext={interpolationContext}
+        error={!!error}
+      />
+      {!!error && (
+        <FormControlFooter>
+          <FormControlErrorMessage name={name} />
+        </FormControlFooter>
+      )}
+    </FlexContainer>
   );
 };

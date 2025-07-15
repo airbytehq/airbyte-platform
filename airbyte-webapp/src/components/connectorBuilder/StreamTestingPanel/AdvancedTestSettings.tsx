@@ -1,9 +1,11 @@
-import { useFormContext } from "react-hook-form";
+import { get, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
+import { FormControlErrorMessage, FormControlFooter, FormLabel } from "components/forms/FormControl";
 import { Button } from "components/ui/Button";
+import { CodeEditor } from "components/ui/CodeEditor";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Tooltip } from "components/ui/Tooltip";
@@ -11,7 +13,6 @@ import { Tooltip } from "components/ui/Tooltip";
 import { TestReadContext, useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./AdvancedTestSettings.module.scss";
-import { BuilderField } from "../Builder/BuilderField";
 
 const MAX_RECORD_LIMIT = 5000;
 const MAX_PAGE_LIMIT = 20;
@@ -194,11 +195,7 @@ const AdvancedTestSettingsForm: React.FC<
           max={MAX_STREAM_LIMIT}
           label={formatMessage({ id: "connectorBuilder.generateStreamsSettings.streamLimit" })}
         />
-        <BuilderField
-          type="jsoneditor"
-          path="testState"
-          label={formatMessage({ id: "connectorBuilder.testReadSettings.testState" })}
-        />
+        <TestStateEditor name="testState" />
       </ModalBody>
       <ModalFooter>
         <FlexContainer className={styles.footer}>
@@ -235,5 +232,33 @@ const AdvancedTestSettingsForm: React.FC<
         </FlexContainer>
       </ModalFooter>
     </>
+  );
+};
+
+const TestStateEditor: React.FC<{ name: string }> = ({ name }) => {
+  const { formatMessage } = useIntl();
+  const value = useWatch({ name });
+  const { setValue } = useFormContext();
+  const { errors } = useFormState({ name });
+  const error = !!get(errors, name);
+
+  return (
+    <FlexContainer direction="column" className={styles.testStateEditor}>
+      <FormLabel htmlFor={name} label={formatMessage({ id: "connectorBuilder.testReadSettings.testState" })} />
+      <div className={styles.stateEditorContainer}>
+        <CodeEditor
+          value={value}
+          language="json"
+          onChange={(val: string | undefined) => {
+            setValue(name, val, { shouldValidate: true, shouldTouch: true, shouldDirty: true });
+          }}
+        />
+      </div>
+      {error && (
+        <FormControlFooter>
+          <FormControlErrorMessage name={name} />
+        </FormControlFooter>
+      )}
+    </FlexContainer>
   );
 };
