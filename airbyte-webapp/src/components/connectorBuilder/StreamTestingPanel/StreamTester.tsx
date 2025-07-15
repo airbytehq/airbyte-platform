@@ -17,6 +17,7 @@ import { Text } from "components/ui/Text";
 import { HttpError, useCustomComponentsEnabled } from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderResolve } from "core/services/connectorBuilder/ConnectorBuilderResolveContext";
+import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import {
@@ -39,6 +40,7 @@ export const StreamTester: React.FC<{
   setTestingValuesInputOpen: (open: boolean) => void;
 }> = ({ hasTestingValuesErrors, setTestingValuesInputOpen }) => {
   const { formatMessage } = useIntl();
+  const isCloudApp = useIsCloudApp();
   const generatedStreams = useBuilderWatch("generatedStreams");
   const {
     streamRead: {
@@ -251,6 +253,25 @@ export const StreamTester: React.FC<{
             <FormattedMessage id="connectorBuilder.couldNotValidateConnectorSpec" />
           </Text>
           <Text bold>{resolveErrorMessage}</Text>
+          {resolveError?.status === 403 && !isCloudApp && (
+            <Message
+              type="warning"
+              text={
+                <Text>
+                  <FormattedMessage
+                    id="connectorBuilder.fixIngress"
+                    values={{
+                      a: (node: React.ReactNode) => (
+                        <a href={links.fixIngress1_7} target="_blank" rel="noreferrer">
+                          {node}
+                        </a>
+                      ),
+                    }}
+                  />
+                </Text>
+              }
+            />
+          )}
           {errorExceptionStack && (
             <Collapsible label={formatMessage({ id: "connectorBuilder.tracebackLabel" })} className={styles.traceback}>
               <Pre longLines>

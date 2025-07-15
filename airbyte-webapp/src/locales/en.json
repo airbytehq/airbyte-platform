@@ -1786,6 +1786,7 @@
   "connectorBuilder.invalidYamlTest": "Cannot test stream while YAML content is invalid.",
   "connectorBuilder.unknownError": "An unknown error has occurred",
   "connectorBuilder.couldNotValidateConnectorSpec": "Could not validate your connector as specified:",
+  "connectorBuilder.fixIngress": "If you recently upgraded Airbyte to version 1.7+, you may need to update your ingress rules. See <a>these docs</a> for more info.",
   "connectorBuilder.tracebackLabel": "View error trace",
   "connectorBuilder.ensureProperYaml": "To resolve errors, ensure that the YAML is structured as described in <a>the docs</a>.",
   "connectorBuilder.contactSupport": "If the error persists, please contact <a>Airbyte support</a>.",

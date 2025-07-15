@@ -66,6 +66,7 @@ export const links = {
   dataActivationDocs: `${BASE_DOCS_LINK}`, // Does not exist yet - this is a placeholder
   ssoDocs: `${BASE_DOCS_LINK}/platform/access-management/sso`,
   embeddedOnboardingDocs: `${BASE_DOCS_LINK}/embedded/develop-your-app`,
+  fixIngress1_7: `${BASE_DOCS_LINK}/platform/next/deploying-airbyte/integrations/ingress-1-7`,
 } as const;
 
 export type OutboundLinks = typeof links;
