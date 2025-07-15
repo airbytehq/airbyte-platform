@@ -107,7 +107,7 @@ class JobTracker
     fun <T> trackCheckConnectionSource(
       jobId: UUID,
       sourceDefinitionId: UUID,
-      workspaceId: UUID?,
+      workspaceId: UUID,
       actorId: UUID?,
       jobState: JobState,
       jobOutput: ConnectorJobOutput?,
@@ -143,7 +143,7 @@ class JobTracker
     fun <T> trackCheckConnectionDestination(
       jobId: UUID,
       destinationDefinitionId: UUID,
-      workspaceId: UUID?,
+      workspaceId: UUID,
       actorId: UUID?,
       jobState: JobState,
       jobOutput: ConnectorJobOutput?,
@@ -185,7 +185,7 @@ class JobTracker
     fun trackDiscover(
       jobId: UUID,
       actorDefinitionId: UUID,
-      workspaceId: UUID?,
+      workspaceId: UUID,
       actorId: UUID?,
       actorType: ActorType?,
       jobState: JobState,
@@ -456,7 +456,7 @@ class JobTracker
     @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     private fun generateDestinationDefinitionMetadata(
       destinationDefinitionId: UUID,
-      workspaceId: UUID?,
+      workspaceId: UUID,
       actorId: UUID?,
     ): Map<String, Any?> {
       val destinationDefinition = destinationService.getStandardDestinationDefinition(destinationDefinitionId)
@@ -472,7 +472,7 @@ class JobTracker
     @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     private fun generateSourceDefinitionMetadata(
       sourceDefinitionId: UUID,
-      workspaceId: UUID?,
+      workspaceId: UUID,
       actorId: UUID?,
     ): Map<String, Any?> {
       val sourceDefinition = sourceService.getStandardSourceDefinition(sourceDefinitionId)

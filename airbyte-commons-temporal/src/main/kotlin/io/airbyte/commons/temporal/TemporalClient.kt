@@ -300,7 +300,7 @@ class TemporalClient(
 
   fun resetConnectionAsync(
     connectionId: UUID,
-    streamsToReset: MutableList<StreamDescriptor?>?,
+    streamsToReset: MutableList<StreamDescriptor>,
   ) {
     try {
       streamResetPersistence.createStreamResets(connectionId, streamsToReset)

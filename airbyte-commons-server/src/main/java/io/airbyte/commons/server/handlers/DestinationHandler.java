@@ -597,7 +597,7 @@ public class DestinationHandler {
             standardDestinationDefinition, destinationConnection.getWorkspaceId(), destinationConnection.getDestinationId());
 
     final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =
-        actorDefinitionHandlerHelper.getVersionBreakingChanges(destinationVersionWithOverrideStatus.actorDefinitionVersion());
+        actorDefinitionHandlerHelper.getVersionBreakingChanges(destinationVersionWithOverrideStatus.actorDefinitionVersion);
 
     final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(destinationConnection.getWorkspaceId());
     final boolean isEntitled = licenseEntitlementChecker.checkEntitlement(organizationId, Entitlement.DESTINATION_CONNECTOR,
@@ -612,10 +612,10 @@ public class DestinationHandler {
         .name(destinationConnection.getName())
         .destinationName(standardDestinationDefinition.getName())
         .icon(standardDestinationDefinition.getIconUrl())
-        .isVersionOverrideApplied(destinationVersionWithOverrideStatus.isOverrideApplied())
+        .isVersionOverrideApplied(destinationVersionWithOverrideStatus.isOverrideApplied)
         .isEntitled(isEntitled)
         .breakingChanges(breakingChanges.orElse(null))
-        .supportState(apiPojoConverters.toApiSupportState(destinationVersionWithOverrideStatus.actorDefinitionVersion().getSupportState()))
+        .supportState(apiPojoConverters.toApiSupportState(destinationVersionWithOverrideStatus.actorDefinitionVersion.getSupportState()))
         .createdAt(destinationConnection.getCreatedAt())
         .resourceAllocation(apiPojoConverters.scopedResourceReqsToApi(destinationConnection.getResourceRequirements()));
   }

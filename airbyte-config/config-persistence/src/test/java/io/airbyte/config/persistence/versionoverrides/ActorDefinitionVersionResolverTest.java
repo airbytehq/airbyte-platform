@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.config.persistence.version_overrides;
+package io.airbyte.config.persistence.versionoverrides;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

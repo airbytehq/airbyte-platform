@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.config.persistence.version_overrides;
+package io.airbyte.config.persistence.versionoverrides;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -148,10 +148,10 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
         overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID);
 
     assertTrue(optResult.isPresent());
-    assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion());
+    assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion);
 
     final boolean expectedOverrideStatus = originTypeStr.equals("user");
-    assertEquals(expectedOverrideStatus, optResult.get().isOverrideApplied());
+    assertEquals(expectedOverrideStatus, optResult.get().isOverrideApplied);
 
     verify(mScopedConfigurationService).getScopedConfiguration(ConnectorVersionKey.INSTANCE, ConfigResourceType.ACTOR_DEFINITION, ACTOR_DEFINITION_ID,
         Map.of(
@@ -188,10 +188,10 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
         overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, null);
 
     assertTrue(optResult.isPresent());
-    assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion());
+    assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion);
 
     final boolean expectedOverrideStatus = originTypeStr.equals("user");
-    assertEquals(expectedOverrideStatus, optResult.get().isOverrideApplied());
+    assertEquals(expectedOverrideStatus, optResult.get().isOverrideApplied);
 
     verify(mScopedConfigurationService).getScopedConfiguration(ConnectorVersionKey.INSTANCE, ConfigResourceType.ACTOR_DEFINITION, ACTOR_DEFINITION_ID,
         Map.of(
@@ -262,7 +262,7 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
         overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID);
 
     assertTrue(optResult.isPresent());
-    assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion());
+    assertEquals(OVERRIDE_VERSION, optResult.get().actorDefinitionVersion);
   }
 
 }
