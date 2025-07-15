@@ -1786,10 +1786,10 @@ public class ConnectionsHandler {
         transformations,
         nonBreakingChangesPreference,
         supportedDestinationSyncModes);
-    updateObject.setSyncCatalog(propagateResult.catalog());
+    updateObject.setSyncCatalog(propagateResult.catalog);
     updateObject.setSourceCatalogId(sourceCatalogId);
     trackSchemaChange(workspaceId, connectionId, propagateResult);
-    return propagateResult.appliedDiff();
+    return propagateResult.appliedDiff;
   }
 
   private void validateCatalogSize(final AirbyteCatalog catalog, final UUID workspaceId, final String operationName) {
@@ -1808,7 +1808,7 @@ public class ConnectionsHandler {
   public void trackSchemaChange(final UUID workspaceId, final UUID connectionId, final UpdateSchemaResult propagateResult) {
     try {
       final String changeEventTimeline = Instant.now().toString();
-      for (final StreamTransform streamTransform : propagateResult.appliedDiff().getTransforms()) {
+      for (final StreamTransform streamTransform : propagateResult.appliedDiff.getTransforms()) {
         final Map<String, Object> payload = new HashMap<>();
         payload.put("workspace_id", workspaceId);
         payload.put("connection_id", connectionId);

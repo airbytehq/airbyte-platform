@@ -210,7 +210,7 @@ class ApplicationBeanFactory {
     OAuthImplementationFactory(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build())
 
   @Singleton
-  fun builderProjectUpdater(connectorBuilderService: ConnectorBuilderService?): BuilderProjectUpdater {
+  fun builderProjectUpdater(connectorBuilderService: ConnectorBuilderService): BuilderProjectUpdater {
     val pathToConnectors = EnvVar.PATH_TO_CONNECTORS.fetch()
     val configRepositoryProjectUpdater = ConfigRepositoryBuilderProjectUpdater(connectorBuilderService)
     return if (pathToConnectors == null || pathToConnectors.isEmpty()) {
