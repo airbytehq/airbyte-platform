@@ -1,26 +1,14 @@
 import { useEffect, useMemo } from "react";
-import { FieldValues, UseFormGetValues, useFormContext } from "react-hook-form";
+import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { SchemaFormControl } from "components/forms/SchemaForm/Controls/SchemaFormControl";
 import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 
-import {
-  DeclarativeComponentSchemaStreamsItem,
-  DeclarativeStream,
-  DeclarativeStreamType,
-  DynamicDeclarativeStream,
-  OAuthAuthenticatorType,
-  SimpleRetrieverType,
-  AsyncRetrieverType,
-  HttpRequesterType,
-  SimpleRetrieverRequester,
-} from "core/api/types/ConnectorManifest";
 import { useConnectorBuilderResolve } from "core/services/connectorBuilder/ConnectorBuilderResolveContext";
 import { useNotificationService } from "hooks/services/Notification";
 import { OAUTH_REDIRECT_URL } from "hooks/services/useConnectorAuth";
-import { BuilderView } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AuthButtonBuilder } from "./AuthButtonBuilder";
 import { useTestingValuesErrors } from "../StreamTestingPanel/TestingValuesMenu";
@@ -233,116 +221,4 @@ export const BuilderDeclarativeOAuth = ({ authFieldPath }: { authFieldPath: (fie
       }}
     />
   );
-};
-
-export const getFirstOAuthStreamView = (getValues: UseFormGetValues<FieldValues>): BuilderView | undefined => {
-  const streams = getValues("manifest.streams") as DeclarativeComponentSchemaStreamsItem[];
-  const firstOAuthStreamIndex =
-    streams?.findIndex(
-      (stream) => stream.type === DeclarativeStreamType.DeclarativeStream && streamHasOAuthAuthenticator(stream)
-    ) ?? -1;
-  if (firstOAuthStreamIndex !== -1) {
-    return {
-      type: "stream",
-      index: firstOAuthStreamIndex,
-    };
-  }
-
-  const dynamicStreams = getValues("manifest.dynamic_streams") as DynamicDeclarativeStream[];
-  const firstOAuthDynamicStreamIndex =
-    dynamicStreams?.findIndex(
-      (dynamicStream) =>
-        dynamicStream.stream_template.type === DeclarativeStreamType.DeclarativeStream &&
-        streamHasOAuthAuthenticator(dynamicStream.stream_template)
-    ) ?? -1;
-  if (firstOAuthDynamicStreamIndex !== -1) {
-    return {
-      type: "dynamic_stream",
-      index: firstOAuthDynamicStreamIndex,
-    };
-  }
-
-  return undefined;
-};
-
-const streamHasOAuthAuthenticator = (stream: DeclarativeStream): boolean => {
-  const checkRequesterForAuthenticator = (requester: SimpleRetrieverRequester | undefined): boolean => {
-    return (
-      requester?.type === HttpRequesterType.HttpRequester &&
-      requester.authenticator?.type === OAuthAuthenticatorType.OAuthAuthenticator
-    );
-  };
-
-  // Check SimpleRetriever
-  if (stream.retriever?.type === SimpleRetrieverType.SimpleRetriever) {
-    return checkRequesterForAuthenticator(stream.retriever.requester);
-  }
-
-  // Check AsyncRetriever
-  if (stream.retriever?.type === AsyncRetrieverType.AsyncRetriever) {
-    return (
-      checkRequesterForAuthenticator(stream.retriever.creation_requester) ||
-      checkRequesterForAuthenticator(stream.retriever.polling_requester) ||
-      checkRequesterForAuthenticator(stream.retriever.download_requester) ||
-      checkRequesterForAuthenticator(stream.retriever.download_target_requester) ||
-      checkRequesterForAuthenticator(stream.retriever.abort_requester) ||
-      checkRequesterForAuthenticator(stream.retriever.delete_requester)
-    );
-  }
-
-  // For other retriever types or if no retriever, return false
-  return false;
-};
-
-interface TokenPathInfo {
-  configPath: string;
-  objectPath: string;
-}
-
-export const findOAuthTokenPaths = (
-  manifestObject: Record<string, unknown>
-): { accessTokenValues: TokenPathInfo[]; refreshTokens: TokenPathInfo[] } => {
-  const accessTokenValues: TokenPathInfo[] = [];
-  const refreshTokens: TokenPathInfo[] = [];
-
-  const traverse = (obj: unknown, currentPath: string[] = []): void => {
-    if (obj && typeof obj === "object") {
-      const objectWithType = obj as Record<string, unknown>;
-
-      // Check if current object is an OAuthAuthenticator
-      if (objectWithType.type === OAuthAuthenticatorType.OAuthAuthenticator) {
-        // Collect access_token_value if present
-        if (objectWithType.access_token_value && typeof objectWithType.access_token_value === "string") {
-          const configPath = extractInterpolatedConfigPath(objectWithType.access_token_value);
-          if (configPath) {
-            const objectPath = [...currentPath, "access_token_value"].join(".");
-            accessTokenValues.push({ configPath, objectPath });
-          }
-        }
-
-        // Collect refresh_token if present
-        if (objectWithType.refresh_token && typeof objectWithType.refresh_token === "string") {
-          const configPath = extractInterpolatedConfigPath(objectWithType.refresh_token);
-          if (configPath) {
-            const objectPath = [...currentPath, "refresh_token"].join(".");
-            refreshTokens.push({ configPath, objectPath });
-          }
-        }
-      }
-
-      // Recursively traverse all properties, including arrays
-      for (const key in objectWithType) {
-        const value = objectWithType[key];
-        if (Array.isArray(value)) {
-          // Traverse each item in the array with index
-          value.forEach((item, index) => traverse(item, [...currentPath, key, index.toString()]));
-        } else if (typeof value === "object" && value !== null) {
-          traverse(value, [...currentPath, key]);
-        }
-      }
-    }
-  };
-
-  traverse(manifestObject);
-  return { accessTokenValues, refreshTokens };
 };

@@ -3,9 +3,9 @@ import { FieldValues, UseFormGetValues, useFormContext } from "react-hook-form";
 
 import { BuilderView } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import { getFirstOAuthStreamView } from "./Builder/BuilderDeclarativeOAuth";
 import { BuilderStreamTab } from "./types";
 import { useBuilderWatch } from "./useBuilderWatch";
+import { getFirstOAuthStreamView } from "./utils";
 
 export const DATA_FIELD_FOCUSED = "data-field-focused";
 

@@ -12,12 +12,12 @@ import { Tooltip } from "components/ui/Tooltip";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./StreamTestButton.module.scss";
-import { OAUTH_BUTTON_NAME, findOAuthTokenPaths } from "../Builder/BuilderDeclarativeOAuth";
+import { OAUTH_BUTTON_NAME } from "../Builder/BuilderDeclarativeOAuth";
 import { HotkeyLabel, getCtrlOrCmdKey } from "../HotkeyLabel";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { useFocusField } from "../useFocusField";
-import { getStreamFieldPath } from "../utils";
+import { getStreamFieldPath, findOAuthTokenPaths } from "../utils";
 
 interface StreamTestButtonProps {
   queueStreamRead: () => void;

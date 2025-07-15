@@ -1,5 +1,5 @@
 import { dump } from "js-yaml";
-import { SetValueConfig, useFormContext } from "react-hook-form";
+import { FieldValues, UseFormGetValues } from "react-hook-form";
 
 import { HttpRequest, HttpResponse } from "core/api/types/ConnectorBuilderClient";
 import {
@@ -7,9 +7,15 @@ import {
   ConnectorManifest,
   DeclarativeComponentSchemaStreamsItem,
   DeclarativeStream,
-  SimpleRetrieverPartitionRouter,
-  SimpleRetrieverPartitionRouterAnyOfItem,
+  DeclarativeStreamType,
+  DynamicDeclarativeStream,
+  OAuthAuthenticatorType,
+  SimpleRetrieverType,
+  AsyncRetrieverType,
+  HttpRequesterType,
+  SimpleRetrieverRequester,
 } from "core/api/types/ConnectorManifest";
+import { BuilderView } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { StreamId } from "./types";
 
@@ -60,59 +66,6 @@ function orderKeys(obj: unknown): unknown {
       })
       .map(([key, val]) => [key, orderKeys(val)])
   );
-}
-
-export type StreamFieldPath = `formValues.streams.${number}.${string}`;
-
-export const useCopyValueIncludingArrays = () => {
-  const { getValues, setValue, control } = useFormContext();
-
-  const replaceStreamIndex = (path: string, streamIndex: number) => {
-    return path.replace(/^formValues.streams.\d+/, `formValues.streams.${streamIndex}`);
-  };
-
-  return (fromStream: number, toStream: number, streamFieldPath: StreamFieldPath, setValueOptions: SetValueConfig) => {
-    const fromPath = replaceStreamIndex(streamFieldPath, fromStream);
-    const toPath = replaceStreamIndex(streamFieldPath, toStream);
-    const valueToCopy = getValues(fromPath);
-    setValue(toPath, valueToCopy, setValueOptions);
-
-    // must explicitly call setValue on each array's path, so that useFieldArray properly reacts to it
-    const affectedArrayPaths = [...control._names.array].filter((arrayPath) => arrayPath.includes(toPath));
-
-    affectedArrayPaths.forEach((arrayPath) => {
-      const arrayValueToCopy = getValues(replaceStreamIndex(arrayPath, fromStream));
-      setValue(replaceStreamIndex(arrayPath, toStream), arrayValueToCopy, setValueOptions);
-    });
-  };
-};
-
-export function filterPartitionRouterToType(
-  partitionRouter: SimpleRetrieverPartitionRouter | undefined,
-  types: Array<SimpleRetrieverPartitionRouterAnyOfItem["type"]>
-) {
-  if (!partitionRouter) {
-    return undefined;
-  }
-
-  if (Array.isArray(partitionRouter)) {
-    return partitionRouter.filter((subRouter) => subRouter.type && types.includes(subRouter.type));
-  }
-
-  if (types.includes(partitionRouter.type)) {
-    return [partitionRouter];
-  }
-
-  return undefined;
-}
-
-export function streamRef(streamName: string) {
-  // force cast to DeclarativeStream so that this still validates against the types
-  return { $ref: `#/definitions/streams/${streamName}` } as unknown as DeclarativeStream;
-}
-
-export function streamNameOrDefault(streamName: string | undefined, index: number) {
-  return streamName || `stream_${index}`;
 }
 
 const MANIFEST_KEY_ORDER: Array<keyof ConnectorManifest> = [
@@ -215,4 +168,116 @@ const parseBracketNotation = (bracketPath: string): string => {
     .filter(Boolean);
 
   return keys.join(".");
+};
+
+export const getFirstOAuthStreamView = (getValues: UseFormGetValues<FieldValues>): BuilderView | undefined => {
+  const streams = getValues("manifest.streams") as DeclarativeComponentSchemaStreamsItem[];
+  const firstOAuthStreamIndex =
+    streams?.findIndex(
+      (stream) => stream.type === DeclarativeStreamType.DeclarativeStream && streamHasOAuthAuthenticator(stream)
+    ) ?? -1;
+  if (firstOAuthStreamIndex !== -1) {
+    return {
+      type: "stream",
+      index: firstOAuthStreamIndex,
+    };
+  }
+
+  const dynamicStreams = getValues("manifest.dynamic_streams") as DynamicDeclarativeStream[];
+  const firstOAuthDynamicStreamIndex =
+    dynamicStreams?.findIndex(
+      (dynamicStream) =>
+        dynamicStream.stream_template.type === DeclarativeStreamType.DeclarativeStream &&
+        streamHasOAuthAuthenticator(dynamicStream.stream_template)
+    ) ?? -1;
+  if (firstOAuthDynamicStreamIndex !== -1) {
+    return {
+      type: "dynamic_stream",
+      index: firstOAuthDynamicStreamIndex,
+    };
+  }
+
+  return undefined;
+};
+
+const streamHasOAuthAuthenticator = (stream: DeclarativeStream): boolean => {
+  const checkRequesterForAuthenticator = (requester: SimpleRetrieverRequester | undefined): boolean => {
+    return (
+      requester?.type === HttpRequesterType.HttpRequester &&
+      requester.authenticator?.type === OAuthAuthenticatorType.OAuthAuthenticator
+    );
+  };
+
+  // Check SimpleRetriever
+  if (stream.retriever?.type === SimpleRetrieverType.SimpleRetriever) {
+    return checkRequesterForAuthenticator(stream.retriever.requester);
+  }
+
+  // Check AsyncRetriever
+  if (stream.retriever?.type === AsyncRetrieverType.AsyncRetriever) {
+    return (
+      checkRequesterForAuthenticator(stream.retriever.creation_requester) ||
+      checkRequesterForAuthenticator(stream.retriever.polling_requester) ||
+      checkRequesterForAuthenticator(stream.retriever.download_requester) ||
+      checkRequesterForAuthenticator(stream.retriever.download_target_requester) ||
+      checkRequesterForAuthenticator(stream.retriever.abort_requester) ||
+      checkRequesterForAuthenticator(stream.retriever.delete_requester)
+    );
+  }
+
+  // For other retriever types or if no retriever, return false
+  return false;
+};
+
+interface TokenPathInfo {
+  configPath: string;
+  objectPath: string;
+}
+
+export const findOAuthTokenPaths = (
+  manifestObject: Record<string, unknown>
+): { accessTokenValues: TokenPathInfo[]; refreshTokens: TokenPathInfo[] } => {
+  const accessTokenValues: TokenPathInfo[] = [];
+  const refreshTokens: TokenPathInfo[] = [];
+
+  const traverse = (obj: unknown, currentPath: string[] = []): void => {
+    if (obj && typeof obj === "object") {
+      const objectWithType = obj as Record<string, unknown>;
+
+      // Check if current object is an OAuthAuthenticator
+      if (objectWithType.type === OAuthAuthenticatorType.OAuthAuthenticator) {
+        // Collect access_token_value if present
+        if (objectWithType.access_token_value && typeof objectWithType.access_token_value === "string") {
+          const configPath = extractInterpolatedConfigPath(objectWithType.access_token_value);
+          if (configPath) {
+            const objectPath = [...currentPath, "access_token_value"].join(".");
+            accessTokenValues.push({ configPath, objectPath });
+          }
+        }
+
+        // Collect refresh_token if present
+        if (objectWithType.refresh_token && typeof objectWithType.refresh_token === "string") {
+          const configPath = extractInterpolatedConfigPath(objectWithType.refresh_token);
+          if (configPath) {
+            const objectPath = [...currentPath, "refresh_token"].join(".");
+            refreshTokens.push({ configPath, objectPath });
+          }
+        }
+      }
+
+      // Recursively traverse all properties, including arrays
+      for (const key in objectWithType) {
+        const value = objectWithType[key];
+        if (Array.isArray(value)) {
+          // Traverse each item in the array with index
+          value.forEach((item, index) => traverse(item, [...currentPath, key, index.toString()]));
+        } else if (typeof value === "object" && value !== null) {
+          traverse(value, [...currentPath, key]);
+        }
+      }
+    }
+  };
+
+  traverse(manifestObject);
+  return { accessTokenValues, refreshTokens };
 };
