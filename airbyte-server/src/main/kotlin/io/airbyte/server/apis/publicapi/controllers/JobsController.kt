@@ -55,7 +55,7 @@ open class JobsController(
   override fun publicCancelJob(
     @PathParam("jobId") jobId: Long,
   ): Response {
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     roleResolver
       .newRequest()
@@ -88,7 +88,7 @@ open class JobsController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateJob(jobCreateRequest: JobCreateRequest): Response {
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     // Only Editor and above should be able to run a Clear.
     roleResolver
@@ -203,7 +203,7 @@ open class JobsController(
   override fun getJob(
     @PathParam("jobId") jobId: Long,
   ): Response {
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     roleResolver
       .newRequest()
@@ -248,7 +248,7 @@ open class JobsController(
     updatedAtEnd: OffsetDateTime?,
     orderBy: String?,
   ): Response {
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
     if (connectionId != null) {
       roleResolver
         .newRequest()

@@ -52,7 +52,7 @@ open class SourcesController(
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateSource(sourceCreateRequest: SourceCreateRequest?): Response {
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     val sourceDefinitionId: UUID =
       sourceCreateRequest?.definitionId
@@ -108,7 +108,7 @@ open class SourcesController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteSource(sourceId: String): Response {
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     roleResolver
       .newRequest()
@@ -144,7 +144,7 @@ open class SourcesController(
     sourceId: String,
     includeSecretCoordinates: Boolean?,
   ): Response {
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     roleResolver
       .newRequest()
@@ -187,7 +187,7 @@ open class SourcesController(
     limit: Int,
     offset: Int,
   ): Response {
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     // If workspace IDs were given, then verify the user has access to those workspaces.
     // If none were given, then the SourceService determine the workspaces for the current user.
@@ -228,7 +228,7 @@ open class SourcesController(
     sourceId: String,
     sourcePatchRequest: SourcePatchRequest?,
   ): Response {
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     roleResolver
       .newRequest()
@@ -270,7 +270,7 @@ open class SourcesController(
     sourceId: String,
     sourcePutRequest: SourcePutRequest?,
   ): Response {
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     roleResolver
       .newRequest()

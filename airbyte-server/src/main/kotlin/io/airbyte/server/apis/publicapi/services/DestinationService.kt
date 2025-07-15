@@ -236,7 +236,7 @@ class DestinationServiceImpl(
     offset: Int,
   ): DestinationsResponse {
     val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(currentUserService.currentUser.userId) }
+    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(currentUserService.getCurrentUser().userId) }
     val listResourcesForWorkspacesRequestBody = ListResourcesForWorkspacesRequestBody()
     listResourcesForWorkspacesRequestBody.includeDeleted = includeDeleted
     listResourcesForWorkspacesRequestBody.pagination = pagination

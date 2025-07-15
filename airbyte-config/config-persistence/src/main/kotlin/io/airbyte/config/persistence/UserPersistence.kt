@@ -456,7 +456,7 @@ open class UserPersistence(
    * only be one auth user ID per Airbyte user and this method can be removed.
    */
   @Throws(IOException::class)
-  fun listAuthUserIdsForUser(userId: UUID?): List<String?> =
+  fun listAuthUserIdsForUser(userId: UUID?): List<String> =
     database.query { ctx: DSLContext ->
       ctx
         .select(Tables.AUTH_USER.AUTH_USER_ID)

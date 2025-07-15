@@ -54,7 +54,7 @@ class StreamsController(
     ignoreCache: Boolean,
   ): Response {
     // Check permission for source and destination
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     val authReq =
       roleResolver

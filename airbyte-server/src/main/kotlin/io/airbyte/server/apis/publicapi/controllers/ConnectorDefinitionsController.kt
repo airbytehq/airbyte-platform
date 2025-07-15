@@ -33,7 +33,7 @@ class ConnectorDefinitionsController(
     type: ConnectorType,
     workspaceId: UUID?,
   ): Response {
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     if (workspaceId == null) {
       throw IllegalArgumentException("Workspace ID must be provided.")

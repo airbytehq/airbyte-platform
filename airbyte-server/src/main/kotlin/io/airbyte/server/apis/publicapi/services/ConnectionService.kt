@@ -202,7 +202,7 @@ class ConnectionServiceImpl(
     includeDeleted: Boolean,
   ): ConnectionsResponse {
     val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
-    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(currentUserService.currentUser.userId) }
+    val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(currentUserService.getCurrentUser().userId) }
 
     val listConnectionsForWorkspacesRequestBody =
       ListConnectionsForWorkspacesRequestBody()

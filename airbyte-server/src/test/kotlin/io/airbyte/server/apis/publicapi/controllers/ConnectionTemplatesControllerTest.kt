@@ -56,8 +56,8 @@ class ConnectionTemplatesControllerTest {
 
   @BeforeEach
   fun setup() {
-    every { currentUserService.currentUser } returns AuthenticatedUser()
-    every { currentUserService.currentUser.userId } returns UUID.randomUUID()
+    every { currentUserService.getCurrentUser() } returns AuthenticatedUser()
+    every { currentUserService.getCurrentUser().userId } returns UUID.randomUUID()
     every { licenseEntitlementChecker.ensureEntitled(any(), any()) } returns Unit
     every { licenseEntitlementChecker.ensureEntitled(any(), any(), any()) } returns Unit
   }

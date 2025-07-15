@@ -50,7 +50,7 @@ class RoleResolverTest {
 
   @Test
   fun testWithCurrentUser() {
-    every { currentUserService.currentUser } returns AuthenticatedUser().withAuthUserId("auth-user-1")
+    every { currentUserService.getCurrentUser() } returns AuthenticatedUser().withAuthUserId("auth-user-1")
     val req = roleResolver.newRequest().withCurrentUser()
     assertEquals(RoleResolver.Subject("auth-user-1", TokenType.USER), req.subject)
   }

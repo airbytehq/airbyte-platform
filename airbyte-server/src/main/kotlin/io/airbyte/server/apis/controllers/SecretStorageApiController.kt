@@ -67,7 +67,7 @@ class SecretStorageApiController(
             },
           descriptor = secretStorageCreateRequestBody.descriptor,
           configuredFromEnvironment = false,
-          createdBy = UserId(currentUserService.currentUser.userId),
+          createdBy = UserId(currentUserService.getCurrentUser().userId),
         ),
         storageConfig = secretStorageCreateRequestBody.config,
       )
@@ -82,7 +82,7 @@ class SecretStorageApiController(
   ) {
     secretStorageService.deleteSecretStorage(
       SecretStorageId(secretStorageIdRequestBody.secretStorageId),
-      UserId(currentUserService.currentUser.userId),
+      UserId(currentUserService.getCurrentUser().userId),
     )
   }
 

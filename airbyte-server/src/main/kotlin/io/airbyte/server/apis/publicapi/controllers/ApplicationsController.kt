@@ -45,7 +45,7 @@ open class ApplicationsController(
 ) : PublicApplicationsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateApplication(applicationCreate: ApplicationCreate): Response {
-    val user: AuthenticatedUser = currentUserService.currentUser
+    val user: AuthenticatedUser = currentUserService.getCurrentUser()
 
     // process and monitor the request
     val applicationRead =
@@ -68,7 +68,7 @@ open class ApplicationsController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteApplication(applicationId: String): Response {
-    val user: AuthenticatedUser = currentUserService.currentUser
+    val user: AuthenticatedUser = currentUserService.getCurrentUser()
 
     // process and monitor the request
     val application: Application? =
@@ -115,7 +115,7 @@ open class ApplicationsController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetApplication(applicationId: String): Response {
-    val user: AuthenticatedUser = currentUserService.currentUser
+    val user: AuthenticatedUser = currentUserService.getCurrentUser()
 
     // process and monitor the request
     val application: Optional<ApplicationRead> =
@@ -147,7 +147,7 @@ open class ApplicationsController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicListApplications(): Response {
-    val user: AuthenticatedUser = currentUserService.currentUser
+    val user: AuthenticatedUser = currentUserService.getCurrentUser()
 
     // process and monitor the request
     val applications =

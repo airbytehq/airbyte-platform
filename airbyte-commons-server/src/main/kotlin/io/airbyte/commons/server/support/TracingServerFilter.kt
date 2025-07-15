@@ -59,7 +59,7 @@ class TracingServerFilter(
     try {
       // trace the current user
       try {
-        currentUserService.getCurrentUser()?.also {
+        currentUserService.getCurrentUser().also {
           trace.user["userId"] = it.userId.toString()
           trace.user["authUserId"] = it.authUserId
           trace.user["authProvider"] = it.authProvider.name

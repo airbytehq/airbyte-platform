@@ -147,7 +147,7 @@ open class ConnectionTemplatesController(
     val template = BasicHttpAttributes.getUriTemplate(currentRequest).orElse(currentRequest.path)
     val method = currentRequest.method.name
 
-    val userId: UUID = currentUserService.currentUser.userId
+    val userId: UUID = currentUserService.getCurrentUser().userId
 
     val res: Response =
       trackingHelper.callWithTracker({
