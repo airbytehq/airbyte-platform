@@ -41,7 +41,8 @@ func (y *ChartYaml) VerifyEnvVarsForApp(t *testing.T, kind string, name string, 
 	envMap := EnvVarMap(pod.Containers[0].Env)
 
 	for _, env := range expected {
-		actual := envMap[env.GetName()]
+		actual, ok := envMap[env.GetName()]
+		assert.True(t, ok, "no such env var %s", env.GetName())
 		VerifyEnvVar(t, y.String(), env, actual)
 	}
 }

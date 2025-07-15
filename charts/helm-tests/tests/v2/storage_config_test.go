@@ -13,15 +13,15 @@ func TestDefaultStorageConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedEnvVars := []helmtests.ExpectedEnvVar{
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("MINIO_ENDPOINT").Value("http://airbyte-minio-svc.ab:9000"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("S3_PATH_STYLE_ACCESS").Value("true"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_BUCKET_ACTIVITY_PAYLOAD").Value("airbyte-bucket"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_BUCKET_LOG").Value("airbyte-bucket"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_BUCKET_STATE").Value("airbyte-bucket"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_BUCKET_WORKLOAD_OUTPUT").Value("airbyte-bucket"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_TYPE").Value("minio"),
-		helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("AWS_ACCESS_KEY_ID").Value("minio"),
-		helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("AWS_SECRET_ACCESS_KEY").Value("minio123"),
+		helmtests.ExpectedConfigMapVar().Name("MINIO_ENDPOINT").RefName("airbyte-airbyte-env").Value("http://airbyte-minio-svc.ab:9000"),
+		helmtests.ExpectedConfigMapVar().Name("S3_PATH_STYLE_ACCESS").RefName("airbyte-airbyte-env").Value("true"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_BUCKET_ACTIVITY_PAYLOAD").RefName("airbyte-airbyte-env").Value("airbyte-bucket"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_BUCKET_LOG").RefName("airbyte-airbyte-env").Value("airbyte-bucket"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_BUCKET_STATE").RefName("airbyte-airbyte-env").Value("airbyte-bucket"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_BUCKET_WORKLOAD_OUTPUT").RefName("airbyte-airbyte-env").Value("airbyte-bucket"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_TYPE").RefName("airbyte-airbyte-env").Name("STORAGE_TYPE").Value("minio"),
+		helmtests.ExpectedSecretVar().Name("AWS_ACCESS_KEY_ID").RefName("airbyte-airbyte-secrets").Name("AWS_ACCESS_KEY_ID").Value("minio"),
+		helmtests.ExpectedSecretVar().Name("AWS_SECRET_ACCESS_KEY").RefName("airbyte-airbyte-secrets").Value("minio123"),
 	}
 
 	releaseApps := appsForRelease("airbyte")
@@ -41,13 +41,13 @@ func TestGcsStorageConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedEnvVars := []helmtests.ExpectedEnvVar{
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("GOOGLE_APPLICATION_CREDENTIALS").Value("/secrets/gcp-creds/gcp.json"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_BUCKET_ACTIVITY_PAYLOAD").Value("airbyte-bucket"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_BUCKET_LOG").Value("airbyte-bucket"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_BUCKET_STATE").Value("airbyte-bucket"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_BUCKET_WORKLOAD_OUTPUT").Value("airbyte-bucket"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_TYPE").Value("gcs"),
-		helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("GOOGLE_APPLICATION_CREDENTIALS_JSON").Value("eyJmYWtlIjogImZha2UifQ=="),
+		helmtests.ExpectedConfigMapVar().Name("GOOGLE_APPLICATION_CREDENTIALS").RefName("airbyte-airbyte-env").Value("/secrets/gcp-creds/gcp.json"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_BUCKET_ACTIVITY_PAYLOAD").RefName("airbyte-airbyte-env").Value("airbyte-bucket"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_BUCKET_LOG").RefName("airbyte-airbyte-env").Value("airbyte-bucket"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_BUCKET_STATE").RefName("airbyte-airbyte-env").Value("airbyte-bucket"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_BUCKET_WORKLOAD_OUTPUT").RefName("airbyte-airbyte-env").Value("airbyte-bucket"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_TYPE").RefName("airbyte-airbyte-env").Value("gcs"),
+		helmtests.ExpectedSecretVar().Name("GOOGLE_APPLICATION_CREDENTIALS_JSON").RefName("airbyte-airbyte-secrets").Value("eyJmYWtlIjogImZha2UifQ=="),
 	}
 
 	releaseApps := appsForRelease("airbyte")
@@ -68,15 +68,15 @@ func TestS3StorageConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedEnvVars := []helmtests.ExpectedEnvVar{
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("AWS_DEFAULT_REGION").Value(""),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("AWS_AUTHENTICATION_TYPE").Value("credentials"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_BUCKET_ACTIVITY_PAYLOAD").Value("airbyte-bucket"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_BUCKET_LOG").Value("airbyte-bucket"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_BUCKET_STATE").Value("airbyte-bucket"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_BUCKET_WORKLOAD_OUTPUT").Value("airbyte-bucket"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_TYPE").Value("s3"),
-		helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("AWS_ACCESS_KEY_ID").Value("access-key-id"),
-		helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("AWS_SECRET_ACCESS_KEY").Value("secret-access-key"),
+		helmtests.ExpectedConfigMapVar().Name("AWS_DEFAULT_REGION").RefName("airbyte-airbyte-env").Value(""),
+		helmtests.ExpectedConfigMapVar().Name("AWS_AUTHENTICATION_TYPE").RefName("airbyte-airbyte-env").Value("credentials"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_BUCKET_ACTIVITY_PAYLOAD").RefName("airbyte-airbyte-env").Value("airbyte-bucket"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_BUCKET_LOG").RefName("airbyte-airbyte-env").Value("airbyte-bucket"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_BUCKET_STATE").RefName("airbyte-airbyte-env").Value("airbyte-bucket"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_BUCKET_WORKLOAD_OUTPUT").RefName("airbyte-airbyte-env").Value("airbyte-bucket"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_TYPE").RefName("airbyte-airbyte-env").Value("s3"),
+		helmtests.ExpectedSecretVar().Name("AWS_ACCESS_KEY_ID").RefName("airbyte-airbyte-secrets").Value("access-key-id"),
+		helmtests.ExpectedSecretVar().Name("AWS_SECRET_ACCESS_KEY").RefName("airbyte-airbyte-secrets").Value("secret-access-key"),
 	}
 
 	releaseApps := appsForRelease("airbyte")
@@ -95,12 +95,12 @@ func TestAzureStorageConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedEnvVars := []helmtests.ExpectedEnvVar{
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_BUCKET_ACTIVITY_PAYLOAD").Value("airbyte-bucket"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_BUCKET_LOG").Value("airbyte-bucket"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_BUCKET_STATE").Value("airbyte-bucket"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_BUCKET_WORKLOAD_OUTPUT").Value("airbyte-bucket"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("STORAGE_TYPE").Value("azure"),
-		helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("AZURE_STORAGE_CONNECTION_STRING").Value("super-duper-secret-string"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_BUCKET_ACTIVITY_PAYLOAD").RefName("airbyte-airbyte-env").Value("airbyte-bucket"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_BUCKET_LOG").RefName("airbyte-airbyte-env").Value("airbyte-bucket"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_BUCKET_STATE").RefName("airbyte-airbyte-env").Value("airbyte-bucket"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_BUCKET_WORKLOAD_OUTPUT").RefName("airbyte-airbyte-env").Value("airbyte-bucket"),
+		helmtests.ExpectedConfigMapVar().Name("STORAGE_TYPE").RefName("airbyte-airbyte-env").Value("azure"),
+		helmtests.ExpectedSecretVar().Name("AZURE_STORAGE_CONNECTION_STRING").RefName("airbyte-airbyte-secrets").Value("super-duper-secret-string"),
 	}
 
 	releaseApps := appsForRelease("airbyte")

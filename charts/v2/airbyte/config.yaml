@@ -1224,13 +1224,13 @@ temporal.database:
 
     - env: POSTGRES_USER
       key: user
-      refKey: DATABASE_USER
+      refKeyExp: (include "airbyte.database.user.secretKey" .)
       sensitive: true
       secretRef: airbyte.database.secretName
 
     - env: POSTGRES_PWD
       key: password
-      refKey: DATABASE_PASSWORD
+      refKeyExp: (include "airbyte.database.password.secretKey" .)
       sensitive: true
       secretRef: airbyte.database.secretName
 

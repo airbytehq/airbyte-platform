@@ -40,10 +40,10 @@ func TestVaultSecretManagerConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedEnvVars := []helmtests.ExpectedEnvVar{
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("SECRET_PERSISTENCE").Value("VAULT"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("VAULT_ADDRESS").Value("http://airbyte-vault-svc.ab:8200"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("VAULT_PREFIX").Value("secret/"),
-		helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("VAULT_AUTH_TOKEN").Value(""),
+		helmtests.ExpectedConfigMapVar().Name("SECRET_PERSISTENCE").RefName("airbyte-airbyte-env").Value("VAULT"),
+		helmtests.ExpectedConfigMapVar().Name("VAULT_ADDRESS").RefName("airbyte-airbyte-env").Value("http://airbyte-vault-svc.ab:8200"),
+		helmtests.ExpectedConfigMapVar().Name("VAULT_PREFIX").RefName("airbyte-airbyte-env").Value("secret/"),
+		helmtests.ExpectedSecretVar().Name("VAULT_AUTH_TOKEN").RefName("airbyte-airbyte-secrets").Value(""),
 	}
 
 	releaseApps := appsForRelease("airbyte")
@@ -64,12 +64,12 @@ func TestAwsSecretManagerSecretManagerConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedEnvVars := []helmtests.ExpectedEnvVar{
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("SECRET_PERSISTENCE").Value("AWS_SECRET_MANAGER"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("AWS_SECRET_MANAGER_REGION").Value("us-east-1"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("AWS_SECRET_MANAGER_SECRET_TAGS").Value(""),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("AWS_KMS_KEY_ARN").Value(""),
-		helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("AWS_SECRET_MANAGER_ACCESS_KEY_ID").Value("fake-access-key-id"),
-		helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("AWS_SECRET_MANAGER_SECRET_ACCESS_KEY").Value("fake-secret-access-key"),
+		helmtests.ExpectedConfigMapVar().Name("SECRET_PERSISTENCE").RefName("airbyte-airbyte-env").Value("AWS_SECRET_MANAGER"),
+		helmtests.ExpectedConfigMapVar().Name("AWS_SECRET_MANAGER_REGION").RefName("airbyte-airbyte-env").Value("us-east-1"),
+		helmtests.ExpectedConfigMapVar().Name("AWS_SECRET_MANAGER_SECRET_TAGS").RefName("airbyte-airbyte-env").Value(""),
+		helmtests.ExpectedConfigMapVar().Name("AWS_KMS_KEY_ARN").RefName("airbyte-airbyte-env").Value(""),
+		helmtests.ExpectedSecretVar().Name("AWS_SECRET_MANAGER_ACCESS_KEY_ID").RefName("airbyte-airbyte-secrets").Value("fake-access-key-id"),
+		helmtests.ExpectedSecretVar().Name("AWS_SECRET_MANAGER_SECRET_ACCESS_KEY").RefName("airbyte-airbyte-secrets").Value("fake-secret-access-key"),
 	}
 
 	releaseApps := appsForRelease("airbyte")
@@ -88,9 +88,9 @@ func TestGoogleSecretManagerSecretManagerConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedEnvVars := []helmtests.ExpectedEnvVar{
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("SECRET_PERSISTENCE").Value("GOOGLE_SECRET_MANAGER"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("SECRET_STORE_GCP_PROJECT_ID").Value("test-project"),
-		helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("SECRET_STORE_GCP_CREDENTIALS").Value("fake-credentials"),
+		helmtests.ExpectedConfigMapVar().Name("SECRET_PERSISTENCE").RefName("airbyte-airbyte-env").Value("GOOGLE_SECRET_MANAGER"),
+		helmtests.ExpectedConfigMapVar().Name("SECRET_STORE_GCP_PROJECT_ID").RefName("airbyte-airbyte-env").Value("test-project"),
+		helmtests.ExpectedSecretVar().Name("SECRET_STORE_GCP_CREDENTIALS").RefName("airbyte-airbyte-secrets").Value("fake-credentials"),
 	}
 
 	releaseApps := appsForRelease("airbyte")
@@ -111,11 +111,11 @@ func TestAzureKeyVaultSecretManagerConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedEnvVars := []helmtests.ExpectedEnvVar{
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("SECRET_PERSISTENCE").Value("AZURE_KEY_VAULT"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("AB_AZURE_KEY_VAULT_TENANT_ID").Value("test-tenant-id"),
-		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("AB_AZURE_KEY_VAULT_VAULT_URL").Value("http://my-test-vault-url"),
-		helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("AB_AZURE_KEY_VAULT_CLIENT_ID").Value("test-client-id"),
-		helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("AB_AZURE_KEY_VAULT_CLIENT_SECRET").Value("test-client-secret"),
+		helmtests.ExpectedConfigMapVar().Name("SECRET_PERSISTENCE").RefName("airbyte-airbyte-env").Value("AZURE_KEY_VAULT"),
+		helmtests.ExpectedConfigMapVar().Name("AB_AZURE_KEY_VAULT_TENANT_ID").RefName("airbyte-airbyte-env").Value("test-tenant-id"),
+		helmtests.ExpectedConfigMapVar().Name("AB_AZURE_KEY_VAULT_VAULT_URL").RefName("airbyte-airbyte-env").Value("http://my-test-vault-url"),
+		helmtests.ExpectedSecretVar().Name("AB_AZURE_KEY_VAULT_CLIENT_ID").RefName("airbyte-airbyte-secrets").Value("test-client-id"),
+		helmtests.ExpectedSecretVar().Name("AB_AZURE_KEY_VAULT_CLIENT_SECRET").RefName("airbyte-airbyte-secrets").Value("test-client-secret"),
 	}
 
 	releaseApps := appsForRelease("airbyte")

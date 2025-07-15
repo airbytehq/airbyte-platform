@@ -45,8 +45,8 @@ func TestDefaultDataPlaneConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedEnvVars := []helmtests.ExpectedEnvVar{
-		helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_ID").RefName("airbyte-auth-secrets").RefKey("dataplane-client-id"),
-		helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_SECRET").RefName("airbyte-auth-secrets").RefKey("dataplane-client-secret"),
+		helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_ID").RefName("airbyte-auth-secrets"),
+		helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_SECRET").RefName("airbyte-auth-secrets"),
 	}
 
 	releaseApps := appsForRelease("airbyte")
@@ -65,8 +65,8 @@ func TestCustomSecretDataPlaneConfig(t *testing.T) {
 		assert.NoError(tt, err)
 
 		expectedEnvVars := []helmtests.ExpectedEnvVar{
-			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_ID").RefName("airbyte-airbyte-secrets").RefKey("dataplane-client-id"),
-			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_SECRET").RefName("airbyte-airbyte-secrets").RefKey("dataplane-client-secret"),
+			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_ID").RefName("airbyte-airbyte-secrets"),
+			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_SECRET").RefName("airbyte-airbyte-secrets"),
 		}
 
 		releaseApps := appsForRelease("airbyte")
@@ -87,8 +87,8 @@ func TestCustomSecretDataPlaneConfig(t *testing.T) {
 		assert.NoError(tt, err)
 
 		expectedEnvVars := []helmtests.ExpectedEnvVar{
-			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_ID").RefName("data-plane-secrets").RefKey("DATAPLANE_CLIENT_ID"),
-			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_SECRET").RefName("data-plane-secrets").RefKey("DATAPLANE_CLIENT_SECRET"),
+			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_ID").RefName("data-plane-secrets"),
+			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_SECRET").RefName("data-plane-secrets"),
 		}
 
 		releaseApps := appsForRelease("airbyte")
