@@ -50,7 +50,6 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     projectId,
     builderProject: {
       builderProject: { name, componentsFileContent },
-      declarativeManifest,
       testingValues: initialTestingValues,
     },
     initialYaml,
@@ -59,8 +58,8 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
   const { getStoredMode } = useConnectorBuilderLocalStorage();
   const areDynamicStreamsEnabled = useExperiment("connectorBuilder.dynamicStreams");
 
-  const dynamicStreams = declarativeManifest?.manifest?.dynamic_streams;
-  const streams = declarativeManifest?.manifest?.streams;
+  const dynamicStreams = initialResolvedManifest?.dynamic_streams;
+  const streams = initialResolvedManifest?.streams;
 
   const hasDynamicStreams = Array.isArray(dynamicStreams) && dynamicStreams.length > 0;
   const hasStreams = Array.isArray(streams) && streams.length > 0;

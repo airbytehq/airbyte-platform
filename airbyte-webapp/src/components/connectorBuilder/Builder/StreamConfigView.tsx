@@ -185,7 +185,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
   return (
     <BuilderConfigView className={styles.relative}>
       {streamId.type === "stream" && (
-        <FlexContainer justifyContent="space-between" className={styles.relative} alignItems="center">
+        <FlexContainer justifyContent="flex-end" className={classNames(styles.titleBar)} alignItems="center">
           <SchemaFormControl
             path={getStreamFieldPath(streamId, "name")}
             titleOverride={null}

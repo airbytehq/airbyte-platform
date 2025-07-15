@@ -111,8 +111,10 @@ $controlButtonWidth: 24px;
     }
   }
 
-  padding-bottom: 0;
   width: auto;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 .sticky {
@@ -143,4 +145,8 @@ $controlButtonWidth: 24px;
 
 .hidden {
   display: none;
+}
+
+.titleBar {
+  padding-bottom: variables.$spacing-lg;
 }

@@ -133,6 +133,10 @@ export const defaultBuilderStateSchema: AirbyteJsonSchema = {
   },
   definitions: {
     ...declarativeComponentSchema.definitions,
+    DeclarativeStream: {
+      ...declarativeComponentSchema.definitions.DeclarativeStream,
+      required: [...declarativeComponentSchema.definitions.DeclarativeStream.required, "name"],
+    },
     StaticStreamId: {
       type: "object",
       properties: {
