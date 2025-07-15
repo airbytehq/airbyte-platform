@@ -57,3 +57,8 @@ cypress.env.json
 /playwright/blob-report/
 /playwright/playwright/.cache/
 /playwright/tests/cloud/embedded/.embedded-env.json
+
+# Local IDEs
+.cursor/
+.vscode/
+.local/

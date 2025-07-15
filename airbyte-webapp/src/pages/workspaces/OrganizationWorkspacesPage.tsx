@@ -128,8 +128,8 @@ const OrganizationWorkspacesPage: React.FC = () => {
 
   return (
     <div className={styles.background}>
-      <FlexContainer direction="column" alignItems="center">
-        <div className={styles.content}>
+      <FlexContainer direction="column" alignItems="center" className={styles.contentContainer}>
+        <FlexContainer direction="column" gap="md" className={styles.content}>
           <FlexContainer justifyContent="space-between" alignItems="center" className={styles.headerRow}>
             <Box>
               <Heading as="h1" size="lg">
@@ -146,10 +146,10 @@ const OrganizationWorkspacesPage: React.FC = () => {
               <OrganizationWorkspacesCreateControl disabled={showNoWorkspacesPermission} />
             </Box>
           </FlexContainer>
-          <Box pb="sm">
+          <Box>
             <SearchInput value={searchValue} onChange={setSearchValue} data-testid="workspaces-page-search" />
           </Box>
-          <Box pb="sm">
+          <Box>
             <ListBox
               options={statusFilterOptions}
               selectedValue={statusFilter}
@@ -159,7 +159,7 @@ const OrganizationWorkspacesPage: React.FC = () => {
               buttonClassName={styles.statusFilterButton}
             />
           </Box>
-          <Box pb="2xl">
+          <Box className={styles.workspacesList}>
             {isLoading ? (
               <Box p="md" pb="sm">
                 <LoadingSpinner />
@@ -195,7 +195,7 @@ const OrganizationWorkspacesPage: React.FC = () => {
             ) : (
               <Virtuoso
                 ref={virtuosoRef}
-                style={{ height: "600px" }}
+                style={{ height: "100%" }}
                 data={filteredWorkspaces}
                 endReached={handleEndReached}
                 computeItemKey={(index, item) => item.workspaceId + index}
@@ -210,12 +210,12 @@ const OrganizationWorkspacesPage: React.FC = () => {
                           <LoadingSpinner />
                         </Box>
                       )
-                    : undefined,
+                    : () => <Box pb="2xl" />,
                 }}
               />
             )}
           </Box>
-        </div>
+        </FlexContainer>
       </FlexContainer>
     </div>
   );
