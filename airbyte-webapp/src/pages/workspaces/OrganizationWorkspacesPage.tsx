@@ -48,7 +48,7 @@ const OrganizationWorkspacesPage: React.FC = () => {
   const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
-  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useListWorkspacesInOrganization({
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage, refetch } = useListWorkspacesInOrganization({
     organizationId,
     nameContains: debouncedSearchValue,
     pagination: {
@@ -143,7 +143,7 @@ const OrganizationWorkspacesPage: React.FC = () => {
               </Text>
             </Box>
             <Box pb="lg">
-              <OrganizationWorkspacesCreateControl disabled={showNoWorkspacesPermission} />
+              <OrganizationWorkspacesCreateControl disabled={showNoWorkspacesPermission} onCreated={refetch} />
             </Box>
           </FlexContainer>
           <Box>
@@ -182,7 +182,7 @@ const OrganizationWorkspacesPage: React.FC = () => {
                     <FormattedMessage id="workspaces.noWorkspacesYet" />
                   </Text>
                 </Box>
-                <OrganizationWorkspacesCreateControl secondary />
+                <OrganizationWorkspacesCreateControl secondary onCreated={refetch} />
               </FlexContainer>
             ) : showNoWorkspacesFound ? (
               <Box mt="xl">

@@ -27,10 +27,11 @@ const OrganizationCreateWorkspaceFormValidationSchema = z.object({
 
 type CreateWorkspaceFormValues = z.infer<typeof OrganizationCreateWorkspaceFormValidationSchema>;
 
-export const OrganizationWorkspacesCreateControl: React.FC<{ disabled?: boolean; secondary?: boolean }> = ({
-  disabled = false,
-  secondary = false,
-}) => {
+export const OrganizationWorkspacesCreateControl: React.FC<{
+  disabled?: boolean;
+  secondary?: boolean;
+  onCreated?: () => void;
+}> = ({ disabled = false, secondary = false, onCreated }) => {
   const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
   const { organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
   const dataplaneGroups = useListDataplaneGroups();
@@ -46,7 +47,9 @@ export const OrganizationWorkspacesCreateControl: React.FC<{ disabled?: boolean;
     const openCreateWorkspaceModal = () =>
       openModal({
         title: formatMessage({ id: "workspaces.create.title" }),
-        content: ({ onCancel }) => <CreateWorkspaceModal dataplaneGroups={dataplaneGroups} onCancel={onCancel} />,
+        content: ({ onCancel }) => (
+          <CreateWorkspaceModal dataplaneGroups={dataplaneGroups} onCancel={onCancel} onCreated={onCreated} />
+        ),
       });
 
     if (showTeamsFeaturesWarnModal) {
@@ -75,10 +78,11 @@ export const OrganizationWorkspacesCreateControl: React.FC<{ disabled?: boolean;
   );
 };
 
-export const CreateWorkspaceModal: React.FC<{ dataplaneGroups: DataplaneGroupRead[]; onCancel: () => void }> = ({
-  dataplaneGroups,
-  onCancel,
-}) => {
+export const CreateWorkspaceModal: React.FC<{
+  dataplaneGroups: DataplaneGroupRead[];
+  onCancel: () => void;
+  onCreated?: () => void;
+}> = ({ dataplaneGroups, onCancel, onCreated }) => {
   const { mutateAsync: createWorkspace } = useCreateWorkspace();
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
@@ -96,6 +100,7 @@ export const CreateWorkspaceModal: React.FC<{ dataplaneGroups: DataplaneGroupRea
       text: formatMessage({ id: "workspaces.createSuccess" }),
       type: "success",
     });
+    onCreated?.();
   };
 
   const onError = (e: Error, { name }: CreateWorkspaceFormValues) => {
