@@ -1743,18 +1743,20 @@ public class ConnectionsHandler {
       LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
           connection.getConnectionId(), catalogId);
       connectionTimelineEventHelper.logSchemaChangeAutoPropagationEventInConnectionTimeline(connectionId, appliedDiff);
-      LOGGER.info("Sending notification of schema auto propagation for connectionId: '{}'", connection.getConnectionId());
-      notificationHelper.notifySchemaPropagated(
-          workspace.getNotificationSettings(),
-          appliedDiff,
-          workspace,
-          connection,
-          source,
-          workspace.getEmail());
+      if (workspace.getNotificationSettings() != null) {
+        LOGGER.info("Sending notification of schema auto propagation for connectionId: '{}'", connection.getConnectionId());
+        notificationHelper.notifySchemaPropagated(
+            workspace.getNotificationSettings(),
+            appliedDiff,
+            workspace,
+            connection,
+            source,
+            workspace.getEmail());
+      }
     } else {
       appliedDiff = null;
       // Send notification to the user if schema change needs to be manually applied.
-      if (applySchemaChangeHelper.shouldManuallyApply(diffToApply, connection)) {
+      if (workspace.getNotificationSettings() != null && applySchemaChangeHelper.shouldManuallyApply(diffToApply, connection)) {
         LOGGER.info("Sending notification of manually applying schema change for connectionId: '{}'", connection.getConnectionId());
         notificationHelper.notifySchemaDiffToApply(
             workspace.getNotificationSettings(),
