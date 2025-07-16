@@ -740,10 +740,7 @@ function requesterToRequestBody(requester: HttpRequester): BuilderRequestBody {
         value: formattedQuery,
       };
     } catch {
-      return {
-        type: "graphql",
-        value: requester.request_body_json.query as string,
-      };
+      // could not parse the request body as graphql, so fall back to the json logic below
     }
   }
 
