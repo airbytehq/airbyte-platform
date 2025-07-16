@@ -16,7 +16,6 @@ export const OrganizationWithWorkspaces: React.FC<OrganizationSummary & { lastIt
   organization,
   workspaces = [],
   memberCount,
-  subscriptionName,
   lastItem,
 }) => {
   const { formatMessage } = useIntl();
@@ -41,12 +40,8 @@ export const OrganizationWithWorkspaces: React.FC<OrganizationSummary & { lastIt
               size="sm"
               color="grey400"
               className={styles.orgMeta}
-              title={`${formatMessage({ id: "organization.subscription" }, { subscriptionName })} ${formatMessage(
-                { id: "organization.members" },
-                { count: memberCount || 0 }
-              )}`}
+              title={`${formatMessage({ id: "organization.members" }, { count: memberCount || 0 })}`}
             >
-              {subscriptionName && <FormattedMessage id="organization.subscription" values={{ subscriptionName }} />}
               <FormattedMessage id="organization.members" values={{ count: memberCount || 0 }} />
             </Text>
           </div>

@@ -14603,8 +14603,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WorkspaceRead"
-        subscriptionName:
-          type: string
         memberCount:
           type: integer
     IndividualWorkspaceUsageRead:
