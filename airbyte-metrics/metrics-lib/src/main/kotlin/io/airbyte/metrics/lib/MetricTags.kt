@@ -64,6 +64,7 @@ object MetricTags {
   const val SECRET_STORAGE_ID: String = "secret_storage_id"
   const val SOURCE_IMAGE: String = "source_image"
   const val SOURCE_IMAGE_IS_DEFAULT: String = "source_image_is_default"
+  const val SKIPPED = "skipped"
   const val STATUS: String = "status"
   const val SUCCESS: String = "success"
   const val WILL_RETRY: String = "will_retry"

@@ -26,6 +26,7 @@ import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -109,7 +110,8 @@ class JobErrorReporterTest {
         AIRBYTE_EDITION,
         AIRBYTE_VERSION,
         webUrlHelper,
-        jobErrorReportingClient);
+        jobErrorReportingClient,
+        mock(MetricClient.class));
 
     Mockito.when(webUrlHelper.getConnectionUrl(WORKSPACE_ID, CONNECTION_ID)).thenReturn(CONNECTION_URL);
     Mockito.when(webUrlHelper.getWorkspaceUrl(WORKSPACE_ID)).thenReturn(WORKSPACE_URL);

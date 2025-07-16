@@ -22,6 +22,10 @@ import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.validation.json.JsonValidationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -41,6 +45,7 @@ class JobErrorReporter(
   private val airbyteVersion: String,
   private val webUrlHelper: WebUrlHelper,
   private val jobErrorReportingClient: JobErrorReportingClient,
+  private val metricClient: MetricClient,
 ) {
   /**
    * Reports a Sync Job's connector-caused FailureReasons to the JobErrorReportingClient.
@@ -380,6 +385,12 @@ class JobErrorReporter(
   ) {
     // Failure types associated with a config-error or a manual-cancellation should NOT be reported.
     if (UNSUPPORTED_FAILURETYPES.contains(failureReason.failureType)) {
+      metricClient.count(
+        OssMetricsRegistry.ERROR_REPORTING_EVENT_COUNT,
+        1,
+        MetricAttribute(MetricTags.STATUS_TAG, MetricTags.SKIPPED),
+        MetricAttribute(MetricTags.FAILURE_TYPE, failureReason.failureType.value()),
+      )
       return
     }
 
@@ -404,7 +415,19 @@ class JobErrorReporter(
 
     try {
       jobErrorReportingClient.reportJobFailureReason(workspace, failureReason, dockerImage, allMetadata, attemptConfig)
+      metricClient.count(
+        OssMetricsRegistry.ERROR_REPORTING_EVENT_COUNT,
+        1,
+        MetricAttribute(MetricTags.STATUS_TAG, MetricTags.SUCCESS),
+        MetricAttribute(MetricTags.FAILURE_TYPE, failureReason.failureType.value()),
+      )
     } catch (e: Exception) {
+      metricClient.count(
+        OssMetricsRegistry.ERROR_REPORTING_EVENT_COUNT,
+        1,
+        MetricAttribute(MetricTags.STATUS_TAG, MetricTags.FAILURE),
+        MetricAttribute(MetricTags.FAILURE_TYPE, failureReason.failureType.value()),
+      )
       LOGGER.error("Error when reporting job failure reason: {}", failureReason, e)
     }
   }

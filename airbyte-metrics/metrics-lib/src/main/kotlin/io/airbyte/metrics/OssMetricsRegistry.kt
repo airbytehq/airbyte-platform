@@ -177,6 +177,10 @@ enum class OssMetricsRegistry(
     metricName = "connector_registry_definition_processed",
     metricDescription = "increments when a connector registry definition is processed by the ApplyDefinitionsHelper",
   ),
+  ERROR_REPORTING_EVENT_COUNT(
+    metricName = "error_reporting_event_count",
+    metricDescription = "whenever when we report an error event",
+  ),
   EST_NUM_METRICS_EMITTED_BY_REPORTER(
     metricName = "est_num_metrics_emitted_by_reporter",
     metricDescription = "estimated metrics emitted by the reporter in the last interval. this is estimated since the count is not precise.",

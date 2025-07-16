@@ -10,6 +10,7 @@ import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient
 import io.airbyte.persistence.job.errorreporter.LoggingJobErrorReportingClient
@@ -49,6 +50,7 @@ class JobErrorReportingBeanFactory {
     airbyteEdition: AirbyteEdition,
     @Named("jobErrorReportingClient") jobErrorReportingClient: Optional<JobErrorReportingClient>,
     webUrlHelper: WebUrlHelper,
+    metricClient: MetricClient,
   ): JobErrorReporter =
     JobErrorReporter(
       actorDefinitionService,
@@ -59,5 +61,6 @@ class JobErrorReportingBeanFactory {
       airbyteVersion,
       webUrlHelper,
       jobErrorReportingClient.orElseGet { LoggingJobErrorReportingClient() },
+      metricClient,
     )
 }
