@@ -4,11 +4,13 @@
 
 package io.airbyte.domain.services.sso
 
+import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.model.generated.ProblemSSOConfigRetrievalData
 import io.airbyte.api.problems.model.generated.ProblemSSOCredentialUpdateData
 import io.airbyte.api.problems.model.generated.ProblemSSODeletionData
 import io.airbyte.api.problems.model.generated.ProblemSSOSetupData
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.SSOConfigRetrievalProblem
 import io.airbyte.api.problems.throwable.generated.SSOCredentialUpdateProblem
@@ -20,6 +22,7 @@ import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
 import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
+import io.airbyte.data.services.impls.keycloak.RealmValuesExistException
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigRetrieval
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
@@ -70,6 +73,11 @@ open class SsoConfigDomainService internal constructor(
 
     try {
       airbyteKeycloakClient.createOidcSsoConfig(config)
+    } catch (ex: RealmValuesExistException) {
+      throw BadRequestProblem(
+        ProblemMessageData()
+          .message("The provided company identifier is already associated with an SSO configuration: $ex"),
+      )
     } catch (ex: Exception) {
       throw SSOSetupProblem(
         ProblemSSOSetupData()

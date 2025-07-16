@@ -112,6 +112,13 @@ class AirbyteKeycloakClient(
       keycloakAdminClient.realms().create(realm)
     } catch (e: Exception) {
       logger.error(e) { "Create SSO config request failed" }
+      // Keycloak doesn't give us good error messages regarding failures. If the realm name already exists,
+      // we get nothing but a 400 Bad Request here, so we attempt to convert it into something else so we can
+      // at least return a 400 to the user instead of a 500.
+      if (e.message?.lowercase()?.contains("bad request") == true) {
+        throw RealmValuesExistException("Issue creating realm: some values already exist in realm config: $e")
+      }
+
       throw RealmCreationException("Create SSO config request failed! Server error: $e")
     }
   }
@@ -212,6 +219,10 @@ class AirbyteKeycloakClient(
 }
 
 class RealmCreationException(
+  message: String,
+) : Exception(message)
+
+class RealmValuesExistException(
   message: String,
 ) : Exception(message)
 
