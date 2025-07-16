@@ -15729,6 +15729,10 @@ components:
         timestamp:
           type: integer
           format: int64
+        fromTraceMessage:
+          type: boolean
+        streamDescriptor:
+          $ref: "#/components/schemas/StreamDescriptor"
     FailureOrigin:
       description: Indicates where the error originated. If not set, the origin of error is not well known.
       type: string

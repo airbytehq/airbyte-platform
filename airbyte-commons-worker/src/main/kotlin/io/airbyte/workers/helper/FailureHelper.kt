@@ -24,7 +24,7 @@ internal const val MAX_STACK_TRACE_LENGTH: Int = 100000
 private const val ATTRIBUTION_MESSAGE = "Remainder truncated by the Airbyte platform."
 private const val JOB_ID_METADATA_KEY = "jobId"
 private const val ATTEMPT_NUMBER_METADATA_KEY = "attemptNumber"
-private const val TRACE_MESSAGE_METADATA_KEY = "from_trace_message"
+const val TRACE_MESSAGE_METADATA_KEY = "from_trace_message"
 private const val CONNECTOR_COMMAND_METADATA_KEY = "connector_command"
 
 /**

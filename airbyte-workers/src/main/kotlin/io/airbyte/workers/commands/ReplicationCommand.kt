@@ -9,17 +9,20 @@ import io.airbyte.api.client.model.generated.CommandGetRequest
 import io.airbyte.api.client.model.generated.ReplicateCommandOutputRequest
 import io.airbyte.api.client.model.generated.ReplicateCommandOutputResponse
 import io.airbyte.api.client.model.generated.RunReplicateCommandRequest
+import io.airbyte.commons.converters.ApiClientConverters.Companion.toInternal
 import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.temporal.scheduling.ReplicationCommandApiInput
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
+import io.airbyte.config.Metadata
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.helpers.log
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.workers.helper.TRACE_MESSAGE_METADATA_KEY
 import io.airbyte.workers.models.ReplicationApiInput
 import io.airbyte.workers.storage.activities.OutputStorageClient
 import jakarta.inject.Singleton
@@ -65,16 +68,7 @@ class ReplicationCommand(
 
     val replicationAttemptSummary = Jsons.`object`(Jsons.jsonNode(commandOutput.attemptSummary), ReplicationAttemptSummary::class.java)
 
-    val failures: List<FailureReason>? =
-      commandOutput.failures
-        ?.map {
-          FailureReason()
-            .withFailureType(failureConverter.getFailureType(it.failureType))
-            .withExternalMessage(it.externalMessage)
-            .withStacktrace(it.stacktrace)
-            .withInternalMessage(it.internalMessage)
-            .withFailureOrigin(failureConverter.getFailureOrigin(it.failureOrigin))
-        }
+    val failures: List<FailureReason>? = commandOutput.failures?.map { apiFailureReasonToConfigModel(it) }
 
     val output =
       failures
@@ -90,6 +84,27 @@ class ReplicationCommand(
 
     return output
   }
+
+  internal fun apiFailureReasonToConfigModel(apiFailureReason: io.airbyte.api.client.model.generated.FailureReason) =
+    FailureReason()
+      .withFailureType(failureConverter.getFailureType(apiFailureReason.failureType))
+      .withExternalMessage(apiFailureReason.externalMessage)
+      .withStacktrace(apiFailureReason.stacktrace)
+      .withInternalMessage(apiFailureReason.internalMessage)
+      .withFailureOrigin(failureConverter.getFailureOrigin(apiFailureReason.failureOrigin))
+      .withTimestamp(apiFailureReason.timestamp)
+      .withRetryable(apiFailureReason.retryable)
+      .withMetadata(
+        Metadata().apply {
+          apiFailureReason.fromTraceMessage?.let { fromTraceMessage ->
+            this.setAdditionalProperty(TRACE_MESSAGE_METADATA_KEY, fromTraceMessage)
+          }
+        },
+      ).apply {
+        apiFailureReason.streamDescriptor?.let { apiStreamDescriptor ->
+          this.streamDescriptor = apiStreamDescriptor.toInternal()
+        }
+      }
 
   fun finalizeOutput(
     commandId: String,

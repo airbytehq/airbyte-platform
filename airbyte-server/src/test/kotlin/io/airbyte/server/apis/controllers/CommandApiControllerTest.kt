@@ -28,10 +28,12 @@ import io.airbyte.commons.server.helpers.SecretSanitizer
 import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
+import io.airbyte.config.Metadata
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardSyncSummary
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.services.WorkspaceService
@@ -53,6 +55,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.UUID
+import io.airbyte.api.model.generated.FailureReason as ApiFailureReason
+import io.airbyte.api.model.generated.StreamDescriptor as ApiStreamDescriptor
 
 class CommandApiControllerTest {
   private lateinit var controller: CommandApiController
@@ -182,8 +186,7 @@ class CommandApiControllerTest {
         .id(TEST_COMMAND_ID)
         .status(CheckCommandOutputResponse.StatusEnum.FAILED)
         .failureReason(
-          io.airbyte.api.model.generated
-            .FailureReason()
+          ApiFailureReason()
             .failureOrigin(FailureOrigin.SOURCE)
             .failureType(FailureType.CONFIG_ERROR)
             .externalMessage("external facing message")
@@ -258,8 +261,7 @@ class CommandApiControllerTest {
         .id(TEST_COMMAND_ID)
         .status(DiscoverCommandOutputResponse.StatusEnum.FAILED)
         .failureReason(
-          io.airbyte.api.model.generated
-            .FailureReason()
+          ApiFailureReason()
             .failureOrigin(FailureOrigin.SOURCE)
             .failureType(FailureType.CONFIG_ERROR)
             .externalMessage("external discover facing message")
@@ -294,8 +296,7 @@ class CommandApiControllerTest {
         .attemptSummary(persistedReplicationOutput.replicationAttemptSummary)
         .failures(
           listOf(
-            io.airbyte.api.model.generated
-              .FailureReason()
+            ApiFailureReason()
               .failureOrigin(FailureOrigin.SOURCE)
               .externalMessage("Something to validate"),
           ),
@@ -303,6 +304,42 @@ class CommandApiControllerTest {
       output,
     )
     verify { commandService.getReplicationOutput(TEST_COMMAND_ID) }
+  }
+
+  @Test
+  fun `FailureReason toApi returns all fields`() {
+    val input =
+      FailureReason()
+        .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
+        .withFailureType(FailureReason.FailureType.CONFIG_ERROR)
+        .withInternalMessage("example internal message")
+        .withExternalMessage("example external message")
+        .withMetadata(Metadata().withAdditionalProperty("from_trace_message", true))
+        .withStacktrace("example stacktrace")
+        .withRetryable(true)
+        .withTimestamp(42)
+        .withStreamDescriptor(StreamDescriptor().withName("example name").withNamespace("example namespace"))
+
+    val output = controller.toApi(input)
+
+    assertEquals(
+      ApiFailureReason()
+        .failureOrigin(FailureOrigin.SOURCE)
+        .failureType(FailureType.CONFIG_ERROR)
+        .internalMessage("example internal message")
+        .externalMessage("example external message")
+        .fromTraceMessage(true)
+        .stacktrace("example stacktrace")
+        .retryable(true)
+        .timestamp(42)
+        .streamDescriptor(ApiStreamDescriptor().name("example name").namespace("example namespace")),
+      output,
+    )
+  }
+
+  @Test
+  fun `FailureReason toApi handles null fields`() {
+    assertEquals(ApiFailureReason(), controller.toApi(FailureReason()))
   }
 
   @Test

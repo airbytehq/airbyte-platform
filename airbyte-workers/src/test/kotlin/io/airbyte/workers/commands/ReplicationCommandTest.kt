@@ -7,6 +7,7 @@ package io.airbyte.workers.commands
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.CommandGetRequest
 import io.airbyte.api.client.model.generated.CommandGetResponse
+import io.airbyte.api.client.model.generated.FailureOrigin
 import io.airbyte.api.client.model.generated.FailureType
 import io.airbyte.api.client.model.generated.ReplicateCommandOutputRequest
 import io.airbyte.api.client.model.generated.ReplicateCommandOutputResponse
@@ -20,9 +21,10 @@ import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
+import io.airbyte.config.Metadata
 import io.airbyte.config.ReplicationAttemptSummary
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.workers.models.ReplicationApiInput
 import io.airbyte.workers.storage.activities.OutputStorageClient
 import io.mockk.every
 import io.mockk.mockk
@@ -30,6 +32,7 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.util.UUID
+import io.airbyte.api.client.model.generated.StreamDescriptor as ApiStreamDescriptor
 
 class ReplicationCommandTest {
   private val airbyteApiClient: AirbyteApiClient = mockk(relaxed = true)
@@ -242,5 +245,70 @@ class ReplicationCommandTest {
     }
 
     assertEquals(expectedActivityPayloadURI, output.catalogUri)
+  }
+
+  @Test
+  fun `apiFailureReasonToConfigModel returns all fields`() {
+    every { failureConverter.getFailureOrigin(FailureOrigin.SOURCE) } returns FailureReason.FailureOrigin.SOURCE
+    every { failureConverter.getFailureType(FailureType.CONFIG_ERROR) } returns FailureReason.FailureType.CONFIG_ERROR
+    val input =
+      io.airbyte.api.client.model.generated.FailureReason(
+        timestamp = 42,
+        FailureOrigin.SOURCE,
+        FailureType.CONFIG_ERROR,
+        externalMessage = "example external message",
+        internalMessage = "example internal message",
+        stacktrace = "example stacktrace",
+        retryable = true,
+        fromTraceMessage = true,
+        ApiStreamDescriptor(name = "example name", namespace = "example namespace"),
+      )
+
+    val output = replicationCommand.apiFailureReasonToConfigModel(input)
+
+    assertEquals(
+      FailureReason()
+        .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
+        .withFailureType(FailureReason.FailureType.CONFIG_ERROR)
+        .withInternalMessage("example internal message")
+        .withExternalMessage("example external message")
+        .withMetadata(Metadata().withAdditionalProperty("from_trace_message", true))
+        .withStacktrace("example stacktrace")
+        .withRetryable(true)
+        .withTimestamp(42)
+        .withStreamDescriptor(StreamDescriptor().withName("example name").withNamespace("example namespace")),
+      output,
+    )
+  }
+
+  @Test
+  fun `apiFailureReasonToConfigModel handles null fields`() {
+    // getFailureOrigin is required to return nonnull value
+    every { failureConverter.getFailureOrigin(null) } returns FailureReason.FailureOrigin.SOURCE
+    every { failureConverter.getFailureType(null) } returns null
+    val input =
+      io.airbyte.api.client.model.generated.FailureReason(
+        // timestamp isn't nullable
+        timestamp = 42,
+        failureOrigin = null,
+        failureType = null,
+        externalMessage = null,
+        internalMessage = null,
+        stacktrace = null,
+        retryable = null,
+        fromTraceMessage = null,
+        streamDescriptor = null,
+      )
+
+    val output = replicationCommand.apiFailureReasonToConfigModel(input)
+
+    assertEquals(
+      FailureReason()
+        .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
+        .withTimestamp(42)
+        // We always populate a Metadata blob, even when we don't write anything into it
+        .withMetadata(Metadata()),
+      output,
+    )
   }
 }

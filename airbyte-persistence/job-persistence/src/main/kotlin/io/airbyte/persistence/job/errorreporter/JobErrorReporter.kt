@@ -411,7 +411,7 @@ class JobErrorReporter(
 
   companion object {
     private val LOGGER: Logger = LoggerFactory.getLogger(JobErrorReporter::class.java)
-    private const val FROM_TRACE_MESSAGE = "from_trace_message"
+    const val FROM_TRACE_MESSAGE = "from_trace_message"
     const val AIRBYTE_EDITION_META_KEY: String = "airbyte_edition"
     const val AIRBYTE_VERSION_META_KEY: String = "airbyte_version"
     const val FAILURE_ORIGIN_META_KEY: String = "failure_origin"

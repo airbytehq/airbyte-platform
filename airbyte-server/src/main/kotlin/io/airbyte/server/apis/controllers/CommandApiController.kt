@@ -27,6 +27,7 @@ import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.converters.ApiConverters.Companion.toApi
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.server.authorization.RoleResolver
@@ -45,6 +46,7 @@ import io.airbyte.domain.models.ActorId
 import io.airbyte.domain.models.CommandId
 import io.airbyte.domain.models.ConnectionId
 import io.airbyte.domain.models.WorkspaceId
+import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.server.helpers.CatalogDiffConverter.toDomain
 import io.airbyte.server.services.CommandService
@@ -96,7 +98,7 @@ class CommandApiController(
         output?.let {
           status(it.checkConnection?.status?.toApi())
           message(it.checkConnection?.message)
-          failureReason(it.failureReason.toApi())
+          failureReason(toApi(it.failureReason))
         }
       }
     }
@@ -155,7 +157,7 @@ class CommandApiController(
           )
           catalogId(output.catalogId)
           catalog(apiCatalog)
-          failureReason(it.failureReason.toApi())
+          failureReason(toApi(it.failureReason))
         }
       }
     }
@@ -173,23 +175,31 @@ class CommandApiController(
       return ReplicateCommandOutputResponse().apply {
         id(replicateCommandOutputRequest.id)
         attemptSummary(output?.replicationAttemptSummary)
-        failures(output?.failures?.map { it.toApi() })
+        failures(output?.failures?.map { toApi(it) })
         catalog(output?.outputCatalog?.let { catalogConverter.toApi(it, null) })
       }
     }
 
-  private fun FailureReason?.toApi(): ApiFailureReason? =
-    when (this) {
+  internal fun toApi(failureReason: FailureReason?): ApiFailureReason? =
+    when (failureReason) {
       null -> null
       else ->
         ApiFailureReason()
-          .failureOrigin(this.failureOrigin?.convertTo())
-          .failureType(this.failureType?.convertTo())
-          .externalMessage(this.externalMessage)
-          .internalMessage(this.internalMessage)
-          .stacktrace(this.stacktrace)
-          .timestamp(this.timestamp)
-          .retryable(this.retryable)
+          .failureOrigin(failureReason.failureOrigin?.convertTo())
+          .failureType(failureReason.failureType?.convertTo())
+          .externalMessage(failureReason.externalMessage)
+          .internalMessage(failureReason.internalMessage)
+          .stacktrace(failureReason.stacktrace)
+          .timestamp(failureReason.timestamp)
+          .retryable(failureReason.retryable)
+          .apply {
+            failureReason.metadata?.let {
+              fromTraceMessage = failureReason.metadata.additionalProperties[JobErrorReporter.FROM_TRACE_MESSAGE] as Boolean?
+            }
+            failureReason.streamDescriptor?.let { internalStreamDescriptor ->
+              streamDescriptor = internalStreamDescriptor.toApi()
+            }
+          }
     }
 
   private fun StandardCheckConnectionOutput.Status.toApi(): CheckCommandOutputResponse.StatusEnum =
