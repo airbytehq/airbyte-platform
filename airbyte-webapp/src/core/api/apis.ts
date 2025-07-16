@@ -1,4 +1,4 @@
-import { buildConfig } from "core/config";
+import { buildConfig, loadConfig } from "core/config";
 
 import { ApiCallOptions, fetchApiCall, RequestOptions } from "./apiCall";
 
@@ -18,5 +18,11 @@ export const connectorBuilderApiCall = async <T, U = unknown>(request: RequestOp
 };
 
 export const sonarApiCall = async <T, U = unknown>(request: RequestOptions<U>, options: ApiCallOptions) => {
-  return fetchApiCall<T>(request, options, "https://api.airbyte.ai");
+  const { sonarApiUrl } = await loadConfig();
+
+  if (!sonarApiUrl) {
+    throw new Error("Sonar API calls are not supported in this environment");
+  }
+
+  return fetchApiCall<T>(request, options, sonarApiUrl);
 };

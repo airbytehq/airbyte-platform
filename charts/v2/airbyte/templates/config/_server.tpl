@@ -370,6 +370,24 @@ Renders the server.webapp.segmentToken environment variable
 {{- end }}
 
 {{/*
+Renders the server.webapp.sonarApiUrl value
+*/}}
+{{- define "airbyte.server.webapp.sonarApiUrl" }}
+    {{- .Values.server.webapp.sonarApiUrl }}
+{{- end }}
+
+{{/*
+Renders the server.webapp.sonarApiUrl environment variable
+*/}}
+{{- define "airbyte.server.webapp.sonarApiUrl.env" }}
+- name: WEBAPP_SONAR_API_URL
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: WEBAPP_SONAR_API_URL
+{{- end }}
+
+{{/*
 Renders the server.webapp.zendeskKey value
 */}}
 {{- define "airbyte.server.webapp.zendeskKey" }}
@@ -412,6 +430,7 @@ Renders the set of all server environment variables
 {{- include "airbyte.server.webapp.launchdarklyKey.env" . }}
 {{- include "airbyte.server.webapp.osanoKey.env" . }}
 {{- include "airbyte.server.webapp.segmentToken.env" . }}
+{{- include "airbyte.server.webapp.sonarApiUrl.env" . }}
 {{- include "airbyte.server.webapp.zendeskKey.env" . }}
 {{- end }}
 
@@ -439,6 +458,7 @@ WEBAPP_HOCKEYSTACK_API_KEY: {{ include "airbyte.server.webapp.hockeystackApiKey"
 WEBAPP_LAUNCHDARKLY_KEY: {{ include "airbyte.server.webapp.launchdarklyKey" . | quote }}
 WEBAPP_OSANO_KEY: {{ include "airbyte.server.webapp.osanoKey" . | quote }}
 WEBAPP_SEGMENT_TOKEN: {{ include "airbyte.server.webapp.segmentToken" . | quote }}
+WEBAPP_SONAR_API_URL: {{ include "airbyte.server.webapp.sonarApiUrl" . | quote }}
 WEBAPP_ZENDESK_KEY: {{ include "airbyte.server.webapp.zendeskKey" . | quote }}
 {{- end }}
 

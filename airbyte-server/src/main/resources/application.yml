@@ -395,6 +395,7 @@ airbyte:
     launchdarkly_key: ${WEBAPP_LAUNCHDARKLY_KEY:}
     osano_key: ${WEBAPP_OSANO_KEY:}
     segment_token: ${WEBAPP_SEGMENT_TOKEN:}
+    sonar_api_url: ${WEBAPP_SONAR_API_URL:}
     zendesk_key: ${WEBAPP_ZENDESK_KEY:}
 
   workspace:

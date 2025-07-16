@@ -190,6 +190,7 @@ open class WebBackendApiController(
       launchdarklyKey = webappConfig.webApp["launchdarkly-key"]
       osanoKey = webappConfig.webApp["osano-key"]
       segmentToken = webappConfig.webApp["segment-token"]
+      sonarApiUrl = webappConfig.webApp["sonar-api-url"]
       zendeskKey = webappConfig.webApp["zendesk-key"]
     }
 }

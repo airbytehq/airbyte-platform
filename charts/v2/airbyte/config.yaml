@@ -1007,6 +1007,9 @@ server:
     - env: WEBAPP_SEGMENT_TOKEN
       key: webapp.segmentToken
 
+    - env: WEBAPP_SONAR_API_URL
+      key: webapp.sonarApiUrl
+
     - env: WEBAPP_ZENDESK_KEY
       key: webapp.zendeskKey
 
