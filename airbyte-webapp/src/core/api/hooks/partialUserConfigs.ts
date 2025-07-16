@@ -15,10 +15,11 @@ import {
   deletePartialUserConfig,
 } from "../generated/AirbyteClient";
 import {
-  embeddedListPartialUserConfigs,
-  embeddedCreatePartialUserConfig,
-  embeddedGetPartialUserConfig,
-  embeddedUpdatePartialUserConfig,
+  embeddedPartialUserConfigsListPartialUserConfigs,
+  embeddedPartialUserConfigsCreatePartialUserConfig,
+  embeddedPartialUserConfigsIdGetPartialUserConfig,
+  embeddedPartialUserConfigsIdUpdatePartialUserConfig,
+  embeddedPartialUserConfigsIdDeletePartialUserConfig,
 } from "../generated/SonarClient";
 import { SCOPE_ORGANIZATION } from "../scopes";
 import {
@@ -42,7 +43,7 @@ const convertedEmbeddedListPartialUserConfigs = async (
   workspace_id: string,
   options: ApiCallOptions
 ): Promise<PartialUserConfigReadList> => {
-  const response = await embeddedListPartialUserConfigs({ workspace_id }, options);
+  const response = await embeddedPartialUserConfigsListPartialUserConfigs({ workspace_id }, options);
   return {
     partialUserConfigs: response.data.map((item) => ({
       configTemplateId: item.source_config_template_id,
@@ -57,7 +58,7 @@ const convertedEmbeddedGetPartialUserConfig = async (
   id: string,
   options: ApiCallOptions
 ): Promise<PartialUserConfigRead> => {
-  const response = await embeddedGetPartialUserConfig(id, options);
+  const response = await embeddedPartialUserConfigsIdGetPartialUserConfig(id, options);
   const objectToReturn = {
     id: response.id,
     configTemplate: {
@@ -82,7 +83,7 @@ const convertedEmbeddedCreatePartialUserConfig = async (
     source_config_template_id: partial_user_config_create.configTemplateId,
     connection_configuration: partial_user_config_create.connectionConfiguration,
   };
-  const response = await embeddedCreatePartialUserConfig(body, options);
+  const response = await embeddedPartialUserConfigsCreatePartialUserConfig(body, options);
   const objectToReturn = {
     id: response.id,
     name: "", // Not provided by Sonar
@@ -117,7 +118,11 @@ const convertedEmbeddedUpdatePartialUserConfig = async (
   const body = {
     connection_configuration: partial_user_config_update.connectionConfiguration,
   };
-  const response = await embeddedUpdatePartialUserConfig(partial_user_config_update.partialUserConfigId, body, options);
+  const response = await embeddedPartialUserConfigsIdUpdatePartialUserConfig(
+    partial_user_config_update.partialUserConfigId,
+    body,
+    options
+  );
   const objectToReturn = {
     id: response.id,
     name: "", // Not provided by Sonar
@@ -142,6 +147,13 @@ const convertedEmbeddedUpdatePartialUserConfig = async (
     },
   };
   return objectToReturn;
+};
+
+const convertedEmbeddedDeletePartialUserConfig = async (
+  partialUserConfigId: string,
+  options: ApiCallOptions
+): Promise<void> => {
+  await embeddedPartialUserConfigsIdDeletePartialUserConfig(partialUserConfigId, options);
 };
 
 export const useListPartialUserConfigs = (workspaceId: string): PartialUserConfigReadList => {
@@ -283,10 +295,14 @@ export const useUpdatePartialUserConfig = () => {
 export const useDeletePartialUserConfig = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
+  const isSonarServerEnabled = useExperiment("embedded.useSonarServer");
 
   const workspaceId = useCurrentWorkspaceId();
   return useMutation(
     (partialUserConfigId: string) => {
+      if (isSonarServerEnabled) {
+        return convertedEmbeddedDeletePartialUserConfig(partialUserConfigId, requestOptions);
+      }
       return deletePartialUserConfig({ partialUserConfigId, workspaceId }, requestOptions);
     },
     {

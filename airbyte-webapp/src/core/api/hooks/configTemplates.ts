@@ -6,13 +6,12 @@ import { useNotificationService } from "hooks/services/Notification";
 import { ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { ApiCallOptions } from "../apiCall";
+import { getConfigTemplate, listConfigTemplates, publicCreateConfigTemplate } from "../generated/AirbyteClient";
 import {
-  listConfigTemplates,
-  getConfigTemplate,
-  publicCreateConfigTemplate,
-  publicCreateConnectionTemplate,
-} from "../generated/AirbyteClient";
-import { embeddedListSourceConfigTemplates, embeddedGetSourceConfigTemplate } from "../generated/SonarClient";
+  embeddedConfigTemplatesConnectionsCreateConnectionConfigTemplate,
+  embeddedConfigTemplatesSourcesIdGetSourceConfigTemplate,
+  embeddedConfigTemplatesSourcesListSourceConfigTemplates,
+} from "../generated/SonarClient";
 import { SCOPE_ORGANIZATION } from "../scopes";
 import {
   AdvancedAuth,
@@ -20,9 +19,9 @@ import {
   ConfigTemplateCreateRequestBody,
   ConfigTemplateList,
   ConfigTemplateRead,
-  ConnectionTemplateCreateRequestBody,
   SourceDefinitionSpecification,
 } from "../types/AirbyteClient";
+import { CreateConnectionConfigTemplateIn } from "../types/SonarClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -38,7 +37,7 @@ const convertedEmbeddedListSourceConfigTemplates = async (
   workspace_id: string,
   options: ApiCallOptions
 ): Promise<ConfigTemplateList> => {
-  const response = await embeddedListSourceConfigTemplates({ workspace_id }, options);
+  const response = await embeddedConfigTemplatesSourcesListSourceConfigTemplates({ workspace_id }, options);
   return {
     configTemplates: response.data.map((item) => ({
       ...item,
@@ -60,7 +59,7 @@ export const convertedEmbeddedGetSourceConfigTemplate = async (
   configTemplateId: string,
   options: ApiCallOptions
 ): Promise<ConfigTemplateRead> => {
-  const response = await embeddedGetSourceConfigTemplate(configTemplateId, options);
+  const response = await embeddedConfigTemplatesSourcesIdGetSourceConfigTemplate(configTemplateId, options);
   const raw = {
     ...response.user_config_spec,
     advancedAuth: response.user_config_spec.advanced_auth,
@@ -68,7 +67,7 @@ export const convertedEmbeddedGetSourceConfigTemplate = async (
   };
   const adv = raw.advanced_auth;
 
-  const returned_object: ConfigTemplateRead = {
+  return {
     id: response.id,
     name: response.name,
     icon: response.icon as string, // Icon should be optional. It's not in the legacy API, but I'm not worried about it because it's being deprecated.
@@ -94,8 +93,6 @@ export const convertedEmbeddedGetSourceConfigTemplate = async (
 
     advancedAuthGlobalCredentialsAvailable: Boolean(adv),
   };
-
-  return returned_object;
 };
 
 // You cannot conditionally use a hook in React. Instead, we will always use the hook and handle the condition inside the query function.
@@ -171,14 +168,14 @@ export const useCreateConnectionTemplate = () => {
       destinationDefinitionId: string;
       organizationId: string;
     }) => {
-      const connectionTemplate: ConnectionTemplateCreateRequestBody = {
-        organizationId,
-        destinationName: values.name,
-        destinationConfiguration: values.connectionConfiguration,
-        destinationActorDefinitionId: destinationDefinitionId,
+      const connectionTemplate: CreateConnectionConfigTemplateIn = {
+        organization_id: organizationId,
+        destination_name: values.name,
+        destination_config: values.connectionConfiguration,
+        destination_actor_definition_id: destinationDefinitionId,
       };
 
-      return publicCreateConnectionTemplate(connectionTemplate, requestOptions);
+      return embeddedConfigTemplatesConnectionsCreateConnectionConfigTemplate(connectionTemplate, requestOptions);
     },
     {
       onSuccess: (response, request) => {

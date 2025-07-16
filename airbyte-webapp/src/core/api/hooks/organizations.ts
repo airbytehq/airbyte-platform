@@ -19,7 +19,7 @@ import {
   listOrganizationSummaries,
 } from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
-import { embeddedGetCurrentScopedOrganization } from "../generated/SonarClient";
+import { embeddedOrganizationsCurrentScopedGetCurrentScopedOrganization } from "../generated/SonarClient";
 import { SCOPE_ORGANIZATION, SCOPE_USER } from "../scopes";
 import {
   ConsumptionTimeWindow,
@@ -283,7 +283,7 @@ export const useGetScopedOrganization = () => {
 
   return useSuspenseQuery(
     organizationKeys.scopedTokenOrganization(),
-    () => embeddedGetCurrentScopedOrganization(requestOptions),
+    () => embeddedOrganizationsCurrentScopedGetCurrentScopedOrganization(requestOptions),
     {
       staleTime: Infinity,
     }
