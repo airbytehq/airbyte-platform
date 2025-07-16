@@ -39,7 +39,7 @@
     "name": "Local Cloud K8s",
     "group": "Cloud",
     "cloudEnv": "local-dev-k8s",
-    "description": "Local Kubernetes cluster via `make deploy`"
+    "description": "Local Kubernetes cluster via `make deploy.cloud`"
   },
   "dev": {
     "name": "dev",
