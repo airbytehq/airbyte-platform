@@ -45,8 +45,8 @@ func TestDefaultDataPlaneConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	expectedEnvVars := []helmtests.ExpectedEnvVar{
-		helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_ID").RefName("airbyte-auth-secrets"),
-		helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_SECRET").RefName("airbyte-auth-secrets"),
+		helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_ID").RefName("airbyte-auth-secrets").RefKey("dataplane-client-id"),
+		helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_SECRET").RefName("airbyte-auth-secrets").RefKey("dataplane-client-secret"),
 	}
 
 	releaseApps := appsForRelease("airbyte")
@@ -65,8 +65,8 @@ func TestCustomSecretDataPlaneConfig(t *testing.T) {
 		assert.NoError(tt, err)
 
 		expectedEnvVars := []helmtests.ExpectedEnvVar{
-			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_ID").RefName("airbyte-airbyte-secrets"),
-			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_SECRET").RefName("airbyte-airbyte-secrets"),
+			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_ID").RefName("airbyte-airbyte-secrets").RefKey("dataplane-client-id"),
+			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_SECRET").RefName("airbyte-airbyte-secrets").RefKey("dataplane-client-secret"),
 		}
 
 		releaseApps := appsForRelease("airbyte")
@@ -81,14 +81,12 @@ func TestCustomSecretDataPlaneConfig(t *testing.T) {
 		// IFF the cluster type is not "hybrid" then read the values from the secret at `workloadLauncher.dataPlane.secretName`
 		opts.SetValues["global.cluster.type"] = "data-plane"
 		opts.SetValues["workloadLauncher.dataPlane.secretName"] = "data-plane-secrets"
-		opts.SetValues["workloadLauncher.dataPlane.clientIdSecretKey"] = "DATAPLANE_CLIENT_ID"
-		opts.SetValues["workloadLauncher.dataPlane.clientSecretSecretKey"] = "DATAPLANE_CLIENT_SECRET"
 		chartYaml, err := helmtests.RenderHelmChart(t, opts, chartPath, "airbyte", nil)
 		assert.NoError(tt, err)
 
 		expectedEnvVars := []helmtests.ExpectedEnvVar{
-			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_ID").RefName("data-plane-secrets"),
-			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_SECRET").RefName("data-plane-secrets"),
+			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_ID").RefName("data-plane-secrets").RefKey("dataplane-client-id"),
+			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_SECRET").RefName("data-plane-secrets").RefKey("dataplane-client-secret"),
 		}
 
 		releaseApps := appsForRelease("airbyte")
@@ -96,6 +94,29 @@ func TestCustomSecretDataPlaneConfig(t *testing.T) {
 			app := releaseApps[name]
 			chartYaml.VerifyEnvVarsForApp(tt, app.Kind, app.FQN(), expectedEnvVars)
 		}
+	})
+
+	t.Run("should reference the user-defined secret name and secret coordinates", func(tt *testing.T) {
+		opts := helmtests.BaseHelmOptions()
+		// IFF the cluster type is not "hybrid" then read the values from the secret at `workloadLauncher.dataPlane.secretName`
+		opts.SetValues["global.cluster.type"] = "data-plane"
+		opts.SetValues["workloadLauncher.dataPlane.secretName"] = "data-plane-secrets"
+		opts.SetValues["workloadLauncher.dataPlane.clientIdSecretKey"] = "DATAPLANE_CLIENT_ID"
+		opts.SetValues["workloadLauncher.dataPlane.clientSecretSecretKey"] = "DATAPLANE_CLIENT_SECRET"
+		chartYaml, err := helmtests.RenderHelmChart(t, opts, chartPath, "airbyte", nil)
+		assert.NoError(tt, err)
+
+		expectedEnvVars := []helmtests.ExpectedEnvVar{
+			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_ID").RefName("data-plane-secrets").RefKey("DATAPLANE_CLIENT_ID"),
+			helmtests.ExpectedSecretVar().Name("DATAPLANE_CLIENT_SECRET").RefName("data-plane-secrets").RefKey("DATAPLANE_CLIENT_SECRET"),
+		}
+
+		releaseApps := appsForRelease("airbyte")
+		for _, name := range []string{"workload-launcher"} {
+			app := releaseApps[name]
+			chartYaml.VerifyEnvVarsForApp(tt, app.Kind, app.FQN(), expectedEnvVars)
+		}
+
 	})
 
 }
