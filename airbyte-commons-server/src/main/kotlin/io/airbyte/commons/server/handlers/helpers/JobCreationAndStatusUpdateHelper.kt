@@ -44,7 +44,6 @@ import java.util.Locale
 import java.util.Objects
 import java.util.Optional
 import java.util.UUID
-import java.util.stream.Collectors
 import java.util.stream.Stream
 
 /**
@@ -494,17 +493,9 @@ class JobCreationAndStatusUpdateHelper(
         addTagsToTrace(
           java.util.Map.of<String?, String>(
             FAILURE_TYPES_KEY,
-            failureSummary.failures
-              .stream()
-              .map<FailureReason.FailureType> { obj: FailureReason -> obj.failureType }
-              .map<String> { obj: FailureReason.FailureType -> getFailureType(obj) }
-              .collect(Collectors.joining(",")),
+            failureSummary.failures.joinToString(",") { getFailureType(it.failureType) },
             FAILURE_ORIGINS_KEY,
-            failureSummary.failures
-              .stream()
-              .map<FailureReason.FailureOrigin> { obj: FailureReason -> obj.failureOrigin }
-              .map<String> { obj: FailureReason.FailureOrigin -> obj.name }
-              .collect(Collectors.joining(",")),
+            failureSummary.failures.joinToString(",") { it.failureOrigin.name },
           ),
         )
       }
