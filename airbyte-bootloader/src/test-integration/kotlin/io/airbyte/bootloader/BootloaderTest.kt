@@ -255,6 +255,7 @@ internal class BootloaderTest {
     val postLoadExecutor = DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater)
     val dataplaneInitializer: DataplaneInitializer = mockk(relaxUnitFun = true)
     val secretStorageInitializer: SecretStorageInitializer = mockk(relaxUnitFun = true)
+    val internalApiTokenInitializer: InternalApiTokenInitializer = mockk(relaxUnitFun = true)
 
     val bootloader =
       Bootloader(
@@ -276,6 +277,7 @@ internal class BootloaderTest {
         airbyteEdition = airbyteEdition,
         authSecretInitializer = authKubeSecretInitializer,
         secretStorageInitializer = secretStorageInitializer,
+        internalApiTokenInitializer = internalApiTokenInitializer,
       )
     bootloader.load()
 
@@ -437,6 +439,7 @@ internal class BootloaderTest {
     val postLoadExecutor = DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater)
     val dataplaneInitializer: DataplaneInitializer = mockk()
     val secretStorageInitializer: SecretStorageInitializer = mockk(relaxUnitFun = true)
+    val internalApiTokenInitializer: InternalApiTokenInitializer = mockk(relaxUnitFun = true)
 
     val bootloader =
       Bootloader(
@@ -458,6 +461,7 @@ internal class BootloaderTest {
         airbyteEdition = airbyteEdition,
         authSecretInitializer = authKubeSecretInitializer,
         secretStorageInitializer = secretStorageInitializer,
+        internalApiTokenInitializer = internalApiTokenInitializer,
       )
 
     // starting from no previous version is always legal.
@@ -711,6 +715,8 @@ internal class BootloaderTest {
     val dataplaneInitializer: DataplaneInitializer = mockk(relaxUnitFun = true)
     val authKubeSecretInitializer: AuthKubernetesSecretInitializer = mockk(relaxed = true)
     val secretStorageInitializer: SecretStorageInitializer = mockk(relaxUnitFun = true)
+    val internalApiTokenInitializer: InternalApiTokenInitializer = mockk(relaxUnitFun = true)
+
     val bootloader =
       Bootloader(
         autoUpgradeConnectors = false,
@@ -731,6 +737,7 @@ internal class BootloaderTest {
         airbyteEdition = airbyteEdition,
         authSecretInitializer = authKubeSecretInitializer,
         secretStorageInitializer = secretStorageInitializer,
+        internalApiTokenInitializer = internalApiTokenInitializer,
       )
     bootloader.load()
     Assertions.assertTrue(testTriggered.get())

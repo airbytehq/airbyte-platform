@@ -88,6 +88,7 @@ Upgrade to version $airbyteVersion failed. As of version 1.6 of the Airbyte Plat
         providedSecretValuesConfig.jwtSignatureSecret,
         randomAlphanumeric(SECRET_LENGTH),
       )
+
     return mapOf(
       secretKeysConfig.instanceAdminPasswordSecretKey!! to passwordValue,
       secretKeysConfig.instanceAdminClientIdSecretKey!! to clientIdValue,
@@ -123,6 +124,7 @@ open class AuthKubernetesSecretKeysConfig {
   var instanceAdminClientIdSecretKey: String? = null
   var instanceAdminClientSecretSecretKey: String? = null
   var jwtSignatureSecretKey: String? = null
+  var internalApiTokenSecretKey: String? = null
 }
 
 @ConfigurationProperties("airbyte.auth.kubernetes-secret.values")

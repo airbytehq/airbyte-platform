@@ -178,6 +178,7 @@ open class RoleResolver(
               permissionHandler.getPermissionsByServiceAccountId(UUID.fromString(subject.id)),
             )
           TokenType.USER -> resolvePermissions(subject.id, permissionHandler.getPermissionsByAuthUserId(subject.id))
+          TokenType.INTERNAL_CLIENT -> AuthRole.getInstanceAdminRoles()
         }
       } catch (e: Exception) {
         logger.error(e) { "Failed to resolve roles for $subject" }

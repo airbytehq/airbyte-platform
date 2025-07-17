@@ -35,6 +35,9 @@ enum class TokenType {
   // This is the default token type if a token cannot be identified by as one of the types above.
   USER,
 
+  // Represents internal clients - worker, cron, etc.
+  INTERNAL_CLIENT,
+
   ;
 
   fun toClaim() = "typ" to "io.airbyte.auth.${this.name.lowercase()}"

@@ -51,11 +51,13 @@ airbyte:
         instance-admin-client-id-secret-key: ${AB_INSTANCE_ADMIN_CLIENT_ID_SECRET_KEY:instance-admin-client-id}
         instance-admin-client-secret-secret-key: ${AB_INSTANCE_ADMIN_CLIENT_SECRET_SECRET_KEY:instance-admin-client-secret}
         jwt-signature-secret-key: ${AB_JWT_SIGNATURE_SECRET_KEY:jwt-signature-secret}
+        internal-api-token-secret-key: ${AB_INTERNAL_API_TOKEN_SECRET_KEY:internal-api-token}
       values:
         instance-admin-password: ${AB_INSTANCE_ADMIN_PASSWORD:}
         instance-admin-client-id: ${AB_INSTANCE_ADMIN_CLIENT_ID:}
         instance-admin-client-secret: ${AB_INSTANCE_ADMIN_CLIENT_SECRET:}
         jwt-signature-secret: ${AB_JWT_SIGNATURE_SECRET:}
+        internal-api-token: ${AB_INTERNAL_API_TOKEN:}
     dataplane-credentials:
       client-id-secret-key: ${DATAPLANE_CLIENT_ID_SECRET_KEY:dataplane-client-id}
       client-secret-secret-key: ${DATAPLANE_CLIENT_SECRET_SECRET_KEY:dataplane-client-secret}
