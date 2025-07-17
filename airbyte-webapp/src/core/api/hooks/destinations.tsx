@@ -17,7 +17,7 @@ import {
   updateDestination,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
-import { DestinationRead, ScopedResourceRequirements, WebBackendConnectionListItem } from "../types/AirbyteClient";
+import { DestinationRead, ScopedResourceRequirements } from "../types/AirbyteClient";
 import { useRequestErrorHandler } from "../useRequestErrorHandler";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
@@ -123,7 +123,7 @@ export const useDeleteDestination = () => {
   const onError = useRequestErrorHandler("destinations.deleteError");
 
   return useMutation(
-    (payload: { destination: DestinationRead; connectionsWithDestination: WebBackendConnectionListItem[] }) =>
+    (payload: { destination: DestinationRead }) =>
       deleteDestination({ destinationId: payload.destination.destinationId }, requestOptions),
     {
       onSuccess: (_data, ctx) => {
@@ -143,8 +143,7 @@ export const useDeleteDestination = () => {
             }) as DestinationList
         );
 
-        const connectionIds = ctx.connectionsWithDestination.map((item) => item.connectionId);
-        removeConnectionsFromList(connectionIds);
+        removeConnectionsFromList({ destinationId: ctx.destination.destinationId });
       },
       onError,
     }

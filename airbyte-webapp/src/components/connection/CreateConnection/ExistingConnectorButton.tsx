@@ -4,7 +4,6 @@ import { ConnectorDefinitionBranding } from "components/ui/ConnectorDefinitionBr
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
-import { useConnectionList } from "core/api";
 import { DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
 import { isSource } from "core/domain/connector/source";
 
@@ -19,12 +18,9 @@ export const ExistingConnectorButton = <T extends SourceRead | DestinationRead>(
   connector,
   onClick,
 }: ExistingConnectorButtonProps<T>) => {
-  const connectionList = useConnectionList();
   const testId = `select-existing-${isSource(connector) ? "source" : "destination"}-${connector.name}`;
 
   const connectorId = isSource(connector) ? connector.sourceId : connector.destinationId;
-
-  const connectionCount = connectionList?.connectionsByConnectorId?.get(connectorId)?.length ?? 0;
 
   return (
     <button onClick={() => onClick(connectorId)} className={styles.existingConnectorButton} data-testid={testId}>
@@ -35,7 +31,10 @@ export const ExistingConnectorButton = <T extends SourceRead | DestinationRead>(
         <ConnectorDefinitionBranding destinationDefinitionId={connector.destinationDefinitionId} />
       )}
       <Text color="grey" size="xs">
-        <FormattedMessage id="connectionForm.sourceExisting.connectionCount" values={{ count: connectionCount }} />
+        <FormattedMessage
+          id="connectionForm.sourceExisting.connectionCount"
+          values={{ count: connector.numConnections ?? 0 }}
+        />
       </Text>
       <Icon type="chevronRight" size="md" />
     </button>

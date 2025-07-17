@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 
@@ -7,7 +7,6 @@ import { Text } from "components/ui/Text";
 
 import { useGetSourceFromParams } from "area/connector/utils";
 import {
-  useConnectionList,
   useSourceDefinitionVersion,
   useGetSourceDefinitionSpecification,
   useSourceDefinition,
@@ -27,8 +26,6 @@ import styles from "./SourceSettingsPage.module.scss";
 export const SourceSettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();
   const source = useGetSourceFromParams();
-  const connectionList = useConnectionList({ sourceId: [source.sourceId] });
-  const connectionsWithSource = useMemo(() => connectionList?.connections ?? [], [connectionList]);
   const sourceDefinition = useSourceDefinition(source.sourceDefinitionId);
   const sourceDefinitionVersion = useSourceDefinitionVersion(source.sourceId);
   const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(source.sourceId);
@@ -54,33 +51,19 @@ export const SourceSettingsPage: React.FC = () => {
 
   const onDelete = useCallback(async () => {
     clearFormChange(formId);
-    await deleteSource({ connectionsWithSource, source });
-  }, [clearFormChange, formId, deleteSource, connectionsWithSource, source]);
+    await deleteSource({ source });
+  }, [clearFormChange, formId, deleteSource, source]);
 
-  const modalAdditionalContent = useMemo<React.ReactNode>(() => {
-    if (connectionsWithSource.length === 0) {
-      return null;
-    }
-
-    return (
-      <Box pt="lg">
-        <Text size="lg">
-          <FormattedMessage
-            id="tables.affectedConnectionsOnDeletion"
-            values={{ count: connectionsWithSource.length }}
-          />
-        </Text>
-
-        <ul>
-          {connectionsWithSource.map((connection) => (
-            <li key={connection.connectionId}>{`${connection.name}`}</li>
-          ))}
-        </ul>
-      </Box>
-    );
-  }, [connectionsWithSource]);
-
-  const onDeleteClick = useDeleteModal("source", onDelete, modalAdditionalContent, source.name);
+  const onDeleteClick = useDeleteModal(
+    "source",
+    onDelete,
+    <Box mt="md">
+      <Text bold>
+        <FormattedMessage id="tables.deleteAssociatedConnectionsWarning" />
+      </Text>
+    </Box>,
+    source.name
+  );
 
   return (
     <div className={styles.content}>

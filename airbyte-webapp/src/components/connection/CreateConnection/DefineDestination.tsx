@@ -9,7 +9,7 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { useConnectionList, useDestinationList } from "core/api";
+import { useDestinationList } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 
 import { BackToDefineSourceButton } from "./BackToDefineSourceButton";
@@ -28,7 +28,6 @@ export const DefineDestination: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_DEFINE_DESTINATION);
   const { formatMessage } = useIntl();
   const { destinations } = useDestinationList();
-  const connectionList = useConnectionList();
   const [searchParams, setSearchParams] = useSearchParams();
 
   if (!searchParams.get(DESTINATION_TYPE_PARAM)) {
@@ -60,13 +59,8 @@ export const DefineDestination: React.FC = () => {
   };
 
   const sortedDestinations = useMemo(() => {
-    return destinations
-      .map((destination) => ({
-        ...destination,
-        connectionCount: connectionList?.connectionsByConnectorId.get(destination.destinationId)?.length || 0,
-      }))
-      .sort((a, b) => b.connectionCount - a.connectionCount || a.name.localeCompare(b.name));
-  }, [destinations, connectionList?.connectionsByConnectorId]);
+    return destinations.sort((a, b) => a.name.localeCompare(b.name));
+  }, [destinations]);
 
   return (
     <PageContainer centered>

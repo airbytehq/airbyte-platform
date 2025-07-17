@@ -1,19 +1,12 @@
 import { getWorkspaceId } from "@cy/commands/api/workspace";
-import {
-  createNewConnectionViaApi,
-  createPostgresDestinationViaApi,
-  createPostgresSourceViaApi,
-} from "@cy/commands/connection";
-import { fillE2ETestingForm, fillPokeAPIForm } from "@cy/commands/connector";
+import { createPostgresDestinationViaApi, createPostgresSourceViaApi } from "@cy/commands/connection";
 import { StreamRowPageObject } from "@cy/pages/connection/StreamRowPageObject";
 import { streamsTable } from "@cy/pages/connection/StreamsTablePageObject";
-import { goToDestinationPage, openDestinationConnectionsPage } from "@cy/pages/destinationPage";
-import { openSourceConnectionsPage, goToSourcePage } from "@cy/pages/sourcePage";
 import { setFeatureFlags, setFeatureServiceFlags } from "@cy/support/e2e";
 import { WebBackendConnectionRead, DestinationRead, SourceRead } from "@src/core/api/types/AirbyteClient";
 import { RoutePaths, ConnectionRoutePaths } from "@src/pages/routePaths";
 import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "commands/api";
-import { appendRandomString, submitButtonClick } from "commands/common";
+import { submitButtonClick } from "commands/common";
 import { runDbQuery } from "commands/db/db";
 import {
   createUsersTableQuery,
@@ -83,12 +76,12 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
         waitForGetSourceDefinitionsRequest();
       });
 
-      it("should select existing Source from dropdown and click button", () => {
+      it("should select existing Source", () => {
         newConnectionPage.isExistingConnectorTypeSelected("source");
         newConnectionPage.selectExistingConnectorFromList("source", source.name);
       });
 
-      it("should select existing Destination from dropdown and click button", () => {
+      it("should select existing Destination", () => {
         interceptDiscoverSchemaRequest();
         newConnectionPage.isExistingConnectorTypeSelected("destination");
         newConnectionPage.selectExistingConnectorFromList("destination", destination.name);
@@ -97,96 +90,6 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
 
       it("should redirect to 'New connection' configuration page with stream table'", () => {
         newConnectionPage.isAtConnectionConfigurationStep();
-      });
-    });
-    describe("From source page", () => {
-      it("can use existing destination", () => {
-        goToSourcePage();
-        openSourceConnectionsPage(source.name);
-        cy.get("button").contains("Create a connection").click();
-        cy.get("button").contains(destination.name).click();
-        newConnectionPage.isAtConnectionConfigurationStep();
-      });
-      it("can use new destination", () => {
-        // this depends on the source having at least one configured connection already
-        createNewConnectionViaApi(source, destination).then((connection) => {
-          connectionId = connection.connectionId;
-
-          cy.intercept("/api/v1/destinations/create").as("createDestination");
-
-          goToSourcePage();
-          openSourceConnectionsPage(source.name);
-          cy.get("button").contains("Add destination").click();
-          cy.get("button").contains("Add a new destination").click();
-          cy.location("search").should("eq", `?sourceId=${source.sourceId}&destinationType=new`);
-
-          // confirm toggling the type
-          cy.get("label").contains("Select an existing destination").click();
-          cy.location("search").should("eq", `?sourceId=${source.sourceId}&destinationType=existing`);
-
-          cy.get("button").contains(destination.name).should("exist");
-
-          cy.get("label").contains("Set up a new destination").click();
-          cy.location("search").should("eq", `?sourceId=${source.sourceId}&destinationType=new`);
-
-          fillE2ETestingForm(appendRandomString("E2E Test destination cypress"));
-
-          cy.get("button").contains("Set up destination").click();
-
-          cy.wait("@createDestination", { timeout: 30000 }).then((interception) => {
-            const createdDestinationId = interception.response?.body.destinationId;
-            cy.location("search").should(
-              "eq",
-              `?sourceId=${source.sourceId}&destination_tab=marketplace&destinationId=${createdDestinationId}`
-            );
-
-            requestDeleteDestination({ destinationId: createdDestinationId });
-          });
-          requestDeleteConnection({ connectionId: connection.connectionId });
-        });
-      });
-    });
-    describe("From destination page", () => {
-      it("can use existing source", () => {
-        goToDestinationPage();
-        openDestinationConnectionsPage(destination.name);
-        cy.get("button").contains("Create a connection").click();
-        cy.get("button").contains(source.name).click();
-        newConnectionPage.isAtConnectionConfigurationStep();
-      });
-      it("can use new source", () => {
-        // this depends on the source having at least one configured connection already
-        createNewConnectionViaApi(source, destination).then((connection) => {
-          cy.intercept("/api/v1/sources/create").as("createSource");
-
-          goToDestinationPage();
-          openDestinationConnectionsPage(destination.name);
-          cy.get("button").contains("Add source").click();
-          cy.get("button").contains("Add a new source").click();
-          cy.location("search").should("eq", `?destinationId=${destination.destinationId}&sourceType=new`);
-
-          // confirm can toggle back and
-          cy.get("label").contains("Select an existing source").click();
-          cy.location("search").should("eq", `?destinationId=${destination.destinationId}&sourceType=existing`);
-
-          cy.get("button").contains(source.name).should("exist");
-
-          cy.get("label").contains("Set up a new source").click();
-          cy.location("search").should("eq", `?destinationId=${destination.destinationId}&sourceType=new`);
-
-          const testPokeSourceName = appendRandomString("Cypress Test Poke");
-          fillPokeAPIForm(testPokeSourceName, "bulbasaur");
-          cy.get("button").contains("Set up source").click();
-          cy.wait("@createSource", { timeout: 30000 }).then((interception) => {
-            const createdSourceId = interception.response?.body.sourceId;
-            newConnectionPage.isAtConnectionConfigurationStep();
-
-            requestDeleteSource({ sourceId: createdSourceId });
-          });
-
-          newConnectionPage.isAtConnectionConfigurationStep();
-          requestDeleteConnection({ connectionId: connection.connectionId });
-        });
       });
     });
   });

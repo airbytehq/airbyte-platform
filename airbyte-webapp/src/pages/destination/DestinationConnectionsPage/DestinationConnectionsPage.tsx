@@ -1,74 +1,83 @@
-import { useMemo } from "react";
-import { createSearchParams, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { FormattedMessage } from "react-intl";
+import { createSearchParams } from "react-router-dom";
 
+import { LoadingPage } from "components";
 import { ConnectorEmptyStateContent } from "components/connector/ConnectorEmptyStateContent";
 import { TableItemTitle } from "components/ConnectorBlocks";
-import { ConnectorIcon } from "components/ConnectorIcon";
 import { DestinationConnectionTable } from "components/destination/DestinationConnectionTable";
-import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
+import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
+import { LoadingSpinner } from "components/ui/LoadingSpinner";
+import { ScrollParent } from "components/ui/ScrollParent";
+import { Text } from "components/ui/Text";
 
 import { useGetDestinationFromParams } from "area/connector/utils";
-import { useCurrentWorkspace, useConnectionList, useSourceList, useListConnectionsStatusesAsync } from "core/api";
-import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
-import { useExperiment } from "hooks/services/Experiment";
+import { useCurrentWorkspace, useConnectionList } from "core/api";
+import { WebBackendConnectionListSortKey } from "core/api/types/AirbyteClient";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./DestinationConnectionsPage.module.scss";
 
-const emptyArray: never[] = [];
 export const DestinationConnectionsPage = () => {
-  const navigate = useNavigate();
+  const [connectionCount, setConnectionCount] = useState<null | number>(null);
+  const [sortKey, setSortKey] = useState<WebBackendConnectionListSortKey>("connectionName_asc");
   const { workspaceId } = useCurrentWorkspace();
 
   const destination = useGetDestinationFromParams();
 
-  // We load only connections attached to this destination to be shown in the connections grid
-  const connectionList = useConnectionList({ destinationId: [destination.destinationId] });
-  const connections = connectionList?.connections ?? (emptyArray as WebBackendConnectionListItem[]);
+  const connectionQuery = useConnectionList({
+    destinationId: [destination.destinationId],
+    sortKey,
+  });
 
-  const isAllConnectionsStatusEnabled = useExperiment("connections.connectionsStatusesEnabled");
-  const connectionIds = useMemo(() => connections.map((connection) => connection.connectionId), [connections]);
-  useListConnectionsStatusesAsync(connectionIds, isAllConnectionsStatusEnabled);
+  // Treating this as a side effect so we can keep the number of connections even as the sorting key changes and
+  // invalidates the query data. If we ever introduced searching/filtering on this page, we would need to change this
+  // logic, because the number of connections would change based on the search/filter.
+  useEffect(() => {
+    const countFromFinalPage = connectionQuery.data?.pages.at(-1)?.num_connections;
+    if (countFromFinalPage !== undefined) {
+      setConnectionCount(countFromFinalPage);
+    }
+  }, [connectionQuery.data]);
 
-  // We load all sources so the add source button has a pre-filled list of options.
-  const { sources } = useSourceList();
-  const sourceDropdownOptions = useMemo<DropdownMenuOptionType[]>(
-    () =>
-      sources.map((source) => {
-        return {
-          as: "button",
-          icon: <ConnectorIcon icon={source.icon} />,
-          iconPosition: "right",
-          displayName: source.name,
-          value: source.sourceId,
-        };
-      }),
-    [sources]
-  );
+  const infiniteConnections = useMemo(() => {
+    return connectionQuery.data?.pages.flatMap((page) => page.connections) ?? [];
+  }, [connectionQuery.data?.pages]);
 
-  const onSelect = (data: DropdownMenuOptionType) => {
-    const path = `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}`;
+  const createConnectionLink = useMemo(() => {
+    const searchParams = createSearchParams({ destinationId: destination.destinationId });
+    return `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}?${searchParams}`;
+  }, [destination.destinationId, workspaceId]);
 
-    const searchParams =
-      data.value !== "create-new-item"
-        ? createSearchParams({ sourceId: data.value as string, destinationId: destination.destinationId })
-        : createSearchParams({ destinationId: destination.destinationId, sourceType: "new" });
-
-    navigate({ pathname: path, search: `?${searchParams}` });
-  };
+  if (connectionCount === null) {
+    return <LoadingPage />;
+  }
 
   return (
     <>
-      {connections.length ? (
+      {connectionCount > 0 ? (
         <FlexContainer direction="column" gap="xl" className={styles.fullHeight}>
-          <TableItemTitle
-            type="source"
-            dropdownOptions={sourceDropdownOptions}
-            onSelect={onSelect}
-            connectionsCount={connections.length}
-          />
-          <DestinationConnectionTable connections={connections} />
+          <TableItemTitle createConnectionLink={createConnectionLink} connectionsCount={connectionCount} />
+          <ScrollParent props={{ className: styles.scrollContainer }}>
+            <DestinationConnectionTable
+              connections={infiniteConnections}
+              hasNextPage={!!connectionQuery.hasNextPage}
+              fetchNextPage={() => !connectionQuery.isFetchingNextPage && connectionQuery.fetchNextPage()}
+              setSortKey={setSortKey}
+              sortKey={sortKey}
+            />
+            {(connectionQuery.isLoading || connectionQuery.isFetchingNextPage) && (
+              <Box p="xl">
+                <FlexContainer justifyContent="center" alignItems="center">
+                  <LoadingSpinner />
+                  <Text>
+                    <FormattedMessage id="tables.connections.loading" />
+                  </Text>
+                </FlexContainer>
+              </Box>
+            )}
+          </ScrollParent>
         </FlexContainer>
       ) : (
         <ConnectorEmptyStateContent

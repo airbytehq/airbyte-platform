@@ -1,6 +1,5 @@
 import { PropsWithChildren, ReactNode, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import { useNavigate } from "react-router-dom";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
@@ -10,16 +9,13 @@ import { Message } from "components/ui/Message";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
-import { useConnectionList, useUpgradeConnectorVersion } from "core/api";
-import { ActorDefinitionVersionRead, DeadlineAction, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
+import { useUpgradeConnectorVersion } from "core/api";
+import { ActorDefinitionVersionRead, DeadlineAction } from "core/api/types/AirbyteClient";
 import { getHumanReadableUpgradeDeadline } from "core/domain/connector";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useNotificationService } from "hooks/services/Notification";
-import { SourcePaths } from "pages/routePaths";
 
 import styles from "./BreakingChangeBanner.module.scss";
-
-const MAX_CONNECTION_NAMES = 5;
 
 interface BreakingChangeBannerProps {
   actorDefinitionVersion: ActorDefinitionVersionRead;
@@ -37,10 +33,7 @@ export const BreakingChangeBanner = ({
   connectorDefinitionId,
 }: BreakingChangeBannerProps) => {
   const [isConfirmUpdateOpen, setConfirmUpdateOpen] = useState(false);
-  const connectionList = useConnectionList({
-    [connectorType === "source" ? "sourceId" : "destinationId"]: [connectorId],
-  });
-  const connections = connectionList?.connections ?? [];
+
   const connectorBreakingChangeDeadlines = useFeature(FeatureItem.ConnectorBreakingChangeDeadlines);
 
   const supportState = actorDefinitionVersion.supportState;
@@ -125,7 +118,6 @@ export const BreakingChangeBanner = ({
           connectorDefinitionId={connectorDefinitionId}
           connectorName={connectorName}
           connectorType={connectorType}
-          connections={connections}
           migrationGuideUrl={migrationGuideUrl}
           onClose={() => setConfirmUpdateOpen(false)}
         />
@@ -145,7 +137,6 @@ interface ConfirmUpdateModalProps {
   connectorDefinitionId: string;
   connectorName: string;
   connectorType: "source" | "destination";
-  connections: WebBackendConnectionListItem[];
   migrationGuideUrl: string;
   onClose: () => void;
 }
@@ -153,14 +144,11 @@ interface ConfirmUpdateModalProps {
 const ConfirmUpdateModal = ({
   connectorId,
   connectorDefinitionId,
-  connectorName,
   connectorType,
-  connections,
   migrationGuideUrl,
   onClose,
 }: ConfirmUpdateModalProps) => {
   const { formatMessage } = useIntl();
-  const navigate = useNavigate();
   const { mutateAsync: upgradeVersion, isLoading } = useUpgradeConnectorVersion(
     connectorType,
     connectorId,
@@ -210,50 +198,15 @@ const ConfirmUpdateModal = ({
       size="md"
     >
       <ModalBody>
-        <FlexContainer direction="column" className={styles.additionalContent}>
+        <FlexContainer direction="column">
           <Text>
             <FormattedMessage
-              id={
-                connections.length > 0
-                  ? "connector.breakingChange.upgradeModal.text"
-                  : "connector.breakingChange.upgradeModal.textNoConnections"
-              }
+              id="connector.breakingChange.upgradeModal.text"
               values={{
-                name: connectorName,
-                count: connections.length,
                 type: connectorType,
               }}
             />
           </Text>
-          {connections.length > 0 && (
-            <FlexItem className={styles.connectionsContainer}>
-              <ul className={styles.connectionsList}>
-                {connections.slice(0, MAX_CONNECTION_NAMES).map((connection, idx) => (
-                  <li key={idx}>
-                    <Text bold>{connection.name}</Text>
-                  </li>
-                ))}
-              </ul>
-              {connections.length > MAX_CONNECTION_NAMES && (
-                <Button
-                  type="button"
-                  variant="link"
-                  className={styles.moreConnections}
-                  onClick={() => {
-                    onClose();
-                    navigate(SourcePaths.Connections);
-                  }}
-                >
-                  <Text italicized>
-                    <FormattedMessage
-                      id="connector.breakingChange.upgradeModal.moreConnections"
-                      values={{ count: connections.length - MAX_CONNECTION_NAMES }}
-                    />
-                  </Text>
-                </Button>
-              )}
-            </FlexItem>
-          )}
           <Message
             type="warning"
             text={

@@ -19,12 +19,7 @@ import {
   updateSource,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
-import {
-  AirbyteCatalog,
-  ScopedResourceRequirements,
-  SourceRead,
-  WebBackendConnectionListItem,
-} from "../types/AirbyteClient";
+import { AirbyteCatalog, ScopedResourceRequirements, SourceRead } from "../types/AirbyteClient";
 import { useRequestErrorHandler } from "../useRequestErrorHandler";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
@@ -130,8 +125,7 @@ const useDeleteSource = () => {
   const onError = useRequestErrorHandler("sources.deleteError");
 
   return useMutation(
-    (payload: { source: SourceRead; connectionsWithSource: WebBackendConnectionListItem[] }) =>
-      deleteSource({ sourceId: payload.source.sourceId }, requestOptions),
+    (payload: { source: SourceRead }) => deleteSource({ sourceId: payload.source.sourceId }, requestOptions),
     {
       onSuccess: (_data, ctx) => {
         analyticsService.track(Namespace.SOURCE, Action.DELETE, {
@@ -149,8 +143,7 @@ const useDeleteSource = () => {
             }) as SourceList
         );
 
-        const connectionIds = ctx.connectionsWithSource.map((item) => item.connectionId);
-        removeConnectionsFromList(connectionIds);
+        removeConnectionsFromList({ sourceId: ctx.source.sourceId });
       },
       onError,
     }

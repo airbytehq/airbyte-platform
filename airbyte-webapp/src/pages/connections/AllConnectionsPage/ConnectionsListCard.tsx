@@ -1,4 +1,3 @@
-import { FetchNextPageOptions, InfiniteQueryObserverResult } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { FormattedMessage } from "react-intl";
 
@@ -18,12 +17,7 @@ import ConnectionsTable from "./ConnectionsTable";
 
 interface ConnectionsListCardProps {
   connections: WebBackendConnectionListItem[];
-  fetchNextPage: (options?: FetchNextPageOptions) => Promise<
-    InfiniteQueryObserverResult<{
-      connections: WebBackendConnectionListItem[];
-      connectionsByConnectorId: Map<string, WebBackendConnectionListItem[]>;
-    }>
-  >;
+  fetchNextPage: () => void;
   hasNextPage: boolean;
   filterValues: FilterValues;
   setFilterValue: (key: keyof FilterValues, value: string | null) => void;

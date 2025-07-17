@@ -9,7 +9,7 @@ import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { useSourceDefinitionList, useSourceList } from "core/api";
+import { useSourceList } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 
 import { CreateNewSource, SOURCE_DEFINITION_PARAM } from "./CreateNewSource";
@@ -27,7 +27,6 @@ export const DefineSource: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_DEFINE_SOURCE);
   const { formatMessage } = useIntl();
   const { sources } = useSourceList();
-  const { sourceDefinitionMap } = useSourceDefinitionList();
   const [searchParams, setSearchParams] = useSearchParams();
 
   if (!searchParams.get(SOURCE_TYPE_PARAM)) {
@@ -56,13 +55,8 @@ export const DefineSource: React.FC = () => {
   };
 
   const sortedSources = useMemo(() => {
-    return sources
-      .map((source) => ({
-        ...source,
-        sourceDefinitionName: sourceDefinitionMap.get(source.sourceDefinitionId)?.name ?? "",
-      }))
-      .sort((a, b) => a.sourceDefinitionName.localeCompare(b.sourceDefinitionName) || a.name.localeCompare(b.name));
-  }, [sources, sourceDefinitionMap]);
+    return sources.sort((a, b) => a.sourceName.localeCompare(b.sourceName) || a.name.localeCompare(b.name));
+  }, [sources]);
 
   return (
     <Box p="xl">

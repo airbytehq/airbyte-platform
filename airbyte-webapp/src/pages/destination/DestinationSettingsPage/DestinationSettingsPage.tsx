@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 
@@ -7,7 +7,6 @@ import { Text } from "components/ui/Text";
 
 import { useGetDestinationFromParams } from "area/connector/utils";
 import {
-  useConnectionList,
   useDestinationDefinitionVersion,
   useGetDestinationDefinitionSpecification,
   useDestinationDefinition,
@@ -27,8 +26,6 @@ import styles from "./DestinationSettings.module.scss";
 export const DestinationSettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();
   const destination = useGetDestinationFromParams();
-  const connectionList = useConnectionList({ destinationId: [destination.destinationId] });
-  const connectionsWithDestination = useMemo(() => connectionList?.connections ?? [], [connectionList]);
   const destinationDefinition = useDestinationDefinition(destination.destinationDefinitionId);
   const destinationDefinitionVersion = useDestinationDefinitionVersion(destination.destinationId);
   const destinationSpecification = useGetDestinationDefinitionSpecification(destination.destinationId);
@@ -54,33 +51,20 @@ export const DestinationSettingsPage: React.FC = () => {
   const onDelete = useCallback(async () => {
     clearFormChange(formId);
     await deleteDestination({
-      connectionsWithDestination,
       destination,
     });
-  }, [clearFormChange, connectionsWithDestination, deleteDestination, destination, formId]);
+  }, [clearFormChange, deleteDestination, destination, formId]);
 
-  const modalAdditionalContent = useMemo<React.ReactNode>(() => {
-    if (connectionsWithDestination.length === 0) {
-      return null;
-    }
-    return (
-      <Box pt="lg">
-        <Text size="lg">
-          <FormattedMessage
-            id="tables.affectedConnectionsOnDeletion"
-            values={{ count: connectionsWithDestination.length }}
-          />
-        </Text>
-        <ul>
-          {connectionsWithDestination.map((connection) => (
-            <li key={connection.connectionId}>{connection.name}</li>
-          ))}
-        </ul>
-      </Box>
-    );
-  }, [connectionsWithDestination]);
-
-  const onDeleteClick = useDeleteModal("destination", onDelete, modalAdditionalContent, destination.name);
+  const onDeleteClick = useDeleteModal(
+    "destination",
+    onDelete,
+    <Box mt="md">
+      <Text bold>
+        <FormattedMessage id="tables.deleteAssociatedConnectionsWarning" />
+      </Text>
+    </Box>,
+    destination.name
+  );
 
   return (
     <div className={styles.content}>

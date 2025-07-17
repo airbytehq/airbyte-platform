@@ -2,22 +2,34 @@ import React from "react";
 
 import { ConnectionTable } from "components/EntityTable";
 import { getConnectionTableData } from "components/EntityTable/utils";
-import { ScrollParent } from "components/ui/ScrollParent";
 
-import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
-
-import styles from "./DestinationConnectionTable.module.scss";
+import { WebBackendConnectionListItem, WebBackendConnectionListSortKey } from "core/api/types/AirbyteClient";
 
 interface DestinationConnectionTableProps {
   connections: WebBackendConnectionListItem[];
+  hasNextPage: boolean;
+  fetchNextPage: () => void;
+  setSortKey: (key: WebBackendConnectionListSortKey) => void;
+  sortKey: WebBackendConnectionListSortKey;
 }
 
-export const DestinationConnectionTable: React.FC<DestinationConnectionTableProps> = ({ connections }) => {
+export const DestinationConnectionTable: React.FC<DestinationConnectionTableProps> = ({
+  connections,
+  hasNextPage,
+  fetchNextPage,
+  setSortKey,
+  sortKey,
+}) => {
   const data = getConnectionTableData(connections, "destination");
 
   return (
-    <ScrollParent props={{ className: styles.container }}>
-      <ConnectionTable data={data} entity="destination" />
-    </ScrollParent>
+    <ConnectionTable
+      data={data}
+      entity="destination"
+      hasNextPage={hasNextPage}
+      fetchNextPage={fetchNextPage}
+      setSortKey={setSortKey}
+      sortKey={sortKey}
+    />
   );
 };

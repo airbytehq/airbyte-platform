@@ -1,4 +1,4 @@
-import React, { Suspense, useLayoutEffect } from "react";
+import React, { Suspense, useLayoutEffect, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
@@ -70,9 +70,10 @@ export const AllConnectionsPage: React.FC = () => {
     sortKey,
   });
 
-  // Filter values are passed to useConnectionList hook
-
-  const connections = connectionListQuery.connections;
+  const connections = useMemo(
+    () => connectionListQuery.data?.pages.flatMap((page) => page.connections) ?? [],
+    [connectionListQuery.data?.pages]
+  );
   const hasConnections = connections.length > 0;
   const isAllConnectionsStatusEnabled = useExperiment("connections.connectionsStatusesEnabled");
 
