@@ -178,7 +178,8 @@ export const useAssistApiProxyQuery = <T>(
   controller: string,
   enabled: boolean,
   params: AssistV1ProcessRequestBody,
-  ignoreCacheKeys: string[]
+  ignoreCacheKeys: string[],
+  transformResult?: (data: T) => T
 ) => {
   const requestOptions = useRequestOptions();
   requestOptions.signal = AbortSignal.timeout(5 * 60 * 1000); // 5 minutes
@@ -188,7 +189,10 @@ export const useAssistApiProxyQuery = <T>(
 
   return useQuery<T, HttpError<KnownExceptionInfo>>(
     debouncedQueryKey,
-    () => explicitlyCastedAssistV1Process<T>(controller, params, requestOptions),
+    async () => {
+      const result = await explicitlyCastedAssistV1Process<T>(controller, params, requestOptions);
+      return transformResult ? transformResult(result) : result;
+    },
     {
       enabled,
       keepPreviousData: true,

@@ -5,7 +5,6 @@ import { FormattedMessage } from "react-intl";
 import { useUpdateEffect } from "react-use";
 
 import Indicator from "components/Indicator";
-import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
@@ -24,8 +23,8 @@ import { links } from "core/utils/links";
 import { useExperiment } from "hooks/services/Experiment";
 import { BuilderView, useConnectorBuilderPermission } from "services/connectorBuilder/ConnectorBuilderStateService";
 
+import { AddStreamButton } from "./AddStreamButton";
 import styles from "./BuilderSidebar.module.scss";
-import { DEFAULT_DYNAMIC_STREAM, DEFAULT_SYNC_STREAM } from "../constants";
 import { Sidebar } from "../Sidebar";
 import { StreamId } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
@@ -256,7 +255,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
   const analyticsService = useAnalyticsService();
   const { hasErrors } = useBuilderErrors();
   const permission = useConnectorBuilderPermission();
-  const { setValue, getValues } = useFormContext();
+  const { setValue } = useFormContext();
   const view = useBuilderWatch("view");
   const handleViewSelect = (selectedView: BuilderView) => {
     setValue("view", selectedView);
@@ -346,16 +345,11 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
             </InfoTooltip>
           </FlexContainer>
 
-          <Button
-            type="button"
-            className={styles.addStreamButton}
-            onClick={() => {
-              const currentStreams = getValues("manifest.streams") ?? [];
-              setValue("manifest.streams", [...currentStreams, DEFAULT_SYNC_STREAM]);
-              setValue("view", { type: "stream", index: streamCount });
-            }}
-            icon="plus"
+          <AddStreamButton
+            streamType="stream"
+            onAddStream={(addedStreamNum) => handleViewSelect({ type: "stream", index: addedStreamNum })}
             disabled={permission === "readOnly"}
+            data-testid="add-stream"
           />
         </FlexContainer>
 
@@ -392,16 +386,11 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
               </InfoTooltip>
             </FlexContainer>
 
-            <Button
-              type="button"
-              className={styles.addStreamButton}
-              onClick={() => {
-                const currentDynamicStreams = getValues("manifest.dynamic_streams") ?? [];
-                setValue("manifest.dynamic_streams", [...currentDynamicStreams, DEFAULT_DYNAMIC_STREAM]);
-                setValue("view", { type: "dynamic_stream", index: dynamicStreamCount });
-              }}
-              icon="plus"
+            <AddStreamButton
+              streamType="dynamicStream"
+              onAddStream={(addedStreamNum) => handleViewSelect({ type: "dynamic_stream", index: addedStreamNum })}
               disabled={permission === "readOnly"}
+              data-testid="add-dynamic-stream"
             />
           </FlexContainer>
 
