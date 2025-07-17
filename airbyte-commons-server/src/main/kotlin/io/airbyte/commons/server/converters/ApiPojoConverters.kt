@@ -243,13 +243,13 @@ class ApiPojoConverters(
   fun toInternalActorType(actorType: ActorType): io.airbyte.config.ActorType? = Enums.convertTo(actorType, io.airbyte.config.ActorType::class.java)
 
   // TODO(https://github.com/airbytehq/airbyte/issues/11432): remove these helpers.
-  fun toApiTimeUnit(apiTimeUnit: Schedule.TimeUnit): ConnectionSchedule.TimeUnitEnum? =
+  fun toApiTimeUnit(apiTimeUnit: Schedule.TimeUnit?): ConnectionSchedule.TimeUnitEnum? =
     Enums.convertTo(
       apiTimeUnit,
       ConnectionSchedule.TimeUnitEnum::class.java,
     )
 
-  fun toApiTimeUnit(timeUnit: BasicSchedule.TimeUnit): ConnectionSchedule.TimeUnitEnum? =
+  fun toApiTimeUnit(timeUnit: BasicSchedule.TimeUnit?): ConnectionSchedule.TimeUnitEnum? =
     Enums.convertTo(
       timeUnit,
       ConnectionSchedule.TimeUnitEnum::class.java,
@@ -257,7 +257,7 @@ class ApiPojoConverters(
 
   fun toApiStatus(status: StandardSync.Status?): ConnectionStatus? = Enums.convertTo(status, ConnectionStatus::class.java)
 
-  fun toPersistenceStatus(apiStatus: ConnectionStatus): StandardSync.Status? = Enums.convertTo(apiStatus, StandardSync.Status::class.java)
+  fun toPersistenceStatus(apiStatus: ConnectionStatus?): StandardSync.Status? = Enums.convertTo(apiStatus, StandardSync.Status::class.java)
 
   fun toPersistenceNonBreakingChangesPreference(preference: NonBreakingChangesPreference?): StandardSync.NonBreakingChangesPreference? =
     Enums.convertTo(
@@ -271,25 +271,25 @@ class ApiPojoConverters(
       StandardSync.BackfillPreference::class.java,
     )
 
-  fun toPersistenceTimeUnit(apiTimeUnit: ConnectionSchedule.TimeUnitEnum): Schedule.TimeUnit? =
+  fun toPersistenceTimeUnit(apiTimeUnit: ConnectionSchedule.TimeUnitEnum?): Schedule.TimeUnit? =
     Enums.convertTo(
       apiTimeUnit,
       Schedule.TimeUnit::class.java,
     )
 
-  fun toBasicScheduleTimeUnit(apiTimeUnit: ConnectionSchedule.TimeUnitEnum): BasicSchedule.TimeUnit? =
+  fun toBasicScheduleTimeUnit(apiTimeUnit: ConnectionSchedule.TimeUnitEnum?): BasicSchedule.TimeUnit? =
     Enums.convertTo(
       apiTimeUnit,
       BasicSchedule.TimeUnit::class.java,
     )
 
-  fun toBasicScheduleTimeUnit(apiTimeUnit: ConnectionScheduleDataBasicSchedule.TimeUnitEnum): BasicSchedule.TimeUnit? =
+  fun toBasicScheduleTimeUnit(apiTimeUnit: ConnectionScheduleDataBasicSchedule.TimeUnitEnum?): BasicSchedule.TimeUnit? =
     Enums.convertTo(
       apiTimeUnit,
       BasicSchedule.TimeUnit::class.java,
     )
 
-  fun toLegacyScheduleTimeUnit(timeUnit: ConnectionScheduleDataBasicSchedule.TimeUnitEnum): Schedule.TimeUnit? =
+  fun toLegacyScheduleTimeUnit(timeUnit: ConnectionScheduleDataBasicSchedule.TimeUnitEnum?): Schedule.TimeUnit? =
     Enums.convertTo(
       timeUnit,
       Schedule.TimeUnit::class.java,
