@@ -1,3 +1,4 @@
+import { WebStorageStateStore } from "oidc-client-ts";
 import { PropsWithChildren, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { AuthProvider, useAuth } from "react-oidc-context";
@@ -39,6 +40,8 @@ export const EnterpriseAuthService: React.FC<PropsWithChildren<unknown>> = ({ ch
         : window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     },
+    // Use local storage to persist tokens across sessions
+    userStore: new WebStorageStateStore({ store: window.localStorage }),
   };
 
   return (
