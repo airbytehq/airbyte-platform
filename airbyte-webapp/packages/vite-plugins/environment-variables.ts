@@ -49,7 +49,7 @@ export function environmentVariables(): Plugin {
 
       // Mirrors the backend version which is set during deployment in .github/actions/deploy/action.yaml
       const version = JSON.stringify(
-        `${process.env.VERSION || "dev"}${process.env.WEBAPP_BUILD_CLOUD_ENV ? "-cloud" : ""}`
+        `${process.env.AIRBYTE_VERSION || "dev"}${process.env.WEBAPP_BUILD_CLOUD_ENV ? "-cloud" : ""}`
       );
 
       // Create an object of defines that will shim all required process.env variables.
