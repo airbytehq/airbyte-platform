@@ -149,6 +149,21 @@ class DefaultJobPersistenceTest {
         NOW.getEpochSecond());
   }
 
+  private static Attempt createAttemptLight(final int id, final long jobId, final AttemptStatus status, final Path logPath) {
+    return new Attempt(
+        id,
+        jobId,
+        logPath,
+        new AttemptSyncConfig(),
+        new JobOutput(),
+        status,
+        null,
+        null,
+        NOW.getEpochSecond(),
+        NOW.getEpochSecond(),
+        NOW.getEpochSecond());
+  }
+
   private static Attempt createUnfinishedAttempt(final int id, final long jobId, final AttemptStatus status, final Path logPath) {
     return new Attempt(
         id,
@@ -1964,6 +1979,35 @@ class DefaultJobPersistenceTest {
           Lists.newArrayList(
               createAttempt(0, jobId, AttemptStatus.FAILED, LOG_PATH),
               createAttempt(1, jobId, AttemptStatus.SUCCEEDED, secondAttemptLogPath)),
+          NOW.getEpochSecond());
+
+      assertEquals(1, actualList.size());
+      assertEquals(expected, actual);
+    }
+
+    @Test
+    @DisplayName("Should list all jobs light with all attempts")
+    void testListJobsLightWithMultipleAttempts() throws IOException {
+      final long jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow();
+      final int attemptNumber0 = jobPersistence.createAttempt(jobId, LOG_PATH);
+
+      jobPersistence.failAttempt(jobId, attemptNumber0);
+
+      final Path secondAttemptLogPath = LOG_PATH.resolve("2");
+      final int attemptNumber1 = jobPersistence.createAttempt(jobId, secondAttemptLogPath);
+
+      jobPersistence.succeedAttempt(jobId, attemptNumber1);
+
+      final List<Job> actualList = jobPersistence.listJobsLight(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString(), 9999);
+
+      final Job actual = actualList.get(0);
+      final Job expected = createJob(
+          jobId,
+          SPEC_JOB_CONFIG,
+          JobStatus.SUCCEEDED,
+          Lists.newArrayList(
+              createAttemptLight(0, jobId, AttemptStatus.FAILED, LOG_PATH),
+              createAttemptLight(1, jobId, AttemptStatus.SUCCEEDED, secondAttemptLogPath)),
           NOW.getEpochSecond());
 
       assertEquals(1, actualList.size());

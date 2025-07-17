@@ -2304,6 +2304,9 @@ class DefaultJobPersistence
           }
           if (entry.getValue(ATTEMPT_NUMBER_FIELD) != null) {
             currentJob = addAttemptToJob(currentJob, getAttemptFromRecordLight(entry))
+            // the last job in the list is the current one, so pop it off and replace it with updated one.
+            jobs.removeLast()
+            jobs.add(currentJob!!)
           }
         }
         return jobs
