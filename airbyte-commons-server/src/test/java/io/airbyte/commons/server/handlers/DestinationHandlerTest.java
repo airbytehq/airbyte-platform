@@ -6,10 +6,12 @@ package io.airbyte.commons.server.handlers;
 
 import static io.airbyte.config.secrets.InlinedConfigWithSecretRefsKt.buildConfigWithSecretRefsJava;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -19,6 +21,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
+import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody;
 import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
@@ -76,6 +79,7 @@ import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -707,6 +711,8 @@ class DestinationHandlerTest {
     when(destinationService.getDestinationConnection(destinationConnection.getDestinationId())).thenReturn(destinationConnection);
     when(destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId()))
         .thenReturn(standardDestinationDefinition);
+    when(destinationService.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId()))
+        .thenReturn(standardDestinationDefinition);
     when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
         destinationConnection.getDestinationId()))
             .thenReturn(destinationDefinitionVersion);
@@ -740,7 +746,7 @@ class DestinationHandlerTest {
         .isEntitled(IS_ENTITLED)
         .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
         .supportState(SUPPORT_STATE)
-        .status(ActorStatus.INACTIVE)
+        .status(ActorStatus.ACTIVE)
         .resourceAllocation(RESOURCE_ALLOCATION)
         .numConnections(0);
     final WorkspaceIdRequestBody workspaceIdRequestBody =
@@ -748,9 +754,15 @@ class DestinationHandlerTest {
 
     when(destinationService.getDestinationConnection(destinationConnectionWithCount.destination.getDestinationId()))
         .thenReturn(destinationConnectionWithCount.destination);
-    when(destinationService.listWorkspaceDestinationConnectionsWithCounts(destinationConnectionWithCount.destination.getWorkspaceId()))
+    when(destinationService.buildCursorPagination(any(), any(), any(), any(), any()))
+        .thenReturn(new io.airbyte.data.services.shared.WorkspaceResourceCursorPagination(null, 10));
+    when(destinationService.countWorkspaceDestinationsFiltered(any(), any()))
+        .thenReturn(1);
+    when(destinationService.listWorkspaceDestinationConnectionsWithCounts(any(), any()))
         .thenReturn(Lists.newArrayList(destinationConnectionWithCount));
     when(destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId()))
+        .thenReturn(standardDestinationDefinition);
+    when(destinationService.getDestinationDefinitionFromDestination(destinationConnectionWithCount.destination.getDestinationId()))
         .thenReturn(standardDestinationDefinition);
     when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition,
         destinationConnectionWithCount.destination.getWorkspaceId(),
@@ -762,15 +774,160 @@ class DestinationHandlerTest {
     when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
         .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
-    final DestinationReadList actualDestinationRead = destinationHandler.listDestinationsForWorkspace(workspaceIdRequestBody);
+    final DestinationReadList actualDestinationRead = destinationHandler
+        .listDestinationsForWorkspace(new ActorListCursorPaginatedRequestBody()
+            .workspaceId(workspaceIdRequestBody.getWorkspaceId())
+            .pageSize(10));
 
     assertEquals(expectedDestinationRead, actualDestinationRead.getDestinations().get(0));
+    assertEquals(1, actualDestinationRead.getNumConnections());
+    assertEquals(10, actualDestinationRead.getPageSize());
+
     verify(actorDefinitionVersionHelper).getDestinationVersion(standardDestinationDefinition,
         destinationConnectionWithCount.destination.getWorkspaceId(),
         destinationConnectionWithCount.destination.getDestinationId());
     verify(secretsProcessor)
         .prepareSecretsForOutput(destinationConnectionWithCount.destination.getConfiguration(),
             destinationDefinitionSpecificationRead.getConnectionSpecification());
+    verify(destinationService).buildCursorPagination(any(), any(), any(), any(), any());
+    verify(destinationService).countWorkspaceDestinationsFiltered(any(), any());
+    verify(destinationService).listWorkspaceDestinationConnectionsWithCounts(any(), any());
+  }
+
+  @Test
+  void testListDestinationsForWorkspaceWithPagination()
+      throws JsonValidationException, IOException, io.airbyte.data.ConfigNotFoundException {
+    // Create multiple destinations for pagination testing
+    final DestinationConnectionWithCount destination1 = createDestinationConnectionWithCount("dest1", 2);
+    final DestinationConnectionWithCount destination2 = createDestinationConnectionWithCount("dest2", 1);
+    final List<DestinationConnectionWithCount> destinations = Lists.newArrayList(destination1, destination2);
+
+    final UUID workspaceId = destination1.destination.getWorkspaceId();
+    final ActorListCursorPaginatedRequestBody requestBody = new ActorListCursorPaginatedRequestBody()
+        .workspaceId(workspaceId)
+        .pageSize(10);
+
+    // Mock the pagination service methods
+    when(destinationService.buildCursorPagination(any(), any(), any(), any(), any()))
+        .thenReturn(new io.airbyte.data.services.shared.WorkspaceResourceCursorPagination(null, 10));
+    when(destinationService.countWorkspaceDestinationsFiltered(any(), any()))
+        .thenReturn(2);
+    when(destinationService.listWorkspaceDestinationConnectionsWithCounts(any(), any()))
+        .thenReturn(destinations);
+
+    // Mock destination service methods for building reads
+    when(destinationService.getStandardDestinationDefinition(any()))
+        .thenReturn(standardDestinationDefinition);
+    when(destinationService.getDestinationDefinitionFromDestination(any()))
+        .thenReturn(standardDestinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any()))
+        .thenReturn(destinationDefinitionVersion);
+    when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(any(), any(), any()))
+        .thenReturn(new io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus(
+            destinationDefinitionVersion, false));
+    when(secretsProcessor.prepareSecretsForOutput(any(), any()))
+        .thenReturn(Jsons.emptyObject());
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
+
+    // Execute the test
+    final DestinationReadList result = destinationHandler.listDestinationsForWorkspace(requestBody);
+
+    // Verify the results
+    assertNotNull(result);
+    assertEquals(2, result.getDestinations().size());
+    assertEquals(2, result.getNumConnections());
+    assertEquals(10, result.getPageSize());
+
+    // Verify the first destination
+    final DestinationRead firstDestination = result.getDestinations().get(0);
+    assertEquals("dest1", firstDestination.getName());
+    assertEquals(2, firstDestination.getNumConnections());
+    assertEquals(ActorStatus.ACTIVE, firstDestination.getStatus()); // Has connections, so should be active
+
+    // Verify the second destination
+    final DestinationRead secondDestination = result.getDestinations().get(1);
+    assertEquals("dest2", secondDestination.getName());
+    assertEquals(1, secondDestination.getNumConnections());
+    assertEquals(ActorStatus.ACTIVE, secondDestination.getStatus()); // Has connections, so should be active
+
+    // Verify service method calls
+    verify(destinationService).buildCursorPagination(any(), any(), any(), any(), any());
+    verify(destinationService).countWorkspaceDestinationsFiltered(eq(workspaceId), any());
+    verify(destinationService).listWorkspaceDestinationConnectionsWithCounts(eq(workspaceId), any());
+  }
+
+  @Test
+  void testListDestinationsForWorkspaceWithFilters()
+      throws JsonValidationException, IOException, io.airbyte.data.ConfigNotFoundException {
+    final UUID workspaceId = destinationConnectionWithCount.destination.getWorkspaceId();
+    final ActorListCursorPaginatedRequestBody requestBody = new ActorListCursorPaginatedRequestBody()
+        .workspaceId(workspaceId)
+        .pageSize(5)
+        .filters(new io.airbyte.api.model.generated.ActorListFilters()
+            .searchTerm("test")
+            .states(Lists.newArrayList(io.airbyte.api.model.generated.ActorStatus.ACTIVE)));
+
+    // Mock the pagination service methods with filters
+    when(destinationService.buildCursorPagination(any(), any(), any(), any(), any()))
+        .thenReturn(new io.airbyte.data.services.shared.WorkspaceResourceCursorPagination(null, 5));
+    when(destinationService.countWorkspaceDestinationsFiltered(any(), any()))
+        .thenReturn(1);
+    when(destinationService.listWorkspaceDestinationConnectionsWithCounts(any(), any()))
+        .thenReturn(Lists.newArrayList(destinationConnectionWithCount));
+
+    // Mock other service methods
+    when(destinationService.getStandardDestinationDefinition(any()))
+        .thenReturn(standardDestinationDefinition);
+    when(destinationService.getDestinationDefinitionFromDestination(any()))
+        .thenReturn(standardDestinationDefinition);
+    when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any()))
+        .thenReturn(destinationDefinitionVersion);
+    when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(any(), any(), any()))
+        .thenReturn(new io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus(
+            destinationDefinitionVersion, false));
+    when(secretsProcessor.prepareSecretsForOutput(any(), any()))
+        .thenReturn(destinationConnectionWithCount.destination.getConfiguration());
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
+
+    // Execute the test
+    final DestinationReadList result = destinationHandler.listDestinationsForWorkspace(requestBody);
+
+    // Verify the results
+    assertNotNull(result);
+    assertEquals(1, result.getDestinations().size());
+    assertEquals(1, result.getNumConnections());
+    assertEquals(5, result.getPageSize());
+
+    // Verify service method calls with proper arguments
+    verify(destinationService).buildCursorPagination(
+        isNull(), // cursor
+        any(), // sortKey
+        any(), // filters
+        eq(true), // ascending (default for DESTINATION_NAME)
+        eq(5) // pageSize
+    );
+    verify(destinationService).countWorkspaceDestinationsFiltered(eq(workspaceId), any());
+    verify(destinationService).listWorkspaceDestinationConnectionsWithCounts(eq(workspaceId), any());
+  }
+
+  private DestinationConnectionWithCount createDestinationConnectionWithCount(final String name, final int connectionCount) {
+    final DestinationConnection destination = new DestinationConnection()
+        .withDestinationId(UUID.randomUUID())
+        .withWorkspaceId(UUID.randomUUID())
+        .withDestinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
+        .withName(name)
+        .withConfiguration(Jsons.emptyObject())
+        .withTombstone(false);
+
+    return new DestinationConnectionWithCount(
+        destination,
+        "destination-definition",
+        connectionCount,
+        null,
+        Map.of(),
+        true);
   }
 
   @Test
@@ -841,6 +998,8 @@ class DestinationHandlerTest {
     when(destinationService.getDestinationConnection(destinationConnection.getDestinationId())).thenReturn(destinationConnection);
     when(destinationService.listDestinationConnection()).thenReturn(Lists.newArrayList(destinationConnection));
     when(destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId()))
+        .thenReturn(standardDestinationDefinition);
+    when(destinationService.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId()))
         .thenReturn(standardDestinationDefinition);
     when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
         destinationConnection.getDestinationId()))

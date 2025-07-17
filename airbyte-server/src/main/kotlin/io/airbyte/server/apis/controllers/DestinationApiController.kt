@@ -5,6 +5,7 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.DestinationApi
+import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.model.generated.CheckConnectionRead
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.DestinationCreate
@@ -19,7 +20,6 @@ import io.airbyte.api.model.generated.DestinationUpdate
 import io.airbyte.api.model.generated.DiscoverCatalogResult
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.model.generated.PartialDestinationUpdate
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
@@ -148,8 +148,8 @@ open class DestinationApiController(
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listDestinationsForWorkspace(
-    @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
-  ): DestinationReadList? = execute { destinationHandler.listDestinationsForWorkspace(workspaceIdRequestBody) }
+    @Body actorListCursorPaginatedRequestBody: ActorListCursorPaginatedRequestBody,
+  ): DestinationReadList? = execute { destinationHandler.listDestinationsForWorkspace(actorListCursorPaginatedRequestBody) }
 
   @Post(uri = "/list_paginated")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)

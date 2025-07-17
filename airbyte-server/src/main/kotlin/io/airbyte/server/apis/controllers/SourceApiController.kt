@@ -6,6 +6,7 @@ package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.SourceApi
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt
+import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.model.generated.CheckConnectionRead
 import io.airbyte.api.model.generated.DiscoverCatalogResult
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
@@ -20,7 +21,6 @@ import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SourceReadList
 import io.airbyte.api.model.generated.SourceSearch
 import io.airbyte.api.model.generated.SourceUpdate
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
@@ -128,8 +128,8 @@ open class SourceApiController(
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listSourcesForWorkspace(
-    @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
-  ): SourceReadList? = execute { sourceHandler.listSourcesForWorkspace(workspaceIdRequestBody) }
+    @Body actorListCursorPaginatedRequestBody: ActorListCursorPaginatedRequestBody,
+  ): SourceReadList? = execute { sourceHandler.listSourcesForWorkspace(actorListCursorPaginatedRequestBody) }
 
   @Post(uri = "/list_paginated")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)

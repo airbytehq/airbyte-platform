@@ -4,8 +4,8 @@
 
 package io.airbyte.data.services.impls.jooq
 
-import io.airbyte.data.services.shared.ConnectionListCursorPagination.Companion.fromValues
-import io.airbyte.data.services.shared.ConnectionSortKey
+import io.airbyte.data.services.shared.SortKey
+import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination.Companion.fromValues
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -13,7 +13,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
 
-internal class ConnectionListCursorPaginationTest {
+internal class WorkspaceResourceCursorPaginationTest {
   companion object {
     @JvmStatic
     fun cursorValuesProvider() =
@@ -32,12 +32,14 @@ internal class ConnectionListCursorPaginationTest {
   ) {
     val cursor =
       fromValues(
-        sortKey = ConnectionSortKey.CONNECTION_NAME,
+        sortKey = SortKey.CONNECTION_NAME,
         connectionName = connectionName,
         sourceName = null,
+        sourceDefinitionName = null,
         destinationName = null,
+        destinationDefinitionName = null,
         lastSync = null,
-        connectionId = connectionId,
+        cursorId = connectionId,
         pageSize = pageSize,
         ascending = true,
         filters = null,
@@ -45,7 +47,7 @@ internal class ConnectionListCursorPaginationTest {
 
     Assertions.assertNotNull(cursor)
     Assertions.assertEquals(connectionName, cursor.cursor?.connectionName)
-    Assertions.assertEquals(connectionId, cursor.cursor?.connectionId)
+    Assertions.assertEquals(connectionId, cursor.cursor?.cursorId)
     Assertions.assertEquals(pageSize, cursor.pageSize)
   }
 
@@ -53,12 +55,14 @@ internal class ConnectionListCursorPaginationTest {
   fun testCursorValidation() {
     Assertions.assertThrows(IllegalArgumentException::class.java) {
       fromValues(
-        sortKey = ConnectionSortKey.CONNECTION_NAME,
+        sortKey = SortKey.CONNECTION_NAME,
         connectionName = null,
         sourceName = null,
+        sourceDefinitionName = null,
         destinationName = null,
+        destinationDefinitionName = null,
         lastSync = null,
-        connectionId = UUID.randomUUID(),
+        cursorId = UUID.randomUUID(),
         pageSize = 5,
         ascending = true,
         filters = null,
@@ -71,12 +75,14 @@ internal class ConnectionListCursorPaginationTest {
     // This should NOT throw an exception - null lastSync is valid for connections that have never synced
     val cursor =
       fromValues(
-        sortKey = ConnectionSortKey.LAST_SYNC,
+        sortKey = SortKey.LAST_SYNC,
         connectionName = null,
         sourceName = null,
+        sourceDefinitionName = null,
         destinationName = null,
+        destinationDefinitionName = null,
         lastSync = null,
-        connectionId = UUID.randomUUID(),
+        cursorId = UUID.randomUUID(),
         pageSize = 10,
         ascending = true,
         filters = null,
@@ -84,7 +90,7 @@ internal class ConnectionListCursorPaginationTest {
 
     Assertions.assertNotNull(cursor)
     Assertions.assertNotNull(cursor.cursor)
-    Assertions.assertEquals(ConnectionSortKey.LAST_SYNC, cursor.cursor?.sortKey)
+    Assertions.assertEquals(SortKey.LAST_SYNC, cursor.cursor?.sortKey)
     Assertions.assertNull(cursor.cursor?.lastSync)
   }
 }

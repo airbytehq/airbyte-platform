@@ -97,7 +97,7 @@ export const ConnectionsListCard: React.FC<ConnectionsListCardProps> = ({
           <FlexContainer justifyContent="center" alignItems="center">
             <LoadingSpinner />
             <Text>
-              <FormattedMessage id="ui.loading" />
+              <FormattedMessage id="tables.connections.loading" />
             </Text>
           </FlexContainer>
         </Box>

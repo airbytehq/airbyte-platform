@@ -41,6 +41,7 @@ import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.data.services.shared.ActorServicePaginationHelper;
 import io.airbyte.db.init.DatabaseInitializationException;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
@@ -95,6 +96,7 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     final var secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     final var connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
     final var metricClient = mock(MetricClient.class);
+    final var actorPaginationServiceHelper = mock(ActorServicePaginationHelper.class);
 
     final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     organizationService.writeOrganization(MockData.defaultOrganization());
@@ -121,13 +123,15 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
         secretPersistenceConfigService,
         connectionService,
         actorDefinitionVersionUpdater,
-        metricClient);
+        metricClient,
+        actorPaginationServiceHelper);
     destinationService = new DestinationServiceJooqImpl(
         database,
         featureFlagClient,
         connectionService,
         actorDefinitionVersionUpdater,
-        metricClient);
+        metricClient,
+        actorPaginationServiceHelper);
 
     workspaceService = new WorkspaceServiceJooqImpl(
         database,

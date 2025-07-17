@@ -10,7 +10,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import datadog.trace.api.Trace;
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead;
-import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.AirbyteCatalog;
 import io.airbyte.api.model.generated.AirbyteCatalogDiff;
 import io.airbyte.api.model.generated.AirbyteStream;
@@ -45,7 +44,6 @@ import io.airbyte.api.model.generated.WebBackendConnectionCreate;
 import io.airbyte.api.model.generated.WebBackendConnectionListFilters;
 import io.airbyte.api.model.generated.WebBackendConnectionListItem;
 import io.airbyte.api.model.generated.WebBackendConnectionListRequestBody;
-import io.airbyte.api.model.generated.WebBackendConnectionListSortKey;
 import io.airbyte.api.model.generated.WebBackendConnectionRead;
 import io.airbyte.api.model.generated.WebBackendConnectionReadList;
 import io.airbyte.api.model.generated.WebBackendConnectionRequestBody;
@@ -80,12 +78,13 @@ import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.data.services.shared.ConnectionFilters;
-import io.airbyte.data.services.shared.ConnectionJobStatus;
-import io.airbyte.data.services.shared.ConnectionListCursorPagination;
-import io.airbyte.data.services.shared.ConnectionSortKey;
 import io.airbyte.data.services.shared.ConnectionWithJobInfo;
+import io.airbyte.data.services.shared.Filters;
+import io.airbyte.data.services.shared.SortKey;
+import io.airbyte.data.services.shared.SortKeyInfo;
 import io.airbyte.data.services.shared.StandardSyncQuery;
+import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination;
+import io.airbyte.data.services.shared.WorkspaceResourceCursorPaginationKt;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.metrics.lib.MetricTags;
@@ -137,7 +136,6 @@ public class WebBackendConnectionsHandler {
   private final ApiPojoConverters apiPojoConverters;
   private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private final CatalogConfigDiffHelper catalogConfigDiffHelper;
-  private static final int DEFAULT_PAGE_SIZE = 20;
 
   public WebBackendConnectionsHandler(final ActorDefinitionVersionHandler actorDefinitionVersionHandler,
                                       final ConnectionsHandler connectionsHandler,
@@ -219,7 +217,8 @@ public class WebBackendConnectionsHandler {
 
     final WebBackendConnectionListFilters filters = webBackendConnectionListRequestBody.getFilters();
     final int pageSize =
-        webBackendConnectionListRequestBody.getPageSize() != null ? webBackendConnectionListRequestBody.getPageSize() : DEFAULT_PAGE_SIZE;
+        webBackendConnectionListRequestBody.getPageSize() != null ? webBackendConnectionListRequestBody.getPageSize()
+            : WorkspaceResourceCursorPaginationKt.DEFAULT_PAGE_SIZE;
 
     final StandardSyncQuery query = new StandardSyncQuery(
         webBackendConnectionListRequestBody.getWorkspaceId(),
@@ -229,12 +228,12 @@ public class WebBackendConnectionsHandler {
         false);
 
     // Parse sort key to extract field and direction
-    final SortKeyInfo sortKeyInfo = parseSortKey(webBackendConnectionListRequestBody.getSortKey());
-    final ConnectionSortKey internalSortKey = sortKeyInfo.sortKey();
+    final SortKeyInfo sortKeyInfo = WorkspaceResourceCursorPaginationKt.parseSortKey(webBackendConnectionListRequestBody.getSortKey());
+    final SortKey internalSortKey = sortKeyInfo.sortKey();
     final boolean ascending = sortKeyInfo.ascending();
-    final ConnectionFilters connectionFilters = buildConnectionFilters(filters);
+    final Filters connectionFilters = WorkspaceResourceCursorPaginationKt.buildFilters(filters);
 
-    final ConnectionListCursorPagination cursorPagination = connectionService.buildCursorPagination(
+    final WorkspaceResourceCursorPagination cursorPagination = connectionService.buildCursorPagination(
         webBackendConnectionListRequestBody.getCursor(),
         internalSortKey,
         connectionFilters,
@@ -268,60 +267,6 @@ public class WebBackendConnectionsHandler {
     }
 
     return new WebBackendConnectionReadList().connections(connectionItems).pageSize(pageSize).numConnections(numConnections);
-  }
-
-  /**
-   * Helper record to hold parsed sort key information.
-   */
-  @VisibleForTesting
-  record SortKeyInfo(ConnectionSortKey sortKey, boolean ascending) {}
-
-  /**
-   * Parses the string-based sort key to extract field and direction.
-   */
-  @VisibleForTesting
-  SortKeyInfo parseSortKey(final WebBackendConnectionListSortKey sortKey) {
-    if (sortKey == null) {
-      return new SortKeyInfo(ConnectionSortKey.CONNECTION_NAME, true);
-    }
-
-    return switch (sortKey) {
-      case CONNECTION_NAME_ASC -> new SortKeyInfo(ConnectionSortKey.CONNECTION_NAME, true);
-      case CONNECTION_NAME_DESC -> new SortKeyInfo(ConnectionSortKey.CONNECTION_NAME, false);
-      case SOURCE_NAME_ASC -> new SortKeyInfo(ConnectionSortKey.SOURCE_NAME, true);
-      case SOURCE_NAME_DESC -> new SortKeyInfo(ConnectionSortKey.SOURCE_NAME, false);
-      case DESTINATION_NAME_ASC -> new SortKeyInfo(ConnectionSortKey.DESTINATION_NAME, true);
-      case DESTINATION_NAME_DESC -> new SortKeyInfo(ConnectionSortKey.DESTINATION_NAME, false);
-      case LAST_SYNC_ASC -> new SortKeyInfo(ConnectionSortKey.LAST_SYNC, true);
-      case LAST_SYNC_DESC -> new SortKeyInfo(ConnectionSortKey.LAST_SYNC, false);
-    };
-  }
-
-  /**
-   * Converts WebBackendConnectionListFilters to ConnectionFilters for internal use.
-   */
-  @VisibleForTesting
-  ConnectionFilters buildConnectionFilters(final WebBackendConnectionListFilters filters) {
-    if (filters == null) {
-      return null;
-    }
-
-    return new ConnectionFilters(
-        filters.getSearchTerm(),
-        filters.getSourceDefinitionIds(),
-        filters.getDestinationDefinitionIds(),
-        // Convert API enum values to config object
-        filters.getStatuses() == null
-            ? null
-            : filters.getStatuses().stream()
-                .map(apiStatus -> ConnectionJobStatus.valueOf(apiStatus.name()))
-                .collect(Collectors.toList()),
-        filters.getStates() == null
-            ? null
-            : filters.getStates().stream()
-                .map(apiState -> ActorStatus.valueOf(apiState.name()))
-                .collect(Collectors.toList()),
-        filters.getTagIds());
   }
 
   private Map<UUID, SourceSnippetRead> getSourceSnippetReadById(final List<UUID> sourceIds) throws IOException {

@@ -13,7 +13,10 @@ import com.google.common.collect.Lists;
 import datadog.trace.api.Trace;
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt;
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
+import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody;
+import io.airbyte.api.model.generated.ActorListFilters;
 import io.airbyte.api.model.generated.ActorStatus;
+import io.airbyte.api.model.generated.ActorType;
 import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
@@ -59,8 +62,13 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.PartialUserConfigService;
 import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.shared.Filters;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
+import io.airbyte.data.services.shared.SortKey;
+import io.airbyte.data.services.shared.SortKeyInfo;
 import io.airbyte.data.services.shared.SourceConnectionWithCount;
+import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination;
+import io.airbyte.data.services.shared.WorkspaceResourceCursorPaginationKt;
 import io.airbyte.domain.models.SecretStorage;
 import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
@@ -341,20 +349,44 @@ public class SourceHandler {
     }
   }
 
-  public SourceReadList listSourcesForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
+  public SourceReadList listSourcesForWorkspace(final ActorListCursorPaginatedRequestBody actorListCursorPaginatedRequestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
-    final List<SourceConnectionWithCount> sourceConnectionsWithCounts =
-        sourceService.listWorkspaceSourceConnectionsWithCounts(workspaceIdRequestBody.getWorkspaceId());
+    final ActorListFilters filters = actorListCursorPaginatedRequestBody.getFilters();
+    final int pageSize =
+        actorListCursorPaginatedRequestBody.getPageSize() != null ? actorListCursorPaginatedRequestBody.getPageSize()
+            : WorkspaceResourceCursorPaginationKt.DEFAULT_PAGE_SIZE;
 
-    final List<SourceRead> reads = Lists.newArrayList();
-    for (final SourceConnectionWithCount sourceConnectionWithCount : sourceConnectionsWithCounts) {
-      final SourceRead sourceRead = buildSourceReadWithStatus(sourceConnectionWithCount.source);
-      sourceRead.numConnections(sourceConnectionWithCount.connectionCount);
+    // Parse sort key to extract field and direction
+    final SortKeyInfo sortKeyInfo =
+        WorkspaceResourceCursorPaginationKt.parseSortKey(actorListCursorPaginatedRequestBody.getSortKey(), ActorType.SOURCE);
+    final SortKey internalSortKey = sortKeyInfo.sortKey();
+    final boolean ascending = sortKeyInfo.ascending();
+    final Filters actorFilters = WorkspaceResourceCursorPaginationKt.buildFilters(filters);
 
+    final WorkspaceResourceCursorPagination cursorPagination = sourceService.buildCursorPagination(
+        actorListCursorPaginatedRequestBody.getCursor(),
+        internalSortKey,
+        actorFilters,
+        ascending,
+        pageSize);
+
+    final int numSources = sourceService.countWorkspaceSourcesFiltered(
+        actorListCursorPaginatedRequestBody.getWorkspaceId(),
+        cursorPagination != null && cursorPagination.getCursor() != null ? cursorPagination : null);
+
+    final List<SourceConnectionWithCount> sourceConnectionsWithCount =
+        sourceService.listWorkspaceSourceConnectionsWithCounts(actorListCursorPaginatedRequestBody.getWorkspaceId(), cursorPagination);
+
+    final List<SourceRead> sourceReads = Lists.newArrayList();
+
+    for (final SourceConnectionWithCount sourceConnectionWithCount : sourceConnectionsWithCount) {
+      final SourceRead sourceRead = buildSourceRead(sourceConnectionWithCount.source);
       if (sourceConnectionWithCount.lastSync != null) {
         sourceRead.lastSync(sourceConnectionWithCount.lastSync.toEpochSecond());
       }
+      sourceRead.numConnections(sourceConnectionWithCount.connectionCount);
+      sourceRead.setStatus(sourceConnectionWithCount.isActive ? ActorStatus.ACTIVE : ActorStatus.INACTIVE);
 
       // Convert Map<JobStatus, Integer> to Map<String, Integer> for API
       final Map<String, Integer> statusCountsMap = new HashMap<>();
@@ -386,10 +418,9 @@ public class SourceHandler {
       }
       sourceRead.connectionJobStatuses(statusCountsMap);
 
-      reads.add(sourceRead);
+      sourceReads.add(sourceRead);
     }
-
-    return new SourceReadList().sources(reads);
+    return new SourceReadList().sources(sourceReads).numConnections(numSources).pageSize(pageSize);
   }
 
   public SourceReadList listSourcesForWorkspaces(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)

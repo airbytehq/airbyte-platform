@@ -66,7 +66,7 @@ public class DestinationHelpers {
   }
 
   public static DestinationConnectionWithCount generateDestinationWithCount(final DestinationConnection destination) {
-    return new DestinationConnectionWithCount(destination, 0, null, java.util.Map.of());
+    return new DestinationConnectionWithCount(destination, "destination-definition", 0, null, java.util.Map.of(), true);
   }
 
   public static ScopedResourceRequirements getResourceRequirementsForDestination() {

@@ -51,6 +51,7 @@ import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.data.services.shared.ActorServicePaginationHelper;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
@@ -109,6 +110,7 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     final MetricClient metricClient = mock(MetricClient.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final DataplaneGroupService dataplaneGroupService = mock(DataplaneGroupService.class);
+    final ActorServicePaginationHelper actorServicePaginationHelper = mock(ActorServicePaginationHelper.class);
     when(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(any(), any()))
         .thenReturn(new DataplaneGroup().withId(DATAPLANE_GROUP_ID));
 
@@ -124,13 +126,15 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
         secretPersistenceConfigService,
         connectionService,
         actorDefinitionVersionUpdater,
-        metricClient);
+        metricClient,
+        actorServicePaginationHelper);
     destinationService = new DestinationServiceJooqImpl(
         database,
         featureFlagClient,
         connectionService,
         actorDefinitionVersionUpdater,
-        metricClient);
+        metricClient,
+        actorServicePaginationHelper);
 
     workspaceService = new WorkspaceServiceJooqImpl(
         database,

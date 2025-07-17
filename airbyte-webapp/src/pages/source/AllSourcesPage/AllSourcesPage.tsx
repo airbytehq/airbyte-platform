@@ -1,9 +1,8 @@
-import React, { useDeferredValue, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Navigate, useNavigate } from "react-router-dom";
 
-import { ImplementationTable } from "components/EntityTable";
-import { filterBySearchEntityTableData, getEntityTableData, statusFilterOptions } from "components/EntityTable/utils";
+import { statusFilterOptions } from "components/EntityTable/utils";
 import { HeadTitle } from "components/HeadTitle";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
@@ -11,16 +10,18 @@ import { Card } from "components/ui/Card";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { ListBox } from "components/ui/ListBox";
+import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { PageGridContainer } from "components/ui/PageGridContainer";
 import { PageHeader } from "components/ui/PageHeader";
 import { ScrollParent } from "components/ui/ScrollParent";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
+import { ActorTable } from "area/connector/components/ActorTable";
 import { SourceLimitReachedModal } from "area/workspace/components/SourceLimitReachedModal";
 import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorkspaceLimits";
 import { useFilters, useSourceList } from "core/api";
-import { SourceRead } from "core/api/types/AirbyteClient";
+import { ActorListSortKey, ActorStatus, SourceRead, SourceReadList } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useModalService } from "hooks/services/Modal";
@@ -28,24 +29,33 @@ import { useModalService } from "hooks/services/Modal";
 import styles from "./AllSourcesPage.module.scss";
 import { SourcePaths } from "../../routePaths";
 
-const AllSourcesPageInner: React.FC<{ sources: SourceRead[] }> = ({ sources }) => {
+export const AllSourcesPage: React.FC = () => {
+  // Rough estimate of page size, assuming ~45px height per row
+  const [pageSize] = useState(() => Math.ceil(window.innerHeight / 45));
   const navigate = useNavigate();
   useTrackPage(PageTrackingCodes.SOURCE_LIST);
   const canCreateSource = useGeneratedIntent(Intent.CreateOrEditConnector);
-  const data = getEntityTableData(sources, "source");
   const { limits, sourceLimitReached } = useCurrentWorkspaceLimits();
   const { formatMessage } = useIntl();
   const { openModal } = useModalService();
 
-  const [{ search, status }, setFilterValue] = useFilters<{ search: string; status: string | null }>({
+  const [{ search, status }, setFilterValue] = useFilters<{ search: string; status: ActorStatus | null }>({
     search: "",
     status: null,
   });
-  const debouncedSearchFilter = useDeferredValue(search);
 
-  const filteredSources = useMemo(
-    () => filterBySearchEntityTableData(debouncedSearchFilter, status, data),
-    [data, debouncedSearchFilter, status]
+  const [sortKey, setSortKey] = React.useState<ActorListSortKey>("actorName_asc");
+  const query = useSourceList({
+    pageSize,
+    filters: { searchTerm: search, states: status ? [status] : undefined },
+    sortKey,
+  });
+
+  const infiniteSources = useMemo<SourceReadList>(
+    () => ({
+      sources: query.data?.pages.flatMap<SourceRead>((page) => page.data.sources) ?? [],
+    }),
+    [query.data]
   );
 
   const onCreateSource = () => {
@@ -59,7 +69,13 @@ const AllSourcesPageInner: React.FC<{ sources: SourceRead[] }> = ({ sources }) =
     }
   };
 
-  return sources.length ? (
+  const anyFiltersActive: boolean = search.length > 0 || status !== null;
+
+  if (!query.isLoading && !anyFiltersActive && infiniteSources.sources.length === 0) {
+    return <Navigate to={SourcePaths.SelectSourceNew} />;
+  }
+
+  return (
     <>
       <HeadTitle titles={[{ id: "admin.sources" }]} />
       <PageGridContainer>
@@ -82,7 +98,11 @@ const AllSourcesPageInner: React.FC<{ sources: SourceRead[] }> = ({ sources }) =
               <Box p="lg">
                 <FlexContainer justifyContent="flex-start" direction="column">
                   <FlexItem grow>
-                    <SearchInput value={search} onChange={(value) => setFilterValue("search", value)} />
+                    <SearchInput
+                      value={search}
+                      onChange={(value) => setFilterValue("search", value)}
+                      debounceTimeout={300}
+                    />
                   </FlexItem>
                   <FlexContainer gap="sm" alignItems="center">
                     <FlexItem>
@@ -98,28 +118,46 @@ const AllSourcesPageInner: React.FC<{ sources: SourceRead[] }> = ({ sources }) =
               </Box>
             </div>
             <div className={styles.table}>
-              <ImplementationTable
-                data={filteredSources}
-                entity="source"
-                emptyPlaceholder={
-                  <Text bold color="grey" align="center">
-                    <FormattedMessage id="tables.sources.filters.empty" />
-                  </Text>
-                }
+              <ActorTable
+                actorReadList={infiniteSources}
+                hasNextPage={!!query.hasNextPage}
+                fetchNextPage={() => !query.isFetchingNextPage && query.fetchNextPage()}
+                sortKey={sortKey}
+                setSortKey={setSortKey}
               />
+              {query.isLoading && (
+                <Box p="xl">
+                  <FlexContainer justifyContent="center" alignItems="center">
+                    <LoadingSpinner />
+                    <Text>
+                      <FormattedMessage id="tables.sources.loading" />
+                    </Text>
+                  </FlexContainer>
+                </Box>
+              )}
+              {anyFiltersActive && !query.isLoading && infiniteSources.sources.length === 0 && (
+                <Box p="xl">
+                  <FlexContainer justifyContent="center" alignItems="center">
+                    <Text color="grey">
+                      <FormattedMessage id="tables.sources.noMatchingSources" />
+                    </Text>
+                  </FlexContainer>
+                </Box>
+              )}
+              {query.isFetchingNextPage && (
+                <Box p="xl">
+                  <FlexContainer justifyContent="center" alignItems="center">
+                    <LoadingSpinner />
+                    <Text>
+                      <FormattedMessage id="tables.sources.loadingMore" />
+                    </Text>
+                  </FlexContainer>
+                </Box>
+              )}
             </div>
           </Card>
         </ScrollParent>
       </PageGridContainer>
     </>
-  ) : (
-    <Navigate to={SourcePaths.SelectSourceNew} />
   );
 };
-
-const AllSourcesPage: React.FC = () => {
-  const { sources } = useSourceList();
-  return sources.length ? <AllSourcesPageInner sources={sources} /> : <Navigate to={SourcePaths.SelectSourceNew} />;
-};
-
-export default AllSourcesPage;

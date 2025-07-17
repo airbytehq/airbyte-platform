@@ -5,47 +5,17 @@ import { Text } from "components/ui/Text";
 import {
   ActorStatus,
   ConnectionStatus,
-  DestinationRead,
   DestinationSnippetRead,
   JobStatus,
-  SourceRead,
   SourceSnippetRead,
   WebBackendConnectionListItem,
 } from "core/api/types/AirbyteClient";
 
-import { EntityTableDataItem, ConnectionTableDataItem, Status as ConnectionSyncStatus } from "./types";
+import { ConnectionTableDataItem, Status as ConnectionSyncStatus } from "./types";
 
 const getConnectorTypeName = (connectorSpec: DestinationSnippetRead | SourceSnippetRead) => {
   return "sourceName" in connectorSpec ? connectorSpec.sourceName : connectorSpec.destinationName;
 };
-
-// TODO: types in next methods look a bit ugly
-export function getEntityTableData<
-  S extends "source" | "destination",
-  SoD extends S extends "source" ? SourceRead : DestinationRead,
->(entities: SoD[], type: S): EntityTableDataItem[] {
-  const mappedEntities = entities.map((entityItem) => {
-    const entitySoDId = entityItem[`${type}Id` as keyof SoD] as unknown as string;
-    const entitySoDName = entityItem[`${type}Name` as keyof SoD] as unknown as string;
-
-    return {
-      entityId: entitySoDId,
-      entityName: entityItem.name,
-      enabled: true,
-      connectorName: entitySoDName,
-      numConnections: entityItem.numConnections ?? 0,
-      connectorIcon: entityItem.icon,
-      isActive: entityItem.status === ActorStatus.active,
-      breakingChanges: entityItem.breakingChanges,
-      isVersionOverrideApplied: entityItem.isVersionOverrideApplied ?? false,
-      supportState: entityItem.supportState,
-      connectionJobStatuses: entityItem.connectionJobStatuses,
-      lastSync: entityItem.lastSync,
-    };
-  });
-
-  return mappedEntities;
-}
 
 export const getConnectionTableData = (
   connections: WebBackendConnectionListItem[],
@@ -103,7 +73,7 @@ export const getConnectionSyncStatus = (
   }
 };
 
-const generateStatusFilterOption = (value: string | null, id: string) => ({
+const generateStatusFilterOption = (value: ActorStatus | null, id: string) => ({
   label: (
     <Text color="grey" bold as="span">
       <FormattedMessage id={id} />
@@ -114,24 +84,6 @@ const generateStatusFilterOption = (value: string | null, id: string) => ({
 
 export const statusFilterOptions = [
   generateStatusFilterOption(null, "tables.connectors.filters.status.all"),
-  generateStatusFilterOption("inactive", "tables.connectors.filters.status.inactive"),
-  generateStatusFilterOption("active", "tables.connectors.filters.status.active"),
+  generateStatusFilterOption(ActorStatus.inactive, "tables.connectors.filters.status.inactive"),
+  generateStatusFilterOption(ActorStatus.active, "tables.connectors.filters.status.active"),
 ];
-
-/**
- * Filter entity table data by entityName(name defined by user) and connectorName
- * @param searchFilter
- * @param data
- */
-export const filterBySearchEntityTableData = (
-  searchFilter: string,
-  status: string | null,
-  data: EntityTableDataItem[]
-) =>
-  data.filter(
-    ({ entityName, connectorName, isActive }) =>
-      [entityName, connectorName]
-        .map((value) => value.toLowerCase())
-        .some((value) => value.includes(searchFilter.toLowerCase())) &&
-      (status === null || (isActive && status === "active") || (!isActive && status === "inactive"))
-  );

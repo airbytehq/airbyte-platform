@@ -25,14 +25,14 @@ import io.airbyte.config.helpers.ScheduleHelpers
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.impls.jooq.DbConverter.buildStandardSync
-import io.airbyte.data.services.shared.ConnectionFilters
 import io.airbyte.data.services.shared.ConnectionJobStatus
-import io.airbyte.data.services.shared.ConnectionListCursor
-import io.airbyte.data.services.shared.ConnectionListCursorPagination
-import io.airbyte.data.services.shared.ConnectionSortKey
 import io.airbyte.data.services.shared.ConnectionWithJobInfo
+import io.airbyte.data.services.shared.Cursor
+import io.airbyte.data.services.shared.Filters
+import io.airbyte.data.services.shared.SortKey
 import io.airbyte.data.services.shared.StandardSyncQuery
 import io.airbyte.data.services.shared.StandardSyncsQueryPaginated
+import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination
 import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
 import io.airbyte.db.instance.configs.jooq.generated.Tables
@@ -407,16 +407,16 @@ class ConnectionServiceJooqImpl
     @Throws(IOException::class)
     override fun listWorkspaceStandardSyncsCursorPaginated(
       standardSyncQuery: StandardSyncQuery,
-      connectionListCursorPagination: ConnectionListCursorPagination,
+      workspaceResourceCursorPagination: WorkspaceResourceCursorPagination,
     ): List<ConnectionWithJobInfo> {
-      val orderByFields = buildOrderByClause(connectionListCursorPagination.cursor)
+      val orderByFields = buildOrderByClause(workspaceResourceCursorPagination.cursor)
 
       val filterCondition =
         buildConnectionFilterConditions(
           standardSyncQuery,
-          if (connectionListCursorPagination.cursor != null) connectionListCursorPagination.cursor!!.filters else null,
+          if (workspaceResourceCursorPagination.cursor != null) workspaceResourceCursorPagination.cursor!!.filters else null,
         )
-      val cursorCondition = buildCursorCondition(connectionListCursorPagination.cursor)
+      val cursorCondition = buildCursorCondition(workspaceResourceCursorPagination.cursor)
       val whereCondition = cursorCondition.and(filterCondition)
 
       val connectionAndOperationIdsResult =
@@ -484,7 +484,7 @@ class ConnectionServiceJooqImpl
             .where(whereCondition)
             .groupBy(buildGroupByFields())
             .orderBy(orderByFields)
-            .limit(connectionListCursorPagination.pageSize)
+            .limit(workspaceResourceCursorPagination.pageSize)
             .fetch()
         })
 
@@ -501,7 +501,7 @@ class ConnectionServiceJooqImpl
     /**
      * Build ORDER BY clause based on sort keys.
      */
-    fun buildOrderByClause(cursor: ConnectionListCursor?): List<SortField<*>> {
+    fun buildOrderByClause(cursor: Cursor?): List<SortField<*>> {
       val orderByFields: MutableList<SortField<*>> = java.util.ArrayList()
 
       if (cursor == null) {
@@ -512,38 +512,41 @@ class ConnectionServiceJooqImpl
       val ascending = cursor.ascending
 
       when (sortKey) {
-        ConnectionSortKey.CONNECTION_NAME -> orderByFields.add(if (ascending) Tables.CONNECTION.NAME.asc() else Tables.CONNECTION.NAME.desc())
-        ConnectionSortKey.SOURCE_NAME ->
+        SortKey.CONNECTION_NAME ->
           orderByFields.add(
             if (ascending) {
-              DSL.field(SOURCE_NAME).asc()
+              DSL.lower(Tables.CONNECTION.NAME).cast(String::class.java).asc()
             } else {
-              DSL
-                .field(
-                  SOURCE_NAME,
-                ).desc()
+              DSL.lower(Tables.CONNECTION.NAME).cast(String::class.java).desc()
+            },
+          )
+        SortKey.SOURCE_NAME ->
+          orderByFields.add(
+            if (ascending) {
+              DSL.lower(Tables.ACTOR.NAME).cast(String::class.java).asc()
+            } else {
+              DSL.lower(Tables.ACTOR.NAME).cast(String::class.java).desc()
             },
           )
 
-        ConnectionSortKey.DESTINATION_NAME ->
+        SortKey.DESTINATION_NAME ->
           orderByFields.add(
             if (ascending) {
-              DSL.field(DESTINATION_NAME).asc()
+              DSL.lower(Tables.ACTOR.`as`(DEST_ACTOR_ALIAS).NAME).cast(String::class.java).asc()
             } else {
-              DSL
-                .field(
-                  DESTINATION_NAME,
-                ).desc()
+              DSL.lower(Tables.ACTOR.`as`(DEST_ACTOR_ALIAS).NAME).cast(String::class.java).desc()
             },
           )
 
-        ConnectionSortKey.LAST_SYNC -> {
+        SortKey.LAST_SYNC -> {
           if (ascending) {
             orderByFields.add(DSL.field(DSL.name(LATEST_JOBS, CREATED_AT)).asc().nullsFirst())
           } else {
             orderByFields.add(DSL.field(DSL.name(LATEST_JOBS, CREATED_AT)).desc().nullsLast())
           }
         }
+
+        else -> throw IllegalArgumentException("Invalid sort key for connection cursor = ${cursor.cursorId}: $sortKey")
       }
 
       // Always add connection ID as the final sort field for consistent pagination
@@ -573,7 +576,7 @@ class ConnectionServiceJooqImpl
     /**
      * Build cursor WHERE condition based on sort keys and cursor values.
      */
-    fun buildCursorCondition(cursor: ConnectionListCursor?): Condition {
+    fun buildCursorCondition(cursor: Cursor?): Condition {
       if (cursor == null) {
         return DSL.noCondition()
       }
@@ -583,28 +586,28 @@ class ConnectionServiceJooqImpl
       val sortFields: MutableList<Field<*>> = java.util.ArrayList()
 
       when (sortKey) {
-        ConnectionSortKey.CONNECTION_NAME -> {
+        SortKey.CONNECTION_NAME -> {
           if (cursor.connectionName != null) {
-            cursorValues.add(cursor.connectionName)
-            sortFields.add(Tables.CONNECTION.NAME)
+            cursorValues.add(DSL.lower(DSL.inline(cursor.connectionName)).cast(String::class.java))
+            sortFields.add(DSL.lower(Tables.CONNECTION.NAME).cast(String::class.java))
           }
         }
 
-        ConnectionSortKey.SOURCE_NAME -> {
+        SortKey.SOURCE_NAME -> {
           if (cursor.sourceName != null) {
-            cursorValues.add(cursor.sourceName)
-            sortFields.add(Tables.ACTOR.NAME)
+            cursorValues.add(DSL.lower(DSL.inline(cursor.sourceName)).cast(String::class.java))
+            sortFields.add(DSL.lower(Tables.ACTOR.NAME).cast(String::class.java))
           }
         }
 
-        ConnectionSortKey.DESTINATION_NAME -> {
+        SortKey.DESTINATION_NAME -> {
           if (cursor.destinationName != null) {
-            cursorValues.add(cursor.destinationName)
-            sortFields.add(Tables.ACTOR.`as`(DEST_ACTOR_ALIAS).NAME)
+            cursorValues.add(DSL.lower(DSL.inline(cursor.destinationName)).cast(String::class.java))
+            sortFields.add(DSL.lower(Tables.ACTOR.`as`(DEST_ACTOR_ALIAS).NAME).cast(String::class.java))
           }
         }
 
-        ConnectionSortKey.LAST_SYNC -> {
+        SortKey.LAST_SYNC -> {
           if (cursor.ascending) {
             if (cursor.lastSync != null) {
               cursorValues.add(OffsetDateTime.ofInstant(Instant.ofEpochSecond(cursor.lastSync!!), ZoneOffset.UTC))
@@ -614,11 +617,13 @@ class ConnectionServiceJooqImpl
             return buildCursorConditionLastSyncDesc(cursor)
           }
         }
+
+        else -> throw IllegalArgumentException("Invalid sort key for source cursor = ${cursor.cursorId}: $sortKey")
       }
 
       // Always add connection ID for consistent pagination
-      if (cursor.connectionId != null) {
-        cursorValues.add(cursor.connectionId)
+      if (cursor.cursorId != null) {
+        cursorValues.add(cursor.cursorId)
         sortFields.add(Tables.CONNECTION.ID)
       }
 
@@ -638,13 +643,13 @@ class ConnectionServiceJooqImpl
     /**
      * Build cursor condition for sorting by last sync desc.
      */
-    fun buildCursorConditionLastSyncDesc(cursor: ConnectionListCursor?): Condition {
-      if (cursor == null || cursor.connectionId == null) {
+    fun buildCursorConditionLastSyncDesc(cursor: Cursor?): Condition {
+      if (cursor == null || cursor.cursorId == null) {
         log.info("First page; cursor == null || cursor.connectionId == null")
         return DSL.noCondition()
       }
 
-      val cursorId = cursor.connectionId
+      val cursorId = cursor.cursorId
       val cursorLastSyncEpoch = cursor.lastSync ?: 0L
       val cursorLastSyncDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(cursorLastSyncEpoch), ZoneOffset.UTC)
 
@@ -660,21 +665,23 @@ class ConnectionServiceJooqImpl
     }
 
     /**
-     * Builds cursor pagination based on the new API structure with connection ID cursor. When a cursor
+     * Builds cursor pagination based connection ID cursor. When a cursor
      * is provided, finds the connection and extracts the sort key value for pagination.
      */
     override fun buildCursorPagination(
       cursor: UUID?,
-      internalSortKey: ConnectionSortKey?,
-      connectionFilters: ConnectionFilters?,
+      internalSortKey: SortKey,
+      filters: Filters?,
       query: StandardSyncQuery?,
       ascending: Boolean?,
       pageSize: Int?,
-    ): ConnectionListCursorPagination {
+    ): WorkspaceResourceCursorPagination {
       if (cursor == null) {
         // No cursor - return pagination for first page with filters
-        return ConnectionListCursorPagination.fromValues(
+        return WorkspaceResourceCursorPagination.fromValues(
           internalSortKey,
+          null,
+          null,
           null,
           null,
           null,
@@ -682,7 +689,7 @@ class ConnectionServiceJooqImpl
           null,
           pageSize,
           ascending,
-          connectionFilters,
+          filters,
         )
       }
 
@@ -700,16 +707,18 @@ class ConnectionServiceJooqImpl
           .map { obj: OffsetDateTime -> obj.toEpochSecond() }
           .orElse(null)
 
-      return ConnectionListCursorPagination.fromValues(
+      return WorkspaceResourceCursorPagination.fromValues(
         internalSortKey,
         connectionName,
         cursorConnection.sourceName(),
+        null,
         cursorConnection.destinationName(),
+        null,
         lastSync,
         cursor,
         pageSize,
         ascending,
-        connectionFilters,
+        filters,
       )
     }
 
@@ -772,7 +781,7 @@ class ConnectionServiceJooqImpl
      */
     fun buildConnectionFilterConditions(
       standardSyncQuery: StandardSyncQuery,
-      filters: ConnectionFilters?,
+      filters: Filters?,
     ): Condition {
       var condition =
         Tables.ACTOR.WORKSPACE_ID
@@ -867,7 +876,7 @@ class ConnectionServiceJooqImpl
     @Throws(IOException::class)
     override fun countWorkspaceStandardSyncs(
       standardSyncQuery: StandardSyncQuery,
-      filters: ConnectionFilters?,
+      filters: Filters?,
     ): Int =
       database.query({ ctx: DSLContext ->
         ctx

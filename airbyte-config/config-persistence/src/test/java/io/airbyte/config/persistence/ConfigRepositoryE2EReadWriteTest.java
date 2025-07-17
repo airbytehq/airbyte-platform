@@ -64,6 +64,7 @@ import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.data.services.shared.ActorServicePaginationHelper;
 import io.airbyte.data.services.shared.DestinationAndDefinition;
 import io.airbyte.data.services.shared.SourceAndDefinition;
 import io.airbyte.data.services.shared.StandardSyncQuery;
@@ -140,6 +141,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
+    final ActorServicePaginationHelper actorPaginationServiceHelper = mock(ActorServicePaginationHelper.class);
 
     OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     organizationService.writeOrganization(MockData.defaultOrganization());
@@ -182,13 +184,15 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         secretPersistenceConfigService,
         connectionService,
         actorDefinitionVersionUpdater,
-        metricClient));
+        metricClient,
+        actorPaginationServiceHelper));
     destinationService = spy(new DestinationServiceJooqImpl(
         database,
         featureFlagClient,
         connectionService,
         actorDefinitionVersionUpdater,
-        metricClient));
+        metricClient,
+        actorPaginationServiceHelper));
     operationService = spy(new OperationServiceJooqImpl(database));
 
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {

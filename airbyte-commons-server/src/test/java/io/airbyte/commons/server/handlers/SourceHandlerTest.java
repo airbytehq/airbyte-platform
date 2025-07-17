@@ -7,9 +7,11 @@ package io.airbyte.commons.server.handlers;
 import static io.airbyte.config.secrets.InlinedConfigWithSecretRefsKt.buildConfigWithSecretRefsJava;
 import static io.airbyte.protocol.models.v0.CatalogHelpers.createAirbyteStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -21,6 +23,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
+import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody;
 import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.model.generated.ConnectionRead;
@@ -763,14 +766,14 @@ class SourceHandlerTest {
             .getSourceRead(sourceConnectionWithCount.source, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
                 RESOURCE_ALLOCATION)
             .numConnections(0);
-    expectedSourceRead.setStatus(ActorStatus.INACTIVE); // set inactive by default
-    final WorkspaceIdRequestBody workspaceIdRequestBody =
-        new WorkspaceIdRequestBody().workspaceId(sourceConnectionWithCount.source.getWorkspaceId());
+    expectedSourceRead.setStatus(ActorStatus.ACTIVE);
+    final ActorListCursorPaginatedRequestBody workspaceIdRequestBody =
+        new ActorListCursorPaginatedRequestBody().workspaceId(sourceConnectionWithCount.source.getWorkspaceId());
 
     when(sourceService.getSourceConnection(sourceConnectionWithCount.source.getSourceId())).thenReturn(sourceConnectionWithCount.source);
     when(sourceService.getSourceConnection(sourceConnectionWithCount.source.getSourceId())).thenReturn(sourceConnectionWithCount.source);
 
-    when(sourceService.listWorkspaceSourceConnectionsWithCounts(sourceConnectionWithCount.source.getWorkspaceId()))
+    when(sourceService.listWorkspaceSourceConnectionsWithCounts(sourceConnectionWithCount.source.getWorkspaceId(), null))
         .thenReturn(Lists.newArrayList(sourceConnectionWithCount));
     when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
@@ -795,6 +798,142 @@ class SourceHandlerTest {
         sourceDefinitionSpecificationRead.getConnectionSpecification());
     verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnectionWithCount.source.getWorkspaceId(),
         sourceConnectionWithCount.source.getSourceId());
+  }
+
+  @Test
+  void testListSourcesForWorkspaceWithPagination()
+      throws JsonValidationException, IOException, io.airbyte.data.ConfigNotFoundException {
+    // Create multiple destinations for pagination testing
+    final SourceConnectionWithCount source1 = createSourceConnectionWithCount("source1", 2);
+    final SourceConnectionWithCount source2 = createSourceConnectionWithCount("source2", 1);
+    final List<SourceConnectionWithCount> sources = Lists.newArrayList(source1, source2);
+
+    final UUID workspaceId = source1.source.getWorkspaceId();
+    final ActorListCursorPaginatedRequestBody requestBody = new ActorListCursorPaginatedRequestBody()
+        .workspaceId(workspaceId)
+        .pageSize(10);
+
+    // Mock the pagination service methods
+    when(sourceService.buildCursorPagination(any(), any(), any(), any(), any()))
+        .thenReturn(new io.airbyte.data.services.shared.WorkspaceResourceCursorPagination(null, 10));
+    when(sourceService.countWorkspaceSourcesFiltered(any(), any()))
+        .thenReturn(2);
+    when(sourceService.listWorkspaceSourceConnectionsWithCounts(any(), any()))
+        .thenReturn(sources);
+
+    // Mock source service methods for building reads
+    when(sourceService.getStandardSourceDefinition(any()))
+        .thenReturn(standardSourceDefinition);
+    when(sourceService.getSourceDefinitionFromSource(any()))
+        .thenReturn(standardSourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any()))
+        .thenReturn(sourceDefinitionVersion);
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(any(), any(), any()))
+        .thenReturn(new io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus(
+            sourceDefinitionVersion, false));
+    when(secretsProcessor.prepareSecretsForOutput(any(), any()))
+        .thenReturn(Jsons.emptyObject());
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
+
+    // Execute the test
+    final SourceReadList result = sourceHandler.listSourcesForWorkspace(requestBody);
+
+    // Verify the results
+    assertNotNull(result);
+    assertEquals(2, result.getSources().size());
+    assertEquals(2, result.getNumConnections());
+    assertEquals(10, result.getPageSize());
+
+    // Verify the first destination
+    final SourceRead firstSource = result.getSources().get(0);
+    assertEquals("source1", firstSource.getName());
+    assertEquals(2, firstSource.getNumConnections());
+    assertEquals(ActorStatus.ACTIVE, firstSource.getStatus()); // Has connections, so should be active
+
+    // Verify the second destination
+    final SourceRead secondSource = result.getSources().get(1);
+    assertEquals("source2", secondSource.getName());
+    assertEquals(1, secondSource.getNumConnections());
+    assertEquals(ActorStatus.ACTIVE, secondSource.getStatus()); // Has connections, so should be active
+
+    // Verify service method calls
+    verify(sourceService).buildCursorPagination(any(), any(), any(), any(), any());
+    verify(sourceService).countWorkspaceSourcesFiltered(eq(workspaceId), any());
+    verify(sourceService).listWorkspaceSourceConnectionsWithCounts(eq(workspaceId), any());
+  }
+
+  @Test
+  void testListSourcesForWorkspaceWithFilters()
+      throws JsonValidationException, IOException, io.airbyte.data.ConfigNotFoundException {
+    final UUID workspaceId = sourceConnectionWithCount.source.getWorkspaceId();
+    final ActorListCursorPaginatedRequestBody requestBody = new ActorListCursorPaginatedRequestBody()
+        .workspaceId(workspaceId)
+        .pageSize(5)
+        .filters(new io.airbyte.api.model.generated.ActorListFilters()
+            .searchTerm("test")
+            .states(Lists.newArrayList(io.airbyte.api.model.generated.ActorStatus.ACTIVE)));
+
+    // Mock the pagination service methods with filters
+    when(sourceService.buildCursorPagination(any(), any(), any(), any(), any()))
+        .thenReturn(new io.airbyte.data.services.shared.WorkspaceResourceCursorPagination(null, 5));
+    when(sourceService.countWorkspaceSourcesFiltered(any(), any()))
+        .thenReturn(1);
+    when(sourceService.listWorkspaceSourceConnectionsWithCounts(any(), any()))
+        .thenReturn(Lists.newArrayList(sourceConnectionWithCount));
+
+    // Mock other service methods
+    when(sourceService.getStandardSourceDefinition(any()))
+        .thenReturn(standardSourceDefinition);
+    when(sourceService.getSourceDefinitionFromSource(any()))
+        .thenReturn(standardSourceDefinition);
+    when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any()))
+        .thenReturn(sourceDefinitionVersion);
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(any(), any(), any()))
+        .thenReturn(new io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus(
+            sourceDefinitionVersion, false));
+    when(secretsProcessor.prepareSecretsForOutput(any(), any()))
+        .thenReturn(sourceConnectionWithCount.source.getConfiguration());
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
+
+    // Execute the test
+    final SourceReadList result = sourceHandler.listSourcesForWorkspace(requestBody);
+
+    // Verify the results
+    assertNotNull(result);
+    assertEquals(1, result.getSources().size());
+    assertEquals(1, result.getNumConnections());
+    assertEquals(5, result.getPageSize());
+
+    // Verify service method calls with proper arguments
+    verify(sourceService).buildCursorPagination(
+        isNull(), // cursor
+        any(), // sortKey
+        any(), // filters
+        eq(true), // ascending (default for DESTINATION_NAME)
+        eq(5) // pageSize
+    );
+    verify(sourceService).countWorkspaceSourcesFiltered(eq(workspaceId), any());
+    verify(sourceService).listWorkspaceSourceConnectionsWithCounts(eq(workspaceId), any());
+  }
+
+  private SourceConnectionWithCount createSourceConnectionWithCount(final String name, final int connectionCount) {
+    final SourceConnection source = new SourceConnection()
+        .withSourceId(UUID.randomUUID())
+        .withWorkspaceId(UUID.randomUUID())
+        .withSourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
+        .withName(name)
+        .withConfiguration(Jsons.emptyObject())
+        .withTombstone(false);
+
+    return new SourceConnectionWithCount(
+        source,
+        "source-definition",
+        connectionCount,
+        null,
+        Map.of(),
+        true);
   }
 
   @Test

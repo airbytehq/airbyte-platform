@@ -4,6 +4,7 @@
 
 package io.airbyte.data.services.impls.jooq;
 
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static org.jooq.impl.DSL.field;
 import static org.jooq.impl.DSL.table;
@@ -28,13 +29,13 @@ import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
-import io.airbyte.data.services.shared.ConnectionFilters;
 import io.airbyte.data.services.shared.ConnectionJobStatus;
-import io.airbyte.data.services.shared.ConnectionListCursor;
-import io.airbyte.data.services.shared.ConnectionListCursorPagination;
-import io.airbyte.data.services.shared.ConnectionSortKey;
 import io.airbyte.data.services.shared.ConnectionWithJobInfo;
+import io.airbyte.data.services.shared.Cursor;
+import io.airbyte.data.services.shared.Filters;
+import io.airbyte.data.services.shared.SortKey;
 import io.airbyte.data.services.shared.StandardSyncQuery;
+import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination;
 import io.airbyte.db.Database;
 import io.airbyte.db.factory.DSLContextFactory;
 import io.airbyte.db.instance.DatabaseConstants;
@@ -574,23 +575,23 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
 
   private static Stream<Arguments> orderByTestProvider() {
     return Stream.of(
-        Arguments.of(ConnectionSortKey.CONNECTION_NAME, true, CONNECTION.NAME.asc(), CONNECTION.ID.asc()),
-        Arguments.of(ConnectionSortKey.CONNECTION_NAME, false, CONNECTION.NAME.desc(), CONNECTION.ID.desc()),
-        Arguments.of(ConnectionSortKey.SOURCE_NAME, true, DSL.field("source_name").asc(), CONNECTION.ID.asc()),
-        Arguments.of(ConnectionSortKey.SOURCE_NAME, false, DSL.field("source_name").desc(), CONNECTION.ID.desc()),
-        Arguments.of(ConnectionSortKey.DESTINATION_NAME, true, DSL.field("destination_name").asc(), CONNECTION.ID.asc()),
-        Arguments.of(ConnectionSortKey.DESTINATION_NAME, false, DSL.field("destination_name").desc(), CONNECTION.ID.desc()),
-        Arguments.of(ConnectionSortKey.LAST_SYNC, true, DSL.field(DSL.name("latest_jobs", "created_at")).asc().nullsFirst(), CONNECTION.ID.asc()),
-        Arguments.of(ConnectionSortKey.LAST_SYNC, false, DSL.field(DSL.name("latest_jobs", "created_at")).desc().nullsLast(), CONNECTION.ID.desc()));
+        Arguments.of(SortKey.CONNECTION_NAME, true, DSL.lower(CONNECTION.NAME).cast(String.class).asc(), CONNECTION.ID.asc()),
+        Arguments.of(SortKey.CONNECTION_NAME, false, DSL.lower(CONNECTION.NAME).cast(String.class).desc(), CONNECTION.ID.desc()),
+        Arguments.of(SortKey.SOURCE_NAME, true, DSL.lower(ACTOR.NAME).cast(String.class).asc(), CONNECTION.ID.asc()),
+        Arguments.of(SortKey.SOURCE_NAME, false, DSL.lower(ACTOR.NAME).cast(String.class).desc(), CONNECTION.ID.desc()),
+        Arguments.of(SortKey.DESTINATION_NAME, true, DSL.lower(ACTOR.as("dest_actor").NAME).cast(String.class).asc(), CONNECTION.ID.asc()),
+        Arguments.of(SortKey.DESTINATION_NAME, false, DSL.lower(ACTOR.as("dest_actor").NAME).cast(String.class).desc(), CONNECTION.ID.desc()),
+        Arguments.of(SortKey.LAST_SYNC, true, DSL.field(DSL.name("latest_jobs", "created_at")).asc().nullsFirst(), CONNECTION.ID.asc()),
+        Arguments.of(SortKey.LAST_SYNC, false, DSL.field(DSL.name("latest_jobs", "created_at")).desc().nullsLast(), CONNECTION.ID.desc()));
   }
 
   @ParameterizedTest
   @MethodSource("orderByTestProvider")
-  void testBuildOrderByClause(final ConnectionSortKey sortKey,
+  void testBuildOrderByClause(final SortKey sortKey,
                               final boolean ascending,
                               final SortField<?> expectedFirstField,
                               final SortField<?> expectedLastField) {
-    final ConnectionListCursor cursor = new ConnectionListCursor(sortKey, null, null, null, null, null, ascending, null);
+    final Cursor cursor = new Cursor(sortKey, null, null, null, null, null, null, null, ascending, null);
     final List<SortField<?>> fields = connectionServiceJooqImpl.buildOrderByClause(cursor);
 
     assertEquals(expectedFirstField, fields.get(0));
@@ -600,25 +601,27 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
   private static Stream<Arguments> sortKeyTestProvider() {
     final UUID testConnectionId = UUID.randomUUID();
     return Stream.of(
-        Arguments.of(ConnectionSortKey.CONNECTION_NAME, "connA", null, null, null, testConnectionId),
-        Arguments.of(ConnectionSortKey.SOURCE_NAME, null, "sourceA", null, null, testConnectionId),
-        Arguments.of(ConnectionSortKey.DESTINATION_NAME, null, null, "destA", null, testConnectionId),
-        Arguments.of(ConnectionSortKey.LAST_SYNC, null, null, null, 1234567890L, testConnectionId));
+        Arguments.of(SortKey.CONNECTION_NAME, "connA", null, null, null, testConnectionId),
+        Arguments.of(SortKey.SOURCE_NAME, null, "sourceA", null, null, testConnectionId),
+        Arguments.of(SortKey.DESTINATION_NAME, null, null, "destA", null, testConnectionId),
+        Arguments.of(SortKey.LAST_SYNC, null, null, null, 1234567890L, testConnectionId));
   }
 
   @ParameterizedTest
   @MethodSource("sortKeyTestProvider")
-  void testBuildCursorConditionAscending(final ConnectionSortKey sortKey,
+  void testBuildCursorConditionAscending(final SortKey sortKey,
                                          final String connectionName,
                                          final String sourceName,
                                          final String destinationName,
                                          final Long lastSync,
                                          final UUID connectionId) {
-    final ConnectionListCursor cursor = new ConnectionListCursor(
+    final Cursor cursor = new Cursor(
         sortKey,
         connectionName,
         sourceName,
+        null,
         destinationName,
+        null,
         lastSync,
         connectionId,
         true,
@@ -701,53 +704,53 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
         // Cursor with no filters
         Arguments.of(
             new StandardSyncQuery(workspaceId, null, null, false),
-            new ConnectionListCursor(ConnectionSortKey.CONNECTION_NAME, null, null, null, null, null, true, null),
+            new Cursor(SortKey.CONNECTION_NAME, null, null, null, null, null, null, null, true, null),
             List.of("workspace_id"),
             "Cursor with no filters"),
 
         // Individual cursor filters
         Arguments.of(
             new StandardSyncQuery(workspaceId, null, null, false),
-            new ConnectionListCursor(ConnectionSortKey.CONNECTION_NAME, null, null, null, null, null, true,
-                new ConnectionFilters("search", null, null, null, null, null)),
+            new Cursor(SortKey.CONNECTION_NAME, null, null, null, null, null, null, null, true,
+                new Filters("search", null, null, null, null, null)),
             List.of("workspace_id", "name"),
             "Search term filter"),
         Arguments.of(
             new StandardSyncQuery(workspaceId, null, null, false),
-            new ConnectionListCursor(ConnectionSortKey.CONNECTION_NAME, null, null, null, null, null, true,
-                new ConnectionFilters(null, List.of(sourceDefId), null, null, null, null)),
+            new Cursor(SortKey.CONNECTION_NAME, null, null, null, null, null, null, null, true,
+                new Filters(null, List.of(sourceDefId), null, null, null, null)),
             List.of("workspace_id", "actor_definition_id"),
             "Source definition filter"),
         Arguments.of(
             new StandardSyncQuery(workspaceId, null, null, false),
-            new ConnectionListCursor(ConnectionSortKey.CONNECTION_NAME, null, null, null, null, null, true,
-                new ConnectionFilters(null, null, List.of(destDefId), null, null, null)),
+            new Cursor(SortKey.CONNECTION_NAME, null, null, null, null, null, null, null, true,
+                new Filters(null, null, List.of(destDefId), null, null, null)),
             List.of("workspace_id", "actor_definition_id"),
             "Destination definition filter"),
         Arguments.of(
             new StandardSyncQuery(workspaceId, null, null, false),
-            new ConnectionListCursor(ConnectionSortKey.CONNECTION_NAME, null, null, null, null, null, true,
-                new ConnectionFilters(null, null, null, List.of(ConnectionJobStatus.HEALTHY), null, null)),
+            new Cursor(SortKey.CONNECTION_NAME, null, null, null, null, null, null, null, true,
+                new Filters(null, null, null, List.of(ConnectionJobStatus.HEALTHY), null, null)),
             List.of("workspace_id", "status"),
             "Status filter"),
         Arguments.of(
             new StandardSyncQuery(workspaceId, null, null, false),
-            new ConnectionListCursor(ConnectionSortKey.CONNECTION_NAME, null, null, null, null, null, true,
-                new ConnectionFilters(null, null, null, null, List.of(ActorStatus.ACTIVE), null)),
+            new Cursor(SortKey.CONNECTION_NAME, null, null, null, null, null, null, null, true,
+                new Filters(null, null, null, null, List.of(ActorStatus.ACTIVE), null)),
             List.of("workspace_id", "status"),
             "State filter"),
         Arguments.of(
             new StandardSyncQuery(workspaceId, null, null, false),
-            new ConnectionListCursor(ConnectionSortKey.CONNECTION_NAME, null, null, null, null, null, true,
-                new ConnectionFilters(null, null, null, null, null, List.of(tagId))),
+            new Cursor(SortKey.CONNECTION_NAME, null, null, null, null, null, null, null, true,
+                new Filters(null, null, null, null, null, List.of(tagId))),
             List.of("workspace_id", "tag_id"),
             "Tag filter"),
 
         // Combined filters
         Arguments.of(
             new StandardSyncQuery(workspaceId, List.of(sourceId), List.of(destinationId), false),
-            new ConnectionListCursor(ConnectionSortKey.CONNECTION_NAME, null, null, null, null, null, true,
-                new ConnectionFilters("search", List.of(sourceDefId), List.of(destDefId),
+            new Cursor(SortKey.CONNECTION_NAME, null, null, null, null, null, null, null, true,
+                new Filters("search", List.of(sourceDefId), List.of(destDefId),
                     List.of(ConnectionJobStatus.HEALTHY), List.of(ActorStatus.ACTIVE), List.of(tagId))),
             List.of("workspace_id", "source_id", "destination_id", "name", "actor_definition_id", "status", "tag_id"),
             "All filters combined"),
@@ -755,8 +758,8 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
         // Empty filter lists (should not add conditions)
         Arguments.of(
             new StandardSyncQuery(workspaceId, null, null, false),
-            new ConnectionListCursor(ConnectionSortKey.CONNECTION_NAME, null, null, null, null, null, true,
-                new ConnectionFilters(null, List.of(), List.of(), List.of(), List.of(), List.of())),
+            new Cursor(SortKey.CONNECTION_NAME, null, null, null, null, null, null, null, true,
+                new Filters(null, List.of(), List.of(), List.of(), List.of(), List.of())),
             List.of("workspace_id"),
             "Empty filter lists"));
   }
@@ -764,10 +767,10 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
   @ParameterizedTest
   @MethodSource("connectionFilterConditionsTestProvider")
   void testBuildConnectionFilterConditions(final StandardSyncQuery query,
-                                           final ConnectionListCursor cursor,
+                                           final Cursor cursor,
                                            final List<String> expectedStrings,
                                            final String description) {
-    final ConnectionFilters filters = cursor != null ? cursor.getFilters() : null;
+    final Filters filters = cursor != null ? cursor.getFilters() : null;
     final Condition condition = connectionServiceJooqImpl.buildConnectionFilterConditions(query, filters);
     final String conditionStr = condition.toString();
 
@@ -789,97 +792,109 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
 
         // Cursor with all null values - should return no condition (first page)
         Arguments.of(
-            ConnectionListCursorPagination.fromValues(
-                ConnectionSortKey.LAST_SYNC,
-                (String) null,
-                (String) null,
-                (String) null,
-                (Long) null,
-                (UUID) null,
+            WorkspaceResourceCursorPagination.fromValues(
+                SortKey.LAST_SYNC,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
                 20,
                 true,
-                (ConnectionFilters) null).getCursor(),
+                null).getCursor(),
             true,
             "cursor with all null values returns no condition"),
 
         // Cursor with null connection ID - should return no condition
         Arguments.of(
-            new ConnectionListCursor(
-                ConnectionSortKey.LAST_SYNC,
+            new Cursor(
+                SortKey.LAST_SYNC,
                 "connection1",
                 "source1",
+                null,
                 "destination1",
+                null,
                 lastSyncEpoch,
                 (UUID) null,
                 false,
-                (ConnectionFilters) null),
+                (Filters) null),
             true,
             "cursor with null connection ID returns no condition"),
 
         // Cursor with connection ID but null lastSync - should return condition with null check
         Arguments.of(
-            ConnectionListCursorPagination.fromValues(
-                ConnectionSortKey.LAST_SYNC,
+            WorkspaceResourceCursorPagination.fromValues(
+                SortKey.LAST_SYNC,
                 "connection1",
                 "source1",
+                null,
                 "destination1",
+                null,
                 (Long) null,
                 connectionId,
                 20,
                 true,
-                (ConnectionFilters) null).getCursor(),
+                (Filters) null).getCursor(),
             false,
             "cursor with null lastSync returns condition with null check"),
 
         // Cursor with connection ID and lastSync - should return condition with time comparison
         Arguments.of(
-            ConnectionListCursorPagination.fromValues(
-                ConnectionSortKey.LAST_SYNC,
+            WorkspaceResourceCursorPagination.fromValues(
+                SortKey.LAST_SYNC,
                 "connection1",
                 "source1",
+                null,
                 "destination1",
+                null,
                 lastSyncEpoch,
                 connectionId,
                 20,
                 true,
-                (ConnectionFilters) null).getCursor(),
+                (Filters) null).getCursor(),
             false,
             "cursor with lastSync returns condition with time comparison"),
 
         // Cursor with different connection ID and lastSync - should return condition with time comparison
         Arguments.of(
-            ConnectionListCursorPagination.fromValues(
-                ConnectionSortKey.LAST_SYNC,
+            WorkspaceResourceCursorPagination.fromValues(
+                SortKey.LAST_SYNC,
                 "connection2",
                 "source2",
+                null,
                 "destination2",
+                null,
                 anotherLastSyncEpoch,
                 anotherConnectionId,
                 20,
                 true,
-                (ConnectionFilters) null).getCursor(),
+                (Filters) null).getCursor(),
             false,
             "cursor with different connection ID and lastSync returns condition with time comparison"),
 
         // Cursor with zero lastSync - should return condition with time comparison
         Arguments.of(
-            ConnectionListCursorPagination.fromValues(
-                ConnectionSortKey.LAST_SYNC,
+            WorkspaceResourceCursorPagination.fromValues(
+                SortKey.LAST_SYNC,
                 "connection1",
                 "source1",
+                null,
                 "destination1",
+                null,
                 0L,
                 connectionId,
                 20,
                 true,
-                (ConnectionFilters) null).getCursor(),
+                (Filters) null).getCursor(),
             false,
             "cursor with zero lastSync returns condition with time comparison"));
   }
 
   @ParameterizedTest
   @MethodSource("buildCursorConditionLastSyncDescTestProvider")
-  void testBuildCursorConditionLastSyncDesc(final ConnectionListCursor cursor,
+  void testBuildCursorConditionLastSyncDesc(final Cursor cursor,
                                             final boolean shouldReturnNoCondition,
                                             final String description) {
     // When
@@ -894,9 +909,9 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
       // Verify the condition contains the expected structure
       final String conditionString = condition.toString();
 
-      if (cursor != null && cursor.getConnectionId() != null) {
+      if (cursor != null && cursor.getCursorId() != null) {
         // Should contain connection ID comparison
-        assertTrue(conditionString.contains(cursor.getConnectionId().toString()),
+        assertTrue(conditionString.contains(cursor.getCursorId().toString()),
             description + ": Expected connection ID in condition");
 
         if (cursor.getLastSync() != null) {
@@ -926,9 +941,11 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
     final StandardSync sync = createStandardSync(source, destination, List.of());
     connectionServiceJooqImpl.writeStandardSync(sync);
 
-    final ConnectionListCursorPagination pagination = new ConnectionListCursorPagination(
-        new ConnectionListCursor(
-            ConnectionSortKey.CONNECTION_NAME,
+    final WorkspaceResourceCursorPagination pagination = new WorkspaceResourceCursorPagination(
+        new Cursor(
+            SortKey.CONNECTION_NAME,
+            null,
+            null,
             null,
             null,
             null,
@@ -972,9 +989,9 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
     final StandardSyncQuery query = new StandardSyncQuery(workspaceId, null, null, false);
     final int pageSize = 20;
 
-    final ConnectionListCursorPagination result = connectionServiceJooqImpl.buildCursorPagination(
+    final WorkspaceResourceCursorPagination result = connectionServiceJooqImpl.buildCursorPagination(
         null,
-        ConnectionSortKey.CONNECTION_NAME,
+        SortKey.CONNECTION_NAME,
         null,
         query,
         true,
@@ -983,13 +1000,13 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
     assertNotNull(result);
     assertEquals(pageSize, result.getPageSize());
     assertNotNull(result.getCursor());
-    assertEquals(ConnectionSortKey.CONNECTION_NAME, result.getCursor().getSortKey());
+    assertEquals(SortKey.CONNECTION_NAME, result.getCursor().getSortKey());
     assertTrue(result.getCursor().getAscending());
     assertNull(result.getCursor().getConnectionName());
     assertNull(result.getCursor().getSourceName());
     assertNull(result.getCursor().getDestinationName());
     assertNull(result.getCursor().getLastSync());
-    assertNull(result.getCursor().getConnectionId());
+    assertNull(result.getCursor().getCursorId());
     assertNull(result.getCursor().getFilters());
   }
 
@@ -1007,9 +1024,9 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
     final StandardSyncQuery query = new StandardSyncQuery(workspaceId, null, null, false);
     final int pageSize = 20;
 
-    final ConnectionListCursorPagination result = connectionServiceJooqImpl.buildCursorPagination(
+    final WorkspaceResourceCursorPagination result = connectionServiceJooqImpl.buildCursorPagination(
         sync.getConnectionId(),
-        ConnectionSortKey.CONNECTION_NAME,
+        SortKey.CONNECTION_NAME,
         null,
         query,
         true,
@@ -1018,7 +1035,7 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
     assertNotNull(result);
     assertEquals(pageSize, result.getPageSize());
     assertNotNull(result.getCursor());
-    assertEquals(ConnectionSortKey.CONNECTION_NAME, result.getCursor().getSortKey());
+    assertEquals(SortKey.CONNECTION_NAME, result.getCursor().getSortKey());
     assertTrue(result.getCursor().getAscending());
     assertNull(result.getCursor().getFilters());
   }
@@ -1032,61 +1049,61 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
 
     return Stream.of(
         // Test all sort keys
-        Arguments.of(ConnectionSortKey.CONNECTION_NAME, true, null, "Sort by connection name ascending"),
-        Arguments.of(ConnectionSortKey.CONNECTION_NAME, false, null, "Sort by connection name descending"),
-        Arguments.of(ConnectionSortKey.SOURCE_NAME, true, null, "Sort by source name ascending"),
-        Arguments.of(ConnectionSortKey.SOURCE_NAME, false, null, "Sort by source name descending"),
-        Arguments.of(ConnectionSortKey.DESTINATION_NAME, true, null, "Sort by destination name ascending"),
-        Arguments.of(ConnectionSortKey.DESTINATION_NAME, false, null, "Sort by destination name descending"),
-        Arguments.of(ConnectionSortKey.LAST_SYNC, true, null, "Sort by last sync ascending"),
-        Arguments.of(ConnectionSortKey.LAST_SYNC, false, null, "Sort by last sync descending"),
+        Arguments.of(SortKey.CONNECTION_NAME, true, null, "Sort by connection name ascending"),
+        Arguments.of(SortKey.CONNECTION_NAME, false, null, "Sort by connection name descending"),
+        Arguments.of(SortKey.SOURCE_NAME, true, null, "Sort by source name ascending"),
+        Arguments.of(SortKey.SOURCE_NAME, false, null, "Sort by source name descending"),
+        Arguments.of(SortKey.DESTINATION_NAME, true, null, "Sort by destination name ascending"),
+        Arguments.of(SortKey.DESTINATION_NAME, false, null, "Sort by destination name descending"),
+        Arguments.of(SortKey.LAST_SYNC, true, null, "Sort by last sync ascending"),
+        Arguments.of(SortKey.LAST_SYNC, false, null, "Sort by last sync descending"),
 
         // Test various filters
-        Arguments.of(ConnectionSortKey.CONNECTION_NAME, true,
-            new ConnectionFilters("conn", null, null, null, null, null), "Search filter"),
-        Arguments.of(ConnectionSortKey.CONNECTION_NAME, true,
-            new ConnectionFilters(null, null, null, List.of(ConnectionJobStatus.HEALTHY), null, null),
+        Arguments.of(SortKey.CONNECTION_NAME, true,
+            new Filters("conn", null, null, null, null, null), "Search filter"),
+        Arguments.of(SortKey.CONNECTION_NAME, true,
+            new Filters(null, null, null, List.of(ConnectionJobStatus.HEALTHY), null, null),
             "Status filter - HEALTHY"),
-        Arguments.of(ConnectionSortKey.CONNECTION_NAME, true,
-            new ConnectionFilters(null, null, null, List.of(ConnectionJobStatus.FAILED), null, null), "Status filter - FAILED"),
-        Arguments.of(ConnectionSortKey.CONNECTION_NAME, true,
-            new ConnectionFilters(null, null, null, List.of(ConnectionJobStatus.RUNNING), null, null),
+        Arguments.of(SortKey.CONNECTION_NAME, true,
+            new Filters(null, null, null, List.of(ConnectionJobStatus.FAILED), null, null), "Status filter - FAILED"),
+        Arguments.of(SortKey.CONNECTION_NAME, true,
+            new Filters(null, null, null, List.of(ConnectionJobStatus.RUNNING), null, null),
             "Status filter - RUNNING"),
-        Arguments.of(ConnectionSortKey.CONNECTION_NAME, true,
-            new ConnectionFilters(null, null, null, null, List.of(ActorStatus.ACTIVE), null), "State filter - ACTIVE"),
-        Arguments.of(ConnectionSortKey.CONNECTION_NAME, true,
-            new ConnectionFilters(null, null, null, null, List.of(ActorStatus.INACTIVE), null), "State filter - INACTIVE"),
+        Arguments.of(SortKey.CONNECTION_NAME, true,
+            new Filters(null, null, null, null, List.of(ActorStatus.ACTIVE), null), "State filter - ACTIVE"),
+        Arguments.of(SortKey.CONNECTION_NAME, true,
+            new Filters(null, null, null, null, List.of(ActorStatus.INACTIVE), null), "State filter - INACTIVE"),
 
         // Test combined filters
-        Arguments.of(ConnectionSortKey.CONNECTION_NAME, true,
-            new ConnectionFilters("conn", null, null,
+        Arguments.of(SortKey.CONNECTION_NAME, true,
+            new Filters("conn", null, null,
                 List.of(ConnectionJobStatus.HEALTHY), List.of(ActorStatus.ACTIVE), null),
             "Combined filters"),
 
         // Test different sort keys with filters
-        Arguments.of(ConnectionSortKey.SOURCE_NAME, true,
-            new ConnectionFilters(null, null, null, List.of(ConnectionJobStatus.HEALTHY), null, null),
+        Arguments.of(SortKey.SOURCE_NAME, true,
+            new Filters(null, null, null, List.of(ConnectionJobStatus.HEALTHY), null, null),
             "Source sort with status filter"),
-        Arguments.of(ConnectionSortKey.DESTINATION_NAME, false,
-            new ConnectionFilters(null, null, null, null, List.of(ActorStatus.ACTIVE), null), "Destination sort with state filter"),
-        Arguments.of(ConnectionSortKey.LAST_SYNC, true,
-            new ConnectionFilters("test", null, null, null, null, null), "Last sync sort with search filter"),
+        Arguments.of(SortKey.DESTINATION_NAME, false,
+            new Filters(null, null, null, null, List.of(ActorStatus.ACTIVE), null), "Destination sort with state filter"),
+        Arguments.of(SortKey.LAST_SYNC, true,
+            new Filters("test", null, null, null, null, null), "Last sync sort with search filter"),
 
         // Source and destination definition ID filters - now using actual deterministic IDs
-        Arguments.of(ConnectionSortKey.CONNECTION_NAME, true,
-            new ConnectionFilters(null, Collections.singletonList(sourceDefId1), null, null, null, null),
+        Arguments.of(SortKey.CONNECTION_NAME, true,
+            new Filters(null, Collections.singletonList(sourceDefId1), null, null, null, null),
             "Source definition filter - sourceDefId1"),
-        Arguments.of(ConnectionSortKey.CONNECTION_NAME, true,
-            new ConnectionFilters(null, Collections.singletonList(sourceDefId2), null, null, null, null),
+        Arguments.of(SortKey.CONNECTION_NAME, true,
+            new Filters(null, Collections.singletonList(sourceDefId2), null, null, null, null),
             "Source definition filter - sourceDefId2"),
-        Arguments.of(ConnectionSortKey.CONNECTION_NAME, true,
-            new ConnectionFilters(null, null, Collections.singletonList(destDefId1), null, null, null),
+        Arguments.of(SortKey.CONNECTION_NAME, true,
+            new Filters(null, null, Collections.singletonList(destDefId1), null, null, null),
             "Destination definition filter - destDefId1"),
-        Arguments.of(ConnectionSortKey.CONNECTION_NAME, true,
-            new ConnectionFilters(null, null, Collections.singletonList(destDefId2), null, null, null),
+        Arguments.of(SortKey.CONNECTION_NAME, true,
+            new Filters(null, null, Collections.singletonList(destDefId2), null, null, null),
             "Destination definition filter - destDefId2"),
-        Arguments.of(ConnectionSortKey.SOURCE_NAME, false,
-            new ConnectionFilters(null, Collections.singletonList(sourceDefId1),
+        Arguments.of(SortKey.SOURCE_NAME, false,
+            new Filters(null, Collections.singletonList(sourceDefId1),
                 Collections.singletonList(destDefId1), null, null, null),
             "Combined definition filters"));
   }
@@ -1094,28 +1111,28 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
   @ParameterizedTest
   @MethodSource("paginationTestProvider")
   void testListWorkspaceStandardSyncsCursorPaginatedComprehensive(
-                                                                  final ConnectionSortKey sortKey,
+                                                                  final SortKey sortKey,
                                                                   final boolean ascending,
-                                                                  final ConnectionFilters filters,
+                                                                  final Filters filters,
                                                                   final String testDescription)
       throws Exception {
     setupJobsDatabase();
     final ComprehensiveTestData testData = createComprehensiveTestData();
     final int pageSize = 3;
 
-    final ConnectionListCursor initialCursor = new ConnectionListCursor(
-        sortKey, null, null, null, null, null, ascending, filters);
+    final Cursor initialCursor = new Cursor(
+        sortKey, null, null, null, null, null, null, null, ascending, filters);
 
     final List<ConnectionWithJobInfo> allResults = new ArrayList<>();
     final Set<UUID> seenConnectionIds = new HashSet<>();
-    ConnectionListCursor currentCursor = initialCursor;
+    Cursor currentCursor = initialCursor;
     int iterations = 0;
     final int maxIterations = 20; // Safety check to prevent infinite loops
 
     final List<Integer> seenPageSizes = new ArrayList<>();
     // Paginate through all results
     while (iterations < maxIterations) {
-      final ConnectionListCursorPagination pagination = new ConnectionListCursorPagination(currentCursor, pageSize);
+      final WorkspaceResourceCursorPagination pagination = new WorkspaceResourceCursorPagination(currentCursor, pageSize);
       final StandardSyncQuery query = new StandardSyncQuery(testData.workspaceId, null, null, false);
       final List<ConnectionWithJobInfo> pageResults = connectionServiceJooqImpl.listWorkspaceStandardSyncsCursorPaginated(
           query, pagination);
@@ -1159,9 +1176,9 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
   @ParameterizedTest
   @MethodSource("paginationTestProvider")
   void testCountWorkspaceStandardSyncsComprehensive(
-                                                    final ConnectionSortKey sortKey,
+                                                    final SortKey sortKey,
                                                     final boolean ascending,
-                                                    final ConnectionFilters filters,
+                                                    final Filters filters,
                                                     final String testDescription)
       throws Exception {
     setupJobsDatabase();
@@ -1177,8 +1194,8 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
     // Get actual results to verify count accuracy
     final List<ConnectionWithJobInfo> allResults = connectionServiceJooqImpl.listWorkspaceStandardSyncsCursorPaginated(
         new StandardSyncQuery(testData.workspaceId, null, null, false),
-        new ConnectionListCursorPagination(
-            new ConnectionListCursor(sortKey, null, null, null, null, null, ascending, filters), 100));
+        new WorkspaceResourceCursorPagination(
+            new Cursor(sortKey, null, null, null, null, null, null, null, ascending, filters), 100));
 
     assertEquals(allResults.size(), count,
         testDescription + " - Count should match actual result size");
@@ -1247,7 +1264,7 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
     final List<SourceConnection> sources = new ArrayList<>();
     final List<DestinationConnection> destinations = new ArrayList<>();
 
-    sources.add(setupHelper.getSource().withName("a"));
+    sources.add(setupHelper.getSource().withName("Z"));
     sources.add(createAdditionalSource(setupHelper, "z", sourceDefId1));
     sources.add(createAdditionalSource(setupHelper, "Sample Data (Faker)", sourceDefId2));
 
@@ -1463,7 +1480,7 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
   }
 
   private void verifyResultsSorted(List<ConnectionWithJobInfo> results,
-                                   ConnectionSortKey sortKey,
+                                   SortKey sortKey,
                                    boolean ascending,
                                    String testDescription) {
     for (int i = 0; i < results.size() - 1; i++) {
@@ -1484,7 +1501,7 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
     }
   }
 
-  private int compareResults(ConnectionWithJobInfo a, ConnectionWithJobInfo b, ConnectionSortKey sortKey) {
+  private int compareResults(ConnectionWithJobInfo a, ConnectionWithJobInfo b, SortKey sortKey) {
     return switch (sortKey) {
       case CONNECTION_NAME -> a.connection().getName().compareTo(b.connection().getName());
       case SOURCE_NAME -> a.sourceName().compareTo(b.sourceName());
@@ -1498,20 +1515,22 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
           yield 1;
         yield a.latestJobCreatedAt().get().compareTo(b.latestJobCreatedAt().get());
       }
+      default -> 0;
     };
   }
 
-  private String getSortValue(ConnectionWithJobInfo result, ConnectionSortKey sortKey) {
+  private String getSortValue(ConnectionWithJobInfo result, SortKey sortKey) {
     return switch (sortKey) {
       case CONNECTION_NAME -> result.connection().getName();
       case SOURCE_NAME -> result.sourceName();
       case DESTINATION_NAME -> result.destinationName();
       case LAST_SYNC -> result.latestJobCreatedAt().isPresent() ? result.latestJobCreatedAt().get().toString() : "null";
+      default -> null;
     };
   }
 
   private void verifyResultsMatchFilters(List<ConnectionWithJobInfo> results,
-                                         ConnectionFilters filters,
+                                         Filters filters,
                                          String testDescription) {
     if (filters == null)
       return;

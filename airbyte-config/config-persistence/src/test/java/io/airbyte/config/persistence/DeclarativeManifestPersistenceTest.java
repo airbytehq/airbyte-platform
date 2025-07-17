@@ -38,6 +38,7 @@ import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.data.services.shared.ActorServicePaginationHelper;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
@@ -103,11 +104,12 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
             connectionTimelineEventService);
     final MetricClient metricClient = mock(MetricClient.class);
     final DataplaneGroupService dataplaneGroupService = mock(DataplaneGroupService.class);
+    final ActorServicePaginationHelper actorPaginationServiceHelper = mock(ActorServicePaginationHelper.class);
     when(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(any(), any()))
         .thenReturn(new DataplaneGroup().withId(UUID.randomUUID()));
 
     sourceService = new SourceServiceJooqImpl(database, featureFlagClient,
-        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient);
+        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient, actorPaginationServiceHelper);
     workspaceService = new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
         secretPersistenceConfigService, metricClient);
     connectorBuilderService = new ConnectorBuilderServiceJooqImpl(database);

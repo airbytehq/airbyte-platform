@@ -53,7 +53,7 @@ const ConnectionStatusPrev: React.FC<Pick<ConnectionStatusProps, "status">> = ({
           id: "connection.pendingSync",
         })
       : status === Status.CANCELLED
-      ? "connection.cancelledSync"
+      ? formatMessage({ id: "connection.cancelledSync" })
       : formatMessage({
           id: "connection.failedSync",
         });

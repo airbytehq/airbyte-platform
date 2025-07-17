@@ -29,7 +29,10 @@ import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.shared.ActorServicePaginationHelper;
 import io.airbyte.data.services.shared.DestinationConnectionWithCount;
+import io.airbyte.data.services.shared.SortKey;
+import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.JsonSchemaType;
@@ -61,12 +64,14 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
     final ConnectionService connectionService = mock(ConnectionService.class);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    final ActorServicePaginationHelper actorPaginationServiceHelper = new ActorServicePaginationHelper(database);
 
     this.destinationServiceJooqImpl =
-        new DestinationServiceJooqImpl(database, featureFlagClient, connectionService, actorDefinitionVersionUpdater, metricClient);
+        new DestinationServiceJooqImpl(database, featureFlagClient, connectionService, actorDefinitionVersionUpdater, metricClient,
+            actorPaginationServiceHelper);
     this.sourceServiceJooqImpl =
         new SourceServiceJooqImpl(database, featureFlagClient, secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater,
-            metricClient);
+            metricClient, actorPaginationServiceHelper);
     this.connectionServiceJooqImpl = new ConnectionServiceJooqImpl(database);
   }
 
@@ -79,7 +84,9 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
     final UUID workspaceId = helper.getWorkspace().getWorkspaceId();
 
     // Test with no connections - should return empty list
-    final List<DestinationConnectionWithCount> result = destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(workspaceId);
+    final List<DestinationConnectionWithCount> result =
+        destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(workspaceId, WorkspaceResourceCursorPagination.fromValues(
+            SortKey.DESTINATION_NAME, null, null, null, null, null, null, null, null, null, null));
 
     assertNotNull(result);
     assertEquals(1, result.size()); // Should have the destination from setup, but with 0 connections
@@ -111,7 +118,9 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
     createJobRecord(connection2.getConnectionId(), newestJobTime, JobStatus.SUCCEEDED);
     createJobRecord(connection3.getConnectionId(), newestJobTime, JobStatus.SUCCEEDED);
 
-    final List<DestinationConnectionWithCount> result = destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(workspaceId);
+    final List<DestinationConnectionWithCount> result =
+        destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(workspaceId, WorkspaceResourceCursorPagination.fromValues(
+            SortKey.DESTINATION_NAME, null, null, null, null, null, null, null, null, null, null));
 
     assertNotNull(result);
     assertEquals(1, result.size());
@@ -144,7 +153,9 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
     createConnection(source, destination, Status.ACTIVE);
     createConnection(source, destination, Status.DEPRECATED);
 
-    final List<DestinationConnectionWithCount> result = destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(workspaceId);
+    final List<DestinationConnectionWithCount> result =
+        destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(workspaceId, WorkspaceResourceCursorPagination.fromValues(
+            SortKey.DESTINATION_NAME, null, null, null, null, null, null, null, null, null, null));
 
     assertNotNull(result);
     assertEquals(1, result.size());
@@ -170,7 +181,9 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
     createConnection(source, destination1, Status.ACTIVE);
     createConnection(source, destination2, Status.ACTIVE);
 
-    final List<DestinationConnectionWithCount> result = destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(workspaceId);
+    final List<DestinationConnectionWithCount> result =
+        destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(workspaceId, WorkspaceResourceCursorPagination.fromValues(
+            SortKey.DESTINATION_NAME, null, null, null, null, null, null, null, null, null, null));
 
     assertNotNull(result);
     assertEquals(2, result.size());
@@ -205,7 +218,8 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
     // Query for a different workspace (should return empty)
     final UUID differentWorkspaceId = UUID.randomUUID();
     final List<DestinationConnectionWithCount> result =
-        destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(differentWorkspaceId);
+        destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(differentWorkspaceId, WorkspaceResourceCursorPagination.fromValues(
+            SortKey.DESTINATION_NAME, null, null, null, null, null, null, null, null, null, null));
 
     assertNotNull(result);
     assertEquals(0, result.size()); // No destinations in the different workspace
@@ -240,7 +254,9 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
     createJobRecord(deprecatedConnection.getConnectionId(), jobTimeDeprecated1, JobStatus.SUCCEEDED);
     createJobRecord(activeConnection2.getConnectionId(), jobTimeActive1, JobStatus.RUNNING);
 
-    final List<DestinationConnectionWithCount> result = destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(workspaceId);
+    final List<DestinationConnectionWithCount> result =
+        destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(workspaceId, WorkspaceResourceCursorPagination.fromValues(
+            SortKey.DESTINATION_NAME, null, null, null, null, null, null, null, null, null, null));
 
     assertNotNull(result);
     assertEquals(2, result.size());
@@ -291,7 +307,9 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
     createConnectionWithName(source, destination, Status.ACTIVE, "connection-without-jobs");
     createConnectionWithName(source, destination, Status.INACTIVE, "another-connection-without-jobs");
 
-    final List<DestinationConnectionWithCount> result = destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(workspaceId);
+    final List<DestinationConnectionWithCount> result =
+        destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(workspaceId, WorkspaceResourceCursorPagination.fromValues(
+            SortKey.DESTINATION_NAME, null, null, null, null, null, null, null, null, null, null));
 
     assertNotNull(result);
     assertEquals(1, result.size());
@@ -316,7 +334,9 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
     createConnection(source, destination, Status.DEPRECATED);
     createConnection(source, destination, Status.ACTIVE);
 
-    final List<DestinationConnectionWithCount> result = destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(workspaceId);
+    final List<DestinationConnectionWithCount> result =
+        destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(workspaceId, WorkspaceResourceCursorPagination.fromValues(
+            SortKey.DESTINATION_NAME, null, null, null, null, null, null, null, null, null, null));
 
     assertNotNull(result);
     assertEquals(1, result.size());
@@ -365,7 +385,9 @@ class DestinationServiceJooqImplTest extends BaseConfigDatabaseTest {
     createJobRecord(cancelledConnection.getConnectionId(), baseTime.minusHours(1), JobStatus.SUCCEEDED);
     createJobRecord(cancelledConnection.getConnectionId(), baseTime, JobStatus.CANCELLED);
 
-    final List<DestinationConnectionWithCount> result = destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(workspaceId);
+    final List<DestinationConnectionWithCount> result =
+        destinationServiceJooqImpl.listWorkspaceDestinationConnectionsWithCounts(workspaceId, WorkspaceResourceCursorPagination.fromValues(
+            SortKey.DESTINATION_NAME, null, null, null, null, null, null, null, null, null, null));
 
     assertNotNull(result);
     assertEquals(1, result.size());

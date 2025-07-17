@@ -12,6 +12,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import io.airbyte.analytics.TrackingClient;
+import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationRead;
@@ -218,12 +219,14 @@ public class WorkspacesHandler {
     }
 
     // disable all destinations associated with this workspace
-    for (final DestinationRead destinationRead : destinationHandler.listDestinationsForWorkspace(workspaceIdRequestBody).getDestinations()) {
+    for (final DestinationRead destinationRead : destinationHandler.listDestinationsForWorkspace(
+        new ActorListCursorPaginatedRequestBody().workspaceId(workspaceIdRequestBody.getWorkspaceId())).getDestinations()) {
       destinationHandler.deleteDestination(destinationRead);
     }
 
     // disable all sources associated with this workspace
-    for (final SourceRead sourceRead : sourceHandler.listSourcesForWorkspace(workspaceIdRequestBody).getSources()) {
+    for (final SourceRead sourceRead : sourceHandler.listSourcesForWorkspace(
+        new ActorListCursorPaginatedRequestBody().workspaceId(workspaceIdRequestBody.getWorkspaceId())).getSources()) {
       sourceHandler.deleteSource(sourceRead);
     }
     persistedWorkspace.withTombstone(true);

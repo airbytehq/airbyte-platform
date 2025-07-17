@@ -1,0 +1,1 @@
+export { ActorTable } from "./ActorTable";

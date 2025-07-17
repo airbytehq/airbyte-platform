@@ -19,6 +19,7 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
 import io.airbyte.analytics.TrackingClient;
+import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionReadList;
@@ -478,10 +479,11 @@ class WorkspacesHandlerTest {
     when(connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody))
         .thenReturn(new ConnectionReadList().connections(Collections.singletonList(connection)));
 
-    when(destinationHandler.listDestinationsForWorkspace(workspaceIdRequestBody))
-        .thenReturn(new DestinationReadList().destinations(Collections.singletonList(destination)));
+    when(destinationHandler
+        .listDestinationsForWorkspace(new ActorListCursorPaginatedRequestBody().workspaceId(workspaceIdRequestBody.getWorkspaceId())))
+            .thenReturn(new DestinationReadList().destinations(Collections.singletonList(destination)));
 
-    when(sourceHandler.listSourcesForWorkspace(workspaceIdRequestBody))
+    when(sourceHandler.listSourcesForWorkspace(new ActorListCursorPaginatedRequestBody().workspaceId(workspaceIdRequestBody.getWorkspaceId())))
         .thenReturn(new SourceReadList().sources(Collections.singletonList(source)));
 
     getWorkspacesHandler(Configs.AirbyteEdition.COMMUNITY).deleteWorkspace(workspaceIdRequestBody);

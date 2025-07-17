@@ -124,11 +124,13 @@ import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.PartialUserConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.data.services.shared.ConnectionFilters;
-import io.airbyte.data.services.shared.ConnectionSortKey;
 import io.airbyte.data.services.shared.DestinationAndDefinition;
+import io.airbyte.data.services.shared.Filters;
+import io.airbyte.data.services.shared.SortKey;
+import io.airbyte.data.services.shared.SortKeyInfo;
 import io.airbyte.data.services.shared.SourceAndDefinition;
 import io.airbyte.data.services.shared.StandardSyncQuery;
+import io.airbyte.data.services.shared.WorkspaceResourceCursorPaginationKt;
 import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
@@ -1701,38 +1703,33 @@ class WebBackendConnectionsHandlerTest {
   @Test
   void testParseSortKeyAllValues() {
     // Test null sort key defaults to CONNECTION_NAME ascending
-    final WebBackendConnectionsHandler.SortKeyInfo result = wbHandler.parseSortKey(null);
-    assertEquals(ConnectionSortKey.CONNECTION_NAME, result.sortKey());
+    final SortKeyInfo result = WorkspaceResourceCursorPaginationKt.parseSortKey(null);
+    assertEquals(SortKey.CONNECTION_NAME, result.sortKey());
     assertTrue(result.ascending());
 
     // Test all sort key enum values
-    assertEquals(new WebBackendConnectionsHandler.SortKeyInfo(ConnectionSortKey.CONNECTION_NAME, true),
-        wbHandler.parseSortKey(WebBackendConnectionListSortKey.CONNECTION_NAME_ASC));
-    assertEquals(new WebBackendConnectionsHandler.SortKeyInfo(ConnectionSortKey.CONNECTION_NAME, false),
-        wbHandler.parseSortKey(WebBackendConnectionListSortKey.CONNECTION_NAME_DESC));
-    assertEquals(new WebBackendConnectionsHandler.SortKeyInfo(ConnectionSortKey.SOURCE_NAME, true),
-        wbHandler.parseSortKey(WebBackendConnectionListSortKey.SOURCE_NAME_ASC));
-    assertEquals(new WebBackendConnectionsHandler.SortKeyInfo(ConnectionSortKey.SOURCE_NAME, false),
-        wbHandler.parseSortKey(WebBackendConnectionListSortKey.SOURCE_NAME_DESC));
-    assertEquals(new WebBackendConnectionsHandler.SortKeyInfo(ConnectionSortKey.DESTINATION_NAME, true),
-        wbHandler.parseSortKey(WebBackendConnectionListSortKey.DESTINATION_NAME_ASC));
-    assertEquals(new WebBackendConnectionsHandler.SortKeyInfo(ConnectionSortKey.DESTINATION_NAME, false),
-        wbHandler.parseSortKey(WebBackendConnectionListSortKey.DESTINATION_NAME_DESC));
-    assertEquals(new WebBackendConnectionsHandler.SortKeyInfo(ConnectionSortKey.LAST_SYNC, true),
-        wbHandler.parseSortKey(WebBackendConnectionListSortKey.LAST_SYNC_ASC));
-    assertEquals(new WebBackendConnectionsHandler.SortKeyInfo(ConnectionSortKey.LAST_SYNC, false),
-        wbHandler.parseSortKey(WebBackendConnectionListSortKey.LAST_SYNC_DESC));
-  }
-
-  @Test
-  void testBuildConnectionFiltersNull() {
-    assertNull(wbHandler.buildConnectionFilters(null));
+    assertEquals(new SortKeyInfo(SortKey.CONNECTION_NAME, true),
+        WorkspaceResourceCursorPaginationKt.parseSortKey(WebBackendConnectionListSortKey.CONNECTION_NAME_ASC));
+    assertEquals(new SortKeyInfo(SortKey.CONNECTION_NAME, false),
+        WorkspaceResourceCursorPaginationKt.parseSortKey(WebBackendConnectionListSortKey.CONNECTION_NAME_DESC));
+    assertEquals(new SortKeyInfo(SortKey.SOURCE_NAME, true),
+        WorkspaceResourceCursorPaginationKt.parseSortKey(WebBackendConnectionListSortKey.SOURCE_NAME_ASC));
+    assertEquals(new SortKeyInfo(SortKey.SOURCE_NAME, false),
+        WorkspaceResourceCursorPaginationKt.parseSortKey(WebBackendConnectionListSortKey.SOURCE_NAME_DESC));
+    assertEquals(new SortKeyInfo(SortKey.DESTINATION_NAME, true),
+        WorkspaceResourceCursorPaginationKt.parseSortKey(WebBackendConnectionListSortKey.DESTINATION_NAME_ASC));
+    assertEquals(new SortKeyInfo(SortKey.DESTINATION_NAME, false),
+        WorkspaceResourceCursorPaginationKt.parseSortKey(WebBackendConnectionListSortKey.DESTINATION_NAME_DESC));
+    assertEquals(new SortKeyInfo(SortKey.LAST_SYNC, true),
+        WorkspaceResourceCursorPaginationKt.parseSortKey(WebBackendConnectionListSortKey.LAST_SYNC_ASC));
+    assertEquals(new SortKeyInfo(SortKey.LAST_SYNC, false),
+        WorkspaceResourceCursorPaginationKt.parseSortKey(WebBackendConnectionListSortKey.LAST_SYNC_DESC));
   }
 
   @Test
   void testBuildConnectionFiltersEmpty() {
     final WebBackendConnectionListFilters filters = new WebBackendConnectionListFilters();
-    final ConnectionFilters result = wbHandler.buildConnectionFilters(filters);
+    final Filters result = WorkspaceResourceCursorPaginationKt.buildFilters(filters);
 
     assertNotNull(result);
     assertNull(result.getSearchTerm());
@@ -1755,7 +1752,7 @@ class WebBackendConnectionsHandlerTest {
                                                int expectedStatuses,
                                                int expectedStates,
                                                int expectedTagIds) {
-    final ConnectionFilters result = wbHandler.buildConnectionFilters(filters);
+    final Filters result = WorkspaceResourceCursorPaginationKt.buildFilters(filters);
 
     assertNotNull(result);
     assertEquals(expectedSearchTerm, result.getSearchTerm());

@@ -54,6 +54,10 @@ export const SourceConnectionsPage = () => {
     return <LoadingPage />;
   }
 
+  if (connectionCount === null) {
+    return <LoadingPage />;
+  }
+
   return (
     <>
       {connectionCount > 0 ? (

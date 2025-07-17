@@ -8,6 +8,7 @@ import com.cronutils.utils.VisibleForTesting
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
+import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.model.generated.ConnectionCreate
 import io.airbyte.api.model.generated.ConnectionScheduleData
 import io.airbyte.api.model.generated.ConnectionScheduleDataBasicSchedule
@@ -23,7 +24,6 @@ import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SyncMode
-import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.handlers.SourceHandler
@@ -120,7 +120,10 @@ class PartialUserConfigHandler(
     }
 
     // Create connection
-    val destinations = destinationHandler.listDestinationsForWorkspace(WorkspaceIdRequestBody().workspaceId(partialUserConfigCreate.workspaceId))
+    val destinations =
+      destinationHandler.listDestinationsForWorkspace(
+        ActorListCursorPaginatedRequestBody().workspaceId(partialUserConfigCreate.workspaceId),
+      )
     val organizationId = workspaceHelper.getOrganizationForWorkspace(partialUserConfigCreate.workspaceId)
     for (connectionTemplateEntity in connectionTemplateRepository.findByOrganizationIdAndTombstoneFalse(organizationId)) {
       val connectionTemplate = connectionTemplateEntity.toConfigModel()

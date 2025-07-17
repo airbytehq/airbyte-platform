@@ -12,7 +12,10 @@ import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.shared.DestinationAndDefinition
 import io.airbyte.data.services.shared.DestinationConnectionWithCount
+import io.airbyte.data.services.shared.Filters
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
+import io.airbyte.data.services.shared.SortKey
+import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination
 import io.airbyte.validation.json.JsonValidationException
 import java.io.IOException
 import java.util.Optional
@@ -114,5 +117,23 @@ interface DestinationService {
   )
 
   @Throws(IOException::class)
-  fun listWorkspaceDestinationConnectionsWithCounts(workspaceId: UUID): List<DestinationConnectionWithCount>
+  fun listWorkspaceDestinationConnectionsWithCounts(
+    workspaceId: UUID,
+    workspaceResourceCursorPagination: WorkspaceResourceCursorPagination,
+  ): List<DestinationConnectionWithCount>
+
+  @Throws(IOException::class)
+  fun countWorkspaceDestinationsFiltered(
+    workspaceId: UUID,
+    workspaceResourceCursorPagination: WorkspaceResourceCursorPagination,
+  ): Int
+
+  @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class)
+  fun buildCursorPagination(
+    cursor: UUID?,
+    internalSortKey: SortKey,
+    filters: Filters?,
+    ascending: Boolean?,
+    pageSize: Int?,
+  ): WorkspaceResourceCursorPagination?
 }

@@ -111,6 +111,8 @@ export const AllConnectionsPage: React.FC = () => {
     !!filterValues.source ||
     !!filterValues.destination;
 
+  console.log({ isLoading: connectionListQuery.isLoading });
+
   return (
     <Suspense fallback={<LoadingPage />}>
       <>
@@ -150,7 +152,7 @@ export const AllConnectionsPage: React.FC = () => {
               <ConnectionsListCard
                 isLoading={connectionListQuery.isLoading}
                 connections={connections}
-                fetchNextPage={connectionListQuery.fetchNextPage}
+                fetchNextPage={() => !connectionListQuery.isFetchingNextPage && connectionListQuery.fetchNextPage()}
                 hasNextPage={connectionListQuery.hasNextPage ?? false}
                 filterValues={filterValues}
                 setFilterValue={setFilterValue}

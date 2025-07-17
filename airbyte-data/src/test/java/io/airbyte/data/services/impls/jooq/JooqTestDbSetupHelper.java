@@ -33,6 +33,7 @@ import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl;
+import io.airbyte.data.services.shared.ActorServicePaginationHelper;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.TagRecord;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
@@ -83,6 +84,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
     final ConnectionService connectionService = mock(ConnectionService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
+    final ActorServicePaginationHelper actorPaginationServiceHelper = mock(ActorServicePaginationHelper.class);
 
     when(featureFlagClient.stringVariation(eq(HeartbeatMaxSecondsBetweenMessages.INSTANCE), any(SourceDefinition.class))).thenReturn("3600");
 
@@ -94,13 +96,15 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         featureFlagClient,
         connectionService,
         actorDefinitionVersionUpdater,
-        metricClient);
+        metricClient,
+        actorPaginationServiceHelper);
     this.sourceServiceJooqImpl = new SourceServiceJooqImpl(database,
         featureFlagClient,
         secretPersistenceConfigService,
         connectionService,
         actorDefinitionVersionUpdater,
-        metricClient);
+        metricClient,
+        actorPaginationServiceHelper);
     this.dataplaneGroupServiceDataImpl = new DataplaneGroupServiceTestJooqImpl(database);
     this.workspaceServiceJooqImpl = new WorkspaceServiceJooqImpl(database,
         featureFlagClient,

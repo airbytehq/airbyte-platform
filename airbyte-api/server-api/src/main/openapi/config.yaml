@@ -1307,7 +1307,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+              $ref: "#/components/schemas/ActorListCursorPaginatedRequestBody"
         required: true
       responses:
         "200":
@@ -1956,7 +1956,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+              $ref: "#/components/schemas/ActorListCursorPaginatedRequestBody"
         required: true
       responses:
         "200":
@@ -12192,6 +12192,45 @@ components:
       enum:
         - active
         - inactive
+    ActorListCursorPaginatedRequestBody:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        cursor:
+          $ref: "#/components/schemas/ConnectionId"
+        sortKey:
+          $ref: "#/components/schemas/ActorListSortKey"
+          description: Sort key that determines the order of results
+        filters:
+          $ref: "#/components/schemas/ActorListFilters"
+          description: Filters for list of of results
+        pageSize:
+          type: integer
+          description: Number of actors to return in the list
+    ActorListSortKey:
+      type: string
+      enum:
+        - actorName_asc
+        - actorName_desc
+        - actorDefinitionName_asc
+        - actorDefinitionName_desc
+        - lastSync_asc
+        - lastSync_desc
+      description: Available sort keys for actor list pagination
+    ActorListFilters:
+      type: object
+      properties:
+        states:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActorStatus"
+          description: Filter connections by their active/inactive state
+        searchTerm:
+          type: string
+          description: Search term to filter connections by name, source name, destination name, etc.
     SourceSnippetRead:
       type: object
       required:
@@ -12219,6 +12258,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SourceRead"
+        page_size:
+          type: integer
+        num_connections:
+          type: integer
     SourceDiscoverSchemaWriteRequestBody:
       description: to write this requested object to database.
       type: object
@@ -12694,6 +12737,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DestinationRead"
+        page_size:
+          type: integer
+        num_connections:
+          type: integer
     DestinationSearch:
       type: object
       properties:

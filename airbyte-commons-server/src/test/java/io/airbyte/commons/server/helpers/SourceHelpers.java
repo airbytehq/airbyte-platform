@@ -63,7 +63,7 @@ public class SourceHelpers {
   }
 
   public static SourceConnectionWithCount generateSourceWithCount(final SourceConnection source) {
-    return new SourceConnectionWithCount(source, 0, null, java.util.Map.of());
+    return new SourceConnectionWithCount(source, "faker", 0, null, java.util.Map.of(), true);
   }
 
   public static SourceRead getSourceRead(final SourceConnection source, final StandardSourceDefinition standardSourceDefinition) {

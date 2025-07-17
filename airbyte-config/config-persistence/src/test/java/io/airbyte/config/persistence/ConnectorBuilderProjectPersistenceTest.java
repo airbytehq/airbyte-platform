@@ -43,6 +43,7 @@ import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.data.services.shared.ActorServicePaginationHelper;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
@@ -108,6 +109,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     final MetricClient metricClient = mock(MetricClient.class);
+    final ActorServicePaginationHelper actorPaginationServiceHelper = mock(ActorServicePaginationHelper.class);
 
     organizationService.writeOrganization(MockData.defaultOrganization());
     final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
@@ -118,7 +120,7 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
         .withEnabled(true)
         .withTombstone(false));
     sourceService = new SourceServiceJooqImpl(database, featureFlagClient,
-        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient);
+        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient, actorPaginationServiceHelper);
     workspaceService = new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
         secretPersistenceConfigService, metricClient);
     connectorBuilderService = new ConnectorBuilderServiceJooqImpl(database);

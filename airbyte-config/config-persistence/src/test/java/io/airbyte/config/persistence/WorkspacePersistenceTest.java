@@ -48,6 +48,7 @@ import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.data.services.shared.ActorServicePaginationHelper;
 import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -106,11 +107,13 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService,
             connectionTimelineEventService);
     final MetricClient metricClient = mock(MetricClient.class);
+    final ActorServicePaginationHelper actorPaginationServiceHelper = mock(ActorServicePaginationHelper.class);
 
     sourceService = spy(new SourceServiceJooqImpl(database, featureFlagClient,
-        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient));
+        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient, actorPaginationServiceHelper));
     destinationService =
-        spy(new DestinationServiceJooqImpl(database, featureFlagClient, connectionService, actorDefinitionVersionUpdater, metricClient));
+        spy(new DestinationServiceJooqImpl(database, featureFlagClient, connectionService, actorDefinitionVersionUpdater, metricClient,
+            actorPaginationServiceHelper));
     workspacePersistence = new WorkspacePersistence(database);
     userPersistence = new UserPersistence(database);
     final OrganizationPersistence organizationPersistence = new OrganizationPersistence(database);

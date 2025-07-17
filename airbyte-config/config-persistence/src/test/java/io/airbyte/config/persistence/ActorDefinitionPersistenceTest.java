@@ -45,6 +45,7 @@ import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
+import io.airbyte.data.services.shared.ActorServicePaginationHelper;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
@@ -92,6 +93,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
     final MetricClient metricClient = mock(MetricClient.class);
+    final ActorServicePaginationHelper actorPaginationServiceHelper = mock(ActorServicePaginationHelper.class);
 
     actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
     final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
@@ -120,7 +122,8 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
                 actorDefinitionService,
                 scopedConfigurationService,
                 connectionTimelineEventService),
-            metricClient));
+            metricClient,
+            actorPaginationServiceHelper));
     destinationService = spy(
         new DestinationServiceJooqImpl(
             database,
@@ -132,7 +135,8 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
                 actorDefinitionService,
                 scopedConfigurationService,
                 connectionTimelineEventService),
-            metricClient));
+            metricClient,
+            actorPaginationServiceHelper));
 
     organizationService.writeOrganization(MockData.defaultOrganization());
 

@@ -35,6 +35,7 @@ import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
+import io.airbyte.data.services.shared.ActorServicePaginationHelper;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
@@ -122,6 +123,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
     final MetricClient metricClient = mock(MetricClient.class);
+    final ActorServicePaginationHelper actorPaginationServiceHelper = mock(ActorServicePaginationHelper.class);
 
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
@@ -131,7 +133,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
         connectionTimelineEventService);
 
     sourceService = spy(new SourceServiceJooqImpl(database, featureFlagClient,
-        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient));
+        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient, actorPaginationServiceHelper));
 
     final UUID defId = UUID.randomUUID();
     final ActorDefinitionVersion initialADV = initialActorDefinitionVersion(defId);

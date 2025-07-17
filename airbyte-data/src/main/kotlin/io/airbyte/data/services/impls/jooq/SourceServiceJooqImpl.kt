@@ -10,7 +10,6 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConfigNotFoundType
-import io.airbyte.config.JobStatus
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.data.ConfigNotFoundException
@@ -18,9 +17,13 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.SourceService
+import io.airbyte.data.services.shared.ActorServicePaginationHelper
+import io.airbyte.data.services.shared.Filters
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
+import io.airbyte.data.services.shared.SortKey
 import io.airbyte.data.services.shared.SourceAndDefinition
 import io.airbyte.data.services.shared.SourceConnectionWithCount
+import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination
 import io.airbyte.db.ContextQueryFunction
 import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
@@ -67,6 +70,7 @@ class SourceServiceJooqImpl(
   connectionService: ConnectionService,
   actorDefinitionVersionUpdater: ActorDefinitionVersionUpdater,
   metricClient: MetricClient,
+  actorPaginationServiceHelper: ActorServicePaginationHelper,
 ) : SourceService {
   private val database: ExceptionWrappingDatabase
   private val featureFlagClient: FeatureFlagClient
@@ -74,6 +78,7 @@ class SourceServiceJooqImpl(
   private val connectionService: ConnectionService
   private val actorDefinitionVersionUpdater: ActorDefinitionVersionUpdater
   private val metricClient: MetricClient
+  private val actorPaginationServiceHelper: ActorServicePaginationHelper
 
   // TODO: This has too many dependencies.
   init {
@@ -83,6 +88,7 @@ class SourceServiceJooqImpl(
     this.secretPersistenceConfigService = secretPersistenceConfigService
     this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater
     this.metricClient = metricClient
+    this.actorPaginationServiceHelper = actorPaginationServiceHelper
   }
 
   @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
@@ -314,92 +320,56 @@ class SourceServiceJooqImpl(
     return sourceConnection
   }
 
-  override fun listWorkspaceSourceConnectionsWithCounts(workspaceId: UUID): List<SourceConnectionWithCount> =
-    database.query { ctx: DSLContext ->
-      val connectionCount = DSL.field("connection_count", Long::class.java)
-      val lastSync = DSL.field("last_sync", OffsetDateTime::class.java)
-      val succeededCount = DSL.field("succeeded_count", Long::class.java)
-      val failedCount = DSL.field("failed_count", Long::class.java)
-      val runningCount = DSL.field("running_count", Long::class.java)
-      val pendingCount = DSL.field("pending_count", Long::class.java)
-      val incompleteCount = DSL.field("incomplete_count", Long::class.java)
-      val cancelledCount = DSL.field("cancelled_count", Long::class.java)
-
-      // Use raw SQL for the optimized query with CTEs
-      val sql =
-        """
-          WITH workspace_connections AS (
-          SELECT c.id, c.source_id, c.status
-          FROM connection c
-          INNER JOIN actor a ON c.source_id = a.id
-          WHERE a.workspace_id = ?
-            AND a.actor_type = 'source'
-            AND a.tombstone = false
-            AND c.status != 'deprecated'
-        ),
-        connection_data AS (
-          SELECT 
-            wc.source_id,
-            COUNT(wc.id) AS connection_count,
-            MAX(lj.job_created_at) AS last_sync,
-            COUNT(CASE WHEN lj.job_status = 'succeeded' THEN 1 END) AS succeeded_count,
-            COUNT(CASE WHEN lj.job_status = 'failed' THEN 1 END) AS failed_count,
-            COUNT(CASE WHEN lj.job_status = 'running' THEN 1 END) AS running_count,
-            COUNT(CASE WHEN lj.job_status = 'pending' THEN 1 END) AS pending_count,
-            COUNT(CASE WHEN lj.job_status = 'incomplete' THEN 1 END) AS incomplete_count,
-            COUNT(CASE WHEN lj.job_status = 'cancelled' THEN 1 END) AS cancelled_count
-          FROM workspace_connections wc
-          LEFT JOIN LATERAL (
-            SELECT j.created_at AS job_created_at, j.status AS job_status
-            FROM jobs j
-            WHERE j.config_type = 'sync'
-              AND j.scope = wc.id::text
-            ORDER BY j.created_at DESC
-            LIMIT 1
-          ) lj ON TRUE
-          GROUP BY wc.source_id
-        )
-        SELECT 
-          a.*,
-          COALESCE(cd.connection_count, 0) AS connection_count,
-          cd.last_sync,
-          COALESCE(cd.succeeded_count, 0) AS succeeded_count,
-          COALESCE(cd.failed_count, 0) AS failed_count,
-          COALESCE(cd.running_count, 0) AS running_count,
-          COALESCE(cd.pending_count, 0) AS pending_count,
-          COALESCE(cd.incomplete_count, 0) AS incomplete_count,
-          COALESCE(cd.cancelled_count, 0) AS cancelled_count
-        FROM actor a
-        LEFT JOIN connection_data cd ON a.id = cd.source_id
-        WHERE a.actor_type = 'source' 
-          AND a.workspace_id = ?
-          AND a.tombstone = false
-        ORDER BY a.created_at DESC;
-        """.trimIndent()
-
-      val results = ctx.fetch(sql, workspaceId, workspaceId)
-
-      results.map { record ->
-        val source = DbConverter.buildSourceConnection(record)
-        val count = (record.get(connectionCount) ?: 0L).toInt()
-        val lastSyncTime = record.get(lastSync)
-
-        val statusCounts = mutableMapOf<JobStatus, Int>()
-        statusCounts[JobStatus.SUCCEEDED] = record.get(succeededCount).toInt()
-        statusCounts[JobStatus.FAILED] = record.get(failedCount).toInt()
-        statusCounts[JobStatus.RUNNING] = record.get(runningCount).toInt()
-        statusCounts[JobStatus.PENDING] = record.get(pendingCount).toInt()
-        statusCounts[JobStatus.INCOMPLETE] = record.get(incompleteCount).toInt()
-        statusCounts[JobStatus.CANCELLED] = record.get(cancelledCount).toInt()
-
-        SourceConnectionWithCount(
-          source,
-          count,
-          lastSyncTime,
-          statusCounts,
-        )
+  /**
+   * List sources for a workspace along with connection counts
+   *
+   * @param workspaceId - The workspace ID
+   * @param workspaceResourceCursorPagination - the cursor object for paginating over results
+   * @throws IOException - you never know when you IO
+   */
+  override fun listWorkspaceSourceConnectionsWithCounts(
+    workspaceId: UUID,
+    workspaceResourceCursorPagination: WorkspaceResourceCursorPagination,
+  ): List<SourceConnectionWithCount> =
+    actorPaginationServiceHelper
+      .listWorkspaceActorConnectionsWithCounts(
+        workspaceId,
+        workspaceResourceCursorPagination,
+        ActorType.source,
+      ).map { actorConnectionWithCount ->
+        actorConnectionWithCount.sourceConnection?.let { source ->
+          SourceConnectionWithCount(
+            source,
+            actorConnectionWithCount.actorDefinitionName,
+            actorConnectionWithCount.connectionCount,
+            actorConnectionWithCount.lastSync,
+            actorConnectionWithCount.connectionJobStatuses,
+            actorConnectionWithCount.isActive,
+          )
+        } ?: throw IllegalStateException("Expected source connection for source actor type")
       }
-    }
+
+  /**
+   * Get the count of sources for a workspace
+   *
+   * @param workspaceId - The workspace ID
+   * @param workspaceResourceCursorPagination - the cursor object for paginating over results
+   * @throws IOException - you never know when you IO
+   */
+  @Throws(IOException::class)
+  override fun countWorkspaceSourcesFiltered(
+    workspaceId: UUID,
+    workspaceResourceCursorPagination: WorkspaceResourceCursorPagination,
+  ): Int = actorPaginationServiceHelper.countWorkspaceActorsFiltered(workspaceId, workspaceResourceCursorPagination, ActorType.source)
+
+  override fun buildCursorPagination(
+    cursor: UUID?,
+    internalSortKey: SortKey,
+    filters: Filters?,
+    ascending: Boolean?,
+    pageSize: Int?,
+  ): WorkspaceResourceCursorPagination? =
+    actorPaginationServiceHelper.buildCursorPagination(cursor, internalSortKey, filters, ascending, pageSize, ActorType.source)
 
   /**
    * Write a SourceConnection to the database. The configuration of the Source should be a partial

@@ -10,12 +10,12 @@ import io.airbyte.config.StandardSync
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.StreamDescriptorForDestination
 import io.airbyte.data.ConfigNotFoundException
-import io.airbyte.data.services.shared.ConnectionFilters
-import io.airbyte.data.services.shared.ConnectionListCursorPagination
-import io.airbyte.data.services.shared.ConnectionSortKey
 import io.airbyte.data.services.shared.ConnectionWithJobInfo
+import io.airbyte.data.services.shared.Filters
+import io.airbyte.data.services.shared.SortKey
 import io.airbyte.data.services.shared.StandardSyncQuery
 import io.airbyte.data.services.shared.StandardSyncsQueryPaginated
+import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination
 import io.airbyte.validation.json.JsonValidationException
 import java.io.IOException
 import java.util.UUID
@@ -51,13 +51,13 @@ interface ConnectionService {
   @Throws(IOException::class)
   fun listWorkspaceStandardSyncsCursorPaginated(
     standardSyncQuery: StandardSyncQuery,
-    connectionListCursorPagination: ConnectionListCursorPagination,
+    workspaceResourceCursorPagination: WorkspaceResourceCursorPagination,
   ): List<ConnectionWithJobInfo>
 
   @Throws(IOException::class)
   fun countWorkspaceStandardSyncs(
     standardSyncQuery: StandardSyncQuery,
-    filters: ConnectionFilters?,
+    filters: Filters?,
   ): Int
 
   @Throws(IOException::class)
@@ -72,12 +72,12 @@ interface ConnectionService {
   @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class)
   fun buildCursorPagination(
     cursor: UUID?,
-    internalSortKey: ConnectionSortKey?,
-    connectionFilters: ConnectionFilters?,
+    internalSortKey: SortKey,
+    filters: Filters?,
     query: StandardSyncQuery?,
     ascending: Boolean?,
     pageSize: Int?,
-  ): ConnectionListCursorPagination?
+  ): WorkspaceResourceCursorPagination?
 
   @Throws(IOException::class)
   fun listWorkspaceStandardSyncsLimitOffsetPaginated(standardSyncsQueryPaginated: StandardSyncsQueryPaginated): Map<UUID, List<StandardSync>>

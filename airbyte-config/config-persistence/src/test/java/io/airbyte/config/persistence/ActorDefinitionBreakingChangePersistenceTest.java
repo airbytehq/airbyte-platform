@@ -28,6 +28,7 @@ import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
+import io.airbyte.data.services.shared.ActorServicePaginationHelper;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
@@ -126,6 +127,7 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
     final MetricClient metricClient = mock(MetricClient.class);
+    final ActorServicePaginationHelper actorPaginationServiceHelper = mock(ActorServicePaginationHelper.class);
     actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
 
     sourceService = spy(
@@ -140,7 +142,8 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
                 actorDefinitionService,
                 scopedConfigurationService,
                 connectionTimelineEventService),
-            metricClient));
+            metricClient,
+            actorPaginationServiceHelper));
     destinationService = spy(
         new DestinationServiceJooqImpl(
             database,
@@ -152,7 +155,8 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
                 actorDefinitionService,
                 scopedConfigurationService,
                 connectionTimelineEventService),
-            metricClient));
+            metricClient,
+            actorPaginationServiceHelper));
 
     sourceService.writeConnectorMetadata(SOURCE_DEFINITION, createActorDefVersion(SOURCE_DEFINITION.getSourceDefinitionId()),
         List.of(BREAKING_CHANGE, BREAKING_CHANGE_2, BREAKING_CHANGE_3, BREAKING_CHANGE_4));

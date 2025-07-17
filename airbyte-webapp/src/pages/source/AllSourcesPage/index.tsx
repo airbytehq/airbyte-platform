@@ -1,3 +1,1 @@
-import AllSourcesPage from "./AllSourcesPage";
-
-export default AllSourcesPage;
+export { AllSourcesPage as default } from "./AllSourcesPage";

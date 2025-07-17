@@ -38,6 +38,7 @@ import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl
+import io.airbyte.data.services.shared.ActorServicePaginationHelper
 import io.airbyte.db.factory.DSLContextFactory
 import io.airbyte.db.factory.DataSourceFactory
 import io.airbyte.db.factory.DatabaseCheckFactory
@@ -143,6 +144,7 @@ internal class BootloaderTest {
         every { listScopedConfigurationsWithOrigins(any(), any(), any(), any(), any()) } returns emptyList()
       }
     val connectionTimelineService: ConnectionTimelineEventService = mockk()
+    val actorPaginationServiceHelper: ActorServicePaginationHelper = mockk()
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
         featureFlagClient,
@@ -158,6 +160,7 @@ internal class BootloaderTest {
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,
+        actorPaginationServiceHelper,
       )
     val sourceService =
       SourceServiceJooqImpl(
@@ -167,6 +170,7 @@ internal class BootloaderTest {
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,
+        actorPaginationServiceHelper,
       )
     val workspaceService =
       WorkspaceServiceJooqImpl(
@@ -331,6 +335,7 @@ internal class BootloaderTest {
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
     val scopedConfigurationService: ScopedConfigurationService = mockk()
     val connectionTimelineService: ConnectionTimelineEventService = mockk()
+    val actorServicePaginationHelper: ActorServicePaginationHelper = mockk()
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
         featureFlagClient,
@@ -347,6 +352,7 @@ internal class BootloaderTest {
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,
+        actorServicePaginationHelper,
       )
     val destinationService =
       DestinationServiceJooqImpl(
@@ -355,6 +361,7 @@ internal class BootloaderTest {
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,
+        actorServicePaginationHelper,
       )
     val workspaceService =
       WorkspaceServiceJooqImpl(
@@ -652,6 +659,7 @@ internal class BootloaderTest {
     val secretsRepositoryReader: SecretsRepositoryReader = mockk()
     val secretsRepositoryWriter: SecretsRepositoryWriter = mockk()
     val secretPersistenceConfigService: SecretPersistenceConfigService = mockk()
+    val actorServicePaginationHelper: ActorServicePaginationHelper = mockk()
     val workspaceService =
       WorkspaceServiceJooqImpl(
         configDatabase,
@@ -669,6 +677,7 @@ internal class BootloaderTest {
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,
+        actorServicePaginationHelper,
       )
     val destinationService =
       DestinationServiceJooqImpl(
@@ -677,6 +686,7 @@ internal class BootloaderTest {
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,
+        actorServicePaginationHelper,
       )
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L)
     val configDatabaseInitializer =

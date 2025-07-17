@@ -10,9 +10,12 @@ import io.airbyte.config.ScopeType
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.services.shared.Filters
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
+import io.airbyte.data.services.shared.SortKey
 import io.airbyte.data.services.shared.SourceAndDefinition
 import io.airbyte.data.services.shared.SourceConnectionWithCount
+import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination
 import io.airbyte.validation.json.JsonValidationException
 import java.io.IOException
 import java.util.Optional
@@ -114,5 +117,23 @@ interface SourceService {
   )
 
   @Throws(IOException::class)
-  fun listWorkspaceSourceConnectionsWithCounts(workspaceId: UUID): List<SourceConnectionWithCount>
+  fun listWorkspaceSourceConnectionsWithCounts(
+    workspaceId: UUID,
+    workspaceResourceCursorPagination: WorkspaceResourceCursorPagination,
+  ): List<SourceConnectionWithCount>
+
+  @Throws(IOException::class)
+  fun countWorkspaceSourcesFiltered(
+    workspaceId: UUID,
+    workspaceResourceCursorPagination: WorkspaceResourceCursorPagination,
+  ): Int
+
+  @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class)
+  fun buildCursorPagination(
+    cursor: UUID?,
+    internalSortKey: SortKey,
+    filters: Filters?,
+    ascending: Boolean?,
+    pageSize: Int?,
+  ): WorkspaceResourceCursorPagination?
 }

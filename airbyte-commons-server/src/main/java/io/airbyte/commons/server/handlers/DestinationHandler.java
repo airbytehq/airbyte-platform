@@ -8,7 +8,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
+import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody;
+import io.airbyte.api.model.generated.ActorListFilters;
 import io.airbyte.api.model.generated.ActorStatus;
+import io.airbyte.api.model.generated.ActorType;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DestinationCreate;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
@@ -47,7 +50,12 @@ import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.shared.DestinationConnectionWithCount;
+import io.airbyte.data.services.shared.Filters;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
+import io.airbyte.data.services.shared.SortKey;
+import io.airbyte.data.services.shared.SortKeyInfo;
+import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination;
+import io.airbyte.data.services.shared.WorkspaceResourceCursorPaginationKt;
 import io.airbyte.domain.models.SecretStorage;
 import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
@@ -61,13 +69,14 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * DestinationHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -76,6 +85,7 @@ import java.util.function.Supplier;
 @Singleton
 public class DestinationHandler {
 
+  private static final Logger log = LoggerFactory.getLogger(DestinationHandler.class);
   private final ConnectionsHandler connectionsHandler;
   private final Supplier<UUID> uuidGenerator;
   private final JsonSchemaValidator validator;
@@ -303,19 +313,44 @@ public class DestinationHandler {
     return buildDestinationRead(destinationIdRequestBody.getDestinationId(), includeSecretCoordinates);
   }
 
-  public DestinationReadList listDestinationsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
+  public DestinationReadList listDestinationsForWorkspace(final ActorListCursorPaginatedRequestBody actorListCursorPaginatedRequestBody)
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
-    final List<DestinationRead> destinationReads = new ArrayList<>();
-    final List<DestinationConnectionWithCount> destinationConnectionsWithCounts =
-        destinationService.listWorkspaceDestinationConnectionsWithCounts(workspaceIdRequestBody.getWorkspaceId());
-    for (final DestinationConnectionWithCount destinationConnectionWithCount : destinationConnectionsWithCounts) {
-      final DestinationRead destinationRead = buildDestinationReadWithStatus(destinationConnectionWithCount.destination);
-      destinationRead.numConnections(destinationConnectionWithCount.connectionCount);
+    final ActorListFilters filters = actorListCursorPaginatedRequestBody.getFilters();
+    final int pageSize =
+        actorListCursorPaginatedRequestBody.getPageSize() != null ? actorListCursorPaginatedRequestBody.getPageSize()
+            : WorkspaceResourceCursorPaginationKt.DEFAULT_PAGE_SIZE;
 
+    // Parse sort key to extract field and direction
+    final SortKeyInfo sortKeyInfo =
+        WorkspaceResourceCursorPaginationKt.parseSortKey(actorListCursorPaginatedRequestBody.getSortKey(), ActorType.DESTINATION);
+    final SortKey internalSortKey = sortKeyInfo.sortKey();
+    final boolean ascending = sortKeyInfo.ascending();
+    final Filters actorFilters = WorkspaceResourceCursorPaginationKt.buildFilters(filters);
+
+    final WorkspaceResourceCursorPagination cursorPagination = destinationService.buildCursorPagination(
+        actorListCursorPaginatedRequestBody.getCursor(),
+        internalSortKey,
+        actorFilters,
+        ascending,
+        pageSize);
+
+    final int numDestinations = destinationService.countWorkspaceDestinationsFiltered(
+        actorListCursorPaginatedRequestBody.getWorkspaceId(),
+        cursorPagination != null && cursorPagination.getCursor() != null ? cursorPagination : null);
+
+    final List<DestinationConnectionWithCount> destinationConnectionsWithCount =
+        destinationService.listWorkspaceDestinationConnectionsWithCounts(actorListCursorPaginatedRequestBody.getWorkspaceId(), cursorPagination);
+
+    final List<DestinationRead> destinationReads = Lists.newArrayList();
+
+    for (final DestinationConnectionWithCount destinationConnectionWithCount : destinationConnectionsWithCount) {
+      final DestinationRead destinationRead = buildDestinationRead(destinationConnectionWithCount.destination);
       if (destinationConnectionWithCount.lastSync != null) {
         destinationRead.lastSync(destinationConnectionWithCount.lastSync.toEpochSecond());
       }
+      destinationRead.numConnections(destinationConnectionWithCount.connectionCount);
+      destinationRead.setStatus(destinationConnectionWithCount.isActive ? ActorStatus.ACTIVE : ActorStatus.INACTIVE);
 
       // Convert Map<JobStatus, Integer> to Map<String, Integer> for API
       final Map<String, Integer> statusCountsMap = new HashMap<>();
@@ -349,8 +384,7 @@ public class DestinationHandler {
 
       destinationReads.add(destinationRead);
     }
-
-    return new DestinationReadList().destinations(destinationReads);
+    return new DestinationReadList().destinations(destinationReads).numConnections(numDestinations).pageSize(pageSize);
   }
 
   private DestinationRead buildDestinationReadWithStatus(final DestinationConnection destinationConnection)
@@ -554,9 +588,12 @@ public class DestinationHandler {
 
   private DestinationRead buildDestinationRead(final DestinationConnection destinationConnection, final Boolean includeSecretCoordinates)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    final ConnectorSpecification spec =
-        getDestinationVersionForDestinationId(destinationConnection.getDestinationDefinitionId(), destinationConnection.getWorkspaceId(),
-            destinationConnection.getDestinationId()).getSpec();
+    final StandardDestinationDefinition destinationDef =
+        destinationService.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId());
+    final ActorDefinitionVersion destinationVersion =
+        actorDefinitionVersionHelper.getDestinationVersion(destinationDef, destinationConnection.getWorkspaceId(),
+            destinationConnection.getDestinationId());
+    final ConnectorSpecification spec = destinationVersion.getSpec();
     return buildDestinationRead(destinationConnection, spec, includeSecretCoordinates);
   }
 

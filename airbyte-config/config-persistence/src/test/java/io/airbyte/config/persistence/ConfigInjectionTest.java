@@ -36,6 +36,7 @@ import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
+import io.airbyte.data.services.shared.ActorServicePaginationHelper;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
@@ -83,6 +84,7 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
     final ActorDefinitionService actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
     final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
     final MetricClient metricClient = mock(MetricClient.class);
+    final ActorServicePaginationHelper actorServicePaginationHelper = mock(ActorServicePaginationHelper.class);
 
     connectorBuilderService = new ConnectorBuilderServiceJooqImpl(database);
     sourceService = new SourceServiceJooqImpl(
@@ -96,7 +98,8 @@ class ConfigInjectionTest extends BaseConfigDatabaseTest {
             actorDefinitionService,
             scopedConfigurationService,
             connectionTimelineEventService),
-        metricClient);
+        metricClient,
+        actorServicePaginationHelper);
     configInjector = new ConfigInjector(new ConnectorBuilderServiceJooqImpl(database));
     exampleConfig = Jsons.jsonNode(Map.of(SAMPLE_CONFIG_KEY, 123));
   }

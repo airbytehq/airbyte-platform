@@ -21,6 +21,7 @@ import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
+import io.airbyte.data.services.shared.ActorServicePaginationHelper;
 import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
@@ -53,11 +54,12 @@ class ActorDefinitionServiceJooqImplTest extends BaseConfigDatabaseTest {
     final ConnectionService connectionService = mock(ConnectionService.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final ConnectionTimelineEventService connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
+    final ActorServicePaginationHelper actorPaginationServiceHelper = mock(ActorServicePaginationHelper.class);
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater =
         new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService,
             connectionTimelineEventService);
     this.sourceService = new SourceServiceJooqImpl(database, featureFlagClient,
-        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient);
+        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient, actorPaginationServiceHelper);
 
     jooqTestDbSetupHelper = new JooqTestDbSetupHelper();
     jooqTestDbSetupHelper.setUpDependencies();

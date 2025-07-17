@@ -1,7 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
 import { ConnectionConfiguration } from "area/connector/types";
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { isDefined } from "core/utils/common";
 
@@ -17,15 +18,26 @@ import {
   updateDestination,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
-import { DestinationRead, ScopedResourceRequirements } from "../types/AirbyteClient";
+import {
+  ActorListFilters,
+  ActorListSortKey,
+  DestinationRead,
+  ScopedResourceRequirements,
+} from "../types/AirbyteClient";
 import { useRequestErrorHandler } from "../useRequestErrorHandler";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const destinationsKeys = {
   all: [SCOPE_WORKSPACE, "destinations"] as const,
-  lists: () => [...destinationsKeys.all, "list"] as const,
-  list: (filters: string) => [...destinationsKeys.lists(), { filters }] as const,
+  list: (filters: ActorListFilters = {}, sortKey?: ActorListSortKey) =>
+    [
+      ...destinationsKeys.all,
+      "list",
+      `searchTerm:${filters.searchTerm ?? ""}`,
+      `states:${filters.states && filters.states.length > 0 ? filters.states.join(",") : ""}`,
+      `sortKey:${sortKey ?? ""}`,
+    ] as const,
   detail: (destinationId: string) => [...destinationsKeys.all, "details", destinationId] as const,
   discover: (destinationId: string) => [...destinationsKeys.all, "discover", destinationId] as const,
   catalogByConnectionId: (connectionId: string) =>
@@ -48,13 +60,30 @@ interface DestinationList {
   destinations: DestinationRead[];
 }
 
-export const useDestinationList = (): DestinationList => {
+export const useDestinationList = ({
+  pageSize = 25,
+  filters,
+  sortKey,
+}: { pageSize?: number; filters?: ActorListFilters; sortKey?: ActorListSortKey } = {}) => {
   const requestOptions = useRequestOptions();
-  const workspace = useCurrentWorkspace();
+  const workspaceId = useCurrentWorkspaceId();
 
-  return useSuspenseQuery(destinationsKeys.lists(), () =>
-    listDestinationsForWorkspace({ workspaceId: workspace.workspaceId }, requestOptions)
-  );
+  return useInfiniteQuery({
+    queryKey: destinationsKeys.list(filters, sortKey),
+    queryFn: async ({ pageParam }: { pageParam?: string }) => {
+      return {
+        data: (await listDestinationsForWorkspace(
+          { workspaceId, pageSize, cursor: pageParam, filters, sortKey },
+          requestOptions
+        )) ?? { sources: [] },
+        pageParam,
+      };
+    },
+    useErrorBoundary: true,
+    getPreviousPageParam: () => undefined, // Cursor based pagination on this endpoint does not support going back
+    getNextPageParam: (lastPage) =>
+      lastPage.data.destinations.length < pageSize ? undefined : lastPage.data.destinations.at(-1)?.destinationId,
+  });
 };
 
 export const useGetDestination = <T extends string | undefined | null>(
@@ -106,7 +135,8 @@ export const useCreateDestination = () => {
     },
     {
       onSuccess: (data) => {
-        queryClient.setQueryData(destinationsKeys.lists(), (lst: DestinationList | undefined) => ({
+        // joey TODO: need to check that cache invalidation is working here
+        queryClient.setQueryData(destinationsKeys.list(), (lst: DestinationList | undefined) => ({
           destinations: [data, ...(lst?.destinations ?? [])],
         }));
       },
@@ -134,8 +164,9 @@ export const useDeleteDestination = () => {
         });
 
         queryClient.removeQueries(destinationsKeys.detail(ctx.destination.destinationId));
+        // joey TODO: need to check that cache invalidation is working here
         queryClient.setQueryData(
-          destinationsKeys.lists(),
+          destinationsKeys.list(),
           (lst: DestinationList | undefined) =>
             ({
               destinations:

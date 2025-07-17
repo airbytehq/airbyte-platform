@@ -127,6 +127,7 @@ open class RepositoryTestSetup {
           mockk(),
           actorDefinitionUpdate,
           mockk(),
+          mockk(),
         )
 
       val sourceDefinitionId = UUID.randomUUID()
@@ -168,6 +169,7 @@ open class RepositoryTestSetup {
           mockk(),
           mockk(),
           actorDefinitionUpdate,
+          mockk(),
           mockk(),
         )
 
