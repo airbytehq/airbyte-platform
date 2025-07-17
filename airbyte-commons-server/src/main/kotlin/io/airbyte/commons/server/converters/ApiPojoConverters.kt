@@ -255,7 +255,7 @@ class ApiPojoConverters(
       ConnectionSchedule.TimeUnitEnum::class.java,
     )
 
-  fun toApiStatus(status: StandardSync.Status): ConnectionStatus? = Enums.convertTo(status, ConnectionStatus::class.java)
+  fun toApiStatus(status: StandardSync.Status?): ConnectionStatus? = Enums.convertTo(status, ConnectionStatus::class.java)
 
   fun toPersistenceStatus(apiStatus: ConnectionStatus): StandardSync.Status? = Enums.convertTo(apiStatus, StandardSync.Status::class.java)
 
