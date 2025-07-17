@@ -19,7 +19,11 @@ import {
   listOrganizationSummaries,
 } from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
-import { embeddedOrganizationsCurrentScopedGetCurrentScopedOrganization } from "../generated/SonarClient";
+import {
+  embeddedOrganizationsCurrentScopedGetCurrentScopedOrganization,
+  embeddedOrganizationsListEmbeddedOrganizations,
+  embeddedOrganizationsIdOnboardingProgressUpdateOrganizationOnboardingProgress,
+} from "../generated/SonarClient";
 import { SCOPE_ORGANIZATION, SCOPE_USER } from "../scopes";
 import {
   ConsumptionTimeWindow,
@@ -33,6 +37,7 @@ import {
   WorkspaceReadList,
   ListWorkspacesInOrganizationRequestBody,
 } from "../types/AirbyteClient";
+import { OnboardingStatusEnum, Organization } from "../types/SonarClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 export const organizationKeys = {
@@ -286,6 +291,41 @@ export const useGetScopedOrganization = () => {
     () => embeddedOrganizationsCurrentScopedGetCurrentScopedOrganization(requestOptions),
     {
       staleTime: Infinity,
+    }
+  );
+};
+
+export const useListEmbeddedOrganizations = () => {
+  const requestOptions = useRequestOptions();
+  return useSuspenseQuery(organizationKeys.list(["embedded"]), () =>
+    embeddedOrganizationsListEmbeddedOrganizations(requestOptions)
+  );
+};
+
+export const useUpdateEmbeddedOnboardingStatus = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    ({ organizationId, status }: { organizationId: string; status: OnboardingStatusEnum }) => {
+      return embeddedOrganizationsIdOnboardingProgressUpdateOrganizationOnboardingProgress(
+        organizationId,
+        { onboarding_status: status },
+        requestOptions
+      );
+    },
+    {
+      onSuccess: (data) => {
+        queryClient.setQueryData<Organization | undefined>(organizationKeys.detail(data.organization_id), (old) => {
+          if (!old) {
+            return undefined;
+          }
+          return {
+            ...old,
+            onboarding_status: data.onboarding_progress ?? old.onboarding_status,
+          };
+        });
+      },
     }
   );
 };

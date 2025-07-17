@@ -1,14 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
-import { ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { ApiCallOptions } from "../apiCall";
-import { getConfigTemplate, listConfigTemplates, publicCreateConfigTemplate } from "../generated/AirbyteClient";
+import { listConfigTemplates, getConfigTemplate, publicCreateConfigTemplate } from "../generated/AirbyteClient";
 import {
-  embeddedConfigTemplatesConnectionsCreateConnectionConfigTemplate,
   embeddedConfigTemplatesSourcesIdGetSourceConfigTemplate,
   embeddedConfigTemplatesSourcesListSourceConfigTemplates,
 } from "../generated/SonarClient";
@@ -21,7 +18,6 @@ import {
   ConfigTemplateRead,
   SourceDefinitionSpecification,
 } from "../types/AirbyteClient";
-import { CreateConnectionConfigTemplateIn } from "../types/SonarClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -145,63 +141,6 @@ export const useCreateConfigTemplate = () => {
         registerNotification({
           id: "config-template-created",
           text: "Failed to create config template",
-          type: "error",
-        });
-      },
-    }
-  );
-};
-
-export const useCreateConnectionTemplate = () => {
-  const requestOptions = useRequestOptions();
-  const queryClient = useQueryClient();
-  const { registerNotification } = useNotificationService();
-  const analyticsService = useAnalyticsService();
-
-  return useMutation(
-    ({
-      values,
-      destinationDefinitionId,
-      organizationId,
-    }: {
-      values: ConnectorFormValues;
-      destinationDefinitionId: string;
-      organizationId: string;
-    }) => {
-      const connectionTemplate: CreateConnectionConfigTemplateIn = {
-        organization_id: organizationId,
-        destination_name: values.name,
-        destination_config: values.connectionConfiguration,
-        destination_actor_definition_id: destinationDefinitionId,
-      };
-
-      return embeddedConfigTemplatesConnectionsCreateConnectionConfigTemplate(connectionTemplate, requestOptions);
-    },
-    {
-      onSuccess: (response, request) => {
-        analyticsService.track(Namespace.EMBEDDED, Action.CONNECTION_TEMPLATE_CREATED, {
-          description: "User created a connection template",
-          connectionTemplateId: response.id,
-          destinationDefinitionId: request.destinationDefinitionId ?? response,
-        });
-
-        queryClient.invalidateQueries(configTemplates.lists());
-        registerNotification({
-          id: "config-template-created",
-          text: "Connection template created",
-          type: "success",
-        });
-      },
-      onError: (error, request) => {
-        analyticsService.track(Namespace.EMBEDDED, Action.CONNECTION_TEMPLATE_CREATE_FAILED, {
-          description: "User failed to create a connection template",
-          destinationDefinitionId: request.destinationDefinitionId,
-          error,
-        });
-
-        registerNotification({
-          id: "config-template-created",
-          text: "Failed to create connection template",
           type: "error",
         });
       },

@@ -14,7 +14,9 @@ import { ExternalLink } from "components/ui/Link";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text/Text";
 
-import { useCurrentWorkspace, useListApplications } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils";
+import { useListApplications, useUpdateEmbeddedOnboardingStatus } from "core/api";
+import { OnboardingStatusEnum } from "core/api/types/SonarClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { links } from "core/utils/links";
 
@@ -25,8 +27,9 @@ export const EmbedCodeStep: React.FC = () => {
   useTrackPage(PageTrackingCodes.EMBEDDED_ONBOARDING_EMBED_CODE);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const { organizationId } = useCurrentWorkspace();
+  const organizationId = useCurrentOrganizationId();
   const { applications } = useListApplications();
+  const { mutate: updateOrganizationOnboardingProgress } = useUpdateEmbeddedOnboardingStatus();
 
   const envContent = useMemo(() => {
     if (!organizationId || !applications[0]?.clientId || !applications[0]?.clientSecret) {
@@ -40,6 +43,7 @@ AIRBYTE_CLIENT_SECRET=${applications[0]?.clientSecret}`;
   useEffectOnce(() => searchParams.delete(DESTINATION_DEFINITION_PARAM));
 
   const onClickNext = () => {
+    updateOrganizationOnboardingProgress({ organizationId, status: OnboardingStatusEnum.EMBED_CODE_COPIED });
     setSearchParams({ [EMBEDDED_ONBOARDING_STEP_PARAM]: EmbeddedOnboardingStep.Finish });
   };
 

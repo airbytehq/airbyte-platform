@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { isDefined } from "core/utils/common";
 
 import { useCurrentWorkspace } from "./workspaces";
@@ -37,7 +38,7 @@ export const useGetDestinationDefinitionSpecification = (
 
 export const useGetDestinationDefinitionSpecificationAsync = (id: string | null) => {
   const requestOptions = useRequestOptions();
-  const { workspaceId } = useCurrentWorkspace();
+  const workspaceId = useCurrentWorkspaceId();
 
   const escapedId = id ?? "";
   return useQuery(
