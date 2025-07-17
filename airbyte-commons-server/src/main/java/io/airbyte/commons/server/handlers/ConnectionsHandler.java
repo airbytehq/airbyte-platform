@@ -1744,28 +1744,38 @@ public class ConnectionsHandler {
           connection.getConnectionId(), catalogId);
       connectionTimelineEventHelper.logSchemaChangeAutoPropagationEventInConnectionTimeline(connectionId, appliedDiff);
       if (workspace.getNotificationSettings() != null) {
-        LOGGER.info("Sending notification of schema auto propagation for connectionId: '{}'", connection.getConnectionId());
-        notificationHelper.notifySchemaPropagated(
-            workspace.getNotificationSettings(),
-            appliedDiff,
-            workspace,
-            connection,
-            source,
-            workspace.getEmail());
+        try {
+          LOGGER.info("Sending notification of schema auto propagation for connectionId: '{}'", connection.getConnectionId());
+          notificationHelper.notifySchemaPropagated(
+              workspace.getNotificationSettings(),
+              appliedDiff,
+              workspace,
+              connection,
+              source,
+              workspace.getEmail());
+        } catch (final Exception e) {
+          LOGGER.info("Failed to send notification", e);
+          ApmTraceUtils.addExceptionToTrace(e);
+        }
       }
     } else {
       appliedDiff = null;
       // Send notification to the user if schema change needs to be manually applied.
       if (workspace.getNotificationSettings() != null && applySchemaChangeHelper.shouldManuallyApply(diffToApply, connection)) {
-        LOGGER.info("Sending notification of manually applying schema change for connectionId: '{}'", connection.getConnectionId());
-        notificationHelper.notifySchemaDiffToApply(
-            workspace.getNotificationSettings(),
-            diffToApply,
-            workspace,
-            connection,
-            source,
-            workspace.getEmail(),
-            connection.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.DISABLE));
+        try {
+          LOGGER.info("Sending notification of manually applying schema change for connectionId: '{}'", connection.getConnectionId());
+          notificationHelper.notifySchemaDiffToApply(
+              workspace.getNotificationSettings(),
+              diffToApply,
+              workspace,
+              connection,
+              source,
+              workspace.getEmail(),
+              connection.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.DISABLE));
+        } catch (final Exception e) {
+          LOGGER.info("Failed to send notification", e);
+          ApmTraceUtils.addExceptionToTrace(e);
+        }
       }
     }
     return new ConnectionAutoPropagateResult().propagatedDiff(appliedDiff);
