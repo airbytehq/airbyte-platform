@@ -32,6 +32,7 @@ export * from "./pypi";
 export * from "./security";
 export * from "./sources";
 export * from "./sourceDefinitions";
+export * from "./ssoConfig";
 export * from "./streams";
 export * from "./tags";
 export * from "./upgradeConnectorVersion";
