@@ -69,7 +69,11 @@ export const loadOsano = (): void => {
 
   // Create and append the script tag to load osano
   const script = document.createElement("script");
-  script.src = `https://cmp.osano.com/${process.env.REACT_APP_OSANO}/osano.js`;
+  script.src = `https://cmp.osano.com/${
+    window.location.href.includes("embedded-widget")
+      ? process.env.REACT_APP_EMBEDDED_OSANO
+      : process.env.REACT_APP_OSANO
+  }/osano.js`;
   script.addEventListener("load", () => {
     window.Osano?.cm.addEventListener("osano-cm-script-blocked", (item) => {
       console.debug(`🛡️ [Osano] Script blocked: ${item}`);
