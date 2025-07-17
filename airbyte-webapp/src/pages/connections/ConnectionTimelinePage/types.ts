@@ -270,6 +270,13 @@ export const jobSummarySchema = z.object({
   attemptsCount: z.number().optional(),
   bytesLoaded: z.number().optional(),
   recordsLoaded: z.number().optional(),
+  recordsRejected: z.number().optional(),
+  rejectedRecordsMeta: z
+    .object({
+      storageUri: z.string().optional(),
+      cloudConsoleUrl: z.string().optional(),
+    })
+    .optional(),
   endTimeEpochSeconds: z.number(),
   startTimeEpochSeconds: z.number(),
   jobId: z.number(),

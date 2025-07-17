@@ -1,0 +1,22 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.rejectedRecordsLink {
+  display: inline-flex;
+  gap: variables.$spacing-xs;
+  align-items: center;
+  color: colors.$blue;
+  text-decoration: none;
+  border-bottom: variables.$border-thin solid transparent;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    border-bottom: variables.$border-thin solid colors.$blue;
+  }
+
+  // Improves visual alignment of the icon with the text
+  &__icon {
+    transform: translateY(-1px);
+  }
+}
