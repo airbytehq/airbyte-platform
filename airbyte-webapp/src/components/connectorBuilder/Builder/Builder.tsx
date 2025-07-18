@@ -1,7 +1,8 @@
+import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 import { Range } from "monaco-editor";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useWatch, useFormContext, get } from "react-hook-form";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useFormContext, get } from "react-hook-form";
 import { useUpdateEffect } from "react-use";
 
 import { CheckDynamicStreamType, CheckStreamType, ConnectorManifest } from "core/api/types/ConnectorManifest";
@@ -146,21 +147,25 @@ const TriggerStateEffects = () => {
   const {
     undoRedo: { registerChange },
   } = useConnectorBuilderFormState();
-  const { watch, trigger } = useFormContext();
+  const { watch, trigger, getValues } = useFormContext();
   const setStreamToStale = useSetStreamToStale();
   const { updateUserInputsForAuth, updateUserInputsForDeclarativeOAuth, updateUserInputsForTokenUpdater } =
     useAuthenticatorInputs();
-  const builderState = useWatch();
+
+  const previousBuilderState = useRef(cloneDeep(getValues()));
+
   useEffect(() => {
     const subscription = watch((data, { name }) => {
-      if (name) {
-        trigger(name);
+      if (!name) {
+        return;
       }
+
+      trigger(name);
       if (data?.manifest) {
         registerChange(data.manifest as ConnectorManifest);
       }
-      if (name?.startsWith("manifest.streams.")) {
-        const oldValue = get(builderState, name);
+      if (name.startsWith("manifest.streams.")) {
+        const oldValue = get(previousBuilderState.current, name);
         const newValue = get(data, name);
         if (!isEqual(oldValue, newValue)) {
           const streamIndexString = name.match(/manifest\.streams\.(\d+)\..*/)?.[1];
@@ -172,29 +177,30 @@ const TriggerStateEffects = () => {
           } catch (error) {}
         }
       }
-      if (name?.endsWith("authenticator")) {
-        const oldValue = get(builderState, name);
+      if (name.endsWith("authenticator")) {
+        const oldValue = get(previousBuilderState.current, name);
         const oldAuth = isHttpRequesterAuthenticator(oldValue) ? oldValue : undefined;
         const newValue = get(data, name);
         const newAuth = isHttpRequesterAuthenticator(newValue) ? newValue : undefined;
         if (oldAuth || newAuth) {
-          updateUserInputsForAuth(name, oldAuth, newAuth);
+          updateUserInputsForAuth(oldAuth, newAuth);
         }
       }
       if (name === OAUTH_INPUT_SPEC_PATH) {
         const value = get(data, name);
         updateUserInputsForDeclarativeOAuth(value);
       }
-      if (name?.endsWith("authenticator.refresh_token_updater")) {
+      if (name.endsWith("authenticator.refresh_token_updater")) {
         const value = get(data, name);
         updateUserInputsForTokenUpdater(name, value);
       }
+
+      previousBuilderState.current = cloneDeep(data);
     });
     return () => subscription.unsubscribe();
   }, [
     watch,
     setStreamToStale,
-    builderState,
     registerChange,
     trigger,
     updateUserInputsForAuth,

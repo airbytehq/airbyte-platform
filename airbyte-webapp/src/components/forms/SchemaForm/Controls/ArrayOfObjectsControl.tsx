@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import classNames from "classnames";
 import isBoolean from "lodash/isBoolean";
-import { useCallback } from "react";
-import { useFieldArray } from "react-hook-form";
+import { useCallback, useMemo } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -23,7 +24,27 @@ export const ArrayOfObjectsControl = ({
   overrideByPath = {},
 }: BaseControlComponentProps) => {
   const { extractDefaultValuesFromSchema } = useSchemaForm();
-  const { fields: items, append, remove } = useFieldArray({ name: baseProps.name });
+  const { setValue } = useFormContext();
+  const value: unknown[] | undefined = useWatch({ name: baseProps.name });
+  const items = useMemo(() => value ?? [], [value]);
+
+  const append = useCallback(
+    (item: unknown) => {
+      setValue(baseProps.name, [...items, item]);
+    },
+    [items, setValue, baseProps.name]
+  );
+
+  const remove = useCallback(
+    (index: number) => {
+      setValue(
+        baseProps.name,
+        items.filter((_, i) => i !== index)
+      );
+    },
+    [items, setValue, baseProps.name]
+  );
+
   // react-hook-form adds "root" to the path of errors on the array of objects field
   const error = useErrorAtPath(`${baseProps.name}.root`);
 
@@ -36,15 +57,6 @@ export const ArrayOfObjectsControl = ({
   const itemSchema = fieldSchema.items as AirbyteJsonSchema;
   const itemDefaultValues = extractDefaultValuesFromSchema(itemSchema);
 
-  const handleAppend = useCallback(() => {
-    if (itemSchema.type === "array") {
-      // React hook form flattens arrays by default, so we need to wrap this in an extra array to counteract this
-      append([itemDefaultValues]);
-    } else {
-      append(itemDefaultValues);
-    }
-  }, [append, itemDefaultValues, itemSchema.type]);
-
   return (
     <ControlGroup
       title={baseProps.label}
@@ -56,8 +68,8 @@ export const ArrayOfObjectsControl = ({
       data-field-path={baseProps["data-field-path"]}
       disabled={baseProps.disabled}
     >
-      {items.map((item, index) => (
-        <FlexContainer key={item.id} alignItems="flex-start">
+      {items.map((_, index) => (
+        <FlexContainer key={index} alignItems="flex-start">
           <SchemaFormControl
             className={styles.itemControl}
             path={`${baseProps.name}.${index}`}
@@ -76,7 +88,7 @@ export const ArrayOfObjectsControl = ({
       <div className={styles.addButtonContainer}>
         <Button
           variant="secondary"
-          onClick={handleAppend}
+          onClick={() => append(itemDefaultValues)}
           type="button"
           icon="plus"
           data-testid={`add-item-_${baseProps.name}`}

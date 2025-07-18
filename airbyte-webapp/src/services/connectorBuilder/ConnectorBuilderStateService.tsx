@@ -111,7 +111,7 @@ interface FormStateContext {
   publishProject: (options: BuilderProjectPublishBody) => Promise<SourceDefinitionIdBody>;
   releaseNewVersion: (options: NewVersionBody) => Promise<void>;
   toggleUI: (newMode: BuilderState["mode"]) => Promise<void>;
-  updateYamlCdkVersion: (currentManifest: ConnectorManifest) => ConnectorManifest;
+  updateCdkVersion: (currentManifest: ConnectorManifest) => ConnectorManifest;
   assistEnabled: boolean;
   assistSessionId: string;
   setAssistEnabled: (enabled: boolean) => void;
@@ -292,14 +292,17 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     ]
   );
 
-  const updateYamlCdkVersion = useCallback(
+  const updateCdkVersion = useCallback(
     (currentManifest: ConnectorManifest) => {
       if (mode === "yaml") {
         const newManifest = { ...(load(yaml) as ConnectorManifest), version: CDK_VERSION };
         setValue("yaml", convertJsonToYaml(newManifest));
         return newManifest;
       }
-      return currentManifest;
+      return {
+        ...currentManifest,
+        version: CDK_VERSION,
+      };
     },
     [mode, setValue, yaml]
   );
@@ -341,22 +344,22 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const publishProject = useCallback(
     async (options: BuilderProjectPublishBody) => {
       // update the version so that the manifest reflects which CDK version was used to build it
-      const updatedManifest = updateYamlCdkVersion(exportValuesWithRefs().manifest);
+      const updatedManifest = updateCdkVersion(exportValuesWithRefs().manifest);
       const result = await sendPublishRequest({ ...options, manifest: updatedManifest });
       setDisplayedVersion(1);
       return result;
     },
-    [exportValuesWithRefs, sendPublishRequest, updateYamlCdkVersion]
+    [exportValuesWithRefs, sendPublishRequest, updateCdkVersion]
   );
 
   const releaseNewVersion = useCallback(
     async (options: NewVersionBody) => {
       // update the version so that the manifest reflects which CDK version was used to build it
-      const updatedManifest = updateYamlCdkVersion(exportValuesWithRefs().manifest);
+      const updatedManifest = updateCdkVersion(exportValuesWithRefs().manifest);
       await sendNewVersionRequest({ ...options, manifest: updatedManifest });
       setDisplayedVersion(options.version);
     },
-    [exportValuesWithRefs, sendNewVersionRequest, updateYamlCdkVersion]
+    [exportValuesWithRefs, sendNewVersionRequest, updateCdkVersion]
   );
 
   const savingState = getSavingState(
@@ -445,7 +448,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     publishProject,
     releaseNewVersion,
     toggleUI,
-    updateYamlCdkVersion,
+    updateCdkVersion,
     setAssistEnabled,
     assistEnabled,
     assistSessionId,
@@ -541,28 +544,17 @@ function getSavingState(
 
 export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const workspaceId = useCurrentWorkspaceId();
-  const { updateYamlCdkVersion, yamlIsDirty } = useConnectorBuilderFormState();
+  const { updateCdkVersion, yamlIsDirty } = useConnectorBuilderFormState();
   const { projectId, isResolving, resolveError } = useConnectorBuilderResolve();
   const { setValue } = useFormContext();
   const manifest = removeEmptyProperties(useBuilderWatch("manifest"), true);
   const mode = useBuilderWatch("mode");
-  const view = useBuilderWatch("view");
   const generatedStreams = useBuilderWatch("generatedStreams");
   const testStreamId = useBuilderWatch("testStreamId");
   const customComponentsCode = useBuilderWatch("customComponentsCode");
   const autoImportSchemaMetadata = useBuilderWatch("manifest.metadata.autoImportSchema") as
     | Record<string, boolean>
     | undefined;
-
-  useEffect(() => {
-    if (view.type === "stream") {
-      setValue("testStreamId", { type: "stream", index: view.index });
-    } else if (view.type === "dynamic_stream") {
-      setValue("testStreamId", { type: "dynamic_stream", index: view.index });
-    } else if (view.type === "generated_stream") {
-      setValue("testStreamId", view);
-    }
-  }, [setValue, view]);
 
   let streamName: string;
   let testStream: DeclarativeComponentSchemaStreamsItem | undefined;
@@ -735,7 +727,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       }
 
       // update the version so that it is clear which CDK version was used to test the connector
-      updateYamlCdkVersion(manifest);
+      updateCdkVersion(manifest);
 
       if (testStreamId.type !== "dynamic_stream" && testStream.type !== ConditionalStreamsType.ConditionalStreams) {
         updateStreamTestResults(result, testStream);

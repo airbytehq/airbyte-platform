@@ -6,13 +6,8 @@ import {
   ApiKeyAuthenticatorType,
   BasicHttpAuthenticatorType,
   BearerAuthenticatorType,
-  CustomAuthenticatorType,
   OAuthAuthenticatorType,
   JwtAuthenticatorType,
-  SessionTokenAuthenticatorType,
-  NoAuthType,
-  LegacySessionTokenAuthenticatorType,
-  SelectiveAuthenticatorType,
   HttpRequesterAuthenticator,
   ConnectorManifest,
   OAuthConfigSpecificationOauthConnectorInputSpecification,
@@ -21,25 +16,9 @@ import {
 
 import { OAUTH_INPUT_SPEC_PATH } from "./Builder/BuilderDeclarativeOAuth";
 import { convertToBuilderFormInputs, convertToConnectionSpecification } from "./Builder/InputsView";
-import { BuilderFormInput } from "./types";
+import { INPUT_REFERENCE_KEYWORD, VALID_AUTHENTICATOR_TYPES } from "./constants";
+import { AuthenticatorType, BuilderFormInput } from "./types";
 import { extractInterpolatedConfigPath } from "./utils";
-
-export const VALID_AUTHENTICATOR_TYPES = [
-  ApiKeyAuthenticatorType.ApiKeyAuthenticator,
-  BasicHttpAuthenticatorType.BasicHttpAuthenticator,
-  BearerAuthenticatorType.BearerAuthenticator,
-  OAuthAuthenticatorType.OAuthAuthenticator,
-  JwtAuthenticatorType.JwtAuthenticator,
-  SessionTokenAuthenticatorType.SessionTokenAuthenticator,
-  SelectiveAuthenticatorType.SelectiveAuthenticator,
-  CustomAuthenticatorType.CustomAuthenticator,
-  NoAuthType.NoAuth,
-  LegacySessionTokenAuthenticatorType.LegacySessionTokenAuthenticator,
-] as const;
-
-type AuthenticatorType = (typeof VALID_AUTHENTICATOR_TYPES)[number];
-
-const INPUT_REFERENCE_KEYWORD = "config";
 
 export const isHttpRequesterAuthenticator = (authenticator: unknown): authenticator is HttpRequesterAuthenticator => {
   return (
@@ -55,11 +34,7 @@ export const useAuthenticatorInputs = () => {
   const { getValues, setValue } = useFormContext();
 
   const updateUserInputsForAuth = useCallback(
-    (
-      path: string,
-      oldAuth: HttpRequesterAuthenticator | undefined,
-      newAuth: HttpRequesterAuthenticator | undefined
-    ) => {
+    (oldAuth: HttpRequesterAuthenticator | undefined, newAuth: HttpRequesterAuthenticator | undefined) => {
       if (!oldAuth && !newAuth) {
         return;
       }
@@ -67,8 +42,6 @@ export const useAuthenticatorInputs = () => {
       if (oldAuth?.type === newAuth?.type) {
         return;
       }
-
-      const authFieldPath = (field: string) => `${path}.${field}`;
 
       const spec = getValues("manifest.spec");
       const currentInputs = convertToBuilderFormInputs(spec);
@@ -91,10 +64,6 @@ export const useAuthenticatorInputs = () => {
         inputsToAdd
       );
       setValue("manifest.spec.connection_specification", convertToConnectionSpecification(newInputs));
-
-      for (const [field, newInput] of Object.entries(fieldToNewInput)) {
-        setValue(authFieldPath(field), `{{ ${INPUT_REFERENCE_KEYWORD}['${newInput.key}'] }}`);
-      }
     },
     [getValues, setValue]
   );
@@ -292,16 +261,6 @@ export const AUTO_CREATED_INPUTS_BY_AUTH_TYPE: Partial<Record<AuthenticatorType,
         type: "string" as const,
         title: "Secret Key",
         airbyte_secret: true,
-      },
-    },
-    algorithm: {
-      key: "algorithm",
-      required: true,
-      definition: {
-        type: "string" as const,
-        title: "Algorithm",
-        always_show: true,
-        airbyte_secret: false,
       },
     },
   },

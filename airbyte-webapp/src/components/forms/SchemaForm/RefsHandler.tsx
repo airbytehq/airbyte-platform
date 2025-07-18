@@ -218,10 +218,19 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({
         return;
       }
 
+      // skip if name is not part of any reference mapping
+      if (
+        ![...refSourceToTarget.keys()].some((key: string) => key.startsWith(name) || name.startsWith(key)) &&
+        ![...refTargetToSources.keys()].some((key) => name.startsWith(key))
+      ) {
+        return;
+      }
+
+      const newData = cloneDeep(data);
+
       // Prevent infinite loops
       const updatedPaths = new Set<string>([name]);
 
-      // Helper to update field values safely
       const updateFieldValue = (pathToUpdate: string, newValue: unknown) => {
         if (updatedPaths.has(pathToUpdate)) {
           return;
@@ -229,7 +238,7 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({
 
         const currentValue = get(data, pathToUpdate);
         if (!isEqual(currentValue, newValue)) {
-          setValue(pathToUpdate, newValue, { shouldValidate: true });
+          set(newData, pathToUpdate, newValue);
           updatedPaths.add(pathToUpdate);
         }
       };
@@ -274,15 +283,27 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({
         if (sourcePath.startsWith(name)) {
           const sourceValue = getValues(sourcePath);
           const targetValue = getValues(targetPath);
-          if (!isEqual(sourceValue, targetValue)) {
+          if (!isEqual(removeEmptyProperties(sourceValue), removeEmptyProperties(targetValue))) {
             removeRef(sourcePath, targetPath);
           }
         }
       }
+
+      // Write updated data to form
+      reset(newData, { keepDirty: true, keepErrors: true, keepTouched: true });
     });
 
     return () => subscription.unsubscribe();
-  }, [watch, setValue, findRefSourceAndTargetForPath, refTargetToSources, refSourceToTarget, removeRef, getValues]);
+  }, [
+    watch,
+    setValue,
+    findRefSourceAndTargetForPath,
+    refTargetToSources,
+    refSourceToTarget,
+    removeRef,
+    getValues,
+    reset,
+  ]);
 
   // REFERENCE ACTIONS
 

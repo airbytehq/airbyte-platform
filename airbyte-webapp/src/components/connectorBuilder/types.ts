@@ -1,9 +1,19 @@
 import { AirbyteJsonSchema } from "components/forms/SchemaForm/utils";
 
 import { ConnectorBuilderProjectTestingValues } from "core/api/types/AirbyteClient";
-import { ConnectorManifest, DeclarativeStream } from "core/api/types/ConnectorManifest";
+import {
+  ApiKeyAuthenticatorType,
+  BasicHttpAuthenticatorType,
+  BearerAuthenticatorType,
+  ConnectorManifest,
+  DeclarativeStream,
+  JwtAuthenticatorType,
+  OAuthAuthenticatorType,
+} from "core/api/types/ConnectorManifest";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 
+import { INPUT_REFERENCE_KEYWORD, VALID_AUTHENTICATOR_TYPES } from "./constants";
+import { AUTO_CREATED_INPUTS_BY_AUTH_TYPE } from "./useAuthenticatorInputs";
 import declarativeComponentSchema from "../../../build/declarative_component_schema.yaml";
 
 export interface GeneratedStreamId {
@@ -36,6 +46,28 @@ export interface BuilderState {
   manifest: ConnectorManifest;
   generatedStreams: Record<string, DeclarativeStream[]>;
 }
+
+export type AuthenticatorType = (typeof VALID_AUTHENTICATOR_TYPES)[number];
+
+const inputReference = (key: string | undefined) => (key ? `{{ ${INPUT_REFERENCE_KEYWORD}['${key}'] }}` : undefined);
+const addAuthInputReferenceDefaults = (schema: AirbyteJsonSchema, authType: AuthenticatorType) => {
+  const newProperties = {
+    ...schema.properties,
+  };
+
+  const autoCreatedInputs = AUTO_CREATED_INPUTS_BY_AUTH_TYPE?.[authType] ?? {};
+  for (const [key, value] of Object.entries(autoCreatedInputs)) {
+    newProperties[key] = {
+      ...(newProperties[key] as AirbyteJsonSchema),
+      default: inputReference(value.key),
+    };
+  }
+
+  return {
+    ...schema,
+    properties: newProperties,
+  };
+};
 
 export const defaultBuilderStateSchema: AirbyteJsonSchema = {
   type: "object",
@@ -162,6 +194,27 @@ export const defaultBuilderStateSchema: AirbyteJsonSchema = {
       },
       required: ["type", "index"],
     },
+    // Add input reference default values for authenticator types
+    ApiKeyAuthenticator: addAuthInputReferenceDefaults(
+      declarativeComponentSchema.definitions.ApiKeyAuthenticator,
+      ApiKeyAuthenticatorType.ApiKeyAuthenticator
+    ),
+    BasicHttpAuthenticator: addAuthInputReferenceDefaults(
+      declarativeComponentSchema.definitions.BasicHttpAuthenticator,
+      BasicHttpAuthenticatorType.BasicHttpAuthenticator
+    ),
+    BearerAuthenticator: addAuthInputReferenceDefaults(
+      declarativeComponentSchema.definitions.BearerAuthenticator,
+      BearerAuthenticatorType.BearerAuthenticator
+    ),
+    JwtAuthenticator: addAuthInputReferenceDefaults(
+      declarativeComponentSchema.definitions.JwtAuthenticator,
+      JwtAuthenticatorType.JwtAuthenticator
+    ),
+    OAuthAuthenticator: addAuthInputReferenceDefaults(
+      declarativeComponentSchema.definitions.OAuthAuthenticator,
+      OAuthAuthenticatorType.OAuthAuthenticator
+    ),
   },
 };
 

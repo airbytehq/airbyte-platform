@@ -450,14 +450,14 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
   const formatError = useFormatError();
   const connectorName = useBuilderWatch("name");
   const connectorImageName = useMemo(() => convertConnectorNameToImageName(connectorName), [connectorName]);
-  const { updateYamlCdkVersion } = useConnectorBuilderFormState();
+  const { updateCdkVersion } = useConnectorBuilderFormState();
   const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
   const customComponentsCode = useBuilderWatch("customComponentsCode");
   const manifest = useBuilderWatch("manifest");
 
   // update the version so that the manifest reflects which CDK version was used to build it
-  const manifestWithCorrectedVersion = useMemo(() => updateYamlCdkVersion(manifest), [manifest, updateYamlCdkVersion]);
+  const manifestWithCorrectedVersion = useMemo(() => updateCdkVersion(manifest), [manifest, updateCdkVersion]);
 
   const {
     data: baseImageRead,

@@ -1,5 +1,7 @@
+import isEqual from "lodash/isEqual";
 import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
+import { useUpdateEffect } from "react-use";
 
 import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
@@ -45,6 +47,15 @@ export const StreamSelector: React.FC<StreamSelectorProps> = () => {
   const testStreamId = useBuilderWatch("testStreamId");
   const generatedStreams = useBuilderWatch("generatedStreams");
   const { streamNames, dynamicStreamNames } = useStreamNames();
+
+  useUpdateEffect(() => {
+    if (
+      !isEqual(view, testStreamId) &&
+      (view.type === "stream" || view.type === "dynamic_stream" || view.type === "generated_stream")
+    ) {
+      setValue("testStreamId", view);
+    }
+  }, [view]);
 
   if (streamNames.length === 0 && dynamicStreamNames.length === 0) {
     return (

@@ -25,7 +25,7 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
   const analyticsService = useAnalyticsService();
   const { validateAndTouch } = useBuilderErrors();
   const connectorNameField = useBuilderWatch("name");
-  const { yamlIsValid } = useConnectorBuilderFormState();
+  const { yamlIsValid, updateCdkVersion } = useConnectorBuilderFormState();
   const { exportValuesWithRefs } = useRefsHandler();
   const yaml = useBuilderWatch("yaml");
   const mode = useBuilderWatch("mode");
@@ -33,7 +33,9 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
 
   const downloadYaml = () => {
     const yamlToDownload =
-      mode === "ui" ? convertJsonToYaml(removeEmptyProperties(exportValuesWithRefs().manifest, true)) : yaml;
+      mode === "ui"
+        ? convertJsonToYaml(removeEmptyProperties(updateCdkVersion(exportValuesWithRefs().manifest), true))
+        : yaml;
     const file = new Blob([yamlToDownload], { type: FILE_TYPE_DOWNLOAD });
     downloadFile(file, connectorNameField ? `${snakeCase(connectorNameField)}.yaml` : "connector_builder.yaml");
     analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DOWNLOAD_YAML, {

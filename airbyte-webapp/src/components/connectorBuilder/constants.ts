@@ -13,6 +13,16 @@ import {
   DynamicDeclarativeStreamType,
   DynamicDeclarativeStream,
   CustomRetrieverType,
+  SelectiveAuthenticatorType,
+  LegacySessionTokenAuthenticatorType,
+  NoAuthType,
+  CustomAuthenticatorType,
+  ApiKeyAuthenticatorType,
+  BasicHttpAuthenticatorType,
+  BearerAuthenticatorType,
+  OAuthAuthenticatorType,
+  JwtAuthenticatorType,
+  SessionTokenAuthenticatorType,
 } from "core/api/types/ConnectorManifest";
 
 import { CDK_VERSION } from "./cdk";
@@ -160,6 +170,21 @@ export const DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM: ConnectorManifest = {
   ...DEFAULT_JSON_MANIFEST_VALUES,
   streams: [DEFAULT_SYNC_STREAM],
 };
+
+export const INPUT_REFERENCE_KEYWORD = "config";
+
+export const VALID_AUTHENTICATOR_TYPES = [
+  ApiKeyAuthenticatorType.ApiKeyAuthenticator,
+  BasicHttpAuthenticatorType.BasicHttpAuthenticator,
+  BearerAuthenticatorType.BearerAuthenticator,
+  OAuthAuthenticatorType.OAuthAuthenticator,
+  JwtAuthenticatorType.JwtAuthenticator,
+  SessionTokenAuthenticatorType.SessionTokenAuthenticator,
+  SelectiveAuthenticatorType.SelectiveAuthenticator,
+  CustomAuthenticatorType.CustomAuthenticator,
+  NoAuthType.NoAuth,
+  LegacySessionTokenAuthenticatorType.LegacySessionTokenAuthenticator,
+] as const;
 
 // TODO(lmossman): add these back as suggestions (https://github.com/airbytehq/airbyte-internal-issues/issues/13341)
 // export const LARGE_DURATION_OPTIONS = [
