@@ -26,7 +26,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<React.PropsWithChildren<SidebarProps>> = ({ className, yamlSelected, children }) => {
-  const [advancedMode, setAdvancedMode] = useLocalStorage("airbyte_connector-builder-advanced-mode", false);
+  const [advancedMode, setAdvancedMode] = useLocalStorage("airbyte_connector-builder-advanced-mode", true);
   const analyticsService = useAnalyticsService();
   const { toggleUI, currentProject } = useConnectorBuilderFormState();
   const { isResolving } = useConnectorBuilderResolve();
@@ -78,14 +78,14 @@ export const Sidebar: React.FC<React.PropsWithChildren<SidebarProps>> = ({ class
       <FlexContainer direction="row" alignItems="center" gap="sm" justifyContent="center">
         <Switch
           size="sm"
-          checked={advancedMode}
+          checked={!advancedMode}
           onChange={() => {
-            setAdvancedMode(!advancedMode);
+            setAdvancedMode((prev) => !prev);
             window.location.reload();
           }}
         />
         <Text size="sm">
-          <FormattedMessage id="connectorBuilder.advancedMode" />
+          <FormattedMessage id="connectorBuilder.legacyMode" />
         </Text>
       </FlexContainer>
     </FlexContainer>

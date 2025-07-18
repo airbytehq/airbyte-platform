@@ -29,7 +29,7 @@ export function getEditPath(projectId: string) {
 }
 
 const ConnectorBuilderRoutes: React.FC = () => {
-  const [advancedMode] = useLocalStorage("airbyte_connector-builder-advanced-mode", false);
+  const [advancedMode] = useLocalStorage("airbyte_connector-builder-advanced-mode", true);
   const isSchemaFormEnabled = useExperiment("connectorBuilder.schemaForm");
 
   if (!advancedMode || !isSchemaFormEnabled) {

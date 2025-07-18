@@ -2320,7 +2320,7 @@
   "connectorBuilder.retrievalType.confirm.submit.async": "Yes, switch to Asynchronous Job",
   "connectorBuilder.retrievalType.confirm.submit.custom": "Yes, switch to Custom",
   "connectorBuilder.retrievalType.confirm.cancel": "No, keep my progress",
-  "connectorBuilder.advancedMode": "Advanced mode",
+  "connectorBuilder.legacyMode": "Legacy mode",
   "connectorBuilder.streamSchema.noStreamName": "A stream name must be set in order to configure the schema",
   "connectorBuilder.streamName.placeholder": "Enter stream name",
   "connectorBuilder.streamTemplateName.placeholder": "Enter stream template name",
