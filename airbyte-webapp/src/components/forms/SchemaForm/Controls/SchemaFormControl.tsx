@@ -117,12 +117,34 @@ export const SchemaFormControl = ({
     return null;
   }
 
+  const multiOptionSchemas = targetSchema.oneOf || targetSchema.anyOf;
+  const options = multiOptionSchemas
+    ? multiOptionSchemas
+        .map((optionSchema) => resolveTopLevelRef(rootSchema, optionSchema as AirbyteJsonSchema))
+        .filter((optionSchema) => !!optionSchema.title)
+        .map((optionSchema) => ({
+          title: optionSchema.title as string,
+          description: optionSchema.description,
+        }))
+    : undefined;
+
+  const label = titleOverride
+    ? titleOverride
+    : titleOverride === null
+    ? undefined
+    : displayName(path, targetSchema.title);
+
   const baseProps: BaseControlProps = {
     name: path,
-    label: titleOverride ? titleOverride : titleOverride === null ? undefined : displayName(path, targetSchema.title),
+    label,
     labelTooltip:
       targetSchema.description || targetSchema.examples ? (
-        <LabelInfo description={targetSchema.description} examples={targetSchema.examples} />
+        <LabelInfo
+          label={label}
+          description={<ReactMarkdown className={styles.markdown}>{targetSchema.description ?? ""}</ReactMarkdown>}
+          examples={targetSchema.examples}
+          options={options}
+        />
       ) : undefined,
     optional: isOptional,
     header: (
@@ -144,7 +166,7 @@ export const SchemaFormControl = ({
     return matchingSchemaOverride.renderOverride(baseProps);
   }
 
-  if (targetSchema.oneOf || targetSchema.anyOf) {
+  if (multiOptionSchemas) {
     return (
       <MultiOptionControl
         fieldSchema={targetSchema}
@@ -215,7 +237,7 @@ export const SchemaFormControl = ({
 const DeprecatedBadge = ({ message }: { message?: string }) => {
   return message ? (
     <Tooltip control={<Badge variant="grey">Deprecated</Badge>} placement="top">
-      <ReactMarkdown className={styles.deprecatedTooltip}>{message}</ReactMarkdown>
+      <ReactMarkdown className={styles.markdown}>{message}</ReactMarkdown>
     </Tooltip>
   ) : (
     <Badge variant="grey">
