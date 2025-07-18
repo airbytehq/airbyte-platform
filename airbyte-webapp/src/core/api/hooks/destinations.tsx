@@ -216,6 +216,7 @@ export const useDiscoverDestination = (destinationId: string) => {
       return discoverCatalogForDestination({ destinationId, disableCache: true }, requestOptions);
     },
     {
+      useErrorBoundary: true,
       cacheTime: 0, // As soon as the query is not used, it should be removed from the cache
       staleTime: 1000 * 60 * 20, // A discovered schema should be valid for max 20 minutes on the client before refetching
     }
