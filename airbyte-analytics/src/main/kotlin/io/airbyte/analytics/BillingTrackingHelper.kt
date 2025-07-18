@@ -54,7 +54,7 @@ class BillingTrackingHelper(
 
   fun trackGracePeriodEnded(
     organizationId: UUID,
-    paymentProviderId: String,
+    paymentProviderId: String?,
   ) {
     trackingClient.track(
       organizationId,

@@ -351,13 +351,13 @@ class ApiPojoConverters(
     return date.toInstant().atOffset(ZoneOffset.UTC)
   }
 
-  fun toApiBasicScheduleTimeUnit(timeUnit: BasicSchedule.TimeUnit): ConnectionScheduleDataBasicSchedule.TimeUnitEnum? =
+  fun toApiBasicScheduleTimeUnit(timeUnit: BasicSchedule.TimeUnit?): ConnectionScheduleDataBasicSchedule.TimeUnitEnum? =
     Enums.convertTo(
       timeUnit,
       ConnectionScheduleDataBasicSchedule.TimeUnitEnum::class.java,
     )
 
-  fun toApiBasicScheduleTimeUnit(timeUnit: Schedule.TimeUnit): ConnectionScheduleDataBasicSchedule.TimeUnitEnum? =
+  fun toApiBasicScheduleTimeUnit(timeUnit: Schedule.TimeUnit?): ConnectionScheduleDataBasicSchedule.TimeUnitEnum? =
     Enums.convertTo(
       timeUnit,
       ConnectionScheduleDataBasicSchedule.TimeUnitEnum::class.java,
