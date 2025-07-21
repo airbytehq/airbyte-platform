@@ -48,7 +48,7 @@ open class DestinationsController(
   private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
 ) : PublicDestinationsApi {
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateDestination(destinationCreateRequest: DestinationCreateRequest?): Response {
     val destinationResponse: Any? =

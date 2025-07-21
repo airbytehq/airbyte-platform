@@ -49,7 +49,7 @@ open class SourcesController(
   private val currentUserService: CurrentUserService,
   private val roleResolver: RoleResolver,
 ) : PublicSourcesApi {
-  @Secured(AuthRoleConstants.WORKSPACE_EDITOR)
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateSource(sourceCreateRequest: SourceCreateRequest?): Response {
     val userId: UUID = currentUserService.getCurrentUser().userId
