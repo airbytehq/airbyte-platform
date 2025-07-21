@@ -6,6 +6,7 @@ import { finalize, Subject } from "rxjs";
 
 import { LoadingPage } from "components";
 
+import { useCurrentOrganizationIdWithoutUser } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useWebappConfig } from "core/config";
 import { useAnalyticsService } from "core/services/analytics";
@@ -70,11 +71,13 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
   const { locale } = useIntl();
   const { setMessageOverwrite } = useI18nContext();
   const workspaceId = useCurrentWorkspaceId();
+  const organizationId = useCurrentOrganizationIdWithoutUser();
 
   const [contextState, dispatchContextUpdate] = useReducer(contextReducer, {
     context: createMultiContext(
       createUserContext(user, locale),
-      ...(workspaceId ? [createLDContext("workspace", workspaceId)] : [])
+      ...(workspaceId ? [createLDContext("workspace", workspaceId)] : []),
+      ...(organizationId ? [createLDContext("organization", organizationId)] : [])
     ),
   });
 
@@ -84,17 +87,22 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
     dispatchContextUpdate({ type: "add", context: userContext });
   }, [user, locale]);
 
-  // Whenever the workspace changes, we need to update our contexts
+  // Whenever the workspace or organization changes, we need to update our contexts
   useEffect(() => {
     if (workspaceId) {
       const workspaceContext = createLDContext("workspace", workspaceId);
-
       dispatchContextUpdate({ type: "add", context: workspaceContext });
     } else {
       dispatchContextUpdate({ type: "remove", kind: "workspace" });
+    }
+
+    if (organizationId) {
+      const organizationContext = createLDContext("organization", organizationId);
+      dispatchContextUpdate({ type: "add", context: organizationContext });
+    } else {
       dispatchContextUpdate({ type: "remove", kind: "organization" });
     }
-  }, [workspaceId]);
+  }, [workspaceId, organizationId]);
 
   const addContext = useCallback((kind: ContextKind, key: string) => {
     dispatchContextUpdate({ type: "add", context: createLDContext(kind, key) });
