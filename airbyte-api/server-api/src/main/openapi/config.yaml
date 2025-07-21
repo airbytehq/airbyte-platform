@@ -17970,8 +17970,7 @@ components:
       required:
         - descriptor
         - secretStorageType
-        - config
-        - scope
+        - scopeType
         - scopeId
       properties:
         descriptor:
@@ -17984,6 +17983,8 @@ components:
           $ref: "#/components/schemas/ScopeId"
         config:
           $ref: "#/components/schemas/SecretPersistenceConfigurationJson"
+        isConfiguredFromEnvironment:
+          type: boolean
     SecretStorageListRequestBody:
       description: Request body for listing secret storage
       required:

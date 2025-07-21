@@ -15,7 +15,6 @@ import io.airbyte.config.secrets.SecretsHelpers
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
-import io.airbyte.domain.models.SecretStorage
 import io.airbyte.metrics.MetricClient
 import io.airbyte.workers.helper.toConfigModel
 import io.airbyte.workers.helper.toModel
@@ -29,13 +28,15 @@ class ConnectorSecretsHydrator(
   private val secretsRepositoryReader: SecretsRepositoryReader,
   private val airbyteApiClient: AirbyteApiClient,
   private val useRuntimeSecretPersistence: Boolean,
-  private val defaultSecretPersistence: SecretPersistence,
+  private val environmentSecretPersistence: SecretPersistence,
   private val metricClient: MetricClient,
 ) {
   private fun getPersistenceByStorageId(secretStorageId: UUID): SecretPersistence {
     val secretStorageRead = airbyteApiClient.secretStorageApi.getSecretStorage(SecretStorageIdRequestBody(secretStorageId))
-    return if (secretStorageRead.id == SecretStorage.DEFAULT_SECRET_STORAGE_ID.value) {
-      defaultSecretPersistence
+    // TODO: Check if the secret storage on the environment actually corresponds to the secret storage we're requesting.
+    // https://github.com/airbytehq/airbyte-internal-issues/issues/13689
+    return if (secretStorageRead.isConfiguredFromEnvironment) {
+      environmentSecretPersistence
     } else {
       RuntimeSecretPersistence(secretStorageRead.toConfigModel(), metricClient)
     }
@@ -65,7 +66,7 @@ class ConnectorSecretsHydrator(
         when {
           secretStorageId != null -> getPersistenceByStorageId(secretStorageId)
           useRuntimeSecretPersistence -> getLegacyPersistenceByOrgId(context.organizationId)
-          else -> defaultSecretPersistence
+          else -> environmentSecretPersistence
         }
       secretStorageId to persistence
     }

@@ -61,7 +61,7 @@ class ApplicationBeanFactory {
       secretsRepositoryReader = secretsRepositoryReader,
       airbyteApiClient = airbyteApiClient,
       useRuntimeSecretPersistence = useRuntimeSecretPersistence,
-      defaultSecretPersistence = defaultSecretPersistence,
+      environmentSecretPersistence = defaultSecretPersistence,
       metricClient = metricClient,
     )
 

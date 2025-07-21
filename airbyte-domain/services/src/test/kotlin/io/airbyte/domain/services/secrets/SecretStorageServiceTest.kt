@@ -145,6 +145,61 @@ class SecretStorageServiceTest {
         )
       }
     }
+
+    @Test
+    fun `should create env-configured secret storage`() {
+      val secretStorageCreate =
+        SecretStorageCreate(
+          scopeType = SecretStorageScopeType.ORGANIZATION,
+          scopeId = orgId.value,
+          descriptor = "descriptor",
+          storageType = SecretStorageType.AWS_SECRETS_MANAGER,
+          configuredFromEnvironment = true,
+          createdBy = userId,
+        )
+
+      val secretStorage =
+        mockk<SecretStorage> {
+          every { id } returns secretStorageId
+        }
+      every { secretStorageRepository.create(secretStorageCreate) } returns secretStorage
+
+      service.createSecretStorage(secretStorageCreate, null) shouldBe secretStorage
+
+      verify {
+        secretStorageRepository.create(secretStorageCreate)
+      }
+
+      verify(exactly = 0) {
+        secretsRepositoryWriter.storeInDefaultPersistence(any(), any())
+        secretReferenceService.createSecretConfigAndReference(
+          any(),
+          any(),
+          any(),
+          any(),
+          any(),
+          any(),
+          any(),
+        )
+      }
+    }
+
+    @Test
+    fun `should throw when storage config is null for non-env-configured storage`() {
+      val secretStorageCreate =
+        SecretStorageCreate(
+          scopeType = SecretStorageScopeType.ORGANIZATION,
+          scopeId = orgId.value,
+          descriptor = "descriptor",
+          storageType = SecretStorageType.AWS_SECRETS_MANAGER,
+          configuredFromEnvironment = false,
+          createdBy = userId,
+        )
+
+      shouldThrow<IllegalArgumentException> {
+        service.createSecretStorage(secretStorageCreate, null)
+      }
+    }
   }
 
   @Nested

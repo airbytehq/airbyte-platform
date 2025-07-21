@@ -66,7 +66,7 @@ class SecretStorageApiController(
               io.airbyte.api.model.generated.SecretStorageType.LOCAL_TESTING -> SecretStorageType.LOCAL_TESTING
             },
           descriptor = secretStorageCreateRequestBody.descriptor,
-          configuredFromEnvironment = false,
+          configuredFromEnvironment = secretStorageCreateRequestBody.isConfiguredFromEnvironment ?: false,
           createdBy = UserId(currentUserService.getCurrentUser().userId),
         ),
         storageConfig = secretStorageCreateRequestBody.config,

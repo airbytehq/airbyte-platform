@@ -9,6 +9,7 @@ import io.airbyte.config.ScopeType
 import io.airbyte.config.SecretPersistenceConfig
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.SecretsHelpers
+import io.airbyte.config.secrets.persistence.DataPlaneOnlySecretPersistence
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.services.OrganizationService
@@ -56,6 +57,14 @@ class SecretPersistenceService(
     if (secretStorage.isDefault()) {
       return defaultSecretPersistence
     }
+
+    // For now, non-default storages configured from env are No-Ops in the control plane.
+    // In the future, we could support an alternate config for use within the control plane.
+    // This condition is relevant when users don't want to give Airbyte their secret storage credentials for ACE data planes.
+    if (secretStorage.configuredFromEnvironment) {
+      return DataPlaneOnlySecretPersistence()
+    }
+
     val secretStorageConfig = secretStorageService.hydrateStorageConfig(secretStorage).config
     val secretPersistenceConfig =
       SecretPersistenceConfig()

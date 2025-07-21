@@ -35,7 +35,7 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 
 class ConnectorSecretsHydratorTest {
-  private val defaultSecretPersistence = mockk<SecretPersistence>()
+  private val environmentSecretPersistence = mockk<SecretPersistence>()
 
   @BeforeEach
   fun setup() {
@@ -58,7 +58,7 @@ class ConnectorSecretsHydratorTest {
         secretsRepositoryReader,
         airbyteApiClient,
         useRuntimeSecretPersistence,
-        defaultSecretPersistence,
+        environmentSecretPersistence,
         metricClient,
       )
 
@@ -119,7 +119,7 @@ class ConnectorSecretsHydratorTest {
         secretsRepositoryReader,
         airbyteApiClient,
         useRuntimeSecretPersistence,
-        defaultSecretPersistence,
+        environmentSecretPersistence,
         metricClient,
       )
 
@@ -138,7 +138,7 @@ class ConnectorSecretsHydratorTest {
     val orgId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
 
-    every { secretsRepositoryReader.hydrateConfig(unhydratedConfig, mapOf(null to defaultSecretPersistence)) } returns
+    every { secretsRepositoryReader.hydrateConfig(unhydratedConfig, mapOf(null to environmentSecretPersistence)) } returns
       hydratedConfig
 
     val result =
@@ -150,7 +150,7 @@ class ConnectorSecretsHydratorTest {
         ),
       )
 
-    verify { secretsRepositoryReader.hydrateConfig(unhydratedConfig, mapOf(null to defaultSecretPersistence)) }
+    verify { secretsRepositoryReader.hydrateConfig(unhydratedConfig, mapOf(null to environmentSecretPersistence)) }
 
     Assertions.assertEquals(hydratedConfig, result)
   }
@@ -167,7 +167,7 @@ class ConnectorSecretsHydratorTest {
         secretsRepositoryReader,
         airbyteApiClient,
         useRuntimeSecretPersistence,
-        defaultSecretPersistence,
+        environmentSecretPersistence,
         metricClient,
       )
 
@@ -192,6 +192,7 @@ class ConnectorSecretsHydratorTest {
     val secretStorage =
       mockk<SecretStorageRead> {
         every { id } returns secretStorageId
+        every { isConfiguredFromEnvironment } returns false
       }
     val secretStorageConfig = mockk<io.airbyte.config.SecretPersistenceConfig>()
 
@@ -213,6 +214,64 @@ class ConnectorSecretsHydratorTest {
     verify { airbyteApiClient.secretStorageApi.getSecretStorage(SecretStorageIdRequestBody(secretStorageId)) }
     verify { constructedWith<RuntimeSecretPersistence>(EqMatcher(secretStorageConfig), EqMatcher(metricClient)) }
     verify { secretsRepositoryReader.hydrateConfig(unhydratedConfig, any<Map<UUID?, SecretPersistence>>()) }
+
+    Assertions.assertEquals(hydratedConfig, result)
+  }
+
+  @Test
+  fun `uses environment-configured persistence from secret storage`() {
+    val airbyteApiClient: AirbyteApiClient = mockk()
+    val metricClient: MetricClient = mockk()
+    val secretsRepositoryReader: SecretsRepositoryReader = mockk()
+    val useRuntimeSecretPersistence = true
+
+    val hydrator =
+      ConnectorSecretsHydrator(
+        secretsRepositoryReader,
+        airbyteApiClient,
+        useRuntimeSecretPersistence,
+        environmentSecretPersistence,
+        metricClient,
+      )
+
+    val secretStorageId = UUID.randomUUID()
+
+    val unhydratedConfig =
+      ConfigWithSecretReferences(
+        Jsons.emptyObject(),
+        mapOf(
+          "$.password" to
+            SecretReferenceConfig(
+              secretCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate("my-secret-coord", 1),
+              secretStorageId = secretStorageId,
+            ),
+        ),
+      )
+    val hydratedConfig = Jsons.jsonNode(mapOf("password" to "my-secret"))
+
+    val orgId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+
+    val secretStorage =
+      mockk<SecretStorageRead> {
+        every { id } returns secretStorageId
+        every { isConfiguredFromEnvironment } returns true
+      }
+
+    every { airbyteApiClient.secretStorageApi.getSecretStorage(SecretStorageIdRequestBody(secretStorageId)) } returns secretStorage
+    every { secretsRepositoryReader.hydrateConfig(unhydratedConfig, mapOf(secretStorageId to environmentSecretPersistence)) } returns hydratedConfig
+
+    val result =
+      hydrator.hydrateConfig(
+        unhydratedConfig,
+        SecretHydrationContext(
+          organizationId = orgId,
+          workspaceId = workspaceId,
+        ),
+      )
+
+    verify { airbyteApiClient.secretStorageApi.getSecretStorage(SecretStorageIdRequestBody(secretStorageId)) }
+    verify { secretsRepositoryReader.hydrateConfig(unhydratedConfig, mapOf(secretStorageId to environmentSecretPersistence)) }
 
     Assertions.assertEquals(hydratedConfig, result)
   }

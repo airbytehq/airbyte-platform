@@ -10,6 +10,7 @@ import io.airbyte.config.ScopeType
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretReferenceConfig
+import io.airbyte.config.secrets.persistence.DataPlaneOnlySecretPersistence
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.services.OrganizationService
@@ -32,6 +33,7 @@ import io.mockk.mockkConstructor
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -96,6 +98,7 @@ class SecretPersistenceServiceTest {
     fun `test getPersistenceMapFromConfig with storage IDs`() {
       val secretStorageId = UUID.randomUUID()
       val secretStorageId2 = UUID.randomUUID()
+      val secretStorageId3 = UUID.randomUUID()
 
       val config =
         ConfigWithSecretReferences(
@@ -116,6 +119,11 @@ class SecretPersistenceServiceTest {
                 secretStorageId = null,
                 secretCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate(),
               ),
+            "$.fromEnv" to
+              SecretReferenceConfig(
+                secretStorageId = secretStorageId3,
+                secretCoordinate = SecretCoordinate.ExternalSecretCoordinate("coord-from-env-persistence"),
+              ),
           ),
         )
 
@@ -131,6 +139,7 @@ class SecretPersistenceServiceTest {
           every { scopeType } returns SecretStorageScopeType.WORKSPACE
           every { scopeId } returns workspaceId.value
           every { storageType } returns SecretStorageType.AWS_SECRETS_MANAGER
+          every { configuredFromEnvironment } returns false
           every { isDefault() } returns false
         }
       every { secretStorageService.getById(SecretStorageId(secretStorageId)) } returns secretStorage
@@ -141,9 +150,21 @@ class SecretPersistenceServiceTest {
           every { scopeType } returns SecretStorageScopeType.WORKSPACE
           every { scopeId } returns workspaceId.value
           every { storageType } returns SecretStorageType.GOOGLE_SECRET_MANAGER
+          every { configuredFromEnvironment } returns false
           every { isDefault() } returns false
         }
       every { secretStorageService.getById(SecretStorageId(secretStorageId2)) } returns secretStorage2
+
+      val secretStorage3 =
+        mockk<SecretStorage> {
+          every { id } returns SecretStorageId(secretStorageId3)
+          every { scopeType } returns SecretStorageScopeType.WORKSPACE
+          every { scopeId } returns workspaceId.value
+          every { storageType } returns SecretStorageType.LOCAL_TESTING
+          every { configuredFromEnvironment } returns true
+          every { isDefault() } returns false
+        }
+      every { secretStorageService.getById(SecretStorageId(secretStorageId3)) } returns secretStorage3
 
       val storageConfig = Jsons.jsonNode(mapOf("key" to "value"))
       every { secretStorageService.hydrateStorageConfig(any()) } returns
@@ -153,8 +174,9 @@ class SecretPersistenceServiceTest {
 
       val persistenceMap = secretPersistenceService.getPersistenceMapFromConfig(config, context)
       assertEquals(defaultSecretPersistence, persistenceMap[null])
-      assertNotNull(persistenceMap[secretStorageId])
-      assertNotNull(persistenceMap[secretStorageId2])
+      assertTrue(persistenceMap[secretStorageId] is RuntimeSecretPersistence)
+      assertTrue(persistenceMap[secretStorageId2] is RuntimeSecretPersistence)
+      assertTrue(persistenceMap[secretStorageId3] is DataPlaneOnlySecretPersistence)
 
       // we can't mock the constructor for RuntimeSecretPersistence, so we check these for now
       persistenceMap[secretStorageId] shouldNotBe persistenceMap[secretStorageId2]
@@ -164,8 +186,13 @@ class SecretPersistenceServiceTest {
       verify {
         secretStorageService.getById(SecretStorageId(secretStorageId))
         secretStorageService.getById(SecretStorageId(secretStorageId2))
+        secretStorageService.getById(SecretStorageId(secretStorageId3))
         secretStorageService.hydrateStorageConfig(secretStorage)
         secretStorageService.hydrateStorageConfig(secretStorage2)
+      }
+
+      verify(exactly = 0) {
+        secretStorageService.hydrateStorageConfig(secretStorage3)
       }
     }
 
@@ -206,6 +233,7 @@ class SecretPersistenceServiceTest {
           every { scopeType } returns SecretStorageScopeType.WORKSPACE
           every { scopeId } returns workspaceId.value
           every { storageType } returns SecretStorageType.AWS_SECRETS_MANAGER
+          every { configuredFromEnvironment } returns false
           every { isDefault() } returns false
         }
       every { secretStorageService.getByWorkspaceId(workspaceId) } returns secretStorage
