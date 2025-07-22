@@ -53,7 +53,7 @@ export const AllSourcesPage: React.FC = () => {
 
   const infiniteSources = useMemo<SourceReadList>(
     () => ({
-      sources: query.data?.pages.flatMap<SourceRead>((page) => page.data.sources) ?? [],
+      sources: query.data?.pages?.flatMap<SourceRead>((page) => page.sources) ?? [],
     }),
     [query.data]
   );

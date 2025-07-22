@@ -11,6 +11,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 import { SearchInput } from "components/ui/SearchInput";
+import { Text } from "components/ui/Text";
 
 import { useDestinationList } from "core/api";
 import { DestinationRead, DestinationReadList } from "core/api/types/AirbyteClient";
@@ -38,7 +39,8 @@ export const DefineDestination: React.FC = () => {
   // serves to warm the cache for the query inside DefineSourceView, which will be mutated as the user searches and paginates.
   const existingDestinationsQuery = useDestinationList({ pageSize: PAGE_SIZE, filters: { searchTerm: "" } });
 
-  const hasExistingDestinations = existingDestinationsQuery.data?.pages[0]?.data.destinations.length !== 0;
+  const pages = existingDestinationsQuery.data?.pages;
+  const hasExistingDestinations = pages?.[0]?.destinations.length !== 0;
 
   const initialView = viewFromSearchParam === "new" ? "new" : hasExistingDestinations ? "existing" : "new";
 
@@ -59,8 +61,7 @@ const DefineDestinationView: React.FC<{ initialView: View }> = ({ initialView })
 
   const infiniteDestinations = useMemo<DestinationReadList>(
     () => ({
-      destinations:
-        existingDestinationsQuery.data?.pages.flatMap<DestinationRead>((page) => page.data.destinations) ?? [],
+      destinations: existingDestinationsQuery.data?.pages?.flatMap<DestinationRead>((page) => page.destinations) ?? [],
     }),
     [existingDestinationsQuery.data]
   );
@@ -80,10 +81,6 @@ const DefineDestinationView: React.FC<{ initialView: View }> = ({ initialView })
 
   const hasExistingDestinations = existingDestinationsQuery.isSuccess && infiniteDestinations.destinations.length !== 0;
 
-  if (existingDestinationsQuery.isLoading) {
-    return <LoadingPage />;
-  }
-
   return (
     <PageContainer centered>
       <Box p="xl">
@@ -102,7 +99,7 @@ const DefineDestinationView: React.FC<{ initialView: View }> = ({ initialView })
                         value: EXISTING_DESTINATION_TYPE,
                         label: formatMessage({ id: "connectionForm.destinationExisting" }),
                         description: formatMessage({ id: "connectionForm.destinationExistingDescription" }),
-                        disabled: !hasExistingDestinations,
+                        disabled: !hasExistingDestinations && searchTerm.length === 0,
                       },
                       {
                         value: NEW_DESTINATION_TYPE,
@@ -122,7 +119,7 @@ const DefineDestinationView: React.FC<{ initialView: View }> = ({ initialView })
               <Box mb="md">
                 <SearchInput value={searchTerm} onChange={setSearchTerm} debounceTimeout={300} />
               </Box>
-              {!existingDestinationsQuery.isLoading && (
+              {!existingDestinationsQuery.isLoading && infiniteDestinations.destinations.length > 0 && (
                 <SelectExistingConnector
                   connectors={infiniteDestinations.destinations}
                   selectConnector={selectDestination}
@@ -142,6 +139,17 @@ const DefineDestinationView: React.FC<{ initialView: View }> = ({ initialView })
                   </FlexContainer>
                 </Card>
               )}
+              {!existingDestinationsQuery.isLoading &&
+                searchTerm.length > 0 &&
+                infiniteDestinations.destinations.length === 0 && (
+                  <Box mt="xl">
+                    <FlexContainer justifyContent="center" gap="md">
+                      <Text>
+                        <FormattedMessage id="tables.destinations.filters.empty" />
+                      </Text>
+                    </FlexContainer>
+                  </Box>
+                )}
             </PageContainer>
           )}
           {selectedView === "new" && <CreateNewDestination />}

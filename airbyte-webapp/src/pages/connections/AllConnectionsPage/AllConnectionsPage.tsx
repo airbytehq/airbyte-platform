@@ -111,8 +111,6 @@ export const AllConnectionsPage: React.FC = () => {
     !!filterValues.source ||
     !!filterValues.destination;
 
-  console.log({ isLoading: connectionListQuery.isLoading });
-
   return (
     <Suspense fallback={<LoadingPage />}>
       <>

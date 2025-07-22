@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { InfiniteData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { useIntl } from "react-intl";
@@ -26,6 +26,7 @@ import {
   AirbyteCatalog,
   ScopedResourceRequirements,
   SourceRead,
+  SourceReadList,
 } from "../types/AirbyteClient";
 import { useRequestErrorHandler } from "../useRequestErrorHandler";
 import { useRequestOptions } from "../useRequestOptions";
@@ -33,10 +34,10 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const sourcesKeys = {
   all: [SCOPE_WORKSPACE, "sources"] as const,
+  lists: () => [...sourcesKeys.all, "list"] as const,
   list: (filters: ActorListFilters = {}, sortKey?: ActorListSortKey) =>
     [
-      ...sourcesKeys.all,
-      "list",
+      ...sourcesKeys.lists(),
       `searchTerm:${filters.searchTerm ?? ""}`,
       `states:${filters.states && filters.states.length > 0 ? filters.states.join(",") : ""}`,
       `sortKey:${sortKey ?? ""}`,
@@ -57,10 +58,6 @@ interface ConnectorProps {
   sourceDefinitionId: string;
 }
 
-interface SourceList {
-  sources: SourceRead[];
-}
-
 export const useSourceList = ({
   pageSize = 25,
   filters,
@@ -71,21 +68,13 @@ export const useSourceList = ({
 
   return useInfiniteQuery({
     queryKey: sourcesKeys.list(filters, sortKey),
-    queryFn: async ({ pageParam }: { pageParam?: string }) => {
-      return {
-        data: (await listSourcesForWorkspace(
-          { workspaceId, pageSize, cursor: pageParam, filters, sortKey },
-          requestOptions
-        )) ?? {
-          sources: [],
-        },
-        pageParam,
-      };
+    queryFn: async ({ pageParam: cursor }) => {
+      return listSourcesForWorkspace({ workspaceId, pageSize, cursor, filters, sortKey }, requestOptions);
     },
     useErrorBoundary: true,
     getPreviousPageParam: () => undefined, // Cursor based pagination on this endpoint does not support going back
     getNextPageParam: (lastPage) =>
-      lastPage.data.sources.length < pageSize ? undefined : lastPage.data.sources.at(-1)?.sourceId,
+      lastPage.sources.length < pageSize ? undefined : lastPage.sources.at(-1)?.sourceId,
   });
 };
 
@@ -165,22 +154,17 @@ export const useDeleteSource = () => {
         });
 
         queryClient.removeQueries(sourcesKeys.detail(ctx.source.sourceId));
-        // joey TODO: need to check that cache invalidation is working here
-        queryClient.setQueryData(
-          sourcesKeys.list(),
-          (oldData: { pages: SourceList[]; pageParams: unknown[] } | undefined) => {
-            if (!oldData) {
-              return oldData;
-            }
-            return {
-              ...oldData,
-              pages: oldData.pages.map((page) => ({
-                ...page,
-                sources: page.sources.filter((conn) => conn.sourceId !== ctx.source.sourceId),
-              })),
-            };
-          }
-        );
+        queryClient.setQueriesData(sourcesKeys.lists(), (oldData: InfiniteData<SourceReadList> | undefined) => {
+          return oldData
+            ? {
+                ...oldData,
+                pages: oldData.pages.map((page) => ({
+                  ...page,
+                  sources: page.sources.filter((source) => source.sourceId !== ctx.source.sourceId),
+                })),
+              }
+            : oldData;
+        });
 
         removeConnectionsFromList({ sourceId: ctx.source.sourceId });
       },

@@ -54,7 +54,7 @@ export const AllDestinationsPage: React.FC = () => {
 
   const infiniteDestinations = useMemo<DestinationReadList>(
     () => ({
-      destinations: query.data?.pages.flatMap<DestinationRead>((page) => page.data.destinations) ?? [],
+      destinations: query.data?.pages?.flatMap<DestinationRead>((page) => page.destinations) ?? [],
     }),
     [query.data]
   );

@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { InfiniteData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
 import { ConnectionConfiguration } from "area/connector/types";
@@ -22,6 +22,7 @@ import {
   ActorListFilters,
   ActorListSortKey,
   DestinationRead,
+  DestinationReadList,
   ScopedResourceRequirements,
 } from "../types/AirbyteClient";
 import { useRequestErrorHandler } from "../useRequestErrorHandler";
@@ -30,10 +31,10 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const destinationsKeys = {
   all: [SCOPE_WORKSPACE, "destinations"] as const,
+  lists: () => [...destinationsKeys.all, "list"] as const,
   list: (filters: ActorListFilters = {}, sortKey?: ActorListSortKey) =>
     [
-      ...destinationsKeys.all,
-      "list",
+      ...destinationsKeys.lists(),
       `searchTerm:${filters.searchTerm ?? ""}`,
       `states:${filters.states && filters.states.length > 0 ? filters.states.join(",") : ""}`,
       `sortKey:${sortKey ?? ""}`,
@@ -56,10 +57,6 @@ interface ConnectorProps {
   destinationDefinitionId: string;
 }
 
-interface DestinationList {
-  destinations: DestinationRead[];
-}
-
 export const useDestinationList = ({
   pageSize = 25,
   filters,
@@ -70,19 +67,13 @@ export const useDestinationList = ({
 
   return useInfiniteQuery({
     queryKey: destinationsKeys.list(filters, sortKey),
-    queryFn: async ({ pageParam }: { pageParam?: string }) => {
-      return {
-        data: (await listDestinationsForWorkspace(
-          { workspaceId, pageSize, cursor: pageParam, filters, sortKey },
-          requestOptions
-        )) ?? { sources: [] },
-        pageParam,
-      };
+    queryFn: async ({ pageParam: cursor }) => {
+      return listDestinationsForWorkspace({ workspaceId, pageSize, cursor, filters, sortKey }, requestOptions);
     },
     useErrorBoundary: true,
     getPreviousPageParam: () => undefined, // Cursor based pagination on this endpoint does not support going back
     getNextPageParam: (lastPage) =>
-      lastPage.data.destinations.length < pageSize ? undefined : lastPage.data.destinations.at(-1)?.destinationId,
+      lastPage.destinations.length < pageSize ? undefined : lastPage.destinations.at(-1)?.destinationId,
   });
 };
 
@@ -134,11 +125,8 @@ export const useCreateDestination = () => {
       );
     },
     {
-      onSuccess: (data) => {
-        // joey TODO: need to check that cache invalidation is working here
-        queryClient.setQueryData(destinationsKeys.list(), (lst: DestinationList | undefined) => ({
-          destinations: [data, ...(lst?.destinations ?? [])],
-        }));
+      onSuccess: () => {
+        queryClient.invalidateQueries(destinationsKeys.lists());
       },
       onError,
     }
@@ -164,14 +152,21 @@ export const useDeleteDestination = () => {
         });
 
         queryClient.removeQueries(destinationsKeys.detail(ctx.destination.destinationId));
-        // joey TODO: need to check that cache invalidation is working here
-        queryClient.setQueryData(
-          destinationsKeys.list(),
-          (lst: DestinationList | undefined) =>
-            ({
-              destinations:
-                lst?.destinations.filter((conn) => conn.destinationId !== ctx.destination.destinationId) ?? [],
-            }) as DestinationList
+        queryClient.setQueriesData(
+          destinationsKeys.lists(),
+          (oldData: InfiniteData<DestinationReadList> | undefined) => {
+            return oldData
+              ? {
+                  ...oldData,
+                  pages: oldData.pages.map((page) => ({
+                    ...page,
+                    destinations: page.destinations.filter(
+                      (destination) => destination.destinationId !== ctx.destination.destinationId
+                    ),
+                  })),
+                }
+              : oldData;
+          }
         );
 
         removeConnectionsFromList({ destinationId: ctx.destination.destinationId });

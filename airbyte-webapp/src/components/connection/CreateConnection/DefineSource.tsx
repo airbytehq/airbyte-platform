@@ -11,6 +11,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 import { SearchInput } from "components/ui/SearchInput";
+import { Text } from "components/ui/Text";
 
 import { useSourceList } from "core/api";
 import { SourceRead, SourceReadList } from "core/api/types/AirbyteClient";
@@ -37,7 +38,8 @@ export const DefineSource: React.FC = () => {
   // serves to warm the cache for the query inside DefineSourceView, which will be mutated as the user searches and paginates.
   const existingSourcesQuery = useSourceList({ pageSize: PAGE_SIZE, filters: { searchTerm: "" } });
 
-  const hasExistingSources = existingSourcesQuery.data?.pages[0]?.data.sources.length !== 0;
+  const pages = existingSourcesQuery.data?.pages;
+  const hasExistingSources = pages?.[0]?.sources.length !== 0;
 
   const initialView = viewFromSearchParam === "new" ? "new" : hasExistingSources ? "existing" : "new";
 
@@ -58,7 +60,7 @@ const DefineSourceView: React.FC<{ initialView: "new" | "existing" }> = ({ initi
 
   const infiniteSources = useMemo<SourceReadList>(
     () => ({
-      sources: existingSourcesQuery.data?.pages.flatMap<SourceRead>((page) => page.data.sources) ?? [],
+      sources: existingSourcesQuery.data?.pages?.flatMap<SourceRead>((page) => page.sources) ?? [],
     }),
     [existingSourcesQuery.data]
   );
@@ -78,10 +80,6 @@ const DefineSourceView: React.FC<{ initialView: "new" | "existing" }> = ({ initi
 
   const hasExistingSources = existingSourcesQuery.isSuccess && infiniteSources.sources.length !== 0;
 
-  if (existingSourcesQuery.isLoading) {
-    return <LoadingPage />;
-  }
-
   return (
     <Box p="xl">
       <FlexContainer direction="column">
@@ -99,7 +97,7 @@ const DefineSourceView: React.FC<{ initialView: "new" | "existing" }> = ({ initi
                       value: EXISTING_SOURCE_TYPE,
                       label: formatMessage({ id: "connectionForm.sourceExisting" }),
                       description: formatMessage({ id: "connectionForm.sourceExistingDescription" }),
-                      disabled: !hasExistingSources,
+                      disabled: !hasExistingSources && searchTerm.length === 0,
                     },
                     {
                       value: NEW_SOURCE_TYPE,
@@ -119,7 +117,7 @@ const DefineSourceView: React.FC<{ initialView: "new" | "existing" }> = ({ initi
             <Box mb="md">
               <SearchInput value={searchTerm} onChange={setSearchTerm} debounceTimeout={300} />
             </Box>
-            {!existingSourcesQuery.isLoading && (
+            {!existingSourcesQuery.isLoading && infiniteSources.sources.length > 0 && (
               <SelectExistingConnector
                 connectors={infiniteSources.sources}
                 selectConnector={selectSource}
@@ -138,6 +136,15 @@ const DefineSourceView: React.FC<{ initialView: "new" | "existing" }> = ({ initi
                   <LoadingSkeleton />
                 </FlexContainer>
               </Card>
+            )}
+            {!existingSourcesQuery.isLoading && searchTerm.length > 0 && infiniteSources.sources.length === 0 && (
+              <Box mt="xl">
+                <FlexContainer justifyContent="center" gap="md">
+                  <Text>
+                    <FormattedMessage id="tables.sources.filters.empty" />
+                  </Text>
+                </FlexContainer>
+              </Box>
             )}
           </PageContainer>
         )}
