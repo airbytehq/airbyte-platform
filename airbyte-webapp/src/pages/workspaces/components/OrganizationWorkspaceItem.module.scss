@@ -33,11 +33,13 @@
 .orgWorkspaceItem__badge {
   display: flex;
   align-items: center;
+  justify-content: center;
   border-radius: variables.$border-radius-xs;
   font-size: variables.$font-size-sm;
   font-weight: 500;
-  padding: 3px 6px;
+  padding: variables.$spacing-xs variables.$spacing-sm;
   gap: variables.$spacing-xs;
+  max-width: 42px;
 }
 
 .orgWorkspaceItem__badge--sync {
