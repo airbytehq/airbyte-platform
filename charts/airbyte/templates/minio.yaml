@@ -182,4 +182,12 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: MINIO_ENDPOINT
+  {{- with .Values.minio.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.minio.tolerations }}
+  tolerations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 {{- end }}
