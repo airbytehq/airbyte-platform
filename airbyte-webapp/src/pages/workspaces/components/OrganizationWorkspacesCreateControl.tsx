@@ -13,6 +13,7 @@ import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrga
 import { useCreateWorkspace, useListDataplaneGroups } from "core/api";
 import { DataplaneGroupRead } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
+import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
@@ -32,6 +33,7 @@ export const OrganizationWorkspacesCreateControl: React.FC<{
   secondary?: boolean;
   onCreated?: () => void;
 }> = ({ disabled = false, secondary = false, onCreated }) => {
+  const { isInTrial } = useOrganizationSubscriptionStatus();
   const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
   const { organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
   const dataplaneGroups = useListDataplaneGroups();
@@ -52,10 +54,10 @@ export const OrganizationWorkspacesCreateControl: React.FC<{
         ),
       });
 
-    if (showTeamsFeaturesWarnModal) {
+    if (isInTrial && showTeamsFeaturesWarnModal) {
       openModal({
         title: null,
-        content: () => <TeamsFeaturesWarnModal onClose={openCreateWorkspaceModal} />,
+        content: () => <TeamsFeaturesWarnModal onContinue={openCreateWorkspaceModal} />,
         size: "xl",
       });
     } else {
@@ -69,8 +71,7 @@ export const OrganizationWorkspacesCreateControl: React.FC<{
       variant={secondary ? "secondary" : "primary"}
       data-testid="workspaces.createNew"
       size="sm"
-      // TODO: show lock icon if the user is on a trial plan
-      icon="plus"
+      icon={isInTrial ? "lock" : "plus"}
       disabled={disabled}
     >
       <FormattedMessage id="workspaces.createNew" />

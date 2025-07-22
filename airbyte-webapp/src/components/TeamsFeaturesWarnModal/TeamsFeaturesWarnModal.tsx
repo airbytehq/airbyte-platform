@@ -13,10 +13,10 @@ import teamsUpsellGraphic from "./teams-upsell-graphic.png";
 import styles from "./TeamsFeaturesWarnModal.module.scss";
 
 interface TeamsFeaturesWarnModalProps {
-  onClose?: () => void;
+  onContinue?: () => void;
 }
 
-export const TeamsFeaturesWarnModal: React.FC<TeamsFeaturesWarnModalProps> = ({ onClose }) => (
+export const TeamsFeaturesWarnModal: React.FC<TeamsFeaturesWarnModalProps> = ({ onContinue }) => (
   <ModalBody className={styles.teamsFeaturesModal}>
     <FlexContainer direction="row" gap="none" className={styles.teamsFeaturesModal__layout}>
       <section className={styles.teamsFeaturesModal__content}>
@@ -51,7 +51,7 @@ export const TeamsFeaturesWarnModal: React.FC<TeamsFeaturesWarnModalProps> = ({ 
             <FormattedMessage id="teamsFeatures.modal.warningMessage" />
           </Text>
           <FlexContainer direction="row">
-            <Button variant="primary" onClick={onClose}>
+            <Button variant="primary" onClick={onContinue}>
               <FormattedMessage id="teamsFeatures.modal.button.continue" />
             </Button>
           </FlexContainer>
