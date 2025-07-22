@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 
+import styles from "./StepsIndicators.module.scss";
 import { FlexContainer } from "../Flex/FlexContainer";
 import { Icon } from "../Icon";
 import { NumberBadge } from "../NumberBadge";
@@ -22,7 +23,7 @@ export const StepItem: React.FC<StepItemProps> = ({ state, label, value }) => {
   return (
     <FlexContainer alignItems="center" gap="sm">
       <NumberBadge value={value} outline={state !== StepStatus.ACTIVE} color={color} />
-      <Text color={color} size="sm">
+      <Text color={color} size="sm" className={styles.label}>
         {label}
       </Text>
     </FlexContainer>

@@ -2624,7 +2624,7 @@
   "embedded.onboarding.selectDestination.talkToUs": "Need to push your data somewhere else? <lnk>Talk to us.</lnk>",
   "embedded.destinations.emptyStateTitle": "No destinations match your search",
   "embedded.onboarding.setupDestination.searchPlaceholder": "Search destinations",
-  "embedded.onboarding.embedCode": "Embed code",
+  "embedded.onboarding.embedCode": "Embed",
   "embedded.onboarding.embedCodeTitle": "Embed your code",
   "embedded.onboarding.finish": "Finish",
   "embedded.onboarding.finish.allSet": "All set!",

@@ -19,7 +19,6 @@ import {
 import { Action, Namespace, PageTrackingCodes, useAnalyticsService, useTrackPage } from "core/services/analytics";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
-import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 import { ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { EMBEDDED_ONBOARDING_STEP_PARAM, EmbeddedOnboardingStep } from "../EmbeddedOnboardingPageLayout";
@@ -94,7 +93,7 @@ export const SetupEmbeddedDestination: React.FC = () => {
   };
 
   return (
-    <ConnectorDocumentationWrapper>
+    <>
       <HeadTitle titles={[{ id: "settings.embedded" }]} />
       <FormPageContent>
         <FlexContainer justifyContent="flex-start">
@@ -119,6 +118,6 @@ export const SetupEmbeddedDestination: React.FC = () => {
           skipCheckConnection
         />
       </FormPageContent>
-    </ConnectorDocumentationWrapper>
+    </>
   );
 };

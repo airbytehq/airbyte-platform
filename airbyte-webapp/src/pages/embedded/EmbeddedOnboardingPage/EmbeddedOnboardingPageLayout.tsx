@@ -13,6 +13,7 @@ import { StepStatus, StepsIndicators } from "components/ui/StepsIndicators/Steps
 import { useCreateApplication, useNonblockingListApplications } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 import { useAuthService } from "core/services/auth";
+import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
 import { EmbedCodeStep } from "./components/EmbedCodeStep";
 import { EmbeddedSetupFinish } from "./components/EmbeddedSetupFinish";
@@ -32,7 +33,7 @@ export const EMBEDDED_ONBOARDING_STEP_PARAM = "step";
 export const EmbeddedOnboardingPageLayout: React.FC = () => {
   const { logout } = useAuthService();
   const { isLoading: isLogoutLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const stepSearchParam = searchParams.get(EMBEDDED_ONBOARDING_STEP_PARAM);
   const applicationsData = useNonblockingListApplications();
   const { mutate: createApplication } = useCreateApplication();
@@ -60,7 +61,6 @@ export const EmbeddedOnboardingPageLayout: React.FC = () => {
     []
   );
 
-  // Memoize currentStep and onboardingSteps for efficiency
   const currentStep = useMemo(
     () =>
       stepOrder.includes(stepSearchParam as StepKey)
@@ -68,14 +68,6 @@ export const EmbeddedOnboardingPageLayout: React.FC = () => {
         : EmbeddedOnboardingStep.SelectDestination,
     [stepSearchParam, stepOrder]
   );
-
-  // If no step is specified, redirect to the first step
-  useEffect(() => {
-    if (!stepSearchParam) {
-      // todo: infer step based on whether folks have a connection_template or not once we have all the endpoints we need https://github.com/airbytehq/airbyte-internal-issues/issues/13177
-      setSearchParams({ [EMBEDDED_ONBOARDING_STEP_PARAM]: EmbeddedOnboardingStep.SelectDestination });
-    }
-  }, [stepSearchParam, setSearchParams]);
 
   const onboardingSteps = useMemo(() => {
     const steps: Record<StepKey, StepStatus> = {} as Record<StepKey, StepStatus>;
@@ -131,7 +123,7 @@ export const EmbeddedOnboardingPageLayout: React.FC = () => {
   }
 
   return (
-    <>
+    <ConnectorDocumentationWrapper>
       <HeadTitle titles={[{ id: "settings.embedded" }]} />
       <FlexContainer alignItems="center" justifyContent="space-between" className={styles.header}>
         <AirbyteLogo className={styles.logo} />
@@ -147,6 +139,6 @@ export const EmbeddedOnboardingPageLayout: React.FC = () => {
       <DefaultErrorBoundary>
         <Suspense fallback={<LoadingPage />}>{StepComponent}</Suspense>
       </DefaultErrorBoundary>
-    </>
+    </ConnectorDocumentationWrapper>
   );
 };
