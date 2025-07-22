@@ -2089,7 +2089,6 @@ paths:
       x-speakeasy-alias: listWorkspaces
       x-speakeasy-group: Workspaces
       summary: List workspaces
-      x-speakeasy-entity-operation: Workspace#list
       parameters:
       - name: workspaceIds
         description: The UUIDs of the workspaces you wish to fetch. Empty list will
