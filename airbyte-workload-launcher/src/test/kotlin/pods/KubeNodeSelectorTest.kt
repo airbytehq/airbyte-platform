@@ -30,10 +30,7 @@ class KubeNodeSelectorTest {
         every { workerKubeNodeSelectors } returns nodeSelectors
       }
     val nodeSelector =
-      KubeNodeSelector(
-        featureFlagClient = featureFlagClient,
-        contexts = emptyList(),
-      )
+      KubeNodeSelector(featureFlagClient = featureFlagClient)
 
     val result = nodeSelector.getNodeSelectors(usesCustomConnector = false, workerConfigs = workerConfigs, connectionId = connectionId)
     assertEquals(nodeSelectors, result)
@@ -52,10 +49,7 @@ class KubeNodeSelectorTest {
         every { workerIsolatedKubeNodeSelectors } returns nodeSelectors
       }
     val nodeSelector =
-      KubeNodeSelector(
-        featureFlagClient = featureFlagClient,
-        contexts = emptyList(),
-      )
+      KubeNodeSelector(featureFlagClient = featureFlagClient)
 
     val result = nodeSelector.getNodeSelectors(usesCustomConnector = true, workerConfigs = workerConfigs, connectionId = connectionId)
     assertEquals(nodeSelectors, result)
@@ -75,10 +69,7 @@ class KubeNodeSelectorTest {
         every { workerKubeNodeSelectors } returns nodeSelectors
       }
     val nodeSelector =
-      KubeNodeSelector(
-        featureFlagClient = featureFlagClient,
-        contexts = emptyList(),
-      )
+      KubeNodeSelector(featureFlagClient = featureFlagClient)
 
     val result = nodeSelector.getNodeSelectors(usesCustomConnector = true, workerConfigs = workerConfigs, connectionId = connectionId)
     assertEquals(nodeSelectors, result)
@@ -99,10 +90,7 @@ class KubeNodeSelectorTest {
         every { workerKubeNodeSelectors } returns nodeSelectors
       }
     val nodeSelector =
-      KubeNodeSelector(
-        featureFlagClient = featureFlagClient,
-        contexts = contexts,
-      )
+      KubeNodeSelector(featureFlagClient = featureFlagClient)
 
     val result = nodeSelector.getNodeSelectors(usesCustomConnector = false, workerConfigs = workerConfigs, connectionId = connectionId)
     assertEquals(override.toNodeSelectorMap(), result)
@@ -122,10 +110,7 @@ class KubeNodeSelectorTest {
         every { workerKubeNodeSelectors } returns nodeSelectors
       }
     val nodeSelector =
-      KubeNodeSelector(
-        featureFlagClient = featureFlagClient,
-        contexts = contexts,
-      )
+      KubeNodeSelector(featureFlagClient = featureFlagClient)
 
     val result = nodeSelector.getNodeSelectors(usesCustomConnector = false, workerConfigs = workerConfigs, connectionId = null)
     assertEquals(nodeSelectors, result)
@@ -145,10 +130,7 @@ class KubeNodeSelectorTest {
         every { workerKubeNodeSelectors } returns nodeSelectors
       }
     val nodeSelector =
-      KubeNodeSelector(
-        featureFlagClient = featureFlagClient,
-        contexts = contexts,
-      )
+      KubeNodeSelector(featureFlagClient = featureFlagClient)
 
     val result = nodeSelector.getNodeSelectors(usesCustomConnector = false, workerConfigs = workerConfigs, connectionId = connectionId)
     assertEquals(nodeSelectors, result)

@@ -359,10 +359,40 @@ data class GeographicRegion(
   }
 }
 
+/**
+ * Context for representing a dataplane.
+ *
+ * @param [key] the unique identifying value of this dataplane.
+ */
+data class Dataplane(
+  override val key: String,
+) : Context {
+  override val kind: String = "dataplane"
+
+  /**
+   * Secondary constructor
+   *
+   * @param [key] dataplane UUID
+   */
+  constructor(key: UUID) : this(key = key.toString())
+}
+
+/**
+ * Context for representing a dataplane group.
+ *
+ * @param [key] the unique identifying value of this dataplane group.
+ */
 data class DataplaneGroup(
   override val key: String,
 ) : Context {
   override val kind: String = "dataplane-group"
+
+  /**
+   * Secondary constructor
+   *
+   * @param [key] dataplane group UUID
+   */
+  constructor(key: UUID) : this(key = key.toString())
 }
 
 data class CloudProviderRegion(

@@ -7,7 +7,6 @@ package pods.factories
 import io.airbyte.commons.storage.STORAGE_CLAIM_NAME
 import io.airbyte.commons.storage.STORAGE_MOUNT
 import io.airbyte.commons.storage.STORAGE_VOLUME_NAME
-import io.airbyte.featureflag.PlaneName
 import io.airbyte.featureflag.TestClient
 import io.airbyte.workload.launcher.context.WorkloadSecurityContextProvider
 import io.airbyte.workload.launcher.pods.KubeContainerInfo
@@ -199,7 +198,6 @@ class ReplicationPodFactoryTest {
       NodeSelectionFactory(
         featureFlagClient = featureFlagClient,
         tolerations = defaultTolerations,
-        infraFlagContexts = listOf(PlaneName("test")),
         spotToleration = spotToleration,
       )
 

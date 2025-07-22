@@ -6,7 +6,6 @@ package pods.factories
 
 import io.airbyte.featureflag.AllowSpotInstances
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.PlaneName
 import io.airbyte.featureflag.TestClient
 import io.airbyte.workload.launcher.pods.factories.NodeSelectionFactory
 import io.fabric8.kubernetes.api.model.Toleration
@@ -54,7 +53,6 @@ class NodeSelectionFactoryTest {
       NodeSelectionFactory(
         featureFlagClient = featureFlagClient,
         tolerations = defaultTolerations,
-        infraFlagContexts = listOf(PlaneName("test")),
         spotToleration = spotToleration,
       )
   }

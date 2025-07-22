@@ -11,6 +11,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
 import com.launchdarkly.sdk.server.LDClient
+import io.airbyte.commons.annotation.InternalForTesting
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Secondary
@@ -179,24 +180,32 @@ class ConfigFileClient(
 class LaunchDarklyClient(
   private val client: LDClient,
 ) : FeatureFlagClient {
+  private var contextInterceptor: ContextInterceptor? = null
+
   override fun boolVariation(
     flag: Flag<Boolean>,
     context: Context,
   ): Boolean =
     when (flag) {
       is EnvVar -> flag.enabled(context)
-      else -> client.boolVariation(flag.key, context.toLDContext(), flag.default)
+      else -> client.boolVariation(flag.key, getFinalContext(context), flag.default)
     }
 
   override fun stringVariation(
     flag: Flag<String>,
     context: Context,
-  ): String = client.stringVariation(flag.key, context.toLDContext(), flag.default)
+  ): String = client.stringVariation(flag.key, getFinalContext(context), flag.default)
 
   override fun intVariation(
     flag: Flag<Int>,
     context: Context,
-  ): Int = client.intVariation(flag.key, context.toLDContext(), flag.default)
+  ): Int = client.intVariation(flag.key, getFinalContext(context), flag.default)
+
+  fun registerContextInterceptor(interceptor: ContextInterceptor) {
+    contextInterceptor = interceptor
+  }
+
+  private fun getFinalContext(context: Context): LDContext = (contextInterceptor?.intercept(context) ?: context).toLDContext()
 }
 
 @Singleton
@@ -409,7 +418,8 @@ private fun Path.onChange(block: () -> Unit) {
 /**
  * LaunchDarkly v6 version
  */
-private fun Context.toLDContext(): LDContext {
+@InternalForTesting
+internal fun Context.toLDContext(): LDContext {
   if (this is Multi) {
     val builder = LDContext.multiBuilder()
     contexts.forEach { builder.add(it.toLDContext()) }

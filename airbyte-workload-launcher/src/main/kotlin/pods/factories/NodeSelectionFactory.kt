@@ -25,7 +25,6 @@ data class NodeSelectionFactory(
   private val featureFlagClient: FeatureFlagClient,
   @Named("replicationPodTolerations") private val tolerations: List<Toleration>,
   @Named("spotToleration") private val spotToleration: Toleration,
-  @Named("infraFlagContexts") private val infraFlagContexts: List<Context>,
 ) {
   internal fun createReplicationNodeSelection(
     nodeSelectors: Map<String, String>,
@@ -58,7 +57,7 @@ data class NodeSelectionFactory(
     featureFlagClient.boolVariation(AllowSpotInstances, buildSpotInstanceFeatureFlagContext(allLabels))
 
   private fun buildSpotInstanceFeatureFlagContext(allLabels: Map<String, String>): Context {
-    val context = infraFlagContexts.toMutableList()
+    val context = mutableListOf<Context>()
     allLabels["connection_id"]?.let { connectionId -> context.add(Connection(connectionId)) }
     allLabels["workspace_id"]?.let { workspaceId -> context.add(Workspace(workspaceId)) }
     allLabels["attempt_id"]?.let { attemptNumber -> context.add(Attempt(attemptNumber)) }

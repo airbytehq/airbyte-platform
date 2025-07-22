@@ -451,6 +451,53 @@ class LaunchDarklyClientTest {
     LaunchDarklyClient(ldClient).boolVariation(testFlag, ctxAnon)
     assertTrue(context.captured.isAnonymous)
   }
+
+  @Test
+  fun `verify context interceptor support for bool, int and string variations`() {
+    val testBoolFlag = Temporary(key = "test-interceptor-bool", default = false)
+    val testIntFlag = Temporary(key = "test-interceptor-int", default = 0)
+    val testStringFlag = Temporary(key = "test-interceptor-string", default = "string")
+    val ctx = Workspace(ANONYMOUS)
+
+    val ldClient: LDClient = mockk()
+    val featureFlagClient = LaunchDarklyClient(ldClient)
+    val boolContextCaptor = slot<LDContext>()
+    every {
+      ldClient.boolVariation(testBoolFlag.key, capture(boolContextCaptor), any())
+    } answers {
+      true
+    }
+
+    val intContextCaptor = slot<LDContext>()
+    every {
+      ldClient.intVariation(testIntFlag.key, capture(intContextCaptor), any())
+    } answers {
+      1
+    }
+
+    val stringContextCaptor = slot<LDContext>()
+    every {
+      ldClient.stringVariation(testStringFlag.key, capture(stringContextCaptor), any())
+    } answers {
+      "yolo"
+    }
+
+    val interceptedContext = Connection(UUID.randomUUID())
+    val interceptor: ContextInterceptor =
+      mockk {
+        every { intercept(any()) } returns interceptedContext
+      }
+    featureFlagClient.registerContextInterceptor(interceptor)
+
+    featureFlagClient.boolVariation(testBoolFlag, ctx)
+    assertEquals(interceptedContext.toLDContext(), boolContextCaptor.captured)
+
+    featureFlagClient.intVariation(testIntFlag, ctx)
+    assertEquals(interceptedContext.toLDContext(), intContextCaptor.captured)
+
+    featureFlagClient.stringVariation(testStringFlag, ctx)
+    assertEquals(interceptedContext.toLDContext(), stringContextCaptor.captured)
+  }
 }
 
 class TestClientTest {

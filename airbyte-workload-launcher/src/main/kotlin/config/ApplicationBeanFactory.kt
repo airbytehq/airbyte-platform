@@ -5,7 +5,6 @@
 package io.airbyte.workload.launcher.config
 
 import dev.failsafe.RetryPolicy
-import io.airbyte.featureflag.Context
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -90,10 +89,6 @@ class ApplicationBeanFactory {
       }.withDelay(Duration.ofSeconds(retryDelaySeconds))
       .withMaxRetries(maxRetries)
       .build()
-
-  @Singleton
-  @Named("infraFlagContexts")
-  fun staticFlagContext(): List<Context> = emptyList()
 
   @Singleton
   @Named("claimedProcessorBackoffDuration")

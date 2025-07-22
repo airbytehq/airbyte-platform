@@ -71,7 +71,7 @@ internal class PayloadKubeInputMapperTest {
     every { ffClient.stringVariation(NodeSelectorOverride, any()) } returns ""
     every { ffClient.boolVariation(ConnectorApmEnabled, any()) } returns false
     val resourceReqFactory: ResourceRequirementsFactory = mockk()
-    val nodeSelector = KubeNodeSelector(ffClient, listOf())
+    val nodeSelector = KubeNodeSelector(ffClient)
 
     val mapper =
       PayloadKubeInputMapper(
@@ -211,7 +211,7 @@ internal class PayloadKubeInputMapperTest {
     val replSelectors = mapOf("test-selector-repl" to "normal-repl")
     every { replConfigs.workerKubeNodeSelectors } returns replSelectors
     val resourceReqFactory: ResourceRequirementsFactory = mockk()
-    val nodeSelector = KubeNodeSelector(ffClient, listOf())
+    val nodeSelector = KubeNodeSelector(ffClient)
 
     val mapper =
       PayloadKubeInputMapper(
@@ -326,7 +326,7 @@ internal class PayloadKubeInputMapperTest {
     val replSelectors = mapOf("test-selector-repl" to "normal-repl")
     every { replConfigs.workerKubeNodeSelectors } returns replSelectors
     val resourceReqFactory: ResourceRequirementsFactory = mockk()
-    val nodeSelector = KubeNodeSelector(ffClient, listOf())
+    val nodeSelector = KubeNodeSelector(ffClient)
 
     val mapper =
       PayloadKubeInputMapper(
@@ -437,7 +437,7 @@ internal class PayloadKubeInputMapperTest {
     every { specConfigs.jobImagePullPolicy } returns pullPolicy
     val replConfigs: WorkerConfigs = mockk()
     val resourceReqFactory: ResourceRequirementsFactory = mockk()
-    val nodeSelector = KubeNodeSelector(ffClient, listOf())
+    val nodeSelector = KubeNodeSelector(ffClient)
 
     val mapper =
       PayloadKubeInputMapper(
@@ -588,7 +588,7 @@ internal class PayloadKubeInputMapperTest {
     every { replInput.syncResourceRequirements } returns SyncResourceRequirements()
     every { replInput.useFileTransfer } returns false
     val syncPayload = SyncPayload(replInput)
-    val nodeSelector = KubeNodeSelector(ffClient, listOf())
+    val nodeSelector = KubeNodeSelector(ffClient)
 
     var mapper =
       PayloadKubeInputMapper(
