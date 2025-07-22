@@ -136,7 +136,12 @@ open class WorkspaceApiController(
     }
 
   @Post("/get")
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
+  @Secured(
+    AuthRoleConstants.WORKSPACE_READER,
+    AuthRoleConstants.ORGANIZATION_READER,
+    AuthRoleConstants.DATAPLANE,
+    AuthRoleConstants.EMBEDDED_END_USER,
+  )
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
