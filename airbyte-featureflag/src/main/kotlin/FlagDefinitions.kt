@@ -216,7 +216,6 @@ object LicenseAllowDestinationObjectStorageConfig : Permanent<Boolean>(key = "li
 
 object UseSonarServer : Temporary<Boolean>(key = "embedded.useSonarServer", default = false)
 
-// this uses the webapp naming conventions, as the flag is used in both the frontend and platform.
-object EnableSsoConfigUpdate : Permanent<Boolean>(key = "featureService.ALLOW_UPDATE_SSO_CONFIG", default = false)
+object EnableSsoConfigUpdate : Permanent<Boolean>(key = "platform.can-change-sso-config", default = false)
 
 object OrchestratorHardFailOnHeartbeatFailure : Temporary<Boolean>(key = "platform.orchestrator-hard-fail-on-heartbeat-failure", default = false)
