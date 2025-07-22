@@ -7,6 +7,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { FormControl } from "components/forms/FormControl";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Box } from "components/ui/Box";
+import { BrandingBadge } from "components/ui/BrandingBadge";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -19,7 +20,6 @@ import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { links } from "core/utils/links";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useNotificationService } from "hooks/services/Notification";
-import { BrandingBadge } from "views/layout/SideBar/AirbyteHomeLink";
 
 import styles from "./SSOSettings.module.scss";
 import { SSOFormValues } from "../UpdateSSOSettingsForm";

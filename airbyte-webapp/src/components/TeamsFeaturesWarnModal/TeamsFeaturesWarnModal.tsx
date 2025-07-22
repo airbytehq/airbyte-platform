@@ -2,12 +2,11 @@ import React from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
+import { BrandingBadge } from "components/ui/BrandingBadge";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { ModalBody } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
-
-import { BrandingBadge } from "views/layout/SideBar/AirbyteHomeLink";
 
 import teamsUpsellGraphic from "./teams-upsell-graphic.png";
 import styles from "./TeamsFeaturesWarnModal.module.scss";

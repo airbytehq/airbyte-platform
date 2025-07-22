@@ -1,9 +1,8 @@
+import { BrandingBadge } from "components/ui/BrandingBadge";
 import { HighlightCard } from "components/ui/Card/HighlightCard";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Text } from "components/ui/Text";
-
-import { BrandingBadge } from "views/layout/SideBar/AirbyteHomeLink";
 
 interface UpsellCardProps {
   header: React.ReactNode;

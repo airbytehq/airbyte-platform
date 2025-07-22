@@ -1,9 +1,8 @@
 import React from "react";
-import { FormattedMessage, useIntl } from "react-intl";
+import { useIntl } from "react-intl";
 
 import AirbyteLogo from "components/illustrations/airbyte-logo.svg?react";
-import { Badge } from "components/ui/Badge";
-import { FlexContainer } from "components/ui/Flex";
+import { BrandingBadge } from "components/ui/BrandingBadge";
 import { Link } from "components/ui/Link";
 
 import { FeatureItem, IfFeatureEnabled } from "core/services/features";
@@ -32,14 +31,3 @@ export const AirbyteHomeLink: React.FC = () => {
     </div>
   );
 };
-
-export const BrandingBadge: React.FC<{ product: "enterprise" | "cloudForTeams"; testId?: string }> = ({
-  product,
-  testId,
-}) => (
-  <Badge variant={product === "enterprise" ? "darkBlue" : "blue"} data-testid={testId}>
-    <FlexContainer alignItems="center">
-      <FormattedMessage id={product === "enterprise" ? "enterprise.enterprise" : "cloud.cloudForTeams"} />
-    </FlexContainer>
-  </Badge>
-);
