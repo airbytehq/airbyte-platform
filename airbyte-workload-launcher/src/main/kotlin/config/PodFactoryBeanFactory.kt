@@ -13,6 +13,7 @@ import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion.DISCOVER_OPERATION_NAME
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion.SPEC_OPERATION_NAME
 import io.airbyte.workload.launcher.pods.factories.InitContainerFactory
+import io.airbyte.workload.launcher.pods.factories.NodeSelectionFactory
 import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
 import io.airbyte.workload.launcher.pods.factories.VolumeFactory
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -39,6 +40,7 @@ class PodFactoryBeanFactory {
     initContainerFactory: InitContainerFactory,
     workloadSecurityContextProvider: WorkloadSecurityContextProvider,
     resourceRequirementsFactory: ResourceRequirementsFactory,
+    nodeSelectionFactory: NodeSelectionFactory,
   ): ConnectorPodFactory =
     ConnectorPodFactory(
       CHECK_OPERATION_NAME,
@@ -56,6 +58,7 @@ class PodFactoryBeanFactory {
       ),
       workloadSecurityContextProvider,
       resourceRequirementsFactory,
+      nodeSelectionFactory,
     )
 
   @Singleton
@@ -72,6 +75,7 @@ class PodFactoryBeanFactory {
     initContainerFactory: InitContainerFactory,
     workloadSecurityContextProvider: WorkloadSecurityContextProvider,
     resourceRequirementsFactory: ResourceRequirementsFactory,
+    nodeSelectionFactory: NodeSelectionFactory,
   ): ConnectorPodFactory =
     ConnectorPodFactory(
       DISCOVER_OPERATION_NAME,
@@ -89,6 +93,7 @@ class PodFactoryBeanFactory {
       ),
       workloadSecurityContextProvider,
       resourceRequirementsFactory,
+      nodeSelectionFactory,
     )
 
   @Singleton
@@ -105,6 +110,7 @@ class PodFactoryBeanFactory {
     initContainerFactory: InitContainerFactory,
     workloadSecurityContextProvider: WorkloadSecurityContextProvider,
     resourceRequirementsFactory: ResourceRequirementsFactory,
+    nodeSelectionFactory: NodeSelectionFactory,
   ): ConnectorPodFactory =
     ConnectorPodFactory(
       SPEC_OPERATION_NAME,
@@ -120,5 +126,6 @@ class PodFactoryBeanFactory {
       mapOf(),
       workloadSecurityContextProvider,
       resourceRequirementsFactory,
+      nodeSelectionFactory,
     )
 }

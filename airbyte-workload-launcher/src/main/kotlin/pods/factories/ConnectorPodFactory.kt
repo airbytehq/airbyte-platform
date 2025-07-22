@@ -39,6 +39,7 @@ data class ConnectorPodFactory(
   private val connectorArgs: Map<String, String>,
   private val workloadSecurityContextProvider: WorkloadSecurityContextProvider,
   private val resourceRequirementsFactory: ResourceRequirementsFactory,
+  private val nodeSelectionFactory: NodeSelectionFactory,
 ) {
   internal fun create(
     allLabels: Map<String, String>,
@@ -71,6 +72,8 @@ data class ConnectorPodFactory(
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
 
+    val nodeSelection = nodeSelectionFactory.createNodeSelection(nodeSelectors, allLabels)
+
     return PodBuilder()
       .withApiVersion("v1")
       .withNewMetadata()
@@ -86,8 +89,9 @@ data class ConnectorPodFactory(
       .withContainers(sidecar, main)
       .withInitContainers(init)
       .withVolumes(volumeMountPairs.volumes)
-      .withNodeSelector<String, String>(nodeSelectors)
-      .withTolerations(tolerations)
+      .withNodeSelector<String, String>(nodeSelection.nodeSelectors)
+      .withTolerations(tolerations + nodeSelection.tolerations)
+      .withAffinity(nodeSelection.podAffinity)
       .withImagePullSecrets(imagePullSecrets) // An empty list or an empty LocalObjectReference turns this into a no-op setting.
       .withSecurityContext(workloadSecurityContextProvider.defaultPodSecurityContext())
       .endSpec()

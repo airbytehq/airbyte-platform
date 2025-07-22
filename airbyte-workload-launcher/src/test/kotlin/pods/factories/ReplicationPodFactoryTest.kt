@@ -121,7 +121,7 @@ class ReplicationPodFactoryTest {
       )
     val nodeSelectionFactory: NodeSelectionFactory =
       mockk {
-        every { createReplicationNodeSelection(any(), any()) } returns expectedNodeSelection
+        every { createNodeSelection(any(), any()) } returns expectedNodeSelection
       }
     val fac =
       Fixtures.defaultReplicationPodFactory.copy(

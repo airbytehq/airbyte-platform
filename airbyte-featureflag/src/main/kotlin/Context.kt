@@ -405,6 +405,15 @@ data class CloudProviderRegion(
   }
 }
 
+/**
+ * Context for representing the JobType.
+ */
+data class JobType(
+  override val key: String,
+) : Context {
+  override val kind: String = "job-type"
+}
+
 data class SecretStorage(
   override val key: String,
 ) : Context {

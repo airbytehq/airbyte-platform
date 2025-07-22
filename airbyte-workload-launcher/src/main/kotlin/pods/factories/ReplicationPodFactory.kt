@@ -90,7 +90,7 @@ data class ReplicationPodFactory(
         image = destImage,
       )
 
-    val nodeSelection = nodeSelectionFactory.createReplicationNodeSelection(nodeSelectors, allLabels)
+    val nodeSelection = nodeSelectionFactory.createNodeSelection(nodeSelectors, allLabels)
 
     val containers = mutableListOf(orchContainer, sourceContainer, destContainer)
 

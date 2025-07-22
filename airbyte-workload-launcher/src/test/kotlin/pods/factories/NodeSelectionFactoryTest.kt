@@ -23,7 +23,7 @@ class NodeSelectionFactoryTest {
     val nodeSelectionFactory = Fixtures.createNodeSelectionFactory(featureFlagClient = featureFlagClient)
     val nodeSelectors = mapOf("label" to "value")
 
-    val nodeSelection = nodeSelectionFactory.createReplicationNodeSelection(nodeSelectors, mapOf())
+    val nodeSelection = nodeSelectionFactory.createNodeSelection(nodeSelectors, mapOf())
 
     assertTrue(nodeSelection.tolerations.containsAll(Fixtures.defaultTolerations))
     assertEquals(useSpotTolerations, nodeSelection.tolerations.contains(Fixtures.spotToleration))
