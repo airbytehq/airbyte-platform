@@ -336,7 +336,7 @@ class ContributionTemplatesTest {
     |  dockerRepository: airbyte/test
     |  githubIssueLabel: test
     |  icon: icon.svg
-    |  license: MIT
+    |  license: ELv2
     |  name: Test Connector
     |  releaseDate: 2021-01-01
     |  releaseStage: alpha
