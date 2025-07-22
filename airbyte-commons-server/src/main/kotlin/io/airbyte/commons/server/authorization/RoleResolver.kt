@@ -279,6 +279,9 @@ private fun impliedRoles(perm: PermissionType): List<String> = PermissionHelper.
 //
 // Similarly, if the permissions grant no access to a given workspace,
 // then this function returns an NONE (no access).
+//
+// perms == the full list of the permissions a user has
+// workspaceIds == the set of workspace IDs that the request is referring to.
 private fun determineWorkspaceRole(
   perms: List<Permission>,
   workspaceIds: Set<UUID>,
@@ -286,13 +289,16 @@ private fun determineWorkspaceRole(
   if (workspaceIds.isEmpty()) return null
   if (perms.isEmpty()) return null
 
+  // Filters out organization level permissions
   val workspacePerms = perms.filter { it.workspaceId != null }
-  val permOrgIds = workspacePerms.map { it.workspaceId }.toSet()
+  val permWorkspaceIds = workspacePerms.map { it.workspaceId }.toSet()
   // There must be a permission for every workspace. If not, then return null.
-  if (!permOrgIds.containsAll(workspaceIds)) {
+  if (!permWorkspaceIds.containsAll(workspaceIds)) {
     return null
   }
   return workspacePerms
+    // Make sure we're only getting the min permission from permissions tied to the requested workspace Ids
+    .filter { it.workspaceId in workspaceIds }
     .minByOrNull {
       Enums
         .convertTo(it.permissionType, WorkspaceAuthRole::class.java)
@@ -304,6 +310,9 @@ private fun determineWorkspaceRole(
 // Determine the minimal role that the permissions grant to the given organizations.
 //
 // See determineWorkspaceRole() for more details about "minimal".
+//
+// perms == the full list of the permissions a user has
+// organizationIds == the set of workspace IDs that the request is referring to.
 private fun determineOrganizationRole(
   perms: List<Permission>,
   organizationIds: Set<UUID>,
@@ -311,6 +320,7 @@ private fun determineOrganizationRole(
   if (organizationIds.isEmpty()) return null
   if (perms.isEmpty()) return null
 
+  // Filters out workspace level permissions
   val orgPerms = perms.filter { it.organizationId != null }
   val permOrgIds = orgPerms.map { it.organizationId }.toSet()
   // There must be a permission for every org. If not, then return null.
@@ -318,6 +328,8 @@ private fun determineOrganizationRole(
     return null
   }
   return orgPerms
+    // Make sure we're only getting the min permission from permissions tied to the requested organization Ids
+    .filter { it.organizationId in organizationIds }
     .minByOrNull {
       Enums
         .convertTo(it.permissionType, OrganizationAuthRole::class.java)

@@ -378,6 +378,73 @@ class RoleResolverTest {
 
     req.requireRole("AUTHENTICATED_USER")
   }
+
+  @Test
+  fun organizationAdminWithWorkspaceAccess() {
+    val workspace1 = UUID.randomUUID()
+    val org1 = UUID.randomUUID()
+    val org2 = UUID.randomUUID()
+
+    // user is requesting access to workspace1
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withRef(AuthenticationId.WORKSPACE_ID, workspace1)
+
+    // user has both ORGANIZATION_MEMBER and ORGANIZATION_ADMIN permissions
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER)
+          .withOrganizationId(org1),
+        Permission()
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
+          .withOrganizationId(org2),
+      )
+
+    // workspace 1 belongs to org 2
+    every { workspaceHelper.getOrganizationForWorkspace(workspace1) } returns org2
+
+    // The user should get ORGANIZATION_ADMIN permission to the workspace
+    val expect =
+      """
+      AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR 
+      ORGANIZATION_ADMIN ORGANIZATION_EDITOR WORKSPACE_ADMIN 
+      ORGANIZATION_READER ORGANIZATION_RUNNER ORGANIZATION_MEMBER
+    """.toRoleSet()
+    assertEquals(expect, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
+
+  @Test
+  fun workspaceAdminPermissionOnSpecificWorkspace() {
+    val workspace1 = UUID.randomUUID()
+    val workspace2 = UUID.randomUUID()
+
+    // user is requesting access to workspace1
+    val req =
+      roleResolver
+        .newRequest()
+        .withSubject("auth-user-1", TokenType.USER)
+        .withRef(AuthenticationId.WORKSPACE_ID, workspace1)
+
+    // user has workspace admin permission on workspace1 and workspace reader on workspace2
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns
+      listOf(
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
+          .withWorkspaceId(workspace1),
+        Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_READER)
+          .withWorkspaceId(workspace2),
+      )
+
+    // The user should get WORKSPACE_ADMIN permission for the requested workspace
+    val expect = "AUTHENTICATED_USER WORKSPACE_READER WORKSPACE_RUNNER WORKSPACE_EDITOR WORKSPACE_ADMIN".toRoleSet()
+    assertEquals(expect, req.roles())
+    verify(exactly = 1) { permissionHandler.getPermissionsByAuthUserId("auth-user-1") }
+  }
 }
 
 private fun String.toRoleSet() = this.trim().split("\\s+".toRegex()).toSet()
