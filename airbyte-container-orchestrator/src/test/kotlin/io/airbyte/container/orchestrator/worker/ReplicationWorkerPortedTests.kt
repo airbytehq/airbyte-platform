@@ -179,8 +179,6 @@ class ReplicationWorkerPortedTests {
         JOB_ID,
         JOB_ATTEMPT,
         replicationInput.workspaceId,
-        SOURCE_IMAGE,
-        DESTINATION_IMAGE,
         UUID.randomUUID(),
         UUID.randomUUID(),
       )

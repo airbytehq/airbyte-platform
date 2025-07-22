@@ -31,8 +31,6 @@ data class ReplicationContext(
   val jobId: Long,
   val attempt: Int,
   val workspaceId: UUID,
-  val sourceImage: String,
-  val destinationImage: String,
   val sourceDefinitionId: UUID,
   val destinationDefinitionId: UUID,
 )

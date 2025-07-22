@@ -544,8 +544,6 @@ class StreamStatusTrackerTest {
         12L,
         34,
         UUID.randomUUID(),
-        "source-image",
-        "dest-image",
         UUID.randomUUID(),
         UUID.randomUUID(),
       )

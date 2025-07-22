@@ -26,8 +26,6 @@ class ReplicationContextProvider(
         jobId = jobId,
         attempt = attempt,
         workspaceId = replicationInput.workspaceId,
-        sourceImage = replicationInput.sourceLauncherConfig.dockerImage,
-        destinationImage = replicationInput.destinationLauncherConfig.dockerImage,
         sourceDefinitionId = replicationInput.connectionContext.sourceDefinitionId,
         destinationDefinitionId = replicationInput.connectionContext.destinationDefinitionId,
       )

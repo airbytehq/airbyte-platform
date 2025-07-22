@@ -12,7 +12,6 @@ import io.airbyte.protocol.models.v0.AirbyteAnalyticsTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteLogMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
-import io.airbyte.workers.testutils.TestConfigHelpers
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -45,8 +44,6 @@ class AnalyticsMessageTrackerTest {
         1,
         1,
         UUID.randomUUID(),
-        TestConfigHelpers.SOURCE_IMAGE,
-        TestConfigHelpers.DESTINATION_IMAGE,
         sourceDefinitionId,
         destinationDefinitionId,
       )
