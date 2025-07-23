@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from "react";
+import { Suspense } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { LoadingPage } from "components";
@@ -10,7 +10,7 @@ import { Icon } from "components/ui/Icon";
 import { ButtonTab, Tabs } from "components/ui/Tabs";
 import { Text } from "components/ui/Text";
 
-import { useListPartialUserConfigs, useGetScopedOrganization, useListConfigTemplates } from "core/api";
+import { useListPartialUserConfigs, useGetScopedOrganization } from "core/api";
 import { useExperimentContext } from "hooks/services/Experiment";
 
 import { ConfigTemplateSelectList } from "./components/ConfigTemplateList";
@@ -46,17 +46,9 @@ export const EmbeddedSourceCreatePageContent: React.FC = () => {
     setSelectedConfig,
     clearSelectedConfig,
     clearSelectedTemplate,
-    setSelectedTemplate,
   } = useEmbeddedSourceParams();
-  const { data: configTemplates } = useListConfigTemplates(workspaceId);
 
-  const { data: partialUserConfigs } = useListPartialUserConfigs(workspaceId);
-
-  useEffect(() => {
-    if (configTemplates && configTemplates.length === 1 && partialUserConfigs.length === 0) {
-      setSelectedTemplate(configTemplates[0].id);
-    }
-  }, [configTemplates, partialUserConfigs, setSelectedTemplate]);
+  const { partialUserConfigs } = useListPartialUserConfigs(workspaceId);
 
   if (selectedTemplateId) {
     return (
@@ -64,16 +56,14 @@ export const EmbeddedSourceCreatePageContent: React.FC = () => {
         <EmbeddedSourcePageHeader
           headingMessage={
             <Box py="sm">
-              {configTemplates.length > 1 && (
-                <button onClick={() => clearSelectedTemplate()} className={styles.clearButton}>
-                  <FlexContainer gap="sm">
-                    <Icon type="chevronLeft" size="sm" />
-                    <Text as="span" size="md" bold color="grey400">
-                      <FormattedMessage id="partialUserConfig.back" />
-                    </Text>
-                  </FlexContainer>
-                </button>
-              )}
+              <button onClick={() => clearSelectedTemplate()} className={styles.clearButton}>
+                <FlexContainer gap="sm">
+                  <Icon type="chevronLeft" size="sm" />
+                  <Text as="span" size="md" bold color="grey400">
+                    <FormattedMessage id="partialUserConfig.back" />
+                  </Text>
+                </FlexContainer>
+              </button>
             </Box>
           }
         />
@@ -122,7 +112,7 @@ export const EmbeddedSourceCreatePageContent: React.FC = () => {
             />
           </Tabs>
         )}
-        <ConfigTemplateSelectList configTemplates={configTemplates} />
+        <ConfigTemplateSelectList />
       </EmbeddedSourcePageWrapper>
     );
   }

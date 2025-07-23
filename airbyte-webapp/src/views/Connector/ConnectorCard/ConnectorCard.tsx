@@ -12,7 +12,7 @@ import { Pre } from "components/ui/Pre";
 import { Spinner } from "components/ui/Spinner";
 
 import { useAirbyteCloudIpsByDataplane } from "area/connector/utils/useAirbyteCloudIpsByDataplane";
-import { ErrorWithJobInfo, useCurrentWorkspace } from "core/api";
+import { ErrorWithJobInfo, useCreateConfigTemplate, useCreateConnectionTemplate, useCurrentWorkspace } from "core/api";
 import { DestinationRead, SourceRead, SupportLevel } from "core/api/types/AirbyteClient";
 import {
   Connector,
@@ -25,6 +25,7 @@ import { useIsCloudApp } from "core/utils/app";
 import { generateMessageFromError } from "core/utils/errorStatusMessage";
 import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
+import { useExperiment } from "hooks/services/Experiment";
 import { ConnectorCardValues, ConnectorForm, ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { Controls } from "./components/Controls";
@@ -80,6 +81,19 @@ const getConnectorId = (connectorRead: DestinationRead | SourceRead) => {
   return "sourceId" in connectorRead ? connectorRead.sourceId : connectorRead.destinationId;
 };
 
+/**
+ * Prepares the configuration for creating a source config template
+ */
+const prepareSourceConfigTemplate = (values: ConnectorFormValues, definitionId: string, organizationId: string) => {
+  const partialDefaultConfig = { ...values.connectionConfiguration } as Record<string, unknown>;
+
+  return {
+    organizationId,
+    actorDefinitionId: definitionId,
+    partialDefaultConfig,
+  };
+};
+
 const getConnectionConfigurationDefaults = (connectorDefinitionSpecification: ConnectorDefinitionSpecificationRead) => {
   const { properties = {}, required = [] } = connectorDefinitionSpecification.connectionSpecification ?? {};
   const props = properties as Record<string, { default?: unknown }>;
@@ -113,7 +127,12 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   const canEditConnector = useGeneratedIntent(Intent.CreateOrEditConnector);
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
   const { formatMessage } = useIntl();
-  const { workspaceId } = useCurrentWorkspace();
+  const { organizationId, workspaceId } = useCurrentWorkspace();
+  const { mutate: createConfigTemplate } = useCreateConfigTemplate();
+  const isTemplateCreateButtonEnabled = useExperiment("embedded.templateCreateButton");
+  const canCreateTemplate = useGeneratedIntent(Intent.CreateOrEditConnection);
+  const showCreateTemplateButton = isTemplateCreateButtonEnabled && canCreateTemplate;
+  const { mutate: createConnectionTemplate } = useCreateConnectionTemplate();
 
   const { setDocumentationPanelOpen, setSelectedConnectorDefinition } = useDocumentationPanelContext();
 
@@ -327,6 +346,25 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
                         schema: selectedConnectorDefinitionSpecification?.connectionSpecification,
                       };
                     }
+              }
+              onCreateConfigTemplate={
+                showCreateTemplateButton
+                  ? props.formType === "source"
+                    ? () => {
+                        const values = getValues();
+                        const definitionId = selectedConnectorDefinition
+                          ? Connector.id(selectedConnectorDefinition)
+                          : "";
+                        createConfigTemplate(prepareSourceConfigTemplate(values, definitionId, organizationId));
+                      }
+                    : () => {
+                        const values = getValues();
+                        const definitionId = selectedConnectorDefinition
+                          ? Connector.id(selectedConnectorDefinition)
+                          : "";
+                        createConnectionTemplate({ values, destinationDefinitionId: definitionId, organizationId });
+                      }
+                  : undefined
               }
             />
           </>

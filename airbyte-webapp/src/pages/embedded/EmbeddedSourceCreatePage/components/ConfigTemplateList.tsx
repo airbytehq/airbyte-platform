@@ -1,30 +1,36 @@
+import { useEffect } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { EmptyState } from "components/EmptyState";
 import { Box } from "components/ui/Box";
 
-import { useListPartialUserConfigs } from "core/api";
-import { SourceConfigTemplateListItem } from "core/api/types/SonarClient";
+import { useListConfigTemplates, useListPartialUserConfigs } from "core/api";
 
 import { SelectableList } from "./SelectableList";
 import { useEmbeddedSourceParams } from "../hooks/useEmbeddedSourceParams";
 
-export const ConfigTemplateSelectList: React.FC<{ configTemplates: SourceConfigTemplateListItem[] }> = ({
-  configTemplates,
-}) => {
+export const ConfigTemplateSelectList: React.FC = () => {
   const { workspaceId, setSelectedTemplate } = useEmbeddedSourceParams();
 
   const onTemplateSelect = (templateId: string) => {
     setSelectedTemplate(templateId);
   };
 
-  const { data: partialUserConfigs } = useListPartialUserConfigs(workspaceId);
+  const { configTemplates } = useListConfigTemplates(workspaceId);
+
+  useEffect(() => {
+    if (configTemplates.length === 1) {
+      setSelectedTemplate(configTemplates[0].id);
+    }
+  }, [configTemplates, setSelectedTemplate]);
+
+  const { partialUserConfigs } = useListPartialUserConfigs(workspaceId);
 
   const items = configTemplates.map((template) => ({
     id: template.id,
     name: template.name,
-    icon: template.icon ?? undefined,
-    configured: partialUserConfigs.some((config) => config.source_config_template_id === template.id),
+    icon: template.icon,
+    configured: partialUserConfigs.some((config) => config.configTemplateId === template.id),
   }));
 
   return (
