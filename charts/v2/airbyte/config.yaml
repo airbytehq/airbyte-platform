@@ -975,6 +975,9 @@ server:
     - env: PUBLIC_API_EXECUTOR_THREADS
       key: publicApiExecutor.numThreads
 
+    - env: IO_TASK_EXECUTOR_THREADS
+      key: ioExecutor.numThreads
+
     - env: SCHEDULER_TASK_EXECUTOR_THREADS
       key: scheduler.numThreads
 

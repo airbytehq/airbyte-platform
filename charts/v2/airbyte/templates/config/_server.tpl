@@ -190,6 +190,24 @@ Renders the server.publicApiExecutor.numThreads environment variable
 {{- end }}
 
 {{/*
+Renders the server.ioExecutor.numThreads value
+*/}}
+{{- define "airbyte.server.ioExecutor.numThreads" }}
+    {{- .Values.server.ioExecutor.numThreads }}
+{{- end }}
+
+{{/*
+Renders the server.ioExecutor.numThreads environment variable
+*/}}
+{{- define "airbyte.server.ioExecutor.numThreads.env" }}
+- name: IO_TASK_EXECUTOR_THREADS
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: IO_TASK_EXECUTOR_THREADS
+{{- end }}
+
+{{/*
 Renders the server.scheduler.numThreads value
 */}}
 {{- define "airbyte.server.scheduler.numThreads" }}
@@ -420,6 +438,7 @@ Renders the set of all server environment variables
 {{- include "airbyte.server.httpIdleTimeout.env" . }}
 {{- include "airbyte.server.openai.syncAssistantApiKey.env" . }}
 {{- include "airbyte.server.publicApiExecutor.numThreads.env" . }}
+{{- include "airbyte.server.ioExecutor.numThreads.env" . }}
 {{- include "airbyte.server.scheduler.numThreads.env" . }}
 {{- include "airbyte.server.webapp.datadogApplicationId.env" . }}
 {{- include "airbyte.server.webapp.datadogClientToken.env" . }}
@@ -448,6 +467,7 @@ GCS_AIRBYTE_WAREHOUSE_EXPORTS_BUCKET_NAME: {{ include "airbyte.server.warehouseE
 GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX: {{ include "airbyte.server.data.salesCustomerAttributesObjectPrefix" . | quote }}
 HTTP_IDLE_TIMEOUT: {{ include "airbyte.server.httpIdleTimeout" . | quote }}
 PUBLIC_API_EXECUTOR_THREADS: {{ include "airbyte.server.publicApiExecutor.numThreads" . | quote }}
+IO_TASK_EXECUTOR_THREADS: {{ include "airbyte.server.ioExecutor.numThreads" . | quote }}
 SCHEDULER_TASK_EXECUTOR_THREADS: {{ include "airbyte.server.scheduler.numThreads" . | quote }}
 WEBAPP_DATADOG_APPLICATION_ID: {{ include "airbyte.server.webapp.datadogApplicationId" . | quote }}
 WEBAPP_DATADOG_CLIENT_TOKEN: {{ include "airbyte.server.webapp.datadogClientToken" . | quote }}

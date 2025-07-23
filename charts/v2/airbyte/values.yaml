@@ -762,6 +762,9 @@ server:
   publicApiExecutor:
     numThreads: ""
 
+  ioExecutor:
+    numThreads: ""
+
   scheduler:
     numThreads: ""
 
