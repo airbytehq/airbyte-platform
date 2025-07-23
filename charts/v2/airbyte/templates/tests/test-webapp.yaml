@@ -17,8 +17,8 @@ spec:
   containers:
   - name: webapp-test
     image: {{ include "imageUrl" (list .Values.testWebapp.image $) }}
-    command: ['curl']
-    args: ['-s', '{{ .Release.Name }}-airbyte-webapp-svc:{{ .Values.webapp.service.port }}', '>', '/dev/null']
+    command: ['/bin/sh', '-c']
+    args: ['curl -s {{ .Release.Name }}-airbyte-webapp-svc:{{ .Values.webapp.service.port }} > /dev/null']
     resources:
       requests:
         memory: "64Mi"
