@@ -2,8 +2,9 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { FormChangeTracker } from "components/forms/FormChangeTracker";
 import { PageContainer } from "components/PageContainer";
+import { BrandingBadge } from "components/ui/BrandingBadge";
 import { Button } from "components/ui/Button";
-import { FlexContainer } from "components/ui/Flex";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
 import { ScrollParent } from "components/ui/ScrollParent";
@@ -88,17 +89,24 @@ const ConnectionMappingsPage = () => {
             alignItems="center"
             className={styles.pageTitleContainer}
           >
-            <Heading as="h3" size="sm">
-              <FormattedMessage id="connections.mappings.title" />
-            </Heading>
+            <FlexItem grow>
+              <FlexContainer direction="row" alignItems="center" gap="md">
+                <Heading as="h3" size="sm">
+                  <FormattedMessage id="connections.mappings.title" />
+                </Heading>
+                <IfFeatureEnabled feature={FeatureItem.CloudForTeamsBranding}>
+                  <BrandingBadge product="cloudForTeams" testId="cloud-for-teams-badge-mappings" />
+                </IfFeatureEnabled>
+              </FlexContainer>
+            </FlexItem>
+            <ExternalLink href={links.connectionMappings}>
+              <Button variant="clear" icon="share" iconPosition="right" iconSize="sm">
+                <FormattedMessage id="connections.mappings.docsLink" />
+              </Button>
+            </ExternalLink>
             <FormChangeTracker formId="mapping-form" changed={hasMappingsChanged} />
             {showSubmissionButtons && (
-              <FlexContainer>
-                <ExternalLink href={links.connectionMappings}>
-                  <Button variant="clear" icon="share" iconPosition="right" iconSize="sm">
-                    <FormattedMessage id="connections.mappings.docsLink" />
-                  </Button>
-                </ExternalLink>
+              <>
                 <Button
                   variant="secondary"
                   onClick={clear}
@@ -114,7 +122,7 @@ const ConnectionMappingsPage = () => {
                 >
                   <FormattedMessage id="form.submit" />
                 </Button>
-              </FlexContainer>
+              </>
             )}
           </FlexContainer>
           {anyMappersConfigured ? <ConnectionMappingsList /> : <MappingsEmptyState />}

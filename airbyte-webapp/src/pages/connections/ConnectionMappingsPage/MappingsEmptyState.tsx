@@ -8,7 +8,17 @@ import { AddStreamForMappingComboBox } from "./AddStreamForMappingComboBox";
 export const MappingsEmptyState: React.FC = () => {
   return (
     <FlexContainer direction="column" alignItems="center" gap="xl">
-      <EmptyState icon="mapping" text={<FormattedMessage id="connections.mappings.emptyState" />} />
+      <EmptyState
+        icon="mapping"
+        description={
+          <>
+            <FormattedMessage id="connections.mappings.description" />
+            <br />
+            <br />
+            <FormattedMessage id="connections.mappings.selectStream" />
+          </>
+        }
+      />
       <FlexContainer direction="column" gap="none" alignItems="center">
         <AddStreamForMappingComboBox />
       </FlexContainer>

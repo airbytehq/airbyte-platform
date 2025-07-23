@@ -3,6 +3,7 @@ import classNames from "classnames";
 import { Fragment, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { TeamsFeaturesWarnModal } from "components/TeamsFeaturesWarnModal";
 import { Button } from "components/ui/Button";
 import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
@@ -11,6 +12,9 @@ import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { useFormMode } from "core/services/ui/FormModeContext";
+import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
+import { useExperiment } from "hooks/services/Experiment";
+import { useModalService } from "hooks/services/Modal";
 
 import styles from "./AddStreamForMappingComboBox.module.scss";
 import { getKeyForStream, getStreamDescriptorForKey, useMappingContext } from "./MappingContext";
@@ -23,6 +27,9 @@ export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({
   const streamsToList = useGetStreamsForNewMapping();
   const { addStreamToMappingsList } = useMappingContext();
   const { formatMessage } = useIntl();
+  const { isInTrial } = useOrganizationSubscriptionStatus();
+  const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
+  const { openModal } = useModalService();
 
   const placeholder = secondary
     ? formatMessage({ id: "connections.mappings.addStream" })
@@ -37,6 +44,16 @@ export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({
     query === "" ? options : options.filter((option) => getStreamDescriptorForKey(option.value).name.includes(query));
 
   const disabled = !options || options.length === 0 || mode === "readonly";
+
+  const handleInputClick = () => {
+    if (isInTrial && showTeamsFeaturesWarnModal) {
+      openModal({
+        title: null,
+        content: ({ onComplete }) => <TeamsFeaturesWarnModal onContinue={() => onComplete("continue")} />,
+        size: "xl",
+      });
+    }
+  };
 
   const handleStreamSelect = (value: string) => {
     const streamDescriptorKey = filteredOptions.find((option) => option.label === value)?.value;
@@ -59,6 +76,7 @@ export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({
           onChange={handleStreamSelect}
           onClose={() => setQuery("")}
           immediate
+          onClick={handleInputClick}
           data-testid="add-stream-for-mapping-combobox"
           className={classNames(styles.addStreamForMappingComboBox, {
             [styles.disabled]: disabled,

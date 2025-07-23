@@ -839,7 +839,7 @@
   "connections.mappings.title": "Mappings",
   "connections.mappings.docsLink": "View docs",
   "connections.mappings.mappingType": "Mapping type",
-  "connections.mappings.emptyState": "No mappings yet",
+  "connections.mappings.description": "Hash, encrypt, filter rows, rename fields, and more.",
   "connections.mappings.selectStream": "Select a stream to apply mappings",
   "connections.mappings.selectAStream": "Select a stream",
   "connections.mappings.emptyState.upsellTitle": "Unlock the power of mappings",
