@@ -6,6 +6,7 @@ package io.airbyte.server.services
 
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.config.ActorCatalog
+import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectionContext
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.ConnectorJobOutput.OutputType
@@ -13,6 +14,7 @@ import io.airbyte.config.FailureReason
 import io.airbyte.config.Organization
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
+import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
@@ -25,6 +27,7 @@ import io.airbyte.protocol.models.v0.AirbyteStream
 import io.airbyte.server.helpers.WorkloadIdGenerator
 import io.airbyte.server.repositories.CommandsRepository
 import io.airbyte.server.repositories.domain.Command
+import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workload.common.WorkloadQueueService
 import io.airbyte.workload.output.DocStoreAccessException
@@ -36,6 +39,7 @@ import io.airbyte.workload.services.WorkloadService
 import io.micronaut.data.exceptions.DataAccessException
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -167,9 +171,49 @@ class CommandServiceTest {
   }
 
   @Test
-  fun `creating a command successfully saves the command and enqueues the workload`() {
+  fun `creating a check command successfully saves the command and enqueues the workload`() {
     val jobId = UUID.randomUUID().toString()
     val attemptNumber = 0L
+    val workloadInput = slot<String>()
+    every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { jobInputService.getCheckInput(any<UUID>(), any<String>(), any()) } returns
+      CheckConnectionInput(
+        jobRunConfig = JobRunConfig().withJobId(jobId).withAttemptId(attemptNumber),
+        launcherConfig = IntegrationLauncherConfig(),
+        checkConnectionInput = StandardCheckConnectionInput().withActorType(ActorType.SOURCE),
+      )
+    every {
+      workloadService.createWorkload(any(), any(), capture(workloadInput), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+    } returns
+      mockk()
+    every { commandsRepository.save(any()) } returns mockk()
+    every { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Unit
+
+    val output =
+      service.createCheckCommand(
+        commandId = COMMAND_ID,
+        actorId = UUID.randomUUID(),
+        jobId = null,
+        attemptNumber = null,
+        workloadPriority = WorkloadPriority.HIGH,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+    assertTrue(output)
+
+    verify { commandsRepository.save(any()) }
+    verify { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+
+    // Ensuring this is added because it impacts nodepool selection in the launcher
+    val actualInput = Jsons.deserialize(workloadInput.captured)
+    assertEquals(WorkloadPriority.HIGH.toString(), actualInput["launcherConfig"]["priority"].asText())
+  }
+
+  @Test
+  fun `creating a discover command successfully saves the command and enqueues the workload`() {
+    val jobId = UUID.randomUUID().toString()
+    val attemptNumber = 0L
+    val workloadInput = slot<String>()
     every { commandsRepository.existsById(COMMAND_ID) } returns false
     every { jobInputService.getDiscoverInput(any(), any(), any()) } returns
       DiscoverCommandInput.DiscoverCatalogInput(
@@ -177,7 +221,9 @@ class CommandServiceTest {
         integrationLauncherConfig = IntegrationLauncherConfig(),
         discoverCatalogInput = StandardDiscoverCatalogInput(),
       )
-    every { workloadService.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+    every {
+      workloadService.createWorkload(any(), any(), capture(workloadInput), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+    } returns
       mockk()
     every { commandsRepository.save(any()) } returns mockk()
     every { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Unit
@@ -196,6 +242,10 @@ class CommandServiceTest {
 
     verify { commandsRepository.save(any()) }
     verify { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+
+    // Ensuring this is added because it impacts nodepool selection in the launcher
+    val actualInput = Jsons.deserialize(workloadInput.captured)
+    assertEquals(WorkloadPriority.DEFAULT.toString(), actualInput["launcherConfig"]["priority"].asText())
   }
 
   @Test

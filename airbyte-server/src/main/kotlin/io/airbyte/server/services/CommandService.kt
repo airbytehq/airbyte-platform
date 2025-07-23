@@ -107,6 +107,9 @@ class CommandService(
     }
 
     val checkInput = jobInputService.getCheckInput(actorDefinitionId, workspaceId, configuration)
+    // Adding the priority to the launcherConfig because it impacts node-pool selection.
+    checkInput.launcherConfig.priority = workloadPriority
+
     val workloadPayload =
       createCheckCreateWorkloadRequest(
         actorId = null,
@@ -144,6 +147,9 @@ class CommandService(
     }
 
     val checkInput = jobInputService.getCheckInput(actorId, jobId, attemptNumber)
+    // Adding the priority to the launcherConfig because it impacts node-pool selection.
+    checkInput.launcherConfig.priority = workloadPriority
+
     val actor = actorRepository.findByActorId(actorId) ?: throw NotFoundException("Unable to find actorId $actorId")
     val workspaceId = actor.workspaceId
     val workloadPayload =
@@ -224,6 +230,9 @@ class CommandService(
     val actor = actorRepository.findByActorId(actorId) ?: throw NotFoundException("Unable to find actorId $actorId")
     val workspaceId = actor.workspaceId
     val discoverInput = jobInputService.getDiscoverInput(actorId, actualJobId, actualAttemptNumber)
+    // Adding the priority to the launcherConfig because it impacts node-pool selection.
+    discoverInput.integrationLauncherConfig.priority = workloadPriority
+
     val workloadPayload =
       createDiscoverWorkloadRequest(
         actorId = actorId,
