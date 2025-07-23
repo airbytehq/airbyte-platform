@@ -4,7 +4,6 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 
-import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useDeletePartialUserConfig, useGetPartialUserConfig, useUpdatePartialUserConfig } from "core/api";
 import { SourceDefinitionSpecification } from "core/api/types/AirbyteClient";
 import { IsAirbyteEmbeddedContext } from "core/services/embedded";
@@ -17,7 +16,6 @@ import { PartialUserConfigSuccessView } from "./PartialUserConfigSuccessView";
 export const PartialUserConfigEditForm: React.FC<{ selectedPartialConfigId: string }> = ({
   selectedPartialConfigId,
 }) => {
-  const workspaceId = useCurrentWorkspaceId();
   const { mutate: updatePartialUserConfig, isSuccess: isUpdateSuccess } = useUpdatePartialUserConfig();
   const {
     mutateAsync: deletePartialUserConfig,
@@ -28,9 +26,8 @@ export const PartialUserConfigEditForm: React.FC<{ selectedPartialConfigId: stri
   const [confirmDelete, setConfirmDelete] = React.useState(false);
 
   const sourceDefinitionSpecification: SourceDefinitionSpecification = {
-    ...partialUserConfig.configTemplate.configTemplateSpec,
-    advancedAuth: partialUserConfig.configTemplate.advancedAuth,
-    sourceDefinitionId: partialUserConfig.configTemplate.sourceDefinitionId,
+    ...partialUserConfig.source_config_template.user_config_spec,
+    sourceDefinitionId: partialUserConfig.source_config_template.actor_definition_id,
   };
 
   if (selectedPartialConfigId === null) {
@@ -41,9 +38,10 @@ export const PartialUserConfigEditForm: React.FC<{ selectedPartialConfigId: stri
     return new Promise<void>((resolve, reject) => {
       updatePartialUserConfig(
         {
-          partialUserConfigId: selectedPartialConfigId,
-          connectionConfiguration: values.connectionConfiguration,
-          workspaceId,
+          id: selectedPartialConfigId,
+          partialUserConfigUpdate: {
+            connection_configuration: values.connectionConfiguration,
+          },
         },
         {
           onSuccess: () => resolve(),
@@ -71,8 +69,8 @@ export const PartialUserConfigEditForm: React.FC<{ selectedPartialConfigId: stri
       <FlexContainer direction="column" justifyContent="space-between" alignItems="center" className={styles.content}>
         <FlexContainer direction="column" gap="xl" alignItems="center">
           <PartialUserConfigHeader
-            icon={partialUserConfig.configTemplate.icon}
-            connectorName={partialUserConfig.configTemplate.name}
+            icon={partialUserConfig.source_config_template.icon ?? ""}
+            connectorName={partialUserConfig.source_config_template.name}
           />
 
           <FormattedMessage id="partialUserConfig.delete.warning" />
@@ -93,8 +91,8 @@ export const PartialUserConfigEditForm: React.FC<{ selectedPartialConfigId: stri
     return (
       <PartialUserConfigSuccessView
         successType="delete"
-        connectorName={partialUserConfig.configTemplate.name}
-        icon={partialUserConfig.configTemplate.icon}
+        connectorName={partialUserConfig.source_config_template.name}
+        icon={partialUserConfig.source_config_template.icon ?? ""}
       />
     );
   }
@@ -103,23 +101,23 @@ export const PartialUserConfigEditForm: React.FC<{ selectedPartialConfigId: stri
     return (
       <PartialUserConfigSuccessView
         successType="update"
-        connectorName={partialUserConfig.configTemplate.name}
-        icon={partialUserConfig.configTemplate.icon}
+        connectorName={partialUserConfig.source_config_template.name}
+        icon={partialUserConfig.source_config_template.icon ?? ""}
       />
     );
   }
 
   const initialValues: Partial<ConnectorFormValues> = {
-    name: partialUserConfig.configTemplate.name,
-    connectionConfiguration: partialUserConfig.connectionConfiguration,
+    name: partialUserConfig.source_config_template.name,
+    connectionConfiguration: partialUserConfig.connection_configuration,
   };
 
   return (
     <IsAirbyteEmbeddedContext.Provider value>
       <PartialUserConfigForm
         isEditMode
-        connectorName={partialUserConfig.configTemplate.name}
-        icon={partialUserConfig.configTemplate.icon}
+        connectorName={partialUserConfig.source_config_template.name}
+        icon={partialUserConfig.source_config_template.icon ?? ""}
         onSubmit={onSubmit}
         initialValues={initialValues}
         sourceDefinitionSpecification={sourceDefinitionSpecification}
