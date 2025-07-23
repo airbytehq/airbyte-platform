@@ -256,7 +256,7 @@ class SlackNotificationClient : NotificationClient {
 
   override fun notifySchemaPropagated(
     notification: SchemaUpdateNotification,
-    recipient: String,
+    recipient: String?,
     workspaceId: UUID?,
   ): Boolean {
     val summary = buildSummary(notification.catalogDiff)
@@ -292,7 +292,7 @@ class SlackNotificationClient : NotificationClient {
 
   override fun notifySchemaDiffToApply(
     notification: SchemaUpdateNotification,
-    recipient: String,
+    recipient: String?,
     workspaceId: UUID?,
   ): Boolean {
     log.info { "Sending slack notification to apply schema changes for workspaceId $workspaceId..." }
@@ -335,7 +335,7 @@ class SlackNotificationClient : NotificationClient {
 
   override fun notifySchemaDiffToApplyWhenPropagationDisabled(
     notification: SchemaUpdateNotification,
-    recipient: String,
+    recipient: String?,
     workspaceId: UUID?,
   ): Boolean {
     log.info { "Sending slack notification to apply schema changes for workspaceId $workspaceId..." }

@@ -79,7 +79,7 @@ class NotificationHelper(
     workspace: StandardWorkspace,
     connection: ConnectionRead,
     source: SourceConnection,
-    email: String,
+    email: String?,
     isPropagationDisabled: Boolean,
   ) {
     try {
@@ -93,55 +93,32 @@ class NotificationHelper(
           notificationSettings?.sendOnConnectionUpdate
         }
 
-      if (item != null) {
-        for (type in item.notificationType) {
+      if (item == null) return
+
+      for (type in item.notificationType) {
+        val client =
           when (type) {
-            Notification.NotificationType.SLACK -> {
-              val slackNotificationClient = SlackNotificationClient(item.slackConfiguration)
-              if (isPropagationDisabled) {
-                sendNotificationMetrics(
-                  slackNotificationClient.notifySchemaDiffToApplyWhenPropagationDisabled(
-                    notification,
-                    email,
-                    workspace.workspaceId,
-                  ),
-                  slackNotificationClient.getNotificationClientType(),
-                  NOTIFICATION_TRIGGER_SCHEMA_CHANGED_AND_SYNC_DISABLED,
-                )
-              } else {
-                sendNotificationMetrics(
-                  slackNotificationClient.notifySchemaDiffToApply(notification, email, workspace.workspaceId),
-                  slackNotificationClient.getNotificationClientType(),
-                  NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY,
-                )
-              }
-            }
-
-            Notification.NotificationType.CUSTOMERIO -> {
-              val emailNotificationClient = CustomerioNotificationClient()
-              if (isPropagationDisabled) {
-                sendNotificationMetrics(
-                  emailNotificationClient.notifySchemaDiffToApplyWhenPropagationDisabled(
-                    notification,
-                    email,
-                    workspace.workspaceId,
-                  ),
-                  emailNotificationClient.getNotificationClientType(),
-                  NOTIFICATION_TRIGGER_SCHEMA_CHANGED_AND_SYNC_DISABLED,
-                )
-              } else {
-                sendNotificationMetrics(
-                  emailNotificationClient.notifySchemaDiffToApply(notification, email, workspace.workspaceId),
-                  emailNotificationClient.getNotificationClientType(),
-                  NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY,
-                )
-              }
-            }
-
-            else -> {
-              LOGGER.warn("Notification type {} not supported", type)
-            }
+            Notification.NotificationType.SLACK -> SlackNotificationClient(item.slackConfiguration)
+            Notification.NotificationType.CUSTOMERIO -> CustomerioNotificationClient()
+            else -> throw IllegalArgumentException("Unknown type: $type")
           }
+
+        if (isPropagationDisabled) {
+          sendNotificationMetrics(
+            client.notifySchemaDiffToApplyWhenPropagationDisabled(
+              notification,
+              email,
+              workspace.workspaceId,
+            ),
+            client.getNotificationClientType(),
+            NOTIFICATION_TRIGGER_SCHEMA_CHANGED_AND_SYNC_DISABLED,
+          )
+        } else {
+          sendNotificationMetrics(
+            client.notifySchemaDiffToApply(notification, email, workspace.workspaceId),
+            client.getNotificationClientType(),
+            NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY,
+          )
         }
       }
     } catch (e: Exception) {

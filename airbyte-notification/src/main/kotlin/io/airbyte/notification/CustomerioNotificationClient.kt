@@ -309,9 +309,11 @@ class CustomerioNotificationClient : NotificationClient {
 
   override fun notifySchemaPropagated(
     notification: SchemaUpdateNotification,
-    recipient: String,
+    recipient: String?,
     workspaceId: UUID?,
   ): Boolean {
+    if (recipient == null) return false
+
     val transactionalMessageId = if (notification.isBreakingChange) SCHEMA_BREAKING_CHANGE_TRANSACTION_ID else SCHEMA_CHANGE_TRANSACTION_ID
 
     val node =
@@ -328,9 +330,11 @@ class CustomerioNotificationClient : NotificationClient {
 
   override fun notifySchemaDiffToApply(
     notification: SchemaUpdateNotification,
-    recipient: String,
+    recipient: String?,
     workspaceId: UUID?,
   ): Boolean {
+    if (recipient == null) return false
+
     val node =
       buildSchemaChangeJson(notification, recipient, SCHEMA_CHANGE_DETECTED_TRANSACTION_ID)
     val payload = Jsons.serialize(node)
@@ -344,9 +348,11 @@ class CustomerioNotificationClient : NotificationClient {
 
   override fun notifySchemaDiffToApplyWhenPropagationDisabled(
     notification: SchemaUpdateNotification,
-    recipient: String,
+    recipient: String?,
     workspaceId: UUID?,
   ): Boolean {
+    if (recipient == null) return false
+
     val node =
       buildSchemaChangeJson(notification, recipient, SCHEMA_CHANGE_DETECTED_AND_PROPAGATION_DISABLED_TRANSACTION_ID)
     val payload = Jsons.serialize(node)

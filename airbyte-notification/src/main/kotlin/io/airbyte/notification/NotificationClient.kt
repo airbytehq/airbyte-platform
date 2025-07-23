@@ -65,19 +65,19 @@ abstract class NotificationClient {
 
   abstract fun notifySchemaPropagated(
     notification: SchemaUpdateNotification,
-    recipient: String,
+    recipient: String?,
     workspaceId: UUID?,
   ): Boolean
 
   abstract fun notifySchemaDiffToApply(
     notification: SchemaUpdateNotification,
-    recipient: String,
+    recipient: String?,
     workspaceId: UUID?,
   ): Boolean
 
   abstract fun notifySchemaDiffToApplyWhenPropagationDisabled(
     notification: SchemaUpdateNotification,
-    recipient: String,
+    recipient: String?,
     workspaceId: UUID?,
   ): Boolean
 
