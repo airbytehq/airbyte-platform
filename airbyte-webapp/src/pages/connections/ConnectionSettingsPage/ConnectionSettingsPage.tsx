@@ -10,6 +10,7 @@ import { ConnectionSyncContextProvider } from "components/connection/ConnectionS
 import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionScheduleFormField";
 import { SimplifiedConnectionsSettingsCard } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionSettingsCard";
 import { Form } from "components/forms";
+import { TeamsFeaturesWarnModal } from "components/TeamsFeaturesWarnModal";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { ExternalLink } from "components/ui/Link";
@@ -17,12 +18,16 @@ import { ScrollParent } from "components/ui/ScrollParent";
 import { Spinner } from "components/ui/Spinner";
 
 import { ConnectionActionsBlock } from "area/connection/components/ConnectionActionsBlock";
-import { HttpError, HttpProblem } from "core/api";
-import { WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
+import { HttpError, HttpProblem, useDescribeCronExpressionFetchQuery } from "core/api";
+import { ConnectionScheduleType, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useFormMode } from "core/services/ui/FormModeContext";
+import { isMoreFrequentThanHourlyFromExecutions } from "core/utils/cron/cronFrequency";
 import { trackError } from "core/utils/datadog";
+import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
+import { useExperiment } from "hooks/services/Experiment";
+import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./ConnectionSettingsPage.module.scss";
@@ -42,20 +47,45 @@ export const ConnectionSettingsPage: React.FC = () => {
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const { mode } = useFormMode();
   const simplifiedInitialValues = useInitialFormValues(connection, mode);
+  const { isInTrial } = useOrganizationSubscriptionStatus();
+  const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
+  const { openModal } = useModalService();
+  const fetchCronDescription = useDescribeCronExpressionFetchQuery();
 
   const zodValidationSchema = useConnectionValidationZodSchema();
 
   const onSubmit = useCallback(
-    (values: FormConnectionFormValues) => {
+    async (values: FormConnectionFormValues) => {
       const connectionUpdates: WebBackendConnectionUpdate = {
         connectionId: connection.connectionId,
         skipReset: true,
         ...values,
       };
 
+      // Check if we need to show Teams features warning modal for sub-hourly cron
+      const isCronSchedule = values.scheduleType === ConnectionScheduleType.cron;
+      const cronExpression = values.scheduleData?.cron?.cronExpression;
+
+      if (isCronSchedule && cronExpression && isInTrial && showTeamsFeaturesWarnModal) {
+        const cronValidationResult = await fetchCronDescription(cronExpression);
+
+        if (
+          cronValidationResult.isValid &&
+          isMoreFrequentThanHourlyFromExecutions(cronValidationResult.nextExecutions)
+        ) {
+          await openModal({
+            title: null,
+            content: ({ onComplete }) => <TeamsFeaturesWarnModal onContinue={() => onComplete("success")} />,
+            preventCancel: true,
+            size: "xl",
+          });
+          return updateConnection(connectionUpdates);
+        }
+      }
+
       return updateConnection(connectionUpdates);
     },
-    [connection.connectionId, updateConnection]
+    [connection.connectionId, isInTrial, showTeamsFeaturesWarnModal, updateConnection, fetchCronDescription, openModal]
   );
 
   const onSuccess = useCallback(() => {

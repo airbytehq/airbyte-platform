@@ -1,4 +1,4 @@
-import { validateCronExpression, validateCronFrequencyOneHourOrMore } from "./validateCronExpression";
+import { validateCronExpression } from "./validateCronExpression";
 
 // Test cases are taken from http://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html
 describe("validateCronExpression", () => {
@@ -72,22 +72,5 @@ describe("validateCronExpression", () => {
   `("'$expression' is valid: $isValid", ({ expression, isValid, message }) => {
     expect(validateCronExpression(expression).isValid).toEqual(isValid);
     expect(validateCronExpression(expression).message).toEqual(message);
-  });
-});
-
-describe("validateCronFrequencyOverOneHour", () => {
-  it.each`
-    expression            | isValid
-    ${"0 0 12 * * ?"}     | ${true}
-    ${"0    0 12 * * ?"}  | ${true}
-    ${"0 0 * * * ?"}      | ${true}
-    ${"0 * 12 * * ?"}     | ${false}
-    ${"* * 12 * * ?"}     | ${false}
-    ${"15,45 * 12 * * ?"} | ${false}
-    ${"0 15,45 12 * * ?"} | ${false}
-    ${"0/10 * * * * ?"}   | ${false}
-    ${"0 0/10 * * * ?"}   | ${false}
-  `("'$expression' is valid: $isValid", ({ expression, isValid }) => {
-    expect(validateCronFrequencyOneHourOrMore(expression)).toEqual(isValid);
   });
 });

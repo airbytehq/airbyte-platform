@@ -8,28 +8,6 @@ const CRON_REGEX_MAP = [
   /^(([0-9]|,|-|\*|\/)+)/, // year
 ];
 
-const ONLY_NUMBERS_REGEX = /^([0-9]){1,2}$/;
-
-export function validateCronFrequencyOneHourOrMore(expression: string | undefined): boolean {
-  if (expression === undefined) {
-    return false;
-  }
-
-  try {
-    const cronFields = expression.trim().split(/\s+/g);
-    const [seconds, minutes] = cronFields;
-    [seconds, minutes].forEach((field) => {
-      if (!ONLY_NUMBERS_REGEX.test(field)) {
-        throw new Error(`"${field}" must be a one or two digit number`);
-      }
-    });
-  } catch (e) {
-    return false;
-  }
-
-  return true;
-}
-
 export function validateCronExpression(expression: string | undefined): { isValid: boolean; message?: string } {
   if (expression === undefined) {
     return { isValid: false };
