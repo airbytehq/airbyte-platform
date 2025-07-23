@@ -19,9 +19,11 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 class AirbyteKeycloakClient(
-  private val keycloakAdminClient: Keycloak,
+  private val keycloakAdminClientProvider: AirbyteKeycloakAdminClientProvider,
   @Value("\${airbyte.airbyte-url}") private val airbyteUrl: String,
 ) {
+  private val keycloakAdminClient: Keycloak = keycloakAdminClientProvider.createKeycloakAdminClient()
+
   fun getSsoConfigData(
     organizationId: UUID,
     realmName: String,

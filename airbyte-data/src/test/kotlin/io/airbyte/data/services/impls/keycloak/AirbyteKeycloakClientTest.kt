@@ -6,9 +6,11 @@ package io.airbyte.data.services.impls.keycloak
 
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
+import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -24,13 +26,21 @@ import java.util.UUID
 
 class AirbyteKeycloakClientTest {
   private val airbyteUrl: String = "https://cloud.airbyte.com"
-  private lateinit var keycloakAdminClient: Keycloak
+  private lateinit var airbyteKeycloakAdminClientProvider: AirbyteKeycloakAdminClientProvider
   private lateinit var airbyteKeycloakClient: AirbyteKeycloakClient
+
+  private var keycloakClientMock = mockk<Keycloak>(relaxed = true)
 
   @BeforeEach
   fun setup() {
-    keycloakAdminClient = mockk<Keycloak>(relaxed = true)
-    airbyteKeycloakClient = AirbyteKeycloakClient(keycloakAdminClient, airbyteUrl)
+    airbyteKeycloakAdminClientProvider = mockk<AirbyteKeycloakAdminClientProvider>(relaxed = true)
+    every { airbyteKeycloakAdminClientProvider.createKeycloakAdminClient() } returns keycloakClientMock
+    airbyteKeycloakClient = AirbyteKeycloakClient(airbyteKeycloakAdminClientProvider, airbyteUrl)
+  }
+
+  @AfterEach
+  fun tearDown() {
+    clearMocks(keycloakClientMock)
   }
 
   @Test
@@ -46,7 +56,7 @@ class AirbyteKeycloakClientTest {
       )
 
     val realmsMock = mockk<RealmsResource>(relaxed = true)
-    every { keycloakAdminClient.realms() } returns realmsMock
+    every { keycloakClientMock.realms() } returns realmsMock
 
     val realmMock = mockk<RealmResource>(relaxed = true)
     every { realmsMock.realm(any()) } returns realmMock
@@ -61,7 +71,7 @@ class AirbyteKeycloakClientTest {
 
     airbyteKeycloakClient.createOidcSsoConfig(config)
 
-    verify(exactly = 4) { keycloakAdminClient.realms() }
+    verify(exactly = 4) { keycloakClientMock.realms() }
     verify(exactly = 1) { realmsMock.create(any()) }
     verify(exactly = 2) { realmMock.identityProviders() }
     verify(exactly = 1) { idpMock.create(any()) }
@@ -81,7 +91,7 @@ class AirbyteKeycloakClientTest {
         discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
       )
 
-    every { keycloakAdminClient.realms().create(any()) } throws RuntimeException("Internal Server Error")
+    every { keycloakClientMock.realms().create(any()) } throws RuntimeException("Internal Server Error")
 
     val exception = assertThrows<RealmCreationException> { airbyteKeycloakClient.createOidcSsoConfig(config) }
 
@@ -98,7 +108,7 @@ class AirbyteKeycloakClientTest {
       )
 
     val realmsMock = mockk<RealmsResource>(relaxed = true)
-    every { keycloakAdminClient.realms() } returns realmsMock
+    every { keycloakClientMock.realms() } returns realmsMock
 
     val realmMock = mockk<RealmResource>(relaxed = true)
     every { realmsMock.realm(any()) } returns realmMock
@@ -117,7 +127,7 @@ class AirbyteKeycloakClientTest {
     every { idpProviderMock.update(any()) } returns Unit
 
     airbyteKeycloakClient.updateIdpClientCredentials(config, "testrealm")
-    verify(exactly = 1) { keycloakAdminClient.realms() }
+    verify(exactly = 1) { keycloakClientMock.realms() }
     verify(exactly = 2) { realmMock.identityProviders() }
     verify(exactly = 1) { idpMock.findAll() }
     verify(exactly = 1) { idpMock.get(any()) }
