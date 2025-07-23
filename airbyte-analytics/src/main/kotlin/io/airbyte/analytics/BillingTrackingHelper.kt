@@ -60,9 +60,7 @@ class BillingTrackingHelper(
       organizationId,
       ScopeType.ORGANIZATION,
       ACTION_GRACE_PERIOD_ENDED,
-      mapOf(
-        METADATA_PAYMENT_PROVIDER_ID to paymentProviderId,
-      ),
+      paymentProviderId?.let { mapOf(METADATA_PAYMENT_PROVIDER_ID to it) } ?: emptyMap(),
     )
   }
 
