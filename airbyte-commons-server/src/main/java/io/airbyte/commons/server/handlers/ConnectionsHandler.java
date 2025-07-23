@@ -1743,7 +1743,7 @@ public class ConnectionsHandler {
       LOGGER.info("Propagating changes for connectionId: '{}', new catalogId '{}'",
           connection.getConnectionId(), catalogId);
       connectionTimelineEventHelper.logSchemaChangeAutoPropagationEventInConnectionTimeline(connectionId, appliedDiff);
-      if (workspace.getNotificationSettings() != null) {
+      if (workspace.getNotificationSettings() != null && workspace.getEmail() != null) {
         try {
           LOGGER.info("Sending notification of schema auto propagation for connectionId: '{}'", connection.getConnectionId());
           notificationHelper.notifySchemaPropagated(
