@@ -73,7 +73,7 @@ interface ConnectorBuilderService {
     projectId: UUID,
     workspaceId: UUID,
     name: String,
-    manifestDraft: JsonNode,
+    manifestDraft: JsonNode?,
     componentsFileContent: String?,
     baseActorDefinitionVersionId: UUID?,
     contributionUrl: String?,

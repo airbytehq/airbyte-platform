@@ -330,7 +330,7 @@ class ConnectorBuilderServiceJooqImpl
       projectId: UUID,
       workspaceId: UUID,
       name: String,
-      manifestDraft: JsonNode,
+      manifestDraft: JsonNode?,
       componentsFileContent: String?,
       baseActorDefinitionVersionId: UUID?,
       contributionPullRequestUrl: String?,
