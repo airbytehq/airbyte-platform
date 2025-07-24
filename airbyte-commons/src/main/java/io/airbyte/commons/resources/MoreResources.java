@@ -21,7 +21,10 @@ import java.util.stream.Stream;
 
 /**
  * Common code for operations on a java Resource.
+ *
+ * @deprecated replace with {@link io.airbyte.commons.resources.Resources}
  */
+@Deprecated
 public class MoreResources {
 
   /**

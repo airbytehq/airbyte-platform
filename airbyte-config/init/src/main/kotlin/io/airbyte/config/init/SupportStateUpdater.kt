@@ -5,7 +5,6 @@
 package io.airbyte.config.init
 
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.commons.string.Strings
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
@@ -196,19 +195,19 @@ class SupportStateUpdater(
         "Supported versions for {} {}: {}",
         sourceDefinition.sourceDefinitionId,
         sourceDefinition.name,
-        Strings.join(supportStateUpdate.supportedVersionIds, ","),
+        supportStateUpdate.supportedVersionIds.joinToString(","),
       )
       log.info(
         "Deprecated versions for {} {}: {}",
         sourceDefinition.sourceDefinitionId,
         sourceDefinition.name,
-        Strings.join(supportStateUpdate.deprecatedVersionIds, ","),
+        supportStateUpdate.deprecatedVersionIds.joinToString(","),
       )
       log.info(
         "Unsupported versions for {} {}: {}",
         sourceDefinition.sourceDefinitionId,
         sourceDefinition.name,
-        Strings.join(supportStateUpdate.unsupportedVersionIds, ","),
+        supportStateUpdate.unsupportedVersionIds.joinToString(","),
       )
       if (shouldNotifyBreakingChanges() && supportStateUpdate.deprecatedVersionIds.isNotEmpty()) {
         val latestBreakingChange =

@@ -18,6 +18,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -72,9 +73,7 @@ class LineGobblerTest {
     final InputStream is = null;
 
     assertDoesNotThrow(() -> {
-      LineGobbler.gobble(is, consumer);
-      LineGobbler.gobble(is, consumer, mdcBuilder);
-      LineGobbler.gobble(is, consumer, "test", mdcBuilder);
+      LineGobbler.gobble(is, consumer, "test", mdcBuilder, Executors.newSingleThreadExecutor());
     });
 
     verify(consumer, times(0)).accept(anyString());

@@ -17,7 +17,6 @@ import com.networknt.schema.SchemaValidatorsConfig
 import com.networknt.schema.SpecVersion
 import com.networknt.schema.ValidationContext
 import com.networknt.schema.ValidationMessage
-import io.airbyte.commons.string.Strings
 import jakarta.inject.Singleton
 import me.andrz.jackson.JsonContext
 import me.andrz.jackson.JsonReferenceException
@@ -116,7 +115,7 @@ class JsonSchemaValidator
       val validationMessages = validateInternal(schemaJson, objectJson)
 
       if (!validationMessages.isEmpty()) {
-        LOGGER.info("JSON schema validation failed. \nerrors: {}", Strings.join(validationMessages, ", "))
+        LOGGER.info("JSON schema validation failed. \nerrors: {}", validationMessages.joinToString(", "))
       }
 
       return validationMessages.isEmpty()
@@ -161,7 +160,7 @@ class JsonSchemaValidator
       throw JsonValidationException(
         String.format(
           "json schema validation failed when comparing the data to the json schema. \nErrors: %s \nSchema: \n%s",
-          Strings.join(validationMessages, ", "),
+          validationMessages.joinToString(", "),
           schemaJson.toPrettyString(),
         ),
       )

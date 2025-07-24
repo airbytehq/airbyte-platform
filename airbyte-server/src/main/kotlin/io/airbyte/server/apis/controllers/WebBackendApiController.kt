@@ -26,7 +26,6 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
-import io.airbyte.commons.lang.MoreBooleans
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler
@@ -93,7 +92,7 @@ open class WebBackendApiController(
   ): WebBackendConnectionRead? =
     execute {
       TracingHelper.addConnection(webBackendConnectionRequestBody.connectionId)
-      if (MoreBooleans.isTruthy(webBackendConnectionRequestBody.withRefreshedCatalog)) {
+      if (webBackendConnectionRequestBody.withRefreshedCatalog == true) {
         // only allow refresh catalog if the user is at least a workspace editor or
         // organization editor for the connection's workspace
         roleResolver

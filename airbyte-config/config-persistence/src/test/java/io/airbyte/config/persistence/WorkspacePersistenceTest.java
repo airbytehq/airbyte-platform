@@ -7,14 +7,13 @@ package io.airbyte.config.persistence;
 import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AuthProvider;
 import io.airbyte.config.AuthenticatedUser;
@@ -301,7 +300,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
 
     workspaceService.writeStandardWorkspaceNoSecrets(workspace);
 
-    assertFalse(MoreBooleans.isTruthy(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false).getFeedbackDone()));
+    assertNull(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false).getFeedbackDone());
     workspaceService.setFeedback(workspace.getWorkspaceId());
     assertTrue(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false).getFeedbackDone());
   }

@@ -76,7 +76,6 @@ import io.airbyte.api.client.model.generated.WorkspaceCreateWithId
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.resources.MoreResources
-import io.airbyte.commons.string.Strings
 import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.commons.temporal.TemporalWorkflowUtils
 import io.airbyte.commons.temporal.config.TemporalSdkTimeouts
@@ -1159,7 +1158,7 @@ class AcceptanceTestHarness
           debugInfo.add(msg)
         }
       }
-      Assertions.assertEquals(JobStatus.SUCCEEDED, job.status, Strings.join(debugInfo, ", "))
+      Assertions.assertEquals(JobStatus.SUCCEEDED, job.status, debugInfo.joinToString(", "))
       Thread.sleep(200)
     }
 

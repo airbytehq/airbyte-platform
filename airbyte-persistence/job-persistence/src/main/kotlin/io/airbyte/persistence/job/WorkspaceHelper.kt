@@ -8,7 +8,6 @@ import com.google.common.base.Preconditions
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
-import io.airbyte.commons.functional.CheckedSupplier
 import io.airbyte.config.Job
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ConnectionService
@@ -22,6 +21,7 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.ExecutionException
+import java.util.function.Supplier
 
 // todo (cgardens) - this class is in an unintuitive module. it is weird that you need to import
 // scheduler:persistence in order to get workspace ids for configs (e.g. source). Our options are to
@@ -210,9 +210,9 @@ class WorkspaceHelper(
     private val LOGGER: Logger = LoggerFactory.getLogger(WorkspaceHelper::class.java)
 
     @Throws(ConfigNotFoundException::class, JsonValidationException::class)
-    private fun handleCacheExceptions(supplier: CheckedSupplier<UUID, ExecutionException>): UUID {
+    private fun handleCacheExceptions(supplier: () -> UUID): UUID {
       try {
-        return supplier.get()
+        return supplier()
       } catch (e: ExecutionException) {
         LOGGER.error("Error retrieving cache:", e.cause)
         if (e.cause is ConfigNotFoundException) {
@@ -228,7 +228,7 @@ class WorkspaceHelper(
       }
     }
 
-    private fun swallowExecutionException(supplier: CheckedSupplier<UUID, Throwable>): UUID {
+    private fun swallowExecutionException(supplier: Supplier<UUID>): UUID {
       try {
         return supplier.get()
       } catch (e: Throwable) {

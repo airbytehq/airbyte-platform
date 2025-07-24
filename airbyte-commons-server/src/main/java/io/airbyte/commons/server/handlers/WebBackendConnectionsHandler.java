@@ -56,7 +56,6 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.commons.converters.ApiConverters;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
@@ -476,7 +475,7 @@ public class WebBackendConnectionsHandler {
      * configuration options set.
      */
     final Optional<SourceDiscoverSchemaRead> refreshedCatalog;
-    if (MoreBooleans.isTruthy(webBackendConnectionRequestBody.getWithRefreshedCatalog())) {
+    if (webBackendConnectionRequestBody.getWithRefreshedCatalog() != null && webBackendConnectionRequestBody.getWithRefreshedCatalog()) {
       refreshedCatalog = getRefreshedSchema(connection.getSourceId(), connection.getConnectionId());
     } else {
       refreshedCatalog = Optional.empty();
