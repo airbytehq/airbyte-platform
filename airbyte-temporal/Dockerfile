@@ -3,4 +3,4 @@ FROM temporalio/auto-setup:1.27.2
 
 ENV TEMPORAL_HOME /etc/temporal
 
-ENTRYPOINT ["./entrypoint.sh autosetup"]
+ENTRYPOINT ["./entrypoint.sh", "autosetup"]
