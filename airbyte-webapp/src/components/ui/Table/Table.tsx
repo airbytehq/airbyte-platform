@@ -99,10 +99,12 @@ export const Table = <T,>({
       sorting: initialSortBy,
     },
     manualSorting,
-    onSortingChange,
+    // Setting onSortingChange to undefined will effectively disable sorting
+    ...(onSortingChange !== undefined ? { onSortingChange } : {}),
     state: {
       columnFilters,
-      sorting: sortingState,
+      // Setting sortingState to undefined will effectively disable sorting
+      ...(sortingState !== undefined ? { sorting: sortingState } : {}),
     },
     getCoreRowModel: getCoreRowModel<T>(),
     getSortedRowModel: getSortedRowModel<T>(),
