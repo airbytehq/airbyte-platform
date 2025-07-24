@@ -19,38 +19,43 @@ import io.airbyte.api.model.generated.SourceUpdate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
-import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.airbyte.server.statusException
+import io.micronaut.context.ApplicationContext
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
-import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.inject.Inject
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @MicronautTest
 internal class SourceApiControllerTest {
   @Inject
-  lateinit var schedulerHandler: SchedulerHandler
+  lateinit var context: ApplicationContext
 
-  @Inject
+  lateinit var schedulerHandler: SchedulerHandler
   lateinit var sourceHandler: SourceHandler
 
   @Inject
   @Client("/")
   lateinit var client: HttpClient
 
-  @MockBean(SchedulerHandler::class)
-  fun schedulerHandler(): SchedulerHandler = mockk()
-
-  @MockBean(SourceHandler::class)
-  fun sourceHandler(): SourceHandler = mockk()
+  @BeforeAll
+  fun setupMock() {
+    schedulerHandler = mockk()
+    context.registerSingleton(SchedulerHandler::class.java, schedulerHandler)
+    sourceHandler = mockk()
+    context.registerSingleton(SourceHandler::class.java, sourceHandler)
+  }
 
   @Test
   fun testCheckConnectionToSource() {

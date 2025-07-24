@@ -179,7 +179,7 @@ open class ConnectionApiController(
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listAllConnectionsForWorkspace(
-    @Body workspaceIdRequestBody: WorkspaceIdRequestBody?,
+    @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
   ): ConnectionReadList? = execute { connectionsHandler.listAllConnectionsForWorkspace(workspaceIdRequestBody) }
 
   @Post(uri = "/list_by_actor_definition")

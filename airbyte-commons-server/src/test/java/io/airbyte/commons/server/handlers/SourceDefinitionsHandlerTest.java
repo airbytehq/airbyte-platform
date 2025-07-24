@@ -316,7 +316,7 @@ class SourceDefinitionsHandlerTest {
             Map.of(
                 sourceDefinitionVersion.getActorDefinitionId(), sourceDefinitionVersion,
                 sourceDefinitionVersion2.getActorDefinitionId(), sourceDefinitionVersion2));
-    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(new StandardWorkspace().withOrganizationId(UUID.randomUUID()));
     when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.SOURCE_CONNECTOR),
         eq(List.of(sourceDefinition.getSourceDefinitionId()))))
             .thenReturn(Map.of(sourceDefinition.getSourceDefinitionId(), true));
@@ -378,7 +378,7 @@ class SourceDefinitionsHandlerTest {
         .thenReturn(Map.of(
             sourceDefinitionVersion.getActorDefinitionId(), sourceDefinitionVersion,
             sourceDefinitionVersion2.getActorDefinitionId(), sourceDefinitionVersion2));
-    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(new StandardWorkspace().withOrganizationId(UUID.randomUUID()));
     when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.SOURCE_CONNECTOR),
         eq(List.of(hiddenSourceDefinition.getSourceDefinitionId(), sourceDefinition.getSourceDefinitionId()))))
             .thenReturn(Map.of(
@@ -409,7 +409,7 @@ class SourceDefinitionsHandlerTest {
         .thenReturn(Map.of(
             sourceDefinitionVersion.getActorDefinitionId(), sourceDefinitionVersion,
             sourceDefinitionVersion2.getActorDefinitionId(), sourceDefinitionVersion2));
-    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(new StandardWorkspace().withOrganizationId(UUID.randomUUID()));
 
     when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.SOURCE_CONNECTOR),
         eq(List.of(unentitledSourceDefinition.getSourceDefinitionId(), sourceDefinition.getSourceDefinitionId()))))
@@ -812,6 +812,7 @@ class SourceDefinitionsHandlerTest {
     when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
         customCreate.getWorkspaceId())).thenThrow(UnsupportedProtocolVersionException.class);
+    when(uuidSupplier.get()).thenReturn(UUID.randomUUID());
     assertThrows(UnsupportedProtocolVersionException.class, () -> sourceDefinitionsHandler.createCustomSourceDefinition(customCreate));
 
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
@@ -1168,7 +1169,7 @@ class SourceDefinitionsHandlerTest {
             Map.of(
                 sourceDefinitionVersion.getActorDefinitionId(), sourceDefinitionVersion,
                 sourceDefinitionVersion2.getActorDefinitionId(), sourceDefinitionVersion2));
-    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(new StandardWorkspace().withOrganizationId(UUID.randomUUID()));
     when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.SOURCE_CONNECTOR),
         eq(List.of(sourceDefinition.getSourceDefinitionId()))))
             .thenReturn(Map.of(sourceDefinition.getSourceDefinitionId(), true));
@@ -1248,7 +1249,7 @@ class SourceDefinitionsHandlerTest {
             Map.of(
                 sourceDefinitionVersion.getActorDefinitionId(), sourceDefinitionVersion,
                 sourceDefinitionVersion2.getActorDefinitionId(), sourceDefinitionVersion2));
-    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(new StandardWorkspace().withOrganizationId(UUID.randomUUID()));
     when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.SOURCE_CONNECTOR),
         eq(List.of(sourceDefinition.getSourceDefinitionId()))))
             .thenReturn(Map.of(sourceDefinition.getSourceDefinitionId(), true));

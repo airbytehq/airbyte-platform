@@ -326,7 +326,7 @@ interface JobPersistence {
     updatedAtEnd: OffsetDateTime?,
     orderByField: String?,
     orderByMethod: String?,
-  ): List<Job?>?
+  ): List<Job>
 
   @Throws(IOException::class)
   fun listJobsLight(
@@ -341,7 +341,7 @@ interface JobPersistence {
     updatedAtEnd: OffsetDateTime?,
     orderByField: String?,
     orderByMethod: String?,
-  ): List<Job?>?
+  ): List<Job>
 
   /**
    * List jobs with id.

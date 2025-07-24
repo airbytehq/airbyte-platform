@@ -771,9 +771,11 @@ class SourceHandlerTest {
         new ActorListCursorPaginatedRequestBody().workspaceId(sourceConnectionWithCount.source.getWorkspaceId());
 
     when(sourceService.getSourceConnection(sourceConnectionWithCount.source.getSourceId())).thenReturn(sourceConnectionWithCount.source);
-    when(sourceService.getSourceConnection(sourceConnectionWithCount.source.getSourceId())).thenReturn(sourceConnectionWithCount.source);
-
-    when(sourceService.listWorkspaceSourceConnectionsWithCounts(sourceConnectionWithCount.source.getWorkspaceId(), null))
+    when(sourceService.buildCursorPagination(any(), any(), any(), any(), any()))
+        .thenReturn(new io.airbyte.data.services.shared.WorkspaceResourceCursorPagination(null, 10));
+    when(sourceService.countWorkspaceSourcesFiltered(any(), any()))
+        .thenReturn(1);
+    when(sourceService.listWorkspaceSourceConnectionsWithCounts(any(), any()))
         .thenReturn(Lists.newArrayList(sourceConnectionWithCount));
     when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
@@ -798,6 +800,9 @@ class SourceHandlerTest {
         sourceDefinitionSpecificationRead.getConnectionSpecification());
     verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnectionWithCount.source.getWorkspaceId(),
         sourceConnectionWithCount.source.getSourceId());
+    verify(sourceService).buildCursorPagination(any(), any(), any(), any(), any());
+    verify(sourceService).countWorkspaceSourcesFiltered(any(), any());
+    verify(sourceService).listWorkspaceSourceConnectionsWithCounts(any(), any());
   }
 
   @Test

@@ -33,7 +33,7 @@ class SourceOauthApiController(
   @Post("/complete_oauth")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun completeSourceOAuth(
-    @Body completeSourceOauthRequest: CompleteSourceOauthRequest?,
+    @Body completeSourceOauthRequest: CompleteSourceOauthRequest,
   ): CompleteOAuthResponse? =
     execute {
       oAuthHandler.completeSourceOAuthHandleReturnSecret(

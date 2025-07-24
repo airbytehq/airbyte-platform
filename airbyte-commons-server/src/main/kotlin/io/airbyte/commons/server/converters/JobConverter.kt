@@ -82,7 +82,7 @@ class JobConverter(
 
   fun getJobInfoLightRead(job: Job): JobInfoLightRead = JobInfoLightRead().job(getJobRead(job))
 
-  fun getJobOptionalRead(job: Optional<Job?>): JobOptionalRead {
+  fun getJobOptionalRead(job: Optional<Job>): JobOptionalRead {
     if (job.isEmpty) {
       return JobOptionalRead()
     }
@@ -239,9 +239,9 @@ class JobConverter(
      */
     private fun extractResetConfigIfReset(job: Job): Optional<ResetConfig> {
       if (job.configType == ConfigType.RESET_CONNECTION) {
-        val resetSourceConfiguration =
-          job.config.resetConnection.resetSourceConfiguration
-            ?: return Optional.empty()
+        if (job.config.resetConnection.resetSourceConfiguration == null) {
+          return Optional.empty()
+        }
         return Optional.ofNullable(
           ResetConfig().streamsToReset(
             job.config.resetConnection.resetSourceConfiguration.streamsToReset

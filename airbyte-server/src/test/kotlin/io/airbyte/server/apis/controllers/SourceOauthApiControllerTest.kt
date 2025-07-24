@@ -9,32 +9,40 @@ import io.airbyte.api.model.generated.OAuthConsentRead
 import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody
 import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.commons.server.handlers.OAuthHandler
-import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.airbyte.server.statusException
+import io.micronaut.context.ApplicationContext
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
-import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.inject.Inject
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @MicronautTest
 internal class SourceOauthApiControllerTest {
   @Inject
+  lateinit var context: ApplicationContext
+
   lateinit var oAuthHandler: OAuthHandler
 
   @Inject
   @Client("/")
   lateinit var client: HttpClient
 
-  @MockBean(OAuthHandler::class)
-  fun oAuthHandler(): OAuthHandler = mockk()
+  @BeforeAll
+  fun setupMock() {
+    oAuthHandler = mockk()
+    context.registerSingleton(OAuthHandler::class.java, oAuthHandler)
+  }
 
   @Test
   fun testCompleteSourceOAuth() {

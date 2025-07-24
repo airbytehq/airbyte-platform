@@ -6,47 +6,34 @@ package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.model.generated.DeploymentMetadataRead
 import io.airbyte.commons.server.handlers.DeploymentMetadataHandler
-import io.airbyte.config.Configs
-import io.airbyte.server.assertStatus
-import io.airbyte.server.status
-import io.micronaut.context.annotation.Requires
-import io.micronaut.context.env.Environment
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.HttpClient
-import io.micronaut.http.client.annotation.Client
-import io.micronaut.test.annotation.MockBean
-import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
-import jakarta.inject.Inject
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
-@MicronautTest
-@Requires(env = [Environment.TEST])
-internal class DeploymentMetadataApiControllerTest {
-  @Inject
-  lateinit var deploymentMetadataHandler: DeploymentMetadataHandler
+class DeploymentMetadataApiControllerTest {
+  private lateinit var deploymentMetadataHandler: DeploymentMetadataHandler
+  private lateinit var controller: DeploymentMetadataApiController
 
-  @Inject
-  @Client("/")
-  lateinit var client: HttpClient
-
-  @MockBean(DeploymentMetadataHandler::class)
-  fun deploymentMetadataHandler(): DeploymentMetadataHandler = mockk()
+  @BeforeEach
+  fun setup() {
+    deploymentMetadataHandler = mockk()
+    controller = DeploymentMetadataApiController(deploymentMetadataHandler)
+  }
 
   @Test
   fun testFetchDeploymentMetadata() {
-    val deploymentMetadataRead =
+    val expected =
       DeploymentMetadataRead()
         .id(UUID.randomUUID())
-        .mode(Configs.AirbyteEdition.COMMUNITY.name)
+        .mode("COMMUNITY")
         .version("0.2.3")
 
-    every { deploymentMetadataHandler.deploymentMetadata } returns deploymentMetadataRead
+    every { deploymentMetadataHandler.getDeploymentMetadata() } returns expected
 
-    val path = "/api/v1/deployment/metadata"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST<Any>(path, null)))
+    val result = controller.getDeploymentMetadata()
+    assertEquals(expected, result)
   }
 }

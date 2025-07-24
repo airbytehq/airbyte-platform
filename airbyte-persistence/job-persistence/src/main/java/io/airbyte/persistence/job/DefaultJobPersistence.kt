@@ -1064,7 +1064,7 @@ class DefaultJobPersistence
       updatedAtEnd: OffsetDateTime?,
       orderByField: String?,
       orderByMethod: String?,
-    ): List<Job?> =
+    ): List<Job> =
       getJobsFromResultLight(
         listJobsQuery(
           configTypes,
@@ -1094,7 +1094,7 @@ class DefaultJobPersistence
       updatedAtEnd: OffsetDateTime?,
       orderByField: String?,
       orderByMethod: String?,
-    ): List<Job?> =
+    ): List<Job> =
       getJobsFromResultLight(
         listJobsQuery(
           configTypes,

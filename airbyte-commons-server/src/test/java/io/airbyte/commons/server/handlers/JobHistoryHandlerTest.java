@@ -68,8 +68,12 @@ import io.airbyte.config.Job;
 import io.airbyte.config.JobCheckConnectionConfig;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
+import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig;
+import io.airbyte.config.RefreshConfig;
+import io.airbyte.config.RefreshStream;
+import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -122,6 +126,17 @@ class JobHistoryHandlerTest {
   private static final JobConfig JOB_CONFIG = new JobConfig()
       .withConfigType(CONFIG_TYPE)
       .withCheckConnection(new JobCheckConnectionConfig())
+      .withResetConnection(new JobResetConnectionConfig().withResetSourceConfiguration(
+          new ResetSourceConfiguration()
+              .withStreamsToReset(List.of(new io.airbyte.config.StreamDescriptor().withName("stream1").withNamespace("ns1")))))
+      .withRefresh(new RefreshConfig()
+          .withStreamsToRefresh(List.of(
+              new RefreshStream().withStreamDescriptor(new io.airbyte.config.StreamDescriptor().withName("stream2"))))
+          .withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog().withStreams(List.of(
+              new ConfiguredAirbyteStream(new AirbyteStream("stream2", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,
+                  DestinationSyncMode.APPEND),
+              new ConfiguredAirbyteStream(new AirbyteStream("stream3", Jsons.emptyObject(), List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,
+                  DestinationSyncMode.APPEND)))))
       .withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(
           new ConfiguredAirbyteCatalog().withStreams(List.of(
               new ConfiguredAirbyteStream(new AirbyteStream("stream1", Jsons.emptyObject(), List.of(SyncMode.FULL_REFRESH)).withNamespace("ns1"),
@@ -747,44 +762,44 @@ class JobHistoryHandlerTest {
           .attempts(List.of(toAttemptRead(testJobAttempt)));
 
       when(jobPersistence.getRunningJobForConnection(connectionId)).thenReturn(List.of(firstJob));
-      try (final MockedStatic<JobConverter> mockedConverter = Mockito.mockStatic(JobConverter.class)) {
-        mockedConverter.when(() -> JobConverter.getJobWithAttemptsRead(firstJob)).thenReturn(firstJobWithAttemptRead);
 
-        final ConnectionSyncProgressRead expected = new ConnectionSyncProgressRead()
-            .jobId(JOB_ID)
-            .connectionId(connectionId)
-            .bytesCommitted(jobAggregatedStats.getBytesCommitted())
-            .recordsCommitted(jobAggregatedStats.getRecordsCommitted())
-            .recordsRejected(jobAggregatedStats.getRecordsRejected())
-            .bytesEmitted(jobAggregatedStats.getBytesEmitted())
-            .recordsEmitted(jobAggregatedStats.getRecordsEmitted())
-            .configType(JobConfigType.SYNC)
-            .syncStartedAt(CREATED_AT)
-            .streams(List.of(
-                new StreamSyncProgressReadItem()
-                    .streamName("stream1")
-                    .streamNamespace("ns1")
-                    .recordsEmitted(5L)
-                    .bytesEmitted(2L)
-                    .recordsCommitted(5L)
-                    .bytesCommitted(2L)
-                    .configType(JobConfigType.SYNC),
-                new StreamSyncProgressReadItem()
-                    .streamName("stream2")
-                    .recordsEmitted(50L)
-                    .bytesEmitted(20L)
-                    .recordsCommitted(45L)
-                    .bytesCommitted(15L)
-                    .recordsRejected(2L)
-                    .configType(JobConfigType.SYNC),
-                new StreamSyncProgressReadItem()
-                    .streamName("stream3")
-                    .configType(JobConfigType.SYNC)));
+      final ConnectionSyncProgressRead expected = new ConnectionSyncProgressRead()
+          .jobId(JOB_ID)
+          .connectionId(connectionId)
+          .bytesCommitted(jobAggregatedStats.getBytesCommitted())
+          .recordsCommitted(jobAggregatedStats.getRecordsCommitted())
+          .recordsRejected(jobAggregatedStats.getRecordsRejected())
+          .bytesEmitted(jobAggregatedStats.getBytesEmitted())
+          .recordsEmitted(jobAggregatedStats.getRecordsEmitted())
+          .configType(JobConfigType.SYNC)
+          .syncStartedAt(CREATED_AT)
+          .streams(List.of(
+              new StreamSyncProgressReadItem()
+                  .streamName("stream1")
+                  .streamNamespace("ns1")
+                  .recordsEmitted(5L)
+                  .bytesEmitted(2L)
+                  .recordsCommitted(5L)
+                  .bytesCommitted(2L)
+                  .configType(JobConfigType.SYNC),
+              new StreamSyncProgressReadItem()
+                  .streamName("stream2")
+                  .recordsEmitted(50L)
+                  .bytesEmitted(20L)
+                  .recordsCommitted(45L)
+                  .bytesCommitted(15L)
+                  .recordsRejected(2L)
+                  .configType(JobConfigType.SYNC),
+              new StreamSyncProgressReadItem()
+                  .streamName("stream3")
+                  .configType(JobConfigType.SYNC)));
 
-        final ConnectionSyncProgressRead actual = jobHistoryHandler.getConnectionSyncProgress(request);
+      final ConnectionSyncProgressRead actual = jobHistoryHandler.getConnectionSyncProgressInternal(
+          request,
+          List.of(firstJob),
+          List.of(firstJobWithAttemptRead));
 
-        assertEquals(expected, actual);
-      }
+      assertEquals(expected, actual);
     }
 
     @Test
@@ -793,7 +808,9 @@ class JobHistoryHandlerTest {
       final UUID connectionId = UUID.randomUUID();
       final ConnectionIdRequestBody request = new ConnectionIdRequestBody().connectionId(connectionId);
 
-      final Job firstJob = new Job(JOB_ID, ConfigType.REFRESH, JOB_CONFIG_ID, JOB_CONFIG, List.of(testJobAttempt), JobStatus.RUNNING,
+      final JobConfig jobConfig = Jsons.clone(JOB_CONFIG).withConfigType(ConfigType.REFRESH);
+
+      final Job firstJob = new Job(JOB_ID, ConfigType.REFRESH, JOB_CONFIG_ID, jobConfig, List.of(testJobAttempt), JobStatus.RUNNING,
           CREATED_AT, CREATED_AT, CREATED_AT, true);
 
       final JobRead jobRead = toJobInfo(firstJob);
@@ -803,12 +820,23 @@ class JobHistoryHandlerTest {
           new StreamDescriptor().name("stream2"))));
 
       jobRead.setStreamAggregatedStats(List.of(
-          new StreamStats().streamName("stream2").recordsEmitted(50L).bytesEmitted(20L).recordsCommitted(45L).bytesCommitted(15L),
-          new StreamStats().streamName("stream1").streamNamespace("ns1").recordsEmitted(5L).bytesEmitted(2L).recordsCommitted(5L)
+          new StreamStats().streamName("stream2")
+              .recordsEmitted(50L)
+              .bytesEmitted(20L)
+              .recordsCommitted(45L)
+              .bytesCommitted(15L),
+          new StreamStats().streamName("stream1").streamNamespace("ns1")
+              .recordsEmitted(5L)
+              .bytesEmitted(2L)
+              .recordsCommitted(5L)
               .bytesCommitted(2L)));
 
       final JobAggregatedStats jobAggregatedStats =
-          new JobAggregatedStats().bytesCommitted(17L).recordsCommitted(50L).bytesEmitted(22L).recordsEmitted(55L);
+          new JobAggregatedStats()
+              .recordsEmitted(55L)
+              .bytesEmitted(22L)
+              .recordsCommitted(50L)
+              .bytesCommitted(17L);
       jobRead.setAggregatedStats(jobAggregatedStats);
 
       final JobWithAttemptsRead firstJobWithAttemptRead = new JobWithAttemptsRead()
@@ -816,34 +844,35 @@ class JobHistoryHandlerTest {
           .attempts(List.of(toAttemptRead(testJobAttempt)));
 
       when(jobPersistence.getRunningJobForConnection(connectionId)).thenReturn(List.of(firstJob));
-      try (final MockedStatic<JobConverter> mockedConverter = Mockito.mockStatic(JobConverter.class)) {
-        mockedConverter.when(() -> JobConverter.getJobWithAttemptsRead(firstJob)).thenReturn(firstJobWithAttemptRead);
 
-        final ConnectionSyncProgressRead expected = new ConnectionSyncProgressRead()
-            .jobId(JOB_ID)
-            .connectionId(connectionId)
-            .bytesCommitted(jobAggregatedStats.getBytesCommitted())
-            .recordsCommitted(jobAggregatedStats.getRecordsCommitted())
-            .bytesEmitted(jobAggregatedStats.getBytesEmitted())
-            .recordsEmitted(jobAggregatedStats.getRecordsEmitted())
-            .configType(JobConfigType.REFRESH)
-            .syncStartedAt(CREATED_AT)
-            .streams(List.of(
-                new StreamSyncProgressReadItem()
-                    .streamName("stream3")
-                    .configType(JobConfigType.SYNC),
-                new StreamSyncProgressReadItem()
-                    .streamName("stream2")
-                    .recordsEmitted(50L)
-                    .bytesEmitted(20L)
-                    .recordsCommitted(45L)
-                    .bytesCommitted(15L)
-                    .configType(JobConfigType.REFRESH)));
+      final ConnectionSyncProgressRead expected = new ConnectionSyncProgressRead()
+          .jobId(JOB_ID)
+          .connectionId(connectionId)
+          .bytesCommitted(jobAggregatedStats.getBytesCommitted())
+          .recordsCommitted(jobAggregatedStats.getRecordsCommitted())
+          .bytesEmitted(jobAggregatedStats.getBytesEmitted())
+          .recordsEmitted(jobAggregatedStats.getRecordsEmitted())
+          .configType(JobConfigType.REFRESH)
+          .syncStartedAt(CREATED_AT)
+          .streams(List.of(
+              new StreamSyncProgressReadItem()
+                  .streamName("stream3")
+                  .configType(JobConfigType.SYNC),
+              new StreamSyncProgressReadItem()
+                  .streamName("stream2")
+                  .recordsEmitted(50L)
+                  .bytesEmitted(20L)
+                  .recordsCommitted(45L)
+                  .bytesCommitted(15L)
+                  .configType(JobConfigType.REFRESH)));
 
-        final ConnectionSyncProgressRead actual = jobHistoryHandler.getConnectionSyncProgress(request);
+      // test an internal version of the method to avoid having to mock JobConverter.
+      final ConnectionSyncProgressRead actual = jobHistoryHandler.getConnectionSyncProgressInternal(
+          request,
+          List.of(firstJob),
+          List.of(firstJobWithAttemptRead));
 
-        assertEquals(expected.getStreams(), actual.getStreams());
-      }
+      assertEquals(expected.getStreams(), actual.getStreams());
     }
 
     @Test

@@ -34,7 +34,7 @@ class StreamResetPersistence(
    * @throws IOException if there is an issue while interacting with the db.
    */
   @Throws(IOException::class)
-  fun getStreamResets(connectionId: UUID?): List<StreamDescriptor?> =
+  fun getStreamResets(connectionId: UUID?): List<StreamDescriptor> =
     database
       .query { ctx: DSLContext ->
         ctx

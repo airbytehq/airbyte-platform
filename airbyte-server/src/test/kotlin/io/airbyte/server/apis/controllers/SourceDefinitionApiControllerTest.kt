@@ -4,58 +4,52 @@
 
 package io.airbyte.server.apis.controllers
 
+import io.airbyte.api.model.generated.ActorDefinitionIdWithScope
+import io.airbyte.api.model.generated.CustomSourceDefinitionCreate
 import io.airbyte.api.model.generated.PrivateSourceDefinitionRead
 import io.airbyte.api.model.generated.PrivateSourceDefinitionReadList
 import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody
-import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId
 import io.airbyte.api.model.generated.SourceDefinitionRead
 import io.airbyte.api.model.generated.SourceDefinitionReadList
 import io.airbyte.api.model.generated.SourceDefinitionUpdate
-import io.airbyte.api.model.generated.SourceIdRequestBody
+import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException
+import io.airbyte.commons.server.errors.IdNotFoundKnownException
+import io.airbyte.commons.server.handlers.EnterpriseSourceStubsHandler
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator
-import io.airbyte.data.ConfigNotFoundException
-import io.airbyte.server.assertStatus
-import io.airbyte.server.status
-import io.airbyte.server.statusException
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.HttpClient
-import io.micronaut.http.client.annotation.Client
-import io.micronaut.test.annotation.MockBean
-import io.micronaut.test.extensions.junit5.annotation.MicronautTest
+import io.airbyte.config.persistence.ConfigNotFoundException
 import io.mockk.every
 import io.mockk.mockk
-import jakarta.inject.Inject
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
-@MicronautTest(rebuildContext = true)
 internal class SourceDefinitionApiControllerTest {
-  @Inject
-  lateinit var sourceDefinitionsHandler: SourceDefinitionsHandler
+  private lateinit var controller: SourceDefinitionApiController
+  private val sourceDefinitionsHandler: SourceDefinitionsHandler = mockk()
+  private val enterpriseSourceStubsHandler: EnterpriseSourceStubsHandler = mockk()
+  private val actorDefinitionAccessValidator: ActorDefinitionAccessValidator = mockk()
 
-  @Inject
-  lateinit var actorDefinitionAccessValidator: ActorDefinitionAccessValidator
-
-  @Inject
-  @Client("/")
-  lateinit var client: HttpClient
-
-  @MockBean(SourceDefinitionsHandler::class)
-  fun sourceDefinitionsHandler(): SourceDefinitionsHandler = mockk()
-
-  @MockBean(ActorDefinitionAccessValidator::class)
-  fun actorDefinitionAccessValidator(): ActorDefinitionAccessValidator = mockk()
+  @BeforeEach
+  fun setUp() {
+    controller =
+      SourceDefinitionApiController(
+        sourceDefinitionsHandler,
+        enterpriseSourceStubsHandler,
+        actorDefinitionAccessValidator,
+      )
+  }
 
   @Test
   fun testCreateCustomSourceDefinition() {
     every { sourceDefinitionsHandler.createCustomSourceDefinition(any()) } returns SourceDefinitionRead()
 
-    val path = "/api/v1/source_definitions/create_custom"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
+    val request = CustomSourceDefinitionCreate()
+    val result = controller.createCustomSourceDefinition(request)
+    Assertions.assertNotNull(result)
   }
 
   @Test
@@ -63,12 +57,12 @@ internal class SourceDefinitionApiControllerTest {
     every { actorDefinitionAccessValidator.validateWriteAccess(any()) } returns Unit
     every { sourceDefinitionsHandler.deleteSourceDefinition(any()) } returns Unit andThenThrows ConfigNotFoundException("", "")
 
-    val path = "/api/v1/source_definitions/delete"
-    assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, SourceDefinitionIdRequestBody().sourceDefinitionId(UUID.randomUUID()))))
-    assertStatus(
-      HttpStatus.NOT_FOUND,
-      client.statusException(HttpRequest.POST(path, SourceDefinitionIdRequestBody().sourceDefinitionId(UUID.randomUUID()))),
-    )
+    val request = SourceDefinitionIdRequestBody().sourceDefinitionId(UUID.randomUUID())
+    controller.deleteSourceDefinition(request)
+
+    Assertions.assertThrows(IdNotFoundKnownException::class.java) {
+      controller.deleteSourceDefinition(request)
+    }
   }
 
   @Test
@@ -76,31 +70,37 @@ internal class SourceDefinitionApiControllerTest {
     val sourceDefinitionId = UUID.randomUUID()
     every { actorDefinitionAccessValidator.validateWriteAccess(sourceDefinitionId) } throws ApplicationErrorKnownException("invalid")
 
-    val path = "/api/v1/source_definitions/delete"
-    assertStatus(
-      HttpStatus.UNPROCESSABLE_ENTITY,
-      client.statusException(HttpRequest.POST(path, SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId))),
-    )
+    val request = SourceDefinitionIdRequestBody().sourceDefinitionId(sourceDefinitionId)
+    Assertions.assertThrows(ApplicationErrorKnownException::class.java) {
+      controller.deleteSourceDefinition(request)
+    }
   }
 
   @Test
   fun testGetSourceDefinition() {
-    every { actorDefinitionAccessValidator.validateWriteAccess(any()) } returns Unit
     every { sourceDefinitionsHandler.getSourceDefinition(any(), any()) } returns SourceDefinitionRead() andThenThrows ConfigNotFoundException("", "")
 
-    val path = "/api/v1/source_definitions/get"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceDefinitionIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceDefinitionIdRequestBody())))
+    val request = SourceDefinitionIdRequestBody().sourceDefinitionId(UUID.randomUUID())
+    val result = controller.getSourceDefinition(request)
+    Assertions.assertNotNull(result)
+
+    Assertions.assertThrows(IdNotFoundKnownException::class.java) {
+      controller.getSourceDefinition(request)
+    }
   }
 
   @Test
-  fun testGetSourceDefinitionForWorkspace() {
-    every { sourceDefinitionsHandler.getSourceDefinitionForWorkspace(any()) } returns SourceDefinitionRead() andThenThrows
+  fun testGetSourceDefinitionForScope() {
+    every { sourceDefinitionsHandler.getSourceDefinitionForScope(any()) } returns SourceDefinitionRead() andThenThrows
       ConfigNotFoundException("", "")
 
-    val path = "/api/v1/source_definitions/get_for_workspace"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceDefinitionIdWithWorkspaceId())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceDefinitionIdWithWorkspaceId())))
+    val request = ActorDefinitionIdWithScope()
+    val result = controller.getSourceDefinitionForScope(request)
+    Assertions.assertNotNull(result)
+
+    Assertions.assertThrows(IdNotFoundKnownException::class.java) {
+      controller.getSourceDefinitionForScope(request)
+    }
   }
 
   @Test
@@ -108,50 +108,55 @@ internal class SourceDefinitionApiControllerTest {
     every { sourceDefinitionsHandler.grantSourceDefinitionToWorkspaceOrOrganization(any()) } returns PrivateSourceDefinitionRead() andThenThrows
       ConfigNotFoundException("", "")
 
-    val path = "/api/v1/source_definitions/grant_definition"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceDefinitionIdWithWorkspaceId())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceDefinitionIdWithWorkspaceId())))
+    val request = ActorDefinitionIdWithScope()
+    val result = controller.grantSourceDefinition(request)
+    Assertions.assertNotNull(result)
+
+    Assertions.assertThrows(IdNotFoundKnownException::class.java) {
+      controller.grantSourceDefinition(request)
+    }
   }
 
   @Test
   fun testListLatestSourceDefinitions() {
-    every { actorDefinitionAccessValidator.validateWriteAccess(any()) } returns Unit
     every { sourceDefinitionsHandler.listLatestSourceDefinitions() } returns SourceDefinitionReadList()
 
-    val path = "/api/v1/source_definitions/list_latest"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceDefinitionIdWithWorkspaceId())))
+    val result = controller.listLatestSourceDefinitions()
+    Assertions.assertNotNull(result)
   }
 
   @Test
   fun testListPrivateSourceDefinitions() {
     every { sourceDefinitionsHandler.listPrivateSourceDefinitions(any()) } returns PrivateSourceDefinitionReadList()
 
-    val path = "/api/v1/source_definitions/list_private"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, WorkspaceIdRequestBody())))
+    val request = WorkspaceIdRequestBody()
+    val result = controller.listPrivateSourceDefinitions(request)
+    Assertions.assertNotNull(result)
   }
 
   @Test
   fun testListSourceDefinitions() {
     every { sourceDefinitionsHandler.listSourceDefinitions() } returns SourceDefinitionReadList()
 
-    val path = "/api/v1/source_definitions/list"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, "")))
+    val result = controller.listSourceDefinitions()
+    Assertions.assertNotNull(result)
   }
 
   @Test
   fun testListSourceDefinitionsForWorkspace() {
     every { sourceDefinitionsHandler.listSourceDefinitionsForWorkspace(any()) } returns SourceDefinitionReadList()
 
-    val path = "/api/v1/source_definitions/list_for_workspace"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, WorkspaceIdRequestBody())))
+    val request = WorkspaceIdActorDefinitionRequestBody()
+    val result = controller.listSourceDefinitionsForWorkspace(request)
+    Assertions.assertNotNull(result)
   }
 
   @Test
   fun testRevokeSourceDefinition() {
     every { sourceDefinitionsHandler.revokeSourceDefinition(any()) } returns Unit
 
-    val path = "/api/v1/source_definitions/revoke_definition"
-    assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, SourceDefinitionIdWithWorkspaceId())))
+    val request = ActorDefinitionIdWithScope()
+    controller.revokeSourceDefinition(request)
   }
 
   @Test
@@ -159,9 +164,13 @@ internal class SourceDefinitionApiControllerTest {
     every { actorDefinitionAccessValidator.validateWriteAccess(any()) } returns Unit
     every { sourceDefinitionsHandler.updateSourceDefinition(any()) } returns SourceDefinitionRead() andThenThrows ConfigNotFoundException("", "")
 
-    val path = "/api/v1/source_definitions/update"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceDefinitionUpdate().sourceDefinitionId(UUID.randomUUID()))))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceDefinitionUpdate().sourceDefinitionId(UUID.randomUUID()))))
+    val request = SourceDefinitionUpdate().sourceDefinitionId(UUID.randomUUID())
+    val result = controller.updateSourceDefinition(request)
+    Assertions.assertNotNull(result)
+
+    Assertions.assertThrows(IdNotFoundKnownException::class.java) {
+      controller.updateSourceDefinition(request)
+    }
   }
 
   @Test
@@ -169,10 +178,9 @@ internal class SourceDefinitionApiControllerTest {
     val sourceDefinitionId = UUID.randomUUID()
     every { actorDefinitionAccessValidator.validateWriteAccess(sourceDefinitionId) } throws ApplicationErrorKnownException("invalid")
 
-    val path = "/api/v1/source_definitions/update"
-    assertStatus(
-      HttpStatus.UNPROCESSABLE_ENTITY,
-      client.statusException(HttpRequest.POST(path, SourceDefinitionUpdate().sourceDefinitionId(sourceDefinitionId))),
-    )
+    val request = SourceDefinitionUpdate().sourceDefinitionId(sourceDefinitionId)
+    Assertions.assertThrows(ApplicationErrorKnownException::class.java) {
+      controller.updateSourceDefinition(request)
+    }
   }
 }

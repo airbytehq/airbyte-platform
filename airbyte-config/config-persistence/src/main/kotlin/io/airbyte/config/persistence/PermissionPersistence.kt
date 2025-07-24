@@ -160,7 +160,7 @@ class PermissionPersistence(
    * List all organization-level permissions for an organization.
    */
   @Throws(IOException::class)
-  fun listPermissionsForOrganization(organizationId: UUID): List<UserPermission?> =
+  fun listPermissionsForOrganization(organizationId: UUID): List<UserPermission> =
     database.query { ctx: DSLContext ->
       listPermissionsForOrganization(
         ctx,

@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -369,7 +370,7 @@ class WebBackendConnectionsHandlerTest {
 
     when(licenseEntitlementChecker.checkEntitlement(any(), any(), any())).thenReturn(true);
 
-    final ConnectorSpecification mockSpec = mock(ConnectorSpecification.class);
+    final ConnectorSpecification mockSpec = new ConnectorSpecification().withConnectionSpecification(Jsons.emptyObject());
     final ActorDefinitionVersion mockADV = new ActorDefinitionVersion().withSpec(mockSpec);
     final ActorDefinitionVersionWithOverrideStatus mockADVWithOverrideStatus = new ActorDefinitionVersionWithOverrideStatus(mockADV, false);
     when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(any(), any(), any())).thenReturn(mockADVWithOverrideStatus);
@@ -565,6 +566,8 @@ class WebBackendConnectionsHandlerTest {
     final WebBackendConnectionListRequestBody webBackendConnectionListRequestBody = new WebBackendConnectionListRequestBody();
     webBackendConnectionListRequestBody.setWorkspaceId(sourceRead.getWorkspaceId());
 
+    when(connectionService.buildCursorPagination(any(), any(), any(), any(), any(), any()))
+        .thenReturn(new io.airbyte.data.services.shared.WorkspaceResourceCursorPagination(null, 10));
     final WebBackendConnectionReadList WebBackendConnectionReadList =
         wbHandler.webBackendListConnectionsForWorkspace(webBackendConnectionListRequestBody);
 
@@ -980,7 +983,7 @@ class WebBackendConnectionsHandlerTest {
 
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(
         new ConnectionRead().connectionId(expected.getConnectionId()).sourceId(expected.getSourceId()));
-    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(
+    when(connectionsHandler.updateConnection(any(), any(), anyBoolean())).thenReturn(
         new ConnectionRead()
             .connectionId(expected.getConnectionId())
             .sourceId(expected.getSourceId())
@@ -1043,7 +1046,7 @@ class WebBackendConnectionsHandlerTest {
             .sourceId(expected.getSourceId())
             .operationIds(connectionRead.getOperationIds())
             .breakingChange(false));
-    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(
+    when(connectionsHandler.updateConnection(any(), any(), anyBoolean())).thenReturn(
         new ConnectionRead()
             .connectionId(expected.getConnectionId())
             .sourceId(expected.getSourceId())
@@ -1118,7 +1121,7 @@ class WebBackendConnectionsHandlerTest {
         .status(expected.getStatus())
         .schedule(expected.getSchedule())
         .breakingChange(false);
-    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(connectionRead);
+    when(connectionsHandler.updateConnection(any(), any(), anyBoolean())).thenReturn(connectionRead);
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(connectionRead);
 
     final ManualOperationResult successfulResult = new ManualOperationResult(null, null, null);
@@ -1137,7 +1140,7 @@ class WebBackendConnectionsHandlerTest {
     final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(result.getConnectionId());
     verify(schedulerHandler, times(0)).resetConnection(connectionId);
     verify(schedulerHandler, times(0)).syncConnection(connectionId);
-    verify(connectionsHandler, times(1)).updateConnection(any(), any(), any());
+    verify(connectionsHandler, times(1)).updateConnection(any(), any(), anyBoolean());
     final InOrder orderVerifier = inOrder(eventRunner);
     if (useRefresh) {
       orderVerifier.verify(eventRunner, times(1)).refreshConnectionAsync(connectionId.getConnectionId(),
@@ -1191,7 +1194,7 @@ class WebBackendConnectionsHandlerTest {
         .syncCatalog(expectedWithNewSchema.getSyncCatalog())
         .status(expected.getStatus())
         .schedule(expected.getSchedule()).breakingChange(false);
-    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(connectionRead);
+    when(connectionsHandler.updateConnection(any(), any(), anyBoolean())).thenReturn(connectionRead);
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(connectionRead);
 
     final WebBackendConnectionRead result = wbHandler.webBackendUpdateConnection(updateBody);
@@ -1205,7 +1208,7 @@ class WebBackendConnectionsHandlerTest {
     verify(connectionsHandler).getConfigurationDiff(expected.getSyncCatalog(), expectedWithNewSchema.getSyncCatalog());
     verify(schedulerHandler, times(0)).resetConnection(connectionId);
     verify(schedulerHandler, times(0)).syncConnection(connectionId);
-    verify(connectionsHandler, times(1)).updateConnection(any(), any(), any());
+    verify(connectionsHandler, times(1)).updateConnection(any(), any(), anyBoolean());
     final InOrder orderVerifier = inOrder(eventRunner);
     orderVerifier.verify(eventRunner, times(0)).resetConnection(eq(connectionId.getConnectionId()), any());
     orderVerifier.verify(eventRunner, times(0)).startNewManualSync(connectionId.getConnectionId());
@@ -1241,7 +1244,7 @@ class WebBackendConnectionsHandlerTest {
         .status(expected.getStatus())
         .schedule(expected.getSchedule())
         .breakingChange(false);
-    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(connectionRead);
+    when(connectionsHandler.updateConnection(any(), any(), anyBoolean())).thenReturn(connectionRead);
 
     final WebBackendConnectionRead result = wbHandler.webBackendUpdateConnection(updateBody);
 
@@ -1251,7 +1254,7 @@ class WebBackendConnectionsHandlerTest {
     verify(schedulerHandler, times(0)).resetConnection(connectionId);
     verify(schedulerHandler, times(0)).syncConnection(connectionId);
     verify(connectionsHandler, times(0)).getDiff(any(), any(), any(), any());
-    verify(connectionsHandler, times(1)).updateConnection(any(), any(), any());
+    verify(connectionsHandler, times(1)).updateConnection(any(), any(), anyBoolean());
     verify(eventRunner, times(0)).resetConnection(any(), any());
   }
 
@@ -1273,7 +1276,11 @@ class WebBackendConnectionsHandlerTest {
 
     // existing connection has a breaking change
     when(connectionsHandler.getConnection(expected.getConnectionId())).thenReturn(
-        new ConnectionRead().connectionId(expected.getConnectionId()).breakingChange(true).sourceId(sourceId));
+        new ConnectionRead()
+            .connectionId(expected.getConnectionId())
+            .breakingChange(true)
+            .syncCatalog(expectedWithNewSchema.getSyncCatalog())
+            .sourceId(sourceId));
 
     final CatalogDiff catalogDiff = new CatalogDiff().transforms(List.of());
 
@@ -1300,15 +1307,14 @@ class WebBackendConnectionsHandlerTest {
         .schedule(expected.getSchedule())
         .breakingChange(false);
 
-    when(connectionsHandler.updateConnection(any(), any(), any())).thenReturn(connectionRead);
-
+    when(connectionsHandler.updateConnection(any(), any(), anyBoolean())).thenReturn(connectionRead);
     final WebBackendConnectionRead result = wbHandler.webBackendUpdateConnection(updateBody);
 
     assertEquals(expectedWithNewSchema.getSyncCatalog(), result.getSyncCatalog());
 
     final ConnectionIdRequestBody connectionId = new ConnectionIdRequestBody().connectionId(result.getConnectionId());
     final ArgumentCaptor<ConnectionUpdate> expectedArgumentCaptor = ArgumentCaptor.forClass(ConnectionUpdate.class);
-    verify(connectionsHandler, times(1)).updateConnection(expectedArgumentCaptor.capture(), any(), any());
+    verify(connectionsHandler, times(1)).updateConnection(expectedArgumentCaptor.capture(), any(), anyBoolean());
     final List<ConnectionUpdate> connectionUpdateValues = expectedArgumentCaptor.getAllValues();
     // Expect the ConnectionUpdate object to have breakingChange: false
     assertEquals(false, connectionUpdateValues.get(0).getBreakingChange());
@@ -1316,7 +1322,7 @@ class WebBackendConnectionsHandlerTest {
     verify(schedulerHandler, times(0)).resetConnection(connectionId);
     verify(schedulerHandler, times(0)).syncConnection(connectionId);
     verify(connectionsHandler, times(2)).getDiff(any(), any(), any(), any());
-    verify(connectionsHandler, times(1)).updateConnection(any(), any(), any());
+    verify(connectionsHandler, times(1)).updateConnection(any(), any(), anyBoolean());
   }
 
   @Test

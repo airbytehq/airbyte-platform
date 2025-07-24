@@ -139,8 +139,9 @@ class ConnectorDefinitionSpecificationHandlerTest {
   @Test
   void testGetSourceSpecWithoutDocs()
       throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
+    final UUID workspaceId = UUID.randomUUID();
     final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId =
-        new SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
+        new SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(UUID.randomUUID()).workspaceId(workspaceId);
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withName(NAME)
@@ -152,6 +153,7 @@ class ConnectorDefinitionSpecificationHandlerTest {
             .withDockerRepository(SOURCE_DOCKER_REPO)
             .withDockerImageTag(SOURCE_DOCKER_TAG)
             .withSpec(CONNECTOR_SPECIFICATION_WITHOUT_DOCS_URL));
+    when(workspaceHelper.getOrganizationForWorkspace(workspaceId)).thenReturn(UUID.randomUUID());
 
     final SourceDefinitionSpecificationRead response =
         connectorDefinitionSpecificationHandler.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId);
@@ -229,8 +231,9 @@ class ConnectorDefinitionSpecificationHandlerTest {
   @Test
   void testGetSourceSpec()
       throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
+    final UUID workspaceId = UUID.randomUUID();
     final SourceDefinitionIdWithWorkspaceId sourceDefinitionIdWithWorkspaceId =
-        new SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
+        new SourceDefinitionIdWithWorkspaceId().sourceDefinitionId(UUID.randomUUID()).workspaceId(workspaceId);
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withName(NAME)
@@ -241,6 +244,7 @@ class ConnectorDefinitionSpecificationHandlerTest {
         .thenReturn(new ActorDefinitionVersion()
             .withDockerImageTag(SOURCE_DOCKER_TAG)
             .withSpec(CONNECTOR_SPECIFICATION));
+    when(workspaceHelper.getOrganizationForWorkspace(workspaceId)).thenReturn(UUID.randomUUID());
 
     final SourceDefinitionSpecificationRead response =
         connectorDefinitionSpecificationHandler.getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId);
@@ -254,8 +258,9 @@ class ConnectorDefinitionSpecificationHandlerTest {
   @ParameterizedTest
   void testDestinationSyncModeEnrichment(final boolean supportsRefreshes)
       throws JsonValidationException, IOException, ConfigNotFoundException {
+    final UUID workspaceId = UUID.randomUUID();
     final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId =
-        new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
+        new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(workspaceId);
 
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withName(NAME)
@@ -274,6 +279,7 @@ class ConnectorDefinitionSpecificationHandlerTest {
                         io.airbyte.protocol.models.v0.DestinationSyncMode.APPEND_DEDUP, io.airbyte.protocol.models.v0.DestinationSyncMode.OVERWRITE,
                         io.airbyte.protocol.models.v0.DestinationSyncMode.UPDATE, io.airbyte.protocol.models.v0.DestinationSyncMode.SOFT_DELETE)))
                 .withSupportsRefreshes(supportsRefreshes));
+    when(workspaceHelper.getOrganizationForWorkspace(workspaceId)).thenReturn(UUID.randomUUID());
 
     final DestinationDefinitionSpecificationRead response =
         connectorDefinitionSpecificationHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId);
@@ -296,8 +302,9 @@ class ConnectorDefinitionSpecificationHandlerTest {
   @ParameterizedTest
   void testDestinationSyncModeEnrichmentWithoutOverwrite(final boolean supportsRefreshes)
       throws JsonValidationException, IOException, ConfigNotFoundException {
+    final UUID workspaceId = UUID.randomUUID();
     final DestinationDefinitionIdWithWorkspaceId destinationDefinitionIdWithWorkspaceId =
-        new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID());
+        new DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(workspaceId);
 
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withName(NAME)
@@ -316,6 +323,7 @@ class ConnectorDefinitionSpecificationHandlerTest {
                         List.of(io.airbyte.protocol.models.v0.DestinationSyncMode.APPEND,
                             io.airbyte.protocol.models.v0.DestinationSyncMode.APPEND_DEDUP)))
                 .withSupportsRefreshes(supportsRefreshes));
+    when(workspaceHelper.getOrganizationForWorkspace(workspaceId)).thenReturn(UUID.randomUUID());
 
     final DestinationDefinitionSpecificationRead response =
         connectorDefinitionSpecificationHandler.getDestinationSpecification(destinationDefinitionIdWithWorkspaceId);

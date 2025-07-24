@@ -191,7 +191,6 @@ import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.DestinationService;
-import io.airbyte.data.services.PartialUserConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.StreamStatusesService;
 import io.airbyte.data.services.WorkspaceService;
@@ -339,7 +338,6 @@ class ConnectionsHandlerTest {
   private SecretStorageService secretStorageService;
   private SecretReferenceService secretReferenceService;
   private CurrentUserService currentUserService;
-  private PartialUserConfigService partialUserConfigService;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -464,6 +462,49 @@ class ConnectionsHandlerTest {
     secretReferenceService = mock(SecretReferenceService.class);
     currentUserService = mock(CurrentUserService.class);
 
+    job = mock(Job.class);
+    streamGenerationRepository = mock(StreamGenerationRepository.class);
+    catalogGenerationSetter = mock(CatalogGenerationSetter.class);
+    catalogValidator = mock(CatalogValidator.class);
+    notificationHelper = mock(NotificationHelper.class);
+    destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
+    connectionSchedulerHelper =
+        new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, entitlementService, workspaceHelper);
+
+    connectionsHandler = new ConnectionsHandler(
+        streamRefreshesHandler,
+        jobPersistence,
+        catalogService,
+        uuidGenerator,
+        workspaceHelper,
+        trackingClient,
+        eventRunner,
+        connectionHelper,
+        featureFlagClient,
+        actorDefinitionVersionHelper,
+        connectorDefinitionSpecificationHandler,
+        streamGenerationRepository,
+        catalogGenerationSetter,
+        catalogValidator,
+        notificationHelper,
+        streamStatusesService,
+        connectionTimelineEventService,
+        connectionTimelineEventHelper,
+        statePersistence,
+        sourceService,
+        destinationService,
+        connectionService,
+        workspaceService,
+        destinationCatalogGenerator,
+        catalogConverter,
+        applySchemaChangeHelper,
+        apiPojoConverters,
+        connectionSchedulerHelper,
+        mapperSecretHelper,
+        metricClient,
+        licenseEntitlementChecker,
+        contextBuilder);
+
     destinationHandler =
         new DestinationHandler(
             jsonSchemaValidator,
@@ -486,6 +527,7 @@ class ConnectionsHandlerTest {
             secretReferenceService,
             currentUserService,
             connectorConfigEntitlementService);
+
     sourceHandler = new SourceHandler(
         catalogService,
         secretsRepositoryReader,
@@ -509,25 +551,18 @@ class ConnectionsHandlerTest {
         secretsRepositoryWriter,
         secretStorageService,
         secretReferenceService,
-        currentUserService, partialUserConfigService);
+        currentUserService,
+        mock());
 
-    connectionSchedulerHelper =
-        new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, entitlementService, workspaceHelper);
     matchSearchHandler =
         new MatchSearchHandler(destinationHandler, sourceHandler, sourceService, destinationService, connectionService, apiPojoConverters);
-    featureFlagClient = mock(TestClient.class);
-    job = mock(Job.class);
-    streamGenerationRepository = mock(StreamGenerationRepository.class);
-    catalogGenerationSetter = mock(CatalogGenerationSetter.class);
-    catalogValidator = mock(CatalogValidator.class);
-    notificationHelper = mock(NotificationHelper.class);
+
     when(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(sourceId)).thenReturn(workspaceId);
     when(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(destinationId)).thenReturn(workspaceId);
     when(workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(operationId)).thenReturn(workspaceId);
     when(workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(otherOperationId)).thenReturn(workspaceId);
     when(workspaceHelper.getOrganizationForWorkspace(workspaceId)).thenReturn(organizationId);
 
-    destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
     when(destinationCatalogGenerator.generateDestinationCatalog(any()))
         .thenReturn(new CatalogGenerationResult(new ConfiguredAirbyteCatalog(), Map.of()));
 
@@ -541,40 +576,6 @@ class ConnectionsHandlerTest {
 
     @BeforeEach
     void setUp() throws JsonValidationException, ConfigNotFoundException, IOException {
-      connectionsHandler = new ConnectionsHandler(
-          streamRefreshesHandler,
-          jobPersistence,
-          catalogService,
-          uuidGenerator,
-          workspaceHelper,
-          trackingClient,
-          eventRunner,
-          connectionHelper,
-          featureFlagClient,
-          actorDefinitionVersionHelper,
-          connectorDefinitionSpecificationHandler,
-          streamGenerationRepository,
-          catalogGenerationSetter,
-          catalogValidator,
-          notificationHelper,
-          streamStatusesService,
-          connectionTimelineEventService,
-          connectionTimelineEventHelper,
-          statePersistence,
-          sourceService,
-          destinationService,
-          connectionService,
-          workspaceService,
-          destinationCatalogGenerator,
-          catalogConverter,
-          applySchemaChangeHelper,
-          apiPojoConverters,
-          connectionSchedulerHelper,
-          mapperSecretHelper,
-          metricClient,
-          licenseEntitlementChecker,
-          contextBuilder);
-
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
           .withName(SOURCE_TEST)
@@ -2536,38 +2537,6 @@ class ConnectionsHandlerTest {
   @Nested
   class ConnectionHistory {
 
-    @BeforeEach
-    void setUp() {
-      connectionsHandler = new ConnectionsHandler(
-          streamRefreshesHandler,
-          jobPersistence,
-          catalogService,
-          uuidGenerator,
-          workspaceHelper,
-          trackingClient,
-          eventRunner,
-          connectionHelper,
-          featureFlagClient,
-          actorDefinitionVersionHelper,
-          connectorDefinitionSpecificationHandler,
-          streamGenerationRepository,
-          catalogGenerationSetter,
-          catalogValidator,
-          notificationHelper,
-          streamStatusesService,
-          connectionTimelineEventService,
-          connectionTimelineEventHelper,
-          statePersistence,
-          sourceService,
-          destinationService,
-          connectionService,
-          workspaceService,
-          destinationCatalogGenerator, catalogConverter, applySchemaChangeHelper,
-          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper,
-          metricClient, licenseEntitlementChecker,
-          contextBuilder);
-    }
-
     private Attempt generateMockAttemptWithStreamStats(final Instant attemptTime, final List<Map<List<String>, Long>> streamsToRecordsSynced) {
       final List<StreamSyncStats> streamSyncStatsList = streamsToRecordsSynced.stream().map(streamToRecordsSynced -> {
         final List<String> streamKey = new ArrayList<>(streamToRecordsSynced.keySet().iterator().next());
@@ -2686,7 +2655,8 @@ class ConnectionsHandlerTest {
         when(jobPersistence.listAttemptsForConnectionAfterTimestamp(eq(connectionId), eq(ConfigType.SYNC), any(Instant.class)))
             .thenReturn(Collections.emptyList());
 
-        final List<ConnectionStreamHistoryReadItem> actual = connectionsHandler.getConnectionStreamHistory(requestBody);
+        final List<ConnectionStreamHistoryReadItem> actual =
+            connectionsHandler.getConnectionStreamHistoryInternal(requestBody, Instant.ofEpochMilli(946684800000L));
 
         final List<ConnectionStreamHistoryReadItem> expected = Collections.emptyList();
 
@@ -2697,7 +2667,7 @@ class ConnectionsHandlerTest {
       @DisplayName("Aggregates data correctly")
       void testStreamHistoryAggregation() throws IOException {
         final UUID connectionId = UUID.randomUUID();
-        final Instant endTime = Instant.now();
+        final Instant endTime = Instant.ofEpochMilli(946684800000L);
         final Instant startTime = endTime.minus(30, ChronoUnit.DAYS);
         final long attempt1Records = 100L;
         final long attempt2Records = 150L;
@@ -2739,7 +2709,7 @@ class ConnectionsHandlerTest {
         final ConnectionStreamHistoryRequestBody requestBody = new ConnectionStreamHistoryRequestBody()
             .connectionId(connectionId)
             .timezone(TIMEZONE_LOS_ANGELES);
-        final List<ConnectionStreamHistoryReadItem> actual = connectionsHandler.getConnectionStreamHistory(requestBody);
+        final List<ConnectionStreamHistoryReadItem> actual = connectionsHandler.getConnectionStreamHistoryInternal(requestBody, endTime);
 
         final List<ConnectionStreamHistoryReadItem> expected = new ArrayList<>();
         // expect the first entry to contain stream 1, day 1, 250 records... next item should be stream 2,
@@ -2778,38 +2748,6 @@ class ConnectionsHandlerTest {
 
   @Nested
   class StreamConfigurationDiff {
-
-    @BeforeEach
-    void setUp() {
-      connectionsHandler = new ConnectionsHandler(
-          streamRefreshesHandler,
-          jobPersistence,
-          catalogService,
-          uuidGenerator,
-          workspaceHelper,
-          trackingClient,
-          eventRunner,
-          connectionHelper,
-          featureFlagClient,
-          actorDefinitionVersionHelper,
-          connectorDefinitionSpecificationHandler,
-          streamGenerationRepository,
-          catalogGenerationSetter,
-          catalogValidator,
-          notificationHelper,
-          streamStatusesService,
-          connectionTimelineEventService,
-          connectionTimelineEventHelper,
-          statePersistence,
-          sourceService,
-          destinationService,
-          connectionService,
-          workspaceService,
-          destinationCatalogGenerator,
-          catalogConverter, applySchemaChangeHelper, apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper,
-          metricClient, licenseEntitlementChecker,
-          contextBuilder);
-    }
 
     @Test
     void testNoDiff() {
@@ -3617,34 +3555,6 @@ class ConnectionsHandlerTest {
       when(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(SOURCE_ID)).thenReturn(WORKSPACE_ID);
       when(workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DESTINATION_ID)).thenReturn(WORKSPACE_ID);
       when(workspaceHelper.getWorkspaceForConnectionId(CONNECTION_ID)).thenReturn(WORKSPACE_ID);
-      connectionsHandler = new ConnectionsHandler(
-          streamRefreshesHandler,
-          jobPersistence,
-          catalogService,
-          uuidGenerator,
-          workspaceHelper,
-          trackingClient,
-          eventRunner,
-          connectionHelper,
-          featureFlagClient,
-          actorDefinitionVersionHelper,
-          connectorDefinitionSpecificationHandler,
-          streamGenerationRepository,
-          catalogGenerationSetter,
-          catalogValidator,
-          notificationHelper,
-          streamStatusesService,
-          connectionTimelineEventService,
-          connectionTimelineEventHelper,
-          statePersistence,
-          sourceService,
-          destinationService,
-          connectionService,
-          workspaceService,
-          destinationCatalogGenerator,
-          catalogConverter, applySchemaChangeHelper,
-          apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper, metricClient, licenseEntitlementChecker,
-          contextBuilder);
     }
 
     @Test
@@ -3955,42 +3865,6 @@ class ConnectionsHandlerTest {
 
   @Nested
   class ConnectionLastJobPerStream {
-
-    @BeforeEach
-    void setUp() {
-      connectionsHandler = new ConnectionsHandler(
-          streamRefreshesHandler,
-          jobPersistence,
-          catalogService,
-          uuidGenerator,
-          workspaceHelper,
-          trackingClient,
-          eventRunner,
-          connectionHelper,
-          featureFlagClient,
-          actorDefinitionVersionHelper,
-          connectorDefinitionSpecificationHandler,
-          streamGenerationRepository,
-          catalogGenerationSetter,
-          catalogValidator,
-          notificationHelper,
-          streamStatusesService,
-          connectionTimelineEventService,
-          connectionTimelineEventHelper,
-          statePersistence,
-          sourceService,
-          destinationService,
-          connectionService,
-          workspaceService,
-          destinationCatalogGenerator,
-          catalogConverter,
-          applySchemaChangeHelper,
-          apiPojoConverters,
-          connectionSchedulerHelper,
-          mapperSecretHelper, metricClient,
-          licenseEntitlementChecker,
-          contextBuilder);
-    }
 
     @Test
     void testGetConnectionLastJobPerStream() throws IOException {

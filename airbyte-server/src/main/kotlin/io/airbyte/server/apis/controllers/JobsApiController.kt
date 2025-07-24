@@ -90,7 +90,7 @@ open class JobsApiController(
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getCheckInput(
-    @Body checkInput: CheckInput?,
+    @Body checkInput: CheckInput,
   ): Any? = execute { jobInputHandler.getCheckJobInput(checkInput) }
 
   @Post("/get_debug_info")
@@ -118,7 +118,7 @@ open class JobsApiController(
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getJobInput(
-    @Body syncInput: SyncInput?,
+    @Body syncInput: SyncInput,
   ): Any? = execute { jobInputHandler.getJobInput(syncInput) }
 
   @Post("/get_light")

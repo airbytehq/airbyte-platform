@@ -35,7 +35,7 @@ open class OperationApiController(
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun checkOperation(
-    @Body operatorConfiguration: OperatorConfiguration?,
+    @Body operatorConfiguration: OperatorConfiguration,
   ): CheckOperationRead? = execute { operationsHandler.checkOperation(operatorConfiguration) }
 
   @Post("/create")

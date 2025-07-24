@@ -53,7 +53,7 @@ object OAuthHelper {
    * @return complete oauth response
    */
   @JvmStatic
-  fun mapToCompleteOAuthResponse(input: Map<String?, Any>): CompleteOAuthResponse {
+  fun mapToCompleteOAuthResponse(input: Map<String, Any>): CompleteOAuthResponse {
     val response = CompleteOAuthResponse()
     response.authPayload = HashMap()
 

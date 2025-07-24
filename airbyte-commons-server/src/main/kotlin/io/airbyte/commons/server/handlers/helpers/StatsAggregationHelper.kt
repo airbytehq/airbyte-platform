@@ -183,7 +183,7 @@ object StatsAggregationHelper {
           .collect(
             Collectors.toMap(
               Function { j: Job -> j.id },
-              Function { job: Job? -> JobHistoryHandler.getStreamsToSyncMode(job) },
+              Function { job: Job -> JobHistoryHandler.getStreamsToSyncMode(job) },
             ),
           )
 

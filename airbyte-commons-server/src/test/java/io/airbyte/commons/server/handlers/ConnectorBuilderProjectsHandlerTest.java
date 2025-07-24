@@ -290,6 +290,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .thenThrow(new IllegalStateException("No declarative manifest image version found in database for major version 0"));
 
     final ConnectorBuilderPublishRequestBody publish = new ConnectorBuilderPublishRequestBody()
+        .name("")
         .builderProjectId(project.getBuilderProjectId())
         .workspaceId(workspaceId)
         .initialDeclarativeManifest(new DeclarativeSourceManifest().spec(A_SPEC).manifest(A_MANIFEST));
@@ -635,7 +636,10 @@ class ConnectorBuilderProjectsHandlerTest {
     when(connectorBuilderService.getConnectorBuilderProject(any(UUID.class), any(boolean.class))).thenReturn(project);
 
     final ConnectorBuilderPublishRequestBody req =
-        anyConnectorBuilderProjectRequest().builderProjectId(A_BUILDER_PROJECT_ID).workspaceId(A_WORKSPACE_ID);
+        anyConnectorBuilderProjectRequest()
+            .builderProjectId(A_BUILDER_PROJECT_ID)
+            .workspaceId(A_WORKSPACE_ID)
+            .initialDeclarativeManifest(anyInitialManifest().spec(Jsons.emptyObject()).manifest(Jsons.emptyObject()));
     final SourceDefinitionIdBody response = connectorBuilderProjectsHandler.publishConnectorBuilderProject(req);
     assertEquals(A_SOURCE_DEFINITION_ID, response.getSourceDefinitionId());
   }
@@ -741,6 +745,7 @@ class ConnectorBuilderProjectsHandlerTest {
   void whenPublishConnectorBuilderProjectThenDraftDeleted() throws ConfigNotFoundException, IOException, JsonValidationException {
     final ConnectorBuilderProject project = generateBuilderProject().withBuilderProjectId(A_BUILDER_PROJECT_ID).withWorkspaceId(A_WORKSPACE_ID);
     when(connectorBuilderService.getConnectorBuilderProject(any(UUID.class), any(boolean.class))).thenReturn(project);
+    when(uuidSupplier.get()).thenReturn(project.getBuilderProjectId());
 
     connectorBuilderProjectsHandler.publishConnectorBuilderProject(anyConnectorBuilderProjectRequest().builderProjectId(A_BUILDER_PROJECT_ID)
         .workspaceId(A_WORKSPACE_ID)
@@ -1001,7 +1006,9 @@ class ConnectorBuilderProjectsHandlerTest {
   }
 
   private static ConnectorBuilderPublishRequestBody anyConnectorBuilderProjectRequest() {
-    return new ConnectorBuilderPublishRequestBody().initialDeclarativeManifest(anyInitialManifest());
+    return new ConnectorBuilderPublishRequestBody()
+        .name("")
+        .initialDeclarativeManifest(anyInitialManifest());
   }
 
   private static DeclarativeSourceManifest anyInitialManifest() {
@@ -1122,7 +1129,10 @@ class ConnectorBuilderProjectsHandlerTest {
     final ConnectorSpecification spec =
         new ConnectorSpecification().withAdvancedAuth(new AdvancedAuth().withOauthConfigSpecification(oAuthConfigSpecification));
     final ConnectorBuilderProject project =
-        new ConnectorBuilderProject().withManifestDraft(Jsons.jsonNode(Map.of("spec", spec))).withTestingValues(testingValuesWithSecretCoordinates);
+        new ConnectorBuilderProject()
+            .withWorkspaceId(workspaceId)
+            .withManifestDraft(Jsons.jsonNode(Map.of("spec", spec)))
+            .withTestingValues(testingValuesWithSecretCoordinates);
     when(connectorBuilderService.getConnectorBuilderProject(projectId, true)).thenReturn(project);
     when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(testingValuesWithSecretCoordinates)).thenReturn(testingValues);
 
@@ -1158,7 +1168,10 @@ class ConnectorBuilderProjectsHandlerTest {
     final ConnectorSpecification spec =
         new ConnectorSpecification().withAdvancedAuth(new AdvancedAuth().withOauthConfigSpecification(oAuthConfigSpecification));
     final ConnectorBuilderProject project =
-        new ConnectorBuilderProject().withManifestDraft(Jsons.jsonNode(Map.of("spec", spec))).withTestingValues(testingValuesWithSecretCoordinates);
+        new ConnectorBuilderProject()
+            .withWorkspaceId(workspaceId)
+            .withManifestDraft(Jsons.jsonNode(Map.of("spec", spec)))
+            .withTestingValues(testingValuesWithSecretCoordinates);
     when(connectorBuilderService.getConnectorBuilderProject(projectId, true)).thenReturn(project);
     when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(testingValuesWithSecretCoordinates)).thenReturn(testingValues);
 

@@ -155,6 +155,8 @@ class DestinationDefinitionsHandlerTest {
         workspaceService,
         licenseEntitlementChecker,
         apiPojoConverters);
+
+    when(uuidSupplier.get()).thenReturn(UUID.randomUUID());
   }
 
   private StandardDestinationDefinition generateDestinationDefinition() {
@@ -282,7 +284,9 @@ class DestinationDefinitionsHandlerTest {
   @DisplayName("listDestinationDefinitionsForWorkspace should return the right list")
   void testListDestinationDefinitionsForWorkspace() throws IOException, URISyntaxException, ConfigNotFoundException, JsonValidationException {
     when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
-    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+    final StandardWorkspace workspace = mock(StandardWorkspace.class);
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
+    when(workspace.getOrganizationId()).thenReturn(UUID.randomUUID());
     when(destinationService.listPublicDestinationDefinitions(false)).thenReturn(List.of(destinationDefinition));
     when(actorDefinitionVersionHelper.getDestinationVersions(List.of(destinationDefinition), workspaceId))
         .thenReturn(Map.of(destinationDefinitionVersion.getActorDefinitionId(), destinationDefinitionVersion));
@@ -322,7 +326,9 @@ class DestinationDefinitionsHandlerTest {
     final StandardDestinationDefinition unentitledDestinationDefinition = generateDestinationDefinition();
 
     when(featureFlagClient.boolVariation(eq(HideActorDefinitionFromList.INSTANCE), any())).thenReturn(false);
-    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+    final StandardWorkspace workspace = mock(StandardWorkspace.class);
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
+    when(workspace.getOrganizationId()).thenReturn(UUID.randomUUID());
 
     when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.DESTINATION_CONNECTOR),
         eq(List.of(destinationDefinition.getDestinationDefinitionId(), unentitledDestinationDefinition.getDestinationDefinitionId()))))
@@ -355,7 +361,9 @@ class DestinationDefinitionsHandlerTest {
         new Multi(List.of(new DestinationDefinition(hiddenDestinationDefinition.getDestinationDefinitionId()), new Workspace(workspaceId)))))
             .thenReturn(true);
 
-    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+    final StandardWorkspace workspace = mock(StandardWorkspace.class);
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
+    when(workspace.getOrganizationId()).thenReturn(UUID.randomUUID());
     when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.DESTINATION_CONNECTOR),
         eq(List.of(destinationDefinition.getDestinationDefinitionId(), hiddenDestinationDefinition.getDestinationDefinitionId()))))
             .thenReturn(Map.of(
@@ -412,7 +420,9 @@ class DestinationDefinitionsHandlerTest {
             Map.of(
                 destinationDefinitionVersion.getActorDefinitionId(), destinationDefinitionVersion,
                 destinationDefinitionVersion2.getActorDefinitionId(), destinationDefinitionVersion2));
-    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(mock(StandardWorkspace.class));
+    final StandardWorkspace workspace = mock(StandardWorkspace.class);
+    when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
+    when(workspace.getOrganizationId()).thenReturn(UUID.randomUUID());
     when(licenseEntitlementChecker.checkEntitlements(any(), eq(Entitlement.DESTINATION_CONNECTOR),
         eq(List.of(destinationDefinition.getDestinationDefinitionId()))))
             .thenReturn(Map.of(destinationDefinition.getDestinationDefinitionId(), true));

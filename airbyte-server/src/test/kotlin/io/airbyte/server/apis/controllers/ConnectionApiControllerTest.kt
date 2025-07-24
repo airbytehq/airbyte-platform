@@ -14,69 +14,59 @@ import io.airbyte.api.model.generated.ConnectionStreamRequestBody
 import io.airbyte.api.model.generated.ConnectionUpdate
 import io.airbyte.api.model.generated.JobInfoRead
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.handlers.ConnectionsHandler
+import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.MatchSearchHandler
 import io.airbyte.commons.server.handlers.OperationsHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
+import io.airbyte.commons.server.handlers.StreamRefreshesHandler
 import io.airbyte.commons.server.services.ConnectionService
-import io.airbyte.data.ConfigNotFoundException
-import io.airbyte.server.assertStatus
-import io.airbyte.server.status
-import io.airbyte.server.statusException
-import io.micronaut.context.env.Environment
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.HttpClient
-import io.micronaut.http.client.annotation.Client
-import io.micronaut.test.annotation.MockBean
-import io.micronaut.test.extensions.junit5.annotation.MicronautTest
+import io.airbyte.config.persistence.ConfigNotFoundException
+import io.airbyte.server.handlers.StreamStatusesHandler
 import io.mockk.every
 import io.mockk.mockk
-import jakarta.inject.Inject
 import jakarta.validation.ConstraintViolationException
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
-@MicronautTest(environments = [Environment.TEST])
 internal class ConnectionApiControllerTest {
-  @Inject
-  lateinit var connectionApiController: ConnectionApiController
+  private lateinit var connectionApiController: ConnectionApiController
+  private lateinit var schedulerHandler: SchedulerHandler
+  private lateinit var connectionsHandler: ConnectionsHandler
+  private lateinit var matchSearchHandler: MatchSearchHandler
+  private lateinit var operationsHandler: OperationsHandler
+  private lateinit var connectionService: ConnectionService
+  private lateinit var streamStatusesHandler: StreamStatusesHandler
+  private lateinit var streamRefreshesHandler: StreamRefreshesHandler
+  private lateinit var jobHistoryHandler: JobHistoryHandler
 
-  @Inject
-  lateinit var schedulerHandler: SchedulerHandler
+  @BeforeEach
+  fun setup() {
+    schedulerHandler = mockk()
+    connectionsHandler = mockk()
+    matchSearchHandler = mockk()
+    operationsHandler = mockk()
+    connectionService = mockk()
+    streamStatusesHandler = mockk()
+    streamRefreshesHandler = mockk()
+    jobHistoryHandler = mockk()
 
-  @Inject
-  lateinit var connectionsHandler: ConnectionsHandler
-
-  @Inject
-  lateinit var matchSearchHandler: MatchSearchHandler
-
-  @Inject
-  lateinit var operationsHandler: OperationsHandler
-
-  @Inject
-  lateinit var connectionService: ConnectionService
-
-  @MockBean(SchedulerHandler::class)
-  fun schedulerHandler(): SchedulerHandler = mockk()
-
-  @MockBean(ConnectionsHandler::class)
-  fun connectionHandler(): ConnectionsHandler = mockk()
-
-  @MockBean(MatchSearchHandler::class)
-  fun matchSearchHandler(): MatchSearchHandler = mockk()
-
-  @MockBean(OperationsHandler::class)
-  fun operationsHandler(): OperationsHandler = mockk()
-
-  @MockBean(ConnectionService::class)
-  fun connectionService(): ConnectionService = mockk()
-
-  @Inject
-  @Client("/")
-  lateinit var client: HttpClient
+    connectionApiController =
+      ConnectionApiController(
+        connectionsHandler,
+        operationsHandler,
+        schedulerHandler,
+        streamStatusesHandler,
+        matchSearchHandler,
+        streamRefreshesHandler,
+        jobHistoryHandler,
+        connectionService,
+      )
+  }
 
   // Disabled because this test somehow causes a failure in the `testConnectionStreamReset` test
   // below with the following error:
@@ -84,12 +74,18 @@ internal class ConnectionApiControllerTest {
   @Disabled
   @Test
   fun testWarnOrDisableConnection() {
+    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(UUID.randomUUID())
+
     every { connectionService.warnOrDisableForConsecutiveFailures(any<UUID>(), any()) } returns true andThenThrows
       ConfigNotFoundException("", "")
 
-    val path = "/api/v1/connections/auto_disable"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ConnectionUpdate())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, ConnectionUpdate())))
+    val result1 = connectionApiController.autoDisableConnection(connectionIdRequestBody)
+    Assertions.assertNotNull(result1)
+    Assertions.assertTrue(result1!!.succeeded)
+
+    Assertions.assertThrows(ConfigNotFoundException::class.java) {
+      connectionApiController.autoDisableConnection(connectionIdRequestBody)
+    }
   }
 
   @Test
@@ -97,9 +93,13 @@ internal class ConnectionApiControllerTest {
     every { connectionsHandler.createConnection(any()) } returns ConnectionRead() andThenThrows
       ConstraintViolationException(setOf())
 
-    val path = "/api/v1/connections/create"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ConnectionCreate())))
-    assertStatus(HttpStatus.BAD_REQUEST, client.statusException(HttpRequest.POST(path, ConnectionCreate())))
+    val connectionCreate = ConnectionCreate()
+    val result = connectionApiController.createConnection(connectionCreate)
+    Assertions.assertNotNull(result)
+
+    Assertions.assertThrows(ConstraintViolationException::class.java) {
+      connectionApiController.createConnection(connectionCreate)
+    }
   }
 
   @Test
@@ -108,10 +108,17 @@ internal class ConnectionApiControllerTest {
       ConstraintViolationException(setOf()) andThenThrows
       ConfigNotFoundException("", "")
 
-    val path = "/api/v1/connections/update"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ConnectionUpdate())))
-    assertStatus(HttpStatus.BAD_REQUEST, client.statusException(HttpRequest.POST(path, ConnectionUpdate())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, ConnectionUpdate())))
+    val connectionUpdate = ConnectionUpdate()
+    val result = connectionApiController.updateConnection(connectionUpdate)
+    Assertions.assertNotNull(result)
+
+    Assertions.assertThrows(ConstraintViolationException::class.java) {
+      connectionApiController.updateConnection(connectionUpdate)
+    }
+
+    Assertions.assertThrows(IdNotFoundKnownException::class.java) {
+      connectionApiController.updateConnection(connectionUpdate)
+    }
   }
 
   @Test
@@ -119,9 +126,13 @@ internal class ConnectionApiControllerTest {
     every { connectionsHandler.listConnectionsForWorkspace(any<WorkspaceIdRequestBody>()) } returns ConnectionReadList() andThenThrows
       ConfigNotFoundException("", "")
 
-    val path = "/api/v1/connections/list"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, WorkspaceIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, WorkspaceIdRequestBody())))
+    val workspaceIdRequestBody = WorkspaceIdRequestBody()
+    val result = connectionApiController.listConnectionsForWorkspace(workspaceIdRequestBody)
+    Assertions.assertNotNull(result)
+
+    Assertions.assertThrows(IdNotFoundKnownException::class.java) {
+      connectionApiController.listConnectionsForWorkspace(workspaceIdRequestBody)
+    }
   }
 
   @Test
@@ -129,9 +140,13 @@ internal class ConnectionApiControllerTest {
     every { connectionsHandler.listAllConnectionsForWorkspace(any<WorkspaceIdRequestBody>()) } returns ConnectionReadList() andThenThrows
       ConfigNotFoundException("", "")
 
-    val path = "/api/v1/connections/list_all"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, WorkspaceIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, WorkspaceIdRequestBody())))
+    val workspaceIdRequestBody = WorkspaceIdRequestBody()
+    val result = connectionApiController.listAllConnectionsForWorkspace(workspaceIdRequestBody)
+    Assertions.assertNotNull(result)
+
+    Assertions.assertThrows(IdNotFoundKnownException::class.java) {
+      connectionApiController.listAllConnectionsForWorkspace(workspaceIdRequestBody)
+    }
   }
 
   @Test
@@ -139,18 +154,26 @@ internal class ConnectionApiControllerTest {
     every { matchSearchHandler.searchConnections(any<ConnectionSearch>()) } returns ConnectionReadList() andThenThrows
       ConfigNotFoundException("", "")
 
-    val path = "/api/v1/connections/search"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ConnectionSearch())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, ConnectionSearch())))
+    val connectionSearch = ConnectionSearch()
+    val result = connectionApiController.searchConnections(connectionSearch)
+    Assertions.assertNotNull(result)
+
+    Assertions.assertThrows(IdNotFoundKnownException::class.java) {
+      connectionApiController.searchConnections(connectionSearch)
+    }
   }
 
   @Test
   fun testGetConnection() {
     every { connectionsHandler.getConnection(any<UUID>()) } returns ConnectionRead() andThenThrows ConfigNotFoundException("", "")
 
-    val path = "/api/v1/connections/get"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ConnectionIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, ConnectionIdRequestBody())))
+    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(UUID.randomUUID())
+    val result = connectionApiController.getConnection(connectionIdRequestBody)
+    Assertions.assertNotNull(result)
+
+    Assertions.assertThrows(IdNotFoundKnownException::class.java) {
+      connectionApiController.getConnection(connectionIdRequestBody)
+    }
   }
 
   @Test
@@ -158,27 +181,38 @@ internal class ConnectionApiControllerTest {
     every { operationsHandler.deleteOperationsForConnection(any()) } returns Unit
     every { connectionsHandler.deleteConnection(any()) } returns Unit andThenThrows ConfigNotFoundException("", "")
 
-    val path = "/api/v1/connections/delete"
-    assertStatus(HttpStatus.NO_CONTENT, client.status(HttpRequest.POST(path, ConnectionIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, ConnectionIdRequestBody())))
+    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(UUID.randomUUID())
+    connectionApiController.deleteConnection(connectionIdRequestBody)
+
+    Assertions.assertThrows(IdNotFoundKnownException::class.java) {
+      connectionApiController.deleteConnection(connectionIdRequestBody)
+    }
   }
 
   @Test
   fun testSyncConnection() {
     every { schedulerHandler.syncConnection(any()) } returns JobInfoRead() andThenThrows ConfigNotFoundException("", "")
 
-    val path = "/api/v1/connections/sync"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ConnectionUpdate())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, ConnectionUpdate())))
+    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(UUID.randomUUID())
+    val result = connectionApiController.syncConnection(connectionIdRequestBody)
+    Assertions.assertNotNull(result)
+
+    Assertions.assertThrows(IdNotFoundKnownException::class.java) {
+      connectionApiController.syncConnection(connectionIdRequestBody)
+    }
   }
 
   @Test
   fun testResetConnection() {
     every { schedulerHandler.resetConnection(any()) } returns JobInfoRead() andThenThrows ConfigNotFoundException("", "")
 
-    val path = "/api/v1/connections/reset"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, ConnectionIdRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, ConnectionIdRequestBody())))
+    val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(UUID.randomUUID())
+    val result = connectionApiController.resetConnection(connectionIdRequestBody)
+    Assertions.assertNotNull(result)
+
+    Assertions.assertThrows(IdNotFoundKnownException::class.java) {
+      connectionApiController.resetConnection(connectionIdRequestBody)
+    }
   }
 
   @Test

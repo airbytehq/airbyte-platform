@@ -32,7 +32,7 @@ class AnalyticsTrackingBeanFactory {
   @Replaces(named = "deploymentSupplier")
   fun deploymentSupplier(deploymentMetadataHandler: DeploymentMetadataHandler): Supplier<DeploymentMetadataRead> =
     Supplier {
-      val deploymentMetadataRead = deploymentMetadataHandler.deploymentMetadata
+      val deploymentMetadataRead = deploymentMetadataHandler.getDeploymentMetadata()
       DeploymentMetadataRead(
         deploymentMetadataRead.id,
         deploymentMetadataRead.mode,

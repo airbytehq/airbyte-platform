@@ -468,7 +468,7 @@ class WorkspacesHandlerTest {
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
     final WorkspaceIdRequestBody workspaceIdRequestBody = new WorkspaceIdRequestBody().workspaceId(workspace.getWorkspaceId());
 
-    final ConnectionRead connection = new ConnectionRead();
+    final ConnectionRead connection = new ConnectionRead().connectionId(UUID.randomUUID());
     final DestinationRead destination = new DestinationRead();
     final SourceRead source = new SourceRead();
 

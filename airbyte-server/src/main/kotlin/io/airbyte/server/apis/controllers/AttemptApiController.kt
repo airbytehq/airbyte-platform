@@ -78,7 +78,7 @@ class AttemptApiController(
   @Post(uri = "/save_stream_metadata", processes = [MediaType.APPLICATION_JSON])
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun saveStreamMetadata(
-    @Body requestBody: SaveStreamAttemptMetadataRequestBody?,
+    @Body requestBody: SaveStreamAttemptMetadataRequestBody,
   ): InternalOperationResult? = execute { attemptHandler.saveStreamMetadata(requestBody) }
 
   @Post(uri = "/save_sync_config", processes = [MediaType.APPLICATION_JSON])

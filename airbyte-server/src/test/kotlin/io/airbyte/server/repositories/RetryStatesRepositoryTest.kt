@@ -27,7 +27,7 @@ import java.util.UUID
 import java.util.concurrent.ThreadLocalRandom
 import javax.sql.DataSource
 
-@MicronautTest
+@MicronautTest(rebuildContext = true)
 internal class RetryStatesRepositoryTest {
   @BeforeEach
   fun truncate() {

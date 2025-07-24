@@ -117,6 +117,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
 
     assertThrows(SourceIsNotDeclarativeException.class,
         () -> handler.createDeclarativeSourceDefinitionManifest(new DeclarativeSourceDefinitionCreateManifestRequestBody()
+            .workspaceId(A_WORKSPACE_ID)
             .sourceDefinitionId(A_SOURCE_DEFINITION_ID)
             .declarativeManifest(anyDeclarativeManifest().version(A_VERSION))));
   }
@@ -129,6 +130,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
 
     assertThrows(ValueConflictKnownException.class,
         () -> handler.createDeclarativeSourceDefinitionManifest(new DeclarativeSourceDefinitionCreateManifestRequestBody()
+            .workspaceId(A_WORKSPACE_ID)
             .sourceDefinitionId(A_SOURCE_DEFINITION_ID)
             .declarativeManifest(anyDeclarativeManifest().version(A_VERSION))));
   }
@@ -142,6 +144,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
     when(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION);
 
     handler.createDeclarativeSourceDefinitionManifest(new DeclarativeSourceDefinitionCreateManifestRequestBody()
+        .workspaceId(A_WORKSPACE_ID)
         .sourceDefinitionId(A_SOURCE_DEFINITION_ID)
         .setAsActiveManifest(true)
         .declarativeManifest(anyDeclarativeManifest().manifest(A_MANIFEST).spec(A_SPEC).version(A_VERSION).description(A_DESCRIPTION)));
@@ -166,6 +169,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
 
     handler.createDeclarativeSourceDefinitionManifest(new DeclarativeSourceDefinitionCreateManifestRequestBody()
         .sourceDefinitionId(A_SOURCE_DEFINITION_ID)
+        .workspaceId(A_WORKSPACE_ID)
         .setAsActiveManifest(false)
         .declarativeManifest(anyDeclarativeManifest().manifest(A_MANIFEST).spec(A_SPEC).version(A_VERSION).description(A_DESCRIPTION)));
 
@@ -304,7 +308,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
     when(connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(sourceDefinitionId)).thenReturn(manifest2);
 
     final DeclarativeManifestsReadList response =
-        handler.listManifestVersions(new ListDeclarativeManifestsRequestBody().sourceDefinitionId(sourceDefinitionId));
+        handler.listManifestVersions(new ListDeclarativeManifestsRequestBody().workspaceId(A_WORKSPACE_ID).sourceDefinitionId(sourceDefinitionId));
     assertEquals(3, response.getManifestVersions().size());
 
     assertFalse(response.getManifestVersions().get(0).getIsActive());

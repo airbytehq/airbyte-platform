@@ -447,7 +447,8 @@ class SchedulerHandlerTest {
     final DestinationConnection destination = new DestinationConnection()
         .withDestinationId(DESTINATION_ID)
         .withWorkspaceId(WORKSPACE_ID)
-        .withDestinationDefinitionId(DESTINATION_DEFINITION_ID);
+        .withDestinationDefinitionId(DESTINATION_DEFINITION_ID)
+        .withConfiguration(Jsons.emptyObject());
     Mockito.when(destinationService.getDestinationConnection(DESTINATION_ID)).thenReturn(destination);
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition();
     final Version destinationVersion = new Version(DESTINATION_PROTOCOL_VERSION);
@@ -1453,7 +1454,7 @@ class SchedulerHandlerTest {
 
     schedulerHandler.applySchemaChangeForSource(request);
 
-    verify(connectionsHandler, times(0)).updateConnection(any(), any(), any());
+    verify(connectionsHandler, times(0)).updateConnection(any(), any(), anyBoolean());
   }
 
   @Test

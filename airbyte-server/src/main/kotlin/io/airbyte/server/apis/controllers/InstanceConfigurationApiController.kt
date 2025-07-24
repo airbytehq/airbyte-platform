@@ -29,7 +29,7 @@ class InstanceConfigurationApiController(
   override fun licenseInfo(): LicenseInfoResponse? = execute(Callable { instanceConfigurationHandler.licenseInfo() })
 
   override fun setupInstanceConfiguration(
-    @Body instanceConfigurationSetupRequestBody: InstanceConfigurationSetupRequestBody?,
+    @Body instanceConfigurationSetupRequestBody: InstanceConfigurationSetupRequestBody,
   ): io.airbyte.api.model.generated.InstanceConfigurationResponse? =
     execute {
       instanceConfigurationHandler.setupInstanceConfiguration(

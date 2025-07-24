@@ -38,7 +38,7 @@ class WorkspacePersistence(
     includeDeleted: Boolean,
     pageSize: Int,
     rowOffset: Int,
-    keyword: Optional<String?>,
+    keyword: Optional<String>,
   ): List<StandardWorkspace> =
     database
       .query<Result<Record>> { ctx: DSLContext ->
@@ -69,7 +69,7 @@ class WorkspacePersistence(
   @Throws(IOException::class)
   fun listWorkspacesByInstanceAdminUser(
     includeDeleted: Boolean,
-    keyword: Optional<String?>,
+    keyword: Optional<String>,
   ): List<StandardWorkspace> =
     database
       .query<Result<Record>> { ctx: DSLContext ->
@@ -98,7 +98,7 @@ class WorkspacePersistence(
   @Throws(IOException::class)
   fun listWorkspacesByOrganizationIdPaginated(
     query: ResourcesByOrganizationQueryPaginated,
-    keyword: Optional<String?>,
+    keyword: Optional<String>,
   ): List<StandardWorkspace> =
     database
       .query<Result<Record>> { ctx: DSLContext ->

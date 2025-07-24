@@ -39,7 +39,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.ArgumentCaptor
 import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.junit.jupiter.MockitoExtension
@@ -334,9 +333,7 @@ internal class UserInvitationHandlerTest {
       ) {
         // capture and verify the permissions that are created by the permission handler!!.
         val permissionCreateCaptor =
-          ArgumentCaptor.forClass(
-            Permission::class.java,
-          )
+          org.mockito.kotlin.argumentCaptor<Permission>()
         verify(permissionHandler!!, Mockito.times(expectedUserIds.size))
           .createPermission(permissionCreateCaptor.capture())
         Mockito.verifyNoMoreInteractions(permissionHandler)
