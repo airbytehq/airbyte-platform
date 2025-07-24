@@ -69,7 +69,6 @@ class AirbyteKeycloakClient(
         alias = DEFAULT_IDP_ALIAS
         displayName = "${request.companyIdentifier} OIDC Login"
         providerId = "oidc"
-        isEnabled = true
         config =
           mapOf(
             "clientId" to request.clientId,
@@ -84,7 +83,9 @@ class AirbyteKeycloakClient(
             "userInfoUrl" to idpDiscoveryResult["userInfoUrl"],
             "validateSignature" to idpDiscoveryResult["validateSignature"],
             "defaultScope" to DEFAULT_SCOPE,
-            "clientAuthMethod" to CLIENT_AUTH_METHOD, // see https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
+            "clientAuthMethod" to CLIENT_AUTH_METHOD,
+            "pkceEnabled" to "false",
+            "clientAssertionSigningAlg" to "",
           )
       }
     createIdpForRealm(request.companyIdentifier, idp)
