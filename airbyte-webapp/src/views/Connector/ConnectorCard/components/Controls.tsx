@@ -33,7 +33,6 @@ interface IProps {
     workspaceId: string;
     definitionId: string;
   };
-  onCreateConfigTemplate?: () => void;
 }
 
 export const Controls: React.FC<IProps> = ({
@@ -47,7 +46,6 @@ export const Controls: React.FC<IProps> = ({
   onCancelClick,
   leftSlot = null,
   onCopyConfig,
-  onCreateConfigTemplate,
   ...restProps
 }) => {
   const showTestCard =
@@ -73,11 +71,6 @@ export const Controls: React.FC<IProps> = ({
             </Button>
           )}
         </FlexItem>
-        {onCreateConfigTemplate && (
-          <Button type="button" variant="secondary" onClick={onCreateConfigTemplate} icon="file">
-            <FormattedMessage id="settings.embedded.templateCreateButton" />
-          </Button>
-        )}
         {onCopyConfig && (
           <CopyButton
             content={() => {

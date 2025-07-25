@@ -13,7 +13,7 @@ import { useEmbeddedSourceParams } from "../hooks/useEmbeddedSourceParams";
 interface PartialUserConfigSuccessViewProps {
   successType: "create" | "delete" | "update";
   connectorName: string;
-  icon?: string;
+  icon: string;
 }
 
 export const PartialUserConfigSuccessView: React.FC<PartialUserConfigSuccessViewProps> = ({
