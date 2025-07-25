@@ -404,7 +404,7 @@ open class SchedulerHandler
 
       val schemaRead = retrieveDiscoveredSchema(persistedCatalogId, sourceVersion)
       // no connection to diff
-      if (connectionId == null) {
+      if (connectionId == null || schemaRead.catalogId == null) {
         return schemaRead
       }
 
@@ -428,7 +428,8 @@ open class SchedulerHandler
         return
       }
 
-      if (sourceAutoPropagateChange.workspaceId == null || sourceAutoPropagateChange.catalogId == null ||
+      if (sourceAutoPropagateChange.workspaceId == null ||
+        sourceAutoPropagateChange.catalogId == null ||
         sourceAutoPropagateChange.catalog == null
       ) {
         metricClient.count(
