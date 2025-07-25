@@ -3,11 +3,15 @@ import { useIntl } from "react-intl";
 import { z } from "zod";
 
 import { Form } from "components/forms";
+import { TeamsFeaturesWarnModal } from "components/TeamsFeaturesWarnModal";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { HttpProblem, useSSOConfigManagement } from "core/api";
 import { useFormatError } from "core/errors";
 import { useIntent } from "core/utils/rbac";
+import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
+import { useExperiment } from "hooks/services/Experiment";
+import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { SSOSettings } from "./components/SSOSettings";
@@ -31,8 +35,21 @@ export const UpdateSSOSettingsForm = () => {
   const organizationId = useCurrentOrganizationId();
   const canUpdateOrganization = useIntent("UpdateOrganization", { organizationId });
   const { ssoConfig, createSsoConfig } = useSSOConfigManagement();
+  const { isInTrial } = useOrganizationSubscriptionStatus();
+  const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
+  const { openModal } = useModalService();
 
   const onSubmit = async (values: SSOFormValues) => {
+    // Check if we need to show Teams features warning modal for trial users
+    if (isInTrial && showTeamsFeaturesWarnModal) {
+      await openModal({
+        title: null,
+        content: ({ onComplete }) => <TeamsFeaturesWarnModal onContinue={() => onComplete("success")} />,
+        preventCancel: true,
+        size: "xl",
+      });
+    }
+
     await createSsoConfig(values);
   };
 
@@ -46,12 +63,7 @@ export const UpdateSSOSettingsForm = () => {
   const onError = (e: unknown) => {
     registerNotification({
       id: SSO_UPDATE_NOTIFICATION_ID,
-      text: HttpProblem.isInstanceOf(e)
-        ? formatError({
-            ...e,
-            message: e.response.data?.errorMessage as string,
-          })
-        : formatMessage({ id: "form.someError" }),
+      text: HttpProblem.isInstanceOf(e) ? formatError(e) : formatMessage({ id: "form.someError" }),
       type: "error",
     });
   };
