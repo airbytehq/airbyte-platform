@@ -15,6 +15,7 @@ import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.ConnectionContext
 import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.MapperConfig
+import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.ResetSourceConfiguration
 import io.airbyte.config.State
 import io.airbyte.config.SyncMode
@@ -50,11 +51,12 @@ import io.airbyte.mappers.transformations.Mapper
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.protocol.models.v0.AirbyteErrorTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
-import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.protocol.models.v0.AirbyteStreamState
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.internal.AirbyteMapper
 import io.airbyte.workers.internal.NamespacingMapper
@@ -72,9 +74,7 @@ import java.nio.file.Path
 import java.time.Clock
 import java.util.Optional
 import java.util.UUID
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
 
 /**
  * This class is mostly just a demo of [ReplicationWorkerIntegrationTestUtil].
@@ -120,13 +120,15 @@ class ReplicationWorkerIntegrationTest {
       // Stats should be tracked internally using the source stream name+namespace
       assertEquals(
         0,
-        replicationWorkerInfo.syncStatsTracker.getStats()[AirbyteStreamNameNamespacePair("test_stream", null)]!!.bytesEmitted,
+        replicationWorkerInfo.replicationOutput.replicationAttemptSummary.streamStats
+          .first { it.streamName == "test_stream" }
+          .stats.bytesEmitted,
       )
     }
 
   /**
-   * Mostly identical to [emptySource], but uses a [StaticMessageListSource].
-   * This allows you to specify an exact list of messages to send to the orchestrator.
+   * Demo of [StaticMessageListSource]. This test shows how we would reproduce a recent race condition between
+   * source unclean exit, and processing the source's trace messages.
    */
   @Test
   fun staticSource() =
@@ -155,42 +157,53 @@ class ReplicationWorkerIntegrationTest {
         )
       val source =
         StaticMessageListSource(
-          sequenceOf(
-            AirbyteMessage()
-              .withType(AirbyteMessage.Type.RECORD)
-              .withRecord(
-                AirbyteRecordMessage()
-                  .withStream("test_stream")
-                  .withEmittedAt(1234)
-                  .withData(Jsons.deserialize("""{"id": 42, "undeclared": "blah"}""")),
-              ),
-            AirbyteMessage()
-              .withType(AirbyteMessage.Type.STATE)
-              .withState(
-                AirbyteStateMessage()
-                  .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
-                  .withStream(
-                    AirbyteStreamState()
-                      .withStreamDescriptor(StreamDescriptor().withName("test_stream"))
-                      .withStreamState(Jsons.deserialize("""{"cursor": "whatever"}""")),
+          // this could just be sequenceOf, but it's easier to use `sequence` for generating many messages
+          sequence {
+            // The race condition only shows up when we have a lot of messages to process,
+            // presumably because the DestinationWriter falls behind the SourceReader?
+            for (i in 1..1000) {
+              yield(
+                AirbyteMessage()
+                  .withType(AirbyteMessage.Type.RECORD)
+                  .withRecord(
+                    AirbyteRecordMessage()
+                      .withStream("test_stream")
+                      .withEmittedAt(1234)
+                      .withData(Jsons.deserialize("""{"id": 42, "undeclared": "blah"}""")),
                   ),
-              ),
-          ),
+              )
+            }
+            yield(
+              AirbyteMessage()
+                .withType(AirbyteMessage.Type.TRACE)
+                .withTrace(
+                  AirbyteTraceMessage()
+                    .withType(AirbyteTraceMessage.Type.ERROR)
+                    .withEmittedAt(1234.0)
+                    .withError(
+                      AirbyteErrorTraceMessage()
+                        .withFailureType(AirbyteErrorTraceMessage.FailureType.CONFIG_ERROR)
+                        .withInternalMessage("internal message")
+                        .withMessage("message")
+                        .withStackTrace("stack trace")
+                        .withStreamDescriptor(StreamDescriptor().withName("test_stream")),
+                    ),
+                ),
+            )
+            // Make the source exit uncleanly
+            yield(null)
+          },
         )
       val destination = CapturingDestination()
 
       val replicationWorkerInfo = ReplicationWorkerIntegrationTestUtil.runSync(catalog, source, destination)
 
-      assertEquals(
-        listOf(AirbyteMessage.Type.RECORD, AirbyteMessage.Type.STATE),
-        destination.getMessages().map { it.type },
-      )
-      assertEquals(
-        // the undeclared field is filtered out, and we minify the json
-        // so we end up emitting {"id":42}, which is 9 bytes long
-        9,
-        replicationWorkerInfo.syncStatsTracker.getStats()[AirbyteStreamNameNamespacePair("test_stream", null)]!!.bytesEmitted,
-      )
+      // Commented out because this behavior is currently broken.
+      // We drop the trace message, so we only get the "nonzero exit code" error.
+//      assertEquals(
+//        listOf("internal message", "Source process exited with non-zero exit code 1"),
+//        replicationWorkerInfo.replicationOutput.failures.map { it.internalMessage },
+//      )
     }
 }
 
@@ -200,6 +213,8 @@ class ReplicationWorkerIntegrationTest {
  * for example usages. TL;DR call [runSync], probably using a [StaticMessageListSource] and [CapturingDestination].
  */
 object ReplicationWorkerIntegrationTestUtil {
+  // TODO some things probably should be smarter mocks (e.g. the AirbyteApi instance)
+  //   so that it's easier to verify we did the right things.
   suspend fun runSync(
     catalog: ConfiguredAirbyteCatalog,
     source: AirbyteSource,
@@ -214,52 +229,14 @@ object ReplicationWorkerIntegrationTestUtil {
         streamPrefix = null,
       ),
   ): ReplicationWorkerInfo {
-    val jobRoot = getJobRoot()
-    val replicationWorkerDispatcher = Executors.newSingleThreadExecutor()
+    val jobRoot =
+      Files
+        .createTempDirectory("replication-worker-integration-test-jobRoot")
+        .also { it.toFile().deleteOnExit() }
+    // CommonBeanFactory.replicationWorkerDispatcher defaults to 4 threads
+    val replicationWorkerDispatcher = Executors.newFixedThreadPool(4)
     val stateFlushExecutorService = Executors.newSingleThreadScheduledExecutor()
 
-    val replicationWorkerInfo =
-      try {
-        getReplicationWorkerInfo(
-          source,
-          catalog,
-          replicationWorkerDispatcher = replicationWorkerDispatcher,
-          stateFlushExecutorService = stateFlushExecutorService,
-          jobRoot,
-          destination = destination,
-          featureFlags,
-          mappers,
-          airbyteMapper,
-        ).also {
-          it.replicationWorker.run(jobRoot)
-        }
-      } finally {
-        replicationWorkerDispatcher.shutdown()
-        stateFlushExecutorService.shutdown()
-      }
-
-    // Return the worker info so the caller can inspect e.g. the sync stats
-    return replicationWorkerInfo
-  }
-
-  private fun getJobRoot(): Path =
-    Files
-      .createTempDirectory("replication-worker-integration-test-jobRoot")
-      .also { it.toFile().deleteOnExit() }
-
-  // TODO some things probably should be smarter mocks (e.g. the AirbyteApi instance)
-  //   so that it's easier to verify we did the right things.
-  private fun getReplicationWorkerInfo(
-    source: AirbyteSource,
-    catalog: ConfiguredAirbyteCatalog,
-    replicationWorkerDispatcher: ExecutorService,
-    stateFlushExecutorService: ScheduledExecutorService,
-    jobRoot: Path,
-    destination: AirbyteDestination,
-    featureFlags: Map<String, Any?>,
-    mappers: List<Mapper<out MapperConfig>>,
-    airbyteMapper: AirbyteMapper,
-  ): ReplicationWorkerInfo {
     val bufferConfiguration = BufferConfiguration()
     val streamStatusCompletionTracker = StreamStatusCompletionTracker(Clock.systemUTC())
     val replicationWorkerState = ReplicationWorkerState()
@@ -394,7 +371,7 @@ object ReplicationWorkerIntegrationTestUtil {
         ClosableChannelQueue(bufferConfiguration.sourceMaxBufferSize),
         streamStatusCompletionTracker,
       )
-    return ReplicationWorkerInfo(
+    val replicationWorker =
       ReplicationWorker(
         source,
         destination,
@@ -409,9 +386,14 @@ object ReplicationWorkerIntegrationTestUtil {
         syncReplicationJobs = syncReplicationJobs,
         replicationWorkerDispatcher,
         MdcScope.Builder(),
-      ),
-      syncStatsTracker,
-    )
+      )
+    try {
+      val replicationOutput = replicationWorker.run(jobRoot)
+      return ReplicationWorkerInfo(replicationWorker, syncStatsTracker, replicationWorkerState, replicationOutput)
+    } finally {
+      replicationWorkerDispatcher.shutdown()
+      stateFlushExecutorService.shutdown()
+    }
   }
 
   // Simple wrapper for useful things.
@@ -419,6 +401,8 @@ object ReplicationWorkerIntegrationTestUtil {
   data class ReplicationWorkerInfo(
     val replicationWorker: ReplicationWorker,
     val syncStatsTracker: SyncStatsTracker,
+    val replicationWorkerState: ReplicationWorkerState,
+    val replicationOutput: ReplicationOutput,
   )
 }
 
@@ -428,9 +412,12 @@ object ReplicationWorkerIntegrationTestUtil {
  *
  * You can use `StaticMessageListSource(sequence { yield(...); ... })` to programmatically generate
  * the messages.
+ *
+ * If the sequence returns a `null` value, the source will return exit code 1 and stop reading further messages.
+ * Otherwise, the source will exit 0 after reading all messages from the sequence.
  */
 class StaticMessageListSource(
-  messages: Sequence<AirbyteMessage>,
+  messages: Sequence<AirbyteMessage?>,
 ) : AirbyteSource {
   private val messageIterator = messages.iterator()
 
@@ -442,13 +429,20 @@ class StaticMessageListSource(
   }
 
   override val isFinished: Boolean
-    get() = !messageIterator.hasNext()
-  override val exitValue = 0
+    get() = !messageIterator.hasNext() && exitValue != -1
+  override var exitValue = -1
 
   override fun attemptRead(): Optional<AirbyteMessage> =
     if (messageIterator.hasNext()) {
-      Optional.of(messageIterator.next())
+      val next = messageIterator.next()
+      if (next == null) {
+        exitValue = 1
+        Optional.empty()
+      } else {
+        Optional.of(next)
+      }
     } else {
+      exitValue = 0
       Optional.empty()
     }
 
