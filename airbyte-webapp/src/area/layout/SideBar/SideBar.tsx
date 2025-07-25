@@ -3,6 +3,7 @@ import { PropsWithChildren } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { matchPath, useLocation } from "react-router-dom";
 
+import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -12,7 +13,7 @@ import { AirbyteOrgPicker } from "area/layout/SideBar/components/AirbyteOrgPicke
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useAuthService } from "core/services/auth";
-import { FeatureItem, useFeature } from "core/services/features";
+import { FeatureItem, IfFeatureEnabled, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
@@ -156,10 +157,9 @@ export const SideBar: React.FC<PropsWithChildren> = () => {
   return (
     <nav className={classNames(styles.sidebar, { [styles.hidden]: isHidden })}>
       <AirbyteOrgPicker />
-      {/* NOTE: AdminWorkspaceWarning wants a workspace but one is not always available: https://github.com/airbytehq/airbyte-internal-issues/issues/12948 */}
-      {/* <IfFeatureEnabled feature={FeatureItem.ShowAdminWarningInWorkspace}>
+      <IfFeatureEnabled feature={FeatureItem.ShowAdminWarningInWorkspace}>
         <AdminWorkspaceWarning />
-      </IfFeatureEnabled> */}
+      </IfFeatureEnabled>
       <FlexContainer className={styles.sidebar__menuItems} direction="column" justifyContent="flex-start">
         {showOrganizationNav && <OrganizationNavItems />}
         {showWorkspaceNav && <WorkspaceNavItems />}

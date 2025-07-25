@@ -1,6 +1,7 @@
-import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useLayoutEffect } from "react";
 
+import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentUser } from "core/services/auth";
 
@@ -255,27 +256,19 @@ export const useListWorkspaceAccessUsers = (workspaceId: string) => {
 export const useIsForeignWorkspace = () => {
   const { userId } = useCurrentUser();
   const { permissions } = useListPermissions(userId);
-  const workspace = useCurrentWorkspace();
+  const workspace = useCurrentWorkspaceOrUndefined();
+  const organizationId = useCurrentOrganizationId();
 
-  if (!workspace) {
-    return false;
+  if (workspace) {
+    return !permissions.some(
+      (permission) =>
+        permission.workspaceId === workspace.workspaceId || permission.organizationId === workspace.organizationId
+    );
   }
 
-  return !permissions.some(
-    (permission) =>
-      permission.workspaceId === workspace.workspaceId || permission.organizationId === workspace.organizationId
-  );
-};
+  if (organizationId) {
+    return !permissions.some((permission) => permission.organizationId === organizationId);
+  }
 
-// NOTE: This hook is temporary and will be removed in favor of the new organizations with workspaces endpoint
-// https://github.com/airbytehq/airbyte-internal-issues/issues/13405
-export const useListWorkspacesByUser = (nameContains?: string) => {
-  const { userId } = useCurrentUser();
-  const requestOptions = useRequestOptions();
-
-  return useQuery(
-    workspaceKeys.list({ nameContains: nameContains ?? "" }),
-    () => listWorkspacesByUser({ userId, nameContains }, requestOptions),
-    { keepPreviousData: true, select: (data) => data.workspaces ?? [] }
-  );
+  return false;
 };
