@@ -24,10 +24,10 @@ import {
 import { WorkspaceRead, WebBackendConnectionStatusCounts } from "core/api/types/AirbyteClient";
 import { useWebappConfig } from "core/config";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { useIntent } from "core/utils/rbac";
 
 import OrganizationWorkspaceItem from "./components/OrganizationWorkspaceItem";
 import { OrganizationWorkspacesCreateControl } from "./components/OrganizationWorkspacesCreateControl";
-import { useOrganizationsToCreateWorkspaces } from "./components/useOrganizationsToCreateWorkspaces";
 import styles from "./OrganizationWorkspacesPage.module.scss";
 
 export const WORKSPACE_LIST_LENGTH = 10;
@@ -38,7 +38,6 @@ const OrganizationWorkspacesPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.WORKSPACES);
   const { formatMessage } = useIntl();
   const { edition } = useWebappConfig();
-  const { organizationsMemberOnly } = useOrganizationsToCreateWorkspaces();
 
   const organizationId = useCurrentOrganizationId();
   const organization = useOrganization(organizationId);
@@ -113,13 +112,8 @@ const OrganizationWorkspacesPage: React.FC = () => {
     setStatusFilter("all");
   }, [organizationId]);
 
-  /**
-   * Check if we should show the "You don't have permission to anything" message, if:
-   * - User is only a member of the current organization
-   */
-  const showNoWorkspacesPermission = organizationsMemberOnly.some(
-    (org) => org.organizationId === organization.organizationId
-  );
+  const canViewOrganizationWorkspaces = useIntent("ViewOrganizationWorkspaces", { organizationId });
+  const canCreateOrganizationWorkspaces = useIntent("CreateOrganizationWorkspaces", { organizationId });
 
   const showNoWorkspacesYet =
     filteredWorkspaces.length === 0 && !isLoading && debouncedSearchValue === "" && statusFilter === "all";
@@ -143,7 +137,7 @@ const OrganizationWorkspacesPage: React.FC = () => {
               </Text>
             </Box>
             <Box pb="lg">
-              <OrganizationWorkspacesCreateControl disabled={showNoWorkspacesPermission} onCreated={refetch} />
+              <OrganizationWorkspacesCreateControl disabled={!canCreateOrganizationWorkspaces} onCreated={refetch} />
             </Box>
           </FlexContainer>
           <Box>
@@ -164,7 +158,7 @@ const OrganizationWorkspacesPage: React.FC = () => {
               <Box p="md" pb="sm">
                 <LoadingSpinner />
               </Box>
-            ) : showNoWorkspacesPermission ? (
+            ) : !canViewOrganizationWorkspaces ? (
               <NoWorkspacePermissionsContent organizations={[organization]} />
             ) : showNoWorkspacesYet ? (
               <FlexContainer direction="column" alignItems="center" justifyContent="flex-start">
@@ -182,7 +176,11 @@ const OrganizationWorkspacesPage: React.FC = () => {
                     <FormattedMessage id="workspaces.noWorkspacesYet" />
                   </Text>
                 </Box>
-                <OrganizationWorkspacesCreateControl secondary onCreated={refetch} />
+                <OrganizationWorkspacesCreateControl
+                  disabled={!canCreateOrganizationWorkspaces}
+                  secondary
+                  onCreated={refetch}
+                />
               </FlexContainer>
             ) : showNoWorkspacesFound ? (
               <Box mt="xl">
