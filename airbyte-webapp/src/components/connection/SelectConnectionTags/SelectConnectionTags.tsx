@@ -212,6 +212,7 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
                     icon={selectedTags.length === 0 ? "plus" : "pencil"}
                     iconSize="sm"
                     className={styles.selectConnectionTags__trigger}
+                    data-testid="select-connection-tags-popover"
                   />
                 }
               >
