@@ -250,19 +250,15 @@ object AirbyteCatalogHelper {
     // check that the first seconds and hour values are not *
   }
 
-  fun normalizeCronExpression(connectionSchedule: AirbyteApiConnectionSchedule?): AirbyteApiConnectionSchedule? =
-    connectionSchedule?.let { schedule ->
-      schedule.cronExpression?.let { cronExpression ->
-        if (cronExpression.endsWith("UTC")) {
-          AirbyteApiConnectionSchedule(
-            scheduleType = connectionSchedule.scheduleType,
-            cronExpression = connectionSchedule.cronExpression?.replace("UTC", "")?.trim(),
-          )
-        } else {
-          connectionSchedule
-        }
-      }
+  fun normalizeCronExpression(connectionSchedule: AirbyteApiConnectionSchedule?): AirbyteApiConnectionSchedule? {
+    if (connectionSchedule?.cronExpression == null) return connectionSchedule
+    val cron = connectionSchedule.cronExpression!!
+    return if (cron.endsWith("UTC")) {
+      connectionSchedule.copy(cronExpression = cron.replace("UTC", "").trim())
+    } else {
+      connectionSchedule
     }
+  }
 
   /**
    * Convert proto/object from public_api model to airbyte_api model.

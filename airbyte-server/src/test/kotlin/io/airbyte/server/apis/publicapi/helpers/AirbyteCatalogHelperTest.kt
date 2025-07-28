@@ -165,6 +165,13 @@ internal class AirbyteCatalogHelperTest {
   }
 
   @Test
+  internal fun `test that the scheduleType is preserved`() {
+    val connectionSchedule =
+      AirbyteApiConnectionSchedule(scheduleType = ScheduleTypeEnum.MANUAL)
+    assertEquals(ScheduleTypeEnum.MANUAL, AirbyteCatalogHelper.normalizeCronExpression(connectionSchedule)?.scheduleType)
+  }
+
+  @Test
   internal fun `test that the cron configuration with a missing cron expression is invalid`() {
     val connectionSchedule =
       AirbyteApiConnectionSchedule(
