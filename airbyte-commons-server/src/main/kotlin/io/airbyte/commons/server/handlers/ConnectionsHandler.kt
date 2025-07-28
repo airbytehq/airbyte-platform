@@ -398,7 +398,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     private fun generateDestinationStreamKey(
       namespaceDefinition: String,
       namespaceFormat: String?,
-      prefix: String,
+      prefix: String?,
       streamNamespace: String?,
       streamName: String,
     ): String = namespaceDefinition + namespaceFormat + streamNamespace + prefix + streamName
