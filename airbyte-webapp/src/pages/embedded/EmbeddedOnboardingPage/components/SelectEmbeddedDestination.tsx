@@ -79,7 +79,7 @@ export const SelectEmbeddedDestination: React.FC = () => {
                   id="embedded.onboarding.selectDestination.talkToUs"
                   values={{
                     lnk: (children) => (
-                      <ExternalLink data-testid="embedded-destinations-talk-to-sales" href={links.featureTalkToSales}>
+                      <ExternalLink data-testid="embedded-destinations-talk-to-sales" href={links.sonarTalktoSales}>
                         {children}
                       </ExternalLink>
                     ),

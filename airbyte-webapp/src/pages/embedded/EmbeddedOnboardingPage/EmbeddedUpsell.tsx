@@ -50,7 +50,7 @@ export const EmbeddedUpsell: React.FC = () => {
                 </Text>
               }
               cta={
-                <ExternalLink variant="buttonPrimary" href={links.featureTalkToSales.replace("{feature}", "embedded")}>
+                <ExternalLink variant="buttonPrimary" href={links.sonarTalktoSales}>
                   <Box p="xs">
                     <FlexContainer alignItems="center">
                       <Icon type="lock" />

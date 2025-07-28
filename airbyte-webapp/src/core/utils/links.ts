@@ -60,6 +60,7 @@ export const links = {
   ossAuthentication: `${BASE_DOCS_LINK}/deploying-airbyte/integrations/authentication`,
   featureTalkToSales:
     "https://airbyte.com/company/talk-to-sales?utm_source=airbyte&utm_medium=product&utm_content=feature-{feature}",
+  sonarTalktoSales: "https://calendly.com/teo-airbyte/15min",
   billingNotificationsForm:
     "https://airbyte.retool.com/form/f06009f2-aad6-4df4-bb54-41f3b17d50d2?orgId={organizationId}&email={email}",
   connectionMappings: `${BASE_DOCS_LINK}/using-airbyte/mappings`,
