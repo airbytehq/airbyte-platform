@@ -33,6 +33,7 @@ micronaut-email = "2.9.0"
 micronaut-jaxrs = "4.9.2"
 micronaut-jdbc = "6.2.1"
 micronaut-kotlin = "4.7.0"
+micronaut-kubernetes = "7.1.1"
 micronaut-micrometer = "5.12.0"
 micronaut-openapi = "6.17.3"
 micronaut-security = "4.13.0"
@@ -226,6 +227,7 @@ micronaut-jdbc-hikari = { module = "io.micronaut.sql:micronaut-jdbc-hikari", ver
 micronaut-jooq = { module = "io.micronaut.sql:micronaut-jooq", version.ref = "micronaut-jdbc" }
 micronaut-kotlin-extension-functions = { module = "io.micronaut.kotlin:micronaut-kotlin-extension-functions", version.ref = "micronaut-kotlin" }
 micronaut-kotlin-runtime = { module = "io.micronaut.kotlin:micronaut-kotlin-runtime", version.ref = "micronaut-kotlin" }
+micronaut-kubernetes-discovery-client = { module = "io.micronaut.kubernetes:micronaut-kubernetes-discovery-client", version.ref = "micronaut-kubernetes" }
 micronaut-management = { module = "io.micronaut:micronaut-management", version.ref = "micronaut-core" }
 micronaut-micrometer-core = { module = "io.micronaut.micrometer:micronaut-micrometer-core", version.ref = "micronaut-micrometer" }
 micronaut-micrometer-registry-datadog = { module = "io.micronaut.micrometer:micronaut-micrometer-registry-datadog", version.ref = "micronaut-micrometer" }
