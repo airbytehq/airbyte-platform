@@ -9,7 +9,7 @@ import { usePrefetchWorkspaceData } from "core/api/cloud";
 import { useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
-import { useExperimentContext } from "hooks/services/Experiment";
+import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
 import OrganizationBillingPage from "packages/cloud/views/billing/OrganizationBillingPage";
 import OrganizationUsagePage from "packages/cloud/views/billing/OrganizationUsagePage";
 import { CloudSettingsPage } from "packages/cloud/views/settings/CloudSettingsPage";
@@ -19,6 +19,7 @@ import { AccountSettingsView } from "packages/cloud/views/users/AccountSettingsV
 import { ApplicationSettingsView } from "packages/cloud/views/users/ApplicationSettingsView/ApplicationSettingsView";
 import { WorkspaceSettingsView } from "packages/cloud/views/workspaces/WorkspaceSettingsView";
 import WorkspaceUsagePage from "packages/cloud/views/workspaces/WorkspaceUsagePage";
+import { OnboardingPage } from "pages/OnboardingPage/OnboardingPage";
 import { RoutePaths, DestinationPaths, SourcePaths, SettingsRoutePaths } from "pages/routePaths";
 import AdvancedSettingsPage from "pages/SettingsPage/pages/AdvancedSettingsPage";
 import {
@@ -55,6 +56,7 @@ export const WorkspacesRoutes: React.FC = () => {
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
+  const showOnboarding = useExperiment("onboarding.surveyEnabled");
 
   useExperimentContext("organization", workspace.organizationId);
 
@@ -91,6 +93,7 @@ export const WorkspacesRoutes: React.FC = () => {
         </Route>
       </Route>
       <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
+      {showOnboarding && <Route path={RoutePaths.Onboarding} element={<OnboardingPage />} />}
       <Route path={`${RoutePaths.Settings}/*`} element={<CloudSettingsPage />}>
         <Route path={CloudSettingsRoutePaths.Account} element={<AccountSettingsView />} />
         <Route path={CloudSettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />

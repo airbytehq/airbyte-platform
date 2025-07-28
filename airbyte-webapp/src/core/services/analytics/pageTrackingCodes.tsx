@@ -45,4 +45,5 @@ export enum PageTrackingCodes {
   EMBEDDED_ONBOARDING_EMBED_CODE = "EmbeddedOnboarding.EmbedCode",
   EMBEDDED_ONBOARDING_FINISH = "EmbeddedOnboarding.Finish",
   EMBEDDED_UPSELL = "EmbeddedOnboarding.Upsell",
+  ONBOARDING = "Onboarding",
 }

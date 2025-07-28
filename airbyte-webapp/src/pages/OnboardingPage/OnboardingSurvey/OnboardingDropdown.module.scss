@@ -1,0 +1,27 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.dropdown {
+  &__button {
+    padding: variables.$spacing-sm variables.$spacing-md;
+    width: 100%;
+    text-align: left;
+    background: colors.$foreground;
+    border: variables.$border-thin solid colors.$grey-200;
+    border-radius: variables.$border-radius-sm;
+    cursor: pointer;
+
+    &:hover {
+      border-color: colors.$grey-200;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: colors.$blue;
+    }
+  }
+}
+
+.selectedOption {
+  background-color: colors.$grey-50;
+}

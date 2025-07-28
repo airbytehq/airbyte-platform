@@ -1,0 +1,56 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.surveyContainer {
+  width: 450px;
+  margin: 0 auto;
+  padding: variables.$spacing-xl;
+  background: colors.$white;
+  border-radius: variables.$border-radius-lg;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 8%);
+}
+
+.form {
+  width: 100%;
+}
+
+.fieldContainer {
+  margin-bottom: variables.$spacing-lg;
+}
+
+.question {
+  display: block;
+  margin-bottom: variables.$spacing-md;
+  font-weight: 500;
+}
+
+.navigationButtons {
+  margin-top: variables.$spacing-xl;
+  padding-top: variables.$spacing-lg;
+  border-top: 1px solid colors.$grey-100;
+}
+
+.required {
+  color: colors.$red;
+  margin-left: 4px;
+}
+
+.progressContainer {
+  margin-bottom: variables.$spacing-xl;
+}
+
+.progressBarWrapper {
+  flex: 1;
+  height: 8px;
+  background-color: colors.$grey-100;
+  border-radius: 4px;
+  margin-left: variables.$spacing-lg;
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 100%;
+  background-color: colors.$blue;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}

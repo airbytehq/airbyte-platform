@@ -31,6 +31,9 @@ export interface Experiments {
   "connectorBuilder.schemaForm": boolean;
   "embedded.operatorOnboarding.destinations": string;
   "embedded.operatorOnboarding": boolean;
+  "embedded.templateCreateButton": boolean;
+  "embedded.useSonarServer": boolean;
+  "onboarding.surveyEnabled": boolean;
   "entitlements.showTeamsFeaturesWarnModal": boolean;
   "platform.allow-config-template-endpoints": boolean;
   "platform.llm-sync-job-failure-explanation": boolean;
@@ -83,7 +86,10 @@ export const defaultExperimentValues: Experiments = {
   "connectorBuilder.schemaForm": false,
   "embedded.operatorOnboarding": false,
   "embedded.operatorOnboarding.destinations": "ConnectorIds.Destinations.S3",
+  "embedded.templateCreateButton": false,
+  "embedded.useSonarServer": false,
   "entitlements.showTeamsFeaturesWarnModal": false,
+  "onboarding.surveyEnabled": false,
   "platform.allow-config-template-endpoints": false,
   "platform.llm-sync-job-failure-explanation": false,
   "platform.use-runtime-secret-persistence": false,

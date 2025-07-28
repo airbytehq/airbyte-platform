@@ -1,0 +1,26 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.multiSelect__button {
+  width: 100%;
+  padding: variables.$spacing-md;
+  background-color: colors.$white;
+  border: variables.$border-thin solid colors.$grey-200;
+  border-radius: variables.$border-radius-md;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-color: colors.$grey-300;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: colors.$blue-500;
+  }
+}
+
+.multiSelect__options {
+  min-width: 300px;
+}

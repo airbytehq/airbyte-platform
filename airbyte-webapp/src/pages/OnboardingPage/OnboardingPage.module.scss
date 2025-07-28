@@ -1,0 +1,8 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.content {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: variables.$spacing-xl;
+}

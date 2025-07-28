@@ -31,6 +31,8 @@ export const enum Action {
   DELETE = "Delete",
   REQUEST = "Request",
   SKIP = "Skip",
+  NEXT = "Next",
+  COMPLETED = "Completed",
   PREFERENCES = "Preferences",
   NO_MATCHING_CONNECTOR = "NoMatchingConnector",
   SELECTION_OPENED = "SelectionOpened",

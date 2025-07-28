@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { AuthGetAccessToken } from "core/services/auth";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { getUtmFromStorage } from "core/utils/utmStorage";
 
 import { useGetInstanceConfiguration } from "./instanceConfiguration";
@@ -49,10 +50,12 @@ export const useGetDefaultUserAsync = () => {
  */
 export const useGetOrCreateUser = () => {
   const analytics = useAnalyticsService();
+  const [, setIsNewSignup] = useLocalStorage("airbyte_new-signup", false);
 
   return useMutation(({ authUserId, getAccessToken }: { authUserId: string; getAccessToken: () => Promise<string> }) =>
     getOrCreateUserByAuthId({ authUserId }, { getAccessToken }).then(({ newUserCreated, userRead }) => {
       if (newUserCreated) {
+        setIsNewSignup(true);
         analytics.track(Namespace.USER, Action.CREATE, {
           actionDescription: "New user registered",
           user_id: authUserId,

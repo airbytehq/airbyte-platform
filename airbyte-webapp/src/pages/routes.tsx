@@ -28,6 +28,7 @@ import { LoginPage } from "pages/login/LoginPage";
 import MainView from "views/layout/MainView";
 
 import { EmbeddedSourceCreatePage } from "./embedded/EmbeddedSourceCreatePage/EmbeddedSourcePage";
+import { OnboardingPage } from "./OnboardingPage/OnboardingPage";
 import { OrganizationRoutes } from "./organization/OrganizationRoutes";
 import { RoutePaths, DestinationPaths, SourcePaths, SettingsRoutePaths } from "./routePaths";
 import { AccountPage } from "./SettingsPage/pages/AccountPage";
@@ -117,6 +118,7 @@ const WorkspacesRoutes: React.FC = () => {
           </Route>
         </Route>
         <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
+        <Route path="onboarding" element={<OnboardingPage />} />
         <Route path={`${RoutePaths.Settings}/*`} element={<SettingsPage />}>
           <Route path={SettingsRoutePaths.Account} element={<AccountPage />} />
           {applicationSupport !== "none" && (

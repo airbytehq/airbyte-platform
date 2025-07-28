@@ -11,6 +11,7 @@ export enum RoutePaths {
   EmbeddedWidget = "embedded-widget",
   EmbeddedOnboarding = "embedded",
   Organization = "organization",
+  Onboarding = "onboarding",
 }
 
 export enum DestinationPaths {
