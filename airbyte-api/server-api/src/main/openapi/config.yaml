@@ -5115,6 +5115,16 @@ paths:
       responses:
         "204":
           description: Successfully unscheduled cancelation of the subscription
+  /v1/billing/disable_delinquent_workspaces:
+    post:
+      summary: Disable connections in workspaces that are delinquent in payment
+      tags:
+        - billing
+        - cloud-only
+      operationId: disableDelinquentWorkspaces
+      responses:
+        "200":
+          description: Success
   /v1/organization_payment_config/{organizationId}:
     get:
       summary: Get an organization payment config

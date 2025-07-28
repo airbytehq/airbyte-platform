@@ -92,6 +92,7 @@ airbyte:
     workload-redelivery-window: ${WORKLOAD_REDELIVERY_WINDOW:PT5M}
     bearer-token:
       secret: ${WORKLOAD_API_BEARER_TOKEN:}
+
 endpoints:
   beans:
     enabled: true
