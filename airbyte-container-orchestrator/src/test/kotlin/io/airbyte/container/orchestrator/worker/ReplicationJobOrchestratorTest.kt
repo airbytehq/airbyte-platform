@@ -19,7 +19,6 @@ import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.workload.WorkloadOutputWriter
 import io.airbyte.workload.api.client.WorkloadApiClient
-import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.micrometer.core.instrument.Counter
 import io.mockk.coEvery
 import io.mockk.every
@@ -29,6 +28,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import retrofit2.mock.Calls
 import java.nio.file.Path
 import java.util.UUID
 import java.util.function.ToDoubleFunction
@@ -98,8 +98,8 @@ internal class ReplicationJobOrchestratorTest {
         coEvery { runReplicationBlocking(any()) } returns replicationOutput
       }
     val workloadapi =
-      mockk<WorkloadApi> {
-        every { workloadSuccess(any()) } returns Unit
+      mockk<io.airbyte.workload.api.WorkloadApiClient> {
+        every { workloadSuccess(any()) } returns Calls.response(Unit)
       }
     val workloadApiClient =
       mockk<WorkloadApiClient> {
@@ -223,8 +223,8 @@ internal class ReplicationJobOrchestratorTest {
         } throws DestinationException("destination")
       }
     val workloadapi =
-      mockk<WorkloadApi> {
-        every { workloadFailure(any()) } returns Unit
+      mockk<io.airbyte.workload.api.WorkloadApiClient> {
+        every { workloadFailure(any()) } returns Calls.response(Unit)
       }
     val workloadApiClient =
       mockk<WorkloadApiClient> {
@@ -348,8 +348,8 @@ internal class ReplicationJobOrchestratorTest {
         coEvery { runReplicationBlocking(any()) } throws WorkerException("platform")
       }
     val workloadapi =
-      mockk<WorkloadApi> {
-        every { workloadFailure(any()) } returns Unit
+      mockk<io.airbyte.workload.api.WorkloadApiClient> {
+        every { workloadFailure(any()) } returns Calls.response(Unit)
       }
     val workloadApiClient =
       mockk<WorkloadApiClient> {
@@ -475,8 +475,8 @@ internal class ReplicationJobOrchestratorTest {
         coEvery { runReplicationBlocking(any()) } throws SourceException("source")
       }
     val workloadapi =
-      mockk<WorkloadApi> {
-        every { workloadFailure(any()) } returns Unit
+      mockk<io.airbyte.workload.api.WorkloadApiClient> {
+        every { workloadFailure(any()) } returns Calls.response(Unit)
       }
     val workloadApiClient =
       mockk<WorkloadApiClient> {

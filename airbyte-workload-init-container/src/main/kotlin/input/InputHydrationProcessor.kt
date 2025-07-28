@@ -4,7 +4,7 @@
 
 package io.airbyte.initContainer.input
 
-import io.airbyte.workload.api.client.model.generated.Workload
+import io.airbyte.workload.api.domain.Workload
 
 interface InputHydrationProcessor {
   fun process(workload: Workload)

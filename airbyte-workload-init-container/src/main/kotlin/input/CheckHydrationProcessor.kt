@@ -17,7 +17,7 @@ import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.serde.PayloadDeserializer
-import io.airbyte.workload.api.client.model.generated.Workload
+import io.airbyte.workload.api.domain.Workload
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
 import secrets.persistence.SecretCoordinateException

@@ -45,6 +45,8 @@ dependencies {
   implementation(libs.micronaut.jackson.databind)
   implementation(libs.slf4j.api)
   implementation(libs.bundles.micronaut.metrics)
+  implementation(libs.micronaut.http.client)
+  implementation(libs.retrofit)
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))
@@ -75,6 +77,7 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.airbyte.protocol)
+  testImplementation(libs.retrofit.mock)
 
   airbyteProtocol(libs.airbyte.protocol) {
     isTransitive = false

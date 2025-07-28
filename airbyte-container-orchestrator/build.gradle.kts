@@ -66,6 +66,7 @@ dependencies {
   implementation(project(":oss:airbyte-persistence:job-persistence"))
   implementation(project(":oss:airbyte-worker-models"))
   implementation(libs.kotlin.coroutines)
+  implementation(libs.retrofit)
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.bundles.logback)
@@ -84,6 +85,7 @@ dependencies {
   testImplementation(libs.mockito.kotlin)
   testImplementation(libs.kotlin.coroutines.test)
   testImplementation(libs.assertj.core)
+  testImplementation(libs.retrofit.mock)
 
   airbyteProtocol(libs.airbyte.protocol) {
     isTransitive = false

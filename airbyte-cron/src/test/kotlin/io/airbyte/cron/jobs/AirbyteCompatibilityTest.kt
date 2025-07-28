@@ -25,6 +25,7 @@ import java.util.UUID
 @Property(name = "airbyte.version", value = "1.2.0")
 @Property(name = "airbyte.workspace.root", value = "./build/tmp/workspace")
 @Property(name = "airbyte.edition", value = "COMMUNITY")
+@Property(name = "micronaut.http.services.workload-api.url", value = "http://localhost")
 @Requires(env = ["internal"])
 class AirbyteCompatibilityTest(
   private val airbyteCompatibilityValidator: AirbyteCompatibleConnectorsValidator,

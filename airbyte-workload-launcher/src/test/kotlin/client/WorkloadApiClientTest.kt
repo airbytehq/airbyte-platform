@@ -4,9 +4,8 @@
 
 package io.airbyte.workload.launcher.client
 
-import io.airbyte.workload.api.client.generated.WorkloadApi
-import io.airbyte.workload.api.client.model.generated.ClaimResponse
-import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
+import io.airbyte.workload.api.domain.ClaimResponse
+import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.airbyte.workload.launcher.authn.DataplaneIdentityService
 import io.micronaut.http.HttpStatus
 import io.mockk.every
@@ -17,6 +16,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.openapitools.client.infrastructure.ClientException
+import retrofit2.mock.Calls
 
 private const val APPLICATION_NAME = "airbyte-workload-launcher"
 private const val DATA_PLANE_ID = "data-plane-id"
@@ -24,7 +24,7 @@ private const val DATA_PLANE_ID = "data-plane-id"
 internal class WorkloadApiClientTest {
   private lateinit var identifyService: DataplaneIdentityService
   private lateinit var workloadApiClient: WorkloadApiClient
-  private lateinit var workloadApi: WorkloadApi
+  private lateinit var workloadApi: io.airbyte.workload.api.WorkloadApiClient
   private lateinit var internalWorkloadApiClient: io.airbyte.workload.api.client.WorkloadApiClient
 
   @BeforeEach
@@ -42,7 +42,7 @@ internal class WorkloadApiClientTest {
     val workloadId = "workload-id"
     val requestCapture = slot<WorkloadFailureRequest>()
 
-    every { workloadApi.workloadFailure(any()) } returns Unit
+    every { workloadApi.workloadFailure(any()) } returns Calls.response(Unit)
     val failure = RuntimeException("Cause")
 
     workloadApiClient.reportFailure(workloadId, failure)
@@ -56,7 +56,7 @@ internal class WorkloadApiClientTest {
     val workloadId = "workload-id"
     val requestCapture = slot<WorkloadFailureRequest>()
 
-    every { workloadApi.workloadFailure(any()) } returns Unit
+    every { workloadApi.workloadFailure(any()) } returns Calls.response(Unit)
 
     workloadApiClient.updateStatusToFailed(workloadId, "Cause")
 
@@ -70,7 +70,7 @@ internal class WorkloadApiClientTest {
     val response: ClaimResponse = mockk()
 
     every { response.claimed } returns true
-    every { workloadApi.workloadClaim(any()) } returns response
+    every { workloadApi.workloadClaim(any()) } returns Calls.response(response)
 
     val claimResult = workloadApiClient.claim(workloadId)
 

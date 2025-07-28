@@ -23,7 +23,7 @@ dependencies {
   implementation(libs.micronaut.security)
   implementation(libs.v3.swagger.annotations)
   implementation(libs.jackson.databind)
-  implementation(libs.jackson.dataformat)
+  implementation(libs.jackson.dataformat.yml)
   implementation(libs.jackson.kotlin)
   implementation(libs.kotlin.logging)
 
@@ -49,7 +49,7 @@ airbyte {
         "MICRONAUT_ENVIRONMENTS" to "control-plane",
         "SERVICE_NAME" to project.name,
         "TRACKING_STRATEGY" to "logging",
-      )
+      ),
     )
   }
   docker {

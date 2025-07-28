@@ -4,6 +4,7 @@
 
 package io.airbyte.initContainer
 
+import io.airbyte.config.WorkloadType
 import io.airbyte.initContainer.InputFetcherTest.Fixtures.WORKLOAD_ID
 import io.airbyte.initContainer.InputFetcherTest.Fixtures.workload
 import io.airbyte.initContainer.input.InputHydrationProcessor
@@ -11,8 +12,7 @@ import io.airbyte.initContainer.system.SystemClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.workers.models.InitContainerConstants
 import io.airbyte.workload.api.client.WorkloadApiClient
-import io.airbyte.workload.api.client.model.generated.Workload
-import io.airbyte.workload.api.client.model.generated.WorkloadType
+import io.airbyte.workload.api.domain.Workload
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
@@ -20,6 +20,7 @@ import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import retrofit2.mock.Calls
 import secrets.persistence.SecretCoordinateException
 import java.util.UUID
 
@@ -53,7 +54,7 @@ class InputFetcherTest {
 
   @Test
   fun `fetches input and processes it`() {
-    every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } returns workload
+    every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } returns Calls.response(workload)
     every { inputProcessor.process(workload) } returns Unit
 
     fetcher.fetch()
@@ -65,7 +66,7 @@ class InputFetcherTest {
   @Test
   fun `fails workload on workload fetch error`() {
     every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } throws Exception("bang")
-    every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Unit
+    every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Calls.response(Unit)
     every { systemClient.exitProcess(any()) } returns Unit
 
     fetcher.fetch()
@@ -76,9 +77,9 @@ class InputFetcherTest {
 
   @Test
   fun `fails workload on workload process error`() {
-    every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } returns workload
+    every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } returns Calls.response(workload)
     every { inputProcessor.process(workload) } throws Exception("bang")
-    every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Unit
+    every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Calls.response(Unit)
     every { systemClient.exitProcess(any()) } returns Unit
 
     fetcher.fetch()
@@ -89,9 +90,9 @@ class InputFetcherTest {
 
   @Test
   fun `fails workload on with specific error on secret coordinate error`() {
-    every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } returns workload
+    every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } returns Calls.response(workload)
     every { inputProcessor.process(workload) } throws SecretCoordinateException("bang")
-    every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Unit
+    every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Calls.response(Unit)
     every { systemClient.exitProcess(any()) } returns Unit
 
     fetcher.fetch()
@@ -117,7 +118,7 @@ class InputFetcherTest {
     val workload =
       Workload(
         id = WORKLOAD_ID,
-        labels = listOf(),
+        labels = mutableListOf(),
         inputPayload = "inputPayload",
         logPath = "logPath",
         type = WorkloadType.SYNC,

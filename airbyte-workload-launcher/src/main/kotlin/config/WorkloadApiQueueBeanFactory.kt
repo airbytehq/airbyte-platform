@@ -4,9 +4,9 @@
 
 package io.airbyte.workload.launcher.config
 
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
-import io.airbyte.workload.api.client.model.generated.WorkloadPriority
 import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.pipeline.consumer.WorkloadApiQueuePoller
 import io.micronaut.context.annotation.Factory

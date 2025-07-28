@@ -44,6 +44,7 @@ import java.util.function.Supplier
 @Property(name = "airbyte.cloud.storage.type", value = "LOCAL")
 @Property(name = "airbyte.job-id", value = "1")
 @Property(name = "airbyte.workspace-root", value = "/tmp")
+@Property(name = "micronaut.http.services.workload-api.url", value = "http://localhost")
 class StateCheckSumEventPubSubWriterTest {
   private val publisherSupplier = mockk<Supplier<Publisher>>(relaxed = true)
 

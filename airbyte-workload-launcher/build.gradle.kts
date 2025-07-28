@@ -27,6 +27,7 @@ dependencies {
   implementation(libs.reactor.core)
   implementation(libs.reactor.core.micrometer)
   implementation(libs.reactor.kotlin.extensions)
+  implementation(libs.retrofit)
   implementation(libs.slf4j.api)
   implementation(libs.bundles.micronaut.metrics)
   implementation(platform(libs.micronaut.platform))
@@ -67,6 +68,7 @@ dependencies {
   testImplementation(libs.jakarta.ws.rs.api)
   testImplementation(libs.kubernetes.mock.server)
   testImplementation(libs.reactor.test)
+  testImplementation(libs.retrofit.mock)
 }
 
 airbyte {

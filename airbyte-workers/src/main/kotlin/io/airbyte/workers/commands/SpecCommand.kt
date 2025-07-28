@@ -9,15 +9,15 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
+import io.airbyte.config.WorkloadPriority
+import io.airbyte.config.WorkloadType
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.pod.Metadata
 import io.airbyte.workers.sync.WorkloadClient
 import io.airbyte.workers.workload.DataplaneGroupResolver
 import io.airbyte.workers.workload.WorkloadIdGenerator
-import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadLabel
-import io.airbyte.workload.api.client.model.generated.WorkloadPriority
-import io.airbyte.workload.api.client.model.generated.WorkloadType
+import io.airbyte.workload.api.domain.WorkloadCreateRequest
+import io.airbyte.workload.api.domain.WorkloadLabel
 import jakarta.inject.Singleton
 import java.nio.file.Path
 

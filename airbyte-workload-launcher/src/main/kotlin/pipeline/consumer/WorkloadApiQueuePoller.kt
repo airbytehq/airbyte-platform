@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.launcher.pipeline.consumer
 
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.DataplaneGroup
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.WorkloadPollerUsesJitter
@@ -11,8 +12,7 @@ import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.workload.api.client.model.generated.Workload
-import io.airbyte.workload.api.client.model.generated.WorkloadPriority
+import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.model.toLauncherInput
 import io.github.oshai.kotlinlogging.KotlinLogging

@@ -4,18 +4,15 @@
 
 package io.airbyte.container.orchestrator.worker
 
+import io.airbyte.api.client.ApiException
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
 import io.airbyte.featureflag.OrchestratorHardFailOnHeartbeatFailure
 import io.airbyte.workload.api.client.WorkloadApiClient
-import io.airbyte.workload.api.client.generated.infrastructure.ClientException
-import io.airbyte.workload.api.client.generated.infrastructure.ServerException
 import io.micronaut.http.HttpStatus
-import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.confirmVerified
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -27,6 +24,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import retrofit2.mock.Calls
 import java.time.Duration
 import java.util.Optional
 import java.util.concurrent.atomic.AtomicLong
@@ -71,14 +69,11 @@ class WorkloadHeartbeatSenderTest {
   fun `test normal flow - single successful heartbeat then GONE`() =
     runTest {
       // On the first call, workloadHeartbeat returns successfully
-      every { mockWorkloadApiClient.workloadApi.workloadHeartbeat(any()) } just Runs
+      every { mockWorkloadApiClient.workloadApi.workloadHeartbeat(any()) } returns Calls.response(Unit)
 
       // On the second call, it throws a ClientException with 410 => we markCancelled() and break
       every { mockWorkloadApiClient.workloadApi.workloadHeartbeat(any()) } throws
-        ClientException(
-          "Gone",
-          HttpStatus.GONE.code,
-        )
+        ApiException(HttpStatus.GONE.code, "http://localhost.test", "")
 
       val sender = getSender()
 
@@ -119,7 +114,7 @@ class WorkloadHeartbeatSenderTest {
 
       // We'll ensure that only a small time elapses so that we do NOT exceed the heartbeatTimeout
       // In this scenario, heartbeat as usual
-      every { mockWorkloadApiClient.workloadApi.workloadHeartbeat(any()) } returns Unit
+      every { mockWorkloadApiClient.workloadApi.workloadHeartbeat(any()) } returns Calls.response(Unit)
 
       val sender = getSender(heartbeatTimeoutDuration = Duration.ofMinutes(1))
 
@@ -159,7 +154,7 @@ class WorkloadHeartbeatSenderTest {
 
       // We'll ensure that only a small time elapses so that we do NOT exceed the heartbeatTimeout
       // In this scenario, heartbeat as usual
-      every { mockWorkloadApiClient.workloadApi.workloadHeartbeat(any()) } returns Unit
+      every { mockWorkloadApiClient.workloadApi.workloadHeartbeat(any()) } returns Calls.response(Unit)
 
       val sender = getSender(heartbeatTimeoutDuration = Duration.ofMinutes(1))
 
@@ -191,7 +186,8 @@ class WorkloadHeartbeatSenderTest {
   fun `test general exception triggers retry, but eventually we exceed heartbeatTimeout and fail`() =
     runTest {
       // Let the first iteration throw a generic error from the client.
-      every { mockWorkloadApiClient.workloadApi.workloadHeartbeat(any()) } throws ServerException("Transient server error")
+      every { mockWorkloadApiClient.workloadApi.workloadHeartbeat(any()) } throws
+        ApiException(HttpStatus.INTERNAL_SERVER_ERROR.code, "http://localhost.test", "")
 
       // We want the code to skip a heartbeat, log "retrying", but not break out on the first iteration
       // Then for the second iteration, we want the time since lastSuccessfulHeartbeat to exceed heartbeatTimeout

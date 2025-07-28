@@ -6,6 +6,8 @@ package io.airbyte.connectorSidecar
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.base.Stopwatch
+import io.airbyte.api.client.body
+import io.airbyte.api.client.unit
 import io.airbyte.commons.io.LineGobbler
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
@@ -26,9 +28,9 @@ import io.airbyte.workers.internal.VersionedAirbyteStreamFactory.InvalidLineFail
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.workload.WorkloadOutputWriter
-import io.airbyte.workload.api.client.WorkloadApiClient
-import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest
+import io.airbyte.workload.api.WorkloadApiClient
+import io.airbyte.workload.api.domain.WorkloadFailureRequest
+import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.oshai.kotlinlogging.withLoggingContext
 import io.micronaut.context.annotation.Context
@@ -173,7 +175,7 @@ class ConnectorWatcher(
 
   private fun markWorkloadSuccess(workloadId: String) {
     logger.info { "Marking workload $workloadId as successful" }
-    workloadApiClient.workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
+    workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId)).unit()
   }
 
   fun handleException(
@@ -334,6 +336,6 @@ class ConnectorWatcher(
       } else {
         WorkloadFailureRequest(workloadId)
       }
-    workloadApiClient.workloadApi.workloadFailure(request)
+    workloadApiClient.workloadFailure(request).body()
   }
 }

@@ -5,13 +5,15 @@
 package io.airbyte.workload.launcher.client
 
 import com.amazonaws.internal.ExceptionUtils
-import io.airbyte.workload.api.client.model.generated.ClaimResponse
-import io.airbyte.workload.api.client.model.generated.Workload
-import io.airbyte.workload.api.client.model.generated.WorkloadClaimRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadLaunchedRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadPriority
-import io.airbyte.workload.api.client.model.generated.WorkloadQueuePollRequest
+import io.airbyte.api.client.body
+import io.airbyte.api.client.unit
+import io.airbyte.config.WorkloadPriority
+import io.airbyte.workload.api.domain.ClaimResponse
+import io.airbyte.workload.api.domain.Workload
+import io.airbyte.workload.api.domain.WorkloadClaimRequest
+import io.airbyte.workload.api.domain.WorkloadFailureRequest
+import io.airbyte.workload.api.domain.WorkloadLaunchedRequest
+import io.airbyte.workload.api.domain.WorkloadQueuePollRequest
 import io.airbyte.workload.launcher.authn.DataplaneIdentityService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
@@ -52,13 +54,13 @@ class WorkloadApiClient(
         reason,
       )
     logger.info { "Attempting to update workload: $workloadId to FAILED." }
-    workloadApiClient.workloadApi.workloadFailure(request)
+    workloadApiClient.workloadApi.workloadFailure(request).body()
   }
 
   fun updateStatusToLaunched(workloadId: String) {
     val request = WorkloadLaunchedRequest(workloadId)
     logger.info { "Attempting to update workload: $workloadId to LAUNCHED." }
-    workloadApiClient.workloadApi.workloadLaunched(request)
+    workloadApiClient.workloadApi.workloadLaunched(request).unit()
   }
 
   fun claim(workloadId: String): Boolean {
@@ -74,7 +76,7 @@ class WorkloadApiClient(
 
     try {
       val resp: ClaimResponse =
-        workloadApiClient.workloadApi.workloadClaim(req)
+        workloadApiClient.workloadApi.workloadClaim(req).body()
       logger.info { "Claimed: ${resp.claimed} for workload $workloadId via API in dataplane $dataplaneName ($dataplaneId)" }
 
       result = resp.claimed
@@ -95,9 +97,9 @@ class WorkloadApiClient(
     priority: WorkloadPriority?,
     pollSizeItems: Int,
   ): List<Workload> {
-    val req = WorkloadQueuePollRequest(pollSizeItems, groupId, priority)
+    val req = WorkloadQueuePollRequest(quantity = pollSizeItems, dataplaneGroup = groupId, priority = priority)
 
-    val resp = workloadApiClient.workloadApi.pollWorkloadQueue(req)
+    val resp = workloadApiClient.workloadApi.pollWorkloadQueue(req).body()
 
     return resp.workloads
   }

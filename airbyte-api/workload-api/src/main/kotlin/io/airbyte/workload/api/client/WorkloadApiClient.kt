@@ -4,14 +4,8 @@
 
 package io.airbyte.workload.api.client
 
-import dev.failsafe.RetryPolicy
-import io.airbyte.workload.api.client.generated.WorkloadApi
-import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
-import jakarta.inject.Named
+import io.airbyte.workload.api.WorkloadApiClient
 import jakarta.inject.Singleton
-import okhttp3.OkHttpClient
-import okhttp3.Response
 
 /**
  * This class wraps all the generated Workload API clients and provides a single entry point. This class is meant
@@ -34,13 +28,9 @@ import okhttp3.Response
  * </ol>
  * <p>
  */
-@SuppressWarnings("Parameter")
+
 @Singleton
-@Requires(property = "airbyte.workload-api.base-path")
+@Deprecated("use WorkloadApiOperations directly", ReplaceWith("io.airbyte.workload.api.WorkloadApiClient"))
 class WorkloadApiClient(
-  @Value("\${airbyte.workload-api.base-path}") basePath: String,
-  @Named("workloadApiClientRetryPolicy") policy: RetryPolicy<Response>,
-  @Named("workloadApiOkHttpClient") httpClient: OkHttpClient,
-) {
-  val workloadApi = WorkloadApi(basePath = basePath, client = httpClient, policy = policy)
-}
+  val workloadApi: WorkloadApiClient,
+)
