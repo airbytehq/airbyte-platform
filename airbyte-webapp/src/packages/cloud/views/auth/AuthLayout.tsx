@@ -35,7 +35,7 @@ export const AuthLayout: React.FC<React.PropsWithChildren<unknown>> = ({ childre
   const embeddedRightSideUrl = useExperiment("authPage.embedded.rightSideUrl");
 
   const loginRedirect = searchParams.get("loginRedirect");
-  const shouldShowEmbedded = loginRedirect === RoutePaths.EmbeddedOnboarding;
+  const shouldShowEmbedded = loginRedirect?.includes(RoutePaths.EmbeddedOnboarding);
   const rightSideUrlToUse = shouldShowEmbedded ? embeddedRightSideUrl : rightSideUrl;
 
   return (
