@@ -73,6 +73,7 @@ class ActorServicePaginationHelper(
           LEFT JOIN actor_definition ad ON ad.id = a.actor_definition_id
           WHERE a.tombstone != true
             AND a.actor_type = '$actorTypeStr'
+            AND a.workspace_id = '$workspaceId'
         ),
         connection_stats AS (
           SELECT 
