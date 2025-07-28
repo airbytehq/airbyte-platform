@@ -11,11 +11,11 @@ export const PartialUserConfigList: React.FC<ConfigListProps> = ({ workspaceId, 
   const { data: partialUserConfigs } = useListPartialUserConfigs(workspaceId);
 
   const items = partialUserConfigs
-    .sort((a, b) => a.config_template_name.localeCompare(b.config_template_name))
+    .sort((a, b) => a.summarized_source_template.name.localeCompare(b.summarized_source_template.name))
     .map((config) => ({
       id: config.id,
-      name: config.config_template_name,
-      icon: config.config_template_icon ?? "",
+      name: config.summarized_source_template.name,
+      icon: config.summarized_source_template.icon ?? "",
       configured: true,
     }));
   return <SelectableList items={items} onSelect={onSelectConfig} />;

@@ -4,12 +4,12 @@ import { EmptyState } from "components/EmptyState";
 import { Box } from "components/ui/Box";
 
 import { useListPartialUserConfigs } from "core/api";
-import { SourceConfigTemplateListItem } from "core/api/types/SonarClient";
+import { SourceTemplateListItem } from "core/api/types/SonarClient";
 
 import { SelectableList } from "./SelectableList";
 import { useEmbeddedSourceParams } from "../hooks/useEmbeddedSourceParams";
 
-export const ConfigTemplateSelectList: React.FC<{ configTemplates: SourceConfigTemplateListItem[] }> = ({
+export const ConfigTemplateSelectList: React.FC<{ configTemplates: SourceTemplateListItem[] }> = ({
   configTemplates,
 }) => {
   const { workspaceId, setSelectedTemplate } = useEmbeddedSourceParams();
@@ -24,7 +24,7 @@ export const ConfigTemplateSelectList: React.FC<{ configTemplates: SourceConfigT
     id: template.id,
     name: template.name,
     icon: template.icon ?? undefined,
-    configured: partialUserConfigs.some((config) => config.source_config_template_id === template.id),
+    configured: partialUserConfigs.some((config) => config.summarized_source_template.id === template.id),
   }));
 
   return (

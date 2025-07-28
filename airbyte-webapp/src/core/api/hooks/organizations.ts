@@ -20,9 +20,9 @@ import {
 } from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
 import {
-  embeddedOrganizationsCurrentScopedGetCurrentScopedOrganization,
-  embeddedOrganizationsListEmbeddedOrganizations,
-  embeddedOrganizationsIdOnboardingProgressUpdateOrganizationOnboardingProgress,
+  listInternalAccountOrganizations,
+  getEmbeddedOrganizationsCurrentScoped,
+  createInternalAccountOrganizationsIdOnboardingProgress,
 } from "../generated/SonarClient";
 import { SCOPE_ORGANIZATION, SCOPE_USER } from "../scopes";
 import {
@@ -288,7 +288,7 @@ export const useGetScopedOrganization = () => {
 
   return useSuspenseQuery(
     organizationKeys.scopedTokenOrganization(),
-    () => embeddedOrganizationsCurrentScopedGetCurrentScopedOrganization(requestOptions),
+    () => getEmbeddedOrganizationsCurrentScoped(requestOptions),
     {
       staleTime: Infinity,
     }
@@ -297,9 +297,7 @@ export const useGetScopedOrganization = () => {
 
 export const useListEmbeddedOrganizations = () => {
   const requestOptions = useRequestOptions();
-  return useSuspenseQuery(organizationKeys.list(["embedded"]), () =>
-    embeddedOrganizationsListEmbeddedOrganizations(requestOptions)
-  );
+  return useSuspenseQuery(organizationKeys.list(["embedded"]), () => listInternalAccountOrganizations(requestOptions));
 };
 
 export const useUpdateEmbeddedOnboardingStatus = () => {
@@ -308,7 +306,7 @@ export const useUpdateEmbeddedOnboardingStatus = () => {
 
   return useMutation(
     ({ organizationId, status }: { organizationId: string; status: OnboardingStatusEnum }) => {
-      return embeddedOrganizationsIdOnboardingProgressUpdateOrganizationOnboardingProgress(
+      return createInternalAccountOrganizationsIdOnboardingProgress(
         organizationId,
         { onboarding_status: status },
         requestOptions

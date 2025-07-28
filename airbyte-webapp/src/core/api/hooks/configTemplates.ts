@@ -1,14 +1,6 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-
-import { useNotificationService } from "hooks/services/Notification";
-
-import {
-  embeddedConfigTemplatesSourcesIdGetSourceConfigTemplate,
-  embeddedConfigTemplatesSourcesListSourceConfigTemplates,
-  embeddedConfigTemplatesSourcesCreateSourceConfigTemplate,
-} from "../generated/SonarClient";
+import { listEmbeddedSourceTemplates, getEmbeddedSourceTemplatesId } from "../generated/SonarClient";
+import { SourceTemplateListResponse } from "../generated/SonarClient.schemas";
 import { SCOPE_ORGANIZATION } from "../scopes";
-import { CreateSourceConfigTemplateRequest, SourceConfigTemplateListResponse } from "../types/SonarClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -18,11 +10,11 @@ const configTemplates = {
   detail: (configTemplateId: string) => [...configTemplates.all, "details", configTemplateId] as const,
 };
 
-export const useListConfigTemplates = (workspaceId: string): SourceConfigTemplateListResponse => {
+export const useListConfigTemplates = (workspaceId: string): SourceTemplateListResponse => {
   const requestOptions = useRequestOptions();
 
   return useSuspenseQuery(configTemplates.lists(), () => {
-    return embeddedConfigTemplatesSourcesListSourceConfigTemplates({ workspace_id: workspaceId }, requestOptions);
+    return listEmbeddedSourceTemplates({ workspace_id: workspaceId }, requestOptions);
   });
 };
 
@@ -30,35 +22,6 @@ export const useGetConfigTemplate = (configTemplateId: string) => {
   const requestOptions = useRequestOptions();
 
   return useSuspenseQuery(configTemplates.detail(configTemplateId), () => {
-    return embeddedConfigTemplatesSourcesIdGetSourceConfigTemplate(configTemplateId, requestOptions);
+    return getEmbeddedSourceTemplatesId(configTemplateId, requestOptions);
   });
-};
-
-export const useCreateConfigTemplate = () => {
-  const requestOptions = useRequestOptions();
-  const queryClient = useQueryClient();
-  const { registerNotification } = useNotificationService();
-
-  return useMutation(
-    (configTemplate: CreateSourceConfigTemplateRequest) => {
-      return embeddedConfigTemplatesSourcesCreateSourceConfigTemplate(configTemplate, requestOptions);
-    },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries(configTemplates.lists());
-        registerNotification({
-          id: "config-template-created",
-          text: "Config template created",
-          type: "success",
-        });
-      },
-      onError: () => {
-        registerNotification({
-          id: "config-template-created",
-          text: "Failed to create config template",
-          type: "error",
-        });
-      },
-    }
-  );
 };

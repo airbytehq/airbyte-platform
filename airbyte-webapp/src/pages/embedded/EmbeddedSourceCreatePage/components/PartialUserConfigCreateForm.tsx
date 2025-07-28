@@ -23,7 +23,9 @@ export const PartialUserConfigCreateForm: React.FC = () => {
       createPartialUserConfig(
         {
           workspace_id: workspaceId,
+          source_template_id: selectedTemplateId ?? "",
           source_config_template_id: selectedTemplateId ?? "",
+          source_config: values.connectionConfiguration,
           connection_configuration: values.connectionConfiguration,
         },
         {

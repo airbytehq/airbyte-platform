@@ -5,19 +5,14 @@ import { useNotificationService } from "hooks/services/Notification";
 import { ALLOWED_ORIGIN_PARAM } from "pages/embedded/EmbeddedSourceCreatePage/hooks/useEmbeddedSourceParams";
 
 import {
-  embeddedPartialUserConfigsListPartialUserConfigs,
-  embeddedPartialUserConfigsCreatePartialUserConfig,
-  embeddedPartialUserConfigsIdGetPartialUserConfig,
-  embeddedPartialUserConfigsIdUpdatePartialUserConfig,
-  embeddedPartialUserConfigsIdDeletePartialUserConfig,
+  createEmbeddedSources,
+  listEmbeddedSources,
+  getEmbeddedSourcesId,
+  updateEmbeddedSourcesId,
+  deleteEmbeddedSourcesId,
 } from "../generated/SonarClient";
 import { SCOPE_ORGANIZATION } from "../scopes";
-import {
-  CreatePartialUserConfigRequest,
-  GetPartialUserConfigResponse,
-  ListPartialUserConfigResponse,
-  UpdatePartialUserConfigRequest,
-} from "../types/SonarClient";
+import { SourceCreateRequest, SourceGetResponse, SourceListResponse, SourceUpdateRequest } from "../types/SonarClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -27,19 +22,19 @@ const partialUserConfigs = {
   detail: (partialUserConfigId: string) => [...partialUserConfigs.all, "details", partialUserConfigId] as const,
 };
 
-export const useListPartialUserConfigs = (workspace_id: string): ListPartialUserConfigResponse => {
+export const useListPartialUserConfigs = (workspace_id: string): SourceListResponse => {
   const requestOptions = useRequestOptions();
 
   return useSuspenseQuery(partialUserConfigs.lists(), () => {
-    return embeddedPartialUserConfigsListPartialUserConfigs({ workspace_id }, requestOptions);
+    return listEmbeddedSources({ workspace_id }, requestOptions);
   });
 };
 
-export const useGetPartialUserConfig = (partialUserConfigId: string): GetPartialUserConfigResponse => {
+export const useGetPartialUserConfig = (partialUserConfigId: string): SourceGetResponse => {
   const requestOptions = useRequestOptions();
 
   return useSuspenseQuery(partialUserConfigs.detail(partialUserConfigId), () => {
-    return embeddedPartialUserConfigsIdGetPartialUserConfig(partialUserConfigId, requestOptions);
+    return getEmbeddedSourcesId(partialUserConfigId, requestOptions);
   });
 };
 
@@ -50,8 +45,8 @@ export const useCreatePartialUserConfig = () => {
   const queryClient = useQueryClient();
 
   return useMutation(
-    (partialUserConfigCreate: CreatePartialUserConfigRequest) => {
-      return embeddedPartialUserConfigsCreatePartialUserConfig(partialUserConfigCreate, requestOptions);
+    (partialUserConfigCreate: SourceCreateRequest) => {
+      return createEmbeddedSources(partialUserConfigCreate, requestOptions);
     },
     {
       onSuccess: (data) => {
@@ -100,14 +95,8 @@ export const useUpdatePartialUserConfig = () => {
   const queryClient = useQueryClient();
 
   return useMutation(
-    async ({
-      id,
-      partialUserConfigUpdate,
-    }: {
-      id: string;
-      partialUserConfigUpdate: UpdatePartialUserConfigRequest;
-    }) => {
-      return embeddedPartialUserConfigsIdUpdatePartialUserConfig(id, partialUserConfigUpdate, requestOptions);
+    async ({ id, partialUserConfigUpdate }: { id: string; partialUserConfigUpdate: SourceUpdateRequest }) => {
+      return updateEmbeddedSourcesId(id, partialUserConfigUpdate, requestOptions);
     },
     {
       onSuccess: (data, variables) => {
@@ -156,7 +145,7 @@ export const useDeletePartialUserConfig = () => {
 
   return useMutation(
     (partialUserConfigId: string) => {
-      return embeddedPartialUserConfigsIdDeletePartialUserConfig(partialUserConfigId, requestOptions);
+      return deleteEmbeddedSourcesId(partialUserConfigId, requestOptions);
     },
     {
       onSuccess: () => {

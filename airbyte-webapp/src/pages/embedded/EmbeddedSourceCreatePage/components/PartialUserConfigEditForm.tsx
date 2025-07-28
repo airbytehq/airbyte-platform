@@ -26,9 +26,14 @@ export const PartialUserConfigEditForm: React.FC<{ selectedPartialConfigId: stri
   const partialUserConfig = useGetPartialUserConfig(selectedPartialConfigId ?? "");
   const [confirmDelete, setConfirmDelete] = React.useState(false);
 
+  // todo: this is not needed once we update the client to require this property
+  if (!partialUserConfig.source_template || !partialUserConfig.source_config) {
+    throw new Error("Source template not valid to edit");
+  }
+
   const sourceDefinitionSpecification: SourceDefinitionSpecification = convertUserConfigSpec(
-    partialUserConfig.source_config_template.user_config_spec,
-    partialUserConfig.source_config_template.actor_definition_id
+    partialUserConfig.source_template.user_config_spec,
+    partialUserConfig.source_template.source_definition_id
   );
 
   if (selectedPartialConfigId === null) {
@@ -41,6 +46,7 @@ export const PartialUserConfigEditForm: React.FC<{ selectedPartialConfigId: stri
         {
           id: selectedPartialConfigId,
           partialUserConfigUpdate: {
+            source_config: values.connectionConfiguration,
             connection_configuration: values.connectionConfiguration,
           },
         },
@@ -70,8 +76,8 @@ export const PartialUserConfigEditForm: React.FC<{ selectedPartialConfigId: stri
       <FlexContainer direction="column" justifyContent="space-between" alignItems="center" className={styles.content}>
         <FlexContainer direction="column" gap="xl" alignItems="center">
           <PartialUserConfigHeader
-            icon={partialUserConfig.source_config_template.icon ?? ""}
-            connectorName={partialUserConfig.source_config_template.name}
+            icon={partialUserConfig.source_template.icon ?? ""}
+            connectorName={partialUserConfig.source_template.name}
           />
 
           <FormattedMessage id="partialUserConfig.delete.warning" />
@@ -92,8 +98,8 @@ export const PartialUserConfigEditForm: React.FC<{ selectedPartialConfigId: stri
     return (
       <PartialUserConfigSuccessView
         successType="delete"
-        connectorName={partialUserConfig.source_config_template.name}
-        icon={partialUserConfig.source_config_template.icon ?? ""}
+        connectorName={partialUserConfig.source_template.name}
+        icon={partialUserConfig.source_template.icon ?? ""}
       />
     );
   }
@@ -102,23 +108,23 @@ export const PartialUserConfigEditForm: React.FC<{ selectedPartialConfigId: stri
     return (
       <PartialUserConfigSuccessView
         successType="update"
-        connectorName={partialUserConfig.source_config_template.name}
-        icon={partialUserConfig.source_config_template.icon ?? ""}
+        connectorName={partialUserConfig.source_template.name}
+        icon={partialUserConfig.source_template.icon ?? ""}
       />
     );
   }
 
   const initialValues: Partial<ConnectorFormValues> = {
-    name: partialUserConfig.source_config_template.name,
-    connectionConfiguration: partialUserConfig.connection_configuration,
+    name: partialUserConfig.source_template.name,
+    connectionConfiguration: partialUserConfig.source_config,
   };
 
   return (
     <IsAirbyteEmbeddedContext.Provider value>
       <PartialUserConfigForm
         isEditMode
-        connectorName={partialUserConfig.source_config_template.name}
-        icon={partialUserConfig.source_config_template.icon ?? ""}
+        connectorName={partialUserConfig.source_template.name}
+        icon={partialUserConfig.source_template.icon ?? ""}
         onSubmit={onSubmit}
         initialValues={initialValues}
         sourceDefinitionSpecification={sourceDefinitionSpecification}

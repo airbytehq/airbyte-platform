@@ -4,9 +4,9 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { useNotificationService } from "hooks/services/Notification";
 import { ConnectorFormValues } from "views/Connector/ConnectorForm";
 
-import { embeddedConfigTemplatesConnectionsCreateConnectionConfigTemplate } from "../generated/SonarClient";
+import { createIntegrationsTemplatesConnections } from "../generated/SonarClient";
 import { SCOPE_ORGANIZATION } from "../scopes";
-import { CreateConnectionConfigTemplateIn } from "../types/SonarClient";
+import { ConnectionTemplateCreateRequest } from "../types/SonarClient";
 import { useRequestOptions } from "../useRequestOptions";
 
 const connectionTemplates = {
@@ -30,14 +30,15 @@ export const useCreateConnectionTemplate = () => {
       destinationDefinitionId: string;
       organizationId: string;
     }) => {
-      const connectionTemplate: CreateConnectionConfigTemplateIn = {
+      const connectionTemplate: ConnectionTemplateCreateRequest = {
         organization_id: organizationId,
         destination_name: values.name,
         destination_config: values.connectionConfiguration,
+        destination_definition_id: destinationDefinitionId,
         destination_actor_definition_id: destinationDefinitionId,
       };
 
-      return embeddedConfigTemplatesConnectionsCreateConnectionConfigTemplate(connectionTemplate, requestOptions);
+      return createIntegrationsTemplatesConnections(connectionTemplate, requestOptions);
     },
     {
       onSuccess: (response, request) => {
