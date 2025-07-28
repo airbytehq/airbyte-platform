@@ -84,7 +84,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
     <Menu ref={reference} as="div" {...(restProps["data-testid"] && { "data-testid": restProps["data-testid"] })}>
       {({ open }) => (
         <>
-          <MenuButton as={React.Fragment}>{children({ open })}</MenuButton>
+          <MenuButton as="span">{children({ open })}</MenuButton>
           {createPortal(
             <MenuItems
               ref={floating}
