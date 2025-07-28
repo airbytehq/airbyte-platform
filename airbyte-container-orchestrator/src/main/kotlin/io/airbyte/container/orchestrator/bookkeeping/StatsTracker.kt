@@ -327,9 +327,8 @@ class StreamStatsTracker(
       stateIds.remove(stagedStats.stateId)
 
       if (isBookkeeperMode) {
-        val totalCommittedRecords = (stateMessage.additionalProperties[DEST_COMMITTED_RECORDS_COUNT] as? Number)?.toLong() ?: 0
-        val totalCommittedBytes = (stateMessage.additionalProperties[DEST_COMMITTED_BYTES_COUNT] as? Number)?.toLong() ?: 0
-        val totalRejectedRecords = (stateMessage.additionalProperties[DEST_REJECTED_RECORDS_COUNT] as? Number)?.toLong() ?: 0
+        val (totalCommittedRecords, totalCommittedBytes, totalRejectedRecords) =
+          extractBookkeeperRelatedCounts(stateMessage)
         // TODO(Subodh): Remove these logs once testing is complete for Bookkeeper mode
         logger.info { "TOTAL_COMMITTED_RECORDS $totalCommittedRecords" }
         logger.info { "TOTAL_COMMITTED_BYTES $totalCommittedBytes" }
@@ -393,36 +392,36 @@ class StreamStatsTracker(
     }
   }
 
-  private fun handleStateStatsBookkeeperMode(
-    stateMessage: AirbyteStateMessage,
-    stagedStats: StagedStats,
-  ) {
-    updateCounter(
-      rawValue = stateMessage.additionalProperties[DEST_COMMITTED_RECORDS_COUNT],
-      counter = stagedStats.emittedStatsCounters.remittedRecordsCount,
-    ) {
-      stagedStats.emittedStatsCounters.filteredOutRecords.set(0)
+  private fun extractBookkeeperRelatedCounts(stateMessage: AirbyteStateMessage) =
+    when (stateMessage.type!!) {
+      AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
+        val targetStreamState =
+          stateMessage.global.streamStates.find { streamState ->
+            streamState.streamDescriptor?.let { descriptor ->
+              descriptor.namespace == nameNamespacePair.namespace &&
+                descriptor.name == nameNamespacePair.name
+            } ?: false
+          }
+
+        targetStreamState?.additionalProperties?.let(::extractCounts)
+          ?: Triple(0L, 0L, 0L)
+      }
+
+      AirbyteStateMessage.AirbyteStateType.STREAM -> {
+        extractCounts(stateMessage.additionalProperties)
+      }
+
+      AirbyteStateMessage.AirbyteStateType.LEGACY -> {
+        error("Bookkeeper mode doesn't work with LEGACY state message")
+      }
     }
 
-    updateCounter(
-      rawValue = stateMessage.additionalProperties[DEST_COMMITTED_BYTES_COUNT],
-      counter = stagedStats.emittedStatsCounters.emittedBytesCount,
-    ) {
-      stagedStats.emittedStatsCounters.filteredOutBytesCount.set(0)
-    }
-  }
-
-  private inline fun updateCounter(
-    rawValue: Any?,
-    counter: AtomicLong,
-    crossinline afterUpdate: () -> Unit = {},
-  ) {
-    val newValue = (rawValue as? Number)?.toLong() ?: return
-    if (counter.get() != newValue) {
-      counter.set(newValue)
-      afterUpdate()
-    }
-  }
+  private fun extractCounts(additionalProperties: Map<String, Any>): Triple<Long, Long, Long> =
+    Triple(
+      (additionalProperties[DEST_COMMITTED_RECORDS_COUNT] as? Number)?.toLong() ?: 0,
+      (additionalProperties[DEST_COMMITTED_BYTES_COUNT] as? Number)?.toLong() ?: 0,
+      (additionalProperties[DEST_REJECTED_RECORDS_COUNT] as? Number)?.toLong() ?: 0,
+    )
 
   /**
    * Bookkeeping for when we see an estimate message.
