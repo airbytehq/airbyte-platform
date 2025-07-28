@@ -38,7 +38,7 @@ class MigrationContainer<T : Migration?>(
     target: Version,
     applyDowngrade: (T, Any) -> Any,
   ): V0 {
-    if (target.majorVersion == mostRecentMajorVersion) {
+    if (target.getMajorVersion() == mostRecentMajorVersion) {
       return message as V0
     }
 
@@ -59,7 +59,7 @@ class MigrationContainer<T : Migration?>(
     source: Version,
     applyUpgrade: (T, Any) -> Any,
   ): V1 {
-    if (source.majorVersion == mostRecentMajorVersion) {
+    if (source.getMajorVersion() == mostRecentMajorVersion) {
       return message as V1
     }
 
@@ -77,7 +77,7 @@ class MigrationContainer<T : Migration?>(
    * @return needed migrations
    */
   fun selectMigrations(version: Version): Collection<T> {
-    val results: Collection<T> = migrations.tailMap(version.majorVersion).values
+    val results: Collection<T> = migrations.tailMap(version.getMajorVersion()).values
     if (results.isEmpty()) {
       throw RuntimeException("Unsupported migration version " + version.serialize())
     }
@@ -92,11 +92,11 @@ class MigrationContainer<T : Migration?>(
    * the migration range) is always current version.
    */
   private fun registerMigration(migration: T) {
-    val key = migration!!.getPreviousVersion().majorVersion
+    val key = migration!!.getPreviousVersion().getMajorVersion()
     if (!migrations.containsKey(key)) {
       migrations[key] = migration
-      if (migration.getCurrentVersion().majorVersion.compareTo(mostRecentMajorVersion) > 0) {
-        mostRecentMajorVersion = migration.getCurrentVersion().majorVersion
+      if (migration.getCurrentVersion().getMajorVersion()!!.compareTo(mostRecentMajorVersion) > 0) {
+        mostRecentMajorVersion = migration.getCurrentVersion().getMajorVersion()!!
       }
     } else {
       throw RuntimeException("Trying to register a duplicated migration " + migration.javaClass.name)

@@ -156,7 +156,7 @@ internal class VersionedAirbyteStreamFactoryTest {
 
     assertEquals(mutableListOf<Any?>(), messageStream.toList())
     verify(exactly = 2) { mockLogger.info(message = any()) }
-    assertEquals(String.format(MALFORMED_NON_AIRBYTE_RECORD_LOG_MESSAGE, CONNECTION_ID_NOT_PRESENT, invalidRecord), infoSlot.captured.invoke())
+    assertEquals(malformedNonAirbyteRecordLogMessage(CONNECTION_ID_NOT_PRESENT, invalidRecord), infoSlot.captured.invoke())
   }
 
   @Test
@@ -179,7 +179,7 @@ internal class VersionedAirbyteStreamFactoryTest {
 
     assertEquals(mutableListOf<Any?>(), messageStream.toList())
     verify(exactly = 2) { mockLogger.info(message = any()) }
-    assertEquals(String.format(MALFORMED_NON_AIRBYTE_RECORD_LOG_MESSAGE, CONNECTION_ID_NOT_PRESENT, invalidRecord), infoSlot.captured.invoke())
+    assertEquals(malformedNonAirbyteRecordLogMessage(CONNECTION_ID_NOT_PRESENT, invalidRecord), infoSlot.captured.invoke())
   }
 
   @Test
@@ -190,7 +190,7 @@ internal class VersionedAirbyteStreamFactoryTest {
 
     assertEquals(mutableListOf<Any?>(), messageStream.toList())
     verify(exactly = 2) { mockLogger.info(message = any()) }
-    assertEquals(String.format(MALFORMED_NON_AIRBYTE_RECORD_LOG_MESSAGE, CONNECTION_ID_NOT_PRESENT, invalidRecord), infoSlot.captured.invoke())
+    assertEquals(malformedNonAirbyteRecordLogMessage(CONNECTION_ID_NOT_PRESENT, invalidRecord), infoSlot.captured.invoke())
   }
 
   @Test
@@ -219,7 +219,7 @@ internal class VersionedAirbyteStreamFactoryTest {
     ],
   )
   fun testMalformedRecordShouldOnlyDebugLog(invalidRecord: String) {
-    val expected = String.format(MALFORMED_AIRBYTE_RECORD_LOG_MESSAGE, CONNECTION_ID_NOT_PRESENT, invalidRecord)
+    val expected = malformedAirbyteRecordLogMessage(CONNECTION_ID_NOT_PRESENT, invalidRecord)
     stringToMessageStream(invalidRecord).toList()
     verifyBlankedRecordRecordWarning()
     verify(exactly = 1) { mockLogger.debug(message = any()) }
@@ -241,7 +241,7 @@ internal class VersionedAirbyteStreamFactoryTest {
   @Test
   fun testToAirbyteMessageRandomLog() {
     val randomLog = "I should not be sent on the same channel than the airbyte messages"
-    val expected = String.format(MALFORMED_NON_AIRBYTE_RECORD_LOG_MESSAGE, CONNECTION_ID_NOT_PRESENT, randomLog)
+    val expected = malformedNonAirbyteRecordLogMessage(CONNECTION_ID_NOT_PRESENT, randomLog)
     assertEquals(
       0,
       streamFactory
@@ -256,7 +256,7 @@ internal class VersionedAirbyteStreamFactoryTest {
   @Test
   fun testToAirbyteMessageMixedUpRecordShouldOnlyDebugLog() {
     val messageLine = "It shouldn't be here ${String.format(VALID_MESSAGE_TEMPLATE, "hello")}"
-    val expected = String.format(MALFORMED_AIRBYTE_RECORD_LOG_MESSAGE, CONNECTION_ID_NOT_PRESENT, messageLine)
+    val expected = malformedAirbyteRecordLogMessage(CONNECTION_ID_NOT_PRESENT, messageLine)
     streamFactory.toAirbyteMessage(messageLine)
     verifyBlankedRecordRecordWarning()
     verify(exactly = 1) { mockLogger.debug(message = any()) }
@@ -266,7 +266,7 @@ internal class VersionedAirbyteStreamFactoryTest {
   @Test
   fun testToAirbyteMessageMixedUpRecordFailureDisable() {
     val messageLine = "It shouldn't be here ${String.format(VALID_MESSAGE_TEMPLATE, "hello")}"
-    val expected = String.format(MALFORMED_AIRBYTE_RECORD_LOG_MESSAGE, CONNECTION_ID_NOT_PRESENT, messageLine)
+    val expected = malformedAirbyteRecordLogMessage(CONNECTION_ID_NOT_PRESENT, messageLine)
     assertEquals(
       0,
       streamFactory

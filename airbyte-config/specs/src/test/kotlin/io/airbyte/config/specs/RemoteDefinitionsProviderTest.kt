@@ -13,7 +13,6 @@ import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
 import io.airbyte.config.SupportLevel
-import io.airbyte.config.specs.RegistryDefinitionNotFoundException
 import io.airbyte.config.specs.RemoteDefinitionsProvider.Companion.getDocPath
 import io.airbyte.config.specs.RemoteDefinitionsProvider.Companion.getManifestPath
 import io.airbyte.config.specs.RemoteDefinitionsProvider.Companion.getRegistryName

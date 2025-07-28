@@ -168,7 +168,12 @@ class CommonBeanFactory {
   @Named("onReplicationRunning")
   fun replicationRunningCallback(
     @Named("workloadId") workloadId: String,
-  ): VoidCallable = VoidCallable { workloadId }
+  ): VoidCallable =
+    object : VoidCallable {
+      override fun voidCall() {
+        println("workloadId = $workloadId")
+      }
+    }
 
   @Singleton
   @Named("startReplicationJobs")

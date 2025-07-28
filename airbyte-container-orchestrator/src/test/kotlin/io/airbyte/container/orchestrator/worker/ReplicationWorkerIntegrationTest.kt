@@ -6,6 +6,7 @@ package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.InternalOperationResult
+import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.jackson.MoreMappers
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.MdcScope
@@ -376,7 +377,10 @@ object ReplicationWorkerIntegrationTestUtil {
         source,
         destination,
         syncPersistence,
-        onReplicationRunning = {},
+        onReplicationRunning =
+          object : VoidCallable {
+            override fun voidCall() {}
+          },
         mockk<WorkloadHeartbeatSender> {
           coEvery { sendHeartbeat() } just Runs
         },

@@ -126,7 +126,7 @@ class ProtocolVersionChecker(
 
   @get:Throws(IOException::class)
   protected val currentAirbyteVersion: Optional<AirbyteVersion>
-    get() = jobPersistence.getVersion().map { version: String? -> AirbyteVersion(version) }
+    get() = jobPersistence.getVersion().map { version: String -> AirbyteVersion(version) }
 
   fun getConflictingActorDefinitions(targetRange: AirbyteProtocolVersionRange): Map<ActorType, MutableSet<UUID>> {
     val actorDefIdToProtocolVersion = actorDefinitionService.getActorDefinitionToProtocolVersionMap()

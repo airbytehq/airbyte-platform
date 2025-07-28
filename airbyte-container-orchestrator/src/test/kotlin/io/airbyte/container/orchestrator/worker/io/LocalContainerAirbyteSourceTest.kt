@@ -59,7 +59,7 @@ internal class LocalContainerAirbyteSourceTest {
     containerLogMdcBuilder =
       MdcScope
         .Builder()
-        .setExtraMdcEntries(LogSource.SOURCE.toMdc())
+        .setExtraMdcEntriesNonNullable(LogSource.SOURCE.toMdc())
     connectionId = UUID.randomUUID()
     heartbeatMonitor = mockk<HeartbeatMonitor>()
     jobRoot = Path.of(".")

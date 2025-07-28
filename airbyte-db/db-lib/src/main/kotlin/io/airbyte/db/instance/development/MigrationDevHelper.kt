@@ -176,7 +176,7 @@ object MigrationDevHelper {
  * Extract the major, minor, and patch version and join them with underscore. E.g. "0.29.10-alpha" -> "0_29_10",
  */
 @InternalForTesting
-internal fun AirbyteVersion.format(): String = "${majorVersion}_${minorVersion}_$patchVersion"
+internal fun AirbyteVersion.format(): String = "${getMajorVersion()}_${getMinorVersion()}_${getPatchVersion()}"
 
 /**
  * Extract the migration id. E.g. "0.29.10.001" -> "001".

@@ -201,23 +201,33 @@ object AcceptanceTestUtils {
   private object LoggingInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
       val request: Request = chain.request()
-      val requestLogMessage =
-        buildString {
-          append("Request: ${request.method} ${request.url}")
-          request.body?.let { body ->
-            val buffer = Buffer()
-            body.writeTo(buffer)
-            append(" body: ${buffer.readUtf8()}")
+      // avoiding spamming ourselves with polling job status.
+      val isJobStatus = isJobStatusRequest(request)
+
+      if (!isJobStatus) {
+        val requestLogMessage =
+          buildString {
+            append("Request: ${request.method} ${request.url}")
+            request.body?.let { body ->
+              val buffer = Buffer()
+              body.writeTo(buffer)
+              append(" body: ${buffer.readUtf8()}")
+            }
           }
-        }
-      logger.info { requestLogMessage }
+        logger.info { requestLogMessage }
+      }
 
       val response: Response = chain.proceed(request)
-      // we don't log the response body because it can be very large which can heavily increase
-      // the test duration + it doesn't add a lot of information
-      logger.info { "Response: ${response.code} ${request.url} " }
+
+      if (!isJobStatus) {
+        // we don't log the response body because it can be very large which can heavily increase
+        // the test duration + it doesn't add a lot of information
+        logger.info { "Response: ${response.code} ${request.url} " }
+      }
 
       return response
     }
+
+    fun isJobStatusRequest(request: Request): Boolean = request.url.toString().contains("api/v1/jobs/get")
   }
 }

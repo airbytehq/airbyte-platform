@@ -875,7 +875,7 @@ open class ConnectorBuilderProjectsHandler
     private fun getImageVersionForManifest(declarativeManifest: JsonNode): DeclarativeManifestImageVersion {
       val manifestVersion = manifestInjector.getCdkVersion(declarativeManifest)
       return declarativeManifestImageVersionService
-        .getDeclarativeManifestImageVersionByMajorVersion(manifestVersion.majorVersion.toInt())
+        .getDeclarativeManifestImageVersionByMajorVersion(manifestVersion.getMajorVersion()!!.toInt())
     }
 
     @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class)

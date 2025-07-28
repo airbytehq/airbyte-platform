@@ -284,7 +284,7 @@ class Bootloader(
     log.info { "Future Airbyte version: $airbyteVersion" }
 
     for (version in REQUIRED_VERSION_UPGRADES) {
-      val futureVersionIsAfterVersionBreak = airbyteVersion.greaterThan(version) || airbyteVersion.isDev
+      val futureVersionIsAfterVersionBreak = airbyteVersion.greaterThan(version) || airbyteVersion.isDev()
       val isUpgradingThroughVersionBreak = airbyteDatabaseVersion.lessThan(version) && futureVersionIsAfterVersionBreak
       if (isUpgradingThroughVersionBreak) {
         return version

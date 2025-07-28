@@ -38,8 +38,17 @@ import java.util.function.Consumer
 import java.util.stream.Stream
 
 const val CONNECTION_ID_NOT_PRESENT: String = "not present"
-const val MALFORMED_NON_AIRBYTE_RECORD_LOG_MESSAGE: String = "Malformed non-Airbyte record (connectionId = {}): {}"
-const val MALFORMED_AIRBYTE_RECORD_LOG_MESSAGE: String = "Malformed Airbyte record (connectionId = {}): {}"
+
+fun malformedNonAirbyteRecordLogMessage(
+  connectionId: String,
+  line: String,
+): String = "Malformed non-Airbyte record (connectionId = $connectionId): $line"
+
+fun malformedAirbyteRecordLogMessage(
+  connectionId: String,
+  line: String,
+): String = "Malformed Airbyte record (connectionId = $connectionId): $line"
+
 const val MESSAGES_LOOK_AHEAD_FOR_DETECTION: Int = 10
 
 private const val TYPE_FIELD_NAME: String = "type"
@@ -100,7 +109,7 @@ class VersionedAirbyteStreamFactory<T>(
    */
   override fun create(bufferedReader: BufferedReader): Stream<AirbyteMessage> {
     detectAndInitialiseMigrators(bufferedReader)
-    val needMigration = protocolVersion.majorVersion != migratorFactory.mostRecentVersion.majorVersion
+    val needMigration = protocolVersion.getMajorVersion() != migratorFactory.mostRecentVersion.getMajorVersion()
     val protocolMessage =
       if (needMigration) {
         ", messages will be upgraded to protocol version ${migratorFactory.mostRecentVersion.serialize()}"
@@ -324,13 +333,13 @@ class VersionedAirbyteStreamFactory<T>(
             metric = OssMetricsRegistry.LINE_SKIPPED_WITH_RECORD,
             attributes = malformedLogAttributes(line, connectionId),
           )
-          logger.debug { String.format(MALFORMED_AIRBYTE_RECORD_LOG_MESSAGE, getConnectionId(), line) }
+          logger.debug { malformedAirbyteRecordLogMessage(getConnectionId(), line) }
         } else {
           metricClient.count(
             metric = OssMetricsRegistry.NON_AIRBYTE_MESSAGE_LOG_LINE,
             attributes = malformedLogAttributes(line, connectionId),
           )
-          logger.info { String.format(MALFORMED_NON_AIRBYTE_RECORD_LOG_MESSAGE, getConnectionId(), line) }
+          logger.info { malformedNonAirbyteRecordLogMessage(getConnectionId(), line) }
         }
       }
     } catch (e: Exception) {

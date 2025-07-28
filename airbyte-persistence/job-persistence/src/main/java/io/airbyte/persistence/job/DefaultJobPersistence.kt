@@ -117,7 +117,7 @@ class DefaultJobPersistence
             Job.REPLICATION_TYPES
               .stream()
               .map { value: ConfigType -> toSqlName(value) }
-              .map { value: String? -> Names.singleQuote(value) }
+              .map { value: String -> Names.singleQuote(value) }
               .collect(
                 Collectors.joining(","),
               ),
@@ -125,7 +125,7 @@ class DefaultJobPersistence
             JobStatus.TERMINAL_STATUSES
               .stream()
               .map { value: JobStatus -> toSqlName(value) }
-              .map { value: String? -> Names.singleQuote(value) }
+              .map { value: String -> Names.singleQuote(value) }
               .collect(
                 Collectors.joining(","),
               ),
@@ -1416,7 +1416,7 @@ class DefaultJobPersistence
         connectionIds
           .stream()
           .map { obj: UUID -> obj.toString() }
-          .map { value: String? -> Names.singleQuote(value) }
+          .map { value: String -> Names.singleQuote(value) }
           .collect(Collectors.joining(",")),
       )
 
@@ -1477,7 +1477,7 @@ class DefaultJobPersistence
     override fun getAirbyteProtocolVersionMax(): Optional<Version> =
       getMetadata(AirbyteProtocolVersion.AIRBYTE_PROTOCOL_VERSION_MAX_KEY_NAME)
         .findFirst()
-        .map { version: String? -> Version(version) }
+        .map { version: String -> Version(version) }
 
     @Throws(IOException::class)
     override fun setAirbyteProtocolVersionMax(version: Version) {
@@ -1488,7 +1488,7 @@ class DefaultJobPersistence
     override fun getAirbyteProtocolVersionMin(): Optional<Version> =
       getMetadata(AirbyteProtocolVersion.AIRBYTE_PROTOCOL_VERSION_MIN_KEY_NAME)
         .findFirst()
-        .map { version: String? -> Version(version) }
+        .map { version: String -> Version(version) }
 
     @Throws(IOException::class)
     override fun setAirbyteProtocolVersionMin(version: Version) {
@@ -1700,7 +1700,7 @@ class DefaultJobPersistence
           JobStatus.NON_TERMINAL_STATUSES
             .stream()
             .map { value: JobStatus -> toSqlName(value) }
-            .map { value: String? -> Names.singleQuote(value) }
+            .map { value: String -> Names.singleQuote(value) }
             .collect(Collectors.joining(",")),
         )
       private val ATTEMPT_FIELDS =
@@ -2324,7 +2324,7 @@ class DefaultJobPersistence
         StreamSupport
           .stream(values.spliterator(), false)
           .map { value: T -> toSqlName(value) }
-          .map { value: String? -> Names.singleQuote(value) }
+          .map { value: String -> Names.singleQuote(value) }
           .collect(Collectors.joining(",", "(", ")"))
 
       @VisibleForTesting

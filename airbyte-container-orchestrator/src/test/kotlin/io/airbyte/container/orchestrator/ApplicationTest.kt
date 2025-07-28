@@ -22,7 +22,7 @@ internal class ApplicationTest {
   @BeforeEach
   fun setup() {
     jobOrchestrator = mockk()
-    replicationLogMdcBuilder = MdcScope.Builder().setExtraMdcEntries(LogSource.REPLICATION_ORCHESTRATOR.toMdc())
+    replicationLogMdcBuilder = MdcScope.Builder().setExtraMdcEntriesNonNullable(LogSource.REPLICATION_ORCHESTRATOR.toMdc())
   }
 
   @Test

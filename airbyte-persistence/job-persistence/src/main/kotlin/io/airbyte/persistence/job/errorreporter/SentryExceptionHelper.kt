@@ -75,8 +75,8 @@ class SentryExceptionHelper {
       if (stacktrace.startsWith("AirbyteDbtError: ")) {
         return@swallowWithDefault buildNormalizationDbtSentryExceptions(stacktrace)
       }
-      Optional.empty<SentryParsedException?>()
-    }, Optional.empty<SentryParsedException?>())
+      Optional.empty<SentryParsedException>()
+    }, Optional.empty<SentryParsedException>())
   }
 
   companion object {

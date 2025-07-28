@@ -37,16 +37,16 @@ class AirbyteMessageSerDeProvider
     /**
      * Returns the Deserializer for the version if known else empty.
      */
-    fun getDeserializer(version: Version): AirbyteMessageDeserializer<*>? = deserializers[version.majorVersion]
+    fun getDeserializer(version: Version): AirbyteMessageDeserializer<*>? = deserializers[version.getMajorVersion()]
 
     /**
      * Returns the Serializer for the version if known else empty.
      */
-    fun getSerializer(version: Version): AirbyteMessageSerializer<*>? = serializers[version.majorVersion]
+    fun getSerializer(version: Version): AirbyteMessageSerializer<*>? = serializers[version.getMajorVersion()]
 
     @VisibleForTesting
     fun registerDeserializer(deserializer: AirbyteMessageDeserializer<*>) {
-      val key = deserializer.getTargetVersion().majorVersion
+      val key = deserializer.getTargetVersion().getMajorVersion()!!
       if (!deserializers.containsKey(key)) {
         deserializers[key] = deserializer
       } else {
@@ -62,7 +62,7 @@ class AirbyteMessageSerDeProvider
 
     @VisibleForTesting
     fun registerSerializer(serializer: AirbyteMessageSerializer<*>) {
-      val key = serializer.getTargetVersion()!!.majorVersion
+      val key = serializer.getTargetVersion()!!.getMajorVersion()!!
       if (!serializers.containsKey(key)) {
         serializers[key] = serializer
       } else {

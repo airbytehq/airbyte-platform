@@ -57,7 +57,7 @@ class InvokeOperationsActivityImpl(
     val webhookOperationSummary = WebhookOperationSummary()
     MdcScope
       .Builder()
-      .setExtraMdcEntries(LogSource.PLATFORM.toMdc())
+      .setExtraMdcEntries(LogSource.PLATFORM.toMdc().toMutableMap())
       .build()
       .use { _ ->
         try {

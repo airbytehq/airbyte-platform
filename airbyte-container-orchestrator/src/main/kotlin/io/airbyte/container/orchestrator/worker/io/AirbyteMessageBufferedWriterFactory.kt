@@ -28,7 +28,7 @@ class AirbyteMessageBufferedWriterFactory(
   private val protocolVersion = replicationInput.destinationLauncherConfig.protocolVersion
 
   fun createWriter(bufferedWriter: BufferedWriter): AirbyteMessageBufferedWriter<*> {
-    val needMigration = protocolVersion.majorVersion != migratorFactory.mostRecentVersion.majorVersion
+    val needMigration = protocolVersion.getMajorVersion() != migratorFactory.mostRecentVersion.getMajorVersion()
     val additionalMessage =
       if (needMigration) {
         ", messages will be downgraded from protocol version ${migratorFactory.mostRecentVersion.serialize()}"

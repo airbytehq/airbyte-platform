@@ -1177,7 +1177,9 @@ class AcceptanceTestHarness
       var job = originalJob
 
       val waitStart = Instant.now()
+      var logDebounce = 0
       while (jobStatuses.contains(job.status)) {
+        logDebounce++
         if (Duration.between(waitStart, Instant.now()).compareTo(maxWaitTime) > 0) {
           LOGGER.info("Max wait time of {} has been reached. Stopping wait.", maxWaitTime)
           break
@@ -1193,7 +1195,10 @@ class AcceptanceTestHarness
         } catch (e: IOException) {
           LOGGER.warn("error querying jobs api, retrying...")
         }
-        LOGGER.info("waiting: job id: {} config type: {} status: {}", job.id, job.configType, job.status)
+        // if we are just waiting only log every 10 seconds to avoid spamming the logs.
+        if (logDebounce % 10 == 0) {
+          LOGGER.info("waiting: job id: {} config type: {} status: {}", job.id, job.configType, job.status)
+        }
       }
       return job
     }

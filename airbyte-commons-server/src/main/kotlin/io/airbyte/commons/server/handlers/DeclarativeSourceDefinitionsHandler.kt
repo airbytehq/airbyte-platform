@@ -189,6 +189,6 @@ open class DeclarativeSourceDefinitionsHandler
     private fun getImageVersionForManifest(declarativeManifest: DeclarativeManifest): DeclarativeManifestImageVersion {
       val manifestVersion = manifestInjector.getCdkVersion(declarativeManifest.manifest)
       return declarativeManifestImageVersionService
-        .getDeclarativeManifestImageVersionByMajorVersion(manifestVersion.majorVersion.toInt())
+        .getDeclarativeManifestImageVersionByMajorVersion(manifestVersion.getMajorVersion()!!.toInt())
     }
   }

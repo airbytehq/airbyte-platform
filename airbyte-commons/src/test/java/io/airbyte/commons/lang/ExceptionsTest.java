@@ -37,9 +37,6 @@ class ExceptionsTest {
     Exceptions.swallow(() -> {
       throw new RuntimeException();
     });
-    Exceptions.swallow(() -> {
-      throw new Exception();
-    });
   }
 
   private String callable(final String input, final boolean shouldThrow) throws IOException {

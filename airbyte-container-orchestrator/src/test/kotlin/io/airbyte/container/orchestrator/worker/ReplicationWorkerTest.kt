@@ -4,6 +4,7 @@
 
 package io.airbyte.container.orchestrator.worker
 
+import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationOutput
@@ -112,7 +113,10 @@ internal class ReplicationWorkerTest {
           source = mockSource,
           destination = mockDestination,
           syncPersistence = mockSyncPersistence,
-          onReplicationRunning = {},
+          onReplicationRunning =
+            object : VoidCallable {
+              override fun voidCall() {}
+            },
           workloadHeartbeatSender = mockWorkloadHeartbeatSender,
           recordSchemaValidator = mockRecordSchemaValidator,
           context = mockContext,
@@ -168,7 +172,10 @@ internal class ReplicationWorkerTest {
           source = mockSource,
           destination = mockDestination,
           syncPersistence = mockSyncPersistence,
-          onReplicationRunning = {},
+          onReplicationRunning =
+            object : VoidCallable {
+              override fun voidCall() {}
+            },
           workloadHeartbeatSender = mockWorkloadHeartbeatSender,
           recordSchemaValidator = mockRecordSchemaValidator,
           context = mockContext,
@@ -222,7 +229,10 @@ internal class ReplicationWorkerTest {
           source = mockSource,
           destination = mockDestination,
           syncPersistence = mockSyncPersistence,
-          onReplicationRunning = {},
+          onReplicationRunning =
+            object : VoidCallable {
+              override fun voidCall() {}
+            },
           workloadHeartbeatSender = mockWorkloadHeartbeatSender,
           recordSchemaValidator = mockRecordSchemaValidator,
           context = mockContext,
@@ -269,7 +279,10 @@ internal class ReplicationWorkerTest {
           source = mockSource,
           destination = mockDestination,
           syncPersistence = mockSyncPersistence,
-          onReplicationRunning = {},
+          onReplicationRunning =
+            object : VoidCallable {
+              override fun voidCall() {}
+            },
           workloadHeartbeatSender = mockWorkloadHeartbeatSender,
           recordSchemaValidator = mockRecordSchemaValidator,
           context = mockContext,
@@ -309,7 +322,10 @@ internal class ReplicationWorkerTest {
           source = mockSource,
           destination = mockDestination,
           syncPersistence = mockSyncPersistence,
-          onReplicationRunning = {},
+          onReplicationRunning =
+            object : VoidCallable {
+              override fun voidCall() {}
+            },
           workloadHeartbeatSender = mockWorkloadHeartbeatSender,
           recordSchemaValidator = mockRecordSchemaValidator,
           context = mockContext,
