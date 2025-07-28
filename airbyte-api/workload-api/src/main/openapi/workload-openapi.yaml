@@ -637,10 +637,10 @@ components:
             $ref: "#/components/schemas/Workload"
     WorkloadPriority:
       type: string
+      x-type: String
       enum:
       - high
       - default
-      x-type: String
     WorkloadQueueCleanLimit:
       required:
       - limit
@@ -711,6 +711,7 @@ components:
           nullable: true
     WorkloadStatus:
       type: string
+      x-type: String
       enum:
       - pending
       - claimed
@@ -719,7 +720,6 @@ components:
       - success
       - failure
       - cancelled
-      x-type: String
     WorkloadSuccessRequest:
       required:
       - workloadId
@@ -729,9 +729,9 @@ components:
           type: string
     WorkloadType:
       type: string
+      x-type: String
       enum:
       - sync
       - check
       - discover
       - spec
-      x-type: String

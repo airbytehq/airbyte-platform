@@ -22,7 +22,7 @@ dependencies {
   implementation(libs.bundles.micronaut.kotlin)
   implementation(libs.micronaut.http)
   implementation(libs.jakarta.transaction.api)
-  implementation(libs.micronaut.jaxrs.server)
+  implementation(libs.bundles.micronaut.jaxrs)
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.micronaut.security)
   implementation(libs.micronaut.security.jwt)

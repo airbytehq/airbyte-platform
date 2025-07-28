@@ -705,8 +705,8 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       }
     }
 
-    private fun generateMetadata(standardSync: StandardSync): ImmutableMap.Builder<String, Any?> {
-      val metadata = ImmutableMap.builder<String, Any?>()
+    private fun generateMetadata(standardSync: StandardSync): ImmutableMap.Builder<String, Any> {
+      val metadata = ImmutableMap.builder<String, Any>()
 
       val connectionId = standardSync.connectionId
       val sourceDefinition =

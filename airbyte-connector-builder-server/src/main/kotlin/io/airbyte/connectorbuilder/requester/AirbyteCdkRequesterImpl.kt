@@ -219,7 +219,7 @@ class AirbyteCdkRequesterImpl(
    */
   private fun calculateChecksums(customComponentsCode: String?): JsonNode {
     val hashFunction = Hashing.md5()
-    val md5Checksum = hashFunction.hashString(customComponentsCode, StandardCharsets.UTF_8).toString()
+    val md5Checksum = hashFunction.hashString(customComponentsCode ?: "", StandardCharsets.UTF_8).toString()
     return Jsons.jsonNode(Collections.singletonMap("md5", md5Checksum))
   }
 

@@ -4,8 +4,6 @@
 
 package io.airbyte.connectorbuilder.commandrunner
 
-import com.google.common.base.Joiner
-import com.google.common.collect.Lists
 import datadog.trace.api.Trace
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.connectorbuilder.TracingHelper
@@ -71,8 +69,8 @@ open class SynchronousPythonCdkCommandRunner(
     val config = this.write("config", configContents)
     val state = this.write("state", stateContents)
 
-    val command: List<String> =
-      Lists.newArrayList(
+    val command: List<String?> =
+      listOf(
         this.python, // TODO: Remove this and invoke directly
         this.cdkEntrypoint,
         "read",
@@ -83,7 +81,7 @@ open class SynchronousPythonCdkCommandRunner(
         "--state",
         state.filepath,
       )
-    LOGGER.debug("Preparing command for {}: {}", cdkCommand, Joiner.on(" ").join(command))
+    LOGGER.debug("Preparing command for {}: {}", cdkCommand, command.joinToString(" "))
     val processBuilder = ProcessBuilder(command)
     addPythonPathToSubprocessEnvironment(processBuilder)
     applyUnsafeCodeExecutionVariable(processBuilder)

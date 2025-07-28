@@ -7,16 +7,16 @@ azure-storage = "12.27.1"
 bouncycastle = "1.79"
 datadog-version = "1.40.1"
 docker-java = "3.2.8"
-fasterxml_version = "2.19.0"
+fasterxml_version = "2.19.1"
 failsafe = "3.3.2"
 flyway = "10.22.0"
 grpc_version = "1.69.1"
-hikaricp = "6.2.1"
+hikaricp = "6.3.0"
 jax-rs = "3.1.0"
 jna = "5.8.0"
 jmh = "1.37"
 jooq = "3.19.18"
-junit-jupiter = "5.11.4"
+junit-jupiter = "5.12.2"
 keycloak-client = "26.2.2" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
 keycloak-admin-client = "26.0.5" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
 kotest = "5.9.1"
@@ -24,28 +24,28 @@ kotlin-logging = "7.0.6"
 kotlinx-coroutine = "1.10.2"
 kubernetes-client = "7.3.1"
 logback = "1.5.18"
-micrometer = "1.14.7"
-micronaut = "4.8.3"
-micronaut-cache = "5.2.0"
-micronaut-core = "4.8.11"
-micronaut-data = "4.12.1"
-micronaut-email = "2.8.0"
-micronaut-jaxrs = "4.8.0"
-micronaut-jdbc = "6.1.1"
-micronaut-kotlin = "4.6.0"
-micronaut-micrometer = "5.10.2"
-micronaut-openapi = "6.16.2"
-micronaut-security = "4.12.2"
-micronaut-test = "4.7.0"
+micrometer = "1.15.1"
+micronaut = "4.9.1"
+micronaut-cache = "5.3.0"
+micronaut-core = "4.9.7"
+micronaut-data = "4.13.2"
+micronaut-email = "2.9.0"
+micronaut-jaxrs = "4.9.2"
+micronaut-jdbc = "6.2.1"
+micronaut-kotlin = "4.7.0"
+micronaut-micrometer = "5.12.0"
+micronaut-openapi = "6.17.3"
+micronaut-security = "4.13.0"
+micronaut-test = "4.8.1"
 moshi = "1.15.0"
-mockito = "5.15.2"
+mockito = "5.18.0"
 mockito-kotlin = "5.2.1"
 okhttp3 = "4.12.0"
 picocli = "4.7.6"
 platform-testcontainers = "1.19.4"
 pmd = "7.6.0"
 postgresql = "42.7.7"
-reactor = "3.7.4"
+reactor = "3.7.7"
 segment = "2.1.1"
 sentry = "6.14.0"
 slf4j = "2.0.17"
@@ -209,7 +209,7 @@ micronaut-data-model = { module = "io.micronaut.data:micronaut-data-model", vers
 micronaut-data-tx = { module = "io.micronaut.data:micronaut-data-tx", version.ref = "micronaut-data" }
 micronaut-email = { module = "io.micronaut.email:micronaut-email", version.ref = "micronaut-email" }
 micronaut-email-sendgrid = { module = "io.micronaut.email:micronaut-email-sendgrid", version.ref = "micronaut-email" }
-micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway", version = "7.7.0" }
+micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway", version = "7.8.0" }
 micronaut-inject = { module = "io.micronaut:micronaut-inject", version.ref = "micronaut-core" }
 micronaut-http = { module = "io.micronaut:micronaut-http", version.ref = "micronaut-core" }
 micronaut-http-client = { module = "io.micronaut:micronaut-http-client", version.ref = "micronaut-core" }
@@ -218,6 +218,7 @@ micronaut-http-validation = { module = "io.micronaut:micronaut-http-validation",
 micronaut-inject-java = { module = "io.micronaut:micronaut-inject-java", version.ref = "micronaut-core" }
 micronaut-inject-kotlin = { module = "io.micronaut:micronaut-inject-kotlin", version.ref = "micronaut-core" }
 micronaut-jackson-databind = { module = "io.micronaut:micronaut-jackson-databind", version.ref = "micronaut-core" }
+micronaut-jaxrs-common = { module = "io.micronaut.jaxrs:micronaut-jaxrs-common", version.ref = "micronaut-jaxrs"}
 micronaut-jaxrs-processor = { module = "io.micronaut.jaxrs:micronaut-jaxrs-processor", version.ref = "micronaut-jaxrs" }
 micronaut-jaxrs-server = { module = "io.micronaut.jaxrs:micronaut-jaxrs-server", version.ref = "micronaut-jaxrs" }
 micronaut-jdbc = { module = "io.micronaut.sql:micronaut-jdbc", version.ref = "micronaut-jdbc" }
@@ -234,21 +235,21 @@ micronaut-openapi = { module = "io.micronaut.openapi:micronaut-openapi", version
 micronaut-openapi-annotations = { module = "io.micronaut.openapi:micronaut-openapi-annotations", version.ref = "micronaut-openapi" }
 micronaut-picocli = { module = "io.micronaut.picocli:micronaut-picocli", version = "5.7.0" }
 micronaut-platform = { module = "io.micronaut.platform:micronaut-platform", version.ref = "micronaut" }
-micronaut-problem-json = { module = "io.micronaut.problem:micronaut-problem-json", version = "3.7.0" }
-micronaut-redis-lettuce = { module = "io.micronaut.redis:micronaut-redis-lettuce", version = "6.7.0" }
+micronaut-problem-json = { module = "io.micronaut.problem:micronaut-problem-json", version = "3.8.0" }
+micronaut-redis-lettuce = { module = "io.micronaut.redis:micronaut-redis-lettuce", version = "6.8.0" }
 micronaut-runtime = { module = "io.micronaut:micronaut-runtime", version.ref = "micronaut-core" }
 micronaut-security = { module = "io.micronaut.security:micronaut-security", version.ref = "micronaut-security" }
 micronaut-security-jwt = { module = "io.micronaut.security:micronaut-security-jwt", version.ref = "micronaut-security" }
 micronaut-security-oauth2 = { module = "io.micronaut.security:micronaut-security-oauth2", version.ref = "micronaut-security" }
 micronaut-test-core = { module = "io.micronaut.test:micronaut-test-core", version.ref = "micronaut-test" }
 micronaut-test-junit5 = { module = "io.micronaut.test:micronaut-test-junit5", version.ref = "micronaut-test" }
-micronaut-validation = { module = "io.micronaut.validation:micronaut-validation", version = "4.9.0" }
+micronaut-validation = { module = "io.micronaut.validation:micronaut-validation", version = "4.10.0" }
 
 # Transitive security patches direct dependency does not have a fix
 json-smart = { module = "net.minidev:json-smart", version = "2.5.2" } # Comes from com.jayway.jsonpath:json-path:2.9.0 (latest version). Force upgrade from 2.5.1 to 2.5.2 to deal with CVE-2024-57699
-netty-handler = { module = "io.netty:netty-handler", version = "4.1.118.Final" } # Comes from micronout. Force upgrade from 4.1.116.Final to 4.1.118.Final to deal with CVE-2025-24970
-netty-common = { module = "io.netty:netty-common", version = "4.1.118.Final" } # Comes from micronout. Force upgrade from 4.1.116.Final to 4.1.118.Final to deal with CVE-2025-24970
-httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", version = "5.4.3" } # Comes from micronout. Force upgrade from 5.4.1 to 5.4.3 to deal with CVE-2025-27820
+netty-handler = { module = "io.netty:netty-handler", version = "4.2.2.Final" } # Comes from micronout. Force upgrade from 4.1.116.Final to 4.2.2.Final to deal with CVE-2025-24970
+netty-common = { module = "io.netty:netty-common", version = "4.2.2.Final" } # Comes from micronout. Force upgrade from 4.1.116.Final to 4.2.2.Final to deal with CVE-2025-24970
+httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", version = "5.5" } # Comes from micronout. Force upgrade from 5.4.1 to 5.5 to deal with CVE-2025-27820
 
 [bundles]
 bouncycastle = ["bouncycastle-bcprov", "bouncycastle-bcpkix"]
@@ -267,6 +268,7 @@ micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-inject-kot
 micronaut-cache = ["micronaut-cache-caffeine", "micronaut-cache-management"]
 micronaut-data-jdbc = [ "micronaut-data-connection", "micronaut-data-jdbc", "micronaut-data-model", "micronaut-data-tx", "jakarta-persistence-api", "micronaut-jdbc-hikari"]
 micronaut-email = ["micronaut-email", "micronaut-email-sendgrid"]
+micronaut-jaxrs =  ["micronaut-jaxrs-common", "micronaut-jaxrs-server"]
 micronaut-kotlin = ["micronaut-kotlin-extension-functions", "micronaut-kotlin-runtime"]
 micronaut-metrics = ["micronaut-management", "micronaut-micrometer-core", "micronaut-micrometer-registry-otlp", "micronaut-micrometer-registry-statsd"]
 micronaut-test = ["micronaut-test-core", "micronaut-test-junit5", "h2-database"]

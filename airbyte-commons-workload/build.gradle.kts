@@ -15,7 +15,7 @@ dependencies {
   implementation(libs.bundles.micronaut.kotlin)
   implementation(libs.micronaut.http)
   implementation(libs.jakarta.transaction.api)
-  implementation(libs.micronaut.jaxrs.server)
+  implementation(libs.bundles.micronaut.jaxrs)
   implementation(libs.micronaut.security)
   implementation(libs.micronaut.security.jwt)
   implementation(libs.okhttp)
