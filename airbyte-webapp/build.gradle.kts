@@ -215,18 +215,6 @@ tasks.register<PnpmTask>("buildStorybook") {
     )
 }
 
-tasks.register<Copy>("copyBuildOutput") {
-    dependsOn("pnpmBuild")
-
-    from("${project.projectDir}/${project.ext.get("appBuildDir")}")
-    into("build/airbyte/docker/bin/build")
-}
-
-tasks.register<Copy>("copyNginx") {
-    from("${project.projectDir}/nginx")
-    into("build/airbyte/docker/bin/nginx")
-}
-
 // Those tasks should be run as part of the "check" task
 tasks.named("check") {
     dependsOn("licenseCheck", "validateLock", "unusedCode", "prettier", "test")
@@ -236,18 +224,6 @@ tasks.named("build") {
     dependsOn("buildStorybook")
 }
 
-tasks.register<DockerBuildxTask>(TASK_DOCKER_BUILD) {
-    dependsOn("copyNginx", "copyBuildOutput")
-    imageName = "webapp"
-    dockerfile = project.layout.projectDirectory.file("Dockerfile")
-
-    if (cloudEnv.isNotEmpty()) {
-        buildArgs.put("NGINX_CONFIG", "bin/nginx/cloud.conf.template")
-        val cloudVersion = project(":cloud").ext["webapp_version"] as String
-        tag = if (cloudEnv == "test") "test" else "cloud-$cloudEnv-$cloudVersion"
-    }
-}
-
 tasks.named("assemble").configure {
-    dependsOn("copyNginx", "copyBuildOutput", TASK_DOCKER_BUILD)
+    dependsOn("pnpmBuild")
 }
