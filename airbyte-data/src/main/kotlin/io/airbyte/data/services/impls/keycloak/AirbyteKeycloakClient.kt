@@ -15,7 +15,7 @@ import org.keycloak.representations.idm.IdentityProviderRepresentation
 import org.keycloak.representations.idm.RealmRepresentation
 import java.util.UUID
 
-private val logger = KotlinLogging.logger {}
+private val logger = KotlinLogging.logger { "airbyte-keycloak" }
 
 @Singleton
 class AirbyteKeycloakClient(
@@ -131,16 +131,19 @@ class AirbyteKeycloakClient(
     discoveryUrl: String,
   ): Map<String, String> {
     try {
-      return keycloakAdminClient
-        .realms()
-        .realm(realmName)
-        .identityProviders()
-        .importFrom(
-          mapOf(
-            "fromUrl" to discoveryUrl,
-            "providerId" to "oidc",
-          ),
-        )
+      val importedIdpConfig =
+        keycloakAdminClient
+          .realms()
+          .realm(realmName)
+          .identityProviders()
+          .importFrom(
+            mapOf(
+              "fromUrl" to discoveryUrl,
+              "providerId" to "oidc",
+            ),
+          )
+      logger.info { "Imported IDP config: $importedIdpConfig" }
+      return importedIdpConfig
     } catch (e: Exception) {
       logger.error(e) { "Import SSO config request failed" }
       throw ImportConfigException("Import SSO config request failed! Server error: $e")
@@ -152,11 +155,13 @@ class AirbyteKeycloakClient(
     idp: IdentityProviderRepresentation,
   ) {
     try {
-      keycloakAdminClient
-        .realms()
-        .realm(realmName)
-        .identityProviders()
-        .create(idp)
+      val response =
+        keycloakAdminClient
+          .realms()
+          .realm(realmName)
+          .identityProviders()
+          .create(idp)
+      logger.info { "Created IDP response: $response" }
     } catch (e: Exception) {
       logger.error(e) { "Create IDP request failed" }
       throw IdpCreationException("Create IDP request failed! Server error: $e")
