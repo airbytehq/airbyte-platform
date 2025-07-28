@@ -4,7 +4,6 @@
 
 package io.airbyte.initContainer.input
 
-import io.airbyte.config.WorkloadType
 import io.airbyte.initContainer.InputFetcherTest
 import io.airbyte.initContainer.serde.ObjectSerializer
 import io.airbyte.initContainer.system.FileClient
@@ -14,7 +13,8 @@ import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.serde.PayloadDeserializer
-import io.airbyte.workload.api.domain.Workload
+import io.airbyte.workload.api.client.model.generated.Workload
+import io.airbyte.workload.api.client.model.generated.WorkloadType
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
@@ -86,7 +86,7 @@ class SpecHydrationProcessorTest {
     val workload =
       Workload(
         id = InputFetcherTest.Fixtures.WORKLOAD_ID,
-        labels = mutableListOf(),
+        labels = listOf(),
         inputPayload = "inputPayload",
         logPath = "logPath",
         type = WorkloadType.SPEC,

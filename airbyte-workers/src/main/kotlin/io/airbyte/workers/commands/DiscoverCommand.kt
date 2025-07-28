@@ -10,16 +10,16 @@ import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
-import io.airbyte.config.WorkloadPriority
-import io.airbyte.config.WorkloadType
 import io.airbyte.workers.input.isReset
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.pod.Metadata
 import io.airbyte.workers.sync.WorkloadClient
 import io.airbyte.workers.workload.DataplaneGroupResolver
 import io.airbyte.workers.workload.WorkloadIdGenerator
-import io.airbyte.workload.api.domain.WorkloadCreateRequest
-import io.airbyte.workload.api.domain.WorkloadLabel
+import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest
+import io.airbyte.workload.api.client.model.generated.WorkloadLabel
+import io.airbyte.workload.api.client.model.generated.WorkloadPriority.Companion.decode
+import io.airbyte.workload.api.client.model.generated.WorkloadType
 import io.micronaut.context.annotation.Property
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -125,7 +125,7 @@ class DiscoverCommand(
       organizationId = organizationId,
       logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber.toLong())),
       type = WorkloadType.DISCOVER,
-      priority = WorkloadPriority.fromValue(input.launcherConfig.priority.toString())!!,
+      priority = decode(input.launcherConfig.priority.toString())!!,
       signalInput = signalPayload,
       dataplaneGroup = dataplaneGroup,
     )

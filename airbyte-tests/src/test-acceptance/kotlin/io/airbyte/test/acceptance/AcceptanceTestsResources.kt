@@ -5,6 +5,9 @@
 package io.airbyte.test.acceptance
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.google.common.collect.ImmutableMap
+import com.google.common.collect.Lists
+import com.google.common.collect.Sets
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.function.CheckedRunnable
@@ -56,10 +59,10 @@ class AcceptanceTestsResources {
   val basicScheduleData: ConnectionScheduleData =
     ConnectionScheduleData(
       ConnectionScheduleDataBasicSchedule(
-        timeUnit = ConnectionScheduleDataBasicSchedule.TimeUnit.HOURS,
-        units = 1L,
+        ConnectionScheduleDataBasicSchedule.TimeUnit.HOURS,
+        1L,
       ),
-      cron = null,
+      null,
     )
 
   /**
@@ -96,7 +99,7 @@ class AcceptanceTestsResources {
     val retrievedCatalog = discoverResult.catalog
     val stream = retrievedCatalog!!.streams[0].stream
 
-    Assertions.assertEquals(listOf(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream!!.supportedSyncModes)
+    Assertions.assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream!!.supportedSyncModes)
     Assertions.assertFalse(stream.sourceDefinedCursor!!)
     Assertions.assertTrue(stream.defaultCursorField!!.isEmpty())
     Assertions.assertTrue(stream.sourceDefinedPrimaryKey!!.isEmpty())
@@ -208,7 +211,13 @@ class AcceptanceTestsResources {
           AcceptanceTestHarness.STREAM_NAME,
         ).toMutableList()
     preMutationRecords.add(
-      Jsons.jsonNode(mapOf(AcceptanceTestHarness.COLUMN_ID to 6, AcceptanceTestHarness.COLUMN_NAME to GERALT)),
+      Jsons.jsonNode<ImmutableMap<Any, Any>>(
+        ImmutableMap
+          .builder<Any, Any>()
+          .put(AcceptanceTestHarness.COLUMN_ID, 6)
+          .put(AcceptanceTestHarness.COLUMN_NAME, GERALT)
+          .build(),
+      ),
     )
     val expectedRecords: List<JsonNode?> = preMutationRecords.toList()
 
@@ -225,19 +234,14 @@ class AcceptanceTestsResources {
 
     LOGGER.info(STATE_AFTER_SYNC_TWO, testHarness.getConnectionState(connectionId))
 
-    assertRawDestinationContains(
-      dst = dst,
-      sourceRecords = expectedRecords,
-      outputSchema = conn.namespaceFormat!!,
-      tableName = AcceptanceTestHarness.STREAM_NAME,
-    )
+    assertRawDestinationContains(dst, expectedRecords, conn.namespaceFormat!!, AcceptanceTestHarness.STREAM_NAME)
     assertStreamStatuses(
-      testHarness = testHarness,
-      workspaceId = workspaceId,
-      connectionId = connectionId,
-      jobId = connectionSyncRead2.job.id,
-      expectedRunState = StreamStatusRunState.COMPLETE,
-      expectedJobType = StreamStatusJobType.SYNC,
+      testHarness,
+      workspaceId,
+      connectionId,
+      connectionSyncRead2.job.id,
+      StreamStatusRunState.COMPLETE,
+      StreamStatusJobType.SYNC,
     )
 
     // reset back to no data.
@@ -245,7 +249,7 @@ class AcceptanceTestsResources {
     val jobInfoRead = testHarness.resetConnection(connectionId)
     testHarness.waitWhileJobHasStatus(
       jobInfoRead.job,
-      setOf(JobStatus.PENDING, JobStatus.RUNNING, JobStatus.INCOMPLETE, JobStatus.FAILED),
+      Sets.newHashSet(JobStatus.PENDING, JobStatus.RUNNING, JobStatus.INCOMPLETE, JobStatus.FAILED),
     )
     // This is a band-aid to prevent some race conditions where the job status was updated but we may
     // still be cleaning up some data in the reset table. This would be an argument for reworking the
@@ -272,10 +276,10 @@ class AcceptanceTestsResources {
       ).run(
         CheckedRunnable {
           assertRawDestinationContains(
-            dst = dst,
-            sourceRecords = emptyList<JsonNode>(),
-            outputSchema = conn.namespaceFormat!!,
-            tableName = AcceptanceTestHarness.STREAM_NAME,
+            dst,
+            emptyList<JsonNode>(),
+            conn.namespaceFormat!!,
+            AcceptanceTestHarness.STREAM_NAME,
           )
         },
       )
@@ -296,12 +300,12 @@ class AcceptanceTestsResources {
       withScdTable = WITHOUT_SCD_TABLE,
     )
     assertStreamStatuses(
-      testHarness = testHarness,
-      workspaceId = workspaceId,
-      connectionId = connectionId,
-      jobId = connectionSyncRead3.job.id,
-      expectedRunState = StreamStatusRunState.COMPLETE,
-      expectedJobType = StreamStatusJobType.SYNC,
+      testHarness,
+      workspaceId,
+      connectionId,
+      connectionSyncRead3.job.id,
+      StreamStatusRunState.COMPLETE,
+      StreamStatusJobType.SYNC,
     )
   }
 
@@ -321,7 +325,7 @@ class AcceptanceTestsResources {
     val retrievedCatalog = discoverResult.catalog
     val stream = retrievedCatalog!!.streams[0].stream
 
-    Assertions.assertEquals(listOf(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream!!.supportedSyncModes)
+    Assertions.assertEquals(Lists.newArrayList(SyncMode.FULL_REFRESH, SyncMode.INCREMENTAL), stream!!.supportedSyncModes)
     Assertions.assertFalse(stream.sourceDefinedCursor!!)
     Assertions.assertTrue(stream.defaultCursorField!!.isEmpty())
     Assertions.assertTrue(stream.sourceDefinedPrimaryKey!!.isEmpty())
@@ -330,28 +334,28 @@ class AcceptanceTestsResources {
     val dstSyncMode = DestinationSyncMode.APPEND
     val catalog =
       modifyCatalog(
-        originalCatalog = retrievedCatalog,
-        replacementSourceSyncMode = Optional.of(srcSyncMode),
-        replacementDestinationSyncMode = Optional.of(dstSyncMode),
-        replacementCursorFields = Optional.of(listOf(AcceptanceTestHarness.COLUMN_ID)),
-        replacementPrimaryKeys = Optional.empty(),
-        replacementSelected = Optional.of(true),
-        replacementFieldSelectionEnabled = Optional.empty(),
-        replacementSelectedFields = Optional.empty(),
-        replacementMinimumGenerationId = Optional.empty(),
-        replacementGenerationId = Optional.empty(),
-        replacementSyncId = Optional.empty(),
-        streamFilter = Optional.empty(),
+        retrievedCatalog,
+        Optional.of(srcSyncMode),
+        Optional.of(dstSyncMode),
+        Optional.of(listOf(AcceptanceTestHarness.COLUMN_ID)),
+        Optional.empty(),
+        Optional.of(true),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
+        Optional.empty(),
       )
     val conn =
       testHarness.createConnection(
         TestConnectionCreate
           .Builder(
-            srcId = sourceId,
-            dstId = destinationId,
-            configuredCatalog = catalog,
-            catalogId = discoverResult.catalogId!!,
-            dataplaneGroupId = testHarness.dataplaneGroupId,
+            sourceId,
+            destinationId,
+            catalog,
+            discoverResult.catalogId!!,
+            testHarness.dataplaneGroupId,
           ).build(),
       )
     LOGGER.info("Beginning runSmallSyncForAWorkspaceId() sync")
@@ -365,20 +369,20 @@ class AcceptanceTestsResources {
     val src = testHarness.getSourceDatabase()
     val dst = testHarness.getDestinationDatabase()
     assertSourceAndDestinationDbRawRecordsInSync(
-      source = src,
-      destination = dst,
-      inputSchema = conn.namespaceFormat!!,
-      outputSchema = AcceptanceTestHarness.PUBLIC_SCHEMA_NAME,
-      withNormalizedTable = false,
-      withScdTable = WITHOUT_SCD_TABLE,
+      src,
+      dst,
+      conn.namespaceFormat!!,
+      AcceptanceTestHarness.PUBLIC_SCHEMA_NAME,
+      false,
+      WITHOUT_SCD_TABLE,
     )
     assertStreamStatuses(
-      testHarness = testHarness,
-      workspaceId = workspaceId,
-      connectionId = connectionId,
-      jobId = connectionSyncRead1.job.id,
-      expectedRunState = StreamStatusRunState.COMPLETE,
-      expectedJobType = StreamStatusJobType.SYNC,
+      testHarness,
+      workspaceId,
+      connectionId,
+      connectionSyncRead1.job.id,
+      StreamStatusRunState.COMPLETE,
+      StreamStatusJobType.SYNC,
     )
 
     // Assert that job logs exist
@@ -404,17 +408,17 @@ class AcceptanceTestsResources {
         airbyteApiClient.workspaceApi
           .createWorkspace(
             WorkspaceCreate(
-              name = "Airbyte Acceptance Tests" + UUID.randomUUID(),
-              organizationId = DEFAULT_ORGANIZATION_ID,
-              email = "acceptance-tests@airbyte.io",
-              anonymousDataCollection = null,
-              news = null,
-              securityUpdates = null,
-              notifications = null,
-              notificationSettings = null,
-              displaySetupWizard = null,
-              dataplaneGroupId = null,
-              webhookConfigs = null,
+              "Airbyte Acceptance Tests" + UUID.randomUUID(),
+              DEFAULT_ORGANIZATION_ID,
+              "acceptance-tests@airbyte.io",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
             ),
           ).workspaceId
       } else {
@@ -423,9 +427,18 @@ class AcceptanceTestsResources {
     LOGGER.info("workspaceId = {}", workspaceId)
 
     // log which connectors are being used.
-    val sourceDef = airbyteApiClient.sourceDefinitionApi.getSourceDefinition(SourceDefinitionIdRequestBody(POSTGRES_SOURCE_DEF_ID))
+    val sourceDef =
+      airbyteApiClient.sourceDefinitionApi.getSourceDefinition(
+        SourceDefinitionIdRequestBody(
+          POSTGRES_SOURCE_DEF_ID,
+        ),
+      )
     val destinationDef =
-      airbyteApiClient.destinationDefinitionApi.getDestinationDefinition(DestinationDefinitionIdRequestBody(POSTGRES_DEST_DEF_ID))
+      airbyteApiClient.destinationDefinitionApi.getDestinationDefinition(
+        DestinationDefinitionIdRequestBody(
+          POSTGRES_DEST_DEF_ID,
+        ),
+      )
     LOGGER.info("pg source definition: {}", sourceDef.dockerImageTag)
     LOGGER.info("pg destination definition: {}", destinationDef.dockerImageTag)
 
@@ -453,18 +466,20 @@ class AcceptanceTestsResources {
   companion object {
     private val LOGGER: Logger = LoggerFactory.getLogger(AcceptanceTestsResources::class.java)
 
+    const val WITH_SCD_TABLE: Boolean = true
     const val WITHOUT_SCD_TABLE: Boolean = false
     const val GATEWAY_AUTH_HEADER: String = "X-Endpoint-API-UserInfo"
 
     // NOTE: this is just a base64 encoding of a jwt representing a test user in some deployments.
     const val CLOUD_API_USER_HEADER_VALUE: String = "eyJ1c2VyX2lkIjogImNsb3VkLWFwaSIsICJlbWFpbF92ZXJpZmllZCI6ICJ0cnVlIn0K"
     const val AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID: String = "AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID"
-    val AIRBYTE_SERVER_HOST: String = System.getenv("AIRBYTE_SERVER_HOST") ?: "http://localhost:8001"
+    val AIRBYTE_SERVER_HOST: String = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001")
     val POSTGRES_SOURCE_DEF_ID: UUID = UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750")
     val POSTGRES_DEST_DEF_ID: UUID = UUID.fromString("25c5221d-dce2-4163-ade9-739ef790f503")
     const val KUBE: String = "KUBE"
     const val TRUE: String = "true"
-    const val DISABLE_TEMPORAL_TESTS_IN_GKE: String = "Test disabled because it specifically interacts with Temporal, which is deployment-dependent "
+    const val DISABLE_TEMPORAL_TESTS_IN_GKE: String =
+      "Test disabled because it specifically interacts with Temporal, which is deployment-dependent "
     const val JITTER_MAX_INTERVAL_SECS: Int = 10
     const val FINAL_INTERVAL_SECS: Int = 60
     const val MAX_TRIES: Int = 3

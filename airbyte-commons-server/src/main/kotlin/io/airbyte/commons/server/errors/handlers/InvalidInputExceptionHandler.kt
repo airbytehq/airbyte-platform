@@ -38,7 +38,7 @@ class InvalidInputExceptionHandler : ExceptionHandler<ConstraintViolationExcepti
   ): HttpResponse<*> =
     HttpResponse
       .status<Any>(HttpStatus.BAD_REQUEST)
-      .body(Jsons.serialize(infoFromConstraints(exception)))
+      .body(Jsons.serialize<InvalidInputExceptionInfo?>(infoFromConstraints(exception)))
       .contentType(MediaType.APPLICATION_JSON_TYPE)
 
   companion object {

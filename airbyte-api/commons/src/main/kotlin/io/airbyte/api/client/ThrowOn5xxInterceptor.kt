@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.api.client.interceptor
+package io.airbyte.api.client
 
 import io.airbyte.api.client.auth.AirbyteApiInterceptor
 import io.micronaut.context.annotation.Requires

@@ -47,7 +47,6 @@ dependencies {
   implementation(project(":oss:airbyte-persistence:job-persistence"))
   implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
-  implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-db:jooq"))
   implementation(project(":oss:airbyte-db:db-lib"))
   implementation(project(":oss:airbyte-data"))

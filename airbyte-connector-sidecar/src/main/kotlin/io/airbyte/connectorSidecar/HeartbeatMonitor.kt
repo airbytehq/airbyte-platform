@@ -4,11 +4,10 @@
 
 package io.airbyte.connectorSidecar
 
-import io.airbyte.api.client.ApiException
-import io.airbyte.api.client.unit
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workload.api.client.WorkloadApiClient
-import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
+import io.airbyte.workload.api.client.generated.infrastructure.ClientException
+import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.oshai.kotlinlogging.withLoggingContext
 import io.micronaut.context.annotation.Parameter
@@ -84,11 +83,9 @@ class HeartbeatMonitor(
       withLoggingContext(logContextFactory.create(sidecarInput.logPath)) {
         try {
           logger.debug { "Sending workload heartbeat" }
-          workloadApiClient.workloadApi
-            .workloadHeartbeat(
-              WorkloadHeartbeatRequest(sidecarInput.workloadId),
-            ).unit()
-
+          workloadApiClient.workloadApi.workloadHeartbeat(
+            WorkloadHeartbeatRequest(sidecarInput.workloadId),
+          )
           lastSuccessfulHeartbeat = clock.instant()
         } catch (e: Exception) {
           handleHeartbeatException(e)
@@ -98,7 +95,7 @@ class HeartbeatMonitor(
 
     private fun handleHeartbeatException(e: Exception) {
       when {
-        e is ApiException && e.statusCode == HttpStatus.GONE.code -> {
+        e is ClientException && e.statusCode == HttpStatus.GONE.code -> {
           logger.warn(e) { "Cancelling job, workload is in a terminal state" }
           abort.set(true)
         }

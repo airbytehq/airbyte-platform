@@ -4,7 +4,6 @@
 
 package io.airbyte.container.orchestrator.worker
 
-import io.airbyte.api.client.ApiException
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.container.orchestrator.worker.exception.WorkloadHeartbeatException
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
@@ -12,7 +11,8 @@ import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatTimeoutException
 import io.airbyte.featureflag.OrchestratorHardFailOnHeartbeatFailure
 import io.airbyte.workload.api.client.WorkloadApiClient
-import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
+import io.airbyte.workload.api.client.generated.infrastructure.ClientException
+import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import io.micronaut.http.HttpStatus
@@ -102,7 +102,7 @@ class WorkloadHeartbeatSender(
         }
       } catch (e: Exception) {
         when {
-          e is ApiException && e.statusCode == HttpStatus.GONE.code -> {
+          e is ClientException && e.statusCode == HttpStatus.GONE.code -> {
             logger.warn(e) { "Workload in terminal state; cancelling sync." }
             replicationWorkerState.markCancelled()
             break
@@ -190,7 +190,7 @@ class WorkloadHeartbeatSender(
           // it has been canceled by the user or failed from the workload-api. Could be timeout from the workload monitor or workload
           // has been superseded by another workload.
           // In this case, the workload has already been failed, we should exit ASAP.
-          e is ApiException && e.statusCode == HttpStatus.GONE.code -> {
+          e is ClientException && e.statusCode == HttpStatus.GONE.code -> {
             logger.warn(e) { "Workload in terminal state; exiting." }
             exitAsap()
             break

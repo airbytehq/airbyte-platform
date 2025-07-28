@@ -33,7 +33,6 @@ dependencies {
   implementation(libs.slf4j.api)
   implementation(libs.micronaut.jooq)
   implementation(libs.bundles.micronaut.metrics)
-  implementation(libs.retrofit)
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))
@@ -59,7 +58,6 @@ dependencies {
   testImplementation(libs.kotlin.test.runner.junit5)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
-  testImplementation(libs.retrofit.mock)
 }
 
 airbyte {
@@ -70,11 +68,12 @@ airbyte {
       mapOf(
         "AIRBYTE_VERSION" to "dev",
         "DATA_PLANE_ID" to "local",
-        "MICRONAUT_ENVIRONMENTS" to "test",
-      ),
+        "MICRONAUT_ENVIRONMENTS" to "test"
+      )
     )
   }
   docker {
     imageName.set("workload-init-container")
   }
 }
+

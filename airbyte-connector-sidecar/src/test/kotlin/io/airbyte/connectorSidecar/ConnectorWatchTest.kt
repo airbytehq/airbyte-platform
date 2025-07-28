@@ -21,9 +21,10 @@ import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SidecarInput.OperationType
 import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.workload.WorkloadOutputWriter
-import io.airbyte.workload.api.WorkloadApiClient
-import io.airbyte.workload.api.domain.WorkloadFailureRequest
-import io.airbyte.workload.api.domain.WorkloadSuccessRequest
+import io.airbyte.workload.api.client.WorkloadApiClient
+import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
+import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest
 import io.mockk.MockKException
 import io.mockk.Runs
 import io.mockk.every
@@ -40,7 +41,6 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
-import retrofit2.mock.Calls
 import java.nio.file.Path
 
 @ExtendWith(MockKExtension::class)
@@ -59,6 +59,9 @@ class ConnectorWatchTest {
 
   @MockK
   private lateinit var gsonPksExtractor: GsonPksExtractor
+
+  @MockK
+  private lateinit var workloadApi: WorkloadApi
 
   @MockK
   private lateinit var workloadApiClient: WorkloadApiClient
@@ -88,7 +91,8 @@ class ConnectorWatchTest {
 
   @BeforeEach
   fun init() {
-    // TODO(cole): make this no longer a spy... never trust a spy
+    every { workloadApiClient.workloadApi } returns workloadApi
+
     connectorWatcher =
       spyk(
         ConnectorWatcher(
@@ -122,7 +126,7 @@ class ConnectorWatchTest {
 
     every { logContextFactory.create(any()) } returns mapOf()
 
-    every { workloadApiClient.workloadHeartbeat(any()) } returns Calls.response(Unit)
+    every { workloadApi.workloadHeartbeat(any()) } just Runs
 
     every { heartbeatMonitor.startHeartbeatThread(any()) } just Runs
 
@@ -143,14 +147,14 @@ class ConnectorWatchTest {
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
 
-    every { workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Calls.response(Unit)
+    every { workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Unit
 
     connectorWatcher.run()
 
     verifyOrder {
       connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType))
       outputWriter.write(workloadId, output)
-      workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId))
+      workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
       connectorWatcher.exitProperly()
     }
   }
@@ -167,14 +171,14 @@ class ConnectorWatchTest {
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
 
-    every { workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Calls.response(Unit)
+    every { workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Unit
 
     connectorWatcher.run()
 
     verifyOrder {
       connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType))
       outputWriter.write(workloadId, output)
-      workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId))
+      workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
       connectorWatcher.exitProperly()
     }
   }
@@ -196,21 +200,21 @@ class ConnectorWatchTest {
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } throws exception
 
     every {
-      workloadApiClient.workloadFailure(
+      workloadApi.workloadFailure(
         WorkloadFailureRequest(
           workloadId,
           output.failureReason.failureOrigin.value(),
           output.failureReason.externalMessage,
         ),
       )
-    } returns Calls.response(Unit)
+    } returns Unit
 
     connectorWatcher.run()
 
     verifyOrder {
       connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType))
       outputWriter.write(workloadId, output)
-      workloadApiClient.workloadFailure(
+      workloadApi.workloadFailure(
         WorkloadFailureRequest(workloadId, output.failureReason.failureOrigin.value(), output.failureReason.externalMessage),
       )
       connectorWatcher.exitInternalError()
@@ -233,7 +237,7 @@ class ConnectorWatchTest {
       throw RuntimeException("")
     }
 
-    every { workloadApiClient.workloadFailure(any()) } returns Calls.response(Unit)
+    every { workloadApi.workloadFailure(any()) } returns Unit
 
     connectorWatcher.run()
 
@@ -252,7 +256,7 @@ class ConnectorWatchTest {
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
 
-    every { workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Calls.response(Unit)
+    every { workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Unit
 
     connectorWatcher.run()
 
@@ -279,7 +283,7 @@ class ConnectorWatchTest {
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
 
-    every { workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Calls.response(Unit)
+    every { workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Unit
 
     every { heartbeatMonitor.shouldAbort() } returns true
 
@@ -309,10 +313,10 @@ class ConnectorWatchTest {
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
     every { outputWriter.write(any(), any()) } throws RuntimeException("Unable to Write")
-    every { workloadApiClient.workloadFailure(any()) } returns Calls.response(Unit)
+    every { workloadApi.workloadFailure(any()) } returns Unit
 
     connectorWatcher.run()
 
-    verify { workloadApiClient.workloadFailure(any()) }
+    verify { workloadApi.workloadFailure(any()) }
   }
 }

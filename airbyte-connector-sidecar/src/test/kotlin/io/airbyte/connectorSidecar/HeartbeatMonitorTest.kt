@@ -4,16 +4,16 @@
 
 package io.airbyte.connectorSidecar
 
-import io.airbyte.api.client.ApiException
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workload.api.client.WorkloadApiClient
+import io.airbyte.workload.api.client.generated.WorkloadApi
+import io.airbyte.workload.api.client.generated.infrastructure.ClientException
 import io.micronaut.http.HttpStatus
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import retrofit2.mock.Calls
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -24,7 +24,7 @@ class HeartbeatMonitorTest {
   fun `should set abort when ClientException with status code 410 is thrown`() {
     val sidecarInput = mockk<SidecarInput>()
     val workloadApiClient = mockk<WorkloadApiClient>()
-    val workloadApi = mockk<io.airbyte.workload.api.WorkloadApiClient>()
+    val workloadApi = mockk<WorkloadApi>()
     val sidecarLogContextFactory = mockk<SidecarLogContextFactory>()
     val clock = Clock.systemUTC()
     val abort = AtomicBoolean(false)
@@ -34,7 +34,7 @@ class HeartbeatMonitorTest {
     every { sidecarInput.workloadId } returns ""
     every { workloadApiClient.workloadApi } returns workloadApi
     every { sidecarLogContextFactory.create(any()) } returns mapOf()
-    every { workloadApi.workloadHeartbeat(any()) } throws ApiException(HttpStatus.GONE.code, "http://localhost.test", "")
+    every { workloadApi.workloadHeartbeat(any()) } throws ClientException("Gone", HttpStatus.GONE.code, null)
 
     val heartbeatTask =
       HeartbeatMonitor.HeartbeatTask(
@@ -55,7 +55,7 @@ class HeartbeatMonitorTest {
   fun `should set abort when heartbeat timeout duration is exceeded`() {
     val sidecarInput = mockk<SidecarInput>()
     val workloadApiClient = mockk<WorkloadApiClient>()
-    val workloadApi = mockk<io.airbyte.workload.api.WorkloadApiClient>()
+    val workloadApi = mockk<WorkloadApi>()
     val sidecarLogContextFactory = mockk<SidecarLogContextFactory>()
     val abort = AtomicBoolean(false)
     val heartbeatTimeoutDuration = Duration.ofMinutes(5)
@@ -91,7 +91,7 @@ class HeartbeatMonitorTest {
   fun `should not set abort on transient exceptions within timeout duration`() {
     val sidecarInput = mockk<SidecarInput>()
     val workloadApiClient = mockk<WorkloadApiClient>()
-    val workloadApi = mockk<io.airbyte.workload.api.WorkloadApiClient>()
+    val workloadApi = mockk<WorkloadApi>()
     val sidecarLogContextFactory = mockk<SidecarLogContextFactory>()
     val abort = AtomicBoolean(false)
     val heartbeatTimeoutDuration = Duration.ofMinutes(5)
@@ -103,7 +103,7 @@ class HeartbeatMonitorTest {
     every { sidecarInput.workloadId } returns ""
     every { workloadApiClient.workloadApi } returns workloadApi
     every { sidecarLogContextFactory.create(any()) } returns mapOf()
-    every { workloadApi.workloadHeartbeat(any()) } throws RuntimeException("Network error") andThen Calls.response(Unit)
+    every { workloadApi.workloadHeartbeat(any()) } throws RuntimeException("Network error") andThen Unit
 
     every { clock.instant() } returnsMany
       listOf(

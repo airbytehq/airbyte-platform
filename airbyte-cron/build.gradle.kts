@@ -20,7 +20,6 @@ dependencies {
   implementation(libs.java.jwt)
   implementation(libs.kotlin.logging)
   implementation(libs.okhttp)
-  implementation(libs.retrofit)
   implementation(libs.sentry.java)
 
   implementation(project(":oss:airbyte-api:server-api"))
@@ -53,7 +52,6 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.mockk)
   testImplementation(libs.bundles.micronaut.test)
-  testImplementation(libs.retrofit.mock)
 }
 
 airbyte {

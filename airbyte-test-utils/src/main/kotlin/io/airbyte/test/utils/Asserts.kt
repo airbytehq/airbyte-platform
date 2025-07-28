@@ -19,6 +19,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.util.UUID
+import java.util.function.Consumer
 import java.util.stream.Collectors
 
 /**
@@ -193,10 +194,9 @@ object Asserts {
 
     val streamStatuses = fetchStreamStatus(testHarness, workspaceId, connectionId, jobId, attemptNumber)
     Assertions.assertNotNull(streamStatuses)
-    val filteredStreamStatuses = streamStatuses.filter { expectedJobType == it.jobType }.toList()
+    val filteredStreamStatuses = streamStatuses.stream().filter { s: StreamStatusRead -> expectedJobType == s.jobType }.toList()
     Assertions.assertFalse(filteredStreamStatuses.isEmpty())
-
-    filteredStreamStatuses.forEach { Assertions.assertEquals(expectedRunState, it.runState) }
+    filteredStreamStatuses.forEach(Consumer { status: StreamStatusRead -> Assertions.assertEquals(expectedRunState, status.runState) })
   }
 
   /**
@@ -246,8 +246,10 @@ object Asserts {
       LOGGER.debug("Fetching stream status for {} {} {} {}...", connectionId, jobId, attempt, workspaceId)
       try {
         val result = testHarness.getStreamStatuses(connectionId, jobId, attempt, workspaceId)
-        LOGGER.debug("Stream status result for connection {}: {}", connectionId, result)
-        results = result.streamStatuses ?: emptyList()
+        if (result != null) {
+          LOGGER.debug("Stream status result for connection {}: {}", connectionId, result)
+          results = result.streamStatuses ?: emptyList()
+        }
       } catch (e: Exception) {
         LOGGER.info("Unable to call stream status API.", e)
       }

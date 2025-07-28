@@ -91,4 +91,4 @@ logger:
     io.netty: INFO
     io.temporal: INFO
 #   Uncomment to help resolve issues with conditional beans
-#    io.micronaut.context.condition: DEBUG
+#      io.micronaut.context.condition: DEBUG

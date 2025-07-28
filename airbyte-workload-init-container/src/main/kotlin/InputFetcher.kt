@@ -4,7 +4,6 @@
 
 package io.airbyte.initContainer
 
-import io.airbyte.api.client.body
 import io.airbyte.config.FailureReason.FailureOrigin
 import io.airbyte.initContainer.input.InputHydrationProcessor
 import io.airbyte.initContainer.system.SystemClient
@@ -12,7 +11,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.workers.models.InitContainerConstants
 import io.airbyte.workload.api.client.WorkloadApiClient
-import io.airbyte.workload.api.domain.WorkloadFailureRequest
+import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Context
 import io.micronaut.context.annotation.Value
@@ -33,7 +32,7 @@ class InputFetcher(
 
     val workload =
       try {
-        workloadApiClient.workloadApi.workloadGet(workloadId).body()
+        workloadApiClient.workloadApi.workloadGet(workloadId)
       } catch (e: Exception) {
         metricClient.count(metric = OssMetricsRegistry.WORKLOAD_HYDRATION_FETCH_FAILURE)
         return failWorkloadAndExit(workloadId, "fetching workload", e, InitContainerConstants.WORKLOAD_API_ERROR_EXIT_CODE)
@@ -64,14 +63,13 @@ class InputFetcher(
 
     var actualExitCodeToUse = exitCodeOnError
     try {
-      workloadApiClient.workloadApi
-        .workloadFailure(
-          WorkloadFailureRequest(
-            id,
-            FailureOrigin.AIRBYTE_PLATFORM.toString(),
-            "$msg Encountered exception of type: ${e.javaClass}. Exception message: ${e.message}.",
-          ),
-        ).body()
+      workloadApiClient.workloadApi.workloadFailure(
+        WorkloadFailureRequest(
+          id,
+          FailureOrigin.AIRBYTE_PLATFORM.toString(),
+          "$msg Encountered exception of type: ${e.javaClass}. Exception message: ${e.message}.",
+        ),
+      )
     } catch (e: Exception) {
       logger.error(e) { "Error encountered failing workload for id: $id. Ignoring..." }
       actualExitCodeToUse = InitContainerConstants.WORKLOAD_API_ERROR_EXIT_CODE

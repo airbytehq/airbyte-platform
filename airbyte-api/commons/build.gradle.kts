@@ -15,7 +15,6 @@ dependencies {
   api(libs.bundles.micronaut.annotation)
   api(libs.micronaut.http)
   api(libs.failsafe.okhttp)
-  api(libs.failsafe.retrofit)
   api(libs.okhttp)
   api(libs.guava)
   api(libs.java.jwt)
@@ -38,7 +37,6 @@ dependencies {
   implementation(libs.reactor.core)
   implementation(libs.slf4j.api)
   implementation(libs.swagger.annotations)
-  implementation(libs.retrofit)
 
   implementation(project(":oss:airbyte-commons"))
 

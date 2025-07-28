@@ -89,7 +89,11 @@ open class WorkloadApi(
   )
   // Since create publishes to a queue, it is prudent to give it its own thread pool.
   @ExecuteOn("workload")
-  fun workloadCreate(workloadCreateRequest: WorkloadCreateRequest): HttpResponse<Unit> {
+  open fun workloadCreate(
+    @RequestBody(
+      content = [Content(schema = Schema(implementation = WorkloadCreateRequest::class))],
+    ) @Body workloadCreateRequest: WorkloadCreateRequest,
+  ): HttpResponse<Any> {
     ApmTraceUtils.addTagsToTrace(
       mutableMapOf(
         MetricTags.MUTEX_KEY_TAG to workloadCreateRequest.mutexKey,
@@ -159,7 +163,7 @@ open class WorkloadApi(
       ),
     ],
   )
-  fun workloadFailure(
+  open fun workloadFailure(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadFailureRequest::class))],
     ) @Body workloadFailureRequest: WorkloadFailureRequest,
@@ -193,7 +197,7 @@ open class WorkloadApi(
       ),
     ],
   )
-  fun workloadSuccess(
+  open fun workloadSuccess(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadSuccessRequest::class))],
     ) @Body workloadSuccessRequest: WorkloadSuccessRequest,
@@ -227,7 +231,7 @@ open class WorkloadApi(
       ),
     ],
   )
-  fun workloadRunning(
+  open fun workloadRunning(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadRunningRequest::class))],
     ) @Body workloadRunningRequest: WorkloadRunningRequest,
@@ -264,7 +268,7 @@ open class WorkloadApi(
       ),
     ],
   )
-  fun workloadCancel(
+  open fun workloadCancel(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadCancelRequest::class))],
     ) @Body workloadCancelRequest: WorkloadCancelRequest,
@@ -306,7 +310,7 @@ open class WorkloadApi(
       ),
     ],
   )
-  fun workloadClaim(
+  open fun workloadClaim(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadClaimRequest::class))],
     ) @Body workloadClaimRequest: WorkloadClaimRequest,
@@ -351,7 +355,7 @@ open class WorkloadApi(
       ),
     ],
   )
-  fun workloadLaunched(
+  open fun workloadLaunched(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadLaunchedRequest::class))],
     ) @Body workloadLaunchedRequest: WorkloadLaunchedRequest,
@@ -382,7 +386,7 @@ open class WorkloadApi(
       ),
     ],
   )
-  fun workloadGet(
+  open fun workloadGet(
     @PathParam("workloadId") workloadId: String,
   ): Workload {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadId))
@@ -414,7 +418,7 @@ open class WorkloadApi(
       ),
     ],
   )
-  fun workloadHeartbeat(
+  open fun workloadHeartbeat(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadHeartbeatRequest::class))],
     ) @Body workloadHeartbeatRequest: WorkloadHeartbeatRequest,
@@ -438,7 +442,7 @@ open class WorkloadApi(
       ),
     ],
   )
-  fun workloadList(
+  open fun workloadList(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadListRequest::class))],
     ) @Body workloadListRequest: WorkloadListRequest,
@@ -467,7 +471,7 @@ open class WorkloadApi(
       ),
     ],
   )
-  fun workloadListWithExpiredDeadline(
+  open fun workloadListWithExpiredDeadline(
     @RequestBody(
       content = [Content(schema = Schema(implementation = ExpiredDeadlineWorkloadListRequest::class))],
     ) @Body expiredDeadlineWorkloadListRequest: ExpiredDeadlineWorkloadListRequest,
@@ -496,7 +500,7 @@ open class WorkloadApi(
       ),
     ],
   )
-  fun workloadListOldNonSync(
+  open fun workloadListOldNonSync(
     @RequestBody(
       content = [Content(schema = Schema(implementation = LongRunningWorkloadRequest::class))],
     ) @Body longRunningWorkloadRequest: LongRunningWorkloadRequest,
@@ -525,7 +529,7 @@ open class WorkloadApi(
       ),
     ],
   )
-  fun workloadListOldSync(
+  open fun workloadListOldSync(
     @RequestBody(
       content = [Content(schema = Schema(implementation = LongRunningWorkloadRequest::class))],
     ) @Body longRunningWorkloadRequest: LongRunningWorkloadRequest,
@@ -554,7 +558,7 @@ open class WorkloadApi(
       ),
     ],
   )
-  fun pollWorkloadQueue(
+  open fun pollWorkloadQueue(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadQueuePollRequest::class))],
     ) @Body req: WorkloadQueuePollRequest,
@@ -583,7 +587,7 @@ open class WorkloadApi(
       ),
     ],
   )
-  fun countWorkloadQueueDepth(
+  open fun countWorkloadQueueDepth(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadQueueQueryRequest::class))],
     ) @Body req: WorkloadQueueQueryRequest,
@@ -612,7 +616,8 @@ open class WorkloadApi(
       ),
     ],
   )
-  fun getWorkloadQueueStats(): WorkloadQueueStatsResponse {
+  open fun getWorkloadQueueStats(): WorkloadQueueStatsResponse {
+    authorize()
     val stats = workloadHandler.getWorkloadQueueStats()
     return WorkloadQueueStatsResponse(stats)
   }
@@ -629,7 +634,7 @@ open class WorkloadApi(
       ),
     ],
   )
-  fun workloadQueueClean(
+  open fun workloadQueueClean(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadQueueCleanLimit::class))],
     ) @Body req: WorkloadQueueCleanLimit,

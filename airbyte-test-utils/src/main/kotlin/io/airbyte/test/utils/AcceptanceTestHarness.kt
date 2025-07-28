@@ -252,7 +252,7 @@ class AcceptanceTestHarness
         )
       expectedAirbyteCatalog =
         AirbyteCatalog(
-          listOf(
+          java.util.List.of(
             AirbyteStreamAndConfiguration(expectedStream, expectedStreamConfig),
           ),
         )
@@ -260,7 +260,7 @@ class AcceptanceTestHarness
       retryPolicy =
         RetryPolicy
           .builder<Any>()
-          .handle(listOf<Class<out Throwable?>>(Exception::class.java))
+          .handle(java.util.List.of<Class<out Throwable?>>(Exception::class.java))
           .withBackoff(Duration.ofSeconds(JITTER_MAX_INTERVAL_SECS.toLong()), Duration.ofSeconds(FINAL_INTERVAL_SECS.toLong()))
           .withMaxRetries(MAX_TRIES)
           .build()
@@ -762,7 +762,12 @@ class AcceptanceTestHarness
     ): List<JsonNode> =
       database
         .query { context: DSLContext ->
-          context.fetch("SELECT * FROM $table")
+          context.fetch(
+            String.format(
+              "SELECT * FROM %s;",
+              table,
+            ),
+          )
         }.stream()
         .map { obj: Record -> obj.intoMap() }
         .map { `object`: Map<String, Any>? -> Jsons.jsonNode(`object`) }
@@ -1136,7 +1141,7 @@ class AcceptanceTestHarness
 
     @Throws(InterruptedException::class, IOException::class)
     fun waitForSuccessfulJob(originalJob: JobRead) {
-      val job = waitWhileJobHasStatus(originalJob, setOf(JobStatus.PENDING, JobStatus.RUNNING, JobStatus.INCOMPLETE))
+      val job = waitWhileJobHasStatus(originalJob, Sets.newHashSet(JobStatus.PENDING, JobStatus.RUNNING, JobStatus.INCOMPLETE))
 
       val debugInfo = ArrayList<String?>()
 
@@ -1159,13 +1164,13 @@ class AcceptanceTestHarness
     @Throws(InterruptedException::class)
     fun waitWhileJobHasStatus(
       originalJob: JobRead,
-      jobStatuses: Set<JobStatus>,
+      jobStatuses: Set<JobStatus?>,
     ): JobRead = waitWhileJobHasStatus(originalJob, jobStatuses, Duration.ofMinutes(12))
 
     @Throws(InterruptedException::class)
-    private fun waitWhileJobHasStatus(
+    fun waitWhileJobHasStatus(
       originalJob: JobRead,
-      jobStatuses: Set<JobStatus>,
+      jobStatuses: Set<JobStatus?>,
       maxWaitTime: Duration,
     ): JobRead {
       var job = originalJob
@@ -1174,7 +1179,7 @@ class AcceptanceTestHarness
       var logDebounce = 0
       while (jobStatuses.contains(job.status)) {
         logDebounce++
-        if (Duration.between(waitStart, Instant.now()) > maxWaitTime) {
+        if (Duration.between(waitStart, Instant.now()).compareTo(maxWaitTime) > 0) {
           LOGGER.info("Max wait time of {} has been reached. Stopping wait.", maxWaitTime)
           break
         }
@@ -1268,27 +1273,27 @@ class AcceptanceTestHarness
     ) {
       updateConnection(
         ConnectionUpdate(
-          connectionId = connectionId,
-          namespaceDefinition = null,
-          namespaceFormat = null,
-          name = null,
-          prefix = null,
-          operationIds = null,
-          syncCatalog = null,
-          schedule = null,
-          scheduleType = null,
-          scheduleData = null,
-          status = null,
-          resourceRequirements = null,
-          sourceCatalogId = null,
-          destinationCatalogId = null,
-          dataplaneGroupId = null,
-          notifySchemaChanges = null,
-          notifySchemaChangesByEmail = null,
-          nonBreakingChangesPreference = nonBreakingChangesPreference,
-          backfillPreference = backfillPreference,
-          breakingChange = null,
-          tags = null,
+          connectionId,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          nonBreakingChangesPreference,
+          backfillPreference,
+          null,
+          null,
         ),
       )
     }
@@ -1299,23 +1304,23 @@ class AcceptanceTestHarness
         .get(CheckedSupplier { apiClient.webBackendApi.webBackendGetConnection(WebBackendConnectionRequestBody(connectionId, true)) })
 
     fun createWorkspaceWithId(workspaceId: UUID) {
-      Failsafe.with(retryPolicy).run(
+      Failsafe.with<Any, RetryPolicy<Any>>(retryPolicy).run(
         CheckedRunnable {
           apiClient.workspaceApi
             .createWorkspaceIfNotExist(
               WorkspaceCreateWithId(
-                id = workspaceId,
-                name = "Airbyte Acceptance Tests" + UUID.randomUUID(),
-                organizationId = DEFAULT_ORGANIZATION_ID,
-                email = "acceptance-tests@airbyte.io",
-                anonymousDataCollection = null,
-                news = null,
-                securityUpdates = null,
-                notifications = null,
-                notificationSettings = null,
-                displaySetupWizard = null,
-                dataplaneGroupId = null,
-                webhookConfigs = null,
+                workspaceId,
+                "Airbyte Acceptance Tests" + UUID.randomUUID(),
+                DEFAULT_ORGANIZATION_ID,
+                "acceptance-tests@airbyte.io",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
               ),
             )
         },
@@ -1332,14 +1337,14 @@ class AcceptanceTestHarness
         CheckedSupplier {
           apiClient.streamStatusesApi.getStreamStatuses(
             StreamStatusListRequestBody(
-              pagination = Pagination(100, 0),
-              workspaceId = workspaceId,
-              attemptNumber = attempt,
-              connectionId = connectionId,
-              jobId = jobId,
-              jobType = null,
-              streamName = null,
-              streamNamespace = null,
+              Pagination(100, 0),
+              workspaceId,
+              attempt,
+              connectionId,
+              jobId,
+              null,
+              null,
+              null,
             ),
           )
         },
@@ -1432,7 +1437,7 @@ class AcceptanceTestHarness
           .parse("debezium/postgres:15-alpine")
           .asCompatibleSubstituteFor("postgres")
 
-      private val TEMPORAL_HOST: String = System.getenv("TEMPORAL_HOST") ?: "temporal.airbyte.dev:80"
+      private val TEMPORAL_HOST: String = Optional.ofNullable(System.getenv("TEMPORAL_HOST")).orElse("temporal.airbyte.dev:80")
 
       private const val SOURCE_E2E_TEST_CONNECTOR_VERSION = "0.1.2"
       private const val DESTINATION_E2E_TEST_CONNECTOR_VERSION = "0.1.1"
@@ -1460,9 +1465,9 @@ class AcceptanceTestHarness
 
       // NOTE: we include `INCOMPLETE` here because the job may still retry; see
       // https://docs.airbyte.com/understanding-airbyte/jobs/.
-      val IN_PROGRESS_JOB_STATUSES: Set<JobStatus> = setOf(JobStatus.PENDING, JobStatus.INCOMPLETE, JobStatus.RUNNING)
+      val IN_PROGRESS_JOB_STATUSES: Set<JobStatus> = java.util.Set.of(JobStatus.PENDING, JobStatus.INCOMPLETE, JobStatus.RUNNING)
 
-      private val KUBE_PROCESS_RUNNER_HOST: String = System.getenv("KUBE_PROCESS_RUNNER_HOST") ?: ""
+      private val KUBE_PROCESS_RUNNER_HOST: String = Optional.ofNullable(System.getenv("KUBE_PROCESS_RUNNER_HOST")).orElse("")
       private val EXPECTED_JSON_SCHEMA =
         """
         {

@@ -56,7 +56,6 @@ dependencies {
   implementation(libs.java.jwt)
   implementation(libs.kubernetes.client)
   implementation(libs.guava)
-  implementation(libs.retrofit)
   implementation(libs.temporal.sdk) {
     exclude(module = "guava")
   }
@@ -117,7 +116,6 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
-  testImplementation(libs.retrofit.mock)
   testImplementation(variantOf(libs.opentracing.util) { classifier("tests") })
 
   testRuntimeOnly(libs.junit.jupiter.engine)
