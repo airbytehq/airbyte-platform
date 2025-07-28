@@ -149,6 +149,27 @@ components:
               default: A user with this email already exists.
             data:
               $ref: "#/components/schemas/ProblemEmailData"
+    FailedPreconditionProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 412
+            type:
+              type: string
+              default: error:failed-precondition
+            title:
+              type: string
+              default: Failed Precondition
+            detail:
+              type: string
+              default: A condition required for this endpoint was not met.
+            data:
+              $ref: "#/components/schemas/FailedPreconditionData"
     OAuthCallbackFailureProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -1207,6 +1228,13 @@ components:
         - email
       properties:
         email:
+          type: string
+    FailedPreconditionData:
+      type: object
+      required:
+        - failedPreconditionDetail
+      properties:
+        failedPreconditionDetail:
           type: string
     ProblemRedirectURLData:
       type: object

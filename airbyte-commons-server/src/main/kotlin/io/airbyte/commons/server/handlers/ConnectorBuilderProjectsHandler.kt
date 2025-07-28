@@ -39,6 +39,8 @@ import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspa
 import io.airbyte.api.model.generated.OAuthConsentRead
 import io.airbyte.api.model.generated.SourceDefinitionIdBody
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.api.problems.model.generated.FailedPreconditionData
+import io.airbyte.api.problems.throwable.generated.FailedPreconditionProblem
 import io.airbyte.commons.constants.AirbyteCatalogConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.errors.NotFoundException
@@ -931,6 +933,24 @@ open class ConnectorBuilderProjectsHandler
         )
       addTagsToTrace(traceTags)
       addTagsToRootSpan(traceTags)
+
+      val advancedAuthNull = spec.advancedAuth == null
+      val oauthSpecNull = spec.advancedAuth?.oauthConfigSpecification == null
+
+      if (advancedAuthNull || oauthSpecNull) {
+        val missingFields =
+          buildList {
+            if (advancedAuthNull) add("advancedAuth")
+            if (oauthSpecNull) add("advancedAuth.oauthConfigSpecification")
+          }.joinToString(", ")
+
+        throw FailedPreconditionProblem(
+          data =
+            FailedPreconditionData().failedPreconditionDetail(
+              "Cannot fetch a consent URL because the following required fields are null in the connector spec: $missingFields.",
+            ),
+        )
+      }
 
       val oauthConfigSpecification = spec.advancedAuth.oauthConfigSpecification
       updateOauthConfigToAcceptAdditionalUserInputProperties(oauthConfigSpecification)
