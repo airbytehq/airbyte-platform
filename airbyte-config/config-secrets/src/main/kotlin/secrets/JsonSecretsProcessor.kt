@@ -11,7 +11,6 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.base.Preconditions
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDINATE_PREFIX
-import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_FIELD
 import io.airbyte.commons.json.JsonPaths
 import io.airbyte.commons.json.JsonSchemas
 import io.airbyte.commons.json.Jsons

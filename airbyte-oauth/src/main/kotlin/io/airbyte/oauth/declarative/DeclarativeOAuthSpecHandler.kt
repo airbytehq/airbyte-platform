@@ -88,10 +88,10 @@ class DeclarativeOAuthSpecHandler {
    * values, inclusive. If "min" or "max" are not provided in the configuration, default
    * values are used.
    */
-  fun getConfigurableState(stateConfig: JsonNode?): String {
+  fun getConfigurableState(stateConfig: JsonNode): String {
     val userState = Jsons.deserializeToIntegerMap(stateConfig)
-    val min = userState.getOrDefault(STATE_PARAM_MIN_KEY, STATE_LEN_MIN)
-    val max = userState.getOrDefault(STATE_PARAM_MAX_KEY, STATE_LEN_MAX)
+    val min = userState[STATE_PARAM_MIN_KEY] ?: STATE_LEN_MIN
+    val max = userState[STATE_PARAM_MAX_KEY] ?: STATE_LEN_MAX
     val length = secureRandom.nextInt((max - min) + 1) + min
 
     val stateValue = StringBuilder(length)
@@ -331,7 +331,7 @@ class DeclarativeOAuthSpecHandler {
       )
 
     // match the default BaseOAuth2Flow behaviour, returning ["refresh_token"] by default.
-    return if (!extractOutputConfig.isEmpty()) extractOutputConfig else java.util.List.of(REFRESH_TOKEN)
+    return if (!extractOutputConfig.isEmpty()) extractOutputConfig else listOf(REFRESH_TOKEN)
   }
 
   /**

@@ -62,7 +62,7 @@ class DeclarativeOAuthFlow : BaseOAuth2Flow {
    * @return a customizable STATE parameter as a String.
    */
   override fun getState(inputOAuthConfiguration: JsonNode): String {
-    val state = inputOAuthConfiguration.path(DeclarativeOAuthSpecHandler.STATE_PARAM_KEY)
+    val state = inputOAuthConfiguration.path(DeclarativeOAuthSpecHandler.STATE_PARAM_KEY)!!
     return if (state.isMissingNode) getState() else specHandler.getConfigurableState(state)
   }
 

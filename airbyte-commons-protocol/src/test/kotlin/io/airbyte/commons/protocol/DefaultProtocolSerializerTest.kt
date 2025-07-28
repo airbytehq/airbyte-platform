@@ -145,7 +145,7 @@ class DefaultProtocolSerializerTest {
           )
 
       val serializedCatalog = serializer.serialize(configuredCatalog, supportRefreshes, target)
-      val actualCatalog = Jsons.deserialize(serializedCatalog, io.airbyte.protocol.models.v0.ConfiguredAirbyteCatalog::class.java)
+      val actualCatalog = Jsons.deserialize(serializedCatalog, ProtocolConfiguredAirbyteCatalog::class.java)
 
       // Verify we serialized what's expected
       assertEquals(expectedConfiguredCatalog, actualCatalog)

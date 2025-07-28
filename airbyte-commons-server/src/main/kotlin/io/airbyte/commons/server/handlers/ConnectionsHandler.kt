@@ -1617,7 +1617,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       connectionEvent.eventType(ConnectionEventType.fromString(event.eventType))
       connectionEvent.createdAt(event.createdAt!!.toEpochSecond())
       connectionEvent.connectionId(event.connectionId)
-      connectionEvent.summary(Jsons.deserialize(event.summary))
+      event.summary?.let { connectionEvent.summary(Jsons.deserialize(it)) }
       if (event.userId != null) {
         connectionEvent.user(connectionTimelineEventHelper.getUserReadInConnectionEvent(event.userId, event.connectionId))
       }
@@ -1668,7 +1668,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       connectionEventWithDetails.connectionId(event.connectionId)
       // enforce event type consistency
       connectionEventWithDetails.eventType(ConnectionEventType.fromString(event.eventType))
-      connectionEventWithDetails.summary(Jsons.deserialize(event.summary))
+      event.summary?.let { connectionEventWithDetails.summary(Jsons.deserialize(it)) }
       // TODO(@keyi): implement details generation for different types of events.
       connectionEventWithDetails.details(null)
       connectionEventWithDetails.createdAt(event.createdAt!!.toEpochSecond())

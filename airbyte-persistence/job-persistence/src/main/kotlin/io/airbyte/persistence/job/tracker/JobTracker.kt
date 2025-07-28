@@ -566,7 +566,7 @@ class JobTracker
 
       private val OBJECT_MAPPER = ObjectMapper()
 
-      private fun mapToJsonString(map: Map<String?, Any>): String =
+      private fun mapToJsonString(map: Map<String?, Any?>): String =
         try {
           OBJECT_MAPPER.writeValueAsString(map)
         } catch (e: JsonProcessingException) {
@@ -582,7 +582,7 @@ class JobTracker
       fun configToMetadata(
         config: JsonNode,
         schema: JsonNode,
-      ): Map<String?, Any> {
+      ): Map<String?, Any?> {
         if (schema.hasNonNull("const") || schema.hasNonNull("enum")) {
           // If this schema is a const or an enum, then just dump it into a map:
           // * If it's an object, flatten it
@@ -606,7 +606,7 @@ class JobTracker
         } else if (config.isObject) {
           // If the schema is not a oneOf, but the config is an object (i.e. the schema has "type": "object")
           // then we need to recursively convert each field of the object to a map.
-          val output: Map<String?, Any> = HashMap()
+          val output: MutableMap<String?, Any?> = HashMap()
           val maybeProperties = schema["properties"]
 
           // If additionalProperties is not set, or it's a boolean, then there's no schema for additional

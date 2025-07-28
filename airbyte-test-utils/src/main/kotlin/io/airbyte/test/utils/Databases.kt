@@ -166,7 +166,7 @@ object Databases {
       .map { r: Map<String, Any> -> r[COLUMN_NAME_DATA] }
       .map { f: Any? -> f as JSONB? }
       .map { obj: JSONB? -> obj!!.data() }
-      .map { jsonString: String? -> Jsons.deserialize(jsonString) }
+      .map { jsonString: String? -> Jsons.deserialize(jsonString!!) }
       .map { `object`: JsonNode? -> Jsons.jsonNode(`object`) }
       .collect(Collectors.toList())
 }

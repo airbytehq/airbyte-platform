@@ -347,6 +347,6 @@ internal class StateAggregatorTest {
     state.state
       .elements()
       .asSequence()
-      .map { s: JsonNode? -> Jsons.`object`(s, AirbyteStateMessage::class.java) }
+      .map { s: JsonNode -> Jsons.`object`(s, AirbyteStateMessage::class.java) }
       .toList()
 }

@@ -37,7 +37,7 @@ object AirbyteMessageExtractor {
       .orElse(ArrayList())
 
   fun containsNonNullPK(
-    pks: List<String?>,
+    pks: List<String>,
     data: JsonNode?,
   ): Boolean = Jsons.navigateTo(data, pks) != null
 }

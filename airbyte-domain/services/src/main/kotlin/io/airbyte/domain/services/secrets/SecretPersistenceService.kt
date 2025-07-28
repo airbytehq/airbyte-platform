@@ -82,7 +82,7 @@ class SecretPersistenceService(
             SecretStorageType.LOCAL_TESTING -> SecretPersistenceConfig.SecretPersistenceType.TESTING
             SecretStorageType.AZURE_KEY_VAULT -> throw IllegalStateException("Azure Key Vault is not supported")
           },
-        ).withConfiguration(Jsons.deserializeToStringMap(secretStorageConfig))
+        ).withConfiguration(secretStorageConfig?.let { Jsons.deserializeToStringMap(it) })
 
     return RuntimeSecretPersistence(secretPersistenceConfig, metricClient)
   }

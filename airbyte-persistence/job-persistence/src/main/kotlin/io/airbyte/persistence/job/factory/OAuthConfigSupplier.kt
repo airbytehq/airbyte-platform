@@ -317,7 +317,7 @@ class OAuthConfigSupplier(
       traverseOAuthOutputPaths(
         spec,
         connectorName,
-      ) { ignore: String?, propertyPath: List<String>? ->
+      ) { ignore: String?, propertyPath: List<String> ->
         Jsons.replaceNestedValue(
           connectorConfig,
           propertyPath,
@@ -353,7 +353,7 @@ class OAuthConfigSupplier(
       traverseOAuthOutputPaths(
         spec,
         connectorName,
-      ) { key: String?, propertyPath: List<String>? ->
+      ) { key: String?, propertyPath: List<String> ->
         Jsons.replaceNestedValue(
           connectorConfig,
           propertyPath,

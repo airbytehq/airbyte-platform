@@ -12,7 +12,6 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.SourceOAuthParameter
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.data.services.OAuthService
-import io.airbyte.oauth.flows.google.GoogleSearchConsoleOAuthFlowIntegrationTest.ServerHandler
 import io.airbyte.validation.json.JsonValidationException
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions

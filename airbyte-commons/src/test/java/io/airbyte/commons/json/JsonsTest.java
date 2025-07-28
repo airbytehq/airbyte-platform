@@ -7,7 +7,7 @@ package io.airbyte.commons.json;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import org.assertj.core.util.Maps;
 import org.junit.jupiter.api.Test;
 
 class JsonsTest {
@@ -41,12 +42,9 @@ class JsonsTest {
   private static final String DEF = "def";
   private static final String GHI = "ghi";
   private static final String JKL = "jkl";
-  private static final String MNO = "mno";
   private static final String PQR = "pqr";
-  private static final String STU = "stu";
   private static final String TEST = "test";
   private static final String TEST2 = "test2";
-  private static final String XYZ = "xyz";
 
   @Test
   void testSerialize() {
@@ -232,36 +230,28 @@ class JsonsTest {
   }
 
   @Test
-  void testGetOptional() {
-    final JsonNode json = Jsons
-        .deserialize("{ \"abc\": { \"def\": \"ghi\" }, \"jkl\": {}, \"mno\": \"pqr\", \"stu\": null }");
-
-    assertEquals(Optional.of(Jsons.jsonNode(GHI)), Jsons.getOptional(json, ABC, DEF));
-    assertEquals(Optional.of(Jsons.emptyObject()), Jsons.getOptional(json, JKL));
-    assertEquals(Optional.of(Jsons.jsonNode(PQR)), Jsons.getOptional(json, MNO));
-    assertEquals(Optional.of(Jsons.jsonNode(null)), Jsons.getOptional(json, STU));
-    assertEquals(Optional.empty(), Jsons.getOptional(json, XYZ));
-    assertEquals(Optional.empty(), Jsons.getOptional(json, ABC, XYZ));
-    assertEquals(Optional.empty(), Jsons.getOptional(json, ABC, DEF, XYZ));
-    assertEquals(Optional.empty(), Jsons.getOptional(json, ABC, JKL, XYZ));
-    assertEquals(Optional.empty(), Jsons.getOptional(json, STU, XYZ));
-  }
-
-  @Test
-  void testGetStringOrNull() {
-    final JsonNode json = Jsons.deserialize("{ \"abc\": { \"def\": \"ghi\" }, \"jkl\": \"mno\", \"pqr\": 1 }");
-
-    assertEquals(GHI, Jsons.getStringOrNull(json, ABC, DEF));
-    assertEquals(MNO, Jsons.getStringOrNull(json, JKL));
-    assertEquals("1", Jsons.getStringOrNull(json, PQR));
-    assertNull(Jsons.getStringOrNull(json, ABC, DEF, XYZ));
-    assertNull(Jsons.getStringOrNull(json, XYZ));
-  }
-
-  @Test
   void testGetEstimatedByteSize() {
     final JsonNode json = Jsons.deserialize("{\"string_key\":\"abc\",\"array_key\":[\"item1\", \"item2\"]}");
     assertEquals(Jsons.toBytes(json).length, Jsons.getEstimatedByteSize(json));
+  }
+
+  @Test
+  void testDeserializeToStringMap() {
+    assertEquals(Maps.newHashMap("a", "b"), Jsons.deserializeToStringMap(Jsons.deserialize("{ \"a\": \"b\" }")));
+    assertEquals(Maps.newHashMap("a", null), Jsons.deserializeToStringMap(Jsons.deserialize("{ \"a\": null }")));
+    assertEquals(Collections.emptyMap(), Jsons.deserializeToStringMap(Jsons.emptyObject()));
+  }
+
+  @Test
+  void testDeserializeToIntegerMap() {
+    assertEquals(Maps.newHashMap("a", 1), Jsons.deserializeToIntegerMap(Jsons.deserialize("{ \"a\": 1 }")));
+    assertEquals(Collections.emptyMap(), Jsons.deserializeToIntegerMap(Jsons.emptyObject()));
+  }
+
+  @Test
+  void testDeserializeToStringList() {
+    assertEquals(List.of("a", "b"), Jsons.deserializeToStringList(Jsons.deserialize("[ \"a\", \"b\" ]")));
+    assertThrows(IllegalArgumentException.class, () -> Jsons.deserializeToStringList(Jsons.emptyObject()));
   }
 
   @Test

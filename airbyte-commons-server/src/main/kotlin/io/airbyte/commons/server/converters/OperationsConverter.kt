@@ -42,10 +42,9 @@ object OperationsConverter {
       Preconditions.checkArgument(operatorConfig.webhook != null)
       // TODO(mfsiega-airbyte): check that the webhook config id references a real webhook config.
       val webhookConfigs =
-        Jsons.`object`(
-          standardWorkspace.webhookOperationConfigs,
-          WebhookOperationConfigs::class.java,
-        )
+        standardWorkspace.webhookOperationConfigs?.let {
+          Jsons.`object`(it, WebhookOperationConfigs::class.java)
+        }
       var customDbtHost = Optional.empty<String>()
       if (webhookConfigs != null && webhookConfigs.webhookConfigs != null) {
         for (config in webhookConfigs.webhookConfigs) {

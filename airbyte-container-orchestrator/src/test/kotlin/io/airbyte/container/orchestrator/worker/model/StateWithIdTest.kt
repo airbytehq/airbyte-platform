@@ -139,7 +139,7 @@ internal class StateWithIdTest {
     recordCount: Double,
     cursorName: String,
   ): AirbyteStateMessage? {
-    val cdcStateAsJson = Jsons.deserialize(cdcState)
+    val cdcStateAsJson = Jsons.deserialize(cdcState!!)
     val globalState =
       AirbyteGlobalState().withSharedState(cdcStateAsJson).withStreamStates(
         listOf<AirbyteStreamState?>(

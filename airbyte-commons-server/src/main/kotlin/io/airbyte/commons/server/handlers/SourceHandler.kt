@@ -638,7 +638,7 @@ class SourceHandler
       val mergedConfig =
         Optional
           .ofNullable(providedUpdateJson)
-          .map { update: JsonNode? ->
+          .map { update: JsonNode ->
             Jsons.mergeNodes(
               updatedSourceConfigWithSecretPlaceholders,
               update,

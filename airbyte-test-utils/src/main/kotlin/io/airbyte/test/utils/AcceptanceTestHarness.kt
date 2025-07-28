@@ -88,7 +88,6 @@ import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.Flag
 import io.airbyte.featureflag.tests.TestFlagsSetter
 import io.airbyte.featureflag.tests.TestFlagsSetter.FlagOverride
-import io.airbyte.test.utils.AcceptanceTestHarness
 import io.airbyte.test.utils.Databases.createDataSource
 import io.airbyte.test.utils.Databases.createDslContext
 import io.airbyte.test.utils.Databases.listAllTables

@@ -150,7 +150,7 @@ class StreamStatusesMapper {
   fun map(domainEnum: JobStreamStatusIncompleteRunCause?): StreamStatusIncompleteRunCause? =
     if (domainEnum != null) StreamStatusIncompleteRunCause.fromValue(domainEnum.name.uppercase(Locale.getDefault())) else null
 
-  fun map(rateLimitedMetadata: JsonNode?): StreamStatusRateLimitedMetadata {
+  fun map(rateLimitedMetadata: JsonNode): StreamStatusRateLimitedMetadata {
     val rateLimitedInfo =
       Jsons.`object`(
         rateLimitedMetadata,

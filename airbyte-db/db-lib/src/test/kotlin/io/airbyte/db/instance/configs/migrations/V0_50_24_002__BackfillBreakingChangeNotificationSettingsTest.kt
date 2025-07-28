@@ -99,7 +99,7 @@ internal class V0_50_24_002__BackfillBreakingChangeNotificationSettingsTest : Ab
     Assertions.assertEquals(
       settingsWithBreakingChangeConfig,
       Jsons.deserialize(
-        wkspc1Result,
+        wkspc1Result!!,
         NotificationSettings::class.java,
       ),
     )
@@ -108,7 +108,7 @@ internal class V0_50_24_002__BackfillBreakingChangeNotificationSettingsTest : Ab
     Assertions.assertEquals(
       settingsWithBreakingChangeConfig,
       Jsons.deserialize(
-        wkspc2Result,
+        wkspc2Result!!,
         NotificationSettings::class.java,
       ),
     )
@@ -117,7 +117,7 @@ internal class V0_50_24_002__BackfillBreakingChangeNotificationSettingsTest : Ab
     Assertions.assertEquals(
       settingsWithDisabledBreakingChangeConfig,
       Jsons.deserialize(
-        wkspc3Result,
+        wkspc3Result!!,
         NotificationSettings::class.java,
       ),
     )
@@ -125,7 +125,7 @@ internal class V0_50_24_002__BackfillBreakingChangeNotificationSettingsTest : Ab
     val wkspc4Result = fetchNotificationSettingsData(ctx, workspaceId4)
     Assertions.assertNull(
       Jsons.deserialize(
-        wkspc4Result,
+        wkspc4Result!!,
         NotificationSettings::class.java,
       ),
     )

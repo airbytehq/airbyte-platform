@@ -520,7 +520,7 @@ object DbConverter {
    * @param airbyteCatalogString catalog as JSON string
    * @return airbyte catalog
    */
-  fun parseAirbyteCatalog(airbyteCatalogString: String?): AirbyteCatalog = Jsons.deserialize(airbyteCatalogString, AirbyteCatalog::class.java)
+  fun parseAirbyteCatalog(airbyteCatalogString: String): AirbyteCatalog = Jsons.deserialize(airbyteCatalogString, AirbyteCatalog::class.java)
 
   /**
    * Build actor catalog fetch event from db record.

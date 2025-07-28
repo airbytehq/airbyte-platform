@@ -76,7 +76,7 @@ object BasicAirbyteMessageValidator {
             isDedup(catalogStream.get().destinationSyncMode)
           ) {
             // required PKs
-            val pksList: List<List<String?>> = getPks(catalogStream)
+            val pksList: List<List<String>> = getPks(catalogStream)
             if (pksList.isEmpty()) {
               throw SourceException(
                 String.format(
@@ -91,9 +91,9 @@ object BasicAirbyteMessageValidator {
               Iterables
                 .tryFind(
                   pksList,
-                ) { pks: List<String?>? ->
+                ) { pks: List<String> ->
                   containsNonNullPK(
-                    pks!!,
+                    pks,
                     record.data,
                   )
                 }.isPresent

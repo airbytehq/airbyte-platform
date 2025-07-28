@@ -466,7 +466,7 @@ class DestinationHandler
       val mergedConfig =
         Optional
           .ofNullable(providedUpdateJson)
-          .map { update: JsonNode? ->
+          .map { update: JsonNode ->
             Jsons.mergeNodes(
               updatedDestinationConfigWithSecretPlaceholders,
               update,

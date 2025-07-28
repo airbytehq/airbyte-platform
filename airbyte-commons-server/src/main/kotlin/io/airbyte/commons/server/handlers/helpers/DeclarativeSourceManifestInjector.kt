@@ -155,10 +155,9 @@ class DeclarativeSourceManifestInjector {
       .withDocumentationUrl(URI.create(declarativeManifestSpec.path("documentationUrl").asText("")))
       .withConnectionSpecification(declarativeManifestSpec["connectionSpecification"])
       .withAdvancedAuth(
-        Jsons.`object`(
-          declarativeManifestSpec["advancedAuth"],
-          AdvancedAuth::class.java,
-        ),
+        declarativeManifestSpec["advancedAuth"]?.let {
+          Jsons.`object`(it, AdvancedAuth::class.java)
+        },
       )
 
   /**

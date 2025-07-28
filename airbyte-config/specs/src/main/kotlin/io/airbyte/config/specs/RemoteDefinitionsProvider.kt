@@ -134,7 +134,7 @@ open class RemoteDefinitionsProvider(
     version: String?,
   ): Optional<ConnectorRegistrySourceDefinition> {
     val registryEntryJson = getConnectorRegistryEntryJson(connectorRepository, version)
-    return registryEntryJson.map { jsonNode: JsonNode? ->
+    return registryEntryJson.map { jsonNode: JsonNode ->
       Jsons.`object`(
         jsonNode,
         ConnectorRegistrySourceDefinition::class.java,
@@ -161,7 +161,7 @@ open class RemoteDefinitionsProvider(
     version: String?,
   ): Optional<ConnectorRegistryDestinationDefinition> {
     val registryEntryJson = getConnectorRegistryEntryJson(connectorRepository, version)
-    return registryEntryJson.map { jsonNode: JsonNode? ->
+    return registryEntryJson.map { jsonNode: JsonNode ->
       Jsons.`object`(
         jsonNode,
         ConnectorRegistryDestinationDefinition::class.java,

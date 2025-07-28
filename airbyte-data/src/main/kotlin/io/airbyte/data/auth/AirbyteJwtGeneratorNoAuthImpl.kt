@@ -5,7 +5,6 @@
 package io.airbyte.data.auth
 
 import io.airbyte.commons.json.Jsons
-import io.airbyte.data.auth.TokenType
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
 import java.time.Clock

@@ -1026,7 +1026,7 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization : BaseJavaMigration() {
     @JvmStatic
     fun <T> listConfigsWithMetadata(
       airbyteConfigType: ConfigSchema,
-      clazz: Class<T>?,
+      clazz: Class<T>,
       ctx: DSLContext,
     ): List<ConfigWithMetadata<T>> {
       val configId = DSL.field("config_id", SQLDataType.VARCHAR(36).nullable(false))

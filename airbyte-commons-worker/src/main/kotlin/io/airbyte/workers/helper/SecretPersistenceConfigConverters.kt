@@ -36,7 +36,7 @@ fun SecretStorageRead.toConfigModel(): SecretPersistenceConfig =
         ScopeType.WORKSPACE -> io.airbyte.config.ScopeType.WORKSPACE
       },
     ).withScopeId(this.scopeId)
-    .withConfiguration(Jsons.deserializeToStringMap(this.config))
+    .withConfiguration(this.config?.let { Jsons.deserializeToStringMap(it) })
     .withSecretPersistenceType(
       when (this.secretStorageType) {
         SecretStorageType.AWS_SECRETS_MANAGER -> SecretPersistenceConfig.SecretPersistenceType.AWS
