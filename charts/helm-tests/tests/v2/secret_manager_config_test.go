@@ -44,6 +44,8 @@ func TestVaultSecretManagerConfig(t *testing.T) {
 		helmtests.ExpectedConfigMapVar().Name("VAULT_ADDRESS").RefName("airbyte-airbyte-env").Value("http://airbyte-vault-svc.ab:8200"),
 		helmtests.ExpectedConfigMapVar().Name("VAULT_PREFIX").RefName("airbyte-airbyte-env").Value("secret/"),
 		helmtests.ExpectedSecretVar().Name("VAULT_AUTH_TOKEN").RefName("airbyte-airbyte-secrets").Value(""),
+		helmtests.ExpectedConfigMapVar().Name("VAULT_AUTH_TOKEN_REF_NAME").RefName("airbyte-airbyte-env").Value("airbyte-airbyte-secrets"),
+		helmtests.ExpectedConfigMapVar().Name("VAULT_AUTH_TOKEN_REF_KEY").RefName("airbyte-airbyte-env").Value("VAULT_AUTH_TOKEN"),
 	}
 
 	releaseApps := appsForRelease("airbyte")
@@ -51,6 +53,53 @@ func TestVaultSecretManagerConfig(t *testing.T) {
 		app := releaseApps[name]
 		chartYaml.VerifyEnvVarsForApp(t, app.Kind, app.FQN(), expectedEnvVars)
 	}
+
+	t.Run("should allow overriding the secret coordinates", func(tt *testing.T) {
+		opts := helmtests.BaseHelmOptions()
+		opts.SetValues["global.secretsManager.type"] = "VAULT"
+		opts.SetValues["global.secretsManager.vault.authTokenSecretKey"] = "CUSTOM_AUTH_TOKEN_SECRET_KEY"
+		chartYaml, err := helmtests.RenderHelmChart(tt, opts, chartPath, "airbyte", nil)
+		assert.NoError(tt, err)
+
+		expectedEnvVars := []helmtests.ExpectedEnvVar{
+			helmtests.ExpectedConfigMapVar().Name("SECRET_PERSISTENCE").RefName("airbyte-airbyte-env").Value("VAULT"),
+			helmtests.ExpectedConfigMapVar().Name("VAULT_ADDRESS").RefName("airbyte-airbyte-env").Value("http://airbyte-vault-svc.ab:8200"),
+			helmtests.ExpectedConfigMapVar().Name("VAULT_PREFIX").RefName("airbyte-airbyte-env").Value("secret/"),
+			helmtests.ExpectedSecretVar().Name("VAULT_AUTH_TOKEN").RefKey("CUSTOM_AUTH_TOKEN_SECRET_KEY").RefName("airbyte-airbyte-secrets").Value(""),
+			helmtests.ExpectedConfigMapVar().Name("VAULT_AUTH_TOKEN_REF_NAME").RefName("airbyte-airbyte-env").Value("airbyte-airbyte-secrets"),
+			helmtests.ExpectedConfigMapVar().Name("VAULT_AUTH_TOKEN_REF_KEY").RefName("airbyte-airbyte-env").Value("CUSTOM_AUTH_TOKEN_SECRET_KEY"),
+		}
+
+		releaseApps := appsForRelease("airbyte")
+		for _, name := range []string{"server", "worker", "workload-launcher"} {
+			app := releaseApps[name]
+			chartYaml.VerifyEnvVarsForApp(tt, app.Kind, app.FQN(), expectedEnvVars)
+		}
+	})
+
+	t.Run("the ref name should derive from the secretName", func(tt *testing.T) {
+		opts := helmtests.BaseHelmOptions()
+		opts.SetValues["global.secretsManager.type"] = "VAULT"
+		opts.SetValues["global.secretsManager.secretName"] = "custom-secret"
+		opts.SetValues["global.secretsManager.vault.authTokenSecretKey"] = "CUSTOM_AUTH_TOKEN_SECRET_KEY"
+		chartYaml, err := helmtests.RenderHelmChart(tt, opts, chartPath, "airbyte", nil)
+		assert.NoError(tt, err)
+
+		expectedEnvVars := []helmtests.ExpectedEnvVar{
+			helmtests.ExpectedConfigMapVar().Name("SECRET_PERSISTENCE").RefName("airbyte-airbyte-env").Value("VAULT"),
+			helmtests.ExpectedConfigMapVar().Name("VAULT_ADDRESS").RefName("airbyte-airbyte-env").Value("http://airbyte-vault-svc.ab:8200"),
+			helmtests.ExpectedConfigMapVar().Name("VAULT_PREFIX").RefName("airbyte-airbyte-env").Value("secret/"),
+			helmtests.ExpectedSecretVar().Name("VAULT_AUTH_TOKEN").RefKey("CUSTOM_AUTH_TOKEN_SECRET_KEY").RefName("custom-secret").Value(""),
+			helmtests.ExpectedConfigMapVar().Name("VAULT_AUTH_TOKEN_REF_NAME").RefName("airbyte-airbyte-env").Value("custom-secret"),
+			helmtests.ExpectedConfigMapVar().Name("VAULT_AUTH_TOKEN_REF_KEY").RefName("airbyte-airbyte-env").Value("CUSTOM_AUTH_TOKEN_SECRET_KEY"),
+		}
+
+		releaseApps := appsForRelease("airbyte")
+		for _, name := range []string{"server", "worker", "workload-launcher"} {
+			app := releaseApps[name]
+			chartYaml.VerifyEnvVarsForApp(tt, app.Kind, app.FQN(), expectedEnvVars)
+		}
+	})
 }
 
 func TestAwsSecretManagerSecretManagerConfig(t *testing.T) {

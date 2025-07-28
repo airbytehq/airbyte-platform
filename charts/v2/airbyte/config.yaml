@@ -939,6 +939,19 @@ secretsManager:
         - VAULT
       sensitive: true
 
+    - env: VAULT_AUTH_TOKEN_REF_NAME
+      # NOTE: this is not expected to be used at all. We should figure out a way to exclude the key if `valueExp` is specified
+      key: vault._authTokenRefName
+      discriminatorOpts: 
+        - VAULT
+      valueExp: (include "airbyte.secretsManager.secretName" .)
+
+    - env: VAULT_AUTH_TOKEN_REF_KEY
+      key: vault.authTokenSecretKey
+      discriminatorOpts: 
+        - VAULT
+      defaultValueExp: (include "airbyte.secretsManager.vault.authToken.secretKey" .)
+
 server:
   keybasePath: server
   config:  
