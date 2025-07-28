@@ -725,7 +725,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       metadata.put("destination_id", standardSync.destinationId)
 
       val frequencyString: String
-      if (standardSync.scheduleType != null) {
+      if (standardSync.scheduleType != null && standardSync.scheduleData != null) {
         frequencyString = getFrequencyStringFromScheduleType(standardSync.scheduleType, standardSync.scheduleData)
       } else if (standardSync.manual) {
         frequencyString = "manual"
