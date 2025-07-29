@@ -15,16 +15,21 @@ import java.util.UUID
 val ANONYMOUS = UUID(0, 0)
 
 /**
- * Context abstraction around LaunchDarkly v6 context idea
+ * Context abstraction for feature flag evaluation, inspired by LaunchDarkly v6 context model.
  *
- * I'm still playing around with this.  Basically the idea is to define our own custom context types
- * (by implementing this sealed interface) to ensure that we are consistently using the same identifiers
- * throughout the code.
+ * Contexts represent the entities for which feature flags are being evaluated. They provide
+ * a way to target specific users, workspaces, organizations, or other entities with different
+ * flag values based on their characteristics.
  *
- * @property [kind] determines the kind of context the implementation is,
- * must be consistent for each type and should not be set by the caller of a context
- * @property [key] is the unique identifier for the specific context, e.g. a user-id or workspace-id
- * @property [attrs] is a list of attributes that can be optionally added to a context
+ * The sealed interface design ensures type safety and consistency across the codebase,
+ * preventing incorrect context usage and enabling compile-time validation.
+ *
+ * @property [kind] The type identifier for this context (e.g., "user", "workspace", "organization").
+ *                 Must be consistent for each implementation and should not vary per instance.
+ * @property [key] The unique identifier for the specific entity this context represents
+ *                (e.g., user UUID, workspace UUID, organization UUID).
+ * @property [attrs] Optional list of additional attributes that provide extra targeting capabilities
+ *                  (e.g., email addresses, geographic regions, plan types).
  */
 sealed interface Context {
   val kind: String
@@ -34,11 +39,17 @@ sealed interface Context {
 }
 
 /**
- * Additional context attributes that can be added to a context.
+ * Additional attributes that can be attached to contexts for enhanced targeting capabilities.
  *
- * @property [key] the key of the attribute
- * @property [value] the value of the attribute
- * @property [private] whether the attribute contains sensitive or PII data
+ * Attributes allow feature flag systems to make more sophisticated targeting decisions
+ * beyond just the primary context key. For example, a user context might include
+ * email attributes for targeting specific domains, or geographic attributes for
+ * regional feature rollouts.
+ *
+ * @property [key] The identifier for this attribute type (e.g., "email", "region", "plan")
+ * @property [value] The actual value of the attribute as a string
+ * @property [private] Whether this attribute contains sensitive or PII data that should
+ *                    be handled with extra care by feature flag providers
  */
 sealed interface Attribute {
   val key: String
@@ -60,9 +71,21 @@ data class EmailAttribute(
 }
 
 /**
- * Context for representing multiple contexts concurrently.  Only supported for LaunchDarkly v6!
+ * A special context type that represents multiple contexts simultaneously.
  *
- *  @param [contexts] list of contexts, must not contain another Multi context
+ * Multi contexts are useful when you need to evaluate feature flags based on multiple
+ * entities at once. For example, you might want to target based on both the user
+ * and the workspace they're operating in, or both the connection and the organization.
+ *
+ * This enables complex targeting scenarios like:
+ * - Enable feature for specific users in specific workspaces
+ * - Different behavior based on user + organization + geographic region
+ * - Connection-specific features that also consider the workspace context
+ *
+ * Note: Multi contexts cannot be nested (a Multi cannot contain another Multi).
+ *
+ * @param [contexts] The set of individual contexts to evaluate simultaneously.
+ *                  Must not be empty and must not contain other Multi contexts.
  */
 data class Multi(
   val contexts: Set<Context>,
@@ -88,10 +111,13 @@ data class Multi(
   }
 
   /**
-   * Returns all the [Context] types contained within this [Multi] matching type [T].
+   * Extracts all contexts of a specific type from this Multi context.
    *
-   * @param [T] the [Context] type to fetch.
-   * @return all [Context] of [T] within this [Multi], or an empty list if none match.
+   * This is useful when you need to access specific types of contexts within a Multi,
+   * for example to get all Workspace contexts or all User contexts for specialized logic.
+   *
+   * @param T The specific Context type to extract (e.g., Workspace::class, User::class)
+   * @return A list of all contexts matching type T, or empty list if none are found
    */
   internal inline fun <reified T> fetchContexts(): List<T> = contexts.filterIsInstance<T>()
 
@@ -427,7 +453,17 @@ data class TokenSubject(
 }
 
 /**
- * Combines two contexts.
+ * Merges two contexts into a single context for combined feature flag evaluation.
+ *
+ * This extension function provides a convenient way to combine contexts when you need
+ * to evaluate flags based on multiple entities. The merge logic handles various scenarios:
+ * - If contexts are identical, returns the original
+ * - Empty contexts are ignored
+ * - Multi contexts are combined efficiently
+ * - Single contexts are converted to Multi when merged
+ *
+ * @param other The context to merge with this context
+ * @return A combined context representing both original contexts
  */
 fun Context.merge(other: Context): Context =
   when {
