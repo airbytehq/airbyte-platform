@@ -192,8 +192,9 @@ const extractUrlBaseFromRequester = (requester: HttpRequester) => {
     return requester.url_base;
   }
   if (requester.url) {
-    const urlObj = new URL(requester.url);
-    return urlObj.origin;
+    // extract the HTTP schema and domain, ending at the first slash after the domain
+    const match = requester.url.match(/^(https?:\/\/[^/]+)/);
+    return match ? match[1] : undefined;
   }
   return undefined;
 };
