@@ -6,7 +6,7 @@ package io.airbyte.data.services.impls.data
 
 import io.airbyte.commons.AUTO_DATAPLANE_GROUP
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.US_CENTRAL_DATAPLANE_GROUP
+import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DataplaneGroup
@@ -85,7 +85,7 @@ open class DataplaneGroupServiceDataImpl(
 
   override fun getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition: AirbyteEdition): DataplaneGroup =
     if (airbyteEdition == AirbyteEdition.CLOUD) {
-      getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_CENTRAL_DATAPLANE_GROUP)
+      getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP)
     } else {
       getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, AUTO_DATAPLANE_GROUP)
     }

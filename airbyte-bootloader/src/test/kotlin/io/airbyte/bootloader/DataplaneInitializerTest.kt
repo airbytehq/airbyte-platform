@@ -5,7 +5,7 @@
 package io.airbyte.bootloader
 
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.US_CENTRAL_DATAPLANE_GROUP
+import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.config.Configs
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
@@ -39,10 +39,10 @@ private val dpg =
     enabled = true
   }
 
-private val `us-gcp-central1` =
+private val dpgUS =
   DataplaneGroup().apply {
     id = UUID.randomUUID()
-    name = US_CENTRAL_DATAPLANE_GROUP
+    name = US_DATAPLANE_GROUP
     organizationId = DEFAULT_ORGANIZATION_ID
     enabled = true
   }
@@ -150,9 +150,9 @@ class DataplaneInitializerTest {
   }
 
   @Test
-  fun `dataplane is created for gcp-central1 dataplane group on Cloud and secret copied to jobs namespace`() {
-    every { groupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_CENTRAL_DATAPLANE_GROUP) } returns `us-gcp-central1`
-    every { service.listDataplanes(`us-gcp-central1`.id, false) } returns emptyList()
+  fun `dataplane is created for US dataplane group on Cloud and secret copied to jobs namespace`() {
+    every { groupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP) } returns dpgUS
+    every { service.listDataplanes(dpgUS.id, false) } returns emptyList()
     val dpSlot = slot<Dataplane>()
     every { service.createDataplaneAndServiceAccount(capture(dpSlot), true) } answers { dataplaneWithServiceAccount }
     every { k8sClient.namespace } returns "ab"
