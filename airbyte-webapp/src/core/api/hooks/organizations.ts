@@ -87,10 +87,14 @@ export const useOrganization = (organizationId: string) => {
   );
 };
 
-export const useOrgInfo = (organizationId: string): OrganizationInfoRead => {
+export const useOrgInfo = (organizationId: string, enabled?: boolean): OrganizationInfoRead | undefined => {
   const requestOptions = useRequestOptions();
-  return useSuspenseQuery(organizationKeys.orgInfo(organizationId), () =>
-    getOrgInfo({ organizationId }, requestOptions)
+  return useSuspenseQuery(
+    organizationKeys.orgInfo(organizationId),
+    () => getOrgInfo({ organizationId }, requestOptions),
+    {
+      enabled,
+    }
   );
 };
 

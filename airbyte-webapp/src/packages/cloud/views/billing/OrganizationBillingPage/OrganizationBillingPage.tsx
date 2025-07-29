@@ -15,6 +15,7 @@ import { useGetOrganizationSubscriptionInfo, useOrganization, useOrgInfo } from 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useFormatCredits } from "core/utils/numberHelper";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import { AccountBalance } from "./AccountBalance";
 import { BillingBanners } from "./BillingBanners";
@@ -30,8 +31,9 @@ export const OrganizationBillingPage: React.FC = () => {
   const { formatCredits } = useFormatCredits();
 
   const organizationId = useCurrentOrganizationId();
+  const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const { email } = useOrganization(organizationId);
-  const { billing } = useOrgInfo(organizationId);
+  const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
   const { data: subscriptionInfo } = useGetOrganizationSubscriptionInfo(
     organizationId,
     billing?.subscriptionStatus === "subscribed"

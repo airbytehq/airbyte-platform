@@ -6,7 +6,7 @@ import { ExternalLink, Link } from "components/ui/Link";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { useOrganizationTrialStatus, useGetOrganizationPaymentConfig } from "core/api";
+import { useOrganizationTrialStatus, useOrgInfo } from "core/api";
 import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
@@ -21,29 +21,29 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
   const { formatMessage } = useIntl();
   const createLink = useCurrentWorkspaceLink();
   const organizationId = useCurrentOrganizationId();
-  const { data: paymentConfig } = useGetOrganizationPaymentConfig(organizationId);
   const canViewTrialStatus = useGeneratedIntent(Intent.ViewOrganizationTrialStatus, { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
+  const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
   const trialStatus = useOrganizationTrialStatus(
     organizationId,
-    (paymentConfig?.paymentStatus === "uninitialized" || paymentConfig?.paymentStatus === "okay") && canViewTrialStatus
+    (billing?.paymentStatus === "uninitialized" || billing?.paymentStatus === "okay") && canViewTrialStatus
   );
 
-  if (!paymentConfig) {
+  if (!billing) {
     return undefined;
   }
 
-  if (paymentConfig.paymentStatus === "manual") {
+  if (billing.paymentStatus === "manual") {
     if (context === "top_level") {
       // Do not show this information banner as a top-level banner.
       return undefined;
     }
-    if (paymentConfig.usageCategoryOverwrite === "free") {
+    if (billing.accountType === "free") {
       return {
         level: "info",
         content: formatMessage({ id: "billing.banners.manualPaymentStatusFree" }),
       };
-    } else if (paymentConfig.usageCategoryOverwrite === "internal") {
+    } else if (billing.accountType === "internal") {
       return {
         level: "info",
         content: formatMessage({ id: "billing.banners.manualPaymentStatusInternal" }),
@@ -51,7 +51,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     }
   }
 
-  if (paymentConfig.paymentStatus === "locked") {
+  if (billing.paymentStatus === "locked") {
     return {
       level: "warning",
       content: formatMessage(
@@ -67,7 +67,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     };
   }
 
-  if (paymentConfig.paymentStatus === "disabled") {
+  if (billing.paymentStatus === "disabled") {
     return {
       level: "warning",
       content: formatMessage(
@@ -86,7 +86,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     };
   }
 
-  if (paymentConfig.paymentStatus === "grace_period") {
+  if (billing.paymentStatus === "grace_period") {
     return {
       level: "warning",
       content: formatMessage(
@@ -97,9 +97,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
               : "billing.banners.gracePeriodPaymentStatus",
         },
         {
-          days: paymentConfig?.gracePeriodEndAt
-            ? Math.max(dayjs(paymentConfig.gracePeriodEndAt).diff(dayjs(), "days"), 0)
-            : 0,
+          days: billing.gracePeriodEndsAt ? Math.max(dayjs(billing.gracePeriodEndsAt).diff(dayjs(), "days"), 0) : 0,
           lnk: (node: React.ReactNode) => (
             <Link to={createLink(`/${RoutePaths.Settings}/${CloudSettingsRoutePaths.Billing}`)}>{node}</Link>
           ),
@@ -116,7 +114,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
   }
 
   if (trialStatus?.trialStatus === "in_trial") {
-    if (paymentConfig.paymentStatus === "okay") {
+    if (billing.paymentStatus === "okay") {
       return {
         level: "info",
         content: formatMessage(
@@ -125,7 +123,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
         ),
       };
     }
-    if (paymentConfig.paymentStatus === "uninitialized") {
+    if (billing.paymentStatus === "uninitialized") {
       return {
         level: "info",
         content: formatMessage(
@@ -148,7 +146,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
 
   if (
     trialStatus?.trialStatus === "post_trial" &&
-    (paymentConfig.paymentStatus === "uninitialized" || paymentConfig.subscriptionStatus !== "subscribed")
+    (billing.paymentStatus === "uninitialized" || billing.subscriptionStatus !== "subscribed")
   ) {
     return {
       level: "info",

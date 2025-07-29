@@ -12,6 +12,7 @@ import { Text } from "components/ui/Text";
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useOrgInfo } from "core/api";
 import { links } from "core/utils/links";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useRedirectToCustomerPortal } from "packages/cloud/area/billing/utils/useRedirectToCustomerPortal";
 
 import styles from "./SubscribeCards.module.scss";
@@ -113,7 +114,8 @@ const TeamsCard: React.FC = () => {
 
 export const SubscribeCards: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
-  const { billing } = useOrgInfo(organizationId);
+  const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
+  const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
   return (
     <Box className={styles.subscribe} p="xl">
       <FlexContainer direction="column" gap="xl">
