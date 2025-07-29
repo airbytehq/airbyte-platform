@@ -6,6 +6,7 @@ import { useDebounce } from "react-use";
 import { match } from "ts-pattern";
 
 import { ConnectorIcon } from "components/ConnectorIcon";
+import { TeamsFeaturesWarnModal } from "components/TeamsFeaturesWarnModal";
 import { Button } from "components/ui/Button";
 import { CheckBox } from "components/ui/CheckBox";
 import { FlexContainer } from "components/ui/Flex";
@@ -20,6 +21,8 @@ import { EnterpriseSourceStub } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionOrEnterpriseStub } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
+import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 import { RoutePaths, SourcePaths } from "pages/routePaths";
@@ -57,6 +60,8 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const { openModal } = useModalService();
   const trackSelectConnector = useTrackSelectConnector(connectorType);
   const trackSelectEnterpriseStub = useTrackSelectEnterpriseStub();
+  const { isInTrial } = useOrganizationSubscriptionStatus();
+  const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
 
   const [showAirbyteConnectors, setShowAirbyteConnectors] = useState(true);
   const [showEnterpriseConnectors, setShowEnterpriseConnectors] = useState(true);
@@ -130,16 +135,28 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const navigate = useNavigate();
 
   const handleConnectorButtonClick = (definition: ConnectorDefinitionOrEnterpriseStub) => {
-    if ("isEnterprise" in definition) {
-      // Handle EnterpriseSourceStubs first
-      trackSelectEnterpriseStub(definition);
-      onSelectEnterpriseSourceStub(definition);
-    } else if (isSourceDefinition(definition)) {
-      trackSelectConnector(definition.sourceDefinitionId, definition.name);
-      onSelectConnectorDefinition(definition.sourceDefinitionId);
+    const proceedWithConnectorSelection = () => {
+      if ("isEnterprise" in definition) {
+        // Handle EnterpriseSourceStubs first
+        trackSelectEnterpriseStub(definition);
+        onSelectEnterpriseSourceStub(definition);
+      } else if (isSourceDefinition(definition)) {
+        trackSelectConnector(definition.sourceDefinitionId, definition.name);
+        onSelectConnectorDefinition(definition.sourceDefinitionId);
+      } else {
+        trackSelectConnector(definition.destinationDefinitionId, definition.name);
+        onSelectConnectorDefinition(definition.destinationDefinitionId);
+      }
+    };
+
+    if ("isEnterprise" in definition && isInTrial && showTeamsFeaturesWarnModal) {
+      openModal({
+        title: null,
+        content: () => <TeamsFeaturesWarnModal onContinue={proceedWithConnectorSelection} />,
+        size: "xl",
+      });
     } else {
-      trackSelectConnector(definition.destinationDefinitionId, definition.name);
-      onSelectConnectorDefinition(definition.destinationDefinitionId);
+      proceedWithConnectorSelection();
     }
   };
 

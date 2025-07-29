@@ -29,6 +29,14 @@ jest.mock("core/api", () => ({
   useGetWebappConfig: () => mockWebappConfig,
 }));
 
+jest.mock("core/utils/useOrganizationSubscriptionStatus", () => ({
+  useOrganizationSubscriptionStatus: () => ({ isInTrial: false }),
+}));
+
+jest.mock("hooks/services/Experiment", () => ({
+  useExperiment: () => false,
+}));
+
 describe(`${SelectConnector.name}`, () => {
   it("Tracks an analytics event when a regular connector is selected", async () => {
     const { getByText } = await render(
