@@ -19,7 +19,7 @@ import java.util.UUID
  * Mappers that help convert models from the config api to models from the public api.
  */
 object JobsResponseMapper {
-  private val ALLOWED_CONFIG_TYPES = listOf(JobConfigType.SYNC, JobConfigType.RESET_CONNECTION)
+  private val ALLOWED_CONFIG_TYPES = listOf(JobConfigType.SYNC, JobConfigType.RESET_CONNECTION, JobConfigType.REFRESH, JobConfigType.CLEAR)
 
   /**
    * Converts a JobReadList object from the config api to a JobsResponse object.
