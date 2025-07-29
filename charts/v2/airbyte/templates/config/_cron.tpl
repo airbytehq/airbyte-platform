@@ -24,10 +24,33 @@ Renders the cron.jobs.updateDefinitions.enabled environment variable
 {{- end }}
 
 {{/*
+Renders the cron.jobs.declarativeSourcesUpdater.enabled value
+*/}}
+{{- define "airbyte.cron.jobs.declarativeSourcesUpdater.enabled" }}
+	{{- if eq .Values.cron.jobs.declarativeSourcesUpdater.enabled nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.cron.jobs.declarativeSourcesUpdater.enabled }}
+	{{- end }}
+{{- end }}
+
+{{/*
+Renders the cron.jobs.declarativeSourcesUpdater.enabled environment variable
+*/}}
+{{- define "airbyte.cron.jobs.declarativeSourcesUpdater.enabled.env" }}
+- name: RUN_DECLARATIVE_SOURCES_UPDATER
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: RUN_DECLARATIVE_SOURCES_UPDATER
+{{- end }}
+
+{{/*
 Renders the set of all cron environment variables
 */}}
 {{- define "airbyte.cron.envs" }}
 {{- include "airbyte.cron.jobs.updateDefinitions.enabled.env" . }}
+{{- include "airbyte.cron.jobs.declarativeSourcesUpdater.enabled.env" . }}
 {{- end }}
 
 {{/*
@@ -35,4 +58,5 @@ Renders the set of all cron config map variables
 */}}
 {{- define "airbyte.cron.configVars" }}
 UPDATE_DEFINITIONS_CRON_ENABLED: {{ include "airbyte.cron.jobs.updateDefinitions.enabled" . | quote }}
+RUN_DECLARATIVE_SOURCES_UPDATER: {{ include "airbyte.cron.jobs.declarativeSourcesUpdater.enabled" . | quote }}
 {{- end }}

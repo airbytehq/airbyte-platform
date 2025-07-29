@@ -40,6 +40,8 @@ airbyte:
   cron:
     update-definitions:
       enabled: ${UPDATE_DEFINITIONS_CRON_ENABLED:false}
+    declarative-sources-updater:
+      enabled: ${RUN_DECLARATIVE_SOURCES_UPDATER:true}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   entitlement:
     client: ${ENTITLEMENT_CLIENT:}

@@ -2110,6 +2110,8 @@ cron:
   jobs:
     updateDefinitions:
       enabled: false
+    declarativeSourcesUpdater:
+      enabled: true
 
   ## workloadApi:
   ##   bearerTokenSecretName: workload-api-bearer-token-name kubernetes secret name where bearer token is stored

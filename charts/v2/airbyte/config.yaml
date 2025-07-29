@@ -360,6 +360,10 @@ cron:
     - env: UPDATE_DEFINITIONS_CRON_ENABLED
       key: jobs.updateDefinitions.enabled
 
+    - env: RUN_DECLARATIVE_SOURCES_UPDATER
+      key: jobs.declarativeSourcesUpdater.enabled
+      defaultValue: true
+
 customerio:
   keyBasePath: global.customerio
   config:

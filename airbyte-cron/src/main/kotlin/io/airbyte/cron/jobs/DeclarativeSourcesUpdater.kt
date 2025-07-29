@@ -16,6 +16,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Requires
 import io.micronaut.scheduling.annotation.Scheduled
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -23,6 +24,7 @@ import jakarta.inject.Singleton
 private val log = KotlinLogging.logger {}
 
 @Singleton
+@Requires(property = "airbyte.cron.declarative-sources-updater.enabled", value = "true")
 class DeclarativeSourcesUpdater(
   @Named("remoteDeclarativeSourceUpdater") private val declarativeSourceUpdater: DeclarativeSourceUpdater,
   private val metricClient: MetricClient,
