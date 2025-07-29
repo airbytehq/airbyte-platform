@@ -584,7 +584,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           validateStreamsDoNotConflictWithExistingDestinationStreams(
             connectionCreate.syncCatalog,
             connectionCreate.destinationId,
-            connectionCreate.namespaceDefinition.toString(),
+            connectionCreate.namespaceDefinition?.toString(),
             connectionCreate.namespaceFormat,
             connectionCreate.prefix,
             null,
@@ -827,12 +827,10 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         validateStreamsDoNotConflictWithExistingDestinationStreams(
           if (connectionPatch.syncCatalog != null) connectionPatch.syncCatalog else catalogConverter.toApi(sync.catalog, null),
           sync.destinationId,
-          if (connectionPatch.namespaceDefinition !=
-            null
-          ) {
+          if (connectionPatch.namespaceDefinition != null) {
             connectionPatch.namespaceDefinition.toString()
           } else {
-            (sync.namespaceDefinition).toString()
+            sync.namespaceDefinition.toString()
           },
           if (connectionPatch.namespaceFormat != null) connectionPatch.namespaceFormat else sync.namespaceFormat,
           if (connectionPatch.prefix != null) connectionPatch.prefix else sync.prefix,
