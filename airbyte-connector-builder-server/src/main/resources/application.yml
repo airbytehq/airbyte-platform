@@ -75,12 +75,6 @@ airbyte:
         credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
         email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
-  internal:
-    api:
-      auth-header:
-        name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
-        value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
-      host: ${INTERNAL_API_HOST}
   role: ${AIRBYTE_ROLE:}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}

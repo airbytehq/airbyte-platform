@@ -63,6 +63,7 @@ spec:
         - name: JAVA_TOOL_OPTIONS
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end}}
+
         {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         - name: API_AUTHORIZATION_ENABLED
           value: "true"
@@ -73,6 +74,13 @@ spec:
         - name: API_AUTHORIZATION_ENABLED
           value: "true"
         {{- end }}
+
+        - name: INTERNAL_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+              key: {{ .Values.global.auth.internalApiTokenSecretKey | default "internal-api-token" | quote }}
+
         {{- if or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")  }}
         {{- include "airbyte.logging.envs" . | nindent 8 }}
         - name: AIRBYTE_API_HOST
@@ -227,10 +235,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: CONNECTOR_BUILDER_SERVER_API_HOST
-        - name: AIRBYTE_API_AUTH_HEADER_NAME
-          value: "X-Airbyte-Auth"
-        - name: AIRBYTE_API_AUTH_HEADER_VALUE
-          value: "Internal server"
         - name: ENTERPRISE_SOURCE_STUBS_URL
           valueFrom:
             configMapKeyRef:

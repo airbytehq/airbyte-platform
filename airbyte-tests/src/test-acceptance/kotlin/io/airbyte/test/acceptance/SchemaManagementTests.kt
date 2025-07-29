@@ -398,12 +398,6 @@ internal class SchemaManagementTests {
   companion object {
     private val LOGGER: Logger = LoggerFactory.getLogger(SchemaManagementTests::class.java)
 
-    // NOTE: this is all copied from BasicAcceptanceTests. We should refactor to have this in a single
-    // place.
-    private const val GATEWAY_AUTH_HEADER = "X-Endpoint-API-UserInfo"
-
-    // NOTE: this is just a base64 encoding of a jwt representing a test user in some deployments.
-    private const val AIRBYTE_AUTH_HEADER = "eyJ1c2VyX2lkIjogImNsb3VkLWFwaSIsICJlbWFpbF92ZXJpZmllZCI6ICJ0cnVlIn0K"
     private const val AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID = "AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID"
   }
 }

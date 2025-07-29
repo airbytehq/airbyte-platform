@@ -11,7 +11,6 @@ import io.airbyte.api.client.model.generated.DataplaneInitRequestBody
 import io.airbyte.api.client.model.generated.DataplaneInitResponse
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
-import io.airbyte.workload.launcher.config.DataplaneCredentials
 import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.micronaut.context.event.ApplicationEventPublisher
 import io.mockk.Ordering
@@ -27,13 +26,8 @@ import org.openapitools.client.infrastructure.ClientException
 import java.util.UUID
 
 class DataplaneIdentityServiceTest {
-  val dataplaneIdProperty = "test-dataplane-1"
-  val dataplaneNameProperty = "test-dataplane"
-  val dataplaneCreds =
-    DataplaneCredentials(
-      clientId = dataplaneNameProperty,
-      clientSecret = "some-secret-secret",
-    )
+  val dataplaneClientId = "test-dp-client-id-1"
+
   lateinit var apiClient: AirbyteApiClient
   lateinit var featureFlagMap: MutableMap<String, Any>
   lateinit var featureFlagClient: FeatureFlagClient
@@ -48,7 +42,7 @@ class DataplaneIdentityServiceTest {
     eventPublisher = mockk(relaxed = true)
     service =
       DataplaneIdentityService(
-        dataplaneCredentials = dataplaneCreds,
+        dataplaneClientId = dataplaneClientId,
         airbyteApiClient = apiClient,
         eventPublisher = eventPublisher,
       )
@@ -68,7 +62,7 @@ class DataplaneIdentityServiceTest {
       apiClient.dataplaneApi
     } returns
       mockk {
-        every { initializeDataplane(DataplaneInitRequestBody(dataplaneCreds.clientId)) } returns initResponse
+        every { initializeDataplane(DataplaneInitRequestBody(dataplaneClientId)) } returns initResponse
       }
 
     service.initialize()
@@ -91,7 +85,7 @@ class DataplaneIdentityServiceTest {
       apiClient.dataplaneApi
     } returns
       mockk {
-        every { initializeDataplane(DataplaneInitRequestBody(dataplaneCreds.clientId)) } throws ClientException("Forbidden", 403)
+        every { initializeDataplane(DataplaneInitRequestBody(dataplaneClientId)) } throws ClientException("Forbidden", 403)
       }
 
     assertThrows<Exception> {
@@ -108,7 +102,7 @@ class DataplaneIdentityServiceTest {
       apiClient.dataplaneApi
     } returns
       mockk {
-        every { heartbeatDataplane(DataplaneHeartbeatRequestBody(dataplaneCreds.clientId)) } returns heartbeatResponse
+        every { heartbeatDataplane(DataplaneHeartbeatRequestBody(dataplaneClientId)) } returns heartbeatResponse
       }
 
     service.heartbeat()
@@ -135,7 +129,7 @@ class DataplaneIdentityServiceTest {
       mockk {
         every {
           heartbeatDataplane(
-            DataplaneHeartbeatRequestBody(dataplaneCreds.clientId),
+            DataplaneHeartbeatRequestBody(dataplaneClientId),
           )
         } returns heartbeatResponse andThen
           heartbeatResponse andThen
@@ -202,7 +196,7 @@ class DataplaneIdentityServiceTest {
       apiClient.dataplaneApi
     } returns
       mockk {
-        every { initializeDataplane(DataplaneInitRequestBody(dataplaneCreds.clientId)) } returns initResponse
+        every { initializeDataplane(DataplaneInitRequestBody(dataplaneClientId)) } returns initResponse
       }
     service.initialize()
 

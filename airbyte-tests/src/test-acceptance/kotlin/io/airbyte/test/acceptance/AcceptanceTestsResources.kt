@@ -468,10 +468,7 @@ class AcceptanceTestsResources {
 
     const val WITH_SCD_TABLE: Boolean = true
     const val WITHOUT_SCD_TABLE: Boolean = false
-    const val GATEWAY_AUTH_HEADER: String = "X-Endpoint-API-UserInfo"
 
-    // NOTE: this is just a base64 encoding of a jwt representing a test user in some deployments.
-    const val CLOUD_API_USER_HEADER_VALUE: String = "eyJ1c2VyX2lkIjogImNsb3VkLWFwaSIsICJlbWFpbF92ZXJpZmllZCI6ICJ0cnVlIn0K"
     const val AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID: String = "AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID"
     val AIRBYTE_SERVER_HOST: String = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001")
     val POSTGRES_SOURCE_DEF_ID: UUID = UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750")

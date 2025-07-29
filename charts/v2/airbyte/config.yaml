@@ -22,15 +22,6 @@ common:
       key: api.host
       defaultValueExp: (ternary (printf "http://localhost:%d/api/public" (int .Values.server.service.port)) (printf "%s/api/public" .Values.global.airbyteUrl) (eq .Values.global.edition "community"))
 
-    - env: AIRBYTE_API_AUTH_HEADER_NAME
-      key: api.authHeaderName
-      defaultValue: "X-Airbyte-Auth"
-
-    - env: AIRBYTE_API_AUTH_HEADER_VALUE
-      key: api.authHeaderValue
-      sensitive: true
-      includeIf: (eq (include "airbyte.common.api.authHeaderName" .) "X-Endpoint-API-UserInfo")
-
     # NOTE: this must NOT include the scheme (http://)
     - env: AIRBYTE_SERVER_HOST
       key: server.host
@@ -58,6 +49,14 @@ common:
     - env: WEBAPP_URL
       key: webapp.url
       valueExp: (include "airbyte.common.airbyteUrl" .)
+
+    # This is a dummy entry that keeps the airbyte.common.secrets template alive.
+    # Without this, the airbyte.common.secrets template is removed and lots of unrelated
+    # things start blowing up.
+    - env: AIRBYTE_DUMMY_SECRET
+      sensitive: true
+      key: dummySecret
+      defaultValue: dummy
 
 auth:
   keyBasePath: global.auth
@@ -123,6 +122,11 @@ auth.bootstrap:
     - env: DATAPLANE_CLIENT_SECRET_SECRET_KEY
       key: dataPlane.clientSecretSecretKey
       defaultValue: dataplane-client-secret
+
+    # internal api tokens
+    - env: AB_INTERNAL_API_TOKEN_SECRET_KEY
+      key: internalApi.tokenSecretKey
+      defaultValue: internal-api-token
 
 auth.identityProvider:
   keyBasePath: global.auth.identityProvider
@@ -231,6 +235,16 @@ auth.instanceAdmin.enterprise:
     - env: INITIAL_USER_PASSWORD
       key: password
       sensitive: true
+
+auth.internalApi:
+  keyBasePath: global.auth.internalApi
+  secretNamePath: global.auth.internalApi.secretName
+  config:
+    - env: INTERNAL_API_TOKEN
+      key: token
+      refKey: internal-api-token
+      sensitive: true
+      secretRef: airbyte.auth.bootstrap.managedSecretName
 
 auth.jwt:
   keyBasePath: global.auth.security

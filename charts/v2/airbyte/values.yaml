@@ -90,6 +90,8 @@ global:
       #    name: name
       #    issuer: iss
 
+    internalApi: {}
+
     # -- Security configuration
     security:
       secretName: ""
@@ -103,8 +105,7 @@ global:
       clientIdSecretKey: ""
       clientSecretSecretKey: ""
 
-  api:
-    authHeaderName: X-Airbyte-Auth
+  api: {}
 
   aws:
     assumeRole:

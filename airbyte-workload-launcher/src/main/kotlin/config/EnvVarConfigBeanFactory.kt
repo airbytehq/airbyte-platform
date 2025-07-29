@@ -48,7 +48,6 @@ class EnvVarConfigBeanFactory {
     @Named("secretPersistenceSecretsEnvMap") secretPersistenceSecretsEnvMap: Map<String, EnvVarSource>,
     @Named("secretPersistenceEnvMap") secretPersistenceEnvMap: Map<String, String>,
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
-    @Named("apiAuthSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
     @Named("databaseEnvMap") dbEnvMap: Map<String, String>,
     @Named("awsAssumedRoleSecretEnv") awsAssumedRoleSecretEnv: Map<String, EnvVarSource>,
     @Named("metricsEnvMap") metricsEnvMap: Map<String, String>,
@@ -91,7 +90,7 @@ class EnvVarConfigBeanFactory {
     val envVars = envMap.toEnvVarList()
 
     val secretEnvVars =
-      (secretsEnvMap + secretPersistenceSecretsEnvMap + awsAssumedRoleSecretEnv + dataplaneCredentialsSecretsEnvMap)
+      (secretPersistenceSecretsEnvMap + awsAssumedRoleSecretEnv + dataplaneCredentialsSecretsEnvMap)
         .toRefEnvVarList()
 
     return envVars + secretEnvVars
@@ -108,7 +107,6 @@ class EnvVarConfigBeanFactory {
     @Named("loggingEnvVars") loggingEnvMap: Map<String, String>,
     @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
-    @Named("apiAuthSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
     @Named("trackingClientEnvMap") trackingClientEnvMap: Map<String, String>,
     @Named("airbyteMetadataEnvMap") airbyteMetadataEnvMap: Map<String, String>,
     @Named("dataplaneCredentialsSecretsEnvMap") dataplaneCredentialsSecretsEnvMap: Map<String, EnvVarSource>,
@@ -137,7 +135,7 @@ class EnvVarConfigBeanFactory {
 
     val envVars = envMap.toEnvVarList()
 
-    val secretEnvVars = (secretsEnvMap + dataplaneCredentialsSecretsEnvMap).toRefEnvVarList()
+    val secretEnvVars = dataplaneCredentialsSecretsEnvMap.toRefEnvVarList()
 
     return envVars + secretEnvVars
   }
@@ -218,23 +216,6 @@ class EnvVarConfigBeanFactory {
     @Named("featureFlagEnvMap") ffEnvVars: Map<String, String>,
   ): List<EnvVar> = metadataEnvMap.toEnvVarList() + ffEnvVars.toEnvVarList()
 
-  @Singleton
-  @Named("apiAuthSecretEnv")
-  fun apiAuthSecretEnv(
-    @Value("\${airbyte.workload-api.bearer-token-secret-name}") bearerTokenSecretName: String,
-    @Value("\${airbyte.workload-api.bearer-token-secret-key}") bearerTokenSecretKey: String,
-    @Value("\${airbyte.internal-api.keycloak-auth-client.secret-name}") keycloakAuthSecretName: String,
-    @Value("\${airbyte.internal-api.keycloak-auth-client.secret-key}") keycloakAuthSecretKey: String,
-  ): Map<String, EnvVarSource> =
-    buildMap {
-      if (bearerTokenSecretName.isNotBlank()) {
-        put(EnvVarConstants.WORKLOAD_API_BEARER_TOKEN_ENV_VAR, createEnvVarSource(bearerTokenSecretName, bearerTokenSecretKey))
-      }
-      if (keycloakAuthSecretName.isNotBlank()) {
-        put(EnvVarConstants.KEYCLOAK_CLIENT_SECRET_ENV_VAR, createEnvVarSource(keycloakAuthSecretName, keycloakAuthSecretKey))
-      }
-    }
-
   /**
    * To be injected into the replication pod, for the connectors that use assumed role access.
    */
@@ -276,9 +257,8 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("orchestratorSecretsEnvMap")
   fun orchestratorSecretsEnvMap(
-    @Named("apiAuthSecretEnv") apiAuthSecretEnv: Map<String, EnvVarSource>,
     @Named("awsAssumedRoleSecretEnv") awsAssumedRoleSecretEnv: Map<String, EnvVarSource>,
-  ): Map<String, EnvVarSource> = apiAuthSecretEnv + awsAssumedRoleSecretEnv
+  ): Map<String, EnvVarSource> = awsAssumedRoleSecretEnv
 
   private fun createEnvVarSource(
     secretName: String,
@@ -327,22 +307,18 @@ class EnvVarConfigBeanFactory {
      * services that use the Airbyte API client.
      */
     @Value("\${INTERNAL_API_HOST}") internalApiHost: String,
-    @Value("\${airbyte.internal-api.auth-header.name}") apiAuthHeaderName: String,
-    @Value("\${airbyte.internal-api.auth-header.value}") apiAuthHeaderValue: String,
     @Value("\${airbyte.control.plane.auth-endpoint}") controlPlaneAuthEndpoint: String,
     @Value("\${airbyte.data.plane.service-account.email}") dataPlaneServiceAccountEmail: String,
     @Value("\${airbyte.data.plane.service-account.credentials-path}") dataPlaneServiceAccountCredentialsPath: String,
     @Value("\${airbyte.acceptance.test.enabled}") isInTestMode: Boolean,
     @Value("\${micronaut.security.oauth2.clients.keycloak.client-id:}") keycloakAuthClientId: String,
     @Value("\${micronaut.security.oauth2.clients.keycloak.openid.issuer:}") keycloakAuthOpenIdIssuer: String,
-    @Value("\${airbyte.auth.control-plane-token-endpoint}") controlPlaneTokenEndpoint: String,
+    @Value("\${airbyte.internal-api.auth.token-endpoint}") controlPlaneTokenEndpoint: String,
     @Value("\${airbyte.airbyte-url}") airbyteUrl: String,
   ): Map<String, String> =
     buildMap {
       put(EnvVarConstants.AIRBYTE_URL, airbyteUrl)
       put(EnvVarConstants.INTERNAL_API_HOST_ENV_VAR, internalApiHost)
-      put(EnvVarConstants.AIRBYTE_API_AUTH_HEADER_NAME_ENV_VAR, apiAuthHeaderName)
-      put(EnvVarConstants.AIRBYTE_API_AUTH_HEADER_VALUE_ENV_VAR, apiAuthHeaderValue)
       put(EnvVarConstants.CONTROL_PLANE_AUTH_ENDPOINT_ENV_VAR, controlPlaneAuthEndpoint)
       put(EnvVarConstants.DATA_PLANE_SERVICE_ACCOUNT_EMAIL_ENV_VAR, dataPlaneServiceAccountEmail)
       put(EnvVarConstants.DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH_ENV_VAR, dataPlaneServiceAccountCredentialsPath)

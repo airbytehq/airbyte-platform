@@ -35,10 +35,6 @@ These defaults can be overridden with flags. All available flags are described a
     Specify the port for the Airbyte server.
     Defaults to '8001'.
 
-  -X <header>
-    Specify the X-Endpoint-API-UserInfo header value for API authentication. 
-    For Google Cloud Endpoint authentication only.
-
   -C <count>
     Specify the number of connections that should be created by the script.
     Defaults to '1'.
@@ -59,12 +55,6 @@ kubectl port-forward deployment/airbyte-server -n ab 8001:8001
 ```
 
 This will make the Airbyte server available at `localhost:8001`
-
-
-### Authentication
-
-If your deployment of Airbyte happens to use Google Cloud Endpoints for authentication, you can use the `-X` option to pass 
-an `X-Endpoint-API-UserInfo` header value.
 
 
 ## Cleanup
@@ -96,8 +86,4 @@ All available cleanup script flags are described as follows:
   -P <port>
     Specify the port for the Airbyte server.
     Defaults to '8001'.
-
-  -X <header>
-    Specify the X-Endpoint-API-UserInfo header value for API authentication. 
-    For Google Cloud Endpoint authentication only.
 ```

@@ -1,0 +1,16 @@
+micronaut:
+  security:
+    oauth2:
+      clients:
+        keycloak:
+          client-id: ${KEYCLOAK_CLIENT_ID:}
+          client-secret: ${KEYCLOAK_CLIENT_SECRET:}
+          openid:
+            issuer: ${KEYCLOAK_INTERNAL_REALM_ISSUER:}
+          client-credentials:
+            enabled: true
+
+airbyte:
+  internal-api:
+    auth:
+      type: KEYCLOAK_ACCESS_TOKEN

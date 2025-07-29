@@ -7,9 +7,9 @@ package io.airbyte.workload.launcher.authn
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.DataplaneHeartbeatRequestBody
 import io.airbyte.api.client.model.generated.DataplaneInitRequestBody
-import io.airbyte.workload.launcher.config.DataplaneCredentials
 import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Property
 import io.micronaut.context.event.ApplicationEventPublisher
 import io.micronaut.http.HttpStatus
 import io.micronaut.scheduling.annotation.Scheduled
@@ -28,7 +28,7 @@ private val logger = KotlinLogging.logger {}
  */
 @Singleton
 class DataplaneIdentityService(
-  private val dataplaneCredentials: DataplaneCredentials,
+  @Property(name = "airbyte.internal-api.auth.client-id") private val dataplaneClientId: String,
   private val airbyteApiClient: AirbyteApiClient,
   private val eventPublisher: ApplicationEventPublisher<DataplaneConfig>,
 ) {
@@ -39,7 +39,7 @@ class DataplaneIdentityService(
     try {
       val initResponse =
         airbyteApiClient.dataplaneApi.initializeDataplane(
-          DataplaneInitRequestBody(clientId = dataplaneCredentials.clientId),
+          DataplaneInitRequestBody(clientId = dataplaneClientId),
         )
       val config =
         DataplaneConfig(
@@ -66,7 +66,7 @@ class DataplaneIdentityService(
     try {
       val heartbeatResponse =
         airbyteApiClient.dataplaneApi.heartbeatDataplane(
-          DataplaneHeartbeatRequestBody(clientId = dataplaneCredentials.clientId),
+          DataplaneHeartbeatRequestBody(clientId = dataplaneClientId),
         )
       publishConfigChange(
         DataplaneConfig(

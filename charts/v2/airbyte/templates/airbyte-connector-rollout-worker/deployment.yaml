@@ -66,11 +66,6 @@ spec:
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.connectorRolloutWorker.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end }}
 
-        {{- if or (eq .Values.global.edition "community") (eq .Values.global.edition "enterprise") }}
-        - name: AIRBYTE_API_AUTH_HEADER_VALUE
-          value: "Internal worker"
-        {{- end }}
-
         {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.connectorRolloutWorker.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}

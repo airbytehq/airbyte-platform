@@ -18,7 +18,6 @@ import io.airbyte.api.client.model.generated.DestinationSyncMode
 import io.airbyte.api.client.model.generated.SelectedFieldInfo
 import io.airbyte.api.client.model.generated.SyncMode
 import io.airbyte.commons.DEFAULT_USER_ID
-import io.airbyte.commons.auth.AirbyteAuthConstants
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.security.token.jwt.signature.secret.SecretSignature
 import io.micronaut.security.token.jwt.signature.secret.SecretSignatureConfiguration
@@ -44,14 +43,6 @@ object AcceptanceTestUtils {
   // TODO(mfsiega-airbyte): clean up and centralize the way we do config.
   private const val IS_ENTERPRISE: String = "IS_ENTERPRISE"
   const val IS_GKE: String = "IS_GKE"
-
-  /**
-   * test-client is a valid internal service name according to the AirbyteAuthInternalTokenValidator.
-   * This header value can be used to set up Acceptance Test clients that can authorize as an instance
-   * admin. This is useful for testing Enterprise features without needing to set up a valid Keycloak
-   * token.
-   */
-  private const val X_AIRBYTE_AUTH_HEADER_TEST_CLIENT_VALUE: String = AirbyteAuthConstants.X_AIRBYTE_AUTH_HEADER_INTERNAL_PREFIX + " test-client"
 
   /**
    * This is a flag that can be used to enable/disable enterprise-only features in acceptance tests.

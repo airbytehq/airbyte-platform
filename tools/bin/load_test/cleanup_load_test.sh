@@ -34,10 +34,6 @@ function showhelp {
   ${CLEAR}-P <port>
     ${GREEN}Specify the port for the Airbyte server.
     Defaults to '8001'.
-
-  ${CLEAR}-X <header>
-    ${GREEN}Specify the X-Endpoint-API-UserInfo header value for API authentication.
-    For Google Cloud Endpoint authentication only.
   """ && exit 1
 }
 

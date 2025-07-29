@@ -37,10 +37,6 @@ import io.airbyte.api.client.generated.UserApi
 import io.airbyte.api.client.generated.WebBackendApi
 import io.airbyte.api.client.generated.WorkloadOutputApi
 import io.airbyte.api.client.generated.WorkspaceApi
-import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
-import jakarta.inject.Named
-import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
 import okhttp3.Response
 
@@ -66,13 +62,10 @@ import okhttp3.Response
  *
  * This needs to be open so that we can wrap it in micronaut test annotations for mock injection in tests.
  */
-@Suppress("MemberVisibilityCanBePrivate")
-@Singleton
-@Requires(property = "airbyte.internal-api.base-path")
 open class AirbyteApiClient(
-  @Value("\${airbyte.internal-api.base-path}") basePath: String,
-  @Named("airbyteApiClientRetryPolicy") policy: RetryPolicy<Response>,
-  @Named("airbyteApiOkHttpClient") httpClient: OkHttpClient,
+  basePath: String,
+  policy: RetryPolicy<Response>,
+  httpClient: OkHttpClient,
 ) {
   val actorDefinitionVersionApi = ActorDefinitionVersionApi(basePath = basePath, client = httpClient, policy = policy)
   val attemptApi = AttemptApi(basePath = basePath, client = httpClient, policy = policy)

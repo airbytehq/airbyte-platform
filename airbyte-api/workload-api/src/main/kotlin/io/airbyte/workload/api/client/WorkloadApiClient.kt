@@ -6,10 +6,6 @@ package io.airbyte.workload.api.client
 
 import dev.failsafe.RetryPolicy
 import io.airbyte.workload.api.client.generated.WorkloadApi
-import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
-import jakarta.inject.Named
-import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
 import okhttp3.Response
 
@@ -34,13 +30,10 @@ import okhttp3.Response
  * </ol>
  * <p>
  */
-@SuppressWarnings("Parameter")
-@Singleton
-@Requires(property = "airbyte.workload-api.base-path")
 class WorkloadApiClient(
-  @Value("\${airbyte.workload-api.base-path}") basePath: String,
-  @Named("workloadApiClientRetryPolicy") policy: RetryPolicy<Response>,
-  @Named("workloadApiOkHttpClient") httpClient: OkHttpClient,
+  basePath: String,
+  policy: RetryPolicy<Response>,
+  httpClient: OkHttpClient,
 ) {
   val workloadApi = WorkloadApi(basePath = basePath, client = httpClient, policy = policy)
 }

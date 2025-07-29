@@ -33,7 +33,7 @@ private val logger = KotlinLogging.logger {}
 @Requires(property = "micronaut.security.oauth2.clients.keycloak.openid.issuer", pattern = ".+")
 class KeycloakAccessTokenInterceptor(
   @Named("keycloak") private val clientCredentialsClient: ClientCredentialsClient,
-) : AirbyteApiInterceptor {
+) : Interceptor {
   private fun fetchAccessToken(): Mono<String?> =
     Mono
       .defer { Mono.from(clientCredentialsClient.requestToken()) }

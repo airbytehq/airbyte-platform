@@ -373,19 +373,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST
-        {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
-        - name: AIRBYTE_API_AUTH_HEADER_NAME
-          value: "X-Airbyte-Auth"
-        - name: AIRBYTE_API_AUTH_HEADER_VALUE
-          value: "Internal worker"
-        {{- else if and (or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) .Values.global.auth.enabled }}
-        # Self-Managed Enterprise and Community w/ auth enabled use the same auth header, just
-        # splitting into two separate blocks for readability.
-        - name: AIRBYTE_API_AUTH_HEADER_NAME
-          value: "X-Airbyte-Auth"
-        - name: AIRBYTE_API_AUTH_HEADER_VALUE
-          value: "Internal worker"
-        {{- end }}
 
         # SECRETS MANAGER
         - name: SECRET_PERSISTENCE

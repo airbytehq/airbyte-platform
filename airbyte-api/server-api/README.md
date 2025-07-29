@@ -17,9 +17,6 @@ in the application's configuration file (`application.yml`):
 ```yaml
 airbyte:
   internal-api:
-    auth-header:
-      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
-      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
     base-path: ${INTERNAL_API_HOST}/api
     connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
     read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:600}
@@ -34,8 +31,6 @@ of each:
 
 | Environment Variable| Description |
 |:----|:----|
-| AIRBYTE_API_AUTH_HEADER_NAME | The name of the HTTP header that will contain authorization information. |
-| AIRBYTE_API_AUTH_HEADER_VALUE | The value to be associated with the HTTP authorization header. |
 | AIRBYTE_API_CONNECT_TIMEOUT_SECONDS | The Airbyte API connection timeout in seconds. |
 | AIRBYTE_API_MAX_RETRIES | The maximum number of client retries to attempt before failing the request |
 | AIRBYTE_API_READ_TIMEOUT_SECONDS | The Airbyte API read timeout in seconds. |

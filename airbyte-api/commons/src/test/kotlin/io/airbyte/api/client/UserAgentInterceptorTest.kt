@@ -32,7 +32,7 @@ internal class UserAgentInterceptorTest {
 
     interceptor.intercept(chain)
 
-    verify(exactly = 0) { builder.addHeader(HttpHeaders.USER_AGENT, formatUserAgent(applicationName)) }
+    verify(exactly = 0) { builder.addHeader(HttpHeaders.USER_AGENT, any()) }
   }
 
   @Test
@@ -52,6 +52,6 @@ internal class UserAgentInterceptorTest {
 
     interceptor.intercept(chain)
 
-    verify(exactly = 1) { builder.addHeader(HttpHeaders.USER_AGENT, formatUserAgent(applicationName)) }
+    verify(exactly = 1) { builder.addHeader(HttpHeaders.USER_AGENT, "TheApplicationName") }
   }
 }

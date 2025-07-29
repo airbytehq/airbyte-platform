@@ -19,7 +19,4 @@ airbyte:
         credentials-path: ""
         email: ""
   internal-api:
-    auth-header:
-      name: ""
-      value: ""
     base-path: http://airbyte-server-svc:8001/api

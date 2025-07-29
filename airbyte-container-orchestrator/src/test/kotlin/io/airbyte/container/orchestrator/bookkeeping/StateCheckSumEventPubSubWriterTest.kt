@@ -32,7 +32,7 @@ import java.util.function.Supplier
 @MicronautTest
 @Property(name = PLATFORM_MODE, value = ORCHESTRATOR)
 @Property(name = "airbyte.attempt-id", value = "1")
-@Property(name = "airbyte.auth.control-plane-token-endpoint", value = "https://localhost:8080/test-token-endpoint")
+@Property(name = "airbyte.internal-api.auth.token-endpoint", value = "https://localhost:8080/test-token-endpoint")
 @Property(name = "airbyte.auth.dataplane-client-id", value = "test")
 @Property(name = "airbyte.auth.dataplane-client-secret", value = "test")
 @Property(name = "airbyte.cloud.pubsub.enabled", value = "true")

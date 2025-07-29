@@ -18,10 +18,6 @@ micronaut:
         port: ${STATSD_PORT:8125}
 airbyte:
   platform-mode: ${PLATFORM_MODE:ORCHESTRATOR}
-  auth:
-    control-plane-token-endpoint: ${CONTROL_PLANE_TOKEN_ENDPOINT}
-    dataplane-client-id: ${DATAPLANE_CLIENT_ID}
-    dataplane-client-secret: ${DATAPLANE_CLIENT_SECRET}
   license-key: ${AIRBYTE_LICENSE_KEY:empty}
   control.plane.auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT}
   data.plane.service-account:
@@ -31,15 +27,17 @@ airbyte:
   init:
     operation: ${OPERATION_TYPE:}
   internal-api:
-    auth-header:
-      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
-      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
     base-path: ${INTERNAL_API_HOST}/api
     connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}
     read-timeout-seconds: ${AIRBYTE_API_READ_TIMEOUT_SECONDS:600}
     retries:
       delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
       max: ${AIRBYTE_API_MAX_RETRIES:5}
+    auth:
+      type: DATAPLANE_ACCESS_TOKEN
+      token-endpoint: ${CONTROL_PLANE_TOKEN_ENDPOINT}
+      client-id: ${DATAPLANE_CLIENT_ID}
+      client-secret: ${DATAPLANE_CLIENT_SECRET}
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:

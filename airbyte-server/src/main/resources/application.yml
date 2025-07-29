@@ -427,12 +427,9 @@ airbyte:
 
   connector-builder-server-api:
     base-path: ${CONNECTOR_BUILDER_SERVER_API_HOST:}
+    token: ${INTERNAL_API_TOKEN}
     connect-timeout-seconds: ${CONNECTOR_BUILDER_SERVER_API_CONNECT_TIMEOUT_SECONDS:30}
     read-timeout-seconds: ${CONNECTOR_BUILDER_SERVER_API_READ_TIMEOUT_SECONDS:300}
-  internal-api:
-    auth-header:
-      name: ${AIRBYTE_API_AUTH_HEADER_NAME:}
-      value: ${AIRBYTE_API_AUTH_HEADER_VALUE:}
 
   # Enterprise feature
   audit:

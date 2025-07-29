@@ -28,6 +28,7 @@ dependencies {
   implementation(libs.reactor.core)
   implementation(libs.slf4j.api)
   implementation(libs.swagger.annotations)
+  implementation(libs.okhttp.logging.interceptor)
   implementation(project(":oss:airbyte-commons"))
 
   compileOnly(libs.v3.swagger.annotations)

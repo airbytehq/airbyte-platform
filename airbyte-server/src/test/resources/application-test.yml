@@ -36,6 +36,8 @@ airbyte:
   web-app:
     url: "http://test-url.com"
     config: null
+  connector-builder-server-api:
+    token: TEST_TOKEN
 
 datasources:
   config:

@@ -19,11 +19,7 @@ airbyte:
         credentials-path: ""
         email: ""
   internal:
-    api:
-      auth-header:
-        name: ""
-        value: ""
-      host: airbyte-server-svc:8001
+    host: airbyte-server-svc:8001
   worker:
   cloud:
     storage:

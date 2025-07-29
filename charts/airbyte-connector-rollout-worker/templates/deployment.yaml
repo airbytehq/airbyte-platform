@@ -146,19 +146,6 @@ spec:
         - name: LOG_LEVEL
           value: "{{ .Values.log.level }}"
         {{- end }}
-        {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
-        - name: AIRBYTE_API_AUTH_HEADER_NAME
-          value: "X-Airbyte-Auth"
-        - name: AIRBYTE_API_AUTH_HEADER_VALUE
-          value: "Internal worker"
-        {{- else if and (eq .Values.global.edition "community") .Values.global.auth.enabled }}
-        # Self-Managed Enterprise and Community w/ auth enabled use the same auth header, just
-        # splitting into two separate blocks for readability.
-        - name: AIRBYTE_API_AUTH_HEADER_NAME
-          value: "X-Airbyte-Auth"
-        - name: AIRBYTE_API_AUTH_HEADER_VALUE
-          value: "Internal worker"
-        {{- end }}
 
         # Values from secret
         {{- if .Values.secrets }}

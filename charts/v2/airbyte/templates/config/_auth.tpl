@@ -297,6 +297,24 @@ Renders the auth.bootstrap.dataPlane.clientSecretSecretKey environment variable
 {{- end }}
 
 {{/*
+Renders the global.auth.internalApi.tokenSecretKey value
+*/}}
+{{- define "airbyte.auth.bootstrap.internalApi.tokenSecretKey" }}
+    {{- .Values.global.auth.internalApi.tokenSecretKey | default "internal-api-token" }}
+{{- end }}
+
+{{/*
+Renders the auth.bootstrap.internalApi.tokenSecretKey environment variable
+*/}}
+{{- define "airbyte.auth.bootstrap.internalApi.tokenSecretKey.env" }}
+- name: AB_INTERNAL_API_TOKEN_SECRET_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AB_INTERNAL_API_TOKEN_SECRET_KEY
+{{- end }}
+
+{{/*
 Renders the set of all auth.bootstrap environment variables
 */}}
 {{- define "airbyte.auth.bootstrap.envs" }}
@@ -312,6 +330,7 @@ Renders the set of all auth.bootstrap environment variables
 {{- include "airbyte.auth.bootstrap.security.jwtSignatureSecretKey.env" . }}
 {{- include "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey.env" . }}
 {{- include "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey.env" . }}
+{{- include "airbyte.auth.bootstrap.internalApi.tokenSecretKey.env" . }}
 {{- end }}
 
 {{/*
@@ -326,6 +345,7 @@ AB_INSTANCE_ADMIN_CLIENT_SECRET_SECRET_KEY: {{ include "airbyte.auth.bootstrap.i
 AB_JWT_SIGNATURE_SECRET_KEY: {{ include "airbyte.auth.bootstrap.security.jwtSignatureSecretKey" . | quote }}
 DATAPLANE_CLIENT_ID_SECRET_KEY: {{ include "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey" . | quote }}
 DATAPLANE_CLIENT_SECRET_SECRET_KEY: {{ include "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey" . | quote }}
+AB_INTERNAL_API_TOKEN_SECRET_KEY: {{ include "airbyte.auth.bootstrap.internalApi.tokenSecretKey" . | quote }}
 {{- end }}
 
 {{/*
@@ -827,6 +847,38 @@ Renders the set of all auth.instanceAdmin.enterprise secret variables
 */}}
 {{- define "airbyte.auth.instanceAdmin.enterprise.secrets" }}
 INITIAL_USER_PASSWORD: {{ include "airbyte.auth.instanceAdmin.enterprise.password" . | quote }}
+{{- end }}
+
+{{/*
+Renders the global.auth.internalApi.token value
+*/}}
+{{- define "airbyte.auth.internalApi.token" }}
+    {{- .Values.global.auth.internalApi.token }}
+{{- end }}
+
+{{/*
+Renders the auth.internalApi.token secret key
+*/}}
+{{- define "airbyte.auth.internalApi.token.secretKey" }}
+	{{- .Values.global.auth.internalApi.tokenSecretKey | default "internal-api-token" }}
+{{- end }}
+
+{{/*
+Renders the auth.internalApi.token environment variable
+*/}}
+{{- define "airbyte.auth.internalApi.token.env" }}
+- name: INTERNAL_API_TOKEN
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "airbyte.auth.bootstrap.managedSecretName" . }}
+      key: {{ include "airbyte.auth.internalApi.token.secretKey" . }}
+{{- end }}
+
+{{/*
+Renders the set of all auth.internalApi environment variables
+*/}}
+{{- define "airbyte.auth.internalApi.envs" }}
+{{- include "airbyte.auth.internalApi.token.env" . }}
 {{- end }}
 
 {{/*
