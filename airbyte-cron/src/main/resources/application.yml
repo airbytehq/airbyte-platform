@@ -78,6 +78,9 @@ airbyte:
     queue:
       deletion-batch-size: ${WORKLOAD_QUEUE_DELETION_BATCH_SIZE:40000}
       deletion-cron: 0 15 * * * ?
+  internal-api:
+    auth:
+      type: STATIC_TOKEN
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
