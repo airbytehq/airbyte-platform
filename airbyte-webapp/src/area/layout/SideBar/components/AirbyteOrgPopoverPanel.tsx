@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import React, { useState, useCallback, useRef, useMemo } from "react";
+import React, { useState, useCallback, useRef, useMemo, Suspense } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useDebounce, useLocation, useUpdateEffect } from "react-use";
 import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
@@ -25,16 +25,14 @@ import { useFeature, FeatureItem } from "core/services/features";
 import styles from "./AirbyteOrgPopoverPanel.module.scss";
 import { OrganizationWithWorkspaces } from "./OrganizationWithWorkspaces";
 
-export const AirbyteOrgPopoverPanel: React.FC<{ closePopover: () => void }> = ({ closePopover }) => {
-  const location = useLocation();
-  const { formatMessage } = useIntl();
+const OrganizationSummariesList: React.FC<{
+  debouncedSearchValue: string;
+  virtuosoRef: React.RefObject<VirtuosoHandle>;
+}> = ({ debouncedSearchValue, virtuosoRef }) => {
   const allowMultiWorkspace = useFeature(FeatureItem.MultiWorkspaceUI);
   const showOSSWorkspaceName = useFeature(FeatureItem.ShowOSSWorkspaceName);
-
+  const { formatMessage } = useIntl();
   const { userId } = useCurrentUser();
-  const [search, setSearch] = useState("");
-  const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
-
   const currentOrganizationId = useCurrentOrganizationId();
   const currentOrganization = useOrganization(currentOrganizationId);
   const currentOrganizationMemberCount = useOrganizationUserCount(currentOrganizationId);
@@ -96,6 +94,69 @@ export const AirbyteOrgPopoverPanel: React.FC<{ closePopover: () => void }> = ({
     allowMultiWorkspace,
   ]);
 
+  const estimatedHeight = !allowMultiWorkspace
+    ? 64
+    : Math.min(
+        organizationSummaries.reduce((acc, curr) => {
+          return acc + 50 + (curr?.workspaces?.length || 0) * 32;
+        }, 0),
+        388
+      );
+
+  const handleEndReached = () => {
+    if (hasNextPage) {
+      fetchNextPage();
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Box p="md" pb="sm">
+        <LoadingSpinner />
+      </Box>
+    );
+  }
+
+  if (organizationSummaries?.length === 0) {
+    return (
+      <Box p="md">
+        <Text align="center">
+          <FormattedMessage id="workspaces.noWorkspaces" />
+        </Text>
+      </Box>
+    );
+  }
+
+  return (
+    <Virtuoso
+      ref={virtuosoRef}
+      style={{ height: estimatedHeight }}
+      data={organizationSummaries}
+      endReached={handleEndReached}
+      computeItemKey={(index, item) => item.organization.organizationId + index}
+      itemContent={(index, item) => (
+        <OrganizationWithWorkspaces {...item} lastItem={index === organizationSummaries.length - 1} />
+      )}
+      components={{
+        Footer: isFetchingNextPage
+          ? () => (
+              <Box pt="md" pb="sm" className={styles.footerLoading}>
+                <LoadingSpinner />
+              </Box>
+            )
+          : undefined,
+      }}
+    />
+  );
+};
+
+export const AirbyteOrgPopoverPanel: React.FC<{ closePopover: () => void }> = ({ closePopover }) => {
+  const location = useLocation();
+  const { formatMessage } = useIntl();
+  const allowMultiWorkspace = useFeature(FeatureItem.MultiWorkspaceUI);
+  const [search, setSearch] = useState("");
+  const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
+
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
   }, []);
@@ -109,26 +170,11 @@ export const AirbyteOrgPopoverPanel: React.FC<{ closePopover: () => void }> = ({
     [search]
   );
 
-  const handleEndReached = () => {
-    if (hasNextPage) {
-      fetchNextPage();
-    }
-  };
-
   useUpdateEffect(() => {
     closePopover();
   }, [closePopover, location.pathname, location.search]);
 
   const virtuosoRef = useRef<VirtuosoHandle | null>(null);
-
-  const estimatedHeight = !allowMultiWorkspace
-    ? 64
-    : Math.min(
-        organizationSummaries.reduce((acc, curr) => {
-          return acc + 50 + (curr?.workspaces?.length || 0) * 32;
-        }, 0),
-        388
-      );
 
   return (
     <>
@@ -146,44 +192,21 @@ export const AirbyteOrgPopoverPanel: React.FC<{ closePopover: () => void }> = ({
           />
         </Box>
       )}
-
       <FlexContainer
         direction="column"
         gap="xs"
         className={classNames(styles.list, { [styles["list--singleWorkspace"]]: !allowMultiWorkspace })}
         style={{ overflow: "auto" }}
       >
-        {isLoading ? (
-          <Box p="md" pb="sm">
-            <LoadingSpinner />
-          </Box>
-        ) : organizationSummaries?.length === 0 ? (
-          <Box p="md">
-            <Text align="center">
-              <FormattedMessage id="workspaces.noWorkspaces" />
-            </Text>
-          </Box>
-        ) : (
-          <Virtuoso
-            ref={virtuosoRef}
-            style={{ height: estimatedHeight }}
-            data={organizationSummaries}
-            endReached={handleEndReached}
-            computeItemKey={(index, item) => item.organization.organizationId + index}
-            itemContent={(index, item) => (
-              <OrganizationWithWorkspaces {...item} lastItem={index === organizationSummaries.length - 1} />
-            )}
-            components={{
-              Footer: isFetchingNextPage
-                ? () => (
-                    <Box pt="md" pb="sm" className={styles.footerLoading}>
-                      <LoadingSpinner />
-                    </Box>
-                  )
-                : undefined,
-            }}
-          />
-        )}
+        <Suspense
+          fallback={
+            <Box p="md" pb="sm">
+              <LoadingSpinner />
+            </Box>
+          }
+        >
+          <OrganizationSummariesList debouncedSearchValue={debouncedSearchValue} virtuosoRef={virtuosoRef} />
+        </Suspense>
       </FlexContainer>
     </>
   );
