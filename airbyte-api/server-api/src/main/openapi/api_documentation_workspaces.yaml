@@ -1981,8 +1981,12 @@ components:
       - "full_refresh_overwrite"
       - "full_refresh_overwrite_deduped"
       - "full_refresh_append"
+      - "full_refresh_update"
+      - "full_refresh_soft_delete"
       - "incremental_append"
       - "incremental_deduped_history"
+      - "incremental_update"
+      - "incremental_soft_delete"
       x-speakeasy-component: true
     ActorTypeEnum:
       description: "Whether you're setting this override for a source or destination"
@@ -2286,6 +2290,30 @@ components:
         id:
           type: "string"
           format: "uuid"
+      x-speakeasy-component: true
+    EmbeddedOrganizationsList:
+      required:
+      - "organizations"
+      properties:
+        organizations:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/EmbeddedOrganizationListItem"
+      x-speakeasy-component: true
+    EmbeddedOrganizationListItem:
+      type: "object"
+      required:
+      - "organizationId"
+      - "organizationName"
+      - "permission"
+      properties:
+        organizationId:
+          type: "string"
+          format: "uuid"
+        organizationName:
+          type: "string"
+        permission:
+          $ref: "#/components/schemas/PermissionType"
       x-speakeasy-component: true
     shopify:
       properties:
@@ -2702,23 +2730,6 @@ components:
           title: "Client Secret"
           type: "string"
       title: "Source Instagram"
-    snowflake:
-      properties:
-        credentials:
-          properties:
-            client_id:
-              airbyte_secret: true
-              description: "The Client ID of your Snowflake developer application."
-              order: 1
-              title: "Client ID"
-              type: "string"
-            client_secret:
-              airbyte_secret: true
-              description: "The Client Secret of your Snowflake developer application."
-              order: 2
-              title: "Client Secret"
-              type: "string"
-      title: "Snowflake Source Spec"
     smartsheets:
       properties:
         credentials:
@@ -2879,6 +2890,8 @@ components:
               title: "Client Secret"
               type: "string"
       title: "Google Analytics (Data API) Spec"
+    intercom:
+      title: null
     facebook-marketing:
       properties:
         credentials:
@@ -3002,6 +3015,8 @@ components:
           $ref: "#/components/schemas/hubspot"
         - title: instagram
           $ref: "#/components/schemas/instagram"
+        - title: intercom
+          $ref: "#/components/schemas/intercom"
         - title: lever-hiring
           $ref: "#/components/schemas/lever-hiring"
         - title: linkedin-ads
@@ -3034,8 +3049,6 @@ components:
           $ref: "#/components/schemas/smartsheets"
         - title: snapchat-marketing
           $ref: "#/components/schemas/snapchat-marketing"
-        - title: snowflake
-          $ref: "#/components/schemas/snowflake"
         - title: surveymonkey
           $ref: "#/components/schemas/surveymonkey"
         - title: tiktok-marketing
@@ -3122,6 +3135,7 @@ components:
         - google-sheets
         - hubspot
         - instagram
+        - intercom
         - lever-hiring
         - linkedin-ads
         - mailchimp
@@ -3137,7 +3151,6 @@ components:
         - slack
         - smartsheets
         - snapchat-marketing
-        - snowflake
         - surveymonkey
         - tiktok-marketing
         - trello

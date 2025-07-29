@@ -27,6 +27,7 @@ paths:
           description: "Not found"
       operationId: "listDestinations"
       x-speakeasy-alias: "listDestinations"
+      x-speakeasy-entity-operation: "Destination#list"
       x-speakeasy-group: "Destinations"
       summary: "List destinations"
       parameters:
@@ -112,6 +113,7 @@ paths:
           description: "Not found"
       operationId: "createDestination"
       x-speakeasy-alias: "createDestination"
+      x-speakeasy-entity-operation: "Destination#create"
       x-speakeasy-group: "Destinations"
       summary: "Create a destination"
       description: "Creates a destination given a name, workspace id, and a json blob\
@@ -147,6 +149,7 @@ paths:
           description: "Not found"
       operationId: "getDestination"
       x-speakeasy-alias: "getDestination"
+      x-speakeasy-entity-operation: "Destination#read"
       x-speakeasy-group: "Destinations"
       summary: "Get Destination details"
       parameters:
@@ -171,6 +174,7 @@ paths:
           description: "Not found"
       operationId: "deleteDestination"
       x-speakeasy-alias: "deleteDestination"
+      x-speakeasy-entity-operation: "Destination#delete"
       x-speakeasy-group: "Destinations"
       summary: "Delete a Destination"
     patch:
@@ -264,8 +268,8 @@ paths:
       operationId: "putDestination"
       x-speakeasy-alias: "putDestination"
       x-speakeasy-group: "Destinations"
-      summary: "Update a Destination and fully overwrite it"
       x-speakeasy-entity-operation: "Destination#update"
+      summary: "Update a Destination and fully overwrite it"
     parameters:
     - name: "destinationId"
       schema:
@@ -2031,8 +2035,12 @@ components:
       - "full_refresh_overwrite"
       - "full_refresh_overwrite_deduped"
       - "full_refresh_append"
+      - "full_refresh_update"
+      - "full_refresh_soft_delete"
       - "incremental_append"
       - "incremental_deduped_history"
+      - "incremental_update"
+      - "incremental_soft_delete"
       x-speakeasy-component: true
     ActorTypeEnum:
       description: "Whether you're setting this override for a source or destination"
@@ -2337,69 +2345,474 @@ components:
           type: "string"
           format: "uuid"
       x-speakeasy-component: true
+    EmbeddedOrganizationsList:
+      required:
+      - "organizations"
+      properties:
+        organizations:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/EmbeddedOrganizationListItem"
+      x-speakeasy-component: true
+    EmbeddedOrganizationListItem:
+      type: "object"
+      required:
+      - "organizationId"
+      - "organizationName"
+      - "permission"
+      properties:
+        organizationId:
+          type: "string"
+          format: "uuid"
+        organizationName:
+          type: "string"
+        permission:
+          $ref: "#/components/schemas/PermissionType"
+      x-speakeasy-component: true
+    destination-hubspot:
+      properties:
+        credentials:
+          description: "Choose how to authenticate to HubSpot."
+          oneOf:
+          - additionalProperties: true
+            properties:
+              client_id:
+                airbyte_secret: true
+                description: "The Client ID of your HubSpot developer application.\
+                  \ See the <a href=\\\"https://legacydocs.hubspot.com/docs/methods/oauth2/oauth2-quickstart\\\
+                  \">Hubspot docs</a> if you need help finding this ID."
+                order: 0
+                title: "Client ID"
+                type: "string"
+                x-speakeasy-param-sensitive: true
+              client_secret:
+                airbyte_secret: true
+                description: "The client secret for your HubSpot developer application.\
+                  \ See the <a href=\\\"https://legacydocs.hubspot.com/docs/methods/oauth2/oauth2-quickstart\\\
+                  \">Hubspot docs</a> if you need help finding this secret."
+                order: 1
+                title: "Client Secret"
+                type: "string"
+                x-speakeasy-param-sensitive: true
+              refresh_token:
+                airbyte_secret: true
+                description: "Refresh token to renew an expired access token. See\
+                  \ the <a href=\\\"https://legacydocs.hubspot.com/docs/methods/oauth2/oauth2-quickstart\\\
+                  \">Hubspot docs</a> if you need help finding this token."
+                order: 2
+                title: "Refresh Token"
+                type: "string"
+                x-speakeasy-param-sensitive: true
+              type:
+                default: "OAuth"
+                enum:
+                - "OAuth"
+                type: "string"
+            required:
+            - "type"
+            - "client_id"
+            - "client_secret"
+            - "refresh_token"
+            title: "OAuth"
+            type: "object"
+          order: 0
+          title: "Credentials"
+          type: "object"
+        object_storage_config:
+          oneOf:
+          - additionalProperties: true
+            properties:
+              storage_type:
+                default: "None"
+                enum:
+                - "None"
+                type: "string"
+            required:
+            - "storage_type"
+            title: "None"
+            type: "object"
+          - additionalProperties: true
+            properties:
+              access_key_id:
+                airbyte_secret: true
+                always_show: true
+                description: "The access key ID to access the S3 bucket. Airbyte requires\
+                  \ Read and Write permissions to the given bucket. Read more <a href=\"\
+                  https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
+                  >here</a>."
+                examples:
+                - "A012345678910EXAMPLE"
+                order: 1
+                title: "Access Key ID"
+                type: "string"
+                x-speakeasy-param-sensitive: true
+              bucket_path:
+                description: "All files in the bucket will be prefixed by this."
+                examples:
+                - "prefix/"
+                order: 7
+                title: "Prefix Path in the Bucket"
+                type: "string"
+              role_arn:
+                description: "The ARN of the AWS role to assume. Only usable in Airbyte\
+                  \ Cloud."
+                examples:
+                - "arn:aws:iam::123456789:role/ExternalIdIsYourWorkspaceId"
+                order: 3
+                title: "Role ARN"
+                type: "string"
+              s3_bucket_name:
+                description: "The name of the S3 bucket. Read more <a href=\"https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html\"\
+                  >here</a>."
+                examples:
+                - "airbyte_sync"
+                order: 4
+                title: "S3 Bucket Name"
+                type: "string"
+              s3_bucket_region:
+                default: ""
+                description: "The region of the S3 bucket. See <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions\"\
+                  >here</a> for all region codes."
+                enum:
+                - ""
+                - "af-south-1"
+                - "ap-east-1"
+                - "ap-northeast-1"
+                - "ap-northeast-2"
+                - "ap-northeast-3"
+                - "ap-south-1"
+                - "ap-south-2"
+                - "ap-southeast-1"
+                - "ap-southeast-2"
+                - "ap-southeast-3"
+                - "ap-southeast-4"
+                - "ca-central-1"
+                - "ca-west-1"
+                - "cn-north-1"
+                - "cn-northwest-1"
+                - "eu-central-1"
+                - "eu-central-2"
+                - "eu-north-1"
+                - "eu-south-1"
+                - "eu-south-2"
+                - "eu-west-1"
+                - "eu-west-2"
+                - "eu-west-3"
+                - "il-central-1"
+                - "me-central-1"
+                - "me-south-1"
+                - "sa-east-1"
+                - "us-east-1"
+                - "us-east-2"
+                - "us-gov-east-1"
+                - "us-gov-west-1"
+                - "us-west-1"
+                - "us-west-2"
+                examples:
+                - "us-east-1"
+                order: 5
+                title: "S3 Bucket Region"
+                type: "string"
+              s3_endpoint:
+                description: "Your S3 endpoint url. Read more <a href=\"https://docs.aws.amazon.com/general/latest/gr/s3.html#:~:text=Service%20endpoints-,Amazon%20S3%20endpoints,-When%20you%20use\"\
+                  >here</a>"
+                examples:
+                - "http://localhost:9000"
+                order: 6
+                title: "S3 Endpoint"
+                type: "string"
+              secret_access_key:
+                airbyte_secret: true
+                always_show: true
+                description: "The corresponding secret to the access key ID. Read\
+                  \ more <a href=\"https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
+                  >here</a>"
+                examples:
+                - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+                order: 2
+                title: "Secret Access Key"
+                type: "string"
+                x-speakeasy-param-sensitive: true
+              storage_type:
+                default: "S3"
+                enum:
+                - "S3"
+                type: "string"
+            required:
+            - "storage_type"
+            - "s3_bucket_name"
+            - "s3_bucket_region"
+            - "bucket_path"
+            - "format"
+            title: "S3"
+            type: "object"
+          title: "Object Storage Configuration"
+          type: "object"
+        destinationType:
+          title: "hubspot"
+          const: "hubspot"
+          enum:
+          - "hubspot"
+          order: 0
+          type: "string"
+      required:
+      - "credentials"
+      - "destinationType"
+      title: "Hub Spot Specification"
+      type: "object"
+    destination-hubspot-update:
+      properties:
+        credentials:
+          description: "Choose how to authenticate to HubSpot."
+          oneOf:
+          - additionalProperties: true
+            properties:
+              client_id:
+                airbyte_secret: true
+                description: "The Client ID of your HubSpot developer application.\
+                  \ See the <a href=\\\"https://legacydocs.hubspot.com/docs/methods/oauth2/oauth2-quickstart\\\
+                  \">Hubspot docs</a> if you need help finding this ID."
+                order: 0
+                title: "Client ID"
+                type: "string"
+              client_secret:
+                airbyte_secret: true
+                description: "The client secret for your HubSpot developer application.\
+                  \ See the <a href=\\\"https://legacydocs.hubspot.com/docs/methods/oauth2/oauth2-quickstart\\\
+                  \">Hubspot docs</a> if you need help finding this secret."
+                order: 1
+                title: "Client Secret"
+                type: "string"
+              refresh_token:
+                airbyte_secret: true
+                description: "Refresh token to renew an expired access token. See\
+                  \ the <a href=\\\"https://legacydocs.hubspot.com/docs/methods/oauth2/oauth2-quickstart\\\
+                  \">Hubspot docs</a> if you need help finding this token."
+                order: 2
+                title: "Refresh Token"
+                type: "string"
+              type:
+                default: "OAuth"
+                enum:
+                - "OAuth"
+                type: "string"
+            required:
+            - "type"
+            - "client_id"
+            - "client_secret"
+            - "refresh_token"
+            title: "OAuth"
+            type: "object"
+          order: 0
+          title: "Credentials"
+          type: "object"
+        object_storage_config:
+          oneOf:
+          - additionalProperties: true
+            properties:
+              storage_type:
+                default: "None"
+                enum:
+                - "None"
+                type: "string"
+            required:
+            - "storage_type"
+            title: "None"
+            type: "object"
+          - additionalProperties: true
+            properties:
+              access_key_id:
+                airbyte_secret: true
+                always_show: true
+                description: "The access key ID to access the S3 bucket. Airbyte requires\
+                  \ Read and Write permissions to the given bucket. Read more <a href=\"\
+                  https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
+                  >here</a>."
+                examples:
+                - "A012345678910EXAMPLE"
+                order: 1
+                title: "Access Key ID"
+                type: "string"
+              bucket_path:
+                description: "All files in the bucket will be prefixed by this."
+                examples:
+                - "prefix/"
+                order: 7
+                title: "Prefix Path in the Bucket"
+                type: "string"
+              role_arn:
+                description: "The ARN of the AWS role to assume. Only usable in Airbyte\
+                  \ Cloud."
+                examples:
+                - "arn:aws:iam::123456789:role/ExternalIdIsYourWorkspaceId"
+                order: 3
+                title: "Role ARN"
+                type: "string"
+              s3_bucket_name:
+                description: "The name of the S3 bucket. Read more <a href=\"https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html\"\
+                  >here</a>."
+                examples:
+                - "airbyte_sync"
+                order: 4
+                title: "S3 Bucket Name"
+                type: "string"
+              s3_bucket_region:
+                default: ""
+                description: "The region of the S3 bucket. See <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions\"\
+                  >here</a> for all region codes."
+                enum:
+                - ""
+                - "af-south-1"
+                - "ap-east-1"
+                - "ap-northeast-1"
+                - "ap-northeast-2"
+                - "ap-northeast-3"
+                - "ap-south-1"
+                - "ap-south-2"
+                - "ap-southeast-1"
+                - "ap-southeast-2"
+                - "ap-southeast-3"
+                - "ap-southeast-4"
+                - "ca-central-1"
+                - "ca-west-1"
+                - "cn-north-1"
+                - "cn-northwest-1"
+                - "eu-central-1"
+                - "eu-central-2"
+                - "eu-north-1"
+                - "eu-south-1"
+                - "eu-south-2"
+                - "eu-west-1"
+                - "eu-west-2"
+                - "eu-west-3"
+                - "il-central-1"
+                - "me-central-1"
+                - "me-south-1"
+                - "sa-east-1"
+                - "us-east-1"
+                - "us-east-2"
+                - "us-gov-east-1"
+                - "us-gov-west-1"
+                - "us-west-1"
+                - "us-west-2"
+                examples:
+                - "us-east-1"
+                order: 5
+                title: "S3 Bucket Region"
+                type: "string"
+              s3_endpoint:
+                description: "Your S3 endpoint url. Read more <a href=\"https://docs.aws.amazon.com/general/latest/gr/s3.html#:~:text=Service%20endpoints-,Amazon%20S3%20endpoints,-When%20you%20use\"\
+                  >here</a>"
+                examples:
+                - "http://localhost:9000"
+                order: 6
+                title: "S3 Endpoint"
+                type: "string"
+              secret_access_key:
+                airbyte_secret: true
+                always_show: true
+                description: "The corresponding secret to the access key ID. Read\
+                  \ more <a href=\"https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
+                  >here</a>"
+                examples:
+                - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+                order: 2
+                title: "Secret Access Key"
+                type: "string"
+              storage_type:
+                default: "S3"
+                enum:
+                - "S3"
+                type: "string"
+            required:
+            - "storage_type"
+            - "s3_bucket_name"
+            - "s3_bucket_region"
+            - "bucket_path"
+            - "format"
+            title: "S3"
+            type: "object"
+          title: "Object Storage Configuration"
+          type: "object"
+      required:
+      - "credentials"
+      title: "Hub Spot Specification"
+      type: "object"
     destination-clickhouse:
+      groups:
+      - id: "connection"
+        title: "Connection"
+      - id: "advanced"
+        title: "Advanced"
       properties:
         database:
+          default: "default"
           description: "Name of the database."
-          order: 2
-          title: "DB Name"
+          order: 3
+          title: "Database"
           type: "string"
+        enable_json:
+          default: false
+          description: "Use the JSON type for Object fields. If disabled, the JSON\
+            \ will be converted to a string."
+          order: 6
+          title: "Enable JSON"
+          type: "boolean"
         host:
           description: "Hostname of the database."
           order: 0
-          title: "Host"
-          type: "string"
-        jdbc_url_params:
-          description: "Additional properties to pass to the JDBC URL string when\
-            \ connecting to the database formatted as 'key=value' pairs separated\
-            \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3)."
-          order: 5
-          title: "JDBC URL Params"
+          title: "Hostname"
           type: "string"
         password:
           airbyte_secret: true
           description: "Password associated with the username."
-          order: 4
+          order: 5
           title: "Password"
           type: "string"
           x-speakeasy-param-sensitive: true
         port:
-          default: 8123
-          description: "HTTP port of the database."
-          examples:
-          - "8123"
-          maximum: 65536
-          minimum: 0
+          default: "8443"
+          description: "HTTP port of the database. Default(s) HTTP: 8123 — HTTPS:\
+            \ 8443"
           order: 1
           title: "Port"
-          type: "integer"
-        raw_data_schema:
-          description: "The schema to write raw tables into (default: airbyte_internal)"
-          order: 7
-          title: "Raw Table Schema Name"
           type: "string"
-        ssl:
-          default: false
-          description: "Encrypt data using SSL."
-          order: 6
-          title: "SSL Connection"
-          type: "boolean"
+        protocol:
+          default: "https"
+          description: "Protocol for the database connection string."
+          enum:
+          - "http"
+          - "https"
+          order: 2
+          title: "Protocol"
+          type: "string"
+        record_window_size:
+          description: "Warning: Tuning this parameter can impact the performances.\
+            \ The maximum number of records that should be written to a batch. The\
+            \ batch size limit is still limited to 70 Mb"
+          order: 8
+          title: "Record Window Size"
+          type: "integer"
         tunnel_method:
           description: "Whether to initiate an SSH tunnel before connecting to the\
             \ database, and if so, which kind of authentication to use."
           oneOf:
-          - properties:
+          - additionalProperties: true
+            description: "No ssh tunnel needed to connect to database"
+            properties:
               tunnel_method:
-                const: "NO_TUNNEL"
-                description: "No ssh tunnel needed to connect to database"
-                order: 0
-                type: "string"
+                default: "NO_TUNNEL"
                 enum:
                 - "NO_TUNNEL"
+                type: "string"
             required:
             - "tunnel_method"
             title: "No Tunnel"
-          - properties:
+            type: "object"
+          - additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and ssh key"
+            properties:
               ssh_key:
                 airbyte_secret: true
                 description: "OS-level user account ssh key credentials in RSA PEM\
@@ -2416,26 +2829,21 @@ components:
                 title: "SSH Tunnel Jump Server Host"
                 type: "string"
               tunnel_method:
-                const: "SSH_KEY_AUTH"
-                description: "Connect through a jump server tunnel host using username\
-                  \ and ssh key"
-                order: 0
-                type: "string"
+                default: "SSH_KEY_AUTH"
                 enum:
                 - "SSH_KEY_AUTH"
+                type: "string"
               tunnel_port:
                 default: 22
                 description: "Port on the proxy/jump server that accepts inbound ssh\
                   \ connections."
-                examples:
-                - "22"
                 maximum: 65536
                 minimum: 0
                 order: 2
                 title: "SSH Connection Port"
                 type: "integer"
               tunnel_user:
-                description: "OS-level username for logging into the jump server host."
+                description: "OS-level username for logging into the jump server host"
                 order: 3
                 title: "SSH Login Username"
                 type: "string"
@@ -2446,7 +2854,11 @@ components:
             - "tunnel_user"
             - "ssh_key"
             title: "SSH Key Authentication"
-          - properties:
+            type: "object"
+          - additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and password authentication"
+            properties:
               tunnel_host:
                 description: "Hostname of the jump server host that allows inbound\
                   \ ssh tunnel."
@@ -2454,19 +2866,14 @@ components:
                 title: "SSH Tunnel Jump Server Host"
                 type: "string"
               tunnel_method:
-                const: "SSH_PASSWORD_AUTH"
-                description: "Connect through a jump server tunnel host using username\
-                  \ and password authentication"
-                order: 0
-                type: "string"
+                default: "SSH_PASSWORD_AUTH"
                 enum:
                 - "SSH_PASSWORD_AUTH"
+                type: "string"
               tunnel_port:
                 default: 22
                 description: "Port on the proxy/jump server that accepts inbound ssh\
                   \ connections."
-                examples:
-                - "22"
                 maximum: 65536
                 minimum: 0
                 order: 2
@@ -2491,12 +2898,15 @@ components:
             - "tunnel_user"
             - "tunnel_user_password"
             title: "Password Authentication"
+            type: "object"
+          order: 5
           title: "SSH Tunnel Method"
           type: "object"
         username:
+          default: "default"
           description: "Username to use to access the database."
-          order: 3
-          title: "User"
+          order: 4
+          title: "Username"
           type: "string"
         destinationType:
           title: "clickhouse"
@@ -2508,73 +2918,87 @@ components:
       required:
       - "host"
       - "port"
+      - "protocol"
       - "database"
       - "username"
+      - "password"
       - "destinationType"
-      title: "ClickHouse Destination Spec"
+      title: "Clickhouse Specification Oss"
       type: "object"
     destination-clickhouse-update:
+      groups:
+      - id: "connection"
+        title: "Connection"
+      - id: "advanced"
+        title: "Advanced"
       properties:
         database:
+          default: "default"
           description: "Name of the database."
-          order: 2
-          title: "DB Name"
+          order: 3
+          title: "Database"
           type: "string"
+        enable_json:
+          default: false
+          description: "Use the JSON type for Object fields. If disabled, the JSON\
+            \ will be converted to a string."
+          order: 6
+          title: "Enable JSON"
+          type: "boolean"
         host:
           description: "Hostname of the database."
           order: 0
-          title: "Host"
-          type: "string"
-        jdbc_url_params:
-          description: "Additional properties to pass to the JDBC URL string when\
-            \ connecting to the database formatted as 'key=value' pairs separated\
-            \ by the symbol '&'. (example: key1=value1&key2=value2&key3=value3)."
-          order: 5
-          title: "JDBC URL Params"
+          title: "Hostname"
           type: "string"
         password:
           airbyte_secret: true
           description: "Password associated with the username."
-          order: 4
+          order: 5
           title: "Password"
           type: "string"
         port:
-          default: 8123
-          description: "HTTP port of the database."
-          examples:
-          - "8123"
-          maximum: 65536
-          minimum: 0
+          default: "8443"
+          description: "HTTP port of the database. Default(s) HTTP: 8123 — HTTPS:\
+            \ 8443"
           order: 1
           title: "Port"
-          type: "integer"
-        raw_data_schema:
-          description: "The schema to write raw tables into (default: airbyte_internal)"
-          order: 7
-          title: "Raw Table Schema Name"
           type: "string"
-        ssl:
-          default: false
-          description: "Encrypt data using SSL."
-          order: 6
-          title: "SSL Connection"
-          type: "boolean"
+        protocol:
+          default: "https"
+          description: "Protocol for the database connection string."
+          enum:
+          - "http"
+          - "https"
+          order: 2
+          title: "Protocol"
+          type: "string"
+        record_window_size:
+          description: "Warning: Tuning this parameter can impact the performances.\
+            \ The maximum number of records that should be written to a batch. The\
+            \ batch size limit is still limited to 70 Mb"
+          order: 8
+          title: "Record Window Size"
+          type: "integer"
         tunnel_method:
           description: "Whether to initiate an SSH tunnel before connecting to the\
             \ database, and if so, which kind of authentication to use."
           oneOf:
-          - properties:
+          - additionalProperties: true
+            description: "No ssh tunnel needed to connect to database"
+            properties:
               tunnel_method:
-                const: "NO_TUNNEL"
-                description: "No ssh tunnel needed to connect to database"
-                order: 0
-                type: "string"
+                default: "NO_TUNNEL"
                 enum:
                 - "NO_TUNNEL"
+                type: "string"
             required:
             - "tunnel_method"
             title: "No Tunnel"
-          - properties:
+            type: "object"
+          - additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and ssh key"
+            properties:
               ssh_key:
                 airbyte_secret: true
                 description: "OS-level user account ssh key credentials in RSA PEM\
@@ -2590,26 +3014,21 @@ components:
                 title: "SSH Tunnel Jump Server Host"
                 type: "string"
               tunnel_method:
-                const: "SSH_KEY_AUTH"
-                description: "Connect through a jump server tunnel host using username\
-                  \ and ssh key"
-                order: 0
-                type: "string"
+                default: "SSH_KEY_AUTH"
                 enum:
                 - "SSH_KEY_AUTH"
+                type: "string"
               tunnel_port:
                 default: 22
                 description: "Port on the proxy/jump server that accepts inbound ssh\
                   \ connections."
-                examples:
-                - "22"
                 maximum: 65536
                 minimum: 0
                 order: 2
                 title: "SSH Connection Port"
                 type: "integer"
               tunnel_user:
-                description: "OS-level username for logging into the jump server host."
+                description: "OS-level username for logging into the jump server host"
                 order: 3
                 title: "SSH Login Username"
                 type: "string"
@@ -2620,7 +3039,11 @@ components:
             - "tunnel_user"
             - "ssh_key"
             title: "SSH Key Authentication"
-          - properties:
+            type: "object"
+          - additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and password authentication"
+            properties:
               tunnel_host:
                 description: "Hostname of the jump server host that allows inbound\
                   \ ssh tunnel."
@@ -2628,19 +3051,14 @@ components:
                 title: "SSH Tunnel Jump Server Host"
                 type: "string"
               tunnel_method:
-                const: "SSH_PASSWORD_AUTH"
-                description: "Connect through a jump server tunnel host using username\
-                  \ and password authentication"
-                order: 0
-                type: "string"
+                default: "SSH_PASSWORD_AUTH"
                 enum:
                 - "SSH_PASSWORD_AUTH"
+                type: "string"
               tunnel_port:
                 default: 22
                 description: "Port on the proxy/jump server that accepts inbound ssh\
                   \ connections."
-                examples:
-                - "22"
                 maximum: 65536
                 minimum: 0
                 order: 2
@@ -2664,19 +3082,24 @@ components:
             - "tunnel_user"
             - "tunnel_user_password"
             title: "Password Authentication"
+            type: "object"
+          order: 5
           title: "SSH Tunnel Method"
           type: "object"
         username:
+          default: "default"
           description: "Username to use to access the database."
-          order: 3
-          title: "User"
+          order: 4
+          title: "Username"
           type: "string"
       required:
       - "host"
       - "port"
+      - "protocol"
       - "database"
       - "username"
-      title: "ClickHouse Destination Spec"
+      - "password"
+      title: "Clickhouse Specification Oss"
       type: "object"
     destination-mssql:
       properties:
@@ -2872,6 +3295,115 @@ components:
             type: "object"
           order: 7
           title: "SSL Method"
+          type: "object"
+        tunnel_method:
+          description: "Whether to initiate an SSH tunnel before connecting to the\
+            \ database, and if so, which kind of authentication to use."
+          oneOf:
+          - additionalProperties: true
+            description: "No ssh tunnel needed to connect to database"
+            properties:
+              tunnel_method:
+                default: "NO_TUNNEL"
+                enum:
+                - "NO_TUNNEL"
+                type: "string"
+            required:
+            - "tunnel_method"
+            title: "No Tunnel"
+            type: "object"
+          - additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and ssh key"
+            properties:
+              ssh_key:
+                airbyte_secret: true
+                description: "OS-level user account ssh key credentials in RSA PEM\
+                  \ format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )"
+                multiline: true
+                order: 4
+                title: "SSH Private Key"
+                type: "string"
+                x-speakeasy-param-sensitive: true
+              tunnel_host:
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                order: 1
+                title: "SSH Tunnel Jump Server Host"
+                type: "string"
+              tunnel_method:
+                default: "SSH_KEY_AUTH"
+                enum:
+                - "SSH_KEY_AUTH"
+                type: "string"
+              tunnel_port:
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                maximum: 65536
+                minimum: 0
+                order: 2
+                title: "SSH Connection Port"
+                type: "integer"
+              tunnel_user:
+                description: "OS-level username for logging into the jump server host"
+                order: 3
+                title: "SSH Login Username"
+                type: "string"
+            required:
+            - "tunnel_method"
+            - "tunnel_host"
+            - "tunnel_port"
+            - "tunnel_user"
+            - "ssh_key"
+            title: "SSH Key Authentication"
+            type: "object"
+          - additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and password authentication"
+            properties:
+              tunnel_host:
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                order: 1
+                title: "SSH Tunnel Jump Server Host"
+                type: "string"
+              tunnel_method:
+                default: "SSH_PASSWORD_AUTH"
+                enum:
+                - "SSH_PASSWORD_AUTH"
+                type: "string"
+              tunnel_port:
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                maximum: 65536
+                minimum: 0
+                order: 2
+                title: "SSH Connection Port"
+                type: "integer"
+              tunnel_user:
+                description: "OS-level username for logging into the jump server host"
+                order: 3
+                title: "SSH Login Username"
+                type: "string"
+              tunnel_user_password:
+                airbyte_secret: true
+                description: "OS-level password for logging into the jump server host"
+                order: 4
+                title: "Password"
+                type: "string"
+                x-speakeasy-param-sensitive: true
+            required:
+            - "tunnel_method"
+            - "tunnel_host"
+            - "tunnel_port"
+            - "tunnel_user"
+            - "tunnel_user_password"
+            title: "Password Authentication"
+            type: "object"
+          order: 5
+          title: "SSH Tunnel Method"
           type: "object"
         user:
           description: "The username which is used to access the database."
@@ -3086,6 +3618,113 @@ components:
             type: "object"
           order: 7
           title: "SSL Method"
+          type: "object"
+        tunnel_method:
+          description: "Whether to initiate an SSH tunnel before connecting to the\
+            \ database, and if so, which kind of authentication to use."
+          oneOf:
+          - additionalProperties: true
+            description: "No ssh tunnel needed to connect to database"
+            properties:
+              tunnel_method:
+                default: "NO_TUNNEL"
+                enum:
+                - "NO_TUNNEL"
+                type: "string"
+            required:
+            - "tunnel_method"
+            title: "No Tunnel"
+            type: "object"
+          - additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and ssh key"
+            properties:
+              ssh_key:
+                airbyte_secret: true
+                description: "OS-level user account ssh key credentials in RSA PEM\
+                  \ format ( created with ssh-keygen -t rsa -m PEM -f myuser_rsa )"
+                multiline: true
+                order: 4
+                title: "SSH Private Key"
+                type: "string"
+              tunnel_host:
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                order: 1
+                title: "SSH Tunnel Jump Server Host"
+                type: "string"
+              tunnel_method:
+                default: "SSH_KEY_AUTH"
+                enum:
+                - "SSH_KEY_AUTH"
+                type: "string"
+              tunnel_port:
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                maximum: 65536
+                minimum: 0
+                order: 2
+                title: "SSH Connection Port"
+                type: "integer"
+              tunnel_user:
+                description: "OS-level username for logging into the jump server host"
+                order: 3
+                title: "SSH Login Username"
+                type: "string"
+            required:
+            - "tunnel_method"
+            - "tunnel_host"
+            - "tunnel_port"
+            - "tunnel_user"
+            - "ssh_key"
+            title: "SSH Key Authentication"
+            type: "object"
+          - additionalProperties: true
+            description: "Connect through a jump server tunnel host using username\
+              \ and password authentication"
+            properties:
+              tunnel_host:
+                description: "Hostname of the jump server host that allows inbound\
+                  \ ssh tunnel."
+                order: 1
+                title: "SSH Tunnel Jump Server Host"
+                type: "string"
+              tunnel_method:
+                default: "SSH_PASSWORD_AUTH"
+                enum:
+                - "SSH_PASSWORD_AUTH"
+                type: "string"
+              tunnel_port:
+                default: 22
+                description: "Port on the proxy/jump server that accepts inbound ssh\
+                  \ connections."
+                maximum: 65536
+                minimum: 0
+                order: 2
+                title: "SSH Connection Port"
+                type: "integer"
+              tunnel_user:
+                description: "OS-level username for logging into the jump server host"
+                order: 3
+                title: "SSH Login Username"
+                type: "string"
+              tunnel_user_password:
+                airbyte_secret: true
+                description: "OS-level password for logging into the jump server host"
+                order: 4
+                title: "Password"
+                type: "string"
+            required:
+            - "tunnel_method"
+            - "tunnel_host"
+            - "tunnel_port"
+            - "tunnel_user"
+            - "tunnel_user_password"
+            title: "Password Authentication"
+            type: "object"
+          order: 5
+          title: "SSH Tunnel Method"
           type: "object"
         user:
           description: "The username which is used to access the database."
@@ -15289,6 +15928,68 @@ components:
       - "apikey"
       title: "Destination Timeplus"
       type: "object"
+    destination-surrealdb:
+      properties:
+        surrealdb_database:
+          default: "airbyte"
+          description: "The database to use in SurrealDB."
+          type: "string"
+        surrealdb_namespace:
+          default: "airbyte"
+          description: "The namespace to use in SurrealDB."
+          type: "string"
+        surrealdb_password:
+          description: "The password to use in SurrealDB."
+          type: "string"
+        surrealdb_url:
+          description: "The URL of the SurrealDB instance."
+          type: "string"
+        surrealdb_username:
+          description: "The username to use in SurrealDB."
+          type: "string"
+        destinationType:
+          title: "surrealdb"
+          const: "surrealdb"
+          enum:
+          - "surrealdb"
+          order: 0
+          type: "string"
+      required:
+      - "surrealdb_url"
+      - "surrealdb_namespace"
+      - "surrealdb_database"
+      - "surrealdb_username"
+      - "surrealdb_password"
+      - "destinationType"
+      title: "SurrealDB Destination"
+      type: "object"
+    destination-surrealdb-update:
+      properties:
+        surrealdb_database:
+          default: "airbyte"
+          description: "The database to use in SurrealDB."
+          type: "string"
+        surrealdb_namespace:
+          default: "airbyte"
+          description: "The namespace to use in SurrealDB."
+          type: "string"
+        surrealdb_password:
+          description: "The password to use in SurrealDB."
+          type: "string"
+        surrealdb_url:
+          description: "The URL of the SurrealDB instance."
+          type: "string"
+        surrealdb_username:
+          description: "The username to use in SurrealDB."
+          type: "string"
+      required:
+      - "surrealdb_url"
+      - "surrealdb_namespace"
+      - "surrealdb_database"
+      - "surrealdb_username"
+      - "surrealdb_password"
+      title: "SurrealDB Destination"
+      type: "object"
     destination-convex:
       properties:
         access_key:
@@ -17720,6 +18421,338 @@ components:
       - "indexing"
       title: "Destination Config"
       type: "object"
+    destination-customer-io:
+      properties:
+        credentials:
+          additionalProperties: true
+          description: "Enter the site ID and API key to authenticate."
+          order: 0
+          properties:
+            apiKey:
+              airbyte_secret: true
+              always_show: true
+              description: "Enter your Customer IO <a href=\"https://docs.customer.io/integrations/sdk/ios/getting-started/auth/#get-your-api-key\"\
+                >API Key</a>."
+              order: 2
+              title: "API Key"
+              type: "string"
+              x-speakeasy-param-sensitive: true
+            siteId:
+              airbyte_secret: true
+              always_show: true
+              description: "Enter your Customer IO <a href=\"https://docs.customer.io/integrations/sdk/ios/getting-started/auth/#get-your-api-key\"\
+                >Site ID</a>."
+              order: 1
+              title: "Site ID"
+              type: "string"
+              x-speakeasy-param-sensitive: true
+          required:
+          - "siteId"
+          - "apiKey"
+          title: "Credentials"
+          type: "object"
+        object_storage_config:
+          oneOf:
+          - additionalProperties: true
+            properties:
+              storage_type:
+                default: "None"
+                enum:
+                - "None"
+                type: "string"
+            required:
+            - "storage_type"
+            title: "None"
+            type: "object"
+          - additionalProperties: true
+            properties:
+              access_key_id:
+                airbyte_secret: true
+                always_show: true
+                description: "The access key ID to access the S3 bucket. Airbyte requires\
+                  \ Read and Write permissions to the given bucket. Read more <a href=\"\
+                  https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
+                  >here</a>."
+                examples:
+                - "A012345678910EXAMPLE"
+                order: 1
+                title: "Access Key ID"
+                type: "string"
+                x-speakeasy-param-sensitive: true
+              bucket_path:
+                description: "All files in the bucket will be prefixed by this."
+                examples:
+                - "prefix/"
+                order: 7
+                title: "Prefix Path in the Bucket"
+                type: "string"
+              role_arn:
+                description: "The ARN of the AWS role to assume. Only usable in Airbyte\
+                  \ Cloud."
+                examples:
+                - "arn:aws:iam::123456789:role/ExternalIdIsYourWorkspaceId"
+                order: 3
+                title: "Role ARN"
+                type: "string"
+              s3_bucket_name:
+                description: "The name of the S3 bucket. Read more <a href=\"https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html\"\
+                  >here</a>."
+                examples:
+                - "airbyte_sync"
+                order: 4
+                title: "S3 Bucket Name"
+                type: "string"
+              s3_bucket_region:
+                default: ""
+                description: "The region of the S3 bucket. See <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions\"\
+                  >here</a> for all region codes."
+                enum:
+                - ""
+                - "af-south-1"
+                - "ap-east-1"
+                - "ap-northeast-1"
+                - "ap-northeast-2"
+                - "ap-northeast-3"
+                - "ap-south-1"
+                - "ap-south-2"
+                - "ap-southeast-1"
+                - "ap-southeast-2"
+                - "ap-southeast-3"
+                - "ap-southeast-4"
+                - "ca-central-1"
+                - "ca-west-1"
+                - "cn-north-1"
+                - "cn-northwest-1"
+                - "eu-central-1"
+                - "eu-central-2"
+                - "eu-north-1"
+                - "eu-south-1"
+                - "eu-south-2"
+                - "eu-west-1"
+                - "eu-west-2"
+                - "eu-west-3"
+                - "il-central-1"
+                - "me-central-1"
+                - "me-south-1"
+                - "sa-east-1"
+                - "us-east-1"
+                - "us-east-2"
+                - "us-gov-east-1"
+                - "us-gov-west-1"
+                - "us-west-1"
+                - "us-west-2"
+                examples:
+                - "us-east-1"
+                order: 5
+                title: "S3 Bucket Region"
+                type: "string"
+              s3_endpoint:
+                description: "Your S3 endpoint url. Read more <a href=\"https://docs.aws.amazon.com/general/latest/gr/s3.html#:~:text=Service%20endpoints-,Amazon%20S3%20endpoints,-When%20you%20use\"\
+                  >here</a>"
+                examples:
+                - "http://localhost:9000"
+                order: 6
+                title: "S3 Endpoint"
+                type: "string"
+              secret_access_key:
+                airbyte_secret: true
+                always_show: true
+                description: "The corresponding secret to the access key ID. Read\
+                  \ more <a href=\"https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
+                  >here</a>"
+                examples:
+                - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+                order: 2
+                title: "Secret Access Key"
+                type: "string"
+                x-speakeasy-param-sensitive: true
+              storage_type:
+                default: "S3"
+                enum:
+                - "S3"
+                type: "string"
+            required:
+            - "storage_type"
+            - "s3_bucket_name"
+            - "s3_bucket_region"
+            - "bucket_path"
+            - "format"
+            title: "S3"
+            type: "object"
+          title: "Object Storage Configuration"
+          type: "object"
+        destinationType:
+          title: "customer-io"
+          const: "customer-io"
+          enum:
+          - "customer-io"
+          order: 0
+          type: "string"
+      required:
+      - "credentials"
+      - "destinationType"
+      title: "Customer Io Specification"
+      type: "object"
+    destination-customer-io-update:
+      properties:
+        credentials:
+          additionalProperties: true
+          description: "Enter the site ID and API key to authenticate."
+          order: 0
+          properties:
+            apiKey:
+              airbyte_secret: true
+              always_show: true
+              description: "Enter your Customer IO <a href=\"https://docs.customer.io/integrations/sdk/ios/getting-started/auth/#get-your-api-key\"\
+                >API Key</a>."
+              order: 2
+              title: "API Key"
+              type: "string"
+            siteId:
+              airbyte_secret: true
+              always_show: true
+              description: "Enter your Customer IO <a href=\"https://docs.customer.io/integrations/sdk/ios/getting-started/auth/#get-your-api-key\"\
+                >Site ID</a>."
+              order: 1
+              title: "Site ID"
+              type: "string"
+          required:
+          - "siteId"
+          - "apiKey"
+          title: "Credentials"
+          type: "object"
+        object_storage_config:
+          oneOf:
+          - additionalProperties: true
+            properties:
+              storage_type:
+                default: "None"
+                enum:
+                - "None"
+                type: "string"
+            required:
+            - "storage_type"
+            title: "None"
+            type: "object"
+          - additionalProperties: true
+            properties:
+              access_key_id:
+                airbyte_secret: true
+                always_show: true
+                description: "The access key ID to access the S3 bucket. Airbyte requires\
+                  \ Read and Write permissions to the given bucket. Read more <a href=\"\
+                  https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
+                  >here</a>."
+                examples:
+                - "A012345678910EXAMPLE"
+                order: 1
+                title: "Access Key ID"
+                type: "string"
+              bucket_path:
+                description: "All files in the bucket will be prefixed by this."
+                examples:
+                - "prefix/"
+                order: 7
+                title: "Prefix Path in the Bucket"
+                type: "string"
+              role_arn:
+                description: "The ARN of the AWS role to assume. Only usable in Airbyte\
+                  \ Cloud."
+                examples:
+                - "arn:aws:iam::123456789:role/ExternalIdIsYourWorkspaceId"
+                order: 3
+                title: "Role ARN"
+                type: "string"
+              s3_bucket_name:
+                description: "The name of the S3 bucket. Read more <a href=\"https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html\"\
+                  >here</a>."
+                examples:
+                - "airbyte_sync"
+                order: 4
+                title: "S3 Bucket Name"
+                type: "string"
+              s3_bucket_region:
+                default: ""
+                description: "The region of the S3 bucket. See <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions\"\
+                  >here</a> for all region codes."
+                enum:
+                - ""
+                - "af-south-1"
+                - "ap-east-1"
+                - "ap-northeast-1"
+                - "ap-northeast-2"
+                - "ap-northeast-3"
+                - "ap-south-1"
+                - "ap-south-2"
+                - "ap-southeast-1"
+                - "ap-southeast-2"
+                - "ap-southeast-3"
+                - "ap-southeast-4"
+                - "ca-central-1"
+                - "ca-west-1"
+                - "cn-north-1"
+                - "cn-northwest-1"
+                - "eu-central-1"
+                - "eu-central-2"
+                - "eu-north-1"
+                - "eu-south-1"
+                - "eu-south-2"
+                - "eu-west-1"
+                - "eu-west-2"
+                - "eu-west-3"
+                - "il-central-1"
+                - "me-central-1"
+                - "me-south-1"
+                - "sa-east-1"
+                - "us-east-1"
+                - "us-east-2"
+                - "us-gov-east-1"
+                - "us-gov-west-1"
+                - "us-west-1"
+                - "us-west-2"
+                examples:
+                - "us-east-1"
+                order: 5
+                title: "S3 Bucket Region"
+                type: "string"
+              s3_endpoint:
+                description: "Your S3 endpoint url. Read more <a href=\"https://docs.aws.amazon.com/general/latest/gr/s3.html#:~:text=Service%20endpoints-,Amazon%20S3%20endpoints,-When%20you%20use\"\
+                  >here</a>"
+                examples:
+                - "http://localhost:9000"
+                order: 6
+                title: "S3 Endpoint"
+                type: "string"
+              secret_access_key:
+                airbyte_secret: true
+                always_show: true
+                description: "The corresponding secret to the access key ID. Read\
+                  \ more <a href=\"https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
+                  >here</a>"
+                examples:
+                - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+                order: 2
+                title: "Secret Access Key"
+                type: "string"
+              storage_type:
+                default: "S3"
+                enum:
+                - "S3"
+                type: "string"
+            required:
+            - "storage_type"
+            - "s3_bucket_name"
+            - "s3_bucket_region"
+            - "bucket_path"
+            - "format"
+            title: "S3"
+            type: "object"
+          title: "Object Storage Configuration"
+          type: "object"
+      required:
+      - "credentials"
+      title: "Customer Io Specification"
+      type: "object"
     destination-pinecone:
       description: "The configuration model for the Vector DB based destinations.\
         \ This model is used to generate the UI for the destination configuration,\n\
@@ -18495,7 +19528,7 @@ components:
       - "indexing"
       title: "Destination Config"
       type: "object"
-    destination-cobra:
+    destination-salesforce:
       properties:
         auth_type:
           const: "Client"
@@ -18504,107 +19537,181 @@ components:
           - "Client"
         client_id:
           description: "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\"\
-            >Client ID</a>"
-          order: 1
+            >Client ID</a>."
+          order: 0
           title: "Client ID"
           type: "string"
         client_secret:
           airbyte_secret: true
           description: "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\"\
-            >Client secret</a>"
-          order: 2
+            >Client secret</a>."
+          order: 1
           title: "Client Secret"
           type: "string"
           x-speakeasy-param-sensitive: true
         is_sandbox:
           default: false
           description: "Toggle if you're using a <a href=\"https://help.salesforce.com/s/articleView?id=sf.deploy_sandboxes_parent.htm&type=5\"\
-            >Salesforce Sandbox</a>"
-          order: 7
-          title: "Sync to Salesforce Sandbox"
+            >Salesforce Sandbox</a>."
+          order: 3
+          title: "Is Sandbox"
           type: "boolean"
-        print_record_content_on_error:
-          default: false
-          description: "If enabled, the records content will be printed as part of\
-            \ the log in case of failure which allows for easier debugging."
-          order: 6
-          title: "Include Record Contents in Error Logs"
-          type: "boolean"
+        object_storage_config:
+          oneOf:
+          - additionalProperties: true
+            properties:
+              storage_type:
+                default: "None"
+                enum:
+                - "None"
+                type: "string"
+            required:
+            - "storage_type"
+            title: "None"
+            type: "object"
+          - additionalProperties: true
+            properties:
+              access_key_id:
+                airbyte_secret: true
+                always_show: true
+                description: "The access key ID to access the S3 bucket. Airbyte requires\
+                  \ Read and Write permissions to the given bucket. Read more <a href=\"\
+                  https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
+                  >here</a>."
+                examples:
+                - "A012345678910EXAMPLE"
+                order: 1
+                title: "Access Key ID"
+                type: "string"
+                x-speakeasy-param-sensitive: true
+              bucket_path:
+                description: "All files in the bucket will be prefixed by this."
+                examples:
+                - "prefix/"
+                order: 7
+                title: "Prefix Path in the Bucket"
+                type: "string"
+              role_arn:
+                description: "The ARN of the AWS role to assume. Only usable in Airbyte\
+                  \ Cloud."
+                examples:
+                - "arn:aws:iam::123456789:role/ExternalIdIsYourWorkspaceId"
+                order: 3
+                title: "Role ARN"
+                type: "string"
+              s3_bucket_name:
+                description: "The name of the S3 bucket. Read more <a href=\"https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html\"\
+                  >here</a>."
+                examples:
+                - "airbyte_sync"
+                order: 4
+                title: "S3 Bucket Name"
+                type: "string"
+              s3_bucket_region:
+                default: ""
+                description: "The region of the S3 bucket. See <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions\"\
+                  >here</a> for all region codes."
+                enum:
+                - ""
+                - "af-south-1"
+                - "ap-east-1"
+                - "ap-northeast-1"
+                - "ap-northeast-2"
+                - "ap-northeast-3"
+                - "ap-south-1"
+                - "ap-south-2"
+                - "ap-southeast-1"
+                - "ap-southeast-2"
+                - "ap-southeast-3"
+                - "ap-southeast-4"
+                - "ca-central-1"
+                - "ca-west-1"
+                - "cn-north-1"
+                - "cn-northwest-1"
+                - "eu-central-1"
+                - "eu-central-2"
+                - "eu-north-1"
+                - "eu-south-1"
+                - "eu-south-2"
+                - "eu-west-1"
+                - "eu-west-2"
+                - "eu-west-3"
+                - "il-central-1"
+                - "me-central-1"
+                - "me-south-1"
+                - "sa-east-1"
+                - "us-east-1"
+                - "us-east-2"
+                - "us-gov-east-1"
+                - "us-gov-west-1"
+                - "us-west-1"
+                - "us-west-2"
+                examples:
+                - "us-east-1"
+                order: 5
+                title: "S3 Bucket Region"
+                type: "string"
+              s3_endpoint:
+                description: "Your S3 endpoint url. Read more <a href=\"https://docs.aws.amazon.com/general/latest/gr/s3.html#:~:text=Service%20endpoints-,Amazon%20S3%20endpoints,-When%20you%20use\"\
+                  >here</a>"
+                examples:
+                - "http://localhost:9000"
+                order: 6
+                title: "S3 Endpoint"
+                type: "string"
+              secret_access_key:
+                airbyte_secret: true
+                always_show: true
+                description: "The corresponding secret to the access key ID. Read\
+                  \ more <a href=\"https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
+                  >here</a>"
+                examples:
+                - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+                order: 2
+                title: "Secret Access Key"
+                type: "string"
+                x-speakeasy-param-sensitive: true
+              storage_type:
+                default: "S3"
+                enum:
+                - "S3"
+                type: "string"
+            required:
+            - "storage_type"
+            - "s3_bucket_name"
+            - "s3_bucket_region"
+            - "bucket_path"
+            - "format"
+            title: "S3"
+            type: "object"
+          title: "Object Storage Configuration"
+          type: "object"
         refresh_token:
           airbyte_secret: true
           description: "Enter your application's <a href=\"https://developer.salesforce.com/docs/atlas.en-us.mobile_sdk.meta/mobile_sdk/oauth_refresh_token_flow.htm\"\
             >Salesforce Refresh Token</a> used for Airbyte to access your Salesforce\
             \ account."
-          order: 3
+          order: 2
           title: "Refresh Token"
           type: "string"
           x-speakeasy-param-sensitive: true
-        stream_mappings:
-          default: []
-          items:
-            description: "Describes the relationship between a source stream and a\
-              \ destination table and how to update the information."
-            properties:
-              destination_table:
-                description: "The name for the table to update the data in the destination."
-                title: "Destination table"
-                type: "string"
-              source_stream:
-                description: "The name for the input stream."
-                title: "Source stream"
-                type: "string"
-              update_mode:
-                description: "How to update the data in the destination."
-                enum:
-                - "INSERT"
-                - "UPDATE"
-                - "UPSERT"
-                - "DELETE"
-                title: "Update mode"
-                type: "string"
-              upsert_key:
-                description: "Given the operation is an upsert, a field representing\
-                  \ an external ID needs to be provided"
-                title: "Upsert key"
-                type: "string"
-            required:
-            - "source_stream"
-            - "destination_table"
-            - "update_mode"
-            title: "Stream Mapping"
-            type: "object"
-          order: 4
-          title: "Stream Mapping to Salesforce"
-          type: "array"
-        stream_order:
-          default: []
-          description: "The order in which the streams should be synced. Streams are\
-            \ synced in the order they are listed. Only those streams will be synced\
-            \ so make sure all the input streams are configured here."
-          items:
-            type: "string"
-          order: 5
-          title: "Stream Sync Order"
-          type: "array"
         destinationType:
-          title: "cobra"
-          const: "cobra"
+          title: "salesforce"
+          const: "salesforce"
           enum:
-          - "cobra"
+          - "salesforce"
           order: 0
           type: "string"
       required:
       - "client_id"
       - "client_secret"
       - "refresh_token"
-      - "stream_mappings"
-      - "stream_order"
-      - "print_record_content_on_error"
       - "is_sandbox"
+      - "auth_type"
       - "destinationType"
-      title: "Salesforce Destination Spec"
+      title: "Salesforce Specification"
       type: "object"
-    destination-cobra-update:
+    destination-salesforce-update:
       properties:
         auth_type:
           const: "Client"
@@ -18613,119 +19720,190 @@ components:
           - "Client"
         client_id:
           description: "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\"\
-            >Client ID</a>"
-          order: 1
+            >Client ID</a>."
+          order: 0
           title: "Client ID"
           type: "string"
         client_secret:
           airbyte_secret: true
           description: "Enter your Salesforce developer application's <a href=\"https://developer.salesforce.com/forums/?id=9062I000000DLgbQAG\"\
-            >Client secret</a>"
-          order: 2
+            >Client secret</a>."
+          order: 1
           title: "Client Secret"
           type: "string"
         is_sandbox:
           default: false
           description: "Toggle if you're using a <a href=\"https://help.salesforce.com/s/articleView?id=sf.deploy_sandboxes_parent.htm&type=5\"\
-            >Salesforce Sandbox</a>"
-          order: 7
-          title: "Sync to Salesforce Sandbox"
+            >Salesforce Sandbox</a>."
+          order: 3
+          title: "Is Sandbox"
           type: "boolean"
-        print_record_content_on_error:
-          default: false
-          description: "If enabled, the records content will be printed as part of\
-            \ the log in case of failure which allows for easier debugging."
-          order: 6
-          title: "Include Record Contents in Error Logs"
-          type: "boolean"
+        object_storage_config:
+          oneOf:
+          - additionalProperties: true
+            properties:
+              storage_type:
+                default: "None"
+                enum:
+                - "None"
+                type: "string"
+            required:
+            - "storage_type"
+            title: "None"
+            type: "object"
+          - additionalProperties: true
+            properties:
+              access_key_id:
+                airbyte_secret: true
+                always_show: true
+                description: "The access key ID to access the S3 bucket. Airbyte requires\
+                  \ Read and Write permissions to the given bucket. Read more <a href=\"\
+                  https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
+                  >here</a>."
+                examples:
+                - "A012345678910EXAMPLE"
+                order: 1
+                title: "Access Key ID"
+                type: "string"
+              bucket_path:
+                description: "All files in the bucket will be prefixed by this."
+                examples:
+                - "prefix/"
+                order: 7
+                title: "Prefix Path in the Bucket"
+                type: "string"
+              role_arn:
+                description: "The ARN of the AWS role to assume. Only usable in Airbyte\
+                  \ Cloud."
+                examples:
+                - "arn:aws:iam::123456789:role/ExternalIdIsYourWorkspaceId"
+                order: 3
+                title: "Role ARN"
+                type: "string"
+              s3_bucket_name:
+                description: "The name of the S3 bucket. Read more <a href=\"https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html\"\
+                  >here</a>."
+                examples:
+                - "airbyte_sync"
+                order: 4
+                title: "S3 Bucket Name"
+                type: "string"
+              s3_bucket_region:
+                default: ""
+                description: "The region of the S3 bucket. See <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions\"\
+                  >here</a> for all region codes."
+                enum:
+                - ""
+                - "af-south-1"
+                - "ap-east-1"
+                - "ap-northeast-1"
+                - "ap-northeast-2"
+                - "ap-northeast-3"
+                - "ap-south-1"
+                - "ap-south-2"
+                - "ap-southeast-1"
+                - "ap-southeast-2"
+                - "ap-southeast-3"
+                - "ap-southeast-4"
+                - "ca-central-1"
+                - "ca-west-1"
+                - "cn-north-1"
+                - "cn-northwest-1"
+                - "eu-central-1"
+                - "eu-central-2"
+                - "eu-north-1"
+                - "eu-south-1"
+                - "eu-south-2"
+                - "eu-west-1"
+                - "eu-west-2"
+                - "eu-west-3"
+                - "il-central-1"
+                - "me-central-1"
+                - "me-south-1"
+                - "sa-east-1"
+                - "us-east-1"
+                - "us-east-2"
+                - "us-gov-east-1"
+                - "us-gov-west-1"
+                - "us-west-1"
+                - "us-west-2"
+                examples:
+                - "us-east-1"
+                order: 5
+                title: "S3 Bucket Region"
+                type: "string"
+              s3_endpoint:
+                description: "Your S3 endpoint url. Read more <a href=\"https://docs.aws.amazon.com/general/latest/gr/s3.html#:~:text=Service%20endpoints-,Amazon%20S3%20endpoints,-When%20you%20use\"\
+                  >here</a>"
+                examples:
+                - "http://localhost:9000"
+                order: 6
+                title: "S3 Endpoint"
+                type: "string"
+              secret_access_key:
+                airbyte_secret: true
+                always_show: true
+                description: "The corresponding secret to the access key ID. Read\
+                  \ more <a href=\"https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
+                  >here</a>"
+                examples:
+                - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+                order: 2
+                title: "Secret Access Key"
+                type: "string"
+              storage_type:
+                default: "S3"
+                enum:
+                - "S3"
+                type: "string"
+            required:
+            - "storage_type"
+            - "s3_bucket_name"
+            - "s3_bucket_region"
+            - "bucket_path"
+            - "format"
+            title: "S3"
+            type: "object"
+          title: "Object Storage Configuration"
+          type: "object"
         refresh_token:
           airbyte_secret: true
           description: "Enter your application's <a href=\"https://developer.salesforce.com/docs/atlas.en-us.mobile_sdk.meta/mobile_sdk/oauth_refresh_token_flow.htm\"\
             >Salesforce Refresh Token</a> used for Airbyte to access your Salesforce\
             \ account."
-          order: 3
+          order: 2
           title: "Refresh Token"
           type: "string"
-        stream_mappings:
-          default: []
-          items:
-            description: "Describes the relationship between a source stream and a\
-              \ destination table and how to update the information."
-            properties:
-              destination_table:
-                description: "The name for the table to update the data in the destination."
-                title: "Destination table"
-                type: "string"
-              source_stream:
-                description: "The name for the input stream."
-                title: "Source stream"
-                type: "string"
-              update_mode:
-                description: "How to update the data in the destination."
-                enum:
-                - "INSERT"
-                - "UPDATE"
-                - "UPSERT"
-                - "DELETE"
-                title: "Update mode"
-                type: "string"
-              upsert_key:
-                description: "Given the operation is an upsert, a field representing\
-                  \ an external ID needs to be provided"
-                title: "Upsert key"
-                type: "string"
-            required:
-            - "source_stream"
-            - "destination_table"
-            - "update_mode"
-            title: "Stream Mapping"
-            type: "object"
-          order: 4
-          title: "Stream Mapping to Salesforce"
-          type: "array"
-        stream_order:
-          default: []
-          description: "The order in which the streams should be synced. Streams are\
-            \ synced in the order they are listed. Only those streams will be synced\
-            \ so make sure all the input streams are configured here."
-          items:
-            type: "string"
-          order: 5
-          title: "Stream Sync Order"
-          type: "array"
       required:
       - "client_id"
       - "client_secret"
       - "refresh_token"
-      - "stream_mappings"
-      - "stream_order"
-      - "print_record_content_on_error"
       - "is_sandbox"
-      title: "Salesforce Destination Spec"
+      - "auth_type"
+      title: "Salesforce Specification"
       type: "object"
     destination-bigquery:
       groups:
       - id: "connection"
         title: "Connection"
+      - id: "sync_behavior"
+        title: "Sync Behavior"
       - id: "advanced"
         title: "Advanced"
       properties:
-        big_query_client_buffer_size_mb:
-          default: 15
-          description: "Google BigQuery client's chunk (buffer) size (MIN=1, MAX =\
-            \ 15) for each table. The size that will be written by a single RPC. Written\
-            \ data will be buffered and only flushed upon reaching this size or closing\
-            \ the channel. The default 15MB value is used if not set explicitly. Read\
-            \ more <a href=\"https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.client.Client.html\"\
-            >here</a>."
-          examples:
-          - "15"
-          group: "advanced"
-          maximum: 15
-          minimum: 1
-          order: 6
-          title: "Google BigQuery Client Chunk Size"
-          type: "integer"
+        cdc_deletion_mode:
+          always_show: true
+          default: "Hard delete"
+          description: "Whether to execute CDC deletions as hard deletes (i.e. propagate\
+            \ source deletions to the destination), or soft deletes (i.e. leave a\
+            \ tombstone record in the destination). Defaults to hard deletes."
+          enum:
+          - "Hard delete"
+          - "Soft delete"
+          group: "sync_behavior"
+          order: 5
+          title: "CDC deletion mode"
+          type: "string"
         credentials_json:
           airbyte_secret: true
           always_show: true
@@ -18751,8 +19929,9 @@ components:
             \ will not be applied. Read more <a href=\"https://cloud.google.com/bigquery/docs/locations\"\
             >here</a>."
           enum:
-          - "US"
           - "EU"
+          - "US"
+          - "africa-south1"
           - "asia-east1"
           - "asia-east2"
           - "asia-northeast1"
@@ -18764,7 +19943,6 @@ components:
           - "asia-southeast2"
           - "australia-southeast1"
           - "australia-southeast2"
-          - "europe-central1"
           - "europe-central2"
           - "europe-north1"
           - "europe-north2"
@@ -18774,21 +19952,20 @@ components:
           - "europe-west3"
           - "europe-west4"
           - "europe-west6"
-          - "europe-west7"
           - "europe-west8"
           - "europe-west9"
+          - "europe-west10"
           - "europe-west12"
           - "me-central1"
           - "me-central2"
           - "me-west1"
           - "northamerica-northeast1"
           - "northamerica-northeast2"
+          - "northamerica-south1"
           - "southamerica-east1"
           - "southamerica-west1"
           - "us-central1"
           - "us-east1"
-          - "us-east2"
-          - "us-east3"
           - "us-east4"
           - "us-east5"
           - "us-south1"
@@ -18802,32 +19979,33 @@ components:
           type: "string"
         disable_type_dedupe:
           default: false
-          description: "Disable Writing Final Tables. WARNING! The data format in\
-            \ _airbyte_data is likely stable but there are no guarantees that other\
-            \ metadata columns will remain the same in future versions"
+          description: "Write the legacy \"raw tables\" format, to enable backwards\
+            \ compatibility with older versions of this connector."
           group: "advanced"
-          order: 8
-          title: "Disable Final Tables. (WARNING! Unstable option; Columns in raw\
-            \ table schema might change between versions)"
+          order: 7
+          title: "Legacy raw tables"
           type: "boolean"
         loading_method:
           description: "The way data will be uploaded to BigQuery."
           display_type: "radio"
           group: "connection"
           oneOf:
-          - description: "Direct loading using batched SQL INSERT statements. This\
+          - additionalProperties: true
+            description: "Direct loading using batched SQL INSERT statements. This\
               \ method uses the BigQuery driver to convert large INSERT statements\
               \ into file uploads automatically."
             properties:
               method:
-                const: "Standard"
-                type: "string"
+                default: "Standard"
                 enum:
                 - "Standard"
+                type: "string"
             required:
             - "method"
             title: "Batched Standard Inserts"
-          - description: "Writes large batches of records to a file, uploads the file\
+            type: "object"
+          - additionalProperties: true
+            description: "Writes large batches of records to a file, uploads the file\
               \ to GCS, then uses COPY INTO to load your data into BigQuery."
             properties:
               credential:
@@ -18836,13 +20014,13 @@ components:
                   \ more <a href=\"https://cloud.google.com/storage/docs/authentication/hmackeys\"\
                   >here</a>."
                 oneOf:
-                - properties:
+                - additionalProperties: true
+                  properties:
                     credential_type:
-                      const: "HMAC_KEY"
-                      order: 0
-                      type: "string"
+                      default: "HMAC_KEY"
                       enum:
                       - "HMAC_KEY"
+                      type: "string"
                     hmac_key_access_id:
                       airbyte_secret: true
                       description: "HMAC key access ID. When linked to a service account,\
@@ -18850,8 +20028,8 @@ components:
                         \ it is 24 characters long."
                       examples:
                       - "1234567890abcdefghij1234"
-                      order: 1
-                      title: "HMAC Key Access ID"
+                      order: 0
+                      title: "HMAC Access Key"
                       type: "string"
                       x-speakeasy-param-sensitive: true
                     hmac_key_secret:
@@ -18860,8 +20038,8 @@ components:
                         \ is a 40-character base-64 encoded string."
                       examples:
                       - "1234567890abcdefghij1234567890ABCDEFGHIJ"
-                      order: 2
-                      title: "HMAC Key Secret"
+                      order: 1
+                      title: "HMAC Secret"
                       type: "string"
                       x-speakeasy-param-sensitive: true
                   required:
@@ -18869,7 +20047,8 @@ components:
                   - "hmac_key_access_id"
                   - "hmac_key_secret"
                   title: "HMAC key"
-                order: 1
+                  type: "object"
+                order: 0
                 title: "Credential"
                 type: "object"
               gcs_bucket_name:
@@ -18877,14 +20056,14 @@ components:
                   >here</a>."
                 examples:
                 - "airbyte_sync"
-                order: 2
+                order: 1
                 title: "GCS Bucket Name"
                 type: "string"
               gcs_bucket_path:
                 description: "Directory under the GCS bucket where data will be written."
                 examples:
                 - "data_sync/test"
-                order: 3
+                order: 2
                 title: "GCS Bucket Path"
                 type: "string"
               keep_files_in_gcs-bucket:
@@ -18896,20 +20075,21 @@ components:
                 enum:
                 - "Delete all tmp files from GCS"
                 - "Keep all tmp files in GCS"
-                order: 4
-                title: "GCS Tmp Files Afterward Processing"
+                order: 3
+                title: "GCS Tmp Files Post-Processing"
                 type: "string"
               method:
-                const: "GCS Staging"
-                type: "string"
+                default: "GCS Staging"
                 enum:
                 - "GCS Staging"
+                type: "string"
             required:
             - "method"
+            - "credential"
             - "gcs_bucket_name"
             - "gcs_bucket_path"
-            - "credential"
             title: "GCS Staging"
+            type: "object"
           order: 3
           title: "Loading Method"
           type: "object"
@@ -18922,27 +20102,12 @@ components:
           title: "Project ID"
           type: "string"
         raw_data_dataset:
-          description: "The dataset to write raw tables into (default: airbyte_internal)"
+          description: "Airbyte will use this dataset for various internal tables.\
+            \ In legacy raw tables mode, the raw tables will be stored in this dataset.\
+            \ Defaults to \"airbyte_internal\"."
           group: "advanced"
-          order: 7
-          title: "Raw Table Dataset Name"
-          type: "string"
-        transformation_priority:
-          default: "interactive"
-          description: "Interactive run type means that the query is executed as soon\
-            \ as possible, and these queries count towards concurrent rate limit and\
-            \ daily limit. Read more about interactive run type <a href=\"https://cloud.google.com/bigquery/docs/running-queries#queries\"\
-            >here</a>. Batch queries are queued and started as soon as idle resources\
-            \ are available in the BigQuery shared resource pool, which usually occurs\
-            \ within a few minutes. Batch queries don’t count towards your concurrent\
-            \ rate limit. Read more about batch queries <a href=\"https://cloud.google.com/bigquery/docs/running-queries#batch\"\
-            >here</a>. The default \"interactive\" value is used if not set explicitly."
-          enum:
-          - "interactive"
-          - "batch"
-          group: "advanced"
-          order: 5
-          title: "Transformation Query Run Type"
+          order: 8
+          title: "Airbyte Internal Table Dataset Name"
           type: "string"
         destinationType:
           title: "bigquery"
@@ -18956,31 +20121,30 @@ components:
       - "dataset_location"
       - "dataset_id"
       - "destinationType"
-      title: "BigQuery Destination Spec"
+      title: "Bigquery Specification"
       type: "object"
     destination-bigquery-update:
       groups:
       - id: "connection"
         title: "Connection"
+      - id: "sync_behavior"
+        title: "Sync Behavior"
       - id: "advanced"
         title: "Advanced"
       properties:
-        big_query_client_buffer_size_mb:
-          default: 15
-          description: "Google BigQuery client's chunk (buffer) size (MIN=1, MAX =\
-            \ 15) for each table. The size that will be written by a single RPC. Written\
-            \ data will be buffered and only flushed upon reaching this size or closing\
-            \ the channel. The default 15MB value is used if not set explicitly. Read\
-            \ more <a href=\"https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.client.Client.html\"\
-            >here</a>."
-          examples:
-          - "15"
-          group: "advanced"
-          maximum: 15
-          minimum: 1
-          order: 6
-          title: "Google BigQuery Client Chunk Size"
-          type: "integer"
+        cdc_deletion_mode:
+          always_show: true
+          default: "Hard delete"
+          description: "Whether to execute CDC deletions as hard deletes (i.e. propagate\
+            \ source deletions to the destination), or soft deletes (i.e. leave a\
+            \ tombstone record in the destination). Defaults to hard deletes."
+          enum:
+          - "Hard delete"
+          - "Soft delete"
+          group: "sync_behavior"
+          order: 5
+          title: "CDC deletion mode"
+          type: "string"
         credentials_json:
           airbyte_secret: true
           always_show: true
@@ -19005,8 +20169,9 @@ components:
             \ will not be applied. Read more <a href=\"https://cloud.google.com/bigquery/docs/locations\"\
             >here</a>."
           enum:
-          - "US"
           - "EU"
+          - "US"
+          - "africa-south1"
           - "asia-east1"
           - "asia-east2"
           - "asia-northeast1"
@@ -19018,7 +20183,6 @@ components:
           - "asia-southeast2"
           - "australia-southeast1"
           - "australia-southeast2"
-          - "europe-central1"
           - "europe-central2"
           - "europe-north1"
           - "europe-north2"
@@ -19028,21 +20192,20 @@ components:
           - "europe-west3"
           - "europe-west4"
           - "europe-west6"
-          - "europe-west7"
           - "europe-west8"
           - "europe-west9"
+          - "europe-west10"
           - "europe-west12"
           - "me-central1"
           - "me-central2"
           - "me-west1"
           - "northamerica-northeast1"
           - "northamerica-northeast2"
+          - "northamerica-south1"
           - "southamerica-east1"
           - "southamerica-west1"
           - "us-central1"
           - "us-east1"
-          - "us-east2"
-          - "us-east3"
           - "us-east4"
           - "us-east5"
           - "us-south1"
@@ -19056,32 +20219,33 @@ components:
           type: "string"
         disable_type_dedupe:
           default: false
-          description: "Disable Writing Final Tables. WARNING! The data format in\
-            \ _airbyte_data is likely stable but there are no guarantees that other\
-            \ metadata columns will remain the same in future versions"
+          description: "Write the legacy \"raw tables\" format, to enable backwards\
+            \ compatibility with older versions of this connector."
           group: "advanced"
-          order: 8
-          title: "Disable Final Tables. (WARNING! Unstable option; Columns in raw\
-            \ table schema might change between versions)"
+          order: 7
+          title: "Legacy raw tables"
           type: "boolean"
         loading_method:
           description: "The way data will be uploaded to BigQuery."
           display_type: "radio"
           group: "connection"
           oneOf:
-          - description: "Direct loading using batched SQL INSERT statements. This\
+          - additionalProperties: true
+            description: "Direct loading using batched SQL INSERT statements. This\
               \ method uses the BigQuery driver to convert large INSERT statements\
               \ into file uploads automatically."
             properties:
               method:
-                const: "Standard"
-                type: "string"
+                default: "Standard"
                 enum:
                 - "Standard"
+                type: "string"
             required:
             - "method"
             title: "Batched Standard Inserts"
-          - description: "Writes large batches of records to a file, uploads the file\
+            type: "object"
+          - additionalProperties: true
+            description: "Writes large batches of records to a file, uploads the file\
               \ to GCS, then uses COPY INTO to load your data into BigQuery."
             properties:
               credential:
@@ -19090,13 +20254,13 @@ components:
                   \ more <a href=\"https://cloud.google.com/storage/docs/authentication/hmackeys\"\
                   >here</a>."
                 oneOf:
-                - properties:
+                - additionalProperties: true
+                  properties:
                     credential_type:
-                      const: "HMAC_KEY"
-                      order: 0
-                      type: "string"
+                      default: "HMAC_KEY"
                       enum:
                       - "HMAC_KEY"
+                      type: "string"
                     hmac_key_access_id:
                       airbyte_secret: true
                       description: "HMAC key access ID. When linked to a service account,\
@@ -19104,8 +20268,8 @@ components:
                         \ it is 24 characters long."
                       examples:
                       - "1234567890abcdefghij1234"
-                      order: 1
-                      title: "HMAC Key Access ID"
+                      order: 0
+                      title: "HMAC Access Key"
                       type: "string"
                     hmac_key_secret:
                       airbyte_secret: true
@@ -19113,15 +20277,16 @@ components:
                         \ is a 40-character base-64 encoded string."
                       examples:
                       - "1234567890abcdefghij1234567890ABCDEFGHIJ"
-                      order: 2
-                      title: "HMAC Key Secret"
+                      order: 1
+                      title: "HMAC Secret"
                       type: "string"
                   required:
                   - "credential_type"
                   - "hmac_key_access_id"
                   - "hmac_key_secret"
                   title: "HMAC key"
-                order: 1
+                  type: "object"
+                order: 0
                 title: "Credential"
                 type: "object"
               gcs_bucket_name:
@@ -19129,14 +20294,14 @@ components:
                   >here</a>."
                 examples:
                 - "airbyte_sync"
-                order: 2
+                order: 1
                 title: "GCS Bucket Name"
                 type: "string"
               gcs_bucket_path:
                 description: "Directory under the GCS bucket where data will be written."
                 examples:
                 - "data_sync/test"
-                order: 3
+                order: 2
                 title: "GCS Bucket Path"
                 type: "string"
               keep_files_in_gcs-bucket:
@@ -19148,20 +20313,21 @@ components:
                 enum:
                 - "Delete all tmp files from GCS"
                 - "Keep all tmp files in GCS"
-                order: 4
-                title: "GCS Tmp Files Afterward Processing"
+                order: 3
+                title: "GCS Tmp Files Post-Processing"
                 type: "string"
               method:
-                const: "GCS Staging"
-                type: "string"
+                default: "GCS Staging"
                 enum:
                 - "GCS Staging"
+                type: "string"
             required:
             - "method"
+            - "credential"
             - "gcs_bucket_name"
             - "gcs_bucket_path"
-            - "credential"
             title: "GCS Staging"
+            type: "object"
           order: 3
           title: "Loading Method"
           type: "object"
@@ -19174,33 +20340,18 @@ components:
           title: "Project ID"
           type: "string"
         raw_data_dataset:
-          description: "The dataset to write raw tables into (default: airbyte_internal)"
+          description: "Airbyte will use this dataset for various internal tables.\
+            \ In legacy raw tables mode, the raw tables will be stored in this dataset.\
+            \ Defaults to \"airbyte_internal\"."
           group: "advanced"
-          order: 7
-          title: "Raw Table Dataset Name"
-          type: "string"
-        transformation_priority:
-          default: "interactive"
-          description: "Interactive run type means that the query is executed as soon\
-            \ as possible, and these queries count towards concurrent rate limit and\
-            \ daily limit. Read more about interactive run type <a href=\"https://cloud.google.com/bigquery/docs/running-queries#queries\"\
-            >here</a>. Batch queries are queued and started as soon as idle resources\
-            \ are available in the BigQuery shared resource pool, which usually occurs\
-            \ within a few minutes. Batch queries don’t count towards your concurrent\
-            \ rate limit. Read more about batch queries <a href=\"https://cloud.google.com/bigquery/docs/running-queries#batch\"\
-            >here</a>. The default \"interactive\" value is used if not set explicitly."
-          enum:
-          - "interactive"
-          - "batch"
-          group: "advanced"
-          order: 5
-          title: "Transformation Query Run Type"
+          order: 8
+          title: "Airbyte Internal Table Dataset Name"
           type: "string"
       required:
       - "project_id"
       - "dataset_location"
       - "dataset_id"
-      title: "BigQuery Destination Spec"
+      title: "Bigquery Specification"
       type: "object"
     destination-pgvector:
       description: "The configuration model for the Vector DB based destinations.\
@@ -20067,10 +21218,10 @@ components:
           $ref: "#/components/schemas/destination-bigquery"
         - title: destination-clickhouse
           $ref: "#/components/schemas/destination-clickhouse"
-        - title: destination-cobra
-          $ref: "#/components/schemas/destination-cobra"
         - title: destination-convex
           $ref: "#/components/schemas/destination-convex"
+        - title: destination-customer-io
+          $ref: "#/components/schemas/destination-customer-io"
         - title: destination-databricks
           $ref: "#/components/schemas/destination-databricks"
         - title: destination-deepset
@@ -20089,6 +21240,8 @@ components:
           $ref: "#/components/schemas/destination-firestore"
         - title: destination-gcs
           $ref: "#/components/schemas/destination-gcs"
+        - title: destination-hubspot
+          $ref: "#/components/schemas/destination-hubspot"
         - title: destination-milvus
           $ref: "#/components/schemas/destination-milvus"
         - title: destination-mongodb
@@ -20121,12 +21274,16 @@ components:
           $ref: "#/components/schemas/destination-s3"
         - title: destination-s3-data-lake
           $ref: "#/components/schemas/destination-s3-data-lake"
+        - title: destination-salesforce
+          $ref: "#/components/schemas/destination-salesforce"
         - title: destination-sftp-json
           $ref: "#/components/schemas/destination-sftp-json"
         - title: destination-snowflake
           $ref: "#/components/schemas/destination-snowflake"
         - title: destination-snowflake-cortex
           $ref: "#/components/schemas/destination-snowflake-cortex"
+        - title: destination-surrealdb
+          $ref: "#/components/schemas/destination-surrealdb"
         - title: destination-teradata
           $ref: "#/components/schemas/destination-teradata"
         - title: destination-timeplus

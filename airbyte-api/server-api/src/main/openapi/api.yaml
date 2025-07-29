@@ -1276,6 +1276,7 @@ paths:
       operationId: listSources
       x-speakeasy-alias: listSources
       x-speakeasy-group: Sources
+      x-speakeasy-entity-operation: Source#list
       summary: List sources
       parameters:
       - name: workspaceIds
@@ -1354,6 +1355,7 @@ paths:
       operationId: createSource
       x-speakeasy-alias: createSource
       x-speakeasy-group: Sources
+      x-speakeasy-entity-operation: Source#create
       summary: Create a source
       description: Creates a source given a name, workspace id, and a json blob containing
         the configuration for the source.
@@ -1384,6 +1386,7 @@ paths:
       operationId: getSource
       x-speakeasy-alias: getSource
       x-speakeasy-group: Sources
+      x-speakeasy-entity-operation: Source#read
       summary: Get Source details
       parameters:
       - in: query
@@ -1522,6 +1525,7 @@ paths:
           description: Not found
       operationId: listDestinations
       x-speakeasy-alias: listDestinations
+      x-speakeasy-entity-operation: Destination#list
       x-speakeasy-group: Destinations
       summary: List destinations
       parameters:
@@ -1607,6 +1611,7 @@ paths:
           description: Not found
       operationId: createDestination
       x-speakeasy-alias: createDestination
+      x-speakeasy-entity-operation: Destination#create
       x-speakeasy-group: Destinations
       summary: Create a destination
       description: Creates a destination given a name, workspace id, and a json blob
@@ -1642,6 +1647,7 @@ paths:
           description: Not found
       operationId: getDestination
       x-speakeasy-alias: getDestination
+      x-speakeasy-entity-operation: Destination#read
       x-speakeasy-group: Destinations
       summary: Get Destination details
       parameters:
@@ -1666,6 +1672,7 @@ paths:
           description: Not found
       operationId: deleteDestination
       x-speakeasy-alias: deleteDestination
+      x-speakeasy-entity-operation: Destination#delete
       x-speakeasy-group: Destinations
       summary: Delete a Destination
     patch:
@@ -1759,8 +1766,8 @@ paths:
       operationId: putDestination
       x-speakeasy-alias: putDestination
       x-speakeasy-group: Destinations
-      summary: Update a Destination and fully overwrite it
       x-speakeasy-entity-operation: Destination#update
+      summary: Update a Destination and fully overwrite it
     parameters:
     - name: destinationId
       schema:
@@ -2463,6 +2470,13 @@ paths:
       x-speakeasy-group: Organizations
   /organizations/{organizationId}/oauthCredentials:
     put:
+      parameters:
+      - name: organizationId
+        schema:
+          format: UUID
+          type: string
+        in: path
+        required: true
       requestBody:
         content:
           application/json:
@@ -2487,13 +2501,6 @@ paths:
       description: |-
         Create/update a set of OAuth credentials to override the Airbyte-provided OAuth credentials used for source/destination OAuth.
         In order to determine what the credential configuration needs to be, please see the connector specification of the relevant source/destination.
-    parameters:
-    - name: organizationId
-      schema:
-        format: UUID
-        type: string
-      in: path
-      required: true
   /users:
     get:
       tags:
@@ -2698,6 +2705,24 @@ paths:
       tags:
       - public
       - embedded_widget
+  /embedded/organizations:
+    get:
+      summary: List organizations that a user has access to that have embedded enabled.
+      tags:
+      - public
+      - embedded_widget
+      operationId: listEmbeddedOrganizationsByUser
+      x-speakeasy-alias: listEmbeddedOrganizationsByUser
+      x-speakeasy-group: EmbeddedWidget
+      responses:
+        '200':
+          description: Successfully retrieved organizations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmbeddedOrganizationsList'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
 components:
   responses:
     InitiateOauthResponse:
@@ -4529,8 +4554,12 @@ components:
       - full_refresh_overwrite
       - full_refresh_overwrite_deduped
       - full_refresh_append
+      - full_refresh_update
+      - full_refresh_soft_delete
       - incremental_append
       - incremental_deduped_history
+      - incremental_update
+      - incremental_soft_delete
       x-speakeasy-component: true
     ActorTypeEnum:
       description: Whether you're setting this override for a source or destination
@@ -4834,4 +4863,28 @@ components:
         id:
           type: string
           format: uuid
+      x-speakeasy-component: true
+    EmbeddedOrganizationsList:
+      required:
+      - organizations
+      properties:
+        organizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmbeddedOrganizationListItem'
+      x-speakeasy-component: true
+    EmbeddedOrganizationListItem:
+      type: object
+      required:
+      - organizationId
+      - organizationName
+      - permission
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        permission:
+          $ref: '#/components/schemas/PermissionType'
       x-speakeasy-component: true

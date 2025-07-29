@@ -1965,8 +1965,12 @@ components:
       - "full_refresh_overwrite"
       - "full_refresh_overwrite_deduped"
       - "full_refresh_append"
+      - "full_refresh_update"
+      - "full_refresh_soft_delete"
       - "incremental_append"
       - "incremental_deduped_history"
+      - "incremental_update"
+      - "incremental_soft_delete"
       x-speakeasy-component: true
     ActorTypeEnum:
       description: "Whether you're setting this override for a source or destination"
@@ -2270,6 +2274,30 @@ components:
         id:
           type: "string"
           format: "uuid"
+      x-speakeasy-component: true
+    EmbeddedOrganizationsList:
+      required:
+      - "organizations"
+      properties:
+        organizations:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/EmbeddedOrganizationListItem"
+      x-speakeasy-component: true
+    EmbeddedOrganizationListItem:
+      type: "object"
+      required:
+      - "organizationId"
+      - "organizationName"
+      - "permission"
+      properties:
+        organizationId:
+          type: "string"
+          format: "uuid"
+        organizationName:
+          type: "string"
+        permission:
+          $ref: "#/components/schemas/PermissionType"
       x-speakeasy-component: true
 
     SourceConfiguration:

@@ -8318,6 +8318,7 @@ paths:
       operationId: listSources
       x-sdk-alias: listSources
       x-sdk-group: Sources
+      x-sdk-entity-operation: Source#list
       summary: List sources
       parameters:
         - name: workspaceIds
@@ -8393,6 +8394,7 @@ paths:
       operationId: publicCreateSource
       x-sdk-alias: createSource
       x-sdk-group: Sources
+      x-sdk-entity-operation: Source#create
       summary: Create a source
       description: "Creates a source given a name, workspace id, and a json blob containing the configuration for the source."
   /public/v1/sources/{sourceId}:
@@ -8422,6 +8424,7 @@ paths:
       operationId: publicGetSource
       x-sdk-alias: getSource
       x-sdk-group: Sources
+      x-sdk-entity-operation: Source#read
       summary: Get Source details
       parameters:
         - in: "query"
@@ -8559,6 +8562,7 @@ paths:
           description: Not found
       operationId: listDestinations
       x-sdk-alias: listDestinations
+      x-sdk-entity-operation: Destination#list
       x-sdk-group: Destinations
       summary: List destinations
       parameters:
@@ -8641,6 +8645,7 @@ paths:
           description: Not found
       operationId: publicCreateDestination
       x-sdk-alias: createDestination
+      x-sdk-entity-operation: Destination#create
       x-sdk-group: Destinations
       summary: Create a destination
       description: "Creates a destination given a name, workspace id, and a json blob containing the configuration for the source."
@@ -8675,6 +8680,7 @@ paths:
           description: Not found
       operationId: publicGetDestination
       x-sdk-alias: getDestination
+      x-sdk-entity-operation: Destination#read
       x-sdk-group: Destinations
       summary: Get Destination details
       parameters:
@@ -8698,6 +8704,7 @@ paths:
           description: Not found
       operationId: publicDeleteDestination
       x-sdk-alias: deleteDestination
+      x-sdk-entity-operation: Destination#delete
       x-sdk-group: Destinations
       summary: Delete a Destination
     patch:
@@ -8791,8 +8798,8 @@ paths:
       operationId: putDestination
       x-sdk-alias: putDestination
       x-sdk-group: Destinations
-      summary: Update a Destination and fully overwrite it
       x-sdk-entity-operation: Destination#update
+      summary: Update a Destination and fully overwrite it
     parameters:
       - name: destinationId
         schema:
