@@ -39,7 +39,7 @@ export const hasFields = <T extends object>(object: T | {}): object is T => {
   return Object.keys(object).length > 0;
 };
 
-export const isEmptyObject = (object: object): boolean => {
+export const isEmptyObject = (object: unknown): boolean => {
   return typeof object === "object" && object !== null && !Array.isArray(object) && Object.keys(object).length === 0;
 };
 

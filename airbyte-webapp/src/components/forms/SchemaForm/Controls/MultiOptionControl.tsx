@@ -137,7 +137,15 @@ export const MultiOptionControl = ({
             }
 
             const defaultValues = extractDefaultValuesFromSchema(selectedOption);
-            unregister(baseProps.name);
+            // If the current option is a number and we are changing it to an empty string,
+            // then we need to first unregister the field so that the setValueAs override doesn't
+            // switch the new value back to null and cause it to stay as a number input.
+            if (
+              (currentlySelectedOption?.type === "number" || currentlySelectedOption?.type === "integer") &&
+              defaultValues === ""
+            ) {
+              unregister(baseProps.name);
+            }
             setValue(baseProps.name, defaultValues, { shouldValidate: false });
 
             // Only clear the error for the parent field itself, without validating

@@ -50,7 +50,7 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
 }: React.PropsWithChildren<SchemaFormProps<JsonSchema, TsSchema>>) => {
   const { formatMessage } = useIntl();
   const rawStartingValues = useMemo(
-    () => initialValues ?? extractDefaultValuesFromSchema<TsSchema>(schema, schema),
+    () => initialValues ?? extractDefaultValuesFromSchema(schema, schema),
     [initialValues, schema]
   );
   const resolvedStartingValues = useMemo(
@@ -60,7 +60,7 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
   const methods = useForm<TsSchema>({
     criteriaMode: "all",
     mode: "onChange",
-    defaultValues: resolvedStartingValues,
+    defaultValues: resolvedStartingValues as DefaultValues<TsSchema>,
     resolver: dynamicValidator(schema, formatMessage),
   });
 
@@ -107,7 +107,7 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
 interface SchemaFormContextValue {
   schema: AirbyteJsonSchema;
   onlyShowErrorIfTouched?: boolean;
-  extractDefaultValuesFromSchema: <T extends FieldValues>(fieldSchema: AirbyteJsonSchema) => DefaultValues<T>;
+  extractDefaultValuesFromSchema: (fieldSchema: AirbyteJsonSchema) => unknown;
   verifyArrayItems: (
     items:
       | ExtendedJSONSchema<AirbyteJsonSchemaExtention>
@@ -171,7 +171,7 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
   }, []);
 
   const extractDefaultValuesFromSchemaCallback = useCallback(
-    <T extends FieldValues>(fieldSchema: AirbyteJsonSchema) => extractDefaultValuesFromSchema<T>(fieldSchema, schema),
+    (fieldSchema: AirbyteJsonSchema) => extractDefaultValuesFromSchema(fieldSchema, schema),
     [schema]
   );
 
@@ -241,34 +241,31 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
   );
 };
 
-const extractDefaultValuesFromSchema = <T extends FieldValues>(
-  fieldSchema: AirbyteJsonSchema,
-  rootSchema: AirbyteJsonSchema
-): DefaultValues<T> => {
+const extractDefaultValuesFromSchema = (fieldSchema: AirbyteJsonSchema, rootSchema: AirbyteJsonSchema): unknown => {
   const resolvedSchema = resolveTopLevelRef(rootSchema, fieldSchema);
 
   if (resolvedSchema.default !== undefined) {
-    return resolvedSchema.default as DefaultValues<T>;
+    return resolvedSchema.default;
   }
 
   if (resolvedSchema.type === "array") {
     const itemSchema = verifyArrayItems(resolvedSchema.items, rootSchema);
     if (itemSchema.type === "array") {
-      return [extractDefaultValuesFromSchema(itemSchema, rootSchema)] as DefaultValues<T>;
+      return [extractDefaultValuesFromSchema(itemSchema, rootSchema)];
     }
-    return [] as DefaultValues<T>;
+    return [];
   }
 
   if (resolvedSchema.type === "string") {
     if (resolvedSchema.enum && Array.isArray(resolvedSchema.enum) && resolvedSchema.enum.length >= 1) {
-      return resolvedSchema.enum[0] as DefaultValues<T>;
+      return resolvedSchema.enum[0];
     }
 
-    return "" as unknown as DefaultValues<T>;
+    return "";
   }
 
   if (resolvedSchema.type === "number" || resolvedSchema.type === "integer") {
-    return null as unknown as DefaultValues<T>;
+    return null;
   }
 
   if (resolvedSchema.oneOf || resolvedSchema.anyOf) {
@@ -279,12 +276,12 @@ const extractDefaultValuesFromSchema = <T extends FieldValues>(
   }
 
   if (resolvedSchema.type !== "object" && !resolvedSchema.properties) {
-    return undefined as unknown as DefaultValues<T>;
+    return undefined;
   }
 
   const defaultValues: Record<string, unknown> = {};
   if (!resolvedSchema.properties) {
-    return defaultValues as DefaultValues<T>;
+    return defaultValues;
   }
   // Iterate through each property in the schema
   Object.entries(resolvedSchema.properties).forEach(([key, property]) => {
@@ -312,7 +309,7 @@ const extractDefaultValuesFromSchema = <T extends FieldValues>(
     }
   });
 
-  return defaultValues as DefaultValues<T>;
+  return defaultValues;
 };
 
 export const verifyArrayItems = (
