@@ -38,7 +38,6 @@ import io.airbyte.featureflag.FieldSelectionEnabled
 import io.airbyte.featureflag.Flag
 import io.airbyte.featureflag.LogConnectorMessages
 import io.airbyte.featureflag.LogStateMsgs
-import io.airbyte.featureflag.OrchestratorHardFailOnHeartbeatFailure
 import io.airbyte.featureflag.PrintLongRecordPks
 import io.airbyte.featureflag.RemoveValidationLimit
 import io.airbyte.featureflag.ReplicationBufferOverride
@@ -66,7 +65,6 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.net.http.HttpClient
 import java.nio.file.Path
-import java.util.List
 import java.util.UUID
 import java.util.function.Supplier
 
@@ -250,14 +248,13 @@ class ApplicationBeanFactory {
   @Named("replicationFeatureFlags")
   fun replicationFeatureFlags(): ReplicationFeatureFlags {
     val featureFlags =
-      List.of<Flag<*>>(
+      listOf<Flag<*>>(
         DestinationTimeoutEnabled,
         DestinationTimeoutSeconds,
         FailSyncOnInvalidChecksum,
         FieldSelectionEnabled,
         LogConnectorMessages,
         LogStateMsgs,
-        OrchestratorHardFailOnHeartbeatFailure,
         PrintLongRecordPks,
         RemoveValidationLimit,
         ReplicationBufferOverride,

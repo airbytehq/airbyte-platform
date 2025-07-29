@@ -6,7 +6,6 @@ package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
-import io.airbyte.featureflag.OrchestratorHardFailOnHeartbeatFailure
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.infrastructure.ClientException
 import io.airbyte.workload.api.client.generated.infrastructure.ServerException
@@ -230,6 +229,5 @@ class WorkloadHeartbeatSenderTest {
       jobId = testJobId,
       attempt = testAttempt,
       hardExitCallable = hardExitCallable,
-      flagReader = mockk { every { read(OrchestratorHardFailOnHeartbeatFailure) } returns true },
     )
 }

@@ -217,5 +217,3 @@ object LicenseAllowDestinationObjectStorageConfig : Permanent<Boolean>(key = "li
 object UseSonarServer : Temporary<Boolean>(key = "embedded.useSonarServer", default = false)
 
 object EnableSsoConfigUpdate : Permanent<Boolean>(key = "platform.can-change-sso-config", default = false)
-
-object OrchestratorHardFailOnHeartbeatFailure : Temporary<Boolean>(key = "platform.orchestrator-hard-fail-on-heartbeat-failure", default = false)

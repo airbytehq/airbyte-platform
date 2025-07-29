@@ -11,7 +11,6 @@ import io.airbyte.featureflag.FieldSelectionEnabled;
 import io.airbyte.featureflag.Flag;
 import io.airbyte.featureflag.LogConnectorMessages;
 import io.airbyte.featureflag.LogStateMsgs;
-import io.airbyte.featureflag.OrchestratorHardFailOnHeartbeatFailure;
 import io.airbyte.featureflag.PrintLongRecordPks;
 import io.airbyte.featureflag.RemoveValidationLimit;
 import io.airbyte.featureflag.ReplicationBufferOverride;
@@ -58,7 +57,6 @@ public class ApplicationBeanFactory {
         FieldSelectionEnabled.INSTANCE,
         LogConnectorMessages.INSTANCE,
         LogStateMsgs.INSTANCE,
-        OrchestratorHardFailOnHeartbeatFailure.INSTANCE,
         PrintLongRecordPks.INSTANCE,
         RemoveValidationLimit.INSTANCE,
         ReplicationBufferOverride.INSTANCE,

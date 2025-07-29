@@ -4,12 +4,9 @@
 
 package io.airbyte.container.orchestrator.worker
 
-import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
-import io.airbyte.container.orchestrator.worker.exception.WorkloadHeartbeatException
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatTimeoutException
-import io.airbyte.featureflag.OrchestratorHardFailOnHeartbeatFailure
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.infrastructure.ClientException
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
@@ -30,7 +27,6 @@ class WorkloadHeartbeatSender(
   private val replicationWorkerState: ReplicationWorkerState,
   private val destinationTimeoutMonitor: DestinationTimeoutMonitor,
   private val sourceTimeoutMonitor: HeartbeatMonitor,
-  private val flagReader: ReplicationInputFeatureFlagReader,
   @Named("workloadHeartbeatInterval") private val heartbeatInterval: Duration,
   @Named("workloadHeartbeatTimeout") private val heartbeatTimeoutDuration: Duration,
   @Named("hardExitCallable") private val hardExitCallable: () -> Unit,
@@ -38,88 +34,6 @@ class WorkloadHeartbeatSender(
   @Value("\${airbyte.job-id}") private val jobId: Long,
   @Named("attemptId") private val attempt: Int,
 ) {
-  @Deprecated("Delete and rename sendHeartbeatV2 to sendHeartbeat once migrated")
-  suspend fun sendHeartbeat() {
-    if (flagReader.read(OrchestratorHardFailOnHeartbeatFailure)) {
-      sendHeartbeatV2()
-    } else {
-      sendHeartbeatFormer()
-    }
-  }
-
-  /**
-   * Sends periodic heartbeat requests until cancellation, terminal error, or heartbeat timeout.
-   *
-   * @param heartbeatInterval the interval between heartbeat requests.
-   * @param heartbeatTimeoutDuration the maximum allowed duration between successful heartbeats.
-   * @param workloadId the workload identifier.
-   */
-  @Deprecated("We want to migrate to sendHeartbeatV2")
-  suspend fun sendHeartbeatFormer() {
-    logger.info { "Starting workload heartbeat" }
-    var lastSuccessfulHeartbeat = Instant.now()
-
-    while (true) {
-      // Capture current time at start of loop iteration.
-      val now = Instant.now()
-      try {
-        when {
-          destinationTimeoutMonitor.hasTimedOut() -> {
-            logger.warn { "Destination has timed out; skipping heartbeat." }
-            if (checkIfExpiredAndMarkSyncStateAsFailed(
-                lastSuccessfulHeartbeat,
-                heartbeatTimeoutDuration,
-                DestinationTimeoutMonitor.TimeoutException(
-                  destinationTimeoutMonitor.timeoutThresholdSec.toMillis(),
-                  destinationTimeoutMonitor.timeSinceLastAction.get(),
-                ),
-              )
-            ) {
-              break
-            }
-          }
-
-          sourceTimeoutMonitor.hasTimedOut() -> {
-            logger.warn { "Source heartbeat missing; skipping heartbeat." }
-            if (checkIfExpiredAndMarkSyncStateAsFailed(
-                lastSuccessfulHeartbeat,
-                heartbeatTimeoutDuration,
-                HeartbeatTimeoutException(
-                  sourceTimeoutMonitor.heartbeatFreshnessThreshold.toMillis(),
-                  sourceTimeoutMonitor.timeSinceLastBeat.orElse(Duration.ZERO).toMillis(),
-                ),
-              )
-            ) {
-              break
-            }
-          }
-
-          else -> {
-            logger.debug { "Sending workload heartbeat" }
-            workloadApiClient.workloadApi.workloadHeartbeat(WorkloadHeartbeatRequest(workloadId))
-            lastSuccessfulHeartbeat = now
-          }
-        }
-      } catch (e: Exception) {
-        when {
-          e is ClientException && e.statusCode == HttpStatus.GONE.code -> {
-            logger.warn(e) { "Workload in terminal state; cancelling sync." }
-            replicationWorkerState.markCancelled()
-            break
-          }
-
-          checkIfExpiredAndMarkSyncStateAsFailed(
-            lastSuccessfulHeartbeat,
-            heartbeatTimeoutDuration,
-            WorkloadHeartbeatException("Workload Heartbeat Error", e),
-          ) -> break
-          else -> logger.warn(e) { "Error sending heartbeat; retrying." }
-        }
-      }
-      delay(heartbeatInterval.toMillis())
-    }
-  }
-
   /**
    * Checks if the time since the last successful heartbeat exceeds the allowed timeout.
    * If so, marks the replication as failed, aborts it, tracks the failure, and returns true.
@@ -147,7 +61,7 @@ class WorkloadHeartbeatSender(
    * @param heartbeatTimeoutDuration the maximum allowed duration between successful heartbeats.
    * @param workloadId the workload identifier.
    */
-  suspend fun sendHeartbeatV2() {
+  suspend fun sendHeartbeat() {
     logger.info { "Starting workload heartbeat (interval=${heartbeatInterval.seconds}s; timeout=${heartbeatTimeoutDuration.seconds}s)" }
     var lastSuccessfulHeartbeat = Instant.now()
 
