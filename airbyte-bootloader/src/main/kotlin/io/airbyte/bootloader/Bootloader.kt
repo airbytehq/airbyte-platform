@@ -5,8 +5,8 @@
 package io.airbyte.bootloader
 
 import io.airbyte.commons.AUTO_DATAPLANE_GROUP
+import io.airbyte.commons.CLOUD_DATAPLANES
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.resources.MoreResources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
@@ -233,17 +233,19 @@ class Bootloader(
     // Cloud currently depends on a "US" Dataplane group to exist. Once this is no longer the case,
     // we can remove Cloud-specific code from the bootloader.
     if (airbyteEdition == AirbyteEdition.CLOUD) {
-      if (!dataplaneGroups.any { it.name == "US" }) {
-        log.info { "Creating US dataplane group." }
-        val dataplaneGroupId = UUID.randomUUID()
-        val dataplaneGroup =
-          DataplaneGroup()
-            .withId(dataplaneGroupId)
-            .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-            .withName(US_DATAPLANE_GROUP)
-            .withEnabled(true)
-            .withTombstone(false)
-        dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
+      for (dataplaneGroupName in CLOUD_DATAPLANES) {
+        if (!dataplaneGroups.any { it.name == dataplaneGroupName }) {
+          log.info { "Creating $dataplaneGroupName dataplane group." }
+          val dataplaneGroupId = UUID.randomUUID()
+          val dataplaneGroup =
+            DataplaneGroup()
+              .withId(dataplaneGroupId)
+              .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+              .withName(dataplaneGroupName)
+              .withEnabled(true)
+              .withTombstone(false)
+          dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
+        }
       }
       return
     } else if (dataplaneGroups.isNotEmpty()) {
