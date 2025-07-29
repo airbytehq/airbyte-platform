@@ -405,7 +405,7 @@ class DeclarativeOAuthSpecHandler {
   @Throws(IOException::class)
   fun processOAuthOutput(
     userConfig: JsonNode,
-    data: JsonNode?,
+    data: JsonNode,
     accessTokenUrl: String?,
   ): Map<String, Any> {
     val oauthOutput: MutableMap<String, Any> = HashMap()

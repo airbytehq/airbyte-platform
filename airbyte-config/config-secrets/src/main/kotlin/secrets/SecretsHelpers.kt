@@ -253,7 +253,7 @@ object SecretsHelpers {
    * return in an ascending alphabetical order.
    */
   @VisibleForTesting
-  fun getSortedSecretPaths(spec: JsonNode?): List<String> =
+  fun getSortedSecretPaths(spec: JsonNode): List<String> =
     JsonSchemas
       .collectPathsThatMeetCondition(
         spec,
@@ -265,10 +265,8 @@ object SecretsHelpers {
           .stream()
           .anyMatch { (key): Map.Entry<String, JsonNode> -> AirbyteSecretConstants.AIRBYTE_SECRET_FIELD == key }
       }.stream()
-      .map { jsonSchemaPath: List<JsonSchemas.FieldNameOrList?>? ->
-        JsonPaths.mapJsonSchemaPathToJsonPath(
-          jsonSchemaPath,
-        )
+      .map { jsonSchemaPath: List<JsonSchemas.FieldNameOrList> ->
+        JsonPaths.mapJsonSchemaPathToJsonPath(jsonSchemaPath)
       }.distinct()
       .sorted()
       .toList()

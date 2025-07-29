@@ -96,12 +96,7 @@ open class SecretsRepositoryReader(
     }
 
   fun hydrateConfig(
-    configuration: ConfigWithSecretReferences?,
+    configuration: ConfigWithSecretReferences,
     secretPersistenceMap: Map<UUID?, SecretPersistence>,
-  ): JsonNode? =
-    if (configuration != null) {
-      secretsHydrator.hydrate(configuration, secretPersistenceMap)
-    } else {
-      null
-    }
+  ): JsonNode = secretsHydrator.hydrate(configuration, secretPersistenceMap)
 }

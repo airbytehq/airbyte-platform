@@ -42,6 +42,7 @@ import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
+import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OAuthService
@@ -52,6 +53,7 @@ import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.ActorId
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.WorkspaceId
+import io.airbyte.domain.services.secrets.SecretHydrationContext
 import io.airbyte.domain.services.secrets.SecretHydrationContext.Companion.fromJava
 import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.domain.services.secrets.SecretReferenceService
@@ -629,7 +631,7 @@ open class OAuthHandler(
 
   private fun getOAuthInputConfigurationForConsent(
     spec: ConnectorSpecification,
-    hydratedSourceConnectionConfiguration: JsonNode?,
+    hydratedSourceConnectionConfiguration: JsonNode,
     oAuthInputConfiguration: JsonNode,
   ): JsonNode {
     val configOauthFields =
@@ -684,7 +686,7 @@ open class OAuthHandler(
 
   @VisibleForTesting
   fun getOAuthInputConfiguration(
-    hydratedSourceConnectionConfiguration: JsonNode?,
+    hydratedSourceConnectionConfiguration: JsonNode,
     pathsToGet: Map<String, String>,
   ): JsonNode {
     val result: MutableMap<String, JsonNode> = HashMap()
@@ -926,9 +928,9 @@ open class OAuthHandler(
     config: ConfigWithSecretReferences,
     organizationId: UUID,
     workspaceId: UUID,
-  ): JsonNode? {
-    val hydrationContext = fromJava(organizationId, workspaceId)
-    val secretPersistenceMap = secretPersistenceService.getPersistenceMapFromConfig(config, hydrationContext)
+  ): JsonNode {
+    val hydrationContext: SecretHydrationContext = fromJava(organizationId, workspaceId)
+    val secretPersistenceMap: Map<UUID?, SecretPersistence> = secretPersistenceService.getPersistenceMapFromConfig(config, hydrationContext)
     return secretsRepositoryReader.hydrateConfig(config, secretPersistenceMap)
   }
 

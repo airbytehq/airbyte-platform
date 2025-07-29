@@ -41,7 +41,7 @@ class JsonSecretsProcessor(
      */
     fun maskAllSecrets(
       json: JsonNode,
-      schema: JsonNode?,
+      schema: JsonNode,
     ): JsonNode {
       val pathsWithSecrets =
         JsonSchemas
@@ -53,7 +53,7 @@ class JsonSecretsProcessor(
               .stream()
               .anyMatch { (key): Map.Entry<String, JsonNode> -> AirbyteSecretConstants.AIRBYTE_SECRET_FIELD == key }
           }.stream()
-          .map { jsonSchemaPath: List<JsonSchemas.FieldNameOrList?>? ->
+          .map { jsonSchemaPath: List<JsonSchemas.FieldNameOrList> ->
             JsonPaths.mapJsonSchemaPathToJsonPath(
               jsonSchemaPath,
             )
