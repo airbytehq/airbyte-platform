@@ -23,7 +23,12 @@ import { useCurrentUser } from "core/services/auth/AuthContext";
 import { useFeature, FeatureItem } from "core/services/features";
 
 import styles from "./AirbyteOrgPopoverPanel.module.scss";
-import { OrganizationWithWorkspaces } from "./OrganizationWithWorkspaces";
+import { OrganizationWithWorkspaces, WorkspaceNavLink } from "./OrganizationWithWorkspaces";
+
+const SINGLE_WORKSPACE_HEIGHT = 64;
+const ORG_ITEM_HEIGHT = 50;
+const WORKSPACE_ITEM_HEIGHT = 32;
+const MAX_HEIGHT = 388;
 
 const OrganizationSummariesList: React.FC<{
   debouncedSearchValue: string;
@@ -46,15 +51,6 @@ const OrganizationSummariesList: React.FC<{
     },
   });
 
-  const { data: workspacesData } = useListWorkspacesInOrganization({
-    organizationId: currentOrganizationId,
-    nameContains: "",
-    pagination: {
-      pageSize: 6,
-    },
-  });
-  const orgWorkspaces = useMemo(() => workspacesData?.pages.flatMap((page) => page.workspaces) ?? [], [workspacesData]);
-
   const organizationSummaries: Array<OrganizationSummary & { brandingBadge?: React.ReactNode }> = useMemo(() => {
     const summaries: Array<OrganizationSummary & { brandingBadge?: React.ReactNode }> =
       data?.pages.flatMap((page) => {
@@ -64,43 +60,33 @@ const OrganizationSummariesList: React.FC<{
         return page.organizationSummaries ?? [];
       }) ?? [];
 
-    // Pin the current organization to the top of the list when no search is active.
-    // This improves UX by keeping the user's current context easily accessible.
-    if (allowMultiWorkspace && debouncedSearchValue === "") {
-      return [
-        {
-          organization: currentOrganization,
-          brandingBadge: (
-            <>
-              <BrandingBadge product={product} testId="enterprise-badge" />{" "}
-            </>
-          ),
-          workspaces: orgWorkspaces,
-          memberCount: currentOrganizationMemberCount ?? 0,
-        },
-        ...summaries.filter((summary) => summary.organization.organizationId !== currentOrganization?.organizationId),
-      ];
-    }
     return summaries;
-  }, [
-    data?.pages,
-    debouncedSearchValue,
-    showOSSWorkspaceName,
-    formatMessage,
-    currentOrganization,
-    currentOrganizationMemberCount,
-    orgWorkspaces,
-    product,
-    allowMultiWorkspace,
-  ]);
+  }, [data?.pages, showOSSWorkspaceName, formatMessage]);
+
+  const {
+    data: workspacesData,
+    isFetchingNextPage: isFetchingNextWorkspacesPage,
+    hasNextPage: hasNextWorkspacesPage,
+    fetchNextPage: fetchNextWorkspacesPage,
+  } = useListWorkspacesInOrganization({
+    organizationId: currentOrganizationId,
+    nameContains: "",
+    pagination: {
+      pageSize: 10,
+    },
+  });
+
+  const orgWorkspaces = useMemo(() => workspacesData?.pages.flatMap((page) => page.workspaces) ?? [], [workspacesData]);
 
   const estimatedHeight = !allowMultiWorkspace
-    ? 64
+    ? SINGLE_WORKSPACE_HEIGHT
+    : !debouncedSearchValue
+    ? Math.min(ORG_ITEM_HEIGHT + WORKSPACE_ITEM_HEIGHT * orgWorkspaces.length, MAX_HEIGHT)
     : Math.min(
         organizationSummaries.reduce((acc, curr) => {
-          return acc + 50 + (curr?.workspaces?.length || 0) * 32;
+          return acc + ORG_ITEM_HEIGHT + (curr?.workspaces?.length || 0) * WORKSPACE_ITEM_HEIGHT;
         }, 0),
-        388
+        MAX_HEIGHT
       );
 
   const handleEndReached = () => {
@@ -109,10 +95,18 @@ const OrganizationSummariesList: React.FC<{
     }
   };
 
+  const handleWorkspacesEndReached = () => {
+    if (hasNextWorkspacesPage) {
+      fetchNextWorkspacesPage();
+    }
+  };
+
   if (isLoading) {
     return (
       <Box p="md" pb="sm">
-        <LoadingSpinner />
+        <Text align="center">
+          <LoadingSpinner />
+        </Text>
       </Box>
     );
   }
@@ -124,6 +118,42 @@ const OrganizationSummariesList: React.FC<{
           <FormattedMessage id="workspaces.noWorkspaces" />
         </Text>
       </Box>
+    );
+  }
+
+  // Only show the current organization when no search is active.
+  if (allowMultiWorkspace && debouncedSearchValue === "") {
+    return (
+      <Virtuoso
+        ref={virtuosoRef}
+        style={{ height: estimatedHeight }}
+        data={orgWorkspaces}
+        endReached={handleWorkspacesEndReached}
+        computeItemKey={(index, item) => item.workspaceId + index}
+        itemContent={(_index, item) => <WorkspaceNavLink workspaceId={item.workspaceId} name={item.name} />}
+        components={{
+          Header: () => (
+            <OrganizationWithWorkspaces
+              organization={currentOrganization}
+              brandingBadge={
+                <>
+                  <BrandingBadge product={product} testId={`${product}-badge`} />{" "}
+                </>
+              }
+              workspaces={[]}
+              memberCount={currentOrganizationMemberCount ?? 0}
+              lastItem
+            />
+          ),
+          Footer: isFetchingNextWorkspacesPage
+            ? () => (
+                <Box pt="md" pb="sm" className={styles.footerLoading}>
+                  <LoadingSpinner />
+                </Box>
+              )
+            : undefined,
+        }}
+      />
     );
   }
 

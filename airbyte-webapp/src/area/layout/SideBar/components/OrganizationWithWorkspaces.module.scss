@@ -80,6 +80,7 @@
 }
 
 .workspaceItem {
+  display: block;
   padding-left: calc(variables.$spacing-md * 2);
   padding-right: variables.$spacing-md;
   cursor: pointer;

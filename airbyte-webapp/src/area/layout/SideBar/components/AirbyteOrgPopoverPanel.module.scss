@@ -10,6 +10,7 @@
 .searchInput,
 .searchInputContainer {
   height: 32px;
+  line-height: 32px;
   font-size: variables.$font-size-sm;
 }
 
@@ -27,4 +28,5 @@
 
 .footerLoading {
   border-top: variables.$border-thin solid colors.$grey-200;
+  text-align: center;
 }

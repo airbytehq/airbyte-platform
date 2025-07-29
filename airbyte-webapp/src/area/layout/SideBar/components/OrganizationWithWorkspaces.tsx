@@ -52,16 +52,21 @@ export const OrganizationWithWorkspaces: React.FC<
         gap="none"
         className={classNames(styles.workspaces, { [styles.lastItem]: lastItem })}
       >
-        {workspaces.map((workspace) => (
-          <NavLink
-            key={workspace.workspaceId}
-            to={`${RoutePaths.Workspaces}/${workspace.workspaceId}`}
-            className={styles.workspaceItem}
-          >
-            {workspace.name}
-          </NavLink>
+        {workspaces.map(({ workspaceId, name }) => (
+          <WorkspaceNavLink key={workspaceId} workspaceId={workspaceId} name={name} />
         ))}
       </FlexContainer>
     </FlexContainer>
+  );
+};
+
+export const WorkspaceNavLink: React.FC<{
+  workspaceId: string;
+  name: string;
+}> = ({ workspaceId, name }) => {
+  return (
+    <NavLink to={`${RoutePaths.Workspaces}/${workspaceId}`} className={styles.workspaceItem}>
+      {name}
+    </NavLink>
   );
 };
