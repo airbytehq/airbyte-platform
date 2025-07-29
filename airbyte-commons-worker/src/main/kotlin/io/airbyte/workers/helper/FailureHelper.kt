@@ -21,6 +21,9 @@ import io.airbyte.workers.exception.WorkloadMonitorException
 internal const val MAX_MSG_LENGTH: Int = 50000
 internal const val MAX_STACK_TRACE_LENGTH: Int = 100000
 
+// For limiting the number of failures to prevent Temporal serialization issues
+const val MAX_FAILURES_TO_KEEP: Int = 10
+
 private const val ATTRIBUTION_MESSAGE = "Remainder truncated by the Airbyte platform."
 private const val JOB_ID_METADATA_KEY = "jobId"
 private const val ATTEMPT_NUMBER_METADATA_KEY = "attemptNumber"
@@ -476,14 +479,10 @@ object FailureHelper {
       .withExternalMessage(externalMessage)
 
   /**
-   * Orders by timestamp, so earlier failures come first.
+   * Orders failures by timestamp, so earlier failures come first.
    */
   @JvmStatic
-  fun orderedFailures(failures: Set<FailureReason>): List<FailureReason> {
-    val compare = compareBy<FailureReason> { it.timestamp }
-
-    return failures.sortedWith(compare)
-  }
+  fun orderedFailures(failures: Collection<FailureReason>): List<FailureReason> = failures.sortedBy { it.timestamp }
 
   @VisibleForTesting
   @JvmStatic
