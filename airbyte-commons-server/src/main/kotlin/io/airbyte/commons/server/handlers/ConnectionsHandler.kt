@@ -396,7 +396,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     }
 
     private fun generateDestinationStreamKey(
-      namespaceDefinition: String,
+      namespaceDefinition: String?,
       namespaceFormat: String?,
       prefix: String?,
       streamNamespace: String?,
@@ -407,7 +407,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     private fun validateStreamsDoNotConflictWithExistingDestinationStreams(
       newCatalog: AirbyteCatalog,
       destinationId: UUID,
-      namespaceDefinitionType: String,
+      namespaceDefinitionType: String?,
       namespaceFormat: String?,
       prefix: String,
       currentConnectionId: UUID?,
