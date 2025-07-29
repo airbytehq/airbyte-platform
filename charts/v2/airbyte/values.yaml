@@ -484,7 +484,7 @@ global:
       writeKeySecretKey: ""
 
   micronaut:
-    environments: []
+    environments: ["k8s"]
 
   extraSelectorLabels: {}
   extraInitContainers: []

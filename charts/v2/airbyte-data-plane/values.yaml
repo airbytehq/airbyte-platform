@@ -240,7 +240,7 @@ tracking:
     writeKeySecretKey: ""
 
 micronaut:
-  environments: []
+  environments: ["k8s"]
 
 workloadApiServer:
   secretName: ""
