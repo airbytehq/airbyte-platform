@@ -31,20 +31,19 @@ import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.oshai.kotlinlogging.withLoggingContext
-import io.micronaut.context.annotation.Context
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
+import jakarta.inject.Singleton
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
 import java.util.Optional
-import javax.annotation.PostConstruct
 import kotlin.system.exitProcess
 
 private val logger = KotlinLogging.logger {}
 
-@Context
+@Singleton
 class ConnectorWatcher(
   @Named("output") val outputPath: Path,
   @Named("configDir") val configDir: String,
@@ -60,7 +59,6 @@ class ConnectorWatcher(
   private val heartbeatMonitor: HeartbeatMonitor,
   private val metricClient: MetricClient,
 ) {
-  @PostConstruct
   fun run() {
     val sidecarInput = readSidecarInput()
     withLoggingContext(logContextFactory.create(sidecarInput.logPath)) {

@@ -5,6 +5,7 @@
 package io.airbyte.connectorSidecar
 
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.kotlin.context.getBean
 import io.micronaut.runtime.Micronaut.build
 
 private val logger = KotlinLogging.logger {}
@@ -12,10 +13,11 @@ private val logger = KotlinLogging.logger {}
 fun main() {
   logger.info { "Sidecar start" }
 
-  build()
-    .deduceCloudEnvironment(false)
-    .deduceEnvironment(false)
-    .start()
+  val ctx =
+    build()
+      .deduceCloudEnvironment(false)
+      .deduceEnvironment(false)
+      .start()
 
-  logger.info { "Sidecar end" }
+  ctx.getBean<ConnectorWatcher>().run()
 }
