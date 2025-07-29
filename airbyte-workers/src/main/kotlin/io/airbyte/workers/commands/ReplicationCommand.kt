@@ -66,7 +66,11 @@ class ReplicationCommand(
 
     val catalog: ConfiguredAirbyteCatalog? = commandOutput.catalog?.let { catalogClientConverters.toConfiguredAirbyteInternal(it) }
 
-    val replicationAttemptSummary = Jsons.`object`(Jsons.jsonNode(commandOutput.attemptSummary), ReplicationAttemptSummary::class.java)
+    val replicationAttemptSummary: ReplicationAttemptSummary =
+      Jsons.`object`(
+        Jsons.jsonNode(commandOutput.attemptSummary ?: mapOf<Any, Any>()),
+        ReplicationAttemptSummary::class.java,
+      )
 
     val failures: List<FailureReason>? = commandOutput.failures?.map { apiFailureReasonToConfigModel(it) }
 
