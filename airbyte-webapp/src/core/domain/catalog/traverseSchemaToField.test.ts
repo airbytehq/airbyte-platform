@@ -15,7 +15,7 @@ describe(`${traverseSchemaToField.name}`, () => {
               type: "object",
               properties: {
                 "1_1_1": {
-                  type: "boolean",
+                  type: ["null", "boolean"],
                 },
               },
               required: ["1_1_1"],

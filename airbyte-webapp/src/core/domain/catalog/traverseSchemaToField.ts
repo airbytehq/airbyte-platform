@@ -1,4 +1,4 @@
-import { JSONSchema7Definition } from "json-schema";
+import { JSONSchema7Definition, JSONSchema7TypeName } from "json-schema";
 
 import { SyncSchemaField } from "./models";
 
@@ -37,13 +37,17 @@ const traverseJsonSchemaProperties = (
       path,
       key,
       fields,
-      type:
-        (Array.isArray(jsonSchema?.type)
-          ? jsonSchema?.type.find((t) => t !== "null") ?? jsonSchema?.type[0]
-          : jsonSchema?.type) ?? "null",
+      type: getJsonSchemaType(jsonSchema?.type),
       $ref: jsonSchema?.$ref,
       airbyte_type: jsonSchema?.airbyte_type,
       format: jsonSchema?.format,
     },
   ];
 };
+
+export function getJsonSchemaType(type: JSONSchema7TypeName | JSONSchema7TypeName[] | undefined): string {
+  if (Array.isArray(type)) {
+    return type.find((t) => t !== "null") ?? type[0];
+  }
+  return type ?? "null";
+}

@@ -15,6 +15,7 @@ import { getDestinationOperationFields } from "area/dataActivation/utils/getDest
 import { getRequiredFields } from "area/dataActivation/utils/getRequiredFields";
 import { useSelectedDestinationOperation } from "area/dataActivation/utils/useSelectedDestinationOperation";
 import { AirbyteCatalog, DestinationCatalog } from "core/api/types/AirbyteClient";
+import { getJsonSchemaType } from "core/domain/catalog";
 
 import styles from "./FieldMapping.module.scss";
 
@@ -68,9 +69,10 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
       sourceCatalog.streams.find(({ stream }) => {
         return stream?.name === sourceStreamDescriptor.name && stream?.namespace === sourceStreamDescriptor.namespace;
       })?.stream?.jsonSchema?.properties ?? [];
-    return Object.keys(topLevelFields)
-      .map((key) => ({
+    return Object.entries(topLevelFields)
+      .map(([key, value]) => ({
         label: key,
+        description: getJsonSchemaType(value.type),
         value: key,
         disabled: selectedFieldNames.sourceFields.has(key),
       }))
@@ -90,9 +92,10 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
 
   const availableDestinationFieldOptions = useMemo(() => {
     return getDestinationOperationFields(selectedDestinationOperation)
-      .map((key) => ({
+      .map(([key, value]) => ({
         label: key,
         value: key,
+        description: getJsonSchemaType(value.type),
         disabled: selectedFieldNames.destinationFields.has(key),
       }))
       .sort((a, b) => {

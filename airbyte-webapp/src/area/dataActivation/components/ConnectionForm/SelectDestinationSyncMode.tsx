@@ -75,7 +75,7 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
     }
 
     // Validate existing field mappings
-    const availableFields = getDestinationOperationFields(selectedOperation);
+    const availableFields = getDestinationOperationFields(selectedOperation).map(([key]) => key);
     const existingFieldMappings = (fields ?? []).map((field) => {
       return {
         sourceFieldName: field.sourceFieldName,
