@@ -2,12 +2,15 @@ import { v4 as uuid } from "uuid";
 
 import { AirbyteCatalog, StreamMapperType } from "core/api/types/AirbyteClient";
 
-import { DataActivationConnectionFormOutput } from "./DataActivationConnectionFormSchema";
+import { DataActivationConnectionFormSchema } from "./DataActivationConnectionFormSchema";
+import { DataActivationConnectionFormValues } from "../types";
 
 export function createSyncCatalogFromFormValues(
-  mappedStreams: DataActivationConnectionFormOutput,
+  formOutput: DataActivationConnectionFormValues,
   catalog: AirbyteCatalog
 ): AirbyteCatalog {
+  const mappedStreams = DataActivationConnectionFormSchema.parse(formOutput);
+
   return {
     streams:
       catalog.streams.map((stream) => {

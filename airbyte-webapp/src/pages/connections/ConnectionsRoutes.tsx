@@ -4,14 +4,15 @@ import { useEffectOnce } from "react-use";
 
 import { LoadingPage } from "components";
 
-import { CreateConnectionRouteWrapper } from "area/dataActivation/components/CreateConnectionRouteWrapper";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useExperiment } from "hooks/services/Experiment";
 
+import ConfigureDataActivationConnectionPage from "./ConfigureDataActivationConnectionPage";
+import { CreateDataActivationConnectionRoutes } from "./CreateDataActivationConnectionRoutes";
+import DataActivationMappingPage from "./DataActivationMappingPage";
 import { ConnectionRoutePaths, RoutePaths } from "../routePaths";
 
 const ConfigureConnectionPage = React.lazy(() => import("./ConfigureConnectionPage"));
-const ConfigureDataActivationConnectionPage = React.lazy(() => import("./ConfigureDataActivationConnectionPage"));
 const ConnectionMappingsPage = React.lazy(() => import("./ConnectionMappingsPage"));
 const ConnectionPage = React.lazy(() => import("./ConnectionPage"));
 const ConnectionReplicationPage = React.lazy(() => import("./ConnectionReplicationPage"));
@@ -19,7 +20,6 @@ const ConnectionSettingsPage = React.lazy(() => import("./ConnectionSettingsPage
 const ConnectionTimelinePage = React.lazy(() => import("./ConnectionTimelinePage"));
 const ConnectionTransformationPage = React.lazy(() => import("./ConnectionTransformationPage"));
 const CreateConnectionPage = React.lazy(() => import("./CreateConnectionPage"));
-const DataActivationMappingPage = React.lazy(() => import("./DataActivationMappingPage"));
 
 const AllConnectionsPage = React.lazy(() => import("./AllConnectionsPage"));
 const StreamStatusPage = React.lazy(() => import("./StreamStatusPage"));
@@ -76,7 +76,7 @@ export const ConnectionsRoutes: React.FC = () => {
         {dataActivationEnabled && (
           <Route
             path={`${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.ConfigureDataActivation}`}
-            element={<CreateConnectionRouteWrapper />}
+            element={<CreateDataActivationConnectionRoutes />}
           >
             <Route index element={<DataActivationMappingPage />} />
             <Route path={ConnectionRoutePaths.ConfigureContinued} element={<ConfigureDataActivationConnectionPage />} />

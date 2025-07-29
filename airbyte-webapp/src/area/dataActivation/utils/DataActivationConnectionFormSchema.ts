@@ -8,6 +8,7 @@ const noSourceSyncModeSelected = z.object({
   sourceSyncMode: z.null().refine((val) => val !== null, {
     message: "form.empty.error",
   }),
+  cursorField: z.null(),
 });
 
 const incrementalSyncMode = z.object({

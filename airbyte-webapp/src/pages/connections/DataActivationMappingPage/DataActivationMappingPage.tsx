@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { SOURCE_ID_PARAM } from "components/connection/CreateConnection/DefineSource";
 import { CreateConnectionFlowLayout } from "components/connection/CreateConnectionFlowLayout";
@@ -18,50 +18,46 @@ import { Text } from "components/ui/Text";
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { StreamMappings } from "area/dataActivation/components/ConnectionForm/StreamMappings";
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
-import { EMPTY_STREAM, DataActivationConnectionFormSchema } from "area/dataActivation/utils";
+import { DataActivationConnectionFormSchema, EMPTY_STREAM } from "area/dataActivation/utils";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useDestinationDefinitionList, useDiscoverDestination, useDiscoverSchemaQuery } from "core/api";
 import { links } from "core/utils/links";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./DataActivationMappingPage.module.scss";
+import { useStreamMappings } from "../CreateDataActivationConnectionRoutes";
 
-export const DataActivationMappingPage = () => {
-  const navigate = useNavigate();
+export const DataActivationMappingPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const { streamMappings, setStreamMappings } = useStreamMappings();
   const source = useGetSourceFromSearchParams();
   const destination = useGetDestinationFromSearchParams();
   const createLink = useCurrentWorkspaceLink();
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
   const { data: discoveredSource } = useDiscoverSchemaQuery(source.sourceId);
   const { data: discoveredDestination } = useDiscoverDestination(destination.destinationId);
   const [showGlobalValidationMessage, setShowGlobalValidationMessage] = useState(false);
+  const navigate = useNavigate();
 
   if (!source || !destination) {
     throw new Error("Source ID and Destination ID are required");
   }
 
   const methods = useForm<DataActivationConnectionFormValues>({
-    defaultValues: {
-      streams: location.state?.streams || [EMPTY_STREAM],
-    },
+    defaultValues: streamMappings || { streams: [EMPTY_STREAM] },
     mode: "onChange",
     resolver: zodResolver(DataActivationConnectionFormSchema),
   });
-
-  const onSubmit = (values: DataActivationConnectionFormValues) => {
-    navigate(`${ConnectionRoutePaths.ConfigureContinued}?${searchParams.toString()}`, {
-      state: {
-        streams: values.streams,
-      },
-    });
-  };
 
   const { destinationDefinitionMap } = useDestinationDefinitionList();
   const destinationDefinition = destinationDefinitionMap.get(destination.destinationDefinitionId);
   if (!destinationDefinition) {
     throw new Error("Destination definition not found");
   }
+
+  const handleSubmit = (formValues: DataActivationConnectionFormValues) => {
+    setStreamMappings(formValues);
+    navigate(`${ConnectionRoutePaths.ConfigureContinued}?${searchParams.toString()}`);
+  };
 
   const schemasLoaded = discoveredSource && discoveredDestination;
 
@@ -70,7 +66,7 @@ export const DataActivationMappingPage = () => {
       <form
         onSubmit={(event) => {
           setShowGlobalValidationMessage(true);
-          return methods.handleSubmit(onSubmit)(event);
+          return methods.handleSubmit(handleSubmit)(event);
         }}
         className={styles.dataActivationMappingPage}
       >

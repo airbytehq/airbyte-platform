@@ -27,6 +27,7 @@
     "noImplicitAny": true,
     "noFallthroughCasesInSwitch": true,
     "useUnknownInCatchVariables": false,
+    "noErrorTruncation": true,
     "plugins": [
       {
         "name": "typescript-plugin-css-modules",

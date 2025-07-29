@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 
 import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
@@ -15,7 +15,6 @@ import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
-import { DataActivationConnectionFormSchema } from "area/dataActivation/utils";
 import { createSyncCatalogFromFormValues } from "area/dataActivation/utils/createSyncCatalogFromFormValues";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { CreateConnectionProps, useCreateConnection, useDiscoverDestination, useDiscoverSchemaQuery } from "core/api";
@@ -30,9 +29,10 @@ import { useNotificationService } from "hooks/services/Notification";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ConfigureConnectionRoute.module.scss";
+import { useStreamMappings } from "../CreateDataActivationConnectionRoutes";
 
-export const ConfigureDataActivationConnectionPage = () => {
-  const location = useLocation();
+export const ConfigureDataActivationConnectionPage: React.FC = () => {
+  const { streamMappings } = useStreamMappings();
   const createLink = useCurrentWorkspaceLink();
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
@@ -50,13 +50,14 @@ export const ConfigureDataActivationConnectionPage = () => {
     if (!sourceSchema.catalog) {
       throw new Error("Source schema catalog missing when trying to create connection");
     }
-
-    const mappedStreams = DataActivationConnectionFormSchema.parse({ streams: location.state.streams });
+    if (!streamMappings) {
+      throw new Error("Stream mappings missing when trying to create connection");
+    }
 
     const webBackendConnectionCreate: CreateConnectionProps = {
       values: {
         ...formValues,
-        syncCatalog: createSyncCatalogFromFormValues(mappedStreams, sourceSchema.catalog),
+        syncCatalog: createSyncCatalogFromFormValues(streamMappings, sourceSchema.catalog),
       },
       source,
       destination,
@@ -141,21 +142,18 @@ const zodSchema = z.object({
 
 const Footer = ({ isLoading }: { isLoading: boolean }) => {
   const [searchParams] = useSearchParams();
+
   const createLink = useCurrentWorkspaceLink();
-  const location = useLocation();
+  const linkBackToMapStreams = createLink(
+    `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${
+      ConnectionRoutePaths.ConfigureDataActivation
+    }?${searchParams.toString()}`
+  );
   const { isSubmitting, isValid } = useFormState<FormConnectionFormValues>();
+
   return (
     <>
-      <Link
-        to={{
-          pathname: createLink(
-            `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.ConfigureDataActivation}`
-          ),
-          search: searchParams.toString(),
-        }}
-        state={location.state}
-        variant="button"
-      >
+      <Link variant="button" to={linkBackToMapStreams}>
         <FormattedMessage id="connection.create.backToMappings" />
       </Link>
       <FormErrors />
