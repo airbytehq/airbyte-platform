@@ -10,6 +10,7 @@ import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import jakarta.ws.rs.core.Response
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -67,7 +68,10 @@ class AirbyteKeycloakClientTest {
 
     val idpMock = mockk<IdentityProvidersResource>(relaxed = true)
     every { realmMock.identityProviders() } returns idpMock
-    every { idpMock.create(any()) } returns mockk()
+
+    val mockResponse = mockk<Response>(relaxed = true)
+    every { mockResponse.statusInfo } returns Response.Status.OK
+    every { idpMock.create(any()) } returns mockResponse
 
     airbyteKeycloakClient.createOidcSsoConfig(config)
 

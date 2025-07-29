@@ -9,6 +9,7 @@ import io.airbyte.domain.models.SsoKeycloakIdpCredentials
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
+import jakarta.ws.rs.core.Response
 import org.keycloak.admin.client.Keycloak
 import org.keycloak.representations.idm.ClientRepresentation
 import org.keycloak.representations.idm.IdentityProviderRepresentation
@@ -161,7 +162,15 @@ class AirbyteKeycloakClient(
           .realm(realmName)
           .identityProviders()
           .create(idp)
-      logger.info { "Created IDP response: $response" }
+
+      logger.info { "Created IDP response status: ${response.status}" }
+      logger.info { "Created IDP response status info: ${response.statusInfo}" }
+      logger.info { "Created IDP response status entity: ${response.entity}" }
+      logger.info { "Created IDP response status string: ${response.statusInfo.reasonPhrase}" }
+
+      if (response.statusInfo.family != Response.Status.Family.SUCCESSFUL) {
+        throw IdpCreationException("Create IDP request failed with ${response.status} response")
+      }
     } catch (e: Exception) {
       logger.error(e) { "Create IDP request failed" }
       throw IdpCreationException("Create IDP request failed! Server error: $e")
