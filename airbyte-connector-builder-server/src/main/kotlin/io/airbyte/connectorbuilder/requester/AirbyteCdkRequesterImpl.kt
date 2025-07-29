@@ -166,7 +166,7 @@ class AirbyteCdkRequesterImpl(
       cdkCommand,
       this.adaptConfig(
         manifest,
-        customComponentsCode!!,
+        customComponentsCode,
         config,
         cdkCommand,
         streamLimit,

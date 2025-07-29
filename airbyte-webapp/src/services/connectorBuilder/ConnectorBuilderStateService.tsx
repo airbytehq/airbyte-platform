@@ -10,7 +10,7 @@ import { useDebounce, useUpdateEffect } from "react-use";
 
 import { WaitForSavingModal } from "components/connectorBuilder/Builder/WaitForSavingModal";
 import { CDK_VERSION } from "components/connectorBuilder/cdk";
-import { BuilderState, GeneratedDeclarativeStream } from "components/connectorBuilder/types";
+import { BuilderState, GeneratedDeclarativeStream, StreamId } from "components/connectorBuilder/types";
 import { useBuilderErrors } from "components/connectorBuilder/useBuilderErrors";
 import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 import { useStreamName } from "components/connectorBuilder/useStreamNames";
@@ -56,6 +56,7 @@ import {
   InlineSchemaLoaderType,
   InlineSchemaLoader,
   ConditionalStreamsType,
+  HttpComponentsResolverType,
 } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderResolve } from "core/services/connectorBuilder/ConnectorBuilderResolveContext";
@@ -665,10 +666,12 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     return resolvedManifest;
   }, [setValue, fullResolveManifest, formatMessage, registerNotification]);
 
+  const filteredManifest = useMemo(() => filterManifest(manifest, testStreamId), [manifest, testStreamId]);
+
   const streamRead = useBuilderProjectReadStream(
     {
       builderProjectId: projectId,
-      manifest,
+      manifest: filteredManifest,
       customComponentsCode: streamUsesCustomCode ? customComponentsCode : undefined,
       streamName,
       recordLimit,
@@ -789,6 +792,45 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   };
 
   return <ConnectorBuilderTestReadContext.Provider value={ctx}>{children}</ConnectorBuilderTestReadContext.Provider>;
+};
+
+const filterManifest = (manifest: ConnectorManifest, testStreamId: StreamId): ConnectorManifest => {
+  if (testStreamId.type === "stream") {
+    return {
+      ...manifest,
+      dynamic_streams: undefined,
+    };
+  } else if (testStreamId.type === "generated_stream") {
+    return {
+      ...manifest,
+      dynamic_streams: manifest.dynamic_streams?.filter((stream) => stream.name === testStreamId.dynamicStreamName),
+    };
+  } else if (testStreamId.type === "dynamic_stream") {
+    const dynamicStream = manifest.dynamic_streams?.[testStreamId.index];
+    // If the dynamic stream is using the HttpComponentsResolver, treat it like a normal stream so that it can be tested
+    // and records can be produced from it, to help the user with debugging the dynamic stream.
+    if (dynamicStream?.components_resolver?.type === HttpComponentsResolverType.HttpComponentsResolver) {
+      return {
+        ...manifest,
+        streams: [
+          ...(manifest.streams ?? []),
+          {
+            type: DeclarativeStreamType.DeclarativeStream,
+            name: dynamicStream.name,
+            retriever: {
+              ...dynamicStream.components_resolver.retriever,
+            },
+          },
+        ],
+        dynamic_streams: undefined,
+      };
+    }
+    return {
+      ...manifest,
+      dynamic_streams: manifest.dynamic_streams?.filter((_, index) => index === testStreamId.index),
+    };
+  }
+  return manifest;
 };
 
 export function useSchemaWarnings(
