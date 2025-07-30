@@ -187,7 +187,7 @@ class NotificationHelper(
           }
 
           Notification.NotificationType.CUSTOMERIO -> {
-            val emailNotificationClient = CustomerioNotificationClient()
+            val emailNotificationClient = CustomerioNotificationClient(metricClient = metricClient)
             if (emailNotificationClient.notifySchemaPropagated(notification, email, workspace.workspaceId)) {
               metricClient.count(
                 OssMetricsRegistry.NOTIFICATION_SUCCESS,

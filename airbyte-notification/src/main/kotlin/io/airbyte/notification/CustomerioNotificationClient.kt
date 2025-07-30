@@ -15,7 +15,6 @@ import io.airbyte.api.common.StreamDescriptorUtils.buildFullyQualifiedName
 import io.airbyte.api.model.generated.FieldTransform
 import io.airbyte.api.model.generated.StreamAttributeTransform
 import io.airbyte.api.model.generated.StreamTransform
-import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.lang.Exceptions
@@ -28,7 +27,6 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.notification.messages.SchemaUpdateNotification
 import io.airbyte.notification.messages.SyncSummary
 import io.github.oshai.kotlinlogging.KotlinLogging
-import jakarta.inject.Inject
 import okhttp3.Interceptor
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
@@ -41,7 +39,6 @@ import org.apache.http.HttpHeaders
 import org.commonmark.parser.Parser
 import org.commonmark.renderer.html.HtmlRenderer
 import java.io.IOException
-import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -54,56 +51,28 @@ private val log = KotlinLogging.logger { }
  *
  * These notifications rely on `TRANSACTION_MESSAGE_ID`, which are basically templates you create
  * through customer.io. These IDs are specific to a user's account on customer.io, so they will be
- * different for every user. For now they are stored as variables here, but in the future they may
+ * different for every user. For now, they are stored as variables here, but in the future they may
  * be stored in as a notification config in the database.
  *
  * For Airbyte Cloud, Airbyte engineers may use `DEFAULT_TRANSACTION_MESSAGE_ID = "6"` as a generic
  * template for notifications.
  */
-class CustomerioNotificationClient : NotificationClient {
-  private val baseUrl: String
-  private val okHttpClient: OkHttpClient
-  private val apiToken: String?
-
-  @Inject
-  private lateinit var metricClient: MetricClient
-
-  constructor() {
-    this.baseUrl = CUSTOMERIO_BASE_URL
-    this.okHttpClient =
-      OkHttpClient
-        .Builder()
-        .addInterceptor(CampaignsRateLimitInterceptor())
-        .build()
-    this.apiToken = System.getenv(EnvVar.CUSTOMERIO_API_KEY.name)
-  }
-
-  @VisibleForTesting
-  constructor(
-    apiToken: String,
-    baseUrl: String,
-  ) {
-    this.apiToken = apiToken
-    this.baseUrl = baseUrl
-    this.okHttpClient =
-      OkHttpClient
-        .Builder()
-        .addInterceptor(CampaignsRateLimitInterceptor())
-        .build()
-  }
-
-  init {
-    val dateFormat: DateFormat = SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
-    MAPPER.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-    MAPPER.setDateFormat(dateFormat)
-    MAPPER.registerModule(JavaTimeModule())
-  }
+class CustomerioNotificationClient(
+  private val baseUrl: String = CUSTOMERIO_BASE_URL,
+  private val apiToken: String? = System.getenv(EnvVar.CUSTOMERIO_API_KEY.name),
+  private val metricClient: MetricClient? = null,
+) : NotificationClient() {
+  private val okHttpClient: OkHttpClient =
+    OkHttpClient
+      .Builder()
+      .addInterceptor(CampaignsRateLimitInterceptor())
+      .build()
 
   /**
    * Customer.io has a rate limit of 10 requests per second for broadcasts. This interceptor will
    * sleep for 10 seconds if a broadcast request fails with a 429 error.
    */
-  internal class CampaignsRateLimitInterceptor : Interceptor {
+  private class CampaignsRateLimitInterceptor : Interceptor {
     @Throws(IOException::class)
     override fun intercept(chain: Interceptor.Chain): Response {
       val request = chain.request()
@@ -457,7 +426,7 @@ class CustomerioNotificationClient : NotificationClient {
     response: Response,
   ): Boolean {
     log.info { "Successful notification workspaceId $workspaceId (${response.code}): ${response.body}" }
-    metricClient.count(
+    metricClient?.count(
       OssMetricsRegistry.CUSTOMER_IO_EMAIL_NOTIFICATION_SEND,
       attributes =
         arrayOf(
@@ -476,7 +445,7 @@ class CustomerioNotificationClient : NotificationClient {
     val body = if (response.body != null) response.body!!.string() else ""
     val errorMessage = String.format("Failed to deliver notification (%s): %s", response.code, body)
     log.info { "Error sending notification workspaceId $workspaceId (${response.code}): $errorMessage" }
-    metricClient.count(
+    metricClient?.count(
       OssMetricsRegistry.CUSTOMER_IO_EMAIL_NOTIFICATION_SEND,
       attributes =
         arrayOf(
@@ -487,13 +456,13 @@ class CustomerioNotificationClient : NotificationClient {
     return errorMessage
   }
 
-  @InternalForTesting
-  internal fun setMetricClient(metricClient: MetricClient) {
-    this.metricClient = metricClient
-  }
-
   companion object {
-    private val MAPPER: ObjectMapper = ObjectMapper()
+    private val MAPPER: ObjectMapper =
+      ObjectMapper().apply {
+        disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+        setDateFormat(SimpleDateFormat("yyyy-MM-dd hh:mm:ss"))
+        registerModule(JavaTimeModule())
+      }
 
     private val JSON: MediaType = "application/json; charset=utf-8".toMediaType()
 

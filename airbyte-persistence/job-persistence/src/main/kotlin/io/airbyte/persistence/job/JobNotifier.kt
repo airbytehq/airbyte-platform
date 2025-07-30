@@ -155,7 +155,7 @@ class JobNotifier(
         if (Notification.NotificationType.SLACK == notificationType) {
           return@map SlackNotificationClient(item.slackConfiguration)
         } else if (Notification.NotificationType.CUSTOMERIO == notificationType) {
-          return@map CustomerioNotificationClient()
+          return@map CustomerioNotificationClient(metricClient = metricClient)
         } else {
           throw IllegalArgumentException("Notification type not supported: $notificationType")
         }
