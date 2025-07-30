@@ -33,7 +33,6 @@ import jakarta.validation.Valid
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.util.Set
 import java.util.UUID
 import java.util.function.Supplier
 import java.util.stream.Collectors
@@ -43,9 +42,9 @@ import java.util.stream.Collectors
  */
 @Singleton
 open class PermissionHandler(
-  private val permissionPersistence: PermissionPersistence,
+  private val permissionPersistence: PermissionPersistence?,
   private val workspaceService: WorkspaceService,
-  @param:Named("uuidGenerator") private val uuidGenerator: Supplier<UUID>,
+  @param:Named("uuidGenerator") private val uuidGenerator: Supplier<UUID>?,
   private val permissionService: PermissionService,
 ) {
   /**
@@ -77,7 +76,7 @@ open class PermissionHandler(
     }
 
     if (permissionCreate.permissionId == null) {
-      permissionCreate.permissionId = uuidGenerator.get()
+      permissionCreate.permissionId = uuidGenerator?.get()
     }
 
     return permissionService.createPermission(permissionCreate)
@@ -87,7 +86,7 @@ open class PermissionHandler(
   fun grantInstanceAdmin(userId: UUID?) {
     permissionService.createPermission(
       Permission()
-        .withPermissionId(uuidGenerator.get())
+        .withPermissionId(uuidGenerator?.get())
         .withUserId(userId)
         .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN),
     )
@@ -339,7 +338,7 @@ open class PermissionHandler(
           try {
             return@map checkPermissions(permissionCheckRequest)
           } catch (e: IOException) {
-            LOGGER.error("Error checking permissions for request: {}", permissionCheckRequest)
+            LOGGER.error("Error checking permissions for request: {}", permissionCheckRequest, e)
             return@map PermissionCheckRead().status(PermissionCheckRead.StatusEnum.FAILED)
           }
         }.toList()
@@ -453,18 +452,19 @@ open class PermissionHandler(
     permissionService.getPermissionsByServiceAccountId(serviceAccountId)
 
   @Throws(IOException::class)
-  fun listUsersInOrganization(organizationId: UUID): List<UserPermission> = permissionPersistence.listUsersInOrganization(organizationId)
+  fun listUsersInOrganization(organizationId: UUID): List<UserPermission> =
+    permissionPersistence?.listUsersInOrganization(organizationId) ?: emptyList()
 
   @Throws(IOException::class)
-  fun listInstanceAdminUsers(): List<UserPermission> = permissionPersistence.listInstanceAdminUsers()
+  fun listInstanceAdminUsers(): List<UserPermission> = permissionPersistence?.listInstanceAdminUsers() ?: emptyList()
 
   @Throws(IOException::class)
   fun listPermissionsForOrganization(organizationId: UUID): List<UserPermission> =
-    permissionPersistence.listPermissionsForOrganization(organizationId)
+    permissionPersistence?.listPermissionsForOrganization(organizationId) ?: emptyList()
 
   fun countInstanceEditors(): Int {
     val editorRoles =
-      Set.of(
+      setOf(
         Permission.PermissionType.ORGANIZATION_EDITOR,
         Permission.PermissionType.ORGANIZATION_ADMIN,
         Permission.PermissionType.ORGANIZATION_RUNNER,
@@ -487,7 +487,7 @@ open class PermissionHandler(
   fun findPermissionTypeForUserAndOrganization(
     organizationId: UUID,
     authUserId: String,
-  ): Permission.PermissionType? = permissionPersistence.findPermissionTypeForUserAndOrganization(organizationId, authUserId)
+  ): Permission.PermissionType? = permissionPersistence?.findPermissionTypeForUserAndOrganization(organizationId, authUserId)
 
   companion object {
     private val LOGGER: Logger = LoggerFactory.getLogger(PermissionHandler::class.java)

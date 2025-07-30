@@ -22,14 +22,14 @@ import java.util.UUID
  */
 @RequestScope
 open class CommunityCurrentUserService(
-  private val userPersistence: UserPersistence,
+  private val userPersistence: UserPersistence?,
 ) : CurrentUserService {
   private var retrievedDefaultUser: AuthenticatedUser? = null
 
   override fun getCurrentUser(): AuthenticatedUser {
     if (this.retrievedDefaultUser == null) {
       try {
-        this.retrievedDefaultUser = userPersistence.getDefaultUser().orElseThrow()
+        this.retrievedDefaultUser = userPersistence?.getDefaultUser()?.orElseThrow()
         log.debug("Setting current user for request to retrieved default user: {}", retrievedDefaultUser)
       } catch (e: Exception) {
         throw RuntimeException("Could not get the current user due to an internal error.", e)

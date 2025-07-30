@@ -45,7 +45,7 @@ import java.util.UUID
 class AuthenticationHeaderResolver(
   private val workspaceHelper: WorkspaceHelper,
   private val permissionHandler: PermissionHandler,
-  private val userPersistence: UserPersistence,
+  private val userPersistence: UserPersistence?,
 ) {
   /**
    * Resolve corresponding organization ID. Currently we support two ways to resolve organization ID:
@@ -203,7 +203,7 @@ class AuthenticationHeaderResolver(
 
   @Throws(IOException::class)
   private fun resolveAirbyteUserIdToAuthUserIds(airbyteUserId: String): Set<String> {
-    val authUserIds = userPersistence.listAuthUserIdsForUser(UUID.fromString(airbyteUserId))
+    val authUserIds = userPersistence?.listAuthUserIdsForUser(UUID.fromString(airbyteUserId)) ?: emptySet()
 
     require(!authUserIds.isEmpty()) { String.format("Could not find any authUserIds for userId %s", airbyteUserId) }
 
