@@ -9,3 +9,8 @@ export const useCurrentOrganizationId = () => {
   const firstOrg = useFirstOrg();
   return workspace?.organizationId || match?.params.organizationId || firstOrg.organizationId;
 };
+
+export const useCurrentOrganizationIdFromUrl = () => {
+  const match = useMatch(`/${RoutePaths.Organization}/:organizationId/*`);
+  return match?.params.organizationId || "";
+};
