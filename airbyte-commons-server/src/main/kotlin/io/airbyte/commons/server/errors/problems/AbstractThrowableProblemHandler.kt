@@ -7,6 +7,7 @@ package io.airbyte.commons.server.errors.problems
 import io.airbyte.api.problems.AbstractThrowableProblem
 import io.airbyte.api.problems.ProblemResponse
 import io.airbyte.commons.json.Jsons
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
@@ -15,16 +16,13 @@ import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Produces
 import io.micronaut.http.server.exceptions.ExceptionHandler
 import jakarta.inject.Singleton
-import org.slf4j.LoggerFactory
+
+private val log = KotlinLogging.logger {}
 
 @Produces
 @Singleton
 @Requires(classes = [AbstractThrowableProblem::class])
 class AbstractThrowableProblemHandler : ExceptionHandler<AbstractThrowableProblem, HttpResponse<*>> {
-  companion object {
-    private val log = LoggerFactory.getLogger(AbstractThrowableProblemHandler::class.java)
-  }
-
   override fun handle(
     request: HttpRequest<*>?,
     exception: AbstractThrowableProblem?,

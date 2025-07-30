@@ -10,10 +10,9 @@ import io.airbyte.connectorbuilder.api.model.generated.ResolveManifest
 import io.airbyte.connectorbuilder.exceptions.AirbyteCdkInvalidInputException
 import io.airbyte.connectorbuilder.exceptions.ConnectorBuilderException
 import io.airbyte.connectorbuilder.requester.AirbyteCdkRequester
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 
 /**
@@ -35,7 +34,7 @@ internal open class FullResolveManifestHandler
           fullResolveManifestRequestBody.workspaceId,
           fullResolveManifestRequestBody.projectId,
         )
-        LOGGER.info(
+        log.info(
           "Handling full_resolve_manifest request for workspace '{}' with project ID = '{}'",
           fullResolveManifestRequestBody.workspaceId,
           fullResolveManifestRequestBody.projectId,
@@ -46,12 +45,12 @@ internal open class FullResolveManifestHandler
           fullResolveManifestRequestBody.streamLimit,
         )
       } catch (exc: IOException) {
-        LOGGER.error("Error handling resolve_manifest request.", exc)
+        log.error(exc) { "Error handling resolve_manifest request." }
         throw ConnectorBuilderException("Error handling resolve_manifest request.", exc)
       }
     }
 
     companion object {
-      private val LOGGER: Logger = LoggerFactory.getLogger(FullResolveManifestHandler::class.java)
+      private val log = KotlinLogging.logger {}
     }
   }

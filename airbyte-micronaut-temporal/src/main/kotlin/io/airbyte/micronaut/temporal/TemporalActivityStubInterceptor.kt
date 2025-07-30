@@ -6,17 +6,18 @@ package io.airbyte.micronaut.temporal
 
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.BeanRegistration
 import io.temporal.activity.ActivityOptions
 import io.temporal.workflow.Workflow
 import net.bytebuddy.implementation.bind.annotation.RuntimeType
 import net.bytebuddy.implementation.bind.annotation.SuperCall
 import net.bytebuddy.implementation.bind.annotation.This
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.util.ReflectionUtils
 import java.lang.reflect.Field
 import java.util.concurrent.Callable
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Custom interceptor that handles invocations of Temporal workflow implementations to ensure that
@@ -102,51 +103,34 @@ class TemporalActivityStubInterceptor<T : Any>(
     activityStubField: Field,
   ) {
     try {
-      log.debug(
-        "Attempting to initialize Temporal activity stub for activity '{}' on workflow '{}'...",
-        activityStubField.type,
-        workflowInstance.javaClass.getName(),
-      )
+      log.debug {
+        "Attempting to initialize Temporal activity stub for activity '${activityStubField.type}' on workflow '${workflowInstance.javaClass.name}'..."
+      }
       ReflectionUtils.makeAccessible(activityStubField)
       if (activityStubField[workflowInstance] == null) {
         val activityOptions = getActivityOptions(activityStubField)
         val activityStub = generateActivityStub(activityStubField, activityOptions)
         activityStubField[workflowInstance] = activityStub
-        log.debug(
-          "Initialized Temporal activity stub for activity '{}' for workflow '{}'.",
-          activityStubField.type,
-          workflowInstance.javaClass.getName(),
-        )
+        log.debug { "Initialized Temporal activity stub for activity '${activityStubField.type}' for workflow '${workflowInstance.javaClass.name}'." }
       } else {
-        log.debug(
-          "Temporal activity stub '{}' is already initialized for Temporal workflow '{}'.",
-          activityStubField.type,
-          workflowInstance.javaClass.getName(),
-        )
+        log.debug {
+          "Temporal activity stub '${activityStubField.type}' is already initialized for Temporal workflow '${workflowInstance.javaClass.name}'."
+        }
       }
     } catch (e: IllegalArgumentException) {
-      log.error(
-        "Unable to initialize Temporal activity stub for activity '{}' for workflow '{}'.",
-        activityStubField.type,
-        workflowInstance.javaClass.getName(),
-        e,
-      )
+      log.error(e) {
+        "Unable to initialize Temporal activity stub for activity '${activityStubField.type}' for workflow '${workflowInstance.javaClass.name}'."
+      }
       throw RuntimeException(e)
     } catch (e: IllegalAccessException) {
-      log.error(
-        "Unable to initialize Temporal activity stub for activity '{}' for workflow '{}'.",
-        activityStubField.type,
-        workflowInstance.javaClass.getName(),
-        e,
-      )
+      log.error(e) {
+        "Unable to initialize Temporal activity stub for activity '${activityStubField.type}' for workflow '${workflowInstance.javaClass.name}'."
+      }
       throw RuntimeException(e)
     } catch (e: IllegalStateException) {
-      log.error(
-        "Unable to initialize Temporal activity stub for activity '{}' for workflow '{}'.",
-        activityStubField.type,
-        workflowInstance.javaClass.getName(),
-        e,
-      )
+      log.error(e) {
+        "Unable to initialize Temporal activity stub for activity '${activityStubField.type}' for workflow '${workflowInstance.javaClass.name}'."
+      }
       throw RuntimeException(e)
     }
   }
@@ -194,9 +178,5 @@ class TemporalActivityStubInterceptor<T : Any>(
   @VisibleForTesting
   fun setActivityStubGenerator(activityStubGenerator: TemporalActivityStubGeneratorFunction<Class<*>, ActivityOptions, Any>) {
     this.activityStubGenerator = activityStubGenerator
-  }
-
-  companion object {
-    private val log: Logger = LoggerFactory.getLogger(TemporalActivityStubInterceptor::class.java)
   }
 }

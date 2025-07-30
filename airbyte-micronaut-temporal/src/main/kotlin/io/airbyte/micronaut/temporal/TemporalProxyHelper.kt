@@ -5,6 +5,7 @@
 package io.airbyte.micronaut.temporal
 
 import com.google.common.annotations.VisibleForTesting
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.BeanRegistration
 import io.temporal.activity.ActivityOptions
 import io.temporal.workflow.QueryMethod
@@ -16,14 +17,14 @@ import net.bytebuddy.TypeCache
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy
 import net.bytebuddy.implementation.MethodDelegation
 import net.bytebuddy.matcher.ElementMatchers
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.springframework.core.MethodIntrospector
 import org.springframework.core.annotation.AnnotationUtils
 import org.springframework.util.ReflectionUtils
 import java.lang.reflect.Method
 import java.util.Optional
 import java.util.stream.Collectors
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Generates proxy classes which can be registered with Temporal. These proxies delegate all methods
@@ -54,11 +55,7 @@ class TemporalProxyHelper(
    * @return A proxied workflow implementation class that can be registered with Temporal.
    </T> */
   fun <T : Any> proxyWorkflowClass(workflowImplClass: Class<T>): Class<T> {
-    log.debug(
-      "Creating a Temporal proxy for worker class '{}' with interface '{}'...",
-      workflowImplClass.name,
-      workflowImplClass.interfaces[0],
-    )
+    log.debug { "Creating a Temporal proxy for worker class '${workflowImplClass.name}' with interface '${workflowImplClass.interfaces[0]}'..." }
     return workflowProxyCache.findOrInsert(
       workflowImplClass.classLoader,
       workflowImplClass,
@@ -91,12 +88,9 @@ class TemporalProxyHelper(
           .load(workflowImplClass.classLoader, ClassLoadingStrategy.Default.WRAPPER)
           .loaded as Class<T>
 
-      log.debug(
-        "Temporal workflow proxy '{}' created for worker class '{}' with interface '{}'.",
-        type.name,
-        workflowImplClass.name,
-        workflowImplClass.interfaces[0],
-      )
+      log.debug {
+        "Temporal workflow proxy '${type.name}' created for worker class '${workflowImplClass.name}' with interface '${workflowImplClass.interfaces[0]}'."
+      }
       type
     } as Class<T>
   }
@@ -144,9 +138,5 @@ class TemporalProxyHelper(
   @VisibleForTesting
   fun setActivityStubGenerator(activityStubGenerator: TemporalActivityStubGeneratorFunction<Class<*>, ActivityOptions, Any>) {
     this.activityStubGenerator = Optional.ofNullable(activityStubGenerator)
-  }
-
-  companion object {
-    private val log: Logger = LoggerFactory.getLogger(TemporalProxyHelper::class.java)
   }
 }

@@ -5,17 +5,16 @@
 package io.airbyte.commons.temporal
 
 import io.airbyte.commons.temporal.CancellationHandler.TemporalCancellationHandler
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.activity.ActivityExecutionContext
 import io.temporal.client.ActivityCompletionException
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 object HeartbeatUtils {
-  private val log: Logger = LoggerFactory.getLogger(HeartbeatUtils::class.java)
+  private val log = KotlinLogging.logger {}
 
   /**
    * Run a callable. If while it is running the temporal activity is cancelled, the provided callback

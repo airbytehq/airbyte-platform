@@ -180,12 +180,11 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Inject
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import jakarta.validation.Valid
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
@@ -636,17 +635,17 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       }
       if (workspaceId != null && featureFlagClient.boolVariation(CheckWithCatalog, Workspace(workspaceId))) {
         // TODO this is the hook for future check with catalog work
-        LOGGER.info("Entered into Dark Launch Code for Check with Catalog for connectionId {}", connectionId)
+        log.info { "Entered into Dark Launch Code for Check with Catalog for connectionId $connectionId" }
       }
       connectionService.writeStandardSync(standardSync)
 
       trackNewConnection(standardSync)
 
       try {
-        LOGGER.info("Starting a connection manager workflow for connectionId {}", connectionId)
+        log.info { "Starting a connection manager workflow for connectionId $connectionId" }
         eventRunner.createConnectionManagerWorkflow(connectionId)
       } catch (e: Exception) {
-        LOGGER.error("Start of the connection manager workflow failed; deleting connectionId {}", connectionId, e)
+        log.error(e) { "Start of the connection manager workflow failed; deleting connectionId $connectionId" }
         // deprecate the newly created connection and also delete the newly created workflow.
         deleteConnection(connectionId)
         throw e
@@ -691,7 +690,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         val metadataBuilder = generateMetadata(standardSync)
         trackingClient.track(workspaceId, ScopeType.WORKSPACE, "New Connection - Backend", metadataBuilder.build())
       } catch (e: Exception) {
-        LOGGER.error("failed while reporting usage.", e)
+        log.error(e) { "failed while reporting usage." }
       }
     }
 
@@ -701,7 +700,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         val metadataBuilder = generateMetadata(standardSync)
         trackingClient.track(workspaceId, ScopeType.WORKSPACE, "Updated Connection - Backend", metadataBuilder.build())
       } catch (e: Exception) {
-        LOGGER.error("failed while reporting usage.", e)
+        log.error(e) { "failed while reporting usage." }
       }
     }
 
@@ -766,11 +765,11 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       val connectionId = connectionPatch.connectionId
       val workspaceId = workspaceHelper.getWorkspaceForConnectionId(connectionId)
 
-      LOGGER.debug("Starting updateConnection for connectionId {}, workspaceId {}...", connectionId, workspaceId)
-      LOGGER.debug("incoming connectionPatch: {}", connectionPatch)
+      log.debug { "Starting updateConnection for connectionId {}, workspaceId $connectionId, workspaceId..." }
+      log.debug { "incoming connectionPatch: $connectionPatch" }
 
       val sync = connectionService.getStandardSync(connectionId)
-      LOGGER.debug("initial StandardSync: {}", sync)
+      log.debug { "initial StandardSync: $sync" }
 
       // Ensure org is entitled to use source and destination
       val sourceDefinition = sourceService.getSourceDefinitionFromConnection(sync.connectionId)
@@ -841,7 +840,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       validateConnectionPatch(workspaceHelper, sync, connectionPatch)
 
       val initialConnectionRead = apiPojoConverters.internalToConnectionRead(sync)
-      LOGGER.debug("initial ConnectionRead: {}", initialConnectionRead)
+      log.debug { "initial ConnectionRead: $initialConnectionRead" }
 
       if (connectionPatch.syncCatalog != null &&
         featureFlagClient.boolVariation(ResetStreamsStateWhenDisabled, Workspace(workspaceId))
@@ -866,7 +865,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
                 .namespace(s.stream.namespace)
             }.collect(Collectors.toSet())
         newCatalogActiveStream.forEach(Consumer { o: io.airbyte.api.model.generated.StreamDescriptor -> deactivatedStreams.remove(o) })
-        LOGGER.debug(
+        log.debug(
           "Wiping out the state of deactivated streams: [{}]",
           java.lang.String.join(
             ", ",
@@ -891,13 +890,13 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
 
       applyPatchToStandardSync(sync, connectionPatch, workspaceId)
 
-      LOGGER.debug("patched StandardSync before persisting: {}", sync)
+      log.debug { "patched StandardSync before persisting: $sync" }
       connectionService.writeStandardSync(sync)
 
       eventRunner.update(connectionId)
 
       val updatedRead = buildConnectionRead(connectionId)
-      LOGGER.debug("final connectionRead: {}", updatedRead)
+      log.debug { "final connectionRead: $updatedRead" }
 
       trackUpdateConnection(sync)
 
@@ -1357,11 +1356,11 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun deleteConnection(connectionId: UUID) {
       connectionHelper.deleteConnection(connectionId)
-      LOGGER.info("Marked connectionId {} as deleted in postgres", connectionId)
+      log.info { "Marked connectionId $connectionId as deleted in postgres" }
       eventRunner.forceDeleteConnection(connectionId)
-      LOGGER.info("Force-deleted connectionId {} workflow", connectionId)
+      log.info { "Force-deleted connectionId $connectionId workflow" }
       streamRefreshesHandler.deleteRefreshesForConnection(connectionId)
-      LOGGER.info("Deleted connectionId {} stream refreshes", connectionId)
+      log.info { "Deleted connectionId $connectionId stream refreshes" }
     }
 
     @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
@@ -1705,7 +1704,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       val connectionId = connectionEventsBackfillRequestBody.connectionId
       val startTime = connectionEventsBackfillRequestBody.createdAtStart
       val endTime = connectionEventsBackfillRequestBody.createdAtEnd
-      LOGGER.info("Backfilled events from {} to {} for connection {}", startTime, endTime, connectionId)
+      log.info { "Backfilled events from {} to {} for connection $startTime, endTime, connectionId" }
       // 1. list all jobs within a given time window
       val allJobsToMigrate =
         jobPersistence.listJobsForConvertingToEvents(
@@ -1714,7 +1713,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           startTime,
           endTime,
         )
-      LOGGER.info("Verify listing jobs. {} jobs found.", allJobsToMigrate.size)
+      log.info { "Verify listing jobs. $allJobsToMigrate.size jobs found." }
       // 2. For each job, log a timeline event
       allJobsToMigrate.forEach(
         Consumer { job: Job ->
@@ -1984,7 +1983,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       catalog: AirbyteCatalog,
       autoApply: Boolean,
     ): ConnectionAutoPropagateResult {
-      LOGGER.info("Applying schema change for connection '{}' only", connectionId)
+      log.info { "Applying schema change for connection '$connectionId' only" }
       val connection = buildConnectionRead(connectionId)
       val catalogUsedToMakeConfiguredCatalog =
         getConnectionAirbyteCatalog(connectionId)
@@ -2025,7 +2024,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
             supportedDestinationSyncModes,
           )
         updateConnection(updateObject, ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name, autoApply)
-        LOGGER.info(
+        log.info(
           "Propagating changes for connectionId: '{}', new catalogId '{}'",
           connection.connectionId,
           catalogId,
@@ -2033,7 +2032,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         connectionTimelineEventHelper.logSchemaChangeAutoPropagationEventInConnectionTimeline(connectionId, appliedDiff)
         if (workspace.notificationSettings != null && workspace.email != null) {
           try {
-            LOGGER.info("Sending notification of schema auto propagation for connectionId: '{}'", connection.connectionId)
+            log.info { "Sending notification of schema auto propagation for connectionId: '$connection.connectionId'" }
             notificationHelper.notifySchemaPropagated(
               workspace.notificationSettings,
               appliedDiff,
@@ -2043,7 +2042,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
               workspace.email,
             )
           } catch (e: Exception) {
-            LOGGER.info("Failed to send notification", e)
+            log.info("Failed to send notification", e)
             addExceptionToTrace(e)
           }
         }
@@ -2052,7 +2051,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         // Send notification to the user if schema change needs to be manually applied.
         if (workspace.notificationSettings != null && applySchemaChangeHelper.shouldManuallyApply(diffToApply, connection)) {
           try {
-            LOGGER.info("Sending notification of manually applying schema change for connectionId: '{}'", connection.connectionId)
+            log.info { "Sending notification of manually applying schema change for connectionId: '$connection.connectionId'" }
             notificationHelper.notifySchemaDiffToApply(
               workspace.notificationSettings,
               diffToApply,
@@ -2063,7 +2062,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
               connection.nonBreakingChangesPreference == NonBreakingChangesPreference.DISABLE,
             )
           } catch (e: Exception) {
-            LOGGER.info("Failed to send notification", e)
+            log.info("Failed to send notification", e)
             addExceptionToTrace(e)
           }
         }
@@ -2145,7 +2144,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           trackingClient.track(workspaceId, ScopeType.WORKSPACE, "Schema Changes", payload)
         }
       } catch (e: Exception) {
-        LOGGER.error("Error while sending tracking event for schema change", e)
+        log.error(e) { "Error while sending tracking event for schema change" }
       }
     }
 
@@ -2394,7 +2393,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     }
 
     companion object {
-      private val LOGGER: Logger = LoggerFactory.getLogger(ConnectionsHandler::class.java)
+      private val log = KotlinLogging.logger {}
       const val DEFAULT_PAGE_SIZE: Int = 20
       const val DEFAULT_ROW_OFFSET: Int = 0
 

@@ -10,10 +10,9 @@ import io.airbyte.connectorbuilder.api.model.generated.ResolveManifestRequestBod
 import io.airbyte.connectorbuilder.exceptions.AirbyteCdkInvalidInputException
 import io.airbyte.connectorbuilder.exceptions.ConnectorBuilderException
 import io.airbyte.connectorbuilder.requester.AirbyteCdkRequester
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 
 /**
@@ -32,19 +31,19 @@ open class ResolveManifestHandler
     fun resolveManifest(resolveManifestRequestBody: ResolveManifestRequestBody): ResolveManifest {
       try {
         addWorkspaceAndProjectIdsToTrace(resolveManifestRequestBody.workspaceId, resolveManifestRequestBody.projectId)
-        LOGGER.info(
+        log.info(
           "Handling resolve_manifest request for workspace '{}' with project ID = '{}'",
           resolveManifestRequestBody.workspaceId,
           resolveManifestRequestBody.projectId,
         )
         return requester.resolveManifest(resolveManifestRequestBody.manifest)
       } catch (exc: IOException) {
-        LOGGER.error("Error handling resolve_manifest request.", exc)
+        log.error(exc) { "Error handling resolve_manifest request." }
         throw ConnectorBuilderException("Error handling resolve_manifest request.", exc)
       }
     }
 
     companion object {
-      private val LOGGER: Logger = LoggerFactory.getLogger(ResolveManifestHandler::class.java)
+      private val log = KotlinLogging.logger {}
     }
   }

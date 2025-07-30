@@ -10,10 +10,9 @@ import io.airbyte.connectorbuilder.api.model.generated.StreamReadRequestBody
 import io.airbyte.connectorbuilder.exceptions.AirbyteCdkInvalidInputException
 import io.airbyte.connectorbuilder.exceptions.ConnectorBuilderException
 import io.airbyte.connectorbuilder.requester.AirbyteCdkRequester
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 
 /**
@@ -32,7 +31,7 @@ open class StreamHandler
     fun readStream(streamReadRequestBody: StreamReadRequestBody): StreamRead {
       try {
         addWorkspaceAndProjectIdsToTrace(streamReadRequestBody.workspaceId, streamReadRequestBody.projectId)
-        LOGGER.info(
+        log.info(
           "Handling test_read request for workspace '{}' with project ID = '{}'",
           streamReadRequestBody.workspaceId,
           streamReadRequestBody.projectId,
@@ -48,12 +47,12 @@ open class StreamHandler
           streamReadRequestBody.sliceLimit,
         )
       } catch (exc: IOException) {
-        LOGGER.error("Error handling test_read request.", exc)
+        log.error(exc) { "Error handling test_read request." }
         throw ConnectorBuilderException("Error handling test_read request.", exc)
       }
     }
 
     companion object {
-      private val LOGGER: Logger = LoggerFactory.getLogger(StreamHandler::class.java)
+      private val log = KotlinLogging.logger {}
     }
   }

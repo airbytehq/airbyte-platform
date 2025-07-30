@@ -5,12 +5,10 @@
 package io.airbyte.keycloak.setup
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.client.HttpClient
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.lang.invoke.MethodHandles
 import java.sql.SQLException
 
 /**
@@ -58,6 +56,6 @@ class KeycloakSetup(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
   }
 }

@@ -16,8 +16,7 @@ import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.validation.json.JsonValidationException
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.ExecutionException
@@ -207,14 +206,14 @@ class WorkspaceHelper(
   fun getWorkspaceForOperationIdIgnoreExceptions(operationId: UUID): UUID = swallowExecutionException { operationToWorkspaceCache[operationId] }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(WorkspaceHelper::class.java)
+    private val log = KotlinLogging.logger {}
 
     @Throws(ConfigNotFoundException::class, JsonValidationException::class)
     private fun handleCacheExceptions(supplier: () -> UUID): UUID {
       try {
         return supplier()
       } catch (e: ExecutionException) {
-        LOGGER.error("Error retrieving cache:", e.cause)
+        log.error(e.cause) { "Error retrieving cache:" }
         if (e.cause is ConfigNotFoundException) {
           throw (e.cause as ConfigNotFoundException?)!!
         }

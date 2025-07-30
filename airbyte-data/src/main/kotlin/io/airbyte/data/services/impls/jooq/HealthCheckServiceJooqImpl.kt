@@ -8,11 +8,10 @@ import com.google.common.annotations.VisibleForTesting
 import io.airbyte.data.services.HealthCheckService
 import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.DSLContext
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 @Singleton
 class HealthCheckServiceJooqImpl
@@ -33,13 +32,13 @@ class HealthCheckServiceJooqImpl
         // The only supported database is Postgres, so we can call SELECT 1 to test connectivity.
         database.query { ctx: DSLContext -> ctx.fetch("SELECT 1") }.stream().count()
       } catch (e: Exception) {
-        LOGGER.error("Health check error: ", e)
+        log.error(e) { "Health check error: " }
         return false
       }
       return true
     }
 
     companion object {
-      private val LOGGER: Logger = LoggerFactory.getLogger(HealthCheckServiceJooqImpl::class.java)
+      private val log = KotlinLogging.logger {}
     }
   }

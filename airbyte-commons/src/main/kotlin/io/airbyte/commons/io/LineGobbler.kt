@@ -7,8 +7,7 @@ package io.airbyte.commons.io
 import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.io.IOs.newBufferedReader
 import io.airbyte.commons.logging.MdcScope
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.slf4j.MDC
 import java.io.ByteArrayInputStream
 import java.io.IOException
@@ -44,16 +43,16 @@ class LineGobbler
           line = inputStream.readLine()
         }
       } catch (i: IOException) {
-        LOGGER.warn("{} gobbler IOException: {}. Typically happens when cancelling a job.", caller, i.message)
+        log.warn { "$caller gobbler IOException: ${i.message}. Typically happens when cancelling a job." }
       } catch (e: Exception) {
-        LOGGER.error("{} gobbler error when reading stream", caller, e)
+        log.error(e) { "$caller gobbler error when reading stream" }
       } finally {
         executor.shutdown()
       }
     }
 
     companion object {
-      private val LOGGER: Logger = LoggerFactory.getLogger(LineGobbler::class.java)
+      private val log = KotlinLogging.logger {}
       private const val GENERIC = "generic"
 
       /**
@@ -96,7 +95,7 @@ class LineGobbler
           val gobbler = LineGobbler(inputStream, consumer, executor, mdc, caller, mdcScopeBuilder)
           executor.submit(gobbler)
         } else {
-          LOGGER.warn("Unable to gobble line(s) from input stream provided by {}:  input stream is null.", caller)
+          log.warn { "Unable to gobble line(s) from input stream provided by $caller:  input stream is null." }
         }
       }
 
@@ -106,7 +105,7 @@ class LineGobbler
        * @param message message to be consumed
        */
       private fun gobble(message: String) {
-        gobble(message) { msg: String? -> LOGGER.info(msg) }
+        gobble(message) { msg: String? -> log.info { msg } }
       }
 
       /**

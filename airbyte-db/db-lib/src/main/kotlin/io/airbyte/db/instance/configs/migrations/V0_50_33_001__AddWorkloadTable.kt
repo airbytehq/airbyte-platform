@@ -14,8 +14,6 @@ import org.jooq.Schema
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
 import org.jooq.impl.SchemaImpl
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 private val log = KotlinLogging.logger {}
 
@@ -54,7 +52,7 @@ class V0_50_33_001__AddWorkloadTable : BaseJavaMigration() {
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(V0_50_33_001__AddWorkloadTable::class.java)
+    private val log = KotlinLogging.logger {}
     private const val WORKLOAD_TABLE_NAME = "workload"
     private const val WORKLOAD_ID_COLUMN_NAME = "id"
     private const val LABEL_TABLE_NAME = "workload_label"
@@ -90,7 +88,7 @@ class V0_50_33_001__AddWorkloadTable : BaseJavaMigration() {
         ).constraints(DSL.primaryKey(id))
         .execute()
 
-      LOGGER.info("workload table created")
+      log.info { "workload table created" }
     }
 
     fun createLabel(ctx: DSLContext) {
@@ -111,7 +109,7 @@ class V0_50_33_001__AddWorkloadTable : BaseJavaMigration() {
           DSL.foreignKey(workloadId).references(WORKLOAD_TABLE_NAME, WORKLOAD_ID_COLUMN_NAME),
           DSL.unique(workloadId, key),
         ).execute()
-      LOGGER.info("workload label table created")
+      log.info { "workload label table created" }
     }
 
     private fun createEnumStatusType(ctx: DSLContext) {

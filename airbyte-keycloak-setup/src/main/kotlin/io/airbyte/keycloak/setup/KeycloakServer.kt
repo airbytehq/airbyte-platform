@@ -6,14 +6,12 @@ package io.airbyte.keycloak.setup
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
 import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.keycloak.admin.client.Keycloak
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.RealmRepresentation
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.lang.invoke.MethodHandles
 
 /**
  * This class represents the Keycloak server. It contains methods to register an initial user, web
@@ -125,7 +123,7 @@ class KeycloakServer(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
 
     private const val FRONTEND_URL_ATTRIBUTE = "frontendUrl"
   }

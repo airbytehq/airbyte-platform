@@ -40,7 +40,7 @@ interface RegionService {
   fun controllerDeleteRegion(regionId: UUID): Response
 }
 
-private val logger = KotlinLogging.logger {}
+private val log = KotlinLogging.logger {}
 
 @Singleton
 class RegionServiceImpl(
@@ -57,7 +57,7 @@ class RegionServiceImpl(
           kotlin
             .runCatching { dataplaneGroupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID, organizationId), false) }
             .onFailure {
-              logger.error { "Error listing regions" }
+              log.error { "Error listing regions" }
               ConfigClientErrorHandler.handleError(it)
             }.getOrNull()
         },
@@ -86,7 +86,7 @@ class RegionServiceImpl(
           kotlin
             .runCatching { dataplaneGroupService.writeDataplaneGroup(regionCreate) }
             .onFailure {
-              logger.error { "Error creating region" }
+              log.error { "Error creating region" }
               ConfigClientErrorHandler.handleError(it)
             }.getOrNull()
         },
@@ -107,7 +107,7 @@ class RegionServiceImpl(
           kotlin
             .runCatching { dataplaneGroupService.getDataplaneGroup(regionId) }
             .onFailure {
-              logger.error { "Error fetching region" }
+              log.error { "Error fetching region" }
               ConfigClientErrorHandler.handleError(it)
             }.getOrNull()
         },
@@ -138,7 +138,7 @@ class RegionServiceImpl(
         {
           runCatching { dataplaneGroupService.writeDataplaneGroup(updated) }
             .onFailure {
-              logger.error { "Error updating region" }
+              log.error { "Error updating region" }
               ConfigClientErrorHandler.handleError(it)
             }.getOrNull()
         },
@@ -171,7 +171,7 @@ class RegionServiceImpl(
 
               tombstonedGroup
             }.onFailure {
-              logger.error { "Error deleting region" }
+              log.error { "Error deleting region" }
               ConfigClientErrorHandler.handleError(it)
             }.getOrNull()
         },

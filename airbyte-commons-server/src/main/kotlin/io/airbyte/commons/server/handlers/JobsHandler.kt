@@ -28,9 +28,8 @@ import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.errorreporter.SyncJobReportingContext
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.UUID
 
@@ -301,6 +300,6 @@ open class JobsHandler(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(JobsHandler::class.java)
+    private val log = KotlinLogging.logger {}
   }
 }

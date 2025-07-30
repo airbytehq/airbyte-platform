@@ -23,14 +23,13 @@ import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorCatalogType
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.DestinationCatalog
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.Record
 import org.jooq.impl.DSL
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.time.OffsetDateTime
 import java.util.Optional
@@ -354,7 +353,7 @@ class CatalogServiceJooqImpl
               .toByteArray(Charsets.UTF_8),
           ).toString()
       } catch (e: IOException) {
-        LOGGER.error("Failed to serialize AirbyteCatalog to canonical JSON", e)
+        log.error(e) { "Failed to serialize AirbyteCatalog to canonical JSON" }
         return null
       }
     }
@@ -369,7 +368,7 @@ class CatalogServiceJooqImpl
               .toByteArray(Charsets.UTF_8),
           ).toString()
       } catch (e: IOException) {
-        LOGGER.error("Failed to serialize DestinationCatalog to canonical JSON", e)
+        log.error(e) { "Failed to serialize DestinationCatalog to canonical JSON" }
         return null
       }
     }
@@ -446,6 +445,6 @@ class CatalogServiceJooqImpl
     }
 
     companion object {
-      private val LOGGER: Logger = LoggerFactory.getLogger(CatalogServiceJooqImpl::class.java)
+      private val log = KotlinLogging.logger {}
     }
   }

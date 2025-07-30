@@ -11,9 +11,8 @@ import io.airbyte.config.ConnectorRegistrySourceDefinition
 import io.airbyte.config.helpers.ConnectorRegistryConverters.toActorDefinitionVersion
 import io.airbyte.config.specs.RemoteDefinitionsProvider
 import io.airbyte.data.services.ActorDefinitionService
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.Optional
 import java.util.UUID
@@ -55,7 +54,7 @@ class ActorDefinitionVersionResolver(
 
     val newVersion = registryDefinitionVersion.get().withActorDefinitionId(actorDefinitionId)
     val persistedADV = actorDefinitionService.writeActorDefinitionVersion(newVersion)
-    LOGGER.info("Persisted new version {} for definition {} with tag {}", persistedADV.versionId, actorDefinitionId, dockerImageTag)
+    log.info { "Persisted new version {} for definition {} with tag $persistedADV.versionId, actorDefinitionId, dockerImageTag" }
 
     return Optional.of(persistedADV)
   }
@@ -85,15 +84,15 @@ class ActorDefinitionVersionResolver(
     }
 
     if (actorDefinitionVersion.isEmpty) {
-      LOGGER.error("Failed to fetch registry entry for {}:{}", connectorRepository, dockerImageTag)
+      log.error(dockerImageTag) { "Failed to fetch registry entry for {}:$connectorRepository" }
       return Optional.empty()
     }
 
-    LOGGER.info("Fetched registry entry for {}:{}.", connectorRepository, dockerImageTag)
+    log.info { "Fetched registry entry for {}:$connectorRepository, dockerImageTag." }
     return actorDefinitionVersion
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(ActorDefinitionVersionResolver::class.java)
+    private val log = KotlinLogging.logger {}
   }
 }

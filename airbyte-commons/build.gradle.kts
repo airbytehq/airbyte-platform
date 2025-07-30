@@ -12,6 +12,7 @@ dependencies {
   implementation(libs.bundles.jackson)
   implementation(libs.guava)
   implementation(libs.bundles.slf4j)
+  implementation(libs.kotlin.logging)
   implementation(libs.google.cloud.storage)
   implementation(libs.airbyte.protocol)
 

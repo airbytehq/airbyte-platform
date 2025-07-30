@@ -12,6 +12,7 @@ import io.airbyte.test.utils.AcceptanceTestHarness
 import io.airbyte.test.utils.AcceptanceTestUtils.IS_GKE
 import io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog
 import io.airbyte.test.utils.TestConnectionCreate
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpStatus
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
@@ -21,8 +22,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
 import org.openapitools.client.infrastructure.ClientException
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.List
 import java.util.Optional
@@ -204,7 +203,7 @@ internal class ApiAcceptanceTests {
     testHarness.waitWhileJobHasStatus(connectionSyncRead.job, Set.of(JobStatus.RUNNING))
 
     // test normal deletion of connection
-    LOGGER.info("Calling delete connection...")
+    log.info { "Calling delete connection..." }
     testHarness.deleteConnection(connectionId)
     testHarness.removeConnection(connectionId) // NOTE: make sure we don't try to delete it again in test teardown.
 
@@ -212,13 +211,13 @@ internal class ApiAcceptanceTests {
     Assertions.assertEquals(ConnectionStatus.DEPRECATED, connectionStatus)
 
     // test that repeated deletion call for same connection is successful
-    LOGGER.info("Calling delete connection a second time to test repeat call behavior...")
+    log.info { "Calling delete connection a second time to test repeat call behavior..." }
     Assertions.assertDoesNotThrow { testHarness.deleteConnection(connectionId) }
 
     // TODO: break this into a separate testcase which we can disable for GKE.
     if (!System.getenv().containsKey("IS_GKE")) {
       // test deletion of connection when temporal workflow is in a bad state
-      LOGGER.info("Testing connection deletion when temporal is in a terminal state")
+      log.info { "Testing connection deletion when temporal is in a terminal state" }
       val anotherConnectionId =
         testHarness
           .createConnection(
@@ -243,7 +242,7 @@ internal class ApiAcceptanceTests {
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(ApiAcceptanceTests::class.java)
+    private val log = KotlinLogging.logger {}
 
     private const val DUPLICATE_TEST_IN_GKE =
       "TODO(https://github.com/airbytehq/airbyte-platform-internal/issues/5182): eliminate test duplication"

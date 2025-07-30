@@ -26,6 +26,7 @@ import io.airbyte.commons.server.handlers.SourceDefinitionsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator
 import io.airbyte.server.apis.execute
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
@@ -35,9 +36,6 @@ import io.micronaut.http.annotation.Status
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.lang.invoke.MethodHandles
 import java.util.concurrent.Callable
 
 @Controller("/api/v1/source_definitions")
@@ -210,6 +208,6 @@ open class SourceDefinitionApiController(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
   }
 }

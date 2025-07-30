@@ -4,9 +4,7 @@
 
 package io.airbyte.commons.lang
 
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.lang.invoke.MethodHandles
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.concurrent.Callable
 import java.util.function.Function
 
@@ -15,7 +13,7 @@ import java.util.function.Function
  */
 @Deprecated("")
 object Exceptions {
-  private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+  private val log = KotlinLogging.logger {}
 
   /**
    * Catch a checked exception and rethrow as a [RuntimeException].

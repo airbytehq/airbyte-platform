@@ -17,17 +17,18 @@ import com.networknt.schema.SchemaValidatorsConfig
 import com.networknt.schema.SpecVersion
 import com.networknt.schema.ValidationContext
 import com.networknt.schema.ValidationMessage
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import me.andrz.jackson.JsonContext
 import me.andrz.jackson.JsonReferenceException
 import me.andrz.jackson.JsonReferenceProcessor
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.IOException
 import java.net.URI
 import java.net.URISyntaxException
 import java.util.stream.Collectors
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Validate a JSON object against a JSONSchema schema.
@@ -115,7 +116,7 @@ class JsonSchemaValidator
       val validationMessages = validateInternal(schemaJson, objectJson)
 
       if (!validationMessages.isEmpty()) {
-        LOGGER.info("JSON schema validation failed. \nerrors: {}", validationMessages.joinToString(", "))
+        log.info { "JSON schema validation failed. \nerrors: ${validationMessages.joinToString(", ")}" }
       }
 
       return validationMessages.isEmpty()
@@ -240,8 +241,6 @@ class JsonSchemaValidator
     }
 
     companion object {
-      private val LOGGER: Logger = LoggerFactory.getLogger(JsonSchemaValidator::class.java)
-
       // This URI just needs to point at any path in the same directory as /app/WellKnownTypes.json
       // It's required for the JsonSchema#validate method to resolve $ref correctly.
       private var defaultBaseUri: URI? = null

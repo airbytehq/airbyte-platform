@@ -78,10 +78,9 @@ import io.airbyte.persistence.job.tracker.TrackingMetadata.generateDestinationDe
 import io.airbyte.persistence.job.tracker.TrackingMetadata.generateSourceDefinitionMetadata
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.Optional
 import java.util.UUID
@@ -220,7 +219,7 @@ open class OAuthHandler(
     try {
       trackingClient.track(sourceOauthConsentRequest.workspaceId, ScopeType.WORKSPACE, "Get Oauth Consent URL - Backend", metadata)
     } catch (e: Exception) {
-      LOGGER.error(ERROR_MESSAGE, e)
+      log.error(ERROR_MESSAGE, e)
     }
     return result
   }
@@ -340,7 +339,7 @@ open class OAuthHandler(
     try {
       trackingClient.track(destinationOauthConsentRequest.workspaceId, ScopeType.WORKSPACE, "Get Oauth Consent URL - Backend", metadata)
     } catch (e: Exception) {
-      LOGGER.error(ERROR_MESSAGE, e)
+      log.error(ERROR_MESSAGE, e)
     }
     return result
   }
@@ -456,7 +455,7 @@ open class OAuthHandler(
     try {
       trackingClient.track(completeSourceOauthRequest.workspaceId, ScopeType.WORKSPACE, "Complete OAuth Flow - Backend", metadata)
     } catch (e: Exception) {
-      LOGGER.error(ERROR_MESSAGE, e)
+      log.error(ERROR_MESSAGE, e)
     }
     return mapToCompleteOAuthResponse(result)
   }
@@ -558,7 +557,7 @@ open class OAuthHandler(
     try {
       trackingClient.track(completeDestinationOAuthRequest.workspaceId, ScopeType.WORKSPACE, "Complete OAuth Flow - Backend", metadata)
     } catch (e: Exception) {
-      LOGGER.error(ERROR_MESSAGE, e)
+      log.error(ERROR_MESSAGE, e)
     }
     return mapToCompleteOAuthResponse(result)
   }
@@ -649,7 +648,7 @@ open class OAuthHandler(
     configOauthFields.putAll(serverOrConfigOauthFields)
 
     val oAuthInputConfigurationFromDB = getOAuthInputConfiguration(hydratedSourceConnectionConfiguration, configOauthFields)
-    LOGGER.warn("oAuthInputConfigurationFromDB: {}", oAuthInputConfigurationFromDB)
+    log.warn { "oAuthInputConfigurationFromDB: $oAuthInputConfigurationFromDB" }
 
     return getOauthFromDBIfNeeded(oAuthInputConfigurationFromDB, oAuthInputConfiguration)
   }
@@ -674,7 +673,7 @@ open class OAuthHandler(
         if (oAuthInputConfigurationFromDB.has(k)) {
           result.set<JsonNode>(k, oAuthInputConfigurationFromDB[k])
         } else {
-          LOGGER.warn("Missing the key {} in the config store in DB", k)
+          log.warn { "Missing the key $k in the config store in DB" }
         }
       } else {
         result.set<JsonNode>(k, v)
@@ -695,7 +694,7 @@ open class OAuthHandler(
       if (configValue.isPresent) {
         result[k] = configValue.get()
       } else {
-        LOGGER.warn("Missing the key {} from the config stored in DB", k)
+        log.warn { "Missing the key $k from the config stored in DB" }
       }
     }
 
@@ -960,7 +959,7 @@ open class OAuthHandler(
       // Advanced auth handling
       val advancedAuthSpecification =
         validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(connectorSpecification, oauthParamConfiguration)
-      LOGGER.debug("AdvancedAuthSpecification: {}", advancedAuthSpecification)
+      log.debug { "AdvancedAuthSpecification: $advancedAuthSpecification" }
 
       return statefulSplitSecrets(organizationId, oauthParamConfiguration, advancedAuthSpecification, id, secretPrefix)
     } else {
@@ -1074,7 +1073,7 @@ open class OAuthHandler(
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(OAuthHandler::class.java)
+    private val log = KotlinLogging.logger {}
     private const val ERROR_MESSAGE = "failed while reporting usage."
 
     private const val ORGANIZATION_SECRET_PREFIX = "organization_"

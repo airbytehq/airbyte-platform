@@ -78,12 +78,12 @@ import io.airbyte.persistence.job.tracker.JobTracker
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.lang.invoke.MethodHandles
 import java.util.UUID
+
+private val log = KotlinLogging.logger {}
 
 /**
  * ScheduleHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -704,8 +704,6 @@ open class SchedulerHandler
     }
 
     companion object {
-      private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
-
       private val HASH_FUNCTION: HashFunction = Hashing.md5()
 
       private val VALUE_CONFLICT_EXCEPTION_ERROR_CODE_SET: Set<ErrorCode?> = ImmutableSet.of(ErrorCode.WORKFLOW_DELETED, ErrorCode.WORKFLOW_RUNNING)

@@ -7,9 +7,11 @@ package io.airbyte.workers.temporal
 import io.airbyte.commons.temporal.utils.ActivityFailureClassifier
 import io.airbyte.config.ActorType
 import io.airbyte.config.FailureReason
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.Duration
 import kotlin.time.toKotlinDuration
+
+private val log = KotlinLogging.logger {}
 
 class FailureConverter {
   @JvmOverloads
@@ -31,7 +33,7 @@ class FailureConverter {
         .withFailureOrigin(if (actorType == ActorType.SOURCE) FailureReason.FailureOrigin.SOURCE else FailureReason.FailureOrigin.DESTINATION)
         .withStacktrace(e.stackTraceToString())
     val classifiedExc = ActivityFailureClassifier.classifyException(e)
-    LoggerFactory.getLogger("test").error("exception classified as $classifiedExc")
+    log.error { "exception classified as $classifiedExc" }
     when (classifiedExc) {
       ActivityFailureClassifier.TemporalFailureReason.HEARTBEAT ->
         failureReason

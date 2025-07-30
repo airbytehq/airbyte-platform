@@ -16,8 +16,6 @@ import org.jooq.Schema
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
 import org.jooq.impl.SchemaImpl
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.util.UUID
 
 private val log = KotlinLogging.logger {}
@@ -114,7 +112,7 @@ class V0_44_4_001__AddUserAndPermissionTables : BaseJavaMigration() {
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(V0_44_4_001__AddUserAndPermissionTables::class.java)
+    private val log = KotlinLogging.logger {}
 
     private fun createStatusEnumType(ctx: DSLContext) {
       ctx

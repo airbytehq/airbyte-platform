@@ -59,12 +59,11 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.HydrateLimits
 import io.airbyte.featureflag.Workspace
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.core.util.CollectionUtils
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.tools.StringUtils
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.Optional
 import java.util.UUID
@@ -364,19 +363,19 @@ class WorkspacesHandler
     fun updateWorkspace(workspacePatch: WorkspaceUpdate): WorkspaceRead {
       val workspaceId = workspacePatch.workspaceId
 
-      LOGGER.debug("Starting updateWorkspace for workspaceId {}...", workspaceId)
-      LOGGER.debug("Incoming workspacePatch: {}", workspacePatch)
+      log.debug { "Starting updateWorkspace for workspaceId $workspaceId..." }
+      log.debug { "Incoming workspacePatch: $workspacePatch" }
 
       val workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)
-      LOGGER.debug("Initial workspace: {}", workspace)
-      LOGGER.debug("Initial WorkspaceRead: {}", domainToApiModel(workspace))
+      log.debug { "Initial workspace: $workspace" }
+      log.debug { "Initial WorkspaceRead: ${domainToApiModel(workspace)}" }
 
       applyPatchToStandardWorkspace(workspace, workspacePatch)
       workspace.notificationSettings = patchNotificationSettingsWithDefaultValue(workspace.notificationSettings)
       validateWorkspacePatch(workspace, workspacePatch)
       validateWorkspace(workspace, airbyteEdition)
 
-      LOGGER.debug("Patched Workspace before persisting: {}", workspace)
+      log.debug { "Patched Workspace before persisting: $workspace" }
 
       if (CollectionUtils.isEmpty(workspacePatch.webhookConfigs)) {
         // We aren't persisting any secrets. It's safe (and necessary) to use the NoSecrets variant because
@@ -628,6 +627,6 @@ class WorkspacesHandler
 
     companion object {
       const val MAX_SLUG_GENERATION_ATTEMPTS: Int = 10
-      private val LOGGER: Logger = LoggerFactory.getLogger(WorkspacesHandler::class.java)
+      private val log = KotlinLogging.logger {}
     }
   }

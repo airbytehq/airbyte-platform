@@ -34,14 +34,15 @@ import io.airbyte.mappers.helpers.getHashedFieldName
 import io.airbyte.mappers.transformations.Mapper
 import io.airbyte.protocol.models.v0.AirbyteStream
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.Nullable
 import jakarta.inject.Singleton
 import jakarta.validation.Valid
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.util.Optional
 import java.util.function.Consumer
 import java.util.stream.Collectors
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Convert classes between io.airbyte.protocol.models and io.airbyte.api.model.generated.
@@ -234,7 +235,7 @@ class CatalogConverter(
       }
       for (selectedFieldName in selectedFieldNames) {
         if (!properties.has(selectedFieldName)) {
-          LOGGER.info("Requested selected field {} not found in JSON schema", selectedFieldName)
+          log.info { "Requested selected field $selectedFieldName not found in JSON schema" }
         }
       }
       (properties as ObjectNode).retain(selectedFieldNames)
@@ -337,7 +338,7 @@ class CatalogConverter(
 
             return@map builder.build()
           } catch (e: JsonValidationException) {
-            LOGGER.error("Error parsing catalog: {}", e)
+            log.error(e) { "Error parsing catalog: $e" }
             errors.add(e)
             return@map null
           }
@@ -469,7 +470,7 @@ class CatalogConverter(
           try {
             return@map toConfiguredProtocol(stream.stream, stream.config)
           } catch (e: JsonValidationException) {
-            LOGGER.error("Error parsing catalog: {}", e)
+            log.error(e) { "Error parsing catalog: $e" }
             errors.add(e)
             return@map null
           }
@@ -546,12 +547,8 @@ class CatalogConverter(
       // to fail in this case today.
       val supportedSyncMode = streamAndConfiguration.stream.supportedSyncModes[0]
       val supportedDestinationSyncMode = supportedDestinationSyncModes[0]
-      LOGGER.warn("Default sync modes are incompatible, so falling back to {} | {}", supportedSyncMode, supportedDestinationSyncMode)
+      log.warn { "Default sync modes are incompatible, so falling back to $supportedSyncMode | $supportedDestinationSyncMode" }
       streamAndConfiguration.config.syncMode(supportedSyncMode).destinationSyncMode(supportedDestinationSyncMode)
     }
-  }
-
-  companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(CatalogConverter::class.java)
   }
 }

@@ -13,8 +13,6 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 internal class DatabaseInitializerTest {
   @Test
@@ -64,6 +62,6 @@ internal class DatabaseInitializerTest {
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(DatabaseInitializerTest::class.java)
+    private val log = KotlinLogging.logger {}
   }
 }

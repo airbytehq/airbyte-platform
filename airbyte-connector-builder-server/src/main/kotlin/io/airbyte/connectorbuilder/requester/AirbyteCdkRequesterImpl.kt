@@ -24,10 +24,9 @@ import io.airbyte.connectorbuilder.commandrunner.SynchronousCdkCommandRunner
 import io.airbyte.connectorbuilder.exceptions.AirbyteCdkInvalidInputException
 import io.airbyte.connectorbuilder.exceptions.CdkProcessException
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import org.apache.commons.lang3.StringUtils
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.util.Collections
@@ -139,7 +138,7 @@ class AirbyteCdkRequesterImpl(
     config: JsonNode,
     cdkCommand: String,
   ): AirbyteRecordMessage {
-    LOGGER.debug("Creating CDK process: {}.", cdkCommand)
+    log.debug { "Creating CDK process: $cdkCommand." }
     return commandRunner.runCommand(
       cdkCommand,
       this.adaptConfig(
@@ -161,7 +160,7 @@ class AirbyteCdkRequesterImpl(
     cdkCommand: String,
     streamLimit: Int?,
   ): AirbyteRecordMessage {
-    LOGGER.debug("Creating CDK process: {}.", cdkCommand)
+    log.debug { "Creating CDK process: $cdkCommand." }
     return commandRunner.runCommand(
       cdkCommand,
       this.adaptConfig(
@@ -188,7 +187,7 @@ class AirbyteCdkRequesterImpl(
     pageLimit: Int?,
     sliceLimit: Int?,
   ): AirbyteRecordMessage {
-    LOGGER.debug("Creating CDK process: {}.", cdkCommand)
+    log.debug { "Creating CDK process: $cdkCommand." }
     return commandRunner.runCommand(
       cdkCommand,
       this.adaptConfig(manifest, customComponentsCode, config, cdkCommand, recordLimit, pageLimit, sliceLimit),
@@ -406,6 +405,6 @@ class AirbyteCdkRequesterImpl(
       """.trimIndent()
     private val OBJECT_WRITER: ObjectWriter = ObjectMapper().writer().withDefaultPrettyPrinter()
     private val CONFIG_NODE: ObjectNode = ObjectMapper().createObjectNode()
-    private val LOGGER: Logger = LoggerFactory.getLogger(AirbyteCdkRequesterImpl::class.java)
+    private val log = KotlinLogging.logger {}
   }
 }

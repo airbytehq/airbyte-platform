@@ -4,14 +4,12 @@
 
 package io.airbyte.commons.server.support
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.netty.channel.ChannelDuplexHandler
 import io.netty.channel.ChannelHandler
 import io.netty.channel.ChannelHandlerContext
 import io.netty.handler.codec.http.FullHttpRequest
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.lang.invoke.MethodHandles
 import java.nio.charset.StandardCharsets
 
 /**
@@ -84,7 +82,7 @@ open class AuthorizationServerHandler(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
 
     private val SKIP_HEADER_UPDATE =
       setOf(

@@ -49,14 +49,15 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.nio.file.Path
 import java.util.UUID
 import java.util.stream.Collectors
+
+private val log = KotlinLogging.logger {}
 
 /**
  * AttemptHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -298,7 +299,7 @@ open class AttemptHandler(
         streamStats,
       )
     } catch (ioe: IOException) {
-      LOGGER.error("IOException when setting temporal workflow in attempt;", ioe)
+      log.error(ioe) { "IOException when setting temporal workflow in attempt;" }
       return InternalOperationResult().succeeded(false)
     }
 
@@ -323,7 +324,7 @@ open class AttemptHandler(
       )
       return InternalOperationResult().succeeded(true)
     } catch (e: Exception) {
-      LOGGER.error("failed to save steam metadata for job:{} attempt:{}", requestBody.jobId, requestBody.attemptNumber, e)
+      log.error(e) { "failed to save steam metadata for job: ${requestBody.jobId} attempt: ${requestBody.attemptNumber}" }
       return InternalOperationResult().succeeded(false)
     }
   }
@@ -336,7 +337,7 @@ open class AttemptHandler(
         apiPojoConverters.attemptSyncConfigToInternal(requestBody.syncConfig),
       )
     } catch (ioe: IOException) {
-      LOGGER.error("IOException when saving AttemptSyncConfig for attempt;", ioe)
+      log.error(ioe) { "IOException when saving AttemptSyncConfig for attempt;" }
       return InternalOperationResult().succeeded(false)
     }
     return InternalOperationResult().succeeded(true)
@@ -380,9 +381,5 @@ open class AttemptHandler(
     jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_FAILED_BY_RELEASE_STAGE, job)
     jobCreationAndStatusUpdateHelper.emitAttemptCompletedEventIfAttemptPresent(job)
     jobCreationAndStatusUpdateHelper.trackFailures(failureSummary)
-  }
-
-  companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(AttemptHandler::class.java)
   }
 }

@@ -32,6 +32,7 @@ import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.metrics.MetricClient
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.Condition
@@ -44,15 +45,14 @@ import org.jooq.Result
 import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.lang.invoke.MethodHandles
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Collectors
 import java.util.stream.Stream
+
+private val log = KotlinLogging.logger {}
 
 @Singleton
 class WorkspaceServiceJooqImpl
@@ -835,9 +835,5 @@ class WorkspaceServiceJooqImpl
         log.warn("Unable to find workspace with ID {}", workspaceId)
         return Optional.empty()
       }
-    }
-
-    companion object {
-      private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
     }
   }

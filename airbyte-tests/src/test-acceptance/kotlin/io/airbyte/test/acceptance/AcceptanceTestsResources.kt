@@ -35,10 +35,9 @@ import io.airbyte.test.utils.Asserts.assertRawDestinationContains
 import io.airbyte.test.utils.Asserts.assertSourceAndDestinationDbRawRecordsInSync
 import io.airbyte.test.utils.Asserts.assertStreamStatuses
 import io.airbyte.test.utils.TestConnectionCreate
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jooq.DSLContext
 import org.junit.jupiter.api.Assertions
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.net.URISyntaxException
 import java.security.GeneralSecurityException
@@ -79,20 +78,20 @@ class AcceptanceTestsResources {
         testHarness.waitForSuccessfulJob(jobRead)
         break
       } catch (e: Exception) {
-        LOGGER.info("Something went wrong querying jobs API, retrying...")
+        log.info { "Something went wrong querying jobs API, retrying..." }
       }
       Thread.sleep(Duration.ofSeconds(30).toMillis())
       i++
     }
 
     if (i == MAX_SCHEDULED_JOB_RETRIES) {
-      LOGGER.error("Sync job did not complete within 5 minutes")
+      log.error { "Sync job did not complete within 5 minutes" }
     }
   }
 
   @Throws(Exception::class)
   fun runIncrementalSyncForAWorkspaceId(workspaceId: UUID) {
-    LOGGER.info("Starting testIncrementalSync()")
+    log.info { "Starting testIncrementalSync()" }
     val sourceId = testHarness.createPostgresSource(workspaceId).sourceId
     val destinationId = testHarness.createPostgresDestination(workspaceId).destinationId
     val discoverResult = testHarness.discoverSourceSchemaWithId(sourceId)
@@ -125,13 +124,13 @@ class AcceptanceTestsResources {
             dataplaneGroupId = testHarness.dataplaneGroupId,
           ).build(),
       )
-    LOGGER.info("Beginning testIncrementalSync() sync 1")
+    log.info { "Beginning testIncrementalSync() sync 1" }
 
     val connectionId = conn.connectionId
     val connectionSyncRead1 = testHarness.syncConnection(connectionId)
     testHarness.waitForSuccessfulJob(connectionSyncRead1.job)
 
-    LOGGER.info(STATE_AFTER_SYNC_ONE, testHarness.getConnectionState(connectionId))
+    log.info(STATE_AFTER_SYNC_ONE, testHarness.getConnectionState(connectionId))
 
     // postgres_init.sql inserts 5 records. Assert that we wrote stats correctly.
     // (this is a bit sketchy, in that theoretically the source could emit a state message,
@@ -228,11 +227,11 @@ class AcceptanceTestsResources {
     // correctly, doing incremental, we will not find this value in the destination.
     source.query { ctx: DSLContext -> ctx.execute("UPDATE id_and_name SET name='yennefer' WHERE id=2") }
 
-    LOGGER.info("Starting testIncrementalSync() sync 2")
+    log.info { "Starting testIncrementalSync() sync 2" }
     val connectionSyncRead2 = testHarness.syncConnection(connectionId)
     testHarness.waitForSuccessfulJob(connectionSyncRead2.job)
 
-    LOGGER.info(STATE_AFTER_SYNC_TWO, testHarness.getConnectionState(connectionId))
+    log.info(STATE_AFTER_SYNC_TWO, testHarness.getConnectionState(connectionId))
 
     assertRawDestinationContains(dst, expectedRecords, conn.namespaceFormat!!, AcceptanceTestHarness.STREAM_NAME)
     assertStreamStatuses(
@@ -245,7 +244,7 @@ class AcceptanceTestsResources {
     )
 
     // reset back to no data.
-    LOGGER.info("Starting testIncrementalSync() reset")
+    log.info { "Starting testIncrementalSync() reset" }
     val jobInfoRead = testHarness.resetConnection(connectionId)
     testHarness.waitWhileJobHasStatus(
       jobInfoRead.job,
@@ -257,7 +256,7 @@ class AcceptanceTestsResources {
     // serialized automagically by temporal
     testHarness.waitWhileJobIsRunning(jobInfoRead.job, Duration.ofMinutes(1))
 
-    LOGGER.info("state after reset: {}", testHarness.getConnectionState(connectionId))
+    log.info { "state after reset: ${testHarness.getConnectionState(connectionId)}" }
     assertDestinationDbEmpty(testHarness.getDestinationDatabase())
 
     // TODO enable once stream status for resets has been fixed
@@ -285,11 +284,11 @@ class AcceptanceTestsResources {
       )
 
     // sync one more time. verify it is the equivalent of a full refresh.
-    LOGGER.info("Starting testIncrementalSync() sync 3")
+    log.info { "Starting testIncrementalSync() sync 3" }
     val connectionSyncRead3 = testHarness.syncConnection(connectionId)
     testHarness.waitForSuccessfulJob(connectionSyncRead3.job)
 
-    LOGGER.info("state after sync 3: {}", testHarness.getConnectionState(connectionId))
+    log.info { "state after sync 3: ${testHarness.getConnectionState(connectionId)}" }
 
     assertSourceAndDestinationDbRawRecordsInSync(
       source = src,
@@ -318,7 +317,7 @@ class AcceptanceTestsResources {
 
   @Throws(Exception::class)
   fun runSmallSyncForAWorkspaceId(workspaceId: UUID): SyncIds {
-    LOGGER.info("Starting runSmallSyncForAWorkspaceId($workspaceId)")
+    log.info { "Starting runSmallSyncForAWorkspaceId($workspaceId)" }
     val sourceId = testHarness.createPostgresSource(workspaceId).sourceId
     val destinationId = testHarness.createPostgresDestination(workspaceId).destinationId
     val discoverResult = testHarness.discoverSourceSchemaWithId(sourceId)
@@ -358,13 +357,13 @@ class AcceptanceTestsResources {
             testHarness.dataplaneGroupId,
           ).build(),
       )
-    LOGGER.info("Beginning runSmallSyncForAWorkspaceId() sync")
+    log.info { "Beginning runSmallSyncForAWorkspaceId() sync" }
 
     val connectionId = conn.connectionId
     val connectionSyncRead1 = testHarness.syncConnection(connectionId)
     testHarness.waitForSuccessfulJob(connectionSyncRead1.job)
 
-    LOGGER.info(STATE_AFTER_SYNC_ONE, testHarness.getConnectionState(connectionId))
+    log.info(STATE_AFTER_SYNC_ONE, testHarness.getConnectionState(connectionId))
 
     val src = testHarness.getSourceDatabase()
     val dst = testHarness.getDestinationDatabase()
@@ -424,7 +423,7 @@ class AcceptanceTestsResources {
       } else {
         UUID.fromString(System.getenv(AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID))
       }
-    LOGGER.info("workspaceId = {}", workspaceId)
+    log.info { "workspaceId = $workspaceId" }
 
     // log which connectors are being used.
     val sourceDef =
@@ -439,8 +438,8 @@ class AcceptanceTestsResources {
           POSTGRES_DEST_DEF_ID,
         ),
       )
-    LOGGER.info("pg source definition: {}", sourceDef.dockerImageTag)
-    LOGGER.info("pg destination definition: {}", destinationDef.dockerImageTag)
+    log.info { "pg source definition: $sourceDef.dockerImageTag" }
+    log.info { "pg destination definition: $destinationDef.dockerImageTag" }
 
     testHarness = AcceptanceTestHarness(apiClient = airbyteApiClient, defaultWorkspaceId = workspaceId, testFlagsSetter = testFlagsSetter)
 
@@ -448,23 +447,23 @@ class AcceptanceTestsResources {
   }
 
   fun end() {
-    LOGGER.debug("Executing test suite teardown")
+    log.debug { "Executing test suite teardown" }
     testHarness.stopDbAndContainers()
   }
 
   @Throws(SQLException::class, URISyntaxException::class, IOException::class)
   fun setup() {
-    LOGGER.debug("Executing test case setup")
+    log.debug { "Executing test case setup" }
     testHarness.setup()
   }
 
   fun tearDown() {
-    LOGGER.debug("Executing test case teardown")
+    log.debug { "Executing test case teardown" }
     testHarness.cleanup()
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(AcceptanceTestsResources::class.java)
+    private val log = KotlinLogging.logger {}
 
     const val WITH_SCD_TABLE: Boolean = true
     const val WITHOUT_SCD_TABLE: Boolean = false

@@ -63,9 +63,10 @@ import io.airbyte.oauth.flows.google.GoogleSearchConsoleOAuthFlow
 import io.airbyte.oauth.flows.google.GoogleSheetsOAuthFlow
 import io.airbyte.oauth.flows.google.YouTubeAnalyticsOAuthFlow
 import io.airbyte.protocol.models.v0.ConnectorSpecification
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.net.http.HttpClient
+
+private val log = KotlinLogging.logger {}
 
 /**
  * OAuth Implementation Factory.
@@ -172,7 +173,7 @@ class OAuthImplementationFactory(
 
   private fun createNonDeclarativeOAuthImplementation(imageName: String): OAuthFlowImplementation? {
     if (oauthFlowMapping.containsKey(imageName)) {
-      LOGGER.info("Using {} for {}", oauthFlowMapping[imageName]!!.javaClass.simpleName, imageName)
+      log.info { "Using ${oauthFlowMapping[imageName]!!.javaClass.simpleName} for $imageName" }
       return oauthFlowMapping[imageName]
     } else {
       throw IllegalStateException(
@@ -182,8 +183,6 @@ class OAuthImplementationFactory(
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(OAuthImplementationFactory::class.java)
-
     private fun hasDeclarativeOAuthConfigSpecification(spec: ConnectorSpecification?): Boolean =
       spec != null &&
         spec.advancedAuth != null &&

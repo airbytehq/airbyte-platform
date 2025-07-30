@@ -34,12 +34,10 @@ import io.airbyte.metrics.lib.MetricTags.getReleaseStage
 import io.airbyte.persistence.job.JobNotifier
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.tracker.JobTracker
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.core.util.CollectionUtils
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.lang.invoke.MethodHandles
 import java.util.Locale
 import java.util.Objects
 import java.util.Optional
@@ -569,7 +567,7 @@ class JobCreationAndStatusUpdateHelper(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
 
     private const val JOB_ID_METADATA_KEY = "jobId"
     private const val ATTEMPT_NUMBER_METADATA_KEY = "attemptNumber"

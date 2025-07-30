@@ -94,13 +94,12 @@ import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToTrace
 import io.airbyte.oauth.OAuthImplementationFactory
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.core.util.CollectionUtils
 import jakarta.annotation.Nullable
 import jakarta.inject.Inject
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.Map
 import java.util.Objects
@@ -1010,7 +1009,7 @@ open class ConnectorBuilderProjectsHandler
     }
 
     companion object {
-      private val log: Logger = LoggerFactory.getLogger(ConnectorBuilderProjectsHandler::class.java)
+      private val log = KotlinLogging.logger {}
       const val SPEC_FIELD: String = "spec"
       const val CONNECTION_SPECIFICATION_FIELD: String = "connection_specification"
     }

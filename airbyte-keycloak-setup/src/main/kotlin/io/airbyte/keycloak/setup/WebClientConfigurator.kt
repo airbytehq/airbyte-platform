@@ -5,13 +5,11 @@
 package io.airbyte.keycloak.setup
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.ClientRepresentation
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.lang.invoke.MethodHandles
 
 /**
  * This class provides a web client. It can create and configure the client based on specified
@@ -85,7 +83,7 @@ class WebClientConfigurator(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
 
     const val HTTP_STATUS_CREATED: Int = 201
     private const val LOCAL_OSS_DEV_URI = "https://localhost:3000/*"

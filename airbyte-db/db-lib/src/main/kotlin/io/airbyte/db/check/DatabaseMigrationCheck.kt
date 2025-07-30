@@ -6,7 +6,6 @@ package io.airbyte.db.check
 
 import io.github.oshai.kotlinlogging.KLogger
 import org.flywaydb.core.Flyway
-import org.slf4j.Logger
 
 /**
  * Represents an unavailable schema migration version that ensures a re-test.

@@ -15,6 +15,7 @@ dependencies {
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.micronaut.metrics)
+  implementation(libs.kotlin.logging)
 
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-config:config-models"))

@@ -13,6 +13,7 @@ import io.airbyte.config.SourceOAuthParameter
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.data.services.OAuthService
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -20,8 +21,6 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.http.HttpClient
@@ -99,7 +98,7 @@ class SalesforceOAuthFlowIntegrationTest {
         null,
         sourceOAuthParameter.configuration,
       )
-    LOGGER.info("Waiting for user consent at: {}", url)
+    log.info { "Waiting for user consent at: $url" }
     // TODO: To automate, start a selenium job to navigate to the Consent URL and click on allowing
     // access...
     while (!serverHandler!!.isSucceeded && limit > 0) {
@@ -115,7 +114,7 @@ class SalesforceOAuthFlowIntegrationTest {
         REDIRECT_URL,
         sourceOAuthParameter.configuration,
       )
-    LOGGER.info("Response from completing OAuth Flow is: {}", params.toString())
+    log.info { "Response from completing OAuth Flow is: $params" }
     Assertions.assertTrue(params.containsKey("refresh_token"))
     Assertions.assertTrue(params["refresh_token"].toString().length > 0)
   }
@@ -132,7 +131,7 @@ class SalesforceOAuthFlowIntegrationTest {
 
     override fun handle(t: HttpExchange) {
       val query = t.requestURI.query
-      LOGGER.info("Received query: '{}'", query)
+      log.info { "Received query: '$query'" }
       val data: Map<String, String>?
       try {
         data = deserialize(query)
@@ -146,7 +145,7 @@ class SalesforceOAuthFlowIntegrationTest {
               paramValue,
             )
           responseQuery = data
-          LOGGER.info(response)
+          log.info { response }
           t.sendResponseHeaders(200, response.length.toLong())
           isSucceeded = true
         } else {
@@ -157,9 +156,9 @@ class SalesforceOAuthFlowIntegrationTest {
         os.write(response.toByteArray(StandardCharsets.UTF_8))
         os.close()
       } catch (e: RuntimeException) {
-        LOGGER.error("Failed to parse from body {}", query, e)
+        log.error(e) { "Failed to parse from body $query" }
       } catch (e: IOException) {
-        LOGGER.error("Failed to parse from body {}", query, e)
+        log.error(e) { "Failed to parse from body $query" }
       }
     }
 
@@ -183,7 +182,7 @@ class SalesforceOAuthFlowIntegrationTest {
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(SalesforceOAuthFlowIntegrationTest::class.java)
+    private val log = KotlinLogging.logger {}
     private const val REDIRECT_URL = "http://localhost:8000/code"
     private val CREDENTIALS_PATH: Path = Path.of("secrets/salesforce.json")
   }

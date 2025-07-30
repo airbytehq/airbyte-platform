@@ -40,9 +40,8 @@ import io.airbyte.notification.messages.SourceInfo
 import io.airbyte.notification.messages.SyncSummary
 import io.airbyte.notification.messages.WorkspaceInfo
 import io.airbyte.persistence.job.tracker.TrackingMetadata
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.core.util.functional.ThrowingFunction
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.UUID
 import java.util.stream.Collectors
@@ -71,7 +70,7 @@ class JobNotifier(
       val workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)
       notifyJob(action, job, attemptStats, workspace)
     } catch (e: Exception) {
-      LOGGER.error("Unable to read configuration for jobId {}:", job.id, e)
+      log.error(e) { "Unable to read configuration for jobId $job.id:" }
     }
   }
 
@@ -145,7 +144,7 @@ class JobNotifier(
         )
       }
     } catch (e: Exception) {
-      LOGGER.error("Unable to read configuration for notification on connectionId '{}'. Non-blocking. Error:", connectionId, e)
+      log.error(e) { "Unable to read configuration for notification on connectionId '$connectionId'. Non-blocking. Error:" }
     }
   }
 
@@ -241,18 +240,18 @@ class JobNotifier(
   ) {
     if (notificationItem == null) {
       // Note: we may be able to implement a log notifier to log notification message only.
-      LOGGER.info("No notification item found for the desired notification event found. Skipping notification for workspaceId {}.", workspaceId)
+      log.info { "No notification item found for the desired notification event found. Skipping notification for workspaceId $workspaceId." }
       return
     }
     val notificationClients = getNotificationClientsFromNotificationItem(notificationItem)
     for (notificationClient in notificationClients) {
       try {
         if (!executeNotification.apply(notificationClient)) {
-          LOGGER.warn("Failed to successfully notify workspaceId {}: {}", workspaceId, notificationItem)
+          log.warn { "Failed to successfully notify workspaceId {}: $workspaceId, notificationItem" }
         }
         submitToMetricClient(notificationTrigger, notificationClient.getNotificationClientType())
       } catch (ex: Exception) {
-        LOGGER.error("Failed to notify workspaceId {}: {} due to an exception. Not blocking.", workspaceId, notificationItem, ex)
+        log.error(ex) { "Failed to notify workspaceId $workspaceId due to an exception. Not blocking." }
         // Do not block.
       }
     }
@@ -372,14 +371,14 @@ class JobNotifier(
         )
       }
     } else {
-      LOGGER.warn("Unable to send notification for worskpace ID {}:  notification settings are not present.", workspace.workspaceId)
+      log.warn { "Unable to send notification for worskpace ID $workspace.workspaceId:  notification settings are not present." }
     }
 
     return notificationItem
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(JobNotifier::class.java)
+    private val log = KotlinLogging.logger {}
 
     const val FAILURE_NOTIFICATION: String = "Failure Notification"
     const val SUCCESS_NOTIFICATION: String = "Success Notification"

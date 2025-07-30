@@ -12,6 +12,7 @@ import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
 import com.launchdarkly.sdk.server.LDClient
 import io.airbyte.commons.annotation.InternalForTesting
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Secondary
@@ -20,7 +21,6 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.slf4j.LoggerFactory
 import java.lang.Thread.MIN_PRIORITY
 import java.nio.file.Path
 import java.nio.file.StandardWatchEventKinds
@@ -31,6 +31,8 @@ import kotlin.concurrent.thread
 import kotlin.concurrent.write
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.notExists
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Feature-Flag Client interface.
@@ -145,8 +147,8 @@ class ConfigFileClient(
   init {
     config?.also { path ->
       when {
-        path.notExists() -> log.info("path $path does not exist, will return default flag values")
-        !path.isRegularFile() -> log.info("path $path does not reference a file, will return default values")
+        path.notExists() -> log.info { "path $path does not exist, will return default flag values" }
+        !path.isRegularFile() -> log.info { "path $path does not reference a file, will return default values" }
         else -> {
           flags = readConfig(path)
           path.onChange {
@@ -178,10 +180,6 @@ class ConfigFileClient(
     flag: Flag<Int>,
     context: Context,
   ): Int = flags[flag.key]?.serve(context)?.let { it as? Int } ?: flag.default
-
-  companion object {
-    private val log = LoggerFactory.getLogger(ConfigFileClient::class.java)
-  }
 }
 
 /**

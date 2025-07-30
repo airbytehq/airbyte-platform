@@ -30,12 +30,10 @@ import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.Nullable
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.lang.invoke.MethodHandles
 import java.util.UUID
 
 /**
@@ -274,6 +272,6 @@ class AuthenticationHeaderResolver(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
   }
 }

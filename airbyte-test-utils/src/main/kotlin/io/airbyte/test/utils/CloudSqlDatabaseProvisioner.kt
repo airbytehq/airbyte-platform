@@ -13,9 +13,8 @@ import com.google.api.services.sqladmin.model.Operation
 import com.google.auth.http.HttpCredentialsAdapter
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.common.annotations.VisibleForTesting
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.http.HttpStatus
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.concurrent.Callable
 
@@ -115,8 +114,8 @@ class CloudSqlDatabaseProvisioner {
       } catch (e: GoogleJsonResponseException) {
         if (e.statusCode == HttpStatus.SC_CONFLICT) {
           attempts++
-          LOGGER.info("Attempt $attempts failed with 409 error")
-          LOGGER.info("Exception thrown by API: " + e.message)
+          log.info { "Attempt $attempts failed with 409 error" }
+          log.info("Exception thrown by API: " + e.message)
           Thread.sleep(1000)
         }
       } catch (e: Exception) {
@@ -127,7 +126,7 @@ class CloudSqlDatabaseProvisioner {
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(CloudSqlDatabaseProvisioner::class.java)
+    private val log = KotlinLogging.logger {}
 
     private const val SQL_OPERATION_DONE_STATUS = "DONE"
     private const val DEFAULT_MAX_POLL_ATTEMPTS = 10

@@ -10,14 +10,13 @@ import io.airbyte.db.factory.DataSourceFactory.close
 import io.airbyte.db.factory.DataSourceFactory.create
 import io.airbyte.db.factory.FlywayFactory.create
 import io.airbyte.db.init.DatabaseInitializationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.Flyway
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
 import org.jooq.meta.postgres.PostgresDatabase
 import org.jooq.tools.jdbc.JDBCUtils
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import java.io.IOException
 import java.sql.Connection
@@ -98,12 +97,12 @@ abstract class FlywayMigrationDatabase : PostgresDatabase() {
     try {
       close(dataSource)
     } catch (e: Exception) {
-      LOGGER.warn("Unable to close data source.", e)
+      log.warn("Unable to close data source.", e)
     }
     super.close()
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(FlywayMigrationDatabase::class.java)
+    private val log = KotlinLogging.logger {}
   }
 }

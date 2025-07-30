@@ -95,6 +95,7 @@ import io.airbyte.test.utils.GKEPostgresConfig.dbConfig
 import io.airbyte.test.utils.GKEPostgresConfig.getDataSource
 import io.airbyte.test.utils.GKEPostgresConfig.runSqlScript
 import io.airbyte.test.utils.PostgreSQLContainerHelper.runSqlScript
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.client.WorkflowClient
 import junit.framework.AssertionFailedError
 import org.jooq.DSLContext
@@ -103,8 +104,6 @@ import org.jooq.SQLDialect
 import org.junit.jupiter.api.Assertions
 import org.openapitools.client.infrastructure.ClientException
 import org.openapitools.client.infrastructure.ServerException
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.shaded.org.apache.commons.lang3.RandomStringUtils
 import org.testcontainers.utility.DockerImageName
@@ -272,7 +271,7 @@ class AcceptanceTestHarness
           .first()
           .dataplaneGroupId
 
-      LOGGER.info("Using external deployment of airbyte.")
+      log.info { "Using external deployment of airbyte." }
     }
 
     fun stopDbAndContainers() {
@@ -281,7 +280,7 @@ class AcceptanceTestHarness
           close(sourceDataSource)
           close(destinationDataSource)
         } catch (e: Exception) {
-          LOGGER.warn("Failed to close data sources", e)
+          log.warn("Failed to close data sources", e)
         }
       } else {
         sourcePsql!!.stop()
@@ -293,7 +292,7 @@ class AcceptanceTestHarness
     fun setup() {
       if (isGke) {
         // Prepare the database data sources.
-        LOGGER.info("postgresPassword: {}", cloudSqlInstancePassword)
+        log.info { "postgresPassword: $cloudSqlInstancePassword" }
         sourceDataSource =
           getDataSource(
             cloudSqlInstanceUsername!!,
@@ -321,13 +320,13 @@ class AcceptanceTestHarness
         // adding an entry to the scoped_configuration table.
         val postgresDestDef = postgresDestinationDefinition
         if (postgresDestDef.dockerImageTag != POSTGRES_DESTINATION_CONNECTOR_VERSION) {
-          LOGGER.info("Setting postgres destination connector to version {}...", POSTGRES_DESTINATION_CONNECTOR_VERSION)
+          log.info { "Setting postgres destination connector to version $POSTGRES_DESTINATION_CONNECTOR_VERSION..." }
           try {
             updateDestinationDefinitionVersion(postgresDestDef.destinationDefinitionId, POSTGRES_DESTINATION_CONNECTOR_VERSION)
           } catch (e: ClientException) {
-            LOGGER.error("Error while updating destination definition version", e)
+            log.error(e) { "Error while updating destination definition version" }
           } catch (e: ServerException) {
-            LOGGER.error("Error while updating destination definition version", e)
+            log.error(e) { "Error while updating destination definition version" }
           }
         }
       }
@@ -373,7 +372,7 @@ class AcceptanceTestHarness
         }
         // TODO(mfsiega-airbyte): clean up created source definitions.
       } catch (e: Exception) {
-        LOGGER.error("Error tearing down test fixtures", e)
+        log.error(e) { "Error tearing down test fixtures" }
       }
     }
 
@@ -384,10 +383,10 @@ class AcceptanceTestHarness
      */
     fun ensureCleanSlate() {
       if (!ensureCleanSlate) {
-        LOGGER.info("proceeding without cleaning up pre-existing connections.")
+        log.info { "proceeding without cleaning up pre-existing connections." }
         return
       }
-      LOGGER.info("ENSURE_CLEAN_SLATE was true, disabling all scheduled connections using postgres source or postgres destination...")
+      log.info { "ENSURE_CLEAN_SLATE was true, disabling all scheduled connections using postgres source or postgres destination..." }
       try {
         val sourceDefinitionId = postgresSourceDefinitionId
         val destinationDefinitionId = postgresDestinationDefinitionId
@@ -416,16 +415,16 @@ class AcceptanceTestHarness
             .filter { connection: ConnectionRead -> connection.scheduleType != ConnectionScheduleType.MANUAL }
             .toList()
 
-        LOGGER.info("Found {} existing connection(s) to clean up", allConnectionsToDisable.size)
+        log.info { "Found $allConnectionsToDisable.size existing connection(s) to clean up" }
         if (!allConnectionsToDisable.isEmpty()) {
           for ((connectionId) in allConnectionsToDisable) {
             disableConnection(connectionId)
-            LOGGER.info("disabled connection with ID {}", connectionId)
+            log.info { "disabled connection with ID $connectionId" }
           }
         }
-        LOGGER.info("ensureCleanSlate completed!")
+        log.info { "ensureCleanSlate completed!" }
       } catch (e: Exception) {
-        LOGGER.warn("An exception occurred while ensuring a clean slate. Proceeding, but a clean slate is not guaranteed for this run.", e)
+        log.warn("An exception occurred while ensuring a clean slate. Proceeding, but a clean slate is not guaranteed for this run.", e)
       }
     }
 
@@ -484,7 +483,7 @@ class AcceptanceTestHarness
       getWorkflowState(connectionId)
 
       // Terminate workflow
-      LOGGER.info("Terminating temporal workflow...")
+      log.info { "Terminating temporal workflow..." }
       workflowCLient.newUntypedWorkflowStub("connection_manager_$connectionId").terminate("")
 
       // remove connection to avoid exception during tear down
@@ -543,7 +542,7 @@ class AcceptanceTestHarness
 
     @Throws(URISyntaxException::class, SQLException::class, IOException::class)
     fun runSqlScriptInSource(resourceName: String) {
-      LOGGER.debug("Running sql script in source: {}", resourceName)
+      log.debug { "Running sql script in source: $resourceName" }
       if (isGke) {
         runSqlScript(Path.of(Resources.readResourceAsFile(resourceName).toURI()), getSourceDatabase())
       } else {
@@ -801,7 +800,7 @@ class AcceptanceTestHarness
             localConfig(psql!!, hiddenPassword, withSchema)
           }
         val config = Jsons.jsonNode(dbConfig)
-        LOGGER.info("Using db config: {}", Jsons.toPrettyString(config))
+        log.info { "Using db config: ${Jsons.toPrettyString(config)}" }
         return config
       } catch (e: Exception) {
         throw RuntimeException(e)
@@ -1038,7 +1037,7 @@ class AcceptanceTestHarness
       val database = getSourceDatabase()
       val pairs = listAllTables(database)
       for (pair in pairs) {
-        LOGGER.debug("Clearing table {} {}", pair.schemaName, pair.tableName)
+        log.debug { "Clearing table {} $pair.schemaName, pair.tableName" }
         database.query { context: DSLContext ->
           context.execute(
             java.lang.String.format(
@@ -1056,7 +1055,7 @@ class AcceptanceTestHarness
       val database = getDestinationDatabase()
       val pairs = listAllTables(database)
       for (pair in pairs) {
-        LOGGER.debug("Clearing table {} {}", pair.schemaName, pair.tableName)
+        log.debug { "Clearing table {} $pair.schemaName, pair.tableName" }
         database.query { context: DSLContext ->
           context.execute(
             java.lang.String.format(
@@ -1153,7 +1152,7 @@ class AcceptanceTestHarness
             "Unsuccessful job attempt " + attempt.id +
               " with status " + job.status + " produced log output as follows: " + logs!!.logLines
           )
-          LOGGER.warn(msg)
+          log.warn(msg)
           debugInfo.add(msg)
         }
       }
@@ -1180,7 +1179,7 @@ class AcceptanceTestHarness
       while (jobStatuses.contains(job.status)) {
         logDebounce++
         if (Duration.between(waitStart, Instant.now()).compareTo(maxWaitTime) > 0) {
-          LOGGER.info("Max wait time of {} has been reached. Stopping wait.", maxWaitTime)
+          log.info { "Max wait time of $maxWaitTime has been reached. Stopping wait." }
           break
         }
         Thread.sleep(1000)
@@ -1188,15 +1187,15 @@ class AcceptanceTestHarness
           job = apiClient.jobsApi.getJobInfo(JobIdRequestBody(job.id)).job
         } catch (e: ClientException) {
           // TODO(mfsiega-airbyte): consolidate our polling/retrying logic.
-          LOGGER.warn("error querying jobs api, retrying...")
+          log.warn { "error querying jobs api, retrying..." }
         } catch (e: ServerException) {
-          LOGGER.warn("error querying jobs api, retrying...")
+          log.warn { "error querying jobs api, retrying..." }
         } catch (e: IOException) {
-          LOGGER.warn("error querying jobs api, retrying...")
+          log.warn { "error querying jobs api, retrying..." }
         }
         // if we are just waiting only log every 10 seconds to avoid spamming the logs.
         if (logDebounce % 10 == 0) {
-          LOGGER.info("waiting: job id: {} config type: {} status: {}", job.id, job.configType, job.status)
+          log.info { "waiting: job id: {} config type: {} status: $job.id, job.configType, job.status" }
         }
       }
       return job
@@ -1209,13 +1208,13 @@ class AcceptanceTestHarness
     ) {
       val waitStart = Instant.now()
       var jobDebugInfoRead = apiClient.jobsApi.getJobDebugInfo(JobIdRequestBody(job.id))
-      LOGGER.info("workflow state: {}", jobDebugInfoRead.workflowState)
+      log.info { "workflow state: $jobDebugInfoRead.workflowState" }
       while (jobDebugInfoRead.workflowState != null && jobDebugInfoRead.workflowState!!.running) {
         if (Duration.between(waitStart, Instant.now()).compareTo(maxWaitTime) > 0) {
-          LOGGER.info("Max wait time of {} has been reached. Stopping wait.", maxWaitTime)
+          log.info { "Max wait time of $maxWaitTime has been reached. Stopping wait." }
           break
         }
-        LOGGER.info("waiting: job id: {}, workflowState.isRunning is still true", job.id)
+        log.info { "waiting: job id: $job.id, workflowState.isRunning is still true" }
         Thread.sleep(1000)
         jobDebugInfoRead = apiClient.jobsApi.getJobDebugInfo(JobIdRequestBody(job.id))
       }
@@ -1237,7 +1236,7 @@ class AcceptanceTestHarness
       var job = jobRead
       while (IN_PROGRESS_JOB_STATUSES.contains(job.status)) {
         job = getJobInfoRead(job.id).job
-        LOGGER.info("waiting: job id: {} config type: {} status: {}", job.id, job.configType, job.status)
+        log.info { "waiting: job id: {} config type: {} status: $job.id, job.configType, job.status" }
         Thread.sleep(3000)
       }
       Assertions.assertEquals(JobStatus.SUCCEEDED, job.status)
@@ -1428,7 +1427,7 @@ class AcceptanceTestHarness
     }
 
     companion object {
-      private val LOGGER: Logger = LoggerFactory.getLogger(AcceptanceTestHarness::class.java)
+      private val log = KotlinLogging.logger {}
 
       private val DESTINATION_POSTGRES_IMAGE_NAME: DockerImageName = DockerImageName.parse("postgres:15-alpine")
 

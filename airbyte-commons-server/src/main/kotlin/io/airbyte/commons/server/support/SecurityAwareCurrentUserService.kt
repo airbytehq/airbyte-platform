@@ -7,13 +7,11 @@ package io.airbyte.commons.server.support
 import io.airbyte.commons.server.errors.AuthException
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.persistence.UserPersistence
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.runtime.http.scope.RequestScope
 import io.micronaut.security.utils.SecurityService
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.lang.invoke.MethodHandles
 import java.util.Optional
 import java.util.UUID
 
@@ -57,6 +55,6 @@ open class SecurityAwareCurrentUserService(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
   }
 }

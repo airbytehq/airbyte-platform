@@ -4,15 +4,13 @@
 
 package io.airbyte.commons.temporal
 
-import io.airbyte.commons.temporal.CancellationHandler.TemporalCancellationHandler
 import io.airbyte.commons.temporal.exception.RetryableException
 import io.airbyte.metrics.lib.ApmTraceConstants
 import io.airbyte.metrics.lib.ApmTraceUtils
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.activity.ActivityExecutionContext
 import io.temporal.client.ActivityCanceledException
 import io.temporal.client.ActivityCompletionException
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.util.Locale
 import java.util.Map
 
@@ -65,7 +63,7 @@ interface CancellationHandler {
         ApmTraceUtils.addExceptionToTrace(e)
         ApmTraceUtils.addTagsToTrace(Map.of<String, Any>(ApmTraceConstants.Tags.FAILURE_TYPES_KEY, e.javaClass.name))
         onCancellationCallback.run()
-        LOGGER.warn("Job was cancelled.", e)
+        log.warn("Job was cancelled.", e)
       } catch (e: ActivityCompletionException) {
         ApmTraceUtils.addExceptionToTrace(e)
         ApmTraceUtils.addTagsToTrace(Map.of<String, Any>(ApmTraceConstants.Tags.FAILURE_TYPES_KEY, e.javaClass.name))
@@ -75,10 +73,10 @@ interface CancellationHandler {
             .lowercase(Locale.getDefault())
             .startsWith("sync")
         ) {
-          LOGGER.warn("The job timeout and was not a sync, we will destroy the pods related to it", e)
+          log.warn("The job timeout and was not a sync, we will destroy the pods related to it", e)
           onCancellationCallback.run()
         } else {
-          LOGGER.debug(
+          log.debug(
             "An error happened while checking that the temporal activity is still alive but is not a cancellation, forcing the activity to retry",
             e,
           )
@@ -88,7 +86,7 @@ interface CancellationHandler {
     }
 
     companion object {
-      private val LOGGER: Logger = LoggerFactory.getLogger(TemporalCancellationHandler::class.java)
+      private val log = KotlinLogging.logger {}
     }
   }
 }

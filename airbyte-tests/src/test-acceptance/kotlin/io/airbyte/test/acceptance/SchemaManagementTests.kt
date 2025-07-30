@@ -22,6 +22,7 @@ import io.airbyte.test.utils.AcceptanceTestHarness
 import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteAdminApiClient
 import io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog
 import io.airbyte.test.utils.TestConnectionCreate
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -30,8 +31,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.net.URISyntaxException
 import java.security.GeneralSecurityException
@@ -90,7 +89,7 @@ internal class SchemaManagementTests {
             testHarness!!.dataplaneGroupId,
           ).build(),
       )
-    LOGGER.info("Created connection: {}", createdConnection)
+    log.info { "Created connection: $createdConnection" }
     // Create a connection that shares the source, to verify that the schema management actions are
     // applied to all connections with the same source.
     createdConnectionWithSameSource =
@@ -135,14 +134,14 @@ internal class SchemaManagementTests {
   @Throws(Exception::class)
   fun beforeEach() {
     init()
-    LOGGER.debug("Executing test case setup")
+    log.debug { "Executing test case setup" }
     testHarness!!.setup()
     createTestConnections()
   }
 
   @AfterEach
   fun afterEach() {
-    LOGGER.debug("Executing test case teardown")
+    log.debug { "Executing test case teardown" }
     testHarness!!.cleanup()
   }
 
@@ -280,7 +279,7 @@ internal class SchemaManagementTests {
     val result = testHarness!!.discoverSourceSchemaWithId(createdConnection!!.sourceId)
     // Update the catalog, but don't enable the new stream.
     val firstUpdate = testHarness!!.updateConnectionSourceCatalogId(createdConnection!!.connectionId, result.catalogId)
-    LOGGER.info("updatedConnection: {}", firstUpdate)
+    log.info { "updatedConnection: $firstUpdate" }
     // Modify the source to add a field to the disabled stream.
     testHarness!!.runSqlScriptInSource("postgres_add_column_to_new_table.sql")
     // Run a sync.
@@ -396,7 +395,7 @@ internal class SchemaManagementTests {
     }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(SchemaManagementTests::class.java)
+    private val log = KotlinLogging.logger {}
 
     private const val AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID = "AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID"
   }

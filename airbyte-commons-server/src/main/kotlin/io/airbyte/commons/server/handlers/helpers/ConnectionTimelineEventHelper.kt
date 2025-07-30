@@ -38,12 +38,11 @@ import io.airbyte.data.services.shared.SchemaConfigUpdateEvent
 import io.airbyte.domain.models.ConnectionId
 import io.airbyte.domain.services.storage.ConnectorObjectStorageService
 import io.airbyte.persistence.job.JobPersistence
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.Nullable
 import jakarta.inject.Inject
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.UUID
 import java.util.stream.Collectors
@@ -68,7 +67,7 @@ class ConnectionTimelineEventHelper
         try {
           return currentUserService.getCurrentUser().userId
         } catch (e: Exception) {
-          LOGGER.info("Unable to get current user associated with the request {}", e.toString())
+          log.info { "Unable to get current user associated with the request $e" }
           return null
         }
       }
@@ -116,7 +115,7 @@ class ConnectionTimelineEventHelper
           .name(user.name)
           .email(user.email)
       } catch (e: Exception) {
-        LOGGER.error("Error while retrieving user information.", e)
+        log.error(e) { "Error while retrieving user information." }
         return null
       }
     }
@@ -188,7 +187,7 @@ class ConnectionTimelineEventHelper
           )
         connectionTimelineEventService.writeEvent(connectionId, event, null)
       } catch (e: Exception) {
-        LOGGER.error("Failed to persist timeline event for job: {}", job.id, e)
+        log.error(e) { "Failed to persist timeline event for job: $job.id" }
       }
     }
 
@@ -223,7 +222,7 @@ class ConnectionTimelineEventHelper
           )
         connectionTimelineEventService.writeEvent(connectionId, event, null)
       } catch (e: Exception) {
-        LOGGER.error("Failed to persist timeline event for job: {}", job.id, e)
+        log.error(e) { "Failed to persist timeline event for job: $job.id" }
       }
     }
 
@@ -250,7 +249,7 @@ class ConnectionTimelineEventHelper
           )
         connectionTimelineEventService.writeEvent(connectionId, event, currentUserIdIfExist)
       } catch (e: Exception) {
-        LOGGER.error("Failed to persist job cancelled event for job: {}", job.id, e)
+        log.error(e) { "Failed to persist job cancelled event for job: $job.id" }
       }
     }
 
@@ -271,7 +270,7 @@ class ConnectionTimelineEventHelper
           connectionTimelineEventService.writeEvent(connectionId, event, currentUserIdIfExist)
         }
       } catch (e: Exception) {
-        LOGGER.error("Failed to persist job started event for job: {}", jobInfo!!.job.id, e)
+        log.error(e) { "Failed to persist job started event for job: $jobInfo!!.job.id" }
       }
     }
 
@@ -285,14 +284,14 @@ class ConnectionTimelineEventHelper
     ) {
       try {
         if (diff.transforms == null || diff.transforms.isEmpty()) {
-          LOGGER.info("Diff is empty. Bypassing logging an event.")
+          log.info { "Diff is empty. Bypassing logging an event." }
           return
         }
-        LOGGER.info("Persisting source schema change auto-propagated event for connection: {} with diff: {}", connectionId, diff)
+        log.info { "Persisting source schema change auto-propagated event for connection: {} with diff: $connectionId, diff" }
         val event = SchemaChangeAutoPropagationEvent(diff)
         connectionTimelineEventService.writeEvent(connectionId, event, null)
       } catch (e: Exception) {
-        LOGGER.error("Failed to persist source schema change auto-propagated event for connection: {}", connectionId, e)
+        log.error(e) { "Failed to persist source schema change auto-propagated event for connection: $connectionId" }
       }
     }
 
@@ -301,11 +300,11 @@ class ConnectionTimelineEventHelper
       airbyteCatalogDiff: AirbyteCatalogDiff,
     ) {
       try {
-        LOGGER.debug("Persisting schema config change event for connection: {} with diff: {}", connectionId, airbyteCatalogDiff)
+        log.debug { "Persisting schema config change event for connection: {} with diff: $connectionId, airbyteCatalogDiff" }
         val event = SchemaConfigUpdateEvent(airbyteCatalogDiff)
         connectionTimelineEventService.writeEvent(connectionId, event, currentUserIdIfExist)
       } catch (e: Exception) {
-        LOGGER.error("Failed to persist schema config change event for connection: {}", connectionId, e)
+        log.error(e) { "Failed to persist schema config change event for connection: $connectionId" }
       }
     }
 
@@ -341,7 +340,7 @@ class ConnectionTimelineEventHelper
           }
         }
       } catch (e: Exception) {
-        LOGGER.error("Failed to persist status changed event for connection: {}", connectionId, e)
+        log.error(e) { "Failed to persist status changed event for connection: $connectionId" }
       }
     }
 
@@ -389,12 +388,12 @@ class ConnectionTimelineEventHelper
           connectionTimelineEventService.writeEvent(connectionId, event, if (autoUpdate) null else currentUserIdIfExist)
         }
       } catch (e: Exception) {
-        LOGGER.error("Failed to persist connection settings changed event for connection: {}", connectionId, e)
+        log.error(e) { "Failed to persist connection settings changed event for connection: $connectionId" }
       }
     }
 
     companion object {
-      private val LOGGER: Logger = LoggerFactory.getLogger(ConnectionTimelineEventHelper::class.java)
+      private val log = KotlinLogging.logger {}
       const val AIRBYTE_SUPPORT_USER_NAME: String = "Airbyte Support"
     }
   }

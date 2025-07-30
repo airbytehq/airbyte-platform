@@ -13,6 +13,7 @@ dependencies {
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(libs.okhttp)
   implementation("org.apache.httpcomponents:httpclient:4.5.13")
+  implementation(libs.kotlin.logging)
   implementation("org.commonmark:commonmark:0.21.0")
 
   implementation(libs.guava)

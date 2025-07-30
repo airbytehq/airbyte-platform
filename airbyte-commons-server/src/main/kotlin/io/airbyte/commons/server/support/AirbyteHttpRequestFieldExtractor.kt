@@ -6,11 +6,9 @@ package io.airbyte.commons.server.support
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.core.util.StringUtils
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.lang.invoke.MethodHandles
 import java.util.Optional
 
 /**
@@ -81,7 +79,7 @@ class AirbyteHttpRequestFieldExtractor {
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
 
     // For some APIs we asked for a list of ids, such as workspace IDs and connection IDs. We will
     // validate if user has permission

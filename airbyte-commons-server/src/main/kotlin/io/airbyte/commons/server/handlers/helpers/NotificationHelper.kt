@@ -22,9 +22,8 @@ import io.airbyte.notification.messages.ConnectionInfo
 import io.airbyte.notification.messages.SchemaUpdateNotification
 import io.airbyte.notification.messages.SourceInfo
 import io.airbyte.notification.messages.WorkspaceInfo
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 @Singleton
 class NotificationHelper(
@@ -41,15 +40,15 @@ class NotificationHelper(
   ): SchemaUpdateNotification? {
     try {
       if (notificationSettings != null && notificationSettings.sendOnConnectionUpdate == null) {
-        LOGGER.warn("Connection update notification settings are not configured for workspaceId: '{}'", workspace.workspaceId)
+        log.warn { "Connection update notification settings are not configured for workspaceId: '$workspace.workspaceId'" }
         return null
       }
       if (diff.transforms.isEmpty()) {
-        LOGGER.info("No diff to report for connection: '{}'; skipping notification.", connection.connectionId)
+        log.info { "No diff to report for connection: '$connection.connectionId'; skipping notification." }
         return null
       }
       if (java.lang.Boolean.TRUE !== connection.notifySchemaChanges) {
-        LOGGER.debug("Schema changes notifications are disabled for connectionId '{}'", connection.connectionId)
+        log.debug { "Schema changes notifications are disabled for connectionId '$connection.connectionId'" }
         return null
       }
 
@@ -68,7 +67,7 @@ class NotificationHelper(
         )
       return notification
     } catch (e: Exception) {
-      LOGGER.error("Failed to build notification {}: {}", workspace, e)
+      log.error(e) { "Failed to build notification {}: $workspace" }
       return null
     }
   }
@@ -122,7 +121,7 @@ class NotificationHelper(
         }
       }
     } catch (e: Exception) {
-      LOGGER.error("Failed to send notification {}: {}", workspace, e)
+      log.error(e) { "Failed to send notification {}: $workspace" }
     }
   }
 
@@ -207,17 +206,17 @@ class NotificationHelper(
           }
 
           else -> {
-            LOGGER.warn("Notification type {} not supported", type)
+            log.warn { "Notification type $type not supported" }
           }
         }
       }
     } catch (e: Exception) {
-      LOGGER.error("Failed to send notification {}: {}", workspace, e)
+      log.error(e) { "Failed to send notification {}: $workspace" }
     }
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(NotificationHelper::class.java)
+    private val log = KotlinLogging.logger {}
     const val NOTIFICATION_TRIGGER_SCHEMA: String = "schema_propagated"
     const val NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY: String = "schema_diff_to_apply"
     const val NOTIFICATION_TRIGGER_SCHEMA_CHANGED_AND_SYNC_DISABLED: String = "schema_diff_to_apply_propagation_disabled"

@@ -32,11 +32,10 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.Optional
 import java.util.UUID
@@ -469,6 +468,6 @@ class ApplyDefinitionsHelper(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(ApplyDefinitionsHelper::class.java)
+    private val log = KotlinLogging.logger {}
   }
 }

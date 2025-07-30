@@ -5,11 +5,10 @@
 package io.airbyte.persistence.job.errorreporter
 
 import io.airbyte.commons.lang.Exceptions
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.sentry.protocol.SentryException
 import io.sentry.protocol.SentryStackFrame
 import io.sentry.protocol.SentryStackTrace
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.util.Arrays
 import java.util.Collections
 import java.util.EnumMap
@@ -80,7 +79,7 @@ class SentryExceptionHelper {
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(SentryExceptionHelper::class.java)
+    private val log = KotlinLogging.logger {}
 
     private fun buildPythonSentryExceptions(stacktrace: String): Optional<SentryParsedException> {
       val sentryExceptions: MutableList<SentryException> = ArrayList()
@@ -355,7 +354,7 @@ class SentryExceptionHelper {
           }
         } catch (e: ArrayIndexOutOfBoundsException) {
           // this means our logic is slightly off, our assumption of where error lines are is incorrect
-          LOGGER.warn("Failed trying to parse useful error message out of dbt error, defaulting to full stacktrace")
+          log.warn { "Failed trying to parse useful error message out of dbt error, defaulting to full stacktrace" }
         }
       }
       if (errorMessageAndType.isEmpty()) {

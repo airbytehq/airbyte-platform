@@ -4,14 +4,12 @@
 
 package io.airbyte.commons.temporal
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.grpc.StatusRuntimeException
 import io.micronaut.context.annotation.Value
 import io.temporal.api.workflowservice.v1.DescribeNamespaceRequest
 import io.temporal.serviceclient.WorkflowServiceStubs
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.lang.invoke.MethodHandles
 import java.util.concurrent.TimeUnit
 
 /**
@@ -73,6 +71,6 @@ class TemporalInitializationUtils(
     }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
   }
 }

@@ -63,10 +63,9 @@ import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.Optional
 import java.util.UUID
@@ -710,6 +709,6 @@ class DestinationHandler
         .icon(standardDestinationDefinition.iconUrl)
 
     companion object {
-      private val log: Logger = LoggerFactory.getLogger(DestinationHandler::class.java)
+      private val log = KotlinLogging.logger {}
     }
   }

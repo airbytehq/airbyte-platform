@@ -15,6 +15,7 @@ import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.ConnectorRegistry
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.cache.annotation.CacheConfig
 import io.micronaut.cache.annotation.Cacheable
 import io.micronaut.context.annotation.Value
@@ -24,8 +25,6 @@ import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -65,8 +64,8 @@ open class RemoteDefinitionsProvider(
         URI(remoteRegistryBaseUrl)
       }
     } catch (e: URISyntaxException) {
-      LOGGER.error("Invalid remote registry base URL: {}", remoteRegistryBaseUrl)
-      throw IllegalArgumentException("Remote connector registry base URL must be a valid URI.", e)
+      log.error(e) { "Invalid remote registry base URL: $remoteRegistryBaseUrl" }
+      throw IllegalArgumentException("Remote connector registry base URL must be a valid URI.")
     }
   }
 
@@ -80,7 +79,7 @@ open class RemoteDefinitionsProvider(
         .Builder()
         .callTimeout(Duration.ofMillis(remoteCatalogTimeoutMs))
         .build()
-    LOGGER.info(
+    log.info(
       "Created remote definitions provider for URL '{}' and registry '{}'...",
       remoteRegistryBaseUrlUri,
       getRegistryName(airbyteEdition),
@@ -209,7 +208,7 @@ open class RemoteDefinitionsProvider(
       okHttpClient.newCall(request).execute().use { response ->
         if (response.isSuccessful && response.body != null) {
           val responseBody = response.body!!.string()
-          LOGGER.info("Fetched latest remote definitions ({})", responseBody.hashCode())
+          log.info { "Fetched latest remote definitions (${responseBody.hashCode()})" }
           return Jsons.deserialize(responseBody, ConnectorRegistry::class.java)
         } else {
           throw IOException(formatStatusCodeException("getRemoteConnectorRegistry", response))
@@ -391,7 +390,7 @@ open class RemoteDefinitionsProvider(
       }
     }
     // Log a warning if the file was not found
-    LOGGER.warn("File {} not found in zip stream", fileName)
+    log.warn { "File $fileName not found in zip stream" }
     return Optional.empty()
   }
 
@@ -411,7 +410,7 @@ open class RemoteDefinitionsProvider(
   ): String = String.format("%s request ran into status code error: %d with message: %s", operationName, response.code, response.message)
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(RemoteDefinitionsProvider::class.java)
+    private val log = KotlinLogging.logger {}
 
     private const val NOT_FOUND = 404
     private const val CUSTOM_COMPONENTS_FILE_NAME = "components.py"

@@ -19,8 +19,7 @@ import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.MessageOrigin
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.IOException
 import java.time.Duration
 import java.time.temporal.ChronoUnit
@@ -34,7 +33,7 @@ import java.util.stream.Collectors
  * Worker static utils.
  */
 object WorkerUtils {
-  private val LOGGER: Logger = LoggerFactory.getLogger(WorkerUtils::class.java)
+  private val log = KotlinLogging.logger {}
 
   /**
    * Waits until process ends or until time elapses.
@@ -54,7 +53,7 @@ object WorkerUtils {
 
     if (process.info() != null) {
       process.info().commandLine().ifPresent { commandLine: String? ->
-        LOGGER.debug(
+        log.debug(
           "Gently closing process {}",
           commandLine,
         )
@@ -66,7 +65,7 @@ object WorkerUtils {
         process.waitFor(timeout, timeUnit)
       }
     } catch (e: InterruptedException) {
-      LOGGER.error("Exception while while waiting for process to finish", e)
+      log.error(e) { "Exception while while waiting for process to finish" }
     }
 
     if (process.isAlive) {
@@ -91,11 +90,11 @@ object WorkerUtils {
       process.destroy()
       process.waitFor(lastChanceDuration.toMillis(), TimeUnit.MILLISECONDS)
       if (process.isAlive) {
-        LOGGER.warn("Process is still alive after calling destroy. Attempting to destroy forcibly...")
+        log.warn { "Process is still alive after calling destroy. Attempting to destroy forcibly..." }
         process.destroyForcibly()
       }
     } catch (e: InterruptedException) {
-      LOGGER.error("Exception when closing process.", e)
+      log.error(e) { "Exception when closing process." }
     }
   }
 
@@ -108,7 +107,7 @@ object WorkerUtils {
     try {
       process.waitFor()
     } catch (e: InterruptedException) {
-      LOGGER.error("Exception while while waiting for process to finish", e)
+      log.error(e) { "Exception while while waiting for process to finish" }
     }
   }
 

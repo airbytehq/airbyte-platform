@@ -10,10 +10,8 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.reporter.model.LongRunningJobMetadata
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.lang.invoke.MethodHandles
 import java.time.Duration
 import java.util.concurrent.Callable
 import java.util.function.Consumer
@@ -220,7 +218,7 @@ internal open class Emitter(
       callable.call()
       client.count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER)
     } catch (e: Exception) {
-      log.error("Exception querying database for metric: ", e)
+      log.error(e) { "Exception querying database for metric" }
     }
   }
 
@@ -233,6 +231,6 @@ internal open class Emitter(
 
   companion object {
     const val UNKNOWN: String = "unknown"
-    protected val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    protected val log = KotlinLogging.logger {}
   }
 }

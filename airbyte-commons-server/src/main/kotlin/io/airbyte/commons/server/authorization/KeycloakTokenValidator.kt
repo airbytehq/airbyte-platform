@@ -24,6 +24,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.MetricTags.AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.common.util.StringUtils
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Requires
@@ -39,10 +40,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.apache.http.HttpHeaders
 import org.reactivestreams.Publisher
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import reactor.core.publisher.Mono
-import java.lang.invoke.MethodHandles
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 import java.util.Optional
@@ -228,7 +226,7 @@ class KeycloakTokenValidator(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
 
     private const val EXTERNAL_USER = "external-user"
     private const val INTERNAL_SERVICE_ACCOUNT = "internal-service-account"

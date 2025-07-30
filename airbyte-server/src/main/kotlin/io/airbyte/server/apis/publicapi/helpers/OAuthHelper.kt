@@ -6,8 +6,10 @@ package io.airbyte.server.apis.publicapi.helpers
 
 import io.airbyte.api.problems.model.generated.ProblemRedirectURLData
 import io.airbyte.api.problems.throwable.generated.InvalidRedirectUrlProblem
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.net.URI
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Helper for OAuth.
@@ -15,7 +17,6 @@ import java.net.URI
 object OAuthHelper {
   private const val TEMP_OAUTH_STATE_KEY = "temp_oauth_state"
   private const val HTTPS = "https"
-  private val log = LoggerFactory.getLogger(OAuthHelper.javaClass)
 
   fun buildTempOAuthStateKey(state: String): String = "$TEMP_OAUTH_STATE_KEY.$state"
 
@@ -31,7 +32,7 @@ object OAuthHelper {
         throw InvalidRedirectUrlProblem(ProblemRedirectURLData().redirectUrl(redirectUrl))
       }
     } catch (e: IllegalArgumentException) {
-      log.error(e.message)
+      log.error(e) { e.message }
       throw InvalidRedirectUrlProblem(ProblemRedirectURLData().redirectUrl(redirectUrl))
     }
   }

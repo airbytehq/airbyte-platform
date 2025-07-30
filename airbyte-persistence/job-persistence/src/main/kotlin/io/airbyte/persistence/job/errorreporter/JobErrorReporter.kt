@@ -26,8 +26,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.validation.json.JsonValidationException
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.IOException
 import java.util.UUID
 
@@ -61,7 +60,7 @@ class JobErrorReporter(
   ) {
     Exceptions.swallow {
       try {
-        LOGGER.info(
+        log.info(
           "{} failures incoming for jobId '{}' connectionId '{}'",
           if (failureSummary.failures == null) 0 else failureSummary.failures.size,
           jobContext.jobId,
@@ -82,7 +81,7 @@ class JobErrorReporter(
         commonMetadata.putAll(java.util.Map.of(JOB_ID_KEY, jobContext.jobId.toString()))
         commonMetadata.putAll(getConnectionMetadata(workspace.workspaceId, connectionId))
 
-        LOGGER.info(
+        log.info(
           "{} failures to report for jobId '{}' connectionId '{}'",
           traceMessageFailures.size,
           jobContext.jobId,
@@ -90,7 +89,7 @@ class JobErrorReporter(
         )
         for (failureReason in traceMessageFailures) {
           val failureOrigin = failureReason.failureOrigin
-          LOGGER.info(
+          log.info(
             "Reporting failure for jobId '{}' connectionId '{}' origin '{}'",
             jobContext.jobId,
             connectionId,
@@ -132,7 +131,7 @@ class JobErrorReporter(
           }
         }
       } catch (e: Exception) {
-        LOGGER.error(
+        log.error(
           "Failed to report status for jobId '{}' connectionId '{}': {}",
           jobContext.jobId,
           connectionId,
@@ -413,12 +412,12 @@ class JobErrorReporter(
         MetricAttribute(MetricTags.STATUS_TAG, MetricTags.FAILURE),
         MetricAttribute(MetricTags.FAILURE_TYPE, failureReason.failureType.value()),
       )
-      LOGGER.error("Error when reporting job failure reason: {}", failureReason, e)
+      log.error(e) { "Error when reporting job failure reason: $failureReason" }
     }
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(JobErrorReporter::class.java)
+    private val log = KotlinLogging.logger {}
     const val FROM_TRACE_MESSAGE = "from_trace_message"
     const val AIRBYTE_EDITION_META_KEY: String = "airbyte_edition"
     const val AIRBYTE_VERSION_META_KEY: String = "airbyte_version"

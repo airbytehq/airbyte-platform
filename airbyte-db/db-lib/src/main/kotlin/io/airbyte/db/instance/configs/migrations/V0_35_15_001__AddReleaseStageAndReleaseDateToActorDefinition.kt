@@ -14,8 +14,6 @@ import org.jooq.Schema
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
 import org.jooq.impl.SchemaImpl
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 private val log = KotlinLogging.logger {}
 
@@ -53,11 +51,6 @@ class V0_35_15_001__AddReleaseStageAndReleaseDateToActorDefinition : BaseJavaMig
   }
 
   companion object {
-    private val LOGGER: Logger =
-      LoggerFactory.getLogger(
-        V0_35_15_001__AddReleaseStageAndReleaseDateToActorDefinition::class.java,
-      )
-
     @JvmStatic
     fun createReleaseStageEnum(ctx: DSLContext) {
       ctx.createType("release_stage").asEnum("alpha", "beta", "generally_available", "custom").execute()

@@ -38,6 +38,7 @@ dependencies {
   implementation(libs.cron.utils)
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.jakarta.validation.api)
+  implementation(libs.kotlin.logging)
   implementation(libs.kubernetes.client)
 
   implementation(project(":oss:airbyte-analytics"))

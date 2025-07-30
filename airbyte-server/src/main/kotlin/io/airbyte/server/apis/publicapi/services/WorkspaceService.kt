@@ -36,11 +36,11 @@ import io.airbyte.server.apis.publicapi.constants.WORKSPACES_PATH
 import io.airbyte.server.apis.publicapi.constants.WORKSPACES_WITH_ID_PATH
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.mappers.WorkspaceResponseMapper
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Secondary
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import jakarta.ws.rs.core.Response
-import org.slf4j.LoggerFactory
 import java.util.UUID
 
 interface WorkspaceService {
@@ -86,6 +86,8 @@ interface WorkspaceService {
   ): Response
 }
 
+private val log = KotlinLogging.logger {}
+
 @Singleton
 @Secondary
 open class WorkspaceServiceImpl(
@@ -96,10 +98,6 @@ open class WorkspaceServiceImpl(
   private val currentUserService: CurrentUserService,
   private val dataplaneGroupService: DataplaneGroupService,
 ) : WorkspaceService {
-  companion object {
-    private val log = LoggerFactory.getLogger(WorkspaceServiceImpl::class.java)
-  }
-
   /**
    * Creates a workspace.
    */
@@ -121,10 +119,10 @@ open class WorkspaceServiceImpl(
       kotlin
         .runCatching { workspacesHandler.createWorkspace(workspaceCreate) }
         .onFailure {
-          log.error("Error for createWorkspace", it)
+          log.error(it) { "Error for createWorkspace" }
           ConfigClientErrorHandler.handleError(it)
         }
-    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
     return WorkspaceResponseMapper.from(
       result.getOrNull()!!,
       dataplaneGroupService.getDataplaneGroup(result.getOrNull()!!.dataplaneGroupId).name,
@@ -176,10 +174,10 @@ open class WorkspaceServiceImpl(
       kotlin
         .runCatching { workspacesHandler.updateWorkspace(workspaceUpdate) }
         .onFailure {
-          log.error("Error for updateWorkspace", it)
+          log.error(it) { "Error for updateWorkspace" }
           ConfigClientErrorHandler.handleError(it)
         }
-    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
     return WorkspaceResponseMapper.from(
       result.getOrNull()!!,
       dataplaneGroupService.getDataplaneGroup(result.getOrNull()!!.dataplaneGroupId).name,
@@ -220,10 +218,10 @@ open class WorkspaceServiceImpl(
       kotlin
         .runCatching { workspacesHandler.getWorkspace(workspaceIdRequestBody) }
         .onFailure {
-          log.error("Error for getWorkspace", it)
+          log.error(it) { "Error for getWorkspace" }
           ConfigClientErrorHandler.handleError(it)
         }
-    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
     return WorkspaceResponseMapper.from(result.getOrNull()!!, dataplaneGroupService.getDataplaneGroup(result.getOrNull()!!.dataplaneGroupId).name)
   }
 
@@ -262,10 +260,10 @@ open class WorkspaceServiceImpl(
       kotlin
         .runCatching { workspacesHandler.deleteWorkspace(workspaceIdRequestBody) }
         .onFailure {
-          log.error("Error for deleteWorkspace", it)
+          log.error(it) { "Error for deleteWorkspace" }
           ConfigClientErrorHandler.handleError(it)
         }
-    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
   }
 
   override fun controllerDeleteWorkspace(workspaceId: UUID): Response {
@@ -300,7 +298,7 @@ open class WorkspaceServiceImpl(
     val pagination: Pagination = Pagination().pageSize(limit).rowOffset(offset)
 
     val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(currentUserService.getCurrentUser().userId) }
-    log.debug("Workspaces to query: {}", workspaceIdsToQuery)
+    log.debug { "Workspaces to query: $workspaceIdsToQuery" }
     val listResourcesForWorkspacesRequestBody = ListResourcesForWorkspacesRequestBody()
     listResourcesForWorkspacesRequestBody.includeDeleted = includeDeleted
     listResourcesForWorkspacesRequestBody.pagination = pagination
@@ -309,10 +307,10 @@ open class WorkspaceServiceImpl(
       kotlin
         .runCatching { workspacesHandler.listWorkspacesPaginated(listResourcesForWorkspacesRequestBody) }
         .onFailure {
-          log.error("Error for listWorkspaces", it)
+          log.error(it) { "Error for listWorkspaces" }
           ConfigClientErrorHandler.handleError(it)
         }
-    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
     return io.airbyte.server.apis.publicapi.mappers.WorkspacesResponseMapper.from(
       result.getOrNull()!!,
       workspaceIds,

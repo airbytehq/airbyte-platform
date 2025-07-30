@@ -51,6 +51,7 @@ import io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.Condition
@@ -66,10 +67,7 @@ import org.jooq.SortField
 import org.jooq.TableField
 import org.jooq.impl.DSL
 import org.jooq.impl.TableImpl
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.lang.invoke.MethodHandles
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -2295,7 +2293,7 @@ class ConnectionServiceJooqImpl
       }
 
     companion object {
-      private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+      private val log = KotlinLogging.logger {}
 
       private const val OPERATION_IDS_AGG_DELIMITER = ","
       private const val OPERATION_IDS_AGG_FIELD = "operation_ids_agg"

@@ -27,11 +27,10 @@ import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.RemoveLastOrgAdminPermissionException
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import jakarta.validation.Valid
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.UUID
 import java.util.function.Supplier
@@ -338,7 +337,7 @@ open class PermissionHandler(
           try {
             return@map checkPermissions(permissionCheckRequest)
           } catch (e: IOException) {
-            LOGGER.error("Error checking permissions for request: {}", permissionCheckRequest, e)
+            log.error(e) { "Error checking permissions for request: $permissionCheckRequest" }
             return@map PermissionCheckRead().status(PermissionCheckRead.StatusEnum.FAILED)
           }
         }.toList()
@@ -490,7 +489,7 @@ open class PermissionHandler(
   ): Permission.PermissionType? = permissionPersistence?.findPermissionTypeForUserAndOrganization(organizationId, authUserId)
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(PermissionHandler::class.java)
+    private val log = KotlinLogging.logger {}
 
     private fun buildPermissionRead(permission: Permission): PermissionRead =
       PermissionRead()

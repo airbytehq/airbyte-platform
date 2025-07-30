@@ -12,16 +12,15 @@ import io.airbyte.config.StateType
 import io.airbyte.config.StateWrapper
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.Nullable
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.util.Optional
 
 /**
  * State Message helpers.
  */
 object StateMessageHelper {
-  private val LOGGER: Logger = LoggerFactory.getLogger(StateMessageHelper::class.java)
+  private val log = KotlinLogging.logger {}
 
   /**
    * This a takes a json blob state and tries return either a legacy state in the format of a json
@@ -39,7 +38,7 @@ object StateMessageHelper {
       try {
         stateMessages = Jsons.`object`(state, AirbyteStateMessageListTypeReference())
       } catch (e: IllegalArgumentException) {
-        LOGGER.warn("Failed to convert state, falling back to legacy state wrapper")
+        log.warn { "Failed to convert state, falling back to legacy state wrapper" }
         return Optional.of(getLegacyStateWrapper(state))
       }
       if (stateMessages.isEmpty()) {

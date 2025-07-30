@@ -14,9 +14,9 @@ import io.airbyte.publicApi.server.generated.models.UsersResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.mappers.UserReadMapper
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Secondary
 import jakarta.inject.Singleton
-import org.slf4j.LoggerFactory
 import java.util.UUID
 
 interface UserService {
@@ -29,27 +29,25 @@ interface UserService {
   ): UsersResponse
 }
 
+private val log = KotlinLogging.logger {}
+
 @Singleton
 @Secondary
 open class UserServiceImpl(
   private val workspacesHandler: WorkspacesHandler,
   private val userHandler: UserHandler,
 ) : UserService {
-  companion object {
-    private val log = LoggerFactory.getLogger(UserServiceImpl::class.java)
-  }
-
   override fun getAllWorkspaceIdsForUser(userId: UUID): List<UUID> {
     val listWorkspacesByUserRequestBody = ListWorkspacesByUserRequestBody().userId(userId)
     val result =
       kotlin
         .runCatching { workspacesHandler.listWorkspacesByUser(listWorkspacesByUserRequestBody) }
         .onFailure {
-          log.error("Error for listWorkspacesByUser", it)
+          log.error(it) { "Error for listWorkspacesByUser" }
           ConfigClientErrorHandler.handleError(it)
         }
 
-    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
     val workspaceReadList: WorkspaceReadList = result.getOrDefault(WorkspaceReadList().workspaces(emptyList()))
     return workspaceReadList.workspaces.map { it.workspaceId }
   }
@@ -66,10 +64,10 @@ open class UserServiceImpl(
         .runCatching {
           userHandler.listUsersInOrganization(organizationIdRequestBody)
         }.onFailure {
-          log.error("Error for getUsersInAnOrganization", it)
+          log.error(it) { "Error for getUsersInAnOrganization" }
           ConfigClientErrorHandler.handleError(it)
         }
-    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
     val userReadList = result.getOrThrow()
     // 2. Filter users on either ids or emails.
     val finalUserReadList = OrganizationUserReadList()

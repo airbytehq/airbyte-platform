@@ -4,17 +4,17 @@
 
 package io.airbyte.metrics.reporter
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.runtime.event.ApplicationShutdownEvent
 import io.micronaut.runtime.event.ApplicationStartupEvent
 import io.micronaut.runtime.event.annotation.EventListener
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.lang.invoke.MethodHandles
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
+
+private val log = KotlinLogging.logger {}
 
 /**
  * EventListeners registers event listeners for the startup and shutdown events from Micronaut.
@@ -42,7 +42,7 @@ internal class EventListeners(
         )
       },
     )
-    log.info("registered {} emitters", emitters.size)
+    log.info { "registered ${emitters.size} emitters" }
   }
 
   /**
@@ -52,11 +52,7 @@ internal class EventListeners(
    */
   @EventListener
   fun stopEmitters(event: ApplicationShutdownEvent?) {
-    log.info("shutting down emitters")
+    log.info { "shutting down emitters" }
     executor.shutdown()
-  }
-
-  companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
   }
 }

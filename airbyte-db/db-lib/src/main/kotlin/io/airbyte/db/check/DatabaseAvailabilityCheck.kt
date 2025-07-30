@@ -8,7 +8,6 @@ import io.airbyte.db.Database
 import io.github.oshai.kotlinlogging.KLogger
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
-import org.slf4j.Logger
 import java.util.function.Function
 
 /**

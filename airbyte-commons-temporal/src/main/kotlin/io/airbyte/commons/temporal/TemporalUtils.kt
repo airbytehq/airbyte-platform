@@ -12,6 +12,7 @@ import io.airbyte.commons.temporal.factories.TemporalCloudConfig
 import io.airbyte.commons.temporal.factories.TemporalSelfHostedConfig
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsFactory
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsTimeouts
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Value
@@ -22,9 +23,6 @@ import io.temporal.api.workflowservice.v1.UpdateNamespaceRequest
 import io.temporal.serviceclient.WorkflowServiceStubs
 import io.temporal.serviceclient.WorkflowServiceStubsOptions
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.lang.invoke.MethodHandles
 import java.nio.file.Path
 import java.time.Duration
 import java.util.Objects
@@ -214,7 +212,7 @@ class TemporalUtils(
       .namespaceInfo
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
 
     private val WAIT_INTERVAL: Duration = Duration.ofSeconds(2)
     private val MAX_TIME_TO_CONNECT: Duration = Duration.ofMinutes(2)

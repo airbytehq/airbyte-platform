@@ -25,12 +25,11 @@ import io.airbyte.notification.messages.SchemaUpdateNotification
 import io.airbyte.notification.messages.SourceInfo
 import io.airbyte.notification.messages.SyncSummary
 import io.airbyte.notification.messages.WorkspaceInfo
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.nio.charset.StandardCharsets
@@ -597,12 +596,12 @@ internal class SlackNotificationClientTest {
     @Throws(IOException::class)
     override fun handle(t: HttpExchange) {
       val body = String(t.requestBody.readAllBytes())
-      LOGGER.info("Received: '{}'", body)
+      log.info { "Received: '$body'" }
       var message: JsonNode? = null
       try {
         message = Jsons.deserialize(body)
       } catch (e: RuntimeException) {
-        LOGGER.error("Failed to parse JSON from body {}", body, e)
+        log.error(e) { "Failed to parse JSON from body $body" }
       }
       val response: String
       if (message != null && message.has("text") && expectedMessage == message["text"].asText()) {
@@ -622,7 +621,7 @@ internal class SlackNotificationClientTest {
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(SlackNotificationClientTest::class.java)
+    private val log = KotlinLogging.logger {}
     private val WORKSPACE_ID: UUID = UUID.randomUUID()
     private val CONNECTION_ID: UUID = UUID.randomUUID()
     private val SOURCE_ID: UUID = UUID.randomUUID()

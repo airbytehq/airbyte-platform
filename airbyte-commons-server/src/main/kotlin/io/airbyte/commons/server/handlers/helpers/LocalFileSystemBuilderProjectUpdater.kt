@@ -5,8 +5,7 @@
 package io.airbyte.commons.server.handlers.helpers
 
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -22,12 +21,12 @@ class LocalFileSystemBuilderProjectUpdater : BuilderProjectUpdater {
              * ensure this cannot affect the platform. Users can look through the logs if they suspect this is
              * failing
              */
-      LOGGER.warn("Error writing manifest to local filesystem. Exception: {}. Builder Project: {}", e, projectUpdate.builderProject)
+      log.warn { "Error writing manifest to local filesystem. Exception: {}. Builder Project: $e, projectUpdate.builderProject" }
     }
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(LocalFileSystemBuilderProjectUpdater::class.java)
+    private val log = KotlinLogging.logger {}
 
     @Throws(IOException::class)
     fun writeJsonNodeToYamlFile(

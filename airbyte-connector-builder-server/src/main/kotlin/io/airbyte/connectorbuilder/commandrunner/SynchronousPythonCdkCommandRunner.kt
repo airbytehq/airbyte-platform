@@ -11,8 +11,7 @@ import io.airbyte.connectorbuilder.filewriter.AirbyteArgument
 import io.airbyte.connectorbuilder.filewriter.AirbyteFileWriter
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.workers.internal.AirbyteStreamFactory
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.IOException
 
 // TODO: Remove this and invoke directly
@@ -81,7 +80,7 @@ open class SynchronousPythonCdkCommandRunner(
         "--state",
         state.filepath,
       )
-    LOGGER.debug("Preparing command for {}: {}", cdkCommand, command.joinToString(" "))
+    log.debug { "Preparing command for {}: $cdkCommand, ${command.joinToString(" ")}" }
     val processBuilder = ProcessBuilder(command)
     addPythonPathToSubprocessEnvironment(processBuilder)
     applyUnsafeCodeExecutionVariable(processBuilder)
@@ -125,6 +124,6 @@ open class SynchronousPythonCdkCommandRunner(
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(SynchronousPythonCdkCommandRunner::class.java)
+    private val log = KotlinLogging.logger {}
   }
 }

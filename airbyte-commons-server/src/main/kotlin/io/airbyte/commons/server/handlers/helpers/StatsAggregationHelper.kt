@@ -18,11 +18,9 @@ import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncMode
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.validation.Valid
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.lang.invoke.MethodHandles
 import java.util.Optional
 import java.util.function.Consumer
 import java.util.function.Function
@@ -33,7 +31,7 @@ import java.util.stream.Collectors
  * single stream across multiple attempts
  */
 object StatsAggregationHelper {
-  private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+  private val log = KotlinLogging.logger {}
 
   /**
    * WARNING! billing uses the stats that this method returns. Be careful when changing this method.

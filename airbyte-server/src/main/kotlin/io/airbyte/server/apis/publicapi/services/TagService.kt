@@ -16,9 +16,9 @@ import io.airbyte.server.apis.publicapi.mappers.TagCreateMapper
 import io.airbyte.server.apis.publicapi.mappers.TagResponseMapper
 import io.airbyte.server.apis.publicapi.mappers.TagsResponseMapper
 import io.airbyte.server.handlers.TagHandler
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Secondary
 import jakarta.inject.Singleton
-import org.slf4j.LoggerFactory
 import java.util.UUID
 
 interface TagService {
@@ -40,6 +40,8 @@ interface TagService {
   ): TagResponse
 }
 
+private val log = KotlinLogging.logger {}
+
 @Singleton
 @Secondary
 class TagServiceImpl(
@@ -47,10 +49,6 @@ class TagServiceImpl(
   private val currentUserService: CurrentUserService,
   private val tagHandler: TagHandler,
 ) : TagService {
-  companion object {
-    private val log = LoggerFactory.getLogger(ConnectionServiceImpl::class.java)
-  }
-
   override fun listTags(workspaceIds: List<UUID>): TagsResponse {
     val workspaceIdsToQuery = workspaceIds.ifEmpty { userService.getAllWorkspaceIdsForUser(currentUserService.getCurrentUser().userId) }
 
@@ -58,7 +56,7 @@ class TagServiceImpl(
       kotlin
         .runCatching { tagHandler.getTagsForWorkspaces(workspaceIdsToQuery) }
         .onFailure {
-          log.error("Error for listTags", it)
+          log.error(it) { "Error for listTags" }
           ConfigClientErrorHandler.handleError(it)
         }.getOrThrow()
 
@@ -70,7 +68,7 @@ class TagServiceImpl(
       kotlin
         .runCatching { tagHandler.createTag(TagCreateMapper.from(tagCreateRequest)) }
         .onFailure {
-          log.error("Error for createTag", it)
+          log.error(it) { "Error for createTag" }
           ConfigClientErrorHandler.handleError(it)
         }.getOrThrow()
 
@@ -82,7 +80,7 @@ class TagServiceImpl(
       kotlin
         .runCatching { tagHandler.getTag(tagId) }
         .onFailure {
-          log.error("Error for getTag", it)
+          log.error(it) { "Error for getTag" }
           ConfigClientErrorHandler.handleError(it)
         }.getOrThrow()
 
@@ -96,7 +94,7 @@ class TagServiceImpl(
     kotlin
       .runCatching { tagHandler.deleteTag(TagDeleteRequestBody().tagId(tagId).workspaceId(workspaceId)) }
       .onFailure {
-        log.error("Error for deleteTag", it)
+        log.error(it) { "Error for deleteTag" }
         ConfigClientErrorHandler.handleError(it)
       }
   }
@@ -118,7 +116,7 @@ class TagServiceImpl(
                 .color(tagPatchRequest.color),
             )
         }.onFailure {
-          log.error("Error for updateTag", it)
+          log.error(it) { "Error for updateTag" }
           ConfigClientErrorHandler.handleError(it)
         }.getOrThrow()
 

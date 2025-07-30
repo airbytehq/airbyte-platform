@@ -49,8 +49,7 @@ import io.airbyte.workers.input.ReplicationInputMapper
 import io.airbyte.workers.models.JobInput
 import io.airbyte.workers.models.RefreshSchemaActivityOutput
 import io.airbyte.workers.models.ReplicationActivityInput
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import secrets.persistence.SecretCoordinateException
 import java.io.IOException
 import java.lang.String
@@ -158,7 +157,7 @@ class ReplicationInputHydrator(
         streamsToBackfill,
       )
     } catch (e: Exception) {
-      LOGGER.error(
+      log.error(
         "Failed to track stream metadata for connectionId:{} attempt:{}",
         replicationActivityInput.connectionId,
         replicationActivityInput.jobRunConfig!!.attemptId,
@@ -264,7 +263,7 @@ class ReplicationInputHydrator(
   ): State? {
     if (schemaRefreshOutput?.appliedDiff != null) {
       val streamsToBackfill: List<StreamDescriptor?> = backfillHelper.getStreamsToBackfill(schemaRefreshOutput.appliedDiff, catalog)
-      LOGGER.debug(
+      log.debug(
         "Backfilling streams: {}",
         String.join(", ", streamsToBackfill.stream().map { obj: StreamDescriptor? -> obj!!.name }.toList()),
       )
@@ -273,7 +272,7 @@ class ReplicationInputHydrator(
         // We persist the state here in case the attempt fails, the subsequent attempt will continue the
         // backfill process.
         // TODO(mfsiega-airbyte): move all of the state handling into a separate activity.
-        LOGGER.debug("Resetting state for connection: {}", connectionId)
+        log.debug { "Resetting state for connection: $connectionId" }
         persistState(resetState, connectionId)
       }
 
@@ -336,6 +335,6 @@ class ReplicationInputHydrator(
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(ReplicationInputHydrator::class.java)
+    private val log = KotlinLogging.logger {}
   }
 }

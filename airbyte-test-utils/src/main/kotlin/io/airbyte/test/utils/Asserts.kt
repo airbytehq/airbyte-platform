@@ -14,9 +14,8 @@ import io.airbyte.api.client.model.generated.StreamStatusJobType
 import io.airbyte.api.client.model.generated.StreamStatusRead
 import io.airbyte.api.client.model.generated.StreamStatusRunState
 import io.airbyte.db.Database
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.Assertions
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.util.UUID
 import java.util.function.Consumer
@@ -28,7 +27,7 @@ import java.util.stream.Collectors
  * acceptance tests. These assertions simplify this and reduce mistakes.
  */
 object Asserts {
-  private val LOGGER: Logger = LoggerFactory.getLogger(Asserts::class.java)
+  private val log = KotlinLogging.logger {}
 
   @JvmStatic
   @Throws(Exception::class)
@@ -107,11 +106,11 @@ object Asserts {
       sourceTables.addAll(Databases.listAllTables(source, inputSchema))
     }
 
-    LOGGER.debug("source tables count: ${inputSchemas.size}")
-    LOGGER.debug("tables found in source: ${sourceTables.joinToString(", ") { it.getFullyQualifiedTableName() }}")
+    log.debug { "source tables count: ${inputSchemas.size}" }
+    log.debug("tables found in source: ${sourceTables.joinToString(", ") { it.getFullyQualifiedTableName() }}")
 
     val expDestTables = addAirbyteGeneratedTables(outputSchema, withNormalizedTable, withScdTable, sourceTables)
-    LOGGER.debug("expected destination tables: ${expDestTables.joinToString(", ")}")
+    log.debug("expected destination tables: ${expDestTables.joinToString(", ")}")
 
     val destinationTables = Databases.listAllTables(destination, outputSchema)
     Assertions.assertEquals(
@@ -120,14 +119,14 @@ object Asserts {
       String.format("streams did not match.\n exp stream names: %s\n destination stream names: %s\n", expDestTables, destinationTables),
     )
 
-    LOGGER.debug("destination tables count: ${destinationTables.size}")
-    LOGGER.debug("tables found in destination: ${destinationTables.joinToString(", ") { it.getFullyQualifiedTableName() }}")
+    log.debug { "destination tables count: ${destinationTables.size}" }
+    log.debug("tables found in destination: ${destinationTables.joinToString(", ") { it.getFullyQualifiedTableName() }}")
 
     for (pair in sourceTables) {
-      LOGGER.debug("searching for table: ${pair.getFullyQualifiedTableName()}")
+      log.debug { "searching for table: ${pair.getFullyQualifiedTableName()}" }
       val sourceRecords = Databases.retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName())
-      LOGGER.debug("records found in source count: ${sourceRecords.size}")
-      LOGGER.debug("records found in source: ${sourceRecords.joinToString(", ") { it.asText() }}")
+      log.debug { "records found in source count: ${sourceRecords.size}" }
+      log.debug("records found in source: ${sourceRecords.joinToString(", ") { it.asText() }}")
       // generate the raw stream with the correct schema
       // retrieve and assert the records
       assertRawDestinationContains(destination, sourceRecords, outputSchema, pair.tableName)
@@ -243,15 +242,15 @@ object Asserts {
 
     var count = 0
     while (count < 60 && results.isEmpty()) {
-      LOGGER.debug("Fetching stream status for {} {} {} {}...", connectionId, jobId, attempt, workspaceId)
+      log.debug { "Fetching stream status for {} {} {} $connectionId, jobId, attempt, workspaceId..." }
       try {
         val result = testHarness.getStreamStatuses(connectionId, jobId, attempt, workspaceId)
         if (result != null) {
-          LOGGER.debug("Stream status result for connection {}: {}", connectionId, result)
+          log.debug { "Stream status result for connection {}: $connectionId, result" }
           results = result.streamStatuses ?: emptyList()
         }
       } catch (e: Exception) {
-        LOGGER.info("Unable to call stream status API.", e)
+        log.info("Unable to call stream status API.", e)
       }
       count++
 
@@ -259,7 +258,7 @@ object Asserts {
         try {
           Thread.sleep(5000)
         } catch (e: InterruptedException) {
-          LOGGER.debug("Failed to sleep.", e)
+          log.debug("Failed to sleep.", e)
         }
       }
     }

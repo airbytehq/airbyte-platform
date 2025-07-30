@@ -36,6 +36,7 @@ import io.airbyte.db.instance.jobs.jooq.generated.Tables
 import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToTrace
 import io.airbyte.persistence.job.JobPersistence.JobAttemptPair
 import io.airbyte.protocol.models.v0.StreamDescriptor
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jooq.DSLContext
 import org.jooq.Field
 import org.jooq.JSONB
@@ -48,8 +49,6 @@ import org.jooq.Result
 import org.jooq.SortField
 import org.jooq.conf.ParamType
 import org.jooq.impl.DSL
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.nio.file.Path
 import java.time.Instant
@@ -105,7 +104,7 @@ class DefaultJobPersistence
       jobConfig: JobConfig,
       isScheduled: Boolean,
     ): Optional<Long> {
-      LOGGER.info("enqueuing pending job for scope: {}", scope)
+      log.info { "enqueuing pending job for scope: $scope" }
       // TODO: stop using LocalDateTime
       // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
       val now = currentTime
@@ -703,7 +702,7 @@ class DefaultJobPersistence
               .offset(offset)
               .getSQL(ParamType.INLINED) + ") AS jobs"
         val fullQuery = jobSelectAndJoin(jobsSubquery) + getJobOrderBySql(orderBy)
-        LOGGER.debug("jobs query: {}", fullQuery)
+        log.debug { "jobs query: $fullQuery" }
         ctx.fetch(fullQuery)
       }
     }
@@ -799,7 +798,7 @@ class DefaultJobPersistence
               .offset(offset)
               .getSQL(ParamType.INLINED) + ") AS jobs"
         val fullQuery = jobSelectAndJoin(jobsSubquery) + getJobOrderBySql(orderBy)
-        LOGGER.debug("jobs query: {}", fullQuery)
+        log.debug { "jobs query: $fullQuery" }
         ctx.fetch(fullQuery)
       }
     }
@@ -943,7 +942,7 @@ class DefaultJobPersistence
               .offset(offset)
               .getSQL(ParamType.INLINED) + ") AS jobs"
         val fullQuery = jobSelectAndJoin(jobsSubquery) + getJobOrderBySql(orderBy)
-        LOGGER.debug("jobs query: {}", fullQuery)
+        log.debug { "jobs query: $fullQuery" }
         getJobsFromResult(ctx.fetch(fullQuery))
       }
     }
@@ -1024,7 +1023,7 @@ class DefaultJobPersistence
                 },
               ).getSQL(ParamType.INLINED) + ") AS jobs"
         val fullQuery = jobSelectAndJoin(jobsSubquery)
-        LOGGER.debug("jobs query: {}", fullQuery)
+        log.debug { "jobs query: $fullQuery" }
         getJobsFromResult(ctx.fetch(fullQuery))
       }
 
@@ -1504,7 +1503,7 @@ class DefaultJobPersistence
         // Flagging this because this would be highly suspicious but not bad enough that we should fail
         // hard.
         // If the new config is fine, the system should self-heal.
-        LOGGER.warn(
+        log.warn(
           "Inconsistent AirbyteProtocolVersion found, only one of min/max was found. (min:{}, max:{})",
           min.map { obj: Version -> obj.serialize() }.orElse(""),
           max
@@ -1610,7 +1609,7 @@ class DefaultJobPersistence
           .orElse(deployment) // if no record was returned that means that the new deployment id was used.
 
       if (deployment != committedDeploymentId) {
-        LOGGER.warn("Attempted to set a deployment id {}, but deployment id {} already set. Retained original value.", deployment, deployment)
+        log.warn { "Attempted to set a deployment id {}, but deployment id $deployment, deployment already set. Retained original value." }
       }
     }
 
@@ -1678,7 +1677,7 @@ class DefaultJobPersistence
     }
 
     companion object {
-      private val LOGGER: Logger = LoggerFactory.getLogger(DefaultJobPersistence::class.java)
+      private val log = KotlinLogging.logger {}
       private const val ATTEMPT_ENDED_AT_FIELD = "attempt_ended_at"
       private const val ATTEMPT_FAILURE_SUMMARY_FIELD = "attempt_failure_summary"
       private const val ATTEMPT_NUMBER_FIELD = "attempt_number"
@@ -2007,7 +2006,7 @@ class DefaultJobPersistence
 
             val key = JobAttemptPair(r.get(Tables.ATTEMPTS.JOB_ID), r.get(Tables.ATTEMPTS.ATTEMPT_NUMBER))
             if (!attemptStats.containsKey(key)) {
-              LOGGER.error(
+              log.error(
                 "{} stream stats entry does not have a corresponding sync stats entry. This suggest the database is in a bad state.",
                 key,
               )

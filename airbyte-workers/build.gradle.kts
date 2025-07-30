@@ -54,6 +54,7 @@ dependencies {
   implementation(libs.aws.java.sdk.sts)
   implementation(libs.google.auth.library.oauth2.http)
   implementation(libs.java.jwt)
+  implementation(libs.kotlin.logging)
   implementation(libs.kubernetes.client)
   implementation(libs.guava)
   implementation(libs.temporal.sdk) {

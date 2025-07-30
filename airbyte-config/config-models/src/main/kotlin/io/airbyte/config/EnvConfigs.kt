@@ -10,8 +10,7 @@ import com.google.common.base.Strings
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.TolerationPOJO.Companion.getJobKubeTolerations
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.nio.file.Path
 import java.util.Arrays
 import java.util.Optional
@@ -171,7 +170,7 @@ class EnvConfigs
       if (value != null && !value.isEmpty()) {
         return parser.apply(value)
       } else {
-        LOGGER.info("Using default value for environment variable {}: '{}'", key, if (isSecret) "*****" else defaultValue)
+        log.info { "Using default value for environment variable $key: ${if (isSecret) "*****" else defaultValue}" }
         return defaultValue
       }
     }
@@ -210,7 +209,7 @@ class EnvConfigs
     private fun getPath(envVar: EnvVar): Path = getPath(envVar.name)
 
     companion object {
-      private val LOGGER: Logger = LoggerFactory.getLogger(EnvConfigs::class.java)
+      private val log = KotlinLogging.logger {}
 
       // job-type-specific overrides
       private const val DEFAULT_JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY = "IfNotPresent"

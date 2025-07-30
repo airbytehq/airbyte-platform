@@ -10,14 +10,12 @@ import io.airbyte.connectorbuilder.TracingHelper
 import io.airbyte.connectorbuilder.exceptions.AirbyteCdkInvalidInputException
 import io.airbyte.connectorbuilder.exceptions.CdkProcessException
 import io.airbyte.connectorbuilder.exceptions.CdkUnknownException
-import io.airbyte.connectorbuilder.requester.AirbyteCdkRequesterImpl
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.internal.AirbyteStreamFactory
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.IOException
 import java.util.Optional
 import java.util.stream.Collectors
@@ -66,7 +64,7 @@ class ProcessOutputParser {
 
     if (trace.isPresent) {
       val traceMessage = trace.get()
-      LOGGER.debug(
+      log.debug(
         "Error response from CDK: {}\n{}",
         traceMessage.error.message,
         traceMessage.error.stackTrace,
@@ -97,7 +95,7 @@ class ProcessOutputParser {
           cdkCommand,
           process.exitValue(),
         )
-      LOGGER.error(errorMessage)
+      log.error(errorMessage)
       return CdkUnknownException(errorMessage)
     }
 
@@ -106,12 +104,12 @@ class ProcessOutputParser {
     val error = stderr.lines().collect(Collectors.joining())
 
     val errorMessage = String.format("CDK subprocess for %s finished with exit code %d. error=%s", cdkCommand, exitCode, error)
-    LOGGER.error(errorMessage)
+    log.error(errorMessage)
     return CdkProcessException(errorMessage)
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(AirbyteCdkRequesterImpl::class.java)
+    private val log = KotlinLogging.logger {}
     private const val TIME_OUT = 30
   }
 }

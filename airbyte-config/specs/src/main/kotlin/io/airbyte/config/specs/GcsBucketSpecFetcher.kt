@@ -15,8 +15,7 @@ import io.airbyte.protocol.models.AirbyteProtocolSchema
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.Optional
@@ -66,7 +65,7 @@ class GcsBucketSpecFetcher {
     val specAsBlob = getSpecAsBlob(dockerImageName, dockerImageTag)
 
     if (specAsBlob.isEmpty) {
-      LOGGER.debug("Spec not found in bucket storage")
+      log.debug { "Spec not found in bucket storage" }
       return Optional.empty()
     }
 
@@ -74,7 +73,7 @@ class GcsBucketSpecFetcher {
     try {
       validateConfig(Jsons.deserialize(specAsString))
     } catch (e: JsonValidationException) {
-      LOGGER.error("Received invalid spec from bucket store. {}", e.toString())
+      log.error(e) { "Received invalid spec from bucket store." }
       return Optional.empty()
     }
     return Optional.of(
@@ -93,7 +92,7 @@ class GcsBucketSpecFetcher {
     if (airbyteEdition == AirbyteEdition.CLOUD) {
       val cloudSpecAsBlob = getSpecAsBlob(dockerImageName, dockerImageTag, CLOUD_SPEC_FILE, AirbyteEdition.CLOUD)
       if (cloudSpecAsBlob.isPresent) {
-        LOGGER.info("Found cloud specific spec: {} {}", bucketName, cloudSpecAsBlob)
+        log.info { "Found cloud specific spec: {} $bucketName, cloudSpecAsBlob" }
         return cloudSpecAsBlob
       }
     }
@@ -113,7 +112,7 @@ class GcsBucketSpecFetcher {
         .resolve(dockerImageName)
         .resolve(dockerImageTag)
         .resolve(specFile)
-    LOGGER.debug("Checking path for cached {} spec: {} {}", airbyteEdition.name, bucketName, specPath)
+    log.debug { "Checking path for cached {} spec: {} $airbyteEdition.name, bucketName, specPath" }
     val specAsBlob = storage[bucketName, specPath.toString()]
     if (specAsBlob != null) {
       return Optional.of(specAsBlob)
@@ -122,7 +121,7 @@ class GcsBucketSpecFetcher {
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(GcsBucketSpecFetcher::class.java)
+    private val log = KotlinLogging.logger {}
 
     // these filenames must match default_spec_file and cloud_spec_file in manage.sh
     const val DEFAULT_SPEC_FILE: String = "spec.json"

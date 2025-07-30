@@ -6,17 +6,19 @@ package io.airbyte.commons.temporal.factories
 
 import com.uber.m3.tally.RootScopeBuilder
 import com.uber.m3.tally.StatsReporter
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.MeterRegistry
 import io.temporal.common.reporter.MicrometerClientStatsReporter
 import io.temporal.serviceclient.SimpleSslContextBuilder
 import io.temporal.serviceclient.WorkflowServiceStubs
 import io.temporal.serviceclient.WorkflowServiceStubsOptions
-import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import java.time.Duration
 import javax.net.ssl.SSLException
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Defines the different timeouts to use with temporal.
@@ -66,7 +68,6 @@ class WorkflowServiceStubsFactory(
   private val meterRegistry: MeterRegistry?,
 ) {
   companion object {
-    private val log = LoggerFactory.getLogger(WorkflowServiceStubsOptions::class.java)
     private const val REPORT_INTERVAL_SECONDS: Double = 120.0
   }
 

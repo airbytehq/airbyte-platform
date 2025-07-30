@@ -11,11 +11,10 @@ import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.persistence.versionoverrides.DefinitionVersionOverrideProvider
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.Nullable
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.UUID
 import java.util.function.Function
@@ -45,7 +44,7 @@ class ActorDefinitionVersionHelper(
   )
 
   init {
-    LOGGER.info(
+    log.info(
       "ActorDefinitionVersionHelper initialized with override provider: {}",
       configOverrideProvider.javaClass.simpleName,
     )
@@ -131,7 +130,7 @@ class ActorDefinitionVersionHelper(
 
       return sourceVersions
     } catch (e: IOException) {
-      LOGGER.error(e.localizedMessage)
+      log.error(e.localizedMessage)
       throw RuntimeException(e)
     }
   }
@@ -188,7 +187,7 @@ class ActorDefinitionVersionHelper(
 
       return destinationVersions
     } catch (e: IOException) {
-      LOGGER.error(e.localizedMessage)
+      log.error(e.localizedMessage)
       throw RuntimeException(e)
     }
   }
@@ -302,7 +301,7 @@ class ActorDefinitionVersionHelper(
   ): ActorDefinitionVersion = getDestinationVersion(destinationDefinition, workspaceId, null)
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(ActorDefinitionVersionHelper::class.java)
+    private val log = KotlinLogging.logger {}
 
     /**
      * Get the docker image name (docker_repository:docker_image_tag) for a given actor definition

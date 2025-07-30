@@ -51,11 +51,9 @@ import io.airbyte.featureflag.SourceDefinition
 import io.airbyte.featureflag.SourceResourceOverrides
 import io.airbyte.featureflag.UseResourceRequirementsVariant
 import io.airbyte.featureflag.Workspace
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.Nullable
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.lang.invoke.MethodHandles
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Consumer
@@ -460,7 +458,7 @@ class DefaultJobCreator(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
 
     // Resets use an empty source which doesn't have a source definition.
     private val RESET_SOURCE_DEFINITION: StandardSourceDefinition? = null

@@ -18,9 +18,9 @@ import io.airbyte.server.apis.publicapi.constants.POST
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.mappers.DataplaneCreateResponseMapper
 import io.airbyte.server.apis.publicapi.mappers.DataplaneResponseMapper
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import jakarta.ws.rs.core.Response
-import org.slf4j.LoggerFactory
 import java.util.UUID
 
 interface DataplaneService {
@@ -38,6 +38,8 @@ interface DataplaneService {
   fun controllerDeleteDataplane(dataplaneId: UUID): Response
 }
 
+private val log = KotlinLogging.logger {}
+
 @Singleton
 class DataplaneServiceImpl(
   private val dataplaneDataService: io.airbyte.data.services.DataplaneService,
@@ -45,10 +47,6 @@ class DataplaneServiceImpl(
   private val trackingHelper: TrackingHelper,
   private val currentUserService: CurrentUserService,
 ) : DataplaneService {
-  companion object {
-    private val log = LoggerFactory.getLogger(DataplaneServiceImpl::class.java)
-  }
-
   override fun controllerListDataplanes(): Response {
     val userId = currentUserService.getCurrentUser().userId
     val result =
@@ -56,7 +54,7 @@ class DataplaneServiceImpl(
         {
           runCatching { dataplaneDataService.listDataplanes(withTombstone = false) }
             .onFailure {
-              log.error("Error listing dataplanes", it)
+              log.error(it) { "Error listing dataplanes" }
               ConfigClientErrorHandler.handleError(it)
             }.getOrNull()
         },
@@ -90,7 +88,7 @@ class DataplaneServiceImpl(
               .clientId(dataplaneWithServiceAccount.serviceAccount.id.toString())
               .clientSecret(dataplaneWithServiceAccount.serviceAccount.secret)
           }.onFailure {
-            log.error("Error creating dataplane", it)
+            log.error(it) { "Error creating dataplane" }
             ConfigClientErrorHandler.handleError(it)
           }.getOrNull()
         },
@@ -110,7 +108,7 @@ class DataplaneServiceImpl(
         {
           runCatching { dataplaneDataService.getDataplane(dataplaneId) }
             .onFailure {
-              log.error("Error getting dataplane", it)
+              log.error(it) { "Error getting dataplane" }
               ConfigClientErrorHandler.handleError(it)
             }.getOrNull()
         },
@@ -140,7 +138,7 @@ class DataplaneServiceImpl(
         {
           runCatching { dataplaneDataService.updateDataplane(updated) }
             .onFailure {
-              log.error("Error updating dataplane", it)
+              log.error(it) { "Error updating dataplane" }
               ConfigClientErrorHandler.handleError(it)
             }.getOrNull()
         },
@@ -161,7 +159,7 @@ class DataplaneServiceImpl(
           runCatching {
             dataplaneService.deleteDataplane(dataplaneId)
           }.onFailure {
-            log.error("Error deleting dataplane", it)
+            log.error(it) { "Error deleting dataplane" }
             ConfigClientErrorHandler.handleError(it)
           }.getOrNull()
         },

@@ -4,9 +4,8 @@
 
 package io.airbyte.connectorbuilder.filewriter
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileOutputStream
@@ -37,7 +36,7 @@ class AirbyteFileWriterImpl : AirbyteFileWriter {
         }
       }
     }
-    LOGGER.debug("{} file written to {}", name, tempFile.absolutePath)
+    log.debug { "{} file written to $name, tempFile.absolutePath" }
     return tempFile.absolutePath
   }
 
@@ -49,13 +48,13 @@ class AirbyteFileWriterImpl : AirbyteFileWriter {
     val deleted = file.delete()
 
     if (deleted) {
-      LOGGER.debug("Deleted file: {}", file.name)
+      log.debug { "Deleted file: $file.name" }
     } else {
-      LOGGER.debug("Failed to delete file {}", file.name)
+      log.debug { "Failed to delete file $file.name" }
     }
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(AirbyteFileWriterImpl::class.java)
+    private val log = KotlinLogging.logger {}
   }
 }

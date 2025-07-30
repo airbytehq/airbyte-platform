@@ -10,7 +10,9 @@ import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.RunDeclarativeSourcesUpdater
 import io.airbyte.featureflag.Workspace
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Helper class used to apply updates to source-declarative-manifest actor definition versions when
@@ -26,7 +28,6 @@ class DeclarativeSourceUpdater(
   private val featureFlagClient: FeatureFlagClient,
 ) {
   companion object {
-    private val log = LoggerFactory.getLogger(DeclarativeSourceUpdater::class.java)
   }
 
   fun apply() {

@@ -32,6 +32,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.Condition
@@ -43,10 +44,7 @@ import org.jooq.Record
 import org.jooq.Record1
 import org.jooq.Result
 import org.jooq.impl.DSL
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.lang.invoke.MethodHandles
 import java.time.OffsetDateTime
 import java.util.Map.entry
 import java.util.Optional
@@ -865,7 +863,7 @@ class DestinationServiceJooqImpl
       actorPaginationServiceHelper.buildCursorPagination(cursor, internalSortKey, filters, ascending, pageSize, ActorType.destination)
 
     companion object {
-      private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+      private val log = KotlinLogging.logger {}
 
       fun writeStandardDestinationDefinition(
         configs: MutableList<StandardDestinationDefinition?>,

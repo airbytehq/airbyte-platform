@@ -42,9 +42,8 @@ import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.persistence.job.tracker.JobTracker
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.Nullable
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.time.Instant
 import java.util.UUID
@@ -471,7 +470,7 @@ class DefaultSynchronousSchedulerClient(
           )
 
         else ->
-          LOGGER.error(
+          log.error(
             "Tried to report job failure for type {}, but this job type is not supported",
             configType,
           )
@@ -480,7 +479,7 @@ class DefaultSynchronousSchedulerClient(
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(DefaultSynchronousSchedulerClient::class.java)
+    private val log = KotlinLogging.logger {}
 
     private val HASH_FUNCTION: HashFunction = Hashing.md5()
   }

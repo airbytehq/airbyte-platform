@@ -4,8 +4,7 @@
 
 package io.airbyte.commons.concurrency
 
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -24,7 +23,7 @@ class ClosableLinkedBlockingQueue<T>(
   private val timeOutDuration: Int
 
   init {
-    LOGGER.info("Using ClosableLinkedBlockingQueue")
+    log.info { "Using ClosableLinkedBlockingQueue" }
     this.queue = LinkedBlockingQueue<T>(maxQueueSize)
     this.timeOutDuration = pollTimeOutDurationInSeconds
     this.closed = AtomicBoolean()
@@ -83,7 +82,7 @@ class ClosableLinkedBlockingQueue<T>(
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(ClosableLinkedBlockingQueue::class.java)
+    private val log = KotlinLogging.logger {}
     const val DEFAULT_POLL_TIME_OUT_DURATION_SECONDS: Int = 5
   }
 }

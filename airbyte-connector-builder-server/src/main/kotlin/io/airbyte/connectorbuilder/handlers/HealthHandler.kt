@@ -6,11 +6,10 @@ package io.airbyte.connectorbuilder.handlers
 
 import io.airbyte.connectorbuilder.api.model.generated.HealthCheckRead
 import io.airbyte.connectorbuilder.api.model.generated.HealthCheckReadCapabilities
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 /**
  * The Health handler gets the CDK version from a CdkVersionProvider and returns a HealthCheckRead
@@ -43,6 +42,6 @@ open class HealthHandler(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(HealthHandler::class.java)
+    private val log = KotlinLogging.logger {}
   }
 }

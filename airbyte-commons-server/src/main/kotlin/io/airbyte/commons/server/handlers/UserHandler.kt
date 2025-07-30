@@ -60,12 +60,11 @@ import io.airbyte.featureflag.EmailAttribute
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.RestrictLoginsForSSODomains
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import jakarta.validation.Valid
 import org.jooq.exception.DataAccessException
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.Map
 import java.util.Objects
@@ -407,7 +406,7 @@ open class UserHandler
       existingUser: User,
       incomingJwtUser: AuthenticatedUser,
     ): UserGetOrCreateByAuthIdResponse {
-      LOGGER.info("Relinking auth user {} to orphaned existing user {}...", incomingJwtUser.authUserId, existingUser.userId)
+      log.info { "Relinking auth user {} to orphaned existing user $incomingJwtUser.authUserId, existingUser.userId..." }
       userPersistence.replaceAuthUserForUserId(existingUser.userId, incomingJwtUser.authUserId, incomingJwtUser.authProvider)
 
       val updatedUser =
@@ -441,11 +440,11 @@ open class UserHandler
       existingUser: User,
       incomingJwtUser: AuthenticatedUser,
     ): UserGetOrCreateByAuthIdResponse {
-      LOGGER.info("Migrating existing user {} to SSO...", existingUser.userId)
+      log.info { "Migrating existing user $existingUser.userId to SSO..." }
       // (1) Revoke existing applications
       if (applicationService.isPresent) {
         val appService = applicationService.get()
-        LOGGER.info("Revoking existing applications for user {}...", existingUser.userId)
+        log.info { "Revoking existing applications for user $existingUser.userId..." }
         val authUsers = userPersistence.listAuthUsersForUser(existingUser.userId)
         for (authUser in authUsers) {
           val authedUser =
@@ -453,7 +452,7 @@ open class UserHandler
           val existingApplications = appService.listApplicationsByUser(authedUser)
           for (application in existingApplications) {
             appService.deleteApplication(authedUser, application.id)
-            LOGGER.info(
+            log.info(
               "Revoked application {} for user {} (auth user {})...",
               application.id,
               existingUser.userId,
@@ -464,16 +463,16 @@ open class UserHandler
       }
 
       // (2) Delete the user from other auth realms
-      LOGGER.info("Deleting user with email {} from other auth realms...", existingUser.email)
+      log.info { "Deleting user with email $existingUser.email from other auth realms..." }
       val newRealm = userAuthenticationResolver.resolveRealm()
       checkNotNull(newRealm) { "No new realm found for user " + existingUser.userId }
       externalUserService.deleteUserByEmailOnOtherRealms(existingUser.email, newRealm)
 
       // (3) Replace the existing auth user with the new one
-      LOGGER.info("Replacing existing auth users with new one ({})...", incomingJwtUser.authUserId)
+      log.info { "Replacing existing auth users with new one ($incomingJwtUser.authUserId)..." }
       userPersistence.replaceAuthUserForUserId(existingUser.userId, incomingJwtUser.authUserId, incomingJwtUser.authProvider)
 
-      LOGGER.info("Done migrating user {} to SSO", existingUser.userId)
+      log.info { "Done migrating user $existingUser.userId to SSO" }
 
       // (4) Return the user
       val userRead = buildUserRead(existingUser)
@@ -534,7 +533,7 @@ open class UserHandler
         // (Enterprise) If the email is already taken by the default user, we can safely clear it so the
         // real user can be created
         userPersistence.writeUser(existingUserWithEmail.get().withEmail(""))
-        LOGGER.info("Cleared email for default user on first login for {}", incomingJwtUser.email)
+        log.info { "Cleared email for default user on first login for $incomingJwtUser.email" }
 
         existingUserWithEmail = Optional.empty()
       }
@@ -580,7 +579,7 @@ open class UserHandler
       val userId = uuidGenerator.get()
       val user = incomingUser.withUserId(userId)
 
-      LOGGER.debug("Creating User: {}", user)
+      log.debug { "Creating User: $user" }
 
       try {
         userPersistence.writeAuthenticatedUser(user)
@@ -738,7 +737,7 @@ open class UserHandler
         return
       }
 
-      LOGGER.info(
+      log.info(
         "creating instance_admin permission for user ID {} because their email matches this instance's configured initial_user",
         createdUser.userId,
       )
@@ -829,6 +828,6 @@ open class UserHandler
     }
 
     companion object {
-      private val LOGGER: Logger = LoggerFactory.getLogger(UserHandler::class.java)
+      private val log = KotlinLogging.logger {}
     }
   }

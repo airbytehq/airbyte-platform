@@ -14,10 +14,12 @@ import io.airbyte.featureflag.NotifyOnConnectorBreakingChanges
 import io.airbyte.featureflag.Workspace
 import io.airbyte.notification.CustomerioNotificationClient
 import io.airbyte.notification.NotificationClient
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.UUID
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Helper class for notifying users about breaking changes.
@@ -25,7 +27,6 @@ import java.util.UUID
 @Singleton
 class BreakingChangeNotificationHelper {
   companion object {
-    private val log = LoggerFactory.getLogger(BreakingChangeNotificationHelper::class.java)
   }
 
   /**

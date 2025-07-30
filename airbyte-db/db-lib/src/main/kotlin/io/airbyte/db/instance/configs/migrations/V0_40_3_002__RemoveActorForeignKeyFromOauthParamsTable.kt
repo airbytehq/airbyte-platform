@@ -9,8 +9,6 @@ import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 private val log = KotlinLogging.logger {}
 
@@ -26,11 +24,6 @@ class V0_40_3_002__RemoveActorForeignKeyFromOauthParamsTable : BaseJavaMigration
   }
 
   companion object {
-    private val LOGGER: Logger =
-      LoggerFactory.getLogger(
-        V0_40_3_002__RemoveActorForeignKeyFromOauthParamsTable::class.java,
-      )
-
     @JvmStatic
     fun removeActorDefinitionForeignKey(ctx: DSLContext) {
       ctx

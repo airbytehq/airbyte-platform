@@ -30,11 +30,10 @@ import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.time.Clock
 import java.util.Date
@@ -169,7 +168,7 @@ open class InstanceConfigurationHandler(
     // not update the default user's email to the provided email since it would cause a conflict.
     val existingUserWithEmail = userPersistence.getUserByEmail(requestBody.email)
     if (existingUserWithEmail.isPresent) {
-      LOGGER.info(
+      log.info(
         "User ID {} already has the provided email {}. Not updating default user's email.",
         existingUserWithEmail.get().userId,
         requestBody.email,
@@ -285,14 +284,14 @@ open class InstanceConfigurationHandler(
         return nodes.list().items.size
       }
     } catch (e: PermissionDeniedException) {
-      LOGGER.warn("Permission denied while attempting to get node usage: {}", e.message)
+      log.warn { "Permission denied while attempting to get node usage: $e.message" }
     } catch (e: Exception) {
-      LOGGER.error("Unexpected error while fetching Kubernetes nodes: {}", e.message, e)
+      log.error(e) { "Unexpected error while fetching Kubernetes nodes: $e.message" }
     }
     return null
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(InstanceConfigurationHandler::class.java)
+    private val log = KotlinLogging.logger {}
   }
 }

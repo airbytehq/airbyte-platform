@@ -25,8 +25,7 @@ import io.airbyte.oauth.MoreOAuthParameters.mergeJsons
 import io.airbyte.persistence.job.tracker.TrackingMetadata
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonValidationException
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
@@ -216,7 +215,7 @@ class OAuthConfigSupplier(
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(OAuthConfigSupplier::class.java)
+    private val log = KotlinLogging.logger {}
 
     const val PATH_IN_CONNECTOR_CONFIG: String = "path_in_connector_config"
     private const val PROPERTIES = "properties"
@@ -248,7 +247,7 @@ class OAuthConfigSupplier(
       if (outputSpecTop != null && outputSpecTop.has(PROPERTIES)) {
         outputSpec = outputSpecTop[PROPERTIES]
       } else {
-        LOGGER.error(
+        log.error(
           String.format(
             "In %s's advanced_auth spec, completeOAuthServerOutputSpecification does not declare properties.",
             connectorName,
@@ -270,7 +269,7 @@ class OAuthConfigSupplier(
             if (!propertyPath.isEmpty()) {
               consumer.accept(key, propertyPath)
             } else {
-              LOGGER.error(
+              log.error(
                 String.format(
                   "In %s's advanced_auth spec, completeOAuthServerOutputSpecification includes an invalid empty %s for %s",
                   connectorName,
@@ -280,7 +279,7 @@ class OAuthConfigSupplier(
               )
             }
           } else {
-            LOGGER.error(
+            log.error(
               String.format(
                 "In %s's advanced_auth spec, completeOAuthServerOutputSpecification does not declare an Array<String> %s for %s",
                 connectorName,
@@ -290,7 +289,7 @@ class OAuthConfigSupplier(
             )
           }
         } else {
-          LOGGER.error(
+          log.error(
             String.format(
               "In %s's advanced_auth spec, completeOAuthServerOutputSpecification does not declare an ObjectNode for %s",
               connectorName,

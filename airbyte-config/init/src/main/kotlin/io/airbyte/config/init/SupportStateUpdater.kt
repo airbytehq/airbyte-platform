@@ -22,14 +22,16 @@ import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.NotifyBreakingChangesOnSupportStateUpdate
 import io.airbyte.featureflag.Workspace
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.time.LocalDate
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
 import kotlin.jvm.optionals.getOrDefault
+
+private val log = KotlinLogging.logger {}
 
 private const val AUTO_UPGRADE = "auto_upgrade"
 
@@ -47,7 +49,6 @@ class SupportStateUpdater(
   private val featureFlagClient: FeatureFlagClient,
 ) {
   companion object {
-    private val log = LoggerFactory.getLogger(SupportStateUpdater::class.java)
   }
 
   data class SupportStateUpdate(

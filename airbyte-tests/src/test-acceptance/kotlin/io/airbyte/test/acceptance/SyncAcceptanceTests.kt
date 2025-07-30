@@ -34,6 +34,7 @@ import io.airbyte.test.utils.Databases
 import io.airbyte.test.utils.Databases.listAllTables
 import io.airbyte.test.utils.Databases.retrieveRecordsFromDatabase
 import io.airbyte.test.utils.TestConnectionCreate
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -42,8 +43,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.security.KeyPairGenerator
 import java.time.Duration
@@ -365,7 +364,7 @@ internal abstract class SyncAcceptanceTests(
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(SyncAcceptanceTests::class.java)
+    private val log = KotlinLogging.logger {}
 
     const val SLOW_TEST_IN_GKE: String = "TODO(https://github.com/airbytehq/airbyte-platform-internal/issues/5181): re-enable slow tests in GKE"
     const val DUPLICATE_TEST_IN_GKE: String =

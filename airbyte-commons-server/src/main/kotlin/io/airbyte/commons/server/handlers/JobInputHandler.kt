@@ -63,10 +63,9 @@ import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.workers.models.JobInput
 import io.airbyte.workers.models.SyncJobCheckConnectionInputs
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.Nullable
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.Optional
 import java.util.UUID
@@ -515,7 +514,7 @@ open class JobInputHandler(
         scopedConfigurationService.getScopedConfigurations(NetworkSecurityTokenKey, scopes)
       return podLabelConfigurations.stream().map { obj: ScopedConfiguration -> obj.value }.toList()
     } catch (e: IllegalArgumentException) {
-      LOGGER.error(e.message)
+      log.error(e.message)
       return emptyList()
     }
   }
@@ -544,6 +543,6 @@ open class JobInputHandler(
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(JobInputHandler::class.java)
+    private val log = KotlinLogging.logger {}
   }
 }

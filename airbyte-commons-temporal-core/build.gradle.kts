@@ -11,6 +11,7 @@ dependencies {
   
   implementation(libs.bundles.temporal)
   implementation(libs.failsafe)
+  implementation(libs.kotlin.logging)
 
   // We do not want dependency on(databases from this library.)
   implementation(project(":oss:airbyte-commons"))

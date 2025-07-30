@@ -6,8 +6,7 @@ package io.airbyte.persistence.job.errorreporter
 
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardWorkspace
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
  * Log job error reports.
@@ -20,7 +19,7 @@ class LoggingJobErrorReportingClient : JobErrorReportingClient {
     metadata: Map<String?, String?>?,
     attemptConfig: AttemptConfigReportingContext?,
   ) {
-    LOGGER.info(
+    log.info(
       "Report Job Error -> workspaceId: {}, dockerImage: {}, failureReason: {}, metadata: {}, state: {}, sourceConfig: {}, destinationConfig: {}",
       if (workspace != null) workspace.workspaceId else "null",
       dockerImage,
@@ -33,6 +32,6 @@ class LoggingJobErrorReportingClient : JobErrorReportingClient {
   }
 
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(LoggingJobErrorReportingClient::class.java)
+    private val log = KotlinLogging.logger {}
   }
 }

@@ -13,6 +13,7 @@ import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.api.common.v1.WorkflowExecution
 import io.temporal.api.enums.v1.WorkflowExecutionStatus
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionRequest
@@ -21,9 +22,6 @@ import io.temporal.workflow.Functions
 import io.temporal.workflow.Functions.Proc1
 import io.temporal.workflow.Functions.TemporalFunctionalInterfaceMarker
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.lang.invoke.MethodHandles
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Function
@@ -291,6 +289,6 @@ class ConnectionManagerUtils(
   fun getConnectionManagerName(connectionId: UUID): String = "connection_manager_$connectionId"
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
   }
 }

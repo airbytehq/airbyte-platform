@@ -24,13 +24,13 @@ import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.STREAMS_PATH
 import io.airbyte.server.apis.publicapi.services.DestinationService
 import io.airbyte.server.apis.publicapi.services.SourceService
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import jakarta.ws.rs.core.Response
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.UUID
 
@@ -44,7 +44,7 @@ class StreamsController(
   private val currentUserService: CurrentUserService,
 ) : PublicStreamsApi {
   companion object {
-    private val log: org.slf4j.Logger? = LoggerFactory.getLogger(StreamsController::class.java)
+    private val log = KotlinLogging.logger {}
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
@@ -137,7 +137,7 @@ class StreamsController(
       try {
         yamlMapper.readTree(connectorSchema!!.traverse())
       } catch (e: IOException) {
-        log?.error("Error getting stream fields from schema", e)
+        log.error(e) { "Error getting stream fields from schema" }
         throw UnexpectedProblem()
       }
     val fields = spec.fields()

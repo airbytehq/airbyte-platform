@@ -8,11 +8,9 @@ import io.airbyte.commons.temporal.exception.RetryableException
 import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.persistence.StreamResetPersistence
 import io.airbyte.persistence.job.JobPersistence
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.lang.invoke.MethodHandles
 import java.util.UUID
 
 /**
@@ -60,6 +58,6 @@ class StreamResetRecordsHelper(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
   }
 }

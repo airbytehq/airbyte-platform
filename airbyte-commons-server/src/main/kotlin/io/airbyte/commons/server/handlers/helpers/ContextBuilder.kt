@@ -17,11 +17,9 @@ import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.lang.invoke.MethodHandles
 import java.util.UUID
 
 /**
@@ -160,6 +158,6 @@ class ContextBuilder(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
   }
 }

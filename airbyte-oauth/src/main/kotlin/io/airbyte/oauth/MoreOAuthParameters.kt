@@ -9,15 +9,14 @@ import com.fasterxml.jackson.databind.node.JsonNodeType
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.base.Strings
 import io.airbyte.commons.json.Jsons
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.function.Consumer
 
 /**
  * OAuth params.
  */
 object MoreOAuthParameters {
-  private val LOGGER: Logger = LoggerFactory.getLogger(Jsons::class.java)
+  private val log = KotlinLogging.logger {}
   const val SECRET_MASK: String = "******"
 
   /**
@@ -50,7 +49,7 @@ object MoreOAuthParameters {
       } else if (!flatConfig.has(key)) {
         flatConfig.set<JsonNode>(key, currentNodeValue)
       } else {
-        LOGGER.debug("configToFlatten: {}", configToFlatten)
+        log.debug { "configToFlatten: $configToFlatten" }
         throw IllegalStateException(String.format("OAuth Config's key '%s' already exists", key))
       }
     }
@@ -88,7 +87,7 @@ object MoreOAuthParameters {
         }
       } else {
         if (!mainConfig.has(key) || isSecretMask(mainConfig[key].asText())) {
-          LOGGER.debug(String.format("injecting instance wide parameter %s into config", key))
+          log.debug { "injecting instance wide parameter $key into config" }
           mainConfig.set<JsonNode>(key, fromConfig[key])
         }
       }

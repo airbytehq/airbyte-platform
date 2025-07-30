@@ -9,8 +9,7 @@ import io.airbyte.commons.temporal.exception.SizeLimitException
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
  * Provide validation to detect temporal failures earlier.
@@ -69,7 +68,7 @@ class PayloadChecker(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(PayloadChecker::class.java)
+    private val log = KotlinLogging.logger {}
 
     const val MAX_PAYLOAD_SIZE_BYTES: Int = 4 * 1024 * 1024
   }

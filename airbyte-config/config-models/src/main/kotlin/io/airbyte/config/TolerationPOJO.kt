@@ -6,8 +6,7 @@ package io.airbyte.config
 
 import com.google.common.base.Splitter
 import com.google.common.base.Strings
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.Objects
 import java.util.stream.Collectors
 import java.util.stream.Stream
@@ -22,7 +21,7 @@ data class TolerationPOJO(
   val operator: String?,
 ) {
   companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(TolerationPOJO::class.java)
+    private val log = KotlinLogging.logger {}
 
     /**
      * Returns worker pod tolerations parsed from the provided tolerationsStr. The tolerationsStr
@@ -81,7 +80,7 @@ data class TolerationPOJO(
           tolerationMap["operator"],
         )
       } else {
-        LOGGER.warn(
+        log.warn(
           "Ignoring toleration {}, missing one of key,effect or operator",
           singleTolerationStr,
         )

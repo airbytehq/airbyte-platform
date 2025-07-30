@@ -5,14 +5,14 @@
 package io.airbyte.keycloak.setup
 
 import io.airbyte.commons.auth.config.OidcConfig
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import jakarta.ws.rs.core.Response
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.IdentityProviderRepresentation
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.lang.invoke.MethodHandles
 import java.util.Optional
+
+private val log = KotlinLogging.logger {}
 
 /**
  * This class is responsible for configuring an identity provider. It creates and manages various
@@ -136,8 +136,6 @@ class IdentityProvidersConfigurator(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
-
     const val AIRBYTE_MANAGED_IDP_KEY: String = "airbyte-managed-idp"
     const val AIRBYTE_MANAGED_IDP_VALUE: String = "true"
     private const val KEYCLOAK_PROVIDER_ID = "oidc" // OIDC is the only supported provider ID for now

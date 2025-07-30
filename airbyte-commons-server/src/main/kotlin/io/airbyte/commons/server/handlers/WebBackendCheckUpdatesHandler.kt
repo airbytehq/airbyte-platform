@@ -11,11 +11,9 @@ import io.airbyte.commons.lang.Exceptions
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
 import io.airbyte.config.specs.RemoteDefinitionsProvider
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.lang.invoke.MethodHandles
 import java.util.UUID
 import java.util.function.Function
 import java.util.stream.Collectors
@@ -123,7 +121,7 @@ open class WebBackendCheckUpdatesHandler(
   }
 
   companion object {
-    private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
+    private val log = KotlinLogging.logger {}
 
     private const val NO_CHANGES_FOUND = 0
   }

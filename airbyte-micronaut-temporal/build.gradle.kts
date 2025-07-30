@@ -13,6 +13,7 @@ dependencies {
   implementation(libs.byte.buddy)
   implementation(libs.guava)
   implementation(libs.spring.core)
+  implementation(libs.kotlin.logging)
   implementation(libs.temporal.sdk) {
     exclude(module = "guava")
   }

@@ -24,10 +24,10 @@ import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.filters.JobsFilter
 import io.airbyte.server.apis.publicapi.mappers.JobResponseMapper
 import io.airbyte.server.apis.publicapi.mappers.JobsResponseMapper
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Secondary
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
-import org.slf4j.LoggerFactory
 import java.util.UUID
 
 interface JobService {
@@ -54,6 +54,8 @@ interface JobService {
   ): JobsResponse
 }
 
+private val log = KotlinLogging.logger {}
+
 @Singleton
 @Secondary
 class JobServiceImpl(
@@ -62,10 +64,6 @@ class JobServiceImpl(
   private val jobHistoryHandler: JobHistoryHandler,
   private val currentUserService: CurrentUserService,
 ) : JobService {
-  companion object {
-    private val log = LoggerFactory.getLogger(JobServiceImpl::class.java)
-  }
-
   @Value("\${airbyte.api.host}")
   var publicApiHost: String? = null
 
@@ -79,7 +77,7 @@ class JobServiceImpl(
         .runCatching { schedulerHandler.syncConnection(connectionIdRequestBody) }
         .onFailure { ConfigClientErrorHandler.handleError(it) }
 
-    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
     return JobResponseMapper.from(result.getOrNull()!!)
   }
 
@@ -92,10 +90,10 @@ class JobServiceImpl(
       kotlin
         .runCatching { schedulerHandler.resetConnection(connectionIdRequestBody) }
         .onFailure {
-          log.error("reset job error $it")
+          log.error(it) { "reset job error" }
           ConfigClientErrorHandler.handleError(it)
         }
-    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
     return JobResponseMapper.from(result.getOrNull()!!)
   }
 
@@ -109,10 +107,10 @@ class JobServiceImpl(
         .runCatching {
           schedulerHandler.cancelJob(jobIdRequestBody)
         }.onFailure {
-          log.error("cancel job error $it")
+          log.error(it) { "cancel job error" }
           ConfigClientErrorHandler.handleError(it)
         }
-    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
     return JobResponseMapper.from(result.getOrNull()!!)
   }
 
@@ -124,10 +122,10 @@ class JobServiceImpl(
       kotlin
         .runCatching { jobHistoryHandler.getJobInfoWithoutLogs(jobId) }
         .onFailure {
-          log.error("Error getting job info without logs $it")
+          log.error(it) { "Error getting job info without logs" }
           ConfigClientErrorHandler.handleError(it)
         }
-    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
     return JobResponseMapper.from(result.getOrNull()!!)
   }
 
@@ -160,11 +158,11 @@ class JobServiceImpl(
       kotlin
         .runCatching { jobHistoryHandler.listJobsForLight(jobListRequestBody) }
         .onFailure {
-          log.error("Error getting job list $it")
+          log.error(it) { "Error getting job list" }
           ConfigClientErrorHandler.handleError(it)
         }
 
-    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
     return JobsResponseMapper.from(
       result.getOrNull()!!,
       connectionId,
@@ -206,11 +204,11 @@ class JobServiceImpl(
       kotlin
         .runCatching { jobHistoryHandler.listJobsForWorkspaces(requestBody) }
         .onFailure {
-          log.error("Error getting job list:", it)
+          log.error(it) { "Error getting job list" }
           ConfigClientErrorHandler.handleError(it)
         }
 
-    log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
     return JobsResponseMapper.from(
       result.getOrNull()!!,
       workspaceIds,

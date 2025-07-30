@@ -13,14 +13,16 @@ import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.persistence.job.WorkspaceHelper
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.time.Duration
 import java.util.UUID
+
+private val log = KotlinLogging.logger {}
 
 @Singleton
 open class EnterpriseSourceStubsHandler(
@@ -31,7 +33,6 @@ open class EnterpriseSourceStubsHandler(
   private val workspaceHelper: WorkspaceHelper,
   private val licenseEntitlementChecker: LicenseEntitlementChecker,
 ) {
-  private val logger = LoggerFactory.getLogger(this::class.java)
   private val okHttpClient: OkHttpClient =
     OkHttpClient
       .Builder()
@@ -68,13 +69,12 @@ open class EnterpriseSourceStubsHandler(
         return objectMapper.readValue(jsonResponse, typeReference)
       }
     } catch (error: IOException) {
-      logger.error(
-        "Encountered an HTTP error fetching enterprise connectors. Message: {}",
-        error.message,
-      )
+      logger.error(error) {
+        "Encountered an HTTP error fetching enterprise connectors. Message: ${error.message}"
+      }
       throw IOException("HTTP error fetching enterprise sources", error)
     } catch (error: Exception) {
-      logger.error("Unexpected error fetching enterprise sources", error)
+      logger.error(error) { "Unexpected error fetching enterprise sources" }
       throw IOException("Encountered an unexpected error fetching enterprise sources", error)
     }
   }
