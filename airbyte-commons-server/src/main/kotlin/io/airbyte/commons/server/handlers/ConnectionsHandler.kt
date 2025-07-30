@@ -409,7 +409,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       destinationId: UUID,
       namespaceDefinitionType: String?,
       namespaceFormat: String?,
-      prefix: String,
+      prefix: String?,
       currentConnectionId: UUID?,
     ) {
       val workspaceId = workspaceHelper.getWorkspaceForDestinationId(destinationId)
