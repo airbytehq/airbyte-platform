@@ -42,6 +42,8 @@ const OrganizationWorkspacesPage: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
   const organization = useOrganization(organizationId);
   const memberCount = useListUsersInOrganization(organizationId).users.length;
+  const canViewOrganizationWorkspaces = useIntent("ViewOrganizationWorkspaces", { organizationId });
+  const canCreateOrganizationWorkspaces = useIntent("CreateOrganizationWorkspaces", { organizationId });
 
   const [searchValue, setSearchValue] = useState("");
   const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
@@ -53,13 +55,17 @@ const OrganizationWorkspacesPage: React.FC = () => {
     pagination: {
       pageSize: 10,
     },
+    enabled: canViewOrganizationWorkspaces,
   });
 
   const allWorkspaces = useMemo(() => data?.pages.flatMap((page) => page.workspaces) ?? [], [data]);
   const workspaceIds = allWorkspaces.map((workspace) => workspace.workspaceId);
 
   // Get status counts for all workspaces
-  const statusCountsResults = useGetWorkspacesStatusesCounts(workspaceIds, { refetchInterval: true });
+  const statusCountsResults = useGetWorkspacesStatusesCounts(workspaceIds, {
+    refetchInterval: canViewOrganizationWorkspaces,
+    enabled: canViewOrganizationWorkspaces,
+  });
 
   const enrichedWorkspaces = useMemo(() => {
     const statusCountsMap = new Map<string, WebBackendConnectionStatusCounts | undefined>();
@@ -112,9 +118,6 @@ const OrganizationWorkspacesPage: React.FC = () => {
     setStatusFilter("all");
   }, [organizationId]);
 
-  const canViewOrganizationWorkspaces = useIntent("ViewOrganizationWorkspaces", { organizationId });
-  const canCreateOrganizationWorkspaces = useIntent("CreateOrganizationWorkspaces", { organizationId });
-
   const showNoWorkspacesYet =
     filteredWorkspaces.length === 0 && !isLoading && debouncedSearchValue === "" && statusFilter === "all";
 
@@ -154,12 +157,12 @@ const OrganizationWorkspacesPage: React.FC = () => {
             />
           </Box>
           <Box className={styles.workspacesList}>
-            {isLoading ? (
+            {!canViewOrganizationWorkspaces ? (
+              <NoWorkspacePermissionsContent organizations={[organization]} />
+            ) : isLoading ? (
               <Box p="md" pb="sm">
                 <LoadingSpinner />
               </Box>
-            ) : !canViewOrganizationWorkspaces ? (
-              <NoWorkspacePermissionsContent organizations={[organization]} />
             ) : showNoWorkspacesYet ? (
               <FlexContainer direction="column" alignItems="center" justifyContent="flex-start">
                 <Box mb="sm" mt="xl">

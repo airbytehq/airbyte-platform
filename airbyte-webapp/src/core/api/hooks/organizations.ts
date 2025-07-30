@@ -165,7 +165,11 @@ export const useListWorkspacesInOrganization = ({
   organizationId,
   pagination,
   nameContains,
-}: ListWorkspacesInOrganizationRequestBody): UseInfiniteQueryResult<WorkspaceReadList, unknown> => {
+  enabled = true,
+}: ListWorkspacesInOrganizationRequestBody & { enabled?: boolean }): UseInfiniteQueryResult<
+  WorkspaceReadList,
+  unknown
+> => {
   const requestOptions = useRequestOptions();
   const pageSize = pagination?.pageSize ?? 10;
   const queryKey = organizationKeys.workspaces(organizationId, pageSize, nameContains?.trim());
@@ -183,6 +187,7 @@ export const useListWorkspacesInOrganization = ({
   };
 
   return useInfiniteQuery({
+    enabled,
     queryKey,
     queryFn: listWorkspacesQueryFn,
     staleTime: 1000 * 60 * 5,

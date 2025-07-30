@@ -882,7 +882,10 @@ export const useGetConnectionStatusesCounts = () => {
   );
 };
 
-export const useGetWorkspacesStatusesCounts = (workspaceIds: string[], options?: { refetchInterval?: boolean }) => {
+export const useGetWorkspacesStatusesCounts = (
+  workspaceIds: string[],
+  options: { refetchInterval?: boolean; enabled?: boolean } = {}
+) => {
   const requestOptions = useRequestOptions();
 
   return useQueries({
@@ -895,6 +898,7 @@ export const useGetWorkspacesStatusesCounts = (workspaceIds: string[], options?:
       staleTime: 1000 * 60, // 1 minute
       cacheTime: 1000 * 60 * 2, // 2 minutes
       refetchInterval: options?.refetchInterval ? 1000 * 60 : undefined, // 1 minute if enabled
+      enabled: options?.enabled ?? true,
     })),
   });
 };
