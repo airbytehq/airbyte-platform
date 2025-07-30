@@ -35,7 +35,7 @@ class BasicAirbyteMessageValidatorTest {
   void testObviousInvalid() {
     final Optional<AirbyteMessage> bad = Jsons.tryDeserializeExact("{}", AirbyteMessage.class);
 
-    final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty());
+    final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty(), MessageOrigin.SOURCE);
     assertTrue(m.isEmpty());
   }
 
@@ -43,7 +43,7 @@ class BasicAirbyteMessageValidatorTest {
   void testValidRecord() {
     final AirbyteMessage rec = AirbyteMessageUtils.createRecordMessage(STREAM_1, DATA_KEY_1, DATA_VALUE);
 
-    final var m = BasicAirbyteMessageValidator.validate(rec, Optional.empty());
+    final var m = BasicAirbyteMessageValidator.validate(rec, Optional.empty(), MessageOrigin.SOURCE);
     assertTrue(m.isPresent());
     assertEquals(rec, m.get());
   }
@@ -52,7 +52,7 @@ class BasicAirbyteMessageValidatorTest {
   void testSubtleInvalidRecord() {
     final Optional<AirbyteMessage> bad = Jsons.tryDeserializeExact("{\"type\": \"RECORD\", \"record\": {}}", AirbyteMessage.class);
 
-    final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty());
+    final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty(), MessageOrigin.SOURCE);
     assertTrue(m.isEmpty());
   }
 
@@ -60,7 +60,7 @@ class BasicAirbyteMessageValidatorTest {
   void testValidState() {
     final AirbyteMessage rec = AirbyteMessageUtils.createStateMessage(1);
 
-    final var m = BasicAirbyteMessageValidator.validate(rec, Optional.empty());
+    final var m = BasicAirbyteMessageValidator.validate(rec, Optional.empty(), MessageOrigin.SOURCE);
     assertTrue(m.isPresent());
     assertEquals(rec, m.get());
   }
@@ -69,7 +69,7 @@ class BasicAirbyteMessageValidatorTest {
   void testSubtleInvalidState() {
     final Optional<AirbyteMessage> bad = Jsons.tryDeserializeExact("{\"type\": \"STATE\", \"control\": {}}", AirbyteMessage.class);
 
-    final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty());
+    final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty(), MessageOrigin.SOURCE);
     assertTrue(m.isEmpty());
   }
 
@@ -77,7 +77,7 @@ class BasicAirbyteMessageValidatorTest {
   void testValidControl() {
     final AirbyteMessage rec = AirbyteMessageUtils.createConfigControlMessage(new Config(), 1000.0);
 
-    final var m = BasicAirbyteMessageValidator.validate(rec, Optional.empty());
+    final var m = BasicAirbyteMessageValidator.validate(rec, Optional.empty(), MessageOrigin.SOURCE);
     assertTrue(m.isPresent());
     assertEquals(rec, m.get());
   }
@@ -86,7 +86,7 @@ class BasicAirbyteMessageValidatorTest {
   void testSubtleInvalidControl() {
     final Optional<AirbyteMessage> bad = Jsons.tryDeserializeExact("{\"type\": \"CONTROL\", \"state\": {}}", AirbyteMessage.class);
 
-    final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty());
+    final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty(), MessageOrigin.SOURCE);
     assertTrue(m.isEmpty());
   }
 
@@ -96,7 +96,7 @@ class BasicAirbyteMessageValidatorTest {
         .withType(Type.DESTINATION_CATALOG)
         .withDestinationCatalog(new DestinationCatalog().withOperations(List.of(
             new DestinationOperation().withObjectName("my_object"))));
-    final var m = BasicAirbyteMessageValidator.validate(message, Optional.empty());
+    final var m = BasicAirbyteMessageValidator.validate(message, Optional.empty(), MessageOrigin.SOURCE);
     assertTrue(m.isPresent());
     assertEquals(message, m.get());
   }
@@ -106,7 +106,7 @@ class BasicAirbyteMessageValidatorTest {
     final AirbyteMessage bad = AirbyteMessageUtils.createRecordMessage(STREAM_1, DATA_KEY_1, DATA_VALUE);
 
     final var m = BasicAirbyteMessageValidator.validate(bad, Optional.of(
-        getCatalogWithPk(STREAM_1, List.of(List.of(DATA_KEY_1)))));
+        getCatalogWithPk(STREAM_1, List.of(List.of(DATA_KEY_1)))), MessageOrigin.SOURCE);
     assertTrue(m.isPresent());
   }
 
@@ -115,7 +115,7 @@ class BasicAirbyteMessageValidatorTest {
     final AirbyteMessage bad = AirbyteMessageUtils.createRecordMessage(STREAM_1, DATA_KEY_1, DATA_VALUE);
 
     final var m = BasicAirbyteMessageValidator.validate(bad, Optional.of(
-        getCatalogWithPk(STREAM_1, List.of(List.of(DATA_KEY_1), List.of("not_field_1")))));
+        getCatalogWithPk(STREAM_1, List.of(List.of(DATA_KEY_1), List.of("not_field_1")))), MessageOrigin.SOURCE);
     assertTrue(m.isPresent());
   }
 
@@ -124,11 +124,11 @@ class BasicAirbyteMessageValidatorTest {
     final AirbyteMessage bad = AirbyteMessageUtils.createRecordMessage(STREAM_1, DATA_KEY_1, DATA_VALUE);
 
     var m = BasicAirbyteMessageValidator.validate(bad, Optional.of(
-        getCatalogNonIncremental(STREAM_1)));
+        getCatalogNonIncremental(STREAM_1)), MessageOrigin.SOURCE);
     assertTrue(m.isPresent());
 
     m = BasicAirbyteMessageValidator.validate(bad, Optional.of(
-        getCatalogNonIncrementalDedup(STREAM_1)));
+        getCatalogNonIncrementalDedup(STREAM_1)), MessageOrigin.SOURCE);
     assertTrue(m.isPresent());
   }
 
@@ -137,7 +137,7 @@ class BasicAirbyteMessageValidatorTest {
     final AirbyteMessage bad = AirbyteMessageUtils.createRecordMessage(STREAM_1, DATA_KEY_1, DATA_VALUE);
 
     assertThrows(SourceException.class, () -> BasicAirbyteMessageValidator.validate(bad, Optional.of(
-        getCatalogWithPk(STREAM_1, List.of(List.of("not_field_1"))))));
+        getCatalogWithPk(STREAM_1, List.of(List.of("not_field_1")))), MessageOrigin.SOURCE));
   }
 
   @Test
@@ -145,7 +145,7 @@ class BasicAirbyteMessageValidatorTest {
     final AirbyteMessage bad = AirbyteMessageUtils.createRecordMessage(STREAM_1, DATA_KEY_1, DATA_VALUE);
 
     assertThrows(SourceException.class, () -> BasicAirbyteMessageValidator.validate(bad, Optional.of(
-        getCatalogWithPk("stream_2", List.of(List.of(DATA_KEY_1))))));
+        getCatalogWithPk("stream_2", List.of(List.of(DATA_KEY_1)))), MessageOrigin.SOURCE));
   }
 
   private ConfiguredAirbyteCatalog getCatalogWithPk(final String streamName,

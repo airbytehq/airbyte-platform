@@ -39,6 +39,7 @@ object BasicAirbyteMessageValidator {
   fun validate(
     message: AirbyteMessage,
     catalog: Optional<ConfiguredAirbyteCatalog>,
+    origin: MessageOrigin,
   ): Optional<AirbyteMessage> {
     if (message.type == null) {
       return Optional.empty()
@@ -53,12 +54,15 @@ object BasicAirbyteMessageValidator {
       }
 
       AirbyteMessage.Type.RECORD -> {
+        if (origin == MessageOrigin.DESTINATION) {
+          return Optional.of(message)
+        }
         if (message.record == null) {
           return Optional.empty()
         }
         // required fields
         val record = message.record
-        if (record.stream == null || record.data == null) {
+        if (record.stream == null || record.data == null || record.data.isNull || record.data.isEmpty) {
           return Optional.empty()
         }
         if (catalog.isPresent) {

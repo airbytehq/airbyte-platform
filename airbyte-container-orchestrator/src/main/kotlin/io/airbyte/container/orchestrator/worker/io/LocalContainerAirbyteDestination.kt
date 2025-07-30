@@ -15,6 +15,7 @@ import io.airbyte.container.orchestrator.tracker.MessageMetricsTracker
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteStreamFactory
+import io.airbyte.workers.internal.MessageOrigin
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.BufferedWriter
 import java.io.IOException
@@ -78,7 +79,7 @@ class LocalContainerAirbyteDestination(
       CheckedRunnable {
         messageIterator =
           streamFactory
-            .create(IOs.newBufferedReader(containerIOHandle.getInputStream()))
+            .create(IOs.newBufferedReader(containerIOHandle.getInputStream()), MessageOrigin.DESTINATION)
             .filter { message: AirbyteMessage -> LocalContainerConstants.ACCEPTED_MESSAGE_TYPES.contains(message.type) }
             .iterator()
       },

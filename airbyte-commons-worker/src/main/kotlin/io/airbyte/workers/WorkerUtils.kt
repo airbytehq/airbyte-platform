@@ -18,6 +18,7 @@ import io.airbyte.protocol.models.v0.AirbyteControlMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.workers.internal.AirbyteStreamFactory
+import io.airbyte.workers.internal.MessageOrigin
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -184,7 +185,7 @@ object WorkerUtils {
     process.inputStream.use { stdout ->
       messagesByType =
         streamFactory
-          .create(IOs.newBufferedReader(stdout))
+          .create(IOs.newBufferedReader(stdout), MessageOrigin.SOURCE)
           .collect(
             Collectors.groupingBy { obj: AirbyteMessage -> obj.type },
           )

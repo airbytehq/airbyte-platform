@@ -107,7 +107,10 @@ class VersionedAirbyteStreamFactory<T>(
    * If detectVersion is set to true, it will decide which protocol version to use from the content of
    * the stream rather than the one passed from the constructor.
    */
-  override fun create(bufferedReader: BufferedReader): Stream<AirbyteMessage> {
+  override fun create(
+    bufferedReader: BufferedReader,
+    origin: MessageOrigin,
+  ): Stream<AirbyteMessage> {
     detectAndInitialiseMigrators(bufferedReader)
     val needMigration = protocolVersion.getMajorVersion() != migratorFactory.mostRecentVersion.getMajorVersion()
     val protocolMessage =
@@ -117,7 +120,7 @@ class VersionedAirbyteStreamFactory<T>(
         ""
       }
     logger.info { "Reading messages from protocol version ${protocolVersion.serialize()}$protocolMessage" }
-    return addLineReadLogic(bufferedReader)
+    return addLineReadLogic(bufferedReader, origin)
   }
 
   private fun detectAndInitialiseMigrators(bufferedReader: BufferedReader) {
@@ -139,10 +142,13 @@ class VersionedAirbyteStreamFactory<T>(
     }
   }
 
-  private fun addLineReadLogic(bufferedReader: BufferedReader): Stream<AirbyteMessage> =
+  private fun addLineReadLogic(
+    bufferedReader: BufferedReader,
+    origin: MessageOrigin,
+  ): Stream<AirbyteMessage> =
     bufferedReader
       .lines()
-      .flatMap<AirbyteMessage> { line: String -> this.toAirbyteMessage(line) }
+      .flatMap<AirbyteMessage> { line: String -> this.toAirbyteMessage(line, origin) }
       .filter { message: AirbyteMessage -> runBlocking { filterLog(message) } }
 
   /**
@@ -255,15 +261,18 @@ class VersionedAirbyteStreamFactory<T>(
    *
    * 3. upgrade the message to the platform version, if needed.
    */
-  internal fun toAirbyteMessage(line: String): Stream<AirbyteMessage?> {
+  internal fun toAirbyteMessage(
+    line: String,
+    origin: MessageOrigin,
+  ): Stream<AirbyteMessage?> {
     logLargeRecordWarning(line)
 
     var m: Optional<AirbyteMessage> = deserializer.deserializeExact(line)
     if (m.isPresent) {
-      m = BasicAirbyteMessageValidator.validate(m.get(), configuredAirbyteCatalog)
+      m = BasicAirbyteMessageValidator.validate(m.get(), configuredAirbyteCatalog, origin)
 
       if (m.isEmpty) {
-        logger.error { "Validation failed: ${Jsons.serialize(line)}" }
+        logger.debug { "Validation failed: ${Jsons.serialize(line)}" }
         return m.stream()
       }
 

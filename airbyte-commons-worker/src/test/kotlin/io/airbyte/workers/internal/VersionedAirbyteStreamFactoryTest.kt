@@ -202,7 +202,7 @@ internal class VersionedAirbyteStreamFactoryTest {
     assertEquals(mutableListOf<Any?>(), messageStream.toList())
 
     verify(atLeast = 1) { mockLogger.info(message = any()) }
-    verify(atLeast = 1) { mockLogger.error(message = any()) }
+    verify(atLeast = 1) { mockLogger.debug(message = any()) }
   }
 
   @ParameterizedTest
@@ -232,7 +232,7 @@ internal class VersionedAirbyteStreamFactoryTest {
     assertEquals(
       1,
       streamFactory
-        .toAirbyteMessage(messageLine)
+        .toAirbyteMessage(messageLine, MessageOrigin.SOURCE)
         .toList()
         .size,
     )
@@ -245,7 +245,7 @@ internal class VersionedAirbyteStreamFactoryTest {
     assertEquals(
       0,
       streamFactory
-        .toAirbyteMessage(randomLog)
+        .toAirbyteMessage(randomLog, MessageOrigin.SOURCE)
         .toList()
         .size,
     )
@@ -257,7 +257,7 @@ internal class VersionedAirbyteStreamFactoryTest {
   fun testToAirbyteMessageMixedUpRecordShouldOnlyDebugLog() {
     val messageLine = "It shouldn't be here ${String.format(VALID_MESSAGE_TEMPLATE, "hello")}"
     val expected = malformedAirbyteRecordLogMessage(CONNECTION_ID_NOT_PRESENT, messageLine)
-    streamFactory.toAirbyteMessage(messageLine)
+    streamFactory.toAirbyteMessage(messageLine, MessageOrigin.SOURCE)
     verifyBlankedRecordRecordWarning()
     verify(exactly = 1) { mockLogger.debug(message = any()) }
     assertEquals(expected, debugSlot.captured.invoke())
@@ -270,7 +270,7 @@ internal class VersionedAirbyteStreamFactoryTest {
     assertEquals(
       0,
       streamFactory
-        .toAirbyteMessage(messageLine)
+        .toAirbyteMessage(messageLine, MessageOrigin.SOURCE)
         .toList()
         .size,
     )
@@ -289,7 +289,7 @@ internal class VersionedAirbyteStreamFactoryTest {
     val messageLine = String.format(VALID_MESSAGE_TEMPLATE, longStringBuilder)
     assertTrue(
       streamFactory
-        .toAirbyteMessage(messageLine)
+        .toAirbyteMessage(messageLine, MessageOrigin.SOURCE)
         .toList()
         .isNotEmpty(),
     )
@@ -311,7 +311,7 @@ internal class VersionedAirbyteStreamFactoryTest {
         metricClient = mockk(relaxed = true),
         logger = mockLogger,
       )
-    streamFactory.create(bufferedReader)
+    streamFactory.create(bufferedReader, MessageOrigin.SOURCE)
 
     verify(exactly = 1) { migratorFactory.getAirbyteMessageMigrator<Any>(initialVersion) }
   }
@@ -334,7 +334,7 @@ internal class VersionedAirbyteStreamFactoryTest {
 
     val bufferedReader =
       getBufferedReader("version-detection/logs-with-version.jsonl")
-    val stream: Stream<AirbyteMessage> = streamFactory.create(bufferedReader)
+    val stream: Stream<AirbyteMessage> = streamFactory.create(bufferedReader, MessageOrigin.SOURCE)
 
     val messageCount = stream.toList().size.toLong()
     assertEquals(1, messageCount)
@@ -358,7 +358,7 @@ internal class VersionedAirbyteStreamFactoryTest {
 
     val bufferedReader =
       getBufferedReader("version-detection/logs-without-version.jsonl")
-    val stream: Stream<AirbyteMessage> = streamFactory.create(bufferedReader)
+    val stream: Stream<AirbyteMessage> = streamFactory.create(bufferedReader, MessageOrigin.SOURCE)
 
     val messageCount = stream.toList().size.toLong()
     assertEquals(1, messageCount)
@@ -382,7 +382,7 @@ internal class VersionedAirbyteStreamFactoryTest {
 
     val bufferedReader =
       getBufferedReader("version-detection/logs-without-spec-message.jsonl")
-    val stream: Stream<AirbyteMessage> = streamFactory.create(bufferedReader)
+    val stream: Stream<AirbyteMessage> = streamFactory.create(bufferedReader, MessageOrigin.SOURCE)
 
     val messageCount = stream.toList().size.toLong()
     assertEquals(2, messageCount)
@@ -399,7 +399,7 @@ internal class VersionedAirbyteStreamFactoryTest {
   private fun stringToMessageStream(inputString: String): Stream<AirbyteMessage> {
     val inputStream: InputStream = ByteArrayInputStream(inputString.toByteArray(StandardCharsets.UTF_8))
     val bufferedReader = BufferedReader(InputStreamReader(inputStream, StandardCharsets.UTF_8))
-    val stream = streamFactory.create(bufferedReader)
+    val stream = streamFactory.create(bufferedReader, MessageOrigin.SOURCE)
     verifyStreamHeader()
     return stream
   }

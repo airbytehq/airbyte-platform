@@ -14,6 +14,7 @@ import io.airbyte.container.orchestrator.tracker.MessageMetricsTracker
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteStreamFactory
+import io.airbyte.workers.internal.MessageOrigin
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.nio.file.Path
 import java.util.Optional
@@ -59,7 +60,7 @@ class LocalContainerAirbyteSource(
       CheckedRunnable {
         messageIterator =
           streamFactory
-            .create(IOs.newBufferedReader(containerIOHandle.getInputStream()))
+            .create(IOs.newBufferedReader(containerIOHandle.getInputStream()), MessageOrigin.SOURCE)
             .peek { message: AirbyteMessage ->
               if (shouldBeat(message.type)) {
                 heartbeatMonitor.beat()

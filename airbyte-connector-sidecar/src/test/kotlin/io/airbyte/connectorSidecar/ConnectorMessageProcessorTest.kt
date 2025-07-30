@@ -82,7 +82,7 @@ class ConnectorMessageProcessorTest {
 
   @Test
   fun `test that message are properly aggregated by type`() {
-    every { streamFactory.create(any()) } returns
+    every { streamFactory.create(any(), any()) } returns
       Stream.of(
         AirbyteMessage().withType(AirbyteMessage.Type.CONTROL).withAdditionalProperty("control", "one"),
         AirbyteMessage().withType(AirbyteMessage.Type.RECORD).withAdditionalProperty("record", "two"),
@@ -382,7 +382,7 @@ class ConnectorMessageProcessorTest {
 
   @Test
   fun `fail if non 0 exit code`() {
-    every { streamFactory.create(any()) } returns Stream.of()
+    every { streamFactory.create(any(), any()) } returns Stream.of()
 
     val jobOutput =
       connectorMessageProcessor.run(
@@ -427,7 +427,7 @@ class ConnectorMessageProcessorTest {
 
   @Test
   fun `properly make connection successful`() {
-    every { streamFactory.create(any()) } returns
+    every { streamFactory.create(any(), any()) } returns
       Stream.of(
         AirbyteMessage()
           .withType(AirbyteMessage.Type.CONNECTION_STATUS)
@@ -458,7 +458,7 @@ class ConnectorMessageProcessorTest {
 
   @Test
   fun `properly make connection failed`() {
-    every { streamFactory.create(any()) } returns
+    every { streamFactory.create(any(), any()) } returns
       Stream.of(
         AirbyteMessage()
           .withType(AirbyteMessage.Type.CONNECTION_STATUS)
@@ -501,7 +501,7 @@ class ConnectorMessageProcessorTest {
             ),
         )
 
-    every { streamFactory.create(any()) } returns
+    every { streamFactory.create(any(), any()) } returns
       Stream.of(
         catalog,
       )
@@ -543,7 +543,7 @@ class ConnectorMessageProcessorTest {
             ),
         )
 
-    every { streamFactory.create(any()) } returns
+    every { streamFactory.create(any(), any()) } returns
       Stream.of(
         catalog,
       )
@@ -578,7 +578,7 @@ class ConnectorMessageProcessorTest {
             .withProtocolVersion("test"),
         )
 
-    every { streamFactory.create(any()) } returns
+    every { streamFactory.create(any(), any()) } returns
       Stream.of(
         specMessage,
       )

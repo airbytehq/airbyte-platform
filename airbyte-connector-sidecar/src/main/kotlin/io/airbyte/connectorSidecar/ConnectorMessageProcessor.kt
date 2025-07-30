@@ -32,6 +32,7 @@ import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.helper.FailureHelper.ConnectorCommand
 import io.airbyte.workers.internal.AirbyteStreamFactory
+import io.airbyte.workers.internal.MessageOrigin
 import io.airbyte.workers.models.SidecarInput.OperationType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
@@ -364,7 +365,7 @@ class ConnectorMessageProcessor(
       streamFactory: AirbyteStreamFactory,
     ): Map<AirbyteMessage.Type, List<AirbyteMessage>> =
       streamFactory
-        .create(IOs.newBufferedReader(inputStream))
+        .create(IOs.newBufferedReader(inputStream), MessageOrigin.SOURCE)
         .collect(Collectors.groupingBy { it.type })
   }
 }

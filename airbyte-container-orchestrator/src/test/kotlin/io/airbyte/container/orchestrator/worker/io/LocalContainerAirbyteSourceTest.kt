@@ -76,7 +76,7 @@ internal class LocalContainerAirbyteSourceTest {
       }
     streamFactory =
       mockk<AirbyteStreamFactory> {
-        every { create(any()) } returns stream
+        every { create(any(), any()) } returns stream
       }
     workerSourceConfig = mockk<WorkerSourceConfig>()
   }

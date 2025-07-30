@@ -12,5 +12,8 @@ import java.util.stream.Stream
  * Interface for creating an AirbyteStream from an InputStream.
  */
 interface AirbyteStreamFactory {
-  fun create(bufferedReader: BufferedReader): Stream<AirbyteMessage>
+  fun create(
+    bufferedReader: BufferedReader,
+    origin: MessageOrigin,
+  ): Stream<AirbyteMessage>
 }
