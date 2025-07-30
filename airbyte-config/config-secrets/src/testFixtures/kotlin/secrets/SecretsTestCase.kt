@@ -7,7 +7,7 @@ package io.airbyte.config.secrets
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.lang.Exceptions
-import io.airbyte.commons.resources.MoreResources
+import io.airbyte.commons.resources.Resources
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.protocol.models.v0.ConnectorSpecification
@@ -67,15 +67,15 @@ interface SecretsTestCase {
   fun getNodeResource(
     testCase: String,
     fileName: String,
-  ): JsonNode = Jsons.deserialize(MoreResources.readResource("$testCase/$fileName"))
+  ): JsonNode = Jsons.deserialize(Resources.read("$testCase/$fileName"))
 
   @get:Throws(IOException::class)
   val expectedSecretsPaths: List<String>
     get() {
       return Arrays
         .stream(
-          MoreResources
-            .readResource("$name/expectedPaths")
+          Resources
+            .read("$name/expectedPaths")
             .trim { it <= ' ' }
             .split(";".toRegex())
             .dropLastWhile { it.isEmpty() }

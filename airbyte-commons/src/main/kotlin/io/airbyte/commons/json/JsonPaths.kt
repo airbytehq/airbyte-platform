@@ -15,7 +15,6 @@ import com.jayway.jsonpath.spi.json.JacksonJsonNodeJsonProvider
 import com.jayway.jsonpath.spi.json.JsonProvider
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider
 import com.jayway.jsonpath.spi.mapper.MappingProvider
-import io.airbyte.commons.util.MoreIterators
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.EnumSet
@@ -334,16 +333,14 @@ object JsonPaths {
     jsonPath: String,
   ): List<JsonNode> {
     assertIsJsonPath(jsonPath)
-    try {
-      return MoreIterators.toList(
-        JsonPath
-          .using(conf)
-          .parse(json)
-          .read(jsonPath, ArrayNode::class.java)
-          .iterator(),
-      )
+    return try {
+      JsonPath
+        .using(conf)
+        .parse(json)
+        .read(jsonPath, ArrayNode::class.java)
+        .toList()
     } catch (e: PathNotFoundException) {
-      return listOf()
+      listOf()
     }
   }
 

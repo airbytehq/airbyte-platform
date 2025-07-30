@@ -7,7 +7,6 @@ package io.airbyte.persistence.job.errorreporter
 import com.google.common.collect.ImmutableSet
 import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.commons.lang.Exceptions
-import io.airbyte.commons.map.MoreMaps
 import io.airbyte.config.ActorType
 import io.airbyte.config.AttemptFailureSummary
 import io.airbyte.config.Configs.AirbyteEdition
@@ -79,11 +78,9 @@ class JobErrorReporter(
             }.toList()
 
         val workspace = workspaceService.getStandardWorkspaceFromConnection(connectionId, true)
-        val commonMetadata =
-          MoreMaps.merge(
-            java.util.Map.of(JOB_ID_KEY, jobContext.jobId.toString()),
-            getConnectionMetadata(workspace.workspaceId, connectionId),
-          )
+        val commonMetadata = mutableMapOf<String?, String?>()
+        commonMetadata.putAll(java.util.Map.of(JOB_ID_KEY, jobContext.jobId.toString()))
+        commonMetadata.putAll(getConnectionMetadata(workspace.workspaceId, connectionId))
 
         LOGGER.info(
           "{} failures to report for jobId '{}' connectionId '{}'",
@@ -112,10 +109,8 @@ class JobErrorReporter(
               commonMetadata[SOURCE_TYPE_META_KEY] = sourceVersion.language
             }
             val metadata =
-              MoreMaps.merge(
-                commonMetadata,
-                getSourceMetadata(sourceDefinition, dockerImage, sourceVersion.releaseStage, sourceVersion.internalSupportLevel),
-              )
+              commonMetadata +
+                getSourceMetadata(sourceDefinition, dockerImage, sourceVersion.releaseStage, sourceVersion.internalSupportLevel)
 
             reportJobFailureReason(workspace, failureReason, dockerImage, metadata, attemptConfig)
           } else if (failureOrigin == FailureReason.FailureOrigin.DESTINATION) {
@@ -125,15 +120,13 @@ class JobErrorReporter(
               actorDefinitionService.getActorDefinitionVersion(jobContext.destinationVersionId!!)
             val dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationVersion)
             val metadata =
-              MoreMaps.merge(
-                commonMetadata,
+              commonMetadata +
                 getDestinationMetadata(
                   destinationDefinition,
                   dockerImage,
                   destinationVersion.releaseStage,
                   destinationVersion.internalSupportLevel,
-                ),
-              )
+                )
 
             reportJobFailureReason(workspace, failureReason, dockerImage, metadata, attemptConfig)
           }
@@ -170,10 +163,8 @@ class JobErrorReporter(
     val workspace = if (workspaceId != null) workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) else null
     val sourceDefinition = sourceService.getStandardSourceDefinition(sourceDefinitionId)
     val metadata =
-      MoreMaps.merge(
-        getSourceMetadata(sourceDefinition, jobContext.dockerImage, jobContext.releaseStage, jobContext.internalSupportLevel),
-        java.util.Map.of(JOB_ID_KEY, jobContext.jobId.toString()),
-      )
+      getSourceMetadata(sourceDefinition, jobContext.dockerImage, jobContext.releaseStage, jobContext.internalSupportLevel) +
+        java.util.Map.of(JOB_ID_KEY, jobContext.jobId.toString())
     reportJobFailureReason(workspace, failureReason.withFailureOrigin(FailureReason.FailureOrigin.SOURCE), jobContext.dockerImage, metadata, null)
   }
 
@@ -198,10 +189,8 @@ class JobErrorReporter(
     val workspace = if (workspaceId != null) workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) else null
     val destinationDefinition = destinationService.getStandardDestinationDefinition(destinationDefinitionId)
     val metadata =
-      MoreMaps.merge(
-        getDestinationMetadata(destinationDefinition, jobContext.dockerImage, jobContext.releaseStage, jobContext.internalSupportLevel),
-        java.util.Map.of(JOB_ID_KEY, jobContext.jobId.toString()),
-      )
+      getDestinationMetadata(destinationDefinition, jobContext.dockerImage, jobContext.releaseStage, jobContext.internalSupportLevel) +
+        java.util.Map.of(JOB_ID_KEY, jobContext.jobId.toString())
     reportJobFailureReason(
       workspace,
       failureReason.withFailureOrigin(FailureReason.FailureOrigin.DESTINATION),
@@ -249,10 +238,8 @@ class JobErrorReporter(
         )
       }
     val metadata =
-      MoreMaps.merge(
-        actorDefMetadata,
-        java.util.Map.of(JOB_ID_KEY, jobContext.jobId.toString()),
-      )
+      actorDefMetadata +
+        java.util.Map.of(JOB_ID_KEY, jobContext.jobId.toString())
     reportJobFailureReason(workspace, failureReason, jobContext.dockerImage, metadata, null)
   }
 
@@ -407,11 +394,9 @@ class JobErrorReporter(
     }
 
     val allMetadata =
-      MoreMaps.merge(
-        commonMetadata,
-        getFailureReasonMetadata(failureReason),
-        metadata,
-      )
+      commonMetadata +
+        getFailureReasonMetadata(failureReason) +
+        metadata
 
     try {
       jobErrorReportingClient.reportJobFailureReason(workspace, failureReason, dockerImage, allMetadata, attemptConfig)

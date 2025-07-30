@@ -7,7 +7,6 @@ package io.airbyte.commons.json
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.base.Preconditions
-import io.airbyte.commons.util.MoreIterators
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.lang.invoke.MethodHandles
@@ -16,7 +15,6 @@ import java.util.function.BiConsumer
 import java.util.function.BiFunction
 import java.util.function.Consumer
 import java.util.function.Predicate
-import java.util.stream.Collectors
 
 // todo (cgardens) - we need the ability to identify jsonschemas that Airbyte considers invalid for
 // a connector (e.g. "not" keyword).
@@ -228,11 +226,12 @@ object JsonSchemas {
   fun getType(jsonSchema: JsonNode): List<String> {
     if (jsonSchema.has(JSON_SCHEMA_TYPE_KEY)) {
       if (jsonSchema.get(JSON_SCHEMA_TYPE_KEY).isArray) {
-        return MoreIterators
-          .toList(jsonSchema.get(JSON_SCHEMA_TYPE_KEY).iterator())
-          .stream()
+        return jsonSchema
+          .get(JSON_SCHEMA_TYPE_KEY)
+          .iterator()
+          .asSequence()
           .map { obj: JsonNode -> obj.asText() }
-          .collect(Collectors.toList())
+          .toList()
       } else {
         return listOf(jsonSchema.get(JSON_SCHEMA_TYPE_KEY).asText())
       }

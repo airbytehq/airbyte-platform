@@ -7,7 +7,6 @@ package io.airbyte.oauth
 import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.map.MoreMaps
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
@@ -84,7 +83,7 @@ abstract class BaseOAuthFlow : OAuthFlowImplementation {
         Jsons.keys(oauthParamConfig),
       ) { resultMap, key -> resultMap.put(key, MoreOAuthParameters.SECRET_MASK) }
 
-    return MoreMaps.merge(oAuthServerOutputs, oAuthOutputs)
+    return oAuthServerOutputs + oAuthOutputs
   }
 
   /**

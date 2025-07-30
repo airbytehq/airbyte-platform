@@ -14,7 +14,6 @@ import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDI
 import io.airbyte.commons.json.JsonPaths
 import io.airbyte.commons.json.JsonSchemas
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.util.MoreIterators
 import io.airbyte.domain.models.SecretStorage
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -48,10 +47,10 @@ class JsonSecretsProcessor(
           .collectPathsThatMeetCondition(
             schema,
           ) { node: JsonNode ->
-            MoreIterators
-              .toList(node.fields())
-              .stream()
-              .anyMatch { (key): Map.Entry<String, JsonNode> -> AirbyteSecretConstants.AIRBYTE_SECRET_FIELD == key }
+            node
+              .fields()
+              .asSequence()
+              .any { (key): Map.Entry<String, JsonNode> -> AirbyteSecretConstants.AIRBYTE_SECRET_FIELD == key }
           }.stream()
           .map { jsonSchemaPath: List<JsonSchemas.FieldNameOrList> ->
             JsonPaths.mapJsonSchemaPathToJsonPath(

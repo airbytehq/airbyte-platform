@@ -75,7 +75,7 @@ import io.airbyte.api.client.model.generated.WebBackendConnectionRequestBody
 import io.airbyte.api.client.model.generated.WorkspaceCreateWithId
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.resources.MoreResources
+import io.airbyte.commons.resources.Resources
 import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.commons.temporal.TemporalWorkflowUtils
 import io.airbyte.commons.temporal.config.TemporalSdkTimeouts
@@ -309,7 +309,7 @@ class AcceptanceTestHarness
             destinationDatabaseName!!,
           )
         // seed database.
-        runSqlScript(Path.of(MoreResources.readResourceAsFile(postgresSqlInitFile).toURI()), getSourceDatabase())
+        runSqlScript(Path.of(Resources.readResourceAsFile(postgresSqlInitFile!!).toURI()), getSourceDatabase())
       } else {
         runSqlScript(MountableFile.forClasspathResource(postgresSqlInitFile!!), sourcePsql!!)
 
@@ -545,7 +545,7 @@ class AcceptanceTestHarness
     fun runSqlScriptInSource(resourceName: String) {
       LOGGER.debug("Running sql script in source: {}", resourceName)
       if (isGke) {
-        runSqlScript(Path.of(MoreResources.readResourceAsFile(resourceName).toURI()), getSourceDatabase())
+        runSqlScript(Path.of(Resources.readResourceAsFile(resourceName).toURI()), getSourceDatabase())
       } else {
         runSqlScript(MountableFile.forClasspathResource(resourceName), sourcePsql!!)
       }

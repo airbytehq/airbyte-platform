@@ -7,7 +7,6 @@ package io.airbyte.config.specs
 import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.io.Resources
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.util.MoreIterators
 import io.airbyte.commons.yaml.Yamls
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
@@ -139,7 +138,12 @@ internal class RemoteDefinitionsProviderTest {
     val remoteDefinitionsProvider =
       RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
     val sourceDefinitions = remoteDefinitionsProvider.getSourceDefinitions()
-    val expectedNumberOfSources = MoreIterators.toList(jsonCatalog!!["sources"].elements()).size
+    val expectedNumberOfSources =
+      jsonCatalog!!["sources"]
+        .elements()
+        .asSequence()
+        .toList()
+        .size
     Assertions.assertEquals(expectedNumberOfSources, sourceDefinitions.size)
     Assertions.assertTrue(
       sourceDefinitions.stream().allMatch { sourceDef: ConnectorRegistrySourceDefinition -> sourceDef.protocolVersion.length > 0 },
@@ -152,7 +156,12 @@ internal class RemoteDefinitionsProviderTest {
     val remoteDefinitionsProvider =
       RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
     val destinationDefinitions = remoteDefinitionsProvider.getDestinationDefinitions()
-    val expectedNumberOfDestinations = MoreIterators.toList(jsonCatalog!!["destinations"].elements()).size
+    val expectedNumberOfDestinations =
+      jsonCatalog!!["destinations"]
+        .elements()
+        .asSequence()
+        .toList()
+        .size
     Assertions.assertEquals(expectedNumberOfDestinations, destinationDefinitions.size)
     Assertions.assertTrue(
       destinationDefinitions.stream().allMatch { destDef: ConnectorRegistryDestinationDefinition -> destDef.protocolVersion.length > 0 },

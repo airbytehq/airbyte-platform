@@ -7,7 +7,6 @@ package io.airbyte.persistence.job
 import com.google.common.collect.ImmutableMap
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.client.WebUrlHelper
-import io.airbyte.commons.map.MoreMaps
 import io.airbyte.config.Attempt
 import io.airbyte.config.AttemptFailureSummary
 import io.airbyte.config.DestinationConnection
@@ -142,7 +141,7 @@ class JobNotifier(
           workspace.workspaceId,
           ScopeType.WORKSPACE,
           action,
-          MoreMaps.merge(jobMetadata, sourceMetadata, destinationMetadata, notificationMetadata),
+          jobMetadata + sourceMetadata + destinationMetadata + notificationMetadata,
         )
       }
     } catch (e: Exception) {

@@ -8,7 +8,7 @@ import io.airbyte.commons.AUTO_DATAPLANE_GROUP
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.commons.annotation.InternalForTesting
-import io.airbyte.commons.resources.MoreResources
+import io.airbyte.commons.resources.Resources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs.AirbyteEdition
@@ -134,7 +134,7 @@ class Bootloader(
     val initialAirbyteDatabaseVersion = jobPersistence.getVersion().map { version: String -> AirbyteVersion(version) }
     val requiredVersionUpgrade = getRequiredVersionUpgrade(initialAirbyteDatabaseVersion.orElse(null), airbyteVersion)
     if (requiredVersionUpgrade != null) {
-      val attentionBanner = MoreResources.readResource("banner/attention-banner.txt")
+      val attentionBanner = Resources.read("banner/attention-banner.txt")
       log.error { attentionBanner }
       val message =
         "Cannot upgrade from version ${initialAirbyteDatabaseVersion.get().serialize()} to version ${airbyteVersion.serialize()} " +

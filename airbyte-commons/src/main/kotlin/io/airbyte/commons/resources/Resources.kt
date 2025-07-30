@@ -55,4 +55,15 @@ object Resources {
    * @return the contents of [resource] if successful, null otherwise
    */
   fun readOrNull(resource: String): String? = this::class.java.getResource("/$resource")?.readText()
+
+  /**
+   * Access a java Resource as a file.
+   *
+   * @param resource name of resource
+   * @return file handle to the Resource
+   * @throws [IllegalArgumentException] if [resource] does not exist
+   */
+  fun readResourceAsFile(resource: String): File =
+    this::class.java.getResource("/$resource")?.let { File(it.toURI()) }
+      ?: throw IllegalArgumentException("Resource not found: $resource")
 }

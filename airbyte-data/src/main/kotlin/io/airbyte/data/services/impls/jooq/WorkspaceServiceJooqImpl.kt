@@ -7,7 +7,7 @@ package io.airbyte.data.services.impls.jooq
 import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.resources.MoreResources
+import io.airbyte.commons.resources.Resources
 import io.airbyte.commons.yaml.Yamls
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.SourceConnection
@@ -779,7 +779,7 @@ class WorkspaceServiceJooqImpl
     @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     override fun writeWorkspaceWithSecrets(workspace: StandardWorkspace) {
       // Get the schema for the webhook config, so we can split out any secret fields.
-      val webhookConfigSchema = Yamls.deserialize(MoreResources.readResource("types/WebhookOperationConfigs.yaml"))
+      val webhookConfigSchema = Yamls.deserialize(Resources.read("types/WebhookOperationConfigs.yaml"))
       // Check if there's an existing config, so we can re-use the secret coordinates.
       val previousWorkspace = getWorkspaceIfExists(workspace.workspaceId)
       var previousWebhookConfigs: Optional<JsonNode> = Optional.empty()

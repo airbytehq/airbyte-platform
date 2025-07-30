@@ -5,7 +5,7 @@
 package io.airbyte.cron.jobs
 
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.resources.MoreResources
+import io.airbyte.commons.resources.Resources
 import io.airbyte.config.AirbyteCompatibleConnectorVersionsMatrix
 import io.airbyte.config.init.AirbyteCompatibleConnectorVersionsProvider
 import io.airbyte.config.init.AirbyteCompatibleConnectorVersionsProvider.Companion.convertToMap
@@ -81,7 +81,7 @@ class AirbyteCompatibilityTest(
   fun platformCompatibilityProvider(): AirbyteCompatibleConnectorVersionsProvider {
     val matrix =
       Jsons.deserialize(
-        MoreResources.readResource("platform-compatibility.json"),
+        Resources.read("platform-compatibility.json"),
         AirbyteCompatibleConnectorVersionsMatrix::class.java,
       )
     val platformCompatibilityProvider: AirbyteCompatibleConnectorVersionsProvider = mockk()

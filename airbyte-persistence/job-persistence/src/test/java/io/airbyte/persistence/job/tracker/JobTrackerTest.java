@@ -14,11 +14,11 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.map.MoreMaps;
-import io.airbyte.commons.resources.MoreResources;
+import io.airbyte.commons.resources.Resources;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AirbyteStream;
@@ -353,7 +353,7 @@ class JobTrackerTest {
 
   @Test
   void testTrackRefresh() throws IOException, JsonValidationException, ConfigNotFoundException {
-    final Map<String, Object> expectedExtraMetadata = MoreMaps.merge(
+    final Map<String, Object> expectedExtraMetadata = mergeMaps(
         SYNC_CONFIG_METADATA,
         Map.of("refresh_types", List.of(RefreshStream.RefreshType.TRUNCATE.toString())));
     testAsynchronous(ConfigType.REFRESH, expectedExtraMetadata);
@@ -465,7 +465,7 @@ class JobTrackerTest {
             .withManual(true));
     when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
-    final Map<String, Object> manualMetadata = MoreMaps.merge(
+    final Map<String, Object> manualMetadata = mergeMaps(
         metadata,
         Map.of(FREQUENCY_KEY, "manual"),
         additionalExpectedMetadata);
@@ -480,7 +480,7 @@ class JobTrackerTest {
             .withCatalog(CATALOG)
             .withManual(false)
             .withSchedule(new Schedule().withUnits(1L).withTimeUnit(TimeUnit.MINUTES)));
-    final Map<String, Object> scheduledMetadata = MoreMaps.merge(
+    final Map<String, Object> scheduledMetadata = mergeMaps(
         metadata,
         Map.of(FREQUENCY_KEY, "1 min"),
         additionalExpectedMetadata);
@@ -509,10 +509,10 @@ class JobTrackerTest {
 
   @Test
   void testConfigToMetadata() throws IOException {
-    final String configJson = MoreResources.readResource("example_config.json");
+    final String configJson = Resources.INSTANCE.read("example_config.json");
     final JsonNode config = Jsons.deserialize(configJson);
 
-    final String schemaJson = MoreResources.readResource("example_config_schema.json");
+    final String schemaJson = Resources.INSTANCE.read("example_config_schema.json");
     final JsonNode schema = Jsons.deserialize(schemaJson);
 
     final Map<String, Object> expected = new ImmutableMap.Builder<String, Object>()
@@ -585,7 +585,7 @@ class JobTrackerTest {
     when(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(LONG_JOB_ID)).thenReturn(WORKSPACE_ID);
     when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
-    final Map<String, Object> manualMetadata = MoreMaps.merge(
+    final Map<String, Object> manualMetadata = mergeMaps(
         ATTEMPT_METADATA,
         metadata,
         Map.of(FREQUENCY_KEY, "manual"),
@@ -641,7 +641,7 @@ class JobTrackerTest {
         "failure_reasons", Jsons.arrayNode().addAll(Arrays.asList(configFailureJson(), systemFailureJson(), unknownFailureJson())).toString(),
         "main_failure_reason", configFailureJson().toString());
     testAsynchronousAttempt(configType, getJobWithFailuresMock(configType, LONG_JOB_ID),
-        MoreMaps.merge(additionalExpectedMetadata, failureMetadata));
+        mergeMaps(additionalExpectedMetadata, failureMetadata));
   }
 
   private Job getJobMock(final ConfigType configType, final long jobId) throws JsonValidationException, ConfigNotFoundException, IOException {
@@ -896,13 +896,13 @@ class JobTrackerTest {
           metadata);
       assertCorrectMessageForSucceededState(
           configType == ConfigType.CHECK_CONNECTION_SOURCE ? JobTracker.CHECK_CONNECTION_SOURCE_EVENT : JobTracker.CHECK_CONNECTION_DESTINATION_EVENT,
-          MoreMaps.merge(metadata, checkConnSuccessMetadata));
+          mergeMaps(metadata, checkConnSuccessMetadata));
       assertCorrectMessageForSucceededState(
           configType == ConfigType.CHECK_CONNECTION_SOURCE ? JobTracker.CHECK_CONNECTION_SOURCE_EVENT : JobTracker.CHECK_CONNECTION_DESTINATION_EVENT,
-          MoreMaps.merge(metadata, checkConnFailureMetadata));
+          mergeMaps(metadata, checkConnFailureMetadata));
       assertCorrectMessageForFailedState(
           configType == ConfigType.CHECK_CONNECTION_SOURCE ? JobTracker.CHECK_CONNECTION_SOURCE_EVENT : JobTracker.CHECK_CONNECTION_DESTINATION_EVENT,
-          MoreMaps.merge(metadata, failedCheckJobMetadata));
+          mergeMaps(metadata, failedCheckJobMetadata));
     } else {
       verifyNoInteractions(trackingClient);
     }
@@ -930,7 +930,7 @@ class JobTrackerTest {
     if (workspaceSet) {
       assertCorrectMessageForStartedState(JobTracker.DISCOVER_EVENT, metadata);
       assertCorrectMessageForSucceededState(JobTracker.DISCOVER_EVENT, metadata);
-      assertCorrectMessageForFailedState(JobTracker.DISCOVER_EVENT, MoreMaps.merge(metadata, failedDiscoverMetadata));
+      assertCorrectMessageForFailedState(JobTracker.DISCOVER_EVENT, mergeMaps(metadata, failedDiscoverMetadata));
     } else {
       verifyNoInteractions(trackingClient);
     }
@@ -954,15 +954,15 @@ class JobTrackerTest {
   }
 
   private void assertCorrectMessageForStartedState(final String action, final Map<String, Object> metadata) {
-    verify(trackingClient).track(WORKSPACE_ID, ScopeType.WORKSPACE, action, MoreMaps.merge(metadata, STARTED_STATE_METADATA, mockWorkspaceInfo()));
+    verify(trackingClient).track(WORKSPACE_ID, ScopeType.WORKSPACE, action, mergeMaps(metadata, STARTED_STATE_METADATA, mockWorkspaceInfo()));
   }
 
   private void assertCorrectMessageForSucceededState(final String action, final Map<String, Object> metadata) {
-    verify(trackingClient).track(WORKSPACE_ID, ScopeType.WORKSPACE, action, MoreMaps.merge(metadata, SUCCEEDED_STATE_METADATA, mockWorkspaceInfo()));
+    verify(trackingClient).track(WORKSPACE_ID, ScopeType.WORKSPACE, action, mergeMaps(metadata, SUCCEEDED_STATE_METADATA, mockWorkspaceInfo()));
   }
 
   private void assertCorrectMessageForFailedState(final String action, final Map<String, Object> metadata) {
-    verify(trackingClient).track(WORKSPACE_ID, ScopeType.WORKSPACE, action, MoreMaps.merge(metadata, FAILED_STATE_METADATA, mockWorkspaceInfo()));
+    verify(trackingClient).track(WORKSPACE_ID, ScopeType.WORKSPACE, action, mergeMaps(metadata, FAILED_STATE_METADATA, mockWorkspaceInfo()));
   }
 
   private Map<String, Object> mockWorkspaceInfo() {
@@ -970,6 +970,27 @@ class JobTrackerTest {
     map.put("workspace_id", WORKSPACE_ID);
     map.put("workspace_name", WORKSPACE_NAME);
     return map;
+  }
+
+  /**
+   * Combine the contents of multiple maps. In the event of duplicate keys, the contents of maps later
+   * in the input args overwrite those earlier in the list.
+   *
+   * @param maps whose contents to combine
+   * @param <K> type of key
+   * @param <V> type of value
+   * @return map with contents of input maps
+   */
+  @SafeVarargs
+  private static <K, V> Map<K, V> mergeMaps(final Map<K, V>... maps) {
+    final Map<K, V> outputMap = new HashMap<>();
+
+    for (final Map<K, V> map : maps) {
+      Preconditions.checkNotNull(map);
+      outputMap.putAll(map);
+    }
+
+    return outputMap;
   }
 
 }

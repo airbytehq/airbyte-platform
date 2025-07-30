@@ -12,7 +12,6 @@ import com.google.common.base.Preconditions
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.lang.Exceptions
-import io.airbyte.commons.map.MoreMaps
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ActorType
 import io.airbyte.config.Attempt
@@ -126,7 +125,7 @@ class JobTracker
         track(
           workspaceId,
           CHECK_CONNECTION_SOURCE_EVENT,
-          MoreMaps.merge(checkConnMetadata, failureReasonMetadata, jobMetadata, sourceDefMetadata, stateMetadata),
+          checkConnMetadata + failureReasonMetadata + jobMetadata + sourceDefMetadata + stateMetadata,
         )
       }
     }
@@ -162,13 +161,7 @@ class JobTracker
         track(
           workspaceId,
           CHECK_CONNECTION_DESTINATION_EVENT,
-          MoreMaps.merge(
-            checkConnMetadata,
-            failureReasonMetadata,
-            jobMetadata,
-            destinationDefinitionMetadata,
-            stateMetadata,
-          ),
+          checkConnMetadata + failureReasonMetadata + jobMetadata + destinationDefinitionMetadata + stateMetadata,
         )
       }
     }
@@ -206,7 +199,7 @@ class JobTracker
         track(
           workspaceId,
           DISCOVER_EVENT,
-          MoreMaps.merge(jobMetadata, failureReasonMetadata, actorDefMetadata, stateMetadata),
+          jobMetadata + failureReasonMetadata + actorDefMetadata + stateMetadata,
         )
       }
     }
@@ -268,16 +261,14 @@ class JobTracker
         track(
           workspaceId,
           SYNC_EVENT,
-          MoreMaps.merge(
-            jobMetadata,
-            jobAttemptMetadata,
-            sourceDefMetadata,
-            destinationDefMetadata,
-            syncMetadata,
-            stateMetadata,
-            syncConfigMetadata,
+          jobMetadata +
+            jobAttemptMetadata +
+            sourceDefMetadata +
+            destinationDefMetadata +
+            syncMetadata +
+            stateMetadata +
+            syncConfigMetadata +
             refreshMetadata,
-          ),
         )
       }
     }
@@ -330,15 +321,7 @@ class JobTracker
         track(
           workspaceId,
           INTERNAL_FAILURE_SYNC_EVENT,
-          MoreMaps.merge(
-            jobMetadata,
-            jobAttemptMetadata,
-            sourceDefMetadata,
-            destinationDefMetadata,
-            syncMetadata,
-            stateMetadata,
-            generalMetadata,
-          ),
+          jobMetadata + jobAttemptMetadata + sourceDefMetadata + destinationDefMetadata + syncMetadata + stateMetadata + generalMetadata,
         )
       }
     }
@@ -389,7 +372,7 @@ class JobTracker
           // This is not possible
           throw IllegalStateException("This should not be reacheable")
         }
-        return MoreMaps.merge(actorConfigMetadata, catalogMetadata)
+        return actorConfigMetadata + catalogMetadata
       } else {
         return emptyMap<String, Any>()
       }
@@ -423,7 +406,7 @@ class JobTracker
       val streamCount = standardSync.catalog.streams.size
       streamCountData["number_of_streams"] = streamCount
 
-      return MoreMaps.merge(TrackingMetadata.generateSyncMetadata(standardSync), operationUsage, streamCountData)
+      return TrackingMetadata.generateSyncMetadata(standardSync) + operationUsage + streamCountData
     }
 
     /**
@@ -548,7 +531,7 @@ class JobTracker
               standardWorkspace.name,
             )
 
-          trackingClient.track(workspaceId, ScopeType.WORKSPACE, action, MoreMaps.merge(metadata, standardTrackingMetadata))
+          trackingClient.track(workspaceId, ScopeType.WORKSPACE, action, metadata + standardTrackingMetadata)
         }
       }
     }

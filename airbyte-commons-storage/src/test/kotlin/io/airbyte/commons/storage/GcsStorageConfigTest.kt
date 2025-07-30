@@ -5,7 +5,7 @@
 package io.airbyte.commons.storage
 
 import io.airbyte.commons.envvar.EnvVar
-import io.airbyte.commons.resources.MoreResources
+import io.airbyte.commons.resources.Resources
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -22,7 +22,7 @@ internal class GcsStorageConfigTest {
         auditLogging = null,
         profilerOutput = null,
       )
-    val applicationCredentials = MoreResources.readResource("sample_gcs_credentials.json")
+    val applicationCredentials = Resources.read("sample_gcs_credentials.json")
     val gcsStorageConfig =
       GcsStorageConfig(
         buckets = bucketConfig,
@@ -49,7 +49,7 @@ internal class GcsStorageConfigTest {
         auditLogging = "audit-logging",
         profilerOutput = null,
       )
-    val applicationCredentials = MoreResources.readResource("sample_gcs_credentials.json")
+    val applicationCredentials = Resources.read("sample_gcs_credentials.json")
     val gcsStorageConfig =
       GcsStorageConfig(
         buckets = bucketConfig,
@@ -77,7 +77,7 @@ internal class GcsStorageConfigTest {
         auditLogging = "audit-logging",
         profilerOutput = null,
       )
-    val applicationCredentials = MoreResources.readResource("sample_gcs_credentials.json")
+    val applicationCredentials = Resources.read("sample_gcs_credentials.json")
     val gcsStorageConfig =
       GcsStorageConfig(
         buckets = bucketConfig,

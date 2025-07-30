@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.airbyte.commons.auth.config.TokenExpirationConfig;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.resources.MoreResources;
+import io.airbyte.commons.resources.Resources;
 import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.data.config.InstanceAdminConfig;
 import io.airbyte.data.services.impls.data.ApplicationServiceMicronautImpl;
@@ -43,7 +43,7 @@ class ApplicationServiceMicronautImplTests {
 
   @BeforeEach
   void setup() throws IOException {
-    token = MoreResources.readResource("test.token");
+    token = Resources.INSTANCE.read("test.token");
     instanceAdminConfig = new InstanceAdminConfig();
     instanceAdminConfig.setUsername("test");
     instanceAdminConfig.setPassword("test-password");

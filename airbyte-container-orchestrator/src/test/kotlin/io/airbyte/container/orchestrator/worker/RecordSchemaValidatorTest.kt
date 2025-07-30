@@ -4,7 +4,7 @@
 
 package io.airbyte.container.orchestrator.worker
 
-import io.airbyte.commons.resources.MoreResources
+import io.airbyte.commons.resources.Resources
 import io.airbyte.config.StandardSync
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.Jsons
@@ -137,7 +137,7 @@ internal class RecordSchemaValidatorTest {
   @Test
   @Throws(InterruptedException::class, IOException::class)
   fun testMigrationOfIdPropertyToEscapedVersion() {
-    val jsonSchema = MoreResources.readResource("catalog-json-schema-with-id.json")
+    val jsonSchema = Resources.read("catalog-json-schema-with-id.json")
     val airbyteStream = AirbyteStream().withJsonSchema(Jsons.deserialize(jsonSchema))
     val executorService = Executors.newSingleThreadExecutor()
     val recordSchemaValidator =

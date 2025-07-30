@@ -5,7 +5,6 @@
 package io.airbyte.commons.protocol
 
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.resources.MoreResources
 import io.airbyte.commons.resources.Resources
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
@@ -55,7 +54,7 @@ internal class CatalogTransformsTest {
   @Test
   @Throws(IOException::class)
   fun testResetCatalogSyncModeReplacementMultipleStreams() {
-    val catalog = MoreResources.readResource("catalogs/multiple_stream_catalog.json")
+    val catalog = Resources.read("catalogs/multiple_stream_catalog.json")
     val configuredAirbyteCatalog =
       Jsons.`object`(
         Jsons.deserialize(catalog),

@@ -4,7 +4,7 @@
 
 package io.airbyte.bootloader.config
 
-import io.airbyte.commons.resources.MoreResources
+import io.airbyte.commons.resources.Resources
 import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
@@ -125,7 +125,7 @@ class DatabaseBeanFactory {
     DatabaseCheckFactory.createConfigsDatabaseInitializer(
       DataSourceUnwrapper.unwrapContext(configsDslContext),
       configsDatabaseInitializationTimeoutMs,
-      MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH),
+      Resources.read(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH),
     )
 
   @Singleton
@@ -137,7 +137,7 @@ class DatabaseBeanFactory {
     DatabaseCheckFactory.createJobsDatabaseInitializer(
       DataSourceUnwrapper.unwrapContext(jobsDslContext),
       jobsDatabaseInitializationTimeoutMs,
-      MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH),
+      Resources.read(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH),
     )
 
   @Singleton

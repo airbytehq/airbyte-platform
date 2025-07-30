@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.commons.resources.MoreResources
+import io.airbyte.commons.resources.Resources
 import jakarta.inject.Singleton
 import java.io.File
 import java.io.IOException
@@ -25,7 +25,7 @@ open class OpenApiConfigHandler {
       try {
         tmpFile = File.createTempFile("airbyte", "openapiconfig")
         tmpFile!!.deleteOnExit()
-        Files.writeString(tmpFile!!.toPath(), MoreResources.readResource("config.yaml"))
+        Files.writeString(tmpFile!!.toPath(), Resources.read("config.yaml"))
       } catch (e: IOException) {
         throw RuntimeException(e)
       }

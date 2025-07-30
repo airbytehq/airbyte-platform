@@ -17,7 +17,6 @@ import io.airbyte.api.client.model.generated.ReleaseStage
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody
 import io.airbyte.api.client.model.generated.SourceIdRequestBody
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.map.MoreMaps
 import io.airbyte.config.Configs
 import io.airbyte.config.FailureReason
 import io.airbyte.config.Metadata
@@ -66,13 +65,11 @@ class StateCheckSumErrorReporter(
     try {
       jobErrorReportingClient.ifPresent { client ->
         val standardWorkspace = StandardWorkspace().withWorkspaceId(workspaceId)
-        val commonMetadata =
-          MoreMaps.merge(
-            mapOf(JobErrorReporter.JOB_ID_KEY to jobId.toString()),
-            getConnectionMetadata(workspaceId, connectionId),
-            getWorkspaceMetadata(workspaceId),
-            airbyteMetadata(),
-          )
+        val commonMetadata: Map<String?, String?> =
+          mapOf(JobErrorReporter.JOB_ID_KEY to jobId.toString()) +
+            getConnectionMetadata(workspaceId, connectionId) +
+            getWorkspaceMetadata(workspaceId) +
+            airbyteMetadata()
 
         val metadata: Map<String, String>
         val dockerImageName: String
@@ -116,7 +113,7 @@ class StateCheckSumErrorReporter(
         }
 
         val failureReason = createFailureReason(origin, internalMessage, externalMessage, exception, jobId, attemptNumber)
-        val allMetadata = MoreMaps.merge(getFailureReasonMetadata(failureReason), metadata, commonMetadata)
+        val allMetadata: Map<String?, String?> = getFailureReasonMetadata(failureReason) + metadata + commonMetadata
         client.reportJobFailureReason(
           standardWorkspace,
           failureReason,

@@ -5,7 +5,7 @@
 package io.airbyte.bootloader
 
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.resources.MoreResources
+import io.airbyte.commons.resources.Resources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.commons.version.Version
@@ -186,7 +186,7 @@ internal class BootloaderTest {
       DatabaseCheckFactory.createConfigsDatabaseInitializer(
         configsDslContext,
         configsDatabaseInitializationTimeoutMs,
-        MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH),
+        Resources.read(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH),
       )
     val configsDatabaseMigrator = ConfigsDatabaseMigrator(configDatabase, configsFlyway)
     val definitionsProvider: DefinitionsProvider = LocalDefinitionsProvider()
@@ -195,7 +195,7 @@ internal class BootloaderTest {
       DatabaseCheckFactory.createJobsDatabaseInitializer(
         jobsDslContext,
         jobsDatabaseInitializationTimeoutMs,
-        MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH),
+        Resources.read(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH),
       )
     val jobsDatabaseMigrator = JobsDatabaseMigrator(jobDatabase, jobsFlyway)
     val jobsPersistence = DefaultJobPersistence(jobDatabase)
@@ -377,7 +377,7 @@ internal class BootloaderTest {
       DatabaseCheckFactory.createConfigsDatabaseInitializer(
         configsDslContext,
         configsDatabaseInitializationTimeoutMs,
-        MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH),
+        Resources.read(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH),
       )
     val configsDatabaseMigrator = ConfigsDatabaseMigrator(configDatabase, configsFlyway)
     val definitionsProvider: DefinitionsProvider = LocalDefinitionsProvider()
@@ -386,7 +386,7 @@ internal class BootloaderTest {
       DatabaseCheckFactory.createJobsDatabaseInitializer(
         jobsDslContext,
         jobsDatabaseInitializationTimeoutMs,
-        MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH),
+        Resources.read(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH),
       )
     val jobsDatabaseMigrator = JobsDatabaseMigrator(jobDatabase, jobsFlyway)
     val jobsPersistence = DefaultJobPersistence(jobDatabase)
@@ -693,7 +693,7 @@ internal class BootloaderTest {
       DatabaseCheckFactory.createConfigsDatabaseInitializer(
         configsDslContext,
         configsDatabaseInitializationTimeoutMs,
-        MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH),
+        Resources.read(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH),
       )
     val configsDatabaseMigrator = ConfigsDatabaseMigrator(configDatabase, configsFlyway)
     val definitionsProvider: DefinitionsProvider = LocalDefinitionsProvider()
@@ -702,7 +702,7 @@ internal class BootloaderTest {
       DatabaseCheckFactory.createJobsDatabaseInitializer(
         jobsDslContext,
         jobsDatabaseInitializationTimeoutMs,
-        MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH),
+        Resources.read(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH),
       )
     val jobsDatabaseMigrator = JobsDatabaseMigrator(jobDatabase, jobsFlyway)
     val jobsPersistence = DefaultJobPersistence(jobDatabase)

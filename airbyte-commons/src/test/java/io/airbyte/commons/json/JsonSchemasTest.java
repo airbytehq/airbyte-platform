@@ -9,7 +9,7 @@ import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.JsonSchemas.FieldNameOrList;
-import io.airbyte.commons.resources.MoreResources;
+import io.airbyte.commons.resources.Resources;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -55,7 +55,7 @@ class JsonSchemasTest {
   @SuppressWarnings(UNCHECKED)
   @Test
   void testTraverse() throws IOException {
-    final JsonNode jsonWithAllTypes = Jsons.deserialize(MoreResources.readResource("json_schemas/json_with_all_types.json"));
+    final JsonNode jsonWithAllTypes = Jsons.deserialize(Resources.INSTANCE.read("json_schemas/json_with_all_types.json"));
     final BiConsumer<JsonNode, List<FieldNameOrList>> mock = mock(BiConsumer.class);
 
     JsonSchemas.traverseJsonSchema(jsonWithAllTypes, mock);
@@ -85,7 +85,7 @@ class JsonSchemasTest {
   })
   @ParameterizedTest
   void testTraverseComposite(final String compositeKeyword) throws IOException {
-    final String jsonSchemaString = MoreResources.readResource("json_schemas/composite_json_schema.json")
+    final String jsonSchemaString = Resources.INSTANCE.read("json_schemas/composite_json_schema.json")
         .replaceAll("<composite-placeholder>", compositeKeyword);
     final JsonNode jsonWithAllTypes = Jsons.deserialize(jsonSchemaString);
     final BiConsumer<JsonNode, List<FieldNameOrList>> mock = mock(BiConsumer.class);
@@ -110,7 +110,7 @@ class JsonSchemasTest {
   @SuppressWarnings(UNCHECKED)
   @Test
   void testTraverseMultiType() throws IOException {
-    final JsonNode jsonWithAllTypes = Jsons.deserialize(MoreResources.readResource("json_schemas/json_with_array_type_fields.json"));
+    final JsonNode jsonWithAllTypes = Jsons.deserialize(Resources.INSTANCE.read("json_schemas/json_with_array_type_fields.json"));
     final BiConsumer<JsonNode, List<FieldNameOrList>> mock = mock(BiConsumer.class);
 
     JsonSchemas.traverseJsonSchema(jsonWithAllTypes, mock);
@@ -127,7 +127,7 @@ class JsonSchemasTest {
   @Test
   void testTraverseMultiTypeComposite() throws IOException {
     final String compositeKeyword = "anyOf";
-    final JsonNode jsonWithAllTypes = Jsons.deserialize(MoreResources.readResource("json_schemas/json_with_array_type_fields_with_composites.json"));
+    final JsonNode jsonWithAllTypes = Jsons.deserialize(Resources.INSTANCE.read("json_schemas/json_with_array_type_fields_with_composites.json"));
     final BiConsumer<JsonNode, List<FieldNameOrList>> mock = mock(BiConsumer.class);
 
     JsonSchemas.traverseJsonSchema(jsonWithAllTypes, mock);
@@ -147,7 +147,7 @@ class JsonSchemasTest {
   @SuppressWarnings(UNCHECKED)
   @Test
   void testTraverseArrayTypeWithNoItemsDoNotThrowsException() throws IOException {
-    final JsonNode jsonWithAllTypes = Jsons.deserialize(MoreResources.readResource("json_schemas/json_with_array_type_fields_no_items.json"));
+    final JsonNode jsonWithAllTypes = Jsons.deserialize(Resources.INSTANCE.read("json_schemas/json_with_array_type_fields_no_items.json"));
     final BiConsumer<JsonNode, List<FieldNameOrList>> mock = mock(BiConsumer.class);
 
     JsonSchemas.traverseJsonSchema(jsonWithAllTypes, mock);
