@@ -9,6 +9,7 @@ import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.ConnectionRead
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.ForceRunStdioMode
 import io.airbyte.featureflag.SocketCount
 import io.airbyte.featureflag.SocketFormat
 import io.airbyte.featureflag.SocketTest
@@ -49,6 +50,10 @@ class ArchitectureDecider(
     if (input.useFileTransfer ||
       input.isReset
     ) {
+      return buildLegacyEnvironment()
+    }
+
+    if (featureFlags.boolVariation(ForceRunStdioMode, Connection(input.connectionId))) {
       return buildLegacyEnvironment()
     }
 

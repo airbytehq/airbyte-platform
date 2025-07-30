@@ -71,6 +71,8 @@ object ProfilingMode : Permanent<String>(key = "platform.async.profiler.mode", d
 
 object SocketTest : Temporary<Boolean>(key = "platform.socket-test", default = false)
 
+object ForceRunStdioMode : Temporary<Boolean>(key = "platform.force-run-stdio-mode", default = false)
+
 object SocketFormat : Temporary<String>(key = "platform.socket-format", default = "")
 
 object SocketCount : Temporary<Int>(key = "platform.socket-count", default = -1)
