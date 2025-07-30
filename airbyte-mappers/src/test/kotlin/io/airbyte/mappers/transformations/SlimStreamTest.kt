@@ -38,6 +38,50 @@ class SlimStreamTest {
   }
 
   @Test
+  fun `removing a field removes it from the fields`() {
+    slimStream.removeField(FIELD1_NAME)
+
+    assertFalse(slimStream.fields.any { it.name == FIELD1_NAME })
+  }
+
+  @Test
+  fun `removing a field throws if the field doesn't exist`() {
+    val e = assertThrows<MapperException> { slimStream.removeField("I don't exist") }
+
+    assertEquals(DestinationCatalogGenerator.MapperErrorType.FIELD_NOT_FOUND, e.type)
+  }
+
+  @Test
+  fun `removing a field also clears the cursor if it matches`() {
+    slimStream.removeField(CURSOR_NAME)
+    assertFalse(slimStream.fields.any { it.name == CURSOR_NAME })
+    assertEquals(null, slimStream.cursor)
+  }
+
+  @Test
+  fun `removing a field also clears the source default cursor if it matches`() {
+    slimStream.removeField(SOURCE_CURSOR_NAME)
+    assertFalse(slimStream.fields.any { it.name == SOURCE_CURSOR_NAME })
+    assertEquals(null, slimStream.sourceDefaultCursor)
+  }
+
+  @Test
+  fun `removing a field also clears the pk if it matches`() {
+    slimStream.removeField(PRIMARY_KEY_NAME)
+
+    assertFalse(slimStream.fields.any { it.name == PRIMARY_KEY_NAME })
+    assertEquals(listOf(listOf(PRIMARY_KEY_OTHER_ATTR_NAME)), slimStream.primaryKey)
+  }
+
+  @Test
+  fun `removing a field also clears the source defined pk if it matches`() {
+    slimStream.removeField(SOURCE_PRIMARY_KEY_NAME)
+
+    assertFalse(slimStream.fields.any { it.name == SOURCE_PRIMARY_KEY_NAME })
+    assertEquals(listOf(listOf(PRIMARY_KEY_OTHER_ATTR_NAME)), slimStream.sourceDefinedPrimaryKey)
+  }
+
+  @Test
   fun `renaming a field keeps the type if not provided`() {
     val renamedField = "renamed_field1"
     slimStream.redefineField(FIELD1_NAME, renamedField)

@@ -18,10 +18,10 @@ class SlimStream(
   sourceDefinedPrimaryKey: List<List<String>>? = null,
 ) {
   private val _fields: MutableList<Field> = fields.toMutableList()
-  private val _cursor: MutableList<String>? = cursor?.toMutableList()
-  private val _primaryKey: MutableList<MutableList<String>>? = primaryKey?.map { it.toMutableList() }?.toMutableList()
-  private val _sourceDefaultCursor: MutableList<String>? = sourceDefaultCursor?.toMutableList()
-  private val _sourceDefinedPrimaryKey: MutableList<MutableList<String>>? = sourceDefinedPrimaryKey?.map { it.toMutableList() }?.toMutableList()
+  private var _cursor: MutableList<String>? = cursor?.toMutableList()
+  private var _primaryKey: MutableList<MutableList<String>>? = primaryKey?.map { it.toMutableList() }?.toMutableList()
+  private var _sourceDefaultCursor: MutableList<String>? = sourceDefaultCursor?.toMutableList()
+  private var _sourceDefinedPrimaryKey: MutableList<MutableList<String>>? = sourceDefinedPrimaryKey?.map { it.toMutableList() }?.toMutableList()
 
   val fields: List<Field>
     get() = _fields.toList()
@@ -92,6 +92,38 @@ class SlimStream(
     _primaryKey?.apply { renameInNestedList(this, oldName, newName) }
     _sourceDefaultCursor?.apply { renameInSimpleList(this, oldName, newName) }
     _sourceDefinedPrimaryKey?.apply { renameInNestedList(this, oldName, newName) }
+  }
+
+  fun removeField(targetName: String) {
+    val result = _fields.removeAll { it.name == targetName }
+    if (!result) {
+      throw MapperException(
+        type = DestinationCatalogGenerator.MapperErrorType.FIELD_NOT_FOUND,
+        message = "Field $targetName not found in stream fields",
+      )
+    }
+
+    _cursor = removeFromSimpleList(_cursor, targetName)
+    _primaryKey = removeFromNestedList(_primaryKey, targetName)
+    _sourceDefaultCursor = removeFromSimpleList(_sourceDefaultCursor, targetName)
+    _sourceDefinedPrimaryKey = removeFromNestedList(_sourceDefinedPrimaryKey, targetName)
+  }
+
+  private fun removeFromSimpleList(
+    list: MutableList<String>?,
+    targetName: String,
+  ): MutableList<String>? {
+    list?.removeAll { it == targetName }
+    return if (list?.isNotEmpty() == true) list else null
+  }
+
+  private fun removeFromNestedList(
+    list: MutableList<MutableList<String>>?,
+    targetName: String,
+  ): MutableList<MutableList<String>>? {
+    val targetListToRemove = listOf(targetName)
+    list?.removeAll { it == targetListToRemove }
+    return if (list?.isNotEmpty() == true) list else null
   }
 
   private fun renameInSimpleList(

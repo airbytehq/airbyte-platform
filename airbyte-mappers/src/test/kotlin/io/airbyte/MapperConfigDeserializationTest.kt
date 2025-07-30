@@ -26,6 +26,8 @@ class MapperConfigDeserializationTest {
   fun `mapper config examples should be correctly deserialized `() {
     val encryptionMapperExamples = loadResource("EncryptionMapperConfigExamples.json")
 
+    val fieldFilteringMapperExamples = loadResource("FieldFilteringMapperConfigExamples.json")
+
     val fieldRenamingMapperExamples = loadResource("FieldRenamingMapperConfigExamples.json")
 
     val hashingMapperExamples = loadResource("HashingMapperConfigExamples.json")
@@ -33,16 +35,19 @@ class MapperConfigDeserializationTest {
     val rowFilteringMapperExamples = loadResource("RowFilteringMapperConfigExamples.json")
 
     val encryptionMapperConfigs = encryptionMapperExamples.toConfig()
+    val fieldFilteringMapperConfigs = fieldFilteringMapperExamples.toConfig()
     val fieldRenamingMapperConfigs = fieldRenamingMapperExamples.toConfig()
     val hashingMapperConfigs = hashingMapperExamples.toConfig()
     val rowFilteringMapperConfigs = rowFilteringMapperExamples.toConfig()
 
     val mixedMappers = mutableListOf<ConfiguredMapper>()
     mixedMappers.addAll(encryptionMapperConfigs)
+    mixedMappers.addAll(fieldFilteringMapperConfigs)
     mixedMappers.addAll(fieldRenamingMapperConfigs)
     mixedMappers.addAll(hashingMapperConfigs)
     mixedMappers.addAll(rowFilteringMapperConfigs)
 
+    // Enforcing all mappers to be covered in the deserialization test.
     val mapperNames: Set<String> = mixedMappers.map { it.name }.toSet()
     mappers.map { (it) }.associateBy { it.name }.forEach {
       if (it.key != "test-mapper") {

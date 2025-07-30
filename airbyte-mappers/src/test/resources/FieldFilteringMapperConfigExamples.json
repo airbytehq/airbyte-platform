@@ -1,0 +1,8 @@
+[
+  {
+    "name": "field-filtering",
+    "config": {
+      "targetField": "status"
+    }
+  }
+]
