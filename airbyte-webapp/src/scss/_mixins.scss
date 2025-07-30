@@ -152,6 +152,7 @@ $animation-length: 3s;
     border-radius: $border-radius;
     opacity: 0.3;
     animation: pulsate $animation-length infinite;
+    pointer-events: none;
   }
 
   &::after {

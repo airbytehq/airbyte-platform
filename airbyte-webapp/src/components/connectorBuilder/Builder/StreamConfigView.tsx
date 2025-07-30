@@ -447,6 +447,8 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
           )}
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.creation_requester.url")} isRequired />
+            <SchemaFormControl path={streamFieldPath("retriever.creation_requester.url_base")} />
+            <SchemaFormControl path={streamFieldPath("retriever.creation_requester.path")} />
             <SchemaFormControl path={streamFieldPath("retriever.creation_requester.http_method")} />
             <SchemaFormControl path={streamFieldPath("retriever.decoder")} />
           </StreamCard>
@@ -497,6 +499,8 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
         >
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.polling_requester.url")} isRequired />
+            <SchemaFormControl path={streamFieldPath("retriever.polling_requester.url_base")} />
+            <SchemaFormControl path={streamFieldPath("retriever.polling_requester.path")} />
             <SchemaFormControl path={streamFieldPath("retriever.polling_requester.http_method")} />
           </StreamCard>
           <StreamCard>
@@ -532,6 +536,8 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
         >
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.download_requester.url")} isRequired />
+            <SchemaFormControl path={streamFieldPath("retriever.download_requester.url_base")} />
+            <SchemaFormControl path={streamFieldPath("retriever.download_requester.path")} />
             <SchemaFormControl path={streamFieldPath("retriever.download_requester.http_method")} />
             <SchemaFormControl path={streamFieldPath("retriever.download_decoder")} />
             <SchemaFormControl path={streamFieldPath("retriever.record_selector")} nonAdvancedFields={["extractor"]} />
@@ -881,6 +887,8 @@ const CollapsedControls: React.FC<React.PropsWithChildren<CollapsedControlsProps
 
       const target = containerRef.current.querySelector(selector);
       setHasChildError(!!target);
+    } else if (errorPaths.length === 0) {
+      setHasChildError(false);
     }
   }, [errorPaths]);
 

@@ -400,7 +400,8 @@ export const JinjaInput: React.FC<JinjaInputProps> = ({
           top: 5,
         },
         fontFamily: styles.fontFamily,
-        fontSize: 14,
+        // variables.$font-size-md / --font-size-md
+        fontSize: 13,
         scrollBeyondLastLine: false,
         fixedOverflowWidgets: true,
       }}
