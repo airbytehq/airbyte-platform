@@ -1,4 +1,5 @@
 import { Listbox } from "@headlessui/react";
+import { useCallback, useMemo, useState } from "react";
 
 import { Box } from "components/ui/Box";
 import { CheckBox } from "components/ui/CheckBox";
@@ -9,9 +10,9 @@ import { ListboxOptions } from "components/ui/ListBox/ListboxOptions";
 import { Option } from "components/ui/ListBox/Option";
 import { Text } from "components/ui/Text";
 
+import { useHeadlessUiOnClose } from "core/utils/useHeadlessUiOnClose";
+
 import styles from "./MultiSelectTags.module.scss";
-import { Icon } from "../Icon";
-import { FloatLayout } from "../ListBox/FloatLayout";
 
 export interface MultiSelectTagsProps<T> {
   options: Array<Option<T>>;
@@ -28,40 +29,53 @@ export const MultiSelectTags = <T,>({
   testId,
   disabled,
 }: MultiSelectTagsProps<T>) => {
-  const handleRemoveSingleValue = (value: T) => {
-    onSelectValues(selectedValues?.filter((selectedValue) => selectedValue !== value) || []);
-  };
+  const [valuesSelectedOnOpen, setValuesSelectedOnOpen] = useState(selectedValues ?? []);
+
+  // For better UX, the originally selected options should always be at the top of the list
+  const sortedOptions = useMemo(() => {
+    const selectedValueSet = new Set(valuesSelectedOnOpen.map((value) => value));
+
+    const topSection: Array<Option<T>> = [];
+    const bottomSection: Array<Option<T>> = [];
+
+    options.forEach((option) => {
+      selectedValueSet.has(option.value) ? topSection.push(option) : bottomSection.push(option);
+    });
+
+    return topSection.concat(bottomSection);
+  }, [options, valuesSelectedOnOpen]);
+
+  // When the listbox closes, we update the selected values so that they will be on top next time it opens
+  const onCloseListbox = useCallback(() => {
+    setValuesSelectedOnOpen(selectedValues);
+  }, [selectedValues]);
+
+  const { targetRef } = useHeadlessUiOnClose(onCloseListbox);
 
   return (
     <div data-testid={testId}>
-      <Listbox multiple value={selectedValues} onChange={onSelectValues} disabled={disabled}>
-        <FloatLayout adaptiveWidth>
-          <ListboxButton className={styles.multiSelect__button} {...{ "data-testid": `${testId}-button` }}>
-            <FlexContainer as="span" wrap="wrap" gap="sm">
-              <SelectedValueTags
-                selectedValues={selectedValues}
-                options={options}
-                handleRemoveSingleValue={handleRemoveSingleValue}
-              />
-            </FlexContainer>
-          </ListboxButton>
-          <ListboxOptions fullWidth>
-            {options.map(({ label, value }, index) => {
-              return (
-                <ListboxOption value={value} key={index}>
-                  {({ selected }) => (
-                    <Box p="md" pr="none">
-                      <FlexContainer alignItems="center" as="span">
-                        <CheckBox checked={selected} readOnly />
-                        <Text>{label}</Text>
-                      </FlexContainer>
-                    </Box>
-                  )}
-                </ListboxOption>
-              );
-            })}
-          </ListboxOptions>
-        </FloatLayout>
+      <Listbox as="div" multiple value={selectedValues} onChange={onSelectValues} disabled={disabled} ref={targetRef}>
+        <ListboxButton className={styles.multiSelect__button} {...{ "data-testid": `${testId}-button` }}>
+          <FlexContainer as="span" wrap="wrap" gap="sm">
+            <SelectedValueTags selectedValues={selectedValues} options={options} />
+          </FlexContainer>
+        </ListboxButton>
+        <ListboxOptions fullWidth anchor="bottom">
+          {sortedOptions.map(({ label, value }, index) => {
+            return (
+              <ListboxOption value={value} key={index}>
+                {({ selected }) => (
+                  <Box p="md" pr="none">
+                    <FlexContainer alignItems="center" as="span">
+                      <CheckBox checked={selected} readOnly />
+                      <Text>{label}</Text>
+                    </FlexContainer>
+                  </Box>
+                )}
+              </ListboxOption>
+            );
+          })}
+        </ListboxOptions>
       </Listbox>
     </div>
   );
@@ -70,10 +84,9 @@ export const MultiSelectTags = <T,>({
 interface SelectedValueItemsProps<T> {
   selectedValues: T[];
   options: Array<Option<T>>;
-  handleRemoveSingleValue: (value: T) => void;
 }
 
-const SelectedValueTags = <T,>({ selectedValues, options, handleRemoveSingleValue }: SelectedValueItemsProps<T>) => {
+const SelectedValueTags = <T,>({ selectedValues, options }: SelectedValueItemsProps<T>) => {
   return (
     <FlexContainer as="span" wrap="wrap" gap="sm">
       {selectedValues?.map((selectedValue, index) => {
@@ -83,16 +96,6 @@ const SelectedValueTags = <T,>({ selectedValues, options, handleRemoveSingleValu
             <Text size="xs" className={styles.multiSelect__itemText}>
               {selectedOption.label}
             </Text>
-            <button
-              className={styles.multiSelect__removeItem}
-              onClick={(e) => {
-                // Prevents headless-ui from closing the listbox
-                handleRemoveSingleValue(selectedOption.value);
-                e.preventDefault();
-              }}
-            >
-              <Icon type="cross" color="action" size="xs" />
-            </button>
           </FlexContainer>
         ) : null;
       })}
