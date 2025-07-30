@@ -195,7 +195,7 @@ pyyaml==6.0.2
     #   langchain-core
 rapidfuzz==3.13.0
     # via airbyte-cdk
-regex==2025.7.29
+regex==2024.11.6
     # via
     #   dateparser
     #   nltk
