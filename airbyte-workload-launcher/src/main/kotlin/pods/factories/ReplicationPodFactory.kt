@@ -120,10 +120,12 @@ data class ReplicationPodFactory(
       .withAffinity(nodeSelection.podAffinity)
       .withAutomountServiceAccountToken(false)
       .withSecurityContext(
-        if (enableAsyncProfiler || architectureEnvironmentVariables.isSocketBased()) {
-          workloadSecurityContextProvider.rootSecurityContext()
-        } else {
-          workloadSecurityContextProvider.defaultPodSecurityContext()
+        when {
+          enableAsyncProfiler -> workloadSecurityContextProvider.rootSecurityContext()
+          architectureEnvironmentVariables.isSocketBased() ->
+            workloadSecurityContextProvider.socketRootlessPodSecurityContext()
+          else ->
+            workloadSecurityContextProvider.defaultPodSecurityContext()
         },
       ).endSpec()
       .build()

@@ -86,6 +86,19 @@ class WorkloadSecurityContextProvider(
       false -> null
     }
 
+  fun socketRootlessPodSecurityContext(
+    user: Long = ROOTLESS_USER_ID,
+    group: Long = ROOTLESS_GROUP_ID,
+  ): PodSecurityContext =
+    PodSecurityContextBuilder()
+      .withRunAsUser(user)
+      .withRunAsGroup(group)
+      .withFsGroup(group)
+      .withFsGroupChangePolicy("OnRootMismatch")
+      .withRunAsNonRoot(true)
+      .withSeccompProfile(SeccompProfileBuilder().withType(SECCOMP_PROFILE_TYPE).build())
+      .build()
+
   fun rootSecurityContext(): PodSecurityContext = PodSecurityContextBuilder().withRunAsUser(ROOT_USER_ID).build()
 
   private fun baseContainerSecurityContext(
