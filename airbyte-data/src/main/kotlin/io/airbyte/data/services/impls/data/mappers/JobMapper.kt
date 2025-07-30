@@ -4,7 +4,7 @@
 
 package io.airbyte.data.services.impls.data.mappers
 
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.JobConfig
 import io.airbyte.data.repositories.entities.Job
@@ -76,10 +76,10 @@ fun EntityJob.toConfigModel(): ModelJob =
 fun ModelJob.toEntity(): EntityJob =
   EntityJob(
     id,
-    Enums.convertTo(this.configType, JobConfigType::class.java),
+    this.configType.convertTo<JobConfigType>(),
     this.scope,
     Jsons.jsonNode(config),
-    Enums.convertTo(this.status, JobStatus::class.java),
+    this.status.convertTo<JobStatus>(),
     startedAtInSecond?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
     OffsetDateTime.ofInstant(Instant.ofEpochSecond(createdAtInSecond), ZoneOffset.UTC),
     OffsetDateTime.ofInstant(Instant.ofEpochSecond(updatedAtInSecond), ZoneOffset.UTC),

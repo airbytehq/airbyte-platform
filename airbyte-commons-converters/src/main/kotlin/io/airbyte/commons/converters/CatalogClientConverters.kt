@@ -9,7 +9,7 @@ import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration
 import io.airbyte.api.client.model.generated.ConfiguredStreamMapper
 import io.airbyte.api.client.model.generated.DestinationSyncMode
 import io.airbyte.api.client.model.generated.SyncMode
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.text.Names
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
@@ -101,7 +101,7 @@ class CatalogClientConverters(
     return ConfigAirbyteStream(
       name = stream.name,
       jsonSchema = stream.jsonSchema!!,
-      supportedSyncModes = Enums.convertListTo(stream.supportedSyncModes, io.airbyte.config.SyncMode::class.java),
+      supportedSyncModes = stream.supportedSyncModes?.convertTo<io.airbyte.config.SyncMode>() ?: emptyList(),
       sourceDefinedCursor = stream.sourceDefinedCursor,
       defaultCursorField = stream.defaultCursorField,
       sourceDefinedPrimaryKey = stream.sourceDefinedPrimaryKey ?: emptyList(),
@@ -131,12 +131,9 @@ class CatalogClientConverters(
     return ConfiguredAirbyteStream
       .Builder()
       .stream(convertedStream)
-      .syncMode(Enums.convertTo(config.syncMode, io.airbyte.config.SyncMode::class.java))
+      .syncMode(config.syncMode.convertTo<io.airbyte.config.SyncMode>())
       .destinationSyncMode(
-        Enums.convertTo(
-          config.destinationSyncMode,
-          io.airbyte.config.DestinationSyncMode::class.java,
-        ),
+        config.destinationSyncMode.convertTo<io.airbyte.config.DestinationSyncMode>(),
       ).primaryKey(config.primaryKey)
       .cursorField(config.cursorField)
       .generationId(config.generationId)
@@ -166,10 +163,7 @@ class CatalogClientConverters(
     ClientAirbyteStreamConfiguration(
       syncMode =
         if (stream.supportedSyncModes?.isNotEmpty() == true) {
-          Enums.convertTo(
-            stream.supportedSyncModes!!.first(),
-            ClientSyncMode::class.java,
-          )
+          stream.supportedSyncModes!!.first().convertTo<ClientSyncMode>()
         } else {
           io.airbyte.api.client.model.generated.SyncMode.INCREMENTAL
         },
@@ -195,10 +189,7 @@ private fun ProtocolAirbyteStream.toAirbyteStreamClientApi(): ClientAirbyteStrea
     name = name,
     jsonSchema = jsonSchema,
     supportedSyncModes =
-      Enums.convertListTo(
-        supportedSyncModes,
-        io.airbyte.api.client.model.generated.SyncMode::class.java,
-      ),
+      supportedSyncModes.convertTo<io.airbyte.api.client.model.generated.SyncMode>(),
     sourceDefinedCursor = sourceDefinedCursor,
     defaultCursorField = defaultCursorField,
     sourceDefinedPrimaryKey = sourceDefinedPrimaryKey,

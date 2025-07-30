@@ -13,7 +13,7 @@ import io.airbyte.api.model.generated.PermissionReadList
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.PermissionUpdate
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.lang.Exceptions
 import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
@@ -170,12 +170,8 @@ open class PermissionHandler(
     val updatedPermission =
       Permission()
         .withPermissionId(permissionUpdate.permissionId)
-        .withPermissionType(
-          Enums.convertTo(
-            permissionUpdate.permissionType,
-            Permission.PermissionType::class.java,
-          ),
-        ).withOrganizationId(existingPermission.organizationId) // cannot be updated
+        .withPermissionType(permissionUpdate.permissionType.convertTo<Permission.PermissionType>())
+        .withOrganizationId(existingPermission.organizationId) // cannot be updated
         .withWorkspaceId(existingPermission.workspaceId) // cannot be updated
         .withUserId(existingPermission.userId) // cannot be updated
     try {
@@ -248,14 +244,8 @@ open class PermissionHandler(
     // by this point, we know we can directly compare the user permission's type to the requested
     // permission's type, because all underlying user/workspace/organization IDs are valid.
     return definedPermissionGrantsTargetPermission(
-      Enums.convertTo(
-        userPermission.permissionType,
-        Permission.PermissionType::class.java,
-      ),
-      Enums.convertTo(
-        permissionCheckRequest.permissionType,
-        Permission.PermissionType::class.java,
-      ),
+      userPermission.permissionType.convertTo<Permission.PermissionType>(),
+      permissionCheckRequest.permissionType.convertTo<Permission.PermissionType>(),
     )
   }
 
@@ -496,10 +486,7 @@ open class PermissionHandler(
         .permissionId(permission.permissionId)
         .userId(permission.userId)
         .permissionType(
-          Enums.convertTo(
-            permission.permissionType,
-            PermissionType::class.java,
-          ),
+          permission.permissionType.convertTo<PermissionType>(),
         ).workspaceId(permission.workspaceId)
         .organizationId(permission.organizationId)
   }

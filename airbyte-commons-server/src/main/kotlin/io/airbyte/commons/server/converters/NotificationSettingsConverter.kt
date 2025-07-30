@@ -8,7 +8,7 @@ import io.airbyte.api.model.generated.NotificationItem
 import io.airbyte.api.model.generated.NotificationSettings
 import io.airbyte.api.model.generated.NotificationType
 import io.airbyte.api.model.generated.SlackNotificationConfiguration
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.config.Notification
 import java.util.stream.Collectors
 
@@ -62,10 +62,7 @@ object NotificationSettingsConverter {
           notificationItem.notificationType
             .stream()
             .map { notificationType: NotificationType ->
-              Enums.convertTo(
-                notificationType,
-                Notification.NotificationType::class.java,
-              )
+              notificationType.convertTo<Notification.NotificationType>()
             }.collect(
               Collectors.toList(),
             ),
@@ -134,10 +131,7 @@ object NotificationSettingsConverter {
           notificationItem.notificationType
             .stream()
             .map { notificationType: Notification.NotificationType ->
-              Enums.convertTo(
-                notificationType,
-                NotificationType::class.java,
-              )
+              notificationType.convertTo<NotificationType>()
             }.collect(
               Collectors.toList(),
             ),
@@ -189,10 +183,7 @@ object NotificationSettingsConverter {
       notificationItem.notificationType
         .stream()
         .map { n: Notification.NotificationType ->
-          Enums.convertTo(
-            n,
-            io.airbyte.api.client.model.generated.NotificationType::class.java,
-          )
+          n.convertTo<io.airbyte.api.client.model.generated.NotificationType>()
         }.toList(),
       if (notificationItem.slackConfiguration != null) {
         io.airbyte.api.client.model.generated.SlackNotificationConfiguration(

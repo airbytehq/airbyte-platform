@@ -7,7 +7,7 @@ package io.airbyte.commons.server.converters
 import io.airbyte.api.model.generated.Notification
 import io.airbyte.api.model.generated.NotificationType
 import io.airbyte.api.model.generated.SlackNotificationConfiguration
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import java.util.stream.Collectors
 
 /**
@@ -26,10 +26,7 @@ object NotificationConverter {
     io.airbyte.config
       .Notification()
       .withNotificationType(
-        Enums.convertTo(
-          notification.notificationType,
-          io.airbyte.config.Notification.NotificationType::class.java,
-        ),
+        notification.notificationType?.convertTo<io.airbyte.config.Notification.NotificationType>(),
       ).withSendOnSuccess(notification.sendOnSuccess)
       .withSendOnFailure(notification.sendOnFailure)
       .withSlackConfiguration(toConfig(notification.slackConfiguration))
@@ -49,12 +46,8 @@ object NotificationConverter {
 
   fun toApi(notification: io.airbyte.config.Notification): Notification =
     Notification()
-      .notificationType(
-        Enums.convertTo(
-          notification.notificationType,
-          NotificationType::class.java,
-        ),
-      ).sendOnSuccess(notification.sendOnSuccess)
+      .notificationType(notification.notificationType?.convertTo<NotificationType>())
+      .sendOnSuccess(notification.sendOnSuccess)
       .sendOnFailure(notification.sendOnFailure)
       .slackConfiguration(toApi(notification.slackConfiguration))
 
@@ -75,10 +68,7 @@ object NotificationConverter {
         if (configNotification.slackConfiguration.webhook != null) configNotification.slackConfiguration.webhook else "",
       )
     return io.airbyte.api.client.model.generated.Notification(
-      Enums.convertTo(
-        configNotification.notificationType,
-        io.airbyte.api.client.model.generated.NotificationType::class.java,
-      ),
+      configNotification.notificationType?.convertTo<io.airbyte.api.client.model.generated.NotificationType>()!!,
       configNotification.sendOnSuccess,
       configNotification.sendOnFailure,
       slackNotificationConfiguration,

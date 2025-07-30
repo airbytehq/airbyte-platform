@@ -31,7 +31,8 @@ import io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem
 import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.auth.config.InitialUserConfig
 import io.airbyte.commons.auth.support.UserAuthenticationResolver
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
+import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
@@ -153,12 +154,8 @@ open class UserHandler
       UserRead()
         .name(user.name)
         .userId(user.userId)
-        .status(
-          Enums.convertTo(
-            user.status,
-            UserStatus::class.java,
-          ),
-        ).companyName(user.companyName)
+        .status(user.status?.convertTo<UserStatus>())
+        .companyName(user.companyName)
         .email(user.email)
         .metadata(if (user.uiMetadata != null) user.uiMetadata else Map.of<Any, Any>())
         .news(user.news)
@@ -193,11 +190,7 @@ open class UserHandler
       }
 
       if (userUpdate.status != null) {
-        user.status =
-          Enums.convertTo(
-            userUpdate.status,
-            User.Status::class.java,
-          )
+        user.status = userUpdate.status?.convertTo<User.Status>()
         hasUpdate = true
       }
 
@@ -231,10 +224,7 @@ open class UserHandler
         .withUserId(userRead.userId)
         .withDefaultWorkspaceId(userRead.defaultWorkspaceId)
         .withStatus(
-          Enums.convertTo(
-            userRead.status,
-            User.Status::class.java,
-          ),
+          userRead.status?.convertTo<User.Status>(),
         ).withCompanyName(userRead.companyName)
         .withEmail(userRead.email)
         .withUiMetadata(Jsons.jsonNode(if (userRead.metadata != null) userRead.metadata else Map.of<Any, Any>()))
@@ -394,10 +384,7 @@ open class UserHandler
         .userRead(buildUserRead(updatedUser))
         .authUserId(incomingJwtUser.authUserId)
         .authProvider(
-          Enums.convertTo(
-            incomingJwtUser.authProvider,
-            io.airbyte.api.model.generated.AuthProvider::class.java,
-          ),
+          incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
         ).newUserCreated(true)
     }
 
@@ -423,10 +410,7 @@ open class UserHandler
         .userRead(buildUserRead(updatedUser))
         .authUserId(incomingJwtUser.authUserId)
         .authProvider(
-          Enums.convertTo(
-            incomingJwtUser.authProvider,
-            io.airbyte.api.model.generated.AuthProvider::class.java,
-          ),
+          incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
         ).newUserCreated(false)
     }
 
@@ -494,10 +478,7 @@ open class UserHandler
         .userRead(buildUserRead(updatedUser))
         .authUserId(incomingJwtUser.authUserId)
         .authProvider(
-          Enums.convertTo(
-            incomingJwtUser.authProvider,
-            io.airbyte.api.model.generated.AuthProvider::class.java,
-          ),
+          incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
         ).newUserCreated(false)
     }
 
@@ -520,10 +501,7 @@ open class UserHandler
           .userRead(buildUserRead(toUser(existingAuthUser.get())))
           .authUserId(userAuthIdRequestBody.authUserId)
           .authProvider(
-            Enums.convertTo(
-              incomingJwtUser.authProvider,
-              io.airbyte.api.model.generated.AuthProvider::class.java,
-            ),
+            incomingJwtUser.authProvider?.convertTo<io.airbyte.api.model.generated.AuthProvider>(),
           ).newUserCreated(false)
       }
 
@@ -758,7 +736,7 @@ open class UserHandler
         userPermissions
           .stream()
           .filter { userPermission: UserPermission -> userPermission.user.userId != DEFAULT_USER_ID }
-          .map<OrganizationUserRead?> { userPermission: UserPermission ->
+          .map { userPermission: UserPermission ->
             OrganizationUserRead()
               .userId(userPermission.user.userId)
               .email(userPermission.user.email)
@@ -766,11 +744,9 @@ open class UserHandler
               .organizationId(organizationId)
               .permissionId(userPermission.permission.permissionId)
               .permissionType(
-                Enums
-                  .toEnum<PermissionType>(
-                    userPermission.permission.permissionType.value(),
-                    PermissionType::class.java,
-                  ).get(),
+                userPermission.permission.permissionType
+                  .value()
+                  .toEnum<PermissionType>()!!,
               )
           }.collect(Collectors.toList<@Valid OrganizationUserRead?>()),
       )
@@ -782,7 +758,7 @@ open class UserHandler
         accessInfos
           .stream()
           .filter { accessInfo: WorkspaceUserAccessInfo -> accessInfo.userId != DEFAULT_USER_ID }
-          .map<WorkspaceUserAccessInfoRead?> { accessInfo: WorkspaceUserAccessInfo -> this.buildWorkspaceUserAccessInfoRead(accessInfo) }
+          .map { accessInfo: WorkspaceUserAccessInfo -> this.buildWorkspaceUserAccessInfoRead(accessInfo) }
           .collect(Collectors.toList<@Valid WorkspaceUserAccessInfoRead?>()),
       )
     }
@@ -795,10 +771,7 @@ open class UserHandler
             PermissionRead()
               .permissionId(wp.permissionId)
               .permissionType(
-                Enums.convertTo(
-                  wp.permissionType,
-                  PermissionType::class.java,
-                ),
+                wp.permissionType?.convertTo<PermissionType>(),
               ).userId(wp.userId)
               .workspaceId(wp.workspaceId)
           }.orElse(null)
@@ -810,10 +783,7 @@ open class UserHandler
             PermissionRead()
               .permissionId(op.permissionId)
               .permissionType(
-                Enums.convertTo(
-                  op.permissionType,
-                  PermissionType::class.java,
-                ),
+                op.permissionType?.convertTo<PermissionType>(),
               ).userId(op.userId)
               .organizationId(op.organizationId)
           }.orElse(null)

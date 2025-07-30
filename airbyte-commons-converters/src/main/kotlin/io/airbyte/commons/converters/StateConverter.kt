@@ -9,7 +9,7 @@ import io.airbyte.api.model.generated.ConnectionStateType
 import io.airbyte.api.model.generated.GlobalState
 import io.airbyte.api.model.generated.StreamDescriptor
 import io.airbyte.api.model.generated.StreamState
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.config.StateType
 import io.airbyte.config.StateWrapper
 import io.airbyte.protocol.models.v0.AirbyteGlobalState
@@ -57,7 +57,7 @@ object StateConverter {
   fun fromClientToApi(clientState: ClientConnectionState): ConnectionState =
     ConnectionState()
       .connectionId(clientState.connectionId)
-      .stateType(Enums.convertTo(clientState.stateType, ConnectionStateType::class.java))
+      .stateType(clientState.stateType.convertTo<ConnectionStateType>())
       .state(clientState.state)
       .globalState(clientState.globalState?.let { globalStateFromClientToApi(it) })
       .streamState(
@@ -125,7 +125,7 @@ private fun convertClientStateTypeToInternal(connectionStateType: ClientConnecti
   if (connectionStateType == null || connectionStateType == ClientConnectionStateType.NOT_SET) {
     null
   } else {
-    Enums.convertTo(connectionStateType, StateType::class.java)
+    connectionStateType.convertTo<StateType>()
   }
 
 /**
@@ -139,7 +139,7 @@ private fun convertStateTypeToApi(stateWrapper: StateWrapper?): ConnectionStateT
   if (stateWrapper?.stateType == null) {
     ConnectionStateType.NOT_SET
   } else {
-    Enums.convertTo(stateWrapper.stateType, ConnectionStateType::class.java)
+    stateWrapper.stateType.convertTo<ConnectionStateType>()
   }
 
 /**
@@ -150,7 +150,7 @@ private fun convertStateTypeToApi(stateWrapper: StateWrapper?): ConnectionStateT
  * @return client representation of state type
  */
 private fun convertStateTypeToClient(stateWrapper: StateWrapper?): ClientConnectionStateType =
-  stateWrapper?.stateType?.let { Enums.convertTo(it, ClientConnectionStateType::class.java) } ?: ClientConnectionStateType.NOT_SET
+  stateWrapper?.stateType?.let { it.convertTo<ClientConnectionStateType>() } ?: ClientConnectionStateType.NOT_SET
 
 /**
  * Convert to internal representation of state type, if set. Otherise, empty optional
@@ -162,7 +162,7 @@ private fun convertStateTypeToInternal(connectionState: ConnectionState?): State
   if (connectionState == null || connectionState.stateType == ConnectionStateType.NOT_SET) {
     null
   } else {
-    Enums.convertTo(connectionState.stateType, StateType::class.java)
+    connectionState.stateType.convertTo<StateType>()
   }
 
 private fun globalStateFromClientToApi(clientGlobalState: ClientGlobalState): GlobalState =

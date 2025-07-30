@@ -4,7 +4,7 @@
 
 package io.airbyte.data.services.impls.jooq
 
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
@@ -77,22 +77,14 @@ object ConnectorMetadataJooqHelper {
           if (actorDefinitionVersion.supportLevel == null) {
             null
           } else {
-            Enums
-              .toEnum(
-                actorDefinitionVersion.supportLevel.value(),
-                SupportLevel::class.java,
-              ).orElseThrow()
+            actorDefinitionVersion.supportLevel.value().toEnum<SupportLevel>()!!
           },
         ).set(
           Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE,
           if (actorDefinitionVersion.releaseStage == null) {
             null
           } else {
-            Enums
-              .toEnum(
-                actorDefinitionVersion.releaseStage.value(),
-                ReleaseStage::class.java,
-              ).orElseThrow()
+            actorDefinitionVersion.releaseStage.value().toEnum<ReleaseStage>()!!
           },
         ).set(
           Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE,
@@ -120,11 +112,7 @@ object ConnectorMetadataJooqHelper {
           actorDefinitionVersion.supportsRefreshes != null && actorDefinitionVersion.supportsRefreshes,
         ).set(
           Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
-          Enums
-            .toEnum(
-              actorDefinitionVersion.supportState.value(),
-              SupportState::class.java,
-            ).orElseThrow(),
+          actorDefinitionVersion.supportState.value().toEnum<SupportState>()!!,
         ).set(
           Tables.ACTOR_DEFINITION_VERSION.LAST_PUBLISHED,
           if (actorDefinitionVersion.lastPublished == null) {
@@ -162,29 +150,9 @@ object ConnectorMetadataJooqHelper {
         .set(Tables.ACTOR_DEFINITION_VERSION.SPEC, JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.spec)))
         .set(Tables.ACTOR_DEFINITION_VERSION.DOCUMENTATION_URL, actorDefinitionVersion.documentationUrl)
         .set(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION, actorDefinitionVersion.protocolVersion)
+        .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL, actorDefinitionVersion.supportLevel?.value()?.toEnum<SupportLevel>())
+        .set(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE, actorDefinitionVersion.releaseStage?.value()?.toEnum<ReleaseStage>())
         .set(
-          Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL,
-          if (actorDefinitionVersion.supportLevel == null) {
-            null
-          } else {
-            Enums
-              .toEnum(
-                actorDefinitionVersion.supportLevel.value(),
-                SupportLevel::class.java,
-              ).orElseThrow()
-          },
-        ).set(
-          Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE,
-          if (actorDefinitionVersion.releaseStage == null) {
-            null
-          } else {
-            Enums
-              .toEnum(
-                actorDefinitionVersion.releaseStage.value(),
-                ReleaseStage::class.java,
-              ).orElseThrow()
-          },
-        ).set(
           Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE,
           if (actorDefinitionVersion.releaseDate == null) {
             null
@@ -218,11 +186,7 @@ object ConnectorMetadataJooqHelper {
         ).set(Tables.ACTOR_DEFINITION_VERSION.CDK_VERSION, actorDefinitionVersion.cdkVersion)
         .set(
           Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
-          Enums
-            .toEnum(
-              actorDefinitionVersion.supportState.value(),
-              SupportState::class.java,
-            ).orElseThrow(),
+          actorDefinitionVersion.supportState.value().toEnum<SupportState>()!!,
         ).set(Tables.ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, actorDefinitionVersion.internalSupportLevel)
         .set(Tables.ACTOR_DEFINITION_VERSION.LANGUAGE, actorDefinitionVersion.language)
         .set(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_FILE_TRANSFER, actorDefinitionVersion.supportsFileTransfer)

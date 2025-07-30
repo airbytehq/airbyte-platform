@@ -17,7 +17,7 @@ import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.commons.converters.ApiConverters.Companion.toApi
 import io.airbyte.commons.converters.toApi
 import io.airbyte.commons.converters.toInternal
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.text.Names
 import io.airbyte.config.ActorDefinitionVersion
@@ -60,10 +60,7 @@ class CatalogConverter(
       .name(stream.name)
       .jsonSchema(stream.jsonSchema)
       .supportedSyncModes(
-        Enums.convertListTo(
-          stream.supportedSyncModes,
-          SyncMode::class.java,
-        ),
+        stream.supportedSyncModes.convertTo<SyncMode>(),
       ).sourceDefinedCursor(if (stream.sourceDefinedCursor != null) stream.sourceDefinedCursor else false)
       .defaultCursorField(stream.defaultCursorField)
       .sourceDefinedPrimaryKey(stream.sourceDefinedPrimaryKey)
@@ -93,16 +90,10 @@ class CatalogConverter(
           val configuration =
             AirbyteStreamConfiguration()
               .syncMode(
-                Enums.convertTo(
-                  configuredStream.syncMode,
-                  SyncMode::class.java,
-                ),
+                configuredStream.syncMode.convertTo<SyncMode>(),
               ).cursorField(configuredStream.cursorField)
               .destinationSyncMode(
-                Enums.convertTo(
-                  configuredStream.destinationSyncMode,
-                  DestinationSyncMode::class.java,
-                ),
+                configuredStream.destinationSyncMode.convertTo<DestinationSyncMode>(),
               ).primaryKey(configuredStream.primaryKey)
               .aliasName(Names.toAlphanumericAndUnderscore(configuredStream.stream.name))
               .selected(true)
@@ -244,10 +235,7 @@ class CatalogConverter(
       .withName(stream.name)
       .withJsonSchema(stream.jsonSchema)
       .withSupportedSyncModes(
-        Enums.convertListTo(
-          stream.supportedSyncModes,
-          io.airbyte.protocol.models.v0.SyncMode::class.java,
-        ),
+        stream.supportedSyncModes.convertTo<io.airbyte.protocol.models.v0.SyncMode>(),
       ).withSourceDefinedCursor(stream.sourceDefinedCursor)
       .withDefaultCursorField(stream.defaultCursorField)
       .withIsFileBased(stream.isFileBased)
@@ -309,15 +297,9 @@ class CatalogConverter(
                 .Builder()
                 .stream(convertedStream)
                 .syncMode(
-                  Enums.convertTo(
-                    s.config.syncMode,
-                    io.airbyte.config.SyncMode::class.java,
-                  ),
+                  s.config.syncMode.convertTo<io.airbyte.config.SyncMode>(),
                 ).destinationSyncMode(
-                  Enums.convertTo(
-                    s.config.destinationSyncMode,
-                    io.airbyte.config.DestinationSyncMode::class.java,
-                  ),
+                  s.config.destinationSyncMode.convertTo<io.airbyte.config.DestinationSyncMode>(),
                 ).cursorField(s.config.cursorField)
                 .primaryKey(Optional.ofNullable(s.config.primaryKey).orElse(emptyList()))
                 .destinationObjectName(s.config.destinationObjectName)

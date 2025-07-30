@@ -6,7 +6,7 @@ package io.airbyte.data.services.impls.jooq
 
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.constants.AirbyteCatalogConstants
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.version.AirbyteProtocolVersion
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionBreakingChange
@@ -436,11 +436,7 @@ class ActorDefinitionServiceJooqImpl
           .update(Tables.ACTOR_DEFINITION_VERSION)
           .set(
             Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
-            Enums
-              .toEnum(
-                supportState.value(),
-                SupportState::class.java,
-              ).orElseThrow(),
+            supportState.value().toEnum<SupportState>()!!,
           ).set(
             Tables.ACTOR_DEFINITION_VERSION.UPDATED_AT,
             OffsetDateTime.now(),

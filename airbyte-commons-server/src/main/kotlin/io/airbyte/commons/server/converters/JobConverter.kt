@@ -31,7 +31,7 @@ import io.airbyte.api.model.generated.ResetConfig
 import io.airbyte.api.model.generated.SourceDefinitionRead
 import io.airbyte.api.model.generated.SynchronousJobRead
 import io.airbyte.commons.converters.ApiConverters.Companion.toApi
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.logging.LogCaller
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.logging.LogEvent
@@ -123,10 +123,7 @@ class JobConverter(
 
   fun getSynchronousJobRead(metadata: SynchronousJobMetadata): SynchronousJobRead {
     val configType =
-      Enums.convertTo(
-        metadata.configType,
-        JobConfigType::class.java,
-      )
+      metadata.configType.convertTo<JobConfigType>()
     val attemptInfoReadLogs = getAttemptLogs(metadata.logPath, null)
 
     return SynchronousJobRead()
@@ -174,11 +171,7 @@ class JobConverter(
     @JvmStatic
     fun getJobRead(job: Job): JobRead {
       val configId = job.scope
-      val configType =
-        Enums.convertTo(
-          job.configType,
-          JobConfigType::class.java,
-        )
+      val configType = job.configType.convertTo<JobConfigType>()
 
       return JobRead()
         .id(job.id)
@@ -190,7 +183,7 @@ class JobConverter(
         .createdAt(job.createdAtInSecond)
         .updatedAt(job.updatedAtInSecond)
         .startedAt(job.startedAtInSecond)
-        .status(Enums.convertTo(job.status, JobStatus::class.java))
+        .status(job.status.convertTo<JobStatus>())
     }
 
     /**
@@ -288,12 +281,8 @@ class JobConverter(
     fun getAttemptRead(attempt: Attempt): AttemptRead =
       AttemptRead()
         .id(attempt.getAttemptNumber().toLong())
-        .status(
-          Enums.convertTo(
-            attempt.status,
-            AttemptStatus::class.java,
-          ),
-        ).bytesSynced(
+        .status(attempt.status?.convertTo<AttemptStatus>())
+        .bytesSynced(
           attempt
             .getOutput() // TODO (parker) remove after frontend switches to totalStats
             .map { obj: JobOutput -> obj.sync }
@@ -388,16 +377,9 @@ class JobConverter(
       return io.airbyte.api.model.generated
         .FailureReason()
         .failureOrigin(
-          Enums.convertTo(
-            failureReason.failureOrigin,
-            FailureOrigin::class.java,
-          ),
-        ).failureType(
-          Enums.convertTo(
-            failureReason.failureType,
-            FailureType::class.java,
-          ),
-        ).externalMessage(failureReason.externalMessage)
+          failureReason.failureOrigin?.convertTo<FailureOrigin>(),
+        ).failureType(failureReason.failureType?.convertTo<FailureType>())
+        .externalMessage(failureReason.externalMessage)
         .internalMessage(failureReason.internalMessage)
         .stacktrace(failureReason.stacktrace)
         .timestamp(if (failureReason.timestamp != null) failureReason.timestamp else defaultTimestamp)

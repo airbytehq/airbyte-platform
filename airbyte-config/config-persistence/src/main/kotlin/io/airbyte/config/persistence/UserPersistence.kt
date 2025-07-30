@@ -7,7 +7,7 @@ package io.airbyte.config.persistence
 import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.DEFAULT_USER_ID
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AuthProvider
 import io.airbyte.config.AuthUser
@@ -82,7 +82,7 @@ open class UserPersistence(
         if (user.status == null) {
           null
         } else {
-          Enums.toEnum(user.status.value(), Status::class.java).orElseThrow()
+          user.status.value().toEnum<Status>()!!
         },
       ).set(Tables.USER.COMPANY_NAME, user.companyName)
       .set(Tables.USER.EMAIL, user.email)
@@ -108,7 +108,7 @@ open class UserPersistence(
         if (user.status == null) {
           null
         } else {
-          Enums.toEnum(user.status.value(), Status::class.java).orElseThrow()
+          user.status.value().toEnum<Status>()!!
         },
       ).set(Tables.USER.COMPANY_NAME, user.companyName)
       .set(Tables.USER.EMAIL, user.email)
@@ -173,7 +173,7 @@ open class UserPersistence(
         if (authProvider == null) {
           null
         } else {
-          Enums.toEnum(authProvider.value(), io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider::class.java).orElseThrow()
+          authProvider.value().toEnum<io.airbyte.db.instance.configs.jooq.generated.enums.AuthProvider>()!!
         },
       ).set(Tables.AUTH_USER.CREATED_AT, now)
       .set(Tables.AUTH_USER.UPDATED_AT, now)
@@ -279,14 +279,11 @@ open class UserPersistence(
         if (record.get(Tables.USER.STATUS) == null) {
           null
         } else {
-          Enums
-            .toEnum(
-              record.get(
-                Tables.USER.STATUS,
-                String::class.java,
-              ),
-              User.Status::class.java,
-            ).orElseThrow()
+          record
+            .get(
+              Tables.USER.STATUS,
+              String::class.java,
+            ).toEnum<User.Status>()!!
         },
       ).withCompanyName(record.get(Tables.USER.COMPANY_NAME))
       .withEmail(record.get(Tables.USER.EMAIL))
@@ -319,14 +316,11 @@ open class UserPersistence(
         if (record.get(Tables.AUTH_USER.AUTH_PROVIDER) == null) {
           null
         } else {
-          Enums
-            .toEnum(
-              record.get(
-                Tables.AUTH_USER.AUTH_PROVIDER,
-                String::class.java,
-              ),
-              AuthProvider::class.java,
-            ).orElseThrow()
+          record
+            .get(
+              Tables.AUTH_USER.AUTH_PROVIDER,
+              String::class.java,
+            ).toEnum<AuthProvider>()!!
         },
       )
   }
@@ -483,14 +477,11 @@ open class UserPersistence(
               if (record.get(Tables.AUTH_USER.AUTH_PROVIDER) == null) {
                 null
               } else {
-                Enums
-                  .toEnum(
-                    record.get(
-                      Tables.AUTH_USER.AUTH_PROVIDER,
-                      String::class.java,
-                    ),
-                    AuthProvider::class.java,
-                  ).orElseThrow()
+                record
+                  .get(
+                    Tables.AUTH_USER.AUTH_PROVIDER,
+                    String::class.java,
+                  ).toEnum<AuthProvider>()!!
               },
             )
         }.toList()
@@ -534,14 +525,11 @@ open class UserPersistence(
           .withWorkspaceId(record.get(PermissionPersistenceHelper.WORKSPACE_PERMISSION_WORKSPACE_ID_ALIAS, UUID::class.java))
           .withPermissionId(record.get(PermissionPersistenceHelper.WORKSPACE_PERMISSION_ID_ALIAS, UUID::class.java))
           .withPermissionType(
-            Enums
-              .toEnum(
-                record.get(
-                  PermissionPersistenceHelper.WORKSPACE_PERMISSION_TYPE_ALIAS,
-                  String::class.java,
-                ),
-                Permission.PermissionType::class.java,
-              ).orElseThrow(),
+            record
+              .get(
+                PermissionPersistenceHelper.WORKSPACE_PERMISSION_TYPE_ALIAS,
+                String::class.java,
+              ).toEnum<Permission.PermissionType>()!!,
           )
     }
 
@@ -553,14 +541,11 @@ open class UserPersistence(
           .withOrganizationId(record.get(PermissionPersistenceHelper.ORG_PERMISSION_ORG_ID_ALIAS, UUID::class.java))
           .withPermissionId(record.get(PermissionPersistenceHelper.ORG_PERMISSION_ID_ALIAS, UUID::class.java))
           .withPermissionType(
-            Enums
-              .toEnum(
-                record.get(
-                  PermissionPersistenceHelper.ORG_PERMISSION_TYPE_ALIAS,
-                  String::class.java,
-                ),
-                Permission.PermissionType::class.java,
-              ).orElseThrow(),
+            record
+              .get(
+                PermissionPersistenceHelper.ORG_PERMISSION_TYPE_ALIAS,
+                String::class.java,
+              ).toEnum<Permission.PermissionType>()!!,
           )
     }
 

@@ -30,7 +30,7 @@ import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceUpdate
 import io.airbyte.api.model.generated.SynchronousJobRead
 import io.airbyte.api.model.generated.WorkloadPriority
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ConfigurationUpdate
 import io.airbyte.commons.server.converters.JobConverter
@@ -614,10 +614,7 @@ open class SchedulerHandler
       if (response.isSuccess) {
         checkConnectionRead
           .status(
-            Enums.convertTo(
-              response.output.status,
-              CheckConnectionRead.StatusEnum::class.java,
-            ),
+            response.output.status.convertTo<CheckConnectionRead.StatusEnum>(),
           ).message(response.output.message)
       }
 

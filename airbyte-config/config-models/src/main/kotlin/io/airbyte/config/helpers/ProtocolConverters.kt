@@ -4,7 +4,7 @@
 
 package io.airbyte.config.helpers
 
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.config.AirbyteStream as InternalAirbyteStream
 import io.airbyte.config.StreamDescriptor as InternalStreamDescriptor
 import io.airbyte.config.SyncMode as InternalSyncMode
@@ -19,7 +19,7 @@ class ProtocolConverters {
       InternalAirbyteStream(
         name = name,
         jsonSchema = jsonSchema,
-        supportedSyncModes = Enums.convertListTo(supportedSyncModes, InternalSyncMode::class.java),
+        supportedSyncModes = supportedSyncModes.convertTo<InternalSyncMode>(),
         sourceDefinedCursor = sourceDefinedCursor,
         defaultCursorField = defaultCursorField,
         sourceDefinedPrimaryKey = sourceDefinedPrimaryKey,
@@ -33,7 +33,7 @@ class ProtocolConverters {
       ProtocolAirbyteStream()
         .withName(name)
         .withJsonSchema(jsonSchema)
-        .withSupportedSyncModes(Enums.convertListTo(supportedSyncModes, ProtocolSyncMode::class.java))
+        .withSupportedSyncModes(supportedSyncModes.convertTo<ProtocolSyncMode>())
         .withSourceDefinedCursor(sourceDefinedCursor)
         .withDefaultCursorField(defaultCursorField)
         .withSourceDefinedPrimaryKey(sourceDefinedPrimaryKey)

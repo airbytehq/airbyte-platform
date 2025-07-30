@@ -7,7 +7,7 @@ package io.airbyte.persistence.job
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.Lists
 import datadog.trace.api.Trace
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.text.Names
 import io.airbyte.commons.timer.Stopwatch
@@ -2132,7 +2132,7 @@ class DefaultJobPersistence
       private fun getJobFromRecord(record: Record): Job =
         Job(
           record.get(JOB_ID, Long::class.java),
-          Enums.toEnum(record.get("config_type", String::class.java), ConfigType::class.java).orElseThrow(),
+          record.get("config_type", String::class.java).toEnum<ConfigType>()!!,
           record.get("scope", String::class.java),
           parseJobConfigFromString(record.get("config", String::class.java)),
           ArrayList(),
@@ -2168,11 +2168,7 @@ class DefaultJobPersistence
               )
             },
             if (attemptOutputString == null) null else parseJobOutputFromString(attemptOutputString),
-            Enums
-              .toEnum(
-                record.get("attempt_status", String::class.java),
-                AttemptStatus::class.java,
-              ).orElseThrow(),
+            record.get("attempt_status", String::class.java).toEnum<AttemptStatus>()!!,
             record.get("processing_task_queue", String::class.java),
             if (record.get(ATTEMPT_FAILURE_SUMMARY_FIELD, String::class.java) == null) {
               null
@@ -2206,11 +2202,7 @@ class DefaultJobPersistence
           Path.of(record.get("log_path", String::class.java)),
           AttemptSyncConfig(),
           JobOutput(),
-          Enums
-            .toEnum(
-              record.get("attempt_status", String::class.java),
-              AttemptStatus::class.java,
-            ).orElseThrow(),
+          record.get("attempt_status", String::class.java).toEnum<AttemptStatus>()!!,
           record.get("processing_task_queue", String::class.java),
           if (record.get(ATTEMPT_FAILURE_SUMMARY_FIELD, String::class.java) == null) {
             null

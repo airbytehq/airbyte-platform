@@ -5,7 +5,7 @@
 package io.airbyte.data.services.impls.jooq
 
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
@@ -935,11 +935,7 @@ class SourceServiceJooqImpl(
                 if (standardSourceDefinition.getSourceType() == null) {
                   null
                 } else {
-                  Enums
-                    .toEnum(
-                      standardSourceDefinition.getSourceType().value(),
-                      SourceType::class.java,
-                    ).orElseThrow()
+                  standardSourceDefinition.getSourceType().value().toEnum<SourceType>()!!
                 },
               ).set(Tables.ACTOR_DEFINITION.TOMBSTONE, standardSourceDefinition.getTombstone())
               .set(Tables.ACTOR_DEFINITION.PUBLIC, standardSourceDefinition.getPublic())
@@ -982,11 +978,7 @@ class SourceServiceJooqImpl(
                 if (standardSourceDefinition.getSourceType() == null) {
                   null
                 } else {
-                  Enums
-                    .toEnum(
-                      standardSourceDefinition.getSourceType().value(),
-                      SourceType::class.java,
-                    ).orElseThrow()
+                  standardSourceDefinition.getSourceType().value().toEnum<SourceType>()!!
                 },
               ).set(
                 Tables.ACTOR_DEFINITION.TOMBSTONE,

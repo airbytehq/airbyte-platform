@@ -16,7 +16,7 @@ import io.airbyte.api.model.generated.OperationReadList
 import io.airbyte.api.model.generated.OperationUpdate
 import io.airbyte.api.model.generated.OperatorConfiguration
 import io.airbyte.api.model.generated.OperatorType
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.converters.OperationsConverter.operationReadFromPersistedOperation
 import io.airbyte.commons.server.converters.OperationsConverter.populateOperatorConfigFromApi
 import io.airbyte.config.ConfigNotFoundType
@@ -88,12 +88,8 @@ open class OperationsHandler
         StandardSyncOperation()
           .withWorkspaceId(operationCreate.workspaceId)
           .withName(operationCreate.name)
-          .withOperatorType(
-            Enums.convertTo(
-              operationCreate.operatorConfiguration.operatorType,
-              StandardSyncOperation.OperatorType::class.java,
-            ),
-          ).withTombstone(false)
+          .withOperatorType(operationCreate.operatorConfiguration.operatorType?.convertTo<StandardSyncOperation.OperatorType>())
+          .withTombstone(false)
       populateOperatorConfigFromApi(operationCreate.operatorConfiguration, standardSyncOperation, workspace)
       return standardSyncOperation
     }

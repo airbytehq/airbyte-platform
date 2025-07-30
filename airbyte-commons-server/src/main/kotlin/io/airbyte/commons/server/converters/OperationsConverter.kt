@@ -11,7 +11,7 @@ import io.airbyte.api.model.generated.OperatorType
 import io.airbyte.api.model.generated.OperatorWebhook
 import io.airbyte.api.model.generated.OperatorWebhook.WebhookTypeEnum
 import io.airbyte.api.model.generated.OperatorWebhookDbtCloud
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.StandardSyncOperation
 import io.airbyte.config.StandardWorkspace
@@ -32,12 +32,7 @@ object OperationsConverter {
     standardSyncOperation: StandardSyncOperation,
     standardWorkspace: StandardWorkspace,
   ) {
-    standardSyncOperation.withOperatorType(
-      Enums.convertTo(
-        operatorConfig.operatorType,
-        StandardSyncOperation.OperatorType::class.java,
-      ),
-    )
+    standardSyncOperation.withOperatorType(operatorConfig.operatorType?.convertTo<StandardSyncOperation.OperatorType>())
     if (Objects.requireNonNull(operatorConfig.operatorType) == OperatorType.WEBHOOK) {
       Preconditions.checkArgument(operatorConfig.webhook != null)
       // TODO(mfsiega-airbyte): check that the webhook config id references a real webhook config.
@@ -61,12 +56,7 @@ object OperationsConverter {
   fun operationReadFromPersistedOperation(standardSyncOperation: StandardSyncOperation): OperationRead {
     val operatorConfiguration =
       OperatorConfiguration()
-        .operatorType(
-          Enums.convertTo(
-            standardSyncOperation.operatorType,
-            OperatorType::class.java,
-          ),
-        )
+        .operatorType(standardSyncOperation.operatorType?.convertTo<OperatorType>())
     if (standardSyncOperation.operatorType == null) {
       // TODO(mfsiega-airbyte): this case shouldn't happen, but the API today would tolerate it. After
       // verifying that it really can't happen, turn this into a precondition.

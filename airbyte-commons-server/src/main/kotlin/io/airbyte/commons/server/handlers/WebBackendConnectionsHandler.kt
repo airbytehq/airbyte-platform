@@ -46,7 +46,7 @@ import io.airbyte.api.model.generated.WebBackendWorkspaceState
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.converters.ApiConverters.Companion.toInternal
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper
@@ -147,10 +147,7 @@ class WebBackendConnectionsHandler(
 
   @Throws(IOException::class)
   fun getStateType(connectionIdRequestBody: ConnectionIdRequestBody): ConnectionStateType? =
-    Enums.convertTo(
-      stateHandler.getState(connectionIdRequestBody).stateType,
-      ConnectionStateType::class.java,
-    )
+    stateHandler.getState(connectionIdRequestBody).stateType.convertTo<ConnectionStateType>()
 
   @Throws(
     IOException::class,

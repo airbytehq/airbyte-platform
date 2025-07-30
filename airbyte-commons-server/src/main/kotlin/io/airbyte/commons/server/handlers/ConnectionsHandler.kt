@@ -87,7 +87,7 @@ import io.airbyte.commons.converters.ApiConverters.Companion.toInternal
 import io.airbyte.commons.converters.toServerApi
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.JsonSchemas
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.protocol.CatalogDiffHelpers.getCatalogDiff
@@ -285,11 +285,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       }
 
       if (patch.namespaceDefinition != null) {
-        sync.namespaceDefinition =
-          Enums.convertTo(
-            patch.namespaceDefinition,
-            JobSyncConfig.NamespaceDefinitionType::class.java,
-          )
+        sync.namespaceDefinition = patch.namespaceDefinition?.convertTo<JobSyncConfig.NamespaceDefinitionType>()
       }
 
       if (patch.namespaceFormat != null) {
@@ -522,10 +518,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         if (connectionCreate.namespaceDefinition == null) {
           JobSyncConfig.NamespaceDefinitionType.SOURCE
         } else {
-          Enums.convertTo(
-            connectionCreate.namespaceDefinition,
-            JobSyncConfig.NamespaceDefinitionType::class.java,
-          )
+          connectionCreate.namespaceDefinition?.convertTo<JobSyncConfig.NamespaceDefinitionType>()
         }
 
       // persist sync
@@ -949,10 +942,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
                     .namespace(streamAndConfig.stream.namespace)
                 },
                 { streamAndConfig: ConfiguredAirbyteStream ->
-                  Enums.convertTo(
-                    streamAndConfig.syncMode,
-                    SyncMode::class.java,
-                  )
+                  streamAndConfig.syncMode?.convertTo<SyncMode>()
                 },
               ),
             )
@@ -1335,10 +1325,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       val destinationVersion =
         actorDefinitionVersionHelper.getDestinationVersion(destination, sourceConnection.workspaceId)
       val supportedDestinationSyncModes =
-        Enums.convertListTo(
-          destinationVersion.spec.supportedDestinationSyncModes,
-          DestinationSyncMode::class.java,
-        )
+        destinationVersion.spec.supportedDestinationSyncModes?.convertTo<DestinationSyncMode>() ?: emptyList()
       val convertedCatalog = Optional.of(catalogConverter.toApi(jsonCatalog, sourceVersion))
       if (convertedCatalog.isPresent) {
         convertedCatalog.get().streams.forEach(
@@ -1466,16 +1453,8 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       val failureReason =
         io.airbyte.api.model.generated
           .FailureReason()
-      failureReason.failureOrigin =
-        Enums.convertTo(
-          data.failureOrigin,
-          FailureOrigin::class.java,
-        )
-      failureReason.failureType =
-        Enums.convertTo(
-          data.failureType,
-          FailureType::class.java,
-        )
+      failureReason.failureOrigin = data.failureOrigin?.convertTo<FailureOrigin>()
+      failureReason.failureType = data.failureType?.convertTo<FailureType>()
       failureReason.externalMessage = data.externalMessage
       failureReason.internalMessage = data.internalMessage
       failureReason.stacktrace = data.stacktrace
@@ -1509,10 +1488,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           jobs.stream().filter { job: Job -> JobStatus.TERMINAL_STATUSES.contains(job.status) && job.status != JobStatus.CANCELLED }.findFirst()
         val lastSyncStatus = lastSucceededOrFailedJob.map { j: Job -> j.status }
         val lastSyncJobStatus =
-          Enums.convertTo(
-            lastSyncStatus.orElse(null),
-            io.airbyte.api.model.generated.JobStatus::class.java,
-          )
+          lastSyncStatus.orElse(null)?.convertTo<io.airbyte.api.model.generated.JobStatus>()
         val lastJobWasCancelled = !jobs.isEmpty() && jobs.first().status == JobStatus.CANCELLED
         val lastJobWasResetOrClear =
           !jobs.isEmpty() &&

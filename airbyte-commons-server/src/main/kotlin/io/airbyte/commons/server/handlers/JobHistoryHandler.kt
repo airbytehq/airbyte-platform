@@ -32,7 +32,7 @@ import io.airbyte.api.model.generated.StreamDescriptor
 import io.airbyte.api.model.generated.StreamStats
 import io.airbyte.api.model.generated.StreamSyncProgressReadItem
 import io.airbyte.api.model.generated.WorkflowStateRead
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.converters.JobConverter.Companion.getDebugJobInfoRead
@@ -103,10 +103,7 @@ class JobHistoryHandler(
       request.configTypes
         .stream()
         .map { type: JobConfigType ->
-          Enums.convertTo(
-            type,
-            ConfigType::class.java,
-          )
+          type.convertTo<ConfigType>()
         }.collect(Collectors.toSet())
 
     val configId = request.configId
@@ -179,10 +176,7 @@ class JobHistoryHandler(
       request.configTypes
         .stream()
         .map { type: JobConfigType ->
-          Enums.convertTo(
-            type,
-            ConfigType::class.java,
-          )
+          type.convertTo<ConfigType>()
         }.collect(Collectors.toSet())
 
     val configId = request.configId
@@ -255,10 +249,7 @@ class JobHistoryHandler(
       request.configTypes
         .stream()
         .map { type: JobConfigType ->
-          Enums.convertTo(
-            type,
-            ConfigType::class.java,
-          )
+          type.convertTo<ConfigType>()
         }.collect(Collectors.toSet())
 
     val pageSize =

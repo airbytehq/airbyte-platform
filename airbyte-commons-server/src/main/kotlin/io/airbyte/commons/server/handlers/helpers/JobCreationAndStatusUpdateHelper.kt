@@ -8,7 +8,7 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.base.Preconditions
 import io.airbyte.api.model.generated.JobFailureRequest
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.JobStatus
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.Attempt
@@ -443,10 +443,7 @@ class JobCreationAndStatusUpdateHelper(
     emitAttemptCompletedEventIfAttemptPresent(job)
     jobTracker.trackSync(
       job,
-      Enums.convertTo(
-        status,
-        JobTracker.JobState::class.java,
-      ),
+      status.convertTo<JobTracker.JobState>(),
     )
   }
 
@@ -472,10 +469,7 @@ class JobCreationAndStatusUpdateHelper(
       jobId,
       connectionId,
       attemptId,
-      Enums.convertTo(
-        status,
-        JobTracker.JobState::class.java,
-      ),
+      status.convertTo<JobTracker.JobState>(),
       e,
     )
   }

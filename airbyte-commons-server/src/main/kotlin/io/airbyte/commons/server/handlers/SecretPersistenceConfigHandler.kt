@@ -5,7 +5,7 @@
 package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.SecretPersistenceType
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ScopeType
 import io.airbyte.config.SecretPersistenceConfig
@@ -24,13 +24,9 @@ open class SecretPersistenceConfigHandler(
     io.airbyte.api.model.generated
       .SecretPersistenceConfig()
       .secretPersistenceType(
-        Enums
-          .toEnum(
-            secretPersistenceConfig.secretPersistenceType.value(),
-            SecretPersistenceType::class.java,
-          ).orElseThrow(),
+        secretPersistenceConfig.secretPersistenceType.value().toEnum<SecretPersistenceType>()!!,
       )._configuration(Jsons.jsonNode(secretPersistenceConfig.configuration))
-      .scopeType(Enums.toEnum(secretPersistenceConfig.scopeType.value(), io.airbyte.api.model.generated.ScopeType::class.java).orElseThrow())
+      .scopeType(secretPersistenceConfig.scopeType.value().toEnum<io.airbyte.api.model.generated.ScopeType>()!!)
       .scopeId(secretPersistenceConfig.scopeId)
 
   fun writeToEnvironmentSecretPersistence(

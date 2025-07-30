@@ -10,7 +10,7 @@
 package io.airbyte.db.instance.configs.migrations
 
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.DestinationOAuthParameter
@@ -724,11 +724,7 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization : BaseJavaMigration() {
             if (standardSyncOperation.operatorType == null) {
               null
             } else {
-              Enums
-                .toEnum(
-                  standardSyncOperation.operatorType.value(),
-                  OperatorType::class.java,
-                ).orElse(OperatorType.normalization)
+              standardSyncOperation.operatorType.value().toEnum<OperatorType>() ?: OperatorType.normalization
             },
           ).set(tombstone, standardSyncOperation.tombstone != null && standardSyncOperation.tombstone)
           .set(createdAt, OffsetDateTime.ofInstant(configWithMetadata.createdAt, ZoneOffset.UTC))
@@ -872,11 +868,7 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization : BaseJavaMigration() {
             if (standardSync.namespaceDefinition == null) {
               null
             } else {
-              Enums
-                .toEnum(
-                  standardSync.namespaceDefinition.value(),
-                  NamespaceDefinitionType::class.java,
-                ).orElseThrow()
+              standardSync.namespaceDefinition.value().toEnum<NamespaceDefinitionType>()!!
             },
           ).set(namespaceFormat, standardSync.namespaceFormat)
           .set(prefix, standardSync.prefix)
@@ -889,11 +881,7 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization : BaseJavaMigration() {
             if (standardSync.status == null) {
               null
             } else {
-              Enums
-                .toEnum(
-                  standardSync.status.value(),
-                  StatusType::class.java,
-                ).orElseThrow()
+              standardSync.status.value().toEnum<StatusType>()!!
             },
           ).set(schedule, JSONB.valueOf(Jsons.serialize(standardSync.schedule)))
           .set(manual, standardSync.manual)

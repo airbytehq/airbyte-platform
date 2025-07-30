@@ -5,7 +5,7 @@
 package io.airbyte.config.persistence
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.State
 import io.airbyte.config.StateWrapper
@@ -348,10 +348,7 @@ class StatePersistence(
                 streamName,
                 namespace,
                 jsonbState,
-                Enums.convertTo(
-                  stateType,
-                  StateType::class.java,
-                ),
+                stateType.convertTo<StateType>(),
               ),
           )
         } else {

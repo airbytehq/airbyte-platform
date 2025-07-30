@@ -6,7 +6,7 @@ package io.airbyte.data.services.impls.jooq
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.Sets
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.OperatorWebhook
@@ -193,14 +193,8 @@ class OperationServiceJooqImpl
               .set(Tables.OPERATION.ID, standardSyncOperation.operationId)
               .set(Tables.OPERATION.WORKSPACE_ID, standardSyncOperation.workspaceId)
               .set(Tables.OPERATION.NAME, standardSyncOperation.name)
-              .set(
-                Tables.OPERATION.OPERATOR_TYPE,
-                Enums
-                  .toEnum(
-                    standardSyncOperation.operatorType.value(),
-                    OperatorType::class.java,
-                  ).orElseThrow(),
-              ).set(Tables.OPERATION.OPERATOR_WEBHOOK, JSONB.valueOf(Jsons.serialize(standardSyncOperation.operatorWebhook)))
+              .set(Tables.OPERATION.OPERATOR_TYPE, standardSyncOperation.operatorType.value().toEnum<OperatorType>()!!)
+              .set(Tables.OPERATION.OPERATOR_WEBHOOK, JSONB.valueOf(Jsons.serialize(standardSyncOperation.operatorWebhook)))
               .set(Tables.OPERATION.TOMBSTONE, standardSyncOperation.tombstone != null && standardSyncOperation.tombstone)
               .set(Tables.OPERATION.UPDATED_AT, timestamp)
               .where(Tables.OPERATION.ID.eq(standardSyncOperation.operationId))
@@ -211,14 +205,8 @@ class OperationServiceJooqImpl
               .set(Tables.OPERATION.ID, standardSyncOperation.operationId)
               .set(Tables.OPERATION.WORKSPACE_ID, standardSyncOperation.workspaceId)
               .set(Tables.OPERATION.NAME, standardSyncOperation.name)
-              .set(
-                Tables.OPERATION.OPERATOR_TYPE,
-                Enums
-                  .toEnum(
-                    standardSyncOperation.operatorType.value(),
-                    OperatorType::class.java,
-                  ).orElseThrow(),
-              ).set(Tables.OPERATION.OPERATOR_WEBHOOK, JSONB.valueOf(Jsons.serialize(standardSyncOperation.operatorWebhook)))
+              .set(Tables.OPERATION.OPERATOR_TYPE, standardSyncOperation.operatorType.value().toEnum<OperatorType>()!!)
+              .set(Tables.OPERATION.OPERATOR_WEBHOOK, JSONB.valueOf(Jsons.serialize(standardSyncOperation.operatorWebhook)))
               .set(Tables.OPERATION.TOMBSTONE, standardSyncOperation.tombstone != null && standardSyncOperation.tombstone)
               .set(Tables.OPERATION.CREATED_AT, timestamp)
               .set(Tables.OPERATION.UPDATED_AT, timestamp)
@@ -235,14 +223,11 @@ class OperationServiceJooqImpl
           .withName(record.get(Tables.OPERATION.NAME))
           .withWorkspaceId(record.get(Tables.OPERATION.WORKSPACE_ID))
           .withOperatorType(
-            Enums
-              .toEnum(
-                record.get(
-                  Tables.OPERATION.OPERATOR_TYPE,
-                  String::class.java,
-                ),
-                StandardSyncOperation.OperatorType::class.java,
-              ).orElseThrow(),
+            record
+              .get(
+                Tables.OPERATION.OPERATOR_TYPE,
+                String::class.java,
+              ).toEnum<StandardSyncOperation.OperatorType>()!!,
           ).withOperatorWebhook(
             if (record.get(Tables.OPERATION.OPERATOR_WEBHOOK) == null) {
               null

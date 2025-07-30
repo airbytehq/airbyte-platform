@@ -9,7 +9,7 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ScopeType
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig
 import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredMapper
@@ -51,14 +51,11 @@ class MapperSecretHydrationHelper(
       io.airbyte.config
         .SecretPersistenceConfig()
         .withScopeType(
-          Enums.convertTo(secretPersistenceConfig.scopeType, io.airbyte.config.ScopeType::class.java),
+          secretPersistenceConfig.scopeType.convertTo<io.airbyte.config.ScopeType>(),
         ).withScopeId(secretPersistenceConfig.scopeId)
         .withConfiguration(Jsons.deserializeToStringMap(secretPersistenceConfig.configuration))
         .withSecretPersistenceType(
-          Enums.convertTo(
-            secretPersistenceConfig.secretPersistenceType,
-            io.airbyte.config.SecretPersistenceConfig.SecretPersistenceType::class.java,
-          ),
+          secretPersistenceConfig.secretPersistenceType.convertTo<io.airbyte.config.SecretPersistenceConfig.SecretPersistenceType>(),
         ),
       metricClient,
     )

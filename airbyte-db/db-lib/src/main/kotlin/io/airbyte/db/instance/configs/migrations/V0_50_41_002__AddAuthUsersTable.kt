@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.toEnum
 import io.airbyte.db.instance.DatabaseConstants.AUTH_USER_TABLE
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
@@ -118,16 +118,13 @@ class V0_50_41_002__AddAuthUsersTable : BaseJavaMigration() {
               ),
             ).set(
               authProviderField,
-              Enums
-                .toEnum(
-                  userRecord.get(
-                    DSL.field(
-                      "auth_provider",
-                      String::class.java,
-                    ),
+              userRecord
+                .get(
+                  DSL.field(
+                    "auth_provider",
+                    String::class.java,
                   ),
-                  V0_50_16_001__UpdateEnumTypeAuthProviderAndPermissionType.AuthProvider::class.java,
-                ).orElseThrow(),
+                ).toEnum<V0_50_16_001__UpdateEnumTypeAuthProviderAndPermissionType.AuthProvider>()!!,
             ).set(createdAtField, now)
             .set(updatedAtField, now)
             .execute()

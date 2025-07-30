@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.helper
 
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.api.client.model.generated.CatalogDiff as ApiCatalogDiff
 import io.airbyte.api.client.model.generated.FieldTransform as ApiFieldTransform
 import io.airbyte.api.client.model.generated.StreamAttributeTransform as ApiStreamAttributeTransform
@@ -32,7 +32,7 @@ object CatalogDiffConverter {
 
   private fun toDomain(streamTransform: ApiStreamTransform): DomainStreamTransform =
     DomainStreamTransform()
-      .withTransformType(Enums.convertTo(streamTransform.transformType, DomainStreamTransform.TransformType::class.java))
+      .withTransformType(streamTransform.transformType.convertTo<DomainStreamTransform.TransformType>())
       .withStreamDescriptor(
         DomainStreamDescriptor()
           .withName(streamTransform.streamDescriptor.name)
@@ -58,7 +58,7 @@ object CatalogDiffConverter {
   private fun toDomain(fieldTransform: ApiFieldTransform): DomainFieldTransform {
     val result =
       DomainFieldTransform()
-        .withTransformType(Enums.convertTo(fieldTransform.transformType, DomainFieldTransform.TransformType::class.java))
+        .withTransformType(fieldTransform.transformType.convertTo<DomainFieldTransform.TransformType>())
         .withFieldName(fieldTransform.fieldName)
         .withBreaking(fieldTransform.breaking)
         .withAddField(fieldTransform.addField?.schema)
@@ -82,7 +82,7 @@ object CatalogDiffConverter {
 
   private fun toDomain(streamAttributeTransform: ApiStreamAttributeTransform): DomainStreamAttributeTransform =
     DomainStreamAttributeTransform()
-      .withTransformType(Enums.convertTo(streamAttributeTransform.transformType, DomainStreamAttributeTransform.TransformType::class.java))
+      .withTransformType(streamAttributeTransform.transformType.convertTo<DomainStreamAttributeTransform.TransformType>())
       .withBreaking(streamAttributeTransform.breaking)
       .withUpdatePrimaryKey(
         DomainStreamAttributePrimaryKeyUpdate()

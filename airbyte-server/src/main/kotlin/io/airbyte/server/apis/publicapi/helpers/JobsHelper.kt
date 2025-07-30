@@ -7,7 +7,7 @@ package io.airbyte.server.apis.publicapi.helpers
 import io.airbyte.api.model.generated.JobListForWorkspacesRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.toEnum
 
 fun orderByToFieldAndMethod(
   orderBy: String?,
@@ -23,13 +23,11 @@ fun orderByToFieldAndMethod(
       throw BadRequestProblem(ProblemMessageData().message("Invalid order by clause provided: $orderBy"))
     }
     field =
-      Enums
-        .toEnum(matcher.group(1), JobListForWorkspacesRequestBody.OrderByFieldEnum::class.java)
-        .orElseThrow { BadRequestProblem(ProblemMessageData().message("Invalid order by clause provided: $orderBy")) }
+      matcher.group(1).toEnum<JobListForWorkspacesRequestBody.OrderByFieldEnum>()
+        ?: throw BadRequestProblem(ProblemMessageData().message("Invalid order by clause provided: $orderBy"))
     method =
-      Enums
-        .toEnum(matcher.group(2), JobListForWorkspacesRequestBody.OrderByMethodEnum::class.java)
-        .orElseThrow { BadRequestProblem(ProblemMessageData().message("Invalid order by clause provided: $orderBy")) }
+      matcher.group(2).toEnum<JobListForWorkspacesRequestBody.OrderByMethodEnum>()
+        ?: throw BadRequestProblem(ProblemMessageData().message("Invalid order by clause provided: $orderBy"))
   }
   return Pair(field, method)
 }

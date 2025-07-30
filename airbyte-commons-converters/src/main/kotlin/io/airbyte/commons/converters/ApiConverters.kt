@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.converters
 
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.api.model.generated.AirbyteStream as ApiAirbyteStream
 import io.airbyte.api.model.generated.StreamDescriptor as ApiStreamDescriptor
 import io.airbyte.api.model.generated.SyncMode as ApiSyncMode
@@ -19,7 +19,7 @@ class ApiConverters {
         .name(name)
         .jsonSchema(jsonSchema)
         .supportedSyncModes(
-          Enums.convertListTo(supportedSyncModes, ApiSyncMode::class.java),
+          supportedSyncModes.convertTo<ApiSyncMode>(),
         ).sourceDefinedCursor(if (sourceDefinedCursor != null) sourceDefinedCursor else false)
         .defaultCursorField(defaultCursorField)
         .sourceDefinedPrimaryKey(sourceDefinedPrimaryKey)

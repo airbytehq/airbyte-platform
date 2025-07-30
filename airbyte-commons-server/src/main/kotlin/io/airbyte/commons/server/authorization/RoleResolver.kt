@@ -11,7 +11,7 @@ import io.airbyte.commons.auth.roles.AuthRole
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.auth.roles.OrganizationAuthRole
 import io.airbyte.commons.auth.roles.WorkspaceAuthRole
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
@@ -300,8 +300,8 @@ private fun determineWorkspaceRole(
     // Make sure we're only getting the min permission from permissions tied to the requested workspace Ids
     .filter { it.workspaceId in workspaceIds }
     .minByOrNull {
-      Enums
-        .convertTo(it.permissionType, WorkspaceAuthRole::class.java)
+      it.permissionType
+        .convertTo<WorkspaceAuthRole>()
         ?.getAuthority()
         ?: Integer.MAX_VALUE
     }?.permissionType
@@ -331,8 +331,8 @@ private fun determineOrganizationRole(
     // Make sure we're only getting the min permission from permissions tied to the requested organization Ids
     .filter { it.organizationId in organizationIds }
     .minByOrNull {
-      Enums
-        .convertTo(it.permissionType, OrganizationAuthRole::class.java)
+      it.permissionType
+        .convertTo<OrganizationAuthRole>()
         ?.getAuthority()
         ?: Integer.MAX_VALUE
     }?.permissionType

@@ -4,7 +4,7 @@
 
 package io.airbyte.config.persistence
 
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.toEnum
 import io.airbyte.config.Permission
 import io.airbyte.config.User
 import io.airbyte.config.UserPermission
@@ -111,7 +111,7 @@ class PermissionPersistence(
         PermissionType::class.java,
       )
 
-    return Enums.toEnum(jooqPermissionType.literal, Permission.PermissionType::class.java).get()
+    return jooqPermissionType.literal.toEnum<Permission.PermissionType>()!!
   }
 
   @Throws(IOException::class)
@@ -153,7 +153,7 @@ class PermissionPersistence(
         Tables.PERMISSION.PERMISSION_TYPE,
         PermissionType::class.java,
       )
-    return Enums.toEnum(jooqPermissionType.literal, Permission.PermissionType::class.java).get()
+    return jooqPermissionType.literal.toEnum<Permission.PermissionType>()!!
   }
 
   /**
@@ -207,11 +207,7 @@ class PermissionPersistence(
         Permission()
           .withPermissionId(record.get(Tables.PERMISSION.ID))
           .withPermissionType(
-            Enums
-              .toEnum(
-                record.get(Tables.PERMISSION.PERMISSION_TYPE).toString(),
-                Permission.PermissionType::class.java,
-              ).get(),
+            record.get(Tables.PERMISSION.PERMISSION_TYPE).toString().toEnum<Permission.PermissionType>()!!,
           ),
       )
 }

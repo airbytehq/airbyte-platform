@@ -25,7 +25,7 @@ import io.airbyte.api.model.generated.ScopedResourceRequirements
 import io.airbyte.api.model.generated.SupportState
 import io.airbyte.commons.converters.StateConverter.toApi
 import io.airbyte.commons.converters.StateConverter.toInternal
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
@@ -173,28 +173,16 @@ class ApiPojoConverters(
         .operationIds(standardSync.operationIds)
         .status(this.toApiStatus(standardSync.status))
         .name(standardSync.name)
-        .namespaceDefinition(
-          Enums.convertTo(
-            standardSync.namespaceDefinition,
-            NamespaceDefinitionType::class.java,
-          ),
-        ).namespaceFormat(standardSync.namespaceFormat)
+        .namespaceDefinition(standardSync.namespaceDefinition?.convertTo<NamespaceDefinitionType>())
+        .namespaceFormat(standardSync.namespaceFormat)
         .prefix(standardSync.prefix)
         .syncCatalog(catalogConverter.toApi(standardSync.catalog, standardSync.fieldSelectionData))
         .sourceCatalogId(standardSync.sourceCatalogId)
         .destinationCatalogId(standardSync.destinationCatalogId)
         .breakingChange(standardSync.breakingChange)
-        .nonBreakingChangesPreference(
-          Enums.convertTo(
-            standardSync.nonBreakingChangesPreference,
-            NonBreakingChangesPreference::class.java,
-          ),
-        ).backfillPreference(
-          Enums.convertTo(
-            standardSync.backfillPreference,
-            SchemaChangeBackfillPreference::class.java,
-          ),
-        ).notifySchemaChanges(standardSync.notifySchemaChanges)
+        .nonBreakingChangesPreference(standardSync.nonBreakingChangesPreference?.convertTo<NonBreakingChangesPreference>())
+        .backfillPreference(standardSync.backfillPreference?.convertTo<SchemaChangeBackfillPreference>())
+        .notifySchemaChanges(standardSync.notifySchemaChanges)
         .createdAt(standardSync.createdAt)
         .notifySchemaChangesByEmail(standardSync.notifySchemaChangesByEmail)
         .tags(
@@ -213,17 +201,10 @@ class ApiPojoConverters(
     return connectionRead
   }
 
-  fun toApiJobType(jobType: io.airbyte.config.JobTypeResourceLimit.JobType): JobType? =
-    Enums.convertTo(
-      jobType,
-      JobType::class.java,
-    )
+  fun toApiJobType(jobType: io.airbyte.config.JobTypeResourceLimit.JobType): JobType? = jobType?.convertTo<JobType>()
 
   fun toInternalJobType(jobType: JobType): io.airbyte.config.JobTypeResourceLimit.JobType? =
-    Enums.convertTo(
-      jobType,
-      io.airbyte.config.JobTypeResourceLimit.JobType::class.java,
-    )
+    jobType?.convertTo<io.airbyte.config.JobTypeResourceLimit.JobType>()
 
   fun toApiTag(tag: Tag): io.airbyte.api.model.generated.Tag =
     io.airbyte.api.model.generated
@@ -240,60 +221,33 @@ class ApiPojoConverters(
       .withWorkspaceId(tag.workspaceId)
       .withColor(tag.color)
 
-  fun toInternalActorType(actorType: ActorType): io.airbyte.config.ActorType? = Enums.convertTo(actorType, io.airbyte.config.ActorType::class.java)
+  fun toInternalActorType(actorType: ActorType): io.airbyte.config.ActorType? = actorType?.convertTo<io.airbyte.config.ActorType>()
 
   // TODO(https://github.com/airbytehq/airbyte/issues/11432): remove these helpers.
-  fun toApiTimeUnit(apiTimeUnit: Schedule.TimeUnit?): ConnectionSchedule.TimeUnitEnum? =
-    Enums.convertTo(
-      apiTimeUnit,
-      ConnectionSchedule.TimeUnitEnum::class.java,
-    )
+  fun toApiTimeUnit(apiTimeUnit: Schedule.TimeUnit?): ConnectionSchedule.TimeUnitEnum? = apiTimeUnit?.convertTo<ConnectionSchedule.TimeUnitEnum>()
 
-  fun toApiTimeUnit(timeUnit: BasicSchedule.TimeUnit?): ConnectionSchedule.TimeUnitEnum? =
-    Enums.convertTo(
-      timeUnit,
-      ConnectionSchedule.TimeUnitEnum::class.java,
-    )
+  fun toApiTimeUnit(timeUnit: BasicSchedule.TimeUnit?): ConnectionSchedule.TimeUnitEnum? = timeUnit?.convertTo<ConnectionSchedule.TimeUnitEnum>()
 
-  fun toApiStatus(status: StandardSync.Status?): ConnectionStatus? = Enums.convertTo(status, ConnectionStatus::class.java)
+  fun toApiStatus(status: StandardSync.Status?): ConnectionStatus? = status?.convertTo<ConnectionStatus>()
 
-  fun toPersistenceStatus(apiStatus: ConnectionStatus?): StandardSync.Status? = Enums.convertTo(apiStatus, StandardSync.Status::class.java)
+  fun toPersistenceStatus(apiStatus: ConnectionStatus?): StandardSync.Status? = apiStatus?.convertTo<StandardSync.Status>()
 
   fun toPersistenceNonBreakingChangesPreference(preference: NonBreakingChangesPreference?): StandardSync.NonBreakingChangesPreference? =
-    Enums.convertTo(
-      preference,
-      StandardSync.NonBreakingChangesPreference::class.java,
-    )
+    preference?.convertTo<StandardSync.NonBreakingChangesPreference>()
 
   fun toPersistenceBackfillPreference(preference: SchemaChangeBackfillPreference?): StandardSync.BackfillPreference? =
-    Enums.convertTo(
-      preference,
-      StandardSync.BackfillPreference::class.java,
-    )
+    preference?.convertTo<StandardSync.BackfillPreference>()
 
-  fun toPersistenceTimeUnit(apiTimeUnit: ConnectionSchedule.TimeUnitEnum?): Schedule.TimeUnit? =
-    Enums.convertTo(
-      apiTimeUnit,
-      Schedule.TimeUnit::class.java,
-    )
+  fun toPersistenceTimeUnit(apiTimeUnit: ConnectionSchedule.TimeUnitEnum?): Schedule.TimeUnit? = apiTimeUnit?.convertTo<Schedule.TimeUnit>()
 
   fun toBasicScheduleTimeUnit(apiTimeUnit: ConnectionSchedule.TimeUnitEnum?): BasicSchedule.TimeUnit? =
-    Enums.convertTo(
-      apiTimeUnit,
-      BasicSchedule.TimeUnit::class.java,
-    )
+    apiTimeUnit?.convertTo<BasicSchedule.TimeUnit>()
 
   fun toBasicScheduleTimeUnit(apiTimeUnit: ConnectionScheduleDataBasicSchedule.TimeUnitEnum?): BasicSchedule.TimeUnit? =
-    Enums.convertTo(
-      apiTimeUnit,
-      BasicSchedule.TimeUnit::class.java,
-    )
+    apiTimeUnit?.convertTo<BasicSchedule.TimeUnit>()
 
   fun toLegacyScheduleTimeUnit(timeUnit: ConnectionScheduleDataBasicSchedule.TimeUnitEnum?): Schedule.TimeUnit? =
-    Enums.convertTo(
-      timeUnit,
-      Schedule.TimeUnit::class.java,
-    )
+    timeUnit?.convertTo<Schedule.TimeUnit>()
 
   fun toApiReleaseStage(releaseStage: ReleaseStage?): io.airbyte.api.model.generated.ReleaseStage? {
     if (releaseStage == null) {
@@ -352,16 +306,10 @@ class ApiPojoConverters(
   }
 
   fun toApiBasicScheduleTimeUnit(timeUnit: BasicSchedule.TimeUnit?): ConnectionScheduleDataBasicSchedule.TimeUnitEnum? =
-    Enums.convertTo(
-      timeUnit,
-      ConnectionScheduleDataBasicSchedule.TimeUnitEnum::class.java,
-    )
+    timeUnit?.convertTo<ConnectionScheduleDataBasicSchedule.TimeUnitEnum>()
 
   fun toApiBasicScheduleTimeUnit(timeUnit: Schedule.TimeUnit?): ConnectionScheduleDataBasicSchedule.TimeUnitEnum? =
-    Enums.convertTo(
-      timeUnit,
-      ConnectionScheduleDataBasicSchedule.TimeUnitEnum::class.java,
-    )
+    timeUnit?.convertTo<ConnectionScheduleDataBasicSchedule.TimeUnitEnum>()
 
   fun toApiConnectionScheduleType(standardSync: StandardSync): ConnectionScheduleType =
     if (standardSync.scheduleType != null) {

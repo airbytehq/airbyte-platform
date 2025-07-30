@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.BasicSchedule
 import io.airbyte.config.Schedule
@@ -83,12 +83,8 @@ class V0_50_11_001__CopyLegacyScheduleToNewScheduleData : BaseJavaMigration() {
         Jsons.serialize(
           ScheduleData().withBasicSchedule(
             BasicSchedule()
-              .withTimeUnit(
-                Enums.convertTo(
-                  legacySchedule.timeUnit,
-                  BasicSchedule.TimeUnit::class.java,
-                ),
-              ).withUnits(legacySchedule.units),
+              .withTimeUnit(legacySchedule.timeUnit.convertTo<BasicSchedule.TimeUnit>())
+              .withUnits(legacySchedule.units),
           ),
         ),
       )

@@ -8,7 +8,7 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.Sets
 import datadog.trace.api.Trace
 import io.airbyte.api.model.generated.ActorStatus
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.ConfiguredAirbyteCatalog
@@ -1709,11 +1709,7 @@ class ConnectionServiceJooqImpl
           .set(Tables.CONNECTION.ID, standardSync.connectionId)
           .set(
             Tables.CONNECTION.NAMESPACE_DEFINITION,
-            Enums
-              .toEnum(
-                standardSync.namespaceDefinition.value(),
-                NamespaceDefinitionType::class.java,
-              ).orElseThrow(),
+            standardSync.namespaceDefinition.value().toEnum<NamespaceDefinitionType>()!!,
           ).set(Tables.CONNECTION.NAMESPACE_FORMAT, standardSync.namespaceFormat)
           .set(Tables.CONNECTION.PREFIX, standardSync.prefix)
           .set(Tables.CONNECTION.SOURCE_ID, standardSync.sourceId)
@@ -1726,11 +1722,7 @@ class ConnectionServiceJooqImpl
             if (standardSync.status == null) {
               null
             } else {
-              Enums
-                .toEnum(
-                  standardSync.status.value(),
-                  StatusType::class.java,
-                ).orElseThrow()
+              standardSync.status.value().toEnum<StatusType>()!!
             },
           ).set(Tables.CONNECTION.SCHEDULE, JSONB.valueOf(Jsons.serialize(standardSync.schedule)))
           .set(Tables.CONNECTION.MANUAL, standardSync.manual)
@@ -1739,11 +1731,7 @@ class ConnectionServiceJooqImpl
             if (standardSync.scheduleType == null) {
               null
             } else {
-              Enums
-                .toEnum(
-                  standardSync.scheduleType.value(),
-                  ScheduleType::class.java,
-                ).orElseThrow()
+              standardSync.scheduleType.value().toEnum<ScheduleType>()!!
             },
           ).set(Tables.CONNECTION.SCHEDULE_DATA, JSONB.valueOf(Jsons.serialize(standardSync.scheduleData)))
           .set(
@@ -1787,11 +1775,7 @@ class ConnectionServiceJooqImpl
           .set(Tables.CONNECTION.ID, standardSync.connectionId)
           .set(
             Tables.CONNECTION.NAMESPACE_DEFINITION,
-            Enums
-              .toEnum(
-                standardSync.namespaceDefinition.value(),
-                NamespaceDefinitionType::class.java,
-              ).orElseThrow(),
+            standardSync.namespaceDefinition.value().toEnum<NamespaceDefinitionType>()!!,
           ).set(Tables.CONNECTION.NAMESPACE_FORMAT, standardSync.namespaceFormat)
           .set(Tables.CONNECTION.PREFIX, standardSync.prefix)
           .set(Tables.CONNECTION.SOURCE_ID, standardSync.sourceId)
@@ -1804,11 +1788,7 @@ class ConnectionServiceJooqImpl
             if (standardSync.status == null) {
               null
             } else {
-              Enums
-                .toEnum(
-                  standardSync.status.value(),
-                  StatusType::class.java,
-                ).orElseThrow()
+              standardSync.status.value().toEnum<StatusType>()!!
             },
           ).set(Tables.CONNECTION.SCHEDULE, JSONB.valueOf(Jsons.serialize(standardSync.schedule)))
           .set(Tables.CONNECTION.MANUAL, standardSync.manual)
@@ -1817,11 +1797,7 @@ class ConnectionServiceJooqImpl
             if (standardSync.scheduleType == null) {
               null
             } else {
-              Enums
-                .toEnum(
-                  standardSync.scheduleType.value(),
-                  ScheduleType::class.java,
-                ).orElseThrow()
+              standardSync.scheduleType.value().toEnum<ScheduleType>()!!
             },
           ).set(Tables.CONNECTION.SCHEDULE_DATA, JSONB.valueOf(Jsons.serialize(standardSync.scheduleData)))
           .set(

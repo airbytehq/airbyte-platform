@@ -5,7 +5,7 @@
 package io.airbyte.data.services.impls.jooq
 
 import com.fasterxml.jackson.core.type.TypeReference
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.version.AirbyteProtocolVersion
 import io.airbyte.commons.version.Version
@@ -115,14 +115,11 @@ object DbConverter {
     return StandardSync()
       .withConnectionId(record.get(Tables.CONNECTION.ID))
       .withNamespaceDefinition(
-        Enums
-          .toEnum(
-            record.get(
-              Tables.CONNECTION.NAMESPACE_DEFINITION,
-              String::class.java,
-            ),
-            JobSyncConfig.NamespaceDefinitionType::class.java,
-          ).orElseThrow(),
+        record
+          .get(
+            Tables.CONNECTION.NAMESPACE_DEFINITION,
+            String::class.java,
+          ).toEnum<JobSyncConfig.NamespaceDefinitionType>()!!,
       ).withNamespaceFormat(record.get(Tables.CONNECTION.NAMESPACE_FORMAT))
       .withPrefix(record.get(Tables.CONNECTION.PREFIX))
       .withSourceId(record.get(Tables.CONNECTION.SOURCE_ID))
@@ -142,14 +139,11 @@ object DbConverter {
         if (record.get(Tables.CONNECTION.STATUS) == null) {
           null
         } else {
-          Enums
-            .toEnum(
-              record.get(
-                Tables.CONNECTION.STATUS,
-                String::class.java,
-              ),
-              StandardSync.Status::class.java,
-            ).orElseThrow()
+          record
+            .get(
+              Tables.CONNECTION.STATUS,
+              String::class.java,
+            ).toEnum<StandardSync.Status>()!!
         },
       ).withSchedule(
         Jsons.deserialize(
@@ -161,14 +155,11 @@ object DbConverter {
         if (record.get(Tables.CONNECTION.SCHEDULE_TYPE) == null) {
           null
         } else {
-          Enums
-            .toEnum(
-              record.get(
-                Tables.CONNECTION.SCHEDULE_TYPE,
-                String::class.java,
-              ),
-              StandardSync.ScheduleType::class.java,
-            ).orElseThrow()
+          record
+            .get(
+              Tables.CONNECTION.SCHEDULE_TYPE,
+              String::class.java,
+            ).toEnum<StandardSync.ScheduleType>()!!
         },
       ).withScheduleData(
         if (record.get(Tables.CONNECTION.SCHEDULE_DATA) == null) {
@@ -189,23 +180,20 @@ object DbConverter {
       .withDestinationCatalogId(record.get(Tables.CONNECTION.DESTINATION_CATALOG_ID))
       .withBreakingChange(record.get(Tables.CONNECTION.BREAKING_CHANGE))
       .withNonBreakingChangesPreference(
-        Enums
-          .toEnum(
-            Optional
-              .ofNullable(record.get(Tables.SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS))
-              .orElse(AutoPropagationStatus.ignore)
-              .literal,
-            StandardSync.NonBreakingChangesPreference::class.java,
-          ).orElseThrow(),
+        Optional
+          .ofNullable(record.get(Tables.SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS))
+          .orElse(AutoPropagationStatus.ignore)
+          .literal
+          .toEnum<StandardSync.NonBreakingChangesPreference>()!!,
       ).withNotifySchemaChanges(isWebhookNotificationEnabled)
       .withNotifySchemaChangesByEmail(isEmailNotificationEnabled)
       .withCreatedAt(record.get(Tables.CONNECTION.CREATED_AT, OffsetDateTime::class.java).toEpochSecond())
       .withBackfillPreference(
-        Enums
-          .toEnum(
-            Optional.ofNullable(record.get(Tables.SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).orElse(BackfillPreference.disabled).literal,
-            StandardSync.BackfillPreference::class.java,
-          ).orElseThrow(),
+        Optional
+          .ofNullable(record.get(Tables.SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE))
+          .orElse(BackfillPreference.disabled)
+          .literal
+          .toEnum<StandardSync.BackfillPreference>()!!,
       ).withTags(tags)
   }
 
@@ -366,14 +354,11 @@ object DbConverter {
         if (record.get(Tables.ACTOR_DEFINITION.SOURCE_TYPE) == null) {
           null
         } else {
-          Enums
-            .toEnum(
-              record.get(
-                Tables.ACTOR_DEFINITION.SOURCE_TYPE,
-                String::class.java,
-              ),
-              StandardSourceDefinition.SourceType::class.java,
-            ).orElseThrow()
+          record
+            .get(
+              Tables.ACTOR_DEFINITION.SOURCE_TYPE,
+              String::class.java,
+            ).toEnum<StandardSourceDefinition.SourceType>()!!
         },
       ).withTombstone(record.get(Tables.ACTOR_DEFINITION.TOMBSTONE))
       .withPublic(record.get(Tables.ACTOR_DEFINITION.PUBLIC))
@@ -482,14 +467,11 @@ object DbConverter {
         },
       ).withCatalogType(
         if (record.get(Tables.ACTOR_CATALOG.CATALOG_TYPE) != null) {
-          Enums
-            .toEnum(
-              record.get(
-                Tables.ACTOR_CATALOG.CATALOG_TYPE,
-                String::class.java,
-              ),
-              CatalogType::class.java,
-            ).orElseThrow()
+          record
+            .get(
+              Tables.ACTOR_CATALOG.CATALOG_TYPE,
+              String::class.java,
+            ).toEnum<CatalogType>()!!
         } else {
           null
         },
@@ -696,28 +678,22 @@ object DbConverter {
         if (record.get(Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL) == null) {
           null
         } else {
-          Enums
-            .toEnum(
-              record.get(
-                Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL,
-                String::class.java,
-              ),
-              SupportLevel::class.java,
-            ).orElseThrow()
+          record
+            .get(
+              Tables.ACTOR_DEFINITION_VERSION.SUPPORT_LEVEL,
+              String::class.java,
+            ).toEnum<SupportLevel>()!!
         },
       ).withProtocolVersion(AirbyteProtocolVersion.getWithDefault(record.get(Tables.ACTOR_DEFINITION_VERSION.PROTOCOL_VERSION)).serialize())
       .withReleaseStage(
         if (record.get(Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE) == null) {
           null
         } else {
-          Enums
-            .toEnum(
-              record.get(
-                Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE,
-                String::class.java,
-              ),
-              ReleaseStage::class.java,
-            ).orElseThrow()
+          record
+            .get(
+              Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE,
+              String::class.java,
+            ).toEnum<ReleaseStage>()!!
         },
       ).withReleaseDate(
         if (record.get(Tables.ACTOR_DEFINITION_VERSION.RELEASE_DATE) == null) {
@@ -752,14 +728,11 @@ object DbConverter {
         },
       ).withSupportsRefreshes(record.get(Tables.ACTOR_DEFINITION_VERSION.SUPPORTS_REFRESHES))
       .withSupportState(
-        Enums
-          .toEnum(
-            record.get(
-              Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
-              String::class.java,
-            ),
-            ActorDefinitionVersion.SupportState::class.java,
-          ).orElseThrow(),
+        record
+          .get(
+            Tables.ACTOR_DEFINITION_VERSION.SUPPORT_STATE,
+            String::class.java,
+          ).toEnum<ActorDefinitionVersion.SupportState>()!!,
       ).withInternalSupportLevel(
         record.get(
           Tables.ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL,
@@ -781,22 +754,16 @@ object DbConverter {
       .withCoordinate(record.get(Tables.SECRET_PERSISTENCE_CONFIG.SECRET_PERSISTENCE_CONFIG_COORDINATE))
       .withScopeId(record.get(Tables.SECRET_PERSISTENCE_CONFIG.SCOPE_ID))
       .withScopeType(
-        Enums
-          .toEnum(
-            record.get(
-              Tables.SECRET_PERSISTENCE_CONFIG.SCOPE_TYPE,
-              String::class.java,
-            ),
-            ScopeType::class.java,
-          ).orElseThrow(),
+        record
+          .get(
+            Tables.SECRET_PERSISTENCE_CONFIG.SCOPE_TYPE,
+            String::class.java,
+          ).toEnum<ScopeType>()!!,
       ).withSecretPersistenceType(
-        Enums
-          .toEnum(
-            record.get(
-              Tables.SECRET_PERSISTENCE_CONFIG.SECRET_PERSISTENCE_TYPE,
-              String::class.java,
-            ),
-            SecretPersistenceConfig.SecretPersistenceType::class.java,
-          ).orElseThrow(),
+        record
+          .get(
+            Tables.SECRET_PERSISTENCE_CONFIG.SECRET_PERSISTENCE_TYPE,
+            String::class.java,
+          ).toEnum<SecretPersistenceConfig.SecretPersistenceType>()!!,
       )
 }

@@ -6,7 +6,7 @@ package io.airbyte.commons.server.converters
 
 import com.google.common.base.Preconditions
 import io.airbyte.api.model.generated.AirbyteCatalog
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.BasicSchedule
 import io.airbyte.config.JobSyncConfig
@@ -83,10 +83,7 @@ class ConnectionHelper(
         Jsons
           .clone(original)
           .withNamespaceDefinition(
-            Enums.convertTo(
-              update.namespaceDefinition,
-              JobSyncConfig.NamespaceDefinitionType::class.java,
-            ),
+            update.namespaceDefinition?.convertTo<JobSyncConfig.NamespaceDefinitionType>(),
           ).withNamespaceFormat(update.namespaceFormat)
           .withPrefix(update.prefix)
           .withOperationIds(update.operationIds)

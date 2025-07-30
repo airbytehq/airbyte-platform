@@ -12,7 +12,7 @@ import io.airbyte.api.client.model.generated.SourceDiscoverSchemaWriteRequestBod
 import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.converters.ConnectorConfigUpdater
 import io.airbyte.commons.converters.toClientApi
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.io.IOs
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorType
@@ -158,7 +158,7 @@ class ConnectorMessageProcessor(
         if (result.connectionStatus != null) {
           val output =
             StandardCheckConnectionOutput()
-              .withStatus(Enums.convertTo(result.connectionStatus.status, StandardCheckConnectionOutput.Status::class.java))
+              .withStatus(result.connectionStatus.status.convertTo<StandardCheckConnectionOutput.Status>())
               .withMessage(result.connectionStatus.message)
           jobOutput.checkConnection = output
         } else if (failureReason.isEmpty && exitCode == 0) {

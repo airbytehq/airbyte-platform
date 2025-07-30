@@ -10,7 +10,7 @@ import io.airbyte.api.model.generated.FieldSchemaUpdate
 import io.airbyte.api.model.generated.StreamAttributePrimaryKeyUpdate
 import io.airbyte.api.model.generated.StreamTransformUpdateStream
 import io.airbyte.commons.converters.ApiConverters.Companion.toApi
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.protocol.transformmodels.FieldTransform
 import io.airbyte.commons.protocol.transformmodels.FieldTransformType
 import io.airbyte.commons.protocol.transformmodels.StreamAttributeTransform
@@ -28,10 +28,7 @@ object CatalogDiffConverters {
     io.airbyte.api.model.generated
       .StreamTransform()
       .transformType(
-        Enums.convertTo(
-          transform.transformType,
-          io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum::class.java,
-        ),
+        transform.transformType?.convertTo<io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum>(),
       ).streamDescriptor(transform.streamDescriptor.toApi())
       .updateStream(updateStreamToApi(transform).orElse(null))
 
@@ -61,10 +58,7 @@ object CatalogDiffConverters {
     io.airbyte.api.model.generated
       .StreamAttributeTransform()
       .transformType(
-        Enums.convertTo(
-          transform.transformType,
-          io.airbyte.api.model.generated.StreamAttributeTransform.TransformTypeEnum::class.java,
-        ),
+        transform.transformType?.convertTo<io.airbyte.api.model.generated.StreamAttributeTransform.TransformTypeEnum>(),
       ).breaking(transform.breaking)
       .updatePrimaryKey(updatePrimaryKeyToApi(transform).orElse(null))
 
@@ -72,10 +66,7 @@ object CatalogDiffConverters {
     io.airbyte.api.model.generated
       .FieldTransform()
       .transformType(
-        Enums.convertTo(
-          transform.transformType,
-          io.airbyte.api.model.generated.FieldTransform.TransformTypeEnum::class.java,
-        ),
+        transform.transformType?.convertTo<io.airbyte.api.model.generated.FieldTransform.TransformTypeEnum>(),
       ).fieldName(transform.fieldName)
       .breaking(transform.breaking())
       .addField(addFieldToApi(transform).orElse(null))

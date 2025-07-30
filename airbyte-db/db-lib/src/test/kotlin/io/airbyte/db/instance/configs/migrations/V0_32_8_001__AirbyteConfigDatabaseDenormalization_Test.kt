@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.DestinationConnection
@@ -161,14 +161,11 @@ internal class V0_32_8_001__AirbyteConfigDatabaseDenormalization_Test : Abstract
           sourceDefinition.get(dockerImageTag),
           sourceDefinition.get(documentationUrl),
           sourceDefinition.get(icon),
-          Enums
-            .toEnum(
-              sourceDefinition.get(
-                sourceType,
-                String::class.java,
-              ),
-              V0_32_8_001__AirbyteConfigDatabaseDenormalization.SourceType::class.java,
-            ).orElseThrow(),
+          sourceDefinition
+            .get(
+              sourceType,
+              String::class.java,
+            ).toEnum<V0_32_8_001__AirbyteConfigDatabaseDenormalization.SourceType>()!!,
           Jsons.deserialize(
             sourceDefinition.get(spec).data(),
             ConnectorSpecification::class.java,
@@ -451,14 +448,12 @@ internal class V0_32_8_001__AirbyteConfigDatabaseDenormalization_Test : Abstract
           .withName(record.get(name))
           .withWorkspaceId(record.get(workspaceId))
           .withOperatorType(
-            Enums
-              .toEnum(
-                record.get(
-                  operatorType,
-                  String::class.java,
-                ),
-                StandardSyncOperation.OperatorType::class.java,
-              ).orElse(StandardSyncOperation.OperatorType.WEBHOOK),
+            record
+              .get(
+                operatorType,
+                String::class.java,
+              ).toEnum<StandardSyncOperation.OperatorType>()
+              ?: StandardSyncOperation.OperatorType.WEBHOOK,
           ).withOperatorWebhook(OperatorWebhook())
           .withTombstone(record.get(tombstone))
 
@@ -514,14 +509,11 @@ internal class V0_32_8_001__AirbyteConfigDatabaseDenormalization_Test : Abstract
         StandardSync()
           .withConnectionId(record.get(id))
           .withNamespaceDefinition(
-            Enums
-              .toEnum(
-                record.get(
-                  namespaceDefinition,
-                  String::class.java,
-                ),
-                JobSyncConfig.NamespaceDefinitionType::class.java,
-              ).orElseThrow(),
+            record
+              .get(
+                namespaceDefinition,
+                String::class.java,
+              ).toEnum<JobSyncConfig.NamespaceDefinitionType>()!!,
           ).withNamespaceFormat(record.get(namespaceFormat))
           .withPrefix(record.get(prefix))
           .withSourceId(record.get(sourceId))
@@ -533,14 +525,11 @@ internal class V0_32_8_001__AirbyteConfigDatabaseDenormalization_Test : Abstract
               ConfiguredAirbyteCatalog::class.java,
             ),
           ).withStatus(
-            Enums
-              .toEnum(
-                record.get(
-                  status,
-                  String::class.java,
-                ),
-                StandardSync.Status::class.java,
-              ).orElseThrow(),
+            record
+              .get(
+                status,
+                String::class.java,
+              ).toEnum<StandardSync.Status>()!!,
           ).withSchedule(
             Jsons.deserialize(
               record.get(schedule).data(),

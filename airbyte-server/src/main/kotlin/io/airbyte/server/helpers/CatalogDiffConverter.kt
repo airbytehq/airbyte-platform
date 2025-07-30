@@ -4,7 +4,7 @@
 
 package io.airbyte.server.helpers
 
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.config.CatalogDiff
 import io.airbyte.config.FieldSchemaUpdate
 import io.airbyte.config.FieldTransform
@@ -27,7 +27,7 @@ object CatalogDiffConverter {
 
   private fun toDomain(streamTransform: ApiStreamTransform): StreamTransform =
     StreamTransform()
-      .withTransformType(Enums.convertTo(streamTransform.transformType, StreamTransform.TransformType::class.java))
+      .withTransformType(streamTransform.transformType.convertTo<StreamTransform.TransformType>())
       .withStreamDescriptor(
         StreamDescriptor()
           .withName(streamTransform.streamDescriptor.name)
@@ -53,7 +53,7 @@ object CatalogDiffConverter {
   private fun toDomain(fieldTransform: ApiFieldTransform): FieldTransform {
     val result =
       FieldTransform()
-        .withTransformType(Enums.convertTo(fieldTransform.transformType, FieldTransform.TransformType::class.java))
+        .withTransformType(fieldTransform.transformType.convertTo<FieldTransform.TransformType>())
         .withFieldName(fieldTransform.fieldName)
         .withBreaking(fieldTransform.breaking)
         .withAddField(fieldTransform.addField?.schema)
@@ -69,7 +69,7 @@ object CatalogDiffConverter {
 
   private fun toDomain(streamAttributeTransform: ApiStreamAttributeTransform): StreamAttributeTransform =
     StreamAttributeTransform()
-      .withTransformType(Enums.convertTo(streamAttributeTransform.transformType, StreamAttributeTransform.TransformType::class.java))
+      .withTransformType(streamAttributeTransform.transformType.convertTo<StreamAttributeTransform.TransformType>())
       .withBreaking(streamAttributeTransform.breaking)
       .withUpdatePrimaryKey(
         StreamAttributePrimaryKeyUpdate()

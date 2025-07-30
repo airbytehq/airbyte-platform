@@ -27,11 +27,24 @@ inline fun <reified T : Enum<T>> Enum<*>.convertTo(): T = enumValueOf(this.name)
 inline fun <reified T : Enum<T>> List<Enum<*>>.convertTo(): List<T> = this.map { it.convertTo<T>() }
 
 /**
- * Convert a string to its values as an enum.
- *
- * Note: the behavior of this differs from the java version, this matches on exact matches only (case and punctuation).
+ * Convert a string to its values as an enum. Normalizes the name to get to a match.
  *
  * @receiver String to convert to an enum of type [T]
  * @return value as enum value [T] or null of not found
  */
-inline fun <reified T : Enum<T>> String.toEnum(): T? = runCatching { enumValueOf<T>(this) }.getOrNull()
+inline fun <reified T : Enum<T>> String.toEnum(): T? = enumValues<T>().firstOrNull { normalizeName(it.name) == normalizeName(this) }
+
+/**
+ * Normalizes a string for case-insensitive and punctuation-insensitive comparison.
+ *
+ * Converts the input to lowercase and removes all non-alphanumeric characters.
+ * Useful for matching strings against enum names or other identifiers in a lenient way.
+ *
+ * Examples:
+ * - "Light-Blue" becomes "lightblue"
+ * - "DARK_RED" becomes "darkred"
+ *
+ * @param name the input string to normalize
+ * @return a normalized version of the string with only lowercase letters and digits
+ */
+fun normalizeName(name: String): String = name.lowercase().replace(Regex("[^a-zA-Z0-9]"), "")

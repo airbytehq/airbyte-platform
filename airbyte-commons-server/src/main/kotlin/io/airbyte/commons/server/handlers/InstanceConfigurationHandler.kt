@@ -16,7 +16,7 @@ import io.airbyte.api.model.generated.WorkspaceUpdate
 import io.airbyte.commons.auth.config.AuthConfigs
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.commons.auth.config.GenericOidcConfig
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.license.ActiveAirbyteLicense
 import io.airbyte.commons.license.AirbyteLicense
 import io.airbyte.commons.server.helpers.KubernetesClientPermissionHelper
@@ -71,7 +71,7 @@ open class InstanceConfigurationHandler(
 
       return InstanceConfigurationResponse()
         .airbyteUrl(airbyteUrl.orElse("airbyte-url-not-configured"))
-        .edition(Enums.convertTo(airbyteEdition, EditionEnum::class.java))
+        .edition(airbyteEdition.convertTo<EditionEnum>())
         .version(airbyteVersion.serialize())
         .licenseStatus(currentLicenseStatus())
         .licenseExpirationDate(licenseExpirationDate())
@@ -124,10 +124,7 @@ open class InstanceConfigurationHandler(
     get() {
       val authConfig =
         AuthConfiguration().mode(
-          Enums.convertTo(
-            authConfigs.authMode,
-            AuthConfiguration.ModeEnum::class.java,
-          ),
+          authConfigs.authMode?.convertTo<AuthConfiguration.ModeEnum>(),
         )
 
       // if Enterprise configurations are present, set OIDC-specific configs

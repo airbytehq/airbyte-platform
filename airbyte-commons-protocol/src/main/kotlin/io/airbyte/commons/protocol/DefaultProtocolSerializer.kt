@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.protocol
 
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
@@ -100,12 +100,9 @@ class DefaultProtocolSerializer : ProtocolSerializer {
     io.airbyte.protocol.models.v0
       .ConfiguredAirbyteStream()
       .withStream(stream.stream.toProtocol())
-      .withSyncMode(Enums.convertTo(stream.syncMode, SyncMode::class.java))
+      .withSyncMode(stream.syncMode.convertTo<SyncMode>())
       .withDestinationSyncMode(
-        Enums.convertTo(
-          stream.destinationSyncMode,
-          io.airbyte.protocol.models.v0.DestinationSyncMode::class.java,
-        ),
+        stream.destinationSyncMode.convertTo<io.airbyte.protocol.models.v0.DestinationSyncMode>(),
       ).withCursorField(stream.cursorField)
       .withPrimaryKey(stream.primaryKey)
       .withGenerationId(stream.generationId)
