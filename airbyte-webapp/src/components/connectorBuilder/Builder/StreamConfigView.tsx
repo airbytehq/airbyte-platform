@@ -1,8 +1,7 @@
 import classNames from "classnames";
-import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useFormContext, useWatch } from "react-hook-form";
+import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { FormControl } from "components/forms";
@@ -52,6 +51,7 @@ import { StreamId, BuilderStreamTab } from "../types";
 import { useAutoImportSchema } from "../useAutoImportSchema";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderWatch } from "../useBuilderWatch";
+import { useUpdateMetadata } from "../useUpdateMetadata";
 import { formatJson, getStreamFieldPath } from "../utils";
 
 interface StreamConfigViewProps {
@@ -79,9 +79,6 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
     | AsyncRetrieverType
     | CustomRetrieverType
     | undefined;
-
-  const metadata = useWatch({ name: "manifest.metadata" });
-  const [prevName, setPrevName] = useState(streamName);
 
   const retrievalType: RetrievalType | null = useMemo(() => {
     if (streamType === StateDelegatingStreamType.StateDelegatingStream) {
@@ -120,36 +117,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
     });
   }, [analyticsService, closeConfirmationModal, streamName, getValues, openConfirmationModal, setValue, streamId]);
 
-  // Copy over stream metadata when renaming
-  useEffect(() => {
-    if (!streamName || streamId.type !== "stream") {
-      return;
-    }
-    if (!prevName) {
-      const metadataClone = cloneDeep(metadata);
-      const newMetadata = {
-        ...metadataClone,
-        autoImportSchema: {
-          ...metadataClone?.autoImportSchema,
-          [streamName]: true,
-        },
-      };
-      setValue("manifest.metadata", newMetadata);
-    }
-    if (metadata && prevName && streamName !== prevName) {
-      const newMetadata = cloneDeep(metadata);
-      if (metadata.autoImportSchema && metadata.autoImportSchema[prevName] !== undefined) {
-        delete newMetadata.autoImportSchema[prevName];
-        newMetadata.autoImportSchema[streamName] = metadata.autoImportSchema[prevName];
-      }
-      if (metadata.testedStreams && metadata.testedStreams[prevName] !== undefined) {
-        delete newMetadata.testedStreams[prevName];
-        newMetadata.testedStreams[streamName] = metadata.testedStreams[prevName];
-      }
-      setValue("manifest.metadata", newMetadata);
-    }
-    setPrevName(streamName);
-  }, [streamName, prevName, metadata, setValue, streamId.type]);
+  useUpdateMetadata(streamId);
 
   const generatedStreamMessage = useMemo(
     () =>
@@ -744,7 +712,7 @@ const SchemaTab = ({
       label={formatMessage({ id: "connectorBuilder.streamSchema" })}
       isSelected={isSelected}
       onSelect={() => onSelect()}
-      showSchemaConflictIndicator={schemaDifferences && !autoImportSchema}
+      showSchemaConflictIndicator={streamId.type !== "generated_stream" && schemaDifferences && !autoImportSchema}
       schemaErrors={incompatibleSchemaErrors}
     />
   );
@@ -760,7 +728,10 @@ const SchemaEditor = ({
   const { formatMessage } = useIntl();
   const { setValue } = useFormContext();
   const { streamRead } = useConnectorBuilderTestRead();
-  const streamName = useBuilderWatch(streamFieldPath("name")) as string | undefined;
+  // Get stream name from getStreamFieldPath instead of streamFieldPath, because streamFieldPath
+  // returns stream template paths, but we want the name of the dynamic stream since that is what
+  // autoImportSchema is tied to.
+  const streamName = useBuilderWatch(getStreamFieldPath(streamId, "name")) as string | undefined;
   const schemaLoaderPath = streamFieldPath("schema_loader");
   const autoImportSchemaPath = `manifest.metadata.autoImportSchema.${streamName}`;
   const autoImportSchema = useBuilderWatch(autoImportSchemaPath);

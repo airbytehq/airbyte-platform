@@ -100,69 +100,72 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
 
   return (
     <FlexContainer direction="column">
-      {mode === "ui" && declaredSchema && !declaredAndInferredSchemasAreEqual && (
-        <Message type="warning" text={<SchemaConflictMessage errors={incompatibleErrors} />}>
-          <FlexItem grow className={styles.mergeButtons}>
-            <FlexContainer direction="column">
-              <FlexContainer>
-                <FlexItem grow>
-                  <Button
-                    full
-                    type="button"
-                    variant="primaryDark"
-                    disabled={declaredAndInferredSchemasAreEqual}
-                    onClick={() => {
-                      setValue(schemaLoaderPath, {
-                        type: InlineSchemaLoaderType.InlineSchemaLoader,
-                        schema: inferredSchema,
-                      });
-                      analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.OVERWRITE_SCHEMA, {
-                        actionDescription: "Declared schema overwritten by detected schema",
-                        stream_name: streamName,
-                      });
-                    }}
-                  >
-                    <FormattedMessage
-                      id={
-                        schemaDiff.lossyOverride
-                          ? "connectorBuilder.overwriteSchemaButton"
-                          : "connectorBuilder.useSchemaButton"
-                      }
-                    />
-                  </Button>
-                </FlexItem>
-                {schemaDiff.mergedSchema && schemaDiff.lossyOverride && (
+      {mode === "ui" &&
+        testStreamId.type !== "generated_stream" &&
+        declaredSchema &&
+        !declaredAndInferredSchemasAreEqual && (
+          <Message type="warning" text={<SchemaConflictMessage errors={incompatibleErrors} />}>
+            <FlexItem grow className={styles.mergeButtons}>
+              <FlexContainer direction="column">
+                <FlexContainer>
                   <FlexItem grow>
-                    <Tooltip
-                      control={
-                        <Button
-                          full
-                          variant="primaryDark"
-                          type="button"
-                          onClick={() => {
-                            setValue(schemaLoaderPath, {
-                              type: InlineSchemaLoaderType.InlineSchemaLoader,
-                              schema: schemaDiff.mergedSchema,
-                            });
-                            analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.MERGE_SCHEMA, {
-                              actionDescription: "Detected and Declared schemas merged to update declared schema",
-                              stream_name: streamName,
-                            });
-                          }}
-                        >
-                          <FormattedMessage id="connectorBuilder.mergeSchemaButton" />
-                        </Button>
-                      }
+                    <Button
+                      full
+                      type="button"
+                      variant="primaryDark"
+                      disabled={declaredAndInferredSchemasAreEqual}
+                      onClick={() => {
+                        setValue(schemaLoaderPath, {
+                          type: InlineSchemaLoaderType.InlineSchemaLoader,
+                          schema: inferredSchema,
+                        });
+                        analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.OVERWRITE_SCHEMA, {
+                          actionDescription: "Declared schema overwritten by detected schema",
+                          stream_name: streamName,
+                        });
+                      }}
                     >
-                      <FormattedMessage id="connectorBuilder.mergeSchemaTooltip" />
-                    </Tooltip>
+                      <FormattedMessage
+                        id={
+                          schemaDiff.lossyOverride
+                            ? "connectorBuilder.overwriteSchemaButton"
+                            : "connectorBuilder.useSchemaButton"
+                        }
+                      />
+                    </Button>
                   </FlexItem>
-                )}
+                  {schemaDiff.mergedSchema && schemaDiff.lossyOverride && (
+                    <FlexItem grow>
+                      <Tooltip
+                        control={
+                          <Button
+                            full
+                            variant="primaryDark"
+                            type="button"
+                            onClick={() => {
+                              setValue(schemaLoaderPath, {
+                                type: InlineSchemaLoaderType.InlineSchemaLoader,
+                                schema: schemaDiff.mergedSchema,
+                              });
+                              analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.MERGE_SCHEMA, {
+                                actionDescription: "Detected and Declared schemas merged to update declared schema",
+                                stream_name: streamName,
+                              });
+                            }}
+                          >
+                            <FormattedMessage id="connectorBuilder.mergeSchemaButton" />
+                          </Button>
+                        }
+                      >
+                        <FormattedMessage id="connectorBuilder.mergeSchemaTooltip" />
+                      </Tooltip>
+                    </FlexItem>
+                  )}
+                </FlexContainer>
               </FlexContainer>
-            </FlexContainer>
-          </FlexItem>
-        </Message>
-      )}
+            </FlexItem>
+          </Message>
+        )}
       {mode === "ui" && !declaredSchema && (
         <Button
           full

@@ -89,6 +89,9 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
           ...values.newStream,
         },
       ]);
+      if (values.newStream.name) {
+        setValue(`manifest.metadata.autoImportSchema.${values.newStream.name}`, true);
+      }
       onAddStream(numStreams);
       analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_CREATE, {
         actionDescription: "New stream created from the Add Stream button",
@@ -102,6 +105,9 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
           ...values.newStream,
         },
       ]);
+      if (values.newStream.name) {
+        setValue(`manifest.metadata.autoImportSchema.${values.newStream.name}`, true);
+      }
       onAddStream(numDynamicStreams);
       analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DYNAMIC_STREAM_CREATE, {
         actionDescription: "New dynamic stream created from the Add Stream button",

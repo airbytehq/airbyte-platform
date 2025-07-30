@@ -547,15 +547,12 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const workspaceId = useCurrentWorkspaceId();
   const { updateCdkVersion, yamlIsDirty } = useConnectorBuilderFormState();
   const { projectId, isResolving, resolveError } = useConnectorBuilderResolve();
-  const { setValue } = useFormContext();
+  const { setValue, getValues } = useFormContext();
   const manifest = removeEmptyProperties(useBuilderWatch("manifest"), true);
   const mode = useBuilderWatch("mode");
   const generatedStreams = useBuilderWatch("generatedStreams");
   const testStreamId = useBuilderWatch("testStreamId");
   const customComponentsCode = useBuilderWatch("customComponentsCode");
-  const autoImportSchemaMetadata = useBuilderWatch("manifest.metadata.autoImportSchema") as
-    | Record<string, boolean>
-    | undefined;
 
   let streamName: string;
   let testStream: DeclarativeComponentSchemaStreamsItem | undefined;
@@ -614,8 +611,6 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
 
   const testStateParsed = testState ? JSON.parse(testState) : undefined;
   const testStateArray = testStateParsed && !Array.isArray(testStateParsed) ? [testStateParsed] : testStateParsed;
-
-  const autoImportSchema = autoImportSchemaMetadata?.[streamName] ?? false;
 
   const { updateStreamTestResults, getStreamHasCustomType } = useStreamTestMetadata();
 
@@ -690,6 +685,12 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       if (result.latest_config_update) {
         setValue("testingValues", result.latest_config_update);
       }
+
+      const autoImportSchemaKey =
+        testStreamId.type === "stream" || testStreamId.type === "dynamic_stream"
+          ? streamName
+          : testStreamId.dynamicStreamName;
+      const autoImportSchema = getValues(`manifest.metadata.autoImportSchema.${autoImportSchemaKey}`);
 
       if (mode === "ui" && autoImportSchema && result.inferred_schema) {
         result.inferred_schema.additionalProperties = true;

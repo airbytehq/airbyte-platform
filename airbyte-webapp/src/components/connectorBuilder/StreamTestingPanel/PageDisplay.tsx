@@ -95,9 +95,10 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
             title: (
               <FlexContainer direction="row" justifyContent="center" alignItems="center" gap="sm">
                 <FormattedMessage id="connectorBuilder.schemaTab" />
-                {mode === "ui" && schemaDifferences && !autoImportSchema && (
-                  <SchemaConflictIndicator errors={incompatibleSchemaErrors} />
-                )}
+                {mode === "ui" &&
+                  testStreamId.type !== "generated_stream" &&
+                  schemaDifferences &&
+                  !autoImportSchema && <SchemaConflictIndicator errors={incompatibleSchemaErrors} />}
               </FlexContainer>
             ),
             content: (
