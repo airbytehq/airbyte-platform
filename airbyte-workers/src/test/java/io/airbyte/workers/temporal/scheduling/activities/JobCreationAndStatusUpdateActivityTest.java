@@ -125,7 +125,7 @@ class JobCreationAndStatusUpdateActivityTest {
               System.currentTimeMillis(), JobStatus.SUCCEEDED, null, null, null, null, null, null), List.of()));
       final JobCreationOutput newJob = jobCreationAndStatusUpdateActivity.createNewJob(new JobCreationInput(CONNECTION_ID, true));
 
-      assertEquals(JOB_ID, newJob.getJobId());
+      assertEquals(JOB_ID, newJob.jobId);
     }
 
     @Test
@@ -187,7 +187,7 @@ class JobCreationAndStatusUpdateActivityTest {
           .thenReturn(new CreateNewAttemptNumberResponse(ATTEMPT_NUMBER_1));
 
       final AttemptNumberCreationOutput output = jobCreationAndStatusUpdateActivity.createNewAttemptNumber(new AttemptCreationInput(JOB_ID));
-      Assertions.assertThat(output.getAttemptNumber()).isEqualTo(ATTEMPT_NUMBER_1);
+      Assertions.assertThat(output.attemptNumber).isEqualTo(ATTEMPT_NUMBER_1);
     }
 
     @Test
@@ -215,10 +215,10 @@ class JobCreationAndStatusUpdateActivityTest {
           new JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber(JOB_ID, ATTEMPT_NUMBER, CONNECTION_ID, standardSyncOutput);
       jobCreationAndStatusUpdateActivity.jobSuccessWithAttemptNumber(request);
       verify(jobsApi).jobSuccessWithAttemptNumber(new JobSuccessWithAttemptNumberRequest(
-          request.getJobId(),
-          request.getAttemptNumber(),
-          request.getConnectionId(),
-          request.getStandardSyncOutput()));
+          request.jobId,
+          request.attemptNumber,
+          request.connectionId,
+          request.standardSyncOutput));
     }
 
     @Test

@@ -63,7 +63,7 @@ class RetryStatePersistenceActivityTest {
 
     verify(mRetryStateClient, times(1)).hydrateRetryState(eq(jobId), Mockito.any());
 
-    assertEquals(manager, result.getManager());
+    assertEquals(manager, result.manager);
   }
 
   @ParameterizedTest
@@ -79,7 +79,7 @@ class RetryStatePersistenceActivityTest {
 
     verify(mRetryStateClient, times(1)).persistRetryState(jobId, connectionId, manager);
 
-    assertEquals(success, result.getSuccess());
+    assertEquals(success, result.success);
   }
 
   public static Stream<Arguments> persistMatrix() {

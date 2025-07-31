@@ -177,7 +177,7 @@ class ConfigFetchActivityTest {
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-        Assertions.assertThat(output.getTimeToWait())
+        Assertions.assertThat(output.timeToWait)
             .isZero();
       }
 
@@ -191,7 +191,7 @@ class ConfigFetchActivityTest {
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-        Assertions.assertThat(output.getTimeToWait())
+        Assertions.assertThat(output.timeToWait)
             .hasDays(100 * 365);
       }
 
@@ -205,7 +205,7 @@ class ConfigFetchActivityTest {
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-        Assertions.assertThat(output.getTimeToWait())
+        Assertions.assertThat(output.timeToWait)
             .hasDays(100 * 365);
       }
 
@@ -219,7 +219,7 @@ class ConfigFetchActivityTest {
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-        Assertions.assertThat(output.getTimeToWait())
+        Assertions.assertThat(output.timeToWait)
             .hasDays(100 * 365);
       }
 
@@ -245,7 +245,7 @@ class ConfigFetchActivityTest {
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-        Assertions.assertThat(output.getTimeToWait())
+        Assertions.assertThat(output.timeToWait)
             .hasMinutes(3);
       }
 
@@ -271,7 +271,7 @@ class ConfigFetchActivityTest {
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-        Assertions.assertThat(output.getTimeToWait())
+        Assertions.assertThat(output.timeToWait)
             .isZero();
       }
 
@@ -285,7 +285,7 @@ class ConfigFetchActivityTest {
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-        Assertions.assertThat(output.getTimeToWait())
+        Assertions.assertThat(output.timeToWait)
             .hasDays(100 * 365);
       }
 
@@ -303,7 +303,7 @@ class ConfigFetchActivityTest {
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-        Assertions.assertThat(output.getTimeToWait())
+        Assertions.assertThat(output.timeToWait)
             .isZero();
       }
 
@@ -327,7 +327,7 @@ class ConfigFetchActivityTest {
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-        Assertions.assertThat(output.getTimeToWait())
+        Assertions.assertThat(output.timeToWait)
             .hasMinutes(3);
       }
 
@@ -373,7 +373,7 @@ class ConfigFetchActivityTest {
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-        Assertions.assertThat(output.getTimeToWait())
+        Assertions.assertThat(output.timeToWait)
             .hasHours(12);
       }
 
@@ -408,7 +408,7 @@ class ConfigFetchActivityTest {
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-        Assertions.assertThat(output.getTimeToWait()).isZero();
+        Assertions.assertThat(output.timeToWait).isZero();
       }
 
       @Test
@@ -437,7 +437,7 @@ class ConfigFetchActivityTest {
 
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
-        Assertions.assertThat(output.getTimeToWait())
+        Assertions.assertThat(output.timeToWait)
             .hasHours(24);
       }
 
@@ -472,7 +472,7 @@ class ConfigFetchActivityTest {
         final ScheduleRetrieverOutput output = configFetchActivity.getTimeToWait(input);
 
         // Note: compareTo returns positive if the left side is greater than the right.
-        Assertions.assertThat(output.getTimeToWait().compareTo(Duration.ofHours(12)) > 0).isTrue();
+        Assertions.assertThat(output.timeToWait.compareTo(Duration.ofHours(12)) > 0).isTrue();
       }
 
     }

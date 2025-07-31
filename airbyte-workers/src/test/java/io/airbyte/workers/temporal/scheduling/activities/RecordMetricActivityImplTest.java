@@ -69,6 +69,7 @@ class RecordMetricActivityImplTest {
 
     verify(metricClient).count(
         eq(METRIC_NAME),
+        eq(1L),
         eq(new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(CONNECTION_ID))),
         eq(new MetricAttribute(MetricTags.WORKSPACE_ID, String.valueOf(WORKSPACE_ID))));
   }
@@ -83,6 +84,7 @@ class RecordMetricActivityImplTest {
 
     verify(metricClient).count(
         eq(METRIC_NAME),
+        eq(1L),
         eq(new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(CONNECTION_ID))),
         eq(new MetricAttribute(MetricTags.WORKSPACE_ID, String.valueOf(WORKSPACE_ID))),
         eq(additionalAttribute));
@@ -97,6 +99,7 @@ class RecordMetricActivityImplTest {
 
     verify(metricClient).count(
         eq(METRIC_NAME),
+        eq(1L),
         eq(new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(CONNECTION_ID))),
         eq(new MetricAttribute(MetricTags.WORKSPACE_ID, String.valueOf(WORKSPACE_ID))),
         eq(new MetricAttribute(MetricTags.FAILURE_CAUSE, failureCause.name())));
@@ -113,6 +116,7 @@ class RecordMetricActivityImplTest {
 
     verify(metricClient).count(
         eq(METRIC_NAME),
+        eq(1L),
         eq(new MetricAttribute(MetricTags.CONNECTION_ID, String.valueOf(CONNECTION_ID_WITHOUT_WORKSPACE))));
   }
 

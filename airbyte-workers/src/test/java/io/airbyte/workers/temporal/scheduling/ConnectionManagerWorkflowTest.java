@@ -980,7 +980,7 @@ class ConnectionManagerWorkflowTest {
       Mockito.verify(mJobCreationAndStatusUpdateActivity, atLeastOnce()).attemptFailureWithAttemptNumber(Mockito.any());
       Mockito.verify(mJobCreationAndStatusUpdateActivity, atLeastOnce()).jobFailure(Mockito.any());
       final AutoDisableConnectionActivityInput autoDisableConnectionActivityInput = new AutoDisableConnectionActivityInput();
-      autoDisableConnectionActivityInput.setConnectionId(connectionId);
+      autoDisableConnectionActivityInput.connectionId = connectionId;
       Mockito.verify(mAutoDisableConnectionActivity).autoDisableFailingConnection(autoDisableConnectionActivityInput);
     }
 
@@ -1396,8 +1396,8 @@ class ConnectionManagerWorkflowTest {
 
       final var captor = ArgumentCaptor.forClass(CheckRunProgressActivity.Input.class);
       Mockito.verify(mCheckRunProgressActivity, times(1)).checkProgress(captor.capture());
-      Assertions.assertThat(captor.getValue().getJobId()).isEqualTo(JOB_ID);
-      Assertions.assertThat(captor.getValue().getAttemptNo()).isEqualTo(attemptNumber);
+      Assertions.assertThat(captor.getValue().jobId).isEqualTo(JOB_ID);
+      Assertions.assertThat(captor.getValue().attemptNo).isEqualTo(attemptNumber);
     }
 
     @ParameterizedTest
@@ -1444,31 +1444,31 @@ class ConnectionManagerWorkflowTest {
       Mockito.verify(mJobCreationAndStatusUpdateActivity, timeout(TEN_SECONDS).times(retryLimit)).createNewAttemptNumber(Mockito.any());
 
       // run 1: hydrate pre scheduling
-      Assertions.assertThat(hydrateCaptor.getAllValues().get(0).getConnectionId()).isEqualTo(connectionId);
-      Assertions.assertThat(hydrateCaptor.getAllValues().get(0).getJobId()).isEqualTo(null);
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(0).connectionId).isEqualTo(connectionId);
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(0).jobId).isEqualTo(null);
       // run 1: hydrate pre run
-      Assertions.assertThat(hydrateCaptor.getAllValues().get(1).getConnectionId()).isEqualTo(connectionId);
-      Assertions.assertThat(hydrateCaptor.getAllValues().get(1).getJobId()).isEqualTo(null);
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(1).connectionId).isEqualTo(connectionId);
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(1).jobId).isEqualTo(null);
       // run 1: persist
-      Assertions.assertThat(persistCaptor.getAllValues().get(0).getConnectionId()).isEqualTo(connectionId);
-      Assertions.assertThat(persistCaptor.getAllValues().get(0).getJobId()).isEqualTo(jobId);
-      Assertions.assertThat(persistCaptor.getAllValues().get(0).getManager().getSuccessivePartialFailures()).isEqualTo(1);
-      Assertions.assertThat(persistCaptor.getAllValues().get(0).getManager().getTotalPartialFailures()).isEqualTo(1);
+      Assertions.assertThat(persistCaptor.getAllValues().get(0).connectionId).isEqualTo(connectionId);
+      Assertions.assertThat(persistCaptor.getAllValues().get(0).jobId).isEqualTo(jobId);
+      Assertions.assertThat(persistCaptor.getAllValues().get(0).manager.getSuccessivePartialFailures()).isEqualTo(1);
+      Assertions.assertThat(persistCaptor.getAllValues().get(0).manager.getTotalPartialFailures()).isEqualTo(1);
 
       // run 2: hydrate pre scheduling
-      Assertions.assertThat(hydrateCaptor.getAllValues().get(2).getConnectionId()).isEqualTo(connectionId);
-      Assertions.assertThat(hydrateCaptor.getAllValues().get(2).getJobId()).isEqualTo(jobId);
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(2).connectionId).isEqualTo(connectionId);
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(2).jobId).isEqualTo(jobId);
       // run 2: hydrate pre run
-      Assertions.assertThat(hydrateCaptor.getAllValues().get(3).getConnectionId()).isEqualTo(connectionId);
-      Assertions.assertThat(hydrateCaptor.getAllValues().get(3).getJobId()).isEqualTo(jobId);
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(3).connectionId).isEqualTo(connectionId);
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(3).jobId).isEqualTo(jobId);
       // run 2: persist
-      Assertions.assertThat(persistCaptor.getAllValues().get(1).getConnectionId()).isEqualTo(connectionId);
-      Assertions.assertThat(persistCaptor.getAllValues().get(1).getJobId()).isEqualTo(jobId);
-      Assertions.assertThat(persistCaptor.getAllValues().get(1).getManager().getSuccessivePartialFailures()).isEqualTo(2);
-      Assertions.assertThat(persistCaptor.getAllValues().get(1).getManager().getTotalPartialFailures()).isEqualTo(2);
+      Assertions.assertThat(persistCaptor.getAllValues().get(1).connectionId).isEqualTo(connectionId);
+      Assertions.assertThat(persistCaptor.getAllValues().get(1).jobId).isEqualTo(jobId);
+      Assertions.assertThat(persistCaptor.getAllValues().get(1).manager.getSuccessivePartialFailures()).isEqualTo(2);
+      Assertions.assertThat(persistCaptor.getAllValues().get(1).manager.getTotalPartialFailures()).isEqualTo(2);
       // run 3: hydrate pre scheduling
-      Assertions.assertThat(hydrateCaptor.getAllValues().get(4).getConnectionId()).isEqualTo(connectionId);
-      Assertions.assertThat(hydrateCaptor.getAllValues().get(4).getJobId()).isEqualTo(null);
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(4).connectionId).isEqualTo(connectionId);
+      Assertions.assertThat(hydrateCaptor.getAllValues().get(4).jobId).isEqualTo(null);
     }
 
     @ParameterizedTest
@@ -1804,7 +1804,7 @@ class ConnectionManagerWorkflowTest {
 
     @Override
     public boolean matches(final AttemptNumberFailureInput arg) {
-      return arg.getAttemptFailureSummary().getFailures().stream().anyMatch(f -> f.getFailureOrigin().equals(expectedFailureOrigin));
+      return arg.attemptFailureSummary.getFailures().stream().anyMatch(f -> f.getFailureOrigin().equals(expectedFailureOrigin));
     }
 
   }
@@ -1821,7 +1821,7 @@ class ConnectionManagerWorkflowTest {
 
     @Override
     public boolean matches(final AttemptNumberFailureInput arg) {
-      final Stream<FailureReason> stream = arg.getAttemptFailureSummary().getFailures().stream();
+      final Stream<FailureReason> stream = arg.attemptFailureSummary.getFailures().stream();
       return stream.anyMatch(f -> f.getFailureOrigin().equals(expectedFailureOrigin) && f.getFailureType().equals(expectedFailureType));
     }
 
@@ -1839,8 +1839,8 @@ class ConnectionManagerWorkflowTest {
 
     @Override
     public boolean matches(final JobCancelledInputWithAttemptNumber arg) {
-      return arg.getAttemptFailureSummary().getFailures().stream().anyMatch(f -> f.getFailureType().equals(FailureType.MANUAL_CANCELLATION))
-          && arg.getJobId() == expectedJobId && arg.getAttemptNumber() == expectedAttemptNumber;
+      return arg.attemptFailureSummary.getFailures().stream().anyMatch(f -> f.getFailureType().equals(FailureType.MANUAL_CANCELLATION))
+          && arg.jobId == expectedJobId && arg.attemptNumber == expectedAttemptNumber;
     }
 
   }

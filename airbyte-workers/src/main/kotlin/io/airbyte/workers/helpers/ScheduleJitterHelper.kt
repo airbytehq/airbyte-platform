@@ -46,7 +46,7 @@ class ScheduleJitterHelper(
    */
   fun addJitterBasedOnWaitTime(
     waitTime: Duration,
-    scheduleType: ConnectionScheduleType,
+    scheduleType: ConnectionScheduleType?,
   ): Duration {
     // If the wait time is less than the cutoff, don't add any jitter.
     if (waitTime.toMinutes() <= noJitterCutoffMinutes) {

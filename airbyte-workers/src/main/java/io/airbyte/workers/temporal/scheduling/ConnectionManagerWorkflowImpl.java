@@ -520,7 +520,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
             failureReason));
 
     final AutoDisableConnectionActivityInput autoDisableConnectionActivityInput = new AutoDisableConnectionActivityInput();
-    autoDisableConnectionActivityInput.setConnectionId(connectionId);
+    autoDisableConnectionActivityInput.connectionId = connectionId;
     final AutoDisableConnectionOutput output = runMandatoryActivityWithOutput(
         autoDisableConnectionActivity::autoDisableFailingConnection,
         autoDisableConnectionActivityInput);
@@ -951,7 +951,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
     final ScheduleRetrieverOutput scheduleRetrieverOutput = runMandatoryActivityWithOutput(configFetchActivity::getTimeToWait,
         scheduleRetrieverInput);
 
-    return scheduleRetrieverOutput.getTimeToWait();
+    return scheduleRetrieverOutput.timeToWait;
   }
 
   private void ensureCleanJobState(final ConnectionUpdaterInput connectionUpdaterInput) {
@@ -992,9 +992,9 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
         runMandatoryActivityWithOutput(
             jobCreationAndStatusUpdateActivity::createNewJob,
             new JobCreationInput(connectionUpdaterInput.getConnectionId(), !workflowState.isSkipScheduling()));
-    connectionUpdaterInput.setJobId(jobCreationOutput.getJobId());
+    connectionUpdaterInput.setJobId(jobCreationOutput.jobId);
 
-    return jobCreationOutput.getJobId();
+    return jobCreationOutput.jobId;
   }
 
   private Map<String, Boolean> getFeatureFlags(final UUID connectionId) {
@@ -1007,7 +1007,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
     final FeatureFlagFetchOutput getFlagsOutput =
         runMandatoryActivityWithOutput(featureFlagFetchActivity::getFeatureFlags, new FeatureFlagFetchInput(connectionId));
-    return getFlagsOutput.getFeatureFlags();
+    return getFlagsOutput.featureFlags;
   }
 
   /**
@@ -1023,7 +1023,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
             jobCreationAndStatusUpdateActivity::createNewAttemptNumber,
             new AttemptCreationInput(
                 jobId));
-    return attemptNumberCreationOutput.getAttemptNumber();
+    return attemptNumberCreationOutput.attemptNumber;
   }
 
   private JobRunConfig getJobRunConfig() {
@@ -1285,7 +1285,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
         RetryStatePersistenceActivity.class.getName(),
         "hydrateRetryState");
 
-    return result.getManager();
+    return result.manager;
   }
 
   private void accumulateFailureAndPersist(final boolean madeProgress) {
@@ -1366,7 +1366,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
         AppendToAttemptLogActivity.class.getName(),
         "log");
 
-    return result.getSuccess();
+    return result.success;
   }
 
   /**

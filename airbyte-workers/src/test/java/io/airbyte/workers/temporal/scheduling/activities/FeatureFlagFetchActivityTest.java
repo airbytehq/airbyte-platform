@@ -69,8 +69,8 @@ class FeatureFlagFetchActivityTest {
     FeatureFlagFetchActivity.FeatureFlagFetchOutput featureFlagFetchOutput =
         featureFlagFetchActivity.getFeatureFlags(input);
 
-    assertTrue(featureFlagFetchOutput.getFeatureFlags().get(UseSyncV2.INSTANCE.getKey()));
-    assertTrue(featureFlagFetchOutput.getFeatureFlags().get(UseCommandCheck.INSTANCE.getKey()));
+    assertTrue(featureFlagFetchOutput.featureFlags.get(UseSyncV2.INSTANCE.getKey()));
+    assertTrue(featureFlagFetchOutput.featureFlags.get(UseCommandCheck.INSTANCE.getKey()));
   }
 
 }

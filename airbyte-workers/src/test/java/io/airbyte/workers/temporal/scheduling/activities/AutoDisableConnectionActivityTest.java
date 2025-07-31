@@ -40,7 +40,7 @@ class AutoDisableConnectionActivityTest {
   @BeforeEach
   void setUp() {
     activityInput = new AutoDisableConnectionActivityInput();
-    activityInput.setConnectionId(CONNECTION_ID);
+    activityInput.connectionId = CONNECTION_ID;
 
     autoDisableActivity = new AutoDisableConnectionActivityImpl(mAirbyteApiClient);
   }

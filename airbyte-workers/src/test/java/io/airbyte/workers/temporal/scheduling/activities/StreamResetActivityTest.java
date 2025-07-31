@@ -50,8 +50,8 @@ class StreamResetActivityTest {
     streamResetActivity.deleteStreamResetRecordsForJob(input);
 
     verify(jobsApi).deleteStreamResetRecordsForJob(req.capture());
-    assertEquals(input.getJobId(), req.getValue().getJobId());
-    assertEquals(input.getConnectionId(), req.getValue().getConnectionId());
+    assertEquals(input.jobId, req.getValue().getJobId());
+    assertEquals(input.connectionId, req.getValue().getConnectionId());
   }
 
   @Test
