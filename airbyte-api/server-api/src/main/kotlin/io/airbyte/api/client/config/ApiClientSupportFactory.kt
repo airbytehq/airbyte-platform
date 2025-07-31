@@ -5,12 +5,12 @@
 package io.airbyte.api.client.config
 
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.ThrowOn5xxInterceptor
-import io.airbyte.api.client.UserAgentInterceptor
 import io.airbyte.api.client.auth.AccessTokenInterceptor
 import io.airbyte.api.client.auth.KeycloakAccessTokenInterceptor
 import io.airbyte.api.client.auth.StaticTokenInterceptor
 import io.airbyte.api.client.config.ClientConfigurationSupport.generateDefaultRetryPolicy
+import io.airbyte.api.client.interceptor.ThrowOn5xxInterceptor
+import io.airbyte.api.client.interceptor.UserAgentInterceptor
 import io.airbyte.metrics.MetricClient
 import io.micronaut.context.annotation.ConfigurationProperties
 import io.micronaut.context.annotation.Factory

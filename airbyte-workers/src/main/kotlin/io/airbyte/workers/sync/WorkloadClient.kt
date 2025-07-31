@@ -4,21 +4,21 @@
 
 package io.airbyte.workers.sync
 
+import io.airbyte.api.client.ApiException
 import io.airbyte.commons.temporal.HeartbeatUtils
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.workers.workload.WorkloadConstants.WORKLOAD_CANCELLED_BY_USER_REASON
 import io.airbyte.workers.workload.WorkloadOutputWriter
 import io.airbyte.workload.api.client.WorkloadApiClient
-import io.airbyte.workload.api.client.model.generated.Workload
-import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadStatus
+import io.airbyte.workload.api.domain.Workload
+import io.airbyte.workload.api.domain.WorkloadCancelRequest
+import io.airbyte.workload.api.domain.WorkloadCreateRequest
+import io.airbyte.workload.api.domain.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpStatus
 import io.temporal.activity.ActivityExecutionContext
 import jakarta.inject.Singleton
-import org.openapitools.client.infrastructure.ClientException
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.seconds
@@ -41,13 +41,12 @@ class WorkloadClient(
 
   fun createWorkload(workloadCreateRequest: WorkloadCreateRequest) {
     try {
-      workloadApiClient.workloadApi.workloadCreate(workloadCreateRequest)
-    } catch (e: ClientException) {
+      workloadApiClient.workloadCreate(workloadCreateRequest)
+    } catch (e: ApiException) {
       /*
        * The Workload API returns a 409 response when the request to execute the workload has already been
-       * created. That response is handled in the form of a ClientException by the generated OpenAPI
-       * client. We do not want to cause the Temporal workflow to retry, so catch it and log the
-       * information so that the workflow will continue.
+       * created. That response is handled in the form of an ApiException by the retrofit WorkloadApiClient.
+       * We do not want to cause the Temporal workflow to retry, so catch it and log the information so that the workflow will continue.
        */
       if (e.statusCode == HttpStatus.CONFLICT.code) {
         logger.warn { "Workload ${workloadCreateRequest.workloadId} already created and in progress.  Continuing..." }
@@ -59,17 +58,17 @@ class WorkloadClient(
     }
   }
 
-  fun isTerminal(workloadId: String) = isWorkloadTerminal(workloadApiClient.workloadApi.workloadGet(workloadId))
+  fun isTerminal(workloadId: String) = isWorkloadTerminal(workloadApiClient.workloadGet(workloadId))
 
   fun waitForWorkload(
     workloadId: String,
     pollingFrequencyInSeconds: Int,
   ) {
     try {
-      var workload = workloadApiClient.workloadApi.workloadGet(workloadId)
+      var workload = workloadApiClient.workloadGet(workloadId)
       while (!isWorkloadTerminal(workload)) {
         Thread.sleep(pollingFrequencyInSeconds.seconds.inWholeMilliseconds)
-        workload = workloadApiClient.workloadApi.workloadGet(workloadId)
+        workload = workloadApiClient.workloadGet(workloadId)
       }
     } catch (e: IOException) {
       throw RuntimeException(e)
@@ -95,8 +94,8 @@ class WorkloadClient(
    */
   fun cancelWorkloadBestEffort(req: WorkloadCancelRequest) {
     try {
-      workloadApiClient.workloadApi.workloadCancel(req)
-    } catch (e: ClientException) {
+      workloadApiClient.workloadCancel(req)
+    } catch (e: ApiException) {
       when (e.statusCode) {
         HttpStatus.GONE.code -> logger.warn { "Workload: ${req.workloadId} already terminal. Cancellation is a no-op." }
         HttpStatus.NOT_FOUND.code -> logger.warn { "Workload: ${req.workloadId} not yet created. Cancellation is a no-op." }
@@ -136,7 +135,7 @@ class WorkloadClient(
   ): FailureReason {
     return Result
       .runCatching {
-        val workload = workloadApiClient.workloadApi.workloadGet(workloadId)
+        val workload = workloadApiClient.workloadGet(workloadId)
 
         return when (workload.status) {
           // This is pretty bad, the workload succeeded, but we failed to read the output

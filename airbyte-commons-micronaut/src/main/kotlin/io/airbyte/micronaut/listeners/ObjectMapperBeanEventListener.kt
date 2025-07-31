@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.micronaut.config.event
+package io.airbyte.micronaut.listeners
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.commons.jackson.MoreMappers

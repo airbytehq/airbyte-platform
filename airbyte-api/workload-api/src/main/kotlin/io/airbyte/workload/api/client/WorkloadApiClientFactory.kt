@@ -2,30 +2,31 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workload.api.client.config
+package io.airbyte.workload.api.client
 
-import io.airbyte.api.client.UserAgentInterceptor
+import io.airbyte.api.client.ApiException
 import io.airbyte.api.client.auth.StaticTokenInterceptor
 import io.airbyte.api.client.config.ApiClientSupportFactory
-import io.airbyte.api.client.config.ClientApiType
-import io.airbyte.api.client.config.ClientConfigurationSupport.generateDefaultRetryPolicy
 import io.airbyte.api.client.config.InternalApiClientConfig
+import io.airbyte.api.client.interceptor.UserAgentInterceptor
+import io.airbyte.commons.jackson.MoreMappers
 import io.airbyte.metrics.MetricClient
-import io.airbyte.workload.api.client.WorkloadApiClient
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
-import java.io.IOException
+import okio.IOException
+import retrofit2.Retrofit
+import retrofit2.converter.jackson.JacksonConverterFactory
+import retrofit2.create
 import java.time.Duration
 import java.util.Base64
-import io.airbyte.workload.api.client.generated.infrastructure.ClientException as WorkloadApiClientException
-import io.airbyte.workload.api.client.generated.infrastructure.ServerException as WorkloadApiServerException
+import kotlin.time.Duration.Companion.seconds
 
 @Factory
 @Requires(property = "airbyte.workload-api.base-path")
-class WorkloadApiClientSupportFactory(
+class WorkloadApiClientFactory(
   @Property(name = "micronaut.application.name") private val applicationName: String,
   @Property(name = "airbyte.workload-api.base-path") private val basePath: String,
   @Property(name = "airbyte.workload-api.bearer-token") private val bearerToken: String,
@@ -34,25 +35,22 @@ class WorkloadApiClientSupportFactory(
   @Property(name = "airbyte.workload-api.jitter-factor") private val jitterFactor: Double = .25,
   @Property(name = "airbyte.workload-api.connect-timeout-seconds") private val connectTimeoutSeconds: Long,
   @Property(name = "airbyte.workload-api.read-timeout-seconds") private val readTimeoutSeconds: Long,
-  private val config: InternalApiClientConfig,
   private val metricClient: MetricClient,
+  private val config: InternalApiClientConfig,
 ) {
   @Singleton
   fun workloadApiClient(): WorkloadApiClient {
-    val retryPolicy =
-      generateDefaultRetryPolicy(
-        retryDelaySeconds = retryDelaySeconds,
-        jitterFactor = jitterFactor,
+    val retryConfig =
+      RetryPolicyConfig(
+        delay = retryDelaySeconds.seconds,
         maxRetries = maxRetries,
-        metricClient = metricClient,
-        clientApiType = ClientApiType.WORKLOAD,
-        clientRetryExceptions =
+        jitterFactor = jitterFactor,
+        exceptions =
           listOf(
-            IllegalStateException::class.java,
+            IllegalArgumentException::class.java,
             IOException::class.java,
             UnsupportedOperationException::class.java,
-            WorkloadApiClientException::class.java,
-            WorkloadApiServerException::class.java,
+            ApiException::class.java,
           ),
       )
 
@@ -74,6 +72,21 @@ class WorkloadApiClientSupportFactory(
           readTimeout(Duration.ofSeconds(readTimeoutSeconds))
           connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
         }.build()
-    return WorkloadApiClient(basePath, retryPolicy, httpClient)
+
+    val reactorApi =
+      Retrofit
+        .Builder()
+        .client(httpClient)
+        .baseUrl("$basePath/api/v1/workload/")
+        // TODO(cole): inject mapper once the mapper has been updated to be injectable
+        .addConverterFactory(JacksonConverterFactory.create(MoreMappers.initMapper()))
+        .build()
+        .create<WorkloadApi>()
+
+    return WorkloadApiClient(
+      metricClient = metricClient,
+      api = reactorApi,
+      retryConfig = retryConfig,
+    )
   }
 }

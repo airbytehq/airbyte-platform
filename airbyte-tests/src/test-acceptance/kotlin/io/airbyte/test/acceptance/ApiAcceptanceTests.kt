@@ -25,7 +25,6 @@ import org.openapitools.client.infrastructure.ClientException
 import java.io.IOException
 import java.util.List
 import java.util.Optional
-import java.util.Set
 import java.util.UUID
 import java.util.function.Consumer
 
@@ -200,7 +199,7 @@ internal class ApiAcceptanceTests {
         ).connectionId
 
     val connectionSyncRead = testHarness.syncConnection(connectionId)
-    testHarness.waitWhileJobHasStatus(connectionSyncRead.job, Set.of(JobStatus.RUNNING))
+    testHarness.waitWhileJobHasStatus(connectionSyncRead.job, setOf(JobStatus.RUNNING))
 
     // test normal deletion of connection
     log.info { "Calling delete connection..." }

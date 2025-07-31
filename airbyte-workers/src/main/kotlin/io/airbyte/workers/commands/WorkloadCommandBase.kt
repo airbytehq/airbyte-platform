@@ -7,8 +7,8 @@ package io.airbyte.workers.commands
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.workers.sync.WorkloadClient
 import io.airbyte.workers.workload.WorkloadConstants
-import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest
+import io.airbyte.workload.api.domain.WorkloadCancelRequest
+import io.airbyte.workload.api.domain.WorkloadCreateRequest
 
 abstract class WorkloadCommandBase<Input>(
   protected val airbyteApiClient: AirbyteApiClient,

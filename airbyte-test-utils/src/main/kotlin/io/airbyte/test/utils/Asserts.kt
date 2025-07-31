@@ -18,7 +18,6 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.Assertions
 import java.time.Duration
 import java.util.UUID
-import java.util.function.Consumer
 import java.util.stream.Collectors
 
 /**
@@ -193,9 +192,10 @@ object Asserts {
 
     val streamStatuses = fetchStreamStatus(testHarness, workspaceId, connectionId, jobId, attemptNumber)
     Assertions.assertNotNull(streamStatuses)
-    val filteredStreamStatuses = streamStatuses.stream().filter { s: StreamStatusRead -> expectedJobType == s.jobType }.toList()
+    val filteredStreamStatuses = streamStatuses.filter { expectedJobType == it.jobType }.toList()
     Assertions.assertFalse(filteredStreamStatuses.isEmpty())
-    filteredStreamStatuses.forEach(Consumer { status: StreamStatusRead -> Assertions.assertEquals(expectedRunState, status.runState) })
+
+    filteredStreamStatuses.forEach { Assertions.assertEquals(expectedRunState, it.runState) }
   }
 
   /**
@@ -245,10 +245,8 @@ object Asserts {
       log.debug { "Fetching stream status for {} {} {} $connectionId, jobId, attempt, workspaceId..." }
       try {
         val result = testHarness.getStreamStatuses(connectionId, jobId, attempt, workspaceId)
-        if (result != null) {
-          log.debug { "Stream status result for connection {}: $connectionId, result" }
-          results = result.streamStatuses ?: emptyList()
-        }
+        log.debug { "Stream status result for connection {}: $connectionId, result" }
+        results = result.streamStatuses ?: emptyList()
       } catch (e: Exception) {
         log.info("Unable to call stream status API.", e)
       }

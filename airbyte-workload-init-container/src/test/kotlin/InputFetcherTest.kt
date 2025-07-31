@@ -4,6 +4,7 @@
 
 package io.airbyte.initContainer
 
+import io.airbyte.config.WorkloadType
 import io.airbyte.initContainer.InputFetcherTest.Fixtures.WORKLOAD_ID
 import io.airbyte.initContainer.InputFetcherTest.Fixtures.workload
 import io.airbyte.initContainer.input.InputHydrationProcessor
@@ -11,8 +12,7 @@ import io.airbyte.initContainer.system.SystemClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.workers.models.InitContainerConstants
 import io.airbyte.workload.api.client.WorkloadApiClient
-import io.airbyte.workload.api.client.model.generated.Workload
-import io.airbyte.workload.api.client.model.generated.WorkloadType
+import io.airbyte.workload.api.domain.Workload
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
@@ -53,57 +53,57 @@ class InputFetcherTest {
 
   @Test
   fun `fetches input and processes it`() {
-    every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } returns workload
+    every { workloadApiClient.workloadGet(WORKLOAD_ID) } returns workload
     every { inputProcessor.process(workload) } returns Unit
 
     fetcher.fetch()
 
-    verify { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) }
+    verify { workloadApiClient.workloadGet(WORKLOAD_ID) }
     verify { inputProcessor.process(workload) }
   }
 
   @Test
   fun `fails workload on workload fetch error`() {
-    every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } throws Exception("bang")
-    every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Unit
+    every { workloadApiClient.workloadGet(WORKLOAD_ID) } throws Exception("bang")
+    every { workloadApiClient.workloadFailure(any()) } returns Unit
     every { systemClient.exitProcess(any()) } returns Unit
 
     fetcher.fetch()
 
-    verify { workloadApiClient.workloadApi.workloadFailure(any()) }
+    verify { workloadApiClient.workloadFailure(any()) }
     verify { systemClient.exitProcess(InitContainerConstants.WORKLOAD_API_ERROR_EXIT_CODE) }
   }
 
   @Test
   fun `fails workload on workload process error`() {
-    every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } returns workload
+    every { workloadApiClient.workloadGet(WORKLOAD_ID) } returns workload
     every { inputProcessor.process(workload) } throws Exception("bang")
-    every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Unit
+    every { workloadApiClient.workloadFailure(any()) } returns Unit
     every { systemClient.exitProcess(any()) } returns Unit
 
     fetcher.fetch()
 
-    verify { workloadApiClient.workloadApi.workloadFailure(any()) }
+    verify { workloadApiClient.workloadFailure(any()) }
     verify { systemClient.exitProcess(InitContainerConstants.UNEXPECTED_ERROR_EXIT_CODE) }
   }
 
   @Test
   fun `fails workload on with specific error on secret coordinate error`() {
-    every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } returns workload
+    every { workloadApiClient.workloadGet(WORKLOAD_ID) } returns workload
     every { inputProcessor.process(workload) } throws SecretCoordinateException("bang")
-    every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Unit
+    every { workloadApiClient.workloadFailure(any()) } returns Unit
     every { systemClient.exitProcess(any()) } returns Unit
 
     fetcher.fetch()
 
-    verify { workloadApiClient.workloadApi.workloadFailure(any()) }
+    verify { workloadApiClient.workloadFailure(any()) }
     verify { systemClient.exitProcess(InitContainerConstants.SECRET_HYDRATION_ERROR_EXIT_CODE) }
   }
 
   @Test
   fun `exception not thrown if failure when failing workload`() {
-    every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } throws Exception("bang")
-    every { workloadApiClient.workloadApi.workloadFailure(any()) } throws Exception("bang 1")
+    every { workloadApiClient.workloadGet(WORKLOAD_ID) } throws Exception("bang")
+    every { workloadApiClient.workloadFailure(any()) } throws Exception("bang 1")
     every { systemClient.exitProcess(any()) } returns Unit
 
     fetcher.fetch()
@@ -117,7 +117,7 @@ class InputFetcherTest {
     val workload =
       Workload(
         id = WORKLOAD_ID,
-        labels = listOf(),
+        labels = mutableListOf(),
         inputPayload = "inputPayload",
         logPath = "logPath",
         type = WorkloadType.SYNC,

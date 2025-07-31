@@ -8,6 +8,7 @@ dependencies {
   ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
+  implementation(libs.bundles.micronaut.kotlin)
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.micronaut.annotation)
   implementation(libs.micronaut.security)

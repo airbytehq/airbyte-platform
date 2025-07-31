@@ -6,8 +6,8 @@ package io.airbyte.workload.launcher.model
 
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 
-typealias OpenApiWorkload = io.airbyte.workload.api.client.model.generated.Workload
-typealias OpenApiWorkloadType = io.airbyte.workload.api.client.model.generated.WorkloadType
+typealias OpenApiWorkload = io.airbyte.workload.api.domain.Workload
+typealias OpenApiWorkloadType = io.airbyte.config.WorkloadType
 typealias InternalApiWorkloadType = io.airbyte.config.WorkloadType
 
 fun OpenApiWorkloadType.toInternalApi(): io.airbyte.config.WorkloadType =

@@ -4,12 +4,12 @@
 
 package io.airbyte.container.orchestrator.worker
 
+import io.airbyte.api.client.ApiException
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatTimeoutException
 import io.airbyte.workload.api.client.WorkloadApiClient
-import io.airbyte.workload.api.client.generated.infrastructure.ClientException
-import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
+import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import io.micronaut.http.HttpStatus
@@ -34,26 +34,6 @@ class WorkloadHeartbeatSender(
   @Value("\${airbyte.job-id}") private val jobId: Long,
   @Named("attemptId") private val attempt: Int,
 ) {
-  /**
-   * Checks if the time since the last successful heartbeat exceeds the allowed timeout.
-   * If so, marks the replication as failed, aborts it, tracks the failure, and returns true.
-   * Otherwise, returns false.
-   */
-  private fun checkIfExpiredAndMarkSyncStateAsFailed(
-    lastSuccessfulHeartbeat: Instant,
-    heartbeatTimeoutDuration: Duration,
-    exception: Throwable,
-  ): Boolean =
-    if (Duration.between(lastSuccessfulHeartbeat, Instant.now()) > heartbeatTimeoutDuration) {
-      logger.warn(exception) { "Heartbeat timeout exceeded. Shutting down heartbeat." }
-      replicationWorkerState.trackFailure(exception, jobId, attempt)
-      replicationWorkerState.markFailed()
-      replicationWorkerState.abort()
-      true
-    } else {
-      false
-    }
-
   /**
    * Sends periodic heartbeat requests until cancellation, terminal error, or heartbeat timeout.
    *
@@ -94,7 +74,7 @@ class WorkloadHeartbeatSender(
 
           else -> {
             logger.debug { "Sending workload heartbeat." }
-            workloadApiClient.workloadApi.workloadHeartbeat(WorkloadHeartbeatRequest(workloadId))
+            workloadApiClient.workloadHeartbeat(WorkloadHeartbeatRequest(workloadId))
             lastSuccessfulHeartbeat = now
           }
         }
@@ -104,7 +84,7 @@ class WorkloadHeartbeatSender(
           // it has been canceled by the user or failed from the workload-api. Could be timeout from the workload monitor or workload
           // has been superseded by another workload.
           // In this case, the workload has already been failed, we should exit ASAP.
-          e is ClientException && e.statusCode == HttpStatus.GONE.code -> {
+          e is ApiException && e.statusCode == HttpStatus.GONE.code -> {
             logger.warn(e) { "Workload in terminal state; exiting." }
             exitAsap()
             break

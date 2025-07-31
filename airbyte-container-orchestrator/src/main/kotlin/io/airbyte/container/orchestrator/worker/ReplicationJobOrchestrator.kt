@@ -26,9 +26,9 @@ import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.workload.WorkloadOutputWriter
 import io.airbyte.workload.api.client.WorkloadApiClient
-import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadSuccessRequest
+import io.airbyte.workload.api.domain.WorkloadCancelRequest
+import io.airbyte.workload.api.domain.WorkloadFailureRequest
+import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -174,7 +174,8 @@ class ReplicationJobOrchestrator(
 
   @Throws(IOException::class)
   private fun cancelWorkload(workloadId: String) {
-    workloadApiClient.workloadApi.workloadCancel(WorkloadCancelRequest(workloadId, "Replication job has been cancelled", "orchestrator"))
+    val req = WorkloadCancelRequest(workloadId, "Replication job has been cancelled", "orchestrator")
+    workloadApiClient.workloadCancel(req)
   }
 
   private fun failWorkload(
@@ -195,7 +196,7 @@ class ReplicationJobOrchestrator(
     failureReason: FailureReason?,
   ) {
     if (failureReason != null) {
-      workloadApiClient.workloadApi.workloadFailure(
+      workloadApiClient.workloadFailure(
         WorkloadFailureRequest(
           workloadId,
           failureReason.failureOrigin.value(),
@@ -203,13 +204,13 @@ class ReplicationJobOrchestrator(
         ),
       )
     } else {
-      workloadApiClient.workloadApi.workloadFailure(WorkloadFailureRequest(workloadId, null, null))
+      workloadApiClient.workloadFailure(WorkloadFailureRequest(workloadId, null, null))
     }
   }
 
   @Throws(IOException::class)
   private fun succeedWorkload(workloadId: String) {
-    workloadApiClient.workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
+    workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId))
   }
 
   @VisibleForTesting

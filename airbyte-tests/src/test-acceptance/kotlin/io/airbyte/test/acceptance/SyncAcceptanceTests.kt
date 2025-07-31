@@ -34,7 +34,6 @@ import io.airbyte.test.utils.Databases
 import io.airbyte.test.utils.Databases.listAllTables
 import io.airbyte.test.utils.Databases.retrieveRecordsFromDatabase
 import io.airbyte.test.utils.TestConnectionCreate
-import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -47,7 +46,6 @@ import java.io.IOException
 import java.security.KeyPairGenerator
 import java.time.Duration
 import java.util.Optional
-import java.util.Set
 import java.util.UUID
 import javax.crypto.Cipher
 
@@ -142,35 +140,35 @@ internal abstract class SyncAcceptanceTests(
       val dstSyncMode = DestinationSyncMode.OVERWRITE
       val catalog =
         modifyCatalog(
-          discoverResult.catalog,
-          Optional.of(srcSyncMode),
-          Optional.of(dstSyncMode),
-          Optional.empty(),
-          Optional.empty(),
-          Optional.empty(),
-          Optional.empty(),
-          Optional.empty(),
-          Optional.empty(),
-          Optional.empty(),
-          Optional.empty(),
-          Optional.empty(),
+          originalCatalog = discoverResult.catalog,
+          replacementSourceSyncMode = Optional.of(srcSyncMode),
+          replacementDestinationSyncMode = Optional.of(dstSyncMode),
+          replacementCursorFields = Optional.empty(),
+          replacementPrimaryKeys = Optional.empty(),
+          replacementSelected = Optional.empty(),
+          replacementFieldSelectionEnabled = Optional.empty(),
+          replacementSelectedFields = Optional.empty(),
+          replacementMinimumGenerationId = Optional.empty(),
+          replacementGenerationId = Optional.empty(),
+          replacementSyncId = Optional.empty(),
+          streamFilter = Optional.empty(),
         )
       val connectionId =
         testHarness
           .createConnection(
             TestConnectionCreate
               .Builder(
-                sourceId,
-                destinationId,
-                catalog,
-                discoverResult.catalogId!!,
-                testHarness.dataplaneGroupId,
+                srcId = sourceId,
+                dstId = destinationId,
+                configuredCatalog = catalog,
+                catalogId = discoverResult.catalogId!!,
+                dataplaneGroupId = testHarness.dataplaneGroupId,
               ).build(),
           ).connectionId
       val connectionSyncRead = testHarness.syncConnection(connectionId)
 
       // wait to get out of PENDING
-      val jobRead = testHarness.waitWhileJobHasStatus(connectionSyncRead.job, Set.of(JobStatus.PENDING))
+      val jobRead = testHarness.waitWhileJobHasStatus(connectionSyncRead.job, setOf(JobStatus.PENDING))
       Assertions.assertEquals(JobStatus.RUNNING, jobRead.status)
 
       val resp = testHarness.cancelSync(connectionSyncRead.job.id)
@@ -364,9 +362,6 @@ internal abstract class SyncAcceptanceTests(
   }
 
   companion object {
-    private val log = KotlinLogging.logger {}
-
-    const val SLOW_TEST_IN_GKE: String = "TODO(https://github.com/airbytehq/airbyte-platform-internal/issues/5181): re-enable slow tests in GKE"
     const val DUPLICATE_TEST_IN_GKE: String =
       "TODO(https://github.com/airbytehq/airbyte-platform-internal/issues/5182): eliminate test duplication"
     const val TYPE: String = "type"
@@ -374,8 +369,6 @@ internal abstract class SyncAcceptanceTests(
     const val INFINITE_FEED: String = "INFINITE_FEED"
     const val MESSAGE_INTERVAL: String = "message_interval"
     const val MAX_RECORDS: String = "max_records"
-    const val FIELD: String = "field"
-    const val ID_AND_NAME: String = "id_and_name"
 
     @Throws(Exception::class)
     fun assertDestinationDbEmpty(dst: Database) {

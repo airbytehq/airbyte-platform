@@ -19,7 +19,6 @@ import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.workload.WorkloadOutputWriter
 import io.airbyte.workload.api.client.WorkloadApiClient
-import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.micrometer.core.instrument.Counter
 import io.mockk.coEvery
 import io.mockk.every
@@ -97,13 +96,9 @@ internal class ReplicationJobOrchestratorTest {
       mockk<ReplicationWorker> {
         coEvery { runReplicationBlocking(any()) } returns replicationOutput
       }
-    val workloadapi =
-      mockk<WorkloadApi> {
-        every { workloadSuccess(any()) } returns Unit
-      }
     val workloadApiClient =
       mockk<WorkloadApiClient> {
-        every { workloadApi } returns workloadapi
+        every { workloadSuccess(any()) } returns Unit
       }
     val outputWriter =
       mockk<WorkloadOutputWriter> {
@@ -138,7 +133,7 @@ internal class ReplicationJobOrchestratorTest {
 
     assertTrue(output.isPresent)
     verify(exactly = 1) { outputWriter.writeSyncOutput(workloadId, replicationOutput) }
-    verify(exactly = 1) { workloadapi.workloadSuccess(any()) }
+    verify(exactly = 1) { workloadApiClient.workloadSuccess(any()) }
     verify(exactly = 1) {
       metricClient.gauge(
         metric = OssMetricsRegistry.SYNC_DURATION,
@@ -222,13 +217,9 @@ internal class ReplicationJobOrchestratorTest {
           runReplicationBlocking(any())
         } throws DestinationException("destination")
       }
-    val workloadapi =
-      mockk<WorkloadApi> {
-        every { workloadFailure(any()) } returns Unit
-      }
     val workloadApiClient =
       mockk<WorkloadApiClient> {
-        every { workloadApi } returns workloadapi
+        every { workloadFailure(any()) } returns Unit
       }
     val outputWriter =
       mockk<WorkloadOutputWriter> {
@@ -265,7 +256,7 @@ internal class ReplicationJobOrchestratorTest {
     }
 
     verify(exactly = 0) { outputWriter.writeSyncOutput(workloadId, replicationOutput) }
-    verify(exactly = 1) { workloadapi.workloadFailure(any()) }
+    verify(exactly = 1) { workloadApiClient.workloadFailure(any()) }
     verify(exactly = 0) {
       metricClient.gauge(
         metric = OssMetricsRegistry.SYNC_DURATION,
@@ -347,13 +338,9 @@ internal class ReplicationJobOrchestratorTest {
       mockk<ReplicationWorker> {
         coEvery { runReplicationBlocking(any()) } throws WorkerException("platform")
       }
-    val workloadapi =
-      mockk<WorkloadApi> {
-        every { workloadFailure(any()) } returns Unit
-      }
     val workloadApiClient =
       mockk<WorkloadApiClient> {
-        every { workloadApi } returns workloadapi
+        every { workloadFailure(any()) } returns Unit
       }
     val outputWriter =
       mockk<WorkloadOutputWriter> {
@@ -392,7 +379,7 @@ internal class ReplicationJobOrchestratorTest {
     Assertions.assertEquals(WorkerException::class.java, e.cause?.javaClass)
 
     verify(exactly = 0) { outputWriter.writeSyncOutput(workloadId, replicationOutput) }
-    verify(exactly = 1) { workloadapi.workloadFailure(any()) }
+    verify(exactly = 1) { workloadApiClient.workloadFailure(any()) }
     verify(exactly = 0) {
       metricClient.gauge(
         metric = OssMetricsRegistry.SYNC_DURATION,
@@ -474,13 +461,9 @@ internal class ReplicationJobOrchestratorTest {
       mockk<ReplicationWorker> {
         coEvery { runReplicationBlocking(any()) } throws SourceException("source")
       }
-    val workloadapi =
-      mockk<WorkloadApi> {
-        every { workloadFailure(any()) } returns Unit
-      }
     val workloadApiClient =
       mockk<WorkloadApiClient> {
-        every { workloadApi } returns workloadapi
+        every { workloadFailure(any()) } returns Unit
       }
     val outputWriter =
       mockk<WorkloadOutputWriter> {
@@ -517,7 +500,7 @@ internal class ReplicationJobOrchestratorTest {
     }
 
     verify(exactly = 0) { outputWriter.writeSyncOutput(workloadId, replicationOutput) }
-    verify(exactly = 1) { workloadapi.workloadFailure(any()) }
+    verify(exactly = 1) { workloadApiClient.workloadFailure(any()) }
     verify(exactly = 0) {
       metricClient.gauge(
         metric = OssMetricsRegistry.SYNC_DURATION,

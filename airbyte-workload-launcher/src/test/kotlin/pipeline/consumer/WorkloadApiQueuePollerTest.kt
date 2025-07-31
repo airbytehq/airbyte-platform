@@ -4,12 +4,12 @@
 
 package io.airbyte.workload.launcher.pipeline.consumer
 
+import io.airbyte.config.WorkloadPriority
+import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
-import io.airbyte.workload.api.client.model.generated.Workload
-import io.airbyte.workload.api.client.model.generated.WorkloadLabel
-import io.airbyte.workload.api.client.model.generated.WorkloadPriority
-import io.airbyte.workload.api.client.model.generated.WorkloadType
+import io.airbyte.workload.api.domain.Workload
+import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.model.toLauncherInput
 import io.airbyte.workload.launcher.pipeline.consumer.WorkloadApiQueuePollerTest.Fixtures.groupId
@@ -175,7 +175,7 @@ class WorkloadApiQueuePollerTest {
     ): Workload =
       Workload(
         id = id,
-        labels = labels,
+        labels = labels.toMutableList(),
         inputPayload = inputPayload,
         logPath = logPath,
         type = type,

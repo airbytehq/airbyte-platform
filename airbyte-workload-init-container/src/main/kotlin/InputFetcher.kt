@@ -11,7 +11,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.workers.models.InitContainerConstants
 import io.airbyte.workload.api.client.WorkloadApiClient
-import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
+import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Context
 import io.micronaut.context.annotation.Value
@@ -32,15 +32,15 @@ class InputFetcher(
 
     val workload =
       try {
-        workloadApiClient.workloadApi.workloadGet(workloadId)
+        workloadApiClient.workloadGet(workloadId)
       } catch (e: Exception) {
         metricClient.count(metric = OssMetricsRegistry.WORKLOAD_HYDRATION_FETCH_FAILURE)
         return failWorkloadAndExit(workloadId, "fetching workload", e, InitContainerConstants.WORKLOAD_API_ERROR_EXIT_CODE)
       }
 
     logger.info { "Workload ${workload.id} fetched." }
-
     logger.info { "Processing workload..." }
+
     try {
       hydrationProcessor.process(workload)
     } catch (e: SecretCoordinateException) {
@@ -63,13 +63,14 @@ class InputFetcher(
 
     var actualExitCodeToUse = exitCodeOnError
     try {
-      workloadApiClient.workloadApi.workloadFailure(
-        WorkloadFailureRequest(
-          id,
-          FailureOrigin.AIRBYTE_PLATFORM.toString(),
-          "$msg Encountered exception of type: ${e.javaClass}. Exception message: ${e.message}.",
-        ),
-      )
+      workloadApiClient
+        .workloadFailure(
+          WorkloadFailureRequest(
+            id,
+            FailureOrigin.AIRBYTE_PLATFORM.toString(),
+            "$msg Encountered exception of type: ${e.javaClass}. Exception message: ${e.message}.",
+          ),
+        )
     } catch (e: Exception) {
       logger.error(e) { "Error encountered failing workload for id: $id. Ignoring..." }
       actualExitCodeToUse = InitContainerConstants.WORKLOAD_API_ERROR_EXIT_CODE

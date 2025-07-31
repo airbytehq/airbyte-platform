@@ -28,6 +28,7 @@ import java.nio.file.Path
 
 @MicronautTest
 @Property(name = "STORAGE_TYPE", value = "yo")
+@Property(name = "micronaut.http.services.workload-api.url", value = "http://localhost")
 class ConnectorCommandWorkflowMicronautTest {
   @Named("workspaceRoot")
   @Bean

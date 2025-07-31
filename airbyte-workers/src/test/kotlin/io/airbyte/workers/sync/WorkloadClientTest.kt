@@ -5,15 +5,14 @@
 package io.airbyte.workers.sync
 
 import io.airbyte.commons.temporal.HeartbeatUtils
+import io.airbyte.config.WorkloadPriority
+import io.airbyte.config.WorkloadType
 import io.airbyte.workers.sync.WorkloadClient.Companion.CANCELLATION_SOURCE_STR
 import io.airbyte.workers.workload.WorkloadConstants.WORKLOAD_CANCELLED_BY_USER_REASON
 import io.airbyte.workers.workload.WorkloadOutputWriter
 import io.airbyte.workload.api.client.WorkloadApiClient
-import io.airbyte.workload.api.client.generated.WorkloadApi
-import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadPriority
-import io.airbyte.workload.api.client.model.generated.WorkloadType
+import io.airbyte.workload.api.domain.WorkloadCancelRequest
+import io.airbyte.workload.api.domain.WorkloadCreateRequest
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -28,41 +27,38 @@ import java.util.concurrent.Callable
 import java.util.concurrent.atomic.AtomicReference
 
 class WorkloadClientTest {
-  private val apiClientWrapper: WorkloadApiClient = mockk()
-  private val apiClient: WorkloadApi = mockk()
+  private val workloadApiClient: WorkloadApiClient = mockk()
   private val outputWriter: WorkloadOutputWriter = mockk()
 
   private lateinit var client: WorkloadClient
 
   @BeforeEach
   fun setup() {
-    every { apiClientWrapper.workloadApi } returns apiClient
-
-    client = spyk(WorkloadClient(apiClientWrapper, outputWriter))
+    client = spyk(WorkloadClient(workloadApiClient, outputWriter))
   }
 
   @Test
   fun `cancelWorkloadBestEffort attempts to cancel the workflow`() {
     val req = WorkloadCancelRequest("workloadId", "reason", "source")
 
-    every { apiClient.workloadCancel(req) } returns Unit
+    every { workloadApiClient.workloadCancel(req) } returns Unit
 
     client.cancelWorkloadBestEffort(req)
 
-    verify { apiClient.workloadCancel(req) }
+    verify { workloadApiClient.workloadCancel(req) }
   }
 
   @Test
   fun `cancelWorkloadBestEffort swallows exceptions`() {
     val req = WorkloadCancelRequest("workloadId", "reason", "source")
 
-    every { apiClient.workloadCancel(req) } throws Exception("bang")
+    every { workloadApiClient.workloadCancel(req) } throws Exception("bang")
 
     assertDoesNotThrow {
       client.cancelWorkloadBestEffort(req)
     }
 
-    verify { apiClient.workloadCancel(req) }
+    verify { workloadApiClient.workloadCancel(req) }
   }
 
   @Test

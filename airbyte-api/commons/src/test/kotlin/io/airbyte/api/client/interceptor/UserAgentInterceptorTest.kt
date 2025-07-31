@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.api.client
+package io.airbyte.api.client.interceptor
 
 import io.micronaut.http.HttpHeaders
 import io.mockk.every

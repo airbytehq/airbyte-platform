@@ -15,12 +15,12 @@ import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.api.client.WorkloadApiClient
-import io.airbyte.workload.api.client.model.generated.ExpiredDeadlineWorkloadListRequest
-import io.airbyte.workload.api.client.model.generated.LongRunningWorkloadRequest
-import io.airbyte.workload.api.client.model.generated.Workload
-import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
-import io.airbyte.workload.api.client.model.generated.WorkloadQueueCleanLimit
-import io.airbyte.workload.api.client.model.generated.WorkloadStatus
+import io.airbyte.workload.api.domain.ExpiredDeadlineWorkloadListRequest
+import io.airbyte.workload.api.domain.LongRunningWorkloadRequest
+import io.airbyte.workload.api.domain.Workload
+import io.airbyte.workload.api.domain.WorkloadFailureRequest
+import io.airbyte.workload.api.domain.WorkloadQueueCleanLimit
+import io.airbyte.workload.api.domain.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Property
 import io.micronaut.scheduling.annotation.Scheduled
@@ -66,12 +66,14 @@ open class WorkloadMonitor(
     logger.info { "Checking for not started workloads." }
     val oldestStartedTime = timeProvider.getOrElse { DEFAULT_TIME_PROVIDER }.invoke(ZoneOffset.UTC)
     val notStartedWorkloads =
-      workloadApiClient.workloadApi.workloadListWithExpiredDeadline(
-        ExpiredDeadlineWorkloadListRequest(
-          oldestStartedTime,
-          status = listOf(WorkloadStatus.CLAIMED),
-        ),
-      )
+      workloadApiClient
+        .workloadListWithExpiredDeadline(
+          ExpiredDeadlineWorkloadListRequest(
+            deadline = oldestStartedTime,
+            status = listOf(WorkloadStatus.CLAIMED),
+          ),
+        )
+
     failWorkloads(
       notStartedWorkloads.workloads,
       "Airbyte could not start the process within time limit. The workload was claimed but never started.",
@@ -91,12 +93,13 @@ open class WorkloadMonitor(
     logger.info { "Checking for not claimed workloads." }
     val oldestClaimTime = timeProvider.getOrElse { DEFAULT_TIME_PROVIDER }.invoke(ZoneOffset.UTC)
     val notClaimedWorkloads =
-      workloadApiClient.workloadApi.workloadListWithExpiredDeadline(
-        ExpiredDeadlineWorkloadListRequest(
-          oldestClaimTime,
-          status = listOf(WorkloadStatus.PENDING),
-        ),
-      )
+      workloadApiClient
+        .workloadListWithExpiredDeadline(
+          ExpiredDeadlineWorkloadListRequest(
+            deadline = oldestClaimTime,
+            status = listOf(WorkloadStatus.PENDING),
+          ),
+        )
 
     failWorkloads(
       notClaimedWorkloads.workloads,
@@ -117,12 +120,13 @@ open class WorkloadMonitor(
     logger.info { "Checking for non heartbeating workloads." }
     val oldestHeartbeatTime = timeProvider.getOrElse { DEFAULT_TIME_PROVIDER }.invoke(ZoneOffset.UTC)
     val nonHeartbeatingWorkloads =
-      workloadApiClient.workloadApi.workloadListWithExpiredDeadline(
-        ExpiredDeadlineWorkloadListRequest(
-          oldestHeartbeatTime,
-          status = listOf(WorkloadStatus.RUNNING, WorkloadStatus.LAUNCHED),
-        ),
-      )
+      workloadApiClient
+        .workloadListWithExpiredDeadline(
+          ExpiredDeadlineWorkloadListRequest(
+            deadline = oldestHeartbeatTime,
+            status = listOf(WorkloadStatus.RUNNING, WorkloadStatus.LAUNCHED),
+          ),
+        )
 
     failWorkloads(
       nonHeartbeatingWorkloads.workloads,
@@ -143,11 +147,12 @@ open class WorkloadMonitor(
   open fun cancelRunningForTooLongNonSyncWorkloads() {
     logger.info { "Checking for workloads running for too long with timeout value $nonSyncWorkloadTimeout" }
     val nonHeartbeatingWorkloads =
-      workloadApiClient.workloadApi.workloadListOldNonSync(
-        LongRunningWorkloadRequest(
-          createdBefore = timeProvider.getOrElse { DEFAULT_TIME_PROVIDER }.invoke(ZoneOffset.UTC).minus(nonSyncWorkloadTimeout),
-        ),
-      )
+      workloadApiClient
+        .workloadListOldNonSync(
+          LongRunningWorkloadRequest(
+            createdBefore = timeProvider.getOrElse { DEFAULT_TIME_PROVIDER }.invoke(ZoneOffset.UTC).minus(nonSyncWorkloadTimeout),
+          ),
+        )
 
     failWorkloads(nonHeartbeatingWorkloads.workloads, "Non sync workload timeout", CHECK_NON_SYNC_TIMEOUT)
   }
@@ -163,11 +168,12 @@ open class WorkloadMonitor(
   open fun cancelRunningForTooLongSyncWorkloads() {
     logger.info { "Checking for sync workloads running for too long with timeout value $syncWorkloadTimeout" }
     val nonHeartbeatingWorkloads =
-      workloadApiClient.workloadApi.workloadListOldSync(
-        LongRunningWorkloadRequest(
-          createdBefore = timeProvider.getOrElse { DEFAULT_TIME_PROVIDER }.invoke(ZoneOffset.UTC).minus(syncWorkloadTimeout),
-        ),
-      )
+      workloadApiClient
+        .workloadListOldSync(
+          LongRunningWorkloadRequest(
+            createdBefore = timeProvider.getOrElse { DEFAULT_TIME_PROVIDER }.invoke(ZoneOffset.UTC).minus(syncWorkloadTimeout),
+          ),
+        )
 
     failWorkloads(nonHeartbeatingWorkloads.workloads, "Sync workload timeout", CHECK_SYNC_TIMEOUT)
   }
@@ -181,7 +187,7 @@ open class WorkloadMonitor(
   )
   @Scheduled(fixedRate = "\${airbyte.workload.monitor.queue-depth-check-rate}")
   open fun workloadQueueDepthMonitoring() {
-    val queueStats = workloadApiClient.workloadApi.getWorkloadQueueStats()
+    val queueStats = workloadApiClient.getWorkloadQueueStats()
     queueStats.stats.forEach {
       metricClient.gauge(
         OssMetricsRegistry.WORKLOAD_QUEUE_SIZE,
@@ -197,9 +203,7 @@ open class WorkloadMonitor(
     val canCleanWorkloadQueue = featureFlagClient.boolVariation(CanCleanWorkloadQueue, Empty)
     if (canCleanWorkloadQueue) {
       logger.info { "Cleaning workload queue. With a batch size of $deletionBatchSizeLimit" }
-      workloadApiClient.workloadApi.workloadQueueClean(
-        WorkloadQueueCleanLimit(deletionBatchSizeLimit),
-      )
+      workloadApiClient.workloadQueueClean(req = WorkloadQueueCleanLimit(deletionBatchSizeLimit))
       logger.info { "Workload queue cleaned." }
     }
   }
@@ -213,13 +217,15 @@ open class WorkloadMonitor(
       var status = "fail"
       try {
         logger.info { "Cancelling workload ${it.id}, reason: $reason" }
-        workloadApiClient.workloadApi.workloadFailure(
-          WorkloadFailureRequest(
-            workloadId = it.id,
-            reason = reason,
-            source = source,
-          ),
-        )
+        workloadApiClient
+          .workloadFailure(
+            workloadFailureRequest =
+              WorkloadFailureRequest(
+                workloadId = it.id,
+                reason = reason,
+                source = source,
+              ),
+          )
         status = "ok"
       } catch (e: Exception) {
         logger.warn(e) { "Failed to cancel workload ${it.id}" }
@@ -230,7 +236,7 @@ open class WorkloadMonitor(
             arrayOf(
               MetricAttribute(MetricTags.CANCELLATION_SOURCE, source),
               MetricAttribute(MetricTags.STATUS, status),
-              MetricAttribute(MetricTags.WORKLOAD_TYPE, it.type.value),
+              MetricAttribute(MetricTags.WORKLOAD_TYPE, it.type.toString()),
             ),
         )
       }

@@ -29,6 +29,9 @@ import jakarta.inject.Singleton
 import java.util.function.Consumer
 import io.airbyte.commons.envvar.EnvVar as AirbyteEnvVar
 
+/** Base config path for workload-api. */
+private const val WORKLOAD_API_PREFIX = "airbyte.workload-api"
+
 /**
  * Provides and configures the static environment variables for the containers we launch.
  * For dynamic configuration see RuntimeEnvVarFactory.
@@ -492,11 +495,11 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("workloadApiEnvMap")
   fun workloadApiEnvVars(
-    @Value("\${airbyte.workload-api.connect-timeout-seconds}") workloadApiConnectTimeoutSeconds: String,
-    @Value("\${airbyte.workload-api.read-timeout-seconds}") workloadApiReadTimeoutSeconds: String,
-    @Value("\${airbyte.workload-api.retries.delay-seconds}") workloadApiRetriesDelaySeconds: String,
-    @Value("\${airbyte.workload-api.retries.max}") workloadApiRetriesMax: String,
-    @Value("\${airbyte.workload-api.base-path}") workloadApiBasePath: String,
+    @Value("\${$WORKLOAD_API_PREFIX.connect-timeout-seconds}") workloadApiConnectTimeoutSeconds: String,
+    @Value("\${$WORKLOAD_API_PREFIX.read-timeout-seconds}") workloadApiReadTimeoutSeconds: String,
+    @Value("\${$WORKLOAD_API_PREFIX.retries.delay-seconds}") workloadApiRetriesDelaySeconds: String,
+    @Value("\${$WORKLOAD_API_PREFIX.retries.max}") workloadApiRetriesMax: String,
+    @Value("\${$WORKLOAD_API_PREFIX.base-path}") workloadApiBasePath: String,
   ): Map<String, String> {
     val envMap: MutableMap<String, String> = HashMap()
     envMap[EnvVarConstants.WORKLOAD_API_HOST_ENV_VAR] = workloadApiBasePath

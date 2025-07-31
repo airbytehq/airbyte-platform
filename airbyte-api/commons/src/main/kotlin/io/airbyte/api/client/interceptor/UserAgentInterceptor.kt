@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.api.client
+package io.airbyte.api.client.interceptor
 
 import com.google.common.base.CaseFormat
 import io.micronaut.http.HttpHeaders
