@@ -1,23 +1,5 @@
-## What
-<!--
-* Describe what the change is solving.
-* It helps to add screenshots if it affects the frontend.
--->
+In an effort to focus our support efforts on connector contributions, we no longer accept community PRs in this repository.
 
-## How
-<!--
-* Describe how code changes achieve the solution.
--->
+Please report issues to: https://github.com/airbytehq/airbyte
 
-## Recommended reading order
-1. `x.kt`
-2. `y.kt`
-
-## Can this PR be safely reverted and rolled back?
-<!--
-* If you know that your be safely rolled back, check YES.*
-* If that is not the case (e.g. a database migration), check NO.
-* If unsure, leave it blank.*
--->
-- [ ] YES 💚
-- [ ] NO ❌
+All of our other public repos remain open to contribution! We look forward to working with you.
