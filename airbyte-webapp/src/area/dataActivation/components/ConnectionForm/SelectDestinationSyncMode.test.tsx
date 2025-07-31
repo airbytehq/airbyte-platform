@@ -11,7 +11,7 @@ import {
 } from "test-utils/mock-data/mockDestinationOperations";
 
 import { DataActivationConnectionFormValues, DataActivationField } from "area/dataActivation/types";
-import { DestinationSyncMode } from "core/api/types/AirbyteClient";
+import { DestinationOperation, DestinationSyncMode } from "core/api/types/AirbyteClient";
 
 import { SelectDestinationSyncMode } from "./SelectDestinationSyncMode";
 
@@ -160,6 +160,172 @@ describe(`${SelectDestinationSyncMode.name}`, () => {
           fields: [{ sourceFieldName: "Some source field", destinationFieldName: "" }],
         }),
       ],
+    });
+  });
+
+  describe("matching keys behavior", () => {
+    it("sets matchingKeys to null when operation has no matchingKeys property", async () => {
+      const MOCK_OPERATION_NO_MATCHING_KEYS: DestinationOperation = {
+        objectName: "NoMatchingKeys",
+        syncMode: "append_dedup",
+        schema: {
+          additionalProperties: false,
+          type: "object",
+          properties: {
+            Name: { type: "string" },
+            Id: { type: "string" },
+          },
+        },
+      };
+      const mockSubmit = jest.fn();
+      await render(
+        <MockFormProvider destinationObjectName={MOCK_OPERATION_NO_MATCHING_KEYS.objectName} onSubmit={mockSubmit}>
+          <SelectDestinationSyncMode
+            streamIndex={0}
+            destinationCatalog={{
+              operations: [MOCK_OPERATION_NO_MATCHING_KEYS],
+            }}
+          />
+        </MockFormProvider>
+      );
+
+      await userEvent.click(screen.getByText("Select insertion method"));
+      await userEvent.click(screen.getByText("Upsert"));
+
+      await userEvent.click(screen.getByText("Submit"));
+
+      expect(mockSubmit).toHaveBeenCalledWith({
+        streams: [
+          expect.objectContaining({
+            matchingKeys: null,
+          }),
+        ],
+      });
+    });
+
+    it("sets matchingKeys to null when operation has empty matchingKeys array", async () => {
+      const MOCK_OPERATION_EMPTY_MATCHING_KEYS: DestinationOperation = {
+        objectName: "EmptyMatchingKeys",
+        syncMode: "append_dedup",
+        schema: {
+          additionalProperties: false,
+          type: "object",
+          properties: {
+            Name: { type: "string" },
+            Id: { type: "string" },
+          },
+        },
+        matchingKeys: [],
+      };
+
+      const mockSubmit = jest.fn();
+      await render(
+        <MockFormProvider destinationObjectName={MOCK_OPERATION_EMPTY_MATCHING_KEYS.objectName} onSubmit={mockSubmit}>
+          <SelectDestinationSyncMode
+            streamIndex={0}
+            destinationCatalog={{
+              operations: [MOCK_OPERATION_EMPTY_MATCHING_KEYS],
+            }}
+          />
+        </MockFormProvider>
+      );
+
+      await userEvent.click(screen.getByText("Select insertion method"));
+      await userEvent.click(screen.getByText("Upsert"));
+
+      await userEvent.click(screen.getByText("Submit"));
+
+      expect(mockSubmit).toHaveBeenCalledWith({
+        streams: [
+          expect.objectContaining({
+            matchingKeys: null,
+          }),
+        ],
+      });
+    });
+
+    it("automatically sets the single matching key when operation has one matching key", async () => {
+      const MOCK_OPERATION_SINGLE_MATCHING_KEY: DestinationOperation = {
+        objectName: "SingleMatchingKey",
+        syncMode: "append_dedup",
+        schema: {
+          additionalProperties: false,
+          type: "object",
+          properties: {
+            Name: { type: "string" },
+            Id: { type: "string" },
+          },
+        },
+        matchingKeys: [["Id"]],
+      };
+      const mockSubmit = jest.fn();
+      await render(
+        <MockFormProvider destinationObjectName={MOCK_OPERATION_SINGLE_MATCHING_KEY.objectName} onSubmit={mockSubmit}>
+          <SelectDestinationSyncMode
+            streamIndex={0}
+            destinationCatalog={{
+              operations: [MOCK_OPERATION_SINGLE_MATCHING_KEY],
+            }}
+          />
+        </MockFormProvider>
+      );
+
+      await userEvent.click(screen.getByText("Select insertion method"));
+      await userEvent.click(screen.getByText("Upsert"));
+
+      await userEvent.click(screen.getByText("Submit"));
+
+      expect(mockSubmit).toHaveBeenCalledWith({
+        streams: [
+          expect.objectContaining({
+            matchingKeys: ["Id"],
+          }),
+        ],
+      });
+    });
+
+    it("sets matchingKeys to empty array when operation has multiple matching keys", async () => {
+      const MOCK_OPERATION_MULTIPLE_MATCHING_KEYS: DestinationOperation = {
+        objectName: "MultipleMatchingKeys",
+        syncMode: "append_dedup",
+        schema: {
+          additionalProperties: false,
+          type: "object",
+          properties: {
+            Name: { type: "string" },
+            Id: { type: "string" },
+            Email: { type: "string" },
+          },
+        },
+        matchingKeys: [["Id"], ["Email"]],
+      };
+      const mockSubmit = jest.fn();
+      await render(
+        <MockFormProvider
+          destinationObjectName={MOCK_OPERATION_MULTIPLE_MATCHING_KEYS.objectName}
+          onSubmit={mockSubmit}
+        >
+          <SelectDestinationSyncMode
+            streamIndex={0}
+            destinationCatalog={{
+              operations: [MOCK_OPERATION_MULTIPLE_MATCHING_KEYS],
+            }}
+          />
+        </MockFormProvider>
+      );
+
+      await userEvent.click(screen.getByText("Select insertion method"));
+      await userEvent.click(screen.getByText("Upsert"));
+
+      await userEvent.click(screen.getByText("Submit"));
+
+      expect(mockSubmit).toHaveBeenCalledWith({
+        streams: [
+          expect.objectContaining({
+            matchingKeys: [],
+          }),
+        ],
+      });
     });
   });
 });

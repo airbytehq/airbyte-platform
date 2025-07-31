@@ -74,7 +74,7 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
       return;
     }
 
-    // Validate existing field mappings
+    // 1. Validate existing field mappings
     const availableFields = getDestinationOperationFields(selectedOperation).map(([key]) => key);
     const existingFieldMappings = (fields ?? []).map((field) => {
       return {
@@ -83,7 +83,7 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
       };
     });
 
-    // Check for required fields in the selected operation
+    // 2. Check for required fields in the selected operation
     const requiredFields = getRequiredFields(selectedOperation);
     const missingFieldNames = requiredFields.filter((field) => !fields?.some((f) => f.destinationFieldName === field));
     const newFieldMappings = missingFieldNames.map((field) => ({
@@ -93,6 +93,17 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
 
     // Update the form with the new field mappings
     setValue(`streams.${streamIndex}.fields`, [...existingFieldMappings, ...newFieldMappings]);
+
+    // 3. Set the matching keys to null if the selected operation does not require them
+    if (selectedOperation.matchingKeys === undefined || selectedOperation.matchingKeys.length === 0) {
+      setValue(`streams.${streamIndex}.matchingKeys`, null);
+    } else if (selectedOperation.matchingKeys.length === 1) {
+      // If there is only one matching key options, we can set it directly
+      setValue(`streams.${streamIndex}.matchingKeys`, selectedOperation.matchingKeys[0]);
+    } else {
+      // If there are multiple matching key options, we leave it as an empty array for the user to select an option
+      setValue(`streams.${streamIndex}.matchingKeys`, []);
+    }
   };
 
   return (

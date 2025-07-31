@@ -45,7 +45,10 @@ const AllowedDestinationSyncModes = z.enum([
 
 const someDestinationSyncMode = z.object({
   destinationSyncMode: AllowedDestinationSyncModes,
-  matchingKeys: z.array(z.string()).nullable(),
+  // The minimum requirement is important. An array of length 0 indicates that the user should select a matching key for
+  // the given destination operation, but has not done so yet. A null value indicates that the destination operation does
+  // not require matching keys.
+  matchingKeys: z.array(z.string()).min(1, "form.empty.error").nullable(),
 });
 
 const destinationSyncMode = z.discriminatedUnion("destinationSyncMode", [
