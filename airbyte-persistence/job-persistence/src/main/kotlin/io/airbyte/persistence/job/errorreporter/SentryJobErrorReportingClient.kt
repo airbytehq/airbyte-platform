@@ -111,7 +111,10 @@ class SentryJobErrorReportingClient internal constructor(
     failureReasonContext["internalMessage"] = failureReason.internalMessage
     failureReasonContext["externalMessage"] = failureReason.externalMessage
     failureReasonContext["stacktrace"] = failureReason.stacktrace
-    failureReasonContext["timestamp"] = failureReason.timestamp.toString()
+    // This is not the same as the actual timestamp that Sentry will use for the timestamp.
+    // This is just intended to track when the failure was created.
+    // But some failures don't actually track their timestamp, so we need to handle nullness here.
+    failureReason.timestamp?.let { failureReasonContext["timestamp"] = it.toString() }
 
     val failureReasonMeta = failureReason.metadata
     if (failureReasonMeta != null) {
