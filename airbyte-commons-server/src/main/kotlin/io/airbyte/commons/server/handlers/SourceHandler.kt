@@ -623,7 +623,7 @@ class SourceHandler
      */
     @Throws(JsonValidationException::class)
     private fun validateSourceUpdate(
-      providedUpdateJson: JsonNode,
+      providedUpdateJson: JsonNode?,
       updatedSource: SourceConnection,
       spec: ConnectorSpecification,
     ) {

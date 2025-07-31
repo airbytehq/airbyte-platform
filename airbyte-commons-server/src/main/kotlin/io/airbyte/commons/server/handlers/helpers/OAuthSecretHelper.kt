@@ -201,7 +201,7 @@ object OAuthSecretHelper {
   @Throws(JsonValidationException::class)
   fun validateNoSecretsInConfiguration(
     spec: ConnectorSpecification,
-    connectionConfiguration: JsonNode,
+    connectionConfiguration: JsonNode?,
   ) {
     if (hasOAuthConfigSpecification(spec)) {
       val oauthPaths = getOAuthInputPaths(spec)
@@ -212,7 +212,7 @@ object OAuthSecretHelper {
   }
 
   private fun throwIfKeyExistsInConfig(
-    connectionConfiguration: JsonNode,
+    connectionConfiguration: JsonNode?,
     key: String,
     jsonPathList: List<String>,
   ) {

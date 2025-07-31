@@ -450,7 +450,7 @@ class DestinationHandler
      */
     @Throws(JsonValidationException::class)
     private fun validateDestinationUpdate(
-      providedUpdateJson: JsonNode,
+      providedUpdateJson: JsonNode?,
       updatedDestination: DestinationConnection,
       spec: ConnectorSpecification,
     ) {
