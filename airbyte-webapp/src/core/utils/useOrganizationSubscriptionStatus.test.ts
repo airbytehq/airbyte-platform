@@ -2,7 +2,7 @@ import { renderHook } from "@testing-library/react";
 import dayjs from "dayjs";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
-import { useGetOrganizationPaymentConfig, useOrganizationTrialStatus } from "core/api";
+import { useOrganizationTrialStatus, useOrgInfo } from "core/api";
 import {
   OrganizationTrialStatusReadTrialStatus,
   OrganizationPaymentConfigReadPaymentStatus,
@@ -19,9 +19,7 @@ jest.mock("core/utils/rbac");
 jest.mock("dayjs");
 
 const mockUseCurrentOrganizationId = useCurrentOrganizationId as jest.MockedFunction<typeof useCurrentOrganizationId>;
-const mockUseGetOrganizationPaymentConfig = useGetOrganizationPaymentConfig as jest.MockedFunction<
-  typeof useGetOrganizationPaymentConfig
->;
+const mockUseOrgInfo = useOrgInfo as jest.MockedFunction<typeof useOrgInfo>;
 const mockUseOrganizationTrialStatus = useOrganizationTrialStatus as jest.MockedFunction<
   typeof useOrganizationTrialStatus
 >;
@@ -33,31 +31,18 @@ const mockOrganizationId = "test-org-id";
 const mockTrialEndDate = "2024-01-15T00:00:00Z";
 const mockPastTrialEndDate = "2024-01-01T00:00:00Z";
 
-const createMockPaymentConfig = (
+const createMockOrgInfo = (
   paymentStatus: OrganizationPaymentConfigReadPaymentStatus,
   subscriptionStatus: OrganizationPaymentConfigReadSubscriptionStatus = "unsubscribed"
 ) => ({
   organizationId: mockOrganizationId,
-  paymentStatus,
-  subscriptionStatus,
+  organizationName: "Test Organization",
+  sso: false,
+  billing: {
+    paymentStatus,
+    subscriptionStatus,
+  },
 });
-
-const createMockPaymentConfigResult = (
-  paymentStatus: OrganizationPaymentConfigReadPaymentStatus,
-  subscriptionStatus: OrganizationPaymentConfigReadSubscriptionStatus = "unsubscribed",
-  isLoading = false
-) =>
-  ({
-    data: isLoading ? undefined : createMockPaymentConfig(paymentStatus, subscriptionStatus),
-    isLoading,
-    isError: false,
-    error: null,
-    isSuccess: !isLoading,
-    status: isLoading ? "loading" : "success",
-    isFetching: false,
-    isRefetching: false,
-    refetch: jest.fn(),
-  }) as unknown as ReturnType<typeof useGetOrganizationPaymentConfig>;
 
 const createMockTrialStatus = (trialStatus: OrganizationTrialStatusReadTrialStatus, trialEndsAt?: string) => ({
   trialStatus,
@@ -71,7 +56,7 @@ describe("useOrganizationSubscriptionStatus", () => {
 
     // Setup default mocks
     mockUseCurrentOrganizationId.mockReturnValue(mockOrganizationId);
-    mockUseGetOrganizationPaymentConfig.mockReturnValue(createMockPaymentConfigResult("uninitialized"));
+    mockUseOrgInfo.mockReturnValue(createMockOrgInfo("uninitialized"));
     mockUseOrganizationTrialStatus.mockReturnValue(undefined);
     mockUseGeneratedIntent.mockReturnValue(true);
 
@@ -162,6 +147,53 @@ describe("useOrganizationSubscriptionStatus", () => {
     });
   });
 
+  describe("Conditional trial status fetching", () => {
+    it("should fetch trial status when payment status is uninitialized and user has permission", () => {
+      mockUseOrgInfo.mockReturnValue(createMockOrgInfo("uninitialized"));
+      mockUseGeneratedIntent.mockReturnValue(true);
+
+      renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(mockUseOrganizationTrialStatus).toHaveBeenCalledWith(mockOrganizationId, true);
+    });
+
+    it("should fetch trial status when payment status is okay and user has permission", () => {
+      mockUseOrgInfo.mockReturnValue(createMockOrgInfo("okay"));
+      mockUseGeneratedIntent.mockReturnValue(true);
+
+      renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(mockUseOrganizationTrialStatus).toHaveBeenCalledWith(mockOrganizationId, true);
+    });
+
+    it("should not fetch trial status when payment status is locked", () => {
+      mockUseOrgInfo.mockReturnValue(createMockOrgInfo("locked"));
+      mockUseGeneratedIntent.mockReturnValue(true);
+
+      renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(mockUseOrganizationTrialStatus).toHaveBeenCalledWith(mockOrganizationId, false);
+    });
+
+    it("should not fetch trial status when user lacks permission", () => {
+      mockUseOrgInfo.mockReturnValue(createMockOrgInfo("uninitialized"));
+      mockUseGeneratedIntent.mockReturnValue(false);
+
+      renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(mockUseOrganizationTrialStatus).toHaveBeenCalledWith(mockOrganizationId, false);
+    });
+
+    it("should not fetch trial status when both payment status is locked and user lacks permission", () => {
+      mockUseOrgInfo.mockReturnValue(createMockOrgInfo("locked"));
+      mockUseGeneratedIntent.mockReturnValue(false);
+
+      renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(mockUseOrganizationTrialStatus).toHaveBeenCalledWith(mockOrganizationId, false);
+    });
+  });
+
   describe("Computed states", () => {
     it.each([
       ["in_trial", "okay", true, "isTrialWithPaymentMethod"],
@@ -170,9 +202,7 @@ describe("useOrganizationSubscriptionStatus", () => {
       ["in_trial", "uninitialized", true, "isTrialWithoutPaymentMethod"],
       ["in_trial", "okay", false, "isTrialWithoutPaymentMethod"],
     ])("should return %s=%s for trial='%s' and payment='%s'", (trialStatus, paymentStatus, expected, property) => {
-      mockUseGetOrganizationPaymentConfig.mockReturnValue(
-        createMockPaymentConfigResult(paymentStatus as OrganizationPaymentConfigReadPaymentStatus)
-      );
+      mockUseOrgInfo.mockReturnValue(createMockOrgInfo(paymentStatus as OrganizationPaymentConfigReadPaymentStatus));
       mockUseOrganizationTrialStatus.mockReturnValue(
         createMockTrialStatus(trialStatus as OrganizationTrialStatusReadTrialStatus)
       );
@@ -189,8 +219,8 @@ describe("useOrganizationSubscriptionStatus", () => {
     ])(
       "should return isPostTrialUnsubscribed=%s for trial='%s', payment='%s', subscription='%s'",
       (trialStatus, paymentStatus, subscriptionStatus, expected) => {
-        mockUseGetOrganizationPaymentConfig.mockReturnValue(
-          createMockPaymentConfigResult(
+        mockUseOrgInfo.mockReturnValue(
+          createMockOrgInfo(
             paymentStatus as OrganizationPaymentConfigReadPaymentStatus,
             subscriptionStatus as OrganizationPaymentConfigReadSubscriptionStatus
           )

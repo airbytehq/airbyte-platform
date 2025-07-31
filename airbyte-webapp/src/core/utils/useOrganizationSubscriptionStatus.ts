@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import { useMemo } from "react";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
-import { useOrganizationTrialStatus, useGetOrganizationPaymentConfig } from "core/api";
+import { useOrganizationTrialStatus, useOrgInfo } from "core/api";
 import {
   OrganizationTrialStatusReadTrialStatus,
   OrganizationPaymentConfigReadPaymentStatus,
@@ -28,9 +28,6 @@ export interface UseOrganizationSubscriptionStatusReturn {
   isTrialWithoutPaymentMethod: boolean;
   isPostTrialUnsubscribed: boolean;
 
-  // Loading States
-  isLoading: boolean;
-
   // Permissions
   canViewTrialStatus: boolean;
   canManageOrganizationBilling: boolean;
@@ -43,15 +40,16 @@ export interface UseOrganizationSubscriptionStatusReturn {
  */
 export const useOrganizationSubscriptionStatus = (): UseOrganizationSubscriptionStatusReturn => {
   const organizationId = useCurrentOrganizationId();
-  const { data: paymentConfig, isLoading: isPaymentConfigLoading } = useGetOrganizationPaymentConfig(organizationId);
 
   // Permission checks
   const canViewTrialStatus = useGeneratedIntent(Intent.ViewOrganizationTrialStatus, { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
 
+  const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
+
   // Conditional trial status fetching - only when payment status allows it and user has permissions
   const shouldFetchTrialStatus =
-    (paymentConfig?.paymentStatus === "uninitialized" || paymentConfig?.paymentStatus === "okay") && canViewTrialStatus;
+    (billing?.paymentStatus === "uninitialized" || billing?.paymentStatus === "okay") && canViewTrialStatus;
 
   const trialStatus = useOrganizationTrialStatus(organizationId, shouldFetchTrialStatus);
 
@@ -84,19 +82,16 @@ export const useOrganizationSubscriptionStatus = (): UseOrganizationSubscription
   const isInTrial = trialStatus?.trialStatus === "in_trial";
 
   const isTrialWithPaymentMethod = useMemo(() => {
-    return trialStatus?.trialStatus === "in_trial" && paymentConfig?.paymentStatus === "okay";
-  }, [trialStatus?.trialStatus, paymentConfig?.paymentStatus]);
+    return trialStatus?.trialStatus === "in_trial" && billing?.paymentStatus === "okay";
+  }, [trialStatus?.trialStatus, billing?.paymentStatus]);
 
   const isTrialWithoutPaymentMethod = useMemo(() => {
-    return trialStatus?.trialStatus === "in_trial" && paymentConfig?.paymentStatus === "uninitialized";
-  }, [trialStatus?.trialStatus, paymentConfig?.paymentStatus]);
+    return trialStatus?.trialStatus === "in_trial" && billing?.paymentStatus === "uninitialized";
+  }, [trialStatus?.trialStatus, billing?.paymentStatus]);
 
   const isPostTrialUnsubscribed = useMemo(() => {
-    return trialStatus?.trialStatus === "post_trial" && paymentConfig?.subscriptionStatus !== "subscribed";
-  }, [trialStatus?.trialStatus, paymentConfig?.subscriptionStatus]);
-
-  // Loading state - true if either API call is still loading
-  const isLoading = isPaymentConfigLoading || (!shouldFetchTrialStatus ? false : !trialStatus);
+    return trialStatus?.trialStatus === "post_trial" && billing?.subscriptionStatus !== "subscribed";
+  }, [trialStatus?.trialStatus, billing?.subscriptionStatus]);
 
   return {
     // Trial Information
@@ -107,16 +102,13 @@ export const useOrganizationSubscriptionStatus = (): UseOrganizationSubscription
     isTrialEndingWithin24Hours,
 
     // Payment/Subscription Information
-    paymentStatus: paymentConfig?.paymentStatus,
-    subscriptionStatus: paymentConfig?.subscriptionStatus,
+    paymentStatus: billing?.paymentStatus,
+    subscriptionStatus: billing?.subscriptionStatus,
 
     // Computed States
     isTrialWithPaymentMethod,
     isTrialWithoutPaymentMethod,
     isPostTrialUnsubscribed,
-
-    // Loading States
-    isLoading,
 
     // Permissions
     canViewTrialStatus,

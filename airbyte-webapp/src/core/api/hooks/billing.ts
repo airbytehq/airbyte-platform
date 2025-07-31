@@ -61,6 +61,11 @@ export const useGetOrganizationSubscriptionInfo = (organizationId: string, enabl
   );
 };
 
+/**
+ * Returns the payment config for an organization.
+ * Note: This hook requires `Intent.ManageOrganizationBilling`,
+ * so it should only be used by org admins. Non-admins will receive a 403 error.
+ */
 export const useGetOrganizationPaymentConfig = (organizationId: string) => {
   const requestOptions = useRequestOptions();
 
