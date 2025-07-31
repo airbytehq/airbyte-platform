@@ -140,8 +140,7 @@ class StreamStatsTracker(
     if (!isBookkeeperMode) {
       return
     }
-    // TODO(Subodh): Remove these logs once testing is complete for Bookkeeper mode
-    logger.info { "Dummy stats message from destination $recordMessage" }
+    logger.debug { "Dummy stats message from destination $recordMessage" }
     val byteCount =
       recordMessage.additionalProperties[DEST_EMITTED_BYTES_COUNT]
         .asLongOrZero()
@@ -219,8 +218,7 @@ class StreamStatsTracker(
    */
   fun trackStateFromSource(stateMessage: AirbyteStateMessage) {
     if (isBookkeeperMode) {
-      // TODO(Subodh): Remove these logs once testing is complete for Bookkeeper mode
-      logger.info { "State message from source $stateMessage" }
+      logger.debug { "State message from source $stateMessage" }
     }
     val currentTime = LocalDateTime.now()
     streamStats.sourceStateCount.incrementAndGet()
@@ -282,8 +280,7 @@ class StreamStatsTracker(
    */
   fun trackStateFromDestination(stateMessage: AirbyteStateMessage) {
     if (isBookkeeperMode) {
-      // TODO(Subodh): Remove these logs once testing is complete for Bookkeeper mode
-      logger.info { "State message from destination : $stateMessage" }
+      logger.debug { "State message from destination : $stateMessage" }
     }
     val currentTime = LocalDateTime.now()
     streamStats.destinationStateCount.incrementAndGet()
@@ -329,9 +326,6 @@ class StreamStatsTracker(
       if (isBookkeeperMode) {
         val (totalCommittedRecords, totalCommittedBytes, totalRejectedRecords) =
           extractBookkeeperRelatedCounts(stateMessage)
-        // TODO(Subodh): Remove these logs once testing is complete for Bookkeeper mode
-        logger.info { "TOTAL_COMMITTED_RECORDS $totalCommittedRecords" }
-        logger.info { "TOTAL_COMMITTED_BYTES $totalCommittedBytes" }
         streamStats.apply {
           if (emittedRecordsCount.get() < totalCommittedRecords) {
             emittedRecordsCount.set(totalCommittedRecords)
