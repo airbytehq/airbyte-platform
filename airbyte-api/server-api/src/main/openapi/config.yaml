@@ -15129,6 +15129,7 @@ components:
         - field-renaming
         - row-filtering
         - encryption
+        - field-filtering
       x-sdk-component: true
     ConfiguredStreamMapper:
       type: object
@@ -15149,6 +15150,7 @@ components:
       description: The values required to configure the mapper.
       oneOf:
         - $ref: "#/components/schemas/HashingMapperConfiguration"
+        - $ref: "#/components/schemas/FieldFilteringMapperConfiguration"
         - $ref: "#/components/schemas/FieldRenamingMapperConfiguration"
         - $ref: "#/components/schemas/RowFilteringMapperConfiguration"
         - $ref: "#/components/schemas/EncryptionMapperConfiguration"
@@ -15180,6 +15182,17 @@ components:
       required:
         - "fieldNameSuffix"
         - "method"
+        - "targetField"
+      x-sdk-component: true
+    FieldFilteringMapperConfiguration:
+      title: "Field Filtering"
+      type: "object"
+      properties:
+        targetField:
+          type: "string"
+          title: "The Field to Filter"
+          description: "The name of the field to filter."
+      required:
         - "targetField"
       x-sdk-component: true
     FieldRenamingMapperConfiguration:

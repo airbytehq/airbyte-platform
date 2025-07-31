@@ -8,6 +8,7 @@ import io.airbyte.api.model.generated.ConfiguredStreamMapper
 import io.airbyte.api.model.generated.EncryptionMapperAESConfiguration
 import io.airbyte.api.model.generated.EncryptionMapperAlgorithm
 import io.airbyte.api.model.generated.EncryptionMapperRSAConfiguration
+import io.airbyte.api.model.generated.FieldFilteringMapperConfiguration
 import io.airbyte.api.model.generated.FieldRenamingMapperConfiguration
 import io.airbyte.api.model.generated.HashingMapperConfiguration
 import io.airbyte.api.model.generated.HashingMapperConfiguration.MethodEnum
@@ -25,6 +26,8 @@ import io.airbyte.config.mapper.configs.AesMode
 import io.airbyte.config.mapper.configs.AesPadding
 import io.airbyte.config.mapper.configs.EncryptionMapperConfig
 import io.airbyte.config.mapper.configs.EqualOperation
+import io.airbyte.config.mapper.configs.FieldFilteringConfig
+import io.airbyte.config.mapper.configs.FieldFilteringMapperConfig
 import io.airbyte.config.mapper.configs.FieldRenamingConfig
 import io.airbyte.config.mapper.configs.FieldRenamingMapperConfig
 import io.airbyte.config.mapper.configs.HashingConfig
@@ -66,6 +69,35 @@ class MapperConvertersTest {
           HashingConfig(
             method = HashingMethods.SHA256,
             fieldNameSuffix = "_hash",
+            targetField = "target_field",
+          ),
+      )
+
+    val result = configuredMapper.toInternal()
+    assertEquals(expectedConfig, result)
+
+    val reverseResult = result.toApi()
+    assertEquals(configuredMapper, reverseResult)
+  }
+
+  @Test
+  fun testConvertFieldFilteringMapper() {
+    val filteringConfig =
+      FieldFilteringMapperConfiguration()
+        .targetField("target_field")
+
+    val configuredMapper =
+      ConfiguredStreamMapper()
+        .id(MAPPER_ID)
+        .type(StreamMapperType.FIELD_FILTERING)
+        .mapperConfiguration(Jsons.jsonNode(filteringConfig))
+
+    val expectedConfig =
+      FieldFilteringMapperConfig(
+        id = MAPPER_ID,
+        name = MapperOperationName.FIELD_FILTERING,
+        config =
+          FieldFilteringConfig(
             targetField = "target_field",
           ),
       )

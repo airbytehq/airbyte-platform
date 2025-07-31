@@ -998,18 +998,21 @@
   "connection.timeline.mapping_create.hashing.description": "{user} created a <b>hashing</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_create.field_renaming.description": "{user} created a <b>field-renaming</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_create.row_filtering.description": "{user} created a <b>row-filtering</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
+  "connection.timeline.mapping_create.field_filtering.description": "{user} created a <b>field-filtering</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_create.encryption.description": "{user} created an <b>encryption</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
 
   "connection.timeline.mapping_update": "Mapping edited",
   "connection.timeline.mapping_update.hashing.description": "{user} updated a <b>hashing</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_update.field_renaming.description": "{user} updated a <b>field-renaming</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_update.row_filtering.description": "{user} updated a <b>row-filtering</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
+  "connection.timeline.mapping_update.field_filtering.description": "{user} updated a <b>field-filtering</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_update.encryption.description": "{user} updated an <b>encryption</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
 
   "connection.timeline.mapping_delete": "Mapping deleted",
   "connection.timeline.mapping_delete.hashing.description": "{user} deleted a <b>hashing</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_delete.field_renaming.description": "{user} deleted a <b>field-renaming</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_delete.row_filtering.description": "{user} deleted a <b>row-filtering</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
+  "connection.timeline.mapping_delete.field_filtering.description": "{user} deleted a <b>field-filtering</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
   "connection.timeline.mapping_delete.encryption.description": "{user} deleted an <b>encryption</b> mapping for the <b>{stream}</b> stream{namespace, select, undefined {} other { in the <b>{namespace}</b> namespace}}.",
 
   "connection.llmSyncFailureExplanation.explain": "Explain this error",

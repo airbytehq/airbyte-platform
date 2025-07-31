@@ -26,6 +26,7 @@ const mapperTypeToMessageIdMap: Record<StreamMapperType, string> = {
   [StreamMapperType["field-renaming"]]: "field_renaming",
   [StreamMapperType["row-filtering"]]: "row_filtering",
   [StreamMapperType.encryption]: "encryption",
+  [StreamMapperType["field-filtering"]]: "field_filtering",
 };
 
 interface MappingEventItemProps {

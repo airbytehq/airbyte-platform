@@ -9,6 +9,7 @@ import io.airbyte.api.model.generated.ConfiguredStreamMapper
 import io.airbyte.api.model.generated.EncryptionMapperAESConfiguration
 import io.airbyte.api.model.generated.EncryptionMapperAlgorithm
 import io.airbyte.api.model.generated.EncryptionMapperRSAConfiguration
+import io.airbyte.api.model.generated.FieldFilteringMapperConfiguration
 import io.airbyte.api.model.generated.FieldRenamingMapperConfiguration
 import io.airbyte.api.model.generated.HashingMapperConfiguration
 import io.airbyte.api.model.generated.HashingMapperConfiguration.MethodEnum
@@ -33,6 +34,8 @@ import io.airbyte.config.mapper.configs.EncryptionConfig.Companion.ALGO_AES
 import io.airbyte.config.mapper.configs.EncryptionConfig.Companion.ALGO_RSA
 import io.airbyte.config.mapper.configs.EncryptionMapperConfig
 import io.airbyte.config.mapper.configs.EqualOperation
+import io.airbyte.config.mapper.configs.FieldFilteringConfig
+import io.airbyte.config.mapper.configs.FieldFilteringMapperConfig
 import io.airbyte.config.mapper.configs.FieldRenamingConfig
 import io.airbyte.config.mapper.configs.FieldRenamingMapperConfig
 import io.airbyte.config.mapper.configs.HashingConfig
@@ -70,6 +73,11 @@ private fun HashingMapperConfiguration.toInternal(): HashingConfig =
   HashingConfig(
     method = this.method.toInternal(),
     fieldNameSuffix = this.fieldNameSuffix,
+    targetField = this.targetField,
+  )
+
+private fun FieldFilteringMapperConfiguration.toInternal(): FieldFilteringConfig =
+  FieldFilteringConfig(
     targetField = this.targetField,
   )
 
@@ -149,6 +157,14 @@ fun ConfiguredStreamMapper.toInternal(): MapperConfig =
         )
       }
 
+      StreamMapperType.FIELD_FILTERING -> {
+        FieldFilteringMapperConfig(
+          id = this.id,
+          name = MapperOperationName.FIELD_FILTERING,
+          config = Jsons.convertValue(this.mapperConfiguration, FieldFilteringMapperConfiguration::class.java).toInternal(),
+        )
+      }
+
       StreamMapperType.FIELD_RENAMING -> {
         FieldRenamingMapperConfig(
           id = this.id,
@@ -214,6 +230,16 @@ private fun HashingMapperConfig.toApi(): ConfiguredStreamMapper =
           .method(this.config.method.toApi())
           .fieldNameSuffix(this.config.fieldNameSuffix)
           .targetField(this.config.targetField),
+      ),
+    )
+
+private fun FieldFilteringMapperConfig.toApi(): ConfiguredStreamMapper =
+  ConfiguredStreamMapper()
+    .id(this.id)
+    .type(StreamMapperType.FIELD_FILTERING)
+    .mapperConfiguration(
+      Jsons.jsonNode(
+        FieldFilteringMapperConfiguration().targetField(this.config.targetField),
       ),
     )
 
@@ -307,6 +333,7 @@ private fun EncryptionMapperConfig.toApi(): ConfiguredStreamMapper {
 fun MapperConfig.toApi(): ConfiguredStreamMapper =
   when (this) {
     is HashingMapperConfig -> this.toApi()
+    is FieldFilteringMapperConfig -> this.toApi()
     is FieldRenamingMapperConfig -> this.toApi()
     is RowFilteringMapperConfig -> this.toApi()
     is EncryptionMapperConfig -> this.toApi()

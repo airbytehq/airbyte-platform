@@ -15,8 +15,11 @@ enum OperationType {
   not = "NOT",
 }
 
+export const supportedMappings = ["hashing", "field-renaming", "row-filtering", "encryption"] as const;
+export type SupportedMapping = (typeof supportedMappings)[number];
+
 interface MappingTypeListBoxProps {
-  selectedValue: StreamMapperType;
+  selectedValue: SupportedMapping;
   streamDescriptorKey: string;
   mappingId: string;
   disabled: boolean;
@@ -44,9 +47,8 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({
       title: "connections.mappings.type.encryption",
       description: "connections.mappings.type.encryption.description",
     },
-  };
-
-  const supportedMappingsOptions = Object.values(StreamMapperType).map((type) => ({
+  } as const;
+  const supportedMappingsOptions = supportedMappings.map((type) => ({
     label: (
       <FlexContainer direction="column" gap="xs" as="span">
         <Text as="span">
@@ -60,7 +62,7 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({
     value: type,
   }));
 
-  const ControlButton: React.FC<ListBoxControlButtonProps<StreamMapperType>> = ({ selectedOption, isDisabled }) => {
+  const ControlButton: React.FC<ListBoxControlButtonProps<SupportedMapping>> = ({ selectedOption, isDisabled }) => {
     if (!selectedOption) {
       return (
         <Text color="grey" as="span">
