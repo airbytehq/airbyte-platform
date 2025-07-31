@@ -105,9 +105,9 @@ class ConnectorObjectStorageServiceTest {
       val result = connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job, 100L)
 
       assertNotNull(result)
-      assertEquals("s3://my-bucket/my/path/$jobId", result!!.storageUri)
+      assertEquals("s3://my-bucket/my/path/$jobId/", result!!.storageUri)
       assertEquals(
-        "https://us-east-1.console.aws.amazon.com/s3/buckets/my-bucket?prefix=my%2Fpath%2F$jobId",
+        "https://us-east-1.console.aws.amazon.com/s3/buckets/my-bucket?prefix=my%2Fpath%2F$jobId%2F",
         result.cloudConsoleUrl,
       )
     }

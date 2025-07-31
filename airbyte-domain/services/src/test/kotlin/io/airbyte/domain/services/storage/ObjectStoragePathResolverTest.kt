@@ -27,9 +27,9 @@ class ObjectStoragePathResolverTest {
       val resolver = S3ObjectStoragePathResolver(config)
       val result = resolver.resolveRejectedRecordsPaths(123L)
       assertNotNull(result)
-      assertEquals("s3://my-bucket/my/path/123", result!!.storageUri)
+      assertEquals("s3://my-bucket/my/path/123/", result!!.storageUri)
       assertEquals(
-        "https://us-west-2.console.aws.amazon.com/s3/buckets/my-bucket?prefix=my%2Fpath%2F123",
+        "https://us-west-2.console.aws.amazon.com/s3/buckets/my-bucket?prefix=my%2Fpath%2F123%2F",
         result.cloudConsoleUrl,
       )
     }
@@ -68,7 +68,7 @@ class ObjectStoragePathResolverTest {
       val resolver = S3ObjectStoragePathResolver(config)
       val result = resolver.resolveRejectedRecordsPaths(123L)
       assertNotNull(result)
-      assertEquals("s3://my-bucket/my/path/123", result!!.storageUri)
+      assertEquals("s3://my-bucket/my/path/123/", result!!.storageUri)
       assertNull(result.cloudConsoleUrl)
     }
 
@@ -82,9 +82,9 @@ class ObjectStoragePathResolverTest {
       val resolver = S3ObjectStoragePathResolver(config)
       val result = resolver.resolveRejectedRecordsPaths(456L)
       assertNotNull(result)
-      assertEquals("s3://my-bucket/456", result!!.storageUri)
+      assertEquals("s3://my-bucket/456/", result!!.storageUri)
       assertEquals(
-        "https://us-west-2.console.aws.amazon.com/s3/buckets/my-bucket?prefix=456",
+        "https://us-west-2.console.aws.amazon.com/s3/buckets/my-bucket?prefix=456%2F",
         result.cloudConsoleUrl,
       )
     }
