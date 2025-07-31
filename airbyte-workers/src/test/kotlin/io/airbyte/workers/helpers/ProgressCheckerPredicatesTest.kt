@@ -17,7 +17,7 @@ internal class ProgressCheckerPredicatesTest {
   @ParameterizedTest
   @MethodSource("statsProgressMatrix")
   fun checkAttemptStats(
-    stats: AttemptStats?,
+    stats: AttemptStats,
     expected: Boolean,
   ) {
     Assertions.assertEquals(expected, checker.test(stats))

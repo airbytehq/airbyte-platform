@@ -26,6 +26,7 @@ import io.airbyte.commons.temporal.scheduling.state.listener.TestStateListener;
 import io.airbyte.commons.temporal.scheduling.state.listener.WorkflowStateChangedListener.ChangedStateEvent;
 import io.airbyte.commons.temporal.scheduling.state.listener.WorkflowStateChangedListener.StateField;
 import io.airbyte.commons.version.Version;
+import io.airbyte.config.ActorContext;
 import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
@@ -223,8 +224,8 @@ class ConnectionManagerWorkflowTest {
         .thenReturn(new SyncJobCheckConnectionInputs(
             new IntegrationLauncherConfig().withDockerImage(SOURCE_DOCKER_IMAGE),
             new IntegrationLauncherConfig(),
-            new StandardCheckConnectionInput(),
-            new StandardCheckConnectionInput()));
+            new StandardCheckConnectionInput().withActorContext(new ActorContext()),
+            new StandardCheckConnectionInput().withActorContext(new ActorContext())));
 
     when(mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(Mockito.any(SyncInputWithAttemptNumber.class)))
         .thenReturn(
@@ -299,8 +300,8 @@ class ConnectionManagerWorkflowTest {
             new SyncJobCheckConnectionInputs(
                 new IntegrationLauncherConfig().withDockerImage(WorkerConstants.RESET_JOB_SOURCE_DOCKER_IMAGE_STUB),
                 new IntegrationLauncherConfig(),
-                new StandardCheckConnectionInput(),
-                new StandardCheckConnectionInput()));
+                new StandardCheckConnectionInput().withActorContext(new ActorContext()),
+                new StandardCheckConnectionInput().withActorContext(new ActorContext())));
     when(mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(Mockito.any(SyncInputWithAttemptNumber.class)))
         .thenReturn(
             new JobInput(

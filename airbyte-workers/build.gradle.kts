@@ -136,7 +136,7 @@ dependencies {
 
 airbyte {
   application {
-    mainClass = "io.airbyte.workers.Application"
+    mainClass = "io.airbyte.workers.ApplicationKt"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     localEnvVars.putAll(
       mapOf(
