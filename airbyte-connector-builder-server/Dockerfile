@@ -2,7 +2,7 @@ ARG JAVA_PYTHON_BASE_IMAGE_VERSION=3.3.8
 FROM airbyte/airbyte-base-java-python-image:${JAVA_PYTHON_BASE_IMAGE_VERSION} AS connector-builder-server
 
 # Set up CDK requirements
-ARG CDK_VERSION=6.60.1
+ARG CDK_VERSION=6.60.3
 ENV CDK_PYTHON=${PYENV_ROOT}/versions/${PYTHON_VERSION}/bin/python
 ENV CDK_ENTRYPOINT ${PYENV_ROOT}/versions/${PYTHON_VERSION}/lib/python3.10/site-packages/airbyte_cdk/connector_builder/main.py
 # Set up CDK
