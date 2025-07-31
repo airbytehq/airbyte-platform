@@ -31,7 +31,7 @@ class AbstractThrowableProblemHandler : ExceptionHandler<AbstractThrowableProble
       log.error("Throwable Problem Handler caught exception: ", exception)
       val problem: ProblemResponse = exception.problem
 
-      val status: HttpStatus = HttpStatus.valueOf(problem.status)
+      val status: HttpStatus = HttpStatus.valueOf(problem.getStatus()!!)
       return HttpResponse
         .status<Any>(status)
         .body(Jsons.serialize(problem))

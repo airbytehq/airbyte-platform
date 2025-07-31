@@ -26,11 +26,11 @@ internal class RequestTimeoutInterceptorTest {
       assertThrows<RequestTimeoutExceededProblem> {
         exampleBean.functionOne("a test string")
       }
-    assertEquals(mapOf("timeout" to "PT1S"), e.problem.data)
-    assertEquals(HttpStatus.REQUEST_TIMEOUT.code, e.problem.status)
-    assertEquals("The request has exceeded the timeout associated with this endpoint.", e.problem.detail)
-    assertEquals("error:request-timeout-exceeded", e.problem.type)
-    assertEquals("Request timeout exceeded", e.problem.title)
+    assertEquals(mapOf("timeout" to "PT1S"), e.problem.getData())
+    assertEquals(HttpStatus.REQUEST_TIMEOUT.code, e.problem.getStatus())
+    assertEquals("The request has exceeded the timeout associated with this endpoint.", e.problem.getDetail())
+    assertEquals("error:request-timeout-exceeded", e.problem.getType())
+    assertEquals("Request timeout exceeded", e.problem.getTitle())
     applicationContext.close()
   }
 

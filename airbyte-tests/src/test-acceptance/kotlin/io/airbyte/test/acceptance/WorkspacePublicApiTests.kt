@@ -195,8 +195,8 @@ class WorkspacePublicApiTests {
     val err = exception.response as ClientError<*>
     val prob = Jsons.deserialize(err.body as String, NotificationMissingUrlProblemResponse::class.java)
     assertEquals(400, exception.statusCode)
-    assertEquals(400, prob.status)
-    assertEquals("The 'failure' notification is enabled but is missing a URL.", prob.data.message)
+    assertEquals(400, prob.getStatus())
+    assertEquals("The 'failure' notification is enabled but is missing a URL.", prob.getData()?.message)
   }
 
   @Test
@@ -217,7 +217,7 @@ class WorkspacePublicApiTests {
     val err = exception.response as ClientError<*>
     val prob = Jsons.deserialize(err.body as String, NotificationRequiredProblemResponse::class.java)
     assertEquals(400, exception.statusCode)
-    assertEquals(400, prob.status)
-    assertEquals("The 'failure' notification is enabled but is missing a URL.", prob.data.message)
+    assertEquals(400, prob.getStatus())
+    assertEquals("The 'failure' notification is enabled but is missing a URL.", prob.getData()?.message)
   }
 }

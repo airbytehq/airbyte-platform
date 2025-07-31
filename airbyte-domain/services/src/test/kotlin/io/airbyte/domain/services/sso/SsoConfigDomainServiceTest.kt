@@ -165,7 +165,8 @@ class SsoConfigDomainServiceTest {
         ssoConfigDomainService.createAndStoreSsoConfig(config)
       }
     assert(
-      exception.problem.data
+      exception.problem
+        .getData()
         .toString()
         .contains("Email domain already exists: ${config.emailDomain}"),
     )
@@ -188,7 +189,8 @@ class SsoConfigDomainServiceTest {
         ssoConfigDomainService.createAndStoreSsoConfig(config)
       }
     assert(
-      exception.problem.data
+      exception.problem
+        .getData()
         .toString()
         .contains("SSO Config already exists for organization ${config.organizationId}"),
     )
@@ -212,7 +214,8 @@ class SsoConfigDomainServiceTest {
         ssoConfigDomainService.createAndStoreSsoConfig(config)
       }
     assert(
-      exception.problem.data
+      exception.problem
+        .getData()
         .toString()
         .contains("Domain must match the organization"),
     )
@@ -234,7 +237,8 @@ class SsoConfigDomainServiceTest {
         ssoConfigDomainService.validateEmailDomain(config)
       }
     assert(
-      exception.problem.data
+      exception.problem
+        .getData()
         .toString()
         .contains("Domain must match the organization"),
     )

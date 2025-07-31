@@ -70,7 +70,7 @@ class TrackingHelper(
   ) {
     var statusCode = 0
     if (e is AbstractThrowableProblem) {
-      statusCode = (e as AbstractThrowableProblem?)?.problem?.status ?: 500
+      statusCode = (e as AbstractThrowableProblem?)?.problem?.getStatus() ?: 500
     } else if (e != null) {
       // also contains InvalidConsentUrlProblem
       statusCode = HttpStatus.INTERNAL_SERVER_ERROR.code

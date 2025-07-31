@@ -15,7 +15,10 @@ import java.util.stream.Collectors;
 
 /**
  * Common code for operations on a {@link Enum}.
+ *
+ * Used only in tests that are still written in java. Do not use in kotlin!
  */
+@Deprecated
 public class Enums {
 
   /**
