@@ -31,7 +31,7 @@ class PayloadChecker(
    * @return data if size is valid
    * @throws SizeLimitException if payload size exceeds temporal limits.
    </T> */
-  fun <T> validatePayloadSize(data: T): T = validatePayloadSize(data, arrayOfNulls(0))
+  fun <T> validatePayloadSize(data: T): T = validatePayloadSize(data, emptyArray())
 
   /**
    * Validate the payload size fits within temporal message size limits.
@@ -44,7 +44,7 @@ class PayloadChecker(
    </T> */
   fun <T> validatePayloadSize(
     data: T,
-    attrs: Array<MetricAttribute?>,
+    attrs: Array<MetricAttribute>,
   ): T {
     val serializedData = Jsons.serialize(data)
     if (serializedData.length > MAX_PAYLOAD_SIZE_BYTES) {
