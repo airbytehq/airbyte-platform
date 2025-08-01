@@ -1,16 +1,14 @@
-import {
-  useCurrentWorkspace,
-  useListUserInvitations,
-  useListUsersInOrganization,
-  useListWorkspaceAccessUsers,
-} from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils";
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useListUserInvitations, useListUsersInOrganization, useListWorkspaceAccessUsers } from "core/api";
 import { ScopeType } from "core/api/types/AirbyteClient";
 import { useIntent } from "core/utils/rbac";
 
 import { UnifiedUserModel, unifyOrganizationUserData, unifyWorkspaceUserData } from "./util";
 
 export const useListUsersToAdd = (scope: ScopeType, deferredSearchValue: string) => {
-  const { workspaceId, organizationId } = useCurrentWorkspace();
+  const workspaceId = useCurrentWorkspaceId();
+  const organizationId = useCurrentOrganizationId();
 
   const canListUsersInOrganization = useIntent("ListOrganizationMembers", {
     organizationId,
@@ -29,11 +27,11 @@ export const useListUsersToAdd = (scope: ScopeType, deferredSearchValue: string)
   let unifiedUserData: UnifiedUserModel[] = [];
   if (scope === "workspace") {
     /*    Before the user begins typing an email address, the list of users should only be users
-          who can be added to the workspace (organization users who aren't org_admin + don't have a workspace permission).  
-      
+          who can be added to the workspace (organization users who aren't org_admin + don't have a workspace permission).
+
           When they begin typing, we filter a list that is a superset of workspaceAccessUsers + organization users.  We want to prefer the workspaceAccessUsers
-          object for a given user (if present) because it contains all relevant permissions for the user.  
-          
+          object for a given user (if present) because it contains all relevant permissions for the user.
+
           Then, we enrich that from the list of organization_members who don't have a permission to this workspace.
       */
     workspaceUsers
@@ -72,11 +70,11 @@ export const useListUsersToAdd = (scope: ScopeType, deferredSearchValue: string)
     });
     unifiedUserData = unifyWorkspaceUserData(Array.from(userMap.values()), invitationsToList);
   } else if (scope === "organization") {
-    /*    Before the user begins typing an email address, do not list any users 
-      
+    /*    Before the user begins typing an email address, do not list any users
+
           When they begin typing, we show any existing organization members that match (and their permissions).
           These users cannot be invited (because they're already there), but helps give clarity as to why they can't be invited.
-          
+
       */
 
     unifiedUserData =

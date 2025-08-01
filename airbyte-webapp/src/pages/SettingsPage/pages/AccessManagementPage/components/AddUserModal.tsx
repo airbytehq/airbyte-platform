@@ -10,7 +10,9 @@ import { Button } from "components/ui/Button";
 import { ModalFooter } from "components/ui/Modal";
 import { SearchInput } from "components/ui/SearchInput";
 
-import { useCreateUserInvitation, useCurrentWorkspace } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils";
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useCreateUserInvitation } from "core/api";
 import { PermissionType, ScopeType } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -51,7 +53,8 @@ export const AddUserModal: React.FC<{
   const canInviteExternalUsers = useFeature(FeatureItem.ExternalInvitations);
 
   const { formatMessage } = useIntl();
-  const { workspaceId, organizationId } = useCurrentWorkspace();
+  const workspaceId = useCurrentWorkspaceId();
+  const organizationId = useCurrentOrganizationId();
 
   const [searchValue, setSearchValue] = useState(initialValues?.searchValue ?? "");
   const deferredSearchValue = useDeferredValue(searchValue);

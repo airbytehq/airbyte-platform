@@ -246,7 +246,13 @@ export const useListWorkspaceAccessUsers = (workspaceId: string) => {
   const requestOptions = useRequestOptions();
   const queryKey = workspaceKeys.listAccessUsers(workspaceId);
 
-  return useSuspenseQuery(queryKey, () => listAccessInfoByWorkspaceId({ workspaceId }, requestOptions));
+  return (
+    useSuspenseQuery(queryKey, () => listAccessInfoByWorkspaceId({ workspaceId }, requestOptions), {
+      enabled: Boolean(workspaceId),
+    }) ?? {
+      usersWithAccess: [],
+    }
+  );
 };
 
 /**

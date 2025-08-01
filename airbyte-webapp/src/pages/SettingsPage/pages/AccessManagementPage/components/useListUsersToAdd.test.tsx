@@ -6,18 +6,14 @@ import {
   mockWorkspaceUserInvitations,
 } from "test-utils/mock-data/mockUsersList";
 
-import {
-  useCurrentWorkspace,
-  useListUserInvitations,
-  useListUsersInOrganization,
-  useListWorkspaceAccessUsers,
-} from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils";
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useListUserInvitations, useListUsersInOrganization, useListWorkspaceAccessUsers } from "core/api";
 import { useIntent } from "core/utils/rbac";
 
 import { useListUsersToAdd } from "./useListUsersToAdd";
 
 jest.mock("core/api", () => ({
-  useCurrentWorkspace: jest.fn(),
   useListUsersInOrganization: jest.fn(),
   useListWorkspaceAccessUsers: jest.fn(),
   useListUserInvitations: jest.fn(),
@@ -27,12 +23,18 @@ jest.mock("core/utils/rbac", () => ({
   useIntent: jest.fn(),
 }));
 
+jest.mock("area/workspace/utils", () => ({
+  useCurrentWorkspaceId: jest.fn(),
+}));
+
+jest.mock("area/organization/utils", () => ({
+  useCurrentOrganizationId: jest.fn(),
+}));
+
 describe("#useListUsersToAdd", () => {
   beforeEach(() => {
-    (useCurrentWorkspace as jest.Mock).mockReturnValue({
-      workspaceId: "ws-id",
-      organizationId: "org-id",
-    });
+    (useCurrentWorkspaceId as jest.Mock).mockReturnValue("ws-id");
+    (useCurrentOrganizationId as jest.Mock).mockReturnValue("org-id");
     (useListUsersInOrganization as jest.Mock).mockReturnValue({
       users: mockOrganizationUsers,
     });
