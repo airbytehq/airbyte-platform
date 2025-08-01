@@ -1,7 +1,7 @@
 import cloneDeep from "lodash/cloneDeep";
 import isBoolean from "lodash/isBoolean";
 import isEqual from "lodash/isEqual";
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { FieldValues, get, set, useFormContext } from "react-hook-form";
 
 import { removeEmptyProperties } from "core/utils/form";
@@ -211,10 +211,16 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({
 
   // REFERENCE SYNCHRONIZATION
 
+  const previousValues = useRef(cloneDeep(getValues()));
   // Watch for changes and propagate to references and targets
   useEffect(() => {
     const subscription = watch((data, { name }) => {
       if (!name) {
+        return;
+      }
+
+      // skip if the value did not change
+      if (isEqual(get(previousValues.current, name), get(data, name))) {
         return;
       }
 
@@ -265,22 +271,27 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({
         const fieldTargetPath = refSuffix ? `${targetPath}${refSuffix}` : targetPath;
         const newValue = get(data, name);
 
-        // Update target
-        updateFieldValue(fieldTargetPath, newValue);
+        // if newValue is empty, remove the ref to avoid clearing out all other references
+        if (newValue === undefined || newValue === null || newValue === "") {
+          removeRef(sourcePath, targetPath);
+        } else {
+          // Update target
+          updateFieldValue(fieldTargetPath, newValue);
 
-        // Update other reference sources
-        const refsToUpdate = refTargetToSources.get(targetPath) || [];
-        refsToUpdate.forEach((otherRefPath) => {
-          if (otherRefPath !== sourcePath) {
-            const pathToUpdate = refSuffix ? `${otherRefPath}${refSuffix}` : otherRefPath;
-            updateFieldValue(pathToUpdate, newValue);
-          }
-        });
+          // Update other reference sources
+          const refsToUpdate = refTargetToSources.get(targetPath) || [];
+          refsToUpdate.forEach((otherRefPath) => {
+            if (otherRefPath !== sourcePath) {
+              const pathToUpdate = refSuffix ? `${otherRefPath}${refSuffix}` : otherRefPath;
+              updateFieldValue(pathToUpdate, newValue);
+            }
+          });
+        }
       }
 
       // Case 3: Parent of a source changed - remove the ref if no longer equal
       for (const [sourcePath, targetPath] of refSourceToTarget.entries()) {
-        if (sourcePath.startsWith(name)) {
+        if (name !== sourcePath && sourcePath.startsWith(name)) {
           const sourceValue = getValues(sourcePath);
           const targetValue = getValues(targetPath);
           if (!isEqual(removeEmptyProperties(sourceValue), removeEmptyProperties(targetValue))) {
@@ -291,6 +302,8 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({
 
       // Write updated data to form
       reset(newData, { keepDirty: true, keepErrors: true, keepTouched: true });
+
+      previousValues.current = cloneDeep(newData);
     });
 
     return () => subscription.unsubscribe();
