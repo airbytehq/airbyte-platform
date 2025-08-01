@@ -310,23 +310,23 @@ func VerifyEnvVar(t *testing.T, chartYaml string, expected ExpectedEnvVar, actua
 	case ExpectedVarFromConfigMap:
 		assert.NotNil(t, actual.ValueFrom, "env var '%s' has no 'valueFrom' set", expected.GetRefKey())
 		assert.NotNil(t, actual.ValueFrom.ConfigMapKeyRef, "env var '%s' has no 'configMapRefKey' set", expected.GetRefKey())
-		assert.Equal(t, expected.GetRefName(), actual.ValueFrom.ConfigMapKeyRef.Name)
+		assert.Equal(t, expected.GetRefName(), actual.ValueFrom.ConfigMapKeyRef.Name, "env var '%s' configMapRef name should '%s'", expected.GetName(), expected.GetRefName())
 		assert.Equal(t, expected.GetRefKey(), actual.ValueFrom.ConfigMapKeyRef.Key)
 
 		configMap := GetConfigMap(chartYaml, expected.GetRefName())
 		if configMap != nil {
-			assert.Equal(t, expected.value, configMap.Data[expected.GetRefKey()])
+			assert.Equal(t, expected.value, configMap.Data[expected.GetRefKey()], "expected configMap value for '%s'", expected.GetRefKey())
 		}
 
 	case ExpectedVarFromSecret:
 		assert.NotNil(t, actual.ValueFrom, "env var '%s' has no 'valueFrom' set", expected.GetRefKey())
 		assert.NotNil(t, actual.ValueFrom.SecretKeyRef, "env var '%s' has no 'secretRefKey' set", expected.GetRefKey())
-		assert.Equal(t, expected.GetRefName(), actual.ValueFrom.SecretKeyRef.Name)
+		assert.Equal(t, expected.GetRefName(), actual.ValueFrom.SecretKeyRef.Name, "env var '%s' secretRef name should be '%s'", expected.GetName(), expected.GetRefName())
 		assert.Equal(t, expected.GetRefKey(), actual.ValueFrom.SecretKeyRef.Key)
 
 		secret := GetSecret(chartYaml, expected.GetRefName())
 		if secret != nil {
-			assert.Equal(t, expected.value, secret.StringData[expected.GetRefKey()])
+			assert.Equal(t, expected.value, secret.StringData[expected.GetRefKey()], "expected secret value for '%s'", expected.GetRefKey())
 		}
 	}
 }

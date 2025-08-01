@@ -280,7 +280,7 @@ aws:
 
     - env: AWS_ASSUME_ROLE_SECRET_NAME
       key: assumeRole.secretName
-      defaultValueExp: (include "airbyte.common.secretName" .)
+      defaultValueExp: (include "airbyte.aws.secretName" .)
 
 cluster:
   keyBasePath: global.cluster

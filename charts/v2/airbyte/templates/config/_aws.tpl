@@ -70,7 +70,7 @@ Renders the aws.assumeRole.secretAccessKey environment variable
 Renders the global.aws.assumeRole.secretName value
 */}}
 {{- define "airbyte.aws.assumeRole.secretName" }}
-    {{- .Values.global.aws.assumeRole.secretName | default (include "airbyte.common.secretName" .) }}
+    {{- .Values.global.aws.assumeRole.secretName | default (include "airbyte.aws.secretName" .) }}
 {{- end }}
 
 {{/*
