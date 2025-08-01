@@ -219,3 +219,5 @@ object LicenseAllowDestinationObjectStorageConfig : Permanent<Boolean>(key = "li
 object UseSonarServer : Temporary<Boolean>(key = "embedded.useSonarServer", default = false)
 
 object EnableSsoConfigUpdate : Permanent<Boolean>(key = "platform.can-change-sso-config", default = false)
+
+object ReplicationDebugLogLevelEnabled : Permanent<Boolean>(key = "platform.replication-debug-log-level-enabled", default = false)

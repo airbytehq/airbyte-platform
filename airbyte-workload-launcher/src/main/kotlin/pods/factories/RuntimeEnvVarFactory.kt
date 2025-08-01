@@ -16,7 +16,9 @@ import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
+import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Organization
+import io.airbyte.featureflag.ReplicationDebugLogLevelEnabled
 import io.airbyte.featureflag.UseAllowCustomCode
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.featureflag.Workspace
@@ -95,8 +97,11 @@ class RuntimeEnvVarFactory(
     val resourceEnvVars = getResourceEnvVars(resourceReqs)
     val customCodeEnvVars = getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId))
     val configPassThroughEnv = launcherConfig.additionalEnvironmentVariables?.toEnvVarList().orEmpty()
+    val debugLogLevelEnvVars =
+      getReplicationDebugLogLevelEnabledEnvVars(Multi(listOf(Workspace(launcherConfig.workspaceId), Connection(launcherConfig.connectionId))))
 
-    return awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + configPassThroughEnv + customCodeEnvVars
+    return awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + configPassThroughEnv + customCodeEnvVars +
+      debugLogLevelEnvVars
   }
 
   // TODO: Separate env factory methods per container (init, sidecar, main, etc.)
@@ -146,6 +151,17 @@ class RuntimeEnvVarFactory(
       connectorApmSupportHelper.addServerNameAndVersionToEnvVars(image, connectorApmEnvVars)
     }
     return connectorApmEnvVars.toList()
+  }
+
+  @InternalForTesting
+  internal fun getReplicationDebugLogLevelEnabledEnvVars(context: Context): List<EnvVar> {
+    val replicationDebugLogLevelEnabled = featureFlagClient.boolVariation(ReplicationDebugLogLevelEnabled, context)
+
+    return if (replicationDebugLogLevelEnabled) {
+      listOf(EnvVar(EnvVarConstants.LOG_LEVEL, "DEBUG", null))
+    } else {
+      emptyList()
+    }
   }
 
   /**

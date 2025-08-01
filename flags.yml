@@ -60,3 +60,10 @@ flags:
   # If set to 'true', the platform will allow custom code to be executed in the platform.
   - name: platform.use-allow-custom-code
     serve: false
+  - name: platform.replication-debug-log-level-enabled
+    serve: false
+    context:
+      - type: workspace
+        include:
+          - 0ebcab60-29f1-426a-8208-c05a12a2335c
+        serve: true

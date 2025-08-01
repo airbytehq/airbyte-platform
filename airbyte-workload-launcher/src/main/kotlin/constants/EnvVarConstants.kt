@@ -50,6 +50,7 @@ object EnvVarConstants {
   const val USE_FILE_TRANSFER = "USE_FILE_TRANSFER"
   const val USE_RUNTIME_SECRET_PERSISTENCE = "USE_RUNTIME_SECRET_PERSISTENCE"
   const val AIRBYTE_URL = "AIRBYTE_URL"
+  const val LOG_LEVEL = "LOG_LEVEL"
 
   // Metrics
   const val MICROMETER_ENV_VAR_PREFIX = "MICROMETER_"

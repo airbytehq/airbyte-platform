@@ -13,6 +13,7 @@ import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
+import io.airbyte.featureflag.ReplicationDebugLogLevelEnabled
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.UseAllowCustomCode
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
@@ -313,6 +314,7 @@ class RuntimeEnvVarFactoryTest {
     val metadataEnvVars = listOf(EnvVar("metadata-var", "4", null))
     val resourceEnvVars = listOf(EnvVar("resource-var", "5", null))
     val customCodeEnvVars = listOf(EnvVar("custom-code-var", "6", null))
+    val debugLogLevelEnvVars = listOf(EnvVar("debug-log-var", "7", null))
     val passThroughVars = passThroughEnvMap?.toEnvVarList().orEmpty()
     every { factory.resolveAwsAssumedRoleEnvVars(any()) } returns awsEnvVars
     every { factory.getConnectorApmEnvVars(any(), any()) } returns apmEnvVars
@@ -320,19 +322,21 @@ class RuntimeEnvVarFactoryTest {
     every { factory.getMetadataEnvVars(any()) } returns metadataEnvVars
     every { factory.getResourceEnvVars(any()) } returns resourceEnvVars
     every { factory.getDeclarativeCustomCodeSupportEnvVars(any()) } returns customCodeEnvVars
+    every { factory.getReplicationDebugLogLevelEnabledEnvVars(any()) } returns debugLogLevelEnvVars
 
     val config =
       IntegrationLauncherConfig()
         .withAdditionalEnvironmentVariables(passThroughEnvMap)
         .withDockerImage("image-name")
         .withWorkspaceId(workspaceId)
+        .withConnectionId(UUID.randomUUID())
 
     val resourceReqs = AirbyteResourceRequirements()
 
     val result = factory.replicationConnectorEnvVars(config, resourceReqs, false)
 
     val expected =
-      awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + passThroughVars + customCodeEnvVars
+      awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + passThroughVars + customCodeEnvVars + debugLogLevelEnvVars
 
     assertEquals(expected, result)
   }
@@ -467,6 +471,29 @@ class RuntimeEnvVarFactoryTest {
       ),
       result,
     )
+  }
+
+  @Test
+  fun `builds debug log level env vars when feature flag is enabled`() {
+    val context = Workspace(workspaceId)
+    every { ffClient.boolVariation(ReplicationDebugLogLevelEnabled, context) } returns true
+
+    val result = factory.getReplicationDebugLogLevelEnabledEnvVars(context)
+
+    assertEquals(
+      listOf(EnvVar(EnvVarConstants.LOG_LEVEL, "DEBUG", null)),
+      result,
+    )
+  }
+
+  @Test
+  fun `returns empty list when debug log level feature flag is disabled`() {
+    val context = Workspace(workspaceId)
+    every { ffClient.boolVariation(ReplicationDebugLogLevelEnabled, context) } returns false
+
+    val result = factory.getReplicationDebugLogLevelEnabledEnvVars(context)
+
+    assertTrue(result.isEmpty())
   }
 
   object Fixtures {
