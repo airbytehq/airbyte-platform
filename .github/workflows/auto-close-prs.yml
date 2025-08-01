@@ -15,7 +15,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
-          const message = `So we can focus on supporting our connector contributors, we do accept PRs in this repo. Please feel free to post an issue in https://github.com/airbytehq/airbyte. We encourage contributions in all of our other public repos including https://github.com/airbytehq/airbyte.`;
+          const message = "So we can focus on supporting our connector contributors, we do not accept PRs in this repo. Please feel free to post an issue in https://github.com/airbytehq/airbyte. We encourage contributions in all of our other public repos including https://github.com/airbytehq/airbyte.";
 
           OWNER=$(echo "$REPO" | cut -d'/' -f1)
           REPO_NAME=$(echo "$REPO" | cut -d'/' -f2)
