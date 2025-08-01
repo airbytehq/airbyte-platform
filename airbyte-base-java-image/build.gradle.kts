@@ -7,6 +7,10 @@ plugins {
 tasks.register<DockerBuildxTask>("dockerJavaBaseImage") {
   inputDir = project.projectDir
   dockerfile = layout.projectDirectory.file("./Dockerfile")
-  tag = "3.3.8"
+  tag = layout.projectDirectory.file(".version").asFile.readText().trim()
+  additionalTags = listOf(
+    tag.substringBeforeLast("."),  // Minor version mutable tag
+    tag.substringBeforeLast(".").substringBeforeLast(".") // Major version mutable tag
+  )
   imageName = "airbyte-base-java-image"
 }
