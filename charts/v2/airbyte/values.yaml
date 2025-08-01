@@ -513,7 +513,7 @@ version: ""
 ## @section Webapp Parameters
 
 webapp:
-  enabled: true
+  enabled: false
   # -- Number of webapp replicas
   replicaCount: 1
 
