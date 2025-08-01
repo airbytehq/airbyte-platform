@@ -53,7 +53,7 @@ export const YamlManifestEditor: React.FC = () => {
         // Increment counter to track this call
         const thisCallId = ++lastCallIdRef.current;
 
-        resolveManifest(newManifest, true).then((resolvedManifest) => {
+        resolveManifest(newManifest).then((resolvedManifest) => {
           // Only update state if this is still the latest call
           // This prevents yamlIsDirty from being set back to false when subsequent YAML changes are made
           // while previous resolve calls are still in progress.

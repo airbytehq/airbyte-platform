@@ -19,7 +19,7 @@ interface ResolveContext {
   builderProject: ConnectorBuilderProjectRead;
   initialYaml: string;
   initialResolvedManifest: ConnectorManifest | null;
-  resolveManifest: (manifestToResolve: ConnectorManifest, shouldNormalize?: boolean) => Promise<ResolveManifest>;
+  resolveManifest: (manifestToResolve: ConnectorManifest) => Promise<ResolveManifest>;
   resolveError: HttpError<KnownExceptionInfo> | null;
   resolveErrorMessage: string | undefined;
   isResolving: boolean;
@@ -51,8 +51,8 @@ export const ConnectorBuilderResolveProvider: React.FC<React.PropsWithChildren<u
     resetResolveState,
   } = useResolveManifest();
   const resolveManifest = useCallback(
-    async (manifestToResolve: ConnectorManifest, shouldNormalize?: boolean) => {
-      return resolveManifestMutation({ manifestToResolve, projectId, shouldNormalize });
+    async (manifestToResolve: ConnectorManifest) => {
+      return resolveManifestMutation({ manifestToResolve, projectId });
     },
     [resolveManifestMutation, projectId]
   );
@@ -75,7 +75,7 @@ export const ConnectorBuilderResolveProvider: React.FC<React.PropsWithChildren<u
   );
   const [initialYaml, setInitialYaml] = useState<string>("");
   useMount(() => {
-    resolveManifest(persistedManifest, true)
+    resolveManifest(persistedManifest)
       .then((result) => {
         const resolvedManifest = result.manifest as ConnectorManifest;
         setInitialStreamHashes(persistedManifest, resolvedManifest);

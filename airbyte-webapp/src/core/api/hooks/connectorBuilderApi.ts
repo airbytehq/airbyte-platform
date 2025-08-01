@@ -126,23 +126,14 @@ export const useResolveManifest = () => {
   const requestOptions = useRequestOptions();
 
   const mutation = useMutation(
-    ({
-      manifestToResolve,
-      projectId,
-      shouldNormalize,
-    }: {
-      manifestToResolve: DeclarativeComponentSchema;
-      projectId?: string;
-      shouldNormalize?: boolean;
-    }) => {
+    ({ manifestToResolve, projectId }: { manifestToResolve: DeclarativeComponentSchema; projectId?: string }) => {
       return resolveManifest(
         {
           manifest: {
             ...manifestToResolve,
             // normalize the manifest in the CDK to produce properly linked fields and parent stream references
-            __should_normalize: shouldNormalize,
-            // TODO: uncomment this once we are ready to migrate all users
-            // __should_migrate: true,
+            __should_normalize: true,
+            __should_migrate: true,
           },
           workspace_id: workspaceId,
           project_id: projectId,
