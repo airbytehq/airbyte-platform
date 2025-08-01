@@ -12,7 +12,6 @@ import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useDestinationDefinitionList, useGetDestination, useGetSource } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { AppActionCodes, trackAction } from "core/utils/datadog";
-import { useExperiment } from "hooks/services/Experiment";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
@@ -53,7 +52,6 @@ const CurrentStep: React.FC = () => {
   const destination = useGetDestination(destinationId);
   const { destinationDefinitionMap } = useDestinationDefinitionList();
   const destinationDefinition = destinationDefinitionMap.get(destination?.destinationDefinitionId || "");
-  const dataActivationEnabled = useExperiment("connection.dataActivationUI");
 
   const sourceRef: MutableRefObject<string | null> = useRef(sourceId);
   useEffect(() => {
@@ -84,7 +82,7 @@ const CurrentStep: React.FC = () => {
   // both source and destination are configured, configure the connection now
   if (source && destination) {
     // Data Activation connections are handled in a different route
-    if (dataActivationEnabled && destinationDefinition?.supportsDataActivation) {
+    if (destinationDefinition?.supportsDataActivation) {
       return (
         <Navigate
           to={{

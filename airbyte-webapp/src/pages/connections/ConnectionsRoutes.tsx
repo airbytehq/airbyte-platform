@@ -5,7 +5,6 @@ import { useEffectOnce } from "react-use";
 import { LoadingPage } from "components";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { useExperiment } from "hooks/services/Experiment";
 
 import ConfigureDataActivationConnectionPage from "./ConfigureDataActivationConnectionPage";
 import { CreateDataActivationConnectionRoutes } from "./CreateDataActivationConnectionRoutes";
@@ -63,8 +62,6 @@ export const JobHistoryToTimelineRedirect = () => {
 };
 
 export const ConnectionsRoutes: React.FC = () => {
-  const dataActivationEnabled = useExperiment("connection.dataActivationUI");
-
   return (
     <Suspense fallback={<LoadingPage />}>
       <Routes>
@@ -73,15 +70,13 @@ export const ConnectionsRoutes: React.FC = () => {
           path={`${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}/*`}
           element={<ConfigureConnectionPage />}
         />
-        {dataActivationEnabled && (
-          <Route
-            path={`${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.ConfigureDataActivation}`}
-            element={<CreateDataActivationConnectionRoutes />}
-          >
-            <Route index element={<DataActivationMappingPage />} />
-            <Route path={ConnectionRoutePaths.ConfigureContinued} element={<ConfigureDataActivationConnectionPage />} />
-          </Route>
-        )}
+        <Route
+          path={`${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.ConfigureDataActivation}`}
+          element={<CreateDataActivationConnectionRoutes />}
+        >
+          <Route index element={<DataActivationMappingPage />} />
+          <Route path={ConnectionRoutePaths.ConfigureContinued} element={<ConfigureDataActivationConnectionPage />} />
+        </Route>
         <Route path={ConnectionRoutePaths.ConnectionNew} element={<CreateConnectionPage />} />
         <Route path={ConnectionRoutePaths.Root} element={<ConnectionPage />}>
           <Route path={ConnectionRoutePaths.Status} element={<StreamStatusPage />} />
