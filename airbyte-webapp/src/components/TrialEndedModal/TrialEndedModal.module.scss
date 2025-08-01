@@ -1,0 +1,32 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.trialEndedModal {
+  max-height: 600px;
+  padding: variables.$spacing-xl;
+
+  &__planCard {
+    flex: 1; // Equal width for both cards
+    min-height: 425px;
+    padding: variables.$spacing-lg;
+    border: variables.$border-thin solid colors.$grey-100;
+    border-radius: variables.$border-radius-lg;
+    background: colors.$foreground;
+    border-color: colors.$dark-blue-900;
+
+    // Ensure the FlexContainer inside fills the card height
+    > * {
+      height: 100%;
+    }
+  }
+
+  &__planTitle {
+    min-height: 70px; // Fixed height to align both feature lists
+  }
+
+  &__button {
+    width: 100%;
+    padding: variables.$spacing-sm variables.$spacing-md;
+    font-size: variables.$font-size-lg;
+  }
+}
