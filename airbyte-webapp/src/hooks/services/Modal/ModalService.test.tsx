@@ -90,4 +90,70 @@ describe("ModalService", () => {
     expect(rendered.queryByTestId("testModalContent")).toBeFalsy();
     expect(resultCallback).toHaveBeenCalledWith({ type: "completed", reason: "reason2" });
   });
+
+  it("should return undefined when no modal is open", () => {
+    const TestComponentWithNoModal: React.FC = () => {
+      const modalService = useModalService();
+
+      expect(modalService.getCurrentModalTitle()).toBeUndefined();
+
+      return null;
+    };
+
+    render(
+      <TestWrapper>
+        <TestComponentWithNoModal />
+      </TestWrapper>
+    );
+  });
+
+  it("should return the current modal title when modal is open", async () => {
+    let capturedTitle: string | undefined;
+
+    const ModalContentComponent: React.FC<{ onComplete: (result: string) => void }> = ({ onComplete }) => {
+      const modalService = useModalService();
+
+      useEffectOnce(() => {
+        // Capture title after component mounts (modal is fully rendered)
+        capturedTitle = modalService.getCurrentModalTitle() as string | undefined;
+      });
+
+      return (
+        <div data-testid="modal-content-with-title">
+          <button onClick={() => onComplete("done")} data-testid="complete-btn">
+            Complete
+          </button>
+        </div>
+      );
+    };
+
+    const TestComponentWithModalTitle: React.FC = () => {
+      const modalService = useModalService();
+
+      useEffectOnce(() => {
+        modalService.openModal({
+          title: "Current Modal Title",
+          content: ModalContentComponent,
+        });
+      });
+
+      return null;
+    };
+
+    const rendered = render(
+      <TestWrapper>
+        <TestComponentWithModalTitle />
+      </TestWrapper>
+    );
+
+    // Wait for modal to render
+    await waitFor(() => {
+      expect(rendered.getByText("Current Modal Title")).toBeTruthy();
+    });
+
+    // Wait a bit more for the useEffectOnce in ModalContentComponent to execute
+    await waitFor(() => {
+      expect(capturedTitle).toBe("Current Modal Title");
+    });
+  });
 });

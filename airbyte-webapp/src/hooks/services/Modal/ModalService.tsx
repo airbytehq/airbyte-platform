@@ -1,4 +1,4 @@
-import React, { useContext, useMemo, useRef, useState } from "react";
+import React, { useCallback, useContext, useMemo, useRef, useState } from "react";
 import { firstValueFrom, Subject } from "rxjs";
 
 import { LoadingPage } from "components";
@@ -18,18 +18,28 @@ export const ModalServiceProvider: React.FC<React.PropsWithChildren<unknown>> = 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const resultSubjectRef = useRef<Subject<ModalResult<any>>>();
 
+  // Store the current modal title so it persists even after modal closes
+  const currentModalTitleRef = useRef<React.ReactNode | undefined>();
+
+  const getCurrentModalTitle = useCallback(() => currentModalTitleRef.current, []);
+
   const service: ModalServiceContext = useMemo(
     () => ({
       openModal: async (options) => {
         resultSubjectRef.current = new Subject();
         setModalOptions(options);
 
+        // Capture the modal title when opening
+        currentModalTitleRef.current = options.title;
+
         const reason = await firstValueFrom(resultSubjectRef.current);
         setModalOptions(undefined);
         resultSubjectRef.current = undefined;
         return reason;
       },
+      getCurrentModalTitle,
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 

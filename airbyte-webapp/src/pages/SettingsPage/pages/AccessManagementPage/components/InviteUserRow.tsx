@@ -1,5 +1,5 @@
 import { Listbox } from "@headlessui/react";
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -38,6 +38,7 @@ interface InviteUserRowProps {
   setSelectedRow: (value: string | null) => void;
   user?: UnifiedUserModel;
   scope: ScopeType;
+  onSelectPermission?: (permission: PermissionType) => void;
 }
 
 export const InviteUserRow: React.FC<InviteUserRowProps> = ({
@@ -48,14 +49,13 @@ export const InviteUserRow: React.FC<InviteUserRowProps> = ({
   setSelectedRow,
   user,
   scope,
+  onSelectPermission,
 }) => {
   const allowAllRBACRoles = useFeature(FeatureItem.AllowAllRBACRoles);
 
-  const [selectedPermissionType, setPermissionType] = useState<PermissionType>(
-    scope === ScopeType.workspace ? PermissionType.workspace_admin : PermissionType.organization_admin
-  );
+  const { setValue, watch } = useFormContext<AddUserFormValues>();
+  const selectedPermissionType = watch("permission");
 
-  const { setValue } = useFormContext<AddUserFormValues>();
   const { formatMessage } = useIntl();
   const { userId: currentUserId } = useCurrentUser();
   const isCurrentUser = user?.id === currentUserId;
@@ -64,13 +64,12 @@ export const InviteUserRow: React.FC<InviteUserRowProps> = ({
 
   const onSelectRow = () => {
     setSelectedRow(id);
-    setValue("permission", selectedPermissionType, { shouldValidate: true });
     setValue("email", email, { shouldValidate: true });
   };
 
-  const onSelectPermission = (selectedValue: PermissionType) => {
-    setPermissionType(selectedValue);
+  const handlePermissionChange = (selectedValue: PermissionType) => {
     setValue("permission", selectedValue, { shouldValidate: true });
+    onSelectPermission?.(selectedValue);
   };
 
   const shouldDisableRow = useMemo(() => {
@@ -150,7 +149,7 @@ export const InviteUserRow: React.FC<InviteUserRowProps> = ({
           </FlexContainer>
           <FlexContainer alignItems="center">
             {allowAllRBACRoles && selectedRow === id && (
-              <Listbox value={selectedPermissionType} onChange={onSelectPermission}>
+              <Listbox value={selectedPermissionType} onChange={handlePermissionChange}>
                 <FloatLayout strategy="fixed">
                   <ListboxButton className={styles.inviteUserRow__listBoxButton}>
                     <Box py="sm" px="xs">

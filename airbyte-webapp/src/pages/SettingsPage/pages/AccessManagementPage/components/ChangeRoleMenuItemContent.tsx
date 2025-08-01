@@ -1,13 +1,15 @@
 import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
+import { BrandingBadge } from "components/ui/BrandingBadge";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { PermissionType } from "core/api/types/AirbyteClient";
+import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 
-import { permissionDescriptionDictionary, permissionStringDictionary } from "./util";
+import { permissionDescriptionDictionary, permissionStringDictionary, isTeamsFeaturePermissionType } from "./util";
 
 interface ChangeRoleMenuItemContentProps {
   roleIsInvalid: boolean;
@@ -24,9 +26,16 @@ export const ChangeRoleMenuItemContent: React.FC<ChangeRoleMenuItemContentProps>
     <Box px="md" py="lg">
       <FlexContainer alignItems="center" justifyContent="space-between">
         <FlexItem>
-          <Text color={roleIsInvalid ? "grey300" : undefined}>
-            <FormattedMessage id={permissionStringDictionary[permissionType].role} />
-          </Text>
+          <FlexContainer alignItems="center">
+            <Text color={roleIsInvalid ? "grey300" : undefined}>
+              <FormattedMessage id={permissionStringDictionary[permissionType].role} />
+            </Text>
+            {isTeamsFeaturePermissionType(permissionType) && (
+              <IfFeatureEnabled feature={FeatureItem.CloudForTeamsBranding}>
+                <BrandingBadge product="cloudForTeams" />
+              </IfFeatureEnabled>
+            )}
+          </FlexContainer>
           <Text color={roleIsInvalid ? "grey300" : "grey"}>
             <FormattedMessage
               id={permissionDescriptionDictionary[permissionType].id}

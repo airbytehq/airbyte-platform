@@ -3,7 +3,7 @@ import React from "react";
 import { ModalProps } from "components/ui/Modal";
 
 export interface ModalOptions<T> {
-  title: ModalProps["title"];
+  title?: ModalProps["title"];
   size?: ModalProps["size"];
   preventCancel?: boolean;
   content: React.ComponentType<ModalContentProps<T>>;
@@ -20,4 +20,5 @@ export interface ModalContentProps<T> {
 
 export interface ModalServiceContext {
   openModal: <ResultType>(options: ModalOptions<ResultType>) => Promise<ModalResult<ResultType>>;
+  getCurrentModalTitle: () => ModalProps["title"] | undefined;
 }

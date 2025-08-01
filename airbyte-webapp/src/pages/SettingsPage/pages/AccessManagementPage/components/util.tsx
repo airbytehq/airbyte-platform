@@ -1,6 +1,7 @@
 import {
   OrganizationUserRead,
   PermissionType,
+  ScopeType,
   UserInvitationRead,
   WorkspaceUserAccessInfoRead,
 } from "core/api/types/AirbyteClient";
@@ -172,3 +173,25 @@ export const getOrganizationAccessLevel = (
   // the reason we set the index to the length of the array is so that if there is not a given type of role, it will not be the lowest index.
   return RbacRoleHierarchy[Math.min(orgRole ? RbacRoleHierarchy.indexOf(orgRole) : RbacRoleHierarchy.length)];
 };
+
+/**
+ * This is used to check if the permission type is a teams feature permission type
+ * @returns true if the permission type is a teams feature permission type
+ */
+export const isTeamsFeaturePermissionType = (permission: PermissionType): boolean => {
+  const warningPermissions: PermissionType[] = [
+    PermissionType.workspace_editor,
+    PermissionType.workspace_runner,
+    // TBD: ask do we need to handle organization level permissions
+    // PermissionType.organization_editor,
+    // PermissionType.organization_runner,
+  ];
+  return warningPermissions.includes(permission);
+};
+
+/**
+ * This is used to set the initial permission type based on the scope for the AddUserModal form
+ * @returns the initial permission type based on the scope
+ */
+export const getInitialPermissionType = (scope: ScopeType): PermissionType =>
+  scope === ScopeType.workspace ? PermissionType.workspace_admin : PermissionType.organization_admin;

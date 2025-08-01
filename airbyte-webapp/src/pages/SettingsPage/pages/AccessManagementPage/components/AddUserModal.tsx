@@ -2,7 +2,6 @@ import { useDeferredValue, useMemo, useState } from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
-import * as yup from "yup";
 import { z } from "zod";
 
 import { Form } from "components/forms";
@@ -18,6 +17,7 @@ import { FeatureItem, useFeature } from "core/services/features";
 
 import { AddUserModalBody } from "./AddUserModalBody";
 import { useListUsersToAdd } from "./useListUsersToAdd";
+import { getInitialPermissionType } from "./util";
 
 const ValidationSchema = z.object({
   email: z.string().trim().email("form.email.error"),
@@ -25,6 +25,13 @@ const ValidationSchema = z.object({
 });
 
 export type AddUserFormValues = z.infer<typeof ValidationSchema>;
+
+interface AddUserModalInitialValues {
+  searchValue: string;
+  email: string;
+  permission: PermissionType;
+  selectedRow: string | null;
+}
 
 const SubmissionButton: React.FC = () => {
   const { isSubmitting, isValid } = useFormState();
@@ -36,16 +43,20 @@ const SubmissionButton: React.FC = () => {
   );
 };
 
-export const AddUserModal: React.FC<{ onSubmit: () => void; scope: ScopeType }> = ({ onSubmit, scope }) => {
+export const AddUserModal: React.FC<{
+  onSubmit: () => void;
+  scope: ScopeType;
+  initialValues?: AddUserModalInitialValues;
+}> = ({ onSubmit, scope, initialValues }) => {
+  const canInviteExternalUsers = useFeature(FeatureItem.ExternalInvitations);
+
   const { formatMessage } = useIntl();
   const { workspaceId, organizationId } = useCurrentWorkspace();
 
-  const [searchValue, setSearchValue] = useState("");
+  const [searchValue, setSearchValue] = useState(initialValues?.searchValue ?? "");
   const deferredSearchValue = useDeferredValue(searchValue);
-  const [selectedRow, setSelectedRow] = useState<string | null>(null);
+  const [selectedRow, setSelectedRow] = useState<string | null>(initialValues?.selectedRow ?? null);
   const { mutateAsync: createInvitation } = useCreateUserInvitation();
-
-  const canInviteExternalUsers = useFeature(FeatureItem.ExternalInvitations);
 
   const analyticsService = useAnalyticsService();
   const location = useLocation();
@@ -57,10 +68,10 @@ export const AddUserModal: React.FC<{ onSubmit: () => void; scope: ScopeType }> 
       : "user.settings";
   }, [location.pathname]);
 
-  const isValidEmail = useMemo(() => {
-    // yup considers an empty string a valid email address so we need to check both
-    return deferredSearchValue.length > 0 && yup.string().email().isValidSync(deferredSearchValue);
-  }, [deferredSearchValue]);
+  const isValidEmail = useMemo(
+    () => z.string().nonempty().email().safeParse(deferredSearchValue).success,
+    [deferredSearchValue]
+  );
 
   const onInviteSubmit = async (values: AddUserFormValues) => {
     await createInvitation({
@@ -86,7 +97,10 @@ export const AddUserModal: React.FC<{ onSubmit: () => void; scope: ScopeType }> 
   return (
     <Form<AddUserFormValues>
       zodSchema={ValidationSchema}
-      defaultValues={{ email: "", permission: PermissionType.workspace_admin }}
+      defaultValues={{
+        email: initialValues?.email ?? "",
+        permission: initialValues?.permission ?? getInitialPermissionType(scope),
+      }}
       onSubmit={onInviteSubmit}
     >
       <Box p="md">

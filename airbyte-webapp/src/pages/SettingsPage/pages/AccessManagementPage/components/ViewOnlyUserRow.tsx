@@ -35,26 +35,26 @@ export const ViewOnlyUserRow: React.FC<ViewOnlyUserRowProps> = ({
     <Box py="md" className={styles.existingUserRow}>
       <FlexContainer justifyContent="space-between" alignItems="center" className={styles.existingUserRow__content}>
         <FlexContainer direction="column" gap="none" justifyContent="center">
-          <Text>
-            {name}
-            {isCurrentUser && name && (
-              <Box as="span" px="sm">
+          {name && (
+            <FlexContainer gap="sm" alignItems="center">
+              <Text>{name}</Text>
+              {isCurrentUser && (
                 <Badge variant="grey">
                   <FormattedMessage id="settings.accessManagement.youHint" />
                 </Badge>
-              </Box>
-            )}
-          </Text>
-          <Text color="grey400" italicized>
-            {email}
+              )}
+            </FlexContainer>
+          )}
+          <FlexContainer gap="sm" alignItems="center">
+            <Text color="grey400" italicized>
+              {email}
+            </Text>
             {isCurrentUser && !name && (
-              <Box as="span" px="sm">
-                <Badge variant="grey">
-                  <FormattedMessage id="settings.accessManagement.youHint" />
-                </Badge>
-              </Box>
+              <Badge variant="grey">
+                <FormattedMessage id="settings.accessManagement.youHint" />
+              </Badge>
             )}
-          </Text>
+          </FlexContainer>
         </FlexContainer>
         <FlexContainer alignItems="center">
           {isOrgAdmin && scope !== ScopeType.organization && (
