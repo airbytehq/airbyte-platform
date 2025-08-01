@@ -95,7 +95,7 @@ export function formatLogEvent(event: LogEvent): string {
   return `${formatLogEventTimestamp(event.timestamp)} ${event.level} ${event.message}`;
 }
 
-function formatLogEventTimestamp(unixTimestamp: number): string {
+export function formatLogEventTimestamp(unixTimestamp: number): string {
   // Intentionally not internationalized to match expectations for log timestamps
   return dayjs(unixTimestamp).format("YYYY-MM-DD HH:mm:ss");
 }
