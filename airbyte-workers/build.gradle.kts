@@ -104,11 +104,16 @@ dependencies {
   testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.annotation.processor)
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
+
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.temporal.testing)
   testImplementation(libs.json.path)
   testImplementation(libs.json.smart)
   testImplementation(libs.mockito.inline)
+  testImplementation(libs.mockito.kotlin)
   testImplementation(libs.mockk)
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers)
@@ -122,6 +127,9 @@ dependencies {
   testImplementation(variantOf(libs.opentracing.util) { classifier("tests") })
 
   testRuntimeOnly(libs.junit.jupiter.engine)
+
+  kspIntegrationTest(platform(libs.micronaut.platform))
+  kspIntegrationTest(libs.bundles.micronaut.test.annotation.processor)
 
   integrationTestAnnotationProcessor(platform(libs.micronaut.platform))
   integrationTestAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)

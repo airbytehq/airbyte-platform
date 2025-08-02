@@ -42,6 +42,7 @@ dependencies {
   testImplementation(libs.temporal.testing)
   // Needed to be able to mock final class
   testImplementation(libs.mockito.inline)
+  testImplementation(libs.mockito.kotlin)
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)

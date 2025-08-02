@@ -78,8 +78,7 @@ class WebhookOperationActivityImpl(
     } else {
       fullWebhookConfigJson = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(input.getWorkspaceWebhookConfigs())
     }
-    val webhookConfigs: WebhookOperationConfigs =
-      Jsons.`object`(fullWebhookConfigJson!!, WebhookOperationConfigs::class.java)
+    val webhookConfigs: WebhookOperationConfigs = Jsons.`object`(fullWebhookConfigJson!!, WebhookOperationConfigs::class.java)
     val webhookConfig =
       webhookConfigs
         .getWebhookConfigs()

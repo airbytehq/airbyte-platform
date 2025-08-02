@@ -74,6 +74,7 @@ dependencies {
   testImplementation(libs.json.path)
   testImplementation(libs.json.smart)
   testImplementation(libs.bundles.mockito.inline)
+  testImplementation(libs.mockito.kotlin)
   testImplementation(libs.mockk)
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers.postgresql)

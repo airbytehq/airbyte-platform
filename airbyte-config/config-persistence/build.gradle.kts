@@ -38,6 +38,7 @@ dependencies {
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.bundles.flyway)
   testImplementation(libs.mockito.inline)
+  testImplementation("org.mockito.kotlin:mockito-kotlin:5.1.0")
   testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
