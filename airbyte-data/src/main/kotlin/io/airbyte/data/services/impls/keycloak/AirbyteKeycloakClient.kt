@@ -83,7 +83,6 @@ class AirbyteKeycloakClient(
             "metadataDescriptorUrl" to idpDiscoveryResult["metadataDescriptorUrl"],
             "userInfoUrl" to idpDiscoveryResult["userInfoUrl"],
             "validateSignature" to idpDiscoveryResult["validateSignature"],
-            "defaultScope" to DEFAULT_SCOPE,
             "clientAuthMethod" to CLIENT_AUTH_METHOD,
             "pkceEnabled" to "false",
             "clientAssertionSigningAlg" to "",
@@ -155,6 +154,9 @@ class AirbyteKeycloakClient(
     realmName: String,
     idp: IdentityProviderRepresentation,
   ) {
+    // remove the clientSecret field to avoid leaking secrets by accident
+    logger.info { "Create IDP request: ${idp.apply { config.remove("clientSecret") } }" }
+
     try {
       val response =
         keycloakAdminClient
@@ -227,7 +229,6 @@ class AirbyteKeycloakClient(
 
   companion object {
     private const val AIRBYTE_LOGIN_THEME = "airbyte-keycloak-theme"
-    private const val DEFAULT_SCOPE = "openid profile email"
     private const val DEFAULT_IDP_ALIAS = "default"
     private const val CLIENT_AUTH_METHOD = "client_secret_post"
     private const val AIRBYTE_WEBAPP_CLIENT_ID = "airbyte-webapp"
