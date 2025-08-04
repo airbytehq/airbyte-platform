@@ -208,9 +208,9 @@ object CanCleanWorkloadQueue : Temporary<Boolean>(key = "platform.can-clean-work
 
 object StoreAuditLogs : Temporary<Boolean>(key = "platform.store-audit-logs", default = false)
 
-object UseCommandCheck : Temporary<Boolean>(key = "platform.use-command-check", default = false)
+object UseCommandCheck : Temporary<Boolean>(key = "platform.use-command-check", default = true)
 
-object UseSyncV2 : Temporary<Boolean>(key = "platform.use-sync-v2", default = false)
+object UseSyncV2 : Temporary<Boolean>(key = "platform.use-sync-v2", default = true)
 
 object EnableDestinationCatalogValidation : Temporary<Boolean>(key = "platform.enable-destination-catalog-validation", default = false)
 
