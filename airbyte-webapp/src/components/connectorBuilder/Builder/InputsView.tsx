@@ -9,7 +9,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import classNames from "classnames";
 import React, { useMemo, useState, useCallback } from "react";
-import { useFormContext, useWatch } from "react-hook-form";
+import { get, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { FormControl } from "components/forms";
@@ -309,20 +309,15 @@ export const DefinitionFormControl = ({
 
       if (definition.airbyte_secret) {
         return (
-          <FlexContainer direction="column" className={styles.secretField}>
-            <SecretField
-              {...defaultProps}
-              value={value as string}
-              onUpdate={(val) => {
-                // Remove the value instead of setting it to the empty string, as secret persistence
-                // gets mad at empty secrets
-                setValue(name, val || undefined);
-              }}
-            />
-            <FormControlFooter>
-              <FormControlErrorMessage name={name} />
-            </FormControlFooter>
-          </FlexContainer>
+          <SecretDefinitionFormControl
+            {...defaultProps}
+            value={value as string}
+            onUpdate={(val) => {
+              // Remove the value instead of setting it to the empty string, as secret persistence
+              // gets mad at empty secrets
+              setValue(name, val || undefined);
+            }}
+          />
         );
       }
 
@@ -338,6 +333,41 @@ export const DefinitionFormControl = ({
     default:
       return unrecognizedTypeElement;
   }
+};
+
+const SecretDefinitionFormControl = ({
+  name,
+  label,
+  id,
+  "data-field-path": dataFieldPath,
+  value,
+  onUpdate,
+}: {
+  name: string;
+  label?: string;
+  id: string;
+  "data-field-path": string;
+  value: string;
+  onUpdate: (val: string) => void;
+}) => {
+  const { errors } = useFormState({ name });
+  const error = get(errors, name);
+  return (
+    <FlexContainer direction="column" className={styles.secretField}>
+      <SecretField
+        name={name}
+        label={label}
+        id={id}
+        data-field-path={dataFieldPath}
+        value={value}
+        onUpdate={onUpdate}
+        error={!!error}
+      />
+      <FormControlFooter>
+        <FormControlErrorMessage name={name} />
+      </FormControlFooter>
+    </FlexContainer>
+  );
 };
 
 export const convertToBuilderFormInputs = (spec: Spec | undefined): BuilderFormInput[] => {

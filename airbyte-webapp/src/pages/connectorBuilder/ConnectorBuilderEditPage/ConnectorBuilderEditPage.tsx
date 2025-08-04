@@ -83,7 +83,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     view: initialView,
     streamTab: "requester" as const,
     testStreamId: initialTestStreamId,
-    testingValues: initialTestingValues,
+    testingValues: initialTestingValues ?? {},
     manifest: initialResolvedManifest ?? DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM,
     generatedStreams: {},
   };
