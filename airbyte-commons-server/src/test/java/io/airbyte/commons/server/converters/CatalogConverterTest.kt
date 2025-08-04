@@ -7,11 +7,10 @@ package io.airbyte.commons.server.converters
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.ConfiguredStreamMapper
-import io.airbyte.api.model.generated.DataType
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.SelectedFieldInfo
 import io.airbyte.api.model.generated.StreamMapperType
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.helpers.ConnectionHelpers
@@ -58,19 +57,10 @@ internal class CatalogConverterTest {
   }
 
   @Test
-  fun testEnumConversion() {
-    Assertions.assertTrue(
-      Enums.isCompatible(
-        DataType::class.java,
-        io.airbyte.config.DataType::class.java,
-      ),
-    )
-    Assertions.assertTrue(
-      Enums.isCompatible(
-        SyncMode::class.java,
-        io.airbyte.api.model.generated.SyncMode::class.java,
-      ),
-    )
+  fun testEnumCompatibility() {
+    Assertions.assertTrue(isCompatible<io.airbyte.config.SyncMode, io.airbyte.api.model.generated.SyncMode>())
+    Assertions.assertTrue(isCompatible<io.airbyte.config.DestinationSyncMode, DestinationSyncMode>())
+    Assertions.assertTrue(isCompatible<io.airbyte.config.DataType, io.airbyte.api.model.generated.DataType>())
   }
 
   @Test

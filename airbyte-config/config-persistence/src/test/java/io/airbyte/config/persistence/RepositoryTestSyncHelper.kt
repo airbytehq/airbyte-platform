@@ -5,7 +5,7 @@
 package io.airbyte.config.persistence
 
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons.serialize
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.FieldSelectionData
@@ -23,8 +23,6 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionTy
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType
 import io.airbyte.db.instance.configs.jooq.generated.enums.ScheduleType
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType
-import io.airbyte.db.instance.configs.jooq.generated.tables.records.ConnectionOperationRecord
-import io.airbyte.db.instance.configs.jooq.generated.tables.records.ConnectionRecord
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord
 import org.jooq.DSLContext
@@ -72,54 +70,45 @@ class RepositoryTestSyncHelper(
     }
 
     ctx
-      .insertInto<ConnectionRecord?>(Tables.CONNECTION)
-      .set<UUID?>(Tables.CONNECTION.ID, standardSync.getConnectionId())
-      .set<NamespaceDefinitionType?>(
+      .insertInto(Tables.CONNECTION)
+      .set(Tables.CONNECTION.ID, standardSync.getConnectionId())
+      .set(
         Tables.CONNECTION.NAMESPACE_DEFINITION,
-        Enums
-          .toEnum<NamespaceDefinitionType?>(
-            standardSync.getNamespaceDefinition().value(),
-            NamespaceDefinitionType::class.java,
-          ).orElseThrow(),
-      ).set<String?>(Tables.CONNECTION.NAMESPACE_FORMAT, standardSync.getNamespaceFormat())
-      .set<String?>(Tables.CONNECTION.PREFIX, standardSync.getPrefix())
-      .set<UUID?>(Tables.CONNECTION.SOURCE_ID, standardSync.getSourceId())
-      .set<UUID?>(Tables.CONNECTION.DESTINATION_ID, standardSync.getDestinationId())
-      .set<String?>(Tables.CONNECTION.NAME, standardSync.getName())
-      .set<JSONB?>(Tables.CONNECTION.CATALOG, JSONB.valueOf(serialize<ConfiguredAirbyteCatalog?>(standardSync.getCatalog())))
-      .set<JSONB?>(Tables.CONNECTION.FIELD_SELECTION_DATA, JSONB.valueOf(serialize<FieldSelectionData?>(standardSync.getFieldSelectionData())))
-      .set<StatusType?>(
+        standardSync.getNamespaceDefinition().value().toEnum<NamespaceDefinitionType>()
+          ?: throw IllegalArgumentException("Invalid namespace definition type: " + standardSync.getNamespaceDefinition()),
+      ).set(Tables.CONNECTION.NAMESPACE_FORMAT, standardSync.getNamespaceFormat())
+      .set(Tables.CONNECTION.PREFIX, standardSync.getPrefix())
+      .set(Tables.CONNECTION.SOURCE_ID, standardSync.getSourceId())
+      .set(Tables.CONNECTION.DESTINATION_ID, standardSync.getDestinationId())
+      .set(Tables.CONNECTION.NAME, standardSync.getName())
+      .set(Tables.CONNECTION.CATALOG, JSONB.valueOf(serialize<ConfiguredAirbyteCatalog?>(standardSync.getCatalog())))
+      .set(Tables.CONNECTION.FIELD_SELECTION_DATA, JSONB.valueOf(serialize<FieldSelectionData?>(standardSync.getFieldSelectionData())))
+      .set(
         Tables.CONNECTION.STATUS,
         if (standardSync.getStatus() == null) {
           null
         } else {
-          Enums
-            .toEnum<StatusType?>(
-              standardSync.getStatus().value(),
-              StatusType::class.java,
-            ).orElseThrow()
+          standardSync.getStatus().value().toEnum<StatusType>()
+            ?: throw IllegalArgumentException("Invalid status type: " + standardSync.getStatus())
         },
-      ).set<JSONB?>(Tables.CONNECTION.SCHEDULE, JSONB.valueOf(serialize<Schedule?>(standardSync.getSchedule())))
-      .set<Boolean?>(Tables.CONNECTION.MANUAL, standardSync.getManual())
-      .set<ScheduleType?>(
+      ).set(Tables.CONNECTION.SCHEDULE, JSONB.valueOf(serialize<Schedule?>(standardSync.getSchedule())))
+      .set(Tables.CONNECTION.MANUAL, standardSync.getManual())
+      .set(
         Tables.CONNECTION.SCHEDULE_TYPE,
         if (standardSync.getScheduleType() == null) {
           null
         } else {
-          Enums
-            .toEnum<ScheduleType?>(
-              standardSync.getScheduleType().value(),
-              ScheduleType::class.java,
-            ).orElseThrow()
+          standardSync.getScheduleType().value().toEnum<ScheduleType>()
+            ?: throw IllegalArgumentException("Invalid schedule type: " + standardSync.getScheduleType())
         },
-      ).set<JSONB?>(Tables.CONNECTION.SCHEDULE_DATA, JSONB.valueOf(serialize<ScheduleData?>(standardSync.getScheduleData())))
-      .set<JSONB?>(
+      ).set(Tables.CONNECTION.SCHEDULE_DATA, JSONB.valueOf(serialize<ScheduleData?>(standardSync.getScheduleData())))
+      .set(
         Tables.CONNECTION.RESOURCE_REQUIREMENTS,
         JSONB.valueOf(serialize<ResourceRequirements?>(standardSync.getResourceRequirements())),
-      ).set<UUID?>(Tables.CONNECTION.SOURCE_CATALOG_ID, standardSync.getSourceCatalogId())
-      .set<Boolean?>(Tables.CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
-      .set<OffsetDateTime?>(Tables.CONNECTION.CREATED_AT, timestamp)
-      .set<OffsetDateTime?>(Tables.CONNECTION.UPDATED_AT, timestamp)
+      ).set(Tables.CONNECTION.SOURCE_CATALOG_ID, standardSync.getSourceCatalogId())
+      .set(Tables.CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
+      .set(Tables.CONNECTION.CREATED_AT, timestamp)
+      .set(Tables.CONNECTION.UPDATED_AT, timestamp)
       .execute()
 
     updateOrCreateNotificationConfiguration(standardSync, timestamp, ctx)
@@ -132,12 +121,12 @@ class RepositoryTestSyncHelper(
 
     for (operationIdFromStandardSync in standardSync.getOperationIds()) {
       ctx
-        .insertInto<ConnectionOperationRecord?>(Tables.CONNECTION_OPERATION)
-        .set<UUID?>(Tables.CONNECTION_OPERATION.ID, UUID.randomUUID())
-        .set<UUID?>(Tables.CONNECTION_OPERATION.CONNECTION_ID, standardSync.getConnectionId())
-        .set<UUID?>(Tables.CONNECTION_OPERATION.OPERATION_ID, operationIdFromStandardSync)
-        .set<OffsetDateTime?>(Tables.CONNECTION_OPERATION.CREATED_AT, timestamp)
-        .set<OffsetDateTime?>(Tables.CONNECTION_OPERATION.UPDATED_AT, timestamp)
+        .insertInto(Tables.CONNECTION_OPERATION)
+        .set(Tables.CONNECTION_OPERATION.ID, UUID.randomUUID())
+        .set(Tables.CONNECTION_OPERATION.CONNECTION_ID, standardSync.getConnectionId())
+        .set(Tables.CONNECTION_OPERATION.OPERATION_ID, operationIdFromStandardSync)
+        .set(Tables.CONNECTION_OPERATION.CREATED_AT, timestamp)
+        .set(Tables.CONNECTION_OPERATION.UPDATED_AT, timestamp)
         .execute()
     }
   }
@@ -154,7 +143,7 @@ class RepositoryTestSyncHelper(
   ) {
     val notificationConfigurations: MutableList<NotificationConfigurationRecord?> =
       ctx
-        .selectFrom<NotificationConfigurationRecord?>(Tables.NOTIFICATION_CONFIGURATION)
+        .selectFrom(Tables.NOTIFICATION_CONFIGURATION)
         .where(Tables.NOTIFICATION_CONFIGURATION.CONNECTION_ID.eq(standardSync.getConnectionId()))
         .fetch()
     updateNotificationConfigurationIfNeeded(notificationConfigurations, NotificationType.webhook, standardSync, timestamp, ctx)
@@ -177,27 +166,27 @@ class RepositoryTestSyncHelper(
     }
     val schemaManagementConfigurations: MutableList<SchemaManagementRecord?> =
       ctx
-        .selectFrom<SchemaManagementRecord?>(Tables.SCHEMA_MANAGEMENT)
+        .selectFrom(Tables.SCHEMA_MANAGEMENT)
         .where(Tables.SCHEMA_MANAGEMENT.CONNECTION_ID.eq(connectionId))
         .fetch()
     if (schemaManagementConfigurations.isEmpty()) {
       ctx
-        .insertInto<SchemaManagementRecord?>(Tables.SCHEMA_MANAGEMENT)
-        .set<UUID?>(Tables.SCHEMA_MANAGEMENT.ID, UUID.randomUUID())
-        .set<UUID?>(Tables.SCHEMA_MANAGEMENT.CONNECTION_ID, connectionId)
-        .set<AutoPropagationStatus?>(
+        .insertInto(Tables.SCHEMA_MANAGEMENT)
+        .set(Tables.SCHEMA_MANAGEMENT.ID, UUID.randomUUID())
+        .set(Tables.SCHEMA_MANAGEMENT.CONNECTION_ID, connectionId)
+        .set(
           Tables.SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS,
           AutoPropagationStatus.valueOf(nonBreakingChangesPreference.value()),
-        ).set<OffsetDateTime?>(Tables.SCHEMA_MANAGEMENT.CREATED_AT, timestamp)
-        .set<OffsetDateTime?>(Tables.SCHEMA_MANAGEMENT.UPDATED_AT, timestamp)
+        ).set(Tables.SCHEMA_MANAGEMENT.CREATED_AT, timestamp)
+        .set(Tables.SCHEMA_MANAGEMENT.UPDATED_AT, timestamp)
         .execute()
     } else if (schemaManagementConfigurations.size == 1) {
       ctx
-        .update<SchemaManagementRecord?>(Tables.SCHEMA_MANAGEMENT)
-        .set<AutoPropagationStatus?>(
+        .update(Tables.SCHEMA_MANAGEMENT)
+        .set(
           Tables.SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS,
           AutoPropagationStatus.valueOf(nonBreakingChangesPreference.value()),
-        ).set<OffsetDateTime?>(Tables.SCHEMA_MANAGEMENT.UPDATED_AT, timestamp)
+        ).set(Tables.SCHEMA_MANAGEMENT.UPDATED_AT, timestamp)
         .where(Tables.SCHEMA_MANAGEMENT.CONNECTION_ID.eq(connectionId))
         .execute()
     } else {
@@ -230,22 +219,22 @@ class RepositoryTestSyncHelper(
         (!maybeConfiguration.get().getEnabled() && standardSync.getNotifySchemaChanges())
       ) {
         ctx
-          .update<NotificationConfigurationRecord?>(Tables.NOTIFICATION_CONFIGURATION)
-          .set<Boolean?>(Tables.NOTIFICATION_CONFIGURATION.ENABLED, getNotificationEnabled(standardSync, notificationType))
-          .set<OffsetDateTime?>(Tables.NOTIFICATION_CONFIGURATION.UPDATED_AT, timestamp)
+          .update(Tables.NOTIFICATION_CONFIGURATION)
+          .set(Tables.NOTIFICATION_CONFIGURATION.ENABLED, getNotificationEnabled(standardSync, notificationType))
+          .set(Tables.NOTIFICATION_CONFIGURATION.UPDATED_AT, timestamp)
           .where(Tables.NOTIFICATION_CONFIGURATION.CONNECTION_ID.eq(standardSync.getConnectionId()))
           .and(Tables.NOTIFICATION_CONFIGURATION.NOTIFICATION_TYPE.eq(notificationType))
           .execute()
       }
     } else if (getNotificationEnabled(standardSync, notificationType)) {
       ctx
-        .insertInto<NotificationConfigurationRecord?>(Tables.NOTIFICATION_CONFIGURATION)
-        .set<UUID?>(Tables.NOTIFICATION_CONFIGURATION.ID, UUID.randomUUID())
-        .set<UUID?>(Tables.NOTIFICATION_CONFIGURATION.CONNECTION_ID, standardSync.getConnectionId())
-        .set<NotificationType?>(Tables.NOTIFICATION_CONFIGURATION.NOTIFICATION_TYPE, notificationType)
-        .set<Boolean?>(Tables.NOTIFICATION_CONFIGURATION.ENABLED, true)
-        .set<OffsetDateTime?>(Tables.NOTIFICATION_CONFIGURATION.CREATED_AT, timestamp)
-        .set<OffsetDateTime?>(Tables.NOTIFICATION_CONFIGURATION.UPDATED_AT, timestamp)
+        .insertInto(Tables.NOTIFICATION_CONFIGURATION)
+        .set(Tables.NOTIFICATION_CONFIGURATION.ID, UUID.randomUUID())
+        .set(Tables.NOTIFICATION_CONFIGURATION.CONNECTION_ID, standardSync.getConnectionId())
+        .set(Tables.NOTIFICATION_CONFIGURATION.NOTIFICATION_TYPE, notificationType)
+        .set(Tables.NOTIFICATION_CONFIGURATION.ENABLED, true)
+        .set(Tables.NOTIFICATION_CONFIGURATION.CREATED_AT, timestamp)
+        .set(Tables.NOTIFICATION_CONFIGURATION.UPDATED_AT, timestamp)
         .execute()
     }
   }

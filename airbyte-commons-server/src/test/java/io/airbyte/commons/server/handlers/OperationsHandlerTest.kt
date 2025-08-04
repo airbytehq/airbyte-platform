@@ -13,7 +13,7 @@ import io.airbyte.api.model.generated.OperatorConfiguration
 import io.airbyte.api.model.generated.OperatorType
 import io.airbyte.api.model.generated.OperatorWebhook.WebhookTypeEnum
 import io.airbyte.api.model.generated.OperatorWebhookDbtCloud
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.json.Jsons.serialize
 import io.airbyte.config.OperatorWebhook
@@ -377,13 +377,8 @@ internal class OperationsHandlerTest {
   }
 
   @Test
-  fun testEnumConversion() {
-    Assertions.assertTrue(
-      Enums.isCompatible(
-        OperatorType::class.java,
-        StandardSyncOperation.OperatorType::class.java,
-      ),
-    )
+  fun testEnumCompatibility() {
+    Assertions.assertTrue(isCompatible<StandardSyncOperation.OperatorType, OperatorType>())
   }
 
   @Test

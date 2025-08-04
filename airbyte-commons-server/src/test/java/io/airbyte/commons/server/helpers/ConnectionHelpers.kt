@@ -25,7 +25,7 @@ import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SourceSnippetRead
 import io.airbyte.api.model.generated.Tag
 import io.airbyte.api.model.generated.WebBackendConnectionListItem
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.text.Names.toAlphanumericAndUnderscore
@@ -222,10 +222,7 @@ object ConnectionHelpers {
         standardSync.getBreakingChange(),
         standardSync.getNotifySchemaChanges(),
         standardSync.getNotifySchemaChangesByEmail(),
-        Enums.convertTo<StandardSync.BackfillPreference?, SchemaChangeBackfillPreference?>(
-          standardSync.getBackfillPreference(),
-          SchemaChangeBackfillPreference::class.java,
-        ),
+        standardSync.getBackfillPreference()?.convertTo<SchemaChangeBackfillPreference>(),
         standardSync
           .getTags()
           .stream()

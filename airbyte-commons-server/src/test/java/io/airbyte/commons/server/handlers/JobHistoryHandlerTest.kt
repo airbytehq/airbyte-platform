@@ -31,7 +31,8 @@ import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.StreamDescriptor
 import io.airbyte.api.model.generated.StreamStats
 import io.airbyte.api.model.generated.StreamSyncProgressReadItem
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
+import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.logging.LogClientManager
@@ -194,7 +195,7 @@ internal class JobHistoryHandlerTest {
 
       whenever(
         jobService.listJobs(
-          eq(setOf(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType::class.java))),
+          eq(setOf(CONFIG_TYPE_FOR_API.convertTo<ConfigType>())),
           eq(JOB_CONFIG_ID),
           eq(pageSize),
           eq(rowOffset),
@@ -210,7 +211,7 @@ internal class JobHistoryHandlerTest {
 
       whenever(
         jobPersistence.getJobCount(
-          eq(setOf(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType::class.java))),
+          eq(setOf(CONFIG_TYPE_FOR_API.convertTo<ConfigType>())),
           eq(JOB_CONFIG_ID),
           anyOrNull(),
           anyOrNull(),
@@ -343,9 +344,9 @@ internal class JobHistoryHandlerTest {
 
       val configTypes =
         setOf(
-          Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType::class.java),
-          Enums.convertTo(JobConfigType.SYNC, ConfigType::class.java),
-          Enums.convertTo(JobConfigType.DISCOVER_SCHEMA, ConfigType::class.java),
+          CONFIG_TYPE_FOR_API.convertTo<ConfigType>(),
+          JobConfigType.SYNC.convertTo<ConfigType>(),
+          JobConfigType.DISCOVER_SCHEMA.convertTo<ConfigType>(),
         )
 
       val latestJobId = secondJobId + 100
@@ -529,7 +530,7 @@ internal class JobHistoryHandlerTest {
 
       whenever(
         jobPersistence.listJobsIncludingId(
-          setOf(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType::class.java)),
+          setOf(CONFIG_TYPE_FOR_API.convertTo<ConfigType>()),
           JOB_CONFIG_ID,
           jobId2,
           pageSize,
@@ -538,7 +539,7 @@ internal class JobHistoryHandlerTest {
 
       whenever(
         jobPersistence.getJobCount(
-          eq(setOf(Enums.convertTo(CONFIG_TYPE_FOR_API, ConfigType::class.java))),
+          eq(setOf(CONFIG_TYPE_FOR_API.convertTo<ConfigType>())),
           eq(JOB_CONFIG_ID),
           anyOrNull(),
           anyOrNull(),
@@ -907,7 +908,7 @@ internal class JobHistoryHandlerTest {
       val firstJobWithAttemptRead =
         JobWithAttemptsRead()
           .job(jobRead)
-          .attempts(listOf(Companion.toAttemptRead(testJobAttempt)))
+          .attempts(listOf(toAttemptRead(testJobAttempt)))
 
       Mockito.`when`(jobPersistence.getRunningJobForConnection(connectionId)).thenReturn(listOf(firstJob))
 
@@ -1023,7 +1024,7 @@ internal class JobHistoryHandlerTest {
       val firstJobWithAttemptRead =
         JobWithAttemptsRead()
           .job(jobRead)
-          .attempts(listOf(Companion.toAttemptRead(testJobAttempt)))
+          .attempts(listOf(toAttemptRead(testJobAttempt)))
 
       Mockito.`when`(jobPersistence.getRunningJobForConnection(connectionId)).thenReturn(listOf(firstJob))
 
@@ -1105,7 +1106,7 @@ internal class JobHistoryHandlerTest {
       val firstJobWithAttemptRead =
         JobWithAttemptsRead()
           .job(jobRead)
-          .attempts(listOf(Companion.toAttemptRead(testJobAttempt)))
+          .attempts(listOf(toAttemptRead(testJobAttempt)))
 
       Mockito.`when`(jobPersistence.getRunningJobForConnection(connectionId)).thenReturn(listOf(firstJob))
       Mockito.mockStatic(JobConverter::class.java).use { mockedConverter ->
@@ -1164,9 +1165,10 @@ internal class JobHistoryHandlerTest {
   }
 
   @Test
-  @DisplayName("Should have compatible config enums")
-  fun testEnumConversion() {
-    Assertions.assertTrue(Enums.isCompatible(ConfigType::class.java, JobConfigType::class.java))
+  fun testEnumCompatibility() {
+    Assertions.assertTrue(isCompatible<ConfigType, JobConfigType>())
+    Assertions.assertTrue(isCompatible<JobStatus, io.airbyte.api.model.generated.JobStatus>())
+    Assertions.assertTrue(isCompatible<AttemptStatus, io.airbyte.api.model.generated.AttemptStatus>())
   }
 
   @Test
@@ -1422,11 +1424,8 @@ internal class JobHistoryHandlerTest {
               StreamDescriptor().name(s!!.stream.name).namespace(s.stream.namespace)
             }.collect(Collectors.toList()),
         ).status(
-          Enums.convertTo(
-            job.status,
-            io.airbyte.api.model.generated.JobStatus::class.java,
-          ),
-        ).configType(Enums.convertTo(job.configType, JobConfigType::class.java))
+          job.status.convertTo<io.airbyte.api.model.generated.JobStatus>(),
+        ).configType(job.configType.convertTo<JobConfigType>())
         .createdAt(job.createdAtInSecond)
         .updatedAt(job.updatedAtInSecond)
 
@@ -1435,16 +1434,13 @@ internal class JobHistoryHandlerTest {
         .id(job.id)
         .configId(job.scope)
         .status(
-          Enums.convertTo(
-            job.status,
-            io.airbyte.api.model.generated.JobStatus::class.java,
-          ),
-        ).configType(Enums.convertTo(job.configType, JobConfigType::class.java))
+          job.status.convertTo<io.airbyte.api.model.generated.JobStatus>(),
+        ).configType(job.configType.convertTo<JobConfigType>())
         .sourceDefinition(null)
         .destinationDefinition(null)
 
     private fun toAttemptInfoList(attempts: List<Attempt?>): MutableList<AttemptInfoRead> {
-      val attemptReads = attempts.stream().map { a: Attempt? -> Companion.toAttemptRead(a!!) }.toList()
+      val attemptReads = attempts.stream().map { a: Attempt? -> toAttemptRead(a!!) }.toList()
 
       val toAttemptInfoRead =
         Function { a: AttemptRead? -> AttemptInfoRead().attempt(a).logType(LogFormatType.FORMATTED).logs(EMPTY_LOG_READ) }
@@ -1455,10 +1451,7 @@ internal class JobHistoryHandlerTest {
       AttemptRead()
         .id(a.getAttemptNumber().toLong())
         .status(
-          Enums.convertTo(
-            a.status,
-            io.airbyte.api.model.generated.AttemptStatus::class.java,
-          ),
+          a.status.convertTo<io.airbyte.api.model.generated.AttemptStatus>(),
         ).streamStats(null)
         .createdAt(a.createdAtInSecond)
         .updatedAt(a.updatedAtInSecond)

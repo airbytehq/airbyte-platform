@@ -4,9 +4,7 @@
 
 package io.airbyte.commons.server.converters
 
-import io.airbyte.api.model.generated.FieldTransform
-import io.airbyte.api.model.generated.StreamTransform
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.protocol.transformmodels.FieldTransformType
 import io.airbyte.commons.protocol.transformmodels.StreamTransformType
 import org.junit.jupiter.api.Assertions
@@ -14,18 +12,12 @@ import org.junit.jupiter.api.Test
 
 internal class CatalogDiffConvertersTest {
   @Test
-  fun testEnumConversion() {
+  fun testEnumCompatibility() {
     Assertions.assertTrue(
-      Enums.isCompatible<StreamTransform.TransformTypeEnum?, StreamTransformType?>(
-        StreamTransform.TransformTypeEnum::class.java,
-        StreamTransformType::class.java,
-      ),
+      isCompatible<io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum, StreamTransformType>(),
     )
     Assertions.assertTrue(
-      Enums.isCompatible<FieldTransform.TransformTypeEnum?, FieldTransformType?>(
-        FieldTransform.TransformTypeEnum::class.java,
-        FieldTransformType::class.java,
-      ),
+      isCompatible<io.airbyte.api.model.generated.FieldTransform.TransformTypeEnum, FieldTransformType>(),
     )
   }
 }

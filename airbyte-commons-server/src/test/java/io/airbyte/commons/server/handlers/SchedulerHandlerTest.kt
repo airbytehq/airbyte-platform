@@ -41,7 +41,7 @@ import io.airbyte.api.model.generated.StreamTransform
 import io.airbyte.api.model.generated.StreamTransformUpdateStream
 import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.api.model.generated.SynchronousJobRead
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.json.Jsons.emptyObject
@@ -1400,18 +1400,18 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
+  @DisplayName("Test enum compatibility")
+  fun testEnumCompatibility() {
+    Assertions.assertThat(isCompatible<ConfigType, io.airbyte.api.model.generated.JobConfigType>()).isTrue()
+  }
+
+  @Test
   fun testEnumConversion() {
     org.junit.jupiter.api.Assertions.assertTrue(
-      Enums.isCompatible(
-        StandardCheckConnectionOutput.Status::class.java,
-        CheckConnectionRead.StatusEnum::class.java,
-      ),
+      isCompatible<StandardCheckConnectionOutput.Status, CheckConnectionRead.StatusEnum>(),
     )
     org.junit.jupiter.api.Assertions.assertTrue(
-      Enums.isCompatible(
-        JobStatus::class.java,
-        io.airbyte.api.model.generated.JobStatus::class.java,
-      ),
+      isCompatible<JobStatus, io.airbyte.api.model.generated.JobStatus>(),
     )
   }
 

@@ -4,7 +4,7 @@
 
 package io.airbyte.config.persistence
 
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
@@ -826,14 +826,9 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  fun testEnumsConversion() {
-    // Making sure StateType we write to the DB and the StateType from the protocols are aligned.
-    // Otherwise, we'll have to dig through runtime errors.
+  fun testEnumCompatibility() {
     Assertions.assertTrue(
-      Enums.isCompatible(
-        io.airbyte.db.instance.configs.jooq.generated.enums.StateType::class.java,
-        StateType::class.java,
-      ),
+      isCompatible<io.airbyte.db.instance.configs.jooq.generated.enums.StateType, io.airbyte.config.StateType>(),
     )
   }
 

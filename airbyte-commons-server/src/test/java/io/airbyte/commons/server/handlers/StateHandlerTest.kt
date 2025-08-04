@@ -11,7 +11,7 @@ import io.airbyte.api.model.generated.ConnectionStateType
 import io.airbyte.api.model.generated.GlobalState
 import io.airbyte.api.model.generated.JobRead
 import io.airbyte.api.model.generated.StreamState
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.server.errors.SyncIsRunningException
 import io.airbyte.config.StateType
@@ -162,29 +162,29 @@ internal class StateHandlerTest {
     // to AirbyteStateType => ConnectionStateType
     Assertions.assertEquals(
       ConnectionStateType.GLOBAL,
-      Enums.convertTo(AirbyteStateType.GLOBAL, ConnectionStateType::class.java),
+      AirbyteStateType.GLOBAL.convertTo<ConnectionStateType>(),
     )
     Assertions.assertEquals(
       ConnectionStateType.STREAM,
-      Enums.convertTo(AirbyteStateType.STREAM, ConnectionStateType::class.java),
+      AirbyteStateType.STREAM.convertTo<ConnectionStateType>(),
     )
     Assertions.assertEquals(
       ConnectionStateType.LEGACY,
-      Enums.convertTo(AirbyteStateType.LEGACY, ConnectionStateType::class.java),
+      AirbyteStateType.LEGACY.convertTo<ConnectionStateType>(),
     )
 
     // to ConnectionStateType => AirbyteStateType
     Assertions.assertEquals(
       AirbyteStateType.GLOBAL,
-      Enums.convertTo(ConnectionStateType.GLOBAL, AirbyteStateType::class.java),
+      ConnectionStateType.GLOBAL.convertTo<AirbyteStateType>(),
     )
     Assertions.assertEquals(
       AirbyteStateType.STREAM,
-      Enums.convertTo(ConnectionStateType.STREAM, AirbyteStateType::class.java),
+      ConnectionStateType.STREAM.convertTo<AirbyteStateType>(),
     )
     Assertions.assertEquals(
       AirbyteStateType.LEGACY,
-      Enums.convertTo(ConnectionStateType.LEGACY, AirbyteStateType::class.java),
+      ConnectionStateType.LEGACY.convertTo<AirbyteStateType>(),
     )
   }
 

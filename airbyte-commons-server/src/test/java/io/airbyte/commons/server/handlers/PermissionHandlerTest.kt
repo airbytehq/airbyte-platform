@@ -11,7 +11,7 @@ import io.airbyte.api.model.generated.PermissionIdRequestBody
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.PermissionUpdate
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Permission
@@ -968,15 +968,15 @@ internal class PermissionHandlerTest {
       Assertions.assertEquals(expected, permissionHandler.getPermissionsByServiceAccountId(serviceAccountId))
     }
 
-    private fun getWorkspacePermissionCheck(targetPermissionType: Permission.PermissionType?): PermissionCheckRequest =
+    private fun getWorkspacePermissionCheck(targetPermissionType: Permission.PermissionType): PermissionCheckRequest =
       PermissionCheckRequest()
-        .permissionType(Enums.convertTo(targetPermissionType, PermissionType::class.java))
+        .permissionType(targetPermissionType.convertTo<PermissionType>())
         .userId(userId)
         .workspaceId(workspaceId)
 
-    private fun getOrganizationPermissionCheck(targetPermissionType: Permission.PermissionType?): PermissionCheckRequest =
+    private fun getOrganizationPermissionCheck(targetPermissionType: Permission.PermissionType): PermissionCheckRequest =
       PermissionCheckRequest()
-        .permissionType(Enums.convertTo(targetPermissionType, PermissionType::class.java))
+        .permissionType(targetPermissionType.convertTo<PermissionType>())
         .userId(userId)
         .organizationId(organizationId)
   }

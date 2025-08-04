@@ -25,7 +25,7 @@ import io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem
 import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.auth.config.InitialUserConfig
 import io.airbyte.commons.auth.support.JwtUserAuthenticationResolver
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.handlers.ResourceBootstrapHandler
@@ -261,17 +261,14 @@ class UserHandlerTest {
     @ParameterizedTest
     @EnumSource(AuthProvider::class)
     @Throws(Exception::class)
-    fun authIdExists(authProvider: AuthProvider?) {
+    fun authIdExists(authProvider: AuthProvider) {
       // set the auth provider for the existing user to match the test case
       user.setAuthProvider(authProvider)
 
       // authUserId is for the existing user
       val authUserId = user.getAuthUserId()
       val apiAuthProvider =
-        Enums.convertTo(
-          authProvider,
-          io.airbyte.api.model.generated.AuthProvider::class.java,
-        )
+        authProvider.convertTo<io.airbyte.api.model.generated.AuthProvider>()
 
       whenever(jwtUserAuthenticationResolver.resolveUser(authUserId)).thenReturn(user)
       whenever(userPersistence.getUserByAuthId(authUserId))
@@ -522,7 +519,7 @@ class UserHandlerTest {
       @ArgumentsSource(NewUserArgumentsProvider::class)
       @Throws(Exception::class)
       fun testNewUserCreation(
-        authProvider: AuthProvider?,
+        authProvider: AuthProvider,
         authRealm: String?,
         initialUserEmail: String?,
         initialUserPresent: Boolean,
@@ -617,11 +614,7 @@ class UserHandlerTest {
           ).thenReturn(WorkspaceReadList().workspaces(mutableListOf<@Valid WorkspaceRead?>()))
         }
 
-        val apiAuthProvider =
-          Enums.convertTo(
-            authProvider,
-            io.airbyte.api.model.generated.AuthProvider::class.java,
-          )
+        val apiAuthProvider = authProvider.convertTo<io.airbyte.api.model.generated.AuthProvider>()
 
         if (domainRestrictedToOrgId != null && (authRealm == null || domainRestrictedToOrgId !== organization.getOrganizationId())) {
           Assertions.assertThrows(

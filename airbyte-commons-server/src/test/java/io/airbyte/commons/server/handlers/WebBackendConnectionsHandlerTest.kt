@@ -56,7 +56,7 @@ import io.airbyte.api.model.generated.WebBackendConnectionUpdate
 import io.airbyte.api.model.generated.WebBackendOperationCreateOrUpdate
 import io.airbyte.api.model.generated.WebBackendWorkspaceState
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
@@ -1081,10 +1081,7 @@ internal class WebBackendConnectionsHandlerTest {
       WebBackendConnectionCreate()
         .name("testConnectionCreate")
         .namespaceDefinition(
-          Enums.convertTo(
-            standardSync.getNamespaceDefinition(),
-            NamespaceDefinitionType::class.java,
-          ),
+          standardSync.getNamespaceDefinition().convertTo<NamespaceDefinitionType>(),
         ).namespaceFormat(standardSync.getNamespaceFormat())
         .prefix(standardSync.getPrefix())
         .sourceId(newSourceId)
@@ -1104,10 +1101,7 @@ internal class WebBackendConnectionsHandlerTest {
       ConnectionCreate()
         .name("testConnectionCreate")
         .namespaceDefinition(
-          Enums.convertTo(
-            standardSync.getNamespaceDefinition(),
-            NamespaceDefinitionType::class.java,
-          ),
+          standardSync.getNamespaceDefinition().convertTo<NamespaceDefinitionType>(),
         ).namespaceFormat(standardSync.getNamespaceFormat())
         .prefix(standardSync.getPrefix())
         .sourceId(newSourceId)
@@ -1147,10 +1141,7 @@ internal class WebBackendConnectionsHandlerTest {
     val input =
       WebBackendConnectionUpdate()
         .namespaceDefinition(
-          Enums.convertTo(
-            standardSync.getNamespaceDefinition(),
-            NamespaceDefinitionType::class.java,
-          ),
+          standardSync.getNamespaceDefinition().convertTo<NamespaceDefinitionType>(),
         ).namespaceFormat(standardSync.getNamespaceFormat())
         .prefix(standardSync.getPrefix())
         .connectionId(standardSync.getConnectionId())
@@ -1170,10 +1161,7 @@ internal class WebBackendConnectionsHandlerTest {
     val expected =
       ConnectionUpdate()
         .namespaceDefinition(
-          Enums.convertTo(
-            standardSync.getNamespaceDefinition(),
-            NamespaceDefinitionType::class.java,
-          ),
+          standardSync.getNamespaceDefinition().convertTo<NamespaceDefinitionType>(),
         ).namespaceFormat(standardSync.getNamespaceFormat())
         .prefix(standardSync.getPrefix())
         .connectionId(standardSync.getConnectionId())

@@ -34,7 +34,6 @@ import io.airbyte.api.model.generated.ConnectionStreamHistoryReadItem
 import io.airbyte.api.model.generated.ConnectionStreamHistoryRequestBody
 import io.airbyte.api.model.generated.ConnectionSyncStatus
 import io.airbyte.api.model.generated.ConnectionUpdate
-import io.airbyte.api.model.generated.DataType
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead
 import io.airbyte.api.model.generated.DestinationSearch
@@ -77,7 +76,8 @@ import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.PlatformSubOneHourSyncFrequency
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.convertTo
+import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.jackson.MoreMappers.initMapper
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
@@ -1078,49 +1078,14 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    fun testEnumConversion() {
-      Assertions.assertTrue(
-        Enums.isCompatible(
-          ConnectionStatus::class.java,
-          StandardSync.Status::class.java,
-        ),
-      )
-      Assertions.assertTrue(
-        Enums.isCompatible(
-          SyncMode::class.java,
-          io.airbyte.api.model.generated.SyncMode::class.java,
-        ),
-      )
-      Assertions.assertTrue(
-        Enums.isCompatible(
-          StandardSync.Status::class.java,
-          ConnectionStatus::class.java,
-        ),
-      )
-      Assertions.assertTrue(
-        Enums.isCompatible(
-          ConnectionSchedule.TimeUnitEnum::class.java,
-          Schedule.TimeUnit::class.java,
-        ),
-      )
-      Assertions.assertTrue(
-        Enums.isCompatible(
-          DataType::class.java,
-          io.airbyte.config.DataType::class.java,
-        ),
-      )
-      Assertions.assertTrue(
-        Enums.isCompatible(
-          io.airbyte.config.DataType::class.java,
-          DataType::class.java,
-        ),
-      )
-      Assertions.assertTrue(
-        Enums.isCompatible(
-          NamespaceDefinitionType::class.java,
-          JobSyncConfig.NamespaceDefinitionType::class.java,
-        ),
-      )
+    fun testEnumCompatibility() {
+      Assertions.assertTrue(isCompatible<StandardSync.Status, ConnectionStatus>())
+      Assertions.assertTrue(isCompatible<ConnectionSchedule.TimeUnitEnum, Schedule.TimeUnit>())
+      Assertions.assertTrue(isCompatible<io.airbyte.config.DestinationSyncMode, DestinationSyncMode>())
+      Assertions.assertTrue(isCompatible<io.airbyte.config.DataType, io.airbyte.api.model.generated.DataType>())
+      Assertions.assertTrue(isCompatible<StandardSync.NonBreakingChangesPreference, io.airbyte.api.model.generated.NonBreakingChangesPreference>())
+      Assertions.assertTrue(isCompatible<StandardSync.BackfillPreference, SchemaChangeBackfillPreference>())
+      Assertions.assertTrue(isCompatible<JobSyncConfig.NamespaceDefinitionType, NamespaceDefinitionType>())
     }
 
     @ParameterizedTest
@@ -1320,10 +1285,7 @@ internal class ConnectionsHandlerTest {
           .notifySchemaChanges(standardSync.getNotifySchemaChanges())
           .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail())
           .backfillPreference(
-            Enums.convertTo(
-              standardSync.getBackfillPreference(),
-              SchemaChangeBackfillPreference::class.java,
-            ),
+            standardSync.getBackfillPreference().convertTo<SchemaChangeBackfillPreference>(),
           )
 
       @Test
@@ -2849,10 +2811,7 @@ internal class ConnectionsHandlerTest {
             false,
             standardSync.getNotifySchemaChanges(),
             standardSync.getNotifySchemaChangesByEmail(),
-            Enums.convertTo(
-              standardSync.getBackfillPreference(),
-              SchemaChangeBackfillPreference::class.java,
-            ),
+            standardSync.getBackfillPreference().convertTo<SchemaChangeBackfillPreference>(),
             standardSync
               .getTags()
               .stream()
@@ -4414,7 +4373,7 @@ internal class ConnectionsHandlerTest {
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status.get(0)
       Assertions.assertEquals(
-        Enums.convertTo(ConnectionSyncStatus.RUNNING, ConnectionSyncStatus::class.java),
+        ConnectionSyncStatus.RUNNING.convertTo<ConnectionSyncStatus>(),
         connectionStatus.getConnectionSyncStatus(),
       )
     }
@@ -4454,7 +4413,7 @@ internal class ConnectionsHandlerTest {
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status.get(0)
       Assertions.assertEquals(
-        Enums.convertTo(ConnectionSyncStatus.FAILED, ConnectionSyncStatus::class.java),
+        ConnectionSyncStatus.FAILED.convertTo<ConnectionSyncStatus>(),
         connectionStatus.getConnectionSyncStatus(),
       )
     }
@@ -4500,7 +4459,7 @@ internal class ConnectionsHandlerTest {
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status.get(0)
       Assertions.assertEquals(
-        Enums.convertTo(ConnectionSyncStatus.FAILED, ConnectionSyncStatus::class.java),
+        ConnectionSyncStatus.FAILED.convertTo<ConnectionSyncStatus>(),
         connectionStatus.getConnectionSyncStatus(),
       )
     }
@@ -4539,7 +4498,7 @@ internal class ConnectionsHandlerTest {
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status.get(0)
       Assertions.assertEquals(
-        Enums.convertTo(ConnectionSyncStatus.PAUSED, ConnectionSyncStatus::class.java),
+        ConnectionSyncStatus.PAUSED.convertTo<ConnectionSyncStatus>(),
         connectionStatus.getConnectionSyncStatus(),
       )
     }
@@ -4578,7 +4537,7 @@ internal class ConnectionsHandlerTest {
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status.get(0)
       Assertions.assertEquals(
-        Enums.convertTo(ConnectionSyncStatus.PAUSED, ConnectionSyncStatus::class.java),
+        ConnectionSyncStatus.PAUSED.convertTo<ConnectionSyncStatus>(),
         connectionStatus.getConnectionSyncStatus(),
       )
     }
@@ -4601,7 +4560,7 @@ internal class ConnectionsHandlerTest {
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status.get(0)
       Assertions.assertEquals(
-        Enums.convertTo(ConnectionSyncStatus.PENDING, ConnectionSyncStatus::class.java),
+        ConnectionSyncStatus.PENDING.convertTo<ConnectionSyncStatus>(),
         connectionStatus.getConnectionSyncStatus(),
       )
     }
@@ -4640,7 +4599,7 @@ internal class ConnectionsHandlerTest {
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status.get(0)
       Assertions.assertEquals(
-        Enums.convertTo(ConnectionSyncStatus.PENDING, ConnectionSyncStatus::class.java),
+        ConnectionSyncStatus.PENDING.convertTo<ConnectionSyncStatus>(),
         connectionStatus.getConnectionSyncStatus(),
       )
     }
@@ -4679,7 +4638,7 @@ internal class ConnectionsHandlerTest {
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status.get(0)
       Assertions.assertEquals(
-        Enums.convertTo(ConnectionSyncStatus.PENDING, ConnectionSyncStatus::class.java),
+        ConnectionSyncStatus.PENDING.convertTo<ConnectionSyncStatus>(),
         connectionStatus.getConnectionSyncStatus(),
       )
     }
@@ -4718,7 +4677,7 @@ internal class ConnectionsHandlerTest {
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status.get(0)
       Assertions.assertEquals(
-        Enums.convertTo(ConnectionSyncStatus.PENDING, ConnectionSyncStatus::class.java),
+        ConnectionSyncStatus.PENDING.convertTo<ConnectionSyncStatus>(),
         connectionStatus.getConnectionSyncStatus(),
       )
     }
@@ -4757,7 +4716,7 @@ internal class ConnectionsHandlerTest {
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status.get(0)
       Assertions.assertEquals(
-        Enums.convertTo(ConnectionSyncStatus.PENDING, ConnectionSyncStatus::class.java),
+        ConnectionSyncStatus.PENDING.convertTo<ConnectionSyncStatus>(),
         connectionStatus.getConnectionSyncStatus(),
       )
     }
@@ -4808,7 +4767,7 @@ internal class ConnectionsHandlerTest {
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status.get(0)
       Assertions.assertEquals(
-        Enums.convertTo(ConnectionSyncStatus.INCOMPLETE, ConnectionSyncStatus::class.java),
+        ConnectionSyncStatus.INCOMPLETE.convertTo<ConnectionSyncStatus>(),
         connectionStatus.getConnectionSyncStatus(),
       )
     }
@@ -4847,7 +4806,7 @@ internal class ConnectionsHandlerTest {
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status.get(0)
       Assertions.assertEquals(
-        Enums.convertTo(ConnectionSyncStatus.INCOMPLETE, ConnectionSyncStatus::class.java),
+        ConnectionSyncStatus.INCOMPLETE.convertTo<ConnectionSyncStatus>(),
         connectionStatus.getConnectionSyncStatus(),
       )
     }
@@ -4885,7 +4844,7 @@ internal class ConnectionsHandlerTest {
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status.get(0)
       Assertions.assertEquals(
-        Enums.convertTo(ConnectionSyncStatus.INCOMPLETE, ConnectionSyncStatus::class.java),
+        ConnectionSyncStatus.INCOMPLETE.convertTo<ConnectionSyncStatus>(),
         connectionStatus.getConnectionSyncStatus(),
       )
     }
@@ -4923,7 +4882,7 @@ internal class ConnectionsHandlerTest {
       val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
       val connectionStatus = status.get(0)
       Assertions.assertEquals(
-        Enums.convertTo(ConnectionSyncStatus.SYNCED, ConnectionSyncStatus::class.java),
+        ConnectionSyncStatus.SYNCED.convertTo<ConnectionSyncStatus>(),
         connectionStatus.getConnectionSyncStatus(),
       )
     }

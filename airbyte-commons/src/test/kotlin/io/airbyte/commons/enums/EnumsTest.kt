@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.enums
 
-import io.airbyte.commons.enums.EnumsTest.E1
-import io.airbyte.commons.enums.EnumsTest.E5
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
@@ -17,8 +15,7 @@ private enum class B { ONE, TWO, THREE }
 
 private enum class C { ONE, TWO, THREE }
 
-// TODO: rename once the old java enums class is no more
-class EnumsKtTest {
+class EnumsTest {
   @Test
   fun `verify convertTo`() {
     assertEquals(B.ONE, A.ONE.convertTo<B>())
@@ -42,6 +39,19 @@ class EnumsKtTest {
     assertThrows<IllegalArgumentException> {
       listOf(A.ZERO, A.TWO).convertTo<B>()
     }
+  }
+
+  enum class E1 {
+    TEST,
+    TEST2,
+  }
+
+  @Suppress("ktlint:standard:enum-entry-name-case")
+  enum class E5 {
+    VALUE_1,
+    VALUE_TWO,
+    value_three,
+    value_4,
   }
 
   @Test

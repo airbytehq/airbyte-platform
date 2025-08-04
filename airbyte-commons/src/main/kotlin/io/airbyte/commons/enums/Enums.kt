@@ -35,6 +35,20 @@ inline fun <reified T : Enum<T>> List<Enum<*>>.convertTo(): List<T> = this.map {
 inline fun <reified T : Enum<T>> String.toEnum(): T? = enumValues<T>().firstOrNull { normalizeName(it.name) == normalizeName(this) }
 
 /**
+ * Test if two enums are compatible to be converted between. To be compatible they must have the
+ * same values.
+ *
+ * @param T1 type of enum 1
+ * @param T2 type of enum 2
+ * @return true if compatible. otherwise, false.
+ */
+inline fun <reified T1 : Enum<T1>, reified T2 : Enum<T2>> isCompatible(): Boolean {
+  val enum1Values = enumValues<T1>().map { it.name }.toSet()
+  val enum2Values = enumValues<T2>().map { it.name }.toSet()
+  return enum1Values.size == enum2Values.size && enum1Values == enum2Values
+}
+
+/**
  * Normalizes a string for case-insensitive and punctuation-insensitive comparison.
  *
  * Converts the input to lowercase and removes all non-alphanumeric characters.

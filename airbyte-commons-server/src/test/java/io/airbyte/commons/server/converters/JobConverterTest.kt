@@ -24,7 +24,7 @@ import io.airbyte.api.model.generated.LogFormatType
 import io.airbyte.api.model.generated.ResetConfig
 import io.airbyte.api.model.generated.SourceDefinitionRead
 import io.airbyte.api.model.generated.SynchronousJobRead
-import io.airbyte.commons.enums.Enums
+import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.logging.LogEvent
@@ -246,26 +246,12 @@ internal class JobConverterTest {
       .withPartialSuccess(partialSuccess)
 
   @Test
-  fun testEnumConversion() {
-    Assertions.assertTrue(Enums.isCompatible<ConfigType, JobConfigType>(ConfigType::class.java, JobConfigType::class.java))
-    Assertions.assertTrue(
-      Enums.isCompatible<JobStatus, io.airbyte.api.model.generated.JobStatus>(
-        JobStatus::class.java,
-        io.airbyte.api.model.generated.JobStatus::class.java,
-      ),
-    )
-    Assertions.assertTrue(
-      Enums.isCompatible<AttemptStatus, io.airbyte.api.model.generated.AttemptStatus>(
-        AttemptStatus::class.java,
-        io.airbyte.api.model.generated.AttemptStatus::class.java,
-      ),
-    )
-    Assertions.assertTrue(
-      Enums.isCompatible<FailureReason.FailureOrigin, FailureOrigin>(
-        FailureReason.FailureOrigin::class.java,
-        FailureOrigin::class.java,
-      ),
-    )
+  fun testEnumCompatibility() {
+    Assertions.assertTrue(isCompatible<ConfigType, JobConfigType>())
+    Assertions.assertTrue(isCompatible<JobStatus, io.airbyte.api.model.generated.JobStatus>())
+    Assertions.assertTrue(isCompatible<AttemptStatus, io.airbyte.api.model.generated.AttemptStatus>())
+    Assertions.assertTrue(isCompatible<FailureReason.FailureOrigin, FailureOrigin>())
+    Assertions.assertTrue(isCompatible<FailureReason.FailureType, FailureType>())
   }
 
   @ParameterizedTest
