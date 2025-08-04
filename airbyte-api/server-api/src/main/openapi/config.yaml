@@ -17645,6 +17645,10 @@ components:
           type: string
         zendeskKey:
           type: string
+        posthogApiKey:
+          type: string
+        posthogHost:
+          type: string
     StreamStatusReadList:
       type: object
       properties:

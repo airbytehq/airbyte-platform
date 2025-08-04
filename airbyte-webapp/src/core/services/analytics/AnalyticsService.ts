@@ -1,3 +1,5 @@
+import { PostHog } from "posthog-js";
+
 import { HockeyStackAnalyticsObject } from "./HockeyStackAnalytics";
 import { Action, EventParams, Namespace } from "./types";
 
@@ -9,6 +11,8 @@ export class AnalyticsService {
   private getSegmentAnalytics = (): SegmentAnalytics.AnalyticsJS | undefined => window.analytics;
 
   private getHockeyStackAnalytics = (): HockeyStackAnalyticsObject | undefined => window.HockeyStack;
+
+  private getPosthogAnalytics = (): PostHog | undefined => window.posthog;
 
   public setContext(context: Context) {
     this.context = {
@@ -55,6 +59,12 @@ export class AnalyticsService {
       console.debug(`%c[Analytics.Identify] ${userId}`, "color: teal", traits);
     }
     this.getSegmentAnalytics()?.identify?.(userId, traits);
+
+    // PostHog identify and alias to link anonymous history
+    const posthog = this.getPosthogAnalytics();
+    if (posthog) {
+      posthog.identify(userId, traits);
+    }
 
     // HockeyStack supports string, boolean and number custom properties
     // https://docs.hockeystack.com/advanced-strategies-and-techniques/advanced-features/identifying-users

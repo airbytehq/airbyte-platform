@@ -316,6 +316,42 @@ Renders the server.webapp.datadogSite environment variable
 {{- end }}
 
 {{/*
+Renders the server.webapp.posthogApiKey value
+*/}}
+{{- define "airbyte.server.webapp.posthogApiKey" }}
+    {{- .Values.server.webapp.posthogApiKey }}
+{{- end }}
+
+{{/*
+Renders the server.webapp.posthogApiKey environment variable
+*/}}
+{{- define "airbyte.server.webapp.posthogApiKey.env" }}
+- name: WEBAPP_POSTHOG_API_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: WEBAPP_POSTHOG_API_KEY
+{{- end }}
+
+{{/*
+Renders the server.webapp.posthogHost value
+*/}}
+{{- define "airbyte.server.webapp.posthogHost" }}
+    {{- .Values.server.webapp.posthogHost }}
+{{- end }}
+
+{{/*
+Renders the server.webapp.posthogHost environment variable
+*/}}
+{{- define "airbyte.server.webapp.posthogHost.env" }}
+- name: WEBAPP_POSTHOG_HOST
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: WEBAPP_POSTHOG_HOST
+{{- end }}
+
+{{/*
 Renders the server.webapp.hockeystackApiKey value
 */}}
 {{- define "airbyte.server.webapp.hockeystackApiKey" }}
@@ -445,6 +481,8 @@ Renders the set of all server environment variables
 {{- include "airbyte.server.webapp.datadogEnv.env" . }}
 {{- include "airbyte.server.webapp.datadogService.env" . }}
 {{- include "airbyte.server.webapp.datadogSite.env" . }}
+{{- include "airbyte.server.webapp.posthogApiKey.env" . }}
+{{- include "airbyte.server.webapp.posthogHost.env" . }}
 {{- include "airbyte.server.webapp.hockeystackApiKey.env" . }}
 {{- include "airbyte.server.webapp.launchdarklyKey.env" . }}
 {{- include "airbyte.server.webapp.osanoKey.env" . }}
@@ -474,6 +512,8 @@ WEBAPP_DATADOG_CLIENT_TOKEN: {{ include "airbyte.server.webapp.datadogClientToke
 WEBAPP_DATADOG_ENV: {{ include "airbyte.server.webapp.datadogEnv" . | quote }}
 WEBAPP_DATADOG_SERVICE: {{ include "airbyte.server.webapp.datadogService" . | quote }}
 WEBAPP_DATADOG_SITE: {{ include "airbyte.server.webapp.datadogSite" . | quote }}
+WEBAPP_POSTHOG_API_KEY: {{ include "airbyte.server.webapp.posthogApiKey" . | quote }}
+WEBAPP_POSTHOG_HOST: {{ include "airbyte.server.webapp.posthogHost" . | quote }}
 WEBAPP_HOCKEYSTACK_API_KEY: {{ include "airbyte.server.webapp.hockeystackApiKey" . | quote }}
 WEBAPP_LAUNCHDARKLY_KEY: {{ include "airbyte.server.webapp.launchdarklyKey" . | quote }}
 WEBAPP_OSANO_KEY: {{ include "airbyte.server.webapp.osanoKey" . | quote }}

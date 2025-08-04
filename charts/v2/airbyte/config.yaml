@@ -1029,6 +1029,12 @@ server:
       key: webapp.datadogSite
       defaultValue: datadoghq.com
 
+    - env: WEBAPP_POSTHOG_API_KEY
+      key: webapp.posthogApiKey
+
+    - env: WEBAPP_POSTHOG_HOST
+      key: webapp.posthogHost
+
     - env: WEBAPP_HOCKEYSTACK_API_KEY
       key: webapp.hockeystackApiKey
 

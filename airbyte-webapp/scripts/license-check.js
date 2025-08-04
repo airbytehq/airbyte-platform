@@ -59,6 +59,7 @@ const IGNORED_PACKAGES = [];
  */
 const LICENSE_OVERWRITES = {
   // "package-name@version": "ACTUAL-LICENSE",
+  "posthog-js@1.257.2": "Apache-2.0", // npm does not have license, see https://github.com/PostHog/posthog-js/blob/v1.257.2/LICENSE
 };
 
 const checkLicenses = promisify(checker.init);

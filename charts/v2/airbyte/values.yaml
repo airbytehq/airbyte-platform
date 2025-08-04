@@ -972,6 +972,8 @@ server:
     hockeystackApiKey: ""
     launchdarklyKey: ""
     osanoKey: ""
+    posthogApiKey: ""
+    posthogHost: ""
     segmentToken: ""
     sonarApiUrl: ""
     zendeskKey: ""

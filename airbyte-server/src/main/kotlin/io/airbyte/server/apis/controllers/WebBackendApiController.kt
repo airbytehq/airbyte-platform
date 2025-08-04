@@ -80,7 +80,10 @@ open class WebBackendApiController(
     @Body webBackendConnectionCreate: WebBackendConnectionCreate,
   ): WebBackendConnectionRead? =
     execute {
-      TracingHelper.addSourceDestination(webBackendConnectionCreate.sourceId, webBackendConnectionCreate.destinationId)
+      TracingHelper.addSourceDestination(
+        webBackendConnectionCreate.sourceId,
+        webBackendConnectionCreate.destinationId,
+      )
       webBackendConnectionsHandler.webBackendCreateConnection(webBackendConnectionCreate)
     }
 
@@ -123,7 +126,9 @@ open class WebBackendApiController(
   ): WebBackendConnectionReadList? =
     execute {
       TracingHelper.addWorkspace(webBackendConnectionListRequestBody.workspaceId)
-      webBackendConnectionsHandler.webBackendListConnectionsForWorkspace(webBackendConnectionListRequestBody)
+      webBackendConnectionsHandler.webBackendListConnectionsForWorkspace(
+        webBackendConnectionListRequestBody,
+      )
     }
 
   @Post("/connections/status_counts")
@@ -191,15 +196,19 @@ open class WebBackendApiController(
       segmentToken = webappConfig.webApp["segment-token"]
       sonarApiUrl = webappConfig.webApp["sonar-api-url"]
       zendeskKey = webappConfig.webApp["zendesk-key"]
+      posthogApiKey = webappConfig.webApp["posthog-api-key"]
+      posthogHost = webappConfig.webApp["posthog-host"]
     }
 }
 
 /**
- * This class is populated by Micronaut with the values from the `airbyte.web-app` section in the application.yaml.
+ * This class is populated by Micronaut with the values from the `airbyte.web-app` section in the
+ * application.yaml.
  *
  * It is only used for by [WebBackendApiController.getWebappConfig].
  *
- * This class should be internal, but due to airbyte-server-wrapped extending the [WebBackendApiController] class, this must be public.
+ * This class should be internal, but due to airbyte-server-wrapped extending the
+ * [WebBackendApiController] class, this must be public.
  */
 @ConfigurationProperties("airbyte")
 data class WebappConfig(

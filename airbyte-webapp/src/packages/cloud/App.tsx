@@ -10,6 +10,7 @@ import { QueryProvider } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 import { AnalyticsProvider } from "core/services/analytics";
 import { HockeyStackAnalytics } from "core/services/analytics/HockeyStackAnalytics";
+import { PostHogAnalytics } from "core/services/analytics/PostHogAnalytics";
 import { defaultCloudFeatures, FeatureService } from "core/services/features";
 import { I18nProvider } from "core/services/i18n";
 import { BlockerService } from "core/services/navigation";
@@ -56,10 +57,12 @@ const App: React.FC = () => {
                 <DefaultErrorBoundary>
                   <AnalyticsProvider>
                     <HockeyStackAnalytics>
-                      <Services>
-                        <DeployPreviewMessage />
-                        <Routing />
-                      </Services>
+                      <PostHogAnalytics>
+                        <Services>
+                          <DeployPreviewMessage />
+                          <Routing />
+                        </Services>
+                      </PostHogAnalytics>
                     </HockeyStackAnalytics>
                   </AnalyticsProvider>
                 </DefaultErrorBoundary>
