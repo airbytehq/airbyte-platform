@@ -8,7 +8,7 @@ import { DestinationCatalog } from "core/api/types/AirbyteClient";
 import { LabeledListbox } from "./LabeledListbox";
 
 interface SelectMatchingKeyProps {
-  appendField: UseFieldArrayAppend<DataActivationConnectionFormValues, "streams" | `streams.${number}.fields`>;
+  appendField: UseFieldArrayAppend<DataActivationConnectionFormValues, `streams.${number}.fields`>;
   destinationCatalog: DestinationCatalog;
   streamIndex: number;
 }

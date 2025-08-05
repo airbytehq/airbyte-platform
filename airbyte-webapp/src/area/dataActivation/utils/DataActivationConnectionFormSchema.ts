@@ -1,6 +1,14 @@
 import { z } from "zod";
 
-import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
+import { publicKey } from "components/connection/ConnectionForm/schemas/mapperSchema";
+
+import {
+  DestinationSyncMode,
+  HashingMapperConfigurationMethod,
+  StreamMapperType,
+  SyncMode,
+} from "core/api/types/AirbyteClient";
+import { FilterCondition } from "pages/connections/ConnectionMappingsPage/RowFilteringMapperForm";
 
 // This allows us to programatically set the sync mode back to null, but still validates that a user selects a sync mode
 // before submitting the form.
@@ -56,6 +64,28 @@ const destinationSyncMode = z.discriminatedUnion("destinationSyncMode", [
   someDestinationSyncMode,
 ]);
 
+export const rowFilteringConfiguration = z.object({
+  type: z.literal(StreamMapperType["row-filtering"]),
+  condition: z.nativeEnum(FilterCondition),
+  comparisonValue: z.string().nonempty("form.empty.error"),
+});
+
+export const hashingConfiguration = z.object({
+  type: z.literal(StreamMapperType.hashing),
+  method: z.nativeEnum(HashingMapperConfigurationMethod),
+});
+
+const encryptionConfiguration = z.object({
+  type: z.literal(StreamMapperType.encryption),
+  publicKey,
+});
+
+export const additionalMappersSchema = z.discriminatedUnion("type", [
+  rowFilteringConfiguration,
+  hashingConfiguration,
+  encryptionConfiguration,
+]);
+
 const DataActivationStreamSchema = z
   .object({
     sourceStreamDescriptor: z
@@ -72,6 +102,7 @@ const DataActivationStreamSchema = z
       z.object({
         sourceFieldName: z.string().nonempty("form.empty.error"),
         destinationFieldName: z.string().nonempty("form.empty.error"),
+        additionalMappers: z.array(additionalMappersSchema),
       })
     ),
   })

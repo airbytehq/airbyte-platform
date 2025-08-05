@@ -80,9 +80,14 @@ const StreamMapping: React.FC<StreamMappingProps> = ({
   source,
   sourceCatalog,
 }) => {
-  const { fields, append, remove } = useFieldArray<DataActivationConnectionFormValues>({
+  const {
+    fields,
+    append: appendField,
+    remove: removeField,
+  } = useFieldArray<DataActivationConnectionFormValues, `streams.${number}.fields`>({
     name: `streams.${index}.fields`,
   });
+
   const sourceStreamDescriptor = useWatch<
     DataActivationConnectionFormValues,
     `streams.${number}.sourceStreamDescriptor`
@@ -141,7 +146,11 @@ const StreamMapping: React.FC<StreamMappingProps> = ({
           <div className={styles.streamMappings__destinationSettings}>
             <SelectDestinationSyncMode streamIndex={index} destinationCatalog={destinationCatalog} />
             {selectedDestinationOperation?.matchingKeys && selectedDestinationOperation.matchingKeys.length > 0 && (
-              <SelectMatchingKey destinationCatalog={destinationCatalog} streamIndex={index} appendField={append} />
+              <SelectMatchingKey
+                destinationCatalog={destinationCatalog}
+                streamIndex={index}
+                appendField={appendField}
+              />
             )}
           </div>
         )}
@@ -156,7 +165,7 @@ const StreamMapping: React.FC<StreamMappingProps> = ({
                 key={field.id}
                 streamIndex={index}
                 fieldIndex={fieldIndex}
-                removeField={fields.length > 1 ? () => remove(fieldIndex) : undefined}
+                removeField={fields.length > 1 ? () => removeField(fieldIndex) : undefined}
               />
             ))}
             <Box py="sm" className={styles.streamMappings__addField}>
@@ -164,7 +173,7 @@ const StreamMapping: React.FC<StreamMappingProps> = ({
                 icon="plus"
                 variant="secondary"
                 type="button"
-                onClick={() => append({ sourceFieldName: "", destinationFieldName: "" })}
+                onClick={() => appendField({ sourceFieldName: "", destinationFieldName: "" })}
               >
                 <FormattedMessage id="connection.create.addField" />
               </Button>

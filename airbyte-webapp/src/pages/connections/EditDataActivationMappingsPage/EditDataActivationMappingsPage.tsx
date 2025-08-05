@@ -25,7 +25,7 @@ export const EditDataActivationMappingsPage = () => {
   const connection = useCurrentConnection();
   const methods = useForm<DataActivationConnectionFormValues, unknown, DataActivationConnectionFormOutput>({
     defaultValues: createFormDefaultValues(connection.syncCatalog),
-    mode: "onChange",
+    mode: "onBlur",
     resolver: zodResolver(DataActivationConnectionFormSchema),
   });
   const { mutateAsync: updateConnection } = useUpdateConnection();

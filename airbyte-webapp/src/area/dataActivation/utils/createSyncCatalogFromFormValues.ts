@@ -1,9 +1,15 @@
-import { v4 as uuid } from "uuid";
-
-import { AirbyteCatalog, StreamMapperType } from "core/api/types/AirbyteClient";
+import {
+  AirbyteCatalog,
+  ConfiguredStreamMapper,
+  EncryptionMapperRSAConfigurationAlgorithm,
+  RowFilteringOperationType,
+  StreamMapperType,
+} from "core/api/types/AirbyteClient";
+import { isNonNullable } from "core/utils/isNonNullable";
+import { FilterCondition } from "pages/connections/ConnectionMappingsPage/RowFilteringMapperForm";
 
 import { DataActivationConnectionFormSchema } from "./DataActivationConnectionFormSchema";
-import { DataActivationConnectionFormValues } from "../types";
+import { DataActivationConnectionFormValues, DataActivationField } from "../types";
 
 export function createSyncCatalogFromFormValues(
   formOutput: DataActivationConnectionFormValues,
@@ -65,15 +71,7 @@ export function createSyncCatalogFromFormValues(
             primaryKey,
             cursorField,
             syncMode: mappedStream.sourceSyncMode ?? stream.config?.syncMode ?? "full_refresh",
-            mappers:
-              mappedStream.fields.map(({ sourceFieldName, destinationFieldName }) => ({
-                id: uuid(),
-                type: StreamMapperType["field-renaming"],
-                mapperConfiguration: {
-                  newFieldName: destinationFieldName,
-                  originalFieldName: sourceFieldName,
-                },
-              })) ?? stream.config?.mappers,
+            mappers: createMappers(mappedStream.fields) ?? stream.config?.mappers,
             selected: true,
             selectedFields: selectedFields.length ? selectedFields : undefined,
             fieldSelectionEnabled: selectedFields.length > 0,
@@ -84,5 +82,85 @@ export function createSyncCatalogFromFormValues(
           },
         };
       }) ?? [],
+  };
+}
+
+function createMappers(fields: DataActivationField[]): ConfiguredStreamMapper[] {
+  const allMappers = fields
+    .map((field) => {
+      const additionalMappers: ConfiguredStreamMapper[] =
+        field.additionalMappers
+          ?.map((config) => {
+            if (config.type === "row-filtering") {
+              return createRowFilteringMapper(field.sourceFieldName, config.condition, config.comparisonValue);
+            }
+            if (config.type === "hashing") {
+              return {
+                type: StreamMapperType.hashing,
+                mapperConfiguration: {
+                  targetField: field.sourceFieldName,
+                  method: config.method,
+                  fieldNameSuffix: "", // It's important that the suffix is not changed so that subsequent mappers can be applied to the same field
+                },
+              };
+            }
+            if (config.type === "encryption") {
+              return {
+                type: StreamMapperType.encryption,
+                mapperConfiguration: {
+                  algorithm: EncryptionMapperRSAConfigurationAlgorithm.RSA,
+                  targetField: field.sourceFieldName,
+                  publicKey: config.publicKey,
+                  fieldNameSuffix: "", // It's important that the suffix is not changed so that subsequent mappers can be applied to the same field
+                },
+              };
+            }
+            return null;
+          })
+          .filter(isNonNullable) ?? [];
+      const finalRenamingMapper = {
+        type: StreamMapperType["field-renaming"],
+        mapperConfiguration: {
+          newFieldName: field.destinationFieldName,
+          originalFieldName: field.sourceFieldName,
+        },
+      };
+      return additionalMappers.concat([finalRenamingMapper]);
+    })
+    .flat();
+
+  return allMappers;
+}
+
+function createRowFilteringMapper(
+  fieldName: string,
+  condition: FilterCondition,
+  comparisonValue: string
+): ConfiguredStreamMapper {
+  const mapperConfiguration =
+    condition === FilterCondition.OUT
+      ? {
+          conditions: {
+            type: RowFilteringOperationType.NOT,
+            conditions: [
+              {
+                type: RowFilteringOperationType.EQUAL,
+                fieldName,
+                comparisonValue,
+              },
+            ],
+          },
+        }
+      : {
+          conditions: {
+            type: RowFilteringOperationType.EQUAL,
+            fieldName,
+            comparisonValue,
+          },
+        };
+
+  return {
+    type: StreamMapperType["row-filtering"],
+    mapperConfiguration,
   };
 }

@@ -1,4 +1,8 @@
+import { z } from "zod";
+
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
+
+import { additionalMappersSchema } from "../utils";
 
 export interface DataActivationStream {
   sourceStreamDescriptor: {
@@ -16,6 +20,7 @@ export interface DataActivationStream {
 export interface DataActivationField {
   sourceFieldName: string;
   destinationFieldName: string;
+  additionalMappers?: Array<z.infer<typeof additionalMappersSchema>>;
 }
 
 export interface DataActivationConnectionFormValues {

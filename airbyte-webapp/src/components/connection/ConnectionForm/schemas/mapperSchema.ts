@@ -24,7 +24,7 @@ export const hashingMapperConfiguration = z.object({
   targetField: z.string().nonempty("form.empty.error"),
 } satisfies ToZodSchema<HashingMapperConfiguration>);
 
-const hashingMapperConfigurationSchema = z.object({
+export const hashingMapperConfigurationSchema = z.object({
   type: z.literal(StreamMapperType.hashing),
   mapperConfiguration: hashingMapperConfiguration,
 });
@@ -45,7 +45,7 @@ const fieldRenamingMapperConfigurationSchema = z.object({
 /**
  * Row filtering
  */
-const rowFilteringMapperConfigurationSchema = z.object({
+export const rowFilteringMapperConfigurationSchema = z.object({
   type: z.literal(StreamMapperType["row-filtering"]),
   mapperConfiguration: z.object({
     conditions: z.discriminatedUnion("type", [
@@ -71,11 +71,15 @@ const rowFilteringMapperConfigurationSchema = z.object({
 /**
  * Encryption
  */
+export const publicKey = z
+  .string()
+  .regex(/^[0-9a-fA-F]*$/, "connections.mappings.error.INVALID_RSA_PUBLIC_KEY")
+  .nonempty("form.empty.error");
 const rsaEncryptionMapperConfigurationSchema = z.object({
   targetField: z.string().nonempty("connections.mappings.error.FIELD_NAME_REQUIRED"),
   algorithm: z.nativeEnum(EncryptionMapperRSAConfigurationAlgorithm),
   fieldNameSuffix: z.string().regex(/^_encrypted$/, "connections.mappings.error.FIELD_NAME_SUFFIX_REQUIRED"),
-  publicKey: z.string().regex(/^[0-9a-fA-F]*$/, "connections.mappings.error.INVALID_RSA_PUBLIC_KEY"),
+  publicKey,
 } satisfies ToZodSchema<EncryptionMapperRSAConfiguration>);
 
 const aesEncryptionMapperConfigurationSchema = z.object({

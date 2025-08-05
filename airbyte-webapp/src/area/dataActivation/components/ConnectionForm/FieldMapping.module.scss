@@ -1,6 +1,11 @@
 @use "scss/variables";
 
 .fieldMapping {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 30px 1fr 20px 1fr;
+  gap: variables.$spacing-md;
+
   &__leftGutter {
     grid-column: 1;
     height: variables.$form-input-height;
@@ -35,5 +40,9 @@
     display: flex;
     justify-content: center;
     align-items: center;
+  }
+
+  &__additionalMappers {
+    grid-column: 2 / 3;
   }
 }

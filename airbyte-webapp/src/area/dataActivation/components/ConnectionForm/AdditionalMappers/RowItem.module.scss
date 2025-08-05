@@ -1,0 +1,12 @@
+@use "scss/variables";
+
+.rowItem {
+  display: flex;
+  align-items: center;
+  min-height: variables.$form-input-height;
+  justify-content: stretch;
+
+  > * {
+    flex-grow: 1;
+  }
+}

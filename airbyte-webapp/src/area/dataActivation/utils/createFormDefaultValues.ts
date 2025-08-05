@@ -1,10 +1,20 @@
+import { z } from "zod";
+
+import { publicKey } from "components/connection/ConnectionForm/schemas/mapperSchema";
+
 import {
   AirbyteCatalog,
   AirbyteStreamConfiguration,
   ConfiguredStreamMapper,
+  EncryptionMapperRSAConfiguration,
+  EncryptionMapperRSAConfigurationAlgorithm,
   FieldRenamingMapperConfiguration,
+  HashingMapperConfigurationMethod,
   StreamMapperType,
 } from "core/api/types/AirbyteClient";
+import { isNonNullable } from "core/utils/isNonNullable";
+import { ToZodSchema } from "core/utils/zod";
+import { FilterCondition } from "pages/connections/ConnectionMappingsPage/RowFilteringMapperForm";
 
 import { DataActivationField, DataActivationStream, DataActivationConnectionFormValues } from "../types";
 
@@ -50,15 +60,126 @@ export const createFormDefaultValues = (syncCatalog: AirbyteCatalog): DataActiva
   };
 };
 
+const hashingMapper = z.object({
+  type: z.literal(StreamMapperType.hashing),
+  mapperConfiguration: z.object({
+    method: z.nativeEnum(HashingMapperConfigurationMethod),
+    targetField: z.string(),
+    fieldNameSuffix: z.literal(""),
+  }),
+});
+
+const filterInMapper = z.object({
+  type: z.literal(StreamMapperType["row-filtering"]),
+  mapperConfiguration: z.object({
+    conditions: z.object({
+      type: z.literal("EQUAL"),
+      fieldName: z.string(),
+      comparisonValue: z.string(),
+    }),
+  }),
+});
+
+const filterOutMapper = z.object({
+  type: z.literal(StreamMapperType["row-filtering"]),
+  mapperConfiguration: z.object({
+    conditions: z.object({
+      type: z.literal("NOT"),
+      conditions: z.array(
+        z.object({
+          type: z.literal("EQUAL"),
+          fieldName: z.string(),
+          comparisonValue: z.string(),
+        })
+      ),
+    }),
+  }),
+});
+
+const encryptionMapper = z.object({
+  type: z.literal(StreamMapperType.encryption),
+  mapperConfiguration: z.object({
+    algorithm: z.nativeEnum(EncryptionMapperRSAConfigurationAlgorithm),
+    targetField: z.string().nonempty(),
+    publicKey,
+    fieldNameSuffix: z.literal(""),
+  } satisfies ToZodSchema<EncryptionMapperRSAConfiguration>),
+});
+
 function inferFieldsFromConfig(config: AirbyteStreamConfiguration): DataActivationField[] {
-  if (!config.mappers) {
+  const persistedMappers = config.mappers;
+  if (!persistedMappers) {
     return [];
   }
+  // Field renaming mappers are the basis for the fields we show in the UI
+  return persistedMappers.filter(isFieldRenamingMapper).map((fieldRenamingMapper) => {
+    // Additional mappers are any mappers that operate on the same field, but do a different operation (e.g. hashing,
+    // filtering or encryption). These will be nested under the field renaming mapper in the form UI.
+    const additionalMappers = persistedMappers
+      .map((mapper) => {
+        // Detect and transform hashing mappers for this field
+        const hashingMapperResult = hashingMapper.safeParse(mapper);
+        if (
+          hashingMapperResult.success &&
+          hashingMapperResult.data.mapperConfiguration.targetField ===
+            fieldRenamingMapper.mapperConfiguration.originalFieldName
+        ) {
+          return {
+            type: "hashing",
+            method: hashingMapperResult.data.mapperConfiguration.method,
+          } as const;
+        }
 
-  return config.mappers.filter(isFieldRenamingMapper).map((mapper) => {
+        // Detect and transform row filtering mappers for this field that filter in rows
+        const filterInMapperResult = filterInMapper.safeParse(mapper);
+        if (
+          filterInMapperResult.success &&
+          filterInMapperResult.data.mapperConfiguration.conditions.fieldName ===
+            fieldRenamingMapper.mapperConfiguration.originalFieldName
+        ) {
+          return {
+            type: "row-filtering",
+            condition: FilterCondition.IN,
+            comparisonValue: filterInMapperResult.data.mapperConfiguration.conditions.comparisonValue,
+          } as const;
+        }
+
+        // Detect and transform row filtering mappers for this field that filter out rows
+        const filterOutMapperResult = filterOutMapper.safeParse(mapper);
+        if (
+          filterOutMapperResult.success &&
+          filterOutMapperResult.data.mapperConfiguration.conditions.conditions[0].fieldName ===
+            fieldRenamingMapper.mapperConfiguration.originalFieldName
+        ) {
+          return {
+            type: "row-filtering",
+            condition: FilterCondition.OUT,
+            comparisonValue: filterOutMapperResult.data.mapperConfiguration.conditions.conditions[0].comparisonValue,
+          } as const;
+        }
+
+        // Detect and transform encryption mappers for this field
+        const encryptionMapperResult = encryptionMapper.safeParse(mapper);
+        if (
+          encryptionMapperResult.success &&
+          encryptionMapperResult.data.mapperConfiguration.targetField ===
+            fieldRenamingMapper.mapperConfiguration.originalFieldName
+        ) {
+          return {
+            type: "encryption",
+            publicKey: encryptionMapperResult.data.mapperConfiguration.publicKey,
+          } as const;
+        }
+
+        // Any other mappers will be stripped out in the UI
+        return null;
+      })
+      .filter(isNonNullable);
+
     return {
-      sourceFieldName: mapper.mapperConfiguration.originalFieldName,
-      destinationFieldName: mapper.mapperConfiguration.newFieldName,
+      sourceFieldName: fieldRenamingMapper.mapperConfiguration.originalFieldName,
+      destinationFieldName: fieldRenamingMapper.mapperConfiguration.newFieldName,
+      additionalMappers,
     };
   });
 }

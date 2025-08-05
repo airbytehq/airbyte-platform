@@ -1,0 +1,33 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.additionalMappers {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: variables.$spacing-md;
+
+  &__nestingIcon {
+    align-self: flex-start;
+  }
+
+  &__listbox {
+    width: fit-content;
+  }
+
+  &__addButtonContainer {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  &__addButton {
+    all: unset;
+    cursor: pointer;
+    font-size: variables.$font-size-sm;
+    color: colors.$grey-400;
+
+    &:hover {
+      color: colors.$blue;
+    }
+  }
+}

@@ -2,6 +2,9 @@ import { AirbyteCatalog, StreamMapperType } from "core/api/types/AirbyteClient";
 
 import { createFormDefaultValues } from "./createFormDefaultValues";
 
+const MOCK_RSA_PUBLIC_KEY =
+  "30820122300d06092a864886f70d01010105000382010f003082010a0282010100cabb23666f3c430417a9b6455c246189c282248fad5acc5c405d20e97c0c2dde125e16a5baa249e3400f286d7142e94d92d0a0d2bffaa6c3dfa6b87cc24fe93125ac5f8646cb37ef823732aa5bdc0ee2770f091c1a0c51ad7e01744133cb43604898ac452e90fd3457436889de6d6f14773154f35a0ee7e22b9432fe3afec52736a0c6a2702b4251ace0d8e2b805ae0714703b8db5ddeff297c7b16e56f4c15709b5140c2415c23c850d38b989317037df753fa89321c73b440c9425ccebf3520b121b135750bb727d998157f29f9c93939b39656cf95782938786d66e9e6be99ccf6f55af055889fe601ade7066d9a7ea04ee7ef266693954e9f216568f0e5f0203010001";
+
 describe(`${createFormDefaultValues.name}`, () => {
   it("should return default values for a given sync catalog", () => {
     const syncCatalog: AirbyteCatalog = {
@@ -48,7 +51,7 @@ describe(`${createFormDefaultValues.name}`, () => {
           destinationObjectName: "",
           sourceSyncMode: "full_refresh",
           destinationSyncMode: "append",
-          fields: [{ sourceFieldName: "id", destinationFieldName: "destination_id" }],
+          fields: [{ sourceFieldName: "id", destinationFieldName: "destination_id", additionalMappers: [] }],
           matchingKeys: ["destination_id"],
           cursorField: "lastUpdatedTime",
         },
@@ -59,26 +62,6 @@ describe(`${createFormDefaultValues.name}`, () => {
   });
 
   it("returns correct composite matching key", () => {
-    const expectedDefaultValues = {
-      streams: [
-        {
-          sourceStreamDescriptor: {
-            name: "campaigns",
-            namespace: undefined,
-          },
-          destinationObjectName: "",
-          sourceSyncMode: "full_refresh",
-          destinationSyncMode: "append",
-          fields: [
-            { sourceFieldName: "id", destinationFieldName: "destination_id" },
-            { sourceFieldName: "name", destinationFieldName: "destination_name" },
-          ],
-          matchingKeys: ["destination_id", "destination_name"],
-          cursorField: "lastUpdatedTime",
-        },
-      ],
-    };
-
     const SYNC_CATALOG_WITH_COMPOSITE_KEY: AirbyteCatalog = {
       streams: [
         {
@@ -109,7 +92,263 @@ describe(`${createFormDefaultValues.name}`, () => {
       ],
     };
 
+    const expectedDefaultValues = {
+      streams: [
+        {
+          sourceStreamDescriptor: {
+            name: "campaigns",
+            namespace: undefined,
+          },
+          destinationObjectName: "",
+          sourceSyncMode: "full_refresh",
+          destinationSyncMode: "append",
+          fields: [
+            { sourceFieldName: "id", destinationFieldName: "destination_id", additionalMappers: [] },
+            { sourceFieldName: "name", destinationFieldName: "destination_name", additionalMappers: [] },
+          ],
+          matchingKeys: ["destination_id", "destination_name"],
+          cursorField: "lastUpdatedTime",
+        },
+      ],
+    };
+
     expect(createFormDefaultValues(SYNC_CATALOG_WITH_COMPOSITE_KEY)).toEqual(expectedDefaultValues);
+  });
+
+  it("correctly parses a field hashing mapper", () => {
+    const syncCatalogWithHashingMapper: AirbyteCatalog = {
+      streams: [
+        {
+          stream: { name: "test_stream", namespace: undefined },
+          config: {
+            selected: true,
+            syncMode: "full_refresh",
+            destinationSyncMode: "append",
+            primaryKey: undefined,
+            cursorField: [],
+            mappers: [
+              {
+                id: "hashing_mapper",
+                type: StreamMapperType.hashing,
+                mapperConfiguration: {
+                  fieldNameSuffix: "",
+                  method: "MD5",
+                  targetField: "source_field",
+                },
+              },
+              {
+                id: "renaming_mapper",
+                type: StreamMapperType["field-renaming"],
+                mapperConfiguration: {
+                  originalFieldName: "source_field",
+                  newFieldName: "destination_field",
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const expectedDefaultValues = {
+      streams: [
+        {
+          sourceStreamDescriptor: {
+            name: "test_stream",
+            namespace: undefined,
+          },
+          destinationObjectName: "",
+          sourceSyncMode: "full_refresh",
+          destinationSyncMode: "append",
+          fields: [
+            {
+              sourceFieldName: "source_field",
+              destinationFieldName: "destination_field",
+              additionalMappers: [
+                {
+                  type: StreamMapperType.hashing,
+                  method: "MD5",
+                },
+              ],
+            },
+          ],
+          matchingKeys: null,
+          cursorField: null,
+        },
+      ],
+    };
+
+    expect(createFormDefaultValues(syncCatalogWithHashingMapper)).toEqual(expectedDefaultValues);
+  });
+
+  it("correctly parses row filtering mappers", () => {
+    const syncCatalogWithRowFilteringMapper: AirbyteCatalog = {
+      streams: [
+        {
+          stream: { name: "test_stream", namespace: undefined },
+          config: {
+            selected: true,
+            syncMode: "full_refresh",
+            destinationSyncMode: "append",
+            primaryKey: undefined,
+            cursorField: [],
+            mappers: [
+              {
+                id: "row_filtering_mapper",
+                type: StreamMapperType["row-filtering"],
+                mapperConfiguration: {
+                  conditions: {
+                    type: "EQUAL",
+                    fieldName: "source_field",
+                    comparisonValue: "some value",
+                  },
+                },
+              },
+              {
+                id: "renaming_mapper",
+                type: StreamMapperType["field-renaming"],
+                mapperConfiguration: {
+                  originalFieldName: "source_field",
+                  newFieldName: "destination_field",
+                },
+              },
+              {
+                id: "row_filtering_mapper",
+                type: StreamMapperType["row-filtering"],
+                mapperConfiguration: {
+                  conditions: {
+                    type: "NOT",
+                    conditions: [
+                      {
+                        type: "EQUAL",
+                        fieldName: "source_field_2",
+                        comparisonValue: "some other value",
+                      },
+                    ],
+                  },
+                },
+              },
+              {
+                id: "renaming_mapper",
+                type: StreamMapperType["field-renaming"],
+                mapperConfiguration: {
+                  originalFieldName: "source_field_2",
+                  newFieldName: "destination_field_2",
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const expectedDefaultValues = {
+      streams: [
+        {
+          sourceStreamDescriptor: {
+            name: "test_stream",
+            namespace: undefined,
+          },
+          destinationObjectName: "",
+          sourceSyncMode: "full_refresh",
+          destinationSyncMode: "append",
+          fields: [
+            {
+              sourceFieldName: "source_field",
+              destinationFieldName: "destination_field",
+              additionalMappers: [
+                {
+                  type: StreamMapperType["row-filtering"],
+                  condition: "IN",
+                  comparisonValue: "some value",
+                },
+              ],
+            },
+            {
+              sourceFieldName: "source_field_2",
+              destinationFieldName: "destination_field_2",
+              additionalMappers: [
+                {
+                  type: StreamMapperType["row-filtering"],
+                  condition: "OUT",
+                  comparisonValue: "some other value",
+                },
+              ],
+            },
+          ],
+          matchingKeys: null,
+          cursorField: null,
+        },
+      ],
+    };
+
+    expect(createFormDefaultValues(syncCatalogWithRowFilteringMapper)).toEqual(expectedDefaultValues);
+  });
+
+  it("correctly parses an encryption mapper", () => {
+    const syncCatalogWithEncryptionMapper: AirbyteCatalog = {
+      streams: [
+        {
+          stream: { name: "test_stream", namespace: undefined },
+          config: {
+            selected: true,
+            syncMode: "full_refresh",
+            destinationSyncMode: "append",
+            primaryKey: undefined,
+            cursorField: [],
+            mappers: [
+              {
+                id: "encryption_mapper",
+                type: StreamMapperType.encryption,
+                mapperConfiguration: {
+                  algorithm: "RSA",
+                  fieldNameSuffix: "",
+                  publicKey: MOCK_RSA_PUBLIC_KEY,
+                  targetField: "source_field",
+                },
+              },
+              {
+                id: "renaming_mapper",
+                type: StreamMapperType["field-renaming"],
+                mapperConfiguration: {
+                  originalFieldName: "source_field",
+                  newFieldName: "destination_field",
+                },
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const expectedDefaultValues = {
+      streams: [
+        {
+          sourceStreamDescriptor: {
+            name: "test_stream",
+            namespace: undefined,
+          },
+          destinationObjectName: "",
+          sourceSyncMode: "full_refresh",
+          destinationSyncMode: "append",
+          fields: [
+            {
+              sourceFieldName: "source_field",
+              destinationFieldName: "destination_field",
+              additionalMappers: [
+                {
+                  type: StreamMapperType.encryption,
+                  publicKey: MOCK_RSA_PUBLIC_KEY,
+                },
+              ],
+            },
+          ],
+          matchingKeys: null,
+          cursorField: null,
+        },
+      ],
+    };
+    expect(createFormDefaultValues(syncCatalogWithEncryptionMapper)).toEqual(expectedDefaultValues);
   });
 });
 

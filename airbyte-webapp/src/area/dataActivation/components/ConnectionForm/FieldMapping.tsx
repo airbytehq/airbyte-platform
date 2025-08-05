@@ -17,6 +17,7 @@ import { useSelectedDestinationOperation } from "area/dataActivation/utils/useSe
 import { AirbyteCatalog, DestinationCatalog } from "core/api/types/AirbyteClient";
 import { getJsonSchemaType } from "core/domain/catalog";
 
+import { AdditionalMappers } from "./AdditionalMappers";
 import styles from "./FieldMapping.module.scss";
 
 interface FieldMappingProps {
@@ -116,7 +117,7 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
   const isRequired = isPartOfMatchingKey || isRequiredBySchema;
 
   return (
-    <>
+    <div className={styles.fieldMapping}>
       <FlexContainer className={styles.fieldMapping__leftGutter} alignItems="center">
         <Text size="lg">
           <FormattedMessage id="connection.create.map" />
@@ -198,6 +199,9 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
           </div>
         )}
       </FlexContainer>
-    </>
+      <div className={styles.fieldMapping__additionalMappers}>
+        <AdditionalMappers streamIndex={streamIndex} fieldIndex={fieldIndex} />
+      </div>
+    </div>
   );
 };
