@@ -155,6 +155,10 @@ test.describe("Airbyte Embedded Integration Flow", () => {
     await page.click('a:has-text("test-external-user")');
     await page.click('a:has-text("Settings")');
     await page.click('a[href*="/settings/workspace"]');
+
+    // wait for cookie banner to disappear
+    await page.waitForTimeout(6000);
+
     await page.click('button:has-text("Delete your workspace")');
     await page.locator('input[id="confirmation-text"]').fill("test-external-user");
     await page.click('button:has-text("Delete workspace")');
