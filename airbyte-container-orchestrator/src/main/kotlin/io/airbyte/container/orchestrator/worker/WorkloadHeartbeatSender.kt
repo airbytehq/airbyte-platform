@@ -5,6 +5,7 @@
 package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.api.client.ApiException
+import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatTimeoutException
@@ -27,6 +28,7 @@ class WorkloadHeartbeatSender(
   private val replicationWorkerState: ReplicationWorkerState,
   private val destinationTimeoutMonitor: DestinationTimeoutMonitor,
   private val sourceTimeoutMonitor: HeartbeatMonitor,
+  private val source: AirbyteSource,
   @Named("workloadHeartbeatInterval") private val heartbeatInterval: Duration,
   @Named("workloadHeartbeatTimeout") private val heartbeatTimeoutDuration: Duration,
   @Named("hardExitCallable") private val hardExitCallable: () -> Unit,
@@ -61,7 +63,12 @@ class WorkloadHeartbeatSender(
             break
           }
 
-          sourceTimeoutMonitor.hasTimedOut() -> {
+          /*
+           * Only fail the job if the source heartbeat has timed out for a source that has not already finished.  This is
+           * to allow destinations that take a long time (e.g. typing and deduping) to finish even after the source has
+           * exited normally.
+           */
+          (sourceTimeoutMonitor.hasTimedOut() && !source.isFinished) -> {
             val e =
               HeartbeatTimeoutException(
                 sourceTimeoutMonitor.heartbeatFreshnessThreshold.toMillis(),

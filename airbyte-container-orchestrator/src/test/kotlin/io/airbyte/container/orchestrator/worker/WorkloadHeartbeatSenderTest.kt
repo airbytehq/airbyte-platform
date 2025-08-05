@@ -5,6 +5,7 @@
 package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.api.client.ApiException
+import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
 import io.airbyte.workload.api.client.WorkloadApiClient
@@ -20,6 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -34,6 +36,7 @@ class WorkloadHeartbeatSenderTest {
   private lateinit var mockDestinationTimeoutMonitor: DestinationTimeoutMonitor
   private lateinit var mockSourceTimeoutMonitor: HeartbeatMonitor
   private lateinit var hardExitCallable: () -> Unit
+  private lateinit var source: AirbyteSource
 
   private val testWorkloadId = "test-workload"
   private val testJobId = 0L
@@ -48,6 +51,7 @@ class WorkloadHeartbeatSenderTest {
     mockDestinationTimeoutMonitor = mockk(relaxed = true)
     mockSourceTimeoutMonitor = mockk(relaxed = true)
     hardExitCallable = mockk(relaxed = true)
+    source = mockk(relaxed = true)
 
     every { mockDestinationTimeoutMonitor.hasTimedOut() } returns false
     every { mockSourceTimeoutMonitor.hasTimedOut() } returns false
@@ -169,6 +173,39 @@ class WorkloadHeartbeatSenderTest {
       verify(exactly = 1) { mockReplicationWorkerState.markFailed() }
     }
 
+  @Test
+  fun `do not fail the Workload if sourceTimeoutMonitor hasTimedOut, but the source finished first`() =
+    runTest {
+      // We want the first iteration to see "hasTimedOut = true" => skip heartbeat, but not break out yet
+      every { mockSourceTimeoutMonitor.hasTimedOut() } returnsMany listOf(false, true)
+      every { mockSourceTimeoutMonitor.timeSinceLastBeat } returnsMany
+        listOf(
+          Optional.of(Duration.ZERO),
+          Optional.of(Duration.ZERO),
+        )
+      every { source.isFinished } returns true
+
+      // We'll ensure that only a small time elapses so that we do NOT exceed the heartbeatTimeout
+      // In this scenario, heartbeat as usual
+      every { mockWorkloadApiClient.workloadHeartbeat(any()) } returns Unit
+
+      val sender = getSender(heartbeatTimeoutDuration = Duration.ofMinutes(1))
+
+      val job =
+        backgroundScope.launch {
+          sender.sendHeartbeat()
+        }
+
+      // Let the test time move enough for 2 iterations
+      advanceTimeBy(200)
+
+      // The job is allowed to continue to run
+      assertFalse(job.isCompleted)
+
+      // We should have failed the workload because of the source timeout failure
+      verify(exactly = 0) { mockReplicationWorkerState.markFailed() }
+    }
+
   /**
    * If the server returns some other error (not GONE), we log and retry unless we exceed the total heartbeat timeout.
    * We'll force the second iteration to exceed the heartbeat timeout. That triggers markFailed, abort, trackFailure.
@@ -212,10 +249,11 @@ class WorkloadHeartbeatSenderTest {
       destinationTimeoutMonitor = mockDestinationTimeoutMonitor,
       sourceTimeoutMonitor = mockSourceTimeoutMonitor,
       heartbeatInterval = shortHeartbeatInterval,
-      heartbeatTimeoutDuration = shortHeartbeatTimeout, // e.g. 50ms
+      heartbeatTimeoutDuration = heartbeatTimeoutDuration, // e.g. 50ms
       workloadId = testWorkloadId,
       jobId = testJobId,
       attempt = testAttempt,
       hardExitCallable = hardExitCallable,
+      source = source,
     )
 }
