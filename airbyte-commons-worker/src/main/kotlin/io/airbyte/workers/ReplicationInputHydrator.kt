@@ -86,6 +86,7 @@ class ReplicationInputHydrator(
   private fun refreshSecretsReferences(parsed: ReplicationActivityInput) {
     val jobInput =
       retry {
+        // TODO is this still relevant? Most input computation should be tied to the commands. We should look into how to delete this endpoint.
         airbyteApiClient.jobsApi.getJobInput(
           SyncInput(
             parsed.jobRunConfig!!.jobId.toLong(),

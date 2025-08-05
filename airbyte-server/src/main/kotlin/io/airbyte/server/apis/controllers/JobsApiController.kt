@@ -6,7 +6,6 @@ package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.JobsApi
 import io.airbyte.api.model.generated.BooleanRead
-import io.airbyte.api.model.generated.CheckInput
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionJobRequestBody
 import io.airbyte.api.model.generated.DeleteStreamResetRecordsForJobRequest
@@ -85,13 +84,6 @@ open class JobsApiController(
       null // to satisfy the lambda interface bounds
     }
   }
-
-  @Post("/get_check_input")
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun getCheckInput(
-    @Body checkInput: CheckInput,
-  ): Any? = execute { jobInputHandler.getCheckJobInput(checkInput) }
 
   @Post("/get_debug_info")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)

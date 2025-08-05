@@ -8,16 +8,11 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.WorkspaceApi
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.WorkspaceRead
-import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.TestClient
-import io.airbyte.featureflag.UseCommandCheck
-import io.airbyte.featureflag.UseSyncV2
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchInput
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.whenever
 import java.io.IOException
 import java.util.UUID
@@ -63,22 +58,13 @@ internal class FeatureFlagFetchActivityTest {
 
   @Test
   fun testGetFeatureFlags() {
-    whenever(mTestClient!!.boolVariation(eq(UseSyncV2), any<Context>()))
-      .thenReturn(true)
-    whenever(
-      mTestClient!!.boolVariation(
-        eq(UseCommandCheck),
-        any<Context>(),
-      ),
-    ).thenReturn(true)
-
     val input = FeatureFlagFetchInput(CONNECTION_ID)
 
     val featureFlagFetchOutput =
       featureFlagFetchActivity!!.getFeatureFlags(input)
 
-    Assertions.assertTrue(featureFlagFetchOutput.featureFlags!!.get(UseSyncV2.key)!!)
-    Assertions.assertTrue(featureFlagFetchOutput.featureFlags!!.get(UseCommandCheck.key)!!)
+//    Left as a sample assertion for when we have a flag to add for the ConnectionManagerWorkflow
+//    Assertions.assertTrue(featureFlagFetchOutput.featureFlags!!.get(UseSyncV2.key)!!)
   }
 
   companion object {

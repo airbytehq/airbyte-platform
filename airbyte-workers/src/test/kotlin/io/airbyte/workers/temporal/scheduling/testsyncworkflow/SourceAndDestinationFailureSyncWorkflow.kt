@@ -5,25 +5,16 @@
 package io.airbyte.workers.temporal.scheduling.testsyncworkflow
 
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.commons.temporal.scheduling.SyncWorkflow
+import io.airbyte.commons.temporal.scheduling.SyncWorkflowV2
+import io.airbyte.commons.temporal.scheduling.SyncWorkflowV2Input
 import io.airbyte.config.FailureReason
-import io.airbyte.config.StandardSyncInput
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.SyncStats
-import io.airbyte.persistence.job.models.IntegrationLauncherConfig
-import io.airbyte.persistence.job.models.JobRunConfig
 import org.assertj.core.util.Sets
-import java.util.UUID
 
-class SourceAndDestinationFailureSyncWorkflow : SyncWorkflow {
-  override fun run(
-    jobRunConfig: JobRunConfig,
-    sourceLauncherConfig: IntegrationLauncherConfig,
-    destinationLauncherConfig: IntegrationLauncherConfig,
-    syncInput: StandardSyncInput,
-    connectionId: UUID,
-  ): StandardSyncOutput =
+class SourceAndDestinationFailureSyncWorkflow : SyncWorkflowV2 {
+  override fun run(input: SyncWorkflowV2Input): StandardSyncOutput =
     StandardSyncOutput()
       .withFailures(FAILURE_REASONS.stream().toList())
       .withStandardSyncSummary(
@@ -35,8 +26,6 @@ class SourceAndDestinationFailureSyncWorkflow : SyncWorkflow {
               .withRecordsEmitted(20L),
           ),
       )
-
-  override fun checkAsyncActivityStatus() {}
 
   companion object {
     @VisibleForTesting

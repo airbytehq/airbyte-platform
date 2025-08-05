@@ -5,15 +5,12 @@
 package io.airbyte.workers.temporal.scheduling
 
 import datadog.trace.api.Trace
-import io.airbyte.commons.constants.WorkerConstants
 import io.airbyte.commons.temporal.TemporalJobType
 import io.airbyte.commons.temporal.TemporalTaskQueueUtils.getTaskQueue
-import io.airbyte.commons.temporal.TemporalWorkflowUtils
 import io.airbyte.commons.temporal.TemporalWorkflowUtils.buildStartWorkflowInput
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub
 import io.airbyte.commons.temporal.exception.RetryableException
 import io.airbyte.commons.temporal.scheduling.CheckCommandApiInput
-import io.airbyte.commons.temporal.scheduling.CheckCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow.JobInformation
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput
@@ -29,12 +26,8 @@ import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectionContext
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
-import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.config.StandardSyncSummary
-import io.airbyte.config.WorkloadPriority
-import io.airbyte.featureflag.UseCommandCheck
-import io.airbyte.featureflag.UseSyncV2
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.ATTEMPT_NUMBER_KEY
@@ -43,17 +36,9 @@ import io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.ApmTraceUtils.addExceptionToTrace
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.persistence.job.models.IntegrationLauncherConfig
-import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.helper.FailureHelper.failureReasonFromWorkflowAndActivity
 import io.airbyte.workers.helper.FailureHelper.platformFailure
-import io.airbyte.workers.helpers.ContextConversionHelper.buildDestinationContextFrom
-import io.airbyte.workers.helpers.ContextConversionHelper.buildSourceContextFrom
-import io.airbyte.workers.helpers.ContextConversionHelper.connectionContextToDestinationContext
-import io.airbyte.workers.helpers.ContextConversionHelper.connectionContextToSourceContext
-import io.airbyte.workers.models.JobInput
-import io.airbyte.workers.models.SyncJobCheckConnectionInputs
 import io.airbyte.workers.temporal.activities.GetConnectionContextInput
 import io.airbyte.workers.temporal.activities.GetLoadShedBackoffInput
 import io.airbyte.workers.temporal.scheduling.SyncCheckConnectionResult.Companion.isOutputFailed
@@ -68,8 +53,6 @@ import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.Sch
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchInput
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchOutput
-import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity
-import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncInputWithAttemptNumber
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput
@@ -99,7 +82,6 @@ import io.temporal.failure.ChildWorkflowFailure
 import io.temporal.workflow.CancellationScope
 import io.temporal.workflow.ChildWorkflowOptions
 import io.temporal.workflow.Workflow
-import jakarta.annotation.Nullable
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.lang.invoke.MethodHandles
@@ -118,9 +100,6 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   private val workflowState = WorkflowState(UUID.randomUUID(), NoopStateListener())
 
   private val workflowInternalState = WorkflowInternalState()
-
-  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
-  private val getSyncInputActivity: GenerateInputActivity? = null
 
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private val jobCreationAndStatusUpdateActivity: JobCreationAndStatusUpdateActivity? = null
@@ -341,66 +320,30 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         workflowInternalState.jobId = getOrCreateJobId(connectionUpdaterInput)
         workflowInternalState.attemptNumber = createAttempt(workflowInternalState.jobId!!)
 
-        var jobInputs: JobInput? = null
-        val shouldRunCheckInputGeneration = shouldRunCheckInputGeneration()
-        if (!shouldRunCheckInputGeneration) {
-          jobInputs = this.jobInput
-        }
-
         reportJobStarting(connectionUpdaterInput.connectionId)
         var standardSyncOutput: StandardSyncOutput? = null
         try {
-          val shouldRunWithCheckCommandFFValue = featureFlags.get(UseCommandCheck.key)
-          val shouldRunWithCheckCommand = if (shouldRunWithCheckCommandFFValue == null) false else shouldRunWithCheckCommandFFValue
-          val canUseCheckWithCommandApi =
-            Workflow.getVersion(
-              CHECK_USING_COMMAND_API_TAG,
-              Workflow.DEFAULT_VERSION,
-              CHECK_USING_COMMAND_API_VERSION,
-            ) > Workflow.DEFAULT_VERSION
-
           val syncCheckConnectionResult =
-            if (shouldRunWithCheckCommand && canUseCheckWithCommandApi) {
-              checkConnectionsWithCommandApi(
-                connectionContext!!.sourceId,
-                connectionContext!!.destinationId,
-                workflowInternalState.jobId!!,
-                workflowInternalState.attemptNumber!!.toLong(),
-                connectionUpdaterInput.resetConnection,
-              )
-            } else {
-              checkConnections(
-                this.jobRunConfig,
-                jobInputs,
-              )
-            }
+            checkConnectionsWithCommandApi(
+              connectionContext!!.sourceId,
+              connectionContext!!.destinationId,
+              workflowInternalState.jobId!!,
+              workflowInternalState.attemptNumber!!.toLong(),
+              connectionUpdaterInput.resetConnection,
+            )
+
           if (syncCheckConnectionResult.isFailed) {
             val checkFailureOutput = syncCheckConnectionResult.buildFailureOutput()
             workflowState.isFailed = getFailStatus(checkFailureOutput)
             reportFailure(connectionUpdaterInput, checkFailureOutput, FailureCause.CONNECTION)
           } else {
-            if (shouldRunCheckInputGeneration) {
-              jobInputs = this.jobInput
-            }
-
-            val useSyncWorkflowV2: Boolean = featureFlags.getOrDefault(UseSyncV2.key, false)!!
-            val canSyncWorkflowV2 =
-              Workflow.getVersion(
-                USE_SYNC_WORKFLOW_V2_TAG,
-                Workflow.DEFAULT_VERSION,
-                USE_SYNC_WORKFLOW_V2_VERSION,
-              ) > Workflow.DEFAULT_VERSION
             standardSyncOutput =
-              if (canSyncWorkflowV2 && useSyncWorkflowV2) {
-                runChildWorkflowV2(
-                  connectionId!!,
-                  workflowInternalState.jobId!!,
-                  workflowInternalState.attemptNumber!!,
-                  connectionContext!!.sourceId,
-                )
-              } else {
-                runChildWorkflow(jobInputs!!)
-              }
+              runChildWorkflowV2(
+                connectionId!!,
+                workflowInternalState.jobId!!,
+                workflowInternalState.attemptNumber!!,
+                connectionContext!!.sourceId,
+              )
             workflowState.isFailed = getFailStatus(standardSyncOutput)
             workflowState.isCancelled = getCancelledStatus(standardSyncOutput)
 
@@ -650,148 +593,6 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     return result.madeProgress()!!
   }
 
-  /**
-   * Returns whether the new check input generation activity should be called, depending on the
-   * presence of workflow versioning. This should be removed once the new activity is fully rolled
-   * out.
-   */
-  private fun shouldRunCheckInputGeneration(): Boolean {
-    val generateCheckInputVersion =
-      Workflow.getVersion(GENERATE_CHECK_INPUT_TAG, Workflow.DEFAULT_VERSION, GENERATE_CHECK_INPUT_CURRENT_VERSION)
-    return generateCheckInputVersion >= GENERATE_CHECK_INPUT_CURRENT_VERSION
-  }
-
-  private fun getCheckConnectionInputFromSync(jobInputs: JobInput): SyncJobCheckConnectionInputs {
-    val syncInput = jobInputs.syncInput
-    val sourceConfig = syncInput!!.sourceConfiguration
-    val destinationConfig = syncInput.destinationConfiguration
-    val sourceLauncherConfig = jobInputs.sourceLauncherConfig
-    val destinationLauncherConfig = jobInputs.destinationLauncherConfig
-
-    val standardCheckInputSource =
-      StandardCheckConnectionInput()
-        .withActorType(ActorType.SOURCE)
-        .withActorId(syncInput.sourceId)
-        .withConnectionConfiguration(sourceConfig)
-        .withActorContext(connectionContextToSourceContext(syncInput.connectionContext))
-
-    val standardCheckInputDestination =
-      StandardCheckConnectionInput()
-        .withActorType(ActorType.DESTINATION)
-        .withActorId(syncInput.destinationId)
-        .withConnectionConfiguration(destinationConfig)
-        .withActorContext(connectionContextToDestinationContext(syncInput.connectionContext))
-
-    return SyncJobCheckConnectionInputs(
-      sourceLauncherConfig,
-      destinationLauncherConfig,
-      standardCheckInputSource,
-      standardCheckInputDestination,
-    )
-  }
-
-  private fun checkConnections(
-    jobRunConfig: JobRunConfig,
-    @Nullable jobInputs: JobInput?,
-  ): SyncCheckConnectionResult {
-    val checkConnectionResult = SyncCheckConnectionResult(jobRunConfig)
-
-    val jobStateInput =
-      JobCheckFailureInput(jobRunConfig.jobId.toLong(), jobRunConfig.attemptId.toInt(), connectionId)
-    val isLastJobOrAttemptFailure =
-      runMandatoryActivityWithOutput(
-        Function { input: JobCheckFailureInput ->
-          jobCreationAndStatusUpdateActivity?.isLastJobOrAttemptFailure(input)
-        },
-        jobStateInput,
-      )!!
-
-    if (!isLastJobOrAttemptFailure) {
-      log.info("SOURCE CHECK: Skipped, last attempt was not a failure")
-      log.info("DESTINATION CHECK: Skipped, last attempt was not a failure")
-      return checkConnectionResult
-    }
-
-    val checkInputs: SyncJobCheckConnectionInputs
-    if (!shouldRunCheckInputGeneration() && jobInputs != null) {
-      checkInputs = getCheckConnectionInputFromSync(jobInputs)
-    } else {
-      checkInputs = this.checkConnectionInput
-    }
-
-    val sourceLauncherConfig =
-      checkInputs.sourceLauncherConfig!!
-        .withPriority(WorkloadPriority.DEFAULT)
-
-    if (isResetJob(sourceLauncherConfig) || checkConnectionResult.isFailed) {
-      // reset jobs don't need to connect to any external source, so check connection is unnecessary
-      log.info("SOURCE CHECK: Skipped, reset job")
-    } else {
-      log.info("SOURCE CHECK: Starting")
-      val sourceCheckResponse: ConnectorJobOutput
-      sourceCheckResponse =
-        runCheckInChildWorkflow(
-          jobRunConfig,
-          sourceLauncherConfig,
-          StandardCheckConnectionInput()
-            .withActorType(ActorType.SOURCE)
-            .withActorId(checkInputs.sourceCheckConnectionInput!!.actorId)
-            .withConnectionConfiguration(checkInputs.sourceCheckConnectionInput!!.connectionConfiguration)
-            .withResourceRequirements(checkInputs.sourceCheckConnectionInput!!.resourceRequirements)
-            .withActorContext(buildSourceContextFrom(jobInputs, checkInputs)),
-        )
-
-      if (isOutputFailed(sourceCheckResponse)) {
-        checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.SOURCE)
-        checkConnectionResult.setFailureOutput(sourceCheckResponse)
-        log.info("SOURCE CHECK: Failed")
-      } else {
-        log.info("SOURCE CHECK: Successful")
-      }
-    }
-
-    if (checkConnectionResult.isFailed) {
-      log.info("DESTINATION CHECK: Skipped, source check failed")
-    } else {
-      val launcherConfig =
-        checkInputs.destinationLauncherConfig!!
-          .withPriority(WorkloadPriority.DEFAULT)
-      log.info("DESTINATION CHECK: Starting")
-      val checkDestInput =
-        StandardCheckConnectionInput()
-          .withActorType(ActorType.DESTINATION)
-          .withActorId(checkInputs.destinationCheckConnectionInput!!.actorId)
-          .withConnectionConfiguration(checkInputs.destinationCheckConnectionInput!!.connectionConfiguration)
-          .withActorContext(buildDestinationContextFrom(jobInputs, checkInputs))
-
-      val shouldPassReqs =
-        Workflow.getVersion(
-          PASS_DEST_REQS_TO_CHECK_TAG,
-          Workflow.DEFAULT_VERSION,
-          PASS_DEST_REQS_TO_CHECK_CURRENT_VERSION,
-        ) >= PASS_DEST_REQS_TO_CHECK_CURRENT_VERSION
-      if (shouldPassReqs) {
-        checkDestInput.resourceRequirements = checkInputs.destinationCheckConnectionInput!!.resourceRequirements
-      }
-
-      val destinationCheckResponse =
-        runCheckInChildWorkflow(
-          jobRunConfig,
-          launcherConfig,
-          checkDestInput,
-        )
-      if (isOutputFailed(destinationCheckResponse)) {
-        checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.DESTINATION)
-        checkConnectionResult.setFailureOutput(destinationCheckResponse)
-        log.info("DESTINATION CHECK: Failed")
-      } else {
-        log.info("DESTINATION CHECK: Successful")
-      }
-    }
-
-    return checkConnectionResult
-  }
-
   private fun checkConnectionsWithCommandApi(
     sourceActorId: UUID,
     destinationActorId: UUID,
@@ -855,9 +656,6 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
     return checkConnectionResult
   }
-
-  private fun isResetJob(sourceLauncherConfig: IntegrationLauncherConfig): Boolean =
-    WorkerConstants.RESET_JOB_SOURCE_DOCKER_IMAGE_STUB == sourceLauncherConfig.dockerImage
 
   // reset the ConnectionUpdaterInput back to a default state
   private fun resetNewConnectionInput(connectionUpdaterInput: ConnectionUpdaterInput) {
@@ -1165,63 +963,6 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     return attemptNumberCreationOutput.attemptNumber
   }
 
-  private val jobRunConfig: JobRunConfig
-    get() {
-      val jobId = workflowInternalState.jobId
-      val attemptNumber = workflowInternalState.attemptNumber
-      return TemporalWorkflowUtils.createJobRunConfig(jobId!!, attemptNumber!!)
-    }
-
-  private val jobInput: JobInput?
-    /**
-     * Generate the input that is needed by the job. It will generate the configuration needed by the
-     * job and will generate a different output if the job is a sync or a reset.
-     */
-    get() {
-      val jobId = workflowInternalState.jobId
-      val attemptNumber = workflowInternalState.attemptNumber
-
-      val getSyncInputActivitySyncInput =
-        SyncInputWithAttemptNumber(
-          attemptNumber!!,
-          jobId!!,
-        )
-
-      return runMandatoryActivityWithOutput<SyncInputWithAttemptNumber, JobInput>(
-        Function { input: SyncInputWithAttemptNumber? ->
-          try {
-            return@Function getSyncInputActivity!!.getSyncWorkflowInputWithAttemptNumber(input!!)
-          } catch (e: Exception) {
-            throw RuntimeException(e)
-          }
-        },
-        getSyncInputActivitySyncInput,
-      )
-    }
-
-  private val checkConnectionInput: SyncJobCheckConnectionInputs
-    /**
-     * Generate the input that is needed by the checks that run prior to the sync workflow.
-     */
-    get() {
-      val jobId = workflowInternalState.jobId
-      val attemptNumber = workflowInternalState.attemptNumber
-
-      val getSyncInputActivitySyncInput =
-        SyncInputWithAttemptNumber(
-          attemptNumber!!,
-          jobId!!,
-        )
-
-      val checkConnectionInputs =
-        runMandatoryActivityWithOutput(
-          { input: SyncInputWithAttemptNumber? -> getSyncInputActivity?.getCheckConnectionInputs(input!!) },
-          getSyncInputActivitySyncInput,
-        )!!
-
-      return checkConnectionInputs
-    }
-
   /**
    * Report the job as started in the job tracker and set it as running in the workflow internal
    * state.
@@ -1238,42 +979,6 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     )
 
     workflowState.isRunning = true
-  }
-
-  /**
-   * Start the child [SyncWorkflow]. We are using a child workflow here for two main reason:
-   *
-   *
-   * - Originally the Sync workflow was living by himself and was launch by the scheduler. In order to
-   * limit the potential migration issues, we kept the [SyncWorkflow] as is and launch it as a
-   * child workflow.
-   *
-   *
-   * - The [SyncWorkflow] has different requirements than the [ConnectionManagerWorkflow]
-   * since the latter is a long running workflow, in the future, using a different Node pool would
-   * make sense.
-   */
-  private fun runChildWorkflow(jobInputs: JobInput): StandardSyncOutput {
-    val taskQueue = getTaskQueue(TemporalJobType.SYNC)
-
-    val childSync =
-      Workflow.newChildWorkflowStub(
-        SyncWorkflow::class.java,
-        ChildWorkflowOptions
-          .newBuilder()
-          .setWorkflowId("sync_" + workflowInternalState.jobId)
-          .setTaskQueue(taskQueue) // This will cancel the child workflow when the parent is terminated
-          .setParentClosePolicy(ParentClosePolicy.PARENT_CLOSE_POLICY_REQUEST_CANCEL)
-          .build(),
-      )
-
-    return childSync.run(
-      jobInputs.jobRunConfig!!,
-      jobInputs.sourceLauncherConfig!!,
-      jobInputs.destinationLauncherConfig!!,
-      jobInputs.syncInput!!,
-      connectionId!!,
-    )
   }
 
   private fun runChildWorkflowV2(
@@ -1303,28 +1008,6 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         sourceId,
       ),
     )
-  }
-
-  private fun runCheckInChildWorkflow(
-    jobRunConfig: JobRunConfig,
-    launcherConfig: IntegrationLauncherConfig,
-    checkInput: StandardCheckConnectionInput,
-  ): ConnectorJobOutput {
-    val workflowId = "check_" + workflowInternalState.jobId + "_" + checkInput.actorType.value()
-    val taskQueue = getTaskQueue(TemporalJobType.SYNC)
-    val childCheck =
-      Workflow.newChildWorkflowStub(
-        ConnectorCommandWorkflow::class.java,
-        ChildWorkflowOptions
-          .newBuilder()
-          .setWorkflowId(workflowId)
-          .setTaskQueue(taskQueue) // This will cancel the child workflow when the parent is terminated
-          .setParentClosePolicy(ParentClosePolicy.PARENT_CLOSE_POLICY_REQUEST_CANCEL)
-          .build(),
-      )
-
-    log.info("Running legacy check for {} with id {}", checkInput.actorType, checkInput.actorId)
-    return childCheck.run(CheckCommandInput(CheckCommandInput.CheckConnectionInput(jobRunConfig, launcherConfig, checkInput)))
   }
 
   private fun runCheckWithCommandApiInChildWorkflow(
@@ -1618,22 +1301,12 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   companion object {
     private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
 
-    private const val GENERATE_CHECK_INPUT_TAG = "generate_check_input"
-    private const val GENERATE_CHECK_INPUT_CURRENT_VERSION = 1
     private const val CHECK_WORKSPACE_TOMBSTONE_TAG = "check_workspace_tombstone"
     private const val CHECK_WORKSPACE_TOMBSTONE_CURRENT_VERSION = 1
     private const val LOAD_SHED_BACK_OFF_TAG = "load_shed_back_off"
     private const val LOAD_SHED_BACK_OFF_CURRENT_VERSION = 1
-    private const val PASS_DEST_REQS_TO_CHECK_TAG = "pass_dest_reqs_to_check"
-    private const val PASS_DEST_REQS_TO_CHECK_CURRENT_VERSION = 1
 
     private const val GET_FEATURE_FLAGS_TAG = "get_feature_flags"
     private const val GET_FEATURE_FLAGS_CURRENT_VERSION = 1
-
-    private const val CHECK_USING_COMMAND_API_TAG = "check_using_command_api"
-    private const val CHECK_USING_COMMAND_API_VERSION = 1
-
-    private const val USE_SYNC_WORKFLOW_V2_TAG = "use_sync_workflow_v2"
-    private const val USE_SYNC_WORKFLOW_V2_VERSION = 1
   }
 }

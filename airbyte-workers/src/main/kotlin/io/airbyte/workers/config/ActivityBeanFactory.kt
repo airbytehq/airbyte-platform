@@ -14,17 +14,12 @@ import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionAc
 import io.airbyte.workers.temporal.scheduling.activities.CheckRunProgressActivity
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity
-import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity
 import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity
-import io.airbyte.workers.temporal.sync.AsyncReplicationActivity
-import io.airbyte.workers.temporal.sync.GenerateReplicationActivityInputActivity
 import io.airbyte.workers.temporal.sync.InvokeOperationsActivity
-import io.airbyte.workers.temporal.sync.ReportRunTimeActivity
-import io.airbyte.workers.temporal.sync.WorkloadStatusCheckActivity
 import io.airbyte.workers.temporal.workflows.ConnectorCommandActivity
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Property
@@ -49,7 +44,6 @@ class ActivityBeanFactory {
   @Requires(env = [EnvConstants.CONTROL_PLANE])
   @Named("connectionManagerActivities")
   fun connectionManagerActivities(
-    generateInputActivity: GenerateInputActivity,
     jobCreationAndStatusUpdateActivity: JobCreationAndStatusUpdateActivity,
     configFetchActivity: ConfigFetchActivity,
     autoDisableConnectionActivity: AutoDisableConnectionActivity,
@@ -62,7 +56,6 @@ class ActivityBeanFactory {
     appendToAttemptLogActivity: AppendToAttemptLogActivity,
   ): List<Any> =
     listOf(
-      generateInputActivity,
       jobCreationAndStatusUpdateActivity,
       configFetchActivity,
       autoDisableConnectionActivity,
@@ -82,55 +75,14 @@ class ActivityBeanFactory {
   @Named("syncActivities")
   fun syncActivities(
     configFetchActivity: ConfigFetchActivity,
-    generateReplicationActivityInputActivity: GenerateReplicationActivityInputActivity,
-    reportRunTimeActivity: ReportRunTimeActivity,
     invokeOperationsActivity: InvokeOperationsActivity,
-    asyncReplicationActivity: AsyncReplicationActivity,
-    workloadStatusCheckActivity: WorkloadStatusCheckActivity,
     discoverCatalogHelperActivity: DiscoverCatalogHelperActivity,
   ): List<Any> =
     listOf(
       configFetchActivity,
-      generateReplicationActivityInputActivity,
-      reportRunTimeActivity,
       invokeOperationsActivity,
-      asyncReplicationActivity,
-      workloadStatusCheckActivity,
       discoverCatalogHelperActivity,
     )
-
-  @Singleton
-  @Named("asyncActivityOptions")
-  fun asyncActivityOptions(
-    @Property(name = "airbyte.activity.async-timeout") asyncTimeoutSeconds: Int,
-  ): ActivityOptions =
-    ActivityOptions
-      .newBuilder()
-      .setStartToCloseTimeout(Duration.ofSeconds(asyncTimeoutSeconds.toLong()))
-      .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
-      .setRetryOptions(TemporalConstants.NO_RETRY)
-      .build()
-
-  @Singleton
-  @Named("workloadStatusCheckActivityOptions")
-  fun workloadStatusCheckActivityOptions(
-    @Property(name = "airbyte.activity.async-timeout") asyncTimeoutSeconds: Int,
-  ): ActivityOptions =
-    ActivityOptions
-      .newBuilder()
-      .setStartToCloseTimeout(Duration.ofSeconds(asyncTimeoutSeconds.toLong()))
-      .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
-      .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(5).build())
-      .build()
-
-  @Singleton
-  @Named("refreshSchemaActivityOptions")
-  fun refreshSchemaActivityOptions(): ActivityOptions =
-    ActivityOptions
-      .newBuilder()
-      .setScheduleToCloseTimeout(Duration.ofMinutes(30))
-      .setRetryOptions(TemporalConstants.NO_RETRY)
-      .build()
 
   @Singleton
   @Named("shortActivityOptions")

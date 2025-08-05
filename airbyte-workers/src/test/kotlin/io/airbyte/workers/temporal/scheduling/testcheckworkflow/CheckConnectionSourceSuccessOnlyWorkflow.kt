@@ -4,17 +4,17 @@
 
 package io.airbyte.workers.temporal.scheduling.testcheckworkflow
 
-import io.airbyte.commons.temporal.scheduling.CheckCommandInput
+import io.airbyte.commons.temporal.scheduling.CheckCommandApiInput
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow
-import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.StandardCheckConnectionOutput
+import io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowTest
 
 class CheckConnectionSourceSuccessOnlyWorkflow : ConnectorCommandWorkflow {
   override fun run(input: ConnectorCommandInput): ConnectorJobOutput {
-    assert(input is CheckCommandInput)
-    if ((input as CheckCommandInput).input.checkConnectionInput.getActorType() == ActorType.SOURCE) {
+    assert(input is CheckCommandApiInput)
+    if ((input as CheckCommandApiInput).input.actorId == ConnectionManagerWorkflowTest.SOURCE_ID) {
       return ConnectorJobOutput()
         .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
         .withCheckConnection(

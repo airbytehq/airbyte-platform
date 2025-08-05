@@ -4,23 +4,14 @@
 
 package io.airbyte.workers.temporal.scheduling.testsyncworkflow
 
-import io.airbyte.commons.temporal.scheduling.SyncWorkflow
-import io.airbyte.config.StandardSyncInput
+import io.airbyte.commons.temporal.scheduling.SyncWorkflowV2
+import io.airbyte.commons.temporal.scheduling.SyncWorkflowV2Input
 import io.airbyte.config.StandardSyncOutput
-import io.airbyte.persistence.job.models.IntegrationLauncherConfig
-import io.airbyte.persistence.job.models.JobRunConfig
 import io.temporal.api.enums.v1.RetryState
 import io.temporal.failure.ActivityFailure
-import java.util.UUID
 
-class ReplicateFailureSyncWorkflow : SyncWorkflow {
-  override fun run(
-    jobRunConfig: JobRunConfig,
-    sourceLauncherConfig: IntegrationLauncherConfig,
-    destinationLauncherConfig: IntegrationLauncherConfig,
-    syncInput: StandardSyncInput,
-    connectionId: UUID,
-  ): StandardSyncOutput =
+class ReplicateFailureSyncWorkflow : SyncWorkflowV2 {
+  override fun run(input: SyncWorkflowV2Input): StandardSyncOutput =
     throw ActivityFailure(
       "replicate failed",
       1L,
@@ -31,8 +22,6 @@ class ReplicateFailureSyncWorkflow : SyncWorkflow {
       "someIdentity",
       CAUSE,
     )
-
-  override fun checkAsyncActivityStatus() {}
 
   companion object {
     // Should match activity types from FailureHelper.java

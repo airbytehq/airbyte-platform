@@ -4,21 +4,10 @@
 
 package io.airbyte.workers.temporal.scheduling.testsyncworkflow
 
-import io.airbyte.commons.temporal.scheduling.SyncWorkflow
-import io.airbyte.config.StandardSyncInput
+import io.airbyte.commons.temporal.scheduling.SyncWorkflowV2
+import io.airbyte.commons.temporal.scheduling.SyncWorkflowV2Input
 import io.airbyte.config.StandardSyncOutput
-import io.airbyte.persistence.job.models.IntegrationLauncherConfig
-import io.airbyte.persistence.job.models.JobRunConfig
-import java.util.UUID
 
-class EmptySyncWorkflow : SyncWorkflow {
-  override fun run(
-    jobRunConfig: JobRunConfig,
-    sourceLauncherConfig: IntegrationLauncherConfig,
-    destinationLauncherConfig: IntegrationLauncherConfig,
-    syncInput: StandardSyncInput,
-    connectionId: UUID,
-  ): StandardSyncOutput = StandardSyncOutput()
-
-  override fun checkAsyncActivityStatus() {}
+class EmptySyncWorkflow : SyncWorkflowV2 {
+  override fun run(input: SyncWorkflowV2Input): StandardSyncOutput = StandardSyncOutput()
 }

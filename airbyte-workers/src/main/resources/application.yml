@@ -49,7 +49,6 @@ airbyte:
     max-timeout: ${ACTIVITY_MAX_TIMEOUT_SECOND:120}
     check-timeout: ${ACTIVITY_CHECK_TIMEOUT:10}
     discovery-timeout: ${ACTIVITY_DISCOVERY_TIMEOUT:30}
-    async-timeout: ${ACTIVITY_ASYNC_TIMEOUT_SECONDS:120}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}

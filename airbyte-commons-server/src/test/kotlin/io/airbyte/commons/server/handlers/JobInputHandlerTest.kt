@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.CheckInput
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionState
 import io.airbyte.api.model.generated.ConnectionStateType
@@ -17,9 +16,7 @@ import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder
-import io.airbyte.config.ActorContext
 import io.airbyte.config.ActorDefinitionVersion
-import io.airbyte.config.ActorType
 import io.airbyte.config.AttemptSyncConfig
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
@@ -32,7 +29,6 @@ import io.airbyte.config.JobStatus
 import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.SourceConnection
-import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.StandardSync
@@ -61,7 +57,6 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.validation.json.JsonValidationException
 import io.airbyte.workers.models.JobInput
-import io.airbyte.workers.models.SyncJobCheckConnectionInputs
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -465,120 +460,6 @@ internal class JobInputHandlerTest {
           .syncConfig(apiPojoConverters.attemptSyncConfigToApi(expectedAttemptSyncConfig, CONNECTION_ID)),
       )
     }
-  }
-
-  @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
-  fun testGetCheckConnectionInputs() {
-    val syncInput = CheckInput().jobId(JOB_ID).attemptNumber(ATTEMPT_NUMBER)
-
-    val sourceDefId = UUID.randomUUID()
-    val sourceConnection =
-      SourceConnection()
-        .withSourceId(SOURCE_ID)
-        .withWorkspaceId(WORKSPACE_ID)
-        .withSourceDefinitionId(sourceDefId)
-        .withConfiguration(SOURCE_CONFIGURATION)
-    every { sourceService.getSourceConnection(SOURCE_ID) } returns sourceConnection
-    every { sourceService.getStandardSourceDefinition(sourceDefId) } returns
-      mockk<StandardSourceDefinition> {
-        every { resourceRequirements } returns null
-      }
-    every { oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefId, SOURCE_ID, WORKSPACE_ID, SOURCE_CONFIGURATION) } returns
-      SOURCE_CONFIG_WITH_OAUTH
-    every {
-      secretReferenceService.getConfigWithSecretReferences(
-        ActorId(SOURCE_ID),
-        SOURCE_CONFIG_WITH_OAUTH,
-        WorkspaceId(WORKSPACE_ID),
-      )
-    } returns SOURCE_CONFIG_WITH_REFS
-    every {
-      secretReferenceService.getConfigWithSecretReferences(
-        ActorId(DESTINATION_ID),
-        DESTINATION_CONFIG_WITH_OAUTH,
-        WorkspaceId(WORKSPACE_ID),
-      )
-    } returns DESTINATION_CONFIG_WITH_REFS
-
-    val jobSyncConfig =
-      JobSyncConfig()
-        .withWorkspaceId(WORKSPACE_ID)
-        .withDestinationDockerImage("destinationDockerImage")
-        .withSourceDockerImage("sourceDockerImage")
-        .withConfiguredAirbyteCatalog(
-          mockk<ConfiguredAirbyteCatalog> {
-            every { streams } returns emptyList()
-          },
-        )
-
-    val jobConfig =
-      JobConfig()
-        .withConfigType(JobConfig.ConfigType.SYNC)
-        .withSync(jobSyncConfig)
-
-    val job =
-      Job(
-        JOB_ID,
-        JobConfig.ConfigType.RESET_CONNECTION,
-        CONNECTION_ID.toString(),
-        jobConfig,
-        mutableListOf(),
-        JobStatus.PENDING,
-        1001L,
-        1000L,
-        1002L,
-        true,
-      )
-    every { jobPersistence.getJob(JOB_ID) } returns job
-
-    val expectedSourceLauncherConfig =
-      IntegrationLauncherConfig()
-        .withJobId(JOB_ID.toString())
-        .withAttemptId(ATTEMPT_NUMBER.toLong())
-        .withWorkspaceId(WORKSPACE_ID)
-        .withConnectionId(CONNECTION_ID)
-        .withDockerImage(jobSyncConfig.getSourceDockerImage())
-
-    val expectedDestinationLauncherConfig =
-      IntegrationLauncherConfig()
-        .withJobId(JOB_ID.toString())
-        .withAttemptId(ATTEMPT_NUMBER.toLong())
-        .withWorkspaceId(WORKSPACE_ID)
-        .withConnectionId(CONNECTION_ID)
-        .withDockerImage(jobSyncConfig.getDestinationDockerImage())
-        .withAdditionalEnvironmentVariables(mutableMapOf<String?, String?>())
-
-    val sourceContext = ActorContext().withActorId(SOURCE_ID)
-    every { contextBuilder.fromSource(any()) } returns sourceContext
-
-    val destinationContext = ActorContext().withActorId(DESTINATION_ID)
-    every { contextBuilder.fromDestination(any()) } returns destinationContext
-
-    val expectedDestinationCheckInput =
-      StandardCheckConnectionInput()
-        .withActorId(DESTINATION_ID)
-        .withActorType(ActorType.DESTINATION)
-        .withConnectionConfiguration(INLINED_DESTINATION_CONFIG_WITH_REFS)
-        .withActorContext(destinationContext)
-
-    val expectedSourceCheckInput =
-      StandardCheckConnectionInput()
-        .withActorId(SOURCE_ID)
-        .withActorType(ActorType.SOURCE)
-        .withConnectionConfiguration(INLINED_SOURCE_CONFIG_WITH_REFS)
-        .withActorContext(sourceContext)
-
-    val expectedCheckInputs =
-      SyncJobCheckConnectionInputs(
-        expectedSourceLauncherConfig,
-        expectedDestinationLauncherConfig,
-        expectedSourceCheckInput,
-        expectedDestinationCheckInput,
-      )
-
-    val checkInputs = jobInputHandler.getCheckJobInput(syncInput)
-    Assertions.assertEquals(expectedCheckInputs, checkInputs)
   }
 
   @Test

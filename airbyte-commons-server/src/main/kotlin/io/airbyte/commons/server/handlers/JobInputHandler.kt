@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.api.model.generated.CheckInput
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionStateType
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody
@@ -20,7 +19,6 @@ import io.airbyte.commons.server.handlers.helpers.ContextBuilder
 import io.airbyte.commons.temporal.TemporalWorkflowUtils.createJobRunConfig
 import io.airbyte.commons.temporal.exception.RetryableException
 import io.airbyte.config.ActorDefinitionVersion
-import io.airbyte.config.ActorType
 import io.airbyte.config.AttemptSyncConfig
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ConfiguredAirbyteStream
@@ -29,15 +27,12 @@ import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
 import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.JobSyncConfig
-import io.airbyte.config.JobTypeResourceLimit
 import io.airbyte.config.JobWebhookConfig
 import io.airbyte.config.ScopedConfiguration
 import io.airbyte.config.SourceActorConfig
 import io.airbyte.config.SourceConnection
-import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardSyncInput
 import io.airbyte.config.State
-import io.airbyte.config.helpers.ResourceRequirementsUtils.getResourceRequirementsForJobType
 import io.airbyte.config.helpers.StateMessageHelper.getState
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.ConfigInjector
@@ -62,7 +57,6 @@ import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.workers.models.JobInput
-import io.airbyte.workers.models.SyncJobCheckConnectionInputs
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.Nullable
 import jakarta.inject.Singleton
@@ -202,98 +196,6 @@ open class JobInputHandler(
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig)
       return JobInput(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput)
-    } catch (e: Exception) {
-      throw RetryableException(e)
-    }
-  }
-
-  /**
-   * Generate a check job input.
-   */
-  fun getCheckJobInput(input: CheckInput): Any {
-    try {
-      val jobId = input.jobId
-      val attemptNumber = input.attemptNumber
-
-      val job = jobPersistence.getJob(jobId)
-      val jobConfig = job.config
-      val jobSyncConfig = getJobSyncConfig(jobId, jobConfig)
-
-      val connectionId = UUID.fromString(job.scope)
-      val standardSync = connectionService.getStandardSync(connectionId)
-
-      val destination = destinationService.getDestinationConnection(standardSync.destinationId)
-      val destinationDefinition =
-        destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId)
-      val destinationVersion =
-        actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.workspaceId, destination.destinationId)
-
-      val source = sourceService.getSourceConnection(standardSync.sourceId)
-      val sourceDefinition =
-        sourceService.getStandardSourceDefinition(source.sourceDefinitionId)
-      val sourceVersion =
-        actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId)
-
-      val sourceConfiguration = getSourceConfiguration(source)
-      val sourceConfigWithInlinedRefs: JsonNode = sourceConfiguration.toInlined().value
-
-      val destinationConfiguration = getDestinationConfiguration(destination)
-      val destinationConfigWithInlinedRefs: JsonNode = destinationConfiguration.toInlined().value
-
-      val sourceLauncherConfig =
-        getSourceIntegrationLauncherConfig(
-          jobId,
-          attemptNumber,
-          connectionId,
-          jobSyncConfig,
-          sourceVersion,
-          sourceConfigWithInlinedRefs,
-        )
-
-      val destinationLauncherConfig =
-        getDestinationIntegrationLauncherConfig(
-          jobId,
-          attemptNumber,
-          connectionId,
-          jobSyncConfig,
-          destinationVersion,
-          destinationConfigWithInlinedRefs,
-          emptyMap(),
-        )
-
-      val sourceCheckResourceRequirements =
-        getResourceRequirementsForJobType(sourceDefinition.resourceRequirements, JobTypeResourceLimit.JobType.CHECK_CONNECTION)
-
-      val sourceContext = contextBuilder.fromSource(source)
-
-      val sourceCheckConnectionInput =
-        StandardCheckConnectionInput()
-          .withActorType(ActorType.SOURCE)
-          .withActorId(source.sourceId)
-          .withConnectionConfiguration(sourceConfigWithInlinedRefs)
-          .withResourceRequirements(sourceCheckResourceRequirements)
-          .withActorContext(sourceContext)
-          .withNetworkSecurityTokens(getNetworkSecurityTokens(jobSyncConfig.workspaceId))
-
-      val destinationCheckResourceRequirements =
-        getResourceRequirementsForJobType(destinationDefinition.resourceRequirements, JobTypeResourceLimit.JobType.CHECK_CONNECTION)
-
-      val destinationContext = contextBuilder.fromDestination(destination)
-
-      val destinationCheckConnectionInput =
-        StandardCheckConnectionInput()
-          .withActorType(ActorType.DESTINATION)
-          .withActorId(destination.destinationId)
-          .withConnectionConfiguration(destinationConfigWithInlinedRefs)
-          .withResourceRequirements(destinationCheckResourceRequirements)
-          .withActorContext(destinationContext)
-          .withNetworkSecurityTokens(getNetworkSecurityTokens(jobSyncConfig.workspaceId))
-      return SyncJobCheckConnectionInputs(
-        sourceLauncherConfig,
-        destinationLauncherConfig,
-        sourceCheckConnectionInput,
-        destinationCheckConnectionInput,
-      )
     } catch (e: Exception) {
       throw RetryableException(e)
     }

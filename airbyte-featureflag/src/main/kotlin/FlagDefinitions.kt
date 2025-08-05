@@ -120,8 +120,6 @@ object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-defaul
 
 object WorkloadHeartbeatRate : Permanent<Int>(key = "workload.heartbeat.rate", default = 5)
 
-object WorkloadPollingInterval : Permanent<Int>(key = "workload.polling.interval", default = 30)
-
 /**
  * Duration in minutes. This should always be less than the value for [io.airbyte.cron.jobs.WorkloadMonitor.heartbeatTimeout]
  */
@@ -181,11 +179,6 @@ object LicenseAllowEnterpriseConnector : Permanent<Boolean>(key = "license.allow
 
 object AllowConfigTemplateEndpoints : Permanent<Boolean>(key = "platform.allow-config-template-endpoints", default = false)
 
-object AllowConfigWithSecretCoordinatesEndpoints : Permanent<Boolean>(
-  key = "platform.allow-config-with-secret-coordinates-endpoints",
-  default = false,
-)
-
 object LoadShedWorkloadLauncher : Permanent<Boolean>(key = "platform.load-shed.workload-launcher", default = false)
 
 object LoadShedSchedulerBackoffMinutes : Permanent<Int>(key = "platform.load-shed.scheduler-backoff-minutes", default = -1)
@@ -207,10 +200,6 @@ object CleanupDanglingSecretConfigs : Temporary<Boolean>(key = "platform.cleanup
 object CanCleanWorkloadQueue : Temporary<Boolean>(key = "platform.can-clean-workload-queue", default = false)
 
 object StoreAuditLogs : Temporary<Boolean>(key = "platform.store-audit-logs", default = false)
-
-object UseCommandCheck : Temporary<Boolean>(key = "platform.use-command-check", default = true)
-
-object UseSyncV2 : Temporary<Boolean>(key = "platform.use-sync-v2", default = true)
 
 object EnableDestinationCatalogValidation : Temporary<Boolean>(key = "platform.enable-destination-catalog-validation", default = false)
 

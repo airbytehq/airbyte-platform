@@ -24,8 +24,6 @@ import io.airbyte.api.client.model.generated.StreamStatusRunState
 import io.airbyte.api.client.model.generated.SyncMode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.db.Database
-import io.airbyte.featureflag.UseSyncV2
-import io.airbyte.featureflag.Workspace
 import io.airbyte.test.utils.AcceptanceTestHarness
 import io.airbyte.test.utils.AcceptanceTestUtils.IS_GKE
 import io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog
@@ -66,9 +64,7 @@ import javax.crypto.Cipher
  */
 @Execution(ExecutionMode.CONCURRENT)
 @Tag("sync")
-internal abstract class SyncAcceptanceTests(
-  private val useV2: Boolean,
-) {
+internal class SyncAcceptanceTests {
   private lateinit var testResources: AcceptanceTestsResources
 
   private lateinit var testHarness: AcceptanceTestHarness
@@ -96,84 +92,80 @@ internal abstract class SyncAcceptanceTests(
     IOException::class,
   )
   fun testSourceCheckConnection() {
-    testHarness.withFlag(UseSyncV2, Workspace(workspaceId), value = useV2).use {
-      val sourceId = testHarness.createPostgresSource().sourceId
+    val sourceId = testHarness.createPostgresSource().sourceId
 
-      val checkConnectionRead = testHarness.checkSource(sourceId)
+    val checkConnectionRead = testHarness.checkSource(sourceId)
 
-      Assertions.assertEquals(
-        CheckConnectionRead.Status.SUCCEEDED,
-        checkConnectionRead.status,
-        checkConnectionRead.message,
-      )
-    }
+    Assertions.assertEquals(
+      CheckConnectionRead.Status.SUCCEEDED,
+      checkConnectionRead.status,
+      checkConnectionRead.message,
+    )
   }
 
   @Test
   @Throws(Exception::class)
   fun testCancelSync() {
-    testHarness.withFlag(UseSyncV2, Workspace(workspaceId), value = useV2).use {
-      val sourceDefinition =
-        testHarness.createE2eSourceDefinition(
-          workspaceId,
-        )
+    val sourceDefinition =
+      testHarness.createE2eSourceDefinition(
+        workspaceId,
+      )
 
-      val source =
-        testHarness.createSource(
-          E2E_TEST_SOURCE + UUID.randomUUID(),
-          workspaceId,
-          sourceDefinition.sourceDefinitionId,
-          Jsons.jsonNode(
-            ImmutableMap
-              .builder<Any, Any>()
-              .put(TYPE, INFINITE_FEED)
-              .put(MESSAGE_INTERVAL, 1000)
-              .put(MAX_RECORDS, Duration.ofMinutes(5).toSeconds())
-              .build(),
-          ),
-        )
+    val source =
+      testHarness.createSource(
+        E2E_TEST_SOURCE + UUID.randomUUID(),
+        workspaceId,
+        sourceDefinition.sourceDefinitionId,
+        Jsons.jsonNode(
+          ImmutableMap
+            .builder<Any, Any>()
+            .put(TYPE, INFINITE_FEED)
+            .put(MESSAGE_INTERVAL, 1000)
+            .put(MAX_RECORDS, Duration.ofMinutes(5).toSeconds())
+            .build(),
+        ),
+      )
 
-      val sourceId = source.sourceId
-      val destinationId = testHarness.createPostgresDestination().destinationId
-      val discoverResult = testHarness.discoverSourceSchemaWithId(sourceId)
-      val srcSyncMode = SyncMode.FULL_REFRESH
-      val dstSyncMode = DestinationSyncMode.OVERWRITE
-      val catalog =
-        modifyCatalog(
-          originalCatalog = discoverResult.catalog,
-          replacementSourceSyncMode = Optional.of(srcSyncMode),
-          replacementDestinationSyncMode = Optional.of(dstSyncMode),
-          replacementCursorFields = Optional.empty(),
-          replacementPrimaryKeys = Optional.empty(),
-          replacementSelected = Optional.empty(),
-          replacementFieldSelectionEnabled = Optional.empty(),
-          replacementSelectedFields = Optional.empty(),
-          replacementMinimumGenerationId = Optional.empty(),
-          replacementGenerationId = Optional.empty(),
-          replacementSyncId = Optional.empty(),
-          streamFilter = Optional.empty(),
-        )
-      val connectionId =
-        testHarness
-          .createConnection(
-            TestConnectionCreate
-              .Builder(
-                srcId = sourceId,
-                dstId = destinationId,
-                configuredCatalog = catalog,
-                catalogId = discoverResult.catalogId!!,
-                dataplaneGroupId = testHarness.dataplaneGroupId,
-              ).build(),
-          ).connectionId
-      val connectionSyncRead = testHarness.syncConnection(connectionId)
+    val sourceId = source.sourceId
+    val destinationId = testHarness.createPostgresDestination().destinationId
+    val discoverResult = testHarness.discoverSourceSchemaWithId(sourceId)
+    val srcSyncMode = SyncMode.FULL_REFRESH
+    val dstSyncMode = DestinationSyncMode.OVERWRITE
+    val catalog =
+      modifyCatalog(
+        originalCatalog = discoverResult.catalog,
+        replacementSourceSyncMode = Optional.of(srcSyncMode),
+        replacementDestinationSyncMode = Optional.of(dstSyncMode),
+        replacementCursorFields = Optional.empty(),
+        replacementPrimaryKeys = Optional.empty(),
+        replacementSelected = Optional.empty(),
+        replacementFieldSelectionEnabled = Optional.empty(),
+        replacementSelectedFields = Optional.empty(),
+        replacementMinimumGenerationId = Optional.empty(),
+        replacementGenerationId = Optional.empty(),
+        replacementSyncId = Optional.empty(),
+        streamFilter = Optional.empty(),
+      )
+    val connectionId =
+      testHarness
+        .createConnection(
+          TestConnectionCreate
+            .Builder(
+              srcId = sourceId,
+              dstId = destinationId,
+              configuredCatalog = catalog,
+              catalogId = discoverResult.catalogId!!,
+              dataplaneGroupId = testHarness.dataplaneGroupId,
+            ).build(),
+        ).connectionId
+    val connectionSyncRead = testHarness.syncConnection(connectionId)
 
-      // wait to get out of PENDING
-      val jobRead = testHarness.waitWhileJobHasStatus(connectionSyncRead.job, setOf(JobStatus.PENDING))
-      Assertions.assertEquals(JobStatus.RUNNING, jobRead.status)
+    // wait to get out of PENDING
+    val jobRead = testHarness.waitWhileJobHasStatus(connectionSyncRead.job, setOf(JobStatus.PENDING))
+    Assertions.assertEquals(JobStatus.RUNNING, jobRead.status)
 
-      val resp = testHarness.cancelSync(connectionSyncRead.job.id)
-      Assertions.assertEquals(JobStatus.CANCELLED, resp.job.status)
-    }
+    val resp = testHarness.cancelSync(connectionSyncRead.job.id)
+    Assertions.assertEquals(JobStatus.CANCELLED, resp.job.status)
   }
 
   /**
@@ -184,181 +176,177 @@ internal abstract class SyncAcceptanceTests(
   // Needed for `keyPair.public.encoded.toHexString()`
   @OptIn(ExperimentalStdlibApi::class)
   fun testCronSync() {
-    testHarness.withFlag(UseSyncV2, Workspace(workspaceId), value = useV2).use {
-      val sourceId = testHarness.createPostgresSource().sourceId
-      val destinationId = testHarness.createPostgresDestination().destinationId
-      val discoverResult = testHarness.discoverSourceSchemaWithId(sourceId)
+    val sourceId = testHarness.createPostgresSource().sourceId
+    val destinationId = testHarness.createPostgresDestination().destinationId
+    val discoverResult = testHarness.discoverSourceSchemaWithId(sourceId)
 
-      // NOTE: this cron should run once every two minutes.
-      val connectionScheduleData =
-        ConnectionScheduleData(
-          null,
-          ConnectionScheduleDataCron("0 */2 * * * ?", "UTC"),
-        )
-      val srcSyncMode = SyncMode.FULL_REFRESH
-      val dstSyncMode = DestinationSyncMode.OVERWRITE
+    // NOTE: this cron should run once every two minutes.
+    val connectionScheduleData =
+      ConnectionScheduleData(
+        null,
+        ConnectionScheduleDataCron("0 */2 * * * ?", "UTC"),
+      )
+    val srcSyncMode = SyncMode.FULL_REFRESH
+    val dstSyncMode = DestinationSyncMode.OVERWRITE
 
-      val keyPair =
-        KeyPairGenerator
-          .getInstance("RSA")
-          .also { it.initialize(2048) }
-          .generateKeyPair()
+    val keyPair =
+      KeyPairGenerator
+        .getInstance("RSA")
+        .also { it.initialize(2048) }
+        .generateKeyPair()
 
-      val catalog =
-        modifyCatalog(
-          originalCatalog = discoverResult.catalog,
-          replacementSourceSyncMode = Optional.of(srcSyncMode),
-          replacementDestinationSyncMode = Optional.of(dstSyncMode),
-          replacementSelected = Optional.of(true),
-          replacementFieldSelectionEnabled = Optional.of(true),
-          // Remove the `id` field, keep the `name` field
-          replacementSelectedFields = Optional.of(listOf(SelectedFieldInfo(listOf("name")))),
-          mappers =
-            listOf(
-              // Drop all records except "sherif"
-              ConfiguredStreamMapper(
-                StreamMapperType.ROW_MINUS_FILTERING,
-                Jsons.deserialize(
-                  """
-                  {
-                    "conditions": {
-                      "comparisonValue": "sherif",
-                      "fieldName": "name",
-                      "type": "EQUAL"
-                    }
+    val catalog =
+      modifyCatalog(
+        originalCatalog = discoverResult.catalog,
+        replacementSourceSyncMode = Optional.of(srcSyncMode),
+        replacementDestinationSyncMode = Optional.of(dstSyncMode),
+        replacementSelected = Optional.of(true),
+        replacementFieldSelectionEnabled = Optional.of(true),
+        // Remove the `id` field, keep the `name` field
+        replacementSelectedFields = Optional.of(listOf(SelectedFieldInfo(listOf("name")))),
+        mappers =
+          listOf(
+            // Drop all records except "sherif"
+            ConfiguredStreamMapper(
+              StreamMapperType.ROW_MINUS_FILTERING,
+              Jsons.deserialize(
+                """
+                {
+                  "conditions": {
+                    "comparisonValue": "sherif",
+                    "fieldName": "name",
+                    "type": "EQUAL"
                   }
-                  """.trimIndent(),
-                ),
-              ),
-              // run a sequence of mappers against the `name` field
-              ConfiguredStreamMapper(
-                StreamMapperType.FIELD_MINUS_RENAMING,
-                Jsons.deserialize(
-                  """
-                  {
-                    "newFieldName": "name_renamed",
-                    "originalFieldName": "name"
-                  }
-                  """.trimIndent(),
-                ),
-              ),
-              ConfiguredStreamMapper(
-                StreamMapperType.HASHING,
-                Jsons.deserialize(
-                  """
-                  {
-                    "method": "SHA-256",
-                    "targetField": "name_renamed",
-                    "fieldNameSuffix": "_hashed"
-                  }
-                  """.trimIndent(),
-                ),
-              ),
-              ConfiguredStreamMapper(
-                StreamMapperType.ENCRYPTION,
-                Jsons.deserialize(
-                  """
-                  {
-                    "algorithm": "RSA",
-                    "fieldNameSuffix": "_encrypted",
-                    "publicKey": "${keyPair.public.encoded.toHexString()}",
-                    "targetField": "name_renamed_hashed"
-                  }
-                  """.trimIndent(),
-                ),
+                }
+                """.trimIndent(),
               ),
             ),
-        )
-      val conn =
-        testHarness.createConnection(
-          TestConnectionCreate
-            .Builder(
-              sourceId,
-              destinationId,
-              catalog,
-              discoverResult.catalogId!!,
-              testHarness.dataplaneGroupId,
-            ).setSchedule(ConnectionScheduleType.CRON, connectionScheduleData)
-            .build(),
-        )
-
-      val connectionId = conn.connectionId
-      val jobRead = testHarness.getMostRecentSyncForConnection(connectionId)
-
-      testResources.waitForSuccessfulJobWithRetries(jobRead)
-
-      // NOTE: this is an unusual use of a retry policy. Sometimes the raw tables haven't been cleaned up
-      // even though the job
-      // is marked successful.
-      val retryAssertOutcome =
-        Failsafe
-          .with<Any, RetryPolicy<Any>>(
-            RetryPolicy
-              .builder<Any>()
-              .withBackoff(
-                Duration.ofSeconds(AcceptanceTestsResources.JITTER_MAX_INTERVAL_SECS.toLong()),
-                Duration.ofSeconds(
-                  AcceptanceTestsResources.FINAL_INTERVAL_SECS.toLong(),
-                ),
-              ).withMaxRetries(AcceptanceTestsResources.MAX_TRIES)
-              .build(),
-          ).get(
-            CheckedSupplier {
-              // Can't use any of the utility assertions, because RSA encryption is nondeterministic.
-              // So we'll do this manually.
-              val destinationRecords: List<JsonNode> =
-                Databases.retrieveRawDestinationRecords(
-                  testHarness.getDestinationDatabase(),
-                  conn.namespaceFormat!!,
-                  AcceptanceTestHarness.STREAM_NAME,
-                )
-
-              Assertions.assertEquals(1, destinationRecords.size, "Expected to see exactly one record, got $destinationRecords")
-              val onlyRecord = destinationRecords.first() as ObjectNode
-              Assertions.assertEquals(
-                listOf("name_renamed_hashed_encrypted"),
-                onlyRecord.fieldNames().asSequence().toList(),
-                "Expected record to contain a single field `name_renamed_hashed_encrypted`, got $onlyRecord",
-              )
-              val encryptedBytes = onlyRecord["name_renamed_hashed_encrypted"].textValue().hexToByteArray()
-              val decrypted =
-                Cipher
-                  .getInstance("RSA")
-                  .also { it.init(Cipher.DECRYPT_MODE, keyPair.private) }
-                  .doFinal(encryptedBytes)
-                  .toString(Charsets.UTF_8)
-              Assertions.assertEquals(
-                "1ba0292c60f8c80a467157c332f641de05256388dff757bdb773987a39ac35e0",
-                decrypted,
-                """Expected decrypted value to equal sha256("sherif")""",
-              )
-
-              "success" // If the assertion throws after all the retries, then retryWithJitter will return null.
-            },
-          )
-      Assertions.assertEquals("success", retryAssertOutcome)
-
-      assertStreamStatuses(
-        testHarness,
-        workspaceId,
-        connectionId,
-        jobRead.id,
-        StreamStatusRunState.COMPLETE,
-        StreamStatusJobType.SYNC,
+            // run a sequence of mappers against the `name` field
+            ConfiguredStreamMapper(
+              StreamMapperType.FIELD_MINUS_RENAMING,
+              Jsons.deserialize(
+                """
+                {
+                  "newFieldName": "name_renamed",
+                  "originalFieldName": "name"
+                }
+                """.trimIndent(),
+              ),
+            ),
+            ConfiguredStreamMapper(
+              StreamMapperType.HASHING,
+              Jsons.deserialize(
+                """
+                {
+                  "method": "SHA-256",
+                  "targetField": "name_renamed",
+                  "fieldNameSuffix": "_hashed"
+                }
+                """.trimIndent(),
+              ),
+            ),
+            ConfiguredStreamMapper(
+              StreamMapperType.ENCRYPTION,
+              Jsons.deserialize(
+                """
+                {
+                  "algorithm": "RSA",
+                  "fieldNameSuffix": "_encrypted",
+                  "publicKey": "${keyPair.public.encoded.toHexString()}",
+                  "targetField": "name_renamed_hashed"
+                }
+                """.trimIndent(),
+              ),
+            ),
+          ),
+      )
+    val conn =
+      testHarness.createConnection(
+        TestConnectionCreate
+          .Builder(
+            sourceId,
+            destinationId,
+            catalog,
+            discoverResult.catalogId!!,
+            testHarness.dataplaneGroupId,
+          ).setSchedule(ConnectionScheduleType.CRON, connectionScheduleData)
+          .build(),
       )
 
-      testHarness.deleteConnection(connectionId)
+    val connectionId = conn.connectionId
+    val jobRead = testHarness.getMostRecentSyncForConnection(connectionId)
 
-      // remove connection to avoid exception during tear down
-      testHarness.removeConnection(connectionId)
-    }
+    testResources.waitForSuccessfulJobWithRetries(jobRead)
+
+    // NOTE: this is an unusual use of a retry policy. Sometimes the raw tables haven't been cleaned up
+    // even though the job
+    // is marked successful.
+    val retryAssertOutcome =
+      Failsafe
+        .with<Any, RetryPolicy<Any>>(
+          RetryPolicy
+            .builder<Any>()
+            .withBackoff(
+              Duration.ofSeconds(AcceptanceTestsResources.JITTER_MAX_INTERVAL_SECS.toLong()),
+              Duration.ofSeconds(
+                AcceptanceTestsResources.FINAL_INTERVAL_SECS.toLong(),
+              ),
+            ).withMaxRetries(AcceptanceTestsResources.MAX_TRIES)
+            .build(),
+        ).get(
+          CheckedSupplier {
+            // Can't use any of the utility assertions, because RSA encryption is nondeterministic.
+            // So we'll do this manually.
+            val destinationRecords: List<JsonNode> =
+              Databases.retrieveRawDestinationRecords(
+                testHarness.getDestinationDatabase(),
+                conn.namespaceFormat!!,
+                AcceptanceTestHarness.STREAM_NAME,
+              )
+
+            Assertions.assertEquals(1, destinationRecords.size, "Expected to see exactly one record, got $destinationRecords")
+            val onlyRecord = destinationRecords.first() as ObjectNode
+            Assertions.assertEquals(
+              listOf("name_renamed_hashed_encrypted"),
+              onlyRecord.fieldNames().asSequence().toList(),
+              "Expected record to contain a single field `name_renamed_hashed_encrypted`, got $onlyRecord",
+            )
+            val encryptedBytes = onlyRecord["name_renamed_hashed_encrypted"].textValue().hexToByteArray()
+            val decrypted =
+              Cipher
+                .getInstance("RSA")
+                .also { it.init(Cipher.DECRYPT_MODE, keyPair.private) }
+                .doFinal(encryptedBytes)
+                .toString(Charsets.UTF_8)
+            Assertions.assertEquals(
+              "1ba0292c60f8c80a467157c332f641de05256388dff757bdb773987a39ac35e0",
+              decrypted,
+              """Expected decrypted value to equal sha256("sherif")""",
+            )
+
+            "success" // If the assertion throws after all the retries, then retryWithJitter will return null.
+          },
+        )
+    Assertions.assertEquals("success", retryAssertOutcome)
+
+    assertStreamStatuses(
+      testHarness,
+      workspaceId,
+      connectionId,
+      jobRead.id,
+      StreamStatusRunState.COMPLETE,
+      StreamStatusJobType.SYNC,
+    )
+
+    testHarness.deleteConnection(connectionId)
+
+    // remove connection to avoid exception during tear down
+    testHarness.removeConnection(connectionId)
   }
 
   @Test
   fun testIncrementalSync() {
-    testHarness.withFlag(UseSyncV2, Workspace(workspaceId), value = useV2).use {
-      testResources.runIncrementalSyncForAWorkspaceId(workspaceId)
-    }
+    testResources.runIncrementalSyncForAWorkspaceId(workspaceId)
   }
 
   companion object {
@@ -381,7 +369,3 @@ internal abstract class SyncAcceptanceTests(
     }
   }
 }
-
-internal class SyncAcceptanceTestsLegacy : SyncAcceptanceTests(useV2 = false)
-
-internal class SyncAcceptanceTestsV2 : SyncAcceptanceTests(useV2 = true)

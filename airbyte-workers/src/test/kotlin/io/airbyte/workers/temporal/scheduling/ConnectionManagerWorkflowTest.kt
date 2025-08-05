@@ -4,12 +4,11 @@
 
 package io.airbyte.workers.temporal.scheduling
 
-import io.airbyte.commons.constants.WorkerConstants
 import io.airbyte.commons.temporal.TemporalJobType
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow
-import io.airbyte.commons.temporal.scheduling.SyncWorkflow
+import io.airbyte.commons.temporal.scheduling.SyncWorkflowV2
 import io.airbyte.commons.temporal.scheduling.retries.BackoffPolicy
 import io.airbyte.commons.temporal.scheduling.retries.RetryManager
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState
@@ -17,17 +16,10 @@ import io.airbyte.commons.temporal.scheduling.state.listener.TestStateListener
 import io.airbyte.commons.temporal.scheduling.state.listener.TestStateListener.Companion.reset
 import io.airbyte.commons.temporal.scheduling.state.listener.WorkflowStateChangedListener.ChangedStateEvent
 import io.airbyte.commons.temporal.scheduling.state.listener.WorkflowStateChangedListener.StateField
-import io.airbyte.commons.version.Version
-import io.airbyte.config.ActorContext
 import io.airbyte.config.ConnectionContext
 import io.airbyte.config.FailureReason
-import io.airbyte.config.StandardCheckConnectionInput
-import io.airbyte.config.StandardSyncInput
 import io.airbyte.micronaut.temporal.TemporalProxyHelper
-import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
-import io.airbyte.workers.models.JobInput
-import io.airbyte.workers.models.SyncJobCheckConnectionInputs
 import io.airbyte.workers.temporal.activities.GetConnectionContextOutput
 import io.airbyte.workers.temporal.activities.GetLoadShedBackoffOutput
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity
@@ -42,8 +34,6 @@ import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.Sch
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverOutput
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchOutput
-import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivity.SyncInputWithAttemptNumber
-import io.airbyte.workers.temporal.scheduling.activities.GenerateInputActivityImpl
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput
@@ -130,17 +120,16 @@ import kotlin.collections.MutableList
 internal class ConnectionManagerWorkflowTest {
   private val mConfigFetchActivity: ConfigFetchActivity =
     Mockito.mock<ConfigFetchActivity>(ConfigFetchActivity::class.java, Mockito.withSettings().withoutAnnotations())
-  private var testEnv: TestWorkflowEnvironment? = null
-  private var client: WorkflowClient? = null
-  private var workflow: ConnectionManagerWorkflow? = null
-  private var activityOptions: ActivityOptions? = null
-  private var temporalProxyHelper: TemporalProxyHelper? = null
+  private lateinit var testEnv: TestWorkflowEnvironment
+  private lateinit var client: WorkflowClient
+  private lateinit var workflow: ConnectionManagerWorkflow
+  private lateinit var activityOptions: ActivityOptions
+  private lateinit var temporalProxyHelper: TemporalProxyHelper
 
   @BeforeEach
   @Throws(Exception::class)
   fun setUp() {
     Mockito.reset<ConfigFetchActivity?>(mConfigFetchActivity)
-    Mockito.reset<GenerateInputActivityImpl?>(mGenerateInputActivityImpl)
     Mockito.reset<JobCreationAndStatusUpdateActivity?>(mJobCreationAndStatusUpdateActivity)
     Mockito.reset<AutoDisableConnectionActivity?>(mAutoDisableConnectionActivity)
     Mockito.reset<StreamResetActivity?>(mStreamResetActivity)
@@ -166,7 +155,7 @@ internal class ConnectionManagerWorkflowTest {
 
     Mockito.`when`<GetConnectionContextOutput?>(mConfigFetchActivity.getConnectionContext(any())).thenReturn(
       GetConnectionContextOutput(
-        ConnectionContext(),
+        ConnectionContext().withSourceId(SOURCE_ID).withDestinationId(DESTINATION_ID),
       ),
     )
 
@@ -186,33 +175,6 @@ internal class ConnectionManagerWorkflowTest {
         ),
       )
 
-    Mockito
-      .`when`<SyncJobCheckConnectionInputs?>(
-        mGenerateInputActivityImpl.getCheckConnectionInputs(
-          any(),
-        ),
-      ).thenReturn(
-        SyncJobCheckConnectionInputs(
-          IntegrationLauncherConfig().withDockerImage(SOURCE_DOCKER_IMAGE),
-          IntegrationLauncherConfig(),
-          StandardCheckConnectionInput().withActorContext(ActorContext()),
-          StandardCheckConnectionInput().withActorContext(ActorContext()),
-        ),
-      )
-
-    Mockito
-      .`when`<JobInput?>(
-        mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(
-          any(),
-        ),
-      ).thenReturn(
-        JobInput(
-          JobRunConfig(),
-          IntegrationLauncherConfig().withDockerImage(SOURCE_DOCKER_IMAGE),
-          IntegrationLauncherConfig(),
-          StandardSyncInput(),
-        ),
-      )
     Mockito
       .`when`<AutoDisableConnectionOutput?>(
         mAutoDisableConnectionActivity.autoDisableFailingConnection(any()),
@@ -271,55 +233,12 @@ internal class ConnectionManagerWorkflowTest {
     val jobRunConfig = JobRunConfig()
     jobRunConfig.setJobId(JOB_ID.toString())
     jobRunConfig.setAttemptId(ATTEMPT_ID.toLong())
-    Mockito
-      .`when`(
-        mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(
-          any<SyncInputWithAttemptNumber>(),
-        ),
-      ).thenReturn(
-        JobInput(
-          jobRunConfig,
-          IntegrationLauncherConfig().withDockerImage(SOURCE_DOCKER_IMAGE).withProtocolVersion(Version("0.2.0")),
-          IntegrationLauncherConfig().withProtocolVersion(Version("0.2.0")),
-          StandardSyncInput(),
-        ),
-      )
   }
 
   @AfterEach
   fun tearDown() {
-    testEnv!!.shutdown()
+    testEnv.shutdown()
     reset()
-  }
-
-  @Throws(Exception::class)
-  private fun mockResetJobInput(jobRunConfig: JobRunConfig?) {
-    Mockito
-      .`when`(
-        mGenerateInputActivityImpl.getCheckConnectionInputs(
-          any<SyncInputWithAttemptNumber>(),
-        ),
-      ).thenReturn(
-        SyncJobCheckConnectionInputs(
-          IntegrationLauncherConfig().withDockerImage(WorkerConstants.RESET_JOB_SOURCE_DOCKER_IMAGE_STUB),
-          IntegrationLauncherConfig(),
-          StandardCheckConnectionInput().withActorContext(ActorContext()),
-          StandardCheckConnectionInput().withActorContext(ActorContext()),
-        ),
-      )
-    Mockito
-      .`when`(
-        mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(
-          any<SyncInputWithAttemptNumber>(),
-        ),
-      ).thenReturn(
-        JobInput(
-          jobRunConfig,
-          IntegrationLauncherConfig().withDockerImage(WorkerConstants.RESET_JOB_SOURCE_DOCKER_IMAGE_STUB),
-          IntegrationLauncherConfig(),
-          StandardSyncInput(),
-        ),
-      )
   }
 
   @Nested
@@ -360,9 +279,9 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
+      Companion.startWorkflowAndWaitUntilReady(workflow, input)
       // wait to be scheduled, then to run, then schedule again
-      testEnv!!.sleep(Duration.ofMinutes(SCHEDULE_WAIT.toMinutes() + SCHEDULE_WAIT.toMinutes() + 1))
+      testEnv.sleep(Duration.ofMinutes(SCHEDULE_WAIT.toMinutes() + SCHEDULE_WAIT.toMinutes() + 1))
       Mockito.verify(mConfigFetchActivity, Mockito.atLeast(2)).getTimeToWait(any())
       val events: Queue<ChangedStateEvent> = testStateListener.events(testId)
 
@@ -425,8 +344,8 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
-      testEnv!!.sleep(Duration.ofMinutes(SCHEDULE_WAIT.toMinutes() - 1))
+      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      testEnv.sleep(Duration.ofMinutes(SCHEDULE_WAIT.toMinutes() - 1))
       val events: Queue<ChangedStateEvent> = testStateListener.events(testId)
 
       Assertions
@@ -486,9 +405,9 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
-      testEnv!!.sleep(Duration.ofMinutes(1L)) // any value here, just so it's started
-      workflow!!.submitManualSync()
+      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      testEnv.sleep(Duration.ofMinutes(1L)) // any value here, just so it's started
+      workflow.submitManualSync()
 
       Mockito
         .verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
@@ -563,15 +482,15 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
-      testEnv!!.sleep(Duration.ofSeconds(30L))
+      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      testEnv.sleep(Duration.ofSeconds(30L))
 
       Mockito.reset(mConfigFetchActivity)
       Mockito
         .`when`(mConfigFetchActivity.getConnectionContext(any()))
         .thenReturn(
           GetConnectionContextOutput(
-            ConnectionContext(),
+            ConnectionContext().withSourceId(SOURCE_ID).withDestinationId(DESTINATION_ID),
           ),
         )
       Mockito.`when`(mConfigFetchActivity.getLoadShedBackoff(any())).thenReturn(
@@ -584,7 +503,7 @@ internal class ConnectionManagerWorkflowTest {
           Duration.ofDays((100 * 365).toLong()),
         ),
       )
-      workflow!!.connectionUpdated()
+      workflow.connectionUpdated()
 
       Mockito
         .verify(mConfigFetchActivity, VERIFY_TIMEOUT)
@@ -660,10 +579,10 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
-      testEnv!!.sleep(Duration.ofSeconds(30L))
-      workflow!!.cancelJob()
-      testEnv!!.sleep(Duration.ofSeconds(20L))
+      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      testEnv.sleep(Duration.ofSeconds(30L))
+      workflow.cancelJob()
+      testEnv.sleep(Duration.ofSeconds(20L))
 
       val events: Queue<ChangedStateEvent> = testStateListener.events(testId)
 
@@ -721,11 +640,11 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
-      testEnv!!.sleep(Duration.ofSeconds(30L))
-      workflow!!.deleteConnection()
+      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      testEnv.sleep(Duration.ofSeconds(30L))
+      workflow.deleteConnection()
 
-      Companion.waitUntilDeleted(workflow!!)
+      Companion.waitUntilDeleted(workflow)
 
       val events: Queue<ChangedStateEvent> = testStateListener.events(testId)
 
@@ -787,8 +706,8 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
-      testEnv!!.sleep(Duration.ofSeconds(30L))
+      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      testEnv.sleep(Duration.ofSeconds(30L))
 
       Mockito
         .verify(mJobCreationAndStatusUpdateActivity, Mockito.times(1))
@@ -836,16 +755,16 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
+      Companion.startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait until the middle of the run
-      testEnv!!.sleep(Duration.ofMinutes(SCHEDULE_WAIT.toMinutes() + SleepingSyncWorkflow.RUN_TIME!!.toMinutes() / 2))
+      testEnv.sleep(Duration.ofMinutes(SCHEDULE_WAIT.toMinutes() + SleepingSyncWorkflow.RUN_TIME!!.toMinutes() / 2))
 
       // trigger the manual sync
-      workflow!!.submitManualSync()
+      workflow.submitManualSync()
 
       // wait for the rest of the workflow
-      testEnv!!.sleep(Duration.ofMinutes(SleepingSyncWorkflow.RUN_TIME.toMinutes() / 2 + 1))
+      testEnv.sleep(Duration.ofMinutes(SleepingSyncWorkflow.RUN_TIME.toMinutes() / 2 + 1))
 
       val events: Queue<ChangedStateEvent> = testStateListener.events(testId)
 
@@ -882,17 +801,17 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
+      Companion.startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
-      testEnv!!.sleep(Duration.ofMinutes(1))
+      testEnv.sleep(Duration.ofMinutes(1))
 
-      workflow!!.submitManualSync()
+      workflow.submitManualSync()
 
       // wait for the manual sync to start working
-      testEnv!!.sleep(Duration.ofMinutes(1))
+      testEnv.sleep(Duration.ofMinutes(1))
 
-      workflow!!.cancelJob()
+      workflow.cancelJob()
 
       Mockito
         .verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
@@ -939,17 +858,17 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
+      Companion.startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
-      testEnv!!.sleep(Duration.ofMinutes(1))
+      testEnv.sleep(Duration.ofMinutes(1))
 
-      workflow!!.submitManualSync()
+      workflow.submitManualSync()
 
       // wait for the manual sync to start working
-      testEnv!!.sleep(Duration.ofMinutes(1))
+      testEnv.sleep(Duration.ofMinutes(1))
 
-      workflow!!.deleteConnection()
+      workflow.deleteConnection()
 
       val eventQueue: Queue<ChangedStateEvent> = testStateListener.events(testId)
       val events: MutableList<ChangedStateEvent> = ArrayList(eventQueue)
@@ -1008,9 +927,9 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
-      testEnv!!.sleep(Duration.ofMinutes(5L))
-      workflow!!.resetConnection()
+      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      testEnv.sleep(Duration.ofMinutes(5L))
+      workflow.resetConnection()
       Mockito
         .verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
         .createNewAttemptNumber(any<AttemptCreationInput>())
@@ -1052,9 +971,9 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
-      testEnv!!.sleep(Duration.ofMinutes(5L))
-      workflow!!.resetConnectionAndSkipNextScheduling()
+      Companion.startWorkflowAndWaitUntilReady(workflow, input)
+      testEnv.sleep(Duration.ofMinutes(5L))
+      workflow.resetConnectionAndSkipNextScheduling()
       Mockito
         .verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
         .createNewAttemptNumber(any<AttemptCreationInput>())
@@ -1105,12 +1024,12 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
+      Companion.startWorkflowAndWaitUntilReady(workflow, input)
 
-      testEnv!!.sleep(Duration.ofSeconds(30L))
-      workflow!!.submitManualSync()
-      testEnv!!.sleep(Duration.ofSeconds(30L))
-      workflow!!.resetConnection()
+      testEnv.sleep(Duration.ofSeconds(30L))
+      workflow.submitManualSync()
+      testEnv.sleep(Duration.ofSeconds(30L))
+      workflow.resetConnection()
 
       Mockito
         .verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
@@ -1159,22 +1078,22 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
+      Companion.startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
-      testEnv!!.sleep(Duration.ofMinutes(1))
+      testEnv.sleep(Duration.ofMinutes(1))
 
       // submit sync
-      workflow!!.submitManualSync()
+      workflow.submitManualSync()
 
       // wait until the middle of the manual run
-      testEnv!!.sleep(Duration.ofMinutes(SleepingSyncWorkflow.RUN_TIME!!.toMinutes() / 2))
+      testEnv.sleep(Duration.ofMinutes(SleepingSyncWorkflow.RUN_TIME!!.toMinutes() / 2))
 
       // indicate connection update
-      workflow!!.connectionUpdated()
+      workflow.connectionUpdated()
 
       // wait after the rest of the run
-      testEnv!!.sleep(Duration.ofMinutes(SleepingSyncWorkflow.RUN_TIME.toMinutes() / 2 + 1))
+      testEnv.sleep(Duration.ofMinutes(SleepingSyncWorkflow.RUN_TIME.toMinutes() / 2 + 1))
 
       val eventQueue: Queue<ChangedStateEvent> = testStateListener.events(testId)
       val events: MutableList<ChangedStateEvent> = ArrayList(eventQueue)
@@ -1248,11 +1167,11 @@ internal class ConnectionManagerWorkflowTest {
     )
     fun testNoAutoDisableOnSuccess() {
       returnTrueForLastJobOrAttemptFailure()
-      val syncWorker = testEnv!!.newWorker(TemporalJobType.SYNC.name)
+      val syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name)
       syncWorker.registerWorkflowImplementationTypes(EmptySyncWorkflow::class.java)
-      val checkWorker = testEnv!!.newWorker(TemporalJobType.CHECK_CONNECTION.name)
+      val checkWorker = testEnv.newWorker(TemporalJobType.CHECK_CONNECTION.name)
       checkWorker.registerWorkflowImplementationTypes(CheckConnectionSuccessWorkflow::class.java)
-      testEnv!!.start()
+      testEnv.start()
 
       val testId = UUID.randomUUID()
       val connectionId = UUID.randomUUID()
@@ -1271,12 +1190,12 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
+      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
-      testEnv!!.sleep(Duration.ofMinutes(1))
+      testEnv.sleep(Duration.ofMinutes(1))
 
-      workflow!!.submitManualSync()
+      workflow.submitManualSync()
 
       Mockito.verifyNoInteractions(mAutoDisableConnectionActivity)
     }
@@ -1304,10 +1223,10 @@ internal class ConnectionManagerWorkflowTest {
           mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()),
         ).thenReturn(AttemptNumberCreationOutput(ATTEMPT_ID))
 
-      val checkWorker = testEnv!!.newWorker(TemporalJobType.SYNC.name)
+      val checkWorker = testEnv.newWorker(TemporalJobType.SYNC.name)
       checkWorker.registerWorkflowImplementationTypes(CheckConnectionFailedWorkflow::class.java)
 
-      testEnv!!.start()
+      testEnv.start()
 
       val testId = UUID.randomUUID()
       val testStateListener = TestStateListener()
@@ -1325,12 +1244,12 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
+      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
-      testEnv!!.sleep(Duration.ofMinutes(1))
+      testEnv.sleep(Duration.ofMinutes(1))
 
-      workflow!!.submitManualSync()
+      workflow.submitManualSync()
 
       Mockito
         .verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
@@ -1354,9 +1273,9 @@ internal class ConnectionManagerWorkflowTest {
         .`when`(
           mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()),
         ).thenReturn(AttemptNumberCreationOutput(ATTEMPT_ID))
-      val checkWorker = testEnv!!.newWorker(TemporalJobType.SYNC.name)
+      val checkWorker = testEnv.newWorker(TemporalJobType.SYNC.name)
       checkWorker.registerWorkflowImplementationTypes(CheckConnectionFailedWorkflow::class.java)
-      testEnv!!.start()
+      testEnv.start()
 
       val testId = UUID.randomUUID()
       val testStateListener = TestStateListener()
@@ -1374,12 +1293,12 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
+      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
-      testEnv!!.sleep(Duration.ofMinutes(1))
+      testEnv.sleep(Duration.ofMinutes(1))
 
-      workflow!!.submitManualSync()
+      workflow.submitManualSync()
 
       Mockito
         .verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
@@ -1401,9 +1320,9 @@ internal class ConnectionManagerWorkflowTest {
         .`when`(
           mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()),
         ).thenReturn(AttemptNumberCreationOutput(ATTEMPT_ID))
-      val checkWorker = testEnv!!.newWorker(TemporalJobType.SYNC.name)
+      val checkWorker = testEnv.newWorker(TemporalJobType.SYNC.name)
       checkWorker.registerWorkflowImplementationTypes(CheckConnectionSystemErrorWorkflow::class.java)
-      testEnv!!.start()
+      testEnv.start()
 
       val testId = UUID.randomUUID()
       val testStateListener = TestStateListener()
@@ -1421,12 +1340,12 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
+      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
-      testEnv!!.sleep(Duration.ofMinutes(1))
+      testEnv.sleep(Duration.ofMinutes(1))
 
-      workflow!!.submitManualSync()
+      workflow.submitManualSync()
 
       Mockito
         .verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
@@ -1448,10 +1367,10 @@ internal class ConnectionManagerWorkflowTest {
         .`when`(
           mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()),
         ).thenReturn(AttemptNumberCreationOutput(ATTEMPT_ID))
-      val checkWorker = testEnv!!.newWorker(TemporalJobType.SYNC.name)
+      val checkWorker = testEnv.newWorker(TemporalJobType.SYNC.name)
       checkWorker.registerWorkflowImplementationTypes(CheckConnectionSourceSuccessOnlyWorkflow::class.java)
 
-      testEnv!!.start()
+      testEnv.start()
 
       val testId = UUID.randomUUID()
       val testStateListener = TestStateListener()
@@ -1469,12 +1388,12 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
+      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
-      testEnv!!.sleep(Duration.ofMinutes(1))
+      testEnv.sleep(Duration.ofMinutes(1))
 
-      workflow!!.submitManualSync()
+      workflow.submitManualSync()
 
       Mockito
         .verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
@@ -1496,10 +1415,10 @@ internal class ConnectionManagerWorkflowTest {
         .`when`(
           mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()),
         ).thenReturn(AttemptNumberCreationOutput(ATTEMPT_ID))
-      val checkWorker = testEnv!!.newWorker(TemporalJobType.SYNC.name)
+      val checkWorker = testEnv.newWorker(TemporalJobType.SYNC.name)
       checkWorker.registerWorkflowImplementationTypes(CheckConnectionDestinationSystemErrorWorkflow::class.java)
 
-      testEnv!!.start()
+      testEnv.start()
 
       val testId = UUID.randomUUID()
       val testStateListener = TestStateListener()
@@ -1517,12 +1436,12 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
+      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
-      testEnv!!.sleep(Duration.ofMinutes(1))
+      testEnv.sleep(Duration.ofMinutes(1))
 
-      workflow!!.submitManualSync()
+      workflow.submitManualSync()
 
       Mockito
         .verify(mJobCreationAndStatusUpdateActivity, VERIFY_TIMEOUT)
@@ -1543,19 +1462,6 @@ internal class ConnectionManagerWorkflowTest {
       val jobRunConfig = JobRunConfig()
       jobRunConfig.setJobId(JOB_ID.toString())
       jobRunConfig.setAttemptId(ATTEMPT_ID.toLong())
-      Mockito
-        .`when`(
-          mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(
-            any<SyncInputWithAttemptNumber>(),
-          ),
-        ).thenReturn(
-          JobInput(
-            jobRunConfig,
-            IntegrationLauncherConfig().withDockerImage(SOURCE_DOCKER_IMAGE),
-            IntegrationLauncherConfig(),
-            StandardSyncInput(),
-          ),
-        )
 
       Mockito
         .`when`(mJobCreationAndStatusUpdateActivity.createNewJob(any()))
@@ -1564,11 +1470,10 @@ internal class ConnectionManagerWorkflowTest {
         .`when`(
           mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(any()),
         ).thenReturn(AttemptNumberCreationOutput(ATTEMPT_ID))
-      mockResetJobInput(jobRunConfig)
-      val checkWorker = testEnv!!.newWorker(TemporalJobType.SYNC.name)
+      val checkWorker = testEnv.newWorker(TemporalJobType.SYNC.name)
       checkWorker.registerWorkflowImplementationTypes(CheckConnectionFailedWorkflow::class.java)
 
-      testEnv!!.start()
+      testEnv.start()
 
       val testId = UUID.randomUUID()
       val testStateListener = TestStateListener()
@@ -1586,12 +1491,12 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
+      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow, input)
 
       // wait for workflow to initialize
-      testEnv!!.sleep(Duration.ofMinutes(1))
+      testEnv.sleep(Duration.ofMinutes(1))
 
-      workflow!!.submitManualSync()
+      workflow.submitManualSync()
 
       Mockito
         .verify(
@@ -1658,11 +1563,11 @@ internal class ConnectionManagerWorkflowTest {
           false,
         )
 
-      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
+      ConnectionManagerWorkflowTest.Companion.startWorkflowAndWaitUntilReady(workflow, input)
 
       // Sleep test env for restart delay, plus a small buffer to ensure that the workflow executed the
       // logic after the delay
-      testEnv!!.sleep(WORKFLOW_FAILURE_RESTART_DELAY.plus(Duration.ofSeconds(10)))
+      testEnv.sleep(WORKFLOW_FAILURE_RESTART_DELAY.plus(Duration.ofSeconds(10)))
 
       val events: Queue<ChangedStateEvent> = testStateListener.events(testId)
 
@@ -1714,7 +1619,7 @@ internal class ConnectionManagerWorkflowTest {
     @Throws(
       Exception::class,
     )
-    fun checksProgressOnFailure(failureCase: Class<out SyncWorkflow?>?) {
+    fun checksProgressOnFailure(failureCase: Class<out SyncWorkflowV2?>?) {
       // We check attempt progress using the 0-based attempt number counting system used everywhere except
       // the ConnectionUpdaterInput where it is 1-based. This will be fixed to be more consistent later.
       // The concrete value passed here is inconsequential—the important part is that it is _not_ the
@@ -1742,7 +1647,7 @@ internal class ConnectionManagerWorkflowTest {
     @Throws(
       Exception::class,
     )
-    fun hydratePersistRetryManagerFlow(failureCase: Class<out SyncWorkflow?>?) {
+    fun hydratePersistRetryManagerFlow(failureCase: Class<out SyncWorkflowV2?>?) {
       val connectionId = UUID.randomUUID()
       val jobId = 32198714L
       val input = testInputBuilder()
@@ -1857,7 +1762,7 @@ internal class ConnectionManagerWorkflowTest {
     @Throws(
       Exception::class,
     )
-    fun usesAttemptBasedRetriesIfRetryManagerUnset(failureCase: Class<out SyncWorkflow?>?) {
+    fun usesAttemptBasedRetriesIfRetryManagerUnset(failureCase: Class<out SyncWorkflowV2?>?) {
       val connectionId = UUID.randomUUID()
       val jobId = 32198714L
       val input = testInputBuilder()
@@ -1919,7 +1824,7 @@ internal class ConnectionManagerWorkflowTest {
 
       setupSuccessfulWorkflow(input)
 
-      testEnv!!.sleep(timeToWait.plus(Duration.ofSeconds(5)))
+      testEnv.sleep(timeToWait.plus(Duration.ofSeconds(5)))
 
       val events: Queue<ChangedStateEvent> = testStateListener.events(testId)
 
@@ -1976,7 +1881,7 @@ internal class ConnectionManagerWorkflowTest {
           },
         ).hasSize(0)
 
-      testEnv!!.sleep(timeTilNextScheduledRun.plus(Duration.ofSeconds(5)))
+      testEnv.sleep(timeTilNextScheduledRun.plus(Duration.ofSeconds(5)))
 
       Assertions
         .assertThat(events)
@@ -2031,7 +1936,7 @@ internal class ConnectionManagerWorkflowTest {
           },
         ).hasSize(0)
 
-      testEnv!!.sleep(backoff.plus(Duration.ofSeconds(5)))
+      testEnv.sleep(backoff.plus(Duration.ofSeconds(5)))
 
       Assertions
         .assertThat(events)
@@ -2083,9 +1988,9 @@ internal class ConnectionManagerWorkflowTest {
 
       val events: Queue<ChangedStateEvent> = testStateListener.events(testId)
 
-      workflow!!.cancelJob()
+      workflow.cancelJob()
 
-      testEnv!!.sleep(Duration.ofMinutes(1))
+      testEnv.sleep(Duration.ofMinutes(1))
 
       Mockito
         .verify(mJobCreationAndStatusUpdateActivity)
@@ -2130,7 +2035,7 @@ internal class ConnectionManagerWorkflowTest {
       input.fromFailure = true
 
       setupSuccessfulWorkflow(input)
-      testEnv!!.sleep(Duration.ofMinutes(1))
+      testEnv.sleep(Duration.ofMinutes(1))
 
       Mockito
         .verify(mJobCreationAndStatusUpdateActivity, Mockito.times(0))
@@ -2152,8 +2057,8 @@ internal class ConnectionManagerWorkflowTest {
     fun reportsCancelledWhenConnectionDisabled() {
       val input = testInputBuilder()
       setupSuccessfulWorkflow(CancelledSyncWorkflow::class.java, input)
-      workflow!!.submitManualSync()
-      testEnv!!.sleep(Duration.ofSeconds(60))
+      workflow.submitManualSync()
+      testEnv.sleep(Duration.ofSeconds(60))
 
       Mockito
         .verify(mJobCreationAndStatusUpdateActivity)
@@ -2210,14 +2115,14 @@ internal class ConnectionManagerWorkflowTest {
 
       setupSuccessfulWorkflow(input)
       // wait a sec til we get to the backoff step before calling verify
-      testEnv!!.sleep(Duration.ofMinutes(1))
+      testEnv.sleep(Duration.ofMinutes(1))
       Mockito.verify(mConfigFetchActivity, Mockito.times(1)).getLoadShedBackoff(any())
       // we will check the load shed flag after each backoff
-      testEnv!!.sleep(backoff)
+      testEnv.sleep(backoff)
       Mockito.verify(mConfigFetchActivity, Mockito.times(2)).getLoadShedBackoff(any())
-      testEnv!!.sleep(backoff)
+      testEnv.sleep(backoff)
       Mockito.verify(mConfigFetchActivity, Mockito.times(3)).getLoadShedBackoff(any())
-      testEnv!!.sleep(backoff)
+      testEnv.sleep(backoff)
       // verify we have exited the loop and will continue
       Mockito
         .verify(mConfigFetchActivity, Mockito.times(1))
@@ -2262,27 +2167,26 @@ internal class ConnectionManagerWorkflowTest {
         arg.attemptNumber == expectedAttemptNumber
   }
 
-  private fun <T1 : SyncWorkflow, T2 : ConnectorCommandWorkflow> setupSpecificChildWorkflow(
-    mockedSyncedWorkflow: Class<T1>,
+  private fun <T1 : SyncWorkflowV2, T2 : ConnectorCommandWorkflow> setupSpecificChildWorkflow(
+    mockedSyncWorkflow: Class<T1>,
     mockedCheckWorkflow: Class<T2>,
   ) {
     testEnv = TestWorkflowEnvironment.newInstance()
 
-    val syncWorker = testEnv!!.newWorker(TemporalJobType.SYNC.name)
-    syncWorker.registerWorkflowImplementationTypes(mockedSyncedWorkflow)
+    val syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name)
+    syncWorker.registerWorkflowImplementationTypes(mockedSyncWorkflow)
 
-    val checkWorker = testEnv!!.newWorker(TemporalJobType.SYNC.name)
+    val checkWorker = testEnv.newWorker(TemporalJobType.SYNC.name)
     checkWorker.registerWorkflowImplementationTypes(mockedCheckWorkflow)
 
-    val managerWorker = testEnv!!.newWorker(TemporalJobType.CONNECTION_UPDATER.name)
+    val managerWorker = testEnv.newWorker(TemporalJobType.CONNECTION_UPDATER.name)
     managerWorker.registerWorkflowImplementationTypes(
-      temporalProxyHelper!!.proxyWorkflowClass(
+      temporalProxyHelper.proxyWorkflowClass(
         ConnectionManagerWorkflowImpl::class.java,
       ),
     )
     managerWorker.registerActivitiesImplementations(
       mConfigFetchActivity,
-      mGenerateInputActivityImpl,
       mJobCreationAndStatusUpdateActivity,
       mAutoDisableConnectionActivity,
       mRecordMetricActivity,
@@ -2293,8 +2197,8 @@ internal class ConnectionManagerWorkflowTest {
       mAppendToAttemptLogActivity,
     )
 
-    client = testEnv!!.getWorkflowClient()
-    testEnv!!.start()
+    client = testEnv.getWorkflowClient()
+    testEnv.start()
 
     workflow =
       client!!
@@ -2312,11 +2216,11 @@ internal class ConnectionManagerWorkflowTest {
     val request =
       ListClosedWorkflowExecutionsRequest
         .newBuilder()
-        .setNamespace(testEnv!!.getNamespace())
+        .setNamespace(testEnv.getNamespace())
         .setExecutionFilter(WorkflowExecutionFilter.newBuilder().setWorkflowId(WORKFLOW_ID))
         .build()
     val listResponse =
-      testEnv!!
+      testEnv
         .getWorkflowService()
         .blockingStub()
         .listClosedWorkflowExecutions(request)
@@ -2351,29 +2255,29 @@ internal class ConnectionManagerWorkflowTest {
    */
   @Throws(Exception::class)
   private fun setupFailureCase(
-    failureClass: Class<out SyncWorkflow?>?,
+    failureClass: Class<out SyncWorkflowV2?>?,
     input: ConnectionUpdaterInput?,
   ) {
     returnTrueForLastJobOrAttemptFailure()
-    val syncWorker = testEnv!!.newWorker(TemporalJobType.SYNC.name)
+    val syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name)
     syncWorker.registerWorkflowImplementationTypes(failureClass)
 
-    val checkWorker = testEnv!!.newWorker(TemporalJobType.SYNC.name)
+    val checkWorker = testEnv.newWorker(TemporalJobType.SYNC.name)
     checkWorker.registerWorkflowImplementationTypes(CheckConnectionSuccessWorkflow::class.java)
 
-    testEnv!!.start()
+    testEnv.start()
 
-    Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
+    Companion.startWorkflowAndWaitUntilReady(workflow, input)
 
     // wait for workflow to initialize
-    testEnv!!.sleep(Duration.ofMinutes(1))
+    testEnv.sleep(Duration.ofMinutes(1))
 
-    workflow!!.submitManualSync()
-    testEnv!!.sleep(Duration.ofMinutes(1))
+    workflow.submitManualSync()
+    testEnv.sleep(Duration.ofMinutes(1))
   }
 
   @Throws(Exception::class)
-  private fun setupFailureCase(failureClass: Class<out SyncWorkflow?>?) {
+  private fun setupFailureCase(failureClass: Class<out SyncWorkflowV2?>?) {
     val input = testInputBuilder()
 
     setupFailureCase(failureClass, input)
@@ -2394,15 +2298,14 @@ internal class ConnectionManagerWorkflowTest {
   private fun setupSimpleConnectionManagerWorkflow() {
     testEnv = TestWorkflowEnvironment.newInstance()
 
-    val managerWorker = testEnv!!.newWorker(TemporalJobType.CONNECTION_UPDATER.name)
+    val managerWorker = testEnv.newWorker(TemporalJobType.CONNECTION_UPDATER.name)
     managerWorker.registerWorkflowImplementationTypes(
-      temporalProxyHelper!!.proxyWorkflowClass(
+      temporalProxyHelper.proxyWorkflowClass(
         ConnectionManagerWorkflowImpl::class.java,
       ),
     )
     managerWorker.registerActivitiesImplementations(
       mConfigFetchActivity,
-      mGenerateInputActivityImpl,
       mJobCreationAndStatusUpdateActivity,
       mAutoDisableConnectionActivity,
       mRecordMetricActivity,
@@ -2413,9 +2316,9 @@ internal class ConnectionManagerWorkflowTest {
       mAppendToAttemptLogActivity,
     )
 
-    client = testEnv!!.getWorkflowClient()
+    client = testEnv.getWorkflowClient()
     workflow =
-      client!!.newWorkflowStub(
+      client.newWorkflowStub(
         ConnectionManagerWorkflow::class.java,
         WorkflowOptions.newBuilder().setTaskQueue(TemporalJobType.CONNECTION_UPDATER.name).build(),
       )
@@ -2427,18 +2330,18 @@ internal class ConnectionManagerWorkflowTest {
   }
 
   @Throws(Exception::class)
-  private fun <T> setupSuccessfulWorkflow(
+  private fun <T : SyncWorkflowV2> setupSuccessfulWorkflow(
     syncWorkflowMockClass: Class<T>,
     input: ConnectionUpdaterInput?,
   ) {
     returnTrueForLastJobOrAttemptFailure()
-    val syncWorker = testEnv!!.newWorker(TemporalJobType.SYNC.name)
+    val syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name)
     syncWorker.registerWorkflowImplementationTypes(syncWorkflowMockClass)
-    val checkWorker = testEnv!!.newWorker(TemporalJobType.SYNC.name)
+    val checkWorker = testEnv.newWorker(TemporalJobType.SYNC.name)
     checkWorker.registerWorkflowImplementationTypes(CheckConnectionSuccessWorkflow::class.java)
-    testEnv!!.start()
+    testEnv.start()
 
-    Companion.startWorkflowAndWaitUntilReady(workflow!!, input)
+    Companion.startWorkflowAndWaitUntilReady(workflow, input)
   }
 
   companion object {
@@ -2447,6 +2350,8 @@ internal class ConnectionManagerWorkflowTest {
     private const val JOB_ID = 1L
     private const val ATTEMPT_ID = 1
     private const val ATTEMPT_NO = 1
+    val SOURCE_ID: UUID = UUID.randomUUID()
+    val DESTINATION_ID: UUID = UUID.randomUUID()
 
     private val SCHEDULE_WAIT: Duration = Duration.ofMinutes(20L)
     private const val WORKFLOW_ID = "workflow-id"
@@ -2457,8 +2362,6 @@ internal class ConnectionManagerWorkflowTest {
     private val TEN_SECONDS = 10 * 1000
     private val VERIFY_TIMEOUT: VerificationMode? = Mockito.timeout(TEN_SECONDS.toLong()).times(1)
 
-    private val mGenerateInputActivityImpl: GenerateInputActivityImpl =
-      Mockito.mock<GenerateInputActivityImpl>(GenerateInputActivityImpl::class.java, Mockito.withSettings().withoutAnnotations())
     private val mJobCreationAndStatusUpdateActivity: JobCreationAndStatusUpdateActivity =
       Mockito.mock<JobCreationAndStatusUpdateActivity>(
         JobCreationAndStatusUpdateActivity::class.java,
@@ -2565,32 +2468,6 @@ internal class ConnectionManagerWorkflowTest {
               .reportJobStart(any())
           },
           0,
-        ),
-        Arguments.of(
-          Thread {
-            Mockito
-              .`when`(
-                mGenerateInputActivityImpl.getCheckConnectionInputs(
-                  any<SyncInputWithAttemptNumber>(),
-                ),
-              ).thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))
-          },
-          1,
-        ),
-        Arguments.of(
-          Thread {
-            try {
-              Mockito
-                .`when`(
-                  mGenerateInputActivityImpl.getSyncWorkflowInputWithAttemptNumber(
-                    any<SyncInputWithAttemptNumber>(),
-                  ),
-                ).thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))
-            } catch (e: Exception) {
-              throw RuntimeException(e)
-            }
-          },
-          1,
         ),
       )
 
