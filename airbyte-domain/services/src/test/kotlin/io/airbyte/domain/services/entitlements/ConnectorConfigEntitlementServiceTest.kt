@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.DestinationObjectStorageEntitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.services.storage.ConnectorObjectStorageService
@@ -212,6 +213,52 @@ class ConnectorConfigEntitlementServiceTest {
       assertThrows<RuntimeException> {
         connectorConfigEntitlementService.ensureEntitledConfig(organizationId, actorDefinitionVersion, config)
       }
+    }
+
+    @Test
+    fun `passes validation when object storage has storage_type None`() {
+      val config =
+        Jsons.jsonNode(
+          mapOf(
+            objectStorageProperty to
+              mapOf(
+                "storage_type" to "None",
+              ),
+          ),
+        )
+
+      val actorDefinitionVersion = ActorDefinitionVersion().withVersionId(actorDefinitionVersionId)
+
+      every { connectorObjectStorageService.getObjectStorageConfigProperty(actorDefinitionVersion) } returns objectStorageProperty
+
+      // Should not call ensureEntitled because discriminator considers this as "not set"
+      connectorConfigEntitlementService.ensureEntitledConfig(organizationId, actorDefinitionVersion, config)
+
+      verify(exactly = 0) { entitlementService.ensureEntitled(any(), any()) }
+    }
+
+    @Test
+    fun `requires entitlement when object storage has storage_type other than None`() {
+      val config =
+        Jsons.jsonNode(
+          mapOf(
+            objectStorageProperty to
+              mapOf(
+                "storage_type" to "S3",
+                "bucket_name" to "my-bucket",
+              ),
+          ),
+        )
+
+      val actorDefinitionVersion = ActorDefinitionVersion().withVersionId(actorDefinitionVersionId)
+
+      every { connectorObjectStorageService.getObjectStorageConfigProperty(actorDefinitionVersion) } returns objectStorageProperty
+      every { entitlementService.ensureEntitled(organizationId.value, DestinationObjectStorageEntitlement) } returns Unit
+
+      // Should call ensureEntitled because discriminator considers this as "set"
+      connectorConfigEntitlementService.ensureEntitledConfig(organizationId, actorDefinitionVersion, config)
+
+      verify(exactly = 1) { entitlementService.ensureEntitled(organizationId.value, DestinationObjectStorageEntitlement) }
     }
   }
 

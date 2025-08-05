@@ -18,6 +18,24 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import kotlin.collections.iterator
 
+/**
+ * Represents an entitlement requirement with optional discriminator to determine when a property is considered "set"
+ */
+data class EntitlementRequirement(
+  val entitlement: Entitlement,
+  val discriminator: ((JsonNode) -> Boolean)? = null,
+) {
+  /**
+   * Determines if the given property value should be considered as "set" and thus requiring the entitlement
+   */
+  fun isPropertySet(propertyValue: JsonNode?): Boolean {
+    if (propertyValue == null || propertyValue.isNull) {
+      return false
+    }
+    return discriminator?.invoke(propertyValue) ?: true
+  }
+}
+
 @Singleton
 class ConnectorConfigEntitlementService(
   private val entitlementService: EntitlementService,
@@ -25,11 +43,19 @@ class ConnectorConfigEntitlementService(
 ) {
   val log = KotlinLogging.logger {}
 
-  private fun getEntitlementRequirements(actorDefinitionVersion: ActorDefinitionVersion): Map<String, Entitlement> {
+  private fun getEntitlementRequirements(actorDefinitionVersion: ActorDefinitionVersion): Map<String, EntitlementRequirement> {
     val objectStorageProperty = connectorObjectStorageService.getObjectStorageConfigProperty(actorDefinitionVersion)
     return buildMap {
       if (objectStorageProperty != null) {
-        put(objectStorageProperty, DestinationObjectStorageEntitlement)
+        // Object storage discriminator: consider property not set if {"storage_type": "None"}
+        val objectStorageDiscriminator: (JsonNode) -> Boolean = { propertyValue ->
+          !(
+            propertyValue.isObject &&
+              propertyValue.has("storage_type") &&
+              propertyValue.get("storage_type").asText() == "None"
+          )
+        }
+        put(objectStorageProperty, EntitlementRequirement(DestinationObjectStorageEntitlement, objectStorageDiscriminator))
       }
     }
   }
@@ -46,7 +72,7 @@ class ConnectorConfigEntitlementService(
 
     val missingEntitlements =
       entitlementRequirements.entries
-        .filterNot { (_, entitlement) -> entitlementService.checkEntitlement(organizationId.value, entitlement).isEntitled }
+        .filterNot { (_, requirement) -> entitlementService.checkEntitlement(organizationId.value, requirement.entitlement).isEntitled }
 
     val spec = actorDefinitionVersion.spec
 
@@ -57,12 +83,12 @@ class ConnectorConfigEntitlementService(
     if (modifiedJsonSchema.has("properties")) {
       val properties = modifiedJsonSchema.get("properties") as ObjectNode
 
-      for ((propertyName, entitlement) in entitlementRequirements.entries) {
+      for ((propertyName, requirement) in entitlementRequirements.entries) {
         if (properties.has(propertyName)) {
           val propertyNode = properties.get(propertyName) as ObjectNode
 
           // Always add airbyte_required_entitlement
-          propertyNode.put("airbyte_required_entitlement", entitlement.featureId)
+          propertyNode.put("airbyte_required_entitlement", requirement.entitlement.featureId)
 
           // Check if the field is required
           val isRequired =
@@ -71,7 +97,7 @@ class ConnectorConfigEntitlementService(
               modifiedJsonSchema.get("required").any { it.asText() == propertyName }
 
           // Hide the property if the organization is not entitled
-          if (missingEntitlements.any { it.value.featureId == entitlement.featureId }) {
+          if (missingEntitlements.any { it.value.entitlement.featureId == requirement.entitlement.featureId }) {
             if (isRequired) {
               log.warn {
                 "Property $propertyName is not entitled to be used, but is required in the spec. Due to this requirement, the field was not trimmed."
@@ -84,7 +110,7 @@ class ConnectorConfigEntitlementService(
       }
     }
 
-    return EntitledConnectorSpec(spec = modifiedSpec, missingEntitlements = missingEntitlements.map { it.value.featureId })
+    return EntitledConnectorSpec(spec = modifiedSpec, missingEntitlements = missingEntitlements.map { it.value.entitlement.featureId })
   }
 
   /**
@@ -99,11 +125,12 @@ class ConnectorConfigEntitlementService(
     val entitlementRequirements = getEntitlementRequirements(actorDefinitionVersion)
     val usedProperties =
       entitlementRequirements.filterKeys { property ->
-        config.has(property) && !config.get(property).isNull
+        val propertyValue = if (config.has(property)) config.get(property) else null
+        entitlementRequirements[property]?.isPropertySet(propertyValue) ?: false
       }
 
-    for ((_, entitlement) in usedProperties) {
-      entitlementService.ensureEntitled(organizationId.value, entitlement)
+    for ((_, requirement) in usedProperties) {
+      entitlementService.ensureEntitled(organizationId.value, requirement.entitlement)
     }
   }
 }
