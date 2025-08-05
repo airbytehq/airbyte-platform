@@ -489,14 +489,14 @@ class ActorServicePaginationHelper(
               a.id,
               a.name,
               ad.name AS actor_definition_name,
-              c.id AS connection_id
+              c.id AS connection_id,
+              c.status as connection_status
             FROM actor a
             LEFT JOIN connection c ON c.$connectionField = a.id
             LEFT JOIN actor_definition ad ON ad.id = a.actor_definition_id
             WHERE a.id = ?
               AND a.tombstone = false
               AND a.actor_type = '${actorType.literal}'
-              AND (c.status IS NULL OR c.status != 'deprecated')
           )
           SELECT 
             wc.id,
@@ -509,6 +509,7 @@ class ActorServicePaginationHelper(
             FROM jobs j
             WHERE j.config_type = 'sync'
               AND j.scope = wc.connection_id::text
+              AND (wc.connection_status IS NOT NULL AND wc.connection_status != 'deprecated')
             ORDER BY j.created_at DESC
             LIMIT 1
           ) lj ON TRUE;

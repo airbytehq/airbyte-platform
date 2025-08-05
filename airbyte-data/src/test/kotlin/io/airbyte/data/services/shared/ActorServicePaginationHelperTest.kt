@@ -11,6 +11,7 @@ import io.airbyte.config.DestinationConnection
 import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSync
+import io.airbyte.config.StandardSync.Status
 import io.airbyte.config.Tag
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
@@ -42,6 +43,7 @@ import org.jooq.SQLDialect
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNotNull
 import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -494,6 +496,85 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
         Assertions.assertNotNull(result, "Should return a result")
       },
     )
+  }
+
+  @ParameterizedTest
+  @MethodSource("actorTypeProvider")
+  @Throws(java.lang.Exception::class)
+  fun testGetCursorActorWithAllDeprecatedConnections(actorType: ActorType) {
+    // Setup test data
+    val helper = JooqTestDbSetupHelper()
+    helper.setUpDependencies()
+
+    val workspaceId: UUID = helper.workspace!!.workspaceId
+    val actorId: UUID
+    val sortKey: SortKey
+
+    if (actorType == ActorType.source) {
+      actorId = helper.source!!.sourceId
+      sortKey = SortKey.SOURCE_NAME
+    } else {
+      actorId = helper.destination!!.destinationId
+      sortKey = SortKey.DESTINATION_NAME
+    }
+
+    // Create multiple connections for the actor
+    val connection1: StandardSync
+    val connection2: StandardSync
+    val connection3: StandardSync
+
+    if (actorType == ActorType.source) {
+      val destination1: DestinationConnection = helper.destination!!
+      val destination2 = createAdditionalDestination(workspaceId, helper)
+      val destination3 = createAdditionalDestination(workspaceId, helper)
+
+      connection1 = createConnection(helper.source!!, destination1, Status.DEPRECATED)
+      connection2 = createConnection(helper.source!!, destination2, Status.DEPRECATED)
+      connection3 = createConnection(helper.source!!, destination3, Status.DEPRECATED)
+    } else {
+      val source1: SourceConnection = helper.source!!
+      val source2 = createAdditionalSource(workspaceId, helper)
+      val source3 = createAdditionalSource(workspaceId, helper)
+
+      connection1 = createConnection(source1, helper.destination!!, Status.DEPRECATED)
+      connection2 = createConnection(source2, helper.destination!!, Status.DEPRECATED)
+      connection3 = createConnection(source3, helper.destination!!, Status.DEPRECATED)
+    }
+
+    // Verify all connections are deprecated
+    Assertions.assertEquals(Status.DEPRECATED, connection1.status)
+    Assertions.assertEquals(Status.DEPRECATED, connection2.status)
+    Assertions.assertEquals(Status.DEPRECATED, connection3.status)
+
+    // Test that getCursorActor works even when all connections are deprecated
+    Assertions.assertDoesNotThrow({
+      val result =
+        paginationHelper.getCursorActor(
+          actorId,
+          sortKey,
+          null,
+          true,
+          10,
+          actorType,
+        )
+      // Verify the result is not null and contains expected data
+      Assertions.assertNotNull(result, "getCursorActor should return a result even when all connections are deprecated")
+      Assertions.assertNotNull(result.cursor, "Cursor should not be null")
+      Assertions.assertEquals(actorId, result.cursor!!.cursorId, "Cursor ID should match the requested actor ID")
+      Assertions.assertEquals(sortKey, result.cursor!!.sortKey, "Sort key should match")
+
+      // The last sync should be null since all connections are deprecated and filtered out
+      Assertions.assertNull(result.cursor!!.lastSync, "Last sync should be null when all connections are deprecated")
+
+      // Actor name should still be populated
+      if (actorType == ActorType.source) {
+        assertNotNull(result.cursor!!.sourceName, "Source name should be populated")
+        Assertions.assertEquals(helper.source?.name, result.cursor!!.sourceName, "Source name should match")
+      } else {
+        assertNotNull(result.cursor!!.destinationName, "Destination name should be populated")
+        Assertions.assertEquals(helper.destination?.name, result.cursor!!.destinationName, "Destination name should match")
+      }
+    }, "getCursorActor should not throw an exception when all connections are deprecated")
   }
 
   @ParameterizedTest
@@ -1244,8 +1325,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     for (result in results) {
       // Verify search term filter
-      if (filters.searchTerm != null && !filters.searchTerm.isEmpty()) {
-        val searchTerm = filters.searchTerm.lowercase(Locale.getDefault())
+      if (filters.searchTerm != null && filters.searchTerm!!.isNotEmpty()) {
+        val searchTerm = filters.searchTerm!!.lowercase(Locale.getDefault())
         val matches =
           result.source.name
             .lowercase(Locale.getDefault())
@@ -1262,13 +1343,13 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       }
 
       // Verify state filter (based on connection activity)
-      if (filters.states != null && !filters.states.isEmpty()) {
+      if (filters.states != null && filters.states!!.isNotEmpty()) {
         // Active sources should have at least one connection (the SQL filtering ensures active connections
         // exist)
         // Inactive sources should have no connections or no active connections (SQL filtering ensures no
         // active connections)
-        val hasActiveFilter = filters.states.contains(ActorStatus.ACTIVE)
-        val hasInactiveFilter = filters.states.contains(ActorStatus.INACTIVE)
+        val hasActiveFilter = filters.states!!.contains(ActorStatus.ACTIVE)
+        val hasInactiveFilter = filters.states!!.contains(ActorStatus.INACTIVE)
 
         if (hasActiveFilter && !hasInactiveFilter) {
           // Only active requested - all results should have connections (SQL ensures active connections
@@ -1376,8 +1457,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     for (result in results) {
       // Verify search term filter
-      if (filters.searchTerm != null && !filters.searchTerm.isEmpty()) {
-        val searchTerm = filters.searchTerm.lowercase(Locale.getDefault())
+      if (filters.searchTerm != null && filters.searchTerm!!.isNotEmpty()) {
+        val searchTerm = filters.searchTerm!!.lowercase(Locale.getDefault())
         val matches =
           result.destination.name
             .lowercase(Locale.getDefault())
@@ -1394,15 +1475,15 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
       }
 
       // Verify state filter (based on connection activity)
-      if (filters.states != null && !filters.states.isEmpty()) {
+      if (filters.states != null && filters.states!!.isNotEmpty()) {
         // Active destinations should have at least one connection (the SQL filtering ensures active
         // connections
         // exist)
         // Inactive destinations should have no connections or no active connections (SQL filtering ensures
         // no
         // active connections)
-        val hasActiveFilter = filters.states.contains(ActorStatus.ACTIVE)
-        val hasInactiveFilter = filters.states.contains(ActorStatus.INACTIVE)
+        val hasActiveFilter = filters.states!!.contains(ActorStatus.ACTIVE)
+        val hasInactiveFilter = filters.states!!.contains(ActorStatus.INACTIVE)
 
         if (hasActiveFilter && !hasInactiveFilter) {
           // Only active requested - all results should have connections (SQL ensures active connections
@@ -1511,7 +1592,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     @JvmStatic
     private fun cursorConditionTestProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>( // Null cursor - should return empty string (test for both actor types)
+      Stream.of<Arguments?>(
+        // Null cursor - should return empty string (test for both actor types)
         Arguments.of(null, "", "null cursor returns empty string", ActorType.source),
         Arguments.of(null, "", "null cursor returns empty string", ActorType.destination), // SOURCE_NAME sort key (only valid for source)
         Arguments.of(
@@ -1604,7 +1686,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     private fun lastSyncDescConditionTestProvider(): Stream<Arguments?> {
       val connectionId = UUID.randomUUID()
 
-      return Stream.of<Arguments?>( // Null cursor (test for both actor types)
+      return Stream.of<Arguments?>(
+        // Null cursor (test for both actor types)
         Arguments.of(null, "", "null cursor returns empty string", ActorType.source),
         Arguments.of(
           null,
@@ -1653,7 +1736,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     @JvmStatic
     private fun filterConditionTestProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>( // Null filters (test for both actor types)
+      Stream.of<Arguments?>(
+        // Null filters (test for both actor types)
         Arguments.of(null, mutableListOf<String?>("workspace_id"), "null filters", ActorType.source),
         Arguments.of(
           null,
@@ -1713,7 +1797,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     @JvmStatic
     private fun combinedWhereClauseTestProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>( // Both empty
+      Stream.of<Arguments?>(
+        // Both empty
         Arguments.of("", "", "", "both clauses empty"), // Only filter clause
         Arguments.of("WHERE workspace_id = ?", "", "WHERE workspace_id = ?", "filter clause only"), // Only cursor clause
         Arguments.of("", "AND actor.name > ?", "WHERE actor.name > ?", "cursor clause only"), // Both present
@@ -1727,7 +1812,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     @JvmStatic
     private fun buildOrderByClauseProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>( // Source tests
+      Stream.of<Arguments?>(
+        // Source tests
         Arguments.of(ActorType.source, SortKey.SOURCE_NAME, true, "ORDER BY LOWER(a.name) ASC , a.id ASC", "Source name ascending"),
         Arguments.of(ActorType.source, SortKey.SOURCE_NAME, false, "ORDER BY LOWER(a.name) DESC , a.id DESC", "Source name descending"),
         Arguments.of(
@@ -1805,7 +1891,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     @JvmStatic
     private fun buildCountFilterConditionProvider(): Stream<Arguments?> {
       val workspaceId = UUID.fromString("12345678-1234-1234-1234-123456789012")
-      return Stream.of<Arguments?>( // No filters (test for both actor types)
+      return Stream.of<Arguments?>(
+        // No filters (test for both actor types)
         Arguments.of(
           workspaceId,
           null,
@@ -1995,7 +2082,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     @JvmStatic
     private fun sourcePaginationTestProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>( // Test all sort keys
+      Stream.of<Arguments?>(
+        // Test all sort keys
         Arguments.of(SortKey.SOURCE_NAME, true, null, "Sort by source name ascending"),
         Arguments.of(SortKey.SOURCE_NAME, false, null, "Sort by source name descending"),
         Arguments.of(SortKey.SOURCE_DEFINITION_NAME, true, null, "Sort by source definition name ascending"),
@@ -2042,7 +2130,8 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
     @JvmStatic
     private fun destinationPaginationTestProvider(): Stream<Arguments?> =
-      Stream.of<Arguments?>( // Test all sort keys
+      Stream.of<Arguments?>(
+        // Test all sort keys
         Arguments.of(SortKey.DESTINATION_NAME, true, null, "Sort by destination name ascending"),
         Arguments.of(SortKey.DESTINATION_NAME, false, null, "Sort by destination name descending"),
         Arguments.of(SortKey.DESTINATION_DEFINITION_NAME, true, null, "Sort by destination definition name ascending"),
