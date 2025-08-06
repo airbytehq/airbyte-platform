@@ -69,6 +69,7 @@ class RuntimeEnvVarFactoryTest {
     ffClient = mockk()
     every { ffClient.boolVariation(InjectAwsSecretsToConnectorPods, any()) } returns false
     every { ffClient.boolVariation(UseAllowCustomCode, any()) } returns false
+    every { ffClient.boolVariation(ReplicationDebugLogLevelEnabled, any()) } returns false
     airbyteEdition = AirbyteEdition.COMMUNITY
 
     factory =
@@ -78,6 +79,7 @@ class RuntimeEnvVarFactoryTest {
           stagingMountPath,
           CONTAINER_ORCH_JAVA_OPTS,
           false,
+          "info",
           connectorApmSupportHelper,
           ffClient,
           airbyteEdition,
@@ -211,6 +213,7 @@ class RuntimeEnvVarFactoryTest {
           stagingMountPath,
           CONTAINER_ORCH_JAVA_OPTS,
           false,
+          "info",
           connectorApmSupportHelper,
           ffClient,
           airbyteEdition,
@@ -322,7 +325,7 @@ class RuntimeEnvVarFactoryTest {
     every { factory.getMetadataEnvVars(any()) } returns metadataEnvVars
     every { factory.getResourceEnvVars(any()) } returns resourceEnvVars
     every { factory.getDeclarativeCustomCodeSupportEnvVars(any()) } returns customCodeEnvVars
-    every { factory.getReplicationDebugLogLevelEnabledEnvVars(any()) } returns debugLogLevelEnvVars
+    every { factory.getLogLevelEnvVars(any()) } returns debugLogLevelEnvVars
 
     val config =
       IntegrationLauncherConfig()
@@ -420,6 +423,7 @@ class RuntimeEnvVarFactoryTest {
           stagingMountPath,
           CONTAINER_ORCH_JAVA_OPTS,
           globalOverride,
+          "info",
           connectorApmSupportHelper,
           ffClient,
           airbyteEdition,
@@ -444,6 +448,7 @@ class RuntimeEnvVarFactoryTest {
   ) {
     every { ffClient.stringVariation(ContainerOrchestratorJavaOpts, any()) } returns optsOverride
     every { ffClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns useRuntimeSecretPersistence
+    val connectionId = UUID.randomUUID()
     val jobRunConfig =
       JobRunConfig()
         .withJobId("2324")
@@ -451,9 +456,9 @@ class RuntimeEnvVarFactoryTest {
     val input =
       ReplicationInput()
         .withJobRunConfig(jobRunConfig)
-        .withConnectionId(UUID.randomUUID())
+        .withConnectionId(connectionId)
         .withUseFileTransfer(useFileTransfer)
-        .withConnectionContext(ConnectionContext().withOrganizationId(UUID.randomUUID()))
+        .withConnectionContext(ConnectionContext().withOrganizationId(UUID.randomUUID()).withWorkspaceId(workspaceId).withConnectionId(connectionId))
         .withSourceLauncherConfig(IntegrationLauncherConfig().withWorkspaceId(workspaceId))
     val result = factory.orchestratorEnvVars(input, WORKLOAD_ID)
 
@@ -468,6 +473,7 @@ class RuntimeEnvVarFactoryTest {
         EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, expectedOpts, null),
         EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
         EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, useRuntimeSecretPersistence.toString(), null),
+        EnvVar(EnvVarConstants.LOG_LEVEL, "info", null),
       ),
       result,
     )
@@ -478,22 +484,25 @@ class RuntimeEnvVarFactoryTest {
     val context = Workspace(workspaceId)
     every { ffClient.boolVariation(ReplicationDebugLogLevelEnabled, context) } returns true
 
-    val result = factory.getReplicationDebugLogLevelEnabledEnvVars(context)
+    val result = factory.getLogLevelEnvVars(context)
 
     assertEquals(
-      listOf(EnvVar(EnvVarConstants.LOG_LEVEL, "DEBUG", null)),
+      listOf(EnvVar(EnvVarConstants.LOG_LEVEL, "debug", null)),
       result,
     )
   }
 
   @Test
-  fun `returns empty list when debug log level feature flag is disabled`() {
+  fun `returns list with default log level when debug log level feature flag is disabled`() {
     val context = Workspace(workspaceId)
     every { ffClient.boolVariation(ReplicationDebugLogLevelEnabled, context) } returns false
 
-    val result = factory.getReplicationDebugLogLevelEnabledEnvVars(context)
+    val result = factory.getLogLevelEnvVars(context)
 
-    assertTrue(result.isEmpty())
+    assertEquals(
+      listOf(EnvVar(EnvVarConstants.LOG_LEVEL, "info", null)),
+      result,
+    )
   }
 
   object Fixtures {

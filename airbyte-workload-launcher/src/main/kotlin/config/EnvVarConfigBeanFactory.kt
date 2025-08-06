@@ -5,7 +5,6 @@
 package io.airbyte.workload.launcher.config
 
 import io.airbyte.commons.envvar.EnvVar.CLOUD_STORAGE_APPENDER_THREADS
-import io.airbyte.commons.envvar.EnvVar.LOG_LEVEL
 import io.airbyte.commons.envvar.EnvVar.S3_PATH_STYLE_ACCESS
 import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.commons.storage.StorageConfig
@@ -163,12 +162,13 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("loggingEnvVars")
   fun loggingEnvVars(
-    @Value("\${airbyte.logging.log-level}") logLevel: String,
     @Value("\${airbyte.logging.s3-path-style-access}") s3PathStyleAccess: String,
   ): Map<String, String> =
     mapOf(
       CLOUD_STORAGE_APPENDER_THREADS.name to "1",
-      LOG_LEVEL.name to logLevel,
+      // We specifically do not set the log level here anymore since this would prevent us from
+      // overriding it later in RuntimeEnvVarFactory. We need to be able to set it there to ensure that
+      // we are able to dynamically change the level based on a feature flag
       S3_PATH_STYLE_ACCESS.name to s3PathStyleAccess,
     )
 

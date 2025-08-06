@@ -58,6 +58,7 @@ class RuntimeEnvVarFactory(
   @Value("\${airbyte.worker.job.kube.volumes.staging.mount-path}") private val stagingMountPath: String,
   @Value("\${airbyte.container.orchestrator.java-opts}") private val containerOrchestratorJavaOpts: String,
   @Value("\${airbyte.container.orchestrator.enable-unsafe-code}") private val enableUnsafeCodeGlobalOverride: Boolean,
+  @Value("\${airbyte.logging.log-level}") private val logLevel: String,
   private val connectorApmSupportHelper: ConnectorApmSupportHelper,
   private val featureFlagClient: FeatureFlagClient,
   private val airbyteEdition: Configs.AirbyteEdition,
@@ -72,6 +73,10 @@ class RuntimeEnvVarFactory(
     val useFileTransferEnvVar =
       replicationInput.useFileTransfer == true &&
         (replicationInput.omitFileTransferEnvVar == null || replicationInput.omitFileTransferEnvVar == false)
+    val logLevelEnvVars =
+      getLogLevelEnvVars(
+        Multi(listOf(Workspace(replicationInput.connectionContext.workspaceId), Connection(replicationInput.connectionContext.connectionId))),
+      )
 
     return listOf(
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
@@ -82,7 +87,7 @@ class RuntimeEnvVarFactory(
       EnvVar(EnvVarConstants.USE_FILE_TRANSFER, useFileTransferEnvVar.toString(), null),
       EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, javaOpts, null),
       EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
-    ) + secretPersistenceEnvVars
+    ) + secretPersistenceEnvVars + logLevelEnvVars
   }
 
   fun replicationConnectorEnvVars(
@@ -97,11 +102,11 @@ class RuntimeEnvVarFactory(
     val resourceEnvVars = getResourceEnvVars(resourceReqs)
     val customCodeEnvVars = getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId))
     val configPassThroughEnv = launcherConfig.additionalEnvironmentVariables?.toEnvVarList().orEmpty()
-    val debugLogLevelEnvVars =
-      getReplicationDebugLogLevelEnabledEnvVars(Multi(listOf(Workspace(launcherConfig.workspaceId), Connection(launcherConfig.connectionId))))
+    val logLevelEnvVars =
+      getLogLevelEnvVars(Multi(listOf(Workspace(launcherConfig.workspaceId), Connection(launcherConfig.connectionId))))
 
     return awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + configPassThroughEnv + customCodeEnvVars +
-      debugLogLevelEnvVars
+      logLevelEnvVars
   }
 
   // TODO: Separate env factory methods per container (init, sidecar, main, etc.)
@@ -154,13 +159,13 @@ class RuntimeEnvVarFactory(
   }
 
   @InternalForTesting
-  internal fun getReplicationDebugLogLevelEnabledEnvVars(context: Context): List<EnvVar> {
+  internal fun getLogLevelEnvVars(context: Context): List<EnvVar> {
     val replicationDebugLogLevelEnabled = featureFlagClient.boolVariation(ReplicationDebugLogLevelEnabled, context)
 
     return if (replicationDebugLogLevelEnabled) {
-      listOf(EnvVar(EnvVarConstants.LOG_LEVEL, "DEBUG", null))
+      listOf(EnvVar(EnvVarConstants.LOG_LEVEL, "debug", null))
     } else {
-      emptyList()
+      listOf(EnvVar(EnvVarConstants.LOG_LEVEL, logLevel, null))
     }
   }
 
