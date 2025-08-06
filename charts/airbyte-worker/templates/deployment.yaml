@@ -89,6 +89,12 @@ spec:
         {{- end }}
         {{- include "airbyte.logging.envs" . | nindent 8 }}
 
+        - name: AB_JWT_SIGNATURE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+              key: {{ .Values.global.auth.jwtSignatureSecretKey | default "jwt-signature-secret" | quote }}
+
         - name: MICROMETER_METRICS_ENABLED
           valueFrom:
             configMapKeyRef:
