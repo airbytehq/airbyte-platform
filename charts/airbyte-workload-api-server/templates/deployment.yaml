@@ -78,11 +78,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: INTERNAL_API_HOST
-        - name: INTERNAL_API_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
-              key: {{ .Values.global.auth.internalApiTokenSecretKey | default "internal-api-token" | quote }}
         - name: AIRBYTE_API_HOST
           valueFrom:
             configMapKeyRef:

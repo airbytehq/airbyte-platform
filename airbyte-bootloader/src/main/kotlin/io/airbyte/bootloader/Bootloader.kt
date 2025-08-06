@@ -55,7 +55,6 @@ class Bootloader(
   val airbyteEdition: AirbyteEdition,
   private val authSecretInitializer: AuthKubernetesSecretInitializer?,
   private val secretStorageInitializer: SecretStorageInitializer,
-  private val internalApiTokenInitializer: InternalApiTokenInitializer,
 ) {
   /**
    * Performs all required bootstrapping for the Airbyte environment. This includes the following:
@@ -108,9 +107,6 @@ class Bootloader(
 
     log.info { "Initializing default secret storage..." }
     secretStorageInitializer.createOrUpdateDefaultSecretStorage()
-
-    log.info { "Initializing internal api token..." }
-    internalApiTokenInitializer.initializeInternalClientToken()
 
     val airbyteVersion = currentAirbyteVersion.serialize()
     log.info { "Setting Airbyte version to '$airbyteVersion'" }

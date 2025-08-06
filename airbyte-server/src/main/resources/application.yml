@@ -429,7 +429,7 @@ airbyte:
 
   connector-builder-server-api:
     base-path: ${CONNECTOR_BUILDER_SERVER_API_HOST:}
-    token: ${INTERNAL_API_TOKEN}
+    signature-secret: ${AB_JWT_SIGNATURE_SECRET:}
     connect-timeout-seconds: ${CONNECTOR_BUILDER_SERVER_API_CONNECT_TIMEOUT_SECONDS:30}
     read-timeout-seconds: ${CONNECTOR_BUILDER_SERVER_API_READ_TIMEOUT_SECONDS:300}
 

@@ -107,8 +107,8 @@ airbyte:
       delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
       max: ${AIRBYTE_API_MAX_RETRIES:5}
     auth:
-      type: STATIC_TOKEN
-      token: ${INTERNAL_API_TOKEN:}
+      type: INTERNAL_CLIENT_TOKEN
+      signature-secret: ${AB_JWT_SIGNATURE_SECRET:}
   notification:
     customerio:
       apikey: ${CUSTOMERIO_API_KEY:}

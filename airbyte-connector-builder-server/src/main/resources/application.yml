@@ -26,6 +26,14 @@ micronaut:
   security:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
+    token:
+      enabled: ${API_AUTHORIZATION_ENABLED:false}
+      jwt:
+        enabled: ${API_AUTHORIZATION_ENABLED:false}
+        signatures:
+          secret:
+            generator:
+              secret: ${AB_JWT_SIGNATURE_SECRET:}
   server:
     port: 8080
     cors:

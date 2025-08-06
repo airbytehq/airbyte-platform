@@ -89,12 +89,6 @@ spec:
         {{- end }}
         {{- include "airbyte.logging.envs" . | nindent 8 }}
 
-        - name: INTERNAL_API_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
-              key: {{ .Values.global.auth.internalApiTokenSecretKey | default "internal-api-token" | quote }}
-
         - name: MICROMETER_METRICS_ENABLED
           valueFrom:
             configMapKeyRef:

@@ -6,8 +6,8 @@ package io.airbyte.api.client.config
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.auth.AccessTokenInterceptor
+import io.airbyte.api.client.auth.InternalClientTokenInterceptor
 import io.airbyte.api.client.auth.KeycloakAccessTokenInterceptor
-import io.airbyte.api.client.auth.StaticTokenInterceptor
 import io.airbyte.api.client.config.ClientConfigurationSupport.generateDefaultRetryPolicy
 import io.airbyte.api.client.interceptor.ThrowOn5xxInterceptor
 import io.airbyte.api.client.interceptor.UserAgentInterceptor
@@ -37,7 +37,7 @@ data class InternalApiClientConfig(
   enum class AuthType {
     DATAPLANE_ACCESS_TOKEN,
     KEYCLOAK_ACCESS_TOKEN,
-    STATIC_TOKEN,
+    INTERNAL_CLIENT_TOKEN,
   }
 
   @ConfigurationProperties("auth")
@@ -47,6 +47,7 @@ data class InternalApiClientConfig(
     val clientSecret: String?,
     val tokenEndpoint: String?,
     val token: String?,
+    val signatureSecret: String?,
   )
 
   @ConfigurationProperties("retries")
@@ -97,11 +98,8 @@ class ApiClientSupportFactory(
             InternalApiClientConfig.AuthType.KEYCLOAK_ACCESS_TOKEN -> {
               addInterceptor(keycloakAccessTokenInterceptor!!)
             }
-            InternalApiClientConfig.AuthType.STATIC_TOKEN -> {
-              if (config.auth.token.isNullOrBlank()) {
-                throw Exception("setting up static auth interceptor: token is null or blank")
-              }
-              addInterceptor(StaticTokenInterceptor(config.auth.token))
+            InternalApiClientConfig.AuthType.INTERNAL_CLIENT_TOKEN -> {
+              addInterceptor(InternalClientTokenInterceptor(applicationName, config.auth.signatureSecret))
             }
           }
 

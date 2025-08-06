@@ -64,7 +64,7 @@ spec:
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.worker.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end}}
 
-        {{- include "airbyte.auth.internalApi.envs" . | nindent 8 }}
+        {{- include "airbyte.auth.jwt.envs" . | nindent 8 }}
         {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
