@@ -67,6 +67,12 @@ describe(`${createSyncCatalogFromFormValues.name}`, () => {
             ],
             mappers: [
               {
+                type: "field-filtering",
+                mapperConfiguration: {
+                  targetField: "created_at",
+                },
+              },
+              {
                 type: "field-renaming",
                 mapperConfiguration: {
                   newFieldName: "dest_name",
@@ -291,6 +297,118 @@ describe(`${createSyncCatalogFromFormValues.name}`, () => {
         mapperConfiguration: {
           originalFieldName: "source_field",
           newFieldName: "destination_field",
+        },
+      },
+    ]);
+  });
+
+  it("should add field filtering mapper for cursor field when cursor is not mapped to destination field", () => {
+    if (!mockSourceDiscoverSchemaRead.catalog) {
+      throw new Error("This test relies on the mock source discover catalog being defined");
+    }
+    const mappedStreams: DataActivationConnectionFormOutput = {
+      streams: [
+        {
+          sourceStreamDescriptor: {
+            name: "test_stream",
+            namespace: "test_namespace",
+          },
+          destinationObjectName: "destination_stream_1",
+          sourceSyncMode: SyncMode.incremental,
+          destinationSyncMode: DestinationSyncMode.append_dedup,
+          fields: [
+            { sourceFieldName: "name", destinationFieldName: "dest_name", additionalMappers: [] },
+            { sourceFieldName: "id", destinationFieldName: "dest_id", additionalMappers: [] },
+          ],
+          cursorField: "created_at",
+          matchingKeys: ["dest_id"],
+        },
+      ],
+    };
+    const result = createSyncCatalogFromFormValues(mappedStreams, mockSourceDiscoverSchemaRead.catalog);
+
+    const mappers = result.streams[0].config?.mappers;
+    expect(mappers).toHaveLength(3);
+
+    // Should have field filtering mapper for cursor field
+    expect(mappers?.[0]).toEqual({
+      type: StreamMapperType["field-filtering"],
+      mapperConfiguration: {
+        targetField: "created_at",
+      },
+    });
+
+    // Should have field renaming mappers for the other fields
+    expect(mappers?.[1]).toEqual({
+      type: StreamMapperType["field-renaming"],
+      mapperConfiguration: {
+        newFieldName: "dest_name",
+        originalFieldName: "name",
+      },
+    });
+
+    expect(mappers?.[2]).toEqual({
+      type: StreamMapperType["field-renaming"],
+      mapperConfiguration: {
+        newFieldName: "dest_id",
+        originalFieldName: "id",
+      },
+    });
+  });
+
+  it("should NOT add field filtering mapper for cursor field when cursor IS mapped to destination field", () => {
+    if (!mockSourceDiscoverSchemaRead.catalog) {
+      throw new Error("This test relies on the mock source discover catalog being defined");
+    }
+    const mappedStreams: DataActivationConnectionFormOutput = {
+      streams: [
+        {
+          sourceStreamDescriptor: {
+            name: "test_stream",
+            namespace: "test_namespace",
+          },
+          destinationObjectName: "destination_stream_1",
+          sourceSyncMode: SyncMode.incremental,
+          destinationSyncMode: DestinationSyncMode.append_dedup,
+          fields: [
+            { sourceFieldName: "name", destinationFieldName: "dest_name", additionalMappers: [] },
+            { sourceFieldName: "id", destinationFieldName: "dest_id", additionalMappers: [] },
+            { sourceFieldName: "created_at", destinationFieldName: "dest_created_at", additionalMappers: [] },
+          ],
+          cursorField: "created_at",
+          matchingKeys: ["dest_id"],
+        },
+      ],
+    };
+    const result = createSyncCatalogFromFormValues(mappedStreams, mockSourceDiscoverSchemaRead.catalog);
+
+    const mappers = result.streams[0].config?.mappers;
+    expect(mappers).toHaveLength(3);
+
+    // Should NOT have field filtering mapper for cursor field since it's mapped
+    expect(mappers?.every((mapper) => mapper.type !== StreamMapperType["field-filtering"])).toBe(true);
+
+    // Should have field renaming mappers for all fields including cursor
+    expect(mappers).toEqual([
+      {
+        type: StreamMapperType["field-renaming"],
+        mapperConfiguration: {
+          newFieldName: "dest_name",
+          originalFieldName: "name",
+        },
+      },
+      {
+        type: StreamMapperType["field-renaming"],
+        mapperConfiguration: {
+          newFieldName: "dest_id",
+          originalFieldName: "id",
+        },
+      },
+      {
+        type: StreamMapperType["field-renaming"],
+        mapperConfiguration: {
+          newFieldName: "dest_created_at",
+          originalFieldName: "created_at",
         },
       },
     ]);

@@ -24,6 +24,8 @@ export function createSyncCatalogFromFormValues(
           throw new Error("Stream or stream config is unexpectedly undefined");
         }
 
+        const mappers: ConfiguredStreamMapper[] = [];
+
         const mappedStream = mappedStreams.streams.find(
           (s) =>
             s.sourceStreamDescriptor.name === stream.stream?.name &&
@@ -55,13 +57,32 @@ export function createSyncCatalogFromFormValues(
             }
           });
         }
-
         const cursorField = mappedStream.sourceSyncMode === "incremental" ? [mappedStream.cursorField] : undefined;
         if (cursorField) {
           selectedFields.push({
             fieldPath: cursorField,
           });
+
+          // If the cursor field is not mapped to a destination field, we need to add a field filtering mapper to remove
+          // it from the catalog. This is necessary because the cursor field MUST be part of selectedFields for some
+          // sources to work, but it will cause an error in DA destinations if it is not mapped to a destination field.
+          const cursorFieldName = cursorField[0];
+
+          // If another mapper already maps the cursor to a destination field, we do not want to filter it out of the catalog
+          const isCursorMapped = mappedStream.fields.some((field) => field.sourceFieldName === cursorFieldName);
+
+          if (!isCursorMapped) {
+            mappers.push({
+              type: StreamMapperType["field-filtering"],
+              mapperConfiguration: {
+                targetField: cursorFieldName,
+              },
+            });
+          }
         }
+
+        // Add all other mappers from the mapped stream
+        mappers.push(...createMappers(mappedStream.fields));
 
         return {
           config: {
@@ -71,7 +92,7 @@ export function createSyncCatalogFromFormValues(
             primaryKey,
             cursorField,
             syncMode: mappedStream.sourceSyncMode ?? stream.config?.syncMode ?? "full_refresh",
-            mappers: createMappers(mappedStream.fields) ?? stream.config?.mappers,
+            mappers,
             selected: true,
             selectedFields: selectedFields.length ? selectedFields : undefined,
             fieldSelectionEnabled: selectedFields.length > 0,
