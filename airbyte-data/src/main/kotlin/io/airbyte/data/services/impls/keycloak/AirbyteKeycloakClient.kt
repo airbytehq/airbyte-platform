@@ -68,24 +68,14 @@ class AirbyteKeycloakClient(
     val idp =
       IdentityProviderRepresentation().apply {
         alias = DEFAULT_IDP_ALIAS
-        displayName = "${request.companyIdentifier} OIDC Login"
         providerId = "oidc"
         config =
           mapOf(
             "clientId" to request.clientId,
             "clientSecret" to request.clientSecret,
-            "useJwksUrl" to "true",
-            "jwksUrl" to idpDiscoveryResult["jwksUrl"],
-            "issuer" to idpDiscoveryResult["issuer"],
             "authorizationUrl" to idpDiscoveryResult["authorizationUrl"],
-            "logoutUrl" to idpDiscoveryResult["logoutUrl"],
             "tokenUrl" to idpDiscoveryResult["tokenUrl"],
-            "metadataDescriptorUrl" to idpDiscoveryResult["metadataDescriptorUrl"],
-            "userInfoUrl" to idpDiscoveryResult["userInfoUrl"],
-            "validateSignature" to idpDiscoveryResult["validateSignature"],
             "clientAuthMethod" to CLIENT_AUTH_METHOD,
-            "pkceEnabled" to "false",
-            "clientAssertionSigningAlg" to "",
           )
       }
     createIdpForRealm(request.companyIdentifier, idp)
@@ -154,8 +144,8 @@ class AirbyteKeycloakClient(
     realmName: String,
     idp: IdentityProviderRepresentation,
   ) {
-    // remove the clientSecret field to avoid leaking secrets by accident
-    logger.info { "Create IDP request: ${idp.apply { config.remove("clientSecret") } }" }
+    val idpStringRep = convertIdpToString(idp)
+    logger.info { "Create IDP request: $idpStringRep" }
 
     try {
       val response =
@@ -167,7 +157,7 @@ class AirbyteKeycloakClient(
 
       logger.info { "Created IDP response status: ${response.status}" }
       logger.info { "Created IDP response status info: ${response.statusInfo}" }
-      logger.info { "Created IDP response status entity: ${response.entity}" }
+      logger.info { "Created IDP response status entity: ${response.readEntity(String::class.java)}" }
       logger.info { "Created IDP response status string: ${response.statusInfo.reasonPhrase}" }
 
       if (response.statusInfo.family != Response.Status.Family.SUCCESSFUL) {
@@ -226,6 +216,16 @@ class AirbyteKeycloakClient(
       .get(DEFAULT_IDP_ALIAS)
       .update(currentIdpRepresentation)
   }
+
+  private fun convertIdpToString(idp: IdentityProviderRepresentation): String =
+    """
+    providerId=${idp.providerId},
+    alias=${idp.alias},
+    clientId=${idp.config["clientId"]},
+    authorizationUrl=${idp.config["authorizationUrl"]},
+    tokenUrl=${idp.config["tokenUrl"]},
+    clientAuthMethod=${idp.config["clientAuthMethod"]},
+    """.trimIndent()
 
   companion object {
     private const val AIRBYTE_LOGIN_THEME = "airbyte-keycloak-theme"
