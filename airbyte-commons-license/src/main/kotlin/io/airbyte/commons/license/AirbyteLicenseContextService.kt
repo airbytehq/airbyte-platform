@@ -5,14 +5,9 @@
 package io.airbyte.commons.license
 
 import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled
-import io.micronaut.context.annotation.Context
+import jakarta.inject.Singleton
 
-/**
- * Service that establishes the active Airbyte License. This is annotated with @Context so that it
- * occurs during application initialization, so that the license is available for downstream beans
- * to conditionally activate.
- */
-@Context
+@Singleton
 @RequiresAirbyteProEnabled
 class AirbyteLicenseContextService(
   licenseReader: AirbyteLicenseReader,
