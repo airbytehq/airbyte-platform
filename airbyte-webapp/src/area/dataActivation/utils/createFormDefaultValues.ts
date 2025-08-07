@@ -31,8 +31,7 @@ export const createFormDefaultValues = (syncCatalog: AirbyteCatalog): DataActiva
         if (!stream.config) {
           throw new Error("Stream config is undefined");
         }
-        // Binding to a block scoped variable to help typescript understand that stream.config is defined
-        const config = stream.config;
+
         return {
           sourceStreamDescriptor: {
             name: stream.stream.name,
@@ -41,19 +40,8 @@ export const createFormDefaultValues = (syncCatalog: AirbyteCatalog): DataActiva
           destinationObjectName: stream.config.destinationObjectName || "",
           sourceSyncMode: stream.config.syncMode,
           destinationSyncMode: stream.config.destinationSyncMode,
-          fields: inferFieldsFromConfig(stream.config),
-          // matchingKeys refers to the destinaiton field names, but primaryKey refers to the source field names. We
-          // need to check the content of the renaming mappers to construct the matchingKeys array from the persisted
-          // primaryKey.
-          matchingKeys:
-            stream.config.mappers && stream.config.primaryKey !== undefined
-              ? stream.config.mappers
-                  .filter(isFieldRenamingMapper)
-                  .filter((mapper) => {
-                    return config.primaryKey?.flat().includes(mapper.mapperConfiguration.originalFieldName);
-                  })
-                  .map((mapper) => mapper.mapperConfiguration.newFieldName)
-              : null,
+          fields: getFieldsFromConfig(stream.config),
+          matchingKeys: getMatchingKeysFromConfig(stream.config),
           cursorField: stream.config.cursorField ? stream.config.cursorField[0] || null : null,
         };
       }),
@@ -106,7 +94,7 @@ const encryptionMapper = z.object({
   } satisfies ToZodSchema<EncryptionMapperRSAConfiguration>),
 });
 
-function inferFieldsFromConfig(config: AirbyteStreamConfiguration): DataActivationField[] {
+function getFieldsFromConfig(config: AirbyteStreamConfiguration): DataActivationField[] {
   const persistedMappers = config.mappers;
   if (!persistedMappers) {
     return [];
@@ -207,3 +195,38 @@ export const EMPTY_STREAM: DataActivationStream = {
   matchingKeys: null,
   cursorField: null,
 };
+
+// We use the primaryKey to persist matchingKeys in a connection. However, the matchingKeys refers to destination field
+// names, and the primaryKey refers to source field names. This function derives the matchingKeys from the primaryKey,
+// ensuring that every primaryKey field also has a corresponding field renaming mapper in the config.
+export function getMatchingKeysFromConfig(config: AirbyteStreamConfiguration): string[] | null {
+  if (!config.mappers || !config.primaryKey) {
+    return null;
+  }
+
+  const fieldRenamingMappers = config.mappers.filter(isFieldRenamingMapper);
+
+  const primaryKeyFields = config.primaryKey.flat();
+
+  if (primaryKeyFields.length === 0) {
+    return null;
+  }
+
+  // Check that every primaryKey field has a corresponding field renaming mapper
+  const allFieldsHaveMapper = primaryKeyFields.every((pkField) =>
+    fieldRenamingMappers.some((mapper) => mapper.mapperConfiguration.originalFieldName === pkField)
+  );
+
+  // This would indicate a malformed config where we set a primaryKey but did not map all the fields to the destination.
+  if (!allFieldsHaveMapper) {
+    return null;
+  }
+
+  // Map each primaryKey field to its newFieldName, which corresponds to the matchingKeys
+  return primaryKeyFields
+    .map((pkField) => {
+      const mapper = fieldRenamingMappers.find((mapper) => mapper.mapperConfiguration.originalFieldName === pkField);
+      return mapper?.mapperConfiguration.newFieldName;
+    })
+    .filter(isNonNullable);
+}

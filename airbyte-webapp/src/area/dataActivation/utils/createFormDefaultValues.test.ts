@@ -1,6 +1,6 @@
-import { AirbyteCatalog, StreamMapperType } from "core/api/types/AirbyteClient";
+import { AirbyteCatalog, AirbyteStreamConfiguration, StreamMapperType } from "core/api/types/AirbyteClient";
 
-import { createFormDefaultValues } from "./createFormDefaultValues";
+import { createFormDefaultValues, getMatchingKeysFromConfig } from "./createFormDefaultValues";
 
 const MOCK_RSA_PUBLIC_KEY =
   "30820122300d06092a864886f70d01010105000382010f003082010a0282010100cabb23666f3c430417a9b6455c246189c282248fad5acc5c405d20e97c0c2dde125e16a5baa249e3400f286d7142e94d92d0a0d2bffaa6c3dfa6b87cc24fe93125ac5f8646cb37ef823732aa5bdc0ee2770f091c1a0c51ad7e01744133cb43604898ac452e90fd3457436889de6d6f14773154f35a0ee7e22b9432fe3afec52736a0c6a2702b4251ace0d8e2b805ae0714703b8db5ddeff297c7b16e56f4c15709b5140c2415c23c850d38b989317037df753fa89321c73b440c9425ccebf3520b121b135750bb727d998157f29f9c93939b39656cf95782938786d66e9e6be99ccf6f55af055889fe601ade7066d9a7ea04ee7ef266693954e9f216568f0e5f0203010001";
@@ -349,6 +349,95 @@ describe(`${createFormDefaultValues.name}`, () => {
       ],
     };
     expect(createFormDefaultValues(syncCatalogWithEncryptionMapper)).toEqual(expectedDefaultValues);
+  });
+});
+
+describe(`${getMatchingKeysFromConfig.name}`, () => {
+  it("should return primaryKey as matchingKeys if it is populated", () => {
+    const config: AirbyteStreamConfiguration = {
+      mappers: [
+        {
+          type: "field-renaming",
+          mapperConfiguration: {
+            originalFieldName: "source-pk",
+            newFieldName: "destination-matching-key",
+          },
+        },
+      ],
+      primaryKey: [["source-pk"]],
+      syncMode: "full_refresh",
+      destinationSyncMode: "append",
+    };
+
+    expect(getMatchingKeysFromConfig(config)).toEqual(["destination-matching-key"]);
+  });
+
+  it("should return composite primaryKey as multiple matchingKeys if populated", () => {
+    const config: AirbyteStreamConfiguration = {
+      mappers: [
+        {
+          type: "field-renaming",
+          mapperConfiguration: {
+            originalFieldName: "source-pk",
+            newFieldName: "destination-matching-key",
+          },
+        },
+        {
+          type: "field-renaming",
+          mapperConfiguration: {
+            originalFieldName: "source-pk2",
+            newFieldName: "destination-matching-key2",
+          },
+        },
+      ],
+      primaryKey: [["source-pk"], ["source-pk2"]],
+      syncMode: "full_refresh",
+      destinationSyncMode: "append",
+    };
+
+    expect(getMatchingKeysFromConfig(config)).toEqual(["destination-matching-key", "destination-matching-key2"]);
+  });
+
+  it("should return null if not all primaryKey fields have corresponding mappers", () => {
+    const config: AirbyteStreamConfiguration = {
+      mappers: [
+        {
+          type: "field-renaming",
+          mapperConfiguration: {
+            originalFieldName: "source-pk",
+            newFieldName: "destination-matching-key",
+          },
+        },
+      ],
+      primaryKey: [["source-pk"], ["source-pk2"]],
+      syncMode: "full_refresh",
+      destinationSyncMode: "append",
+    };
+    // In this case, the primary key has been selected, but the fields have not been fully mapped, so we fall back to
+    // null, forcing the user to fix the issue in the UI.
+    expect(getMatchingKeysFromConfig(config)).toBeNull();
+  });
+
+  it("should return null if primaryKey is not defined", () => {
+    const config: AirbyteStreamConfiguration = {
+      mappers: [],
+      primaryKey: undefined,
+      syncMode: "full_refresh",
+      destinationSyncMode: "append",
+    };
+
+    expect(getMatchingKeysFromConfig(config)).toBeNull();
+  });
+
+  it("should return null if primaryKey is empty", () => {
+    const config: AirbyteStreamConfiguration = {
+      mappers: [],
+      primaryKey: [],
+      syncMode: "full_refresh",
+      destinationSyncMode: "append",
+    };
+
+    expect(getMatchingKeysFromConfig(config)).toBeNull();
   });
 });
 
