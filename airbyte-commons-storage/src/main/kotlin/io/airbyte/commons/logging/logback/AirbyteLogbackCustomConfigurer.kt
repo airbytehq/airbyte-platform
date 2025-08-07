@@ -14,6 +14,7 @@ import ch.qos.logback.core.ConsoleAppender
 import ch.qos.logback.core.Context
 import ch.qos.logback.core.Layout
 import ch.qos.logback.core.boolex.EventEvaluator
+import ch.qos.logback.core.boolex.EventEvaluatorBase
 import ch.qos.logback.core.encoder.Encoder
 import ch.qos.logback.core.encoder.LayoutWrappingEncoder
 import ch.qos.logback.core.filter.EvaluatorFilter
@@ -27,6 +28,8 @@ import ch.qos.logback.core.util.StatusPrinter2
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.logging.DEFAULT_AUDIT_LOGGING_PATH_MDC_KEY
 import io.airbyte.commons.logging.DEFAULT_JOB_LOG_PATH_MDC_KEY
+import io.airbyte.commons.logging.LOG_SOURCE_MDC_KEY
+import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.storage.CloudStorageBulkUploaderExecutor
 import io.airbyte.commons.storage.DocumentType
 import org.slf4j.Logger.ROOT_LOGGER_NAME
@@ -53,6 +56,7 @@ class AirbyteLogbackCustomConfigurer :
       listOf(
         createPlatformAppender(loggerContext = loggerContext),
         createOperationsJobAppender(loggerContext = loggerContext),
+        createReplicationDumpAppender(loggerContext = loggerContext),
         createAuditLogAppender(loggerContext = loggerContext),
       )
 
@@ -72,7 +76,57 @@ class AirbyteLogbackCustomConfigurer :
   }
 
   /**
+   * Custom [EventEvaluator] that filters logging events based on log level thresholds.
+   * Events below the specified threshold level will be denied (filtered out).
+   */
+  class ThresholdEvaluator : EventEvaluatorBase<ILoggingEvent>() {
+    /**
+     * The minimum log level threshold. Events below this level will be filtered out.
+     */
+    var threshold: Level? = null
+
+    /**
+     * Evaluates whether a logging event should be denied based on its level.
+     *
+     * @param event The logging event to evaluate.
+     * @return `true` to deny the event (filter out), `false` to allow the event through.
+     */
+    override fun evaluate(event: ILoggingEvent): Boolean {
+      val thresholdLevel = threshold ?: return false
+      return event.level.levelInt < thresholdLevel.levelInt
+    }
+  }
+
+  /**
+   * Custom [EventEvaluator] that filters logging events based on ReplicationDebugLogLevelEnabled feature flag.
+   * Events are only allowed through when running in orchestrator mode AND debug level is enabled.
+   */
+  class ReplicationDebugEvaluator : EventEvaluatorBase<ILoggingEvent>() {
+    /**
+     * Evaluates whether a logging event should be denied.
+     *
+     * @param event The logging event to evaluate.
+     * @return `true` to deny the event (filter out), `false` to allow the event through.
+     */
+    override fun evaluate(event: ILoggingEvent): Boolean {
+      // Check if we're in replication orchestrator
+      val eventLogSource = event.mdcPropertyMap?.get(LOG_SOURCE_MDC_KEY)
+      if (eventLogSource != LogSource.REPLICATION_ORCHESTRATOR.displayName) {
+        return true // Deny if not replication orchestrator
+      }
+
+      // Check if the current logger context has DEBUG level enabled
+      val loggerContext = context as LoggerContext
+      val rootLogger = loggerContext.getLogger(ROOT_LOGGER_NAME)
+      val isDebugLevel = rootLogger.level == Level.DEBUG
+
+      return !isDebugLevel // Return true to DENY if not debug, false to ALLOW if debug
+    }
+  }
+
+  /**
    * Builds the appender for operations job log messages.  This appender logs all messages to remote storage.
+   * Only logs events at INFO level and above.
    *
    * @param loggerContext The logging context.
    * @return The operations job appender.
@@ -87,11 +141,61 @@ class AirbyteLogbackCustomConfigurer :
       )
     }
 
+    val thresholdEvaluator =
+      ThresholdEvaluator().apply {
+        context = loggerContext
+        threshold = Level.INFO
+        start()
+      }
+
     return createSiftingAppender(
       appenderFactory = appenderFactory,
       appenderName = CLOUD_OPERATIONS_JOB_LOGGER_NAME,
+      // Uses the same MDC KEY as job loggings
       contextKey = DEFAULT_JOB_LOG_PATH_MDC_KEY,
       loggerContext = loggerContext,
+      evaluators = listOf(thresholdEvaluator),
+    )
+  }
+
+  /**
+   * Builds the appender for replication job dumped messages. This appender logs all messages to remote storage,
+   * but only for events from the replication orchestrator log source. This specialized appender is used for
+   * debugging purposes to capture specific log events from replication jobs.
+   * Only logs events at DEBUG level and above.
+   *
+   * @param loggerContext The logging context.
+   * @return The replication job dump appender with log source filtering.
+   */
+  internal fun createReplicationDumpAppender(loggerContext: LoggerContext): Appender<ILoggingEvent> {
+    val appenderFactory = { context: Context, discriminatorValue: String ->
+      createCloudAppender(
+        context = context,
+        discriminatorValue = discriminatorValue,
+        documentType = DocumentType.REPLICATION_DUMP,
+        appenderName = CLOUD_REPLICATION_JOB_DUMPER_NAME,
+      )
+    }
+
+    val thresholdEvaluator =
+      ThresholdEvaluator().apply {
+        context = loggerContext
+        threshold = Level.DEBUG
+        start()
+      }
+
+    val replicationDebugEvaluator =
+      ReplicationDebugEvaluator().apply {
+        context = loggerContext
+        start()
+      }
+
+    return createSiftingAppender(
+      appenderFactory = appenderFactory,
+      appenderName = CLOUD_REPLICATION_JOB_DUMPER_NAME,
+      contextKey = DEFAULT_JOB_LOG_PATH_MDC_KEY,
+      loggerContext = loggerContext,
+      evaluators = listOf(thresholdEvaluator, replicationDebugEvaluator),
     )
   }
 
@@ -242,12 +346,14 @@ class AirbyteLogbackCustomConfigurer :
 
   /**
    * Builds a [SiftingAppender] that is invoked when the provided `contextKey` is present
-   * in the MDC.  Once created, the appender will expire after disuse to ensure proper cleanup.
+   * in the MDC. Once created, the appender will expire after disuse to ensure proper cleanup.
+   * Optionally accepts custom evaluators for additional filtering logic beyond MDC key presence.
    *
    * @param appenderFactory An [AppenderFactory] used to create an appender when the logging event matches the provided filter.
    * @param contextKey The key in the MDC that is used to filter logging events.
    * @param appenderName The name to apply to the appender.
    * @param loggerContext The logging context.
+   * @param evaluators Optional list of custom [EventEvaluator]s for additional filtering logic. If not provided, defaults to checking MDC key presence.
    * @return A [SiftingAppender] that creates dynamic appenders based on the value returned by a [Discriminator].
    */
   internal fun createSiftingAppender(
@@ -255,10 +361,9 @@ class AirbyteLogbackCustomConfigurer :
     contextKey: String,
     appenderName: String,
     loggerContext: LoggerContext,
+    evaluators: List<EventEvaluator<ILoggingEvent>> = emptyList(),
   ): SiftingAppender {
     val discriminator = createDiscriminator(contextKey = contextKey, loggerContext = loggerContext)
-    val evaluator = createEvaluator(contextKey = contextKey, loggerContext = loggerContext)
-    val filter = createFilter(evaluator = evaluator, loggerContext = loggerContext)
 
     return SiftingAppender().apply {
       setAppenderFactory(appenderFactory)
@@ -266,7 +371,19 @@ class AirbyteLogbackCustomConfigurer :
       this.discriminator = discriminator
       name = appenderName
       timeout = Duration.valueOf("$APPENDER_TIMEOUT minutes")
-      addFilter(filter)
+
+      // Add MDC key presence filter by default
+      if (evaluators.isEmpty()) {
+        addFilter(createFilter(evaluator = createEvaluator(contextKey = contextKey, loggerContext = loggerContext), loggerContext = loggerContext))
+      } else {
+        // Add MDC key presence filter first
+        addFilter(createFilter(evaluator = createEvaluator(contextKey = contextKey, loggerContext = loggerContext), loggerContext = loggerContext))
+        // Add all custom evaluator filters
+        evaluators.forEach { evaluator ->
+          addFilter(createFilter(evaluator = evaluator, loggerContext = loggerContext))
+        }
+      }
+
       start()
     }
   }
