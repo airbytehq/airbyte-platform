@@ -20,10 +20,10 @@ export const useFocusField = () => {
     }
 
     // First try to find an input element with right field path, then fall back to any element
-    let fieldToFocus = document.querySelector(`input[data-field-path="${focusPath}"]`);
-    if (!fieldToFocus) {
-      fieldToFocus = document.querySelector(`[data-field-path="${focusPath}"]`);
-    }
+    let fieldToFocus =
+      document.querySelector(`input[data-field-path="${focusPath}"]`) ??
+      document.querySelector(`[data-field-path="${focusPath}"] textarea`) ??
+      document.querySelector(`[data-field-path="${focusPath}"]`);
     if (!fieldToFocus) {
       // Check if path ends in .{number} and extract base path
       const basePathMatch = focusPath.match(/^(.+)\.\d+$/);

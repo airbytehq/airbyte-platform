@@ -88,7 +88,7 @@ export const useBuilderErrors = () => {
   const { trigger } = useFormContext<BuilderState>();
   const { errors } = useFormState<BuilderState>();
   const view = useBuilderWatch("view");
-  const { setValue, getValues } = useFormContext();
+  const { setValue, getValues, getFieldState } = useFormContext();
   const focusField = useFocusField();
 
   // Returns true if the react hook form has errors, and false otherwise.
@@ -127,8 +127,11 @@ export const useBuilderErrors = () => {
   );
 
   const getErrorPathAndView = useCallback(
-    (limitToViews?: BuilderView[]): { view: BuilderView; errorPath: string } | undefined => {
-      const builderViewToErrorPaths = getBuilderViewToErrorPaths(errors, getValues);
+    (
+      builderStateErrors: FieldErrors<BuilderState>,
+      limitToViews?: BuilderView[]
+    ): { view: BuilderView; errorPath: string } | undefined => {
+      const builderViewToErrorPaths = getBuilderViewToErrorPaths(builderStateErrors, getValues);
 
       // if already on a view with an error, scroll to the first erroring field
       if (
@@ -158,7 +161,7 @@ export const useBuilderErrors = () => {
 
       return undefined;
     },
-    [view, errors, getValues]
+    [view, getValues]
   );
 
   const highlightErrorField = useCallback(
@@ -179,7 +182,24 @@ export const useBuilderErrors = () => {
           return;
         }
 
-        const errorPathAndView = getErrorPathAndView(limitToViews);
+        // Errors must be explicitly retrieved here because after triggering validation,
+        // the `errors` returned by `useFormState` are stale, and aren't accurate until
+        // the next render.
+        const { error } = getFieldState("manifest");
+        if (!error) {
+          callback?.();
+          return;
+        }
+
+        // Must nest the error object under a "manifest" key in order
+        // to produce the correct full error paths
+        const builderStateErrors: FieldErrors<BuilderState> = {
+          manifest: {
+            ...error,
+          },
+        };
+
+        const errorPathAndView = getErrorPathAndView(builderStateErrors, limitToViews);
         if (errorPathAndView) {
           highlightErrorField(errorPathAndView.errorPath);
           return;
@@ -188,7 +208,7 @@ export const useBuilderErrors = () => {
         callback?.();
       });
     },
-    [trigger, getErrorPathAndView, highlightErrorField]
+    [trigger, getFieldState, getErrorPathAndView, highlightErrorField]
   );
 
   const getErrorPaths = useCallback(
