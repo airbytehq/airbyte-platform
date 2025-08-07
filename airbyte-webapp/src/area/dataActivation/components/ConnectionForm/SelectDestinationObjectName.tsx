@@ -1,15 +1,17 @@
-import { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { ConnectorIcon } from "components/ConnectorIcon";
 import { FormControlErrorMessage } from "components/forms/FormControl";
-import { ComboBox } from "components/ui/ComboBox";
 import { FlexContainer } from "components/ui/Flex";
 
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
-import { DestinationCatalog, DestinationRead, DestinationSyncMode } from "core/api/types/AirbyteClient";
+import { EMPTY_FIELD } from "area/dataActivation/utils";
+import { useSetDefaultValuesForDestinationOperation } from "area/dataActivation/utils/useSetDefaultValuesForDestinationOperation";
+import { DestinationCatalog, DestinationRead } from "core/api/types/AirbyteClient";
 
+import { DACombobox } from "./DACombobox";
 import styles from "./SelectDestinationObjectName.module.scss";
 
 interface SelectDestinationObjectNameProps {
@@ -17,14 +19,15 @@ interface SelectDestinationObjectNameProps {
   destinationCatalog: DestinationCatalog;
   streamIndex: number;
 }
-
 export const SelectDestinationObjectName: React.FC<SelectDestinationObjectNameProps> = ({
   destination,
   destinationCatalog,
   streamIndex,
 }) => {
   const { formatMessage } = useIntl();
-  const { control, setValue } = useFormContext<DataActivationConnectionFormValues>();
+  const { control, getValues, setValue } = useFormContext<DataActivationConnectionFormValues>();
+
+  const setDefaultValuesForDestinationOperation = useSetDefaultValuesForDestinationOperation();
 
   const destinationObjectNameOptions = useMemo(() => {
     const destinationObjectNames = new Set(destinationCatalog.operations.map((operation) => operation.objectName));
@@ -38,16 +41,24 @@ export const SelectDestinationObjectName: React.FC<SelectDestinationObjectNamePr
       });
   }, [destinationCatalog]);
 
-  const syncModesByObjectName = useMemo(() => {
-    const map = new Map<string, Set<DestinationSyncMode>>();
-    destinationCatalog.operations.forEach((operation) => {
-      if (!map.has(operation.objectName)) {
-        map.set(operation.objectName, new Set<DestinationSyncMode>());
-      }
-      map.get(operation.objectName)?.add(operation.syncMode);
-    });
-    return map;
-  }, [destinationCatalog]);
+  const resetFormValues = useCallback(() => {
+    const destinationObjectName = getValues(`streams.${streamIndex}.destinationObjectName`);
+
+    const availableOperations = destinationCatalog.operations.filter(
+      (operation) => operation.objectName === destinationObjectName
+    );
+
+    // Auto-select the sync mode if there is only one operation available
+    if (availableOperations.length === 1) {
+      setValue(`streams.${streamIndex}.destinationSyncMode`, availableOperations[0].syncMode);
+      setDefaultValuesForDestinationOperation(availableOperations[0], streamIndex);
+    } else {
+      // Multiple operations are available, so reset everything and make the user choose one
+      setValue(`streams.${streamIndex}.destinationSyncMode`, null);
+      setValue(`streams.${streamIndex}.matchingKeys`, null);
+      setValue(`streams.${streamIndex}.fields`, [EMPTY_FIELD]);
+    }
+  }, [destinationCatalog.operations, getValues, setDefaultValuesForDestinationOperation, setValue, streamIndex]);
 
   return (
     <div className={styles.selectDestinationObjectName}>
@@ -56,27 +67,24 @@ export const SelectDestinationObjectName: React.FC<SelectDestinationObjectNamePr
         control={control}
         render={({ field, fieldState }) => (
           <FlexContainer direction="column" gap="xs">
-            <ComboBox
+            <DACombobox
               error={!!fieldState.error}
-              options={destinationObjectNameOptions}
-              value={field.value}
+              placeholder={formatMessage({ id: "connection.create.selectDestinationObject" })}
               icon={<ConnectorIcon icon={destination.icon} className={styles.selectDestinationObjectName__icon} />}
+              options={destinationObjectNameOptions}
+              selectedValue={field.value}
               onChange={(value) => {
                 if (value === field.value) {
                   return;
                 }
-
-                field.onChange(value);
-                setValue(`streams.${streamIndex}.matchingKeys`, null);
-                if (syncModesByObjectName.get(value)?.size === 1) {
-                  // If there is only one sync mode available for the selected object name, set it automatically
-                  setValue(
-                    `streams.${streamIndex}.destinationSyncMode`,
-                    syncModesByObjectName.get(value)?.values().next().value ?? null
-                  );
+                if (value === null) {
+                  // We don't want to set the field to null, because that would violate the zod schema
+                  field.onChange("");
+                } else {
+                  field.onChange(value);
                 }
+                resetFormValues();
               }}
-              placeholder={formatMessage({ id: "connection.create.selectDestinationObject" })}
             />
             {fieldState.error && <FormControlErrorMessage name={field.name} />}
           </FlexContainer>

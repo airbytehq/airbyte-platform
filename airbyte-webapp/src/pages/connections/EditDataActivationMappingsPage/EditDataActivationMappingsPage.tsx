@@ -70,7 +70,15 @@ export const EditDataActivationMappingsPage = () => {
               <Text>
                 <FormattedMessage
                   id="connection.dataActivationDescription"
-                  values={{ destinationName: connection.destination.name }}
+                  values={{
+                    destinationName: connection.destination.name,
+                    sourceName: connection.source.name,
+                    bold: (children) => (
+                      <Text as="span" bold>
+                        {children}
+                      </Text>
+                    ),
+                  }}
                 />
               </Text>
             </FlexContainer>
@@ -82,7 +90,11 @@ export const EditDataActivationMappingsPage = () => {
                   </ExternalLink>
                 </Text>
 
-                <FormSubmissionButtons submitKey="connection.dataActivation.save" allowInvalidSubmit />
+                <FormSubmissionButtons
+                  submitKey="connection.dataActivation.save"
+                  cancelKey="form.reset"
+                  allowInvalidSubmit
+                />
               </FlexContainer>
             </FlexItem>
           </FlexContainer>

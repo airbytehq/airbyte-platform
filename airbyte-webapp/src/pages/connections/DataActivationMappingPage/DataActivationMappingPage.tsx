@@ -81,7 +81,15 @@ export const DataActivationMappingPage: React.FC = () => {
                   <Text>
                     <FormattedMessage
                       id="connection.dataActivationDescription"
-                      values={{ destinationName: destinationDefinition.name }}
+                      values={{
+                        destinationName: destinationDefinition.name,
+                        sourceName: source.name,
+                        bold: (children) => (
+                          <Text as="span" bold>
+                            {children}
+                          </Text>
+                        ),
+                      }}
                     />
                   </Text>
                   <div style={{ flexShrink: 0 }}>

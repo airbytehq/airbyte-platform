@@ -18,7 +18,7 @@
 }
 
 .optionValue {
-  padding: variables.$spacing-md variables.$spacing-lg;
+  padding: variables.$spacing-md;
   cursor: pointer;
   word-break: break-all;
 }
@@ -56,5 +56,5 @@
   border: none;
   cursor: pointer;
   color: colors.$grey-300;
-  padding-inline: 8px;
+  padding-inline: variables.$spacing-md;
 }

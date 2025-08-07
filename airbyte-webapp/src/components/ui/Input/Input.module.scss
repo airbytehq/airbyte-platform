@@ -52,7 +52,7 @@
   }
 }
 
-$input-horizontal-padding: 8px;
+$input-horizontal-padding: variables.$spacing-md;
 $icon-width: 20px;
 
 /** The icon is positioned absolute so that it is within the bounds of the input. Other components like our ComboBox

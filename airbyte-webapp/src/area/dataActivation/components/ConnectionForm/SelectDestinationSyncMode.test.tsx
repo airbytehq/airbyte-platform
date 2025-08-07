@@ -93,6 +93,7 @@ describe(`${SelectDestinationSyncMode.name}`, () => {
             { destinationFieldName: "UserOrGroupId", sourceFieldName: "" },
             { destinationFieldName: "AccessLevel", sourceFieldName: "" },
           ],
+          matchingKeys: null,
         }),
       ],
     });
@@ -122,13 +123,13 @@ describe(`${SelectDestinationSyncMode.name}`, () => {
     expect(mockSubmit).toHaveBeenCalledWith({
       streams: [
         expect.objectContaining({
-          fields: [],
+          fields: [{ sourceFieldName: "", destinationFieldName: "" }], // EMPTY_FIELD added when no required fields
         }),
       ],
     });
   });
 
-  it("unsets mapped destination field names when the new operation does not include them", async () => {
+  it("removes field mappings when the new operation does not require them", async () => {
     const mockSubmit = jest.fn();
     await render(
       <MockFormProvider
@@ -156,8 +157,7 @@ describe(`${SelectDestinationSyncMode.name}`, () => {
     expect(mockSubmit).toHaveBeenCalledWith({
       streams: [
         expect.objectContaining({
-          // The destination operation does not include "Some destination field", so it should be unset
-          fields: [{ sourceFieldName: "Some source field", destinationFieldName: "" }],
+          fields: [{ sourceFieldName: "", destinationFieldName: "" }], // EMPTY_FIELD added when no required fields
         }),
       ],
     });
@@ -326,6 +326,55 @@ describe(`${SelectDestinationSyncMode.name}`, () => {
           }),
         ],
       });
+    });
+  });
+
+  it("adds EMPTY_FIELD when operation has no required fields and multiple matching key options", async () => {
+    const MOCK_OPERATION_NO_REQUIRED_FIELDS_MULTIPLE_KEYS: DestinationOperation = {
+      objectName: "NoRequiredFieldsMultipleKeys",
+      syncMode: "append_dedup",
+      schema: {
+        additionalProperties: false,
+        type: "object",
+        properties: {
+          Name: { type: "string" },
+          Id: { type: "string" },
+          Email: { type: "string" },
+        },
+      },
+      matchingKeys: [["Id"], ["Email"]],
+    };
+    const mockSubmit = jest.fn();
+
+    await render(
+      <MockFormProvider
+        destinationObjectName={MOCK_OPERATION_NO_REQUIRED_FIELDS_MULTIPLE_KEYS.objectName}
+        fields={[]} // Start with empty fields
+        onSubmit={mockSubmit}
+      >
+        <SelectDestinationSyncMode
+          streamIndex={0}
+          destinationCatalog={{
+            operations: [MOCK_OPERATION_NO_REQUIRED_FIELDS_MULTIPLE_KEYS],
+          }}
+        />
+      </MockFormProvider>
+    );
+
+    // Select a sync mode
+    await userEvent.click(screen.getByText("Select insertion method"));
+    await userEvent.click(screen.getByText("Upsert"));
+
+    // Submit the form
+    await userEvent.click(screen.getByText("Submit"));
+
+    expect(mockSubmit).toHaveBeenCalledWith({
+      streams: [
+        expect.objectContaining({
+          fields: [{ sourceFieldName: "", destinationFieldName: "" }], // EMPTY_FIELD added
+          matchingKeys: [],
+        }),
+      ],
     });
   });
 });

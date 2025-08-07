@@ -1,5 +1,5 @@
 import { Listbox } from "@headlessui/react";
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -14,9 +14,7 @@ import { ListboxOptions } from "components/ui/ListBox/ListboxOptions";
 import { Text } from "components/ui/Text";
 
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
-import { getDestinationOperation } from "area/dataActivation/utils/getDestinationOperation";
-import { getDestinationOperationFields } from "area/dataActivation/utils/getDestinationOperationFields";
-import { getRequiredFields } from "area/dataActivation/utils/getRequiredFields";
+import { useSetDefaultValuesForDestinationOperation } from "area/dataActivation/utils/useSetDefaultValuesForDestinationOperation";
 import { DestinationCatalog, DestinationSyncMode } from "core/api/types/AirbyteClient";
 
 interface SelectDestinationSyncModeProps {
@@ -28,18 +26,15 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
   destinationCatalog,
   streamIndex,
 }) => {
-  const { control, setValue } = useFormContext<DataActivationConnectionFormValues>();
+  const { control, getValues } = useFormContext<DataActivationConnectionFormValues>();
   const { formatMessage } = useIntl();
+  const setDefaultValuesForDestinationOperation = useSetDefaultValuesForDestinationOperation();
 
   const destinationObjectName = useWatch<DataActivationConnectionFormValues, `streams.${number}.destinationObjectName`>(
     {
       name: `streams.${streamIndex}.destinationObjectName`,
     }
   );
-
-  const fields = useWatch<DataActivationConnectionFormValues, `streams.${number}.fields`>({
-    name: `streams.${streamIndex}.fields`,
-  });
 
   const availableOperations = useMemo(() => {
     return destinationCatalog.operations.filter((operation) => operation.objectName === destinationObjectName);
@@ -64,47 +59,22 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
     disabled: !availableOperations.some((operation) => operation.syncMode === option.value),
   }));
 
-  // When the destination object changes, we need to do a few things:
-  // 1. Make sure any existing field mappings are still valid for the new destination object.
-  // 2. Make sure any required fields for the new destination object are added to the form.
-  const updateFieldMappings = (value: DestinationSyncMode) => {
-    const selectedOperation = getDestinationOperation(availableOperations, destinationObjectName, value);
+  const resetFormValues = useCallback(() => {
+    const destinationObjectName = getValues(`streams.${streamIndex}.destinationObjectName`);
+    const destinationSyncMode = getValues(`streams.${streamIndex}.destinationSyncMode`);
+
+    const selectedOperation = availableOperations.find(
+      (operation) => operation.objectName === destinationObjectName && operation.syncMode === destinationSyncMode
+    );
 
     if (!selectedOperation) {
-      return;
+      // This should not be possible, since we populate the options based on the available operations
+      throw new Error(
+        `No operation found for destination object name "${destinationObjectName}" and sync mode "${destinationSyncMode}"`
+      );
     }
-
-    // 1. Validate existing field mappings
-    const availableFields = getDestinationOperationFields(selectedOperation).map(([key]) => key);
-    const existingFieldMappings = (fields ?? []).map((field) => {
-      return {
-        sourceFieldName: field.sourceFieldName,
-        destinationFieldName: availableFields.includes(field.destinationFieldName) ? field.destinationFieldName : "",
-      };
-    });
-
-    // 2. Check for required fields in the selected operation
-    const requiredFields = getRequiredFields(selectedOperation);
-    const missingFieldNames = requiredFields.filter((field) => !fields?.some((f) => f.destinationFieldName === field));
-    const newFieldMappings = missingFieldNames.map((field) => ({
-      sourceFieldName: "",
-      destinationFieldName: field,
-    }));
-
-    // Update the form with the new field mappings
-    setValue(`streams.${streamIndex}.fields`, [...existingFieldMappings, ...newFieldMappings]);
-
-    // 3. Set the matching keys to null if the selected operation does not require them
-    if (selectedOperation.matchingKeys === undefined || selectedOperation.matchingKeys.length === 0) {
-      setValue(`streams.${streamIndex}.matchingKeys`, null);
-    } else if (selectedOperation.matchingKeys.length === 1) {
-      // If there is only one matching key options, we can set it directly
-      setValue(`streams.${streamIndex}.matchingKeys`, selectedOperation.matchingKeys[0]);
-    } else {
-      // If there are multiple matching key options, we leave it as an empty array for the user to select an option
-      setValue(`streams.${streamIndex}.matchingKeys`, []);
-    }
-  };
+    setDefaultValuesForDestinationOperation(selectedOperation, streamIndex);
+  }, [availableOperations, getValues, setDefaultValuesForDestinationOperation, streamIndex]);
 
   return (
     <Controller
@@ -118,16 +88,8 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
               if (value === field.value) {
                 return;
               }
-              if (value === DestinationSyncMode.append) {
-                setValue(`streams.${streamIndex}.matchingKeys`, null);
-              }
-              if (value === DestinationSyncMode.append_dedup) {
-                setValue(`streams.${streamIndex}.matchingKeys`, null);
-              }
-              if (value !== null) {
-                updateFieldMappings(value);
-              }
               field.onChange(value);
+              resetFormValues();
             }}
           >
             <FloatLayout adaptiveWidth>

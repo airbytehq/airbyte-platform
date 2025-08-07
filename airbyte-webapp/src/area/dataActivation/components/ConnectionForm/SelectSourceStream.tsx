@@ -1,23 +1,17 @@
-import { Listbox } from "@headlessui/react";
 import isEqual from "lodash/isEqual";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { Controller, useFormContext } from "react-hook-form";
-import { FormattedMessage } from "react-intl";
+import { useIntl } from "react-intl";
 
 import { ConnectorIcon } from "components/ConnectorIcon";
 import { FormControlErrorMessage } from "components/forms/FormControl";
-import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
-import { FloatLayout } from "components/ui/ListBox/FloatLayout";
-import { ListboxButton } from "components/ui/ListBox/ListboxButton";
-import { ListboxOption } from "components/ui/ListBox/ListboxOption";
-import { ListboxOptions } from "components/ui/ListBox/ListboxOptions";
-import { Text } from "components/ui/Text";
 
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
 import { EMPTY_FIELD } from "area/dataActivation/utils";
 import { AirbyteCatalog, SourceRead } from "core/api/types/AirbyteClient";
 
+import { DACombobox } from "./DACombobox";
 import styles from "./SelectSourceStream.module.scss";
 
 interface SelectSourceStreamProps {
@@ -27,8 +21,8 @@ interface SelectSourceStreamProps {
 }
 
 export const SelectSourceStream: React.FC<SelectSourceStreamProps> = ({ sourceCatalog, source, index }) => {
-  const { control, setValue } = useFormContext<DataActivationConnectionFormValues>();
-
+  const { control, getValues, setValue } = useFormContext<DataActivationConnectionFormValues>();
+  const { formatMessage } = useIntl();
   const sourceStreams = useMemo(() => sourceCatalog.streams ?? [], [sourceCatalog]);
 
   const showNamespace = useMemo(
@@ -40,14 +34,60 @@ export const SelectSourceStream: React.FC<SelectSourceStreamProps> = ({ sourceCa
     () =>
       sourceStreams
         .map((stream) => ({
-          label: showNamespace ? `${stream.stream?.namespace}.${stream.stream?.name}` : stream.stream?.name,
-          value: { name: stream.stream?.name, namespace: stream.stream?.namespace },
+          label: showNamespace ? `${stream.stream?.namespace}.${stream.stream?.name}` : stream.stream?.name ?? "",
+          value: { name: stream.stream?.name ?? "", namespace: stream.stream?.namespace },
         }))
         .sort((a, b) => {
           return a.label?.localeCompare(b.label ?? "", undefined, { numeric: true }) ?? 0;
         }),
     [sourceStreams, showNamespace]
   );
+
+  const resetFormValues = useCallback(() => {
+    const fields = getValues(`streams.${index}.fields`);
+    const sourceStreamDescriptor = getValues(`streams.${index}.sourceStreamDescriptor`);
+    const newFields = fields.length === 0 ? [EMPTY_FIELD] : fields;
+
+    const sourceStream = sourceCatalog.streams.find(
+      (stream) =>
+        stream.stream?.name === sourceStreamDescriptor.name &&
+        stream.stream?.namespace === sourceStreamDescriptor.namespace
+    );
+
+    if (sourceStream) {
+      const availableSyncModes = sourceStream.stream?.supportedSyncModes;
+
+      if (availableSyncModes?.length === 1) {
+        // Automatically select the only available sync mode
+        setValue(`streams.${index}.sourceSyncMode`, availableSyncModes[0]);
+        setValue(`streams.${index}.cursorField`, null);
+      } else {
+        setValue(`streams.${index}.sourceSyncMode`, null);
+        setValue(`streams.${index}.cursorField`, null);
+      }
+      const availableSourceFields = getSourceStreamFieldNames(sourceCatalog, sourceStreamDescriptor);
+
+      setValue(
+        `streams.${index}.fields`,
+        // The source stream likely changed, so we need to check if mappings have valid source field names, otherwise
+        // reset them to empty strings, forcing the user to re-select a new one
+        newFields.map((field) => ({
+          ...field,
+          sourceFieldName: availableSourceFields.includes(field.sourceFieldName) ? field.sourceFieldName : "",
+        }))
+      );
+    } else {
+      // No source stream is selected, so we need to reset the sync mode and clear source field names
+      setValue(`streams.${index}.sourceSyncMode`, null);
+      setValue(
+        `streams.${index}.fields`,
+        newFields.map((field) => ({
+          ...field,
+          sourceFieldName: "",
+        }))
+      );
+    }
+  }, [getValues, index, sourceCatalog, setValue]);
 
   return (
     <div className={styles.selectSourceStream}>
@@ -56,55 +96,27 @@ export const SelectSourceStream: React.FC<SelectSourceStreamProps> = ({ sourceCa
         control={control}
         render={({ field, fieldState }) => (
           <FlexContainer direction="column" gap="xs">
-            <Listbox
-              by={isEqual}
+            <DACombobox
+              error={!!fieldState.error}
+              selectedValue={field.value}
+              placeholder={formatMessage({ id: "connection.create.selectSourceStream" })}
+              icon={<ConnectorIcon icon={source.icon} className={styles.selectSourceStream__icon} />}
+              options={sourceStreamOptions}
               onChange={(value) => {
                 if (isEqual(value, field.value)) {
                   return;
                 }
-                field.onChange(value);
-                const stream = getStreamByDescriptor(sourceStreams, value);
-                // If the stream only supports one sync mode, set it automatically
-                if (stream?.stream?.supportedSyncModes?.length === 1) {
-                  setValue(`streams.${index}.sourceSyncMode`, stream.stream.supportedSyncModes[0]);
+                if (value === null) {
+                  // We don't want to set the field to null, because that would violate the zod schema
+                  field.onChange({
+                    name: "",
+                  });
                 } else {
-                  setValue(`streams.${index}.sourceSyncMode`, null);
+                  field.onChange(value);
                 }
-                // Changing the stream resets the sync mode and selected fields
-                setValue(`streams.${index}.fields`, [EMPTY_FIELD]);
+                resetFormValues();
               }}
-              value={field.value}
-            >
-              <FloatLayout adaptiveWidth>
-                <ListboxButton hasError={!!fieldState.error}>
-                  <FlexContainer alignItems="center" as="span">
-                    <ConnectorIcon icon={source.icon} className={styles.selectSourceStream__icon} />
-                    <Box py="md" as="span">
-                      {field.value?.name ? (
-                        <Text size="lg">{field.value.name}</Text>
-                      ) : (
-                        <Text size="lg" color="grey">
-                          <FormattedMessage id="connection.create.selectSourceStream" />
-                        </Text>
-                      )}
-                    </Box>
-                  </FlexContainer>
-                </ListboxButton>
-                <ListboxOptions>
-                  {sourceStreamOptions.map(({ label, value }, index) => {
-                    return (
-                      <ListboxOption value={value} key={index}>
-                        {() => (
-                          <Box p="md" pr="none" as="span">
-                            <Text size="lg">{label}</Text>
-                          </Box>
-                        )}
-                      </ListboxOption>
-                    );
-                  })}
-                </ListboxOptions>
-              </FloatLayout>
-            </Listbox>
+            />
             {fieldState.error && <FormControlErrorMessage name={field.name} />}
           </FlexContainer>
         )}
@@ -113,10 +125,13 @@ export const SelectSourceStream: React.FC<SelectSourceStreamProps> = ({ sourceCa
   );
 };
 
-function getStreamByDescriptor(streams: AirbyteCatalog["streams"], descriptor: { name: string; namespace?: string }) {
-  return streams.find(
-    (stream) =>
-      stream.stream?.name === descriptor.name &&
-      (descriptor.namespace ? stream.stream?.namespace === descriptor.namespace : true)
-  );
-}
+const getSourceStreamFieldNames = (
+  sourceCatalog: AirbyteCatalog,
+  sourceStreamDescriptor: { name: string; namespace?: string }
+) => {
+  const topLevelFields =
+    sourceCatalog.streams.find(({ stream }) => {
+      return stream?.name === sourceStreamDescriptor.name && stream?.namespace === sourceStreamDescriptor.namespace;
+    })?.stream?.jsonSchema?.properties ?? [];
+  return Object.keys(topLevelFields);
+};

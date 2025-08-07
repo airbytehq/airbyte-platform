@@ -59,9 +59,11 @@ export function createSyncCatalogFromFormValues(
         }
         const cursorField = mappedStream.sourceSyncMode === "incremental" ? [mappedStream.cursorField] : undefined;
         if (cursorField) {
-          selectedFields.push({
-            fieldPath: cursorField,
-          });
+          if (!selectedFields.some((field) => field.fieldPath[0] === cursorField[0])) {
+            selectedFields.push({
+              fieldPath: cursorField,
+            });
+          }
 
           // If the cursor field is not mapped to a destination field, we need to add a field filtering mapper to remove
           // it from the catalog. This is necessary because the cursor field MUST be part of selectedFields for some

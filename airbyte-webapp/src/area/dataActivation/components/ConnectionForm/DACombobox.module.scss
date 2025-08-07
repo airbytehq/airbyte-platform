@@ -1,0 +1,61 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/z-indices";
+
+.combobox {
+  position: relative;
+
+  &__input {
+    width: 100%;
+    height: variables.$form-input-height;
+    padding: 7px 8px;
+    font-size: variables.$font-size-md;
+    font-weight: normal;
+    border-radius: variables.$border-radius-sm;
+    border: variables.$border-thin solid colors.$grey-200;
+  }
+
+  &__options {
+    width: var(--input-width); // match the combobox button's width, see https://headlessui.com/react/combobox
+    min-height: 1px; // Required for a dynamic virtualized combobox height
+    --anchor-max-height: 280px; // limit the option list's height, see https://github.com/tailwindlabs/headlessui/blob/b6f355d154f69ac67d2196f755f9751c6b1acba0/packages/%40headlessui-react/src/internal/floating.tsx#L317
+
+    background-color: colors.$foreground;
+    border-radius: variables.$border-radius-lg;
+    box-shadow: variables.$box-shadow-raised;
+    padding: 0;
+    margin-top: variables.$spacing-sm;
+    min-width: variables.$min-width-listbox-options-list;
+    list-style-type: none;
+    overflow-y: auto;
+    z-index: z-indices.$dropdownMenu;
+  }
+
+  &__option {
+    width: 100%;
+    padding: variables.$spacing-md variables.$spacing-md;
+    cursor: pointer;
+    word-break: break-all;
+
+    &--focus {
+      background-color: colors.$grey-50;
+    }
+
+    &--selected {
+      background-color: colors.$blue-50;
+    }
+  }
+}
+
+.caretButton {
+  width: fit-content;
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  color: colors.$grey-300;
+  padding-inline: variables.$spacing-md;
+}

@@ -382,6 +382,10 @@ describe(`${createSyncCatalogFromFormValues.name}`, () => {
     };
     const result = createSyncCatalogFromFormValues(mappedStreams, mockSourceDiscoverSchemaRead.catalog);
 
+    const selectedFields = result.streams[0].config?.selectedFields;
+    expect(selectedFields).toHaveLength(3);
+    expect(selectedFields).toEqual([{ fieldPath: ["name"] }, { fieldPath: ["id"] }, { fieldPath: ["created_at"] }]);
+
     const mappers = result.streams[0].config?.mappers;
     expect(mappers).toHaveLength(3);
 
