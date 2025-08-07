@@ -1,4 +1,5 @@
 import { ReactElement } from "react";
+import { ZodSchema } from "zod";
 
 import { AirbyteJsonSchema } from "../utils";
 
@@ -20,7 +21,13 @@ export type OverrideByPath = Record<string, (path: string) => ReactElement | nul
 
 type FieldName = string;
 type ObjectType = string;
-export type OverrideByObjectField = Record<ObjectType, Record<FieldName, (path: string) => ReactElement | null>>;
+export type OverrideByObjectField = Record<
+  ObjectType,
+  {
+    fieldOverrides: Record<FieldName, (path: string) => ReactElement | null>;
+    validate?: ZodSchema;
+  }
+>;
 
 export type OverrideByFieldSchema = Array<{
   shouldOverride: (schema: AirbyteJsonSchema) => boolean;

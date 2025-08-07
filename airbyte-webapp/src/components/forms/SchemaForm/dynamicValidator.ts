@@ -8,19 +8,27 @@ import { FORM_PATTERN_ERROR } from "core/form/types";
 import { NON_I18N_ERROR_TYPE } from "core/utils/form";
 import { getPatternDescriptor } from "views/Connector/ConnectorForm/utils";
 
+import { OverrideByObjectField } from "./Controls/types";
 import { getSelectedOptionSchema, verifyArrayItems } from "./SchemaForm";
-import { AirbyteJsonSchema, resolveTopLevelRef } from "./utils";
+import { AirbyteJsonSchema, getDeclarativeSchemaTypeValue, resolveTopLevelRef } from "./utils";
 
 // Produces a dynamic zod schema that resolves $refs only as far as needed to validate the current values.
 export const dynamicValidator = <TSchema extends FieldValues>(
   rootSchema: AirbyteJsonSchema,
-  formatMessage: IntlShape["formatMessage"]
+  formatMessage: IntlShape["formatMessage"],
+  overrideByObjectField?: OverrideByObjectField
 ) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return async (data: TSchema, context: any, options: ResolverOptions<TSchema>): Promise<ResolverResult<TSchema>> => {
     try {
       // Convert JSON schema to a usable Zod schema with preset error messages
-      const zodSchema = convertJsonSchemaToZodSchema(rootSchema, rootSchema, formatMessage, false);
+      const zodSchema = convertJsonSchemaToZodSchema(
+        rootSchema,
+        rootSchema,
+        formatMessage,
+        false,
+        overrideByObjectField
+      );
 
       // Use zodResolver which is CSP-compliant
       const resolver = zodResolver(zodSchema);
@@ -71,7 +79,8 @@ export const convertJsonSchemaToZodSchema = (
   rootSchema: AirbyteJsonSchema,
   schema: AirbyteJsonSchema,
   formatMessage: IntlShape["formatMessage"],
-  isRequired: boolean
+  isRequired: boolean,
+  overrideByObjectField: OverrideByObjectField | undefined
 ): z.ZodTypeAny => {
   try {
     // Handle enum values for any schema type
@@ -105,7 +114,13 @@ export const convertJsonSchemaToZodSchema = (
           }
           return;
         }
-        const zodSchema = convertJsonSchemaToZodSchema(rootSchema, selectedSchema, formatMessage, isRequired);
+        const zodSchema = convertJsonSchemaToZodSchema(
+          rootSchema,
+          selectedSchema,
+          formatMessage,
+          isRequired,
+          overrideByObjectField
+        );
         try {
           const result = zodSchema.safeParse(value);
           if (!result.success) {
@@ -145,6 +160,12 @@ export const convertJsonSchemaToZodSchema = (
 
     const properties = schema.properties;
     if (properties && (!schema.type || schema.type === "object")) {
+      const declarativeSchemaType = getDeclarativeSchemaTypeValue("type", properties.type);
+      const validationOverride = overrideByObjectField?.[declarativeSchemaType]?.validate;
+      if (validationOverride) {
+        return validationOverride;
+      }
+
       return z.any().superRefine((value, ctx) => {
         if (valueContainsRef(value)) {
           return;
@@ -186,7 +207,8 @@ export const convertJsonSchemaToZodSchema = (
                 rootSchema,
                 resolveTopLevelRef(rootSchema, propertyValue),
                 formatMessage,
-                isFieldRequired
+                isFieldRequired,
+                overrideByObjectField
               ),
             ];
           })
@@ -302,10 +324,13 @@ export const convertJsonSchemaToZodSchema = (
       return zodNull;
     } else if (schema.type === "array" && schema.items) {
       const itemsSchema = verifyArrayItems(schema.items, rootSchema);
-      const arraySchema = z.array(convertJsonSchemaToZodSchema(rootSchema, itemsSchema, formatMessage, isRequired), {
-        required_error: formatMessage({ id: REQUIRED_ERROR }),
-        invalid_type_error: formatMessage({ id: INVALID_TYPE_ERROR }),
-      });
+      const arraySchema = z.array(
+        convertJsonSchemaToZodSchema(rootSchema, itemsSchema, formatMessage, isRequired, overrideByObjectField),
+        {
+          required_error: formatMessage({ id: REQUIRED_ERROR }),
+          invalid_type_error: formatMessage({ id: INVALID_TYPE_ERROR }),
+        }
+      );
 
       // Add array-specific validations with custom error messages
       if (schema.minItems) {
@@ -330,7 +355,13 @@ export const convertJsonSchemaToZodSchema = (
       // Create a union of the types
       const typeSchemas = schema.type.map((type) => {
         const typeSchema = { ...schema, type };
-        return convertJsonSchemaToZodSchema(rootSchema, typeSchema as AirbyteJsonSchema, formatMessage, isRequired);
+        return convertJsonSchemaToZodSchema(
+          rootSchema,
+          typeSchema as AirbyteJsonSchema,
+          formatMessage,
+          isRequired,
+          overrideByObjectField
+        );
       });
 
       if (typeSchemas.length >= 2) {
@@ -350,7 +381,8 @@ export const convertJsonSchemaToZodSchema = (
         rootSchema,
         resolveTopLevelRef(rootSchema, schema.additionalProperties),
         formatMessage,
-        true
+        true,
+        overrideByObjectField
       );
       return z.object({}).catchall(additionalPropSchema);
     }

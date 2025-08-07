@@ -12,6 +12,7 @@ export const SelectWrapper = <T extends FormValues>({
   name,
   disabled = false,
   options,
+  onSelect,
   ...rest
 }: Omit<SelectControlProps<T>, OmittableProperties>) => {
   const { control } = useFormContext();
@@ -28,11 +29,14 @@ export const SelectWrapper = <T extends FormValues>({
           isDisabled={disabled}
           options={options}
           hasError={hasError}
-          onSelect={(value) => field.onChange(value)}
           selectedValue={value}
           buttonClassName={styles.select}
           {...rest}
           id={controlId}
+          onSelect={(value) => {
+            field.onChange(value);
+            onSelect?.(value);
+          }}
         />
       )}
     />

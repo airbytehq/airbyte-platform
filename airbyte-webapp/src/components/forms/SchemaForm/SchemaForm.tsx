@@ -61,7 +61,7 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
     criteriaMode: "all",
     mode: "onChange",
     defaultValues: resolvedStartingValues as DefaultValues<TsSchema>,
-    resolver: dynamicValidator(schema, formatMessage),
+    resolver: dynamicValidator(schema, formatMessage, overrideByObjectField),
   });
 
   const processSubmission = useCallback(

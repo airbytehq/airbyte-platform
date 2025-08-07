@@ -388,7 +388,9 @@ export const OverrideByObjectField = () => {
         onSubmit={onSubmit}
         overrideByObjectField={{
           User: {
-            email: () => <div>My user email override</div>,
+            fieldOverrides: {
+              email: () => <div>My user email override</div>,
+            },
           },
         }}
       >

@@ -113,7 +113,8 @@ export interface DatepickerControlProps<T extends FormValues>
 
 export interface SelectControlProps<T extends FormValues>
   extends ControlBaseProps<T>,
-    Omit<ListBoxProps<string>, "onSelect" | "selectedValue"> {
+    Omit<ListBoxProps<string>, "onSelect" | "selectedValue">,
+    Partial<Pick<ListBoxProps<string>, "onSelect">> {
   fieldType: "dropdown";
   options: Array<Option<string>>;
 }

@@ -22,10 +22,8 @@ import { LabelInfo } from "components/Label";
 import { CodeEditor } from "components/ui/CodeEditor";
 import { GraphQLEditor } from "components/ui/CodeEditor/GraphqlEditor";
 import { FlexContainer } from "components/ui/Flex";
-import { Input } from "components/ui/Input";
 import { ListBox } from "components/ui/ListBox";
 import { Option } from "components/ui/ListBox/Option";
-import { TagInput } from "components/ui/TagInput";
 
 import { RequestOptionInjectInto } from "core/api/types/ConnectorManifest";
 import { useConnectorBuilderPermission } from "services/connectorBuilder/ConnectorBuilderStateService";
@@ -279,65 +277,50 @@ const validateJSON = (value: string | undefined) => {
 
 export type RequestOptionInjectIntoValues = (typeof RequestOptionInjectInto)[keyof typeof RequestOptionInjectInto];
 
-export const RequestOptionFieldName = () => {
-  return null;
+export const RequestOptionFieldName = ({ path }: { path: string }) => {
+  const { formatMessage } = useIntl();
+  const injectIntoPath = useMemo(() => `${path.split(".").slice(0, -1).join(".")}.inject_into`, [path]);
+  const injectIntoValue = useBuilderWatch(injectIntoPath) as RequestOptionInjectIntoValues | undefined;
+
+  if (injectIntoValue === "body_json") {
+    return null;
+  }
+
+  return (
+    <SchemaFormControl
+      titleOverride={
+        injectIntoValue === "request_parameter"
+          ? formatMessage({ id: "connectorBuilder.requestOption.parameter.label" })
+          : injectIntoValue === "header"
+          ? formatMessage({ id: "connectorBuilder.requestOption.header.label" })
+          : injectIntoValue === "body_data"
+          ? formatMessage({ id: "connectorBuilder.requestOption.body_data.label" })
+          : formatMessage({ id: "connectorBuilder.requestOption.fieldName.label" })
+      }
+      isRequired
+      path={path}
+    />
+  );
 };
 
 export const RequestOptionFieldPath = ({ path }: { path: string }) => {
-  const { formatMessage } = useIntl();
-  const { setValue } = useFormContext();
-
-  const fieldNamePath = useMemo(() => `${path.split(".").slice(0, -1).join(".")}.field_name`, [path]);
   const injectIntoPath = useMemo(() => `${path.split(".").slice(0, -1).join(".")}.inject_into`, [path]);
-
-  const fieldPathValue = useBuilderWatch(path) as string[] | undefined;
-  const fieldNameValue = useBuilderWatch(fieldNamePath) as string | undefined;
   const injectIntoValue = useBuilderWatch(injectIntoPath) as RequestOptionInjectIntoValues | undefined;
 
-  const fieldLabel = useMemo(() => {
-    switch (injectIntoValue) {
-      case "request_parameter":
-        return formatMessage({ id: "connectorBuilder.requestOption.parameter.label" });
-      case "header":
-        return formatMessage({ id: "connectorBuilder.requestOption.header.label" });
-      case "body_data":
-        return formatMessage({ id: "connectorBuilder.requestOption.body_data.label" });
-      default:
-        return formatMessage({ id: "connectorBuilder.requestOption.fieldPath.label" });
-    }
-  }, [formatMessage, injectIntoValue]);
+  if (injectIntoValue !== "body_json") {
+    return null;
+  }
 
-  return (
-    <FlexContainer direction="column" gap="none" className={styles.controlContainer}>
-      <FormLabel
-        htmlFor={path}
-        label={fieldLabel}
-        labelTooltip={formatMessage({ id: "connectorBuilder.requestOption.field.tooltip" })}
-      />
-      {injectIntoValue === "request_parameter" || injectIntoValue === "header" || injectIntoValue === "body_data" ? (
-        <Input
-          value={fieldNameValue}
-          onChange={(e) => {
-            setValue(fieldNamePath, e.target.value);
-            setValue(path, undefined);
-          }}
-        />
-      ) : (
-        <TagInput
-          name={path}
-          fieldValue={fieldPathValue ?? []}
-          onChange={(newValue: string[]) => {
-            setValue(path, newValue);
-            setValue(fieldNamePath, undefined);
-          }}
-        />
-      )}
-    </FlexContainer>
-  );
+  return <SchemaFormControl path={path} isRequired />;
 };
 
 export const RequestOptionInjectSelector = ({ path }: { path: string }) => {
   const { formatMessage } = useIntl();
+  const { setValue } = useFormContext();
+
+  const fieldNamePath = useMemo(() => `${path.split(".").slice(0, -1).join(".")}.field_name`, [path]);
+  const fieldPathPath = useMemo(() => `${path.split(".").slice(0, -1).join(".")}.field_path`, [path]);
+
   const injectIntoOptions: Array<Option<string>> = [
     {
       label: formatMessage({ id: "connectorBuilder.requestOption.injectInto.requestParameter" }),
@@ -365,6 +348,14 @@ export const RequestOptionInjectSelector = ({ path }: { path: string }) => {
       label={getLabelByManifest("RequestOption.properties.inject_into")}
       labelTooltip={getDescriptionByManifest("RequestOption.properties.inject_into")}
       onlyShowErrorIfTouched
+      onSelect={(value) => {
+        // clear the unused field's value when the inject_into value changes
+        if (value === "body_json") {
+          setValue(fieldNamePath, undefined, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+        } else {
+          setValue(fieldPathPath, undefined, { shouldDirty: true, shouldTouch: true, shouldValidate: true });
+        }
+      }}
     />
   );
 };

@@ -2341,6 +2341,7 @@
   "connectorBuilder.requestOption.parameter.label": "Parameter Name",
   "connectorBuilder.requestOption.header.label": "Header Name",
   "connectorBuilder.requestOption.body_data.label": "Field Name",
+  "connectorBuilder.requestOption.fieldName.label": "Field Name",
   "connectorBuilder.requestOption.fieldPath.label": "Field Path",
   "connectorBuilder.requestOption.field.tooltip": "Configures the field into which the value will be injected.",
   "connectorBuilder.requestOption.injectInto.requestParameter": "Query Parameter",

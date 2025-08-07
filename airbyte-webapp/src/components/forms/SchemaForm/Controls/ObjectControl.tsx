@@ -82,7 +82,7 @@ export const ObjectControl = ({
         return;
       }
 
-      const element = overrideByObjectField?.[declarativeSchemaType]?.[propertyName]?.(fullPath) ?? (
+      const element = overrideByObjectField?.[declarativeSchemaType]?.fieldOverrides?.[propertyName]?.(fullPath) ?? (
         <SchemaFormControl
           key={fullPath}
           path={fullPath}

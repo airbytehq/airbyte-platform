@@ -1,6 +1,8 @@
 import classnames from "classnames";
 import React, { useMemo } from "react";
 import { DefaultValues, useFormContext } from "react-hook-form";
+import { useIntl } from "react-intl";
+import { z } from "zod";
 
 import { Builder } from "components/connectorBuilder/Builder/Builder";
 import {
@@ -46,6 +48,7 @@ import {
 import styles from "./ConnectorBuilderEditPage.module.scss";
 
 const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
+  const { formatMessage } = useIntl();
   const {
     projectId,
     builderProject: {
@@ -101,16 +104,46 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
       onlyShowErrorIfTouched
       overrideByObjectField={{
         RequestBodyGraphQL: {
-          value: (path) => <RequestBodyGraphQL path={path} />,
+          fieldOverrides: {
+            value: (path) => <RequestBodyGraphQL path={path} />,
+          },
         },
         RequestOption: {
-          field_name: () => <RequestOptionFieldName />,
-          field_path: (path) => <RequestOptionFieldPath path={path} />,
-          inject_into: (path) => <RequestOptionInjectSelector path={path} />,
+          fieldOverrides: {
+            field_name: (path) => <RequestOptionFieldName path={path} />,
+            field_path: (path) => <RequestOptionFieldPath path={path} />,
+            inject_into: (path) => <RequestOptionInjectSelector path={path} />,
+          },
+          validate: z
+            .object({
+              field_name: z.string().trim().optional(),
+              field_path: z.array(z.string()).optional(),
+              inject_into: z.string(),
+            })
+            .superRefine((val, ctx) => {
+              if (val.inject_into !== "body_json" && !val.field_name) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message: formatMessage({ id: "form.empty.error" }),
+                  path: ["field_name"],
+                });
+                return false;
+              } else if (val.inject_into === "body_json" && (!val.field_path || val.field_path?.length === 0)) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message: formatMessage({ id: "form.empty.error" }),
+                  path: ["field_path"],
+                });
+                return false;
+              }
+              return true;
+            }),
         },
         OAuthAuthenticator: {
-          client_id: (path) => <DeclarativeOAuthWithClientId clientIdPath={path} />,
-          grant_type: (path) => <GrantTypeSelector path={path} />,
+          fieldOverrides: {
+            client_id: (path) => <DeclarativeOAuthWithClientId clientIdPath={path} />,
+            grant_type: (path) => <GrantTypeSelector path={path} />,
+          },
         },
       }}
       overrideByFieldSchema={[
