@@ -74,7 +74,7 @@ val genApiServer =
     generatorName = "jaxrs-spec"
     inputSpec = specFile
     outputDir = serverOutputDir
-    templateDir = "$projectDir/src/main/resources/templates/jaxrs-spec"
+    templateDir.set("$projectDir/src/main/resources/templates/jaxrs-spec")
 
     apiPackage = "io.airbyte.api.generated"
     invokerPackage = "io.airbyte.api.invoker.generated"
@@ -136,7 +136,7 @@ val genApiServer2 =
     generatorName = "kotlin-server"
     inputSpec = specFile
     outputDir = serverOutputDir
-    templateDir = "$projectDir/src/main/resources/templates/kotlin-server"
+    templateDir.set("$projectDir/src/main/resources/templates/kotlin-server")
 
     packageName = "io.airbyte.api.server.generated"
 

@@ -53,7 +53,7 @@ val genAirbyteApiProblems =
     generatorName = "jaxrs-spec"
     inputSpec = airbyteApiProblemsSpecFile
     outputDir = serverOutputDir
-    templateDir = "$projectDir/src/main/resources/templates/jaxrs-spec-api/public_api"
+    templateDir.set("$projectDir/src/main/resources/templates/jaxrs-spec-api/public_api")
 
     packageName = "io.airbyte.api.problems"
     invokerPackage = "io.airbyte.api.problems.invoker.generated"

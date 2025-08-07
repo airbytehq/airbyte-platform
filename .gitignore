@@ -15,6 +15,7 @@ data
 /.vscode
 **/gmon.out
 static_checker_reports/
+oss/
 
 # Logs
 acceptance_tests_logs/

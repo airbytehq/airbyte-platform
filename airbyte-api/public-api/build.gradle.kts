@@ -53,7 +53,7 @@ val genPublicApiServer =
     generatorName = "kotlin-server"
     inputSpec = internalApiSpecFile
     outputDir = serverOutputDir
-    templateDir = "$projectDir/src/main/resources/templates/kotlin-server/public-api"
+    templateDir.set("$projectDir/src/main/resources/templates/kotlin-server/public-api")
 
     packageName = "io.airbyte.publicApi.server.generated"
 
