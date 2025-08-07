@@ -299,6 +299,12 @@ secretsManager:
         - GOOGLE_SECRET_MANAGER
       sensitive: true
 
+    - env: SECRET_STORE_GCP_REGION
+      key: googleSecretManager.region
+      discriminatorOpts: 
+        - GOOGLE_SECRET_MANAGER
+      defaultValue: ""
+
     - env: VAULT_ADDRESS
       key: vault.address
       defaultValueExp: (printf "http://airbyte-vault-svc.%s:8200" .Release.Namespace)

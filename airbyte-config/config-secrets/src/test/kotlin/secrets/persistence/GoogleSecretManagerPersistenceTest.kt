@@ -43,7 +43,7 @@ class GoogleSecretManagerPersistenceTest {
     val mockResponse: AccessSecretVersionResponse = mockk()
     val mockPayload: SecretPayload = mockk()
     val mockMetric: MetricClient = mockk()
-    val persistence = GoogleSecretManagerPersistence(projectId, mockClient, mockMetric)
+    val persistence = GoogleSecretManagerPersistence(projectId, null, mockClient, mockMetric)
 
     every { mockPayload.data } returns ByteString.copyFromUtf8(secret)
     every { mockResponse.payload } returns mockPayload
@@ -63,7 +63,7 @@ class GoogleSecretManagerPersistenceTest {
     val mockClient: GoogleSecretManagerServiceClient = mockk()
     val mockGoogleClient: SecretManagerServiceClient = mockk()
     val mockMetric: MetricClient = mockk()
-    val persistence = GoogleSecretManagerPersistence(projectId, mockClient, mockMetric)
+    val persistence = GoogleSecretManagerPersistence(projectId, null, mockClient, mockMetric)
 
     every { mockGoogleClient.accessSecretVersion(ofType(SecretVersionName::class)) } throws
       NotFoundException(
@@ -93,7 +93,7 @@ class GoogleSecretManagerPersistenceTest {
     val mockResponse: AccessSecretVersionResponse = mockk()
     val mockPayload: SecretPayload = mockk()
     val mockMetric: MetricClient = mockk()
-    val persistence = GoogleSecretManagerPersistence(projectId, mockClient, mockMetric)
+    val persistence = GoogleSecretManagerPersistence(projectId, null, mockClient, mockMetric)
 
     every { mockPayload.data } returns ByteString.copyFromUtf8(secret)
     every { mockResponse.payload } returns mockPayload
@@ -127,7 +127,7 @@ class GoogleSecretManagerPersistenceTest {
     val mockResponse: AccessSecretVersionResponse = mockk()
     val mockPayload: SecretPayload = mockk()
     val mockMetric: MetricClient = mockk()
-    val persistence = GoogleSecretManagerPersistence(projectId, mockClient, mockMetric)
+    val persistence = GoogleSecretManagerPersistence(projectId, null, mockClient, mockMetric)
 
     every { mockPayload.data } returns ByteString.copyFromUtf8(secret)
     every { mockResponse.payload } returns mockPayload
@@ -173,7 +173,7 @@ class GoogleSecretManagerPersistenceTest {
     val mockResponse: AccessSecretVersionResponse = mockk()
     val mockPayload: SecretPayload = mockk()
     val mockMetric: MetricClient = mockk()
-    val persistence = GoogleSecretManagerPersistence(projectId, mockClient, mockMetric)
+    val persistence = GoogleSecretManagerPersistence(projectId, null, mockClient, mockMetric)
 
     every { mockPayload.data } returns ByteString.copyFromUtf8(secret)
     every { mockResponse.payload } returns mockPayload
@@ -198,7 +198,7 @@ class GoogleSecretManagerPersistenceTest {
     val mockResponse: AccessSecretVersionResponse = mockk()
     val mockPayload: SecretPayload = mockk()
     val mockMetric: MetricClient = mockk()
-    val persistence = GoogleSecretManagerPersistence(projectId, mockClient, mockMetric)
+    val persistence = GoogleSecretManagerPersistence(projectId, null, mockClient, mockMetric)
     val mockSecret: Secret = mockk()
 
     every { mockPayload.data } returns ByteString.copyFromUtf8(secret)
@@ -237,7 +237,7 @@ class GoogleSecretManagerPersistenceTest {
     val mockResponse: AccessSecretVersionResponse = mockk()
     val mockPayload: SecretPayload = mockk()
     val mockMetric: MetricClient = mockk()
-    val persistence = GoogleSecretManagerPersistence(projectId, mockClient, mockMetric)
+    val persistence = GoogleSecretManagerPersistence(projectId, null, mockClient, mockMetric)
 
     every { mockPayload.data } returns ByteString.copyFromUtf8(secret)
     every { mockResponse.payload } returns mockPayload
@@ -264,7 +264,7 @@ class GoogleSecretManagerPersistenceTest {
     val mockResponse: AccessSecretVersionResponse = mockk()
     val mockPayload: SecretPayload = mockk()
     val mockMetric: MetricClient = mockk()
-    val persistence = GoogleSecretManagerPersistence(projectId, mockClient, mockMetric)
+    val persistence = GoogleSecretManagerPersistence(projectId, null, mockClient, mockMetric)
 
     every { mockPayload.data } returns ByteString.copyFromUtf8(secret)
     every { mockResponse.payload } returns mockPayload

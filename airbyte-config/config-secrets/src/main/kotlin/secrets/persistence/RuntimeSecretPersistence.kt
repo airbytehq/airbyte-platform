@@ -40,7 +40,8 @@ class RuntimeSecretPersistence(
         // Manually create the client for now.
         GoogleSecretManagerPersistence(
           secretPersistenceConfig.configuration["gcpProjectId"]!!,
-          GoogleSecretManagerServiceClient(secretPersistenceConfig.configuration["gcpCredentialsJson"]!!),
+          null,
+          GoogleSecretManagerServiceClient(secretPersistenceConfig.configuration["gcpCredentialsJson"]!!, null),
           metricClient,
         )
       }

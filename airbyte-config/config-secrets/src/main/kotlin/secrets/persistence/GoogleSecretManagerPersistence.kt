@@ -51,13 +51,21 @@ private val logger = KotlinLogging.logger {}
 @Named("secretPersistence")
 class GoogleSecretManagerPersistence(
   @Value("\${airbyte.secret.store.gcp.project-id}") val gcpProjectId: String,
+  @Value("\${airbyte.secret.store.gcp.region:}") val gcpRegion: String?,
   private val googleSecretManagerServiceClient: GoogleSecretManagerServiceClient,
   private val metricClient: MetricClient,
 ) : SecretPersistence {
   override fun read(coordinate: SecretCoordinate): String {
     try {
       googleSecretManagerServiceClient.createClient().use { client ->
-        val secretVersionName = SecretVersionName.of(gcpProjectId, coordinate.fullCoordinate, LATEST)
+        val secretVersionName =
+          if (!gcpRegion.isNullOrBlank()) {
+            // For regional secrets, construct the resource name with location
+            val resourceName = "projects/$gcpProjectId/locations/$gcpRegion/secrets/${coordinate.fullCoordinate}/versions/$LATEST"
+            SecretVersionName.parse(resourceName)
+          } else {
+            SecretVersionName.of(gcpProjectId, coordinate.fullCoordinate, LATEST)
+          }
         val response = client.accessSecretVersion(secretVersionName)
         return response.payload.data.toStringUtf8()
       }
@@ -116,7 +124,14 @@ class GoogleSecretManagerPersistence(
 
         logger.info { "GoogleSecretManagerPersistence createSecret coordinate=$coordinate expiry=$expiry" }
 
-        val secret = client.createSecret(ProjectName.of(gcpProjectId), coordinate.fullCoordinate, secretBuilder.build())
+        val secret =
+          if (!gcpRegion.isNullOrBlank()) {
+            // For regional secrets, use the location as parent
+            val parentName = "projects/$gcpProjectId/locations/$gcpRegion"
+            client.createSecret(parentName, coordinate.fullCoordinate, secretBuilder.build())
+          } else {
+            client.createSecret(ProjectName.of(gcpProjectId), coordinate.fullCoordinate, secretBuilder.build())
+          }
         try {
           addSecretVersion(client, coordinate, payload)
         } catch (e: Exception) {
@@ -126,10 +141,14 @@ class GoogleSecretManagerPersistence(
       } else {
         addSecretVersion(client, coordinate, payload)
         logger.warn {
-          "Added a new version to a secret with existing versions name=${SecretName.of(
-            gcpProjectId,
-            coordinate.fullCoordinate,
-          )} coordinate=$coordinate"
+          val secretName =
+            if (!gcpRegion.isNullOrBlank()) {
+              val resourceName = "projects/$gcpProjectId/locations/$gcpRegion/secrets/${coordinate.fullCoordinate}"
+              SecretName.parse(resourceName)
+            } else {
+              SecretName.of(gcpProjectId, coordinate.fullCoordinate)
+            }
+          "Added a new version to a secret with existing versions name=$secretName coordinate=$coordinate"
         }
       }
     }
@@ -140,27 +159,55 @@ class GoogleSecretManagerPersistence(
     coordinate: SecretCoordinate,
     payload: String,
   ) {
-    val name = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
+    val name =
+      if (!gcpRegion.isNullOrBlank()) {
+        // For regional secrets, construct the resource name with location
+        val resourceName = "projects/$gcpProjectId/locations/$gcpRegion/secrets/${coordinate.fullCoordinate}"
+        SecretName.parse(resourceName)
+      } else {
+        SecretName.of(gcpProjectId, coordinate.fullCoordinate)
+      }
     val secretPayload = SecretPayload.newBuilder().setData(ByteString.copyFromUtf8(payload)).build()
     client.addSecretVersion(name, secretPayload)
   }
 
   override fun delete(coordinate: AirbyteManagedSecretCoordinate) {
     googleSecretManagerServiceClient.createClient().use { client ->
-      val secretName = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
+      val secretName =
+        if (!gcpRegion.isNullOrBlank()) {
+          // For regional secrets, construct the resource name with location
+          val resourceName = "projects/$gcpProjectId/locations/$gcpRegion/secrets/${coordinate.fullCoordinate}"
+          SecretName.parse(resourceName)
+        } else {
+          SecretName.of(gcpProjectId, coordinate.fullCoordinate)
+        }
       client.deleteSecret(secretName)
     }
   }
 
   override fun disable(coordinate: AirbyteManagedSecretCoordinate) {
     googleSecretManagerServiceClient.createClient().use { client ->
-      val secretVersionName = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
-      val request = ListSecretVersionsRequest.newBuilder().setParent(secretVersionName.toString()).build()
+      val secretName =
+        if (!gcpRegion.isNullOrBlank()) {
+          // For regional secrets, construct the resource name with location
+          val resourceName = "projects/$gcpProjectId/locations/$gcpRegion/secrets/${coordinate.fullCoordinate}"
+          SecretName.parse(resourceName)
+        } else {
+          SecretName.of(gcpProjectId, coordinate.fullCoordinate)
+        }
+      val request = ListSecretVersionsRequest.newBuilder().setParent(secretName.toString()).build()
 
       val response: ListSecretVersionsPagedResponse = client.listSecretVersions(request)
       response.iterateAll().forEach { secret ->
         val version = secret.name.split("/").last()
-        val versionName = SecretVersionName.of(gcpProjectId, coordinate.fullCoordinate, version)
+        val versionName =
+          if (!gcpRegion.isNullOrBlank()) {
+            // For regional secrets, construct the resource name with location
+            val versionResourceName = "projects/$gcpProjectId/locations/$gcpRegion/secrets/${coordinate.fullCoordinate}/versions/$version"
+            SecretVersionName.parse(versionResourceName)
+          } else {
+            SecretVersionName.of(gcpProjectId, coordinate.fullCoordinate, version)
+          }
         client.disableSecretVersion(versionName)
       }
     }
@@ -171,6 +218,7 @@ class GoogleSecretManagerPersistence(
 @Requires(property = "airbyte.secret.persistence", pattern = "(?i)^google_secret_manager$")
 class GoogleSecretManagerServiceClient(
   @Value("\${airbyte.secret.store.gcp.credentials}") private val gcpCredentialsJson: String,
+  @Value("\${airbyte.secret.store.gcp.region:}") private val gcpRegion: String?,
 ) {
   /**
    * Creates a new {@link SecretManagerServiceClient} on each invocation.
@@ -179,12 +227,26 @@ class GoogleSecretManagerServiceClient(
    */
   fun createClient(): SecretManagerServiceClient {
     val credentialsByteStream = ByteArrayInputStream(gcpCredentialsJson.toByteArray(StandardCharsets.UTF_8))
-    val credentials = ServiceAccountCredentials.fromStream(credentialsByteStream)
-    val clientSettings =
+    val credentials =
+      ServiceAccountCredentials
+        .fromStream(
+          credentialsByteStream,
+        ).createScoped(listOf("https://www.googleapis.com/auth/cloud-platform"))
+
+    val settingsBuilder =
       SecretManagerServiceSettings
         .newBuilder()
         .setCredentialsProvider(FixedCredentialsProvider.create(credentials))
-        .build()
-    return SecretManagerServiceClient.create(clientSettings)
+
+    // Only set regional endpoint if region is specified and not empty
+    if (!gcpRegion.isNullOrBlank()) {
+      val apiEndpoint = "secretmanager.$gcpRegion.rep.googleapis.com:443"
+      settingsBuilder.endpoint = apiEndpoint
+      logger.info { "Using regional Google Secret Manager endpoint: $apiEndpoint" }
+    } else {
+      logger.info { "Using global Google Secret Manager endpoint" }
+    }
+
+    return SecretManagerServiceClient.create(settingsBuilder.build())
   }
 }

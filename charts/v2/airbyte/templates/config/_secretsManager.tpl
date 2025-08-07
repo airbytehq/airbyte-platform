@@ -376,6 +376,24 @@ Renders the secretsManager.googleSecretManager.credentailsSecretName environment
 {{- end }}
 
 {{/*
+Renders the global.secretsManager.googleSecretManager.region value
+*/}}
+{{- define "airbyte.secretsManager.googleSecretManager.region" }}
+    {{- .Values.global.secretsManager.googleSecretManager.region | default "" }}
+{{- end }}
+
+{{/*
+Renders the secretsManager.googleSecretManager.region environment variable
+*/}}
+{{- define "airbyte.secretsManager.googleSecretManager.region.env" }}
+- name: SECRET_STORE_GCP_REGION
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: SECRET_STORE_GCP_REGION
+{{- end }}
+
+{{/*
 Renders the global.secretsManager.vault.address value
 */}}
 {{- define "airbyte.secretsManager.vault.address" }}
@@ -503,6 +521,7 @@ Renders the set of all secretsManager environment variables
 {{- include "airbyte.secretsManager.googleSecretManager.credentials.env" . }}
 {{- include "airbyte.secretsManager.googleSecretManager.credentialsSecretKey.env" . }}
 {{- include "airbyte.secretsManager.googleSecretManager.credentailsSecretName.env" . }}
+{{- include "airbyte.secretsManager.googleSecretManager.region.env" . }}
 {{- end }}
 
 {{- if eq $opt "TESTING_CONFIG_DB_TABLE" }}
@@ -544,6 +563,7 @@ AB_AZURE_KEY_CLIENT_SECRET_REF_KEY: {{ .Values.global.secretsManager.azureKeyVau
 SECRET_STORE_GCP_PROJECT_ID: {{ include "airbyte.secretsManager.googleSecretManager.projectId" . | quote }}
 SECRET_STORE_GCP_SECRET_KEY: {{ (include "airbyte.secretsManager.googleSecretManager.credentials.secretKey" .) | quote }}
 SECRET_STORE_GCP_SECRET_NAME: {{ (include "airbyte.secretsManager.secretName" .) | quote }}
+SECRET_STORE_GCP_REGION: {{ include "airbyte.secretsManager.googleSecretManager.region" . | quote }}
 {{- end }}
 
 {{- if eq $opt "TESTING_CONFIG_DB_TABLE" }}

@@ -422,6 +422,7 @@ class EnvVarConfigBeanFactory {
   fun secretPersistenceEnvMap(
     @Value("\${airbyte.secret.persistence}") persistenceType: String,
     @Value("\${airbyte.secret.store.gcp.project-id}") gcpProjectId: String,
+    @Value("\${airbyte.secret.store.gcp.region:}") gcpRegion: String?,
     @Value("\${airbyte.secret.store.aws.region}") awsRegion: String,
     @Value("\${airbyte.secret.store.aws.kms-key-arn}") awsKmsKeyArn: String,
     @Value("\${airbyte.secret.store.aws.tags}") awsTags: String,
@@ -434,6 +435,7 @@ class EnvVarConfigBeanFactory {
     buildMap {
       put(EnvVarConstants.SECRET_PERSISTENCE, persistenceType)
       put(EnvVarConstants.SECRET_STORE_GCP_PROJECT_ID, gcpProjectId)
+      if (!gcpRegion.isNullOrBlank()) put(EnvVarConstants.SECRET_STORE_GCP_REGION, gcpRegion)
       put(EnvVarConstants.AWS_SECRET_MANAGER_REGION, awsRegion)
       put(EnvVarConstants.AWS_KMS_KEY_ARN, awsKmsKeyArn)
       put(EnvVarConstants.AWS_SECRET_MANAGER_SECRET_TAGS, awsTags)

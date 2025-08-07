@@ -465,6 +465,12 @@ spec:
           value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
         - name: SECRET_STORE_GCP_SECRET_KEY
           value: {{ include "airbyte.googleSecretManagerCredentialsSecretKey" .Values.global.secretsManager.googleSecretManager.credentialsSecretKey }}
+        {{- if .Values.global.secretsManager.googleSecretManager.region }}
+        - name: SECRET_STORE_GCP_REGION
+          value: {{ .Values.global.secretsManager.googleSecretManager.region }}
+        - name: CLOUDSDK_API_ENDPOINT_OVERRIDES_SECRETMANAGER
+          value: https://secretmanager.{{ .Values.global.secretsManager.googleSecretManager.region }}.rep.googleapis.com/
+        {{- end }}
         {{- end }}
 
         # Values for vault secrets
