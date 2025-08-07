@@ -8,6 +8,7 @@ import {
   OrganizationPaymentConfigReadPaymentStatus,
   OrganizationPaymentConfigReadSubscriptionStatus,
   ISO8601DateTime,
+  OrganizationTrialStatusRead,
 } from "core/api/types/AirbyteClient";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
@@ -38,7 +39,10 @@ export interface UseOrganizationSubscriptionStatusReturn {
  * Provides trial, payment, and subscription status throughout the subscription lifecycle.
  * Follows the same logic as useBillingStatusBanner but focuses on data retrieval.
  */
-export const useOrganizationSubscriptionStatus = (): UseOrganizationSubscriptionStatusReturn => {
+export const useOrganizationSubscriptionStatus = (options?: {
+  refetchWithInterval?: boolean;
+  onSuccessGetTrialStatusClb?: (isTrialEndedAndLockedOrDisabled: boolean) => void;
+}): UseOrganizationSubscriptionStatusReturn => {
   const organizationId = useCurrentOrganizationId();
 
   // Permission checks
@@ -49,9 +53,26 @@ export const useOrganizationSubscriptionStatus = (): UseOrganizationSubscription
 
   // Conditional trial status fetching - only when payment status allows it and user has permissions
   const shouldFetchTrialStatus =
-    (billing?.paymentStatus === "uninitialized" || billing?.paymentStatus === "okay") && canViewTrialStatus;
+    (billing?.paymentStatus === "uninitialized" ||
+      billing?.paymentStatus === "okay" ||
+      billing?.paymentStatus === "disabled" ||
+      billing?.paymentStatus === "locked") &&
+    canViewTrialStatus;
 
-  const trialStatus = useOrganizationTrialStatus(organizationId, shouldFetchTrialStatus);
+  const trialStatus = useOrganizationTrialStatus(organizationId, {
+    enabled: shouldFetchTrialStatus,
+    ...(options?.refetchWithInterval && {
+      refetchInterval: options?.refetchWithInterval,
+    }),
+    ...(options?.onSuccessGetTrialStatusClb && {
+      onSuccess: (data: OrganizationTrialStatusRead) => {
+        const isTrialEndedAndLockedOrDisabled =
+          data.trialStatus === "post_trial" &&
+          (billing?.paymentStatus === "locked" || billing?.paymentStatus === "disabled");
+        options?.onSuccessGetTrialStatusClb?.(isTrialEndedAndLockedOrDisabled);
+      },
+    }),
+  });
 
   // Calculate remaining trial days
   const trialDaysLeft = useMemo(() => {

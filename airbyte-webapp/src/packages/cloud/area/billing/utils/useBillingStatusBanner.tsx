@@ -24,10 +24,9 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
   const canViewTrialStatus = useGeneratedIntent(Intent.ViewOrganizationTrialStatus, { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
-  const trialStatus = useOrganizationTrialStatus(
-    organizationId,
-    (billing?.paymentStatus === "uninitialized" || billing?.paymentStatus === "okay") && canViewTrialStatus
-  );
+  const trialStatus = useOrganizationTrialStatus(organizationId, {
+    enabled: (billing?.paymentStatus === "uninitialized" || billing?.paymentStatus === "okay") && canViewTrialStatus,
+  });
 
   if (!billing) {
     return undefined;

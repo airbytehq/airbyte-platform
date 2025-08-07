@@ -42,7 +42,8 @@ export const useGetProductBranding = (): "enterprise" | "cloudForTeams" | "cloud
   const isCloudApp = useIsCloudApp();
   const isCloudForTeams = useFeature(FeatureItem.CloudForTeamsBranding);
   const isCloudInTrial =
-    useOrganizationTrialStatus(currentOrganizationId, !!currentOrganizationId && isCloudApp)?.trialStatus ===
-    "in_trial";
+    useOrganizationTrialStatus(currentOrganizationId, {
+      enabled: !!currentOrganizationId && isCloudApp,
+    })?.trialStatus === "in_trial";
   return isEnterprise ? "enterprise" : isCloudForTeams ? "cloudForTeams" : isCloudInTrial ? "cloudInTrial" : null;
 };

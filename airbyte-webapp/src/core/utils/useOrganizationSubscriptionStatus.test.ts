@@ -154,7 +154,9 @@ describe("useOrganizationSubscriptionStatus", () => {
 
       renderHook(() => useOrganizationSubscriptionStatus());
 
-      expect(mockUseOrganizationTrialStatus).toHaveBeenCalledWith(mockOrganizationId, true);
+      expect(mockUseOrganizationTrialStatus).toHaveBeenCalledWith(mockOrganizationId, {
+        enabled: true,
+      });
     });
 
     it("should fetch trial status when payment status is okay and user has permission", () => {
@@ -163,16 +165,20 @@ describe("useOrganizationSubscriptionStatus", () => {
 
       renderHook(() => useOrganizationSubscriptionStatus());
 
-      expect(mockUseOrganizationTrialStatus).toHaveBeenCalledWith(mockOrganizationId, true);
+      expect(mockUseOrganizationTrialStatus).toHaveBeenCalledWith(mockOrganizationId, {
+        enabled: true,
+      });
     });
 
-    it("should not fetch trial status when payment status is locked", () => {
+    it("should fetch trial status when payment status is locked and user has permission", () => {
       mockUseOrgInfo.mockReturnValue(createMockOrgInfo("locked"));
       mockUseGeneratedIntent.mockReturnValue(true);
 
       renderHook(() => useOrganizationSubscriptionStatus());
 
-      expect(mockUseOrganizationTrialStatus).toHaveBeenCalledWith(mockOrganizationId, false);
+      expect(mockUseOrganizationTrialStatus).toHaveBeenCalledWith(mockOrganizationId, {
+        enabled: true,
+      });
     });
 
     it("should not fetch trial status when user lacks permission", () => {
@@ -181,16 +187,20 @@ describe("useOrganizationSubscriptionStatus", () => {
 
       renderHook(() => useOrganizationSubscriptionStatus());
 
-      expect(mockUseOrganizationTrialStatus).toHaveBeenCalledWith(mockOrganizationId, false);
+      expect(mockUseOrganizationTrialStatus).toHaveBeenCalledWith(mockOrganizationId, {
+        enabled: false,
+      });
     });
 
-    it("should not fetch trial status when both payment status is locked and user lacks permission", () => {
+    it("should not fetch trial status when payment status is locked but user lacks permission", () => {
       mockUseOrgInfo.mockReturnValue(createMockOrgInfo("locked"));
       mockUseGeneratedIntent.mockReturnValue(false);
 
       renderHook(() => useOrganizationSubscriptionStatus());
 
-      expect(mockUseOrganizationTrialStatus).toHaveBeenCalledWith(mockOrganizationId, false);
+      expect(mockUseOrganizationTrialStatus).toHaveBeenCalledWith(mockOrganizationId, {
+        enabled: false,
+      });
     });
   });
 
