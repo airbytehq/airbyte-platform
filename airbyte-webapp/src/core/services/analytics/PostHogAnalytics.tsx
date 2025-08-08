@@ -24,6 +24,10 @@ export const PostHogAnalytics: React.FC<React.PropsWithChildren> = ({ children }
         capture_pageleave: false,
         autocapture: false,
         debug: process.env.MODE === "development",
+        loaded: (posthogInstance) => {
+          // Attach PostHog instance to window to follow the same pattern as other analytics tools
+          window.posthog = posthogInstance;
+        },
       }}
     >
       {children}

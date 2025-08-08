@@ -37,7 +37,14 @@ export class AnalyticsService {
     if (process.env.NODE_ENV === "development") {
       console.debug(`%c[Analytics.Page] ${name}`, "color: teal", params);
     }
-    this.getSegmentAnalytics()?.page?.(name, { ...params, ...this.context });
+
+    const session_id = this.getPosthogAnalytics()?.get_session_id();
+
+    this.getSegmentAnalytics()?.page?.(name, {
+      ...params,
+      ...this.context,
+      ...(session_id && { $session_id: session_id }),
+    });
   }
 
   public reset(): void {
@@ -48,9 +55,12 @@ export class AnalyticsService {
     if (process.env.NODE_ENV === "development") {
       console.debug(`%c[Analytics.Track] Airbyte.UI.${namespace}.${action}`, "color: teal", params);
     }
+    const session_id = this.getPosthogAnalytics()?.get_session_id();
+
     this.getSegmentAnalytics()?.track(`Airbyte.UI.${namespace}.${action}`, {
       ...params,
       ...this.context,
+      ...(session_id && { $session_id: session_id }),
     });
   }
 
@@ -59,7 +69,6 @@ export class AnalyticsService {
       console.debug(`%c[Analytics.Identify] ${userId}`, "color: teal", traits);
     }
     this.getSegmentAnalytics()?.identify?.(userId, traits);
-
     // PostHog identify and alias to link anonymous history
     const posthog = this.getPosthogAnalytics();
     if (posthog) {
