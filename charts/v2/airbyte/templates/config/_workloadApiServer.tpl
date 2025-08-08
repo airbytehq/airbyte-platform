@@ -6,17 +6,6 @@
 */}}
 
 {{/*
-Renders the workloadApiServer secret name
-*/}}
-{{- define "airbyte.workloadApiServer.secretName" }}
-{{- if .Values.workloadApiServer.secretName }}
-    {{- .Values.workloadApiServer.secretName }}
-{{- else }}
-    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the workloadApiServer.enabled value
 */}}
 {{- define "airbyte.workloadApiServer.enabled" }}
@@ -57,75 +46,11 @@ Renders the workloadApiServer.host environment variable
 {{- end }}
 
 {{/*
-Renders the workloadApiServer.bearerToken value
-*/}}
-{{- define "airbyte.workloadApiServer.bearerToken" }}
-    {{- .Values.workloadApiServer.bearerToken | default "token" }}
-{{- end }}
-
-{{/*
-Renders the workloadApiServer.bearerToken secret key
-*/}}
-{{- define "airbyte.workloadApiServer.bearerToken.secretKey" }}
-	{{- .Values.workloadApiServer.bearerTokenSecretKey | default "WORKLOAD_API_BEARER_TOKEN" }}
-{{- end }}
-
-{{/*
-Renders the workloadApiServer.bearerToken environment variable
-*/}}
-{{- define "airbyte.workloadApiServer.bearerToken.env" }}
-- name: WORKLOAD_API_BEARER_TOKEN
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "airbyte.workloadApiServer.secretName" . }}
-      key: {{ include "airbyte.workloadApiServer.bearerToken.secretKey" . }}
-{{- end }}
-
-{{/*
-Renders the workloadApiServer.bearerTokenSecretName value
-*/}}
-{{- define "airbyte.workloadApiServer.bearerTokenSecretName" }}
-    {{- .Values.workloadApiServer.bearerTokenSecretName | default (include "airbyte.workloadApiServer.secretName" .) }}
-{{- end }}
-
-{{/*
-Renders the workloadApiServer.bearerTokenSecretName environment variable
-*/}}
-{{- define "airbyte.workloadApiServer.bearerTokenSecretName.env" }}
-- name: WORKLOAD_API_BEARER_TOKEN_SECRET_NAME
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: WORKLOAD_API_BEARER_TOKEN_SECRET_NAME
-{{- end }}
-
-{{/*
-Renders the workloadApiServer.bearerTokenSecretKey value
-*/}}
-{{- define "airbyte.workloadApiServer.bearerTokenSecretKey" }}
-    {{- .Values.workloadApiServer.bearerTokenSecretKey | default "WORKLOAD_API_BEARER_TOKEN" }}
-{{- end }}
-
-{{/*
-Renders the workloadApiServer.bearerTokenSecretKey environment variable
-*/}}
-{{- define "airbyte.workloadApiServer.bearerTokenSecretKey.env" }}
-- name: WORKLOAD_API_BEARER_TOKEN_SECRET_KEY
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: WORKLOAD_API_BEARER_TOKEN_SECRET_KEY
-{{- end }}
-
-{{/*
 Renders the set of all workloadApiServer environment variables
 */}}
 {{- define "airbyte.workloadApiServer.envs" }}
 {{- include "airbyte.workloadApiServer.enabled.env" . }}
 {{- include "airbyte.workloadApiServer.host.env" . }}
-{{- include "airbyte.workloadApiServer.bearerToken.env" . }}
-{{- include "airbyte.workloadApiServer.bearerTokenSecretName.env" . }}
-{{- include "airbyte.workloadApiServer.bearerTokenSecretKey.env" . }}
 {{- end }}
 
 {{/*
@@ -134,13 +59,4 @@ Renders the set of all workloadApiServer config map variables
 {{- define "airbyte.workloadApiServer.configVars" }}
 WORKLOAD_API_SERVER_ENABLED: {{ include "airbyte.workloadApiServer.enabled" . | quote }}
 WORKLOAD_API_HOST: {{ include "airbyte.workloadApiServer.host" . | quote }}
-WORKLOAD_API_BEARER_TOKEN_SECRET_NAME: {{ include "airbyte.workloadApiServer.bearerTokenSecretName" . | quote }}
-WORKLOAD_API_BEARER_TOKEN_SECRET_KEY: {{ include "airbyte.workloadApiServer.bearerTokenSecretKey" . | quote }}
-{{- end }}
-
-{{/*
-Renders the set of all workloadApiServer secret variables
-*/}}
-{{- define "airbyte.workloadApiServer.secrets" }}
-WORKLOAD_API_BEARER_TOKEN: {{ include "airbyte.workloadApiServer.bearerToken" . | quote }}
 {{- end }}

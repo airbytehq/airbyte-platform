@@ -59,6 +59,7 @@ spec:
           image: {{ include "imageUrl" (list .Values.cron.image $) }}
           imagePullPolicy: "{{ .Values.cron.image.pullPolicy }}"
           env:
+            {{- include "airbyte.auth.jwt.envs" . | nindent 12 }}
             {{- include "airbyte.common.envs" . | nindent 12 }}
             {{- include "airbyte.connector.envs" . | nindent 12 }}
             {{- include "airbyte.cron.envs" . | nindent 12 }}

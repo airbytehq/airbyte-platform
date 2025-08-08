@@ -138,11 +138,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: TRACKING_STRATEGY
-        - name: WORKLOAD_API_BEARER_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: {{ index .Values "workloadApi" "bearerTokenSecretName" | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-              key: {{ index .Values "workloadApi" "bearerTokenSecretKey" | default "WORKLOAD_API_BEARER_TOKEN" }}
         - name: AB_JWT_SIGNATURE_SECRET
           valueFrom:
             secretKeyRef:

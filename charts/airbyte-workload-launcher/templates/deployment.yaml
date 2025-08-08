@@ -281,15 +281,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS
-        - name: WORKLOAD_API_BEARER_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: {{ index .Values "workloadApi" "bearerTokenSecretName" | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-              key: {{ index .Values "workloadApi" "bearerTokenSecretKey" | default "WORKLOAD_API_BEARER_TOKEN" }}
-        - name: WORKLOAD_API_BEARER_TOKEN_SECRET_NAME
-          value: {{ index .Values "workloadApi" "bearerTokenSecretName" | default (printf "%s-airbyte-secrets" .Release.Name ) }}
-        - name: WORKLOAD_API_BEARER_TOKEN_SECRET_KEY
-          value: {{ index .Values "workloadApi" "bearerTokenSecretKey" | default "WORKLOAD_API_BEARER_TOKEN" }}
         - name: INTERNAL_API_HOST
           valueFrom:
             configMapKeyRef:

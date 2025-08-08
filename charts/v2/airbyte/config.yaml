@@ -1457,19 +1457,6 @@ workloadApiServer:
       key: host
       valueExp: ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-workload-api-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.workloadApiServer.service.port)) (eq (include "airbyte.cluster.type" .) "data-plane")
 
-    - env: WORKLOAD_API_BEARER_TOKEN
-      key: bearerToken
-      defaultValue: token
-      sensitive: true
-
-    - env: WORKLOAD_API_BEARER_TOKEN_SECRET_NAME
-      key: bearerTokenSecretName
-      defaultValueExp: (include "airbyte.workloadApiServer.secretName" .)
-
-    - env: WORKLOAD_API_BEARER_TOKEN_SECRET_KEY
-      key: bearerTokenSecretKey
-      defaultValue: WORKLOAD_API_BEARER_TOKEN
-
 workloadLauncher:
   config:
     - env: CONTROL_PLANE_TOKEN_ENDPOINT

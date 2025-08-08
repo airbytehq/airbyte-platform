@@ -5,7 +5,7 @@
 package io.airbyte.workload.api.client
 
 import io.airbyte.api.client.ApiException
-import io.airbyte.api.client.auth.StaticTokenInterceptor
+import io.airbyte.api.client.auth.InternalClientTokenInterceptor
 import io.airbyte.api.client.config.ApiClientSupportFactory
 import io.airbyte.api.client.config.InternalApiClientConfig
 import io.airbyte.api.client.interceptor.UserAgentInterceptor
@@ -21,7 +21,6 @@ import retrofit2.Retrofit
 import retrofit2.converter.jackson.JacksonConverterFactory
 import retrofit2.create
 import java.time.Duration
-import java.util.Base64
 import kotlin.time.Duration.Companion.seconds
 
 @Factory
@@ -29,7 +28,6 @@ import kotlin.time.Duration.Companion.seconds
 class WorkloadApiClientFactory(
   @Property(name = "micronaut.application.name") private val applicationName: String,
   @Property(name = "airbyte.workload-api.base-path") private val basePath: String,
-  @Property(name = "airbyte.workload-api.bearer-token") private val bearerToken: String,
   @Property(name = "airbyte.workload-api.retries.delay-seconds") private val retryDelaySeconds: Long = 2,
   @Property(name = "airbyte.workload-api.retries.max") private val maxRetries: Int = 5,
   @Property(name = "airbyte.workload-api.jitter-factor") private val jitterFactor: Double = .25,
@@ -64,8 +62,10 @@ class WorkloadApiClientFactory(
           if (config.auth.type == InternalApiClientConfig.AuthType.DATAPLANE_ACCESS_TOKEN) {
             addInterceptor(ApiClientSupportFactory.newAccessTokenInterceptorFromConfig(config))
           } else {
-            val encodedBearerToken = Base64.getEncoder().encodeToString(bearerToken.toByteArray())
-            addInterceptor(StaticTokenInterceptor(encodedBearerToken))
+            if (config.auth.signatureSecret.isNullOrBlank()) {
+              throw Exception("setting up internal auth interceptor: signatureSecret is null or blank")
+            }
+            addInterceptor(InternalClientTokenInterceptor(applicationName, config.auth.signatureSecret))
           }
 
           addInterceptor(UserAgentInterceptor(applicationName))

@@ -85,7 +85,6 @@ airbyte {
         "MICRONAUT_ENVIRONMENTS" to "control-plane",
         "SERVICE_NAME" to project.name,
         "TRACKING_STRATEGY" to "logging",
-        "WORKLOAD_API_BEARER_TOKEN" to "ItsASecret",
       ),
     )
   }

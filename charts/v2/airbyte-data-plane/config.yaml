@@ -526,22 +526,6 @@ workloadApiServer:
       key: host
       defaultValueExp: (include "airbyte-data-plane.common.airbyteUrl" .)
 
-    # DEPRECATED: ?
-    - env: WORKLOAD_API_BEARER_TOKEN
-      key: bearerToken
-      defaultValue: token
-      sensitive: true
-
-    # DEPRECATED: ?
-    - env: WORKLOAD_API_BEARER_TOKEN_SECRET_NAME
-      key: bearerTokenSecretName
-      defaultValueExp: (include "airbyte-data-plane.workloadApiServer.secretName" .)
-
-    # DEPRECATED: ?
-    - env: WORKLOAD_API_BEARER_TOKEN_SECRET_KEY
-      key: bearerTokenSecretKey
-      defaultValue: WORKLOAD_API_BEARER_TOKEN
-
 workloadLauncher:
   config:
     - env: RUNNING_TTL_MINUTES

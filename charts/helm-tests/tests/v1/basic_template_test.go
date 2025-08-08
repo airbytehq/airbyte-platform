@@ -192,7 +192,6 @@ var commonSecretkeys = []string{
 	"DATABASE_PASSWORD",
 	"MINIO_ACCESS_KEY_ID",
 	"MINIO_SECRET_ACCESS_KEY",
-	"WORKLOAD_API_BEARER_TOKEN",
 }
 
 var proEditionSecretKeys = append([]string{

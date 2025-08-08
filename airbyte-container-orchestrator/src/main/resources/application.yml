@@ -115,7 +115,6 @@ airbyte:
       persistence-flush-period-sec: ${REPLICATION_FLUSH_PERIOD_SECONDS:10}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
-    bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}
     connect-timeout-seconds: ${WORKLOAD_API_CONNECT_TIMEOUT_SECONDS:30}
     heartbeat:
       interval-seconds: ${WORKLOAD_API_HEARTBEAT_INTERVAL_SECONDS:10}
