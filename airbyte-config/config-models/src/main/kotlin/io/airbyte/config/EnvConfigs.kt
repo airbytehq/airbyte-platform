@@ -125,7 +125,7 @@ class EnvConfigs
      * injected in the KubePodProcess class and used in the job pod templates.
      *
      *
-     * Can provide multiple strings seperated by comma(,) to indicate pulling from different
+     * Can provide multiple strings seperated by comma(, ) to indicate pulling from different
      * repositories. The empty string is a no-op value.
      */
     override fun getJobKubeMainContainerImagePullSecrets(): List<String> {

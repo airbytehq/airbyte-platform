@@ -80,8 +80,7 @@ class DiscoverCommand(
     val jobId = input.jobRunConfig.jobId
     val attemptNumber = if (input.jobRunConfig.attemptId == null) 0 else Math.toIntExact(input.jobRunConfig.attemptId)
     val workloadId =
-      if (input.discoverCatalogInput.manual
-      ) {
+      if (input.discoverCatalogInput.manual) {
         workloadIdGenerator.generateDiscoverWorkloadId(
           input.discoverCatalogInput.actorContext.actorDefinitionId,
           jobId,

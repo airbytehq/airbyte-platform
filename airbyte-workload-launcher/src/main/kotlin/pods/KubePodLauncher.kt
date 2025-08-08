@@ -283,8 +283,7 @@ class KubePodLauncher(
     // Edge case of the init container exiting with specific error codes
     // Those are configuration related errors that cause the main container to never start however, we did not fail
     // because the launch was a success from a workload-infra pov
-    if (initContainerExitCode == InitContainerConstants.SECRET_HYDRATION_ERROR_EXIT_CODE
-    ) {
+    if (initContainerExitCode == InitContainerConstants.SECRET_HYDRATION_ERROR_EXIT_CODE) {
       return true
     }
 

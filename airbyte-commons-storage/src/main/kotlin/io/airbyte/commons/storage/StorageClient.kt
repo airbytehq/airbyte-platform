@@ -481,7 +481,7 @@ abstract class AbstractS3StorageClient internal constructor(
   }
 
   private fun createBucketIfNotExists() {
-    if (!doesBucketExist(bucketName=bucketName)) {
+    if (!doesBucketExist(bucketName = bucketName)) {
       val createBucketRequest = CreateBucketRequest.builder().bucket(bucketName).build()
       s3Client.createBucket(createBucketRequest)
     }

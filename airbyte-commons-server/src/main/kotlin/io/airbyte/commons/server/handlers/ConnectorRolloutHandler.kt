@@ -220,8 +220,7 @@ open class ConnectorRolloutHandler
     open fun getAndValidateFinalizeRequest(connectorRolloutFinalize: ConnectorRolloutFinalizeRequestBody): ConnectorRollout {
       val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutFinalize.id)
       val invalidFinalizeStates = ConnectorRolloutFinalState.entries.map { ConnectorEnumRolloutState.fromValue(it.toString()) }
-      if (connectorRollout.state in invalidFinalizeStates
-      ) {
+      if (connectorRollout.state in invalidFinalizeStates) {
         throw ConnectorRolloutInvalidRequestProblem(
           ProblemMessageData().message(
             "Connector rollout may not be in a terminal state when finalizing the rollout, but was in state " + connectorRollout.state.toString(),
@@ -260,8 +259,7 @@ open class ConnectorRolloutHandler
     ): ConnectorRollout {
       val connectorRollout = connectorRolloutService.getConnectorRollout(id)
       val invalidUpdateStates = ConnectorRolloutFinalState.entries.map { ConnectorEnumRolloutState.fromValue(it.toString()) }
-      if (connectorRollout.state in invalidUpdateStates
-      ) {
+      if (connectorRollout.state in invalidUpdateStates) {
         throw ConnectorRolloutInvalidRequestProblem(
           ProblemMessageData().message(
             "Connector rollout may not be in a terminal state when updating the rollout state, but was in state " + connectorRollout.state.toString(),
