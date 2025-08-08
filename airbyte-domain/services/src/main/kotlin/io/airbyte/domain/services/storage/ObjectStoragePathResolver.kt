@@ -27,7 +27,7 @@ class S3ObjectStoragePathResolver(
     val bucketPath = objectStorageConfig.get("bucket_path")?.takeIf { it.isTextual }?.asText()
     val s3Endpoint = objectStorageConfig.get("s3_endpoint")
 
-    val jobPath = if (bucketPath.isNullOrEmpty()) "$jobId/" else "$bucketPath/$jobId/"
+    val jobPath = if (bucketPath.isNullOrEmpty()) "$jobId/" else "${bucketPath.trimEnd('/')}/$jobId/"
     val storageUri = "s3://$bucketName/$jobPath"
 
     val s3ConsoleUrl =

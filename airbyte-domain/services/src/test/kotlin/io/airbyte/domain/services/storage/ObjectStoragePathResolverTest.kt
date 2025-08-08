@@ -88,5 +88,23 @@ class ObjectStoragePathResolverTest {
         result.cloudConsoleUrl,
       )
     }
+
+    @Test
+    fun `resolve handles bucket_path with trailing slash correctly`() {
+      val config =
+        objectMapper.createObjectNode().apply {
+          put("s3_bucket_name", "my-bucket")
+          put("s3_bucket_region", "us-west-2")
+          put("bucket_path", "my/path/")
+        }
+      val resolver = S3ObjectStoragePathResolver(config)
+      val result = resolver.resolveRejectedRecordsPaths(123L)
+      assertNotNull(result)
+      assertEquals("s3://my-bucket/my/path/123/", result!!.storageUri)
+      assertEquals(
+        "https://us-west-2.console.aws.amazon.com/s3/buckets/my-bucket?prefix=my%2Fpath%2F123%2F",
+        result.cloudConsoleUrl,
+      )
+    }
   }
 }
