@@ -14,23 +14,19 @@ import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 export interface UseOrganizationSubscriptionStatusReturn {
   // Trial Information
-  isInTrial: boolean;
-  trialDaysLeft: number;
   trialStatus: OrganizationTrialStatusReadTrialStatus | undefined;
   trialEndsAt: ISO8601DateTime | undefined;
+  isInTrial: boolean;
+  trialDaysLeft: number;
   isTrialEndingWithin24Hours: boolean;
 
-  // Payment/Subscription Information
+  // Billing Information
   paymentStatus: OrganizationPaymentConfigReadPaymentStatus | undefined;
   subscriptionStatus: OrganizationPaymentConfigReadSubscriptionStatus | undefined;
-
-  // Computed States
-  isTrialWithPaymentMethod: boolean;
-  isTrialWithoutPaymentMethod: boolean;
-  isPostTrialUnsubscribed: boolean;
+  accountType: string | undefined;
+  gracePeriodEndsAt: number | undefined;
 
   // Permissions
-  canViewTrialStatus: boolean;
   canManageOrganizationBilling: boolean;
 }
 
@@ -99,40 +95,23 @@ export const useOrganizationSubscriptionStatus = (options?: {
     }
   }, [trialStatus?.trialEndsAt, trialStatus?.trialStatus]);
 
-  // Computed states
   const isInTrial = trialStatus?.trialStatus === "in_trial";
-
-  const isTrialWithPaymentMethod = useMemo(() => {
-    return trialStatus?.trialStatus === "in_trial" && billing?.paymentStatus === "okay";
-  }, [trialStatus?.trialStatus, billing?.paymentStatus]);
-
-  const isTrialWithoutPaymentMethod = useMemo(() => {
-    return trialStatus?.trialStatus === "in_trial" && billing?.paymentStatus === "uninitialized";
-  }, [trialStatus?.trialStatus, billing?.paymentStatus]);
-
-  const isPostTrialUnsubscribed = useMemo(() => {
-    return trialStatus?.trialStatus === "post_trial" && billing?.subscriptionStatus !== "subscribed";
-  }, [trialStatus?.trialStatus, billing?.subscriptionStatus]);
 
   return {
     // Trial Information
-    isInTrial,
-    trialDaysLeft,
     trialStatus: trialStatus?.trialStatus,
     trialEndsAt: trialStatus?.trialEndsAt,
+    isInTrial,
+    trialDaysLeft,
     isTrialEndingWithin24Hours,
 
-    // Payment/Subscription Information
+    // Billing Information
     paymentStatus: billing?.paymentStatus,
     subscriptionStatus: billing?.subscriptionStatus,
-
-    // Computed States
-    isTrialWithPaymentMethod,
-    isTrialWithoutPaymentMethod,
-    isPostTrialUnsubscribed,
+    accountType: billing?.accountType,
+    gracePeriodEndsAt: billing?.gracePeriodEndsAt,
 
     // Permissions
-    canViewTrialStatus,
     canManageOrganizationBilling,
   };
 };

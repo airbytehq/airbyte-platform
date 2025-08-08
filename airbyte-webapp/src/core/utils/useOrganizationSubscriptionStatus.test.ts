@@ -7,6 +7,7 @@ import {
   OrganizationTrialStatusReadTrialStatus,
   OrganizationPaymentConfigReadPaymentStatus,
   OrganizationPaymentConfigReadSubscriptionStatus,
+  OrganizationInfoReadBillingAccountType,
 } from "core/api/types/AirbyteClient";
 import { useGeneratedIntent } from "core/utils/rbac";
 
@@ -33,7 +34,9 @@ const mockPastTrialEndDate = "2024-01-01T00:00:00Z";
 
 const createMockOrgInfo = (
   paymentStatus: OrganizationPaymentConfigReadPaymentStatus,
-  subscriptionStatus: OrganizationPaymentConfigReadSubscriptionStatus = "unsubscribed"
+  subscriptionStatus: OrganizationPaymentConfigReadSubscriptionStatus = "unsubscribed",
+  accountType: OrganizationInfoReadBillingAccountType = "free",
+  gracePeriodEndsAt?: number
 ) => ({
   organizationId: mockOrganizationId,
   organizationName: "Test Organization",
@@ -41,6 +44,8 @@ const createMockOrgInfo = (
   billing: {
     paymentStatus,
     subscriptionStatus,
+    accountType,
+    gracePeriodEndsAt,
   },
 });
 
@@ -204,45 +209,28 @@ describe("useOrganizationSubscriptionStatus", () => {
     });
   });
 
-  describe("Computed states", () => {
-    it.each([
-      ["in_trial", "okay", true, "isTrialWithPaymentMethod"],
-      ["in_trial", "uninitialized", false, "isTrialWithPaymentMethod"],
-      ["post_trial", "okay", false, "isTrialWithPaymentMethod"],
-      ["in_trial", "uninitialized", true, "isTrialWithoutPaymentMethod"],
-      ["in_trial", "okay", false, "isTrialWithoutPaymentMethod"],
-    ])("should return %s=%s for trial='%s' and payment='%s'", (trialStatus, paymentStatus, expected, property) => {
-      mockUseOrgInfo.mockReturnValue(createMockOrgInfo(paymentStatus as OrganizationPaymentConfigReadPaymentStatus));
-      mockUseOrganizationTrialStatus.mockReturnValue(
-        createMockTrialStatus(trialStatus as OrganizationTrialStatusReadTrialStatus)
-      );
+  describe("Billing data access", () => {
+    it("should provide access to specific billing properties", () => {
+      const mockBilling = {
+        paymentStatus: "okay" as const,
+        subscriptionStatus: "subscribed" as const,
+        accountType: "free" as const,
+        gracePeriodEndsAt: 1705276800000,
+      };
+      mockUseOrgInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        sso: false,
+        billing: mockBilling,
+      });
 
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
 
-      expect(result.current[property as keyof typeof result.current]).toBe(expected);
+      expect(result.current.paymentStatus).toBe("okay");
+      expect(result.current.subscriptionStatus).toBe("subscribed");
+      expect(result.current.accountType).toBe("free");
+      expect(result.current.gracePeriodEndsAt).toBe(1705276800000);
+      expect(result.current.canManageOrganizationBilling).toBe(true);
     });
-
-    it.each([
-      ["post_trial", "uninitialized", "unsubscribed", true],
-      ["post_trial", "okay", "subscribed", false],
-      ["in_trial", "uninitialized", "unsubscribed", false],
-    ])(
-      "should return isPostTrialUnsubscribed=%s for trial='%s', payment='%s', subscription='%s'",
-      (trialStatus, paymentStatus, subscriptionStatus, expected) => {
-        mockUseOrgInfo.mockReturnValue(
-          createMockOrgInfo(
-            paymentStatus as OrganizationPaymentConfigReadPaymentStatus,
-            subscriptionStatus as OrganizationPaymentConfigReadSubscriptionStatus
-          )
-        );
-        mockUseOrganizationTrialStatus.mockReturnValue(
-          createMockTrialStatus(trialStatus as OrganizationTrialStatusReadTrialStatus)
-        );
-
-        const { result } = renderHook(() => useOrganizationSubscriptionStatus());
-
-        expect(result.current.isPostTrialUnsubscribed).toBe(expected);
-      }
-    );
   });
 });

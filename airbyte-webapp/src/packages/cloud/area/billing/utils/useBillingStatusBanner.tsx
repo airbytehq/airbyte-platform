@@ -4,11 +4,9 @@ import { useIntl } from "react-intl";
 
 import { ExternalLink, Link } from "components/ui/Link";
 
-import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { useOrganizationTrialStatus, useOrgInfo } from "core/api";
 import { links } from "core/utils/links";
-import { Intent, useGeneratedIntent } from "core/utils/rbac";
+import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
 import { RoutePaths } from "pages/routePaths";
 
@@ -20,29 +18,31 @@ interface BillingStatusBanner {
 export const useBillingStatusBanner = (context: "top_level" | "billing_page"): BillingStatusBanner | undefined => {
   const { formatMessage } = useIntl();
   const createLink = useCurrentWorkspaceLink();
-  const organizationId = useCurrentOrganizationId();
-  const canViewTrialStatus = useGeneratedIntent(Intent.ViewOrganizationTrialStatus, { organizationId });
-  const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
-  const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
-  const trialStatus = useOrganizationTrialStatus(organizationId, {
-    enabled: (billing?.paymentStatus === "uninitialized" || billing?.paymentStatus === "okay") && canViewTrialStatus,
-  });
+  const {
+    trialStatus,
+    trialDaysLeft,
+    canManageOrganizationBilling,
+    paymentStatus,
+    subscriptionStatus,
+    accountType,
+    gracePeriodEndsAt,
+  } = useOrganizationSubscriptionStatus();
 
-  if (!billing) {
+  if (!paymentStatus || !subscriptionStatus) {
     return undefined;
   }
 
-  if (billing.paymentStatus === "manual") {
+  if (paymentStatus === "manual") {
     if (context === "top_level") {
       // Do not show this information banner as a top-level banner.
       return undefined;
     }
-    if (billing.accountType === "free") {
+    if (accountType === "free") {
       return {
         level: "info",
         content: formatMessage({ id: "billing.banners.manualPaymentStatusFree" }),
       };
-    } else if (billing.accountType === "internal") {
+    } else if (accountType === "internal") {
       return {
         level: "info",
         content: formatMessage({ id: "billing.banners.manualPaymentStatusInternal" }),
@@ -50,7 +50,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     }
   }
 
-  if (billing.paymentStatus === "locked") {
+  if (paymentStatus === "locked") {
     return {
       level: "warning",
       content: formatMessage(
@@ -66,7 +66,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     };
   }
 
-  if (billing.paymentStatus === "disabled") {
+  if (paymentStatus === "disabled") {
     return {
       level: "warning",
       content: formatMessage(
@@ -85,7 +85,8 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     };
   }
 
-  if (billing.paymentStatus === "grace_period") {
+  if (paymentStatus === "grace_period") {
+    const gracePeriodDaysLeft = gracePeriodEndsAt ? Math.max(dayjs(gracePeriodEndsAt).diff(dayjs(), "days"), 0) : 0;
     return {
       level: "warning",
       content: formatMessage(
@@ -96,7 +97,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
               : "billing.banners.gracePeriodPaymentStatus",
         },
         {
-          days: billing.gracePeriodEndsAt ? Math.max(dayjs(billing.gracePeriodEndsAt).diff(dayjs(), "days"), 0) : 0,
+          days: gracePeriodDaysLeft,
           lnk: (node: React.ReactNode) => (
             <Link to={createLink(`/${RoutePaths.Settings}/${CloudSettingsRoutePaths.Billing}`)}>{node}</Link>
           ),
@@ -105,24 +106,21 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     };
   }
 
-  if (trialStatus?.trialStatus === "pre_trial") {
+  if (trialStatus === "pre_trial") {
     return {
       level: "info",
       content: formatMessage({ id: "billing.banners.preTrial" }),
     };
   }
 
-  if (trialStatus?.trialStatus === "in_trial") {
-    if (billing.paymentStatus === "okay") {
+  if (trialStatus === "in_trial") {
+    if (paymentStatus === "okay") {
       return {
         level: "info",
-        content: formatMessage(
-          { id: "billing.banners.inTrialWithPaymentMethod" },
-          { days: Math.max(dayjs(trialStatus.trialEndsAt).diff(dayjs(), "days"), 0) }
-        ),
+        content: formatMessage({ id: "billing.banners.inTrialWithPaymentMethod" }, { days: trialDaysLeft }),
       };
     }
-    if (billing.paymentStatus === "uninitialized") {
+    if (paymentStatus === "uninitialized") {
       return {
         level: "info",
         content: formatMessage(
@@ -133,7 +131,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
                 : "billing.banners.inTrial",
           },
           {
-            days: Math.max(dayjs(trialStatus.trialEndsAt).diff(dayjs(), "days"), 0),
+            days: trialDaysLeft,
             lnk: (node: React.ReactNode) => (
               <Link to={createLink(`/${RoutePaths.Settings}/${CloudSettingsRoutePaths.Billing}`)}>{node}</Link>
             ),
@@ -143,10 +141,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     }
   }
 
-  if (
-    trialStatus?.trialStatus === "post_trial" &&
-    (billing.paymentStatus === "uninitialized" || billing.subscriptionStatus !== "subscribed")
-  ) {
+  if (trialStatus === "post_trial" && (paymentStatus === "uninitialized" || subscriptionStatus !== "subscribed")) {
     return {
       level: "info",
       content: formatMessage(
