@@ -314,8 +314,6 @@ class EnvVarConfigBeanFactory {
     @Value("\${airbyte.data.plane.service-account.email}") dataPlaneServiceAccountEmail: String,
     @Value("\${airbyte.data.plane.service-account.credentials-path}") dataPlaneServiceAccountCredentialsPath: String,
     @Value("\${airbyte.acceptance.test.enabled}") isInTestMode: Boolean,
-    @Value("\${micronaut.security.oauth2.clients.keycloak.client-id:}") keycloakAuthClientId: String,
-    @Value("\${micronaut.security.oauth2.clients.keycloak.openid.issuer:}") keycloakAuthOpenIdIssuer: String,
     @Value("\${airbyte.internal-api.auth.token-endpoint}") controlPlaneTokenEndpoint: String,
     @Value("\${airbyte.airbyte-url}") airbyteUrl: String,
   ): Map<String, String> =
@@ -326,9 +324,6 @@ class EnvVarConfigBeanFactory {
       put(EnvVarConstants.DATA_PLANE_SERVICE_ACCOUNT_EMAIL_ENV_VAR, dataPlaneServiceAccountEmail)
       put(EnvVarConstants.DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH_ENV_VAR, dataPlaneServiceAccountCredentialsPath)
       put(EnvVarConstants.ACCEPTANCE_TEST_ENABLED_VAR, isInTestMode.toString())
-      // Expected to be present in Cloud for internal api auth
-      put(EnvVarConstants.KEYCLOAK_CLIENT_ID_ENV_VAR, keycloakAuthClientId)
-      put(EnvVarConstants.KEYCLOAK_INTERNAL_REALM_ISSUER_ENV_VAR, keycloakAuthOpenIdIssuer)
       // Expected to be present in dataplane for fetching token from control plane
       put(EnvVarConstants.CONTROL_PLANE_TOKEN_ENDPOINT, controlPlaneTokenEndpoint)
     }

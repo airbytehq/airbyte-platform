@@ -3,15 +3,7 @@ micronaut:
     enabled: true
     filter:
       enabled: false
-    oauth2:
-      clients:
-        keycloak:
-          client-id: ${KEYCLOAK_CLIENT_ID:}
-          client-secret: ${KEYCLOAK_CLIENT_SECRET:}
-          client-credentials:
-            enabled: true
-          openid:
-            issuer: ${KEYCLOAK_INTERNAL_REALM_ISSUER:}
+
 airbyte:
   workload-launcher:
     network-policy-introspection: true
