@@ -4,8 +4,6 @@
 
 package io.airbyte.config
 
-import com.google.common.collect.Sets
-
 /**
  * The statuses of a job.
  */
@@ -19,26 +17,18 @@ enum class JobStatus {
   ;
 
   companion object {
-    @JvmField
     val TERMINAL_STATUSES: Set<JobStatus> = setOf(FAILED, SUCCEEDED, CANCELLED)
 
-    @JvmField
-    val NON_TERMINAL_STATUSES: Set<JobStatus> = Sets.difference(setOf(*entries.toTypedArray()), TERMINAL_STATUSES)
+    val NON_TERMINAL_STATUSES: Set<JobStatus> = entries.toSet() - TERMINAL_STATUSES
 
     val VALID_STATUS_CHANGES: Map<JobStatus, Set<JobStatus>> =
-      java.util.Map.of(
-        PENDING,
-        setOf(RUNNING, FAILED, CANCELLED, INCOMPLETE),
-        RUNNING,
-        setOf(INCOMPLETE, SUCCEEDED, FAILED, CANCELLED),
-        INCOMPLETE,
-        setOf(PENDING, RUNNING, FAILED, CANCELLED, INCOMPLETE, SUCCEEDED),
-        SUCCEEDED,
-        setOf(),
-        FAILED,
-        setOf(FAILED),
-        CANCELLED,
-        setOf(),
+      mapOf(
+        PENDING to setOf(RUNNING, FAILED, CANCELLED, INCOMPLETE),
+        RUNNING to setOf(INCOMPLETE, SUCCEEDED, FAILED, CANCELLED),
+        INCOMPLETE to setOf(PENDING, RUNNING, FAILED, CANCELLED, INCOMPLETE, SUCCEEDED),
+        SUCCEEDED to emptySet(),
+        FAILED to setOf(FAILED),
+        CANCELLED to emptySet(),
       )
   }
 }
