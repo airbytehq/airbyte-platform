@@ -64,7 +64,7 @@ export const links = {
   billingNotificationsForm:
     "https://airbyte.retool.com/form/f06009f2-aad6-4df4-bb54-41f3b17d50d2?orgId={organizationId}&email={email}",
   connectionMappings: `${BASE_DOCS_LINK}/using-airbyte/mappings`,
-  dataActivationDocs: `${BASE_DOCS_LINK}`, // Does not exist yet - this is a placeholder
+  dataActivationDocs: `${BASE_DOCS_LINK}/platform/next/move-data/elt-data-activation`,
   ssoDocs: `${BASE_DOCS_LINK}/platform/access-management/sso`,
   embeddedOnboardingDocs: `${BASE_DOCS_LINK}/developer-tools/embedded/widget/develop-your-app`,
   fixIngress1_7: `${BASE_DOCS_LINK}/platform/next/deploying-airbyte/integrations/ingress-1-7`,
