@@ -4,4 +4,7 @@
 
 package io.airbyte.commons.server
 
+/**
+ * URL to the Airbyte API reference documentation.
+ */
 const val API_DOC_URL = "https://reference.airbyte.com"

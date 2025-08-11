@@ -8,6 +8,16 @@ package io.airbyte.commons.server.slug
 
 import java.text.Normalizer
 
+/**
+ * Converts a string to a URL-friendly slug by:
+ * - Normalizing unicode characters to ASCII
+ * - Converting special characters from multiple languages (German, Nordic, Turkish, etc.)
+ * - Replacing non-alphanumeric characters with hyphens
+ * - Converting to lowercase
+ *
+ * @param s the input string to slugify
+ * @return a URL-safe slug string
+ */
 fun slugify(s: String): String =
   if (s.isBlank()) {
     ""

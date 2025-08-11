@@ -10,11 +10,19 @@ import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.DestinationSearch
 
 /**
- * Constructs a query for finding a query.
+ * Utility for matching and merging destination search criteria with destination queries.
+ * Allows partial updates by merging search parameters with existing destination data.
  */
 class DestinationMatcher(
   private val search: DestinationSearch?,
 ) : Matchable<DestinationRead> {
+  /**
+   * Merges search criteria with the given destination query.
+   * Search parameters take precedence over query values when provided.
+   *
+   * @param query the base destination to merge search criteria into
+   * @return a new DestinationRead with merged values
+   */
   override fun match(query: DestinationRead): DestinationRead {
     if (search == null) {
       return query

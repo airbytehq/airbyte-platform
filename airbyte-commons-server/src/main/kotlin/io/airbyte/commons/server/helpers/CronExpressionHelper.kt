@@ -14,6 +14,10 @@ import jakarta.inject.Singleton
 import java.time.ZonedDateTime
 import java.util.Locale
 
+/**
+ * Helper service for validating, describing, and working with cron expressions.
+ * Enforces Airbyte-specific constraints like minimum execution intervals.
+ */
 @Singleton
 class CronExpressionHelper {
   fun validateCronExpression(cronExpression: String): Cron {
@@ -30,6 +34,12 @@ class CronExpressionHelper {
     }
   }
 
+  /**
+   * Converts a parsed cron expression to a human-readable description in English.
+   *
+   * @param cron the parsed cron expression
+   * @return a human-readable description of when the cron will execute
+   */
   fun describeCronExpression(cron: Cron): String = CronDescriptor.instance(Locale.ENGLISH).describe(cron)
 
   fun getNextExecutions(
