@@ -109,10 +109,18 @@ class AirbyteLogbackCustomConfigurer :
      * @return `true` to deny the event (filter out), `false` to allow the event through.
      */
     override fun evaluate(event: ILoggingEvent): Boolean {
-      // Check if we're in replication orchestrator
+      // Check if we're in a replication-related component (orchestrator, source, or destination)
       val eventLogSource = event.mdcPropertyMap?.get(LOG_SOURCE_MDC_KEY)
-      if (eventLogSource != LogSource.REPLICATION_ORCHESTRATOR.displayName) {
-        return true // Deny if not replication orchestrator
+      val isReplicationComponent =
+        eventLogSource in
+          setOf(
+            LogSource.REPLICATION_ORCHESTRATOR.displayName,
+            LogSource.SOURCE.displayName,
+            LogSource.DESTINATION.displayName,
+          )
+
+      if (!isReplicationComponent) {
+        return true // Deny if not a replication component
       }
 
       // Check if the current logger context has DEBUG level enabled
