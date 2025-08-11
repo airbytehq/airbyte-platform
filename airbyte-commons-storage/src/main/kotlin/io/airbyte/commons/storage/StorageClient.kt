@@ -568,7 +568,6 @@ fun StorageConfig.bucketName(type: DocumentType): String =
     DocumentType.LOGS -> this.buckets.log
     DocumentType.ACTIVITY_PAYLOADS -> this.buckets.activityPayload
     DocumentType.AUDIT_LOGS -> this.buckets.auditLogging?.takeIf { it.isNotBlank() } ?: ""
-    // Replication dump documents share the STORAGE_BUCKET_LOG bucket for now.
-    DocumentType.REPLICATION_DUMP -> this.buckets.log
+    DocumentType.REPLICATION_DUMP -> this.buckets.replicationDump?.takeIf { it.isNotBlank() } ?: REPLICATION_DUMP
     DocumentType.PROFILER_OUTPUT -> this.buckets.profilerOutput?.takeIf { it.isNotBlank() } ?: ""
   }

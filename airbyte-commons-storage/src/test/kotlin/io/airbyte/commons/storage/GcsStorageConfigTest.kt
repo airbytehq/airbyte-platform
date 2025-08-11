@@ -21,6 +21,7 @@ internal class GcsStorageConfigTest {
         // Audit logging is null by default as it is SME feature only
         auditLogging = null,
         profilerOutput = null,
+        replicationDump = null,
       )
     val applicationCredentials = Resources.read("sample_gcs_credentials.json")
     val gcsStorageConfig =
@@ -48,6 +49,7 @@ internal class GcsStorageConfigTest {
         activityPayload = "activity-payload",
         auditLogging = "audit-logging",
         profilerOutput = null,
+        replicationDump = null,
       )
     val applicationCredentials = Resources.read("sample_gcs_credentials.json")
     val gcsStorageConfig =
@@ -76,6 +78,7 @@ internal class GcsStorageConfigTest {
         activityPayload = "activity-payload",
         auditLogging = "audit-logging",
         profilerOutput = null,
+        replicationDump = null,
       )
     val applicationCredentials = Resources.read("sample_gcs_credentials.json")
     val gcsStorageConfig =

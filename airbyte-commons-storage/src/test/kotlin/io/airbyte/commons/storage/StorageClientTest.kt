@@ -65,6 +65,7 @@ private val buckets =
     activityPayload = "payload",
     auditLogging = null,
     profilerOutput = null,
+    replicationDump = null,
   )
 
 internal class DocumentTypeTest {
@@ -440,6 +441,7 @@ internal class LocalStorageClientTest {
         // Audit logging is null by default as it is SME feature only
         auditLogging = null,
         profilerOutput = null,
+        replicationDump = null,
       )
     val localStorageConfig =
       LocalStorageConfig(
@@ -466,6 +468,7 @@ internal class LocalStorageClientTest {
         activityPayload = "activity-payload",
         auditLogging = "audit-logging",
         profilerOutput = null,
+        replicationDump = null,
       )
     val localStorageConfig =
       LocalStorageConfig(

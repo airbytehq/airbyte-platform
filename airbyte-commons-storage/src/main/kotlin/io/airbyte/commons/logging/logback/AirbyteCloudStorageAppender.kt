@@ -130,6 +130,7 @@ internal fun buildBucketConfig(storageConfig: Map<EnvVar, String>): StorageBucke
     activityPayload = "",
     auditLogging = storageConfig[EnvVar.STORAGE_BUCKET_AUDIT_LOGGING] ?: "",
     profilerOutput = "",
+    replicationDump = "",
   )
 
 private fun buildStorageConfig(): Map<EnvVar, String> =

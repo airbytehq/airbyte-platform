@@ -37,6 +37,7 @@ private val bucket =
     activityPayload = "payload",
     auditLogging = null,
     profilerOutput = null,
+    replicationDump = null,
   )
 
 @MicronautTest
@@ -62,6 +63,7 @@ class LocalStorageClientFactoryTest {
           activityPayload = "ap",
           auditLogging = null,
           profilerOutput = null,
+          replicationDump = null,
         )
     }
 
