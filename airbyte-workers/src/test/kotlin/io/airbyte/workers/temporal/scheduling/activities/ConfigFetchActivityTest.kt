@@ -145,44 +145,6 @@ internal class ConfigFetchActivityTest {
       }
 
       @Test
-      @DisplayName("Test that the job gets scheduled if it is not manual and if it is the first run with legacy schedule schema")
-      @Throws(
-        IOException::class,
-      )
-      fun testFirstJobNonManual() {
-        whenever(mAirbyteApiClient!!.jobsApi).thenReturn(mJobsApi)
-        whenever(mJobsApi!!.getLastReplicationJobWithCancel(any<ConnectionIdRequestBody>()))
-          .thenReturn(JobOptionalRead())
-
-        whenever(mConnectionApi!!.getConnection(any<ConnectionIdRequestBody>()))
-          .thenReturn(connectionReadWithLegacySchedule)
-
-        val input = ScheduleRetrieverInput(CONNECTION_ID)
-
-        val output = configFetchActivity!!.getTimeToWait(input)
-
-        Assertions
-          .assertThat(output.timeToWait)
-          .isZero()
-      }
-
-      @Test
-      @DisplayName("Test that the job will wait for a long time if it is manual in the legacy schedule schema")
-      @Throws(IOException::class)
-      fun testManual() {
-        whenever(mConnectionApi!!.getConnection(any<ConnectionIdRequestBody>()))
-          .thenReturn(connectionReadWithoutSchedule)
-
-        val input = ScheduleRetrieverInput(CONNECTION_ID)
-
-        val output = configFetchActivity!!.getTimeToWait(input)
-
-        Assertions
-          .assertThat(output.timeToWait)
-          .hasDays((100 * 365).toLong())
-      }
-
-      @Test
       @DisplayName("Test that the job will wait for a long time if it is disabled")
       @Throws(IOException::class)
       fun testDisable() {
@@ -212,74 +174,6 @@ internal class ConfigFetchActivityTest {
         Assertions
           .assertThat(output.timeToWait)
           .hasDays((100 * 365).toLong())
-      }
-
-      @Test
-      @DisplayName("Test we will wait the required amount of time with legacy config")
-      @Throws(IOException::class)
-      fun testWait() {
-        whenever(mAirbyteApiClient!!.jobsApi).thenReturn(mJobsApi)
-        configFetchActivity =
-          ConfigFetchActivityImpl(
-            mAirbyteApiClient,
-            SYNC_JOB_MAX_ATTEMPTS,
-            Supplier { 60L * 3 },
-            mFeatureFlagClient!!,
-            mScheduleJitterHelper!!,
-            mFfContextMapper!!,
-          )
-
-        whenever(mJobRead!!.startedAt).thenReturn(null)
-        whenever(mJobRead.createdAt)
-          .thenReturn(60L)
-
-        whenever(mJobsApi!!.getLastReplicationJobWithCancel(any<ConnectionIdRequestBody>()))
-          .thenReturn(JobOptionalRead(mJobRead))
-
-        whenever(mConnectionApi!!.getConnection(any<ConnectionIdRequestBody>()))
-          .thenReturn(connectionReadWithLegacySchedule)
-
-        val input = ScheduleRetrieverInput(CONNECTION_ID)
-
-        val output = configFetchActivity!!.getTimeToWait(input)
-
-        Assertions
-          .assertThat(output.timeToWait)
-          .hasMinutes(3)
-      }
-
-      @Test
-      @DisplayName("Test we will not wait if we are late in the legacy schedule schema")
-      @Throws(IOException::class)
-      fun testNotWaitIfLate() {
-        whenever(mAirbyteApiClient!!.jobsApi).thenReturn(mJobsApi)
-        configFetchActivity =
-          ConfigFetchActivityImpl(
-            mAirbyteApiClient,
-            SYNC_JOB_MAX_ATTEMPTS,
-            Supplier { 60L * 10 },
-            mFeatureFlagClient!!,
-            mScheduleJitterHelper!!,
-            mFfContextMapper!!,
-          )
-
-        whenever(mJobRead!!.startedAt).thenReturn(null)
-        whenever(mJobRead.createdAt)
-          .thenReturn(60L)
-
-        whenever(mJobsApi!!.getLastReplicationJobWithCancel(any<ConnectionIdRequestBody>()))
-          .thenReturn(JobOptionalRead(mJobRead))
-
-        whenever(mConnectionApi!!.getConnection(any<ConnectionIdRequestBody>()))
-          .thenReturn(connectionReadWithLegacySchedule)
-
-        val input = ScheduleRetrieverInput(CONNECTION_ID)
-
-        val output = configFetchActivity!!.getTimeToWait(input)
-
-        Assertions
-          .assertThat(output.timeToWait)
-          .isZero()
       }
 
       @Test
@@ -717,35 +611,6 @@ internal class ConfigFetchActivityTest {
 
     private const val SYNC_JOB_MAX_ATTEMPTS = 3
 
-    private val connectionReadWithLegacySchedule =
-      ConnectionRead(
-        CONNECTION_ID,
-        CONNECTION_NAME,
-        SOURCE_ID,
-        DESTINATION_ID,
-        AirbyteCatalog(mutableListOf<AirbyteStreamAndConfiguration>()),
-        ConnectionStatus.ACTIVE,
-        false,
-        null,
-        null,
-        null,
-        null,
-        ConnectionSchedule(5L, ConnectionSchedule.TimeUnit.MINUTES),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-      )
-
     private val connectionReadWithManualScheduleType =
       ConnectionRead(
         CONNECTION_ID,
@@ -877,35 +742,6 @@ internal class ConfigFetchActivityTest {
         null,
         null,
         ConnectionSchedule(5L, ConnectionSchedule.TimeUnit.MINUTES),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-      )
-
-    private val connectionReadWithoutSchedule =
-      ConnectionRead(
-        CONNECTION_ID,
-        CONNECTION_NAME,
-        SOURCE_ID,
-        DESTINATION_ID,
-        AirbyteCatalog(mutableListOf<AirbyteStreamAndConfiguration>()),
-        ConnectionStatus.DEPRECATED,
-        false,
-        null,
-        null,
-        null,
-        null,
-        null,
         null,
         null,
         null,

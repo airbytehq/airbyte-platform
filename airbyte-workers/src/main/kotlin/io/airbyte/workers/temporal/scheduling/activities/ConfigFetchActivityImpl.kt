@@ -89,12 +89,7 @@ class ConfigFetchActivityImpl
         val connectionIdRequestBody = ConnectionIdRequestBody(input.connectionId!!)
         val connectionRead = airbyteApiClient.connectionApi.getConnection(connectionIdRequestBody)
         val workspaceId = airbyteApiClient.workspaceApi.getWorkspaceByConnectionId(connectionIdRequestBody).workspaceId
-        val timeToWait =
-          if (connectionRead.scheduleType != null) {
-            getTimeToWaitFromScheduleType(connectionRead, input.connectionId!!, workspaceId)
-          } else {
-            getTimeToWaitFromLegacy(connectionRead, input.connectionId!!)
-          }
+        val timeToWait = getTimeToWaitFromScheduleType(connectionRead, input.connectionId!!, workspaceId)
         val timeToWaitWithSchedulingJitter =
           applyJitterRules(timeToWait, input.connectionId!!, connectionRead.scheduleType, workspaceId)
         return ScheduleRetrieverOutput(timeToWaitWithSchedulingJitter)
@@ -271,42 +266,6 @@ class ConfigFetchActivityImpl
       return timeToWait.plusMinutes(minutesToWait).plusSeconds(1)
     }
 
-    /**
-     * Get wait time from legacy schedule. This method consumes the `schedule` field.
-     *
-     * @param connectionRead connection read
-     * @param connectionId connection id
-     * @return time to wait
-     * @throws IOException exception when interacting with the db
-     */
-    @Throws(IOException::class)
-    private fun getTimeToWaitFromLegacy(
-      connectionRead: ConnectionRead,
-      connectionId: UUID,
-    ): Duration {
-      if (connectionRead.schedule == null || connectionRead.status != ConnectionStatus.ACTIVE) {
-        // Manual syncs wait for their first run
-        return Duration.ofDays((100 * 365).toLong())
-      }
-
-      val previousJobOptional =
-        airbyteApiClient.jobsApi.getLastReplicationJobWithCancel(ConnectionIdRequestBody(connectionId))
-
-      if (previousJobOptional.job == null && connectionRead.schedule != null) {
-        // Non-manual syncs don't wait for their first run
-        return Duration.ZERO
-      }
-
-      val previousJob = previousJobOptional.job!!
-      val prevRunStart: Long = (if (previousJob.startedAt != null) previousJob.startedAt else previousJob.createdAt)!!
-
-      val nextRunStart = prevRunStart + getIntervalInSecond(connectionRead.schedule!!)
-
-      return Duration.ofSeconds(
-        max(0, nextRunStart - currentSecondsSupplier.get()!!),
-      )
-    }
-
     @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
     override fun getMaxAttempt(): GetMaxAttemptOutput = GetMaxAttemptOutput(syncJobMaxAttempts)
 
@@ -384,8 +343,6 @@ class ConfigFetchActivityImpl
 
     private fun getIntervalInSecond(schedule: ConnectionScheduleDataBasicSchedule): Long = getSecondsInUnit(schedule.timeUnit) * schedule.units
 
-    private fun getIntervalInSecond(schedule: ConnectionSchedule): Long = getSecondsInUnit(schedule.timeUnit) * schedule.units
-
     private fun getSecondsInUnit(timeUnitEnum: ConnectionScheduleDataBasicSchedule.TimeUnit): Long {
       when (timeUnitEnum) {
         ConnectionScheduleDataBasicSchedule.TimeUnit.MINUTES -> return TimeUnit.MINUTES.toSeconds(1)
@@ -393,17 +350,6 @@ class ConfigFetchActivityImpl
         ConnectionScheduleDataBasicSchedule.TimeUnit.DAYS -> return TimeUnit.DAYS.toSeconds(1)
         ConnectionScheduleDataBasicSchedule.TimeUnit.WEEKS -> return TimeUnit.DAYS.toSeconds(1) * 7
         ConnectionScheduleDataBasicSchedule.TimeUnit.MONTHS -> return TimeUnit.DAYS.toSeconds(1) * 30
-        else -> throw RuntimeException("Unhandled TimeUnitEnum: " + timeUnitEnum)
-      }
-    }
-
-    private fun getSecondsInUnit(timeUnitEnum: ConnectionSchedule.TimeUnit): Long {
-      when (timeUnitEnum) {
-        ConnectionSchedule.TimeUnit.MINUTES -> return TimeUnit.MINUTES.toSeconds(1)
-        ConnectionSchedule.TimeUnit.HOURS -> return TimeUnit.HOURS.toSeconds(1)
-        ConnectionSchedule.TimeUnit.DAYS -> return TimeUnit.DAYS.toSeconds(1)
-        ConnectionSchedule.TimeUnit.WEEKS -> return TimeUnit.DAYS.toSeconds(1) * 7
-        ConnectionSchedule.TimeUnit.MONTHS -> return TimeUnit.DAYS.toSeconds(1) * 30
         else -> throw RuntimeException("Unhandled TimeUnitEnum: " + timeUnitEnum)
       }
     }
