@@ -5,6 +5,7 @@
 package io.airbyte.config.secrets
 
 import com.fasterxml.jackson.databind.JsonNode
+import java.io.Serializable
 
 data class ConfigWithSecretReferences(
   /**
@@ -16,4 +17,4 @@ data class ConfigWithSecretReferences(
    * Map of secret coordinates to slot into the configuration.
    */
   val referencedSecrets: Map<String, SecretReferenceConfig>,
-)
+) : Serializable

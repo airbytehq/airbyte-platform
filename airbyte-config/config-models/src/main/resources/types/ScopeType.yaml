@@ -1,9 +1,0 @@
----
-"$schema": http://json-schema.org/draft-07/schema#
-"$id": https://github.com/airbytehq/airbyte/blob/master/airbyte-config/models/src/main/resources/types/ScopeType.yaml
-title: ScopeType
-description: Scope type of resource id
-type: string
-enum:
-  - organization
-  - workspace

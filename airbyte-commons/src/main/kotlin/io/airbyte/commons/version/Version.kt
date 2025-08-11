@@ -6,6 +6,7 @@ package io.airbyte.commons.version
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import java.io.Serializable
 import java.util.Objects
 
 /**
@@ -13,7 +14,7 @@ import java.util.Objects
  */
 @JsonDeserialize(using = VersionDeserializer::class)
 @JsonSerialize(using = VersionSerializer::class)
-open class Version {
+open class Version : Serializable {
   companion object {
     const val DEV_VERSION_PREFIX = "dev"
 

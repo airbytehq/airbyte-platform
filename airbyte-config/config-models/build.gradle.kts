@@ -3,7 +3,6 @@ import org.jsonschema2pojo.SourceType
 plugins {
   id("io.airbyte.gradle.jvm.lib")
   id("io.airbyte.gradle.publish")
-  id("com.github.eirnym.js2p")
 }
 
 dependencies {
@@ -35,22 +34,10 @@ dependencies {
   testRuntimeOnly(libs.junit.jupiter.engine)
 }
 
-jsonSchema2Pojo {
-  setSourceType(SourceType.YAMLSCHEMA.name)
-  setSource(files("${sourceSets["main"].output.resourcesDir}/types"))
-  targetDirectory = file("${project.layout.buildDirectory.get()}/generated/src/gen/java/")
-
-  targetPackage = "io.airbyte.config"
-  useLongIntegers = true
-
-  removeOldOutput = true
-
-  generateBuilders = true
-  includeConstructors = false
-  includeSetters = true
-  serializable = true
-}
-
-tasks.named("compileKotlin") {
-  dependsOn(tasks.named("generateJsonSchema2Pojo"))
+sourceSets {
+  main {
+    java {
+      srcDir("${project.layout.projectDirectory}/src/generated/java")
+    }
+  }
 }
