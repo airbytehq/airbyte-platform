@@ -2,13 +2,13 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.micronaut.config
+package io.airbyte.micronaut.env
 
 import io.micronaut.core.io.ResourceLoader
 import io.mockk.Called
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
 class EditionPropertySourceLoaderTest {
@@ -20,7 +20,7 @@ class EditionPropertySourceLoaderTest {
 
     val result = loader.load("test", resourceLoader)
 
-    assertTrue(result.isEmpty)
+    Assertions.assertTrue(result.isEmpty)
     verify { resourceLoader wasNot Called }
   }
 
@@ -30,7 +30,7 @@ class EditionPropertySourceLoaderTest {
 
     val result = loader.load("test", resourceLoader)
 
-    assertTrue(result.isEmpty)
+    Assertions.assertTrue(result.isEmpty)
     verify { resourceLoader wasNot Called }
   }
 

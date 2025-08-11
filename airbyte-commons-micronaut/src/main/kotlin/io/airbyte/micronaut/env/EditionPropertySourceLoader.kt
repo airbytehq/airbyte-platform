@@ -2,9 +2,8 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.micronaut.config
+package io.airbyte.micronaut.env
 
-import io.micronaut.context.env.AbstractPropertySourceLoader
 import io.micronaut.context.env.PropertySource
 import io.micronaut.context.env.yaml.YamlPropertySourceLoader
 import io.micronaut.core.io.ResourceLoader
@@ -24,7 +23,7 @@ class EditionPropertySourceLoader(
     const val AIRBYTE_EDITION_ENV_VAR = "AIRBYTE_EDITION"
   }
 
-  override fun getOrder(): Int = AbstractPropertySourceLoader.DEFAULT_POSITION + 10
+  override fun getOrder(): Int = DEFAULT_POSITION + 10
 
   override fun load(
     name: String?,
