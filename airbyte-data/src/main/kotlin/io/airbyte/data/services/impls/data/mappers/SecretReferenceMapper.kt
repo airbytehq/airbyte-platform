@@ -31,6 +31,7 @@ object SecretReferenceMapper {
       EntityScopeType.actor -> ModelScopeType.ACTOR
       EntityScopeType.secret_storage -> ModelScopeType.SECRET_STORAGE
       EntityScopeType.connection_template -> ModelScopeType.CONNECTION_TEMPLATE
+      EntityScopeType.actor_oauth_parameter -> ModelScopeType.ACTOR_OAUTH_PARAMETER
     }
 
   fun ModelScopeType.toEntity(): EntityScopeType =
@@ -38,6 +39,7 @@ object SecretReferenceMapper {
       ModelScopeType.ACTOR -> EntityScopeType.actor
       ModelScopeType.SECRET_STORAGE -> EntityScopeType.secret_storage
       ModelScopeType.CONNECTION_TEMPLATE -> EntityScopeType.connection_template
+      ModelScopeType.ACTOR_OAUTH_PARAMETER -> EntityScopeType.actor_oauth_parameter
     }
 
   fun SecretReferenceCreate.toEntity(): EntitySecretReference =

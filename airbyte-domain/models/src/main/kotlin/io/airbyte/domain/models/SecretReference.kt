@@ -30,6 +30,7 @@ enum class SecretReferenceScopeType {
   ACTOR,
   SECRET_STORAGE,
   CONNECTION_TEMPLATE,
+  ACTOR_OAUTH_PARAMETER,
 }
 
 data class SecretReferenceCreate(
