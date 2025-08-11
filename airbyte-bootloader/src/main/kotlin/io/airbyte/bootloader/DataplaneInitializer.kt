@@ -12,6 +12,7 @@ import io.airbyte.config.DataplaneClientCredentials
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService
+import io.airbyte.data.services.ServiceAccountsService
 import io.airbyte.data.services.shared.DataplaneWithServiceAccount
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -23,8 +24,9 @@ private val log = KotlinLogging.logger {}
 
 @Singleton
 class DataplaneInitializer(
-  private val service: DataplaneService,
+  private val dataplaneService: DataplaneService,
   private val groupService: DataplaneGroupService,
+  private val serviceAccountsService: ServiceAccountsService,
   private val k8sClient: KubernetesClient,
   private val edition: AirbyteEdition,
   @Property(name = "airbyte.auth.kubernetes-secret.name") private val secretName: String,
@@ -38,27 +40,25 @@ class DataplaneInitializer(
    * - If running on OSS, a single dataplane group exists that does not have any existing dataplanes
    */
   fun createDataplaneIfNotExists() {
-    val group =
-      when (edition) {
-        AirbyteEdition.CLOUD ->
-          groupService.getDataplaneGroupByOrganizationIdAndName(
-            DEFAULT_ORGANIZATION_ID,
-            US_DATAPLANE_GROUP,
-          )
-        else -> {
-          val groups = groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false)
-          when {
-            groups.size > 1 -> {
-              log.info { "Skipping dataplane creation because multiple dataplane groups exist." }
-              return
-            }
-            groups.isEmpty() -> throw IllegalStateException("No dataplane groups exist.")
-            else -> groups.first()
-          }
-        }
-      }
+    // If the secret contains credentials that match an existing dataplane + service account,
+    // then do nothing.
+    if (isValidServiceAccount()) {
+      return
+    }
 
-    val dataplane = createDataplane(group) ?: return
+    // We don't have valid crendentials stored in the secret. This could be because:
+    // - this is the first install, and the secret and dataplane have never been created.
+    // - the secret was deleted.
+    // - the dataplane was deleted.
+    // - the credentials just don't match.
+
+    // Get the dataplane group.
+    // If multiple groups exist, the function returns null, and we skip the rest of this init.
+    // If no groups exist, the function throws and we fail.
+    val group = getOneGroup() ?: return
+
+    // Create the dataplane and store the secret.
+    val dataplane = createDataplane(group)
     createK8sSecret(dataplane)
 
     // Cloud puts dataplane pods in the jobs namespace, so we need to copy the secret containing
@@ -74,16 +74,49 @@ class DataplaneInitializer(
     }
   }
 
-  private fun createDataplane(group: DataplaneGroup): DataplaneWithServiceAccount? {
-    val planes = service.listDataplanes(group.id, false)
-    if (planes.isNotEmpty()) {
-      log.info { "At least one dataplane for the group ${group.name} (${group.id}) already exists." }
-      return null
+  private fun getOneGroup(): DataplaneGroup? =
+    when (edition) {
+      AirbyteEdition.CLOUD ->
+        groupService.getDataplaneGroupByOrganizationIdAndName(
+          DEFAULT_ORGANIZATION_ID,
+          US_DATAPLANE_GROUP,
+        )
+      else -> {
+        val groups = groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false)
+        when {
+          groups.size > 1 -> {
+            log.info { "Skipping dataplane creation because multiple dataplane groups exist." }
+            null
+          }
+          groups.isEmpty() -> throw IllegalStateException("No dataplane groups exist.")
+          else -> groups.first()
+        }
+      }
     }
 
-    // If we're here, then we have one dataplane group and no dataplanes associated with it
+  private fun isValidServiceAccount(): Boolean {
+    // Get the secret that stores the credentials.
+    val secret = K8sSecretHelper.getAndDecodeSecret(k8sClient, secretName)
+
+    // Check to see whether the secret contains credentials that match an existing service account.
+    val clientId = secret?.get(clientIdSecretKey)
+    val clientSecret = secret?.get(clientSecretSecretKey)
+
+    if (clientId == null || clientSecret == null) {
+      return false
+    }
+
+    try {
+      serviceAccountsService.getAndVerify(UUID.fromString(clientId), clientSecret)
+      return true
+    } catch (e: Exception) {
+      return false
+    }
+  }
+
+  private fun createDataplane(group: DataplaneGroup): DataplaneWithServiceAccount {
     val dataplaneAndServiceAccount =
-      service.createDataplaneAndServiceAccount(
+      dataplaneService.createDataplaneAndServiceAccount(
         dataplane =
           Dataplane().apply {
             id = UUID.randomUUID()

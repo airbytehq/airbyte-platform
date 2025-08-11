@@ -11,6 +11,8 @@ import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService
+import io.airbyte.data.services.ServiceAccountNotFound
+import io.airbyte.data.services.ServiceAccountsService
 import io.airbyte.data.services.shared.DataplaneWithServiceAccount
 import io.airbyte.domain.models.ServiceAccount
 import io.fabric8.kubernetes.client.KubernetesClient
@@ -47,19 +49,20 @@ private val dpgUS =
     enabled = true
   }
 
-private val dp =
-  Dataplane().apply {
-    id = UUID.randomUUID()
-    dataplaneGroupId = dpg.id
-    name = "dp name"
-  }
-
 private val serviceAccount =
   ServiceAccount(
     id = DATAPLANE_ID,
     name = "service-account",
     secret = DATAPLANE_SECRET,
   )
+
+private val dp =
+  Dataplane().apply {
+    id = UUID.randomUUID()
+    dataplaneGroupId = dpg.id
+    name = "dp name"
+    serviceAccountId = serviceAccount.id
+  }
 
 private val dataplaneWithServiceAccount =
   DataplaneWithServiceAccount(
@@ -76,12 +79,14 @@ class DataplaneInitializerTest {
   private val service = mockk<DataplaneService>()
   private val groupService = mockk<DataplaneGroupService>()
   private val k8sClient = mockk<KubernetesClient>()
+  private val serviceAccountsService = mockk<ServiceAccountsService>()
 
   @BeforeEach
   fun setup() {
     mockkObject(K8sSecretHelper)
     every { K8sSecretHelper.createOrUpdateSecret(any(), any(), any()) } returns Unit
     every { K8sSecretHelper.copySecretToNamespace(any(), any(), any(), any()) } returns Unit
+    every { K8sSecretHelper.getAndDecodeSecret(any(), any()) } returns null
   }
 
   @AfterEach
@@ -99,7 +104,7 @@ class DataplaneInitializerTest {
 
     val initializer =
       DataplaneInitializer(
-        service = service,
+        dataplaneService = service,
         groupService = groupService,
         k8sClient = k8sClient,
         edition = Configs.AirbyteEdition.COMMUNITY,
@@ -107,6 +112,7 @@ class DataplaneInitializerTest {
         clientIdSecretKey = CLIENT_ID_SECRET_KEY,
         clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
         jobsNamespace = JOBS_NAMESPACE,
+        serviceAccountsService = serviceAccountsService,
       )
 
     initializer.createDataplaneIfNotExists()
@@ -125,13 +131,20 @@ class DataplaneInitializerTest {
   }
 
   @Test
-  fun `data plane is not created if one exists`() {
+  fun `data plane is created if secret credentials don't match`() {
     every { groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false) } returns listOf(dpg)
-    every { service.listDataplanes(dpg.id, false) } returns listOf(dp)
+    every { service.listDataplanes(dpg.id, false) } returns emptyList()
+    val dpSlot = slot<Dataplane>()
+    every { service.createDataplaneAndServiceAccount(capture(dpSlot), true) } answers { dataplaneWithServiceAccount }
+    every { K8sSecretHelper.getAndDecodeSecret(any(), SECRET_NAME) } returns
+      mapOf(
+        CLIENT_ID_SECRET_KEY to "foo",
+        CLIENT_SECRET_SECRET_KEY to "bar",
+      )
 
     val initializer =
       DataplaneInitializer(
-        service = service,
+        dataplaneService = service,
         groupService = groupService,
         k8sClient = k8sClient,
         edition = Configs.AirbyteEdition.COMMUNITY,
@@ -139,14 +152,90 @@ class DataplaneInitializerTest {
         clientIdSecretKey = CLIENT_ID_SECRET_KEY,
         clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
         jobsNamespace = JOBS_NAMESPACE,
+        serviceAccountsService = serviceAccountsService,
+      )
+
+    initializer.createDataplaneIfNotExists()
+
+    verify {
+      service.createDataplaneAndServiceAccount(dpSlot.captured, true)
+      K8sSecretHelper.createOrUpdateSecret(
+        k8sClient,
+        SECRET_NAME,
+        mapOf(
+          CLIENT_ID_SECRET_KEY to dataplaneWithServiceAccount.serviceAccount.id.toString(),
+          CLIENT_SECRET_SECRET_KEY to dataplaneWithServiceAccount.serviceAccount.secret,
+        ),
+      )
+    }
+  }
+
+  @Test
+  fun `data plane is created if credentials exist but service account doesn't exist`() {
+    every { groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false) } returns listOf(dpg)
+    every { service.listDataplanes(dpg.id, false) } returns emptyList()
+    val dpSlot = slot<Dataplane>()
+    every { service.createDataplaneAndServiceAccount(capture(dpSlot), true) } answers { dataplaneWithServiceAccount }
+    every { K8sSecretHelper.getAndDecodeSecret(any(), SECRET_NAME) } returns
+      mapOf(
+        CLIENT_ID_SECRET_KEY to dataplaneWithServiceAccount.serviceAccount.id.toString(),
+        CLIENT_SECRET_SECRET_KEY to dataplaneWithServiceAccount.serviceAccount.secret,
+      )
+    every { serviceAccountsService.getAndVerify(any(), any()) } throws ServiceAccountNotFound(UUID.randomUUID())
+
+    val initializer =
+      DataplaneInitializer(
+        dataplaneService = service,
+        groupService = groupService,
+        k8sClient = k8sClient,
+        edition = Configs.AirbyteEdition.COMMUNITY,
+        secretName = SECRET_NAME,
+        clientIdSecretKey = CLIENT_ID_SECRET_KEY,
+        clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
+        jobsNamespace = JOBS_NAMESPACE,
+        serviceAccountsService = serviceAccountsService,
+      )
+
+    initializer.createDataplaneIfNotExists()
+
+    verify {
+      service.createDataplaneAndServiceAccount(dpSlot.captured, true)
+      K8sSecretHelper.createOrUpdateSecret(
+        k8sClient,
+        SECRET_NAME,
+        mapOf(
+          CLIENT_ID_SECRET_KEY to dataplaneWithServiceAccount.serviceAccount.id.toString(),
+          CLIENT_SECRET_SECRET_KEY to dataplaneWithServiceAccount.serviceAccount.secret,
+        ),
+      )
+    }
+  }
+
+  @Test
+  fun `data plane is not created if valid credentials exist`() {
+    every { serviceAccountsService.getAndVerify(any(), any()) } returns serviceAccount
+    every { K8sSecretHelper.getAndDecodeSecret(any(), SECRET_NAME) } returns
+      mapOf(
+        CLIENT_ID_SECRET_KEY to dataplaneWithServiceAccount.serviceAccount.id.toString(),
+        CLIENT_SECRET_SECRET_KEY to dataplaneWithServiceAccount.serviceAccount.secret,
+      )
+
+    val initializer =
+      DataplaneInitializer(
+        dataplaneService = service,
+        groupService = groupService,
+        k8sClient = k8sClient,
+        edition = Configs.AirbyteEdition.COMMUNITY,
+        secretName = SECRET_NAME,
+        clientIdSecretKey = CLIENT_ID_SECRET_KEY,
+        clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
+        jobsNamespace = JOBS_NAMESPACE,
+        serviceAccountsService = serviceAccountsService,
       )
 
     initializer.createDataplaneIfNotExists()
 
     verify(exactly = 0) { service.createDataplaneAndServiceAccount(any(), any()) }
-    verify {
-      k8sClient wasNot Called
-    }
   }
 
   @Test
@@ -159,7 +248,7 @@ class DataplaneInitializerTest {
 
     val initializer =
       DataplaneInitializer(
-        service = service,
+        dataplaneService = service,
         groupService = groupService,
         k8sClient = k8sClient,
         edition = Configs.AirbyteEdition.CLOUD,
@@ -167,6 +256,7 @@ class DataplaneInitializerTest {
         clientIdSecretKey = CLIENT_ID_SECRET_KEY,
         clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
         jobsNamespace = JOBS_NAMESPACE,
+        serviceAccountsService = serviceAccountsService,
       )
 
     initializer.createDataplaneIfNotExists()
@@ -196,7 +286,7 @@ class DataplaneInitializerTest {
 
     val initializer =
       DataplaneInitializer(
-        service = service,
+        dataplaneService = service,
         groupService = groupService,
         k8sClient = k8sClient,
         edition = Configs.AirbyteEdition.COMMUNITY,
@@ -204,6 +294,7 @@ class DataplaneInitializerTest {
         clientIdSecretKey = CLIENT_ID_SECRET_KEY,
         clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
         jobsNamespace = JOBS_NAMESPACE,
+        serviceAccountsService = serviceAccountsService,
       )
 
     shouldThrow<IllegalStateException> { initializer.createDataplaneIfNotExists() }
@@ -220,7 +311,7 @@ class DataplaneInitializerTest {
 
     val initializer =
       DataplaneInitializer(
-        service = service,
+        dataplaneService = service,
         groupService = groupService,
         k8sClient = k8sClient,
         edition = Configs.AirbyteEdition.COMMUNITY,
@@ -228,6 +319,7 @@ class DataplaneInitializerTest {
         clientIdSecretKey = CLIENT_ID_SECRET_KEY,
         clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
         jobsNamespace = JOBS_NAMESPACE,
+        serviceAccountsService = serviceAccountsService,
       )
 
     initializer.createDataplaneIfNotExists()

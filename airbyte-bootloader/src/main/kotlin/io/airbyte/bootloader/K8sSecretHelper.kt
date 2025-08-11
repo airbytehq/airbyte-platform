@@ -91,6 +91,14 @@ object K8sSecretHelper {
     kubernetesClient.resource(copiedSecret).create()
   }
 
+  fun getAndDecodeSecret(
+    kubernetesClient: KubernetesClient,
+    secretName: String,
+  ): Map<String, String>? =
+    kubernetesClient.secrets().withName(secretName).get()?.data?.mapValues { (_, value) ->
+      base64Decode(value)
+    }
+
   @OptIn(ExperimentalEncodingApi::class)
   fun base64Encode(text: String): String = Base64.encode(text.toByteArray())
 

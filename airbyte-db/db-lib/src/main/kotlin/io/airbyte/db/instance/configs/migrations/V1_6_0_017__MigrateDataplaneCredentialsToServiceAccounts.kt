@@ -15,6 +15,7 @@ import org.jooq.Schema
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
 import org.jooq.impl.SchemaImpl
+import java.time.OffsetDateTime
 import java.util.UUID
 import java.util.stream.Collectors
 
@@ -27,6 +28,7 @@ class V1_6_0_017__MigrateDataplaneCredentialsToServiceAccounts : BaseJavaMigrati
     val name: String,
     val secret: String,
     val clientId: String, // this is going to be a UUID, but the column is varchar
+    val createdAt: OffsetDateTime,
   )
 
   @VisibleForTesting
@@ -103,9 +105,13 @@ class V1_6_0_017__MigrateDataplaneCredentialsToServiceAccounts : BaseJavaMigrati
             name = r.get("name") as String,
             secret = r.get("client_secret") as String,
             clientId = r.get("client_id") as String,
+            createdAt = r.get("created_at") as OffsetDateTime,
           )
         }.collect(Collectors.toList())
-        .distinctBy { it.id }
+        .groupBy { it.id }
+        .values
+        .toList()
+        .map { it.maxByOrNull { it.createdAt }!! }
 
     fun createServiceAccounts(
       ctx: DSLContext,

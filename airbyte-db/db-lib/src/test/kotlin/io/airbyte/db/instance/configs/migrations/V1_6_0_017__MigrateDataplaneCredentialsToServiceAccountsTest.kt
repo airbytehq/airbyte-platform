@@ -44,11 +44,9 @@ class V1_6_0_017__MigrateDataplaneCredentialsToServiceAccountsTest : AbstractCon
 
     val dataplaneId = UUID.randomUUID()
     val dataplaneGroupId = UUID.randomUUID()
-    val dataplaneCredentialsId = UUID.randomUUID()
-    val dataplaneCredentialsClientId = UUID.randomUUID()
     val orgId = UUID.randomUUID()
 
-    // create an org so we dont collide with the default org
+    // create an org so we don't collide with the default org
     ctx
       .insertInto(DSL.table("organization"))
       .columns(
@@ -95,6 +93,9 @@ class V1_6_0_017__MigrateDataplaneCredentialsToServiceAccountsTest : AbstractCon
         false,
       ).execute()
 
+    val clientId1 = UUID.randomUUID()
+    val clientId2 = UUID.randomUUID()
+
     // create credentials for the dataplane
     ctx
       .insertInto(DSL.table("dataplane_client_credentials"))
@@ -104,10 +105,10 @@ class V1_6_0_017__MigrateDataplaneCredentialsToServiceAccountsTest : AbstractCon
         DSL.field("client_id"),
         DSL.field("client_secret"),
       ).values(
-        dataplaneCredentialsId,
+        UUID.randomUUID(),
         dataplaneId,
-        dataplaneCredentialsClientId,
-        "client-secret",
+        clientId1,
+        "client-secret-1",
       ).execute()
 
     // create a second set to ensure only one set is selected
@@ -121,7 +122,7 @@ class V1_6_0_017__MigrateDataplaneCredentialsToServiceAccountsTest : AbstractCon
       ).values(
         UUID.randomUUID(),
         dataplaneId,
-        "client-id-${UUID.randomUUID()}", // dont reuse the existing client id
+        clientId2,
         "client-secret-2",
       ).execute()
 
@@ -139,12 +140,13 @@ class V1_6_0_017__MigrateDataplaneCredentialsToServiceAccountsTest : AbstractCon
     val result =
       ctx
         .selectFrom(DSL.table("service_accounts"))
-        .where(DSL.field("id").eq(dataplaneCredentialsClientId))
+        .where(DSL.field("id").eq(clientId2))
         .fetchOne()
 
     assertNotNull(result)
-    assertEquals(dataplaneCredentialsClientId, result.get("id"))
-    assertEquals("client-secret", result.get("secret"))
+    // The second client ID is used, because it is the most recent.
+    assertEquals(clientId2, result.get("id"))
+    assertEquals("client-secret-2", result.get("secret"))
     assertEquals("dataplane-$dataplaneId", result.get("name"))
 
     // create the dataplane permission for the service account
@@ -159,11 +161,11 @@ class V1_6_0_017__MigrateDataplaneCredentialsToServiceAccountsTest : AbstractCon
             SQLDataType.VARCHAR.asEnumDataType(V1_6_0_017__MigrateDataplaneCredentialsToServiceAccounts.PermissionType::class.java),
           ),
         ).from(DSL.table("permission"))
-        .where(DSL.field("service_account_id").eq(dataplaneCredentialsClientId))
+        .where(DSL.field("service_account_id").eq(clientId2))
         .fetchOne()
 
     assertNotNull(permission)
-    assertEquals(dataplaneCredentialsClientId, permission.get("service_account_id"))
+    assertEquals(clientId2, permission.get("service_account_id"))
     assertEquals(V1_6_0_017__MigrateDataplaneCredentialsToServiceAccounts.PermissionType.DATAPLANE, permission.get("permission_type"))
 
     V1_6_0_017__MigrateDataplaneCredentialsToServiceAccounts.fillDataplaneServiceAccountsColumn(ctx, creds)
@@ -175,7 +177,7 @@ class V1_6_0_017__MigrateDataplaneCredentialsToServiceAccountsTest : AbstractCon
         .fetchOne()
 
     assertNotNull(dataplane)
-    assertEquals(dataplaneCredentialsClientId, dataplane.get("service_account_id"))
+    assertEquals(clientId2, dataplane.get("service_account_id"))
   }
 
   private fun clearCredsTable(ctx: DSLContext) {
