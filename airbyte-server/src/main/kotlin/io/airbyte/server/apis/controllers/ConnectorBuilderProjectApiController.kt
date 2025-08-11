@@ -9,6 +9,8 @@ import io.airbyte.api.generated.ConnectorBuilderProjectApi
 import io.airbyte.api.model.generated.BuilderProjectForDefinitionRequestBody
 import io.airbyte.api.model.generated.BuilderProjectForDefinitionResponse
 import io.airbyte.api.model.generated.BuilderProjectOauthConsentRequest
+import io.airbyte.api.model.generated.CheckContributionRead
+import io.airbyte.api.model.generated.CheckContributionRequestBody
 import io.airbyte.api.model.generated.CompleteConnectorBuilderProjectOauthRequest
 import io.airbyte.api.model.generated.CompleteOAuthResponse
 import io.airbyte.api.model.generated.ConnectorBuilderProjectForkRequestBody
@@ -25,15 +27,20 @@ import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody
 import io.airbyte.api.model.generated.DeclarativeManifestBaseImageRead
 import io.airbyte.api.model.generated.DeclarativeManifestRequestBody
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId
+import io.airbyte.api.model.generated.GenerateContributionRequestBody
+import io.airbyte.api.model.generated.GenerateContributionResponse
 import io.airbyte.api.model.generated.OAuthConsentRead
 import io.airbyte.api.model.generated.SourceDefinitionIdBody
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.server.builder.contributions.ContributionCreate
 import io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler
+import io.airbyte.commons.server.handlers.ConnectorContributionHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.HttpStatus
+import io.micronaut.http.MediaType
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Post
@@ -47,6 +54,7 @@ import io.micronaut.security.rules.SecurityRule
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class ConnectorBuilderProjectApiController(
   @param:Body private val connectorBuilderProjectsHandler: ConnectorBuilderProjectsHandler,
+  private val connectorContributionHandler: ConnectorContributionHandler,
 ) : ConnectorBuilderProjectApi {
   @Post(uri = "/create")
   @Status(HttpStatus.CREATED)
@@ -161,6 +169,46 @@ class ConnectorBuilderProjectApiController(
       connectorBuilderProjectsHandler.fullResolveManifestBuilderProject(
         connectorBuilderProjectFullResolveRequestBody,
       )
+    }
+
+  @Post(uri = "/contribute/generate", produces = [MediaType.APPLICATION_JSON])
+  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun generateContribution(
+    @Body generateContributionRequestBody: GenerateContributionRequestBody,
+  ): GenerateContributionResponse? =
+    execute {
+      val contributionResult =
+        connectorContributionHandler.generateContribution(
+          ContributionCreate(
+            name = generateContributionRequestBody.name,
+            connectorImageName = generateContributionRequestBody.connectorImageName,
+            connectorDescription = generateContributionRequestBody.connectorDescription,
+            githubToken = generateContributionRequestBody.githubToken,
+            manifestYaml = generateContributionRequestBody.manifestYaml,
+            customComponents = generateContributionRequestBody.customComponents,
+            baseImage = generateContributionRequestBody.baseImage,
+            contributionDescription = generateContributionRequestBody.contributionDescription,
+          ),
+        )
+      GenerateContributionResponse()
+        .pullRequestUrl(contributionResult.pullRequestUrl)
+        .actorDefinitionId(contributionResult.actorDefinitionId)
+    }
+
+  @Post(uri = "/contribute/check", produces = [MediaType.APPLICATION_JSON])
+  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun checkContribution(
+    @Body checkContributionRequestBody: CheckContributionRequestBody,
+  ): CheckContributionRead? =
+    execute {
+      val contribution = connectorContributionHandler.checkContribution(checkContributionRequestBody.connectorImageName)
+      CheckContributionRead()
+        .connectorName(contribution.connectorName)
+        .connectorDescription(contribution.connectorDescription)
+        .githubUrl(contribution.githubUrl)
+        .connectorExists(contribution.connectorExists)
     }
 
   @Post(uri = "/update")

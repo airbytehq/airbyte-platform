@@ -35,6 +35,11 @@ dependencies {
   implementation(libs.guava)
   implementation(libs.cron.utils)
 
+  // CBServer dependencies - should probably move to deps.toml
+  implementation("org.kohsuke:github-api:1.327")
+  implementation("org.yaml:snakeyaml:2.2")
+  implementation("io.pebbletemplates:pebble:3.2.4")
+
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:connector-builder-api"))
   implementation(project(":oss:airbyte-api:problems-api"))

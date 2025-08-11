@@ -4,11 +4,11 @@
 
 package io.airbyte.connectorbuilder.handlers
 
+import io.airbyte.commons.server.builder.exceptions.ConnectorBuilderException
 import io.airbyte.connectorbuilder.TracingHelper
 import io.airbyte.connectorbuilder.api.model.generated.FullResolveManifestRequestBody
 import io.airbyte.connectorbuilder.api.model.generated.ResolveManifest
 import io.airbyte.connectorbuilder.exceptions.AirbyteCdkInvalidInputException
-import io.airbyte.connectorbuilder.exceptions.ConnectorBuilderException
 import io.airbyte.connectorbuilder.requester.AirbyteCdkRequester
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Inject

@@ -4,7 +4,7 @@
 
 package io.airbyte.connectorbuilder.commandrunner
 
-import io.airbyte.connectorbuilder.exceptions.ConnectorBuilderException
+import io.airbyte.commons.server.builder.exceptions.ConnectorBuilderException
 import io.airbyte.connectorbuilder.filewriter.AirbyteArgument
 import io.airbyte.connectorbuilder.filewriter.AirbyteFileWriter
 import java.io.IOException

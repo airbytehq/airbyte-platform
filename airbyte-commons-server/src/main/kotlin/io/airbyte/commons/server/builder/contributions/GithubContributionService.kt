@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.connectorbuilder.services
+package io.airbyte.commons.server.builder.contributions
 
 import io.airbyte.commons.server.handlers.logger
 import org.kohsuke.github.GHBranch
@@ -16,6 +16,7 @@ import org.kohsuke.github.GitHub
 import org.kohsuke.github.GitHubBuilder
 import org.kohsuke.github.HttpException
 import org.yaml.snakeyaml.Yaml
+import kotlin.collections.iterator
 
 class GithubContributionService(
   var connectorImageName: String,

@@ -5,6 +5,9 @@
 package io.airbyte.connectorbuilder.controllers
 
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.server.builder.contributions.ContributionCreate
+import io.airbyte.commons.server.handlers.AssistProxyHandler
+import io.airbyte.commons.server.handlers.ConnectorContributionHandler
 import io.airbyte.connectorbuilder.api.generated.ApiApi
 import io.airbyte.connectorbuilder.api.model.generated.CheckContributionRead
 import io.airbyte.connectorbuilder.api.model.generated.CheckContributionRequestBody
@@ -16,8 +19,6 @@ import io.airbyte.connectorbuilder.api.model.generated.ResolveManifest
 import io.airbyte.connectorbuilder.api.model.generated.ResolveManifestRequestBody
 import io.airbyte.connectorbuilder.api.model.generated.StreamRead
 import io.airbyte.connectorbuilder.api.model.generated.StreamReadRequestBody
-import io.airbyte.connectorbuilder.handlers.AssistProxyHandler
-import io.airbyte.connectorbuilder.handlers.ConnectorContributionHandler
 import io.airbyte.connectorbuilder.handlers.FullResolveManifestHandler
 import io.airbyte.connectorbuilder.handlers.HealthHandler
 import io.airbyte.connectorbuilder.handlers.ResolveManifestHandler
@@ -56,14 +57,38 @@ internal class ConnectorBuilderController(
   @ExecuteOn(TaskExecutors.IO)
   override fun checkContribution(
     @Body checkContributionRequestBody: CheckContributionRequestBody,
-  ): CheckContributionRead = connectorContributionHandler.checkContribution(checkContributionRequestBody)
+  ): CheckContributionRead {
+    val contribution = connectorContributionHandler.checkContribution(checkContributionRequestBody.connectorImageName)
+    return CheckContributionRead()
+      .connectorName(contribution.connectorName)
+      .connectorDescription(contribution.connectorDescription)
+      .githubUrl(contribution.githubUrl)
+      .connectorExists(contribution.connectorExists)
+  }
 
   @Post(uri = "/contribute/generate", produces = [MediaType.APPLICATION_JSON])
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(TaskExecutors.IO)
   override fun generateContribution(
     @Body generateContributionRequestBody: GenerateContributionRequestBody,
-  ): GenerateContributionResponse = connectorContributionHandler.generateContribution(generateContributionRequestBody)
+  ): GenerateContributionResponse {
+    val contributionResult =
+      connectorContributionHandler.generateContribution(
+        ContributionCreate(
+          name = generateContributionRequestBody.name,
+          connectorImageName = generateContributionRequestBody.connectorImageName,
+          connectorDescription = generateContributionRequestBody.connectorDescription,
+          githubToken = generateContributionRequestBody.githubToken,
+          manifestYaml = generateContributionRequestBody.manifestYaml,
+          customComponents = generateContributionRequestBody.customComponents,
+          baseImage = generateContributionRequestBody.baseImage,
+          contributionDescription = generateContributionRequestBody.contributionDescription,
+        ),
+      )
+    return GenerateContributionResponse()
+      .pullRequestUrl(contributionResult.pullRequestUrl)
+      .actorDefinitionId(contributionResult.actorDefinitionId)
+  }
 
   @Post(uri = "/stream/read", produces = [MediaType.APPLICATION_JSON])
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)

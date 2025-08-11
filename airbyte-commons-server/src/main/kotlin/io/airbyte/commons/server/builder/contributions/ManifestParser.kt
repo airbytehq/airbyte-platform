@@ -2,11 +2,11 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.connectorbuilder.utils
+package io.airbyte.commons.server.builder.contributions
 
-import io.airbyte.connectorbuilder.exceptions.CircularReferenceException
-import io.airbyte.connectorbuilder.exceptions.ManifestParserException
-import io.airbyte.connectorbuilder.exceptions.UndefinedReferenceException
+import io.airbyte.commons.server.builder.exceptions.CircularReferenceException
+import io.airbyte.commons.server.builder.exceptions.ManifestParserException
+import io.airbyte.commons.server.builder.exceptions.UndefinedReferenceException
 import org.yaml.snakeyaml.Yaml
 
 const val REF_TAG = "\$ref"

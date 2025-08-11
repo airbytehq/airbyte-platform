@@ -2,39 +2,35 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.connectorbuilder.handlers
+package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.problems.model.generated.GithubContributionProblemData
 import io.airbyte.api.problems.throwable.generated.GithubContributionFailedProblem
 import io.airbyte.api.problems.throwable.generated.InsufficientGithubTokenPermissionsProblem
 import io.airbyte.api.problems.throwable.generated.InvalidGithubTokenProblem
-import io.airbyte.connectorbuilder.api.model.generated.CheckContributionRead
-import io.airbyte.connectorbuilder.api.model.generated.CheckContributionRequestBody
-import io.airbyte.connectorbuilder.api.model.generated.GenerateContributionRequestBody
-import io.airbyte.connectorbuilder.api.model.generated.GenerateContributionResponse
-import io.airbyte.connectorbuilder.services.GithubContributionService
-import io.airbyte.connectorbuilder.templates.ContributionTemplates
-import io.airbyte.connectorbuilder.utils.BuilderContributionInfo
-import io.github.oshai.kotlinlogging.KotlinLogging
+import io.airbyte.commons.server.builder.contributions.BuilderContributionInfo
+import io.airbyte.commons.server.builder.contributions.ContributionCreate
+import io.airbyte.commons.server.builder.contributions.ContributionCreateResult
+import io.airbyte.commons.server.builder.contributions.ContributionRead
+import io.airbyte.commons.server.builder.contributions.ContributionTemplates
+import io.airbyte.commons.server.builder.contributions.GithubContributionService
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import org.kohsuke.github.GHFileNotFoundException
 import org.kohsuke.github.HttpException
 import java.util.UUID
 
-private val logger = KotlinLogging.logger {}
-
 @Singleton
 class ConnectorContributionHandler(
   private val contributionTemplates: ContributionTemplates,
   @Value("\${airbyte.connector-builder-server.github.airbyte-pat-token}") private val publicPatToken: String?,
 ) {
-  fun checkContribution(request: CheckContributionRequestBody): CheckContributionRead {
+  fun checkContribution(connectorImageName: String): ContributionRead {
     // Validate the request connector name
-    checkConnectorImageNameIsValid(request.connectorImageName)
+    checkConnectorImageNameIsValid(connectorImageName)
 
     // Instantiate the Connectors Contribution Service
-    val githubContributionService = GithubContributionService(request.connectorImageName, publicPatToken)
+    val githubContributionService = GithubContributionService(connectorImageName, publicPatToken)
 
     // Check for existing connector
     val connectorExists = githubContributionService.checkIfConnectorExistsOnMain()
@@ -45,18 +41,18 @@ class ConnectorContributionHandler(
         Triple(
           githubContributionService.readConnectorMetadataValue("name"),
           githubContributionService.readConnectorDescription(),
-          "airbytehq/airbyte/tree/master/airbyte-integrations/connectors/${request.connectorImageName}",
+          "airbytehq/airbyte/tree/master/airbyte-integrations/connectors/$connectorImageName",
         )
       } else {
         Triple(null, null, null)
       }
 
-    return CheckContributionRead().apply {
-      this.connectorName = connectorName
-      this.connectorDescription = connectorDescription
-      githubUrl = connectorPath
-      this.connectorExists = connectorExists
-    }
+    return ContributionRead(
+      connectorName = connectorName,
+      connectorDescription = connectorDescription,
+      githubUrl = connectorPath,
+      connectorExists = connectorExists,
+    )
   }
 
   private fun checkConnectorImageNameIsValid(connectorImageName: String) {
@@ -99,7 +95,7 @@ class ConnectorContributionHandler(
   }
 
   private fun getContributionInfo(
-    generateContributionRequestBody: GenerateContributionRequestBody,
+    contributionCreate: ContributionCreate,
     githubContributionService: GithubContributionService,
   ): BuilderContributionInfo {
     val isEdit = githubContributionService.checkIfConnectorExistsOnMain()
@@ -107,25 +103,25 @@ class ConnectorContributionHandler(
     val authorUsername = githubContributionService.username
     return BuilderContributionInfo(
       isEdit = isEdit,
-      connectorName = generateContributionRequestBody.name,
-      connectorImageName = generateContributionRequestBody.connectorImageName,
+      connectorName = contributionCreate.name,
+      connectorImageName = contributionCreate.connectorImageName,
       actorDefinitionId = actorDefinitionId,
-      connectorDescription = generateContributionRequestBody.connectorDescription,
-      contributionDescription = generateContributionRequestBody.contributionDescription,
-      githubToken = generateContributionRequestBody.githubToken,
-      manifestYaml = generateContributionRequestBody.manifestYaml,
-      customComponents = generateContributionRequestBody.customComponents,
-      baseImage = generateContributionRequestBody.baseImage,
+      connectorDescription = contributionCreate.connectorDescription,
+      contributionDescription = contributionCreate.contributionDescription,
+      githubToken = contributionCreate.githubToken,
+      manifestYaml = contributionCreate.manifestYaml,
+      customComponents = contributionCreate.customComponents,
+      baseImage = contributionCreate.baseImage,
       versionTag = "0.0.1",
       authorUsername = authorUsername,
       changelogMessage = "Initial release by [@$authorUsername](https://github.com/$authorUsername) via Connector Builder",
     )
   }
 
-  private fun generateContributionPullRequest(generateContributionRequestBody: GenerateContributionRequestBody): GenerateContributionResponse {
+  private fun generateContributionPullRequest(contributionCreate: ContributionCreate): ContributionCreateResult {
     val githubContributionService =
-      GithubContributionService(generateContributionRequestBody.connectorImageName, generateContributionRequestBody.githubToken)
-    val contributionInfo = getContributionInfo(generateContributionRequestBody, githubContributionService)
+      GithubContributionService(contributionCreate.connectorImageName, contributionCreate.githubToken)
+    val contributionInfo = getContributionInfo(contributionCreate, githubContributionService)
 
     // Create or get branch
     githubContributionService.prepareBranchForContribution()
@@ -139,9 +135,10 @@ class ConnectorContributionHandler(
     val pullRequestDescription = contributionTemplates.renderContributionPullRequestDescription(contributionInfo)
     val pullRequest = githubContributionService.getOrCreatePullRequest(pullRequestDescription)
 
-    return GenerateContributionResponse()
-      .pullRequestUrl(pullRequest.htmlUrl.toString())
-      .actorDefinitionId(UUID.fromString(contributionInfo.actorDefinitionId))
+    return ContributionCreateResult(
+      pullRequestUrl = pullRequest.htmlUrl.toString(),
+      actorDefinitionId = UUID.fromString(contributionInfo.actorDefinitionId),
+    )
   }
 
   private fun convertGithubExceptionToContributionException(e: HttpException): Exception =
@@ -161,9 +158,9 @@ class ConnectorContributionHandler(
     }
   }
 
-  fun generateContribution(generateContributionRequestBody: GenerateContributionRequestBody): GenerateContributionResponse {
+  fun generateContribution(contributionCreate: ContributionCreate): ContributionCreateResult {
     try {
-      return generateContributionPullRequest(generateContributionRequestBody)
+      return generateContributionPullRequest(contributionCreate)
     } catch (e: Exception) {
       throw convertToContributionException(e)
     }

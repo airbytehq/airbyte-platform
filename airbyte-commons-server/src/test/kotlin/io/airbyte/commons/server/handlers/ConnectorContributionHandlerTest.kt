@@ -2,33 +2,26 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.connectorbuilder.handlers
+package io.airbyte.commons.server.handlers
 
-import io.airbyte.connectorbuilder.api.model.generated.CheckContributionRequestBody
-import io.airbyte.connectorbuilder.services.GithubContributionService
-import io.airbyte.connectorbuilder.templates.ContributionTemplates
-import io.airbyte.connectorbuilder.utils.BuilderContributionInfo
+import io.airbyte.commons.server.builder.contributions.BuilderContributionInfo
+import io.airbyte.commons.server.builder.contributions.ContributionTemplates
+import io.airbyte.commons.server.builder.contributions.GithubContributionService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 class ConnectorContributionHandlerTest {
   private var testConnectorImageName = "source-test-connector"
-  private val requestBodyMock = mockk<CheckContributionRequestBody>()
   private lateinit var connectorContributionHandler: ConnectorContributionHandler
 
   @BeforeEach
   fun setUp() {
     mockkConstructor(GithubContributionService::class)
-    every { requestBodyMock.connectorImageName } returns testConnectorImageName
     val templateService = ContributionTemplates()
     connectorContributionHandler = ConnectorContributionHandler(templateService, null)
   }
@@ -39,37 +32,34 @@ class ConnectorContributionHandlerTest {
     every { anyConstructed<GithubContributionService>().readConnectorMetadataValue("name") } returns "Test Connector"
     every { anyConstructed<GithubContributionService>().readConnectorDescription() } returns "This is a mocked test connector description."
 
-    val response = connectorContributionHandler.checkContribution(requestBodyMock)
+    val response = connectorContributionHandler.checkContribution(testConnectorImageName)
 
-    assertTrue(response.connectorExists)
-    assertEquals("Test Connector", response.connectorName)
-    assertEquals("This is a mocked test connector description.", response.connectorDescription)
-    assertNotNull(response.githubUrl)
+    Assertions.assertTrue(response.connectorExists)
+    Assertions.assertEquals("Test Connector", response.connectorName)
+    Assertions.assertEquals("This is a mocked test connector description.", response.connectorDescription)
+    Assertions.assertNotNull(response.githubUrl)
   }
 
   @Test
   fun `checkContribution returns 'false' for connectorExists if connector not found in target repository`() {
     every { anyConstructed<GithubContributionService>().checkIfConnectorExistsOnMain() } returns false
 
-    val response = connectorContributionHandler.checkContribution(requestBodyMock)
+    val response = connectorContributionHandler.checkContribution(testConnectorImageName)
 
-    assertFalse(response.connectorExists)
-    assertNull(response.connectorName)
-    assertNull(response.connectorDescription)
-    assertNull(response.githubUrl)
+    Assertions.assertFalse(response.connectorExists)
+    Assertions.assertNull(response.connectorName)
+    Assertions.assertNull(response.connectorDescription)
+    Assertions.assertNull(response.githubUrl)
   }
 
   @Test
   fun `checkContribution throws IllegalArgumentException for invalid connectorImageName`() {
-    val invalidRequestBodyMock = mockk<CheckContributionRequestBody>()
-    every { invalidRequestBodyMock.connectorImageName } returns "not-a-valid_image_name"
-
     val exception =
       assertThrows<IllegalArgumentException> {
-        connectorContributionHandler.checkContribution((invalidRequestBodyMock))
+        connectorContributionHandler.checkContribution("not-a-valid_image_name")
       }
 
-    assertEquals("not-a-valid_image_name is not a valid image name.", exception.message)
+    Assertions.assertEquals("not-a-valid_image_name is not a valid image name.", exception.message)
   }
 
   @Test
@@ -86,9 +76,17 @@ class ConnectorContributionHandlerTest {
     every { githubContributionService.checkFileExistsOnMain(any()) } returns false
 
     val filesToCommit = connectorContributionHandler.getFilesToCommitGenerationMap(contributionInfo, githubContributionService)
-    assertEquals(7, filesToCommit.size)
-    assertEquals(
-      setOf("manifestPath", "readmePath", "metadataPath", "iconPath", "acceptanceTestConfigPath", "docsPath", "customComponentsPath"),
+    Assertions.assertEquals(7, filesToCommit.size)
+    Assertions.assertEquals(
+      setOf(
+        "manifestPath",
+        "readmePath",
+        "metadataPath",
+        "iconPath",
+        "acceptanceTestConfigPath",
+        "docsPath",
+        "customComponentsPath",
+      ),
       filesToCommit.keys,
     )
   }
@@ -102,7 +100,7 @@ class ConnectorContributionHandlerTest {
     every { githubContributionService.checkFileExistsOnMain(any()) } returns true
 
     val filesToCommit = connectorContributionHandler.getFilesToCommitGenerationMap(contributionInfo, githubContributionService)
-    assertEquals(2, filesToCommit.size)
-    assertEquals(setOf("manifestPath", "customComponentsPath"), filesToCommit.keys)
+    Assertions.assertEquals(2, filesToCommit.size)
+    Assertions.assertEquals(setOf("manifestPath", "customComponentsPath"), filesToCommit.keys)
   }
 }

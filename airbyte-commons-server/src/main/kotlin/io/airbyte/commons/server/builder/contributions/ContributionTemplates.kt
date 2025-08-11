@@ -2,11 +2,8 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.connectorbuilder.templates
+package io.airbyte.commons.server.builder.contributions
 
-import io.airbyte.connectorbuilder.services.GithubContributionService
-import io.airbyte.connectorbuilder.utils.BuilderContributionInfo
-import io.airbyte.connectorbuilder.utils.ManifestParser
 import io.pebbletemplates.pebble.PebbleEngine
 import io.pebbletemplates.pebble.template.PebbleTemplate
 import jakarta.inject.Singleton

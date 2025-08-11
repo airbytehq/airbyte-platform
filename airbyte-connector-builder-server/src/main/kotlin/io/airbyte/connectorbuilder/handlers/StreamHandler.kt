@@ -4,11 +4,11 @@
 
 package io.airbyte.connectorbuilder.handlers
 
+import io.airbyte.commons.server.builder.exceptions.ConnectorBuilderException
 import io.airbyte.connectorbuilder.TracingHelper.addWorkspaceAndProjectIdsToTrace
 import io.airbyte.connectorbuilder.api.model.generated.StreamRead
 import io.airbyte.connectorbuilder.api.model.generated.StreamReadRequestBody
 import io.airbyte.connectorbuilder.exceptions.AirbyteCdkInvalidInputException
-import io.airbyte.connectorbuilder.exceptions.ConnectorBuilderException
 import io.airbyte.connectorbuilder.requester.AirbyteCdkRequester
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Inject

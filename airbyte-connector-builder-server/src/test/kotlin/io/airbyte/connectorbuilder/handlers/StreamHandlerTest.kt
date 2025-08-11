@@ -8,12 +8,12 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.airbyte.commons.server.builder.exceptions.ConnectorBuilderException
 import io.airbyte.connectorbuilder.api.model.generated.StreamRead
 import io.airbyte.connectorbuilder.api.model.generated.StreamReadLogsInner
 import io.airbyte.connectorbuilder.api.model.generated.StreamReadRequestBody
 import io.airbyte.connectorbuilder.api.model.generated.StreamReadSlicesInner
 import io.airbyte.connectorbuilder.exceptions.AirbyteCdkInvalidInputException
-import io.airbyte.connectorbuilder.exceptions.ConnectorBuilderException
 import io.airbyte.connectorbuilder.requester.AirbyteCdkRequester
 import org.assertj.core.util.Lists
 import org.junit.jupiter.api.Assertions

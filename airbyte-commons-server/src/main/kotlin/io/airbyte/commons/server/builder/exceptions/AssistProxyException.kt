@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.connectorbuilder.exceptions
+package io.airbyte.commons.server.builder.exceptions
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.server.errors.KnownException

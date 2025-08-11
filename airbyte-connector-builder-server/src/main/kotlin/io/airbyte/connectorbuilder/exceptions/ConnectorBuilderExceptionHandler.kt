@@ -4,7 +4,7 @@
 
 package io.airbyte.connectorbuilder.exceptions
 
-import io.airbyte.connectorbuilder.exceptions.ConnectorBuilderException
+import io.airbyte.commons.server.builder.exceptions.ConnectorBuilderException
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse

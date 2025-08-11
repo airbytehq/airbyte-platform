@@ -2,16 +2,17 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.connectorbuilder.requester.assist
+package io.airbyte.commons.server.builder.assist
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.connectorbuilder.exceptions.AssistProxyException
-import io.airbyte.connectorbuilder.exceptions.ConnectorBuilderException
+import io.airbyte.commons.server.builder.exceptions.AssistProxyException
+import io.airbyte.commons.server.builder.exceptions.ConnectorBuilderException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 
 private val logger = KotlinLogging.logger {}
 
@@ -90,7 +91,7 @@ class AssistProxy(
           }
         }
     } catch (e: IOException) {
-      if (suppressTimeout && e is java.net.SocketTimeoutException) {
+      if (suppressTimeout && e is SocketTimeoutException) {
         logger.debug(e) { "Suppressed timeout error" }
         return objectMapper.createObjectNode()
       }

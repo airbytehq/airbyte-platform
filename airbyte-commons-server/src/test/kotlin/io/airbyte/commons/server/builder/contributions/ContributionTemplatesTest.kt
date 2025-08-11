@@ -2,17 +2,15 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.connectorbuilder.templates
+package io.airbyte.commons.server.builder.contributions
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.connectorbuilder.services.GithubContributionService
-import io.airbyte.connectorbuilder.utils.BuilderContributionInfo
-import io.airbyte.connectorbuilder.utils.ManifestParser
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
+import kotlin.collections.iterator
 
 fun jacksonSerialize(input: String): String {
   val mapper = ObjectMapper()
@@ -25,7 +23,7 @@ fun jacksonSerialize(input: String): String {
 }
 
 class ContributionTemplatesTest {
-  val serialzedYamlContent = this::class.java.getResource("/valid_manifest.yaml")!!.readText()
+  val serialzedYamlContent = this::class.java.getResource("/templates/valid_manifest.yaml")!!.readText()
 
   val newConnectorContributionInfo =
     BuilderContributionInfo(

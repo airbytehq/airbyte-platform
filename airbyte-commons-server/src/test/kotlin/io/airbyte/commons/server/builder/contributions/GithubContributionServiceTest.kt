@@ -2,16 +2,13 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.connectorbuilder.services
+package io.airbyte.commons.server.builder.contributions
 
 import io.mockk.every
 import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions.assertDoesNotThrow
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -102,7 +99,7 @@ class GithubContributionServiceTest {
     val connectorDirectoryPath = contributionService.connectorDirectoryPath
 
     // assert that the connector directory path is correct
-    assertEquals("airbyte-integrations/connectors/$testConnectorImageName", connectorDirectoryPath)
+    Assertions.assertEquals("airbyte-integrations/connectors/$testConnectorImageName", connectorDirectoryPath)
   }
 
   @Test
@@ -111,43 +108,43 @@ class GithubContributionServiceTest {
     val contributionBranchName = contributionService.contributionBranchName
 
     // assert that the contribution branch name is correct
-    assertEquals("$testUserName/builder-contribute/$testConnectorImageName", contributionBranchName)
+    Assertions.assertEquals("$testUserName/builder-contribute/$testConnectorImageName", contributionBranchName)
   }
 
   @Test
   fun `constructConnectorFilePath returns correct path`() {
     val expectedPath = "airbyte-integrations/connectors/$testConnectorImageName/dummyFile.txt"
     val actualPath = contributionService.constructConnectorFilePath("dummyFile.txt")
-    assertEquals(expectedPath, actualPath)
+    Assertions.assertEquals(expectedPath, actualPath)
   }
 
   @Test
   fun `createBranch successfully creates a new branch`() {
     val branchRef = contributionService.createBranch("new-feature-branch", forkedRepoMock)
-    assertNotNull(branchRef)
+    Assertions.assertNotNull(branchRef)
   }
 
   @Test
   fun `getExistingOpenPullRequest returns null when no open PR exists`() {
     every { forkedRepoMock.getBranch(any()) } returns null
-    assertNull(contributionService.getExistingOpenPullRequest())
+    Assertions.assertNull(contributionService.getExistingOpenPullRequest())
   }
 
   @Test
   fun `deleteBranch deletes the specified branch`() {
     every { refMock.delete() } returns Unit
-    assertDoesNotThrow { contributionService.deleteBranch("feature-to-delete", forkedRepoMock) }
+    Assertions.assertDoesNotThrow { contributionService.deleteBranch("feature-to-delete", forkedRepoMock) }
   }
 
   @Test
   fun `getExistingFileSha returns null when file does not exist`() {
     every { forkedRepoMock.getFileContent(any(), any()) } throws GHFileNotFoundException("File does not exist")
-    assertNull(contributionService.getExistingFileSha("non-existing-file.txt"))
+    Assertions.assertNull(contributionService.getExistingFileSha("non-existing-file.txt"))
   }
 
   @Test
   fun `createPullRequest creates a new pull request successfully`() {
-    assertNotNull(contributionService.createPullRequest("dummy description"))
+    Assertions.assertNotNull(contributionService.createPullRequest("dummy description"))
   }
 
   @Test
@@ -192,7 +189,7 @@ class GithubContributionServiceTest {
   fun `connectorDocsPath formats correctly`() {
     val expectedPath = "docs/integrations/sources/test-case.md"
     val actualPath = contributionService.connectorDocsPath
-    assertEquals(expectedPath, actualPath)
+    Assertions.assertEquals(expectedPath, actualPath)
   }
 
   @Test
@@ -201,8 +198,8 @@ class GithubContributionServiceTest {
 
     val result = contributionService.getBranchRef("existing-branch", forkedRepoMock)
 
-    assertNotNull(result)
-    assertEquals(refMock, result)
+    Assertions.assertNotNull(result)
+    Assertions.assertEquals(refMock, result)
   }
 
   @Test
@@ -211,7 +208,7 @@ class GithubContributionServiceTest {
 
     val result = contributionService.getBranchRef("non-existing-branch", forkedRepoMock)
 
-    assertNull(result)
+    Assertions.assertNull(result)
   }
 
   @Test
@@ -220,7 +217,7 @@ class GithubContributionServiceTest {
 
     val result = contributionService.getBranchRef("conflict-branch", forkedRepoMock)
 
-    assertNull(result)
+    Assertions.assertNull(result)
   }
 
   @Test
@@ -232,7 +229,7 @@ class GithubContributionServiceTest {
         contributionService.getBranchRef("error-branch", forkedRepoMock)
       }
 
-    assertEquals(500, exception.responseCode)
+    Assertions.assertEquals(500, exception.responseCode)
   }
 
   @Test
@@ -241,8 +238,8 @@ class GithubContributionServiceTest {
 
     val result = contributionService.getBranch("existing-branch", forkedRepoMock)
 
-    assertNotNull(result)
-    assertEquals(branchMock, result)
+    Assertions.assertNotNull(result)
+    Assertions.assertEquals(branchMock, result)
   }
 
   @Test
@@ -251,7 +248,7 @@ class GithubContributionServiceTest {
 
     val result = contributionService.getBranch("non-existing-branch", forkedRepoMock)
 
-    assertNull(result)
+    Assertions.assertNull(result)
   }
 
   @Test
@@ -260,7 +257,7 @@ class GithubContributionServiceTest {
 
     val result = contributionService.getBranch("conflict-branch", forkedRepoMock)
 
-    assertNull(result)
+    Assertions.assertNull(result)
   }
 
   @Test
@@ -272,6 +269,6 @@ class GithubContributionServiceTest {
         contributionService.getBranch("error-branch", forkedRepoMock)
       }
 
-    assertEquals(500, exception.responseCode)
+    Assertions.assertEquals(500, exception.responseCode)
   }
 }

@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.connectorbuilder.handlers
+package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonNode
@@ -11,14 +11,11 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import io.airbyte.commons.json.Jsons
-import io.airbyte.connectorbuilder.exceptions.ConnectorBuilderException
-import io.airbyte.connectorbuilder.requester.assist.AssistConfiguration
-import io.airbyte.connectorbuilder.requester.assist.AssistProxy
-import io.github.oshai.kotlinlogging.KotlinLogging
+import io.airbyte.commons.server.builder.assist.AssistConfiguration
+import io.airbyte.commons.server.builder.assist.AssistProxy
+import io.airbyte.commons.server.builder.exceptions.ConnectorBuilderException
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * Proxy to the Assist API.

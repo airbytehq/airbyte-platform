@@ -5,10 +5,10 @@
 package io.airbyte.connectorbuilder.requester
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.commons.server.builder.exceptions.ConnectorBuilderException
 import io.airbyte.connectorbuilder.api.model.generated.ResolveManifest
 import io.airbyte.connectorbuilder.api.model.generated.StreamRead
 import io.airbyte.connectorbuilder.exceptions.AirbyteCdkInvalidInputException
-import io.airbyte.connectorbuilder.exceptions.ConnectorBuilderException
 import java.io.IOException
 
 /**

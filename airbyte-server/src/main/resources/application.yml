@@ -183,6 +183,11 @@ airbyte:
   connector:
     specific-resource-defaults-enabled: ${CONNECTOR_SPECIFIC_RESOURCE_DEFAULTS_ENABLED:false}
     datadog-support-names: ${CONNECTOR_DATADOG_SUPPORT_NAMES:}
+  connector-builder-server:
+    github:
+      airbyte-pat-token: ${BUILDER_GITHUB_AIRBYTE_PAT_TOKEN:}
+    ai-assist:
+      url-base: ${AI_ASSIST_URL_BASE:}
   connector-registry:
     remote:
       base-url: ${CONNECTOR_REGISTRY_BASE_URL:}

@@ -4,13 +4,13 @@
 
 package io.airbyte.connectorbuilder.controllers
 
+import io.airbyte.commons.server.handlers.AssistProxyHandler
+import io.airbyte.commons.server.handlers.ConnectorContributionHandler
 import io.airbyte.connectorbuilder.api.model.generated.ResolveManifest
 import io.airbyte.connectorbuilder.api.model.generated.ResolveManifestRequestBody
 import io.airbyte.connectorbuilder.api.model.generated.StreamRead
 import io.airbyte.connectorbuilder.api.model.generated.StreamReadRequestBody
 import io.airbyte.connectorbuilder.exceptions.AirbyteCdkInvalidInputException
-import io.airbyte.connectorbuilder.handlers.AssistProxyHandler
-import io.airbyte.connectorbuilder.handlers.ConnectorContributionHandler
 import io.airbyte.connectorbuilder.handlers.FullResolveManifestHandler
 import io.airbyte.connectorbuilder.handlers.HealthHandler
 import io.airbyte.connectorbuilder.handlers.ResolveManifestHandler
@@ -19,7 +19,6 @@ import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows

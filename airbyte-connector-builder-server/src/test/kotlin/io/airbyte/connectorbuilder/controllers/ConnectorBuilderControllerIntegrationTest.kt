@@ -13,6 +13,10 @@ import io.airbyte.commons.protocol.ConfiguredAirbyteCatalogMigrator
 import io.airbyte.commons.protocol.serde.AirbyteMessageV0Deserializer
 import io.airbyte.commons.protocol.serde.AirbyteMessageV0Serializer
 import io.airbyte.commons.resources.Resources
+import io.airbyte.commons.server.builder.contributions.ContributionTemplates
+import io.airbyte.commons.server.builder.exceptions.ConnectorBuilderException
+import io.airbyte.commons.server.handlers.AssistProxyHandler
+import io.airbyte.commons.server.handlers.ConnectorContributionHandler
 import io.airbyte.commons.version.AirbyteProtocolVersion
 import io.airbyte.connectorbuilder.api.model.generated.ResolveManifestRequestBody
 import io.airbyte.connectorbuilder.api.model.generated.StreamReadRequestBody
@@ -21,16 +25,12 @@ import io.airbyte.connectorbuilder.commandrunner.SynchronousCdkCommandRunner
 import io.airbyte.connectorbuilder.exceptions.AirbyteCdkInvalidInputException
 import io.airbyte.connectorbuilder.exceptions.CdkProcessException
 import io.airbyte.connectorbuilder.exceptions.CdkUnknownException
-import io.airbyte.connectorbuilder.exceptions.ConnectorBuilderException
 import io.airbyte.connectorbuilder.filewriter.MockAirbyteFileWriterImpl
-import io.airbyte.connectorbuilder.handlers.AssistProxyHandler
-import io.airbyte.connectorbuilder.handlers.ConnectorContributionHandler
 import io.airbyte.connectorbuilder.handlers.FullResolveManifestHandler
 import io.airbyte.connectorbuilder.handlers.HealthHandler
 import io.airbyte.connectorbuilder.handlers.ResolveManifestHandler
 import io.airbyte.connectorbuilder.handlers.StreamHandler
 import io.airbyte.connectorbuilder.requester.AirbyteCdkRequesterImpl
-import io.airbyte.connectorbuilder.templates.ContributionTemplates
 import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory

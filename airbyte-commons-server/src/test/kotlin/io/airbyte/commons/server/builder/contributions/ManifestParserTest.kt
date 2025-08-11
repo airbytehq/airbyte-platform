@@ -2,13 +2,12 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.connectorbuilder.utils
+package io.airbyte.commons.server.builder.contributions
 
-import io.airbyte.connectorbuilder.exceptions.CircularReferenceException
-import io.airbyte.connectorbuilder.exceptions.ManifestParserException
-import io.airbyte.connectorbuilder.exceptions.UndefinedReferenceException
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
+import io.airbyte.commons.server.builder.exceptions.CircularReferenceException
+import io.airbyte.commons.server.builder.exceptions.ManifestParserException
+import io.airbyte.commons.server.builder.exceptions.UndefinedReferenceException
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
 class ManifestParserTest {
@@ -33,7 +32,7 @@ class ManifestParserTest {
       )
 
     val result = ManifestParser(yaml).manifestMap
-    assertEquals(expected, result)
+    Assertions.assertEquals(expected, result)
   }
 
   @Test
@@ -62,7 +61,7 @@ class ManifestParserTest {
       )
 
     val result = ManifestParser(yaml).manifestMap
-    assertEquals(expected, result)
+    Assertions.assertEquals(expected, result)
   }
 
   @Test
@@ -99,7 +98,7 @@ class ManifestParserTest {
       )
 
     val result = ManifestParser(yaml).manifestMap
-    assertEquals(expected, result)
+    Assertions.assertEquals(expected, result)
   }
 
   @Test
@@ -117,7 +116,7 @@ class ManifestParserTest {
             ${"\$ref"}: "#/allowedHostsNotFound"
       """.trimMargin()
 
-    assertThrows(UndefinedReferenceException::class.java) {
+    Assertions.assertThrows(UndefinedReferenceException::class.java) {
       ManifestParser(yaml).manifestMap
     }
   }
@@ -141,7 +140,7 @@ class ManifestParserTest {
             |manifestYamlString: "string"
       """.trimMargin()
 
-    assertThrows(CircularReferenceException::class.java) {
+    Assertions.assertThrows(CircularReferenceException::class.java) {
       ManifestParser(yaml).manifestMap
     }
   }
@@ -167,7 +166,7 @@ class ManifestParserTest {
 
     val expected = listOf("stream1", "stream2", mapOf("name" to "CARDS"), mapOf("name" to "COLLECTIONS"))
     val result = ManifestParser(yaml).streams
-    assertEquals(expected, result)
+    Assertions.assertEquals(expected, result)
   }
 
   @Test
@@ -191,14 +190,14 @@ class ManifestParserTest {
 
     val expected = listOf("stream1", "stream2", mapOf("name" to "CARDS"), mapOf("name" to "{{ config[\"api_key\"] }}"))
     val result = ManifestParser(yaml).streams
-    assertEquals(expected, result)
+    Assertions.assertEquals(expected, result)
   }
 
   @Test
   fun `ensure processManifestYaml throws contribution error on invalid yaml`() {
     val yaml = "invalid: yaml: string"
 
-    assertThrows(ManifestParserException::class.java) {
+    Assertions.assertThrows(ManifestParserException::class.java) {
       ManifestParser(yaml)
     }
   }
@@ -213,11 +212,11 @@ class ManifestParserTest {
             |manifestYamlString: "string"
       """.trimMargin()
 
-    assertThrows(ManifestParserException::class.java) {
+    Assertions.assertThrows(ManifestParserException::class.java) {
       ManifestParser(yaml).streams
     }
 
-    assertThrows(ManifestParserException::class.java) {
+    Assertions.assertThrows(ManifestParserException::class.java) {
       ManifestParser(yaml).spec
     }
   }

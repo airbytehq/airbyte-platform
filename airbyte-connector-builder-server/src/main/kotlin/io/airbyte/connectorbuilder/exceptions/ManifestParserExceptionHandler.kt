@@ -4,6 +4,7 @@
 
 package io.airbyte.connectorbuilder.exceptions
 
+import io.airbyte.commons.server.builder.exceptions.ManifestParserException
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
@@ -12,7 +13,7 @@ import io.micronaut.http.server.exceptions.ExceptionHandler
 import jakarta.inject.Singleton
 
 /**
- * Custom Micronaut exception handler for the [ManifestParserException].
+ * Custom Micronaut exception handler for the [io.airbyte.commons.server.builder.exceptions.ManifestParserException].
  */
 @Produces
 @Singleton
