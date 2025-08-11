@@ -20,11 +20,16 @@ private val logger = KotlinLogging.logger { "airbyte-keycloak" }
 
 @Singleton
 class AirbyteKeycloakClient(
-  private val keycloakAdminClientProvider: AirbyteKeycloakAdminClientProvider,
+  keycloakAdminClientProvider: AirbyteKeycloakAdminClientProvider,
   @Value("\${airbyte.airbyte-url}") private val airbyteUrl: String,
 ) {
   private val keycloakAdminClient: Keycloak = keycloakAdminClientProvider.createKeycloakAdminClient()
 
+  /**
+   * Retrieves SSO configuration data for a specific organization and realm.
+   * Finds the default identity provider and extracts client credentials from it.
+   * @throws IdpNotFoundException if the default identity provider does not exist in the realm.
+   */
   fun getSsoConfigData(
     organizationId: UUID,
     realmName: String,
@@ -48,6 +53,11 @@ class AirbyteKeycloakClient(
     )
   }
 
+  /**
+   * Creates a complete OIDC SSO configuration including realm, identity provider, and client.
+   * Sets up the full authentication flow for an organization's SSO integration.
+   * @throws RealmCreationException, IdpCreationException, CreateClientException, or ImportConfigException on failures.
+   */
   fun createOidcSsoConfig(request: SsoConfig) {
     createRealm(
       RealmRepresentation().apply {
@@ -65,6 +75,8 @@ class AirbyteKeycloakClient(
 
     // see https://www.keycloak.org/docs/latest/server_admin/index.html#_identity_broker_oidc
     // and https://www.keycloak.org/docs-api/latest/rest-api/index.html#IdentityProviderRepresentation
+    // The idpDiscovery result contains more fields than we pass in the following config, however we only require
+    // the auth url and the token url to enable sso.
     val idp =
       IdentityProviderRepresentation().apply {
         alias = DEFAULT_IDP_ALIAS
@@ -76,6 +88,7 @@ class AirbyteKeycloakClient(
             "authorizationUrl" to idpDiscoveryResult["authorizationUrl"],
             "tokenUrl" to idpDiscoveryResult["tokenUrl"],
             "clientAuthMethod" to CLIENT_AUTH_METHOD,
+            "defaultScope" to DEFAULT_SCOPE,
           )
       }
     createIdpForRealm(request.companyIdentifier, idp)
@@ -97,9 +110,14 @@ class AirbyteKeycloakClient(
         isImplicitFlowEnabled = false
         isPublicClient = true
       }
-    createClient(request.companyIdentifier, airbyteWebappClient)
+    createClientForRealm(request.companyIdentifier, airbyteWebappClient)
   }
 
+  /**
+   * Creates a new Keycloak realm with the provided configuration.
+   * Handles creation errors and provides meaningful exception messages.
+   * @throws RealmValuesExistException if realm values already exist, RealmCreationException for other failures.
+   */
   fun createRealm(realm: RealmRepresentation) {
     try {
       keycloakAdminClient.realms().create(realm)
@@ -116,6 +134,11 @@ class AirbyteKeycloakClient(
     }
   }
 
+  /**
+   * Imports identity provider configuration from an OIDC discovery URL.
+   * Returns the imported configuration map containing auth and token URLs.
+   * @throws ImportConfigException if the discovery URL is invalid or import fails.
+   */
   fun importIdpConfig(
     realmName: String,
     discoveryUrl: String,
@@ -140,13 +163,15 @@ class AirbyteKeycloakClient(
     }
   }
 
+  /**
+   * Creates an identity provider within a specific realm.
+   * Validates the response status and throws exceptions on failure.
+   * @throws IdpCreationException if creation fails or returns non-successful status.
+   */
   fun createIdpForRealm(
     realmName: String,
     idp: IdentityProviderRepresentation,
   ) {
-    val idpStringRep = convertIdpToString(idp)
-    logger.info { "Create IDP request: $idpStringRep" }
-
     try {
       val response =
         keycloakAdminClient
@@ -155,12 +180,8 @@ class AirbyteKeycloakClient(
           .identityProviders()
           .create(idp)
 
-      logger.info { "Created IDP response status: ${response.status}" }
-      logger.info { "Created IDP response status info: ${response.statusInfo}" }
-      logger.info { "Created IDP response status entity: ${response.readEntity(String::class.java)}" }
-      logger.info { "Created IDP response status string: ${response.statusInfo.reasonPhrase}" }
-
       if (response.statusInfo.family != Response.Status.Family.SUCCESSFUL) {
+        logger.info { "Created IDP response status entity: ${response.readEntity(String::class.java)}" }
         throw IdpCreationException("Create IDP request failed with ${response.status} response")
       }
     } catch (e: Exception) {
@@ -169,22 +190,38 @@ class AirbyteKeycloakClient(
     }
   }
 
-  fun createClient(
+  /**
+   * Creates a client application within a specific realm.
+   * Handles response validation and provides error handling for failed requests.
+   * @throws CreateClientException if creation fails or returns non-successful status.
+   */
+  fun createClientForRealm(
     realmName: String,
     client: ClientRepresentation,
   ) {
     try {
-      keycloakAdminClient
-        .realms()
-        .realm(realmName)
-        .clients()
-        .create(client)
+      val response =
+        keycloakAdminClient
+          .realms()
+          .realm(realmName)
+          .clients()
+          .create(client)
+
+      if (response.statusInfo.family != Response.Status.Family.SUCCESSFUL) {
+        logger.info { "Created client response status entity: ${response.readEntity(String::class.java)}" }
+        throw CreateClientException("Create client request failed with ${response.status} response")
+      }
     } catch (e: Exception) {
       logger.error(e) { "Create client request failed" }
       throw CreateClientException("Create client request failed! Server error: $e")
     }
   }
 
+  /**
+   * Deletes a Keycloak realm by name.
+   * Removes all associated configurations, clients, and identity providers.
+   * This method does not throw custom exceptions but may throw Keycloak client exceptions.
+   */
   fun deleteRealm(realmName: String) {
     keycloakAdminClient
       .realms()
@@ -192,6 +229,11 @@ class AirbyteKeycloakClient(
       .remove()
   }
 
+  /**
+   * Updates client credentials for an existing identity provider.
+   * Finds the default IDP in the realm and updates its client ID and secret.
+   * @throws IdpNotFoundException if the default identity provider does not exist in the realm.
+   */
   fun updateIdpClientCredentials(
     clientConfig: SsoKeycloakIdpCredentials,
     realmName: String,
@@ -217,18 +259,9 @@ class AirbyteKeycloakClient(
       .update(currentIdpRepresentation)
   }
 
-  private fun convertIdpToString(idp: IdentityProviderRepresentation): String =
-    """
-    providerId=${idp.providerId},
-    alias=${idp.alias},
-    clientId=${idp.config["clientId"]},
-    authorizationUrl=${idp.config["authorizationUrl"]},
-    tokenUrl=${idp.config["tokenUrl"]},
-    clientAuthMethod=${idp.config["clientAuthMethod"]},
-    """.trimIndent()
-
   companion object {
     private const val AIRBYTE_LOGIN_THEME = "airbyte-keycloak-theme"
+    private const val DEFAULT_SCOPE = "openid profile email"
     private const val DEFAULT_IDP_ALIAS = "default"
     private const val CLIENT_AUTH_METHOD = "client_secret_post"
     private const val AIRBYTE_WEBAPP_CLIENT_ID = "airbyte-webapp"

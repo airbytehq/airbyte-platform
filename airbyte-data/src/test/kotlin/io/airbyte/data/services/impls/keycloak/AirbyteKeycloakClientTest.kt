@@ -56,6 +56,9 @@ class AirbyteKeycloakClientTest {
         discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
       )
 
+    val mockResponse = mockk<Response>(relaxed = true)
+    every { mockResponse.statusInfo } returns Response.Status.OK
+
     val realmsMock = mockk<RealmsResource>(relaxed = true)
     every { keycloakClientMock.realms() } returns realmsMock
 
@@ -64,13 +67,10 @@ class AirbyteKeycloakClientTest {
 
     val clientsMock = mockk<ClientsResource>(relaxed = true)
     every { realmMock.clients() } returns clientsMock
-    every { clientsMock.create(any()) } returns mockk()
+    every { clientsMock.create(any()) } returns mockResponse
 
     val idpMock = mockk<IdentityProvidersResource>(relaxed = true)
     every { realmMock.identityProviders() } returns idpMock
-
-    val mockResponse = mockk<Response>(relaxed = true)
-    every { mockResponse.statusInfo } returns Response.Status.OK
     every { idpMock.create(any()) } returns mockResponse
 
     airbyteKeycloakClient.createOidcSsoConfig(config)
