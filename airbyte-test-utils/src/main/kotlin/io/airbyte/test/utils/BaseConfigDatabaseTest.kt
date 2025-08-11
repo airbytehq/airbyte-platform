@@ -151,6 +151,7 @@ open class BaseConfigDatabaseTest {
               declarative_manifest,
               notification_configuration,
               operation,
+              orchestration,
               organization,
               organization_email_domain,
               organization_payment_config,

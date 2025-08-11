@@ -381,6 +381,18 @@ create table "public"."operation" (
   "operator_webhook" jsonb,
   constraint "operation_pkey" primary key ("id")
 );
+create table "public"."orchestration" (
+  "id" uuid not null,
+  "version_id" uuid not null,
+  "workspace_id" uuid not null,
+  "name" varchar(2147483647) not null,
+  "orchestration_definition" jsonb not null,
+  "orchestration_schedule" jsonb,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "tombstone" boolean not null default false,
+  constraint "orchestration_pkey" primary key ("id", "version_id")
+);
 create table "public"."organization" (
   "id" uuid not null,
   "name" varchar(256) not null,
@@ -710,6 +722,8 @@ create index "idx_connection_timeline_connection_id" on "public"."connection_tim
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
 create unique index "actor_definition_id_state_tag_unique_idx" on "public"."connector_rollout"("actor_definition_id" asc, "tag" asc)
 where (((state)::text = ANY ((ARRAY['initialized'::character varying, 'in_progress'::character varying, 'paused'::character varying, 'workflow_started'::character varying, 'finalizing'::character varying, 'errored'::character varying])::text[])));
+create index "orchestration_name_idx" on "public"."orchestration"("name" asc);
+create index "orchestration_workspace_id_idx" on "public"."orchestration"("workspace_id" asc);
 create index "organization_email_domain_email_domain_idx" on "public"."organization_email_domain"("email_domain" asc);
 create index "organization_email_domain_organization_id_idx" on "public"."organization_email_domain"("organization_id" asc);
 create index "organization_payment_config_grace_period_end_at_idx" on "public"."organization_payment_config"("grace_period_end_at" asc);
@@ -795,6 +809,7 @@ alter table "public"."dataplane_client_credentials" add constraint "dataplane_cl
 alter table "public"."dataplane_group" add constraint "dataplane_group_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."notification_configuration" add constraint "notification_configuration_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."operation" add constraint "operation_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
+alter table "public"."orchestration" add constraint "orchestration_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."organization_email_domain" add constraint "organization_email_domain_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."organization_payment_config" add constraint "organization_payment_config_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."partial_user_config" add constraint "partial_user_config_actor_id_fkey" foreign key ("actor_id") references "public"."actor" ("id");
