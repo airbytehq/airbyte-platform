@@ -28,15 +28,6 @@ micronaut:
     enabled: true
     filter:
       enabled: false
-    oauth2:
-      clients:
-        keycloak:
-          client-id: ${KEYCLOAK_CLIENT_ID:}
-          client-secret: ${KEYCLOAK_CLIENT_SECRET:}
-          client-credentials:
-            enabled: true
-          openid:
-            issuer: ${KEYCLOAK_INTERNAL_REALM_ISSUER:}
 
 airbyte:
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
@@ -49,7 +40,8 @@ airbyte:
       delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
       max: ${AIRBYTE_API_MAX_RETRIES:5}
     auth:
-      type: KEYCLOAK_ACCESS_TOKEN
+      type: INTERNAL_CLIENT_TOKEN
+      signature-secret: ${AB_JWT_SIGNATURE_SECRET:}
   acceptance.test.enabled: ${ACCEPTANCE_TEST_ENABLED:false}
   role: ${AIRBYTE_ROLE:}
   tracking:
