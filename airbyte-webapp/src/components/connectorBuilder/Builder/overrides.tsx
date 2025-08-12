@@ -32,6 +32,7 @@ import { BuilderDeclarativeOAuth } from "./BuilderDeclarativeOAuth";
 import { JinjaInput } from "./JinjaInput";
 import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
 import styles from "./overrides.module.scss";
+import { getStreamTabFromPath } from "../useFocusField";
 
 export const ParentStreamSelector = ({ path, currentStreamName }: { path: string; currentStreamName?: string }) => {
   const { formatMessage } = useIntl();
@@ -366,9 +367,16 @@ export const DeclarativeOAuthWithClientId = ({ clientIdPath }: { clientIdPath: s
     [clientIdPath]
   );
 
+  const parentStreamTab = getStreamTabFromPath(clientIdPath);
+  const activeStreamTab = useBuilderWatch("streamTab");
+
   return (
     <FlexContainer direction="column" gap="none">
-      <BuilderDeclarativeOAuth authFieldPath={authFieldPath} />
+      {/* Only render the BuilderDeclarativeOAuth if this path is in the currently active stream tab
+       * to avoid rendering BuilderDeclarativeOAuth multiple times simultaneously, as this confuses
+       * react-hook-form.
+       */}
+      {parentStreamTab === activeStreamTab && <BuilderDeclarativeOAuth authFieldPath={authFieldPath} />}
       <SchemaFormControl path={clientIdPath} />
     </FlexContainer>
   );

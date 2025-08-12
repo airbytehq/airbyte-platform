@@ -38,12 +38,9 @@ export const useFocusField = () => {
       fieldToFocus = baseFieldToFocus;
     }
 
-    const tabContainer = fieldToFocus.closest("[data-stream-tab]");
-    if (tabContainer) {
-      const streamTabToFocus = tabContainer.getAttribute("data-stream-tab") as BuilderStreamTab;
-      if (streamTabToFocus !== streamTab) {
-        setValue("streamTab", streamTabToFocus);
-      }
+    const streamTabToFocus = getStreamTabFromPath(focusPath);
+    if (streamTabToFocus !== streamTab) {
+      setValue("streamTab", streamTabToFocus);
     }
 
     fieldToFocus.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -125,4 +122,19 @@ export const getViewFromPath = (path: string, getValues: UseFormGetValues<FieldV
   return {
     type: "global",
   };
+};
+
+export const getStreamTabFromPath = (path: string): BuilderStreamTab | undefined => {
+  const targetField = document.querySelector(`[data-field-path="${path}"]`);
+  if (!targetField) {
+    return undefined;
+  }
+
+  const tabContainer = targetField.closest("[data-stream-tab]");
+  if (!tabContainer) {
+    return undefined;
+  }
+
+  const streamTab = tabContainer.getAttribute("data-stream-tab") as BuilderStreamTab | null;
+  return streamTab ?? undefined;
 };
