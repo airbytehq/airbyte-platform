@@ -152,6 +152,7 @@ open class BaseConfigDatabaseTest {
               notification_configuration,
               operation,
               orchestration,
+              orchestration_run,
               organization,
               organization_email_domain,
               organization_payment_config,

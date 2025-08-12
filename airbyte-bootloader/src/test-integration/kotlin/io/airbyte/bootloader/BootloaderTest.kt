@@ -46,7 +46,7 @@ import io.airbyte.db.factory.FlywayFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider
-import io.airbyte.db.instance.configs.migrations.V1_6_0_021__CreateOrchestrationsTable
+import io.airbyte.db.instance.configs.migrations.V1_6_0_022__CreateOrchestrationRunTable
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider
 import io.airbyte.db.instance.jobs.migrations.V1_1_0_004__AddRejectedRecordStats
@@ -789,7 +789,7 @@ internal class BootloaderTest {
 
     // ⚠️ This line should change with every new migration to show that you meant to make a new
     // migration to the prod database
-    private val CURRENT_CONFIGS_MIGRATION = V1_6_0_021__CreateOrchestrationsTable::class.java
+    private val CURRENT_CONFIGS_MIGRATION = V1_6_0_022__CreateOrchestrationRunTable::class.java
     private val CURRENT_JOBS_MIGRATION = V1_1_0_004__AddRejectedRecordStats::class.java
 
     private fun getMigrationVersion(cls: Class<*>): String =
