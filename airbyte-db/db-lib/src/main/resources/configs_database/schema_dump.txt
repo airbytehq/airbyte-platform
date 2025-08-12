@@ -368,6 +368,35 @@ create table "public"."oauth_state" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "oauth_state_pkey" primary key ("id")
 );
+create table "public"."observability_jobs_stats" (
+  "job_id" bigint not null,
+  "connection_id" uuid not null,
+  "workspace_id" uuid not null,
+  "organization_id" uuid not null,
+  "source_id" uuid not null,
+  "source_definition_id" uuid not null,
+  "source_image_tag" varchar(2147483647),
+  "destination_id" uuid not null,
+  "destination_definition_id" uuid not null,
+  "destination_image_tag" varchar(2147483647),
+  "created_at" timestamp(6) with time zone not null,
+  "job_type" varchar(2147483647),
+  "status" varchar(2147483647),
+  "attempt_count" int,
+  "duration_seconds" bigint,
+  constraint "observability_jobs_stats_pkey" primary key ("job_id")
+);
+create table "public"."observability_stream_stats" (
+  "job_id" bigint not null,
+  "stream_namespace" varchar(2147483647),
+  "stream_name" varchar(2147483647) not null,
+  "bytes_loaded" bigint not null,
+  "records_loaded" bigint not null,
+  "records_rejected" bigint not null,
+  "was_backfilled" boolean not null,
+  "was_resumed" boolean not null,
+  constraint "observability_stream_stats__job_id__stream_namespace__stream_na" unique ("job_id", "stream_namespace", "stream_name")
+);
 create table "public"."operation" (
   "id" uuid not null,
   "workspace_id" uuid not null,
@@ -731,6 +760,11 @@ create index "idx_connection_timeline_connection_id" on "public"."connection_tim
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
 create unique index "actor_definition_id_state_tag_unique_idx" on "public"."connector_rollout"("actor_definition_id" asc, "tag" asc)
 where (((state)::text = ANY ((ARRAY['initialized'::character varying, 'in_progress'::character varying, 'paused'::character varying, 'workflow_started'::character varying, 'finalizing'::character varying, 'errored'::character varying])::text[])));
+create index "observability_jobs_stats__connection_id_created_at__idx" on "public"."observability_jobs_stats"("connection_id" asc, "created_at" asc);
+create index "observability_jobs_stats__job_id__idx" on "public"."observability_jobs_stats"("job_id" asc);
+create index "observability_stream_stats__job_id__idx" on "public"."observability_stream_stats"("job_id" asc);
+create unique index "observability_stream_stats__job_id__stream_name__uq" on "public"."observability_stream_stats"("job_id" asc, "stream_name" asc)
+where ((stream_namespace IS NULL));
 create index "orchestration_name_idx" on "public"."orchestration"("name" asc);
 create index "orchestration_workspace_id_idx" on "public"."orchestration"("workspace_id" asc);
 create index "orchestration_run_orchestration_id_idx" on "public"."orchestration_run"("orchestration_id" asc);
