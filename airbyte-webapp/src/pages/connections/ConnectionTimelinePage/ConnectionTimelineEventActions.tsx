@@ -25,7 +25,9 @@ export const ConnectionTimelineEventActions: React.FC<ConnectionTimelineEventAct
           <FormattedDate value={createdAt * 1000} timeStyle="short" dateStyle="medium" />
         </Text>
       )}
-      {jobId && <JobEventMenu jobId={jobId} eventId={eventId} attemptCount={attemptCount} />}
+      <div className={styles.eventActions__menu}>
+        {jobId && <JobEventMenu jobId={jobId} eventId={eventId} attemptCount={attemptCount} />}
+      </div>
     </div>
   );
 };

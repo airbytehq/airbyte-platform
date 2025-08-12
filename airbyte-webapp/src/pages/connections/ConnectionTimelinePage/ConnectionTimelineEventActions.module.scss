@@ -7,4 +7,9 @@
   min-width: max-content;
   justify-content: flex-end;
   flex-basis: 180px;
+
+  &__menu {
+    // We want a fixed width here, because the button is not always present, but we want the timestamps to remain aligned
+    width: 40px;
+  }
 }
