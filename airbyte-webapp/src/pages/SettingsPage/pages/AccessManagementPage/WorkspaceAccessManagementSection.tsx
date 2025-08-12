@@ -10,7 +10,7 @@ import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace, useListUserInvitations, useListWorkspaceAccessUsers } from "core/api";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useModalService } from "hooks/services/Modal";
 
 import { AddUserModal } from "./components/AddUserModal";
@@ -22,7 +22,7 @@ const SEARCH_PARAM = "search";
 
 const WorkspaceAccessManagementSection: React.FC = () => {
   const workspace = useCurrentWorkspace();
-  const canUpdateWorkspacePermissions = useIntent("UpdateWorkspacePermissions", { workspaceId: workspace.workspaceId });
+  const canUpdateWorkspacePermissions = useGeneratedIntent(Intent.UpdateWorkspacePermissions);
   const { openModal } = useModalService();
 
   const { usersWithAccess } = useListWorkspaceAccessUsers(workspace.workspaceId);

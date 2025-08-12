@@ -5,18 +5,16 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
 import { UpdateWorkspaceSettingsForm } from "area/workspace/components/UpdateWorkspaceSettingsForm";
-import { useCurrentWorkspace } from "core/api";
 import { useFeature, FeatureItem } from "core/services/features";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import { TagsTable } from "./components/TagsTable";
 import { DeleteWorkspace } from "../components/DeleteWorkspace";
 
 export const GeneralWorkspaceSettingsPage = () => {
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
-  const { workspaceId } = useCurrentWorkspace();
-  const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
-  const canDeleteWorkspace = useIntent("DeleteWorkspace", { workspaceId });
+  const canViewWorkspaceSettings = useGeneratedIntent(Intent.ViewWorkspaceSettings);
+  const canDeleteWorkspace = useGeneratedIntent(Intent.DeleteWorkspace);
 
   return (
     <FlexContainer direction="column" gap="xl">

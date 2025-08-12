@@ -11,12 +11,11 @@ import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspace } from "core/api";
 import { useDbtCloudServiceToken } from "core/api/cloud";
 import { useFormatError } from "core/errors";
 import { trackError } from "core/utils/datadog";
 import { links } from "core/utils/links";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { useDbtTokenRemovalModal } from "./useDbtTokenRemovalModal";
@@ -33,8 +32,7 @@ export const DbtCloudSettingsView: React.FC = () => {
   const { formatMessage } = useIntl();
   const { hasExistingToken, saveToken } = useDbtCloudServiceToken();
   const { registerNotification } = useNotificationService();
-  const { workspaceId, organizationId } = useCurrentWorkspace();
-  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId, organizationId });
+  const canUpdateWorkspace = useGeneratedIntent(Intent.UpdateWorkspace);
 
   const onDeleteClick = useDbtTokenRemovalModal();
 

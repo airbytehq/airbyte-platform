@@ -7,7 +7,7 @@ import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 
 import { useCurrentWorkspace, useUpdateWorkspace } from "core/api";
 import { trackError } from "core/utils/datadog";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
 
 const ValidationSchema = z.object({
@@ -18,10 +18,10 @@ type MetricsFormValues = z.infer<typeof ValidationSchema>;
 
 export const MetricsForm: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { workspaceId, organizationId, anonymousDataCollection } = useCurrentWorkspace();
+  const { workspaceId, anonymousDataCollection } = useCurrentWorkspace();
   const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
   const { registerNotification } = useNotificationService();
-  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId, organizationId });
+  const canUpdateWorkspace = useGeneratedIntent(Intent.UpdateWorkspace);
 
   const onSubmit = async ({ anonymousDataCollection }: MetricsFormValues) => {
     await updateWorkspace({

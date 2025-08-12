@@ -6,7 +6,7 @@ import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 
 import { useCurrentWorkspace, useInvalidateWorkspace, useUpdateWorkspace } from "core/api";
 import { trackError } from "core/utils/datadog";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
 
 const ValidationSchema = z.object({
@@ -19,9 +19,9 @@ export const WorkspaceEmailForm = () => {
   const { formatMessage } = useIntl();
   const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
   const { registerNotification } = useNotificationService();
-  const { workspaceId, organizationId, name, email } = useCurrentWorkspace();
+  const { workspaceId, name, email } = useCurrentWorkspace();
   const invalidateWorkspace = useInvalidateWorkspace(workspaceId);
-  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId, organizationId });
+  const canUpdateWorkspace = useGeneratedIntent(Intent.UpdateWorkspace);
 
   const onSubmit = async ({ email }: WorkspaceEmailFormValues) => {
     await updateWorkspace({

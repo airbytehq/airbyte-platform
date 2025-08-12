@@ -8,7 +8,7 @@ import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { useCurrentWorkspace, useUpdateWorkspace, useInvalidateWorkspace } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { trackError } from "core/utils/datadog";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
 
 const workspaceSettingsSchema = z.object({
@@ -24,10 +24,10 @@ type WorkspaceFormValues = z.infer<typeof workspaceSettingsSchema>;
 export const UpdateWorkspaceSettingsForm = () => {
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
-  const { workspaceId, organizationId, name, email, dataplaneGroupId } = useCurrentWorkspace();
+  const { workspaceId, name, email, dataplaneGroupId } = useCurrentWorkspace();
   const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
   const invalidateWorkspace = useInvalidateWorkspace(workspaceId);
-  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId, organizationId });
+  const canUpdateWorkspace = useGeneratedIntent(Intent.UpdateWorkspace);
   const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataplanes);
 
   const onSubmit = async ({ name, dataplaneGroupId }: WorkspaceFormValues) => {

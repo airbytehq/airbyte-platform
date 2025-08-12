@@ -25,6 +25,7 @@ jest.mock("core/utils/rbac", () => ({
   useIntent: jest.fn().mockReturnValue(true),
   useGeneratedIntent: jest.fn().mockReturnValue(true),
   Intent: {
+    UpdateWorkspacePermissions: "UpdateWorkspacePermissions",
     CreateOrEditConnection: "CreateOrEditConnection",
   },
 }));

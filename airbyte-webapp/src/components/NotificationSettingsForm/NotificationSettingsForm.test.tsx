@@ -21,6 +21,7 @@ jest.mock("core/utils/rbac", () => ({
   useIntent: () => true,
   useGeneratedIntent: () => true,
   Intent: {
+    UpdateWorkspace: "UpdateWorkspace",
     CreateOrEditConnection: "CreateOrEditConnection",
   },
 }));

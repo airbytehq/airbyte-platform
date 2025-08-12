@@ -17,7 +17,7 @@ import { useListUserInvitations, useListUsersInOrganization, useOrganization } f
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
@@ -31,9 +31,7 @@ const SEARCH_PARAM = "search";
 export const OrganizationAccessManagementSection: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
   const organization = useOrganization(organizationId);
-  const canUpdateOrganizationPermissions = useIntent("UpdateOrganizationPermissions", {
-    organizationId,
-  });
+  const canUpdateOrganizationPermissions = useGeneratedIntent(Intent.UpdateOrganizationPermissions);
   const allowExternalInvitations = useFeature(FeatureItem.ExternalInvitations);
 
   const { openModal } = useModalService();

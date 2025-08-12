@@ -7,7 +7,7 @@ import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useModalService } from "hooks/services/Modal";
 import { AddUserModal } from "pages/SettingsPage/pages/AccessManagementPage/components/AddUserModal";
 
@@ -21,8 +21,7 @@ export const InviteUsersHint: React.FC<InviteUsersHintProps> = ({ connectorType 
   const workspace = useCurrentWorkspace();
   const { formatMessage } = useIntl();
   const inviteUsersHintVisible = useFeature(FeatureItem.ShowInviteUsersHint);
-  const { workspaceId } = useCurrentWorkspace();
-  const canInviteUsers = useIntent("UpdateWorkspacePermissions", { workspaceId });
+  const canInviteUsers = useGeneratedIntent(Intent.UpdateWorkspacePermissions);
   const { openModal } = useModalService();
 
   if (!inviteUsersHintVisible || !canInviteUsers) {

@@ -5,9 +5,8 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Separator } from "components/ui/Separator";
 
-import { useCurrentWorkspace } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { DeleteWorkspace } from "pages/SettingsPage/components/DeleteWorkspace";
 import { TagsTable } from "pages/SettingsPage/Workspace/components/TagsTable";
 
@@ -15,9 +14,8 @@ import { UpdateWorkspaceSettingsForm } from "./components/UpdateWorkspaceSetting
 
 export const WorkspaceSettingsView: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_WORKSPACE);
+  const canDeleteWorkspace = useGeneratedIntent(Intent.DeleteWorkspace);
 
-  const { workspaceId } = useCurrentWorkspace();
-  const canDeleteWorkspace = useIntent("DeleteWorkspace", { workspaceId });
   return (
     <FlexContainer direction="column" gap="xl">
       <Heading as="h1" size="md">

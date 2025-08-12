@@ -15,7 +15,7 @@ import { NotificationReadStatus, NotificationSettings, NotificationTrigger } fro
 import { FeatureItem, useFeature } from "core/services/features";
 import { trackError } from "core/utils/datadog";
 import { isFulfilled } from "core/utils/promises";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import { useUpdateNotificationSettings } from "hooks/services/useWorkspace";
@@ -34,8 +34,7 @@ export const NotificationSettingsForm: React.FC = () => {
   const testWebhook = useTryNotificationWebhook();
   const { formatMessage } = useIntl();
   const { registerNotification } = useNotificationService();
-  const { workspaceId, organizationId } = useCurrentWorkspace();
-  const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId, organizationId });
+  const canUpdateWorkspace = useGeneratedIntent(Intent.UpdateWorkspace);
 
   const onSubmit = async (
     values: NotificationSettingsFormValues,

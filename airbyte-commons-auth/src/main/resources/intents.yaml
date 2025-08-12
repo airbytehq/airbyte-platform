@@ -136,7 +136,46 @@ intents:
       - ORGANIZATION_EDITOR
       - ORGANIZATION_ADMIN
       - ADMIN
-
+  UpdateWorkspace:
+    name: Update workspace
+    description: Update a workspace's settings
+    roles:
+      - ORGANIZATION_ADMIN
+      - ORGANIZATION_EDITOR
+      - WORKSPACE_ADMIN
+      - ADMIN
+  DeleteWorkspace:
+    name: Delete workspace
+    description: Delete a workspace
+    roles:
+      - ORGANIZATION_ADMIN
+      - WORKSPACE_ADMIN
+      - ADMIN
+  UpdateWorkspacePermissions:
+    name: Update workspace-level permissions
+    description: Update a user's workspace-level permissions
+    roles:
+      - ORGANIZATION_ADMIN
+      - WORKSPACE_ADMIN
+      - ADMIN
+  UpdateOrganizationPermissions:
+    name: Update organization-level permissions
+    description: Update a user's organization-level permissions
+    roles:
+      - ORGANIZATION_ADMIN
+      - ADMIN
+  ViewWorkspaceSettings:
+    name: View workspace settings
+    description: View settings for a workspace
+    roles:
+      - ORGANIZATION_ADMIN
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_RUNNER
+      - ORGANIZATION_READER
+      - WORKSPACE_ADMIN
+      - WORKSPACE_EDITOR
+      - WORKSPACE_RUNNER
+      - WORKSPACE_READER
   CreateOrEditConnectorBuilder:
     name: Create or edit connector builder connectors
     description: Create a connector builder connector or change the settings of an existing connector builder connector
