@@ -9,7 +9,7 @@ import {
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useListUserInvitations, useListUsersInOrganization, useListWorkspaceAccessUsers } from "core/api";
-import { useIntent } from "core/utils/rbac";
+import { useGeneratedIntent, useIntent } from "core/utils/rbac";
 
 import { useListUsersToAdd } from "./useListUsersToAdd";
 
@@ -21,6 +21,10 @@ jest.mock("core/api", () => ({
 
 jest.mock("core/utils/rbac", () => ({
   useIntent: jest.fn(),
+  useGeneratedIntent: jest.fn(),
+  Intent: {
+    CreateOrEditConnection: "CreateOrEditConnection",
+  },
 }));
 
 jest.mock("area/workspace/utils", () => ({
@@ -42,6 +46,7 @@ describe("#useListUsersToAdd", () => {
       usersWithAccess: mockWorkspaceAccessUsers,
     });
     (useIntent as jest.Mock).mockReturnValue(true);
+    (useGeneratedIntent as jest.Mock).mockReturnValue(true);
     (useListUserInvitations as jest.Mock).mockReturnValue(mockWorkspaceUserInvitations);
   });
 

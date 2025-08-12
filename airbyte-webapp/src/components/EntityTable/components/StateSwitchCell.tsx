@@ -4,9 +4,9 @@ import React from "react";
 import { FlexContainer } from "components/ui/Flex";
 import { Switch } from "components/ui/Switch";
 
-import { useCurrentWorkspace, useUpdateConnection } from "core/api";
+import { useUpdateConnection } from "core/api";
 import { ConnectionStatus, SchemaChange } from "core/api/types/AirbyteClient";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useAnalyticsTrackFunctions } from "hooks/services/ConnectionEdit/useAnalyticsTrackFunctions";
 
 import { ConnectionTableDataItem } from "../types";
@@ -16,8 +16,7 @@ export const StateSwitchCell: ColumnDefTemplate<CellContext<ConnectionTableDataI
   const enabled = props.cell.getValue();
   const schemaChange = props.row.original.schemaChange;
   const { trackConnectionStatusUpdate } = useAnalyticsTrackFunctions();
-  const { workspaceId } = useCurrentWorkspace();
-  const canEditConnection = useIntent("EditConnection", { workspaceId });
+  const canEditConnection = useGeneratedIntent(Intent.CreateOrEditConnection);
   const { mutateAsync: updateConnection, isLoading } = useUpdateConnection();
 
   const onChange = async ({ target: { checked } }: React.ChangeEvent<HTMLInputElement>) => {

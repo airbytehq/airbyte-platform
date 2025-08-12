@@ -19,6 +19,10 @@ jest.mock("core/api", () => ({
 
 jest.mock("core/utils/rbac", () => ({
   useIntent: () => true,
+  useGeneratedIntent: () => true,
+  Intent: {
+    CreateOrEditConnection: "CreateOrEditConnection",
+  },
 }));
 
 const mockUpdateNotificationSettings = jest.fn();

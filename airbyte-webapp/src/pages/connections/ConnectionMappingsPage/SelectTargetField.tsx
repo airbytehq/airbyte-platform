@@ -11,10 +11,9 @@ import { Input } from "components/ui/Input";
 import { FloatLayout } from "components/ui/ListBox/FloatLayout";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspace } from "core/api";
 import { FieldSpec } from "core/api/types/AirbyteClient";
 import { useFormMode } from "core/services/ui/FormModeContext";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import { MappingRowItem } from "./MappingRow";
 import styles from "./SelectTargetField.module.scss";
@@ -31,8 +30,7 @@ interface SelectTargetFieldProps<TFormValues> {
 export const SelectTargetField = <TFormValues extends FieldValues>({
   ...props
 }: SelectTargetFieldProps<TFormValues>) => {
-  const { workspaceId } = useCurrentWorkspace();
-  const canEditConnection = useIntent("EditConnection", { workspaceId });
+  const canEditConnection = useGeneratedIntent(Intent.CreateOrEditConnection);
   const { control } = useFormContext<TFormValues>();
 
   return (

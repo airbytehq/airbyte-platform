@@ -8,7 +8,7 @@ import { Tooltip } from "components/ui/Tooltip";
 import { useCurrentWorkspaceLink, useWorkspaceLink } from "area/workspace/utils";
 import { useCreateSourceDefForkedBuilderProject, useGetBuilderProjectIdByDefinitionId } from "core/api";
 import { ConnectorBuilderProjectIdWithWorkspaceId, SourceDefinitionRead } from "core/api/types/AirbyteClient";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./ForkInBuilderButton.module.scss";
@@ -26,7 +26,9 @@ const EditBuilderProjectButton = ({
 }) => {
   // Check if the user has permission to edit the project in the builder workspace,
   // custom connectors are scoped to the Organization, but Builder projects are scoped to the Workspace.
-  const canEditInBuilder = useIntent("UpdateCustomConnector", { workspaceId: builderProjectWorkspaceId });
+  const canEditInBuilder = useGeneratedIntent(Intent.CreateOrEditConnectorBuilder, {
+    workspaceId: builderProjectWorkspaceId,
+  });
   const createWorkspaceLink = useWorkspaceLink(builderProjectWorkspaceId);
   const createProjectEditLink = useCallback(
     (projectId: string) => createWorkspaceLink(`/${RoutePaths.ConnectorBuilder}/${getEditPath(projectId)}`),

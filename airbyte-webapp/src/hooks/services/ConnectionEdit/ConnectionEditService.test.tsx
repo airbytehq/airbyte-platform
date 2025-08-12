@@ -30,6 +30,10 @@ import { useConnectionFormService } from "../ConnectionForm/ConnectionFormServic
 
 jest.mock("core/utils/rbac", () => ({
   useIntent: () => true,
+  useGeneratedIntent: () => true,
+  Intent: {
+    CreateOrEditConnection: "CreateOrEditConnection",
+  },
 }));
 
 const mockedUseUpdateConnection = jest.fn(async (connection: WebBackendConnectionUpdate) => {

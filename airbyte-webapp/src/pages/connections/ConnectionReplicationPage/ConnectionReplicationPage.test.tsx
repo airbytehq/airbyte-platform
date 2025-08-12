@@ -60,6 +60,10 @@ jest.mock("core/api", () => ({
 
 jest.mock("core/utils/rbac", () => ({
   useIntent: () => true,
+  useGeneratedIntent: () => true,
+  Intent: {
+    CreateOrEditConnection: "CreateOrEditConnection",
+  },
 }));
 
 jest.mock("hooks/theme/useAirbyteTheme", () => ({

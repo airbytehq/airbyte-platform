@@ -5,10 +5,9 @@ import { FlexContainer } from "components/ui/Flex";
 import { Link } from "components/ui/Link";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useCurrentWorkspace } from "core/api";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { isSourceDefinition } from "core/domain/connector/source";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import styles from "./ConnectionOnboardingConnectorLink.module.scss";
 
@@ -29,8 +28,7 @@ export const ConnectionOnboardingConnectorLink: React.FC<ConnectionOnboardingCon
   onMouseEnter,
   children,
 }) => {
-  const { workspaceId } = useCurrentWorkspace();
-  const canCreateConnection = useIntent("CreateConnection", { workspaceId });
+  const canCreateConnection = useGeneratedIntent(Intent.CreateOrEditConnection);
 
   const dataDefinitionId = useMemo(() => {
     if (connector) {

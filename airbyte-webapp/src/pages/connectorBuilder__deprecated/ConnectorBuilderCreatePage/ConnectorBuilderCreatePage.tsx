@@ -16,11 +16,11 @@ import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspace, useListBuilderProjects } from "core/api";
+import { useListBuilderProjects } from "core/api";
 import { ConnectorManifest } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import { ConnectorBuilderLocalStorageProvider } from "services/connectorBuilder__deprecated/ConnectorBuilderLocalStorageService";
@@ -51,8 +51,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
   const { convertToBuilderFormValues } = useManifestToBuilderForm();
   const [importYamlLoading, setImportYamlLoading] = useState(false);
 
-  const { workspaceId } = useCurrentWorkspace();
-  const canCreateConnector = useIntent("CreateCustomConnector", { workspaceId });
+  const canCreateConnector = useGeneratedIntent(Intent.CreateOrEditConnectorBuilder);
 
   const isAIFeatureEnabled = useExperiment("connectorBuilder.aiAssist.enabled");
 

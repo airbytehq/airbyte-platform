@@ -18,14 +18,13 @@ import { Tooltip } from "components/ui/Tooltip";
 import {
   BuilderProject,
   useChangeBuilderProjectVersion,
-  useCurrentWorkspace,
   useDeleteBuilderProject,
   useListBuilderProjectVersions,
   useSourceDefinitionList,
 } from "core/api";
 import { ContributionInfo } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
@@ -187,8 +186,7 @@ export const ConnectorBuilderProjectTable = ({
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const analyticsService = useAnalyticsService();
   const { mutateAsync: deleteProject } = useDeleteBuilderProject();
-  const { workspaceId } = useCurrentWorkspace();
-  const canUpdateConnector = useIntent("UpdateCustomConnector", { workspaceId });
+  const canUpdateConnector = useGeneratedIntent(Intent.CreateOrEditConnectorBuilder);
   const getEditUrl = useCallback(
     (projectId: string) => `${basePath ? basePath : ""}${getEditPath(projectId)}`,
     [basePath]

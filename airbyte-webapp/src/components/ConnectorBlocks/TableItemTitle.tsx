@@ -8,8 +8,7 @@ import { Link } from "components/ui/Link";
 
 import { ActiveConnectionLimitReachedModal } from "area/workspace/components/ActiveConnectionLimitReachedModal";
 import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorkspaceLimits";
-import { useCurrentWorkspace } from "core/api";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useModalService } from "hooks/services/Modal";
 
 interface TableItemTitleProps {
@@ -21,8 +20,7 @@ const TableItemTitle: React.FC<TableItemTitleProps> = ({ createConnectionLink, c
   const { activeConnectionLimitReached, limits } = useCurrentWorkspaceLimits();
   const { openModal } = useModalService();
   const { formatMessage } = useIntl();
-  const { workspaceId } = useCurrentWorkspace();
-  const canCreateConnection = useIntent("CreateConnection", { workspaceId });
+  const canCreateConnection = useGeneratedIntent(Intent.CreateOrEditConnection);
 
   const handleButtonClickLimitsReached = () => {
     if (!limits) {

@@ -30,7 +30,6 @@ import {
   StreamReadTransformedSlices,
   useBuilderProjectReadStream,
   useBuilderProjectFullResolveManifest,
-  useCurrentWorkspace,
   usePublishBuilderProject,
   useReleaseNewBuilderProjectVersion,
   useUpdateBuilderProject,
@@ -63,7 +62,7 @@ import { useConnectorBuilderResolve } from "core/services/connectorBuilder/Conne
 import { FeatureItem, useFeature } from "core/services/features";
 import { Blocker, useBlocker } from "core/services/navigation";
 import { removeEmptyProperties } from "core/utils/form";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -181,8 +180,7 @@ export const ConnectorBuilderMainRHFContext = React.createContext<UseFormReturn<
 
 export const useConnectorBuilderPermission = () => {
   const restrictAdminInForeignWorkspace = useFeature(FeatureItem.RestrictAdminInForeignWorkspace);
-  const { workspaceId } = useCurrentWorkspace();
-  const canUpdateConnector = useIntent("UpdateCustomConnector", { workspaceId });
+  const canUpdateConnector = useGeneratedIntent(Intent.CreateOrEditConnectorBuilder);
   const isForeignWorkspace = useIsForeignWorkspace();
 
   let permission: ConnectorBuilderPermission = "readOnly";

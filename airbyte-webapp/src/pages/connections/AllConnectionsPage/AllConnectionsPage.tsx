@@ -17,7 +17,7 @@ import { useConnectionList, useCurrentWorkspace, useListConnectionsStatusesAsync
 import { WebBackendConnectionListSortKey } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useDrawerActions } from "core/services/ui/DrawerService";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { RoutePaths, ConnectionRoutePaths } from "pages/routePaths";
@@ -55,7 +55,7 @@ export const AllConnectionsPage: React.FC = () => {
   const [sortKey, setSortKey] = React.useState<WebBackendConnectionListSortKey>("connectionName_asc");
 
   const { workspaceId } = useCurrentWorkspace();
-  const canCreateConnection = useIntent("CreateConnection", { workspaceId });
+  const canCreateConnection = useGeneratedIntent(Intent.CreateOrEditConnection);
 
   // Pass filters and sort state to useConnectionList for server-side filtering and sorting
   const connectionListQuery = useConnectionList({

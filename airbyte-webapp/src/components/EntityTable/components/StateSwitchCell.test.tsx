@@ -19,6 +19,10 @@ jest.mock("core/api", () => ({
 
 jest.mock("core/utils/rbac", () => ({
   useIntent: jest.fn(() => true),
+  useGeneratedIntent: jest.fn(() => true),
+  Intent: {
+    CreateOrEditConnection: "CreateOrEditConnection",
+  },
 }));
 
 const mockId = "mock-id";

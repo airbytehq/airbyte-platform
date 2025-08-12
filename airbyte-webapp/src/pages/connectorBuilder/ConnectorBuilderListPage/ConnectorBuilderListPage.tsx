@@ -9,16 +9,15 @@ import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { PageHeader } from "components/ui/PageHeader";
 
-import { useCurrentWorkspace, useListBuilderProjects } from "core/api";
-import { useIntent } from "core/utils/rbac";
+import { useListBuilderProjects } from "core/api";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import { ConnectorBuilderRoutePaths } from "../ConnectorBuilderRoutes";
 
 export const ConnectorBuilderListPage: React.FC = () => {
   const navigate = useNavigate();
   const projects = useListBuilderProjects();
-  const { workspaceId } = useCurrentWorkspace();
-  const canCreateConnector = useIntent("CreateCustomConnector", { workspaceId });
+  const canCreateConnector = useGeneratedIntent(Intent.CreateOrEditConnectorBuilder);
 
   return projects.length ? (
     <MainPageWithScroll

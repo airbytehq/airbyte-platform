@@ -23,6 +23,10 @@ jest.mock("core/api", () => ({
 
 jest.mock("core/utils/rbac", () => ({
   useIntent: jest.fn().mockReturnValue(true),
+  useGeneratedIntent: jest.fn().mockReturnValue(true),
+  Intent: {
+    CreateOrEditConnection: "CreateOrEditConnection",
+  },
 }));
 
 describe("InviteUsersHint", () => {

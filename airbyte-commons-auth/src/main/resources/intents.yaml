@@ -136,3 +136,13 @@ intents:
       - ORGANIZATION_EDITOR
       - ORGANIZATION_ADMIN
       - ADMIN
+
+  CreateOrEditConnectorBuilder:
+    name: Create or edit connector builder connectors
+    description: Create a connector builder connector or change the settings of an existing connector builder connector
+    roles:
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - WORKSPACE_EDITOR
+      - WORKSPACE_ADMIN
+      - ADMIN

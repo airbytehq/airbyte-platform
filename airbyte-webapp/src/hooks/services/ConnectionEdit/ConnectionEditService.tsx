@@ -4,7 +4,6 @@ import { useIntl } from "react-intl";
 import { useAsyncFn } from "react-use";
 
 import {
-  useCurrentWorkspace,
   useDestinationDefinitionVersion,
   useGetConnection,
   useGetConnectionQuery,
@@ -21,7 +20,7 @@ import {
   WebBackendConnectionUpdate,
 } from "core/api/types/AirbyteClient";
 import { FormMode, FormModeProvider } from "core/services/ui/FormModeContext";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 import { ConnectionFormServiceProvider } from "../ConnectionForm/ConnectionFormService";
@@ -250,8 +249,7 @@ export const ConnectionEditServiceProvider: React.FC<React.PropsWithChildren<Con
   ...props
 }) => {
   const { refreshSchema, schemaError, ...data } = useConnectionEdit(props);
-  const { workspaceId } = useCurrentWorkspace();
-  const canEditConnection = useIntent("EditConnection", { workspaceId });
+  const canEditConnection = useGeneratedIntent(Intent.CreateOrEditConnection);
 
   const formMode = useMemo<FormMode>(
     () =>

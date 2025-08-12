@@ -22,13 +22,4 @@ export const intentToRbacQuery = {
   UpdateWorkspacePermissions: { resourceType: "WORKSPACE", role: "ADMIN" },
   UploadCustomConnector: { resourceType: "WORKSPACE", role: "EDITOR" },
   ViewWorkspaceSettings: { resourceType: "WORKSPACE", role: "READER" },
-
-  // builder
-  CreateCustomConnector: { resourceType: "WORKSPACE", role: "EDITOR" },
-  UpdateCustomConnector: { resourceType: "WORKSPACE", role: "EDITOR" },
-
-  // connection
-  CreateConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
-  EditConnection: { resourceType: "WORKSPACE", role: "EDITOR" },
-  ClearData: { resourceType: "WORKSPACE", role: "EDITOR" },
 } as const;

@@ -9,10 +9,10 @@ import { SwitchNext } from "components/ui/SwitchNext";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useCurrentConnection, useCurrentWorkspace } from "core/api";
+import { useCurrentConnection } from "core/api";
 import { ConnectionStatus, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
 import { useFormMode } from "core/services/ui/FormModeContext";
-import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { ConnectionRoutePaths } from "pages/routePaths";
@@ -29,10 +29,9 @@ export const ConnectionHeaderControls: React.FC = () => {
   const { updateConnectionStatus, connectionUpdating, schemaRefreshing } = useConnectionEditService();
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);
   const navigate = useNavigate();
-  const { workspaceId } = useCurrentWorkspace();
   const connectionStatus = useConnectionStatus(connection.connectionId);
   const canSyncConnection = useGeneratedIntent(Intent.RunAndCancelConnectionSyncAndRefresh);
-  const canClearData = useIntent("ClearData", { workspaceId });
+  const canClearData = useGeneratedIntent(Intent.CreateOrEditConnection);
 
   const {
     jobRefreshRunning,

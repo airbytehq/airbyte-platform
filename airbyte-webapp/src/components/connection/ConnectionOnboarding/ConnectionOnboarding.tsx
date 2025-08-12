@@ -11,7 +11,7 @@ import { Tooltip } from "components/ui/Tooltip";
 import { ConnectorIds, SvgIcon } from "area/connector/utils";
 import { useCurrentWorkspace, useSourceDefinitionList, useDestinationDefinitionList } from "core/api";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/api/types/AirbyteClient";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 import { ConnectionRoutePaths, DestinationPaths, RoutePaths } from "pages/routePaths";
 
@@ -78,7 +78,7 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
   const { formatMessage } = useIntl();
   const { workspaceId } = useCurrentWorkspace();
   const { sourceDefinitions, destinationDefinitions } = useConnectorSpecificationMap();
-  const canCreateConnection = useIntent("CreateConnection", { workspaceId });
+  const canCreateConnection = useGeneratedIntent(Intent.CreateOrEditConnection);
 
   const [highlightedSource, setHighlightedSource] = useState<HighlightIndex>(1);
   const [highlightedDestination, setHighlightedDestination] = useState<HighlightIndex>(0);

@@ -14,6 +14,7 @@ import { Text } from "components/ui/Text";
 import { ActiveConnectionLimitReachedModal } from "area/workspace/components/ActiveConnectionLimitReachedModal";
 import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorkspaceLimits";
 import { useCurrentWorkspace } from "core/api";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useModalService } from "hooks/services/Modal";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
@@ -49,6 +50,7 @@ export const ConnectorEmptyStateContent: React.FC<ConnectorEmptyStateContentProp
   const navigate = useNavigate();
   const { workspaceId } = useCurrentWorkspace();
   const { formatMessage } = useIntl();
+  const canCreateConnection = useGeneratedIntent(Intent.CreateOrEditConnection);
 
   const onButtonClick = () => {
     if (activeConnectionLimitReached && limits) {
@@ -108,7 +110,7 @@ export const ConnectorEmptyStateContent: React.FC<ConnectorEmptyStateContentProp
           )}
         </Text>
       </FlexContainer>
-      <Button size="sm" onClick={onButtonClick} data-testid="create-connection">
+      <Button size="sm" onClick={onButtonClick} data-testid="create-connection" disabled={!canCreateConnection}>
         <Text inverseColor bold size="lg">
           <FormattedMessage id="connector.connections.empty.button" />
         </Text>

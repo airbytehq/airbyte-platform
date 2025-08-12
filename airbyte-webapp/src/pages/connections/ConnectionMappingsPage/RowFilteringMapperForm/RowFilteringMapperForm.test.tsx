@@ -31,6 +31,10 @@ const mockMapper: StreamMapperWithId<RowFilteringMapperConfiguration> = {
 
 jest.mock("core/utils/rbac", () => ({
   useIntent: () => true,
+  useGeneratedIntent: () => true,
+  Intent: {
+    CreateOrEditConnection: "CreateOrEditConnection",
+  },
 }));
 
 jest.mock("../useGetFieldsInStream", () => ({
