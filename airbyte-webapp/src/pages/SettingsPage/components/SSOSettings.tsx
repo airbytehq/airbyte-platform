@@ -1,6 +1,5 @@
 import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useCallback } from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -18,44 +17,14 @@ import { Text } from "components/ui/Text";
 import { useSSOConfigManagement } from "core/api";
 import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { links } from "core/utils/links";
-import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./SSOSettings.module.scss";
 import { SSOFormValues } from "../UpdateSSOSettingsForm";
 
 export const SSOSettings = () => {
   const { formatMessage } = useIntl();
-  const { isSSOConfigured, isLoading, deleteSsoConfig } = useSSOConfigManagement();
-  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const { registerNotification } = useNotificationService();
+  const { isSSOConfigured, isLoading } = useSSOConfigManagement();
   const { isSubmitting } = useFormState();
-
-  const openSsoConfigRemovalModal = useCallback(() => {
-    openConfirmationModal({
-      text: "settings.organizationSettings.sso.delete.modal.text",
-      title: "settings.organizationSettings.sso.delete.modal.title",
-      submitButtonText: "settings.organizationSettings.sso.delete.confirm",
-      submitButtonVariant: "danger",
-      onSubmit: async () => {
-        try {
-          await deleteSsoConfig();
-          closeConfirmationModal();
-          registerNotification({
-            id: "sso/delete-config-success",
-            text: formatMessage({ id: "settings.organizationSettings.sso.delete.success" }),
-            type: "success",
-          });
-        } catch (e) {
-          registerNotification({
-            id: "sso/delete-config-failure",
-            text: formatMessage({ id: "settings.organizationSettings.sso.delete.failure" }),
-            type: "error",
-          });
-        }
-      },
-    });
-  }, [openConfirmationModal, deleteSsoConfig, closeConfirmationModal, registerNotification, formatMessage]);
 
   return (
     <div className={styles.card}>
@@ -111,9 +80,6 @@ export const SSOSettings = () => {
                       {isSSOConfigured ? (
                         <FlexContainer direction="column" alignItems="flex-start">
                           <Message text={formatMessage({ id: "settings.organizationSettings.sso.configured" })} />
-                          <Button variant="danger" type="button" onClick={openSsoConfigRemovalModal}>
-                            <FormattedMessage id="settings.organizationSettings.sso.configured.remove" />
-                          </Button>
                         </FlexContainer>
                       ) : (
                         <>
