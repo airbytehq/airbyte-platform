@@ -3,7 +3,7 @@ Enteprise Configuration
 */}}
 
 {{- define "airbyte.enterprise.license" -}}
-{{- if and (or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) (not .Values.global.airbyteYml) }}
+{{- if and (or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) }}
 {{- $secretName := .Values.global.enterprise.secretName | required "You must set `global.enterprise.secretName` when `global.edition` is 'enterprise'" }}
 {{- $secretKey := .Values.global.enterprise.licenseKeySecretKey | required "You must set `global.enterprise.licenseKeySecretKey` when `global.edition` is 'enterprise'" }}
 - name: AIRBYTE_LICENSE_KEY
@@ -15,7 +15,7 @@ Enteprise Configuration
 {{- end }}
 
 {{- define "airbyte.enterprise.instanceAdmin" -}}
-{{- if and (or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) (not .Values.global.airbyteYml) }}
+{{- if and (or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) }}
 {{- $auth := .Values.global.auth | required "You must set `global.auth` when `global.edition` is 'enterprise'"}}
 {{- $authInstanceAdminSecretName := .Values.global.auth.instanceAdmin.secretName | required "You must set `global.auth.instanceAdmin.secretName` when `global.edition` is 'enterprise'" }}
 {{- $authInstanceAdminFirstName :=  .Values.global.auth.instanceAdmin.firstName | required "You must set `global.auth.instanceAdmin.firstName` when `global.edition` is 'enterprise'" }}
@@ -46,7 +46,7 @@ Enteprise Configuration
 {{- end }}
 
 {{- define "airbyte.enterprise.identityProvider" -}}
-{{- if and (or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) (not .Values.global.airbyteYml) .Values.global.auth.identityProvider }}
+{{- if and (or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) .Values.global.auth.identityProvider }}
 {{- $authIdentityProviderSecretName := .Values.global.auth.identityProvider.secretName | required "You must set `global.auth.identityProvider.secretName` when enabling SSO" }}
 {{- $authIdentityProviderType := .Values.global.auth.identityProvider.type | required "You must set `global.auth.identityProvider.type` when enabling SSO "}}
 {{- $authIdentityProviderOIDC :=  .Values.global.auth.identityProvider.oidc | required "You must set `global.auth.identityProvider.oidc` when enabling SSO" }}

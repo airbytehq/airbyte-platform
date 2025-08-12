@@ -430,12 +430,6 @@ spec:
           mountPath: /secrets/gcs-log-creds
           readOnly: true
         {{- end }}
-        {{- if .Values.global.airbyteYml }}
-        - name: airbyte-yml-volume
-          mountPath: /app/configs/airbyte.yml
-          subPath: fileContents
-          readOnly: true
-        {{- end }}
       {{- end }}
 
         {{- if .Values.extraVolumeMounts }}
@@ -465,11 +459,6 @@ spec:
           secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) .Values.global.storage.storageSecretName (not ((.Values.global.storage).storageSecretName)) }}
       {{- end }}
 
-      {{- if .Values.global.airbyteYml }}
-      - name: airbyte-yml-volume
-        secret:
-          secretName: {{ .Release.Name }}-airbyte-yml
-      {{- end }}
     {{- end }}
       {{- if .Values.extraVolumes }}
 {{ toYaml .Values.extraVolumes | nindent 6 }}

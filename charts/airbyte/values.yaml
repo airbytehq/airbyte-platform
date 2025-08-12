@@ -8,8 +8,6 @@ global:
   # -- Edition; "community" or "enterprise"
   edition: "community"
 
-  airbyteYml: ""
-
   enterprise:
     # -- Secret name where an Airbyte license key is stored
     secretName: "airbyte-config-secrets"

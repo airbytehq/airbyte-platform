@@ -1,4 +1,3 @@
-{{- $airbyteYmlDict := (default "" .Values.global.airbyteYml | fromYaml) }} # default to empty dict if airbyteYml is undefined
 apiVersion: v1
 kind: ConfigMap
 metadata:

@@ -223,11 +223,6 @@ spec:
           claimName: airbyte-storage-pvc
       {{- end }}
 
-      {{- if .Values.global.airbyteYml }}
-      - name: airbyte-yml-volume
-        secret:
-          secretName: {{ .Release.Name }}-airbyte-yml
-      {{- end }}
       {{- if .Values.server.extraVolumes }}
       {{ toYaml .Values.server.extraVolumes | nindent 6 }}
       {{- end }}

@@ -40,29 +40,11 @@ func TestHelmTemplateWithDefaultValues(t *testing.T) {
 		assert.ElementsMatch(t, keys, commonSecretkeys)
 	})
 
-	t.Run("the airbyte-airbyte-yml secret is not created by default", func(t *testing.T) {
-		// The airbyte-airbyte-yml secret is not created by default.
-		// The global.airbyteYml value must be set in order to render this resource.
-		helmtests.AssertNoResource(t, chartYaml, "Secret", "airbyte-airbyte-yml")
-	})
-
 	t.Run("service account is created by default", func(t *testing.T) {
 		assert.NotNil(t, helmtests.GetServiceAccount(chartYaml, "airbyte-admin"))
 		assert.NotNil(t, helmtests.GetRole(chartYaml, "airbyte-admin-role"))
 		helmtests.GetRoleBinding(chartYaml, "airbyte-admin-binding")
 	})
-}
-
-func TestAirbyteYmlSecret(t *testing.T) {
-	// The airbyte-airbyte-yml secret is created when the global.airbyteYml value is set.
-	opts := helmtests.BaseHelmOptions()
-	opts.SetFiles = map[string]string{
-		"global.airbyteYml": "fixtures/airbyte.yaml",
-	}
-	chartYml := helmtests.RenderChart(t, opts, chartPath)
-	secret := helmtests.GetSecret(chartYml, "airbyte-airbyte-yml")
-	assert.Equal(t, secret.Name, "airbyte-airbyte-yml")
-	assert.NotEmpty(t, secret.Data["fileContents"])
 }
 
 func TestEnterpriseConfigKeys(t *testing.T) {

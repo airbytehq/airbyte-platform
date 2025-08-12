@@ -7,7 +7,7 @@ package io.airbyte.commons.license
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.license.AirbyteLicense.LicenseType
 import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled
-import jakarta.inject.Named
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import java.nio.charset.Charset
 import java.sql.Date
@@ -18,7 +18,7 @@ import java.util.UUID
 @Singleton
 @RequiresAirbyteProEnabled
 class AirbyteLicenseReader(
-  @param:Named("licenseKey") private val licenceKey: String,
+  @Value("\${airbyte.license-key}") private val licenceKey: String,
 ) {
   fun extractLicense(): AirbyteLicense {
     val fragments = licenceKey.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()

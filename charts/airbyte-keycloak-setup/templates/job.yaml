@@ -98,13 +98,6 @@ spec:
           {{- if .Values.resources }}
           resources: {{- toYaml .Values.resources | nindent 12 }}
           {{- end }}
-          volumeMounts:
-            {{- if .Values.global.airbyteYml }}
-            - name: airbyte-yml-volume
-              mountPath: /app/configs/airbyte.yml
-              subPath: fileContents
-              readOnly: true
-            {{- end }}
           {{- if .Values.extraVolumeMounts }}
           {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
           {{- end }}
@@ -119,11 +112,6 @@ spec:
         {{- end }}
       securityContext: {{- toYaml .Values.podSecurityContext | nindent 10 }}
       volumes:
-        {{- if .Values.global.airbyteYml }}
-        - name: airbyte-yml-volume
-          secret:
-            secretName: {{ .Release.Name }}-airbyte-yml
-        {{- end }}
         {{- if .Values.extraVolumes }}
         {{- toYaml .Values.extraVolumes | nindent 8 }}
         {{- end }}

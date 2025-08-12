@@ -1,4 +1,3 @@
-{{- $airbyteYmlDict := (default "" .Values.global.airbyteYml | fromYaml) }} # default to empty dict if airbyteYml is undefined
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -16,12 +15,7 @@ data:
   AIRBYTE_EDITION: "community"
   {{- end }}
 
-  {{- if $airbyteYmlDict }}
-  AIRBYTE_URL: {{ (index $airbyteYmlDict "webapp-url") | quote }}
-  {{- else}}
   AIRBYTE_URL: {{ .Values.global.airbyteUrl | quote }}
-  {{- end }}
-
   AIRBYTE_SERVER_HOST: {{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}
   API_URL: {{ .Values.webapp.api.url }}
   CONFIG_API_HOST: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }} # temporary solution for oss kube deploys for airbyte api server until that server is wrapped into the config server
@@ -46,13 +40,7 @@ data:
     {{- end }}
   KEYCLOAK_INTERNAL_HOST: {{ .Release.Name }}-airbyte-keycloak-svc:{{ .Values.keycloak.service.port }}
   KEYCLOAK_PORT: {{ .Values.keycloak.service.port | quote }}
-
-    {{- if $airbyteYmlDict }}
-  KEYCLOAK_HOSTNAME_URL: {{ printf "%s/auth" (index $airbyteYmlDict "webapp-url") | quote }}
-    {{- else }}
   KEYCLOAK_HOSTNAME_URL: {{ printf "%s/auth" .Values.global.airbyteUrl | quote }}
-    {{- end }}
-
   KEYCLOAK_JAVA_OPTS_APPEND: -Djgroups.dns.query={{ .Release.Name }}-airbyte-keycloak-headless-svc
   {{- else }}
   KEYCLOAK_INTERNAL_HOST: localhost # just a placeholder so that nginx template is valid - shouldn't be used when edition isn't "pro"
@@ -61,11 +49,7 @@ data:
   CONNECTOR_BUILDER_API_HOST: {{ ternary (printf "%s-airbyte-connector-builder-server-svc:%d" .Release.Name (index .Values "connector-builder-server" "service" "port" | int)) "localhost" (index .Values "connector-builder-server" "enabled") }}
 
   {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
-    {{- if $airbyteYmlDict }}
-  AIRBYTE_API_HOST: {{ printf "%s/api/public" (index $airbyteYmlDict "webapp-url") | quote }}
-    {{- else }}
   AIRBYTE_API_HOST: {{ printf "%s/api/public" .Values.global.airbyteUrl | quote }}
-    {{- end }}
   {{- else if (eq .Values.global.edition "community")}}
   AIRBYTE_API_HOST: http://localhost:{{ .Values.server.service.port }}/api/public
   {{- else }}

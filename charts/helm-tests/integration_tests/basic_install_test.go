@@ -110,9 +110,6 @@ func TestBasicEnterpriseInstallWithDefaultValues(t *testing.T) {
 	t.Run("should install successfully with airbyte.yml as a file", func(t *testing.T) {
 		opts := tests.BaseHelmOptions()
 		opts.SetValues["global.edition"] = "enterprise"
-		opts.SetFiles = map[string]string{
-			"global.airbyteYml": "../tests/fixtures/airbyte.yaml",
-		}
 		opts.KubectlOptions = &k8s.KubectlOptions{
 			Namespace: releaseNamespace,
 		}

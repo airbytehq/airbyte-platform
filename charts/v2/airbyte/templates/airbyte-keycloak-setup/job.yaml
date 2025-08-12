@@ -100,13 +100,6 @@ spec:
           {{- if .Values.keycloakSetup.resources }}
           resources: {{- toYaml .Values.keycloakSetup.resources | nindent 10 }}
           {{- end }}
-          volumeMounts:
-            {{- if .Values.global.airbyteYml }}
-            - name: airbyte-yml-volume
-              mountPath: /app/configs/airbyte.yml
-              subPath: fileContents
-              readOnly: true
-            {{- end }}
           {{- if .Values.keycloakSetup.extraVolumeMount }}
           {{- toYaml .Values.keycloakSetup.extraVolumeMounts | nindent 12 }}
           {{- end }}
@@ -121,11 +114,6 @@ spec:
         {{- end }}
       securityContext: {{- toYaml .Values.keycloakSetup.podSecurityContext | nindent 8 }}
       volumes:
-        {{- if .Values.global.airbyteYml }}
-        - name: airbyte-yml-volume
-          secret:
-            secretName: {{ .Release.Name }}-airbyte-yml
-        {{- end }}
         {{- if .Values.keycloakSetup.extraVolumes }}
         {{- toYaml .Values.keycloakSetup.extraVolumes | nindent 8 }}
         {{- end }}

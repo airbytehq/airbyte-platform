@@ -40,13 +40,13 @@ if [ "$LOCAL" == "true" ]; then
   helm dep update
 
   # additional arguments to this script are appended at the end of the command, so that further customization can be done
-  helm upgrade --install "$airbyte_pro_release_name" . $set_dev_image_tag_if_true $set_reset_realm_if_true --set-file airbyteYml="$airbyte_yml_file_path" --values "$airbyte_pro_values_yml_file_path" --values "$airbyte_yml_file_path" "$@"
+  helm upgrade --install "$airbyte_pro_release_name" . $set_dev_image_tag_if_true $set_reset_realm_if_true --values "$airbyte_pro_values_yml_file_path" --values "$airbyte_yml_file_path" "$@"
   popd
 else
   airbyte_chart="airbyte/airbyte"
 
   # additional arguments to this script are appended at the end of the command, so that further customization can be done
-  helm upgrade --install "$airbyte_pro_release_name" "$airbyte_chart" $set_dev_image_tag_if_true $set_reset_realm_if_true --set-file airbyteYml="$airbyte_yml_file_path" --values "$airbyte_pro_values_yml_file_path" "$@"
+  helm upgrade --install "$airbyte_pro_release_name" "$airbyte_chart" $set_dev_image_tag_if_true $set_reset_realm_if_true --values "$airbyte_pro_values_yml_file_path" "$@"
 fi
 
 echo "Airbyte Pro installation complete!"

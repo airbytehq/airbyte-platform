@@ -11,11 +11,7 @@ import io.airbyte.config.Configs.AirbyteEdition
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
-import io.micronaut.context.exceptions.DisabledBeanException
-import io.micronaut.core.util.StringUtils
-import jakarta.inject.Named
 import jakarta.inject.Singleton
-import java.util.Optional
 
 /**
  * Bean Factory for common Airbyte Configuration.
@@ -36,21 +32,6 @@ class AirbyteConfigurationBeanFactory {
   ): AirbyteEdition =
     runCatching { AirbyteEdition.valueOf(airbyteEdition.uppercase()) }
       .getOrDefault(AirbyteEdition.COMMUNITY)
-
-  /**
-   * This method provides the airbyte url by preferring the `airbyte.airbyte-url` property over the
-   * deprecated `airbyte-yml.webapp-url` property. For backwards compatibility, if
-   * `airbyte-yml.airbyte-url` is not provided, this method falls back on `airbyte-yml.webapp-url`.
-   */
-  @Singleton
-  @Named("airbyteUrl")
-  fun airbyteUrl(
-    @Value("\${airbyte.airbyte-url}") airbyteUrl: Optional<String>,
-    @Value("\${airbyte-yml.webapp-url}") webappUrl: Optional<String>,
-  ): String =
-    airbyteUrl
-      .filter(StringUtils::isNotEmpty)
-      .orElseGet { webappUrl.orElseThrow { DisabledBeanException("Airbyte URL not provided.") } }
 
   @Singleton
   @Requires(property = "airbyte.protocol.min-version")

@@ -25,13 +25,13 @@ import io.airbyte.publicApi.server.generated.models.PermissionType
 import io.airbyte.server.auth.TokenScopeClaim
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
+import io.micronaut.context.annotation.Value
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.context.ServerRequestContext
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
-import jakarta.inject.Named
 import jakarta.ws.rs.core.Response
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.time.Clock
@@ -53,7 +53,7 @@ class EmbeddedController(
   val permissionHandler: PermissionHandler,
   val embeddedWorkspacesHandler: EmbeddedWorkspacesHandler,
   val licenseEntitlementChecker: LicenseEntitlementChecker,
-  @Named("airbyteUrl") val airbyteUrl: String,
+  @Value("\${airbyte.airbyte-url}") val airbyteUrl: String,
   @Property(name = "airbyte.auth.token-issuer") private val tokenIssuer: String,
 ) : EmbeddedWidgetApi {
   var clock: Clock = Clock.systemUTC()

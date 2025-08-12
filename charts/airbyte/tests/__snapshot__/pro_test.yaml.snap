@@ -77,23 +77,6 @@ manifest should match snapshot:
   3: |
     apiVersion: v1
     data:
-      fileContents: |2-
-        path
-    kind: secret 
-    metadata:
-      annotations:
-        helm.sh/hook: pre-install,pre-upgrade
-        helm.sh/hook-weight: "-1"
-      labels:
-        app.kubernetes.io/instance: RELEASE-NAME
-        app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: airbyte
-        app.kubernetes.io/version: 0.50.19
-        helm.sh/chart: airbyte-0.47.26
-      name: RELEASE-NAME-airbyte-yml
-  4: |
-    apiVersion: v1
-    data:
       ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS: ""
       ACTIVITY_MAX_ATTEMPT: ""
       ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS: ""
@@ -154,7 +137,7 @@ manifest should match snapshot:
         app.kubernetes.io/version: 0.50.19
         helm.sh/chart: airbyte-0.47.26
       name: RELEASE-NAME-airbyte-env
-  5: |
+  4: |
     apiVersion: v1
     data:
       gcp.json: ""
@@ -168,7 +151,7 @@ manifest should match snapshot:
         helm.sh/chart: airbyte-0.47.26
       name: RELEASE-NAME-gcs-log-creds
     type: Opaque
-  6: |
+  5: |
     apiVersion: apps/v1
     kind: StatefulSet
     metadata:
@@ -219,7 +202,7 @@ manifest should match snapshot:
             resources:
               requests:
                 storage: 500Mi
-  7: |
+  6: |
     apiVersion: v1
     kind: Service
     metadata:
@@ -241,7 +224,7 @@ manifest should match snapshot:
       selector:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/name: RELEASE-NAME-minio
-  8: |
+  7: |
     apiVersion: v1
     kind: Secret
     metadata:
@@ -265,7 +248,7 @@ manifest should match snapshot:
       AWS_ACCESS_KEY_ID: minio
       AWS_SECRET_ACCESS_KEY: minio123
     type: Opaque
-  9: |
+  8: |
     apiVersion: v1
     kind: ServiceAccount
     metadata:
@@ -279,7 +262,7 @@ manifest should match snapshot:
         app.kubernetes.io/version: 0.50.19
         helm.sh/chart: airbyte-0.47.26
       name: airbyte-admin
-  10: |
+  9: |
     apiVersion: rbac.authorization.k8s.io/v1
     kind: Role
     metadata:
@@ -301,7 +284,7 @@ manifest should match snapshot:
           - update
           - patch
           - delete
-  11: |
+  10: |
     apiVersion: rbac.authorization.k8s.io/v1
     kind: RoleBinding
     metadata:
