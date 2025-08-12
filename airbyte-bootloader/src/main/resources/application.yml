@@ -27,7 +27,7 @@ airbyte:
     migration-baseline-version: ${BOOTLOADER_MIGRATION_BASELINE_VERSION:0.29.0.001}
     run-migration-on-startup: ${RUN_DATABASE_MIGRATION_ON_STARTUP:true}
   connector-registry:
-    seed-provider: ${CONNECTOR_REGISTRY_SEED_PROVIDER:local}
+    seed-provider: ${CONNECTOR_REGISTRY_SEED_PROVIDER:remote}
     remote:
       base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}

@@ -236,7 +236,7 @@ global:
     log4jConfigFile: ""
 
   connectorRegistry:
-    seedProvider: local
+    seedProvider: remote
 
   connectorRollout:
     expirationSeconds:
@@ -2111,7 +2111,7 @@ cron:
 
   jobs:
     updateDefinitions:
-      enabled: false
+      enabled: true
     declarativeSourcesUpdater:
       enabled: true
 

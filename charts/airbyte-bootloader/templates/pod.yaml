@@ -110,6 +110,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: TRACKING_STRATEGY
+        - name: CONNECTOR_REGISTRY_SEED_PROVIDER
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONNECTOR_REGISTRY_SEED_PROVIDER
 
         # Airbyte auth secret keys and values
         {{- if and (eq .Values.global.edition "community") .Values.global.auth.enabled }}

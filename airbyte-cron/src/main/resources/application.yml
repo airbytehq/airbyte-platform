@@ -32,14 +32,14 @@ micronaut:
 
 airbyte:
   connector-registry:
-    seed-provider: ${CONNECTOR_REGISTRY_SEED_PROVIDER:local}
+    seed-provider: ${CONNECTOR_REGISTRY_SEED_PROVIDER:remote}
     remote:
       base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
   license-key: ${AIRBYTE_LICENSE_KEY:}
   cron:
     update-definitions:
-      enabled: ${UPDATE_DEFINITIONS_CRON_ENABLED:false}
+      enabled: ${UPDATE_DEFINITIONS_CRON_ENABLED:true}
     declarative-sources-updater:
       enabled: ${RUN_DECLARATIVE_SOURCES_UPDATER:true}
   edition: ${AIRBYTE_EDITION:COMMUNITY}

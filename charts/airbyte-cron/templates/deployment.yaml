@@ -158,6 +158,16 @@ spec:
               configMapKeyRef:
                 name: {{ .Release.Name }}-airbyte-env
                 key: WORKSPACE_ROOT
+          - name: CONNECTOR_REGISTRY_SEED_PROVIDER
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-airbyte-env
+                key: CONNECTOR_REGISTRY_SEED_PROVIDER
+          - name: UPDATE_DEFINITIONS_CRON_ENABLED
+            valueFrom:
+              configMapKeyRef:
+                name: {{ .Release.Name }}-airbyte-env
+                key: UPDATE_DEFINITIONS_CRON_ENABLED
 
             # Secrets Manager
           - name: SECRET_PERSISTENCE
