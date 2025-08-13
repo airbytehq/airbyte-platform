@@ -55,11 +55,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
       : { type: "stream" as const, index: 0 };
 
   const values: BuilderState = {
-    mode: failedInitialFormValueConversion
-      ? resolvedManifest !== null
-        ? getStoredMode(projectId)
-        : "yaml"
-      : getStoredMode(projectId),
+    mode: failedInitialFormValueConversion ? "yaml" : getStoredMode(projectId),
     formValues: initialFormValues,
     yaml: initialYaml,
     customComponentsCode: componentsFileContent,
