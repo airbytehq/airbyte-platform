@@ -62,6 +62,6 @@ open class JobPostProcessingWorkflowImpl : JobPostProcessingWorkflow {
 
     jobPostProcessingActivity.finalizeJobStats(FinalizeJobStatsInput(input.jobId, input.connectionId))
 
-    jobPostProcessingActivity.evaluateOutlier(EvaluateOutlierInput(input.jobId))
+    jobPostProcessingActivity.evaluateOutlier(EvaluateOutlierInput(input.jobId, input.connectionId))
   }
 }

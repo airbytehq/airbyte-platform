@@ -23,17 +23,22 @@ import java.util.UUID
 @JsonDeserialize(builder = EvaluateOutlierInput.Builder::class)
 data class EvaluateOutlierInput(
   val jobId: Long,
+  val connectionId: UUID?,
 ) {
   class Builder
     @JvmOverloads
     constructor(
       var jobId: Long? = null,
+      var connectionId: UUID? = null,
     ) {
       fun jobId(jobId: Long) = apply { this.jobId = jobId }
+
+      fun connectionId(connectionId: UUID) = apply { this.connectionId = connectionId }
 
       fun build(): EvaluateOutlierInput =
         EvaluateOutlierInput(
           jobId = jobId ?: throw IllegalArgumentException("jobId must be specified."),
+          connectionId = connectionId,
         )
     }
 }
@@ -77,18 +82,27 @@ class JobProcessingActivityImpl(
   private val featureFlagClient: FeatureFlagClient,
 ) : JobPostProcessingActivity {
   override fun evaluateOutlier(input: EvaluateOutlierInput) {
-    // We do not check the feature flag again here because we rely on the writes to the history table to be doing the gating.
+    // TODO input.connectionId shouldn't be nullable, this is just for a smooth transition.
+    val dataObservabilityEnabled = input.connectionId?.let { isOutlierDetectionEnabled(input.connectionId) } ?: false
+    if (!dataObservabilityEnabled) {
+      return
+    }
+
     airbyteApiClient.jobsApi.evaluateOutlier(JobIdRequestBody(input.jobId))
   }
 
   override fun finalizeJobStats(input: FinalizeJobStatsInput) {
-    val workspace = airbyteApiClient.workspaceApi.getWorkspaceByConnectionId(ConnectionIdRequestBody(connectionId = input.connectionId))
-    val context = Multi(listOf(Connection(input.connectionId), Workspace(workspace.workspaceId)))
-    val dataObservabilityEnabled = featureFlagClient.boolVariation(EnableDataObservability, context)
+    val dataObservabilityEnabled = isOutlierDetectionEnabled(input.connectionId)
     if (!dataObservabilityEnabled) {
       return
     }
 
     airbyteApiClient.jobsApi.finalizeJob(JobIdRequestBody(input.jobId))
+  }
+
+  private fun isOutlierDetectionEnabled(connectionId: UUID): Boolean {
+    val workspace = airbyteApiClient.workspaceApi.getWorkspaceByConnectionId(ConnectionIdRequestBody(connectionId = connectionId))
+    val context = Multi(listOf(Connection(connectionId), Workspace(workspace.workspaceId)))
+    return featureFlagClient.boolVariation(EnableDataObservability, context)
   }
 }
