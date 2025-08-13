@@ -22,6 +22,7 @@ export type IconType =
   | "chevronUpDown"
   | "clockFilled"
   | "clockOutline"
+  | "code"
   | "comments"
   | "community"
   | "connection"

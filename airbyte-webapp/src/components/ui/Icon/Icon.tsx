@@ -26,6 +26,7 @@ import ChevronUpDownIcon from "./icons/chevronUpDownIcon.svg?react";
 import ChevronUpIcon from "./icons/chevronUpIcon.svg?react";
 import ClockFilledIcon from "./icons/clockFilledIcon.svg?react";
 import ClockOutlineIcon from "./icons/clockOutlineIcon.svg?react";
+import CodeIcon from "./icons/codeIcon.svg?react";
 import CollapseAllIcon from "./icons/collapseAllIcon.svg?react";
 import CommentsIcon from "./icons/commentsIcon.svg?react";
 import CommunityIcon from "./icons/communityIcon.svg?react";
@@ -193,6 +194,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   chevronRight: ChevronRightIcon,
   chevronUp: ChevronUpIcon,
   chevronUpDown: ChevronUpDownIcon,
+  code: CodeIcon,
   clockFilled: ClockFilledIcon,
   clockOutline: ClockOutlineIcon,
   comments: CommentsIcon,
