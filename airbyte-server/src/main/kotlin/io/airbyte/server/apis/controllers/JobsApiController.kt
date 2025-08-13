@@ -38,6 +38,8 @@ import io.airbyte.commons.server.handlers.JobsHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.temporal.StreamResetRecordsHelper
+import io.airbyte.metrics.lib.ApmTraceUtils
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.server.apis.execute
 import io.airbyte.server.services.JobObservabilityService
 import io.micronaut.context.annotation.Context
@@ -90,18 +92,30 @@ open class JobsApiController(
   @Post("/evaluate_outlier")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun evaluateOutlier(jobIdRequestBody: JobIdRequestBody): InternalOperationResult {
-    jobObservabilityService.evaluateOutlier(jobId = jobIdRequestBody.id)
-    return InternalOperationResult().succeeded(true)
-  }
+  override fun evaluateOutlier(jobIdRequestBody: JobIdRequestBody): InternalOperationResult? =
+    execute {
+      try {
+        jobObservabilityService.evaluateOutlier(jobId = jobIdRequestBody.id)
+        InternalOperationResult().succeeded(true)
+      } catch (t: Throwable) {
+        ApmTraceUtils.addTagsToTrace(mapOf(MetricTags.JOB_ID to jobIdRequestBody.id))
+        throw t
+      }
+    }
 
   @Post("/finalize")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun finalizeJob(jobIdRequestBody: JobIdRequestBody): InternalOperationResult {
-    jobObservabilityService.finalizeStats(jobId = jobIdRequestBody.id)
-    return InternalOperationResult().succeeded(true)
-  }
+  override fun finalizeJob(jobIdRequestBody: JobIdRequestBody): InternalOperationResult? =
+    execute {
+      try {
+        jobObservabilityService.finalizeStats(jobId = jobIdRequestBody.id)
+        InternalOperationResult().succeeded(true)
+      } catch (t: Throwable) {
+        ApmTraceUtils.addTagsToTrace(mapOf(MetricTags.JOB_ID to jobIdRequestBody.id))
+        throw t
+      }
+    }
 
   @Post("/get_debug_info")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)

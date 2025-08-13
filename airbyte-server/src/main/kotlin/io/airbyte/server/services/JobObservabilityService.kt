@@ -154,7 +154,9 @@ class JobObservabilityService(
       )
 
     if (outlierOutcome.isOutlier) {
-      logger.info { "jobId:$jobId has been marked as an outlier. (details:${outlierOutcome.jobStats})" }
+      logger.info {
+        "jobId:$jobId has been marked as an outlier. (details:${outlierOutcome.jobStats}, ${outlierOutcome.jobScore}, ${outlierOutcome.streamScores})"
+      }
     }
     reportOutlierMetric(outlierOutcome)
   }
