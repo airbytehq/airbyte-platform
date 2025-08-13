@@ -34,6 +34,7 @@ import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.Sch
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverOutput
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchOutput
+import io.airbyte.workers.temporal.scheduling.activities.FinalizeJobStatsInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput
@@ -41,6 +42,7 @@ import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpd
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCancelledInputWithAttemptNumber
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCreationOutput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber
+import io.airbyte.workers.temporal.scheduling.activities.JobPostProcessingActivity
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.HydrateInput
@@ -60,6 +62,8 @@ import io.airbyte.workers.temporal.scheduling.testsyncworkflow.ReplicateFailureS
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.SleepingSyncWorkflow
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.SourceAndDestinationFailureSyncWorkflow
 import io.airbyte.workers.temporal.scheduling.testsyncworkflow.SyncWorkflowFailingOutputWorkflow
+import io.airbyte.workers.temporal.workflows.JobPostProcessingWorkflowStub
+import io.airbyte.workers.temporal.workflows.ValidateJobPostProcessingWorkflowStartedActivity
 import io.micronaut.context.BeanRegistration
 import io.micronaut.inject.BeanIdentifier
 import io.temporal.activity.ActivityOptions
@@ -73,7 +77,6 @@ import io.temporal.failure.ApplicationFailure
 import io.temporal.testing.TestWorkflowEnvironment
 import org.assertj.core.api.AbstractCollectionAssert
 import org.assertj.core.api.Assertions
-import org.assertj.core.api.ObjectAssert
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Disabled
@@ -103,7 +106,6 @@ import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
 import java.util.stream.Stream
 import kotlin.collections.ArrayList
-import kotlin.collections.MutableCollection
 import kotlin.collections.MutableList
 
 // Forcing SAME_THREAD execution as we seem to face the issues described in
@@ -120,6 +122,8 @@ import kotlin.collections.MutableList
 internal class ConnectionManagerWorkflowTest {
   private val mConfigFetchActivity: ConfigFetchActivity =
     Mockito.mock<ConfigFetchActivity>(ConfigFetchActivity::class.java, Mockito.withSettings().withoutAnnotations())
+  private val mJobPostProcessingActivity: ValidateJobPostProcessingWorkflowStartedActivity =
+    Mockito.mock(ValidateJobPostProcessingWorkflowStartedActivity::class.java, Mockito.withSettings().withoutAnnotations())
   private lateinit var testEnv: TestWorkflowEnvironment
   private lateinit var client: WorkflowClient
   private lateinit var workflow: ConnectionManagerWorkflow
@@ -1571,12 +1575,7 @@ internal class ConnectionManagerWorkflowTest {
 
       val events: Queue<ChangedStateEvent> = testStateListener.events(testId)
 
-      val filteredAssertionList: AbstractCollectionAssert<
-        out AbstractCollectionAssert<*, MutableCollection<out ChangedStateEvent?>?, ChangedStateEvent?, ObjectAssert<ChangedStateEvent?>?>?,
-        MutableCollection<out ChangedStateEvent?>?,
-        ChangedStateEvent?,
-        ObjectAssert<ChangedStateEvent?>?,
-      > =
+      val filteredAssertionList: AbstractCollectionAssert<*, *, *, *> =
         Assertions
           .assertThat(events)
           .filteredOn(
@@ -2064,6 +2063,50 @@ internal class ConnectionManagerWorkflowTest {
         .verify(mJobCreationAndStatusUpdateActivity)
         .jobCancelledWithAttemptNumber(any<JobCancelledInputWithAttemptNumber>())
     }
+
+    @Test
+    fun `When a sync is cancelled, we still execute the post processing`() {
+      val input = testInputBuilder()
+      setupSuccessfulWorkflow(CancelledSyncWorkflow::class.java, input)
+      workflow.submitManualSync()
+      testEnv.sleep(Duration.ofSeconds(60))
+
+      Mockito
+        .verify(mJobPostProcessingActivity)
+        .wasStarted()
+    }
+
+    @Test
+    fun `When a sync fails, we execute the post processing`() {
+      val input = testInputBuilder()
+      setupSuccessfulWorkflow(SyncWorkflowFailingOutputWorkflow::class.java, input)
+      workflow.submitManualSync()
+      testEnv.sleep(Duration.ofSeconds(60))
+
+      Mockito
+        .verify(mJobCreationAndStatusUpdateActivity)
+        .jobFailure(any<JobCreationAndStatusUpdateActivity.JobFailureInput>())
+
+      Mockito
+        .verify(mJobPostProcessingActivity)
+        .wasStarted()
+    }
+
+    @Test
+    fun `When a sync succeeds, we execute the post processing`() {
+      val input = testInputBuilder()
+      setupSuccessfulWorkflow(EmptySyncWorkflow::class.java, input)
+      workflow.submitManualSync()
+      testEnv.sleep(Duration.ofSeconds(60))
+
+      Mockito
+        .verify(mJobCreationAndStatusUpdateActivity)
+        .jobSuccessWithAttemptNumber(any<JobSuccessInputWithAttemptNumber>())
+
+      Mockito
+        .verify(mJobPostProcessingActivity)
+        .wasStarted()
+    }
   }
 
   @DisplayName("Load shedding backoff loop")
@@ -2184,6 +2227,9 @@ internal class ConnectionManagerWorkflowTest {
       temporalProxyHelper.proxyWorkflowClass(
         ConnectionManagerWorkflowImpl::class.java,
       ),
+      temporalProxyHelper.proxyWorkflowClass(
+        JobPostProcessingWorkflowStub::class.java,
+      ),
     )
     managerWorker.registerActivitiesImplementations(
       mConfigFetchActivity,
@@ -2195,6 +2241,7 @@ internal class ConnectionManagerWorkflowTest {
       mCheckRunProgressActivity,
       mRetryStatePersistenceActivity,
       mAppendToAttemptLogActivity,
+      mJobPostProcessingActivity,
     )
 
     client = testEnv.getWorkflowClient()
@@ -2303,6 +2350,9 @@ internal class ConnectionManagerWorkflowTest {
       temporalProxyHelper.proxyWorkflowClass(
         ConnectionManagerWorkflowImpl::class.java,
       ),
+      temporalProxyHelper.proxyWorkflowClass(
+        JobPostProcessingWorkflowStub::class.java,
+      ),
     )
     managerWorker.registerActivitiesImplementations(
       mConfigFetchActivity,
@@ -2314,6 +2364,7 @@ internal class ConnectionManagerWorkflowTest {
       mCheckRunProgressActivity,
       mRetryStatePersistenceActivity,
       mAppendToAttemptLogActivity,
+      mJobPostProcessingActivity,
     )
 
     client = testEnv.getWorkflowClient()

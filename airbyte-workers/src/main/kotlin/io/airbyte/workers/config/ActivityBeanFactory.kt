@@ -15,6 +15,7 @@ import io.airbyte.workers.temporal.scheduling.activities.CheckRunProgressActivit
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity
+import io.airbyte.workers.temporal.scheduling.activities.JobPostProcessingActivity
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity
@@ -67,6 +68,10 @@ class ActivityBeanFactory {
       retryStatePersistenceActivity,
       appendToAttemptLogActivity,
     )
+
+  @Singleton
+  @Named("jobPostProcessingActivities")
+  fun jobPostProcessingActivities(jobPostProcessingActivity: JobPostProcessingActivity): List<Any> = listOf(jobPostProcessingActivity)
 
   @Singleton
   fun payloadChecker(metricClient: MetricClient): PayloadChecker = PayloadChecker(metricClient)

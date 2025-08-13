@@ -195,6 +195,8 @@ object ReadSecretReferenceIdsInConfigs : Temporary<Boolean>(key = "platform.read
 
 object EnableDefaultSecretStorage : Temporary<Boolean>(key = "platform.use-default-secret-storage", default = false)
 
+object EnableDataObservability : Temporary<Boolean>(key = "platform.enable-data-observability", default = false)
+
 object CleanupDanglingSecretConfigs : Temporary<Boolean>(key = "platform.cleanup-dangling-secret-configs", default = false)
 
 object CanCleanWorkloadQueue : Temporary<Boolean>(key = "platform.can-clean-workload-queue", default = false)

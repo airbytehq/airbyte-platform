@@ -39,6 +39,7 @@ import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.temporal.StreamResetRecordsHelper
 import io.airbyte.server.apis.execute
+import io.airbyte.server.services.JobObservabilityService
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -58,6 +59,7 @@ open class JobsApiController(
   private val jobInputHandler: JobInputHandler,
   private val jobsHandler: JobsHandler,
   private val streamResetRecordsHelper: StreamResetRecordsHelper,
+  private val jobObservabilityService: JobObservabilityService,
 ) : JobsApi {
   @Post("/cancel")
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
@@ -83,6 +85,22 @@ open class JobsApiController(
       jobsHandler.failNonTerminalJobs(connectionIdRequestBody.connectionId)
       null // to satisfy the lambda interface bounds
     }
+  }
+
+  @Post("/evaluate_outlier")
+  @Secured(AuthRoleConstants.ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun evaluateOutlier(jobIdRequestBody: JobIdRequestBody): InternalOperationResult {
+    jobObservabilityService.evaluateOutlier(jobId = jobIdRequestBody.id)
+    return InternalOperationResult().succeeded(true)
+  }
+
+  @Post("/finalize")
+  @Secured(AuthRoleConstants.ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun finalizeJob(jobIdRequestBody: JobIdRequestBody): InternalOperationResult {
+    jobObservabilityService.finalizeStats(jobId = jobIdRequestBody.id)
+    return InternalOperationResult().succeeded(true)
   }
 
   @Post("/get_debug_info")

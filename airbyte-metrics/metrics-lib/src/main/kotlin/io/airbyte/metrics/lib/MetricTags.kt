@@ -29,6 +29,7 @@ object MetricTags {
   const val CONNECTOR_TYPE: String = "connector_type"
   const val CRON_TYPE: String = "cron_type"
   const val CRUD_OPERATION: String = "crud_operation"
+  const val DESTINATION_DEFINITION_ID: String = "destination_definition_id"
   const val DESTINATION_ID: String = "destination_id"
   const val DESTINATION_IMAGE: String = "destination_image"
   const val DESTINATION_IMAGE_IS_DEFAULT: String = "destination_image_is_default"

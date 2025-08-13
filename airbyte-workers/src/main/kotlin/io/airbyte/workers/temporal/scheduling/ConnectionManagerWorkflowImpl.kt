@@ -26,6 +26,7 @@ import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectionContext
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
+import io.airbyte.config.JobStatus
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.metrics.MetricAttribute
@@ -41,6 +42,8 @@ import io.airbyte.workers.helper.FailureHelper.failureReasonFromWorkflowAndActiv
 import io.airbyte.workers.helper.FailureHelper.platformFailure
 import io.airbyte.workers.temporal.activities.GetConnectionContextInput
 import io.airbyte.workers.temporal.activities.GetLoadShedBackoffInput
+import io.airbyte.workers.temporal.jobpostprocessing.JobPostProcessingInput
+import io.airbyte.workers.temporal.jobpostprocessing.JobPostProcessingWorkflow
 import io.airbyte.workers.temporal.scheduling.SyncCheckConnectionResult.Companion.isOutputFailed
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity.LogInput
@@ -79,6 +82,7 @@ import io.temporal.api.enums.v1.ParentClosePolicy
 import io.temporal.failure.ActivityFailure
 import io.temporal.failure.CanceledFailure
 import io.temporal.failure.ChildWorkflowFailure
+import io.temporal.workflow.Async
 import io.temporal.workflow.CancellationScope
 import io.temporal.workflow.ChildWorkflowOptions
 import io.temporal.workflow.Workflow
@@ -154,7 +158,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
              */
       val hydratedContext =
         runMandatoryActivityWithOutput(
-          Function { input: GetConnectionContextInput -> configFetchActivity?.getConnectionContext(input) },
+          Function { input: GetConnectionContextInput? -> configFetchActivity?.getConnectionContext(input!!) },
           GetConnectionContextInput(connectionUpdaterInput.connectionId!!),
         )!!
       setConnectionContext(hydratedContext.connectionContext)
@@ -411,6 +415,8 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
       ),
     )
 
+    runEndOfSyncHooks(JobStatus.SUCCEEDED)
+
     deleteResetJobStreams()
 
     // Record the success metric
@@ -516,7 +522,7 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
     )
 
     runMandatoryActivity<JobFailureInput?>(
-      { input: JobFailureInput? -> jobCreationAndStatusUpdateActivity!!.jobFailure(input!!) },
+      { activityInput: JobFailureInput? -> jobCreationAndStatusUpdateActivity!!.jobFailure(activityInput!!) },
       JobFailureInput(
         input.jobId,
         input.attemptNumber,
@@ -525,12 +531,14 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
       ),
     )
 
+    runEndOfSyncHooks(JobStatus.FAILED)
+
     val autoDisableConnectionActivityInput = AutoDisableConnectionActivityInput()
     autoDisableConnectionActivityInput.connectionId = connectionId
     val output =
       runMandatoryActivityWithOutput(
-        Function { input: AutoDisableConnectionActivityInput ->
-          autoDisableConnectionActivity?.autoDisableFailingConnection(input)
+        Function { input: AutoDisableConnectionActivityInput? ->
+          autoDisableConnectionActivity?.autoDisableFailingConnection(input!!)
         },
         autoDisableConnectionActivityInput,
       )!!
@@ -559,6 +567,31 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         attrs,
       ),
     )
+  }
+
+  /**
+   * Intended to host all activities that need to run as an end of sync (not attempt) hook.
+   */
+  private fun runEndOfSyncHooks(status: JobStatus) {
+    // TODO we should account for stats delays in case of cancel/failures
+    // Because of how we shutdown job pods, it can take up to a minute to get the last stats update
+    workflowInternalState.jobId?.let { jobId ->
+      val postProcessingWorkflow =
+        Workflow.newChildWorkflowStub(
+          JobPostProcessingWorkflow::class.java,
+          ChildWorkflowOptions
+            .newBuilder()
+            .setWorkflowId("post_sync_$jobId")
+            // We let the post-processing workflow run its course
+            .setParentClosePolicy(ParentClosePolicy.PARENT_CLOSE_POLICY_ABANDON)
+            .build(),
+        )
+
+      // Starting the post process workflow asynchronously to avoid blocking the ConnectionManager on post-processing.
+      Async.procedure(postProcessingWorkflow::run, JobPostProcessingInput(jobId = jobId, connectionId = connectionId!!, jobStatus = status))
+      // This ensures the child workflow starts, if the parent exits too early, the child workflow may never start
+      Workflow.getWorkflowExecution(postProcessingWorkflow).get()
+    }
   }
 
   private fun isWithinRetryLimit(attemptNumber: Int): Boolean {
@@ -606,8 +639,8 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
       JobCheckFailureInput(jobId, attemptId.toInt(), connectionId)
     val isLastJobOrAttemptFailure =
       runMandatoryActivityWithOutput(
-        Function { input: JobCheckFailureInput ->
-          jobCreationAndStatusUpdateActivity?.isLastJobOrAttemptFailure(input)
+        Function { input: JobCheckFailureInput? ->
+          jobCreationAndStatusUpdateActivity?.isLastJobOrAttemptFailure(input!!)
         },
         jobStateInput,
       )!!
@@ -1100,6 +1133,8 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         FailureHelper.failureSummaryForCancellation(jobId, attemptNumber, failures, partialSuccess),
       ),
     )
+
+    runEndOfSyncHooks(JobStatus.CANCELLED)
   }
 
   private fun deleteResetJobStreams() {

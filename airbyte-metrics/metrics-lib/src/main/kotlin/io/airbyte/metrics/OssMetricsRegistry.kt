@@ -787,6 +787,10 @@ enum class OssMetricsRegistry(
     metricName = "customerio_email_notification_send",
     metricDescription = "a customer io email notification was sent",
   ),
+  DATA_OBS_OUTLIER_CHECK(
+    metricName = "data_obs_outlier_check",
+    metricDescription = "outcome of the outlier check",
+  ),
   ;
 
   override fun getMetricName(): String = metricName

@@ -15,6 +15,7 @@ import io.airbyte.micronaut.temporal.TemporalProxyHelper
 import io.airbyte.workers.temporal.TemporalWorkerShutdownHook
 import io.airbyte.workers.temporal.check.connection.CheckConnectionWorkflowImpl
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogWorkflowImpl
+import io.airbyte.workers.temporal.jobpostprocessing.JobPostProcessingWorkflowImpl
 import io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowImpl
 import io.airbyte.workers.temporal.spec.SpecWorkflowImpl
 import io.airbyte.workers.temporal.sync.SyncWorkflowImpl
@@ -55,6 +56,7 @@ import kotlin.math.max
 class ApplicationInitializer(
   @param:Named("uiCommandsActivities") private val uiCommandsActivities: Optional<List<Any>>,
   @param:Named("connectionManagerActivities") private val connectionManagerActivities: Optional<List<Any>>,
+  @param:Named("jobPostProcessingActivities") private val jobPostProcessingActivities: Optional<List<Any>>,
   @param:Named(TaskExecutors.IO) private val executorService: ExecutorService,
   @param:Value("\${airbyte.worker.check.max-workers}") private val maxCheckWorkers: Int,
   @param:Value("\${airbyte.worker.notify.max-workers}") private val maxNotifyWorkers: Int,
@@ -209,11 +211,14 @@ class ApplicationInitializer(
       .registerWorkflowImplementationTypes(
         options,
         temporalProxyHelper.proxyWorkflowClass(ConnectionManagerWorkflowImpl::class.java),
+        temporalProxyHelper.proxyWorkflowClass(JobPostProcessingWorkflowImpl::class.java),
       )
-    connectionUpdaterWorker.registerActivitiesImplementations(
-      *connectionManagerActivities.orElseThrow().toTypedArray(),
-    )
+    connectionUpdaterWorker
+      .registerActivitiesImplementations(*connectionManagerActivities.orElseThrow().toTypedArray())
     log.info("Connection Manager Workflow registered.")
+    connectionUpdaterWorker
+      .registerActivitiesImplementations(*jobPostProcessingActivities.orElseThrow().toTypedArray())
+    log.info("Job Post Processing Workflow registered.")
   }
 
   // This workflow is now deprecated, it remains to provide an explicit failure in case of a migration

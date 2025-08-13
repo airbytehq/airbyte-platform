@@ -18,6 +18,35 @@ interface ObsStreamStatsRepository : PageableRepository<ObsStreamStats, ObsStrea
 
   @Query(
     """
+    WITH
+      target_job AS MATERIALIZED (
+          SELECT * FROM observability_jobs_stats WHERE job_id = :jobId LIMIT 1
+      ),
+      selected_jobs AS MATERIALIZED (
+          SELECT ojs.job_id
+          FROM observability_jobs_stats ojs
+          JOIN target_job ON ojs.connection_id = target_job.connection_id
+          WHERE
+            ojs.created_at <= target_job.created_at
+            AND ojs.created_at > (target_job.created_at - :intervalMinutes * (INTERVAL '1min'))
+            AND ((:jobTypes) IS NULL OR ojs.job_type in (:jobTypes))
+          ORDER BY ojs.created_at DESC
+          LIMIT (:limit + 1)
+        )
+    SELECT oss.*
+    FROM observability_stream_stats oss
+    JOIN selected_jobs ON oss.job_id = selected_jobs.job_id
+  """,
+  )
+  fun findJobWithPrevious(
+    jobId: Long,
+    intervalMinutes: Long,
+    limit: Int,
+    jobTypes: List<String>? = null,
+  ): List<ObsStreamStats>
+
+  @Query(
+    """
     UPDATE observability_stream_stats
     SET
         bytes_loaded = :bytesLoaded,

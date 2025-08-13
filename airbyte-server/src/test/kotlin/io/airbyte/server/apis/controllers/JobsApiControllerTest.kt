@@ -29,6 +29,7 @@ internal class JobsApiControllerTest {
         jobInputHandler = mockk(),
         jobsHandler = mockk(),
         streamResetRecordsHelper = mockk(),
+        jobObservabilityService = mockk(),
       )
   }
 
