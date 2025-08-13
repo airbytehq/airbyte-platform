@@ -40,11 +40,12 @@ class ConnectionManagerUtils(
    */
   fun deleteWorkflowIfItExist(connectionId: UUID) {
     try {
+      log.info { "Deleting workflow $connectionId" }
       val connectionManagerWorkflow =
         workflowClientWrapped.newWorkflowStub(ConnectionManagerWorkflow::class.java, getConnectionManagerName(connectionId))
       connectionManagerWorkflow.deleteConnection()
     } catch (e: Exception) {
-      log.warn("The workflow is not reachable when trying to cancel it", e)
+      log.warn("The workflow is not reachable when trying to cancel it, for the connection $connectionId", e)
     }
   }
 
