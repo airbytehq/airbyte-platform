@@ -23,6 +23,7 @@ export const StateSwitchCell: ColumnDefTemplate<CellContext<ConnectionTableDataI
     const updatedConnection = await updateConnection({
       connectionId,
       status: checked ? ConnectionStatus.active : ConnectionStatus.inactive,
+      skipReset: true,
     });
     trackConnectionStatusUpdate(updatedConnection);
   };

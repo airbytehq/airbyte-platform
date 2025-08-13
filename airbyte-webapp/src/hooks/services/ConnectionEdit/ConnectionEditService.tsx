@@ -83,6 +83,7 @@ const useConnectionEdit = ({ connectionId }: ConnectionEditProps): ConnectionEdi
       const updatedConnection = await updateConnectionAction({
         connectionId,
         status,
+        skipReset: true,
       });
       setConnection(updatedConnection);
       trackConnectionStatusUpdate(updatedConnection);
