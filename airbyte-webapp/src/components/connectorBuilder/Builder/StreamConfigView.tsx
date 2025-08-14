@@ -453,12 +453,6 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.creation_requester.error_handler")} />
           </StreamCard>
-          <Card>
-            <CollapsedControls streamId={streamId}>
-              <SchemaFormRemainingFields path={streamFieldPath("retriever.creation_requester")} />
-              <SchemaFormRemainingFields path={streamFieldPath()} />
-            </CollapsedControls>
-          </Card>
         </FlexContainer>
         <FlexContainer
           direction="column"
@@ -491,11 +485,6 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.polling_requester.error_handler")} />
           </StreamCard>
-          <Card>
-            <CollapsedControls streamId={streamId}>
-              <SchemaFormRemainingFields path={streamFieldPath("retriever.polling_requester")} />
-            </CollapsedControls>
-          </Card>
         </FlexContainer>
         <FlexContainer
           direction="column"
@@ -531,12 +520,6 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.download_requester.error_handler")} />
           </StreamCard>
-          <Card>
-            <CollapsedControls streamId={streamId}>
-              <SchemaFormRemainingFields path={streamFieldPath("retriever.download_requester")} />
-              <SchemaFormRemainingFields path={streamFieldPath("retriever")} />
-            </CollapsedControls>
-          </Card>
         </FlexContainer>
         <FlexContainer
           direction="column"
@@ -545,6 +528,23 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
         >
           <SchemaEditor streamId={streamId} streamFieldPath={streamFieldPath} />
         </FlexContainer>
+        <Card>
+          <CollapsedControls streamId={streamId}>
+            <div className={classNames({ [styles.hidden]: streamTab !== "requester" })}>
+              <SchemaFormRemainingFields path={streamFieldPath("retriever.creation_requester")} />
+            </div>
+            <div className={classNames({ [styles.hidden]: streamTab !== "polling" })}>
+              <SchemaFormRemainingFields path={streamFieldPath("retriever.polling_requester")} />
+            </div>
+            <div className={classNames({ [styles.hidden]: streamTab !== "download" })}>
+              <SchemaFormRemainingFields path={streamFieldPath("retriever.download_requester")} />
+              <SchemaFormRemainingFields path={streamFieldPath("retriever")} />
+            </div>
+            <div className={classNames({ [styles.hidden]: streamTab !== "requester" })}>
+              <SchemaFormRemainingFields path={streamFieldPath()} />
+            </div>
+          </CollapsedControls>
+        </Card>
       </fieldset>
     </>
   );

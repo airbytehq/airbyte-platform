@@ -2,7 +2,7 @@ import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 import { Range } from "monaco-editor";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useFormContext, get } from "react-hook-form";
+import { useFormContext, get, set } from "react-hook-form";
 import { useUpdateEffect } from "react-use";
 
 import { CheckDynamicStreamType, CheckStreamType, ConnectorManifest } from "core/api/types/ConnectorManifest";
@@ -164,9 +164,9 @@ const TriggerStateEffects = () => {
       if (data?.manifest) {
         registerChange(data.manifest as ConnectorManifest);
       }
+      const oldValue = get(previousBuilderState.current, name);
+      const newValue = get(data, name);
       if (name.startsWith("manifest.streams.")) {
-        const oldValue = get(previousBuilderState.current, name);
-        const newValue = get(data, name);
         if (!isEqual(oldValue, newValue)) {
           const streamIndexString = name.match(/manifest\.streams\.(\d+)\..*/)?.[1];
           try {
@@ -178,24 +178,20 @@ const TriggerStateEffects = () => {
         }
       }
       if (name.endsWith("authenticator")) {
-        const oldValue = get(previousBuilderState.current, name);
         const oldAuth = isHttpRequesterAuthenticator(oldValue) ? oldValue : undefined;
-        const newValue = get(data, name);
         const newAuth = isHttpRequesterAuthenticator(newValue) ? newValue : undefined;
         if (oldAuth || newAuth) {
           updateUserInputsForAuth(oldAuth, newAuth);
         }
       }
       if (name === OAUTH_INPUT_SPEC_PATH) {
-        const value = get(data, name);
-        updateUserInputsForDeclarativeOAuth(value);
+        updateUserInputsForDeclarativeOAuth(newValue);
       }
       if (name.endsWith("authenticator.refresh_token_updater")) {
-        const value = get(data, name);
-        updateUserInputsForTokenUpdater(name, value);
+        updateUserInputsForTokenUpdater(name, newValue);
       }
 
-      previousBuilderState.current = cloneDeep(data);
+      set(previousBuilderState.current, name, newValue);
     });
     return () => subscription.unsubscribe();
   }, [

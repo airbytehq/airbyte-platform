@@ -7,6 +7,7 @@ import { useEffectOnce } from "react-use";
 
 import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 import { formatJson, getStreamName } from "components/connectorBuilder/utils";
+import { BuilderStreamTab } from "components/connectorBuilder__deprecated/types";
 import {
   FormControlFooter,
   FormLabel,
@@ -32,7 +33,6 @@ import { BuilderDeclarativeOAuth } from "./BuilderDeclarativeOAuth";
 import { JinjaInput } from "./JinjaInput";
 import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
 import styles from "./overrides.module.scss";
-import { getStreamTabFromPath } from "../useFocusField";
 
 export const ParentStreamSelector = ({ path, currentStreamName }: { path: string; currentStreamName?: string }) => {
   const { formatMessage } = useIntl();
@@ -367,16 +367,33 @@ export const DeclarativeOAuthWithClientId = ({ clientIdPath }: { clientIdPath: s
     [clientIdPath]
   );
 
-  const parentStreamTab = getStreamTabFromPath(clientIdPath);
   const activeStreamTab = useBuilderWatch("streamTab");
+
+  const shouldRenderDeclarativeOAuth = useMemo(() => {
+    // Always render declarative oauth for components_resolver, since that does not depend on the stream tab
+    if (clientIdPath.includes("components_resolver")) {
+      return true;
+    }
+
+    // Only render the BuilderDeclarativeOAuth if this path is in the currently active stream tab
+    // to avoid rendering BuilderDeclarativeOAuth multiple times simultaneously, as this confuses
+    // react-hook-form.
+    const requesterMatch = clientIdPath.match(/^manifest\..*\.retriever\.([^.]+)\.authenticator\..*$/)?.[1];
+    const parentStreamTab: BuilderStreamTab | undefined = requesterMatch
+      ? requesterMatch === "requester" || requesterMatch === "creation_requester"
+        ? "requester"
+        : requesterMatch === "polling_requester"
+        ? "polling"
+        : requesterMatch === "download_requester"
+        ? "download"
+        : undefined
+      : undefined;
+    return parentStreamTab === activeStreamTab;
+  }, [clientIdPath, activeStreamTab]);
 
   return (
     <FlexContainer direction="column" gap="none">
-      {/* Only render the BuilderDeclarativeOAuth if this path is in the currently active stream tab
-       * to avoid rendering BuilderDeclarativeOAuth multiple times simultaneously, as this confuses
-       * react-hook-form.
-       */}
-      {parentStreamTab === activeStreamTab && <BuilderDeclarativeOAuth authFieldPath={authFieldPath} />}
+      {shouldRenderDeclarativeOAuth && <BuilderDeclarativeOAuth authFieldPath={authFieldPath} />}
       <SchemaFormControl path={clientIdPath} />
     </FlexContainer>
   );

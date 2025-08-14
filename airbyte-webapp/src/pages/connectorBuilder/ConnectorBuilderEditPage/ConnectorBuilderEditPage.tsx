@@ -105,14 +105,14 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
       overrideByObjectField={{
         RequestBodyGraphQL: {
           fieldOverrides: {
-            value: (path) => <RequestBodyGraphQL path={path} />,
+            value: (path) => <RequestBodyGraphQL path={path} key={path} />,
           },
         },
         RequestOption: {
           fieldOverrides: {
-            field_name: (path) => <RequestOptionFieldName path={path} />,
-            field_path: (path) => <RequestOptionFieldPath path={path} />,
-            inject_into: (path) => <RequestOptionInjectSelector path={path} />,
+            field_name: (path) => <RequestOptionFieldName path={path} key={path} />,
+            field_path: (path) => <RequestOptionFieldPath path={path} key={path} />,
+            inject_into: (path) => <RequestOptionInjectSelector path={path} key={path} />,
           },
           validate: z
             .object({
@@ -141,15 +141,15 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
         },
         OAuthAuthenticator: {
           fieldOverrides: {
-            client_id: (path) => <DeclarativeOAuthWithClientId clientIdPath={path} />,
-            grant_type: (path) => <GrantTypeSelector path={path} />,
+            client_id: (path) => <DeclarativeOAuthWithClientId clientIdPath={path} key={path} />,
+            grant_type: (path) => <GrantTypeSelector path={path} key={path} />,
           },
         },
       }}
       overrideByFieldSchema={[
         {
           shouldOverride: (schema) => schema.type === "string" && !!schema.interpolation_context,
-          renderOverride: (controlProps) => <JinjaBuilderField {...controlProps} />,
+          renderOverride: (controlProps) => <JinjaBuilderField {...controlProps} key={controlProps.name} />,
         },
       ]}
     >
