@@ -21,6 +21,8 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.JobPersistence
+import io.airbyte.server.services.JobObservabilityService.JobMetrics.Companion.toJobMetrics
+import io.airbyte.server.services.JobObservabilityService.StreamMetrics.Companion.toStreamMetrics
 import io.airbyte.statistics.Outliers
 import io.airbyte.statistics.Scores
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -30,6 +32,7 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
+import kotlin.math.absoluteValue
 
 @Singleton
 class JobObservabilityService(
@@ -66,6 +69,53 @@ class JobObservabilityService(
     val jobScore: Scores,
     val streamScores: Map<Pair<String?, String>, Scores>,
   )
+
+  /**
+   * The Job metrics to consider for outlier detection.
+   */
+  private data class JobMetrics(
+    val attemptCount: Int,
+    val durationSeconds: Long,
+  ) {
+    companion object {
+      fun ObsJobsStats.toJobMetrics(): JobMetrics =
+        JobMetrics(
+          attemptCount = attemptCount,
+          durationSeconds = durationSeconds,
+        )
+
+      fun isOutlier(scores: Scores): Boolean {
+        scores.scores["durationSeconds"]?.let { if (it > 2.5) return true }
+        scores.scores["attemptCount"]?.let { if (it > 2.5) return true }
+        return false
+      }
+    }
+  }
+
+  /**
+   * The Stream metrics to consider for outlier detection.
+   */
+  private data class StreamMetrics(
+    var bytesLoaded: Long,
+    var recordsLoaded: Long,
+    var recordsRejected: Long,
+  ) {
+    companion object {
+      fun ObsStreamStats.toStreamMetrics(): StreamMetrics =
+        StreamMetrics(
+          bytesLoaded = bytesLoaded,
+          recordsLoaded = recordsLoaded,
+          recordsRejected = recordsRejected,
+        )
+
+      fun isOutlier(scores: Scores): Boolean {
+        scores.scores["bytesLoaded"]?.let { if (it.absoluteValue > 2.5) return true }
+        scores.scores["recordsLoaded"]?.let { if (it.absoluteValue > 2.5) return true }
+        scores.scores["recordsRejected"]?.let { if (it.absoluteValue > 2.5) return true }
+        return false
+      }
+    }
+  }
 
   fun finalizeStats(jobId: Long) {
     val details = fetchJobDetails(jobId)
@@ -127,7 +177,7 @@ class JobObservabilityService(
       return
     }
 
-    val jobScore = outliers.evaluate(jobHistory, job.first())
+    val jobScore = outliers.evaluate(jobHistory.map { it.toJobMetrics() }, job.first().toJobMetrics())
 
     val allStreamStats =
       obsStatsService
@@ -140,7 +190,7 @@ class JobObservabilityService(
           val current =
             currentList.firstOrNull()
               ?: defaultEmptyStatsForStream(jobId = jobId, streamNamespace = streamStats.key.first, streamName = streamStats.key.second)
-          val streamScore = outliers.evaluate(history, current)
+          val streamScore = outliers.evaluate(history.map { it.toStreamMetrics() }, current.toStreamMetrics())
           return@mapValues streamScore
         }
 
@@ -148,7 +198,7 @@ class JobObservabilityService(
       OutlierOutcome(
         jobStats = job.first(),
         streamsStats = allStreamStats.filter { it.id.jobId == jobId },
-        isOutlier = jobScore.isOutlier || scoresByStream.values.any { it.isOutlier },
+        isOutlier = JobMetrics.isOutlier(jobScore) || scoresByStream.values.any { StreamMetrics.isOutlier(it) },
         jobScore = jobScore,
         streamScores = scoresByStream,
       )

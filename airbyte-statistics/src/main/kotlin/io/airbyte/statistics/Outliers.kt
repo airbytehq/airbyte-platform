@@ -8,7 +8,6 @@ import org.jetbrains.kotlinx.dataframe.api.last
 import org.jetbrains.kotlinx.dataframe.api.mean
 import org.jetbrains.kotlinx.dataframe.api.std
 import org.jetbrains.kotlinx.dataframe.api.toDataFrame
-import kotlin.math.absoluteValue
 
 /** Output of the outlier detection.
  *
@@ -18,10 +17,7 @@ data class Scores(
   val mean: MutableMap<String, Double> = mutableMapOf(),
   val std: MutableMap<String, Double> = mutableMapOf(),
   val scores: MutableMap<String, Double> = mutableMapOf(),
-) {
-  val isOutlier: Boolean
-    get() = scores.any { it.value.absoluteValue > 2.0 }
-}
+)
 
 class Outliers {
   /**

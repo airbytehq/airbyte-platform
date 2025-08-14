@@ -5,11 +5,13 @@
 package io.airbyte.statistics
 
 import io.airbyte.statistics.OutliersTest.Fixtures.defaultStreamStats
+import io.airbyte.statistics.OutliersTest.Fixtures.isOutlier
 import io.airbyte.statistics.OutliersTest.Fixtures.randomize
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import kotlin.math.absoluteValue
 import kotlin.random.Random
 import kotlin.random.nextInt
 import kotlin.random.nextLong
@@ -44,9 +46,9 @@ class OutliersTest {
     logger.info { current }
 
     val outcome = Outliers().evaluate(historical, current)
-    logger.info { "outcome: ${outcome.isOutlier} $outcome" }
+    logger.info { "outcome: ${outcome.isOutlier()} $outcome" }
 
-    assertTrue(outcome.isOutlier)
+    assertTrue(outcome.isOutlier())
   }
 
   @Test
@@ -67,9 +69,9 @@ class OutliersTest {
     logger.info { current }
 
     val outcome = Outliers().evaluate(historical, current)
-    logger.info { "outcome: ${outcome.isOutlier} $outcome" }
+    logger.info { "outcome: ${outcome.isOutlier()} $outcome" }
 
-    assertFalse(outcome.isOutlier)
+    assertFalse(outcome.isOutlier())
   }
 
   @Test
@@ -90,9 +92,9 @@ class OutliersTest {
     logger.info { current }
 
     val outcome = Outliers().evaluate(historical, current)
-    logger.info { "outcome: ${outcome.isOutlier} $outcome" }
+    logger.info { "outcome: ${outcome.isOutlier()} $outcome" }
 
-    assertTrue(outcome.isOutlier)
+    assertTrue(outcome.isOutlier())
   }
 
   object Fixtures {
@@ -124,5 +126,7 @@ class OutliersTest {
       value: Int,
       range: Double,
     ): Int = Random.nextInt(((1.0 - range) * value).toInt()..((1.0 + range) * value).toInt())
+
+    fun Scores.isOutlier() = scores.any { it.value.absoluteValue > 2.0 }
   }
 }
