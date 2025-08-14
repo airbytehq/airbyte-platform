@@ -6,6 +6,7 @@ export * from "./configTemplates";
 export * from "./connections";
 export * from "./connectionTemplates";
 export * from "./connectorBuilderApi";
+export * from "./connectorBuilderAssist";
 export * from "./connectorBuilderProject";
 export * from "./connectorCheck";
 export * from "./connectorDefinitionSpecification";

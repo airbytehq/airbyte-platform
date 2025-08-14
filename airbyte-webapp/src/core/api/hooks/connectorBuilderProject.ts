@@ -1,15 +1,24 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import isArray from "lodash/isArray";
+import { useCallback } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { sourceDefinitionKeys } from "core/api";
+import { HttpError, sourceDefinitionKeys } from "core/api";
+import { useFormatError } from "core/errors";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useNotificationService } from "hooks/services/Notification";
 
 import { useBuilderResolveManifestQuery } from "./connectorBuilderApi";
 import {
+  checkContribution,
   createConnectorBuilderProject,
   createDeclarativeSourceDefinitionManifest,
   deleteConnectorBuilderProject,
+  fullResolveManifestBuilderProject,
+  generateContribution,
   getConnectorBuilderProject,
+  getConnectorBuilderProjectIdForDefinitionId,
+  getDeclarativeManifestBaseImage,
   listConnectorBuilderProjects,
   listDeclarativeManifests,
   publishConnectorBuilderProject,
@@ -17,32 +26,32 @@ import {
   updateConnectorBuilderProject,
   updateConnectorBuilderProjectTestingValues,
   updateDeclarativeManifestVersion,
-  getDeclarativeManifestBaseImage,
   createForkedConnectorBuilderProject,
-  getConnectorBuilderProjectIdForDefinitionId,
-  fullResolveManifestBuilderProject,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
-  ConnectorBuilderProjectIdWithWorkspaceId,
-  DeclarativeManifestVersionRead,
-  ConnectorBuilderProjectRead,
-  SourceDefinitionIdBody,
+  BaseActorDefinitionVersionInfo,
+  BuilderProjectForDefinitionResponse,
+  CheckContributionRead,
+  CheckContributionRequestBody,
+  ConnectorBuilderProjectDetailsRead,
   ConnectorBuilderProjectFullResolveRequestBody,
-  ConnectorBuilderProjectStreamReadRequestBody,
+  ConnectorBuilderProjectIdWithWorkspaceId,
+  ConnectorBuilderProjectRead,
   ConnectorBuilderProjectStreamRead,
-  ConnectorBuilderProjectTestingValuesUpdate,
-  ConnectorBuilderProjectTestingValues,
+  ConnectorBuilderProjectStreamReadRequestBody,
   ConnectorBuilderProjectStreamReadSlicesItem,
   ConnectorBuilderProjectStreamReadSlicesItemPagesItem,
   ConnectorBuilderProjectStreamReadSlicesItemStateItem,
-  DeclarativeManifestRequestBody,
-  DeclarativeManifestBaseImageRead,
-  BaseActorDefinitionVersionInfo,
+  ConnectorBuilderProjectTestingValues,
+  ConnectorBuilderProjectTestingValuesUpdate,
   ContributionInfo,
-  ConnectorBuilderProjectDetailsRead,
+  DeclarativeManifestBaseImageRead,
+  DeclarativeManifestRequestBody,
+  DeclarativeManifestVersionRead,
+  GenerateContributionRequestBody,
   SourceDefinitionId,
-  BuilderProjectForDefinitionResponse,
+  SourceDefinitionIdBody,
 } from "../types/AirbyteClient";
 import {
   ConditionalStreamsType,
@@ -67,6 +76,8 @@ const connectorBuilderProjectsKeys = {
   getProjectForDefinition: (sourceDefinitionId: string | undefined) =>
     [...connectorBuilderProjectsKeys.all, "getProjectByDefinition", sourceDefinitionId] as const,
   fullResolve: (projectId?: string) => ["builder_project_full_resolve", projectId] as const,
+  checkContribution: (imageName?: string) =>
+    [...connectorBuilderProjectsKeys.all, "checkContribution", { imageName }] as const,
 };
 
 export interface BuilderProject {
@@ -661,4 +672,70 @@ export const useGetBuilderProjectIdByDefinitionId = (sourceDefinitionId: string 
       };
     }
   );
+};
+
+export const GENERATE_CONTRIBUTION_NOTIFICATION_ID = "generate-contribution-notification";
+
+export const useBuilderGenerateContribution = () => {
+  const requestOptions = useRequestOptions();
+  const formatError = useFormatError();
+  const { registerNotification } = useNotificationService();
+  const analyticsService = useAnalyticsService();
+
+  return useMutation((params: GenerateContributionRequestBody) => generateContribution(params, requestOptions), {
+    onSuccess: (_date, params) => {
+      analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONTRIBUTE_SUCCESS, {
+        actionDescription: "Connector contribution successfully submitted to airbyte repo",
+        connector_name: params.name,
+        connector_image_name: params.connector_image_name,
+      });
+    },
+    onError: (error: Error, params) => {
+      const errorMessage = formatError(error);
+      registerNotification({
+        id: GENERATE_CONTRIBUTION_NOTIFICATION_ID,
+        type: "error",
+        text: errorMessage,
+      });
+      analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.CONTRIBUTE_FAILURE, {
+        actionDescription: "Connector contribution failed to be submitted to airbyte repo",
+        status_code: error instanceof HttpError ? error.status : undefined,
+        error_message: errorMessage,
+        connector_name: params.name,
+        connector_image_name: params.connector_image_name,
+      });
+    },
+  });
+};
+
+export const useBuilderCheckContribution = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  const getCachedCheck = useCallback(
+    (params: CheckContributionRequestBody) => {
+      const queryKey = connectorBuilderProjectsKeys.checkContribution(params.connector_image_name);
+      return queryClient.getQueryData<CheckContributionRead>(queryKey);
+    },
+    [queryClient]
+  );
+
+  const fetchContributionCheck = useCallback(
+    async (params: CheckContributionRequestBody) => {
+      try {
+        return await queryClient.fetchQuery<CheckContributionRead>(
+          connectorBuilderProjectsKeys.checkContribution(params.connector_image_name),
+          () => checkContribution(params, requestOptions)
+        );
+      } catch (error) {
+        return error as Error;
+      }
+    },
+    [queryClient, requestOptions]
+  );
+
+  return {
+    getCachedCheck,
+    fetchContributionCheck,
+  };
 };
