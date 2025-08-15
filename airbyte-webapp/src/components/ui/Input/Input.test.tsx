@@ -55,12 +55,10 @@ describe("<Input />", () => {
 
     const { getByTestId } = await render(<Input type="password" defaultValue={value} />);
     const inputEl = getByTestId("input") as HTMLInputElement;
+    await userEvent.click(inputEl);
+    inputEl.selectionStart = selectionStart;
 
-    act(() => {
-      inputEl.selectionStart = selectionStart;
-    });
-
-    getByTestId("toggle-password-visibility-button")?.click();
+    await userEvent.click(getByTestId("toggle-password-visibility-button"));
 
     expect(inputEl.selectionStart).toBe(selectionStart);
   });
@@ -69,7 +67,7 @@ describe("<Input />", () => {
     const value = "eight888";
     const { getByTestId } = await render(<Input type="password" defaultValue={value} />);
 
-    getByTestId("toggle-password-visibility-button").click();
+    await userEvent.click(getByTestId("toggle-password-visibility-button"));
 
     const inputEl = getByTestId("input");
 
@@ -87,18 +85,18 @@ describe("<Input />", () => {
     const { getByTestId } = await render(<Input type="password" defaultValue={value} />);
     const inputEl = getByTestId("input") as HTMLInputElement;
 
-    getByTestId("toggle-password-visibility-button").click();
+    await userEvent.click(getByTestId("toggle-password-visibility-button"));
     expect(inputEl).toHaveFocus();
     act(() => {
       inputEl.selectionStart = value.length / 2;
-      inputEl.blur();
     });
+    await userEvent.click(document.body);
 
     await waitFor(() => {
       expect(inputEl).toHaveAttribute("type", "password");
     });
 
-    getByTestId("toggle-password-visibility-button").click();
+    await userEvent.click(getByTestId("toggle-password-visibility-button"));
     expect(inputEl).toHaveFocus();
     expect(inputEl.selectionStart).toBe(value.length);
   });
