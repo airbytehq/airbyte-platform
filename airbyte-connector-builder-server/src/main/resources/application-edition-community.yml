@@ -1,0 +1,21 @@
+## This file configures authentication for the Community edition of Airbyte Connector Builder Server.
+# It is loaded by the EditionPropertySourceLoader when AIRBYTE_EDITION is set to "community".
+micronaut:
+  security:
+    authentication: cookie
+    redirect:
+      enabled: false
+    token:
+      cookie:
+        enabled: true
+        cookie-same-site: ${AB_COOKIE_SAME_SITE:Strict}
+        cookie-secure: ${AB_COOKIE_SECURE:true}
+      refresh:
+        cookie:
+          enabled: true
+          cookie-same-site: ${AB_COOKIE_SAME_SITE:Strict}
+          cookie-secure: ${AB_COOKIE_SECURE:true}
+          cookie-max-age: P30D
+      generator:
+        access-token:
+          expiration: 180 # 3 mins
