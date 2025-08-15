@@ -109,6 +109,8 @@ tags:
     description: Job management endpoints.
   - name: entitlements
     description: Entitlement management endpoints
+  - name: orchestration
+    description: Orchestration related resources.
 
 paths:
   /v1/workspaces/create:
@@ -9901,6 +9903,143 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/orchestrations/get:
+    post:
+      tags:
+        - orchestration
+      summary: Get a single orchestration by id
+      operationId: getOrchestration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrchestrationGetRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrchestrationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/orchestrations/list:
+    post:
+      tags:
+        - orchestration
+      summary: Returns all orchestrations for a workspace.
+      description: List orchestrations for workspace. Does not return deleted orchestrations.
+      operationId: listOrchestrationsForWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrchestrationListRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrchestrationReadList"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/orchestrations/create:
+    post:
+      tags:
+        - orchestration
+      summary: Create an orchestration
+      operationId: createOrchestration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrchestrationCreateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrchestrationRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/orchestrations/delete:
+    post:
+      tags:
+        - orchestration
+      summary: Delete an orchestration
+      operationId: deleteOrchestration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrchestrationDeleteRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The resource was deleted successfully.
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/orchestrations/update:
+    post:
+      tags:
+        - orchestration
+      summary: Update an orchestration
+      operationId: updateOrchestration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrchestrationUpdateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrchestrationRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/orchestrations/run:
+    post:
+      tags:
+        - orchestration
+      summary: Start an orchestration
+      operationId: runOrchestration
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrchestrationRunRequestBody"
+        required: true
+      responses:
+        "202":
+          description: The orchestration was started successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrchestrationRunResponseBody"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -14634,6 +14773,186 @@ components:
           $ref: "#/components/schemas/ISO8601DateTime"
         newGracePeriodReason:
           type: string
+
+    # Orchestration Config
+
+    OrchestrationId:
+      type: string
+      format: uuid
+
+    OrchestrationTaskId:
+      type: string
+      format: uuid
+
+    OrchestrationVersion:
+      type: string
+      format: uuid
+
+    OrchestrationTask:
+      type: object
+      required:
+        - taskId
+        - orchestrationId
+        - orchestrationVersion
+        - orchestrationTaskType
+        - taskDefinitionId
+        - dependsOn
+        - createdAt
+      properties:
+        taskId:
+          $ref: "#/components/schemas/OrchestrationTaskId"
+        orchestrationId:
+          $ref: "#/components/schemas/OrchestrationId"
+        orchestrationVersion:
+          $ref: "#/components/schemas/OrchestrationVersion"
+        orchestrationTaskType:
+          type: string
+          enum:
+            - sync
+        taskDefinitionId:
+          type: string
+          format: uuid
+        dependsOn:
+          type: array
+          items:
+            type: string
+            format: uuid
+        createdAt:
+          type: integer
+          format: int64
+
+    OrchestrationGetRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - orchestrationId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        orchestrationId:
+          $ref: "#/components/schemas/OrchestrationId"
+
+    OrchestrationListRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - pagination
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    OrchestrationRunRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - orchestrationId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        orchestrationId:
+          $ref: "#/components/schemas/OrchestrationId"
+
+    OrchestrationRunResponseBody:
+      type: object
+      required:
+        - orchestrationRunId
+      properties:
+        orchestrationRunId:
+          type: string
+          format: uuid
+
+    OrchestrationRead:
+      type: object
+      required:
+        - orchestrationId
+        - versionId
+        - workspaceId
+        - name
+        - tasks
+        - createdAt
+        - updatedAt
+        - tombstone
+      properties:
+        orchestrationId:
+          $ref: "#/components/schemas/OrchestrationId"
+        versionId:
+          type: string
+          format: uuid
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        name:
+          type: string
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrchestrationTask"
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
+        tombstone:
+          type: boolean
+
+    OrchestrationReadList:
+      type: object
+      required:
+        - orchestrations
+      properties:
+        orchestrations:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrchestrationRead"
+
+    OrchestrationCreateRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - name
+        - tasks
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        name:
+          type: string
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrchestrationTask"
+
+    OrchestrationDeleteRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - orchestrationId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        orchestrationId:
+          $ref: "#/components/schemas/OrchestrationId"
+
+    OrchestrationUpdateRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - orchestrationId
+        - name
+        - tasks
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        orchestrationId:
+          $ref: "#/components/schemas/OrchestrationId"
+        name:
+          type: string
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrchestrationTask"
+
     # ORGANIZATIONS
     OrganizationId:
       type: string

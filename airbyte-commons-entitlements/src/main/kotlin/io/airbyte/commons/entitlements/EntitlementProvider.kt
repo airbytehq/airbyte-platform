@@ -9,6 +9,7 @@ import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled
 import io.airbyte.config.ActorType
 import io.airbyte.featureflag.AllowConfigTemplateEndpoints
 import io.airbyte.featureflag.DestinationDefinition
+import io.airbyte.featureflag.EnableOrchestration
 import io.airbyte.featureflag.EnableSsoConfigUpdate
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.LicenseAllowDestinationObjectStorageConfig
@@ -34,6 +35,8 @@ interface EntitlementProvider {
   fun hasDestinationObjectStorageEntitlement(organizationId: UUID): Boolean
 
   fun hasSsoConfigUpdateEntitlement(organizationId: UUID): Boolean
+
+  fun hasOrchestrationEntitlement(organizationId: UUID): Boolean
 }
 
 /**
@@ -52,6 +55,8 @@ class DefaultEntitlementProvider : EntitlementProvider {
   override fun hasDestinationObjectStorageEntitlement(organizationId: UUID): Boolean = false
 
   override fun hasSsoConfigUpdateEntitlement(organizationId: UUID): Boolean = false
+
+  override fun hasOrchestrationEntitlement(organizationId: UUID): Boolean = false
 }
 
 /**
@@ -82,6 +87,8 @@ class EnterpriseEntitlementProvider(
   override fun hasDestinationObjectStorageEntitlement(organizationId: UUID): Boolean = true
 
   override fun hasSsoConfigUpdateEntitlement(organizationId: UUID): Boolean = false
+
+  override fun hasOrchestrationEntitlement(organizationId: UUID): Boolean = false
 }
 
 /**
@@ -124,4 +131,7 @@ class CloudEntitlementProvider(
 
   override fun hasSsoConfigUpdateEntitlement(organizationId: UUID): Boolean =
     featureFlagClient.boolVariation(EnableSsoConfigUpdate, Organization(organizationId))
+
+  override fun hasOrchestrationEntitlement(organizationId: UUID): Boolean =
+    featureFlagClient.boolVariation(EnableOrchestration, Organization(organizationId))
 }

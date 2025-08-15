@@ -20,6 +20,10 @@ object SsoConfigUpdateEntitlement : FeatureEntitlement(
   featureId = "feature-platform-sso-config-update",
 )
 
+object OrchestrationEntitlement : FeatureEntitlement(
+  featureId = "feature-platform-orchestration",
+)
+
 object Entitlements {
   private val ALL =
     listOf(
@@ -27,6 +31,7 @@ object Entitlements {
       PlatformSubOneHourSyncFrequency,
       DestinationObjectStorageEntitlement,
       SsoConfigUpdateEntitlement,
+      OrchestrationEntitlement,
     )
 
   private val byId = ALL.associateBy { it.featureId }

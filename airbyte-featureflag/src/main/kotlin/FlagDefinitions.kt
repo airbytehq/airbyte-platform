@@ -212,3 +212,5 @@ object UseSonarServer : Temporary<Boolean>(key = "embedded.useSonarServer", defa
 object EnableSsoConfigUpdate : Permanent<Boolean>(key = "platform.can-change-sso-config", default = false)
 
 object ReplicationDebugLogLevelEnabled : Permanent<Boolean>(key = "platform.replication-debug-log-level-enabled", default = false)
+
+object EnableOrchestration : Permanent<Boolean>(key = "platform.enable-orchestration", default = false)
