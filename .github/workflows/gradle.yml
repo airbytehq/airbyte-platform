@@ -68,7 +68,6 @@ jobs:
               - '(charts|kube)/**'
             build:
               - '.github/**'
-              - 'buildSrc/**'
               - 'tools/**'
               - '*.gradle'
               - 'deps.toml'

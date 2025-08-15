@@ -1,0 +1,147 @@
+{{- if .Values.manifestRunner.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-manifest-runner
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+  annotations:
+    {{ toYaml .Values.manifestRunner.annotations | nindent 4 }}
+spec:
+  replicas: {{ .Values.manifestRunner.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "airbyte.selectorLabels" . | nindent 6 }}
+      {{- if .Values.manifestRunner.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.manifestRunner.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
+      {{- end }}
+  strategy:
+    type: {{ .Values.manifestRunner.deploymentStrategyType }}
+  template:
+    metadata:
+      labels:
+        {{- include "airbyte.selectorLabels" . | nindent 8 }}
+        {{- if .Values.manifestRunner.extraSelectorLabels }}
+        {{ toYaml (mergeOverwrite .Values.manifestRunner.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.manifestRunner.podLabels }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.manifestRunner.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.manifestRunner.podAnnotations }}
+      annotations:
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.manifestRunner.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ default .Values.global.serviceAccountName .Values.manifestRunner.serviceAccountName }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.manifestRunner.nodeSelector }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.manifestRunner.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.manifestRunner.tolerations }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.manifestRunner.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.manifestRunner.affinity }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.manifestRunner.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.manifestRunner.extraInitContainers }}
+      initContainers:
+      {{- toYaml .Values.manifestRunner.extraInitContainers | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: airbyte-manifest-runner
+        image: {{ include "imageUrl" (list .Values.manifestRunner.image $) }}
+        imagePullPolicy: "{{ .Values.manifestRunner.image.pullPolicy }}"
+        env:
+        {{- include "airbyte.common.envs" . | nindent 8 }}
+        {{- include "airbyte.logging.envs" . | nindent 8 }}
+        {{- include "airbyte.metrics.envs" . | nindent 8 }}
+
+        {{- if .Values.global.datadog.enabled }}
+        - name: DD_SERVICE
+          value: {{ include "airbyte.componentNameWithAirbytePrefix" . }}
+        {{- include "airbyte.datadog.envs" . | nindent 8 }}
+        {{- include "airbyte.otel.envs" . | nindent 8 }}
+        {{- end}}
+
+        # Values from secret
+        {{- if .Values.manifestRunner.secrets }}
+        {{- range $k, $v := .Values.manifestRunner.secrets }}
+        - name: {{ $k }}
+          valueFrom:
+            secretKeyRef:
+              name: server-secrets
+              key: {{ $k }}
+        {{- end }}
+        {{- end }}
+
+        # Values from env
+        {{- if or .Values.manifestRunner.env_vars .Values.global.env_vars }}
+        {{- range $k, $v := mergeOverwrite .Values.manifestRunner.env_vars .Values.global.env_vars }}
+        - name: {{ $k }}
+          value: {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+
+        # Values from extraEnv for more compatibility (if you want to use external secret source or other stuff)
+        {{- if .Values.manifestRunner.extraEnv }}
+        {{- toYaml .Values.manifestRunner.extraEnv | nindent 8 }}
+        {{- end }}
+
+        {{- if .Values.manifestRunner.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: {{ .Values.manifestRunner.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.manifestRunner.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.manifestRunner.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.manifestRunner.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.manifestRunner.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.manifestRunner.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: {{ .Values.manifestRunner.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.manifestRunner.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.manifestRunner.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.manifestRunner.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.manifestRunner.readinessProbe.failureThreshold }}
+        {{- end }}
+
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        {{- if .Values.manifestRunner.resources }}
+        resources: {{- toYaml .Values.manifestRunner.resources | nindent 10 }}
+        {{- end }}
+        {{- if .Values.manifestRunner.containerSecurityContext }}
+        securityContext: {{- toYaml .Values.manifestRunner.containerSecurityContext | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+        {{- if .Values.manifestRunner.extraVolumeMounts }}
+          {{ toYaml .Values.manifestRunner.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+        {{- if .Values.global.extraVolumeMounts }}
+          {{ toYaml .Values.global.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+      {{- if .Values.manifestRunner.extraContainers }}
+        {{ toYaml .Values.manifestRunner.extraContainers | nindent 6 }}
+      {{- end }}
+      {{- if .Values.global.extraContainers }}
+        {{ toYaml .Values.global.extraContainers | nindent 6 }}
+      {{- end }}
+      securityContext: {{- toYaml .Values.manifestRunner.podSecurityContext | nindent 8 }}
+      volumes:
+      {{- if .Values.manifestRunner.extraVolumes }}
+{{ toYaml .Values.manifestRunner.extraVolumes | nindent 6 }}
+      {{- end }}
+{{- end }}
