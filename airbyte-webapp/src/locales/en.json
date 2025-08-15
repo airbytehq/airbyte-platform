@@ -1398,7 +1398,7 @@
   "settings.organizationSettings.sso.label": "Set up SSO",
   "settings.organizationSettings.sso.label.optional": "Optional",
   "settings.organizationSettings.sso.docsLink": "Check out our docs",
-  "settings.organizationSettings.sso.configured": "This organization already has an existing SSO configuration. To update or remove, the configuration, please contact Airbyte support.",
+  "settings.organizationSettings.sso.configured": "This organization already has an existing SSO configuration. To update or remove the configuration, please contact Airbyte support.",
   "settings.organizationSettings.sso.configured.remove": "Remove current SSO configuration",
   "settings.organizationSettings.sso.companyIdentifier": "Company Identifier",
   "settings.organizationSettings.sso.clientId": "Client ID",
