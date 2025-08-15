@@ -24,3 +24,25 @@
 
   padding-bottom: variables.$spacing-xl;
 }
+
+.streamNameContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200px;
+}
+
+.streamNameContainerInner {
+  position: relative;
+  padding-bottom: 30px;
+}
+
+.streamNameInput {
+  font-weight: bold;
+  font-size: variables.$font-size-lg;
+
+  &::placeholder {
+    font-weight: normal;
+    font-size: 13px;
+  }
+}

@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { StreamId } from "./types";
 import { useBuilderWatch } from "./useBuilderWatch";
 import { getStreamFieldPath, getStreamName } from "./utils";
-export const useStreamNames = () => {
+export const useStreamNames = (): { streamNames: string[]; dynamicStreamNames: string[] } => {
   const streams = useBuilderWatch("manifest.streams");
   const dynamicStreams = useBuilderWatch("manifest.dynamic_streams");
   const streamNames = useMemo(

@@ -1,7 +1,7 @@
 import classNames from "classnames";
 import React, { useCallback } from "react";
 import { useFormContext } from "react-hook-form";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 
 import { SchemaFormControl } from "components/forms/SchemaForm/Controls/SchemaFormControl";
 import { Button } from "components/ui/Button";
@@ -17,6 +17,7 @@ import { BuilderView } from "services/connectorBuilder/ConnectorBuilderStateServ
 
 import { BuilderConfigView } from "./BuilderConfigView";
 import styles from "./DynamicStreamConfigView.module.scss";
+import { StreamNameField } from "./overrides";
 import { StreamConfigView } from "./StreamConfigView";
 import { StreamId } from "../types";
 import { getStreamFieldPath } from "../utils";
@@ -28,7 +29,6 @@ export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = (
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const analyticsService = useAnalyticsService();
   const { setValue, getValues } = useFormContext();
-  const { formatMessage } = useIntl();
 
   const dynamicStreamFieldPath = useCallback(
     (fieldPath?: string) => getStreamFieldPath(streamId, fieldPath),
@@ -74,9 +74,9 @@ export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = (
         <FlexContainer justifyContent="flex-end" alignItems="center">
           <SchemaFormControl
             path={dynamicStreamFieldPath("name")}
-            titleOverride={null}
-            className={styles.streamNameInput}
-            placeholder={formatMessage({ id: "connectorBuilder.streamTemplateName.placeholder" })}
+            overrideByPath={{
+              [dynamicStreamFieldPath("name")]: (path) => <StreamNameField path={path} />,
+            }}
           />
           <Button variant="danger" onClick={handleDelete}>
             <FormattedMessage id="connectorBuilder.deleteDynamicStreamModal.title" />

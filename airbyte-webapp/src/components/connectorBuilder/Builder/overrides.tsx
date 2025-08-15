@@ -3,7 +3,7 @@ import { parse } from "graphql";
 import { useCallback, useMemo, useState } from "react";
 import { get, useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import { useEffectOnce } from "react-use";
+import { useEffectOnce, useUpdateEffect } from "react-use";
 
 import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 import { formatJson, getStreamName } from "components/connectorBuilder/utils";
@@ -23,6 +23,7 @@ import { LabelInfo } from "components/Label";
 import { CodeEditor } from "components/ui/CodeEditor";
 import { GraphQLEditor } from "components/ui/CodeEditor/GraphqlEditor";
 import { FlexContainer } from "components/ui/Flex";
+import { Input } from "components/ui/Input";
 import { ListBox } from "components/ui/ListBox";
 import { Option } from "components/ui/ListBox/Option";
 
@@ -33,6 +34,7 @@ import { BuilderDeclarativeOAuth } from "./BuilderDeclarativeOAuth";
 import { JinjaInput } from "./JinjaInput";
 import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
 import styles from "./overrides.module.scss";
+import { useStreamNames } from "../useStreamNames";
 
 export const ParentStreamSelector = ({ path, currentStreamName }: { path: string; currentStreamName?: string }) => {
   const { formatMessage } = useIntl();
@@ -468,5 +470,77 @@ export const JinjaBuilderField = ({
         </FormControlFooter>
       )}
     </FlexContainer>
+  );
+};
+
+export const StreamNameField = ({ path }: { path: string }) => {
+  const { formatMessage } = useIntl();
+  const { setValue } = useFormContext();
+  const { streamNames, dynamicStreamNames } = useStreamNames();
+  const value = useBuilderWatch(path) as string | undefined;
+
+  // Maintain a local value so that user can see their changes even if the name is
+  // a duplicate and is therefore not being saved to the form.
+  const [localValue, setLocalValue] = useState(value);
+
+  const [isDuplicate, setIsDuplicate] = useState(false);
+
+  const error = useMemo(() => {
+    if (!value) {
+      return <FormattedMessage id="form.empty.error" />;
+    }
+    if (isDuplicate) {
+      return <FormattedMessage id="connectorBuilder.duplicateStreamName" />;
+    }
+    return undefined;
+  }, [value, isDuplicate]);
+
+  // If the form value changes for any reason, update the local value to match it.
+  useUpdateEffect(() => {
+    if (localValue !== value) {
+      setLocalValue(value);
+    }
+  }, [value]);
+
+  return (
+    <div className={styles.streamNameContainer}>
+      <FlexContainer direction="column" gap="none" className={styles.streamNameContainerInner}>
+        <Input
+          className={styles.streamNameInput}
+          data-field-path={path}
+          value={localValue}
+          error={!!error}
+          placeholder={formatMessage({ id: "connectorBuilder.streamName.placeholder" })}
+          onChange={(e) => {
+            const newValue = e.target.value;
+            setLocalValue(newValue);
+
+            let numMatchingNames =
+              streamNames.filter((name) => name === newValue).length +
+              dynamicStreamNames.filter((name) => name === newValue).length;
+
+            // If the current form value for this field is the same as the new value, don't count it towards the duplicate check
+            if (newValue === value) {
+              numMatchingNames -= 1;
+            }
+
+            // If there are matching names, set the duplicate state to true and don't commit the new value to the form
+            // to avoid unwanted effects.
+            if (numMatchingNames > 0) {
+              setIsDuplicate(true);
+              return;
+            }
+
+            setIsDuplicate(false);
+            setValue(path, newValue);
+          }}
+        />
+        {error && (
+          <FormControlFooter>
+            <FormControlFooterError>{error}</FormControlFooterError>
+          </FormControlFooter>
+        )}
+      </FlexContainer>
+    </div>
   );
 };

@@ -38,7 +38,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderConfigView } from "./BuilderConfigView";
-import { ParentStreamSelector } from "./overrides";
+import { ParentStreamSelector, StreamNameField } from "./overrides";
 import styles from "./StreamConfigView.module.scss";
 import {
   DEFAULT_SYNC_STREAM,
@@ -60,7 +60,6 @@ interface StreamConfigViewProps {
 }
 
 export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ streamId, scrollToTop }) => {
-  const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { setValue, getValues } = useFormContext();
@@ -156,9 +155,9 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
         <FlexContainer justifyContent="flex-end" className={classNames(styles.titleBar)} alignItems="center">
           <SchemaFormControl
             path={getStreamFieldPath(streamId, "name")}
-            titleOverride={null}
-            className={styles.streamNameInput}
-            placeholder={formatMessage({ id: "connectorBuilder.streamName.placeholder" })}
+            overrideByPath={{
+              [getStreamFieldPath(streamId, "name")]: (path) => <StreamNameField path={path} />,
+            }}
           />
 
           <Button type="button" variant="danger" onClick={handleDelete}>

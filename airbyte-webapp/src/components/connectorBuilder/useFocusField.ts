@@ -82,7 +82,7 @@ export const removeFieldFocusedAttribute = (dataFieldPath: string) => {
 };
 
 export const getViewFromPath = (path: string, getValues: UseFormGetValues<FieldValues>): BuilderView => {
-  const streamMatch = path.match(/^manifest\.streams\.(\d+)\..*$/);
+  const streamMatch = path.match(/^manifest\.streams\.(\d+).*$/);
   if (streamMatch) {
     return {
       type: "stream",
