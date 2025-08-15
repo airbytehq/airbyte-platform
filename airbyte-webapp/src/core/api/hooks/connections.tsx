@@ -81,7 +81,8 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const connectionsKeys = {
   all: [SCOPE_WORKSPACE, "connections"] as const,
-  lists: (filters: Array<string | string[]> = []) => [...connectionsKeys.all, "list", ...filters],
+  lists: () => [...connectionsKeys.all, "list"],
+  list: (filters: Array<string | string[]> = []) => [...connectionsKeys.lists(), "list", ...filters],
   detail: (connectionId: string) => [...connectionsKeys.all, "details", connectionId] as const,
   dataHistory: (connectionId: string, jobCount?: number) =>
     [...connectionsKeys.all, "dataHistory", connectionId, ...(jobCount == null ? [] : [jobCount])] as const,
@@ -450,7 +451,7 @@ export const useUpdateConnectionOptimistically = () => {
 
       return {
         pageParams: oldData.pageParams,
-        pages: oldData.pages.map((page) => {
+        pages: oldData.pages?.map((page) => {
           return {
             connectionsByConnectorId: page.connectionsByConnectorId,
             connections: page.connections.map((connection) =>
@@ -521,18 +522,26 @@ export const useUpdateConnection = () => {
       onSuccess: (updatedConnection) => {
         queryClient.setQueryData(connectionsKeys.detail(updatedConnection.connectionId), updatedConnection);
         // Update the connection inside the connections list response
-        queryClient.setQueryData(
+        queryClient.setQueriesData(
           connectionsKeys.lists(),
-          (connectionList: WebBackendConnectionReadList | undefined) => {
+          (oldData: InfiniteData<WebBackendConnectionReadList> | undefined) => {
+            if (!oldData) {
+              return oldData;
+            }
             return {
-              ...connectionList,
-              connections:
-                connectionList?.connections.map((connection) => {
+              ...oldData,
+              pages: oldData.pages?.map((page) => ({
+                ...page,
+                connections: page.connections.map((connection) => {
                   if (connection.connectionId === updatedConnection.connectionId) {
-                    return updatedConnection as WebBackendConnectionListItem;
+                    return {
+                      ...connection,
+                      ...updatedConnection,
+                    };
                   }
                   return connection;
-                }) ?? [],
+                }),
+              })),
             };
           }
         );
@@ -648,7 +657,7 @@ export const useConnectionList = ({
   const requestOptions = useRequestOptions();
 
   // Create a comprehensive query key that includes all filter parameters
-  const queryKey = connectionsKeys.lists([
+  const queryKey = connectionsKeys.list([
     ...(sourceId ? [`source-${sourceId.join(",")}`] : []),
     ...(destinationId ? [`destination-${destinationId.join(",")}`] : []),
     ...(filters?.search ? [`search-${filters.search}`] : []),
@@ -702,7 +711,7 @@ export const useWorkspaceConnectionStatusCounts = (workspaceId: string) => {
   const REFETCH_CONNECTION_LIST_INTERVAL = 60_000;
 
   return useQuery(
-    connectionsKeys.lists([`workspace-${workspaceId}`]),
+    connectionsKeys.list([`workspace-${workspaceId}`]),
     async (): Promise<{ pendingCount: number; successCount: number; failedCount: number }> => {
       const { connections } = await webBackendListConnectionsForWorkspace({ workspaceId }, requestOptions);
 
