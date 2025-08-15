@@ -30,7 +30,7 @@ import {
   useListBuilderProjectVersions,
   useUpdateBuilderProject,
 } from "core/api";
-import { CheckContributionRead } from "core/api/types/ConnectorBuilderClient";
+import { CheckContributionRead } from "core/api/types/AirbyteClient";
 import { DynamicDeclarativeStream } from "core/api/types/ConnectorManifest";
 import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";

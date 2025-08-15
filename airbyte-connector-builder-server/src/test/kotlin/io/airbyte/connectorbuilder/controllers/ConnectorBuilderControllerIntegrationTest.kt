@@ -13,10 +13,7 @@ import io.airbyte.commons.protocol.ConfiguredAirbyteCatalogMigrator
 import io.airbyte.commons.protocol.serde.AirbyteMessageV0Deserializer
 import io.airbyte.commons.protocol.serde.AirbyteMessageV0Serializer
 import io.airbyte.commons.resources.Resources
-import io.airbyte.commons.server.builder.contributions.ContributionTemplates
 import io.airbyte.commons.server.builder.exceptions.ConnectorBuilderException
-import io.airbyte.commons.server.handlers.AssistProxyHandler
-import io.airbyte.commons.server.handlers.ConnectorContributionHandler
 import io.airbyte.commons.version.AirbyteProtocolVersion
 import io.airbyte.connectorbuilder.api.model.generated.ResolveManifestRequestBody
 import io.airbyte.connectorbuilder.api.model.generated.StreamReadRequestBody
@@ -52,8 +49,6 @@ internal class ConnectorBuilderControllerIntegrationTest {
   private lateinit var healthHandler: HealthHandler
   private lateinit var writer: MockAirbyteFileWriterImpl
   private lateinit var streamFactory: AirbyteStreamFactory
-  private lateinit var contributionTemplates: ContributionTemplates
-  private lateinit var assistProxyHandler: AssistProxyHandler
 
   @BeforeEach
   fun setup() {
@@ -83,8 +78,6 @@ internal class ConnectorBuilderControllerIntegrationTest {
         gsonPksExtractor = GsonPksExtractor(),
         metricClient = mockk(relaxed = true),
       )
-    contributionTemplates = ContributionTemplates()
-    assistProxyHandler = mockk()
   }
 
   fun createControllerWithSynchronousRunner(
@@ -110,8 +103,6 @@ internal class ConnectorBuilderControllerIntegrationTest {
       ResolveManifestHandler(requester),
       FullResolveManifestHandler(requester),
       StreamHandler(requester),
-      ConnectorContributionHandler(contributionTemplates, null),
-      assistProxyHandler,
     )
   }
 

@@ -33,8 +33,6 @@ internal class ConnectorBuilderControllerTest {
   private var streamReadResponse: StreamRead = mockk()
   private var resolveManifestRequestBody: ResolveManifestRequestBody = mockk()
   private var resolveManifest: ResolveManifest = mockk()
-  private var connectorContributionHandler: ConnectorContributionHandler = mockk()
-  private var assistProxyHandler: AssistProxyHandler = mockk()
 
   @BeforeEach
   fun setup() {
@@ -46,8 +44,6 @@ internal class ConnectorBuilderControllerTest {
         resolveManifestHandler = resolveManifestHandler,
         fullResolveManifestHandler = fullResolveManifestHandler,
         streamHandler = streamHandler,
-        connectorContributionHandler = connectorContributionHandler,
-        assistProxyHandler = assistProxyHandler,
       )
   }
 

@@ -5,15 +5,8 @@
 package io.airbyte.connectorbuilder.controllers
 
 import io.airbyte.commons.auth.roles.AuthRoleConstants
-import io.airbyte.commons.server.builder.contributions.ContributionCreate
-import io.airbyte.commons.server.handlers.AssistProxyHandler
-import io.airbyte.commons.server.handlers.ConnectorContributionHandler
 import io.airbyte.connectorbuilder.api.generated.ApiApi
-import io.airbyte.connectorbuilder.api.model.generated.CheckContributionRead
-import io.airbyte.connectorbuilder.api.model.generated.CheckContributionRequestBody
 import io.airbyte.connectorbuilder.api.model.generated.FullResolveManifestRequestBody
-import io.airbyte.connectorbuilder.api.model.generated.GenerateContributionRequestBody
-import io.airbyte.connectorbuilder.api.model.generated.GenerateContributionResponse
 import io.airbyte.connectorbuilder.api.model.generated.HealthCheckRead
 import io.airbyte.connectorbuilder.api.model.generated.ResolveManifest
 import io.airbyte.connectorbuilder.api.model.generated.ResolveManifestRequestBody
@@ -28,7 +21,6 @@ import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
-import io.micronaut.http.server.cors.CrossOrigin
 import io.micronaut.scheduling.TaskExecutors
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
@@ -44,51 +36,11 @@ internal class ConnectorBuilderController(
   private val resolveManifestHandler: ResolveManifestHandler,
   private val fullResolveManifestHandler: FullResolveManifestHandler,
   private val streamHandler: StreamHandler,
-  private val connectorContributionHandler: ConnectorContributionHandler,
-  private val assistProxyHandler: AssistProxyHandler,
 ) : ApiApi {
   @Get(uri = "/health", produces = [MediaType.APPLICATION_JSON])
   @Secured(SecurityRule.IS_ANONYMOUS)
   @ExecuteOn(TaskExecutors.IO)
   override fun getHealthCheck(): HealthCheckRead = healthHandler.getHealthCheck()
-
-  @Post(uri = "/contribute/read", produces = [MediaType.APPLICATION_JSON])
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
-  @ExecuteOn(TaskExecutors.IO)
-  override fun checkContribution(
-    @Body checkContributionRequestBody: CheckContributionRequestBody,
-  ): CheckContributionRead {
-    val contribution = connectorContributionHandler.checkContribution(checkContributionRequestBody.connectorImageName)
-    return CheckContributionRead()
-      .connectorName(contribution.connectorName)
-      .connectorDescription(contribution.connectorDescription)
-      .githubUrl(contribution.githubUrl)
-      .connectorExists(contribution.connectorExists)
-  }
-
-  @Post(uri = "/contribute/generate", produces = [MediaType.APPLICATION_JSON])
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
-  @ExecuteOn(TaskExecutors.IO)
-  override fun generateContribution(
-    @Body generateContributionRequestBody: GenerateContributionRequestBody,
-  ): GenerateContributionResponse {
-    val contributionResult =
-      connectorContributionHandler.generateContribution(
-        ContributionCreate(
-          name = generateContributionRequestBody.name,
-          connectorImageName = generateContributionRequestBody.connectorImageName,
-          connectorDescription = generateContributionRequestBody.connectorDescription,
-          githubToken = generateContributionRequestBody.githubToken,
-          manifestYaml = generateContributionRequestBody.manifestYaml,
-          customComponents = generateContributionRequestBody.customComponents,
-          baseImage = generateContributionRequestBody.baseImage,
-          contributionDescription = generateContributionRequestBody.contributionDescription,
-        ),
-      )
-    return GenerateContributionResponse()
-      .pullRequestUrl(contributionResult.pullRequestUrl)
-      .actorDefinitionId(contributionResult.actorDefinitionId)
-  }
 
   @Post(uri = "/stream/read", produces = [MediaType.APPLICATION_JSON])
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
@@ -110,19 +62,4 @@ internal class ConnectorBuilderController(
   override fun fullResolveManifest(
     @Body fullResolveManifestRequestBody: FullResolveManifestRequestBody,
   ): ResolveManifest = fullResolveManifestHandler.fullResolveManifest(fullResolveManifestRequestBody)
-
-  @Post(uri = "/assist/process", consumes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
-  @ExecuteOn(TaskExecutors.IO)
-  override fun assistV1Process(
-    @Body requestBody: Map<String, Any>,
-  ): Map<String, Any> = assistProxyHandler.process(requestBody, true)
-
-  @Post(uri = "/assist/warm", consumes = [MediaType.APPLICATION_JSON], produces = [MediaType.APPLICATION_JSON])
-  @Secured(SecurityRule.IS_ANONYMOUS)
-  @CrossOrigin("*")
-  @ExecuteOn(TaskExecutors.IO)
-  override fun assistV1Warm(
-    @Body requestBody: Map<String, Any>,
-  ): Map<String, Any> = assistProxyHandler.process(requestBody, false)
 }

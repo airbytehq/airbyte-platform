@@ -16,52 +16,6 @@ externalDocs:
 servers:
   - url: "http://localhost:80/"
 paths:
-  /api/v1/connector_builder/contribute/check:
-    post:
-      tags:
-        - connectorBuilderServer
-      summary: Checks if a connector being contributed already exists
-      operationId: checkContribution
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CheckContributionRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CheckContributionRead"
-        "400":
-          $ref: "#/components/responses/ExceptionResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-  /api/v1/connector_builder/contribute/generate:
-    post:
-      tags:
-        - connectorBuilderServer
-      summary: Generates a connector module and pushes it to Github as a PR
-      operationId: generateContribution
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/GenerateContributionRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GenerateContributionResponse"
-        "400":
-          $ref: "#/components/responses/ExceptionResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
   /api/v1/connector_builder/stream/read:
     post:
       tags:
@@ -131,52 +85,6 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /api/v1/connector_builder/assist/process:
-    post:
-      tags:
-        - connectorBuilderServer
-      summary: Assist server access point
-      operationId: assistV1Process
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AssistV1ProcessRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AssistV1Process"
-        "400":
-          $ref: "#/components/responses/ExceptionResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-  /api/v1/connector_builder/assist/warm:
-    post:
-      tags:
-        - connectorBuilderServer
-      summary: Assist server warming access point
-      operationId: assistV1Warm
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AssistV1ProcessRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AssistV1Process"
-        "400":
-          $ref: "#/components/responses/ExceptionResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
 
   /api/v1/connector_builder/health:
     get:
@@ -218,79 +126,6 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
-    CheckContributionRequestBody:
-      type: object
-      required:
-        - connector_image_name
-      properties:
-        connector_image_name:
-          type: string
-          description: The id of the connector being submitted for contribution
-    CheckContributionRead:
-      type: object
-      required:
-        - connector_exists
-      properties:
-        connector_name:
-          type: string
-          description: The name of the connector in Github, if it exists
-        connector_description:
-          type: string
-          description: The text description of the connector in Github, if it exists
-        github_url:
-          type: string
-          description: The Github URL of the connector in the airbyte repository, if it exists
-        connector_exists:
-          type: boolean
-          description: Indicates whether a connector already exists with the provided image name
-    GenerateContributionRequestBody:
-      type: object
-      required:
-        - name
-        - connector_image_name
-        - github_token
-        - manifest_yaml
-        - base_image
-        - connector_description
-        - contribution_description
-      properties:
-        name:
-          type: string
-          description: Name of the connector being contributed, e.g. Google Sheets
-        connector_image_name:
-          type: string
-          description: The name of the connector module, e.g. source-google-sheets
-        connector_description:
-          type: string
-          description: Brief description of the connector and the API it integrates
-        github_token:
-          type: string
-          description: Github Personal Access Token that should be used to create the PR
-        manifest_yaml:
-          type: string
-          description: The connector manifest in YAML form
-        custom_components:
-          type: string
-          description: (Optional) The file contents for any custom python CDK components
-        base_image:
-          type: string
-          description: The base image to use for the connector
-        contribution_description:
-          type: string
-          description: Message describing the content of the contribution, including any changes to the connector
-    GenerateContributionResponse:
-      type: object
-      required:
-        - pull_request_url
-        - actor_definition_id
-      properties:
-        pull_request_url:
-          type: string
-          description: URL of the PR that was created or updated
-        actor_definition_id:
-          type: string
-          format: UUID
-          description: The definition ID of the connector that was contributed to
     StreamRead:
       type: object
       required:
@@ -534,12 +369,6 @@ components:
         manifest:
           type: object
           description: The config-based connector manifest contents with $refs and $parameters resolved
-    AssistV1ProcessRequestBody:
-      type: object
-      additionalProperties: true
-    AssistV1Process:
-      type: object
-      additionalProperties: true
     HealthCheckRead:
       type: object
       required:
