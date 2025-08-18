@@ -170,7 +170,6 @@ open class RoleResolver(
           // Certain token types have a hard-coded list of roles.
           TokenType.WORKLOAD_API -> setOf(AuthRoleConstants.DATAPLANE)
           TokenType.EMBEDDED_V1 -> setOf(AuthRoleConstants.EMBEDDED_END_USER)
-          TokenType.LEGACY_KEYCLOAK_SERVICE_ACCOUNT -> AuthRole.getInstanceAdminRoles()
           // Everything else resolves roles via the "permissions" table.
           TokenType.DATAPLANE_V1, TokenType.SERVICE_ACCOUNT ->
             resolvePermissions(

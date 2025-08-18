@@ -27,10 +27,6 @@ enum class TokenType {
   // These are NOT legacy, keycloak-based, internal service accounts.
   SERVICE_ACCOUNT,
 
-  // Legacy service account tokens represent legacy, keycloak-based, internal service accounts.
-  @Deprecated("legacy service account tokens should be replaced by service accounts")
-  LEGACY_KEYCLOAK_SERVICE_ACCOUNT,
-
   // User tokens represent users.
   // This is the default token type if a token cannot be identified by as one of the types above.
   USER,

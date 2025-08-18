@@ -7,10 +7,6 @@ package io.airbyte.commons.server.authorization
 import com.auth0.jwt.algorithms.Algorithm
 import com.nimbusds.jwt.JWT
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
-import io.airbyte.commons.auth.roles.AuthRole.Companion.getInstanceAdminRoles
-import io.airbyte.commons.json.Jsons.serialize
-import io.airbyte.data.auth.TokenType
-import io.airbyte.data.auth.TokenType.Companion.fromClaims
 import io.airbyte.metrics.MetricClient
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.HttpRequest
@@ -32,7 +28,6 @@ import java.io.IOException
 import java.net.URI
 import java.net.URISyntaxException
 import java.util.Optional
-import java.util.UUID
 import java.util.function.Predicate
 
 internal class KeycloakTokenValidatorTest {
@@ -87,33 +82,6 @@ internal class KeycloakTokenValidatorTest {
     StepVerifier
       .create(responsePublisher)
       .expectNextMatches(Predicate { r: Authentication? -> matchSuccessfulResponse(r!!, expectedUserId, mockedRoles) })
-      .verifyComplete()
-  }
-
-  @Test
-  @Throws(Exception::class)
-  fun testInternalServiceAccountIsInstanceAdmin() {
-    val sub = UUID.randomUUID().toString()
-    val issuer = "/auth/realms/" + INTERNAL_REALM_NAME
-    val clientName = "airbyte-workload-client"
-    val accessToken =
-      com.auth0.jwt.JWT
-        .create()
-        .withSubject(sub)
-        .withIssuer(issuer)
-        .withClaim("azp", clientName)
-        .sign(Algorithm.none())
-
-    val responseBody = serialize(mapOf("sub" to sub, "iss" to issuer, "azp" to clientName))
-    val httpRequest = mockRequests(accessToken, responseBody)
-
-    val responsePublisher: Publisher<Authentication> = keycloakTokenValidator.validateToken(accessToken, httpRequest)
-
-    Mockito.verifyNoInteractions(authenticationFactory)
-
-    StepVerifier
-      .create(responsePublisher)
-      .expectNextMatches(Predicate { r: Authentication? -> matchSuccessfulResponseServiceAccount(r!!, clientName, getInstanceAdminRoles()) })
       .verifyComplete()
   }
 
@@ -190,15 +158,6 @@ internal class KeycloakTokenValidatorTest {
   ): Boolean =
     authentication.getName() == expectedUserId &&
       authentication.getRoles().containsAll(expectedRoles)
-
-  private fun matchSuccessfulResponseServiceAccount(
-    authentication: Authentication,
-    expectedUserId: String?,
-    expectedRoles: Set<String?>,
-  ): Boolean =
-    authentication.getName() == expectedUserId &&
-      authentication.getRoles().containsAll(expectedRoles) &&
-      fromClaims(authentication.getAttributes()) == TokenType.LEGACY_KEYCLOAK_SERVICE_ACCOUNT
 
   companion object {
     private const val LOCALHOST = "http://localhost"

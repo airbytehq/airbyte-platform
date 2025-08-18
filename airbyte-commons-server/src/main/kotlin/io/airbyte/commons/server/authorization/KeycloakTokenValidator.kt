@@ -12,13 +12,11 @@ import com.nimbusds.jwt.PlainJWT
 import io.airbyte.commons.auth.RequiresAuthMode
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
 import io.airbyte.commons.auth.config.AuthMode
-import io.airbyte.commons.auth.roles.AuthRole.Companion.getInstanceAdminRoles
 import io.airbyte.commons.auth.support.JwtTokenParser.JWT_SSO_REALM
 import io.airbyte.commons.auth.support.JwtTokenParser.convertJwtPayloadToUserAttributes
 import io.airbyte.commons.auth.support.JwtTokenParser.getJwtPayloadToken
 import io.airbyte.commons.auth.support.JwtTokenParser.tokenToAttributes
 import io.airbyte.commons.json.Jsons
-import io.airbyte.data.auth.TokenType
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -114,24 +112,6 @@ class KeycloakTokenValidator(
 
       val userAttributeMap = convertJwtPayloadToUserAttributes(jwtPayload).toMutableMap()
 
-      if (isInternalServiceAccount(userAttributeMap)) {
-        log.debug("Performing authentication for internal service account...")
-        val clientName = jwtPayload["azp"].asText()
-        val tokenTypeClaim = TokenType.LEGACY_KEYCLOAK_SERVICE_ACCOUNT.toClaim()
-        userAttributeMap[tokenTypeClaim.component1()] = tokenTypeClaim.component2()
-        metricClient.ifPresent { m: MetricClient ->
-          m.count(
-            OssMetricsRegistry.KEYCLOAK_TOKEN_VALIDATION,
-            1L,
-            AUTHENTICATION_SUCCESS_METRIC_ATTRIBUTE,
-            MetricAttribute(MetricTags.USER_TYPE, INTERNAL_SERVICE_ACCOUNT),
-            MetricAttribute(MetricTags.CLIENT_ID, clientName),
-            MetricAttribute(AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY, request.uri.path),
-          )
-        }
-        return Authentication.build(clientName, getInstanceAdminRoles(), userAttributeMap)
-      }
-
       val authUserId = jwtPayload["sub"].asText()
       log.debug("Performing authentication for auth user '{}'...", authUserId)
 
@@ -159,11 +139,6 @@ class KeycloakTokenValidator(
       log.error("Encountered an exception while validating the token.", e)
       throw AuthenticationException("Failed to authenticate the user.")
     }
-  }
-
-  private fun isInternalServiceAccount(jwtAttributes: Map<String, Any>): Boolean {
-    val realm = jwtAttributes[JWT_SSO_REALM] as String?
-    return keycloakConfiguration.internalRealm == realm
   }
 
   private fun validateTokenWithKeycloak(token: String): Mono<Boolean> {
@@ -229,7 +204,6 @@ class KeycloakTokenValidator(
     private val log = KotlinLogging.logger {}
 
     private const val EXTERNAL_USER = "external-user"
-    private const val INTERNAL_SERVICE_ACCOUNT = "internal-service-account"
     private val AUTHENTICATION_FAILURE_METRIC_ATTRIBUTE = MetricAttribute(MetricTags.AUTHENTICATION_RESPONSE, "failure")
     private val AUTHENTICATION_SUCCESS_METRIC_ATTRIBUTE = MetricAttribute(MetricTags.AUTHENTICATION_RESPONSE, "success")
   }
