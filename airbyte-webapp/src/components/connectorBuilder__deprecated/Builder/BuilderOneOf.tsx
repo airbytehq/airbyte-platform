@@ -72,8 +72,8 @@ export const BuilderOneOf = <T extends OneOfType>({
             label: option.label,
             value: option,
           }))}
-          placement="bottom-end"
-          adaptiveWidth={false}
+          placement="bottom end"
+          adaptiveWidth
           isDisabled={isPreview}
           selectedValue={selectedOption}
           onSelect={(selectedOption: OneOfOption<T>) => {

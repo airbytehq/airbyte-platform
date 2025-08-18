@@ -5,7 +5,6 @@ import React from "react";
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
-import { FloatLayout } from "./FloatLayout";
 import { ListBoxProps, ListBoxControlButtonProps } from "./ListBox";
 import { ListboxButton } from "./ListboxButton";
 import { ListboxOption } from "./ListboxOption";
@@ -34,9 +33,8 @@ export const BaseListBox = <T,>({
   optionClassName,
   optionTextAs,
   // Layout props
-  placement,
-  flip = true,
-  adaptiveWidth = true,
+  placement = "bottom start",
+  adaptiveWidth = false,
   // HTML attributes
   id,
   "data-testid": testId,
@@ -72,30 +70,32 @@ export const BaseListBox = <T,>({
 
   return (
     <Listbox value={selectedValue} onChange={onOnSelect} disabled={isDisabled} by={isEqual}>
-      <FloatLayout adaptiveWidth={adaptiveWidth} placement={placement} flip={flip}>
-        <ListboxButton
-          id={id}
-          className={buttonClassName}
-          hasError={hasError}
-          onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
-          as={controlButtonAs}
-          onFocus={onFocus}
-          {...(testId && {
-            "data-testid": `${testId}-listbox-button`,
-          })}
-        >
-          <ControlButtonContent selectedOption={selectedOption} isDisabled={isDisabled} />
-        </ListboxButton>
-        <ListboxOptions
-          as="ul"
-          fullWidth={!adaptiveWidth}
-          {...(testId && {
-            "data-testid": `${testId}-listbox-options`,
-          })}
-        >
-          {options.map(ListBoxOption)}
-        </ListboxOptions>
-      </FloatLayout>
+      <ListboxButton
+        id={id}
+        className={buttonClassName}
+        hasError={hasError}
+        onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
+        as={controlButtonAs}
+        onFocus={onFocus}
+        {...(testId && {
+          "data-testid": `${testId}-listbox-button`,
+        })}
+      >
+        <ControlButtonContent selectedOption={selectedOption} isDisabled={isDisabled} />
+      </ListboxButton>
+      <ListboxOptions
+        as="ul"
+        adaptiveWidth={adaptiveWidth}
+        {...(testId && {
+          "data-testid": `${testId}-listbox-options`,
+        })}
+        anchor={{
+          to: placement,
+          gap: 5,
+        }}
+      >
+        {options.map(ListBoxOption)}
+      </ListboxOptions>
     </Listbox>
   );
 };

@@ -30,7 +30,7 @@ export const SyncMetricListbox: React.FC<SyncMetricListboxProps> = ({ selectedVa
         },
       ]}
       selectedValue={selectedValue}
-      adaptiveWidth={false}
+      adaptiveWidth
       onSelect={onSelect}
     />
   );

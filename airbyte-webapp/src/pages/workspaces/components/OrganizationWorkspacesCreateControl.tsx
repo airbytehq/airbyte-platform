@@ -136,7 +136,7 @@ export const CreateWorkspaceModal: React.FC<{
           label={formatMessage({ id: "form.region" })}
           name="dataplaneGroupId"
           fieldType="dropdown"
-          adaptiveWidth={false}
+          adaptiveWidth
           options={dataplaneGroups.map((dataplaneGroup) => {
             return {
               value: dataplaneGroup.dataplane_group_id,

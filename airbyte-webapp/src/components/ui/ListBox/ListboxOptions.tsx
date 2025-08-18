@@ -7,18 +7,18 @@ import styles from "./ListboxOptions.module.scss";
 export type ExtractProps<T> = T extends ComponentType<infer P> ? P : T;
 
 export interface ListboxOptionsProps {
-  fullWidth?: boolean;
+  adaptiveWidth?: boolean;
 }
 
 export const ListboxOptions = React.forwardRef<
   HTMLElement,
   ExtractProps<typeof HeadlessUIListboxOptions> & ListboxOptionsProps
 >((props, ref) => {
-  const { fullWidth, ...restProps } = props;
+  const { adaptiveWidth, ...restProps } = props;
   const mergedClassNames = classNames(
     styles.listboxOptions,
     {
-      [styles["listboxOptions--fullWidth"]]: !!fullWidth,
+      [styles["listboxOptions--adaptiveWidth"]]: !!adaptiveWidth,
     },
     props.className
   );

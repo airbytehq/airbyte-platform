@@ -631,9 +631,8 @@ const RetrievalTypeSelector = ({
             value: "custom",
           },
         ]}
-        placement="bottom-end"
-        adaptiveWidth={false}
-        flip={false}
+        placement="bottom end"
+        adaptiveWidth
         buttonClassName={styles.requestTypeButton}
         isDisabled={disabled}
       />

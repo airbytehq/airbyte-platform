@@ -60,7 +60,7 @@ export const MultiSelectTags = <T,>({
             <SelectedValueTags selectedValues={selectedValues} options={options} />
           </FlexContainer>
         </ListboxButton>
-        <ListboxOptions fullWidth anchor="bottom">
+        <ListboxOptions adaptiveWidth anchor="bottom">
           {sortedOptions.map(({ label, value }, index) => {
             return (
               <ListboxOption value={value} key={index}>

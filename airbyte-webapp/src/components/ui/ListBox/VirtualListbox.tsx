@@ -7,7 +7,6 @@ import { IndexLocationWithAlign, Virtuoso, VirtuosoHandle } from "react-virtuoso
 import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
-import { FloatLayout } from "./FloatLayout";
 import { ListBoxProps, ListBoxControlButtonProps } from "./ListBox";
 import { ListboxButton } from "./ListboxButton";
 import { ListboxOption } from "./ListboxOption";
@@ -36,9 +35,8 @@ export const VirtualListBox = <T,>({
   optionClassName,
   optionTextAs,
   // Layout props
-  placement,
-  flip = true,
-  adaptiveWidth = true,
+  placement = "bottom start",
+  adaptiveWidth = false,
   // HTML attributes
   id,
   "data-testid": testId,
@@ -108,38 +106,40 @@ export const VirtualListBox = <T,>({
 
   return (
     <Listbox value={selectedValue} onChange={onOnSelect} disabled={isDisabled} by={isEqual}>
-      <FloatLayout adaptiveWidth={adaptiveWidth} placement={placement} flip={flip}>
-        <ListboxButton
-          id={id}
-          className={buttonClassName}
-          hasError={hasError}
-          onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
-          as={controlButtonAs}
-          onFocus={onFocus}
-          {...(testId && {
-            "data-testid": `${testId}-listbox-button`,
-          })}
-        >
-          <ControlButtonContent selectedOption={selectedOption} isDisabled={isDisabled} />
-        </ListboxButton>
-        <ListboxOptions
-          as="ul"
-          onKeyDown={handleKeydownForVirtualizedList}
-          fullWidth={!adaptiveWidth}
-          {...(testId && {
-            "data-testid": `${testId}-listbox-options`,
-          })}
-        >
-          <Virtuoso<Option<T>>
-            style={{ height: "300px" }} // $height-long-listbox-options-list
-            data={options}
-            ref={virtuosoRef}
-            increaseViewportBy={{ top: 100, bottom: 100 }}
-            itemContent={(index, option) => <ListBoxOption key={index} {...option} />}
-            {...(initialTopMostItemIndex && { initialTopMostItemIndex })} // scroll to selected value
-          />
-        </ListboxOptions>
-      </FloatLayout>
+      <ListboxButton
+        id={id}
+        className={buttonClassName}
+        hasError={hasError}
+        onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
+        as={controlButtonAs}
+        onFocus={onFocus}
+        {...(testId && {
+          "data-testid": `${testId}-listbox-button`,
+        })}
+      >
+        <ControlButtonContent selectedOption={selectedOption} isDisabled={isDisabled} />
+      </ListboxButton>
+      <ListboxOptions
+        as="ul"
+        onKeyDown={handleKeydownForVirtualizedList}
+        adaptiveWidth={adaptiveWidth}
+        {...(testId && {
+          "data-testid": `${testId}-listbox-options`,
+        })}
+        anchor={{
+          to: placement,
+          gap: 5,
+        }}
+      >
+        <Virtuoso<Option<T>>
+          style={{ height: "300px" }} // $height-long-listbox-options-list
+          data={options}
+          ref={virtuosoRef}
+          increaseViewportBy={{ top: 100, bottom: 100 }}
+          itemContent={(index, option) => <ListBoxOption key={index} {...option} />}
+          {...(initialTopMostItemIndex && { initialTopMostItemIndex })} // scroll to selected value
+        />
+      </ListboxOptions>
     </Listbox>
   );
 };

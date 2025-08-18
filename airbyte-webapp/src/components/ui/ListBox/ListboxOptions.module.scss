@@ -1,5 +1,6 @@
 @use "scss/colors";
 @use "scss/variables";
+@use "scss/z-indices";
 
 .listboxOptions {
   width: variables.$min-width-listbox-options-list;
@@ -11,6 +12,7 @@
   background: colors.$foreground;
   max-height: variables.$height-long-listbox-options-list;
   overflow: auto;
+  z-index: z-indices.$dropdownMenu;
 
   // remove default browser styles for ul
   margin-block-start: 0;
@@ -21,7 +23,7 @@
     outline: none;
   }
 
-  &--fullWidth {
+  &--adaptiveWidth {
     /** --button-width is a variable exposed by headless-ui */
     width: var(--button-width);
   }

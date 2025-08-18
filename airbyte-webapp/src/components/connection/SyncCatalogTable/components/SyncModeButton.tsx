@@ -34,7 +34,7 @@ export const SyncModeButton: React.FC<SyncModeSelectProps> = ({ options, value, 
       options={syncModeOptions}
       selectedValue={value}
       onSelect={onChange}
-      placement="bottom-start"
+      placement="bottom start"
     />
   );
 };

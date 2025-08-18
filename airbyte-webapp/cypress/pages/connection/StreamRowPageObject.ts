@@ -105,16 +105,16 @@ export class StreamRowPageObject {
       // eslint-disable-next-line cypress/no-unnecessary-waiting
       cy.wait(1000);
       cy.get(streamSyncModeSelectButton).click();
-      cy.get(streamSyncModeOptionsMenu).should("exist");
+    });
 
-      cy.get(streamSyncModeOptionsMenu).within(() => {
-        cy.get('li[role="option"]')
-          // It's possible that there are multiple options with the same text, so we need to filter by exact text content
-          // instead of using .contains(), e.g. "Incremental | Append" and "Incremental | Append + Dedupe"
-          .filter((_, element) => Cypress.$(element).text().trim() === syncMode)
-          .should("have.length", 1)
-          .click({ force: true });
-      });
+    cy.get(streamSyncModeOptionsMenu).should("exist");
+    cy.get(streamSyncModeOptionsMenu).within(() => {
+      cy.get('li[role="option"]')
+        // It's possible that there are multiple options with the same text, so we need to filter by exact text content
+        // instead of using .contains(), e.g. "Incremental | Append" and "Incremental | Append + Dedupe"
+        .filter((_, element) => Cypress.$(element).text().trim() === syncMode)
+        .should("have.length", 1)
+        .click({ force: true });
     });
   }
 

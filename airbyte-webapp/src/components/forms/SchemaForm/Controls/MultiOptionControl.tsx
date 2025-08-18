@@ -152,7 +152,7 @@ export const MultiOptionControl = ({
             clearErrors(baseProps.name);
           }}
           selectedValue={getOptionLabel(currentlySelectedOption)}
-          adaptiveWidth={false}
+          adaptiveWidth
         />
       }
       toggleConfig={baseProps.optional ? toggleConfig : undefined}

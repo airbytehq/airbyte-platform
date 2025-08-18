@@ -70,7 +70,7 @@ const selectDropdownOption = (container: HTMLElement, dropdownContainerTestId: s
   const dropdownControlButton = getByTestId(container, `${dropdownContainerTestId}-listbox-button`);
   fireEvent.click(dropdownControlButton);
 
-  const dropdownOptionsMenu = getByTestId(container, `${dropdownContainerTestId}-listbox-options`);
+  const dropdownOptionsMenu = screen.getByTestId(`${dropdownContainerTestId}-listbox-options`);
 
   const listBoxOption = getByRole(dropdownOptionsMenu, "option", { name: option });
   fireEvent.click(listBoxOption);

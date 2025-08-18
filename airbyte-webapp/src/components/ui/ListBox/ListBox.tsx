@@ -1,5 +1,4 @@
-import { ListboxButton } from "@headlessui/react";
-import { FloatProps } from "@headlessui-float/react";
+import { ListboxButton, ListboxOptionsProps } from "@headlessui/react";
 import React, { ComponentPropsWithoutRef, useMemo } from "react";
 import { useIntl } from "react-intl";
 
@@ -81,17 +80,12 @@ export interface ListBoxProps<T> {
   /**
    * Floating menu placement
    */
-  placement?: FloatProps["placement"];
+  placement?: Extract<ListboxOptionsProps["anchor"], object>["to"];
   /**
-   * Floating menu flip strategy
-   * @default 15px (flip to the opposite side if there is no space)
+   * If true, the width of the ListBox menu will be the same as the width of the control button.
+   * If false, the width of the ListBox menu will have a static width. Default is false.
    */
-  flip?: FloatProps["flip"];
-  /**
-   * If true, the width of the ListBox menu will be the same as the width of the control button. Default is true.
-   * If false, the width of the ListBox menu will have max-width of 200px.
-   */
-  adaptiveWidth?: FloatProps["adaptiveWidth"];
+  adaptiveWidth?: boolean;
   // HTML attributes
   /** HTML id attribute for the control button */
   id?: string;

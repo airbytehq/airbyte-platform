@@ -773,9 +773,8 @@ const RequestTypeSelector = ({
             value: "async",
           },
         ]}
-        placement="bottom-end"
-        adaptiveWidth={false}
-        flip={false}
+        placement="bottom end"
+        adaptiveWidth
         buttonClassName={styles.requestTypeButton}
       />
     </FlexContainer>
