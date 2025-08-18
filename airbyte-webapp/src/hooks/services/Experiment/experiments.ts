@@ -94,7 +94,7 @@ export const defaultExperimentValues: Experiments = {
   productLimitsUI: false,
   "settings.breakingChangeNotifications": false,
   "settings.downloadDiagnostics": false,
-  "settings.organizationRbacImprovements": false,
+  "settings.organizationRbacImprovements": true,
   "settings.showAdvancedSettings": false,
   "sidebar.showOrgPicker": false,
 };
