@@ -8,7 +8,7 @@ export const selectDropdownOption = async (
   targetOption: string
 ) => {
   await page.locator(`div[data-field-path="${fieldPath}"]`).locator(`span:text-is("${initialOption}")`).click();
-  await page.locator(`div[data-field-path="${fieldPath}"]`).locator(`p:text-is("${targetOption}")`).click();
+  await page.locator(`p:text-is("${targetOption}")`).click();
 };
 
 // Helper function to find and fill nested input fields by field path
