@@ -16,6 +16,8 @@ import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient
 import io.airbyte.persistence.job.errorreporter.LoggingJobErrorReportingClient
 import io.airbyte.persistence.job.errorreporter.SentryExceptionHelper
 import io.airbyte.persistence.job.errorreporter.SentryJobErrorReportingClient
+import io.airbyte.persistence.job.errorreporter.SentryJobErrorReportingClient.Companion.createSentryHubWithDSN
+import io.airbyte.server.services.JobObservabilityReportingService
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
@@ -63,4 +65,10 @@ class JobErrorReportingBeanFactory {
       jobErrorReportingClient.orElseGet { LoggingJobErrorReportingClient() },
       metricClient,
     )
+
+  @Singleton
+  @Requires(property = "airbyte.worker.job.error-reporting.strategy", pattern = "(?i)^sentry$")
+  fun jobObservabilityReportingService(
+    @Value("\${airbyte.worker.job.error-reporting.sentry.dsn}") sentryDsn: String?,
+  ): JobObservabilityReportingService = JobObservabilityReportingService(createSentryHubWithDSN(sentryDsn))
 }

@@ -21,8 +21,6 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.JobPersistence
-import io.airbyte.server.services.JobObservabilityService.JobMetrics.Companion.toJobMetrics
-import io.airbyte.server.services.JobObservabilityService.StreamMetrics.Companion.toStreamMetrics
 import io.airbyte.statistics.Outliers
 import io.airbyte.statistics.Scores
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -35,6 +33,66 @@ import java.util.UUID
 import kotlin.math.absoluteValue
 import kotlin.math.sqrt
 
+data class OutlierOutcome(
+  val job: JobInfo,
+  val streams: List<StreamInfo>,
+  val isOutlier: Boolean,
+  val numberOfHistoricalJobsConsidered: Int,
+  val numberOfOutlierStreams: Int,
+)
+
+data class JobInfo(
+  val jobId: Long,
+  val connectionId: UUID,
+  val workspaceId: UUID,
+  val organizationId: UUID,
+  val sourceId: UUID,
+  val sourceDefinitionId: UUID,
+  val sourceImageTag: String,
+  val destinationId: UUID,
+  val destinationDefinitionId: UUID,
+  val destinationImageTag: String,
+  val jobType: String,
+  val jobOutcome: String,
+  val metrics: JobMetrics,
+  val evaluations: List<OutlierEvaluation>,
+  val isOutlier: Boolean,
+)
+
+/**
+ * The Job metrics to consider for outlier detection.
+ */
+data class JobMetrics(
+  val attemptCount: Int,
+  val durationSeconds: Long,
+)
+
+data class StreamInfo(
+  val namespace: String?,
+  val name: String,
+  val wasBackfilled: Boolean,
+  val wasResumed: Boolean,
+  val metrics: StreamMetrics,
+  val evaluations: List<OutlierEvaluation>,
+  val isOutlier: Boolean,
+)
+
+/**
+ * The Stream metrics to consider for outlier detection.
+ */
+data class StreamMetrics(
+  var bytesLoaded: Long,
+  var recordsLoaded: Long,
+  var recordsRejected: Long,
+)
+
+data class OutlierEvaluation(
+  val dimension: String,
+  val score: Double,
+  val threshold: Double,
+  val isOutlier: Boolean,
+)
+
 @Singleton
 class JobObservabilityService(
   private val actorDefinitionService: ActorDefinitionService,
@@ -44,6 +102,7 @@ class JobObservabilityService(
   private val obsStatsService: ObsStatsService,
   private val workspaceService: WorkspaceService,
   private val metricClient: MetricClient,
+  private val jobObservabilityReportingService: JobObservabilityReportingService?,
 ) {
   private val logger = KotlinLogging.logger {}
   private val outliers = Outliers()
@@ -62,89 +121,6 @@ class JobObservabilityService(
     val job: JobRead,
     val attempts: List<AttemptRead>,
   )
-
-  private data class OutlierOutcome(
-    val jobStats: ObsJobsStats,
-    val streamsStats: List<ObsStreamStats>,
-    val isOutlier: Boolean,
-    val isJobMetricOutlier: Boolean,
-    val numberOfOutlierStreams: Int,
-    val jobScore: Scores,
-    val streamScores: Map<Pair<String?, String>, Scores>,
-  )
-
-  /**
-   * The Job metrics to consider for outlier detection.
-   */
-  private data class JobMetrics(
-    val attemptCount: Int,
-    val durationSeconds: Long,
-  ) {
-    companion object {
-      fun ObsJobsStats.toJobMetrics(): JobMetrics =
-        JobMetrics(
-          attemptCount = attemptCount,
-          durationSeconds = durationSeconds,
-        )
-
-      fun isOutlier(scores: Scores): Boolean {
-        scores.scores["durationSeconds"]?.let { if (it > 3.0) return true }
-        scores.scores["attemptCount"]?.let { if (it > 3.0) return true }
-        return false
-      }
-    }
-  }
-
-  /**
-   * The Stream metrics to consider for outlier detection.
-   */
-  private data class StreamMetrics(
-    var bytesLoaded: Long,
-    var recordsLoaded: Long,
-    var recordsRejected: Long,
-  ) {
-    companion object {
-      fun ObsStreamStats.toStreamMetrics(): StreamMetrics =
-        StreamMetrics(
-          bytesLoaded = bytesLoaded,
-          recordsLoaded = recordsLoaded,
-          recordsRejected = recordsRejected,
-        )
-
-      /**
-       * StreamMetrics outlier evaluation.
-       *
-       * We are adjusting the threshold for loaded data based on the average record count as a proxy for volume. Rationale being that a stream moving
-       * little amount of data will be more susceptible to variations.
-       *
-       * RejectedRecords have their own deviation, mostly because they are more isolated events and shouldn't be tied to the same trend as the
-       * "positive" amount of data loaded.
-       */
-      fun isOutlier(scores: Scores): Boolean {
-        val loadedCoefficient = volumeCoefficient(scores.mean["recordsLoaded"])
-        val loadedThreshold = outlierThreshold(threshold = 3.0, coefficient = loadedCoefficient)
-        scores.scores["bytesLoaded"]?.let { if (it.absoluteValue > loadedThreshold) return true }
-        scores.scores["recordsLoaded"]?.let { if (it.absoluteValue > loadedThreshold) return true }
-
-        val rejectedCoefficient = volumeCoefficient(scores.mean["recordsRejected"])
-        val rejectedThreshold = outlierThreshold(threshold = 3.0, coefficient = rejectedCoefficient)
-        scores.scores["recordsRejected"]?.let { if (it.absoluteValue > rejectedThreshold) return true }
-        return false
-      }
-
-      /**
-       * Returns a coefficient to adjust the outlier threshold. The intent is to increase the thresholds for connections with
-       * lower volume of data.
-       * Desired function has a high enough value for f(0) and should converge towards 1 as x goes towards infinity
-       */
-      fun volumeCoefficient(x: Double?): Double = 1.0 + (1.0 / sqrt(x ?: 0.01))
-
-      fun outlierThreshold(
-        threshold: Double,
-        coefficient: Double,
-      ): Double = threshold * coefficient
-    }
-  }
 
   fun finalizeStats(jobId: Long) {
     val details = fetchJobDetails(jobId)
@@ -206,45 +182,93 @@ class JobObservabilityService(
       return
     }
 
-    val jobScore = outliers.evaluate(jobHistory.map { it.toJobMetrics() }, job.first().toJobMetrics())
+    val jobInfo = evaluateJob(job.first(), jobHistory)
 
     val allStreamStats =
       obsStatsService
         .findJobStreamStatsAndPrevious(jobId, DEFAULT_INTERVAL, MAX_JOBS_COUNT, JOB_TYPES_TO_CONSIDER)
-    val scoresByStream =
+    val streams =
       allStreamStats
         .groupBy { it.id.streamNamespace to it.id.streamName }
-        .mapValues { streamStats ->
+        .map { streamStats ->
           val (currentList, history) = streamStats.value.partition { it.id.jobId == jobId }
           val current =
             currentList.firstOrNull()
               ?: defaultEmptyStatsForStream(jobId = jobId, streamNamespace = streamStats.key.first, streamName = streamStats.key.second)
-          val streamScore = outliers.evaluate(history.map { it.toStreamMetrics() }, current.toStreamMetrics())
-          return@mapValues streamScore
+          evaluateStream(
+            namespace = streamStats.key.first,
+            name = streamStats.key.second,
+            currentStream = current,
+            streamHistory = history,
+          )
         }
 
-    val isJobOutlier = JobMetrics.isOutlier(jobScore)
-    val numberOfOutlierStreams = scoresByStream.values.count { StreamMetrics.isOutlier(it) }
+    val numberOfOutlierStreams = streams.count { it.isOutlier }
     val outlierOutcome =
       OutlierOutcome(
-        jobStats = job.first(),
-        streamsStats = allStreamStats.filter { it.id.jobId == jobId },
-        isOutlier = isJobOutlier || numberOfOutlierStreams > 0,
-        isJobMetricOutlier = isJobOutlier,
+        job = jobInfo,
+        isOutlier = jobInfo.isOutlier || numberOfOutlierStreams > 0,
+        numberOfHistoricalJobsConsidered = jobHistory.size,
         numberOfOutlierStreams = numberOfOutlierStreams,
-        jobScore = jobScore,
-        streamScores = scoresByStream,
+        streams = streams,
       )
 
     if (outlierOutcome.isOutlier) {
+      jobObservabilityReportingService?.reportJobOutlierStatus(outlierOutcome)
       logger.info {
         "jobId:$jobId has been marked as an outlier. (" +
-          "jobOutlier:${outlierOutcome.isJobMetricOutlier}, " +
+          "jobOutlier:${outlierOutcome.job.isOutlier}, " +
           "outlierStreams:${outlierOutcome.numberOfOutlierStreams}, " +
-          "details:${outlierOutcome.jobStats}, ${outlierOutcome.jobScore}, ${outlierOutcome.streamScores})"
+          "details:$outlierOutcome)"
       }
     }
     reportOutlierMetric(outlierOutcome)
+  }
+
+  private fun evaluateJob(
+    currentJob: ObsJobsStats,
+    jobHistory: List<ObsJobsStats>,
+  ): JobInfo {
+    val currentJobMetrics = currentJob.toJobMetrics()
+    val jobScore = outliers.evaluate(jobHistory.map { it.toJobMetrics() }, currentJobMetrics)
+    val jobEvaluations = evaluateJobOutliers(jobScore)
+    return JobInfo(
+      jobId = currentJob.jobId,
+      connectionId = currentJob.connectionId,
+      workspaceId = currentJob.workspaceId,
+      organizationId = currentJob.organizationId,
+      sourceId = currentJob.sourceId,
+      sourceDefinitionId = currentJob.sourceDefinitionId,
+      sourceImageTag = currentJob.sourceImageTag,
+      destinationId = currentJob.destinationId,
+      destinationDefinitionId = currentJob.destinationDefinitionId,
+      destinationImageTag = currentJob.destinationImageTag,
+      jobType = currentJob.jobType,
+      jobOutcome = currentJob.status,
+      metrics = currentJobMetrics,
+      evaluations = jobEvaluations,
+      isOutlier = jobEvaluations.any { it.isOutlier },
+    )
+  }
+
+  private fun evaluateStream(
+    namespace: String?,
+    name: String,
+    currentStream: ObsStreamStats,
+    streamHistory: List<ObsStreamStats>,
+  ): StreamInfo {
+    val currentStreamMetrics = currentStream.toStreamMetrics()
+    val streamScore = outliers.evaluate(streamHistory.map { it.toStreamMetrics() }, currentStreamMetrics)
+    val streamEvaluations = evaluateStreamOutliers(streamScore)
+    return StreamInfo(
+      namespace = namespace,
+      name = name,
+      wasBackfilled = currentStream.wasBackfilled,
+      wasResumed = currentStream.wasResumed,
+      metrics = currentStreamMetrics,
+      evaluations = streamEvaluations,
+      isOutlier = streamEvaluations.any { streamFeatureEval -> streamFeatureEval.isOutlier },
+    )
   }
 
   private fun reportOutlierMetric(outlierOutcome: OutlierOutcome) {
@@ -252,10 +276,12 @@ class JobObservabilityService(
       OssMetricsRegistry.DATA_OBS_OUTLIER_CHECK,
       1,
       MetricAttribute(MetricTags.STATUS_TAG, outlierOutcome.isOutlier.toString()),
-      MetricAttribute(MetricTags.CONNECTION_ID, outlierOutcome.jobStats.connectionId.toString()),
-      MetricAttribute(MetricTags.WORKSPACE_ID, outlierOutcome.jobStats.workspaceId.toString()),
-      MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, outlierOutcome.jobStats.sourceDefinitionId.toString()),
-      MetricAttribute(MetricTags.DESTINATION_DEFINITION_ID, outlierOutcome.jobStats.destinationDefinitionId.toString()),
+      MetricAttribute(MetricTags.CONNECTION_ID, outlierOutcome.job.connectionId.toString()),
+      MetricAttribute(MetricTags.WORKSPACE_ID, outlierOutcome.job.workspaceId.toString()),
+      MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, outlierOutcome.job.sourceDefinitionId.toString()),
+      MetricAttribute(MetricTags.DESTINATION_DEFINITION_ID, outlierOutcome.job.destinationDefinitionId.toString()),
+      MetricAttribute(MetricTags.IS_CORRECTNESS_OUTLIER, (outlierOutcome.numberOfOutlierStreams > 0).toString()),
+      MetricAttribute(MetricTags.IS_FRESHNESS_OUTLIER, outlierOutcome.job.isOutlier.toString()),
     )
   }
 
@@ -326,5 +352,104 @@ class JobObservabilityService(
     private val JOB_TYPES_TO_CONSIDER = listOf(JobConfigType.sync)
 
     private val UUID_ZERO: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000")
+
+    fun ObsJobsStats.toJobMetrics(): JobMetrics =
+      JobMetrics(
+        attemptCount = attemptCount,
+        durationSeconds = durationSeconds,
+      )
+
+    fun ObsStreamStats.toStreamMetrics(): StreamMetrics =
+      StreamMetrics(
+        bytesLoaded = bytesLoaded,
+        recordsLoaded = recordsLoaded,
+        recordsRejected = recordsRejected,
+      )
+
+    private fun evaluateJobOutliers(scores: Scores): List<OutlierEvaluation> {
+      val evaluations = mutableListOf<OutlierEvaluation>()
+      scores.scores["durationSeconds"]?.let {
+        evaluations.add(
+          OutlierEvaluation(
+            dimension = "duration",
+            score = it,
+            threshold = 3.0,
+            isOutlier = it > 3.0,
+          ),
+        )
+      }
+      scores.scores["attemptCount"]?.let {
+        evaluations.add(
+          OutlierEvaluation(
+            dimension = "attempts",
+            score = it,
+            threshold = 3.0,
+            isOutlier = it > 3.0,
+          ),
+        )
+      }
+      return evaluations
+    }
   }
+
+  /**
+   * StreamMetrics outlier evaluation.
+   *
+   * We are adjusting the threshold for loaded data based on the average record count as a proxy for volume. Rationale being that a stream moving
+   * little amount of data will be more susceptible to variations.
+   *
+   * RejectedRecords have their own deviation, mostly because they are more isolated events and shouldn't be tied to the same trend as the
+   * "positive" amount of data loaded.
+   */
+  private fun evaluateStreamOutliers(scores: Scores): List<OutlierEvaluation> {
+    val evals = mutableListOf<OutlierEvaluation>()
+    val loadedCoefficient = volumeCoefficient(scores.mean["recordsLoaded"])
+    val loadedThreshold = outlierThreshold(threshold = 3.0, coefficient = loadedCoefficient)
+    scores.scores["bytesLoaded"]?.let {
+      evals.add(
+        OutlierEvaluation(
+          dimension = "bytesLoaded",
+          score = it,
+          threshold = loadedThreshold,
+          isOutlier = it.absoluteValue > loadedThreshold,
+        ),
+      )
+    }
+    scores.scores["recordsLoaded"]?.let {
+      evals.add(
+        OutlierEvaluation(
+          dimension = "recordsLoaded",
+          score = it,
+          threshold = loadedThreshold,
+          isOutlier = it.absoluteValue > loadedThreshold,
+        ),
+      )
+    }
+
+    val rejectedCoefficient = volumeCoefficient(scores.mean["recordsRejected"])
+    val rejectedThreshold = outlierThreshold(threshold = 3.0, coefficient = rejectedCoefficient)
+    scores.scores["recordsRejected"]?.let {
+      evals.add(
+        OutlierEvaluation(
+          dimension = "recordsRejected",
+          score = it,
+          threshold = rejectedThreshold,
+          isOutlier = it.absoluteValue > rejectedThreshold,
+        ),
+      )
+    }
+    return evals
+  }
+
+  /**
+   * Returns a coefficient to adjust the outlier threshold. The intent is to increase the thresholds for connections with
+   * lower volume of data.
+   * Desired function has a high enough value for f(0) and should converge towards 1 as x goes towards infinity
+   */
+  private fun volumeCoefficient(x: Double?): Double = 1.0 + (1.0 / sqrt(x ?: 0.01))
+
+  private fun outlierThreshold(
+    threshold: Double,
+    coefficient: Double,
+  ): Double = threshold * coefficient
 }
