@@ -42,6 +42,8 @@ airbyte:
       enabled: ${UPDATE_DEFINITIONS_CRON_ENABLED:true}
     declarative-sources-updater:
       enabled: ${RUN_DECLARATIVE_SOURCES_UPDATER:true}
+    db-prune:
+      enabled: ${DB_PRUNE_CRON_ENABLED:true}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   entitlement:
     client: ${ENTITLEMENT_CLIENT:}

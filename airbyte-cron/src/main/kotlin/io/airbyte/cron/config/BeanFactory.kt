@@ -16,6 +16,7 @@ import io.airbyte.data.services.shared.DataSourceUnwrapper
 import io.airbyte.db.Database
 import io.airbyte.db.check.DatabaseMigrationCheck
 import io.airbyte.db.factory.DatabaseCheckFactory
+import io.airbyte.persistence.job.DbPrune
 import io.airbyte.persistence.job.DefaultJobPersistence
 import io.airbyte.persistence.job.DefaultMetadataPersistence
 import io.airbyte.persistence.job.JobPersistence
@@ -152,4 +153,11 @@ class BeanFactory {
   fun metadataPersistence(
     @Named("jobsDatabase") jobDatabase: Database,
   ): MetadataPersistence = DefaultMetadataPersistence(jobDatabase)
+
+  @Singleton
+  @Named("dbPrune")
+  @Requires(env = [EnvConstants.CONTROL_PLANE])
+  fun dbPrune(
+    @Named("jobsDatabase") jobDatabase: Database,
+  ): DbPrune = DbPrune(jobDatabase)
 }

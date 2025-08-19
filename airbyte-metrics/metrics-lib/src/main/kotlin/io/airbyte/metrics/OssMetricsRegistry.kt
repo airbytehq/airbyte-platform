@@ -791,6 +791,14 @@ enum class OssMetricsRegistry(
     metricName = "data_obs_outlier_check",
     metricDescription = "outcome of the outlier check",
   ),
+  DATABASE_PRUNING_JOBS_DELETED(
+    metricName = "database_pruning_jobs_deleted",
+    metricDescription = "number of jobs deleted during database pruning operation",
+  ),
+  DATABASE_PRUNING_DURATION(
+    metricName = "database_pruning_duration",
+    metricDescription = "duration of database pruning operation",
+  ),
   ;
 
   override fun getMetricName(): String = metricName
