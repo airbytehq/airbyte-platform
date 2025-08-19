@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.dataframe.api.toDataFrame
  * isOutlier is the decision, other fields are for debugging purpose.
  */
 data class Scores(
+  val current: MutableMap<String, Double> = mutableMapOf(),
   val mean: MutableMap<String, Double> = mutableMapOf(),
   val std: MutableMap<String, Double> = mutableMapOf(),
   val scores: MutableMap<String, Double> = mutableMapOf(),
@@ -36,9 +37,11 @@ class Outliers {
 
     val scores = Scores()
     mean.df().columns().forEach {
-      scores.mean[it.name()] = mean[it.name()].toDouble()
-      scores.std[it.name()] = std[it.name()].toDouble()
-      scores.scores[it.name()] = zScore(c[it.name()].toDouble(), mean[it.name()].toDouble(), std[it.name()].toDouble())
+      val name = it.name()
+      scores.current[name] = c[name].toDouble()
+      scores.mean[name] = mean[name].toDouble()
+      scores.std[name] = std[name].toDouble()
+      scores.scores[name] = zScore(c[name].toDouble(), mean[name].toDouble(), std[name].toDouble())
     }
     return scores
   }

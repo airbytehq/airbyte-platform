@@ -352,44 +352,51 @@ class JobObservabilityService(
     private val JOB_TYPES_TO_CONSIDER = listOf(JobConfigType.sync)
 
     private val UUID_ZERO: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000")
+  }
 
-    fun ObsJobsStats.toJobMetrics(): JobMetrics =
-      JobMetrics(
-        attemptCount = attemptCount,
-        durationSeconds = durationSeconds,
+  private fun ObsJobsStats.toJobMetrics(): JobMetrics =
+    JobMetrics(
+      attemptCount = attemptCount,
+      durationSeconds = durationSeconds,
+    )
+
+  private fun ObsStreamStats.toStreamMetrics(): StreamMetrics =
+    StreamMetrics(
+      bytesLoaded = bytesLoaded,
+      recordsLoaded = recordsLoaded,
+      recordsRejected = recordsRejected,
+    )
+
+  private fun evaluateJobOutliers(scores: Scores): List<OutlierEvaluation> {
+    val evaluations = mutableListOf<OutlierEvaluation>()
+
+    // Get the time coefficient from the duration in minutes for a more adequate drop off
+    val durationCoefficient = timeCoefficient(scores.mean["durationSeconds"]?.let { it / 60.0 })
+    val durationThreshold = outlierThreshold(threshold = 3.0, coefficient = durationCoefficient)
+    scores.scores["durationSeconds"]?.let {
+      evaluations.add(
+        OutlierEvaluation(
+          dimension = "duration",
+          score = it,
+          threshold = durationThreshold,
+          isOutlier = it > durationThreshold,
+        ),
       )
-
-    fun ObsStreamStats.toStreamMetrics(): StreamMetrics =
-      StreamMetrics(
-        bytesLoaded = bytesLoaded,
-        recordsLoaded = recordsLoaded,
-        recordsRejected = recordsRejected,
-      )
-
-    private fun evaluateJobOutliers(scores: Scores): List<OutlierEvaluation> {
-      val evaluations = mutableListOf<OutlierEvaluation>()
-      scores.scores["durationSeconds"]?.let {
-        evaluations.add(
-          OutlierEvaluation(
-            dimension = "duration",
-            score = it,
-            threshold = 3.0,
-            isOutlier = it > 3.0,
-          ),
-        )
-      }
-      scores.scores["attemptCount"]?.let {
-        evaluations.add(
-          OutlierEvaluation(
-            dimension = "attempts",
-            score = it,
-            threshold = 3.0,
-            isOutlier = it > 3.0,
-          ),
-        )
-      }
-      return evaluations
     }
+
+    scores.mean["attemptCount"]?.let { mean ->
+      val current = scores.current["attemptCount"]!!
+      val threshold = mean + 3.0
+      evaluations.add(
+        OutlierEvaluation(
+          dimension = "attempts",
+          score = current,
+          threshold = threshold,
+          isOutlier = current > threshold,
+        ),
+      )
+    }
+    return evaluations
   }
 
   /**
@@ -442,11 +449,22 @@ class JobObservabilityService(
   }
 
   /**
+   * 1+(1/sqrt(x))
+   *
    * Returns a coefficient to adjust the outlier threshold. The intent is to increase the thresholds for connections with
    * lower volume of data.
    * Desired function has a high enough value for f(0) and should converge towards 1 as x goes towards infinity
    */
   private fun volumeCoefficient(x: Double?): Double = 1.0 + (1.0 / sqrt(x ?: 0.01))
+
+  /**
+   * 1+(1/x)
+   *
+   * Returns a coefficient to adjust the outlier threshold. The intent is to increase the thresholds for connections that
+   * generally run faster.
+   * Desired function has a high enough value for f(0) and should converge towards 1 as x goes towards infinity
+   */
+  private fun timeCoefficient(x: Double?): Double = 1.0 + (1.0 / (x ?: 0.01))
 
   private fun outlierThreshold(
     threshold: Double,
