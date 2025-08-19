@@ -7,7 +7,6 @@ package io.airbyte.api.client.config
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.auth.AccessTokenInterceptor
 import io.airbyte.api.client.auth.InternalClientTokenInterceptor
-import io.airbyte.api.client.auth.KeycloakAccessTokenInterceptor
 import io.airbyte.api.client.config.ClientConfigurationSupport.generateDefaultRetryPolicy
 import io.airbyte.api.client.interceptor.ThrowOn5xxInterceptor
 import io.airbyte.api.client.interceptor.UserAgentInterceptor
@@ -36,7 +35,6 @@ data class InternalApiClientConfig(
 ) {
   enum class AuthType {
     DATAPLANE_ACCESS_TOKEN,
-    KEYCLOAK_ACCESS_TOKEN,
     INTERNAL_CLIENT_TOKEN,
   }
 
@@ -62,7 +60,6 @@ data class InternalApiClientConfig(
 class ApiClientSupportFactory(
   @Property(name = "micronaut.application.name") private val applicationName: String,
   private val config: InternalApiClientConfig,
-  private val keycloakAccessTokenInterceptor: KeycloakAccessTokenInterceptor?,
   private val metricClient: MetricClient,
 ) {
   companion object {
@@ -94,9 +91,6 @@ class ApiClientSupportFactory(
           when (config.auth.type) {
             InternalApiClientConfig.AuthType.DATAPLANE_ACCESS_TOKEN -> {
               addInterceptor(newAccessTokenInterceptorFromConfig(config))
-            }
-            InternalApiClientConfig.AuthType.KEYCLOAK_ACCESS_TOKEN -> {
-              addInterceptor(keycloakAccessTokenInterceptor!!)
             }
             InternalApiClientConfig.AuthType.INTERNAL_CLIENT_TOKEN -> {
               addInterceptor(InternalClientTokenInterceptor(applicationName, config.auth.signatureSecret))
