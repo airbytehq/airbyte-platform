@@ -26,6 +26,8 @@ import io.airbyte.workers.helper.TRACE_MESSAGE_METADATA_KEY
 import io.airbyte.workers.models.ReplicationApiInput
 import io.airbyte.workers.storage.activities.OutputStorageClient
 import jakarta.inject.Singleton
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 @Singleton
 class ReplicationCommand(
@@ -36,6 +38,8 @@ class ReplicationCommand(
   private val catalogClientConverters: CatalogClientConverters,
 ) : ApiCommandBase<ReplicationApiInput>(airbyteApiClient) {
   override val name = "replication-command-api"
+
+  override fun getAwaitDuration(): Duration = 15.minutes
 
   override fun start(
     input: ReplicationApiInput,

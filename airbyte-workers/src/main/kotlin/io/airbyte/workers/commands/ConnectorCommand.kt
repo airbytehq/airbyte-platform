@@ -9,6 +9,8 @@ import io.airbyte.api.client.model.generated.FailureType
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import jakarta.inject.Singleton
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 interface ConnectorCommand<Input> {
   val name: String
@@ -23,6 +25,8 @@ interface ConnectorCommand<Input> {
   fun getOutput(id: String): ConnectorJobOutput
 
   fun cancel(id: String)
+
+  fun getAwaitDuration(): Duration = 1.minutes
 }
 
 @Singleton

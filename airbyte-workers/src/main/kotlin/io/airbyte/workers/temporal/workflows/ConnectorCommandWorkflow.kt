@@ -48,6 +48,7 @@ import io.temporal.failure.ActivityFailure
 import io.temporal.failure.CanceledFailure
 import io.temporal.workflow.Workflow
 import jakarta.inject.Singleton
+import java.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
 
@@ -95,6 +96,9 @@ interface ConnectorCommandActivity {
 
   @ActivityMethod
   fun cancelCommand(activityInput: ConnectorCommandActivityInput)
+
+  @ActivityMethod
+  fun getAwaitDuration(activityInput: ConnectorCommandActivityInput): Duration
 }
 
 /**
@@ -166,6 +170,9 @@ class ConnectorCommandActivityImpl(
       getCommand(activityInput.input).cancel(id = activityInput.id ?: throw IllegalStateException("id must exist"))
     }
   }
+
+  override fun getAwaitDuration(activityInput: ConnectorCommandActivityInput): Duration =
+    getCommand(activityInput.input).getAwaitDuration().toJavaDuration()
 
   private fun <T> withInstrumentation(
     activityInput: ConnectorCommandActivityInput,
@@ -252,13 +259,25 @@ open class ConnectorCommandWorkflowImpl : ConnectorCommandWorkflow {
         id = null,
         startTimeInMillis = System.currentTimeMillis(),
       )
+
+    // Versioning for a smoother that doesn't fail all ongoing commands upon release.
+    val useAwaitFromCommand = Workflow.getVersion("useAwaitFromCommand", Workflow.DEFAULT_VERSION, 1)
+    // We look up the await duration at the beginning of the workflow so that we can freely change the awaitDuration of a command
+    // without impacting already running workflows. This way, they don't NonDeterministicException and get to finish on their initial config.
+    val awaitDuration =
+      if (useAwaitFromCommand == Workflow.DEFAULT_VERSION) {
+        1.minutes.toJavaDuration()
+      } else {
+        connectorCommandActivity.getAwaitDuration(activityInput)
+      }
+
     val id = connectorCommandActivity.startCommand(activityInput)
     activityInput = activityInput.copy(id = id)
 
     try {
       shouldBlock = !connectorCommandActivity.isCommandTerminal(activityInput)
       while (shouldBlock) {
-        Workflow.await(1.minutes.toJavaDuration()) { !shouldBlock }
+        Workflow.await(awaitDuration) { !shouldBlock }
         shouldBlock = !connectorCommandActivity.isCommandTerminal(activityInput)
       }
     } catch (e: Exception) {

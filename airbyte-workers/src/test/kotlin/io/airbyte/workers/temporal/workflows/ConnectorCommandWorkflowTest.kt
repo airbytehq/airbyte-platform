@@ -33,6 +33,7 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
@@ -118,6 +119,7 @@ class ConnectorCommandWorkflowTest {
     every { checkCommand.start(any(), any()) } returns workloadId
     every { checkCommand.isTerminal(workloadId) } returns false andThen false andThen true
     every { checkCommand.getOutput(workloadId) } returns output
+    every { checkCommand.getAwaitDuration() } returns 1.minutes
 
     val input =
       CheckCommandInput(
