@@ -38,9 +38,6 @@ export const DEFAULT_SCHEMA_LOADER_SCHEMA = {
 
 export const BUILDER_COMPATIBLE_CONNECTOR_LANGUAGE = "manifest-only";
 
-export const OAUTH_ACCESS_TOKEN_INPUT = "oauth_access_token";
-export const OAUTH_TOKEN_EXPIRY_DATE_INPUT = "oauth_token_expiry_date";
-
 export const DEFAULT_JSON_MANIFEST_STREAM: DeclarativeStream = {
   type: "DeclarativeStream",
   retriever: {

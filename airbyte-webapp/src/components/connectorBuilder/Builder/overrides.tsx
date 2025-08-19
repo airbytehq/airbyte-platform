@@ -7,7 +7,6 @@ import { useEffectOnce, useUpdateEffect } from "react-use";
 
 import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 import { formatJson, getStreamName } from "components/connectorBuilder/utils";
-import { BuilderStreamTab } from "components/connectorBuilder__deprecated/types";
 import {
   FormControlFooter,
   FormLabel,
@@ -26,6 +25,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Input } from "components/ui/Input";
 import { ListBox } from "components/ui/ListBox";
 import { Option } from "components/ui/ListBox/Option";
+import { Message } from "components/ui/Message";
 
 import { RequestOptionInjectInto } from "core/api/types/ConnectorManifest";
 import { useConnectorBuilderPermission } from "services/connectorBuilder/ConnectorBuilderStateService";
@@ -34,6 +34,7 @@ import { BuilderDeclarativeOAuth } from "./BuilderDeclarativeOAuth";
 import { JinjaInput } from "./JinjaInput";
 import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
 import styles from "./overrides.module.scss";
+import { BuilderStreamTab, StreamId } from "../types";
 import { useStreamNames } from "../useStreamNames";
 
 export const ParentStreamSelector = ({ path, currentStreamName }: { path: string; currentStreamName?: string }) => {
@@ -473,7 +474,7 @@ export const JinjaBuilderField = ({
   );
 };
 
-export const StreamNameField = ({ path }: { path: string }) => {
+export const StreamNameField = ({ path, streamType }: { path: string; streamType: StreamId["type"] }) => {
   const { formatMessage } = useIntl();
   const { setValue } = useFormContext();
   const { streamNames, dynamicStreamNames } = useStreamNames();
@@ -510,7 +511,11 @@ export const StreamNameField = ({ path }: { path: string }) => {
           data-field-path={path}
           value={localValue}
           error={!!error}
-          placeholder={formatMessage({ id: "connectorBuilder.streamName.placeholder" })}
+          placeholder={
+            streamType === "dynamic_stream"
+              ? formatMessage({ id: "connectorBuilder.streamTemplateName.placeholder" })
+              : formatMessage({ id: "connectorBuilder.streamName.placeholder" })
+          }
           onChange={(e) => {
             const newValue = e.target.value;
             setLocalValue(newValue);
@@ -542,5 +547,15 @@ export const StreamNameField = ({ path }: { path: string }) => {
         )}
       </FlexContainer>
     </div>
+  );
+};
+
+export const BackoffStrategies = ({ path }: { path: string }) => {
+  const { formatMessage } = useIntl();
+  return (
+    <FlexContainer direction="column" gap="xl">
+      <Message text={formatMessage({ id: "connectorBuilder.errorHandlerWarning" })} type="warning" />
+      <SchemaFormControl path={path} />
+    </FlexContainer>
   );
 };

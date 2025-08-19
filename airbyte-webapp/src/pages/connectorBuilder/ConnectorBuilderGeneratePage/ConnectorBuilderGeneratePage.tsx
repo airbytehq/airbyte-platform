@@ -15,7 +15,6 @@ import { AssistWaiting } from "components/connectorBuilder/Builder/Assist/Assist
 import {
   DEFAULT_CONNECTOR_NAME,
   DEFAULT_JSON_MANIFEST_STREAM,
-  DEFAULT_JSON_MANIFEST_VALUES,
   DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM,
 } from "components/connectorBuilder/constants";
 import { Form, FormControl } from "components/forms";
@@ -82,13 +81,8 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
     createAndNavigate({ name: projectName, assistSessionId: undefined });
   }, [createAndNavigate, projectName]);
 
-  const isSchemaFormEnabled = useExperiment("connectorBuilder.schemaForm");
-
   const onSkip = useCallback(() => {
-    const manifest: DeclarativeComponentSchema = isSchemaFormEnabled
-      ? cloneDeep(DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM)
-      : cloneDeep(DEFAULT_JSON_MANIFEST_VALUES);
-    console.log("manifest", manifest);
+    const manifest: DeclarativeComponentSchema = cloneDeep(DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM);
     if (!manifest.metadata) {
       manifest.metadata = {};
     }
@@ -102,7 +96,6 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
     manifest.streams = [stream];
     createAndNavigate({ name: projectName, assistSessionId, manifest });
   }, [
-    isSchemaFormEnabled,
     submittedAssistValues?.docsUrl,
     submittedAssistValues?.openapiSpecUrl,
     submittedAssistValues?.firstStream,

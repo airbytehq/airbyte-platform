@@ -75,7 +75,7 @@ export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = (
           <SchemaFormControl
             path={dynamicStreamFieldPath("name")}
             overrideByPath={{
-              [dynamicStreamFieldPath("name")]: (path) => <StreamNameField path={path} />,
+              [dynamicStreamFieldPath("name")]: (path) => <StreamNameField path={path} streamType={streamId.type} />,
             }}
           />
           <Button variant="danger" onClick={handleDelete}>

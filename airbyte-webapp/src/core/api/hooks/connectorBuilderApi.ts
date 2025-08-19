@@ -1,69 +1,22 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 
-import {
-  DEFAULT_JSON_MANIFEST_VALUES,
-  DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM,
-} from "components/connectorBuilder/constants";
+import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "components/connectorBuilder/constants";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError } from "core/api";
-import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useExperiment } from "hooks/services/Experiment";
 
-import { readStream, resolveManifest, getHealthCheck } from "../generated/ConnectorBuilderClient";
+import { resolveManifest, getHealthCheck } from "../generated/ConnectorBuilderClient";
 import { KnownExceptionInfo } from "../generated/ConnectorBuilderClient.schemas";
-import {
-  ConnectorConfig,
-  ConnectorManifest,
-  ResolveManifestRequestBody,
-  ResolveManifest,
-  StreamRead,
-  StreamReadRequestBody,
-  HealthCheckRead,
-} from "../types/ConnectorBuilderClient";
+import { ConnectorManifest, HealthCheckRead } from "../types/ConnectorBuilderClient";
 import { DeclarativeComponentSchema } from "../types/ConnectorManifest";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
 const connectorBuilderKeys = {
   all: ["connectorBuilder"] as const,
-  read: (projectId: string, streamName: string) =>
-    [...connectorBuilderKeys.all, "read", { projectId, streamName }] as const,
-  list: (manifest: ConnectorManifest, config: ConnectorConfig) =>
-    [...connectorBuilderKeys.all, "list", { manifest, config }] as const,
-  template: ["template"] as const,
-  resolve: (manifest?: ConnectorManifest) => [...connectorBuilderKeys.all, "resolve", { manifest }] as const,
   resolveSuspense: (manifest?: ConnectorManifest) =>
     [...connectorBuilderKeys.all, "resolveSuspense", { manifest }] as const,
-};
-
-export const useBuilderReadStream = (
-  projectId: string,
-  params: StreamReadRequestBody,
-  onSuccess: (data: StreamRead) => void
-) => {
-  const requestOptions = useRequestOptions();
-
-  return useQuery(connectorBuilderKeys.read(projectId, params.stream), () => readStream(params, requestOptions), {
-    refetchOnWindowFocus: false,
-    enabled: false,
-    onSuccess,
-  });
-};
-
-export const useBuilderResolvedManifest = (params: ResolveManifestRequestBody, enabled = true) => {
-  const requestOptions = useRequestOptions();
-
-  return useQuery<ResolveManifest, HttpError<KnownExceptionInfo>>(
-    connectorBuilderKeys.resolve(params.manifest),
-    () => resolveManifest(params, requestOptions),
-    {
-      keepPreviousData: true,
-      cacheTime: 0,
-      retry: false,
-      enabled,
-    }
-  );
 };
 
 export const useBuilderResolveManifestQuery = () => {
@@ -75,14 +28,10 @@ export const useBuilderResolveManifestQuery = () => {
 
 export const useBuilderResolvedManifestSuspense = (manifest?: ConnectorManifest, projectId?: string) => {
   const resolveManifestQuery = useBuilderResolveManifestQuery();
-  const [advancedMode] = useLocalStorage("airbyte_connector-builder-advanced-mode", false);
-  const isSchemaFormEnabled = useExperiment("connectorBuilder.schemaForm");
 
   return useSuspenseQuery(connectorBuilderKeys.resolveSuspense(manifest), async () => {
     if (!manifest) {
-      return isSchemaFormEnabled && advancedMode
-        ? DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM
-        : DEFAULT_JSON_MANIFEST_VALUES;
+      return DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM;
     }
     try {
       return (await resolveManifestQuery(manifest, projectId)).manifest as DeclarativeComponentSchema;

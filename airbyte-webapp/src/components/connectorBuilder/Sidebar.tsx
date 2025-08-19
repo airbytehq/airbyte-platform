@@ -4,13 +4,10 @@ import { FormattedMessage } from "react-intl";
 
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 import { FlexContainer } from "components/ui/Flex";
-import { Switch } from "components/ui/Switch";
-import { Text } from "components/ui/Text";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderResolve } from "core/services/connectorBuilder/ConnectorBuilderResolveContext";
 import { FeatureItem, IfFeatureEnabled } from "core/services/features";
-import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BaseConnectorInfo } from "./BaseConnectorInfo";
@@ -26,7 +23,6 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<React.PropsWithChildren<SidebarProps>> = ({ className, yamlSelected, children }) => {
-  const [advancedMode, setAdvancedMode] = useLocalStorage("airbyte_connector-builder-advanced-mode", true);
   const analyticsService = useAnalyticsService();
   const { toggleUI, currentProject } = useConnectorBuilderFormState();
   const { isResolving } = useConnectorBuilderResolve();
@@ -73,26 +69,6 @@ export const Sidebar: React.FC<React.PropsWithChildren<SidebarProps>> = ({ class
 
       <FlexContainer direction="column" alignItems="stretch" gap="xl" className={styles.modeSpecificContent}>
         {children}
-      </FlexContainer>
-
-      <FlexContainer
-        direction="row"
-        alignItems="center"
-        gap="sm"
-        justifyContent="center"
-        data-testid="advanced-mode-toggle"
-      >
-        <Switch
-          size="sm"
-          checked={!advancedMode}
-          onChange={() => {
-            setAdvancedMode((prev) => !prev);
-            window.location.reload();
-          }}
-        />
-        <Text size="sm">
-          <FormattedMessage id="connectorBuilder.legacyMode" />
-        </Text>
       </FlexContainer>
     </FlexContainer>
   );

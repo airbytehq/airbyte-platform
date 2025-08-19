@@ -156,7 +156,9 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
           <SchemaFormControl
             path={getStreamFieldPath(streamId, "name")}
             overrideByPath={{
-              [getStreamFieldPath(streamId, "name")]: (path) => <StreamNameField path={path} />,
+              [getStreamFieldPath(streamId, "name")]: (path) => (
+                <StreamNameField path={path} streamType={streamId.type} />
+              ),
             }}
           />
 

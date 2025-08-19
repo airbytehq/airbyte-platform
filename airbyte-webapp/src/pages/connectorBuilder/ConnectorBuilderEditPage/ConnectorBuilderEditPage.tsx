@@ -13,6 +13,7 @@ import {
   DeclarativeOAuthWithClientId,
   GrantTypeSelector,
   JinjaBuilderField,
+  BackoffStrategies,
 } from "components/connectorBuilder/Builder/overrides";
 import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "components/connectorBuilder/constants";
 import { MenuBar } from "components/connectorBuilder/MenuBar";
@@ -143,6 +144,11 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
           fieldOverrides: {
             client_id: (path) => <DeclarativeOAuthWithClientId clientIdPath={path} key={path} />,
             grant_type: (path) => <GrantTypeSelector path={path} key={path} />,
+          },
+        },
+        DefaultErrorHandler: {
+          fieldOverrides: {
+            backoff_strategies: (path) => <BackoffStrategies path={path} key={path} />,
           },
         },
       }}
