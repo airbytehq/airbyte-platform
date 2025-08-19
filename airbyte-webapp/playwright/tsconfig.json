@@ -9,7 +9,7 @@
     "skipLibCheck": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "types": ["node", "playwright"],
+    "types": ["node"],
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {

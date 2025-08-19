@@ -54,7 +54,9 @@ const command = ["npx", "playwright", "test"];
 
 async function main() {
   try {
-    const options = optionator.parse(process.argv);
+    // Filter out '--' from arguments so optionator can parse options that come after it
+    const filteredArgs = process.argv.filter((arg) => arg !== "--");
+    const options = optionator.parse(filteredArgs);
 
     if (options.help) {
       console.log(optionator.generateHelp());
@@ -65,16 +67,22 @@ async function main() {
       command.push("--config=playwright.cloud-config.ts");
     }
 
-    // This ends up taking precedence over the serverHost option if both are provided.
-    // This is useful for running tests against a local webapp instance.
-    // For now, this just overrides the serverHost option, but once we begin adding tests that hit the API directly,
-    // we will need to split these into separate env vars in the playwright configs!
+    // Set environment variables for the test run
+    const envVars = [];
+
     if (options.webappUrl) {
-      command.unshift(`AIRBYTE_SERVER_HOST=${options.webappUrl}`);
+      envVars.push(`AIRBYTE_WEBAPP_URL=${options.webappUrl}`);
     }
+
     if (options.serverHost) {
-      command.unshift(`AIRBYTE_SERVER_HOST=${options.serverHost}`);
+      envVars.push(`AIRBYTE_SERVER_HOST=${options.serverHost}`);
     }
+
+    // Prepend environment variables to the command
+    if (envVars.length > 0) {
+      command.unshift(...envVars);
+    }
+
     if (options.headed) {
       command.push("--headed");
     }

@@ -15,7 +15,7 @@ This directory contains end-to-end (E2E) tests for the Airbyte webapp, using [Pl
 You can use the helper script to point the e2e tests against a specific server and webapp. For example, if you are running cloud locally and would like to run the cloud e2e tests against that, you can run:
 
 ```bash
-pnpm test -- --cloud --serverHost=https://local.airbyte.dev
+pnpm test -- --cloud --serverHost=https://local.airbyte.dev --webappUrl=https://localhost:3000
 ```
 
 > **Note:**  
@@ -33,7 +33,7 @@ pnpm test -- --cloud --serverHost=https://local.airbyte.dev
   Example: `https://frontend-dev-cloud.airbyte.com` or `https://local.airbyte.dev`
 
 - `--webappUrl <url>`  
-  Webapp environment to use.  
+  Webapp environment to use (ie, the baseURL for Playwright tests).
   Example: `https://localhost:3000` or `https://localhost:3001`
 
 - `--debug`  

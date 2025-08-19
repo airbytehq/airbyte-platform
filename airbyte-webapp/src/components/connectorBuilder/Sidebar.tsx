@@ -75,7 +75,13 @@ export const Sidebar: React.FC<React.PropsWithChildren<SidebarProps>> = ({ class
         {children}
       </FlexContainer>
 
-      <FlexContainer direction="row" alignItems="center" gap="sm" justifyContent="center">
+      <FlexContainer
+        direction="row"
+        alignItems="center"
+        gap="sm"
+        justifyContent="center"
+        data-testid="advanced-mode-toggle"
+      >
         <Switch
           size="sm"
           checked={!advancedMode}

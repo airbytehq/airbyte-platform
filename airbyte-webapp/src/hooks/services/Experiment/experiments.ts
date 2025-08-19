@@ -81,7 +81,7 @@ export const defaultExperimentValues: Experiments = {
   "connectorBuilder.declarativeOauth": true,
   "connectorBuilder.dynamicStreams": false,
   "connectorBuilder.generateConnectorFromParams": false,
-  "connectorBuilder.schemaForm": false,
+  "connectorBuilder.schemaForm": true,
   "embedded.operatorOnboarding": false,
   "embedded.operatorOnboarding.destinations": "ConnectorIds.Destinations.S3",
   "embedded.templateCreateButton": false,

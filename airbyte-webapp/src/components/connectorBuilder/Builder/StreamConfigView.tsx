@@ -780,7 +780,7 @@ const SchemaEditor = ({
             ? {
                 [schemaLoaderPath]: () => (
                   <div className={styles.autoSchemaContainer}>
-                    <Pre>{formatJson(schemaLoader.schema, true)}</Pre>
+                    <Pre data-testid="auto-import-schema-json">{formatJson(schemaLoader.schema, true)}</Pre>
                   </div>
                 ),
               }

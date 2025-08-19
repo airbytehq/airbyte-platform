@@ -3,7 +3,7 @@ import { FormattedMessage } from "react-intl";
 import styles from "./SchemaConflictMessage.module.scss";
 
 export const SchemaConflictMessage: React.FC<{ errors?: string[] }> = ({ errors }) => (
-  <>
+  <div data-testid="schema-conflict-message">
     <FormattedMessage id="connectorBuilder.differentSchemaDescription" />
     {errors && (
       <>
@@ -17,5 +17,5 @@ export const SchemaConflictMessage: React.FC<{ errors?: string[] }> = ({ errors 
         </ul>
       </>
     )}
-  </>
+  </div>
 );
