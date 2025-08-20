@@ -310,8 +310,7 @@ create table "public"."dataplane" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "tombstone" boolean not null default false,
   "service_account_id" uuid,
-  constraint "dataplane_pkey" primary key ("id"),
-  constraint "dataplane_dataplane_group_id_name_key" unique ("dataplane_group_id", "name")
+  constraint "dataplane_pkey" primary key ("id")
 );
 create table "public"."dataplane_client_credentials" (
   "id" uuid not null,

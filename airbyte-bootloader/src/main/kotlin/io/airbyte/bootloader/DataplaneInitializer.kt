@@ -121,7 +121,8 @@ class DataplaneInitializer(
           Dataplane().apply {
             id = UUID.randomUUID()
             dataplaneGroupId = group.id
-            name = group.name
+            // Append the UUID to ensure names are unique.
+            name = group.name + UUID.randomUUID()
             enabled = true
           },
         instanceScope = true,
