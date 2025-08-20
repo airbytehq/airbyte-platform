@@ -48,9 +48,11 @@ data class JobInfo(
   val organizationId: UUID,
   val sourceId: UUID,
   val sourceDefinitionId: UUID,
+  val sourceImageName: String,
   val sourceImageTag: String,
   val destinationId: UUID,
   val destinationDefinitionId: UUID,
+  val destinationImageName: String,
   val destinationImageTag: String,
   val jobType: String,
   val jobOutcome: String,
@@ -232,6 +234,8 @@ class JobObservabilityService(
     val currentJobMetrics = currentJob.toJobMetrics()
     val jobScore = outliers.evaluate(jobHistory.map { it.toJobMetrics() }, currentJobMetrics)
     val jobEvaluations = evaluateJobOutliers(jobScore)
+
+    val (sourceImage, destImage) = getImageNames(currentJob.jobId)
     return JobInfo(
       jobId = currentJob.jobId,
       connectionId = currentJob.connectionId,
@@ -239,9 +243,11 @@ class JobObservabilityService(
       organizationId = currentJob.organizationId,
       sourceId = currentJob.sourceId,
       sourceDefinitionId = currentJob.sourceDefinitionId,
+      sourceImageName = sourceImage,
       sourceImageTag = currentJob.sourceImageTag,
       destinationId = currentJob.destinationId,
       destinationDefinitionId = currentJob.destinationDefinitionId,
+      destinationImageName = destImage,
       destinationImageTag = currentJob.destinationImageTag,
       jobType = currentJob.jobType,
       jobOutcome = currentJob.status,
@@ -279,7 +285,9 @@ class JobObservabilityService(
       MetricAttribute(MetricTags.CONNECTION_ID, outlierOutcome.job.connectionId.toString()),
       MetricAttribute(MetricTags.WORKSPACE_ID, outlierOutcome.job.workspaceId.toString()),
       MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, outlierOutcome.job.sourceDefinitionId.toString()),
+      MetricAttribute(MetricTags.SOURCE_IMAGE, outlierOutcome.job.sourceImageName),
       MetricAttribute(MetricTags.DESTINATION_DEFINITION_ID, outlierOutcome.job.destinationDefinitionId.toString()),
+      MetricAttribute(MetricTags.DESTINATION_IMAGE, outlierOutcome.job.destinationImageName),
       MetricAttribute(MetricTags.IS_CORRECTNESS_OUTLIER, (outlierOutcome.numberOfOutlierStreams > 0).toString()),
       MetricAttribute(MetricTags.IS_FRESHNESS_OUTLIER, outlierOutcome.job.isOutlier.toString()),
     )
@@ -333,6 +341,19 @@ class JobObservabilityService(
       destinationImageTag = destVersion.dockerImageTag,
       job = jobRead.job,
       attempts = jobRead.attempts.map { it.attempt },
+    )
+  }
+
+  /**
+   * returns (souceImageName, destinationImageName) for a jobId
+   */
+  private fun getImageNames(jobId: Long): Pair<String, String> {
+    val job = jobPersistence.getJob(jobId)
+    val sourceVersion = job.config.getSourceVersionId()?.let { actorDefinitionService.getActorDefinitionVersion(it) }
+    val destVersion = actorDefinitionService.getActorDefinitionVersion(job.config.getDestinationVersionId())
+    return Pair(
+      sourceVersion?.dockerRepository ?: "empty-source",
+      destVersion.dockerRepository,
     )
   }
 

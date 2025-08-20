@@ -55,9 +55,11 @@ class JobObservabilityReportingService(
       MetricTags.JOB_ID to tags.jobId.toString(),
       MetricTags.SOURCE_ID to tags.sourceId.toString(),
       MetricTags.SOURCE_DEFINITION_ID to tags.sourceDefinitionId.toString(),
+      MetricTags.SOURCE_IMAGE to tags.sourceImageName,
       MetricTags.SOURCE_IMAGE_TAG to tags.sourceImageTag,
       MetricTags.DESTINATION_ID to tags.destinationId.toString(),
       MetricTags.DESTINATION_DEFINITION_ID to tags.destinationDefinitionId.toString(),
+      MetricTags.DESTINATION_IMAGE to tags.destinationImageName,
       MetricTags.DESTINATION_IMAGE_TAG to tags.destinationImageTag,
       // Convenience URLs
       "connection_url" to connectionUrl,
