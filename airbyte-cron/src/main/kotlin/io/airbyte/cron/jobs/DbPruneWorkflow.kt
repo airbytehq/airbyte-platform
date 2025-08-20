@@ -37,7 +37,12 @@ class DbPruneWorkflow(
   }
 
   @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
-  @Scheduled(cron = "0 0 22 * * *") // Daily at 10:00 PM
+  // todo (cgardens) - We have a big back log to run through which takes a long time,
+  //  so we'll never get through it, because each deploy interrupts it. So for now,
+  //  kick this off as soon as we start the service each time. Once we work through
+  //  the backlog, delete the fixed rate and use cron instead.
+  @Scheduled(fixedRate = "1d")
+  //  @Scheduled(cron = "0 0 22 * * *", zoneId = "America/Los_Angeles") // Daily at 10:00 PM
   @Synchronized
   fun pruneOldJobs() {
     val startTime = OffsetDateTime.now(ZoneOffset.UTC)
