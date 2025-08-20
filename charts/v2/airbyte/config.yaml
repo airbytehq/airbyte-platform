@@ -247,10 +247,12 @@ auth.security:
     - env: AB_COOKIE_SECURE
       key: cookieSecureSetting
       defaultValue: true
+      includeIf: (eq (include "airbyte.common.auth.enabled" .) "true")
 
     - env: AB_COOKIE_SAME_SITE
       key: cookieSameSiteSetting
-      defaultValue: strict
+      defaultValue: Strict
+      includeIf: (eq (include "airbyte.common.auth.enabled" .) "true")
 
 aws:
   keyBasePath: global.aws
@@ -1678,4 +1680,3 @@ workloads.queues:
     - env: DATA_SYNC_TASK_QUEUES
       key: sync
       valueExp: join " " .Values.global.workloads.queues.sync
-

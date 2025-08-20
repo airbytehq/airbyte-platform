@@ -898,7 +898,7 @@ Renders the auth.security.cookieSecureSetting environment variable
 Renders the global.auth.security.cookieSameSiteSetting value
 */}}
 {{- define "airbyte.auth.security.cookieSameSiteSetting" }}
-    {{- .Values.global.auth.security.cookieSameSiteSetting | default "strict" }}
+    {{- .Values.global.auth.security.cookieSameSiteSetting | default "Strict" }}
 {{- end }}
 
 {{/*
@@ -916,14 +916,22 @@ Renders the auth.security.cookieSameSiteSetting environment variable
 Renders the set of all auth.security environment variables
 */}}
 {{- define "airbyte.auth.security.envs" }}
+{{- if (eq (include "airbyte.common.auth.enabled" .) "true") }}
 {{- include "airbyte.auth.security.cookieSecureSetting.env" . }}
+{{- end }}
+{{- if (eq (include "airbyte.common.auth.enabled" .) "true") }}
 {{- include "airbyte.auth.security.cookieSameSiteSetting.env" . }}
+{{- end }}
 {{- end }}
 
 {{/*
 Renders the set of all auth.security config map variables
 */}}
 {{- define "airbyte.auth.security.configVars" }}
+{{- if (eq (include "airbyte.common.auth.enabled" .) "true") }}
 AB_COOKIE_SECURE: {{ include "airbyte.auth.security.cookieSecureSetting" . | quote }}
+{{- end }}
+{{- if (eq (include "airbyte.common.auth.enabled" .) "true") }}
 AB_COOKIE_SAME_SITE: {{ include "airbyte.auth.security.cookieSameSiteSetting" . | quote }}
+{{- end }}
 {{- end }}
