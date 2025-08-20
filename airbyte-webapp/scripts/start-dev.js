@@ -69,6 +69,7 @@ const choices = Object.entries(groupedEnvs).flatMap(([group, entries]) => {
 });
 
 async function preStart() {
+  await spawn("./scripts/clean-generated.sh", [], { stdio: "inherit" });
   await spawn("pnpm", ["generate-client"], { stdio: "inherit" });
 }
 
