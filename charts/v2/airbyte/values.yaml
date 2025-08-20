@@ -213,6 +213,7 @@ global:
 
     #googleSecretManager:
     #  projectId: <project-id>
+    #  region: "" ## e.g. us-central1
     #  credentialsSecretKey: gcp.json
 
     #azureKeyVault:
