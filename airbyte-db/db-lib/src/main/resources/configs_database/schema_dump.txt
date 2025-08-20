@@ -434,11 +434,19 @@ create table "public"."orchestration_task" (
   "id" uuid not null,
   "orchestration_id" uuid not null,
   "orchestration_version_id" uuid not null,
-  "type" varchar(2147483647) not null,
-  "task_definition_id" uuid not null,
+  "type" orchestration_task_type not null,
+  "task_scope_id" uuid not null,
   "depends_on" uuid[] not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "orchestration_task_pkey" primary key ("id")
+);
+create table "public"."orchestration_task_run" (
+  "id" uuid not null,
+  "orchestration_run_id" uuid not null,
+  "orchestration_task_run_status" "public"."orchestration_task_run_status" not null,
+  "task_id" uuid not null,
+  "task_ref_id" varchar(2147483647) not null,
+  constraint "orchestration_task_run_pkey" primary key ("id")
 );
 create table "public"."organization" (
   "id" uuid not null,
@@ -779,6 +787,9 @@ create index "orchestration_workspace_id_idx" on "public"."orchestration"("works
 create index "orchestration_run_orchestration_id_idx" on "public"."orchestration_run"("orchestration_id" asc);
 create index "orchestration_run_status_idx" on "public"."orchestration_run"("orchestration_run_status" asc);
 create index "orchestration_task_orchestration_id_idx" on "public"."orchestration_task"("orchestration_id" asc);
+create index "orchestration_task_run_orchestration_run_id_idx" on "public"."orchestration_task_run"("orchestration_run_id" asc);
+create index "orchestration_task_run_status_idx" on "public"."orchestration_task_run"("orchestration_task_run_status" asc);
+create index "orchestration_task_run_task_id_idx" on "public"."orchestration_task_run"("task_id" asc);
 create index "organization_email_domain_email_domain_idx" on "public"."organization_email_domain"("email_domain" asc);
 create index "organization_email_domain_organization_id_idx" on "public"."organization_email_domain"("organization_id" asc);
 create index "organization_payment_config_grace_period_end_at_idx" on "public"."organization_payment_config"("grace_period_end_at" asc);
@@ -867,6 +878,7 @@ alter table "public"."operation" add constraint "operation_workspace_id_fkey" fo
 alter table "public"."orchestration" add constraint "orchestration_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."orchestration_run" add constraint "orchestration_run_orchestration_id_orchestration_version_i_fkey" foreign key ("orchestration_id", "orchestration_version_id") references "public"."orchestration" ("id", "version_id");
 alter table "public"."orchestration_task" add constraint "orchestration_task_orchestration_id_orchestration_version__fkey" foreign key ("orchestration_id", "orchestration_version_id") references "public"."orchestration" ("id", "version_id");
+alter table "public"."orchestration_task_run" add constraint "orchestration_task_run_orchestration_run_id_fkey" foreign key ("orchestration_run_id") references "public"."orchestration_run" ("id");
 alter table "public"."organization_email_domain" add constraint "organization_email_domain_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."organization_payment_config" add constraint "organization_payment_config_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."partial_user_config" add constraint "partial_user_config_actor_id_fkey" foreign key ("actor_id") references "public"."actor" ("id");
