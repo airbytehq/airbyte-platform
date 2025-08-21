@@ -131,7 +131,7 @@ class WorkloadService(
               logger.info {
                 "Workload $workloadId is already cancelled. Cancelling an already cancelled workload is a noop"
               }
-            else -> logger.error { "Cancelling workload $workloadId failed to update its status, status is ${w.status}" }
+            else -> logger.error { "Failed to update workload ($workloadId) to cancelled. Current status is ${w.status}." }
           }
         }.orElseThrow { NotFoundException("Workload $workloadId not found") }
     }
@@ -158,7 +158,7 @@ class WorkloadService(
               logger.info {
                 "Workload $workloadId is already failed. Failing an already failed workload is a noop"
               }
-            else -> logger.error { "Failed workload $workloadId failed to update its status, status is ${w.status}" }
+            else -> logger.error { "Failed to update workload ($workloadId) to failed. Current status is ${w.status}." }
           }
         }.orElseThrow { NotFoundException("Workload $workloadId not found") }
     }
@@ -180,7 +180,7 @@ class WorkloadService(
             WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
               "Can't set a workload status to running on a workload that hasn't been claimed",
             )
-            else -> logger.error { "Failed workload $workloadId failed to update its status, status is ${w.status}" }
+            else -> logger.error { "Failed to update workload ($workloadId) to launched. Current status is ${w.status}." }
           }
         }.orElseThrow { NotFoundException("Workload $workloadId not found") }
     }
@@ -200,7 +200,7 @@ class WorkloadService(
               "Heartbeat a workload in a terminal state (${w.status})",
             )
             WorkloadStatus.PENDING -> throw InvalidStatusTransitionException("Heartbeat a non claimed workload")
-            else -> logger.error { "Failed workload $workloadId failed to update its status, status is ${w.status}" }
+            else -> logger.error { "Failed to heartbeat workload ($workloadId). Current status is ${w.status}." }
           }
         }.orElseThrow { NotFoundException("Workload $workloadId not found") }
     }
@@ -222,7 +222,7 @@ class WorkloadService(
             WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
               "Can't set a workload status to running on a workload that hasn't been claimed",
             )
-            else -> logger.error { "Failed workload $workloadId failed to update its status, status is ${w.status}" }
+            else -> logger.error { "Failed to update workload ($workloadId) to running. Current status is ${w.status}." }
           }
         }.orElseThrow { NotFoundException("Workload $workloadId not found") }
     }
@@ -247,7 +247,7 @@ class WorkloadService(
                 "Workload $workloadId is already successful. Succeeding an already successful workload is a noop"
               }
 
-            else -> logger.error { "Failed workload $workloadId failed to update its status, status is ${w.status}" }
+            else -> logger.error { "Failed to update workload ($workloadId) to success. Current status is ${w.status}." }
           }
         }.orElseThrow { NotFoundException("Workload $workloadId not found") }
     }
