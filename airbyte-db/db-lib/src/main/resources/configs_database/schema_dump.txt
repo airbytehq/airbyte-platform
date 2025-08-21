@@ -414,7 +414,7 @@ create table "public"."orchestration" (
   "version_id" uuid not null,
   "workspace_id" uuid not null,
   "name" varchar(2147483647) not null,
-  "orchestration_schedule" jsonb,
+  "schedule" jsonb,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "tombstone" boolean not null default false,
@@ -424,7 +424,7 @@ create table "public"."orchestration_run" (
   "id" uuid not null,
   "orchestration_id" uuid not null,
   "orchestration_version_id" uuid not null,
-  "orchestration_run_status" "public"."orchestration_run_status" not null,
+  "status" "public"."orchestration_run_status" not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "orchestration_run_pkey" primary key ("id")
@@ -434,15 +434,16 @@ create table "public"."orchestration_task" (
   "orchestration_id" uuid not null,
   "orchestration_version_id" uuid not null,
   "type" orchestration_task_type not null,
-  "task_scope_id" uuid not null,
-  "depends_on" uuid[] not null,
+  "scope_id" uuid not null,
+  "depends_on" varchar(2147483647)[] not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "name" varchar(2147483647) not null,
   constraint "orchestration_task_pkey" primary key ("id")
 );
 create table "public"."orchestration_task_run" (
   "id" uuid not null,
   "orchestration_run_id" uuid not null,
-  "orchestration_task_run_status" "public"."orchestration_task_run_status" not null,
+  "status" "public"."orchestration_task_run_status" not null,
   "task_id" uuid not null,
   "task_ref_id" varchar(2147483647) not null,
   constraint "orchestration_task_run_pkey" primary key ("id")
@@ -784,10 +785,10 @@ where ((stream_namespace IS NULL));
 create index "orchestration_name_idx" on "public"."orchestration"("name" asc);
 create index "orchestration_workspace_id_idx" on "public"."orchestration"("workspace_id" asc);
 create index "orchestration_run_orchestration_id_idx" on "public"."orchestration_run"("orchestration_id" asc);
-create index "orchestration_run_status_idx" on "public"."orchestration_run"("orchestration_run_status" asc);
-create index "orchestration_task_orchestration_id_idx" on "public"."orchestration_task"("orchestration_id" asc);
+create index "orchestration_run_status_idx" on "public"."orchestration_run"("status" asc);
+create unique index "name_unique_key" on "public"."orchestration_task"("orchestration_id" asc, "orchestration_version_id" asc, "name" asc);
 create index "orchestration_task_run_orchestration_run_id_idx" on "public"."orchestration_task_run"("orchestration_run_id" asc);
-create index "orchestration_task_run_status_idx" on "public"."orchestration_task_run"("orchestration_task_run_status" asc);
+create index "orchestration_task_run_status_idx" on "public"."orchestration_task_run"("status" asc);
 create index "orchestration_task_run_task_id_idx" on "public"."orchestration_task_run"("task_id" asc);
 create index "organization_email_domain_email_domain_idx" on "public"."organization_email_domain"("email_domain" asc);
 create index "organization_email_domain_organization_id_idx" on "public"."organization_email_domain"("organization_id" asc);
