@@ -7,7 +7,6 @@ package io.airbyte.workers.config
 import io.airbyte.featureflag.DestinationTimeoutEnabled
 import io.airbyte.featureflag.DestinationTimeoutSeconds
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum
-import io.airbyte.featureflag.FieldSelectionEnabled
 import io.airbyte.featureflag.LogConnectorMessages
 import io.airbyte.featureflag.LogStateMsgs
 import io.airbyte.featureflag.PrintLongRecordPks
@@ -49,7 +48,6 @@ class ApplicationBeanFactory {
         DestinationTimeoutEnabled,
         DestinationTimeoutSeconds,
         FailSyncOnInvalidChecksum,
-        FieldSelectionEnabled,
         LogConnectorMessages,
         LogStateMsgs,
         PrintLongRecordPks,

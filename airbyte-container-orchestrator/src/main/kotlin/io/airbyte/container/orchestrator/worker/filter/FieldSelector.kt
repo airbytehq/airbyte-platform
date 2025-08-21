@@ -10,7 +10,6 @@ import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.container.orchestrator.worker.RecordSchemaValidator
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.container.orchestrator.worker.util.ReplicationMetricReporter
-import io.airbyte.featureflag.FieldSelectionEnabled
 import io.airbyte.featureflag.RemoveValidationLimit
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteMessage
@@ -54,9 +53,6 @@ class FieldSelector(
   replicationInput: ReplicationInput,
   replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
 ) {
-  private val fieldSelectionEnabled: Boolean =
-    replicationInput.workspaceId != null &&
-      replicationInputFeatureFlagReader.read(FieldSelectionEnabled)
   private val removeValidationLimit: Boolean =
     replicationInput.workspaceId != null &&
       replicationInputFeatureFlagReader.read(RemoveValidationLimit)
@@ -75,9 +71,7 @@ class FieldSelector(
    * Initialize the FieldSelector instance with the fields from the catalog.
    */
   fun populateFields(catalog: ConfiguredAirbyteCatalog) {
-    if (fieldSelectionEnabled) {
-      populatedStreamToSelectedFields(catalog)
-    }
+    populatedStreamToSelectedFields(catalog)
     populateStreamToAllFields(catalog)
   }
 
@@ -101,10 +95,6 @@ class FieldSelector(
    */
   @Throws(RuntimeException::class)
   fun filterSelectedFields(airbyteMessage: AirbyteMessage) {
-    if (!fieldSelectionEnabled) {
-      return
-    }
-
     val record = airbyteMessage.record
 
     if (record == null) {

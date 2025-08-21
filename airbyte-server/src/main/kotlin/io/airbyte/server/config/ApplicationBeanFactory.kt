@@ -34,7 +34,6 @@ import io.airbyte.featureflag.DestinationTimeoutEnabled
 import io.airbyte.featureflag.DestinationTimeoutSeconds
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.FieldSelectionEnabled
 import io.airbyte.featureflag.Flag
 import io.airbyte.featureflag.LogConnectorMessages
 import io.airbyte.featureflag.LogStateMsgs
@@ -252,7 +251,6 @@ class ApplicationBeanFactory {
         DestinationTimeoutEnabled,
         DestinationTimeoutSeconds,
         FailSyncOnInvalidChecksum,
-        FieldSelectionEnabled,
         LogConnectorMessages,
         LogStateMsgs,
         PrintLongRecordPks,

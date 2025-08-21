@@ -30,7 +30,6 @@ import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.util.ClosableChannelQueue
 import io.airbyte.container.orchestrator.worker.util.ReplicationMetricReporter
-import io.airbyte.featureflag.FieldSelectionEnabled
 import io.airbyte.featureflag.RemoveValidationLimit
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
@@ -153,7 +152,6 @@ class ReplicationWorkerPortedTests {
     replicationMetricReporter = ReplicationMetricReporter(metricClient, replicationInput)
     replicationInputFeatureFlagReader =
       mockk {
-        every { read(FieldSelectionEnabled) } returns false
         every { read(RemoveValidationLimit) } returns false
       }
     replicationAirbyteMessageEventPublishingHelper = mockk(relaxed = true)
@@ -391,8 +389,6 @@ class ReplicationWorkerPortedTests {
 
   @Test
   fun `field selection enabled filters extra fields`() {
-    every { replicationInputFeatureFlagReader.read(FieldSelectionEnabled) } returns true
-
     val recordWithExtraFields =
       Jsons.clone(RECORD_MESSAGE1).apply {
         (this.record.data as ObjectNode).put("AnUnexpectedField", "SomeValue")
