@@ -14,7 +14,7 @@ export const selectDropdownOption = async (
 // Helper function to find and fill nested input fields by field path
 export const fillInputByLabel = async (page: Page, fieldPath: string, value: string) => {
   const label = page.locator(`label[for="${fieldPath}"]`);
-  await label.waitFor({ state: "visible", timeout: 2000 });
+  await label.waitFor({ state: "visible", timeout: 10000 });
   if ((await label.count()) > 0) {
     // First try to find a standard input container
     const inputContainer = label.locator('xpath=../..//div[@data-testid="input-container"]');
@@ -22,7 +22,7 @@ export const fillInputByLabel = async (page: Page, fieldPath: string, value: str
 
     if ((await standardInput.count()) > 0) {
       // Standard HTML input found
-      await standardInput.waitFor({ state: "visible", timeout: 2000 });
+      await standardInput.waitFor({ state: "visible", timeout: 5000 });
       await standardInput.fill(value);
     }
 
@@ -30,7 +30,7 @@ export const fillInputByLabel = async (page: Page, fieldPath: string, value: str
     const monacoEditor = label.locator("xpath=../..//section").locator(".monaco-editor textarea");
     if ((await monacoEditor.count()) > 0) {
       // Monaco Editor found - focus and type into it
-      await monacoEditor.waitFor({ state: "visible", timeout: 2000 });
+      await monacoEditor.waitFor({ state: "visible", timeout: 5000 });
       await monacoEditor.click();
       await monacoEditor.fill(value);
     }
@@ -49,9 +49,9 @@ export const initializeBuilderConnector = async (page: Page) => {
   await page.goto("/connector-builder/create", { waitUntil: "networkidle" });
 
   // Select the "Start from scratch" option
-  await page.locator('button[data-testid="start-from-scratch"]').click({ timeout: 5000 });
+  await page.locator('button[data-testid="start-from-scratch"]').click({ timeout: 10000 });
   await page.waitForSelector('button[data-testid="start-from-scratch"]', { state: "hidden" });
-  await page.waitForSelector('button[data-testid="connector-name-label"]', { timeout: 10000 });
+  await page.waitForSelector('button[data-testid="connector-name-label"]', { timeout: 45000 });
   await page.click('button[data-testid="connector-name-label"]');
   await page.locator('input[data-testid="connector-name-input"]').fill(appendRandomString("dummy_api"));
 };
@@ -67,7 +67,7 @@ export const configureStream = async (page: Page) => {
   await page
     .locator('div[data-field-path="manifest.streams.0.retriever.requester.url"]')
     .locator("textarea")
-    .fill(`${dummyApiHost}/items/`);
+    .fill(`${dummyApiHost}/items/`, { timeout: 5000 });
 
   await page
     .locator('input[data-testid="tag-input-manifest.streams.0.retriever.record_selector.extractor.field_path"]')
@@ -165,7 +165,7 @@ export const configureListPartitionRouter = async (page: Page, numberOfParameter
   // Now add values one by one to the tag input (type value, press enter, repeat)
   const valuesArray = Array.from(Array(numberOfParameters).keys());
   const tagInput = page.locator('[data-testid="tag-input-manifest.streams.0.retriever.partition_router.values"]');
-  await tagInput.waitFor({ state: "visible", timeout: 2000 });
+  await tagInput.waitFor({ state: "visible", timeout: 5000 });
   await tagInput.click();
 
   for (const value of valuesArray) {

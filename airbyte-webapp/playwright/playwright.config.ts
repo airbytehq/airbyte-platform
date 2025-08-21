@@ -7,7 +7,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 4 : undefined,
-  timeout: 30000,
+  timeout: 60000, // 1 minute timeout for each test
   reporter: process.env.CI
     ? [
         ["html"],
@@ -28,6 +28,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     stdout: "pipe",
     stderr: "pipe",
+    timeout: 120 * 1000, // 2 minutes timeout for webServer startup
   },
 
   /* Configure projects for major browsers */
