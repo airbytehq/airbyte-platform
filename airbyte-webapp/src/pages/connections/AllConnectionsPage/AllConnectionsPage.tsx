@@ -74,7 +74,6 @@ export const AllConnectionsPage: React.FC = () => {
     () => connectionListQuery.data?.pages.flatMap((page) => page.connections) ?? [],
     [connectionListQuery.data?.pages]
   );
-  const hasConnections = connections.length > 0;
   const isAllConnectionsStatusEnabled = useExperiment("connections.connectionsStatusesEnabled");
 
   const onCreateConnection = () => {
@@ -103,19 +102,22 @@ export const AllConnectionsPage: React.FC = () => {
     return () => closeDrawer();
   }, [closeDrawer]);
 
-  const anyActiveFilters: boolean =
-    tagFilters.length > 0 ||
-    !!filterValues.search ||
-    !!filterValues.status ||
-    !!filterValues.state ||
-    !!filterValues.source ||
-    !!filterValues.destination;
+  // This query is only used to determine if the workspace's total connection count is > 0
+  const connectionCountQuery = useConnectionList({
+    pageSize: 1,
+  });
+  const hasAnyConnections =
+    connectionCountQuery.data?.pages.length && connectionCountQuery.data.pages[0].connections.length > 0;
+
+  if (connectionCountQuery.isLoading) {
+    return <LoadingPage />;
+  }
 
   return (
     <Suspense fallback={<LoadingPage />}>
       <>
         <HeadTitle titles={[{ id: "sidebar.connections" }]} />
-        {anyActiveFilters || hasConnections || connectionListQuery.isLoading ? (
+        {hasAnyConnections ? (
           <PageGridContainer>
             <PageHeader
               className={styles.pageHeader}

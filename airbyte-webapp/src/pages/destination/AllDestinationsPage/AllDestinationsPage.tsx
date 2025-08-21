@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Navigate, useNavigate } from "react-router-dom";
 
+import { LoadingPage } from "components";
 import { statusFilterOptions } from "components/EntityTable/utils";
 import { HeadTitle } from "components/HeadTitle";
 import { Box } from "components/ui/Box";
@@ -72,7 +73,16 @@ export const AllDestinationsPage: React.FC = () => {
 
   const anyFiltersActive: boolean = search.length > 0 || status !== null;
 
-  if (!query.isLoading && !anyFiltersActive && infiniteDestinations.destinations.length === 0) {
+  // This query is only used to check if the workspace has any destinations at all
+  const destinationCountQuery = useDestinationList({ pageSize: 1 });
+  const hasAnyDestinations =
+    destinationCountQuery.data?.pages.length && destinationCountQuery.data.pages[0].destinations.length > 0;
+
+  if (destinationCountQuery.isLoading) {
+    return <LoadingPage />;
+  }
+
+  if (!hasAnyDestinations) {
     return <Navigate to={DestinationPaths.SelectDestinationNew} />;
   }
 

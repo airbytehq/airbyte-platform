@@ -35,12 +35,23 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 export const sourcesKeys = {
   all: [SCOPE_WORKSPACE, "sources"] as const,
   lists: () => [...sourcesKeys.all, "list"] as const,
-  list: (filters: ActorListFilters = {}, sortKey?: ActorListSortKey) =>
+  list: ({
+    pageSize,
+    filters = {},
+    sortKey,
+  }: {
+    pageSize?: number;
+    filters?: ActorListFilters;
+    sortKey?: ActorListSortKey;
+  } = {}) =>
     [
       ...sourcesKeys.lists(),
-      `searchTerm:${filters.searchTerm ?? ""}`,
-      `states:${filters.states && filters.states.length > 0 ? filters.states.join(",") : ""}`,
-      `sortKey:${sortKey ?? ""}`,
+      {
+        searchTerm: filters.searchTerm ?? "",
+        states: filters.states && filters.states.length > 0 ? filters.states.join(",") : "",
+        sortKey: sortKey ?? "",
+        pageSize,
+      },
     ] as const,
   detail: (sourceId: string) => [...sourcesKeys.all, "details", sourceId] as const,
   discoverSchema: (sourceId: string) => [...sourcesKeys.all, "discoverSchema", sourceId] as const,
@@ -67,7 +78,7 @@ export const useSourceList = ({
   const workspaceId = useCurrentWorkspaceId();
 
   return useInfiniteQuery({
-    queryKey: sourcesKeys.list(filters, sortKey),
+    queryKey: sourcesKeys.list({ pageSize, filters, sortKey }),
     queryFn: async ({ pageParam: cursor }) => {
       return listSourcesForWorkspace({ workspaceId, pageSize, cursor, filters, sortKey }, requestOptions);
     },
@@ -129,7 +140,7 @@ export const useCreateSource = () => {
     },
     {
       onSuccess: () => {
-        queryClient.invalidateQueries(sourcesKeys.list());
+        queryClient.resetQueries(sourcesKeys.lists());
       },
       onError,
     }

@@ -32,12 +32,23 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 export const destinationsKeys = {
   all: [SCOPE_WORKSPACE, "destinations"] as const,
   lists: () => [...destinationsKeys.all, "list"] as const,
-  list: (filters: ActorListFilters = {}, sortKey?: ActorListSortKey) =>
+  list: ({
+    pageSize,
+    filters = {},
+    sortKey,
+  }: {
+    pageSize?: number;
+    filters?: ActorListFilters;
+    sortKey?: ActorListSortKey;
+  } = {}) =>
     [
       ...destinationsKeys.lists(),
-      `searchTerm:${filters.searchTerm ?? ""}`,
-      `states:${filters.states && filters.states.length > 0 ? filters.states.join(",") : ""}`,
-      `sortKey:${sortKey ?? ""}`,
+      {
+        searchTerm: filters.searchTerm ?? "",
+        states: filters.states && filters.states.length > 0 ? filters.states.join(",") : "",
+        sortKey: sortKey ?? "",
+        pageSize,
+      },
     ] as const,
   detail: (destinationId: string) => [...destinationsKeys.all, "details", destinationId] as const,
   discover: (destinationId: string) => [...destinationsKeys.all, "discover", destinationId] as const,
@@ -66,7 +77,7 @@ export const useDestinationList = ({
   const workspaceId = useCurrentWorkspaceId();
 
   return useInfiniteQuery({
-    queryKey: destinationsKeys.list(filters, sortKey),
+    queryKey: destinationsKeys.list({ pageSize, filters, sortKey }),
     queryFn: async ({ pageParam: cursor }) => {
       return listDestinationsForWorkspace({ workspaceId, pageSize, cursor, filters, sortKey }, requestOptions);
     },
@@ -126,7 +137,7 @@ export const useCreateDestination = () => {
     },
     {
       onSuccess: () => {
-        queryClient.invalidateQueries(destinationsKeys.lists());
+        queryClient.resetQueries(destinationsKeys.lists());
       },
       onError,
     }

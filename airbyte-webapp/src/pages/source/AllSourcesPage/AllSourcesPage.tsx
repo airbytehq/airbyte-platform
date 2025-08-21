@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Navigate, useNavigate } from "react-router-dom";
 
+import { LoadingPage } from "components";
 import { statusFilterOptions } from "components/EntityTable/utils";
 import { HeadTitle } from "components/HeadTitle";
 import { Box } from "components/ui/Box";
@@ -71,7 +72,15 @@ export const AllSourcesPage: React.FC = () => {
 
   const anyFiltersActive: boolean = search.length > 0 || status !== null;
 
-  if (!query.isLoading && !anyFiltersActive && infiniteSources.sources.length === 0) {
+  // This query is only used to check if the workspace has any sources at all
+  const sourceCountQuery = useSourceList({ pageSize: 1 });
+  const hasAnySources = sourceCountQuery.data?.pages.length && sourceCountQuery.data.pages[0].sources.length > 0;
+
+  if (sourceCountQuery.isLoading) {
+    return <LoadingPage />;
+  }
+
+  if (!hasAnySources) {
     return <Navigate to={SourcePaths.SelectSourceNew} />;
   }
 

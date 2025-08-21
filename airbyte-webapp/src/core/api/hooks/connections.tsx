@@ -371,17 +371,8 @@ export const useCreateConnection = () => {
       return response;
     },
     {
-      onSuccess: (data) => {
-        queryClient.setQueryData(
-          connectionsKeys.lists(),
-          (connectionList: WebBackendConnectionReadList | undefined) => ({
-            ...connectionList,
-            // TODO: not sure this is correct, as we would need to place the new connection in the right place in the
-            // list. Might be easier to just invalidate the query
-            connections: [{ ...(data as WebBackendConnectionListItem) }, ...(connectionList?.connections ?? [])],
-          })
-        );
-
+      onSuccess: () => {
+        queryClient.resetQueries({ queryKey: connectionsKeys.lists() });
         invalidateWorkspaceSummary();
       },
     }
