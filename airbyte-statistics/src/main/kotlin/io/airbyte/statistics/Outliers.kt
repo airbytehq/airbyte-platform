@@ -9,15 +9,14 @@ import org.jetbrains.kotlinx.dataframe.api.mean
 import org.jetbrains.kotlinx.dataframe.api.std
 import org.jetbrains.kotlinx.dataframe.api.toDataFrame
 
-/** Output of the outlier detection.
- *
- * isOutlier is the decision, other fields are for debugging purpose.
+/**
+ * Output of the outlier scoring.
  */
 data class Scores(
-  val current: MutableMap<String, Double> = mutableMapOf(),
-  val mean: MutableMap<String, Double> = mutableMapOf(),
-  val std: MutableMap<String, Double> = mutableMapOf(),
-  val scores: MutableMap<String, Double> = mutableMapOf(),
+  val current: Double,
+  val mean: Double,
+  val std: Double,
+  val zScore: Double,
 )
 
 class Outliers {
@@ -29,21 +28,22 @@ class Outliers {
   inline fun <reified T> evaluate(
     historicalData: List<T>,
     current: T,
-  ): Scores {
+  ): Map<String, Scores> {
     val df = (historicalData + current).toDataFrame()
     val mean = df.mean()
     val std = df.std()
     val c = df.last()
 
-    val scores = Scores()
-    mean.df().columns().forEach {
+    return mean.df().columns().associate {
       val name = it.name()
-      scores.current[name] = c[name].toDouble()
-      scores.mean[name] = mean[name].toDouble()
-      scores.std[name] = std[name].toDouble()
-      scores.scores[name] = zScore(c[name].toDouble(), mean[name].toDouble(), std[name].toDouble())
+      name to
+        Scores(
+          current = c[name].toDouble(),
+          mean = mean[name].toDouble(),
+          std = std[name].toDouble(),
+          zScore = zScore(c[name].toDouble(), mean[name].toDouble(), std[name].toDouble()),
+        )
     }
-    return scores
   }
 
   /**

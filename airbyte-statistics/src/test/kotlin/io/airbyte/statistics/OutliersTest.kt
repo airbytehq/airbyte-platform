@@ -127,6 +127,6 @@ class OutliersTest {
       range: Double,
     ): Int = Random.nextInt(((1.0 - range) * value).toInt()..((1.0 + range) * value).toInt())
 
-    fun Scores.isOutlier() = scores.any { it.value.absoluteValue > 2.0 }
+    fun Map<String, Scores>.isOutlier() = values.any { it.zScore.absoluteValue > 2.0 }
   }
 }

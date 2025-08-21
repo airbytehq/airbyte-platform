@@ -97,9 +97,10 @@ class JobObservabilityReportingService(
     map["_score_$dimension"] =
       Jsons.serialize(
         mapOf(
-          "score" to score,
+          "value" to value,
           "threshold" to threshold,
           "is_outlier" to isOutlier,
+          "scores" to scores.toString(),
         ),
       )
   }

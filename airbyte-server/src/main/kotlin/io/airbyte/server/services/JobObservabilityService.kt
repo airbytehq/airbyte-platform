@@ -90,9 +90,10 @@ data class StreamMetrics(
 
 data class OutlierEvaluation(
   val dimension: String,
-  val score: Double,
+  val value: Double,
   val threshold: Double,
   val isOutlier: Boolean,
+  val scores: Scores,
 )
 
 @Singleton
@@ -388,32 +389,34 @@ class JobObservabilityService(
       recordsRejected = recordsRejected,
     )
 
-  private fun evaluateJobOutliers(scores: Scores): List<OutlierEvaluation> {
+  private fun evaluateJobOutliers(scores: Map<String, Scores>): List<OutlierEvaluation> {
     val evaluations = mutableListOf<OutlierEvaluation>()
 
     // Get the time coefficient from the duration in minutes for a more adequate drop off
-    val durationCoefficient = timeCoefficient(scores.mean["durationSeconds"]?.let { it / 60.0 })
+    val durationCoefficient = timeCoefficient(scores["durationSeconds"]?.let { it.mean / 60.0 })
     val durationThreshold = outlierThreshold(threshold = 3.0, coefficient = durationCoefficient)
-    scores.scores["durationSeconds"]?.let {
+    scores["durationSeconds"]?.let {
       evaluations.add(
         OutlierEvaluation(
           dimension = "duration",
-          score = it,
+          value = it.zScore,
           threshold = durationThreshold,
-          isOutlier = it > durationThreshold,
+          isOutlier = it.zScore > durationThreshold,
+          scores = it,
         ),
       )
     }
 
-    scores.mean["attemptCount"]?.let { mean ->
-      val current = scores.current["attemptCount"]!!
-      val threshold = mean + 3.0
+    scores["attemptCount"]?.let {
+      val current = it.current
+      val threshold = it.mean + 3.0
       evaluations.add(
         OutlierEvaluation(
           dimension = "attempts",
-          score = current,
+          value = current,
           threshold = threshold,
           isOutlier = current > threshold,
+          scores = it,
         ),
       )
     }
@@ -429,40 +432,43 @@ class JobObservabilityService(
    * RejectedRecords have their own deviation, mostly because they are more isolated events and shouldn't be tied to the same trend as the
    * "positive" amount of data loaded.
    */
-  private fun evaluateStreamOutliers(scores: Scores): List<OutlierEvaluation> {
+  private fun evaluateStreamOutliers(scores: Map<String, Scores>): List<OutlierEvaluation> {
     val evals = mutableListOf<OutlierEvaluation>()
-    val loadedCoefficient = volumeCoefficient(scores.mean["recordsLoaded"])
+    val loadedCoefficient = volumeCoefficient(scores["recordsLoaded"]?.mean)
     val loadedThreshold = outlierThreshold(threshold = 3.0, coefficient = loadedCoefficient)
-    scores.scores["bytesLoaded"]?.let {
+    scores["bytesLoaded"]?.let {
       evals.add(
         OutlierEvaluation(
           dimension = "bytesLoaded",
-          score = it,
+          value = it.zScore,
           threshold = loadedThreshold,
-          isOutlier = it.absoluteValue > loadedThreshold,
+          isOutlier = it.zScore.absoluteValue > loadedThreshold,
+          scores = it,
         ),
       )
     }
-    scores.scores["recordsLoaded"]?.let {
+    scores["recordsLoaded"]?.let {
       evals.add(
         OutlierEvaluation(
           dimension = "recordsLoaded",
-          score = it,
+          value = it.zScore,
           threshold = loadedThreshold,
-          isOutlier = it.absoluteValue > loadedThreshold,
+          isOutlier = it.zScore.absoluteValue > loadedThreshold,
+          scores = it,
         ),
       )
     }
 
-    val rejectedCoefficient = volumeCoefficient(scores.mean["recordsRejected"])
+    val rejectedCoefficient = volumeCoefficient(scores["recordsRejected"]?.mean)
     val rejectedThreshold = outlierThreshold(threshold = 3.0, coefficient = rejectedCoefficient)
-    scores.scores["recordsRejected"]?.let {
+    scores["recordsRejected"]?.let {
       evals.add(
         OutlierEvaluation(
           dimension = "recordsRejected",
-          score = it,
+          value = it.zScore,
           threshold = rejectedThreshold,
-          isOutlier = it.absoluteValue > rejectedThreshold,
+          isOutlier = it.zScore.absoluteValue > rejectedThreshold,
+          scores = it,
         ),
       )
     }
