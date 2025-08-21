@@ -25,7 +25,11 @@ class ResolvedConfigEndpoint(
     environment.propertySources
       .sortedBy { it.order }
       .flatMap { propertySource ->
-        propertySource.map {
+        propertySource.mapNotNull {
+          if (it == null) {
+            return@mapNotNull null
+          }
+
           ResolvedConfiguration(
             key = it,
             details = ResolvedConfigurationDetails(value = maskValue(propertySource.get(it)), location = propertySource.origin.location()),
@@ -34,7 +38,10 @@ class ResolvedConfigEndpoint(
       }.associate { it.key to it.details }
 }
 
-internal fun maskValue(value: Any): String {
+internal fun maskValue(value: Any?): String {
+  if (value == null) {
+    return "null"
+  }
   val length = value.toString().length
   return if (length <= UNMASKED_LENGTH) MASK_VALUE else MASK_VALUE + value.toString().substring(length - UNMASKED_LENGTH, length)
 }
