@@ -455,16 +455,16 @@ Renders the secretsManager.vault.authToken environment variable
 {{- end }}
 
 {{/*
-Renders the global.secretsManager.vault._authTokenRefName value
+Renders the global.secretsManager.vault.authTokenRefName value
 */}}
-{{- define "airbyte.secretsManager.vault._authTokenRefName" }}
-    {{- (include "airbyte.secretsManager.secretName" .) }}
+{{- define "airbyte.secretsManager.vault.authTokenRefName" }}
+    {{- .Values.global.secretsManager.vault.authTokenRefName | default (include "airbyte.secretsManager.secretName" .) }}
 {{- end }}
 
 {{/*
-Renders the secretsManager.vault._authTokenRefName environment variable
+Renders the secretsManager.vault.authTokenRefName environment variable
 */}}
-{{- define "airbyte.secretsManager.vault._authTokenRefName.env" }}
+{{- define "airbyte.secretsManager.vault.authTokenRefName.env" }}
 - name: VAULT_AUTH_TOKEN_REF_NAME
   valueFrom:
     configMapKeyRef:
@@ -531,7 +531,7 @@ Renders the set of all secretsManager environment variables
 {{- include "airbyte.secretsManager.vault.address.env" . }}
 {{- include "airbyte.secretsManager.vault.prefix.env" . }}
 {{- include "airbyte.secretsManager.vault.authToken.env" . }}
-{{- include "airbyte.secretsManager.vault._authTokenRefName.env" . }}
+{{- include "airbyte.secretsManager.vault.authTokenRefName.env" . }}
 {{- include "airbyte.secretsManager.vault.authTokenSecretKey.env" . }}
 {{- end }}
 
@@ -572,7 +572,7 @@ SECRET_STORE_GCP_REGION: {{ include "airbyte.secretsManager.googleSecretManager.
 {{- if eq $opt "VAULT" }}
 VAULT_ADDRESS: {{ include "airbyte.secretsManager.vault.address" . | quote }}
 VAULT_PREFIX: {{ include "airbyte.secretsManager.vault.prefix" . | quote }}
-VAULT_AUTH_TOKEN_REF_NAME: {{ (include "airbyte.secretsManager.secretName" .) | quote }}
+VAULT_AUTH_TOKEN_REF_NAME: {{ include "airbyte.secretsManager.vault.authTokenRefName" . | quote }}
 VAULT_AUTH_TOKEN_REF_KEY: {{ include "airbyte.secretsManager.vault.authTokenSecretKey" . | quote }}
 {{- end }}
 
