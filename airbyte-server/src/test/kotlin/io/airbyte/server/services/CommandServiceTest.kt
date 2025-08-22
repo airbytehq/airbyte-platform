@@ -16,9 +16,11 @@ import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
+import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.data.services.CatalogService
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.protocol.models.Jsons
@@ -48,6 +50,9 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
+import org.junitpioneer.jupiter.ClearSystemProperty.ClearSystemProperties
 import java.nio.file.Path
 import java.time.OffsetDateTime
 import java.util.Optional
@@ -60,6 +65,7 @@ class CommandServiceTest {
   private lateinit var workloadService: WorkloadService
   private lateinit var workloadQueueService: WorkloadQueueService
   private lateinit var workloadOutputReader: WorkloadOutputDocStoreReader
+  private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var service: CommandService
 
   @BeforeEach
@@ -76,6 +82,7 @@ class CommandServiceTest {
     workloadService = mockk(relaxed = true)
     workloadQueueService = mockk(relaxed = true)
     workloadOutputReader = mockk(relaxed = true)
+    featureFlagClient = mockk(relaxed = true)
     service =
       CommandService(
         actorRepository = mockk(relaxed = true),
@@ -88,6 +95,7 @@ class CommandServiceTest {
         workloadQueueService = workloadQueueService,
         workloadOutputReader = workloadOutputReader,
         workspaceService = mockk(relaxed = true),
+        featureFlagClient = featureFlagClient,
         workspaceRoot = Path.of("/test-root"),
         workloadIdGenerator = WorkloadIdGenerator(),
         discoverAutoRefreshWindowMinutes = 0,
@@ -390,7 +398,7 @@ class CommandServiceTest {
   }
 
   @Test
-  fun `getReplicationOutput returns an output`() {
+  fun `getReplicationOutput returns an output (happy path)`() {
     val expectedOutput =
       ReplicationOutput()
         .withReplicationAttemptSummary(ReplicationAttemptSummary())
@@ -402,6 +410,25 @@ class CommandServiceTest {
     every { workloadOutputReader.readSyncOutput(WORKLOAD_ID) } returns expectedOutput
     val output = service.getReplicationOutput(COMMAND_ID)
     assertEquals(expectedOutput, output)
+  }
+
+  @ParameterizedTest
+  @CsvSource("FAILURE,FAILED", "CANCELLED,CANCELLED", "SUCCESS,COMPLETED")
+  fun `getReplicationOutput returns an output derived from the workload when the output is not found`(
+    workloadStatus: WorkloadStatus,
+    expectedStatus: StandardSyncSummary.ReplicationStatus,
+  ) {
+    every { featureFlagClient.boolVariation(any(), any()) } returns true
+    val workload: Workload =
+      mockk {
+        every { status } returns workloadStatus
+        every { terminationSource } returns "platform"
+        every { terminationReason } returns "probably the workload monitor"
+      }
+    every { workloadService.getWorkload(WORKLOAD_ID) } returns workload
+    every { workloadOutputReader.readSyncOutput(WORKLOAD_ID) } throws Exception("bang")
+    val output = service.getReplicationOutput(COMMAND_ID)
+    assertEquals(expectedStatus, output!!.replicationAttemptSummary.status)
   }
 
   @Test

@@ -212,3 +212,8 @@ object EnableSsoConfigUpdate : Permanent<Boolean>(key = "platform.can-change-sso
 object ReplicationDebugLogLevelEnabled : Permanent<Boolean>(key = "platform.replication-debug-log-level-enabled", default = false)
 
 object EnableOrchestration : Permanent<Boolean>(key = "platform.enable-orchestration", default = false)
+
+object ReplicationCommandFallsBackToWorkloadStatus : Temporary<Boolean>(
+  key = "platform.replication-command-falls-back-to-workload-status",
+  default = false,
+)

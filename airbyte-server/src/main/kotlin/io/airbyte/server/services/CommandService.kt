@@ -14,14 +14,19 @@ import io.airbyte.config.ActorType
 import io.airbyte.config.CatalogDiff
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
+import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardCheckConnectionOutput
+import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.featureflag.Empty
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.ReplicationCommandFallsBackToWorkloadStatus
 import io.airbyte.server.helpers.WorkloadIdGenerator
 import io.airbyte.server.repositories.CommandsRepository
 import io.airbyte.server.repositories.domain.Command
@@ -83,6 +88,7 @@ class CommandService(
   private val workloadOutputReader: WorkloadOutputDocStoreReader,
   private val workloadIdGenerator: WorkloadIdGenerator,
   private val workspaceService: WorkspaceService,
+  private val featureFlagClient: FeatureFlagClient,
   @Named("workspaceRoot") private val workspaceRoot: Path,
   @Property(name = "airbyte.worker.discover.auto-refresh-window") discoverAutoRefreshWindowMinutes: Int,
 ) {
@@ -531,9 +537,40 @@ class CommandService(
     }
 
   fun getReplicationOutput(commandId: String): ReplicationOutput? =
-    getReplicationOutput(commandId) { failureReason ->
-      ReplicationOutput().withFailures(listOf(failureReason))
-    }
+    commandsRepository
+      .findById(commandId)
+      .map { command ->
+        try {
+          workloadOutputReader.readSyncOutput(command.workloadId) ?: throw NotFoundException("no output found for $commandId")
+        } catch (e: Exception) {
+          val workload = workloadService.getWorkload(command.workloadId)
+
+          val failureReason = getFailureReasonForMissingConnectorJobOutput(commandId, workload, e)
+
+          val fallbackOutput = ReplicationOutput().withFailures(listOf(failureReason))
+
+          if (featureFlagClient.boolVariation(ReplicationCommandFallsBackToWorkloadStatus, Empty)) {
+            // Fallback to the workload status when we can't read the output
+            if (workload.status == WorkloadStatus.FAILURE) {
+              fallbackOutput.replicationAttemptSummary =
+                ReplicationAttemptSummary()
+                  .withStatus(StandardSyncSummary.ReplicationStatus.FAILED)
+            }
+            if (workload.status == WorkloadStatus.CANCELLED) {
+              fallbackOutput.replicationAttemptSummary =
+                ReplicationAttemptSummary()
+                  .withStatus(StandardSyncSummary.ReplicationStatus.CANCELLED)
+            }
+            if (workload.status == WorkloadStatus.SUCCESS) {
+              fallbackOutput.replicationAttemptSummary =
+                ReplicationAttemptSummary()
+                  .withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED)
+            }
+          }
+
+          fallbackOutput
+        }
+      }.orElse(null)
 
   private fun getConnectorJobOutput(
     commandId: String,
@@ -544,22 +581,6 @@ class CommandService(
       .map { command ->
         try {
           workloadOutputReader.readConnectorOutput(command.workloadId) ?: throw NotFoundException("no output found for $commandId")
-        } catch (e: Exception) {
-          val workload = workloadService.getWorkload(command.workloadId)
-          val failureReason = getFailureReasonForMissingConnectorJobOutput(commandId, workload, e)
-          onFailure(failureReason)
-        }
-      }.orElse(null)
-
-  private fun getReplicationOutput(
-    commandId: String,
-    onFailure: (FailureReason) -> ReplicationOutput,
-  ): ReplicationOutput? =
-    commandsRepository
-      .findById(commandId)
-      .map { command ->
-        try {
-          workloadOutputReader.readSyncOutput(command.workloadId) ?: throw NotFoundException("no output found for $commandId")
         } catch (e: Exception) {
           val workload = workloadService.getWorkload(command.workloadId)
           val failureReason = getFailureReasonForMissingConnectorJobOutput(commandId, workload, e)
