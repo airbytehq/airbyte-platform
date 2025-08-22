@@ -31,8 +31,8 @@ import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Value
-import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.io.IOException
 import java.time.Clock
@@ -46,7 +46,7 @@ import java.util.UUID
  */
 @Singleton
 open class InstanceConfigurationHandler(
-  @param:Named("airbyteUrl") private val airbyteUrl: Optional<String>,
+  @Property(name = "airbyte.airbyte-url") private val airbyteUrl: Optional<String>,
   @param:Value("\${airbyte.tracking.strategy:}") private val trackingStrategy: String,
   private val airbyteEdition: AirbyteEdition,
   private val airbyteVersion: AirbyteVersion,

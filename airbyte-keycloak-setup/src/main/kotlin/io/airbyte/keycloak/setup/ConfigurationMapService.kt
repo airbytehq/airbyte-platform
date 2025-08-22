@@ -6,7 +6,7 @@ package io.airbyte.keycloak.setup
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
 import io.airbyte.commons.auth.config.OidcConfig
-import jakarta.inject.Named
+import io.micronaut.context.annotation.Property
 import jakarta.inject.Singleton
 import org.keycloak.admin.client.resource.RealmResource
 
@@ -16,7 +16,7 @@ import org.keycloak.admin.client.resource.RealmResource
  */
 @Singleton
 class ConfigurationMapService(
-  @param:Named("airbyteUrl") private val airbyteUrl: String,
+  @Property(name = "airbyte.airbyte-url") private val airbyteUrl: String,
   private val keycloakConfiguration: AirbyteKeycloakConfiguration,
 ) {
   fun importProviderFrom(

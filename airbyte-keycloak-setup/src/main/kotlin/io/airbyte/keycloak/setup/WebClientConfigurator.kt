@@ -6,7 +6,7 @@ package io.airbyte.keycloak.setup
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
 import io.github.oshai.kotlinlogging.KotlinLogging
-import jakarta.inject.Named
+import io.micronaut.context.annotation.Property
 import jakarta.inject.Singleton
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.ClientRepresentation
@@ -17,7 +17,7 @@ import org.keycloak.representations.idm.ClientRepresentation
  */
 @Singleton
 class WebClientConfigurator(
-  @param:Named("airbyteUrl") private val airbyteUrl: String,
+  @Property(name = "airbyte.airbyte-url") private val airbyteUrl: String,
   private val keycloakConfiguration: AirbyteKeycloakConfiguration,
 ) {
   fun configureWebClient(keycloakRealm: RealmResource) {
