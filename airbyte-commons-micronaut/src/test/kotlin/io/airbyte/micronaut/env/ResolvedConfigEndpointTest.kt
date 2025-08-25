@@ -5,12 +5,14 @@
 package io.airbyte.micronaut.env
 
 import io.micronaut.context.env.Environment
+import io.micronaut.context.env.PropertyPlaceholderResolver
 import io.micronaut.context.env.PropertySource
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.util.Optional
 
 internal class ResolvedConfigEndpointTest {
   @Test
@@ -21,8 +23,13 @@ internal class ResolvedConfigEndpointTest {
     val config = mapOf(key to value)
     val origin = PropertySource.Origin.of("someFile")
     val propertySource = PropertySource.of(name, config, origin)
+    val propertyPlaceholderResolver =
+      mockk<PropertyPlaceholderResolver> {
+        every { resolvePlaceholders(any()) } returns Optional.empty()
+      }
     val environment =
       mockk<Environment> {
+        every { placeholderResolver } returns propertyPlaceholderResolver
         every { propertySources } returns setOf(propertySource)
       }
     val endpoint = ResolvedConfigEndpoint(environment)
@@ -30,7 +37,32 @@ internal class ResolvedConfigEndpointTest {
     assertEquals(1, resolvedConfiguration.keys.size)
     assertEquals(key, resolvedConfiguration.keys.first())
     assertEquals(origin.location(), resolvedConfiguration.values.first().location)
-    assertEquals(maskValue(value), resolvedConfiguration.values.first().value)
+    assertEquals(endpoint.maskValue(value), resolvedConfiguration.values.first().value)
+  }
+
+  @Test
+  fun testResolvedConfigWithPlaceholder() {
+    val name = "default"
+    val key = "airbyte.test"
+    val value = "\${PROPERTY_PLACEHOLDER}"
+    val config = mapOf(key to value)
+    val origin = PropertySource.Origin.of("someFile")
+    val propertySource = PropertySource.of(name, config, origin)
+    val propertyPlaceholderResolver =
+      mockk<PropertyPlaceholderResolver> {
+        every { resolvePlaceholders(any()) } returns Optional.of("a really long string")
+      }
+    val environment =
+      mockk<Environment> {
+        every { placeholderResolver } returns propertyPlaceholderResolver
+        every { propertySources } returns setOf(propertySource)
+      }
+    val endpoint = ResolvedConfigEndpoint(environment)
+    val resolvedConfiguration = endpoint.getResolvedConfiguration()
+    assertEquals(1, resolvedConfiguration.keys.size)
+    assertEquals(key, resolvedConfiguration.keys.first())
+    assertEquals(origin.location(), resolvedConfiguration.values.first().location)
+    assertEquals(endpoint.maskValue(value), resolvedConfiguration.values.first().value)
   }
 
   @Test
@@ -45,8 +77,13 @@ internal class ResolvedConfigEndpointTest {
     val origin = PropertySource.Origin.of("someFile")
     val propertySource1 = PropertySource.of(name1, config1, origin, -100)
     val propertySource2 = PropertySource.of(name2, config2, origin, 100)
+    val propertyPlaceholderResolver =
+      mockk<PropertyPlaceholderResolver> {
+        every { resolvePlaceholders(any()) } returns Optional.empty()
+      }
     val environment =
       mockk<Environment> {
+        every { placeholderResolver } returns propertyPlaceholderResolver
         every { propertySources } returns setOf(propertySource1, propertySource2)
       }
     val endpoint = ResolvedConfigEndpoint(environment)
@@ -54,7 +91,7 @@ internal class ResolvedConfigEndpointTest {
     assertEquals(1, resolvedConfiguration.keys.size)
     assertEquals(key, resolvedConfiguration.keys.first())
     assertEquals(origin.location(), resolvedConfiguration.values.first().location)
-    assertEquals(maskValue(value2), resolvedConfiguration.values.first().value)
+    assertEquals(endpoint.maskValue(value2), resolvedConfiguration.values.first().value)
   }
 
   @Test
@@ -65,8 +102,13 @@ internal class ResolvedConfigEndpointTest {
     val config = mapOf(key to value)
     val origin = PropertySource.Origin.of("someFile")
     val propertySource = PropertySource.of(name, config, origin)
+    val propertyPlaceholderResolver =
+      mockk<PropertyPlaceholderResolver> {
+        every { resolvePlaceholders(any()) } returns Optional.empty()
+      }
     val environment =
       mockk<Environment> {
+        every { placeholderResolver } returns propertyPlaceholderResolver
         every { propertySources } returns setOf(propertySource)
       }
     val endpoint = ResolvedConfigEndpoint(environment)
@@ -74,7 +116,7 @@ internal class ResolvedConfigEndpointTest {
     assertEquals(1, resolvedConfiguration.keys.size)
     assertEquals(key, resolvedConfiguration.keys.first())
     assertEquals(origin.location(), resolvedConfiguration.values.first().location)
-    assertEquals(maskValue(value), resolvedConfiguration.values.first().value)
+    assertEquals(endpoint.maskValue(value), resolvedConfiguration.values.first().value)
     assertTrue(
       resolvedConfiguration.values
         .first()

@@ -36,14 +36,15 @@ class ResolvedConfigEndpoint(
           )
         }
       }.associate { it.key to it.details }
-}
 
-internal fun maskValue(value: Any?): String {
-  if (value == null) {
-    return "null"
+  internal fun maskValue(value: Any?): String {
+    if (value == null) {
+      return "null"
+    }
+    val resolvedPropertyValue = environment.placeholderResolver.resolvePlaceholders(value.toString()).orElse(value.toString())
+    val length = resolvedPropertyValue.length
+    return if (length <= UNMASKED_LENGTH) MASK_VALUE else MASK_VALUE + resolvedPropertyValue.substring(length - UNMASKED_LENGTH, length)
   }
-  val length = value.toString().length
-  return if (length <= UNMASKED_LENGTH) MASK_VALUE else MASK_VALUE + value.toString().substring(length - UNMASKED_LENGTH, length)
 }
 
 data class ResolvedConfiguration(
