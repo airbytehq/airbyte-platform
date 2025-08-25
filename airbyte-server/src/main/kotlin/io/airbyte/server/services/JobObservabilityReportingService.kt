@@ -6,6 +6,7 @@ package io.airbyte.server.services
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.statistics.OutlierEvaluation
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.sentry.IHub
 import io.sentry.SentryEvent
@@ -94,7 +95,7 @@ class JobObservabilityReportingService(
   }
 
   private fun OutlierEvaluation.addToContextMap(map: MutableMap<String, Any>) {
-    map["_score_$dimension"] =
+    map["_score_$name"] =
       Jsons.serialize(
         mapOf(
           "value" to value,

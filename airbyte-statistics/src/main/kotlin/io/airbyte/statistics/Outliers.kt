@@ -21,11 +21,11 @@ data class Scores(
 
 class Outliers {
   /**
-   * Outlier detection using z-scores.
+   * Scoring phase for outlier detection.
    *
-   * Evaluate will take an object of type [T], convert it to a dataframe and evaluate z-scores on any numerical fields of [T]
+   * getScores will take an object of type [T], convert it to a dataframe and evaluate z-scores on any numerical fields of [T]
    */
-  inline fun <reified T> evaluate(
+  inline fun <reified T> getScores(
     historicalData: List<T>,
     current: T,
   ): Map<String, Scores> {

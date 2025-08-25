@@ -45,7 +45,7 @@ class OutliersTest {
     logger.info { historical }
     logger.info { current }
 
-    val outcome = Outliers().evaluate(historical, current)
+    val outcome = Outliers().getScores(historical, current)
     logger.info { "outcome: ${outcome.isOutlier()} $outcome" }
 
     assertTrue(outcome.isOutlier())
@@ -68,7 +68,7 @@ class OutliersTest {
     logger.info { historical }
     logger.info { current }
 
-    val outcome = Outliers().evaluate(historical, current)
+    val outcome = Outliers().getScores(historical, current)
     logger.info { "outcome: ${outcome.isOutlier()} $outcome" }
 
     assertFalse(outcome.isOutlier())
@@ -91,7 +91,7 @@ class OutliersTest {
     logger.info { historical }
     logger.info { current }
 
-    val outcome = Outliers().evaluate(historical, current)
+    val outcome = Outliers().getScores(historical, current)
     logger.info { "outcome: ${outcome.isOutlier()} $outcome" }
 
     assertTrue(outcome.isOutlier())
