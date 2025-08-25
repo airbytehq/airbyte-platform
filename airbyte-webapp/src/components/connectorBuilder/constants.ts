@@ -142,7 +142,10 @@ export const DEFAULT_CUSTOM_STREAM: DeclarativeStream = {
 
 export const DEFAULT_DYNAMIC_STREAM: DynamicDeclarativeStream = {
   type: DynamicDeclarativeStreamType.DynamicDeclarativeStream,
-  stream_template: DEFAULT_SYNC_STREAM,
+  stream_template: {
+    ...DEFAULT_SYNC_STREAM,
+    name: "placeholder",
+  },
   components_resolver: {
     type: HttpComponentsResolverType.HttpComponentsResolver,
     retriever: {

@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import isEqual from "lodash/isEqual";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -12,6 +12,7 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer } from "components/ui/Flex";
+import { ExternalLink } from "components/ui/Link";
 import { ListBox } from "components/ui/ListBox";
 import { Message } from "components/ui/Message";
 import { Pre } from "components/ui/Pre";
@@ -30,6 +31,7 @@ import {
   StateDelegatingStreamType,
 } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { links } from "core/utils/links";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import {
   BuilderView,
@@ -235,6 +237,21 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
             disabled={streamId.type === "generated_stream"}
           />
         </FlexContainer>
+        {streamId.type === "dynamic_stream" && (
+          <Message
+            type="info"
+            text={
+              <FormattedMessage
+                id="connectorBuilder.streamTemplate.hint"
+                values={{
+                  a: (content: ReactNode) => (
+                    <ExternalLink href={links.connectorBuilderStreamTemplates}>{content}</ExternalLink>
+                  ),
+                }}
+              />
+            }
+          />
+        )}
       </FlexContainer>
       <fieldset disabled={permission === "readOnly"} className={styles.fieldset}>
         <FlexContainer
@@ -402,6 +419,21 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
             disabled={streamId.type === "generated_stream"}
           />
         </FlexContainer>
+        {streamId.type === "dynamic_stream" && (
+          <Message
+            type="info"
+            text={
+              <FormattedMessage
+                id="connectorBuilder.streamTemplate.hint"
+                values={{
+                  a: (content: ReactNode) => (
+                    <ExternalLink href={links.connectorBuilderStreamTemplates}>{content}</ExternalLink>
+                  ),
+                }}
+              />
+            }
+          />
+        )}
       </FlexContainer>
       <fieldset disabled={permission === "readOnly"} className={styles.fieldset}>
         <FlexContainer
