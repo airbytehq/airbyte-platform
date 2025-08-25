@@ -17,10 +17,11 @@ import { useBuilderWatch } from "../useBuilderWatch";
 import { extractInterpolatedConfigPath } from "../utils";
 
 export const ADVANCED_AUTH_PATH = "manifest.spec.advanced_auth";
-export const OAUTH_INPUT_SPEC_PATH = `${ADVANCED_AUTH_PATH}.oauth_config_specification.oauth_connector_input_specification`;
-const COMPLETE_OAUTH_OUTPUT_SPEC_PATH = `${ADVANCED_AUTH_PATH}.oauth_config_specification.complete_oauth_output_specification`;
-const COMPLETE_OAUTH_SERVER_INPUT_SPEC_PATH = `${ADVANCED_AUTH_PATH}.oauth_config_specification.complete_oauth_server_input_specification`;
-const COMPLETE_OAUTH_SERVER_OUTPUT_SPEC_PATH = `${ADVANCED_AUTH_PATH}.oauth_config_specification.complete_oauth_server_output_specification`;
+export const OAUTH_CONFIG_SPEC_PATH = `${ADVANCED_AUTH_PATH}.oauth_config_specification`;
+export const OAUTH_INPUT_SPEC_PATH = `${OAUTH_CONFIG_SPEC_PATH}.oauth_connector_input_specification`;
+const COMPLETE_OAUTH_OUTPUT_SPEC_PATH = `${OAUTH_CONFIG_SPEC_PATH}.complete_oauth_output_specification`;
+const COMPLETE_OAUTH_SERVER_INPUT_SPEC_PATH = `${OAUTH_CONFIG_SPEC_PATH}.complete_oauth_server_input_specification`;
+const COMPLETE_OAUTH_SERVER_OUTPUT_SPEC_PATH = `${OAUTH_CONFIG_SPEC_PATH}.complete_oauth_server_output_specification`;
 const DEFAULT_ACCESS_TOKEN_KEY = "access_token";
 const DEFAULT_REFRESH_TOKEN_KEY = "refresh_token";
 export const OAUTH_BUTTON_NAME = "oauth-button";

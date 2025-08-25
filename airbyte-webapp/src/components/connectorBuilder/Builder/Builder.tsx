@@ -181,14 +181,23 @@ const TriggerStateEffects = () => {
         const oldAuth = isHttpRequesterAuthenticator(oldValue) ? oldValue : undefined;
         const newAuth = isHttpRequesterAuthenticator(newValue) ? newValue : undefined;
         if (oldAuth || newAuth) {
-          updateUserInputsForAuth(oldAuth, newAuth);
+          // setTimeout ensures that RefHandler in SchemaForm as has time to
+          // update linked authenticators before the auth inputs are updated,
+          // to guarantee consistency across the full connector
+          setTimeout(() => {
+            updateUserInputsForAuth(oldAuth, newAuth);
+          }, 0);
         }
       }
       if (name === OAUTH_INPUT_SPEC_PATH) {
-        updateUserInputsForDeclarativeOAuth(newValue);
+        setTimeout(() => {
+          updateUserInputsForDeclarativeOAuth(newValue);
+        }, 0);
       }
       if (name.endsWith("authenticator.refresh_token_updater")) {
-        updateUserInputsForTokenUpdater(name, newValue);
+        setTimeout(() => {
+          updateUserInputsForTokenUpdater(name, newValue);
+        }, 0);
       }
 
       set(previousBuilderState.current, name, newValue);
