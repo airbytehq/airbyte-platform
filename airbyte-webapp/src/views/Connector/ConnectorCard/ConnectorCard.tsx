@@ -25,6 +25,7 @@ import { useIsCloudApp } from "core/utils/app";
 import { generateMessageFromError } from "core/utils/errorStatusMessage";
 import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
+import { useNotificationService } from "hooks/services/Notification";
 import { ConnectorCardValues, ConnectorForm, ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { Controls } from "./components/Controls";
@@ -114,6 +115,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
   const { formatMessage } = useIntl();
   const { workspaceId } = useCurrentWorkspace();
+  const { registerNotification } = useNotificationService();
 
   const { setDocumentationPanelOpen, setSelectedConnectorDefinition } = useDocumentationPanelContext();
 
@@ -188,7 +190,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     }
   };
 
-  const onHandleSubmit = async (values: ConnectorFormValues) => {
+  const onHandleSubmit = async (values: ConnectorFormValues, shouldSkipCheckConnection = false) => {
     if (!selectedConnectorDefinition) {
       return;
     }
@@ -201,7 +203,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     };
 
     try {
-      if (skipCheckConnection) {
+      if (shouldSkipCheckConnection) {
         await onSubmit(connectorCardValues);
       } else {
         const response = await testConnectorWithTracking(connectorCardValues);
@@ -213,6 +215,11 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       }
     } catch (e) {
       setErrorStatusRequest(e);
+      registerNotification({
+        id: "connector.submitFailed",
+        type: "error",
+        text: formatMessage({ id: "connectorForm.submitFailed" }, { name: values.name, error: String(e.message) }),
+      });
       // keep throwing the exception to inform the component the submit did not go through
       throw e;
     }
@@ -278,7 +285,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       selectedConnectorDefinitionSpecification={selectedConnectorDefinitionSpecification}
       isTestConnectionInProgress={isTestConnectionInProgress}
       connectionTestSuccess={connectionTestSuccess}
-      onSubmit={onHandleSubmit}
+      onSubmit={(values) => onHandleSubmit(values, skipCheckConnection)}
       formValues={formValues}
       connectorId={connectorId}
       renderFooter={({ dirty, isSubmitting, isValid, resetConnectorForm, getValues }) =>
@@ -310,6 +317,15 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
               job={job ?? undefined}
               onCancelClick={() => {
                 resetConnectorForm();
+              }}
+              onSubmitWithoutCheck={async () => {
+                const values = getValues();
+                await onHandleSubmit(values, true);
+                registerNotification({
+                  id: "connector.saveWithoutCheckSuccessful",
+                  type: "success",
+                  text: formatMessage({ id: "connectorForm.saveWithoutCheckSuccessful" }, { name: values.name }),
+                });
               }}
               connectionTestSuccess={connectionTestSuccess}
               leftSlot={leftFooterSlot}

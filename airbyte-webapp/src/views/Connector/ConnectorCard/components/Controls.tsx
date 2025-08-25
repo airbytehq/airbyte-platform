@@ -1,8 +1,10 @@
-import React from "react";
-import { FormattedMessage } from "react-intl";
+import React, { useState } from "react";
+import { useFormContext } from "react-hook-form";
+import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { CopyButton } from "components/ui/CopyButton";
+import { DropdownButton } from "components/ui/DropdownButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 
 import { maskSecrets } from "area/connector/utils/maskSecrets";
@@ -26,6 +28,7 @@ interface IProps {
   hasDefinition: boolean;
   isEditMode: boolean;
   leftSlot?: React.ReactNode;
+  onSubmitWithoutCheck?: () => Promise<void>;
   onCopyConfig?: () => {
     config: Record<string, unknown>;
     schema: unknown;
@@ -41,21 +44,33 @@ export const Controls: React.FC<IProps> = ({
   formType,
   hasDefinition,
   isEditMode,
+  isValid,
   dirty,
   onDeleteClick,
   onCancelClick,
   leftSlot = null,
+  onSubmitWithoutCheck,
   onCopyConfig,
   ...restProps
 }) => {
+  const { formatMessage } = useIntl();
+  const { trigger } = useFormContext();
   const showTestCard =
     hasDefinition &&
     (isEditMode || isTestConnectionInProgress || restProps.connectionTestSuccess || restProps.errorMessage);
+  const buttonContent = isEditMode ? (
+    <FormattedMessage id="form.saveChangesAndTest" />
+  ) : (
+    <FormattedMessage id={`onboarding.${formType}SetUp.buttonText`} />
+  );
+  const [isSubmittingWithoutCheck, setIsSubmittingWithoutCheck] = useState(false);
+
   return (
     <>
       {showTestCard && (
         <TestCard
           {...restProps}
+          isValid={isValid}
           dirty={dirty}
           formType={formType}
           isTestConnectionInProgress={isTestConnectionInProgress}
@@ -98,18 +113,47 @@ export const Controls: React.FC<IProps> = ({
             <FormattedMessage id="form.cancel" />
           </Button>
         )}
-        <Button
-          type="submit"
-          data-testid={`${isEditMode ? "edit" : "create"}-${formType}-button`}
-          isLoading={isSubmitting}
-          disabled={isSubmitting || (isEditMode && !dirty)}
-        >
-          {isEditMode ? (
-            <FormattedMessage id="form.saveChangesAndTest" />
-          ) : (
-            <FormattedMessage id={`onboarding.${formType}SetUp.buttonText`} />
-          )}
-        </Button>
+        {onSubmitWithoutCheck ? (
+          <DropdownButton
+            type="submit"
+            data-testid={`${isEditMode ? "edit" : "create"}-${formType}-button`}
+            isLoading={isSubmitting || isSubmittingWithoutCheck}
+            disabled={isSubmitting || (isEditMode && !dirty)}
+            dropdown={{
+              options: [
+                {
+                  displayName: formatMessage({ id: "connectorForm.submitWithoutCheck" }),
+                  value: "skipCheckConnection",
+                },
+              ],
+              onSelect: (option) => {
+                if (option.value === "skipCheckConnection") {
+                  trigger().then(async (valid) => {
+                    if (valid) {
+                      setIsSubmittingWithoutCheck(true);
+                      try {
+                        await onSubmitWithoutCheck();
+                      } finally {
+                        setIsSubmittingWithoutCheck(false);
+                      }
+                    }
+                  });
+                }
+              },
+            }}
+          >
+            {buttonContent}
+          </DropdownButton>
+        ) : (
+          <Button
+            type="submit"
+            data-testid={`${isEditMode ? "edit" : "create"}-${formType}-button`}
+            isLoading={isSubmitting}
+            disabled={isSubmitting || (isEditMode && !dirty)}
+          >
+            {buttonContent}
+          </Button>
+        )}
       </FlexContainer>
     </>
   );

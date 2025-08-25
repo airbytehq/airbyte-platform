@@ -28,6 +28,7 @@ export const DropdownButton: React.FC<React.PropsWithChildren<DropdownButtonProp
     isLoading,
     width,
     "data-testid": dataTestId,
+    type,
     ...dropdownCaretButtonProps
   } = buttonProps;
 
@@ -47,6 +48,7 @@ export const DropdownButton: React.FC<React.PropsWithChildren<DropdownButtonProp
       <DropdownMenu {...dropdown} placement={dropdown.placement ?? "bottom-end"} onChange={dropdown.onSelect}>
         {() => (
           <Button
+            type="button"
             icon="caretDown"
             iconSize="sm"
             className={classNames(styles.dropdownButton, { [styles.noPointerEvents]: isLoading })}

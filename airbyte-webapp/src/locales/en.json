@@ -2133,6 +2133,9 @@
   "copyButton.title": "Copy",
   "connectorForm.copyConfig": "Copy JSON",
   "connectorForm.copyConfig.success": "Configuration JSON copied to clipboard",
+  "connectorForm.submitWithoutCheck": "Save without testing",
+  "connectorForm.saveWithoutCheckSuccessful": "{name} saved successfully without testing",
+  "connectorForm.submitFailed": "Failed to save {name} due to the following error: {error}",
 
   "login.haveAccount": "Already have an account?",
   "login.noAccount": "Don’t have an account?",
