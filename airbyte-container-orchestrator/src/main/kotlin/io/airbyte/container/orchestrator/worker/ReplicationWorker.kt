@@ -110,7 +110,7 @@ class ReplicationWorker(
         context.replicationWorkerState.markReplicationRunning(onReplicationRunning)
 
         val heartbeatSender =
-          AsyncUtils.runLaunch(Dispatchers.Default, this, mdc) {
+          AsyncUtils.runLaunch(Dispatchers.IO, this, mdc) {
             workloadHeartbeatSender.sendHeartbeat()
           }
 
