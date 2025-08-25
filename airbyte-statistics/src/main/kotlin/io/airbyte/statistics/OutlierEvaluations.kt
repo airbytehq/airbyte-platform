@@ -194,7 +194,14 @@ data class Abs(
 data class Reciprocal(
   override val value: Expression,
 ) : Function {
-  override fun apply(value: Double): Double = 1.0 / (1.0 + value)
+  override fun getValue(sc: ScoringContext): Double {
+    // Ensures we always provide a value, also put a floor on it to avoid arbitrarily high thresholds.
+    // f(0.01) being 101
+    val value = value.getValue(sc)
+    return apply(if (value == null || value < 0.01) 0.01 else value)
+  }
+
+  override fun apply(value: Double): Double = 1.0 + (1.0 / value)
 }
 
 /**
@@ -207,5 +214,12 @@ data class Reciprocal(
 data class ReciprocalSqrt(
   override val value: Expression,
 ) : Function {
-  override fun apply(value: Double): Double = 1.0 / (1.0 + sqrt(value))
+  override fun getValue(sc: ScoringContext): Double {
+    // Ensures we always provide a value, also put a floor on it to avoid arbitrarily high thresholds.
+    // f(0.01) being 11
+    val value = value.getValue(sc)
+    return apply(if (value == null || value < 0.01) 0.01 else value)
+  }
+
+  override fun apply(value: Double): Double = 1.0 + (1.0 / sqrt(value))
 }
