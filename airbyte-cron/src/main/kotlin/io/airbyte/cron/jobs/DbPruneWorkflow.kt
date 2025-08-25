@@ -22,9 +22,10 @@ import java.time.ZoneOffset
 private val log = KotlinLogging.logger {}
 
 /**
- * Workflow that runs daily at 10pm to prune old job records from the database.
+ * Workflow that runs daily at 10pm to prune old records from the database.
  * Deletes jobs older than 6 months that are not the last job for their scope,
  * along with all related records via foreign key relationships.
+ * Also deletes connection timeline events older than 18 months.
  */
 @Singleton
 @Requires(property = "airbyte.cron.db-prune.enabled", value = "true")
@@ -44,7 +45,7 @@ class DbPruneWorkflow(
   @Scheduled(fixedRate = "1d")
   //  @Scheduled(cron = "0 0 22 * * *", zoneId = "America/Los_Angeles") // Daily at 10:00 PM
   @Synchronized
-  fun pruneOldJobs() {
+  fun pruneRecords() {
     val startTime = OffsetDateTime.now(ZoneOffset.UTC)
     log.info { "Starting database pruning workflow at $startTime" }
 
@@ -57,29 +58,20 @@ class DbPruneWorkflow(
       // Use the same timestamp for both count and pruning to ensure consistency
       val now = OffsetDateTime.now(ZoneOffset.UTC)
 
-      // Get initial statistics
-      log.info { "Counting jobs eligible for deletion" }
-      val initialCount = dbPrune.getEligibleJobCount(now)
-      log.info { "Found $initialCount jobs eligible for deletion" }
+      log.info { "Pruning jobs older than 6 months" }
+      val jobsDeleted = dbPrune.pruneJobs(now)
 
-      if (initialCount == 0L) {
-        log.info { "No jobs to prune, skipping cleanup" }
-        metricClient.count(
-          metric = OssMetricsRegistry.DATABASE_PRUNING_JOBS_DELETED,
-          attributes = arrayOf(MetricAttribute(MetricTags.SUCCESS, "true")),
-        )
-        return
-      }
-
-      // DbPrune handles all batching internally, just call once
-      val totalDeleted = dbPrune.pruneJobs(now)
+      log.info { "Pruning jobs older than 18 months" }
+      val eventsDeleted = dbPrune.pruneEvents(now)
 
       val endTime = OffsetDateTime.now(ZoneOffset.UTC)
       val duration = java.time.Duration.between(startTime, endTime)
 
       log.info {
         "Database pruning completed successfully. " +
-          "Total jobs deleted: $totalDeleted, duration: ${duration.toMinutes()} minutes"
+          "Total jobs deleted: $jobsDeleted, " +
+          "Total events deleted: $eventsDeleted, " +
+          "Duration: ${duration.toMinutes()} minutes"
       }
 
       // Record success metrics

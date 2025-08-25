@@ -8,29 +8,29 @@ import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
 import io.airbyte.db.instance.jobs.jooq.generated.Tables
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.jooq.DSLContext
-import org.jooq.Record1
-import org.jooq.SelectConditionStep
-import org.jooq.impl.DSL
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import io.airbyte.db.instance.configs.jooq.generated.Tables as ConfigTables
 
 /**
  * Handles pruning of old job records and their associated data from the database.
  * Deletes jobs older than 6 months that are not the last job for their scope,
  * along with all related records via foreign key relationships.
+ * Also handles pruning of connection timeline events.
  */
 class DbPrune(
   jobDatabase: Database,
   private val batchSize: Int = DEFAULT_BATCH_SIZE,
-  private val maxAgeMonths: Long = DEFAULT_MAX_AGE_MONTHS,
+  private val jobsMaxAgeMonths: Long = DEFAULT_JOBS_MAX_AGE_MONTHS,
+  private val eventsMaxAgeMonths: Long = DEFAULT_EVENTS_MAX_AGE_MONTHS,
 ) {
   private val database = ExceptionWrappingDatabase(jobDatabase)
 
   companion object {
     private val log = KotlinLogging.logger {}
     private const val DEFAULT_BATCH_SIZE = 500
-    private const val DEFAULT_MAX_AGE_MONTHS = 6L
+    private const val DEFAULT_JOBS_MAX_AGE_MONTHS = 6L
+    private const val DEFAULT_EVENTS_MAX_AGE_MONTHS = 18L
   }
 
   /**
@@ -58,23 +58,6 @@ class DbPrune(
   }
 
   /**
-   * Builds the base query for finding jobs eligible for deletion:
-   * - Older than cutoff date
-   * - Not the last job for their scope (EXISTS newer job)
-   */
-  private fun buildEligibleJobsQuery(
-    ctx: DSLContext,
-    now: OffsetDateTime,
-  ): SelectConditionStep<Record1<Long>> {
-    val cutoffDate = now.minusMonths(maxAgeMonths)
-
-    return ctx
-      .select(Tables.JOBS.ID)
-      .from(Tables.JOBS)
-      .where(Tables.JOBS.CREATED_AT.lessThan(cutoffDate))
-  }
-
-  /**
    * Prunes a single batch of jobs.
    *
    * @param now The reference timestamp to use for determining job age
@@ -82,9 +65,13 @@ class DbPrune(
    */
   private fun pruneJobBatch(now: OffsetDateTime): Int {
     return database.transaction { ctx ->
+      val cutoffDate = now.minusMonths(jobsMaxAgeMonths)
+
       val jobsToDelete =
-        buildEligibleJobsQuery(ctx, now)
-          .orderBy(Tables.JOBS.CREATED_AT.asc())
+        ctx
+          .select(Tables.JOBS.ID)
+          .from(Tables.JOBS)
+          .where(Tables.JOBS.CREATED_AT.lessThan(cutoffDate))
           .limit(batchSize)
           .fetch()
           .map { it.value1() }
@@ -204,9 +191,56 @@ class DbPrune(
    */
   fun getEligibleJobCount(now: OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC)): Long =
     database.query { ctx ->
+      val cutoffDate = now.minusMonths(jobsMaxAgeMonths)
+
       ctx
         .selectCount()
-        .from(buildEligibleJobsQuery(ctx, now).asTable("eligible_jobs"))
+        .from(Tables.JOBS)
+        .where(Tables.JOBS.CREATED_AT.lessThan(cutoffDate))
         .fetchOne(0, Long::class.java) ?: 0L
     }
+
+  /**
+   * Prunes old connection timeline events from the database.
+   * Deletes events older than the configured max age in a single operation.
+   *
+   * @param now The reference timestamp to use for determining event age
+   * @return Number of events deleted
+   */
+  fun pruneEvents(now: OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC)): Int {
+    val cutoffDate = now.minusMonths(eventsMaxAgeMonths)
+
+    return database.transaction { ctx ->
+      val eventsDeleted =
+        ctx
+          .deleteFrom(ConfigTables.CONNECTION_TIMELINE_EVENT)
+          .where(ConfigTables.CONNECTION_TIMELINE_EVENT.CREATED_AT.lessThan(cutoffDate))
+          .execute()
+
+      if (eventsDeleted > 0) {
+        log.info { "Deleted $eventsDeleted connection timeline events older than $cutoffDate" }
+      }
+
+      eventsDeleted
+    }
+  }
+
+  /**
+   * Gets the count of connection timeline events eligible for deletion without actually deleting them.
+   * Useful for monitoring and dry-run scenarios.
+   *
+   * @param now The reference timestamp to use for determining event age
+   * @return Number of events that would be deleted
+   */
+  fun getEligibleEventCount(now: OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC)): Long {
+    val cutoffDate = now.minusMonths(eventsMaxAgeMonths)
+
+    return database.query { ctx ->
+      ctx
+        .selectCount()
+        .from(ConfigTables.CONNECTION_TIMELINE_EVENT)
+        .where(ConfigTables.CONNECTION_TIMELINE_EVENT.CREATED_AT.lessThan(cutoffDate))
+        .fetchOne(0, Long::class.java) ?: 0L
+    }
+  }
 }

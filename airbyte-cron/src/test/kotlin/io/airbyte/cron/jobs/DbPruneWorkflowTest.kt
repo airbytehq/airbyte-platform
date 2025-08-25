@@ -30,16 +30,17 @@ class DbPruneWorkflowTest {
   }
 
   @Test
-  fun `should skip pruning when no jobs are eligible for deletion`() {
-    // Given: no jobs to prune
-    every { dbPrune.getEligibleJobCount(any()) } returns 0L
+  fun `should handle when no jobs are eligible for deletion`() {
+    // Given: no jobs to prune (pruneJobs and pruneEvents will return 0)
+    every { dbPrune.pruneJobs(any()) } returns 0
+    every { dbPrune.pruneEvents(any()) } returns 0
 
     // When: pruning is executed
-    workflow.pruneOldJobs()
+    workflow.pruneRecords()
 
-    // Then: should check for eligible jobs but not attempt any deletions
-    verify(exactly = 1) { dbPrune.getEligibleJobCount(any()) }
-    verify(exactly = 0) { dbPrune.pruneJobs(any()) }
+    // Then: should call both prune methods (they handle empty case internally)
+    verify(exactly = 1) { dbPrune.pruneJobs(any()) }
+    verify(exactly = 1) { dbPrune.pruneEvents(any()) }
 
     // Should record success metrics
     verify {
@@ -52,16 +53,16 @@ class DbPruneWorkflowTest {
 
   @Test
   fun `should prune jobs in batches until none remain`() {
-    // Given: jobs to delete (DbPrune handles all batching internally)
-    every { dbPrune.getEligibleJobCount(any()) } returns 1500L // Initial check
+    // Given: jobs and events to delete (DbPrune handles all batching internally)
     every { dbPrune.pruneJobs(any()) } returns 1500 // Total deleted across all internal batches
+    every { dbPrune.pruneEvents(any()) } returns 200 // Events deleted
 
     // When: pruning is executed
-    workflow.pruneOldJobs()
+    workflow.pruneRecords()
 
-    // Then: should check initial count and call pruneJobs once (which handles internal batching)
-    verify(exactly = 1) { dbPrune.getEligibleJobCount(any()) }
+    // Then: should call prune methods once each (which handle internal batching)
     verify(exactly = 1) { dbPrune.pruneJobs(any()) }
+    verify(exactly = 1) { dbPrune.pruneEvents(any()) }
 
     // Should record success metrics
     verify {
@@ -82,16 +83,16 @@ class DbPruneWorkflowTest {
 
   @Test
   fun `should handle when no jobs are actually deleted`() {
-    // Given: jobs are eligible but DbPrune returns 0 (no actual deletion - handled internally by DbPrune)
-    every { dbPrune.getEligibleJobCount(any()) } returns 100L
-    every { dbPrune.pruneJobs(any()) } returns 0 // No jobs actually deleted (DbPrune handles infinite loop prevention internally)
+    // Given: DbPrune returns 0 (no actual deletion - handled internally by DbPrune)
+    every { dbPrune.pruneJobs(any()) } returns 0 // No jobs actually deleted (DbPrune handles all logic internally)
+    every { dbPrune.pruneEvents(any()) } returns 0 // No events actually deleted
 
     // When: pruning is executed
-    workflow.pruneOldJobs()
+    workflow.pruneRecords()
 
-    // Then: should call DbPrune once (DbPrune handles edge cases internally)
-    verify(exactly = 1) { dbPrune.getEligibleJobCount(any()) }
+    // Then: should call DbPrune once for each type (DbPrune handles edge cases internally)
     verify(exactly = 1) { dbPrune.pruneJobs(any()) }
+    verify(exactly = 1) { dbPrune.pruneEvents(any()) }
 
     // Should still record success metrics
     verify {
@@ -105,12 +106,11 @@ class DbPruneWorkflowTest {
   @Test
   fun `should record failure metrics when pruning throws exception`() {
     // Given: pruning will fail
-    every { dbPrune.getEligibleJobCount(any()) } returns 100L
     every { dbPrune.pruneJobs(any()) } throws RuntimeException("Database error")
 
     // When/Then: should propagate exception
     assertThrows<RuntimeException> {
-      workflow.pruneOldJobs()
+      workflow.pruneRecords()
     }
 
     // Should record failure metrics
@@ -137,10 +137,11 @@ class DbPruneWorkflowTest {
   @Test
   fun `should record cron job execution metrics`() {
     // Given: normal execution
-    every { dbPrune.getEligibleJobCount(any()) } returns 0L
+    every { dbPrune.pruneJobs(any()) } returns 0
+    every { dbPrune.pruneEvents(any()) } returns 0
 
     // When: pruning is executed
-    workflow.pruneOldJobs()
+    workflow.pruneRecords()
 
     // Then: should record cron job execution
     verify {
@@ -153,16 +154,16 @@ class DbPruneWorkflowTest {
 
   @Test
   fun `should handle single batch completion correctly`() {
-    // Given: jobs to delete
-    every { dbPrune.getEligibleJobCount(any()) } returns 500L // Initial count
+    // Given: jobs and events to delete
     every { dbPrune.pruneJobs(any()) } returns 500 // Delete all jobs (DbPrune handles batching internally)
+    every { dbPrune.pruneEvents(any()) } returns 100 // Delete all events
 
     // When: pruning is executed
-    workflow.pruneOldJobs()
+    workflow.pruneRecords()
 
-    // Then: should check count and call pruneJobs once
-    verify(exactly = 1) { dbPrune.getEligibleJobCount(any()) } // Only initial check
+    // Then: should call prune methods once each
     verify(exactly = 1) { dbPrune.pruneJobs(any()) }
+    verify(exactly = 1) { dbPrune.pruneEvents(any()) }
 
     // Should record success metrics
     verify {
