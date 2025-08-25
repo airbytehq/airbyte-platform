@@ -172,7 +172,9 @@ class BreakingChangeNotificationHelper {
 
       // Note: we only send emails for now
       // Slack can't be enabled due to not being able to handle bulk Slack notifications reliably
-      if (notificationItem != null && notificationItem.notificationType.contains(Notification.NotificationType.CUSTOMERIO)) {
+      if (notificationItem != null && workspace.email != null &&
+        notificationItem.notificationType.contains(Notification.NotificationType.CUSTOMERIO)
+      ) {
         receiverEmails.add(workspace.email)
       }
     }
