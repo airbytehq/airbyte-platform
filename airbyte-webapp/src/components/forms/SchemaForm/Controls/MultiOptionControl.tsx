@@ -198,7 +198,10 @@ const renderOptionContents = (
     return (
       <AdditionalPropertiesControl
         baseProps={{ ...baseProps, header: undefined }}
-        fieldSchema={selectedOption.additionalProperties}
+        fieldSchema={{
+          ...selectedOption.additionalProperties,
+          interpolation_context: baseProps.interpolationContext,
+        }}
         overrideByPath={overrideByPath}
         skipRenderedPathRegistration={skipRenderedPathRegistration}
         hideBorder

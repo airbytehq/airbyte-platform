@@ -46,7 +46,10 @@ export const ObjectControl = ({
 
     return (
       <AdditionalPropertiesControl
-        fieldSchema={additionalPropertiesSchema}
+        fieldSchema={{
+          ...additionalPropertiesSchema,
+          interpolation_context: baseProps.interpolationContext,
+        }}
         baseProps={baseProps}
         overrideByPath={overrideByPath}
         skipRenderedPathRegistration={skipRenderedPathRegistration}
