@@ -33,6 +33,7 @@ interface BaseProps {
   options: Option[] | OptionSection[];
   error?: boolean;
   fieldInputProps?: ControllerRenderProps<FieldValues, string>;
+  id?: string;
 }
 
 export interface OptionsConfig {
@@ -212,6 +213,7 @@ export const ComboBox = ({
   placeholder,
   className,
   icon,
+  id,
 }: ComboBoxProps) => {
   // Stores the value that the user types in to filter the options
   const [query, setQuery] = useState("");
@@ -262,6 +264,7 @@ export const ComboBox = ({
       <ComboboxInput as={React.Fragment}>
         <Input
           {...fieldInputProps}
+          id={id}
           spellCheck={false}
           value={currentInputValue}
           error={error}
@@ -308,6 +311,7 @@ export const MultiComboBox = ({
   error,
   fieldInputProps,
   disabled,
+  id,
 }: MultiComboBoxProps) => {
   const { x, y, reference, floating, strategy } = useFloating({
     whileElementsMounted: autoUpdate,
@@ -324,6 +328,7 @@ export const MultiComboBox = ({
           onBlur={fieldInputProps?.onBlur}
           error={error}
           disabled={disabled}
+          id={id}
         />
       </ComboboxInput>
       {createPortal(

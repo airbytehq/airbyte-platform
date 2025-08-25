@@ -14,6 +14,8 @@ import {
   GrantTypeSelector,
   JinjaBuilderField,
   BackoffStrategies,
+  CursorField,
+  CursorDatetimeFormats,
 } from "components/connectorBuilder/Builder/overrides";
 import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "components/connectorBuilder/constants";
 import { MenuBar } from "components/connectorBuilder/MenuBar";
@@ -149,6 +151,12 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
         DefaultErrorHandler: {
           fieldOverrides: {
             backoff_strategies: (path) => <BackoffStrategies path={path} key={path} />,
+          },
+        },
+        DatetimeBasedCursor: {
+          fieldOverrides: {
+            cursor_field: (path) => <CursorField path={path} key={path} />,
+            cursor_datetime_formats: (path) => <CursorDatetimeFormats path={path} key={path} />,
           },
         },
       }}

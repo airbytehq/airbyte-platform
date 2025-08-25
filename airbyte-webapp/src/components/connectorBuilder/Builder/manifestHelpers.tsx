@@ -1,5 +1,4 @@
 import get from "lodash/get";
-import { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 
 import { LabelInfo } from "components/Label";
@@ -38,44 +37,21 @@ export function getInterpolationVariablesByManifest(manifestPath: string) {
   return getDescriptor(manifestPath)?.interpolation_context ?? undefined;
 }
 
-export function getLabelAndTooltip(
-  label: string | undefined,
-  tooltip: React.ReactNode | undefined,
-  manifestPath: string | undefined,
-  omitExamples = false,
-  manifestOptionPaths?: string[]
-): { label: string | undefined; tooltip: React.ReactNode | undefined } {
+export function getLabelAndTooltip(manifestPath: string): {
+  label: string | undefined;
+  tooltip: React.ReactNode | undefined;
+} {
   const manifestDescriptor = manifestPath ? getDescriptor(manifestPath) : undefined;
-  const finalLabel = (label || manifestDescriptor?.title) ?? undefined;
-  const finalDescription: ReactNode = manifestDescriptor?.description ? (
-    <ReactMarkdown linkTarget="_blank">{manifestDescriptor?.description}</ReactMarkdown>
-  ) : undefined;
-  const options = manifestOptionPaths?.flatMap((optionPath) => {
-    const optionDescriptor: ManifestDescriptor | undefined = get(
-      declarativeComponentSchema,
-      `definitions.${optionPath}`
-    );
-    if (!optionDescriptor?.title) {
-      return [];
-    }
-    return [
-      {
-        title: optionDescriptor.title,
-        description: optionDescriptor.description,
-      },
-    ];
-  });
+  const label = manifestDescriptor?.title;
   return {
-    label: finalLabel,
-    tooltip:
-      tooltip || finalDescription || options ? (
-        <LabelInfo
-          label={finalLabel}
-          examples={!omitExamples ? manifestDescriptor?.examples : undefined}
-          description={tooltip || finalDescription}
-          options={options}
-        />
-      ) : null,
+    label,
+    tooltip: manifestDescriptor?.description ? (
+      <LabelInfo
+        label={label}
+        examples={manifestDescriptor?.examples}
+        description={<ReactMarkdown linkTarget="_blank">{manifestDescriptor?.description}</ReactMarkdown>}
+      />
+    ) : undefined,
   };
 }
 

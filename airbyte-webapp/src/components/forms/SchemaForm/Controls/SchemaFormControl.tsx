@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { useWatch } from "react-hook-form";
-import { FormattedMessage } from "react-intl";
+import { FormattedMessage, IntlShape, useIntl } from "react-intl";
 import { ReactMarkdown } from "react-markdown/lib/react-markdown";
 
 import { LabelInfo } from "components/Label";
 import { Badge } from "components/ui/Badge";
+import { OptionSection } from "components/ui/ComboBox";
 import { FlexContainer } from "components/ui/Flex";
 import { Tooltip } from "components/ui/Tooltip";
 
@@ -53,6 +54,7 @@ interface SchemaFormControlProps {
   isRequired?: boolean;
   className?: string;
   placeholder?: string;
+  suggestionsOverride?: string[];
 }
 
 /**
@@ -69,7 +71,9 @@ export const SchemaFormControl = ({
   className,
   nonAdvancedFields,
   placeholder,
+  suggestionsOverride,
 }: SchemaFormControlProps) => {
+  const { formatMessage } = useIntl();
   const {
     schema: rootSchema,
     getSchemaAtPath,
@@ -209,6 +213,17 @@ export const SchemaFormControl = ({
     if (targetSchema.multiline) {
       return <FormControl {...baseProps} fieldType="textarea" />;
     }
+    const suggestions = suggestionsOverride ?? targetSchema.suggestions;
+    if (suggestions) {
+      return (
+        <FormControl
+          {...baseProps}
+          fieldType="combobox"
+          allowCustomValue
+          options={convertToOptions(suggestions, formatMessage)}
+        />
+      );
+    }
     return <FormControl {...baseProps} fieldType="input" />;
   }
 
@@ -218,6 +233,12 @@ export const SchemaFormControl = ({
 
   if (targetSchema.type === "array") {
     const items = verifyArrayItems(targetSchema.items);
+    const suggestions = suggestionsOverride ?? targetSchema.suggestions;
+    if (items.type === "string" && suggestions) {
+      return (
+        <FormControl {...baseProps} fieldType="multiCombobox" options={convertToOptions(suggestions, formatMessage)} />
+      );
+    }
     if (items.type === "string" || items.type === "integer" || items.type === "number") {
       return <FormControl {...baseProps} fieldType="array" itemType={items.type} />;
     }
@@ -258,4 +279,16 @@ export const getMatchingOverrideForPath = (overrideByPath: OverrideByPath, path:
   });
 
   return matchingOverridePath ? overrideByPath[matchingOverridePath] : undefined;
+};
+
+const convertToOptions = (suggestions: string[], formatMessage: IntlShape["formatMessage"]): OptionSection[] => {
+  return [
+    {
+      sectionTitle: formatMessage({ id: "form.suggestions" }),
+      innerOptions: suggestions.map((suggestion) => ({
+        label: suggestion,
+        value: suggestion,
+      })),
+    },
+  ];
 };

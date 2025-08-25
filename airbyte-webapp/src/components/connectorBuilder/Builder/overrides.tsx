@@ -28,11 +28,14 @@ import { Option } from "components/ui/ListBox/Option";
 import { Message } from "components/ui/Message";
 
 import { RequestOptionInjectInto } from "core/api/types/ConnectorManifest";
-import { useConnectorBuilderPermission } from "services/connectorBuilder/ConnectorBuilderStateService";
+import {
+  useConnectorBuilderPermission,
+  useConnectorBuilderTestRead,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderDeclarativeOAuth } from "./BuilderDeclarativeOAuth";
 import { JinjaInput } from "./JinjaInput";
-import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
+import { getDescriptionByManifest, getLabelAndTooltip, getLabelByManifest } from "./manifestHelpers";
 import styles from "./overrides.module.scss";
 import { BuilderStreamTab, StreamId } from "../types";
 import { useStreamNames } from "../useStreamNames";
@@ -344,13 +347,15 @@ export const RequestOptionInjectSelector = ({ path }: { path: string }) => {
     },
   ];
 
+  const { label, tooltip } = getLabelAndTooltip("RequestOption.properties.inject_into");
+
   return (
     <FormControl
       fieldType="dropdown"
       name={path}
       options={injectIntoOptions}
-      label={getLabelByManifest("RequestOption.properties.inject_into")}
-      labelTooltip={getDescriptionByManifest("RequestOption.properties.inject_into")}
+      label={label}
+      labelTooltip={tooltip}
       onlyShowErrorIfTouched
       onSelect={(value) => {
         // clear the unused field's value when the inject_into value changes
@@ -558,4 +563,47 @@ export const BackoffStrategies = ({ path }: { path: string }) => {
       <SchemaFormControl path={path} />
     </FlexContainer>
   );
+};
+
+export const CursorField = ({ path }: { path: string }) => {
+  const { formatMessage } = useIntl();
+  const {
+    streamRead: { data },
+  } = useConnectorBuilderTestRead();
+
+  const datetimeFields = Object.keys(data?.inferred_datetime_formats || {});
+  if (datetimeFields.length > 0) {
+    const { label, tooltip } = getLabelAndTooltip("DatetimeBasedCursor.properties.cursor_field");
+    return (
+      <FormControl
+        name={path}
+        label={label}
+        labelTooltip={tooltip}
+        fieldType="combobox"
+        allowCustomValue
+        options={[
+          {
+            sectionTitle: formatMessage({ id: "form.suggestions" }),
+            innerOptions: datetimeFields.map((datetimeField) => ({
+              label: datetimeField,
+              value: datetimeField,
+            })),
+          },
+        ]}
+      />
+    );
+  }
+  return <SchemaFormControl path={path} />;
+};
+
+export const CursorDatetimeFormats = ({ path }: { path: string }) => {
+  const {
+    streamRead: { data },
+  } = useConnectorBuilderTestRead();
+  const cursorFieldPath: string = useMemo(() => `${path.split(".").slice(0, -1).join(".")}.cursor_field`, [path]);
+  const cursorField = useBuilderWatch(cursorFieldPath) as string | undefined;
+  const rawDetectedFormat = cursorField ? data?.inferred_datetime_formats?.[cursorField] : undefined;
+  const detectedFormat = typeof rawDetectedFormat === "string" ? rawDetectedFormat : null;
+
+  return <SchemaFormControl path={path} suggestionsOverride={detectedFormat ? [detectedFormat] : undefined} />;
 };

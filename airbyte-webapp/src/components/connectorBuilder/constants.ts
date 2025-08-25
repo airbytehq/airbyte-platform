@@ -185,32 +185,3 @@ export const VALID_AUTHENTICATOR_TYPES = [
   NoAuthType.NoAuth,
   LegacySessionTokenAuthenticatorType.LegacySessionTokenAuthenticator,
 ] as const;
-
-// TODO(lmossman): add these back as suggestions (https://github.com/airbytehq/airbyte-internal-issues/issues/13341)
-// export const LARGE_DURATION_OPTIONS = [
-//   { value: "PT1H", description: "1 hour" },
-//   { value: "P1D", description: "1 day" },
-//   { value: "P1W", description: "1 week" },
-//   { value: "P1M", description: "1 month" },
-//   { value: "P1Y", description: "1 year" },
-// ];
-// export const SMALL_DURATION_OPTIONS = [
-//   { value: "PT0.000001S", description: "1 microsecond" },
-//   { value: "PT0.001S", description: "1 millisecond" },
-//   { value: "PT1S", description: "1 second" },
-//   { value: "PT1M", description: "1 minute" },
-//   { value: "PT1H", description: "1 hour" },
-//   { value: "P1D", description: "1 day" },
-// ];
-// export const DATETIME_FORMAT_OPTIONS = [
-//   { value: "%Y-%m-%d" },
-//   { value: "%Y-%m-%d %H:%M:%S" },
-//   { value: "%Y-%m-%dT%H:%M:%S" },
-//   { value: "%Y-%m-%dT%H:%M:%SZ" },
-//   { value: "%Y-%m-%dT%H:%M:%S%z" },
-//   { value: "%Y-%m-%dT%H:%M:%S.%fZ" },
-//   { value: "%Y-%m-%dT%H:%M:%S.%f%z" },
-//   { value: "%Y-%m-%d %H:%M:%S.%f+00:00" },
-//   { value: "%s" },
-//   { value: "%ms" },
-// ];

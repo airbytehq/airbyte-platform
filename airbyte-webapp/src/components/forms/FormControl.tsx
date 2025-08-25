@@ -5,6 +5,7 @@ import React, { HTMLInputTypeAttribute, ReactNode, useState } from "react";
 import { Path, get, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { ComboBoxProps, MultiComboBoxProps } from "components/ui/ComboBox";
 import { DatePickerProps } from "components/ui/DatePicker/DatePicker";
 import { FlexContainer } from "components/ui/Flex";
 import { InputProps } from "components/ui/Input";
@@ -18,10 +19,12 @@ import { InfoTooltip } from "components/ui/Tooltip";
 import { NON_I18N_ERROR_TYPE } from "core/utils/form";
 
 import { ArrayWrapper } from "./ArrayWrapper";
+import { ComboBoxWrapper } from "./ComboBoxWrapper";
 import { DatepickerWrapper } from "./DatepickerWrapper";
 import { FormValues } from "./Form";
 import styles from "./FormControl.module.scss";
 import { InputWrapper } from "./InputWrapper";
+import { MultiComboBoxWrapper } from "./MultiComboBoxWrapper";
 import { SelectWrapper } from "./SelectWrapper";
 import { SwitchWrapper } from "./SwitchWrapper";
 import { TextAreaWrapper } from "./TextAreaWrapper";
@@ -32,13 +35,15 @@ type ControlProps<T extends FormValues> =
   | TextAreaControlProps<T>
   | DatepickerControlProps<T>
   | SwitchControlProps<T>
-  | ArrayControlProps<T>;
+  | ArrayControlProps<T>
+  | ComboboxControlProps<T>
+  | MultiComboboxControlProps<T>;
 
 interface ControlBaseProps<T extends FormValues> {
   /**
    * fieldType determines what form element is rendered. Depending on the chosen fieldType, additional props may be optional or required.
    */
-  fieldType: "input" | "textarea" | "date" | "dropdown" | "switch" | "array";
+  fieldType: "input" | "textarea" | "date" | "dropdown" | "switch" | "array" | "combobox" | "multiCombobox";
   /**
    * The field name must match any provided default value or validation schema.
    */
@@ -130,6 +135,18 @@ export interface ArrayControlProps<T extends FormValues>
   itemType?: "string" | "number" | "integer";
 }
 
+export interface ComboboxControlProps<T extends FormValues>
+  extends ControlBaseProps<T>,
+    Omit<ComboBoxProps, "value" | "onChange"> {
+  fieldType: "combobox";
+}
+
+export interface MultiComboboxControlProps<T extends FormValues>
+  extends ControlBaseProps<T>,
+    Omit<MultiComboBoxProps, "name" | "value" | "onChange"> {
+  fieldType: "multiCombobox";
+}
+
 export const FormControl = <T extends FormValues>({
   label,
   labelTooltip,
@@ -185,6 +202,16 @@ export const FormControl = <T extends FormValues>({
     if (controlProps.fieldType === "array") {
       const { fieldType, ...withoutFieldType } = controlProps;
       return <ArrayWrapper {...withoutFieldType} />;
+    }
+
+    if (controlProps.fieldType === "combobox") {
+      const { fieldType, ...withoutFieldType } = controlProps;
+      return <ComboBoxWrapper {...withoutFieldType} />;
+    }
+
+    if (controlProps.fieldType === "multiCombobox") {
+      const { fieldType, ...withoutFieldType } = controlProps;
+      return <MultiComboBoxWrapper {...withoutFieldType} />;
     }
 
     throw new Error(`No matching form input found for type: ${props.fieldType}`);
