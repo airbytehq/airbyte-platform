@@ -15,7 +15,7 @@ class InstagramOAuthFlowTest : BaseOAuthFlowTest() {
 
   @Suppress("ktlint:standard:max-line-length")
   override val expectedConsentUrl: String
-    get() = "https://www.facebook.com/v21.0/dialog/oauth?client_id=test_client_id&redirect_uri=https%3A%2F%2Fairbyte.io&state=state&scope=ads_management%2Cbusiness_management%2Cinstagram_basic%2Cinstagram_manage_insights%2Cpages_show_list%2Cpages_read_engagement"
+    get() = "https://www.facebook.com/v23.0/dialog/oauth?client_id=test_client_id&redirect_uri=https%3A%2F%2Fairbyte.io&state=state&scope=ads_management%2Cbusiness_management%2Cinstagram_basic%2Cinstagram_manage_insights%2Cpages_show_list%2Cpages_read_engagement"
 
   override val expectedOutputPath: List<String>
     get() = listOf()

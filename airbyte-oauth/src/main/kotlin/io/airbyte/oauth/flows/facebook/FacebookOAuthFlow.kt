@@ -134,8 +134,8 @@ abstract class FacebookOAuthFlow : BaseOAuth2Flow {
   override fun getDefaultOAuthOutputPath(): List<String> = listOf()
 
   companion object {
-    private const val ACCESS_TOKEN_URL = "https://graph.facebook.com/v21.0/oauth/access_token"
-    private const val AUTH_CODE_TOKEN_URL = "https://www.facebook.com/v21.0/dialog/oauth"
+    private const val ACCESS_TOKEN_URL = "https://graph.facebook.com/v23.0/oauth/access_token"
+    private const val AUTH_CODE_TOKEN_URL = "https://www.facebook.com/v23.0/dialog/oauth"
     private const val ACCESS_TOKEN = "access_token"
   }
 }
