@@ -245,6 +245,7 @@ internal class BootloaderTest {
         actorDefinitionVersionResolver,
         airbyteCompatibleConnectorsValidator,
         connectorRolloutService,
+        AirbyteEdition.COMMUNITY,
       )
     val declarativeManifestImageVersionsProvider: DeclarativeManifestImageVersionsProvider = LocalDeclarativeManifestImageVersionsProvider()
     val declarativeSourceUpdater =
@@ -430,6 +431,7 @@ internal class BootloaderTest {
         actorDefinitionVersionResolver,
         airbyteCompatibleConnectorsValidator,
         connectorRolloutService,
+        AirbyteEdition.COMMUNITY,
       )
     val declarativeManifestImageVersionsProvider: DeclarativeManifestImageVersionsProvider = LocalDeclarativeManifestImageVersionsProvider()
     val declarativeSourceUpdater =

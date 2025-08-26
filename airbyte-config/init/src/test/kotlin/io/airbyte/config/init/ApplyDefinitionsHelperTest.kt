@@ -9,6 +9,7 @@ import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.BreakingChanges
+import io.airbyte.config.Configs
 import io.airbyte.config.Configs.SeedDefinitionsProviderType
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
@@ -50,6 +51,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.IOException
 import java.time.Instant
@@ -89,6 +91,7 @@ internal class ApplyDefinitionsHelperTest {
         actorDefinitionVersionResolver,
         airbyteCompatibleConnectorsValidator,
         connectorRolloutService,
+        Configs.AirbyteEdition.CLOUD,
       )
 
     every { actorDefinitionService.getActorDefinitionIdsInUse() } returns emptySet()
@@ -471,6 +474,55 @@ internal class ApplyDefinitionsHelperTest {
 
     assertEquals(false, sourceRollout.hasBreakingChanges)
     assertEquals(false, destinationRollout.hasBreakingChanges)
+  }
+
+  @ParameterizedTest
+  @EnumSource(Configs.AirbyteEdition::class, names = ["COMMUNITY", "ENTERPRISE"])
+  fun `applyReleaseCandidates should not write ConnectorRollout if not on Cloud`(airbyteEdition: Configs.AirbyteEdition) {
+    val helper =
+      ApplyDefinitionsHelper(
+        definitionsProvider,
+        seedDefinitionsProviderType,
+        jobPersistence,
+        actorDefinitionService,
+        sourceService,
+        destinationService,
+        metricClient,
+        supportStateUpdater,
+        actorDefinitionVersionResolver,
+        airbyteCompatibleConnectorsValidator,
+        connectorRolloutService,
+        airbyteEdition,
+      )
+    mockSeedInitialDefinitions()
+
+    val fakeAdvId = UUID.randomUUID()
+    val fakeInitialAdvId = UUID.randomUUID()
+    val insertedAdvSource = ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_RC).withVersionId(fakeAdvId)
+    val insertedInitialAdvSource = ConnectorRegistryConverters.toActorDefinitionVersion(SOURCE_POSTGRES_RC).withVersionId(fakeInitialAdvId)
+    val insertedAdvDestination = ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_RC).withVersionId(fakeAdvId)
+    val insertedInitialAdvDestination = ConnectorRegistryConverters.toActorDefinitionVersion(DESTINATION_S3_RC).withVersionId(fakeInitialAdvId)
+
+    every {
+      actorDefinitionService.writeActorDefinitionVersion(any())
+    } returns
+      insertedAdvSource andThen insertedAdvDestination
+    every {
+      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
+    } returns Optional.of(insertedInitialAdvSource) andThen Optional.of(insertedInitialAdvDestination)
+
+    val rcSourceDefinitions = listOf(SOURCE_POSTGRES_RC)
+    val rcDestinationDefinitions = listOf(DESTINATION_S3_RC)
+
+    helper.applyReleaseCandidates(rcSourceDefinitions)
+    helper.applyReleaseCandidates(rcDestinationDefinitions)
+
+    verify(exactly = 0) {
+      actorDefinitionService.writeActorDefinitionVersion(any())
+    }
+    verify(exactly = 0) {
+      connectorRolloutService.insertConnectorRollout(any())
+    }
   }
 
   @ParameterizedTest

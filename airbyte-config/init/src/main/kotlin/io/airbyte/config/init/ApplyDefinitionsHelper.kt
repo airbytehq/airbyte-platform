@@ -10,6 +10,7 @@ import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ActorType
+import io.airbyte.config.Configs
 import io.airbyte.config.Configs.SeedDefinitionsProviderType
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
@@ -60,6 +61,7 @@ class ApplyDefinitionsHelper(
   private val actorDefinitionVersionResolver: ActorDefinitionVersionResolver,
   private val airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator,
   private val connectorRolloutService: ConnectorRolloutService,
+  private val airbyteEdition: Configs.AirbyteEdition,
 ) {
   private var newConnectorCount = 0
   private var changedConnectorCount = 0
@@ -204,6 +206,9 @@ class ApplyDefinitionsHelper(
 
   @VisibleForTesting
   internal fun <T> applyReleaseCandidates(rcDefinitions: List<T>) {
+    if (airbyteEdition != Configs.AirbyteEdition.CLOUD) {
+      return
+    }
     for (rcDef in rcDefinitions) {
       val rcAdv =
         when (rcDef) {
