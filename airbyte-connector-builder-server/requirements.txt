@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==6.60.9
+airbyte-cdk==6.61.1
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.17.1
     # via airbyte-cdk
@@ -41,7 +41,7 @@ certifi==2025.1.31
     #   requests
 cffi==1.17.1
     # via cryptography
-charset-normalizer==3.4.2
+charset-normalizer==3.4.3
     # via requests
 click==8.2.1
     # via
@@ -115,7 +115,7 @@ langchain-core==0.1.42
     # via airbyte-cdk
 langsmith==0.1.147
     # via langchain-core
-markdown-it-py==3.0.0
+markdown-it-py==4.0.0
     # via rich
 markupsafe==3.0.2
     # via jinja2
@@ -127,7 +127,7 @@ numpy==1.26.4
     # via
     #   airbyte-cdk
     #   pandas
-orjson==3.11.1
+orjson==3.11.2
     # via
     #   airbyte-cdk
     #   langsmith
@@ -144,7 +144,7 @@ proto-plus==1.26.1
     # via
     #   google-api-core
     #   google-cloud-secret-manager
-protobuf==6.31.1
+protobuf==6.32.0
     # via
     #   google-api-core
     #   google-cloud-secret-manager
@@ -182,7 +182,7 @@ python-dateutil==2.9.0.post0
     #   airbyte-cdk
     #   dateparser
     #   pandas
-python-ulid==3.0.0
+python-ulid==3.1.0
     # via airbyte-cdk
 pytz==2024.2
     # via
@@ -199,7 +199,7 @@ regex==2025.7.34
     # via
     #   dateparser
     #   nltk
-requests==2.32.4
+requests==2.32.5
     # via
     #   airbyte-cdk
     #   google-api-core
@@ -230,7 +230,7 @@ tenacity==8.5.0
     # via langchain-core
 tqdm==4.67.1
     # via nltk
-typing-extensions==4.14.1
+typing-extensions==4.15.0
     # via
     #   airbyte-cdk
     #   anyio
