@@ -122,7 +122,8 @@ internal class ReplicationWorkerTest {
           context = mockContext,
           startReplicationJobs = startJobs,
           syncReplicationJobs = syncJobs,
-          replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+          replicationWorkerExecutor = Executors.newFixedThreadPool(4),
+          heartbeatExecutor = Executors.newSingleThreadExecutor(),
           replicationLogMdcBuilder = mockReplicationMdcScopeBuilder,
         )
 
@@ -194,7 +195,8 @@ internal class ReplicationWorkerTest {
               ),
             ),
           syncReplicationJobs = syncJobs,
-          replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+          replicationWorkerExecutor = Executors.newFixedThreadPool(4),
+          heartbeatExecutor = Executors.newSingleThreadExecutor(),
           replicationLogMdcBuilder = mockReplicationMdcScopeBuilder,
         )
 
@@ -245,7 +247,8 @@ internal class ReplicationWorkerTest {
                 replicationWorkerHelper = mockWorkerHelper,
               ),
             ),
-          replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+          replicationWorkerExecutor = Executors.newFixedThreadPool(4),
+          heartbeatExecutor = Executors.newSingleThreadExecutor(),
           replicationLogMdcBuilder = mockReplicationMdcScopeBuilder,
         )
 
@@ -288,7 +291,8 @@ internal class ReplicationWorkerTest {
           context = mockContext,
           startReplicationJobs = startJobs,
           syncReplicationJobs = syncJobs,
-          replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+          replicationWorkerExecutor = Executors.newFixedThreadPool(4),
+          heartbeatExecutor = Executors.newSingleThreadExecutor(),
           replicationLogMdcBuilder = mockReplicationMdcScopeBuilder,
         )
 
@@ -331,7 +335,8 @@ internal class ReplicationWorkerTest {
           context = mockContext,
           startReplicationJobs = startJobs,
           syncReplicationJobs = syncJobs,
-          replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+          replicationWorkerExecutor = Executors.newFixedThreadPool(4),
+          heartbeatExecutor = Executors.newSingleThreadExecutor(),
           replicationLogMdcBuilder = mockReplicationMdcScopeBuilder,
         )
 

@@ -143,10 +143,14 @@ class CommonBeanFactory {
   fun outputDocumentStoreClient(factory: StorageClientFactory): StorageClient = factory.create(DocumentType.WORKLOAD_OUTPUT)
 
   @Singleton
-  @Named("replicationWorkerDispatcher")
-  fun replicationWorkerDispatcher(
+  @Named("replicationWorkerExecutor")
+  fun replicationWorkerExecutor(
     @Value("\${airbyte.replication.dispatcher.n-threads:4}") nThreads: Int,
   ): ExecutorService = Executors.newFixedThreadPool(nThreads)
+
+  @Singleton
+  @Named("heartbeatExecutor")
+  fun heartbeatExecutor(): ExecutorService = Executors.newSingleThreadExecutor()
 
   @Singleton
   @Named("syncPersistenceExecutorService")

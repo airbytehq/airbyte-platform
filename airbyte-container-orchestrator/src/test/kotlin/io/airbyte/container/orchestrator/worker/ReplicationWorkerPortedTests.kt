@@ -238,7 +238,8 @@ class ReplicationWorkerPortedTests {
       context = ctx,
       startReplicationJobs = startJobs,
       syncReplicationJobs = syncJobs,
-      replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+      replicationWorkerExecutor = Executors.newFixedThreadPool(4),
+      heartbeatExecutor = Executors.newSingleThreadExecutor(),
       replicationLogMdcBuilder = replicationMdcScopeBuilder,
     )
 
@@ -443,7 +444,8 @@ class ReplicationWorkerPortedTests {
         context = ctxEnabled,
         startReplicationJobs = startJobs,
         syncReplicationJobs = syncJobs,
-        replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+        replicationWorkerExecutor = Executors.newFixedThreadPool(4),
+        heartbeatExecutor = Executors.newSingleThreadExecutor(),
         replicationLogMdcBuilder = replicationMdcScopeBuilder,
       )
 
@@ -506,7 +508,8 @@ class ReplicationWorkerPortedTests {
         context = ctxDisabled,
         startReplicationJobs = startJobs,
         syncReplicationJobs = syncJobs,
-        replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+        replicationWorkerExecutor = Executors.newFixedThreadPool(4),
+        heartbeatExecutor = Executors.newSingleThreadExecutor(),
         replicationLogMdcBuilder = replicationMdcScopeBuilder,
       )
 

@@ -234,8 +234,9 @@ object ReplicationWorkerIntegrationTestUtil {
       Files
         .createTempDirectory("replication-worker-integration-test-jobRoot")
         .also { it.toFile().deleteOnExit() }
-    // CommonBeanFactory.replicationWorkerDispatcher defaults to 4 threads
-    val replicationWorkerDispatcher = Executors.newFixedThreadPool(4)
+    // CommonBeanFactory.replicationWorkerExecutor defaults to 4 threads
+    val replicationWorkerExecutor = Executors.newFixedThreadPool(4)
+    val heartbeatWorkerExecutor = Executors.newSingleThreadScheduledExecutor()
     val stateFlushExecutorService = Executors.newSingleThreadScheduledExecutor()
 
     val bufferConfiguration = BufferConfiguration()
@@ -388,14 +389,15 @@ object ReplicationWorkerIntegrationTestUtil {
         replicationWorkerContext,
         startReplicationJobs = startReplicationJobs,
         syncReplicationJobs = syncReplicationJobs,
-        replicationWorkerDispatcher,
+        replicationWorkerExecutor,
+        heartbeatWorkerExecutor,
         MdcScope.Builder(),
       )
     try {
       val replicationOutput = replicationWorker.run(jobRoot)
       return ReplicationWorkerInfo(replicationWorker, syncStatsTracker, replicationWorkerState, replicationOutput)
     } finally {
-      replicationWorkerDispatcher.shutdown()
+      replicationWorkerExecutor.shutdown()
       stateFlushExecutorService.shutdown()
     }
   }

@@ -43,10 +43,12 @@ class ReplicationWorker(
   private val context: ReplicationWorkerContext,
   @Named("startReplicationJobs") private val startReplicationJobs: List<ReplicationTask>,
   @Named("syncReplicationJobs") private val syncReplicationJobs: List<ReplicationTask>,
-  @Named("replicationWorkerDispatcher") private val replicationWorkerDispatcher: ExecutorService,
+  @Named("replicationWorkerExecutor") private val replicationWorkerExecutor: ExecutorService,
+  @Named("heartbeatExecutor") private val heartbeatExecutor: ExecutorService,
   @Named("replicationMdcScopeBuilder") private val replicationLogMdcBuilder: MdcScope.Builder,
 ) {
-  private val dedicatedDispatcher = replicationWorkerDispatcher.asCoroutineDispatcher()
+  private val dedicatedDispatcher = replicationWorkerExecutor.asCoroutineDispatcher()
+  private val heartbeatDispatcher = heartbeatExecutor.asCoroutineDispatcher()
 
   /**
    * Helper function to track failures.
@@ -110,7 +112,7 @@ class ReplicationWorker(
         context.replicationWorkerState.markReplicationRunning(onReplicationRunning)
 
         val heartbeatSender =
-          AsyncUtils.runLaunch(Dispatchers.IO, this, mdc) {
+          AsyncUtils.runLaunch(heartbeatDispatcher, this, mdc) {
             workloadHeartbeatSender.sendHeartbeat()
           }
 
@@ -134,6 +136,7 @@ class ReplicationWorker(
       throw WorkerException("Sync failed", e)
     } finally {
       safeClose(dedicatedDispatcher)
+      safeClose(heartbeatDispatcher)
       safeClose(destination)
       safeClose(source)
       safeClose(recordSchemaValidator)
