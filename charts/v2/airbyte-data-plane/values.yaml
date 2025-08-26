@@ -243,6 +243,8 @@ tracking:
 micronaut:
   environments: ["k8s"]
 
+worker: {}
+
 workloadApiServer:
   secretName: ""
   bearerToken: token
