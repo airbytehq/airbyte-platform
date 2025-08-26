@@ -27,7 +27,7 @@ import io.airbyte.metrics.lib.ApmTraceConstants.Tags
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workers.commands.CheckCommand
-import io.airbyte.workers.commands.CheckCommandThroughApi
+import io.airbyte.workers.commands.CheckCommandV2
 import io.airbyte.workers.commands.ConnectorCommand
 import io.airbyte.workers.commands.DiscoverCommand
 import io.airbyte.workers.commands.DiscoverCommandV2
@@ -112,7 +112,7 @@ class ActivityExecutionContextProvider {
 @Singleton
 class ConnectorCommandActivityImpl(
   private val checkCommand: CheckCommand,
-  private val checkCommandApi: CheckCommandThroughApi,
+  private val checkCommandApi: CheckCommandV2,
   private val discoverCommand: DiscoverCommand,
   private val discoverCommandApi: DiscoverCommandV2,
   private val specCommand: SpecCommand,

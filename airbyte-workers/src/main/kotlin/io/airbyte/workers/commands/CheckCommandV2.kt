@@ -19,7 +19,7 @@ import io.airbyte.workers.models.CheckConnectionApiInput
 import jakarta.inject.Singleton
 
 @Singleton
-class CheckCommandThroughApi(
+class CheckCommandV2(
   airbyteApiClient: AirbyteApiClient,
   private val metricClient: MetricClient,
   private val failureConverter: FailureConverter,

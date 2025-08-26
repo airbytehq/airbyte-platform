@@ -20,7 +20,7 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.commands.CheckCommand
-import io.airbyte.workers.commands.CheckCommandThroughApi
+import io.airbyte.workers.commands.CheckCommandV2
 import io.airbyte.workers.commands.DiscoverCommand
 import io.airbyte.workers.commands.DiscoverCommandV2
 import io.airbyte.workers.commands.ReplicationCommand
@@ -43,7 +43,7 @@ import java.util.UUID
 class ConnectorCommandActivityTest {
   lateinit var activity: ConnectorCommandActivity
   lateinit var checkCommand: CheckCommand
-  lateinit var checkCommandThroughApi: CheckCommandThroughApi
+  lateinit var checkCommandThroughApi: CheckCommandV2
   lateinit var discoverCommand: DiscoverCommand
   lateinit var discoverCommandV2: DiscoverCommandV2
   lateinit var specCommand: SpecCommand

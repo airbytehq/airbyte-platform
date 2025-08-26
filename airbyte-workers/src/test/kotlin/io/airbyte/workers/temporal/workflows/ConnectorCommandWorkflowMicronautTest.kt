@@ -9,7 +9,7 @@ import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.storage.StorageClientFactory
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.workers.commands.CheckCommand
-import io.airbyte.workers.commands.CheckCommandThroughApi
+import io.airbyte.workers.commands.CheckCommandV2
 import io.airbyte.workers.commands.DiscoverCommand
 import io.airbyte.workers.commands.DiscoverCommandV2
 import io.airbyte.workers.commands.ReplicationCommand
@@ -64,7 +64,7 @@ class ConnectorCommandWorkflowMicronautTest {
   lateinit var checkCommand: CheckCommand
 
   @Inject
-  lateinit var checkCommandThroughApi: CheckCommandThroughApi
+  lateinit var checkCommandThroughApi: CheckCommandV2
 
   @Inject
   lateinit var discoverCommand: DiscoverCommand
