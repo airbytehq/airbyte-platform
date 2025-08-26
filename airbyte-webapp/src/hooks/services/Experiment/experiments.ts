@@ -19,6 +19,7 @@ export interface Experiments {
   "connection.rateLimitedUI": boolean;
   "connections.connectionsStatusesEnabled": boolean;
   "connector.airbyteCloudIpAddressesByDataplane": Record<string, string[]>;
+  "connector.allowSavingWithoutTesting": boolean;
   "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
   "connectorBuilder.aiAssist.enabled": boolean;
@@ -72,6 +73,7 @@ export const defaultExperimentValues: Experiments = {
       "34.33.7.0/29",
     ],
   },
+  "connector.allowSavingWithoutTesting": false,
   "connector.suggestedDestinationConnectors": "",
   "connector.suggestedSourceConnectors": "",
   "connectorBuilder.aiAssist.enabled": false,

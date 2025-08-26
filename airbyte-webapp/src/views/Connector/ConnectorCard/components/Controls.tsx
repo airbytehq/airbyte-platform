@@ -9,6 +9,7 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 
 import { maskSecrets } from "area/connector/utils/maskSecrets";
 import { SynchronousJobRead } from "core/api/types/AirbyteClient";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { TestCard } from "./TestCard";
 
@@ -64,6 +65,7 @@ export const Controls: React.FC<IProps> = ({
     <FormattedMessage id={`onboarding.${formType}SetUp.buttonText`} />
   );
   const [isSubmittingWithoutCheck, setIsSubmittingWithoutCheck] = useState(false);
+  const shouldAllowSavingWithoutTesting = useExperiment("connector.allowSavingWithoutTesting");
 
   return (
     <>
@@ -113,7 +115,7 @@ export const Controls: React.FC<IProps> = ({
             <FormattedMessage id="form.cancel" />
           </Button>
         )}
-        {onSubmitWithoutCheck ? (
+        {onSubmitWithoutCheck && shouldAllowSavingWithoutTesting ? (
           <DropdownButton
             type="submit"
             data-testid={`${isEditMode ? "edit" : "create"}-${formType}-button`}
