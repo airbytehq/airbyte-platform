@@ -791,6 +791,10 @@ enum class OssMetricsRegistry(
     metricName = "data_obs_outlier_check",
     metricDescription = "outcome of the outlier check",
   ),
+  DATA_OBS_OUTLIER_CHECK_ERRORS(
+    metricName = "data_obs_outlier_check_errors",
+    metricDescription = "number of errors encountered during the outlier check",
+  ),
   DATABASE_PRUNING_JOBS_DELETED(
     metricName = "database_pruning_jobs_deleted",
     metricDescription = "number of jobs deleted during database pruning operation",

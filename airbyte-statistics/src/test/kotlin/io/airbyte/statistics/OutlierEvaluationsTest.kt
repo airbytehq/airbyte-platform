@@ -74,6 +74,20 @@ class OutlierEvaluationsTest {
   }
 
   @Test
+  fun `function reciprocal returns the reciprocal`() {
+    assertEquals(1.25, Reciprocal(Const(4.0)).getValue(defaultScoringContext))
+    assertEquals(1.5, Reciprocal(Const(2.0)).getValue(defaultScoringContext))
+    assertEquals(101.0, Reciprocal(Const(0.0)).getValue(defaultScoringContext))
+  }
+
+  @Test
+  fun `function reciprocalSqrt returns the reciprocal of the square root`() {
+    assertEquals(1.25, ReciprocalSqrt(Const(16.0)).getValue(defaultScoringContext))
+    assertEquals(1.2, ReciprocalSqrt(Const(25.0)).getValue(defaultScoringContext))
+    assertEquals(11.0, ReciprocalSqrt(Const(0.0)).getValue(defaultScoringContext))
+  }
+
+  @Test
   fun `function return the scores of their underlying expression`() {
     assertEquals(DURATION_SCORES, Abs(DURATION_DIM).getScores(defaultScoringContext))
     assertEquals(DURATION_SCORES, Reciprocal(DURATION_DIM).getScores(defaultScoringContext))

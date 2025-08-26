@@ -22,6 +22,7 @@ import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.statistics.OutlierEvaluation
+import io.airbyte.statistics.OutlierRule
 import io.airbyte.statistics.Outliers
 import io.airbyte.statistics.Scores
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -367,10 +368,22 @@ class JobObservabilityService(
   private fun evaluateJobOutliers(scores: Map<String, Scores>): List<OutlierEvaluation> =
     jobObservabilityRulesService
       .getJobOutlierRules()
-      .mapNotNull { it.evaluate(scores) }
+      .mapNotNull { evaluateRule(scores, rule = it) }
 
   private fun evaluateStreamOutliers(scores: Map<String, Scores>): List<OutlierEvaluation> =
     jobObservabilityRulesService
       .getStreamOutlierRules()
-      .mapNotNull { it.evaluate(scores) }
+      .mapNotNull { evaluateRule(scores, rule = it) }
+
+  private fun evaluateRule(
+    scores: Map<String, Scores>,
+    rule: OutlierRule,
+  ): OutlierEvaluation? {
+    val eval = rule.evaluate(scores)
+    if (eval == null) {
+      logger.warn { "Failed to evaluate outlier rule ${rule.name}" }
+      metricClient.count(OssMetricsRegistry.DATA_OBS_OUTLIER_CHECK_ERRORS, value = 1)
+    }
+    return eval
+  }
 }
