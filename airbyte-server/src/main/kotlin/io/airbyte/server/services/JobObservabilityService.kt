@@ -8,6 +8,7 @@ import io.airbyte.api.model.generated.AttemptRead
 import io.airbyte.api.model.generated.JobRead
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.config.JobConfig
+import io.airbyte.config.StreamDescriptor
 import io.airbyte.data.repositories.entities.ObsJobsStats
 import io.airbyte.data.repositories.entities.ObsStreamStats
 import io.airbyte.data.repositories.entities.ObsStreamStatsId
@@ -161,6 +162,11 @@ class JobObservabilityService(
       return
     }
 
+    val jobConfig = jobPersistence.getJob(jobId)
+    val configuredStreams =
+      jobConfig.config.sync.configuredAirbyteCatalog.streams
+        .map { it.streamDescriptor }
+        .toSet()
     val jobInfo = evaluateJob(job.first(), jobHistory)
 
     val allStreamStats =
@@ -169,6 +175,8 @@ class JobObservabilityService(
     val streams =
       allStreamStats
         .groupBy { it.id.streamNamespace to it.id.streamName }
+        // Make sure we only evaluate the streams from the configured catalog
+        .filter { configuredStreams.contains(StreamDescriptor().withNamespace(it.key.first).withName(it.key.second)) }
         .map { streamStats ->
           val (currentList, history) = streamStats.value.partition { it.id.jobId == jobId }
           val current =
