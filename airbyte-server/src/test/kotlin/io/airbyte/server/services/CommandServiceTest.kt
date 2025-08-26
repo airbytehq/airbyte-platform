@@ -37,6 +37,7 @@ import io.airbyte.workload.output.WorkloadOutputDocStoreReader
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.services.ConflictException
+import io.airbyte.workload.services.InvalidStatusTransitionException
 import io.airbyte.workload.services.WorkloadService
 import io.micronaut.data.exceptions.DataAccessException
 import io.mockk.every
@@ -112,6 +113,13 @@ class CommandServiceTest {
   fun `cancel does nothing for unknown command ids`() {
     service.cancel(UNKNOWN_COMMAND_ID)
     verify(exactly = 0) { workloadService.cancelWorkload(any(), any(), any()) }
+  }
+
+  @Test
+  fun `cancel does nothing for workloads that are already terminated`() {
+    every { workloadService.cancelWorkload(WORKLOAD_ID, any(), any()) } throws InvalidStatusTransitionException("I am done")
+    service.cancel(COMMAND_ID)
+    verify(exactly = 1) { workloadService.cancelWorkload(WORKLOAD_ID, any(), any()) }
   }
 
   @Test

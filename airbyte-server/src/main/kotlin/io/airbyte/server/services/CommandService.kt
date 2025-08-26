@@ -39,6 +39,7 @@ import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.services.ConflictException
+import io.airbyte.workload.services.InvalidStatusTransitionException
 import io.airbyte.workload.services.NotFoundException
 import io.airbyte.workload.services.WorkloadService
 import io.micronaut.context.annotation.Property
@@ -454,7 +455,11 @@ class CommandService(
 
   fun cancel(commandId: String) {
     commandsRepository.findById(commandId).ifPresent { command ->
-      workloadService.cancelWorkload(command.workloadId, "api", "cancelled from the api")
+      try {
+        workloadService.cancelWorkload(command.workloadId, "api", "cancelled from the api")
+      } catch (e: InvalidStatusTransitionException) {
+        log.info(e) { "Trying to cancel $commandId that has an already terminated workload ${command.workloadId}." }
+      }
     }
   }
 
