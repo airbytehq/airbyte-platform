@@ -19,6 +19,7 @@ import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.persistence.GoogleSecretManagerPersistence.Companion.replicationPolicy
 import io.airbyte.metrics.MetricClient
 import io.grpc.Status
+import io.grpc.StatusRuntimeException
 import io.micrometer.core.instrument.Counter
 import io.mockk.Runs
 import io.mockk.coEvery
@@ -274,6 +275,33 @@ class GoogleSecretManagerPersistenceTest {
     every { mockMetric.count(metric = any(), value = any(), attributes = anyVararg()) } returns mockk<Counter>()
 
     persistence.delete(coordinate)
+
+    verify { mockGoogleClient.deleteSecret(any<SecretName>()) }
+  }
+
+  @Test
+  fun `test deleting a secret that doesn't exist swallows NotFoundException`() {
+    val projectId = "test"
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+    val mockClient: GoogleSecretManagerServiceClient = mockk()
+    val mockGoogleClient: SecretManagerServiceClient = mockk()
+    val mockMetric: MetricClient = mockk()
+    val persistence = GoogleSecretManagerPersistence(projectId, null, mockClient, mockMetric)
+
+    every { mockClient.createClient() } returns mockGoogleClient
+    every { mockGoogleClient.deleteSecret(any<SecretName>()) } throws
+      NotFoundException(
+        StatusRuntimeException(Status.NOT_FOUND),
+        GrpcStatusCode.of(
+          Status.Code.NOT_FOUND,
+        ),
+        false,
+      )
+    every { mockGoogleClient.close() } returns Unit
+
+    Assertions.assertDoesNotThrow {
+      persistence.delete(coordinate)
+    }
 
     verify { mockGoogleClient.deleteSecret(any<SecretName>()) }
   }

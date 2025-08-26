@@ -181,7 +181,13 @@ class GoogleSecretManagerPersistence(
         } else {
           SecretName.of(gcpProjectId, coordinate.fullCoordinate)
         }
-      client.deleteSecret(secretName)
+
+      try {
+        client.deleteSecret(secretName)
+      } catch (_: NotFoundException) {
+        logger.warn { "Tried to delete coordinate ${coordinate.fullCoordinate}, but it was already deleted." }
+        return
+      }
     }
   }
 
