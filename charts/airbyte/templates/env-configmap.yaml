@@ -37,6 +37,7 @@ data:
   IDENTITY_PROVIDER_TYPE: {{ .Values.global.auth.identityProvider.type }}
   OIDC_DOMAIN: {{ .Values.global.auth.identityProvider.oidc.domain }}
   OIDC_APP_NAME: {{ .Values.global.auth.identityProvider.oidc.appName }}
+  OIDC_DISPLAY_NAME: {{ .Values.global.auth.identityProvider.oidc.displayName | default .Values.global.auth.identityProvider.oidc.appName }}
     {{- end }}
   KEYCLOAK_INTERNAL_HOST: {{ .Release.Name }}-airbyte-keycloak-svc:{{ .Values.keycloak.service.port }}
   KEYCLOAK_PORT: {{ .Values.keycloak.service.port | quote }}

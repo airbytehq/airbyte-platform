@@ -71,6 +71,8 @@ global:
       #  domain: ""
       #  # -- OIDC application name
       #  appName: ""
+      #  # -- OIDC application display name
+      #  displayName: ""
       #  # -- The key within `clientIdSecretName` where the OIDC client id is stored
       #  clientIdSecretKey: ""
       #  # -- The key within `clientSecretSecretName` where the OIDC client secret is stored

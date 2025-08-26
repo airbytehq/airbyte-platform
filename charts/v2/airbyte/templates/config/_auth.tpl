@@ -498,6 +498,24 @@ Renders the auth.identityProvider.oidc.clientSecret environment variable
 {{- end }}
 
 {{/*
+Renders the global.auth.identityProvider.oidc.displayName value
+*/}}
+{{- define "airbyte.auth.identityProvider.oidc.displayName" }}
+    {{- .Values.global.auth.identityProvider.oidc.displayName | default (include "airbyte.auth.identityProvider.oidc.appName" .) }}
+{{- end }}
+
+{{/*
+Renders the auth.identityProvider.oidc.displayName environment variable
+*/}}
+{{- define "airbyte.auth.identityProvider.oidc.displayName.env" }}
+- name: OIDC_DISPLAY_NAME
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: OIDC_DISPLAY_NAME
+{{- end }}
+
+{{/*
 Renders the global.auth.identityProvider.genericOidc.clientId value
 */}}
 {{- define "airbyte.auth.identityProvider.genericOidc.clientId" }}
@@ -673,6 +691,7 @@ Renders the set of all auth.identityProvider environment variables
 {{- include "airbyte.auth.identityProvider.oidc.appName.env" . }}
 {{- include "airbyte.auth.identityProvider.oidc.clientId.env" . }}
 {{- include "airbyte.auth.identityProvider.oidc.clientSecret.env" . }}
+{{- include "airbyte.auth.identityProvider.oidc.displayName.env" . }}
 {{- end }}
 
 {{- if eq $opt "generic-oidc" }}
@@ -701,6 +720,7 @@ AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_AUDIENCE: {{ include "airbyte.auth.iden
 {{- if eq $opt "oidc" }}
 OIDC_DOMAIN: {{ include "airbyte.auth.identityProvider.oidc.domain" . | quote }}
 OIDC_APP_NAME: {{ include "airbyte.auth.identityProvider.oidc.appName" . | quote }}
+OIDC_DISPLAY_NAME: {{ include "airbyte.auth.identityProvider.oidc.displayName" . | quote }}
 {{- end }}
 
 {{- if eq $opt "generic-oidc" }}

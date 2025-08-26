@@ -164,6 +164,12 @@ auth.identityProvider:
       discriminatorOpts:
         - oidc
 
+    - env: OIDC_DISPLAY_NAME
+      key: oidc.displayName
+      defaultValueExp: (include "airbyte.auth.identityProvider.oidc.appName" .)
+      discriminatorOpts:
+        - oidc
+
     - env: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_CLIENT_ID 
       key: genericOidc.clientId
       discriminatorOpts:

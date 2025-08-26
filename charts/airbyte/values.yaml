@@ -57,6 +57,8 @@ global:
     #    domain: ""
     #    # -- OIDC application name
     #    appName: ""
+    #    # -- OIDC application display name (sets the name to present to the user on the login form, defaults to appName if not set)  
+    #    displayName: ""
     #    # -- The key within `clientIdSecretName` where the OIDC client id is stored
     #    clientIdSecretKey: "client-id"
     #    # -- The key within `clientSecretSecretName` where the OIDC client secret is stored

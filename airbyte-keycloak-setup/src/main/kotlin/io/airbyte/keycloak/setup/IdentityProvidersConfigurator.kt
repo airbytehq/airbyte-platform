@@ -109,9 +109,27 @@ class IdentityProvidersConfigurator(
     existingIdp: IdentityProviderRepresentation,
     updatedIdp: IdentityProviderRepresentation,
   ) {
+    log.debug { "Updating Existing Idp configuration" }
+    log.debug { "Before update - Existing IDP fields:" }
+    log.debug { "InternalId: ${existingIdp.internalId}" }
+    log.debug { "Alias: ${existingIdp.alias}" }
+    log.debug { "ProviderId: ${existingIdp.providerId}" }
+    log.debug { "Enabled: ${existingIdp.isEnabled}" }
+    log.debug { "DisplayName: ${existingIdp.displayName}" }
+    log.debug { "Config: ${existingIdp.config}" }
+
     // In order to apply the updated IDP configuration to the existing IDP within Keycloak, we need to
     // set the internal ID of the existing IDP.
     updatedIdp.internalId = existingIdp.internalId
+
+    log.debug { "After update - Updated IDP fields:" }
+    log.debug { "InternalId: ${updatedIdp.internalId}" }
+    log.debug { "Alias: ${updatedIdp.alias}" }
+    log.debug { "ProviderId: ${updatedIdp.providerId}" }
+    log.debug { "Enabled: ${updatedIdp.isEnabled}" }
+    log.debug { "DisplayName: ${updatedIdp.displayName}" }
+    log.debug { "Config: ${updatedIdp.config}" }
+
     keycloakRealm.identityProviders()[existingIdp.alias].update(updatedIdp)
   }
 

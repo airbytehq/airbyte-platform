@@ -69,6 +69,11 @@ Enteprise Configuration
     configMapKeyRef: 
       name: {{ .Release.Name }}-airbyte-env
       key: OIDC_APP_NAME
+- name: OIDC_DISPLAY_NAME
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: OIDC_DISPLAY_NAME
 - name: OIDC_CLIENT_ID
   valueFrom:
     secretKeyRef: 
