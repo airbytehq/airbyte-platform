@@ -263,8 +263,10 @@ class JobObservabilityService(
       MetricAttribute(MetricTags.WORKSPACE_ID, outlierOutcome.job.workspaceId.toString()),
       MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, outlierOutcome.job.sourceDefinitionId.toString()),
       MetricAttribute(MetricTags.SOURCE_IMAGE, outlierOutcome.job.sourceImageName),
+      MetricAttribute(MetricTags.SOURCE_IMAGE_TAG, outlierOutcome.job.sourceImageTag),
       MetricAttribute(MetricTags.DESTINATION_DEFINITION_ID, outlierOutcome.job.destinationDefinitionId.toString()),
       MetricAttribute(MetricTags.DESTINATION_IMAGE, outlierOutcome.job.destinationImageName),
+      MetricAttribute(MetricTags.DESTINATION_IMAGE_TAG, outlierOutcome.job.destinationImageTag),
       MetricAttribute(MetricTags.IS_CORRECTNESS_OUTLIER, (outlierOutcome.numberOfOutlierStreams > 0).toString()),
       MetricAttribute(MetricTags.IS_FRESHNESS_OUTLIER, outlierOutcome.job.isOutlier.toString()),
     )
