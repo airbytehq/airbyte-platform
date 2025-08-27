@@ -5,8 +5,11 @@ import { Box } from "components/ui/Box";
 import { BrandingBadge } from "components/ui/BrandingBadge";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { ExternalLink } from "components/ui/Link";
 import { ModalBody } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
+
+import { links } from "core/utils/links";
 
 import teamsUpsellGraphic from "./teams-upsell-graphic.png";
 import styles from "./TeamsFeaturesWarnModal.module.scss";
@@ -53,6 +56,11 @@ export const TeamsFeaturesWarnModal: React.FC<TeamsFeaturesWarnModalProps> = ({ 
             <Button variant="primary" onClick={onContinue}>
               <FormattedMessage id="teamsFeatures.modal.button.continue" />
             </Button>
+            <ExternalLink href={links.contactSales} opensInNewTab>
+              <Button variant="secondary" icon="share" iconSize="sm" iconPosition="right">
+                <FormattedMessage id="teamsFeatures.modal.button.talkToSalesNow" />
+              </Button>
+            </ExternalLink>
           </FlexContainer>
         </FlexContainer>
       </section>

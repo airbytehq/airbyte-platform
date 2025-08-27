@@ -47,6 +47,7 @@
   "teamsFeatures.modal.features.mappers": "Mappers",
   "teamsFeatures.modal.warningMessage": "Please note you will lose access to these features once your trial ends unless you upgrade to Teams. All syncs using these features will be disabled and all members invited will be deleted.",
   "teamsFeatures.modal.button.continue": "Continue",
+  "teamsFeatures.modal.button.talkToSalesNow": "Talk to Sales now",
 
   "role.admin": "Admin",
   "role.reader": "Reader",
