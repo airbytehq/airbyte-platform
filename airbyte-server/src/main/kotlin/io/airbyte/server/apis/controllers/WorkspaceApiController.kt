@@ -224,11 +224,20 @@ open class WorkspaceApiController(
   ): WorkspaceRead? = execute { workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody, true) }
 
   @Post("/list_by_organization_id")
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  // No organization role is required because this endpoint can list workspaces within an org that a
+  // user does not have an org-level permission for. This endpoint only returns workspaces that the
+  // user has a permission for, so it is safe to authorize any authenticated user.
+  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listWorkspacesInOrganization(
     @Body listWorkspacesInOrganizationRequestBody: ListWorkspacesInOrganizationRequestBody,
-  ): WorkspaceReadList? = execute { workspacesHandler.listWorkspacesInOrganization(listWorkspacesInOrganizationRequestBody) }
+  ): WorkspaceReadList? =
+    execute {
+      workspacesHandler.listWorkspacesInOrganizationForUser(
+        userId = currentUserService.getCurrentUser().userId,
+        request = listWorkspacesInOrganizationRequestBody,
+      )
+    }
 
   @Post("/list_by_user_id")
   @Secured(AuthRoleConstants.READER, AuthRoleConstants.SELF)
