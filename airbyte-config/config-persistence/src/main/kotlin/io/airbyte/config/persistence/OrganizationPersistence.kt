@@ -11,6 +11,7 @@ import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated
 import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
 import io.airbyte.db.instance.configs.jooq.generated.Tables
+import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType
 import org.jooq.DSLContext
 import org.jooq.Record
 import org.jooq.impl.DSL
@@ -154,28 +155,19 @@ class OrganizationPersistence(
 
   /**
    * List all organizations by user id, returning result ordered by org name. Supports keyword search.
+   * Returns organizations accessible via:
+   * 1. Direct organization-level permissions
+   * 2. Workspace-level permissions (user has access to organization containing the workspace)
+   * 3. Instance admin permission (access to all organizations)
    */
   @Throws(IOException::class)
   fun listOrganizationsByUserId(
-    userId: UUID?,
+    userId: UUID,
     keyword: Optional<String>,
   ): List<Organization> =
     database
       .query { ctx: DSLContext ->
-        ctx
-          .select(
-            Tables.ORGANIZATION.asterisk(),
-            Tables.SSO_CONFIG.asterisk(),
-          ).from(Tables.ORGANIZATION)
-          .join(Tables.PERMISSION)
-          .on(Tables.ORGANIZATION.ID.eq(Tables.PERMISSION.ORGANIZATION_ID))
-          .leftJoin(Tables.SSO_CONFIG)
-          .on(Tables.ORGANIZATION.ID.eq(Tables.SSO_CONFIG.ORGANIZATION_ID))
-          .where(Tables.PERMISSION.USER_ID.eq(userId))
-          .and(Tables.PERMISSION.ORGANIZATION_ID.isNotNull())
-          .and(if (keyword.isPresent) Tables.ORGANIZATION.NAME.containsIgnoreCase(keyword.get()) else DSL.noCondition())
-          .orderBy(Tables.ORGANIZATION.NAME.asc())
-          .fetch()
+        getOrganizationsForUser(ctx, userId, keyword, null)
       }.stream()
       .map { record: Record -> createOrganizationFromRecord(record) }
       .toList()
@@ -183,6 +175,10 @@ class OrganizationPersistence(
   /**
    * List all organizations by user id, returning result ordered by org name. Supports pagination and
    * keyword search.
+   * Returns organizations accessible via:
+   * 1. Direct organization-level permissions
+   * 2. Workspace-level permissions (user has access to organization containing the workspace)
+   * 3. Instance admin permission (access to all organizations)
    */
   @Throws(IOException::class)
   fun listOrganizationsByUserIdPaginated(
@@ -191,25 +187,139 @@ class OrganizationPersistence(
   ): List<Organization> =
     database
       .query { ctx: DSLContext ->
-        ctx
-          .select(
-            Tables.ORGANIZATION.asterisk(),
-            Tables.SSO_CONFIG.asterisk(),
-          ).from(Tables.ORGANIZATION)
-          .join(Tables.PERMISSION)
-          .on(Tables.ORGANIZATION.ID.eq(Tables.PERMISSION.ORGANIZATION_ID))
-          .leftJoin(Tables.SSO_CONFIG)
-          .on(Tables.ORGANIZATION.ID.eq(Tables.SSO_CONFIG.ORGANIZATION_ID))
-          .where(Tables.PERMISSION.USER_ID.eq(query.userId))
-          .and(Tables.PERMISSION.ORGANIZATION_ID.isNotNull())
-          .and(if (keyword.isPresent) Tables.ORGANIZATION.NAME.containsIgnoreCase(keyword.get()) else DSL.noCondition())
-          .orderBy(Tables.ORGANIZATION.NAME.asc())
-          .limit(query.pageSize)
-          .offset(query.rowOffset)
-          .fetch()
+        getOrganizationsForUser(ctx, query.userId, keyword, PaginationParams(query.pageSize, query.rowOffset))
       }.stream()
       .map { record: Record -> createOrganizationFromRecord(record) }
       .toList()
+
+  private data class PaginationParams(
+    val limit: Int,
+    val offset: Int,
+  )
+
+  /**
+   * Core helper method that retrieves organizations accessible to a user based on their permissions.
+   * Handles instance admin privileges and union of organization/workspace-level permissions.
+   */
+  private fun getOrganizationsForUser(
+    ctx: DSLContext,
+    userId: UUID,
+    keyword: Optional<String>,
+    pagination: PaginationParams?,
+  ): org.jooq.Result<Record> =
+    if (hasInstanceAdminPermission(ctx, userId)) {
+      getAllOrganizationsQuery(ctx, keyword, pagination)
+    } else {
+      getUnionOfOrgAndWorkspacePermissions(ctx, userId, keyword, pagination)
+    }
+
+  /**
+   * Checks if the user has instance admin permission, which grants access to all organizations.
+   */
+  private fun hasInstanceAdminPermission(
+    ctx: DSLContext,
+    userId: UUID?,
+  ): Boolean =
+    ctx
+      .selectCount()
+      .from(Tables.PERMISSION)
+      .where(Tables.PERMISSION.USER_ID.eq(userId))
+      .and(Tables.PERMISSION.PERMISSION_TYPE.eq(PermissionType.instance_admin))
+      .fetchOne(0, Int::class.java)!! > 0
+
+  /**
+   * Returns all organizations with optional keyword filtering and pagination.
+   * Used for instance admin users who have access to all organizations.
+   */
+  private fun getAllOrganizationsQuery(
+    ctx: DSLContext,
+    keyword: Optional<String>,
+    pagination: PaginationParams?,
+  ): org.jooq.Result<Record> {
+    val query =
+      ctx
+        .select(
+          Tables.ORGANIZATION.asterisk(),
+          Tables.SSO_CONFIG.asterisk(),
+        ).from(Tables.ORGANIZATION)
+        .leftJoin(Tables.SSO_CONFIG)
+        .on(Tables.ORGANIZATION.ID.eq(Tables.SSO_CONFIG.ORGANIZATION_ID))
+        .where(if (keyword.isPresent) Tables.ORGANIZATION.NAME.containsIgnoreCase(keyword.get()) else DSL.noCondition())
+        .orderBy(Tables.ORGANIZATION.NAME.asc())
+
+    return if (pagination != null) {
+      query.limit(pagination.limit).offset(pagination.offset).fetch()
+    } else {
+      query.fetch()
+    }
+  }
+
+  /**
+   * Returns organizations accessible via union of organization-level and workspace-level permissions.
+   * Used for non-instance admin users.
+   */
+  private fun getUnionOfOrgAndWorkspacePermissions(
+    ctx: DSLContext,
+    userId: UUID,
+    keyword: Optional<String>,
+    pagination: PaginationParams?,
+  ): org.jooq.Result<Record> {
+    val orgPermissions = getOrganizationLevelPermissionsQuery(ctx, userId)
+    val workspacePermissions = getWorkspaceLevelPermissionsQuery(ctx, userId)
+    val union = orgPermissions.union(workspacePermissions)
+
+    val query =
+      ctx
+        .select(DSL.asterisk())
+        .from(union.asTable("union_orgs"))
+        .where(if (keyword.isPresent) DSL.field("union_orgs.name").containsIgnoreCase(keyword.get()) else DSL.noCondition())
+        .orderBy(DSL.field("union_orgs.name").asc())
+
+    return if (pagination != null) {
+      query.limit(pagination.limit).offset(pagination.offset).fetch()
+    } else {
+      query.fetch()
+    }
+  }
+
+  /**
+   * Returns organizations where user has direct organization-level permissions.
+   */
+  private fun getOrganizationLevelPermissionsQuery(
+    ctx: DSLContext,
+    userId: UUID?,
+  ) = ctx
+    .selectDistinct(
+      Tables.ORGANIZATION.asterisk(),
+      Tables.SSO_CONFIG.asterisk(),
+    ).from(Tables.ORGANIZATION)
+    .join(Tables.PERMISSION)
+    .on(Tables.ORGANIZATION.ID.eq(Tables.PERMISSION.ORGANIZATION_ID))
+    .leftJoin(Tables.SSO_CONFIG)
+    .on(Tables.ORGANIZATION.ID.eq(Tables.SSO_CONFIG.ORGANIZATION_ID))
+    .where(Tables.PERMISSION.USER_ID.eq(userId))
+    .and(Tables.PERMISSION.ORGANIZATION_ID.isNotNull())
+
+  /**
+   * Returns organizations where user has workspace-level permissions.
+   * Users get minimal access to organizations containing any workspace they have a permission for.
+   */
+  private fun getWorkspaceLevelPermissionsQuery(
+    ctx: DSLContext,
+    userId: UUID?,
+  ) = ctx
+    .selectDistinct(
+      Tables.ORGANIZATION.asterisk(),
+      Tables.SSO_CONFIG.asterisk(),
+    ).from(Tables.ORGANIZATION)
+    .join(Tables.WORKSPACE)
+    .on(Tables.ORGANIZATION.ID.eq(Tables.WORKSPACE.ORGANIZATION_ID))
+    .join(Tables.PERMISSION)
+    .on(Tables.WORKSPACE.ID.eq(Tables.PERMISSION.WORKSPACE_ID))
+    .leftJoin(Tables.SSO_CONFIG)
+    .on(Tables.ORGANIZATION.ID.eq(Tables.SSO_CONFIG.ORGANIZATION_ID))
+    .where(Tables.PERMISSION.USER_ID.eq(userId))
+    .and(Tables.PERMISSION.WORKSPACE_ID.isNotNull())
 
   /**
    * Get the matching organization that has the given sso config realm. If not exists, returns empty
