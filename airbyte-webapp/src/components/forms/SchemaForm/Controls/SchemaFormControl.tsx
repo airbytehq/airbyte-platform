@@ -55,6 +55,7 @@ interface SchemaFormControlProps {
   className?: string;
   placeholder?: string;
   suggestionsOverride?: string[];
+  tooltipDocsLink?: string;
 }
 
 /**
@@ -72,6 +73,7 @@ export const SchemaFormControl = ({
   nonAdvancedFields,
   placeholder,
   suggestionsOverride,
+  tooltipDocsLink,
 }: SchemaFormControlProps) => {
   const { formatMessage } = useIntl();
   const {
@@ -148,6 +150,7 @@ export const SchemaFormControl = ({
           description={<ReactMarkdown className={styles.markdown}>{targetSchema.description ?? ""}</ReactMarkdown>}
           examples={targetSchema.examples}
           options={options}
+          docsLink={tooltipDocsLink}
         />
       ) : undefined,
     optional: isOptional,

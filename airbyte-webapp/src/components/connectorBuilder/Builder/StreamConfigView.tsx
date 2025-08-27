@@ -270,13 +270,18 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
             <SchemaFormControl path={streamFieldPath("retriever.requester.path")} />
             <SchemaFormControl path={streamFieldPath("retriever.requester.http_method")} />
             <SchemaFormControl path={streamFieldPath("retriever.decoder")} />
-            <SchemaFormControl path={streamFieldPath("retriever.record_selector")} nonAdvancedFields={["extractor"]} />
+            <SchemaFormControl
+              path={streamFieldPath("retriever.record_selector")}
+              nonAdvancedFields={["extractor"]}
+              tooltipDocsLink={links.connectorBuilderRecordSelector}
+            />
             <SchemaFormControl path={streamFieldPath("primary_key")} />
           </StreamCard>
           <StreamCard>
             <SchemaFormControl
               path={streamFieldPath("retriever.requester.authenticator")}
               nonAdvancedFields={NON_ADVANCED_AUTH_FIELDS}
+              tooltipDocsLink={links.connectorBuilderAuthentication}
             />
           </StreamCard>
           <StreamCard>
@@ -287,12 +292,16 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
             <SchemaFormControl path={streamFieldPath("retriever.requester.request_body_data")} />
           </StreamCard>
           <StreamCard>
-            <SchemaFormControl path={streamFieldPath("retriever.paginator")} />
+            <SchemaFormControl
+              path={streamFieldPath("retriever.paginator")}
+              tooltipDocsLink={links.connectorBuilderPagination}
+            />
           </StreamCard>
           <StreamCard>
             <SchemaFormControl
               path={streamFieldPath("incremental_sync")}
               nonAdvancedFields={NON_ADVANCED_INCREMENTAL_FIELDS}
+              tooltipDocsLink={links.connectorBuilderIncrementalSync}
             />
           </StreamCard>
           <StreamCard>
@@ -306,13 +315,20 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
                   <ParentStreamSelector path={path} currentStreamName={name} />
                 ),
               }}
+              tooltipDocsLink={links.connectorBuilderPartitioning}
             />
           </StreamCard>
           <StreamCard>
-            <SchemaFormControl path={streamFieldPath("retriever.requester.error_handler")} />
+            <SchemaFormControl
+              path={streamFieldPath("retriever.requester.error_handler")}
+              tooltipDocsLink={links.connectorBuilderErrorHandler}
+            />
           </StreamCard>
           <StreamCard>
-            <SchemaFormControl path={streamFieldPath("transformations")} />
+            <SchemaFormControl
+              path={streamFieldPath("transformations")}
+              tooltipDocsLink={links.connectorBuilderTransformations}
+            />
           </StreamCard>
           <Card>
             <CollapsedControls streamId={streamId}>
@@ -457,6 +473,7 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
             <SchemaFormControl
               path={streamFieldPath("retriever.creation_requester.authenticator")}
               nonAdvancedFields={NON_ADVANCED_AUTH_FIELDS}
+              tooltipDocsLink={links.connectorBuilderAuthentication}
             />
           </StreamCard>
           <StreamCard>
@@ -468,6 +485,7 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
             <SchemaFormControl
               path={streamFieldPath("incremental_sync")}
               nonAdvancedFields={NON_ADVANCED_INCREMENTAL_FIELDS}
+              tooltipDocsLink={links.connectorBuilderIncrementalSync}
             />
           </StreamCard>
           <StreamCard>
@@ -481,10 +499,14 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
                   <ParentStreamSelector path={path} currentStreamName={name} />
                 ),
               }}
+              tooltipDocsLink={links.connectorBuilderPartitioning}
             />
           </StreamCard>
           <StreamCard>
-            <SchemaFormControl path={streamFieldPath("retriever.creation_requester.error_handler")} />
+            <SchemaFormControl
+              path={streamFieldPath("retriever.creation_requester.error_handler")}
+              tooltipDocsLink={links.connectorBuilderErrorHandler}
+            />
           </StreamCard>
         </FlexContainer>
         <FlexContainer
@@ -502,6 +524,7 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
             <SchemaFormControl
               path={streamFieldPath("retriever.polling_requester.authenticator")}
               nonAdvancedFields={NON_ADVANCED_AUTH_FIELDS}
+              tooltipDocsLink={links.connectorBuilderAuthentication}
             />
           </StreamCard>
           <StreamCard>
@@ -516,7 +539,10 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
             <SchemaFormControl path={streamFieldPath("retriever.polling_requester.request_body")} />
           </StreamCard>
           <StreamCard>
-            <SchemaFormControl path={streamFieldPath("retriever.polling_requester.error_handler")} />
+            <SchemaFormControl
+              path={streamFieldPath("retriever.polling_requester.error_handler")}
+              tooltipDocsLink={links.connectorBuilderErrorHandler}
+            />
           </StreamCard>
         </FlexContainer>
         <FlexContainer
@@ -530,13 +556,18 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
             <SchemaFormControl path={streamFieldPath("retriever.download_requester.path")} />
             <SchemaFormControl path={streamFieldPath("retriever.download_requester.http_method")} />
             <SchemaFormControl path={streamFieldPath("retriever.download_decoder")} />
-            <SchemaFormControl path={streamFieldPath("retriever.record_selector")} nonAdvancedFields={["extractor"]} />
+            <SchemaFormControl
+              path={streamFieldPath("retriever.record_selector")}
+              nonAdvancedFields={["extractor"]}
+              tooltipDocsLink={links.connectorBuilderRecordSelector}
+            />
             <SchemaFormControl path={streamFieldPath("primary_key")} />
           </StreamCard>
           <StreamCard>
             <SchemaFormControl
               path={streamFieldPath("retriever.download_requester.authenticator")}
               nonAdvancedFields={NON_ADVANCED_AUTH_FIELDS}
+              tooltipDocsLink={links.connectorBuilderAuthentication}
             />
           </StreamCard>
           <StreamCard>
@@ -545,13 +576,22 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
             <SchemaFormControl path={streamFieldPath("retriever.download_requester.request_body")} />
           </StreamCard>
           <StreamCard>
-            <SchemaFormControl path={streamFieldPath("retriever.download_paginator")} />
+            <SchemaFormControl
+              path={streamFieldPath("retriever.download_paginator")}
+              tooltipDocsLink={links.connectorBuilderPagination}
+            />
           </StreamCard>
           <StreamCard>
-            <SchemaFormControl path={streamFieldPath("transformations")} />
+            <SchemaFormControl
+              path={streamFieldPath("transformations")}
+              tooltipDocsLink={links.connectorBuilderTransformations}
+            />
           </StreamCard>
           <StreamCard>
-            <SchemaFormControl path={streamFieldPath("retriever.download_requester.error_handler")} />
+            <SchemaFormControl
+              path={streamFieldPath("retriever.download_requester.error_handler")}
+              tooltipDocsLink={links.connectorBuilderErrorHandler}
+            />
           </StreamCard>
         </FlexContainer>
         <FlexContainer

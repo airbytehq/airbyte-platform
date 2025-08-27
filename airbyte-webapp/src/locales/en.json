@@ -2461,5 +2461,7 @@
   "onboarding.survey.primaryGoal.reduceSpendDataTools": "Reduce spend on data tools",
   "onboarding.survey.primaryGoal.unifySalesPayment": "Unify sales and payment platform data",
   "onboarding.survey.primaryGoal.buildCustomConnectors": "Build custom connectors with Connector Builder for new data sources",
-  "onboarding.survey.primaryGoal.other": "Other"
+  "onboarding.survey.primaryGoal.other": "Other",
+
+  "label.docsLink": "For more information, see <a>the docs</a>."
 }
