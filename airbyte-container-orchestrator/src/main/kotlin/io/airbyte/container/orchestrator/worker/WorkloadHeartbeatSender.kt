@@ -19,6 +19,8 @@ import jakarta.inject.Singleton
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 
 private val logger = KotlinLogging.logger {}
 
@@ -68,7 +70,7 @@ class WorkloadHeartbeatSender(
            * to allow destinations that take a long time (e.g. typing and deduping) to finish even after the source has
            * exited normally.
            */
-          (sourceTimeoutMonitor.hasTimedOut() && !source.isFinished) -> {
+          (sourceTimeoutMonitor.hasTimedOut() && !checkSourceFinishedWithTimeout()) -> {
             val e =
               HeartbeatTimeoutException(
                 sourceTimeoutMonitor.heartbeatFreshnessThreshold.toMillis(),
@@ -118,6 +120,30 @@ class WorkloadHeartbeatSender(
     lastSuccessfulHeartbeat: Instant,
     timeoutDuration: Duration,
   ): Boolean = Duration.between(lastSuccessfulHeartbeat, Instant.now()) > timeoutDuration
+
+  /**
+   * Checks if source is finished with a 1-minute timeout.
+   * Returns false if the call doesn't complete within 1 minute.
+   * This runs completely outside the coroutine context to avoid cancellation issues.
+   */
+  private fun checkSourceFinishedWithTimeout(): Boolean =
+    try {
+      val future =
+        CompletableFuture.supplyAsync {
+          source.isFinished
+        }
+
+      try {
+        future.get(60, TimeUnit.SECONDS)
+      } catch (_: Exception) {
+        logger.warn { "Checking source.isFinished timed out after 1 minute, returning false" }
+        future.cancel(true)
+        false
+      }
+    } catch (e: Exception) {
+      logger.warn(e) { "Exception occurred while checking source finished state, returning false" }
+      false
+    }
 
   /**
    * Fail the current workload.
