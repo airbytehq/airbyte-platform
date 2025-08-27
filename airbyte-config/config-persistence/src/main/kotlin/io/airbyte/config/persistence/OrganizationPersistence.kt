@@ -31,6 +31,22 @@ class OrganizationPersistence(
 ) {
   private val database = ExceptionWrappingDatabase(database)
 
+  private fun organizationWithSso(ctx: DSLContext) =
+    ctx
+      .select(ORGANIZATION_WITH_SSO_FIELDS)
+      .from(Tables.ORGANIZATION)
+      .leftJoin(Tables.SSO_CONFIG)
+      .on(Tables.ORGANIZATION.ID.eq(Tables.SSO_CONFIG.ORGANIZATION_ID))
+
+  private fun organizationsByIdWithKeyword(
+    ctx: DSLContext,
+    organizationIds: Collection<UUID>,
+    keyword: Optional<String>,
+  ) = organizationWithSso(ctx)
+    .where(Tables.ORGANIZATION.ID.`in`(organizationIds))
+    .and(if (keyword.isPresent) Tables.ORGANIZATION.NAME.containsIgnoreCase(keyword.get()) else DSL.noCondition())
+    .orderBy(Tables.ORGANIZATION.NAME.asc())
+
   /**
    * Retrieve an organization.
    *
@@ -42,11 +58,7 @@ class OrganizationPersistence(
   fun getOrganization(organizationId: UUID?): Optional<Organization> {
     val result =
       database.query { ctx: DSLContext ->
-        ctx
-          .select(DSL.asterisk())
-          .from(Tables.ORGANIZATION)
-          .leftJoin(Tables.SSO_CONFIG)
-          .on(Tables.ORGANIZATION.ID.eq(Tables.SSO_CONFIG.ORGANIZATION_ID))
+        organizationWithSso(ctx)
           .where(Tables.ORGANIZATION.ID.eq(organizationId))
           .fetch()
       }
@@ -62,11 +74,7 @@ class OrganizationPersistence(
   fun getOrganizationByWorkspaceId(workspaceId: UUID?): Optional<Organization> {
     val result =
       database.query { ctx: DSLContext ->
-        ctx
-          .select(DSL.asterisk())
-          .from(Tables.ORGANIZATION)
-          .leftJoin(Tables.SSO_CONFIG)
-          .on(Tables.ORGANIZATION.ID.eq(Tables.SSO_CONFIG.ORGANIZATION_ID))
+        organizationWithSso(ctx)
           .join(Tables.WORKSPACE)
           .on(Tables.ORGANIZATION.ID.eq(Tables.WORKSPACE.ORGANIZATION_ID))
           .where(Tables.WORKSPACE.ID.eq(workspaceId))
@@ -84,11 +92,7 @@ class OrganizationPersistence(
   fun getOrganizationByConnectionId(connectionId: UUID?): Optional<Organization> {
     val result =
       database.query { ctx: DSLContext ->
-        ctx
-          .select(DSL.asterisk())
-          .from(Tables.ORGANIZATION)
-          .leftJoin(Tables.SSO_CONFIG)
-          .on(Tables.ORGANIZATION.ID.eq(Tables.SSO_CONFIG.ORGANIZATION_ID))
+        organizationWithSso(ctx)
           .join(Tables.WORKSPACE)
           .on(Tables.ORGANIZATION.ID.eq(Tables.WORKSPACE.ORGANIZATION_ID))
           .join(Tables.ACTOR)
@@ -199,19 +203,33 @@ class OrganizationPersistence(
 
   /**
    * Core helper method that retrieves organizations accessible to a user based on their permissions.
-   * Handles instance admin privileges and union of organization/workspace-level permissions.
+   * Handles instance admin privileges and gets accessible org IDs, then fetches organizations.
    */
   private fun getOrganizationsForUser(
     ctx: DSLContext,
     userId: UUID,
     keyword: Optional<String>,
     pagination: PaginationParams?,
-  ): org.jooq.Result<Record> =
-    if (hasInstanceAdminPermission(ctx, userId)) {
-      getAllOrganizationsQuery(ctx, keyword, pagination)
-    } else {
-      getUnionOfOrgAndWorkspacePermissions(ctx, userId, keyword, pagination)
+  ): org.jooq.Result<Record> {
+    val accessibleOrgIds =
+      if (hasInstanceAdminPermission(ctx, userId)) {
+        getAllOrganizationIds(ctx)
+      } else {
+        getAccessibleOrganizationIds(ctx, userId)
+      }
+
+    if (accessibleOrgIds.isEmpty()) {
+      return ctx.newResult()
     }
+
+    val query = organizationsByIdWithKeyword(ctx, accessibleOrgIds, keyword)
+
+    return if (pagination != null) {
+      query.limit(pagination.limit).offset(pagination.offset).fetch()
+    } else {
+      query.fetch()
+    }
+  }
 
   /**
    * Checks if the user has instance admin permission, which grants access to all organizations.
@@ -228,98 +246,62 @@ class OrganizationPersistence(
       .fetchOne(0, Int::class.java)!! > 0
 
   /**
-   * Returns all organizations with optional keyword filtering and pagination.
-   * Used for instance admin users who have access to all organizations.
+   * Gets all organization IDs (for instance admin users).
    */
-  private fun getAllOrganizationsQuery(
-    ctx: DSLContext,
-    keyword: Optional<String>,
-    pagination: PaginationParams?,
-  ): org.jooq.Result<Record> {
-    val query =
-      ctx
-        .select(
-          Tables.ORGANIZATION.asterisk(),
-          Tables.SSO_CONFIG.asterisk(),
-        ).from(Tables.ORGANIZATION)
-        .leftJoin(Tables.SSO_CONFIG)
-        .on(Tables.ORGANIZATION.ID.eq(Tables.SSO_CONFIG.ORGANIZATION_ID))
-        .where(if (keyword.isPresent) Tables.ORGANIZATION.NAME.containsIgnoreCase(keyword.get()) else DSL.noCondition())
-        .orderBy(Tables.ORGANIZATION.NAME.asc())
-
-    return if (pagination != null) {
-      query.limit(pagination.limit).offset(pagination.offset).fetch()
-    } else {
-      query.fetch()
-    }
-  }
+  private fun getAllOrganizationIds(ctx: DSLContext): Set<UUID> =
+    ctx
+      .select(Tables.ORGANIZATION.ID)
+      .from(Tables.ORGANIZATION)
+      .fetch()
+      .mapTo(HashSet()) { it.value1() }
 
   /**
-   * Returns organizations accessible via union of organization-level and workspace-level permissions.
-   * Used for non-instance admin users.
+   * Gets organization IDs accessible to a specific user via direct org permissions or workspace permissions.
    */
-  private fun getUnionOfOrgAndWorkspacePermissions(
+  private fun getAccessibleOrganizationIds(
     ctx: DSLContext,
     userId: UUID,
-    keyword: Optional<String>,
-    pagination: PaginationParams?,
-  ): org.jooq.Result<Record> {
-    val orgPermissions = getOrganizationLevelPermissionsQuery(ctx, userId)
-    val workspacePermissions = getWorkspaceLevelPermissionsQuery(ctx, userId)
-    val union = orgPermissions.union(workspacePermissions)
-
-    val query =
-      ctx
-        .select(DSL.asterisk())
-        .from(union.asTable("union_orgs"))
-        .where(if (keyword.isPresent) DSL.field("union_orgs.name").containsIgnoreCase(keyword.get()) else DSL.noCondition())
-        .orderBy(DSL.field("union_orgs.name").asc())
-
-    return if (pagination != null) {
-      query.limit(pagination.limit).offset(pagination.offset).fetch()
-    } else {
-      query.fetch()
-    }
+  ): Set<UUID> {
+    val orgLevelIds = getOrganizationLevelPermissionIds(ctx, userId)
+    val workspaceLevelIds = getWorkspaceLevelPermissionIds(ctx, userId)
+    return orgLevelIds + workspaceLevelIds
   }
 
   /**
-   * Returns organizations where user has direct organization-level permissions.
+   * Gets organization IDs where user has direct organization-level permissions.
    */
-  private fun getOrganizationLevelPermissionsQuery(
+  private fun getOrganizationLevelPermissionIds(
     ctx: DSLContext,
-    userId: UUID?,
-  ) = ctx
-    .selectDistinct(
-      Tables.ORGANIZATION.asterisk(),
-      Tables.SSO_CONFIG.asterisk(),
-    ).from(Tables.ORGANIZATION)
-    .join(Tables.PERMISSION)
-    .on(Tables.ORGANIZATION.ID.eq(Tables.PERMISSION.ORGANIZATION_ID))
-    .leftJoin(Tables.SSO_CONFIG)
-    .on(Tables.ORGANIZATION.ID.eq(Tables.SSO_CONFIG.ORGANIZATION_ID))
-    .where(Tables.PERMISSION.USER_ID.eq(userId))
-    .and(Tables.PERMISSION.ORGANIZATION_ID.isNotNull())
+    userId: UUID,
+  ): Set<UUID> =
+    ctx
+      .selectDistinct(Tables.ORGANIZATION.ID)
+      .from(Tables.ORGANIZATION)
+      .join(Tables.PERMISSION)
+      .on(Tables.ORGANIZATION.ID.eq(Tables.PERMISSION.ORGANIZATION_ID))
+      .where(Tables.PERMISSION.USER_ID.eq(userId))
+      .and(Tables.PERMISSION.ORGANIZATION_ID.isNotNull())
+      .fetch()
+      .mapTo(HashSet()) { it.value1() }
 
   /**
-   * Returns organizations where user has workspace-level permissions.
-   * Users get minimal access to organizations containing any workspace they have a permission for.
+   * Gets organization IDs where user has workspace-level permissions.
    */
-  private fun getWorkspaceLevelPermissionsQuery(
+  private fun getWorkspaceLevelPermissionIds(
     ctx: DSLContext,
-    userId: UUID?,
-  ) = ctx
-    .selectDistinct(
-      Tables.ORGANIZATION.asterisk(),
-      Tables.SSO_CONFIG.asterisk(),
-    ).from(Tables.ORGANIZATION)
-    .join(Tables.WORKSPACE)
-    .on(Tables.ORGANIZATION.ID.eq(Tables.WORKSPACE.ORGANIZATION_ID))
-    .join(Tables.PERMISSION)
-    .on(Tables.WORKSPACE.ID.eq(Tables.PERMISSION.WORKSPACE_ID))
-    .leftJoin(Tables.SSO_CONFIG)
-    .on(Tables.ORGANIZATION.ID.eq(Tables.SSO_CONFIG.ORGANIZATION_ID))
-    .where(Tables.PERMISSION.USER_ID.eq(userId))
-    .and(Tables.PERMISSION.WORKSPACE_ID.isNotNull())
+    userId: UUID,
+  ): Set<UUID> =
+    ctx
+      .selectDistinct(Tables.ORGANIZATION.ID)
+      .from(Tables.ORGANIZATION)
+      .join(Tables.WORKSPACE)
+      .on(Tables.ORGANIZATION.ID.eq(Tables.WORKSPACE.ORGANIZATION_ID))
+      .join(Tables.PERMISSION)
+      .on(Tables.WORKSPACE.ID.eq(Tables.PERMISSION.WORKSPACE_ID))
+      .where(Tables.PERMISSION.USER_ID.eq(userId))
+      .and(Tables.PERMISSION.WORKSPACE_ID.isNotNull())
+      .fetch()
+      .mapTo(HashSet()) { it.value1() }
 
   /**
    * Get the matching organization that has the given sso config realm. If not exists, returns empty
@@ -329,11 +311,7 @@ class OrganizationPersistence(
   fun getOrganizationBySsoConfigRealm(ssoConfigRealm: String?): Optional<Organization> {
     val result =
       database.query { ctx: DSLContext ->
-        ctx
-          .select(DSL.asterisk())
-          .from(Tables.ORGANIZATION)
-          .join(Tables.SSO_CONFIG)
-          .on(Tables.ORGANIZATION.ID.eq(Tables.SSO_CONFIG.ORGANIZATION_ID))
+        organizationWithSso(ctx)
           .where(Tables.SSO_CONFIG.KEYCLOAK_REALM.eq(ssoConfigRealm))
           .fetch()
       }
@@ -508,6 +486,21 @@ class OrganizationPersistence(
   }
 
   companion object {
+    private val ORGANIZATION_WITH_SSO_FIELDS =
+      listOf(
+        Tables.ORGANIZATION.ID,
+        Tables.ORGANIZATION.NAME,
+        Tables.ORGANIZATION.EMAIL,
+        Tables.ORGANIZATION.USER_ID,
+        Tables.ORGANIZATION.CREATED_AT,
+        Tables.ORGANIZATION.UPDATED_AT,
+        Tables.SSO_CONFIG.ID,
+        Tables.SSO_CONFIG.ORGANIZATION_ID,
+        Tables.SSO_CONFIG.KEYCLOAK_REALM,
+        Tables.SSO_CONFIG.CREATED_AT,
+        Tables.SSO_CONFIG.UPDATED_AT,
+      )
+
     private fun createOrganizationFromRecord(record: Record): Organization =
       Organization()
         .withOrganizationId(record.get(Tables.ORGANIZATION.ID))
