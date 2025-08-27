@@ -1,4 +1,6 @@
-import { useCurrentWorkspaceOrUndefined, useListPermissions } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils";
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useListPermissions } from "core/api";
 import { PermissionType } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 import { assertNever } from "core/utils/asserts";
@@ -11,14 +13,15 @@ interface MetaOverride {
 }
 
 export const useGeneratedIntent = (intentName: Intent, metaOverride?: MetaOverride) => {
-  const workspace = useCurrentWorkspaceOrUndefined();
+  const currentOrganizationId = useCurrentOrganizationId();
+  const currentWorkspaceId = useCurrentWorkspaceId();
   const { userId } = useCurrentUser();
   const { permissions } = useListPermissions(userId);
   const intent = INTENTS[intentName];
 
   // If metaOverride is provided, use those values instead of workspace values
-  const organizationId = metaOverride?.organizationId || workspace?.organizationId;
-  const workspaceId = metaOverride?.workspaceId || workspace?.workspaceId;
+  const organizationId = metaOverride?.organizationId || currentOrganizationId;
+  const workspaceId = metaOverride?.workspaceId || currentWorkspaceId;
 
   // If we don't have either an organization ID or workspace ID, return false
   if (!organizationId && !workspaceId) {

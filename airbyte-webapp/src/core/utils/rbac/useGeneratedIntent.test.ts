@@ -40,6 +40,9 @@ jest.mock("core/api", () => ({
   useGetDefaultUser: () => ({
     userId: MOCK_USER_ID,
   }),
+  useFirstOrg: () => ({
+    organizationId: MOCK_ORGANIZATION_UUID,
+  }),
 }));
 
 jest.mock("core/services/auth", () => ({
