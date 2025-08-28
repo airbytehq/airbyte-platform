@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==6.61.1
+airbyte-cdk==6.61.4
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.17.1
     # via airbyte-cdk
@@ -101,7 +101,7 @@ isodate==0.6.1
     # via airbyte-cdk
 jinja2==3.1.6
     # via airbyte-cdk
-joblib==1.5.1
+joblib==1.5.2
     # via nltk
 jsonpatch==1.33
     # via langchain-core
@@ -127,7 +127,7 @@ numpy==1.26.4
     # via
     #   airbyte-cdk
     #   pandas
-orjson==3.11.2
+orjson==3.11.3
     # via
     #   airbyte-cdk
     #   langsmith
@@ -138,7 +138,7 @@ packaging==23.2
     #   langchain-core
 pandas==2.2.2
     # via airbyte-cdk
-platformdirs==4.3.8
+platformdirs==4.4.0
     # via requests-cache
 proto-plus==1.26.1
     # via
@@ -193,7 +193,7 @@ pyyaml==6.0.2
     # via
     #   airbyte-cdk
     #   langchain-core
-rapidfuzz==3.13.0
+rapidfuzz==3.14.0
     # via airbyte-cdk
 regex==2025.7.34
     # via
