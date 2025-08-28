@@ -37,7 +37,7 @@ common:
 
     - env: MANIFEST_SERVER_API_HOST
       key: manifestServer.apiHost
-      valueExp: (printf "http://%s-airbyte-manifest-runner-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.manifestRunner.service.port))
+      valueExp: (printf "http://%s-airbyte-manifest-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.manifestServer.service.port))
 
     - env: DEPLOYMENT_ENV
       key: deploymentEnv

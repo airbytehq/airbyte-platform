@@ -186,7 +186,7 @@ Renders the common.connectorBuilderServer.apiHost environment variable
 Renders the global.manifestServer.apiHost value
 */}}
 {{- define "airbyte.common.manifestServer.apiHost" }}
-    {{- (printf "http://%s-airbyte-manifest-runner-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.manifestRunner.service.port)) }}
+    {{- (printf "http://%s-airbyte-manifest-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.manifestServer.service.port)) }}
 {{- end }}
 
 {{/*

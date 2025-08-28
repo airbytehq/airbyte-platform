@@ -1,19 +1,19 @@
-{{- if .Values.manifestRunner.enabled }}
+{{- if .Values.manifestServer.enabled }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{.Release.Name }}-airbyte-manifest-runner-svc
-  {{- with .Values.manifestRunner.service.annotations }}
+  name: {{.Release.Name }}-airbyte-manifest-server-svc
+  {{- with .Values.manifestServer.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.manifestRunner.service.type }}
+  type: {{ .Values.manifestServer.service.type }}
   ports:
-    - port: {{ .Values.manifestRunner.service.port }}
+    - port: {{ .Values.manifestServer.service.port }}
       targetPort: http
       protocol: TCP
       name: http

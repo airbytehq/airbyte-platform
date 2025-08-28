@@ -2599,16 +2599,17 @@ keycloakSetup:
   extraInitContainers: []
   extraContainers: []
 
-manifestRunner:
+manifestServer:
   enabled: false
 
-  # -- Number of manifest-runner replicas
+  # -- Number of manifest-server replicas
   replicaCount: 1
 
   serviceAccountName:
 
   image:
-    repository: airbyte/manifest-runner
+    repository: airbyte/manifest-server
+    tag: 6.61.4
     pullPolicy: IfNotPresent
 
   annotations: {}
@@ -2661,7 +2662,7 @@ manifestRunner:
     # -- Ingress TLS configuration
     tls: []
 
-  ## manifest-runner resource requests and limits
+  ## manifest-server resource requests and limits
   ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
   ## We usually recommend not to specify default resources and to leave this as a conscious
   ## choice for the user. This also increases chances charts run on environments with little
@@ -2672,13 +2673,13 @@ manifestRunner:
     ## limits:
     ##    cpu: 200m
     ##    memory: 1Gi
-    # -- The resources limits for the airbyte-manifest-runner container
+    # -- The resources limits for the airbyte-manifest-server container
     limits: {}
     ## Examples:
     ## requests:
     ##    memory: 256Mi
     ##    cpu: 250m
-    # -- The requested resources for the airbyte-manifest-runner container
+    # -- The requested resources for the airbyte-manifest-server container
     requests: {}
 
   service:
