@@ -46,6 +46,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
 import io.airbyte.validation.json.JsonValidationException
 import org.assertj.core.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -716,6 +717,570 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
       HashSet<StandardWorkspace?>(workspacePersistence.listActiveWorkspacesByUserId(userId, Optional.empty<String>()))
 
     assertWorkspacesEqual(expectedWorkspaces, actualWorkspaces)
+  }
+
+  @Test
+  @Throws(Exception::class)
+  fun testListWorkspacesInOrganizationByUserIdWithKeyword() {
+    val workspaceId1 = UUID.randomUUID()
+    val workspaceId2 = UUID.randomUUID()
+    val workspaceId3 = UUID.randomUUID()
+    val workspaceId4 = UUID.randomUUID()
+
+    // create a user
+    val userId = UUID.randomUUID()
+    userPersistence.writeAuthenticatedUser(
+      AuthenticatedUser()
+        .withUserId(userId)
+        .withName("user")
+        .withAuthUserId("auth_id")
+        .withEmail("email")
+        .withAuthProvider(AuthProvider.AIRBYTE),
+    )
+
+    // create a workspace in org_1, name contains search "keyword"
+    val workspace1: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId1)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspace_with_keyword_1")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace1)
+
+    // create another workspace in org_1, name contains search "keyword"
+    val workspace2: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId2)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspace_with_keyword_2")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace2)
+
+    // create a workspace in org_1, name does NOT contain search "keyword"
+    val workspace3: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId3)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspace_3")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace3)
+
+    // create a workspace in org_2 with keyword (should be excluded because wrong org)
+    val workspace4: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId4)
+        .withOrganizationId(MockData.ORGANIZATION_ID_2)
+        .withName("workspace_4_with_keyword")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_2)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace4)
+
+    // create additional workspace in org_3 with keyword but NO permission (should be excluded due to lack of permission)
+    val workspaceNoPermission: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_3)
+        .withName("workspace_no_permission_with_keyword")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_3)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspaceNoPermission)
+
+    // create workspace-level permission for workspace 1
+    writePermission(
+      Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withWorkspaceId(workspaceId1)
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.WORKSPACE_READER),
+    )
+
+    // create org-level permission that grants access to all workspaces in org_1 (including workspace2, workspace3, workspaceNoPermission)
+    writePermission(
+      Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.ORGANIZATION_READER),
+    )
+
+    val workspaces =
+      workspacePersistence.listWorkspacesInOrganizationByUserId(
+        MockData.ORGANIZATION_ID_1,
+        userId,
+        Optional.of<String>("keyword"),
+      )
+
+    // should return workspaces 1 and 2 (both in org_1 with keyword and permissions via org-level access)
+    // workspace 3 excluded because no keyword (even though it has org-level permission)
+    // workspace 4 excluded because wrong org
+    // workspaceNoPermission excluded because no permission and wrong org
+    assertEquals(2, workspaces.size)
+
+    val actualWorkspaces: MutableSet<StandardWorkspace?> = HashSet<StandardWorkspace?>(workspaces)
+    val expectedWorkspaces = Set.of<StandardWorkspace?>(workspace1, workspace2)
+    assertWorkspacesEqual(expectedWorkspaces, actualWorkspaces)
+  }
+
+  @Test
+  @Throws(Exception::class)
+  fun testListWorkspacesInOrganizationByUserIdWithoutKeyword() {
+    val workspaceId1 = UUID.randomUUID()
+    val workspaceId2 = UUID.randomUUID()
+    val workspaceId3 = UUID.randomUUID()
+    val workspaceId4 = UUID.randomUUID()
+
+    // create a user
+    val userId = UUID.randomUUID()
+    userPersistence.writeAuthenticatedUser(
+      AuthenticatedUser()
+        .withUserId(userId)
+        .withName("user")
+        .withAuthUserId("auth_id")
+        .withEmail("email")
+        .withAuthProvider(AuthProvider.AIRBYTE),
+    )
+
+    // create workspaces in org_1
+    val workspace1: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId1)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspace_1")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace1)
+
+    val workspace2: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId2)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspace_2")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace2)
+
+    val workspace3: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId3)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspace_3")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace3)
+
+    // create a workspace in org_2 without permission (should be excluded because wrong org)
+    val workspaceOrg2: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_2)
+        .withName("workspace_org2")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_2)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspaceOrg2)
+
+    // create a workspace in org_3 with permission (should be excluded because wrong org)
+    val workspaceOrg3: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId4)
+        .withOrganizationId(MockData.ORGANIZATION_ID_3)
+        .withName("workspace_org3")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_3)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspaceOrg3)
+
+    // create workspace-level permission for workspace 1 in org_1
+    writePermission(
+      Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withWorkspaceId(workspaceId1)
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.WORKSPACE_READER),
+    )
+
+    // create workspace-level permission for workspace 2 in org_1
+    writePermission(
+      Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withWorkspaceId(workspaceId2)
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN),
+    )
+
+    // DO NOT create permission for workspace 3 - it should be excluded even though it's in org_1
+
+    // create an org member permission for org_1 (should not affect results, as org-member is too low of a permission level)
+    writePermission(
+      Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER),
+    )
+
+    // create workspace-level permission for workspace in org_3 (different org, should not affect results)
+    writePermission(
+      Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withWorkspaceId(workspaceId4)
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.WORKSPACE_READER),
+    )
+
+    val workspaces =
+      workspacePersistence.listWorkspacesInOrganizationByUserId(
+        MockData.ORGANIZATION_ID_1,
+        userId,
+        Optional.empty<String>(),
+      )
+
+    // should return only workspaces 1 and 2 (both in org_1 with workspace-level permissions)
+    // workspace 3 excluded because no permission, other workspaces excluded because wrong org
+    assertEquals(2, workspaces.size)
+
+    val actualWorkspaces: MutableSet<StandardWorkspace?> = HashSet<StandardWorkspace?>(workspaces)
+    val expectedWorkspaces = Set.of<StandardWorkspace?>(workspace1, workspace2)
+    assertWorkspacesEqual(expectedWorkspaces, actualWorkspaces)
+  }
+
+  @Test
+  @Throws(Exception::class)
+  fun testListWorkspacesInOrganizationByUserIdPaginatedWithKeyword() {
+    val workspaceId1 = UUID.randomUUID()
+    val workspaceId2 = UUID.randomUUID()
+    val workspaceId3 = UUID.randomUUID()
+
+    // create a user
+    val userId = UUID.randomUUID()
+    userPersistence.writeAuthenticatedUser(
+      AuthenticatedUser()
+        .withUserId(userId)
+        .withName("user")
+        .withAuthUserId("auth_id")
+        .withEmail("email")
+        .withAuthProvider(AuthProvider.AIRBYTE),
+    )
+
+    // create workspaces in org_1 (sorted alphabetically by name)
+    val workspace1: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId1)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("A_workspace_with_keyword")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace1)
+
+    val workspace2: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId2)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("B_workspace_with_keyword")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace2)
+
+    val workspace3: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId3)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("C_workspace_with_keyword")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace3)
+
+    // create additional workspace in org_1 with keyword but NO permission (should be excluded even with org permission)
+    val workspaceNoPermission: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("D_workspace_no_permission_with_keyword")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspaceNoPermission)
+
+    // create workspace in different org with keyword and permission (should be excluded due to org filter)
+    val workspaceDifferentOrg: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_2)
+        .withName("E_workspace_different_org_with_keyword")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_2)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspaceDifferentOrg)
+
+    // create workspace-level permissions for workspace 1, 2, and 3 (but NOT workspaceNoPermission)
+    writePermission(
+      Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withWorkspaceId(workspaceId1)
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.WORKSPACE_READER),
+    )
+
+    writePermission(
+      Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withWorkspaceId(workspaceId2)
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.WORKSPACE_READER),
+    )
+
+    writePermission(
+      Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withWorkspaceId(workspaceId3)
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.WORKSPACE_READER),
+    )
+
+    // create workspace-level permission for workspace in different org (to prove org filtering works)
+    writePermission(
+      Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withWorkspaceId(workspaceDifferentOrg.workspaceId)
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.WORKSPACE_READER),
+    )
+
+    // Test first page (page size 2, offset 0)
+    // Should return only workspace1, workspace2, workspace3 (all with permissions and keyword)
+    // Should exclude: workspaceNoPermission (no permission), workspaceDifferentOrg (wrong org)
+    val firstPageWorkspaces =
+      workspacePersistence.listWorkspacesInOrganizationByUserIdPaginated(
+        ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 2, 0),
+        userId,
+        Optional.of<String>("keyword"),
+      )
+
+    assertEquals(2, firstPageWorkspaces.size)
+    assertWorkspaceEquals(workspace1, firstPageWorkspaces[0]) // A_workspace... (first alphabetically)
+    assertWorkspaceEquals(workspace2, firstPageWorkspaces[1]) // B_workspace... (second alphabetically)
+
+    // Test second page (page size 2, offset 2)
+    val secondPageWorkspaces =
+      workspacePersistence.listWorkspacesInOrganizationByUserIdPaginated(
+        ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 2, 2),
+        userId,
+        Optional.of<String>("keyword"),
+      )
+
+    org.junit.jupiter.api.Assertions
+      .assertEquals(1, secondPageWorkspaces.size)
+    assertWorkspaceEquals(workspace3, secondPageWorkspaces.get(0)) // C_workspace... (third alphabetically)
+  }
+
+  @Test
+  @Throws(Exception::class)
+  fun testListWorkspacesInOrganizationByUserIdPaginatedWithoutPermission() {
+    val workspaceId1 = UUID.randomUUID()
+    val workspaceId2 = UUID.randomUUID()
+    val workspaceId3 = UUID.randomUUID()
+
+    // create a user
+    val userId = UUID.randomUUID()
+    userPersistence.writeAuthenticatedUser(
+      AuthenticatedUser()
+        .withUserId(userId)
+        .withName("user")
+        .withAuthUserId("auth_id")
+        .withEmail("email")
+        .withAuthProvider(AuthProvider.AIRBYTE),
+    )
+
+    // create multiple workspaces in org_1 - none will be accessible due to lack of permissions
+    val workspace1: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId1)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspace_1")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace1)
+
+    val workspace2: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId2)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspace_2")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace2)
+
+    val workspace3: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId3)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspace_3")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace3)
+
+    // create a workspace in a different org with permission (to verify org filtering)
+    val workspaceDifferentOrg: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_2)
+        .withName("workspace_different_org")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_2)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspaceDifferentOrg)
+
+    // create permission for workspace in different org (should not affect results)
+    writePermission(
+      Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withWorkspaceId(workspaceDifferentOrg.workspaceId)
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.WORKSPACE_READER),
+    )
+
+    // Don't create any permissions for workspaces in org_1 - user should have no access
+
+    val workspaces =
+      workspacePersistence.listWorkspacesInOrganizationByUserIdPaginated(
+        ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 10, 0),
+        userId,
+        Optional.empty<String>(),
+      )
+
+    // should return 0 results - all workspaces in org_1 lack permissions
+    // workspaceDifferentOrg excluded due to organization filter
+    assertEquals(0, workspaces.size)
+  }
+
+  @Test
+  @Throws(Exception::class)
+  fun testListWorkspacesInOrganizationByUserIdWithInstanceAdminPermission() {
+    val workspaceId1 = UUID.randomUUID()
+    val workspaceId2 = UUID.randomUUID()
+    val workspaceId3 = UUID.randomUUID()
+
+    // create a user
+    val userId = UUID.randomUUID()
+    userPersistence.writeAuthenticatedUser(
+      AuthenticatedUser()
+        .withUserId(userId)
+        .withName("user")
+        .withAuthUserId("auth_id")
+        .withEmail("email")
+        .withAuthProvider(AuthProvider.AIRBYTE),
+    )
+
+    // create workspaces in org_1
+    val workspace1: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId1)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspace_1")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace1)
+
+    val workspace2: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId2)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspace_2")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace2)
+
+    val workspace3: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId3)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("workspace_3")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace3)
+
+    // create a workspace in a different org (should be excluded by org filter)
+    val workspaceDifferentOrg: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(MockData.ORGANIZATION_ID_2)
+        .withName("workspace_different_org")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_2)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspaceDifferentOrg)
+
+    // create INSTANCE_ADMIN permission (no organization_id or workspace_id needed)
+    writePermission(
+      Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN),
+    )
+
+    val workspaces =
+      workspacePersistence.listWorkspacesInOrganizationByUserId(
+        MockData.ORGANIZATION_ID_1,
+        userId,
+        Optional.empty<String>(),
+      )
+
+    // should return all 3 workspaces in org_1 due to instance admin permission
+    // workspaceDifferentOrg excluded due to organization filter
+    assertEquals(3, workspaces.size)
+
+    val actualWorkspaces: MutableSet<StandardWorkspace?> = HashSet<StandardWorkspace?>(workspaces)
+    val expectedWorkspaces = Set.of<StandardWorkspace?>(workspace1, workspace2, workspace3)
+    assertWorkspacesEqual(expectedWorkspaces, actualWorkspaces)
+  }
+
+  @Test
+  @Throws(Exception::class)
+  fun testListWorkspacesInOrganizationByUserIdPaginatedWithInstanceAdminPermission() {
+    val workspaceId1 = UUID.randomUUID()
+    val workspaceId2 = UUID.randomUUID()
+    val workspaceId3 = UUID.randomUUID()
+
+    // create a user
+    val userId = UUID.randomUUID()
+    userPersistence.writeAuthenticatedUser(
+      AuthenticatedUser()
+        .withUserId(userId)
+        .withName("user")
+        .withAuthUserId("auth_id")
+        .withEmail("email")
+        .withAuthProvider(AuthProvider.AIRBYTE),
+    )
+
+    // create workspaces in org_1 (sorted alphabetically by name)
+    val workspace1: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId1)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("A_workspace")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace1)
+
+    val workspace2: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId2)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("B_workspace")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace2)
+
+    val workspace3: StandardWorkspace =
+      createBaseStandardWorkspace()
+        .withWorkspaceId(workspaceId3)
+        .withOrganizationId(MockData.ORGANIZATION_ID_1)
+        .withName("C_workspace")
+        .withDataplaneGroupId(MockData.DATAPLANE_GROUP_ID_ORG_1)
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace3)
+
+    // create INSTANCE_ADMIN permission
+    writePermission(
+      Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN),
+    )
+
+    // Test first page (page size 2, offset 0)
+    val firstPageWorkspaces =
+      workspacePersistence.listWorkspacesInOrganizationByUserIdPaginated(
+        ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 2, 0),
+        userId,
+        Optional.empty<String>(),
+      )
+
+    assertEquals(2, firstPageWorkspaces.size)
+    assertWorkspaceEquals(workspace1, firstPageWorkspaces[0]) // A_workspace (first alphabetically)
+    assertWorkspaceEquals(workspace2, firstPageWorkspaces[1]) // B_workspace (second alphabetically)
+
+    // Test second page (page size 2, offset 2)
+    val secondPageWorkspaces =
+      workspacePersistence.listWorkspacesInOrganizationByUserIdPaginated(
+        ResourcesByOrganizationQueryPaginated(MockData.ORGANIZATION_ID_1, false, 2, 2),
+        userId,
+        Optional.empty<String>(),
+      )
+
+    assertEquals(1, secondPageWorkspaces.size)
+    assertWorkspaceEquals(workspace3, secondPageWorkspaces[0]) // C_workspace (third alphabetically)
   }
 
   companion object {

@@ -304,6 +304,41 @@ class WorkspacesHandler
     }
 
     @Throws(IOException::class)
+    fun listWorkspacesInOrganizationForUser(
+      userId: UUID,
+      request: ListWorkspacesInOrganizationRequestBody,
+    ): WorkspaceReadList {
+      val nameContains = if (StringUtils.isBlank(request.nameContains)) Optional.empty() else Optional.of(request.nameContains)
+      val standardWorkspaces =
+        if (request.pagination != null) {
+          workspacePersistence
+            .listWorkspacesInOrganizationByUserIdPaginated(
+              query =
+                ResourcesByOrganizationQueryPaginated(
+                  organizationId = request.organizationId,
+                  includeDeleted = false,
+                  pageSize = request.pagination.pageSize,
+                  rowOffset = request.pagination.rowOffset,
+                ),
+              userId = userId,
+              keyword = nameContains,
+            ).stream()
+            .map { obj: StandardWorkspace -> domainToApiModel(obj) }
+            .collect(Collectors.toList())
+        } else {
+          workspacePersistence
+            .listWorkspacesInOrganizationByUserId(
+              organizationId = request.organizationId,
+              userId = userId,
+              keyword = nameContains,
+            ).stream()
+            .map { obj: StandardWorkspace -> domainToApiModel(obj) }
+            .collect(Collectors.toList())
+        }
+      return WorkspaceReadList().workspaces(standardWorkspaces)
+    }
+
+    @Throws(IOException::class)
     private fun listWorkspacesByInstanceAdminUser(request: ListWorkspacesByUserRequestBody): WorkspaceReadList {
       val nameContains = if (StringUtils.isBlank(request.nameContains)) Optional.empty() else Optional.of(request.nameContains)
       val standardWorkspaces =

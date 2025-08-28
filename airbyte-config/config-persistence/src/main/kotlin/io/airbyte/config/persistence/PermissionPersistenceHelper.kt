@@ -128,4 +128,42 @@ object PermissionPersistenceHelper {
       " WHERE \"user\".id IN (SELECT user_id FROM usersInOrgWithPerm UNION SELECT user_id FROM usersInWorkspaceWithPerm)" +
       " ORDER BY name ASC"
   )
+
+  /**
+   * This query lists all workspaces in a specific organization that a particular user has access to
+   * based on their permissions. It's similar to LIST_ACTIVE_WORKSPACES_BY_USER_ID_AND_PERMISSION_TYPES_QUERY
+   * but adds an additional filter for organization_id.
+   *
+   * The query handles instance admins by checking if the user has instance_admin permission.
+   * If they do, all workspaces in the organization are returned.
+   *
+   * The query is parameterized by: user id, permission type array, organization id, and keyword search string.
+   */
+  const val LIST_WORKSPACES_IN_ORGANIZATION_BY_USER_ID_AND_PERMISSION_TYPES_QUERY: String = (
+    "WITH " +
+      " userHasInstanceAdmin AS (" +
+      "   SELECT COUNT(*) > 0 AS has_instance_admin FROM permission WHERE user_id = {0} AND permission_type = 'instance_admin'" +
+      " )," +
+      " userOrg AS (" +
+      "   SELECT organization_id FROM permission WHERE user_id = {0} AND permission_type = ANY({1}::permission_type[])" +
+      " )," +
+      " userWorkspaces AS (" +
+      "   SELECT workspace.id AS workspace_id FROM userOrg JOIN workspace" +
+      "   ON workspace.organization_id = userOrg.organization_id" +
+      "   WHERE workspace.organization_id = {2}" +
+      "   UNION" +
+      "   SELECT workspace_id FROM permission WHERE user_id = {0} AND permission_type = ANY({1}::permission_type[])" +
+      "   AND workspace_id IN (SELECT id FROM workspace WHERE organization_id = {2})" +
+      " )" +
+      " SELECT workspace.* " +
+      " FROM workspace" +
+      " WHERE (" +
+      "   workspace.id IN (SELECT workspace_id from userWorkspaces)" +
+      "   OR (SELECT has_instance_admin FROM userHasInstanceAdmin)" +
+      " )" +
+      " AND workspace.organization_id = {2}" +
+      " AND workspace.name ILIKE {3}" +
+      " AND workspace.tombstone = false" +
+      " ORDER BY workspace.name ASC"
+  )
 }
