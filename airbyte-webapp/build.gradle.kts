@@ -95,11 +95,6 @@ tasks.register<PnpmTask>("pnpmBuild") {
 
     environment.put("VERSION", webappVersion)
 
-    // Pass the WEBAPP_ENV_PATH environment variable to the Vite build process
-    System.getenv("WEBAPP_ENV_PATH")?.also {
-        environment.put("WEBAPP_ENV_PATH", it)
-        inputs.file(it)
-    }
     args = listOf("build")
 
     // The WEBAPP_BUILD_CLOUD_ENV environment variable is an input for this task,

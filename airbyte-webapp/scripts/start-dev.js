@@ -1,10 +1,7 @@
 const origSpawn = require("node:child_process").spawn;
-const { existsSync } = require("node:fs");
-const path = require("node:path");
 
-const { default: select, Separator } = require("@inquirer/select");
+const { default: select } = require("@inquirer/select");
 const chalk = require("chalk");
-const groupBy = require("lodash/groupBy");
 const optionator = require("optionator")({
   options: [
     {
@@ -38,33 +35,14 @@ const spawn = (cmd, args, options) => {
   });
 };
 
-const areCloudEnvsAvailable = existsSync(path.join(__dirname, "../../../cloud/cloud-webapp/development"));
-
-const groupedEnvs = groupBy(
-  Object.entries(environments)
-    .filter(([, entry]) => {
-      if (entry.cloudEnv && !areCloudEnvsAvailable) {
-        // Only show cloud environments if we're running in airbyte-platform-internal
-        return false;
-      }
-      if (entry.envFile && !existsSync(path.join(__dirname, "..", entry.envFile))) {
-        // If environment requires an additional env file only show it the file exists
-        return false;
-      }
-      return true;
-    })
-    .map(([id, entry]) => ({ id, ...entry })),
-  "group"
-);
-
-const choices = Object.entries(groupedEnvs).flatMap(([group, entries]) => {
+const choices = Object.entries(environments).flatMap(([id, entry]) => {
   return [
-    new Separator(`--- ${group} ---`),
-    ...entries.map((entry) => ({
+    {
       name: entry.name,
-      value: entry.id,
+      apiUrl: entry.apiUrl,
       description: entry.description,
-    })),
+      value: id,
+    },
   ];
 });
 
@@ -103,19 +81,19 @@ async function main() {
 
     await preStart();
 
+    console.log(env.apiUrl);
+
     if (options.preview) {
-      console.log(`\n> pnpm vite build && pnpm vite preview --port ${env.cloudEnv ? "3001" : "3000"}\n`);
+      console.log(`\n> pnpm vite build && pnpm vite preview --port "3000"}\n`);
       await spawn("pnpm", ["vite", "build"], {
         stdio: "inherit",
         env: {
           ...process.env,
-          ...(env.cloudEnv ? { NODE_OPTIONS: "-r ./scripts/local-cloud-dev.js", CLOUD_ENV: env.cloudEnv } : {}),
-          ...(env.envFile
-            ? { NODE_OPTIONS: "-r dotenv/config", DOTENV_CONFIG_PATH: path.join(__dirname, "..", env.envFile) }
-            : {}),
+          REACT_APP_API_URL: process.env.REACT_APP_API_URL ?? env.apiUrl,
+          REACT_APP_KEYCLOAK_BASE_URL: env.apiUrl,
         },
       });
-      await spawn("pnpm", ["vite", "preview", "--port", `${env.cloudEnv ? "3001" : "3000"}`], {
+      await spawn("pnpm", ["vite", "preview", "--port", `"3000"`], {
         stdio: "inherit",
       });
     } else {
@@ -124,10 +102,8 @@ async function main() {
         stdio: "inherit",
         env: {
           ...process.env,
-          ...(env.cloudEnv ? { NODE_OPTIONS: "-r ./scripts/local-cloud-dev.js", CLOUD_ENV: env.cloudEnv } : {}),
-          ...(env.envFile
-            ? { NODE_OPTIONS: "-r dotenv/config", DOTENV_CONFIG_PATH: path.join(__dirname, "..", env.envFile) }
-            : {}),
+          REACT_APP_API_URL: process.env.REACT_APP_API_URL ?? env.apiUrl,
+          REACT_APP_KEYCLOAK_BASE_URL: env.apiUrl,
         },
       });
     }

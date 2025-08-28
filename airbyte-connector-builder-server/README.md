@@ -105,7 +105,7 @@ You must then make two changes to your local `airbyte-platform-internal` repo:
     ```
     cd oss/airbyte-webapp
     pnpm install
-    pnpm start oss-local
+    pnpm start local
     ```
 
 If you then go to https://localhost:3000/ in your browser, and navigate to the connector builder, all requests directed toward the connector builder server will now be sent to your locally-running gradle builder server that uses your local CDK code, and the UI will use your local airbyte-webapp code.

@@ -9,8 +9,6 @@
   "scripts": {
     "prepare": "./scripts/install-githooks.sh",
     "start": "node ./scripts/start-dev.js",
-    "prestart:cloud-preview": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client && CLOUD_ENV=${CLOUD_ENV-frontend-dev} NODE_OPTIONS='-r ./scripts/local-cloud-dev.js' vite build",
-    "start:cloud-preview": "vite preview --port 3001",
     "prebuild": "./scripts/clean-generated.sh && pnpm run generate-client",
     "build": ". ./scripts/calculate-source-hash.sh && vite build",
     "pretest": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client",

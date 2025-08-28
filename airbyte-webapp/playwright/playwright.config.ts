@@ -23,7 +23,7 @@ export default defineConfig({
     video: process.env.CI ? "on-first-retry" : "off",
   },
   webServer: {
-    command: "cd .. && (test -d node_modules || pnpm install) && pnpm start oss-local",
+    command: "cd .. && (test -d node_modules || pnpm install) && pnpm start local",
     port: 3000,
     reuseExistingServer: !process.env.CI,
     stdout: "pipe",
