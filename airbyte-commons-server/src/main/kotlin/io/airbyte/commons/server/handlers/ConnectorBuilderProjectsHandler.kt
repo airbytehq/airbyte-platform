@@ -12,25 +12,20 @@ import io.airbyte.api.model.generated.BuilderProjectForDefinitionResponse
 import io.airbyte.api.model.generated.BuilderProjectOauthConsentRequest
 import io.airbyte.api.model.generated.CompleteConnectorBuilderProjectOauthRequest
 import io.airbyte.api.model.generated.CompleteOAuthResponse
-import io.airbyte.api.model.generated.ConnectorBuilderAuxiliaryRequest
-import io.airbyte.api.model.generated.ConnectorBuilderHttpRequest
-import io.airbyte.api.model.generated.ConnectorBuilderHttpResponse
+import io.airbyte.api.model.generated.ConnectorBuilderCapabilities
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetails
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetailsRead
 import io.airbyte.api.model.generated.ConnectorBuilderProjectForkRequestBody
 import io.airbyte.api.model.generated.ConnectorBuilderProjectFullResolveRequestBody
-import io.airbyte.api.model.generated.ConnectorBuilderProjectFullResolveResponse
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamRead
-import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadLogsInner
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadRequestBody
-import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInner
-import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadSlicesInnerPagesInner
 import io.airbyte.api.model.generated.ConnectorBuilderProjectTestingValuesUpdate
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId
 import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody
+import io.airbyte.api.model.generated.ConnectorBuilderResolvedManifest
 import io.airbyte.api.model.generated.ContributionInfo
 import io.airbyte.api.model.generated.DeclarativeManifestBaseImageRead
 import io.airbyte.api.model.generated.DeclarativeManifestRead
@@ -43,6 +38,7 @@ import io.airbyte.api.problems.model.generated.FailedPreconditionData
 import io.airbyte.api.problems.throwable.generated.FailedPreconditionProblem
 import io.airbyte.commons.constants.AirbyteCatalogConstants
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.server.builder.manifest.processor.ManifestProcessorProvider
 import io.airbyte.commons.server.errors.NotFoundException
 import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector
@@ -64,17 +60,6 @@ import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.specs.RemoteDefinitionsProvider
-import io.airbyte.connectorbuilderserver.api.client.generated.ConnectorBuilderServerApi
-import io.airbyte.connectorbuilderserver.api.client.model.generated.AuxiliaryRequest
-import io.airbyte.connectorbuilderserver.api.client.model.generated.FullResolveManifestRequestBody
-import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpRequest
-import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpResponse
-import io.airbyte.connectorbuilderserver.api.client.model.generated.ResolveManifest
-import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead
-import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadLogsInner
-import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody
-import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInner
-import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInnerPagesInner
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
 import io.airbyte.data.services.ActorDefinitionService
@@ -95,7 +80,6 @@ import io.airbyte.oauth.OAuthImplementationFactory
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.core.util.CollectionUtils
 import jakarta.annotation.Nullable
 import jakarta.inject.Inject
 import jakarta.inject.Named
@@ -129,7 +113,7 @@ open class ConnectorBuilderProjectsHandler
     private val secretPersistenceConfigService: SecretPersistenceConfigService,
     private val sourceService: SourceService,
     @param:Named("jsonSecretsProcessorWithCopy") private val secretsProcessor: JsonSecretsProcessor,
-    private val connectorBuilderServerApiClient: ConnectorBuilderServerApi,
+    private val manifestProcessorProvider: ManifestProcessorProvider,
     private val actorDefinitionService: ActorDefinitionService,
     private val remoteDefinitionsProvider: RemoteDefinitionsProvider,
     @param:Named("oauthImplementationFactory") private val oAuthImplementationFactory: OAuthImplementationFactory,
@@ -532,30 +516,29 @@ open class ConnectorBuilderProjectsHandler
         val existingHydratedTestingValues =
           getHydratedTestingValues(project, secretPersistenceConfig.orElse(null)).orElse(Jsons.emptyObject())
 
-        val streamReadRequestBody =
-          StreamReadRequestBody(
+        val processor = manifestProcessorProvider.getProcessor(project.workspaceId)
+        val builderProjectStreamRead =
+          processor.streamTestRead(
             existingHydratedTestingValues,
             requestBody.manifest,
             requestBody.streamName,
             requestBody.customComponentsCode,
             requestBody.formGeneratedManifest,
-            requestBody.builderProjectId.toString(),
+            requestBody.builderProjectId,
             requestBody.recordLimit,
             requestBody.pageLimit,
             requestBody.sliceLimit,
             requestBody.state,
-            requestBody.workspaceId.toString(),
+            requestBody.workspaceId,
           )
-        val streamRead = connectorBuilderServerApiClient.readStream(streamReadRequestBody)
 
-        val builderProjectStreamRead = convertStreamRead(streamRead)
-
-        if (streamRead.latestConfigUpdate != null) {
+        // Handle latestConfigUpdate secret processing if present
+        if (builderProjectStreamRead.latestConfigUpdate != null) {
           val spec = requestBody.manifest[SPEC_FIELD][CONNECTION_SPECIFICATION_FIELD]
           val updatedTestingValuesWithSecretCoordinates =
             writeSecretsToSecretPersistence(
               Optional.ofNullable(project.testingValues),
-              Jsons.convertValue(streamRead.latestConfigUpdate, JsonNode::class.java),
+              builderProjectStreamRead.latestConfigUpdate,
               spec,
               project.workspaceId,
               secretPersistenceConfig,
@@ -573,23 +556,38 @@ open class ConnectorBuilderProjectsHandler
     }
 
     @Throws(ConfigNotFoundException::class, IOException::class)
-    fun fullResolveManifestBuilderProject(requestBody: ConnectorBuilderProjectFullResolveRequestBody): ConnectorBuilderProjectFullResolveResponse {
+    fun fullResolveManifestBuilderProject(requestBody: ConnectorBuilderProjectFullResolveRequestBody): ConnectorBuilderResolvedManifest {
       val project = connectorBuilderService.getConnectorBuilderProject(requestBody.builderProjectId, false)
       val secretPersistenceConfig = getSecretPersistenceConfig(project.workspaceId)
       val existingHydratedTestingValues =
         getHydratedTestingValues(project, secretPersistenceConfig.orElse(null)).orElse(Jsons.emptyObject())
 
-      val fullResolveManifestRequestBody =
-        FullResolveManifestRequestBody(
-          existingHydratedTestingValues,
-          requestBody.manifest,
-          requestBody.streamLimit,
-          requestBody.builderProjectId.toString(),
-          requestBody.workspaceId.toString(),
-        )
-      val resolveManifest = connectorBuilderServerApiClient.fullResolveManifest(fullResolveManifestRequestBody)
-      val builderProjectResolveManifest = convertResolveManifest(resolveManifest)
-      return builderProjectResolveManifest
+      val processor = manifestProcessorProvider.getProcessor(project.workspaceId)
+      return processor.fullResolveManifest(
+        existingHydratedTestingValues,
+        requestBody.manifest,
+        requestBody.streamLimit,
+        requestBody.builderProjectId,
+        requestBody.workspaceId,
+      )
+    }
+
+    fun getCapabilities(workspaceId: UUID): ConnectorBuilderCapabilities {
+      val processor = manifestProcessorProvider.getProcessor(workspaceId)
+      return processor.getCapabilities()
+    }
+
+    fun resolveManifest(
+      manifest: JsonNode,
+      workspaceId: UUID,
+      projectId: UUID,
+    ): JsonNode {
+      val processor = manifestProcessorProvider.getProcessor(workspaceId)
+      return processor.resolveManifest(
+        manifest = manifest,
+        builderProjectId = projectId,
+        workspaceId = workspaceId,
+      )
     }
 
     @Throws(IOException::class, ConfigNotFoundException::class)
@@ -611,187 +609,6 @@ open class ConnectorBuilderProjectsHandler
         .builderProjectId(builderProjectId.orElse(null))
         .workspaceId(workspaceId.orElse(null))
     }
-
-    /**
-     * Converts the provided `StreamRead` object into a `ConnectorBuilderProjectStreamRead`
-     * object.
-     *
-     *
-     * This method maps various properties from the `streamRead` instance including logs, slices,
-     * auxiliary requests, inferred schema, and inferred datetime formats. It also transfers the test
-     * read limit flag.
-     *
-     * @param streamRead the `StreamRead` instance containing the original data to be converted.
-     * @return a new `ConnectorBuilderProjectStreamRead` instance populated with the mapped values
-     * from `streamRead`.
-     */
-    private fun convertStreamRead(streamRead: StreamRead): ConnectorBuilderProjectStreamRead =
-      ConnectorBuilderProjectStreamRead()
-        .logs(mapStreamReadLogs(streamRead))
-        .slices(mapStreamReadSlices(streamRead))
-        .testReadLimitReached(streamRead.testReadLimitReached)
-        .auxiliaryRequests(mapGlobalAuxiliaryRequests(streamRead))
-        .inferredSchema(streamRead.inferredSchema)
-        .inferredDatetimeFormats(streamRead.inferredDatetimeFormats)
-
-    /**
-     * Converts the provided `ResolveManifest` object into a
-     * `ConnectorBuilderProjectFullResolveResponse` object.
-     *
-     *
-     * This method maps manifest property from the `resolveManifest` instance.
-     *
-     * @param resolveManifest the `ResolveManifest` instance containing the original data to be
-     * converted.
-     * @return a new `ConnectorBuilderProjectFullResolveResponse` instance populated with the
-     * mapped value from `resolveManifest`.
-     */
-    private fun convertResolveManifest(resolveManifest: ResolveManifest): ConnectorBuilderProjectFullResolveResponse =
-      ConnectorBuilderProjectFullResolveResponse()
-        .manifest(resolveManifest.manifest)
-
-    /**
-     * Converts the logs contained within a `StreamRead` object into a list of
-     * `ConnectorBuilderProjectStreamReadLogsInner` instances.
-     *
-     *
-     *
-     * Each log entry in the provided `streamRead` is transformed by mapping its message, level
-     * (converted via `LevelEnum.fromString`), internal message, and stacktrace.
-     *
-     *
-     * @param streamRead the `StreamRead` instance containing the logs to be mapped
-     * @return a list of `ConnectorBuilderProjectStreamReadLogsInner` objects representing the
-     * mapped log entries
-     */
-    private fun mapStreamReadLogs(streamRead: StreamRead): List<ConnectorBuilderProjectStreamReadLogsInner> =
-      streamRead.logs
-        .stream()
-        .map { log: StreamReadLogsInner ->
-          ConnectorBuilderProjectStreamReadLogsInner()
-            .message(log.message)
-            .level(ConnectorBuilderProjectStreamReadLogsInner.LevelEnum.fromString(log.level.value))
-            .internalMessage(log.internalMessage)
-            .stacktrace(log.stacktrace)
-        }.toList()
-
-    /**
-     * Maps the slices from the given StreamRead instance into a list of
-     * ConnectorBuilderProjectStreamReadSlicesInner objects.
-     *
-     *
-     *
-     * This method iterates through each slice in the provided StreamRead, creating a corresponding
-     * ConnectorBuilderProjectStreamReadSlicesInner for each slice. For each slice, it:
-     *
-     *  * Sets the slice descriptor.
-     *  * Ensures the state list is not empty; otherwise, it uses an empty list.
-     *  * Converts each page by mapping records and transforming both the HTTP request and
-     * response.
-     *  * Processes auxiliary requests specific to the slice.
-     *
-     *
-     * @param streamRead the StreamRead instance containing slices to be mapped.
-     * @return a list of ConnectorBuilderProjectStreamReadSlicesInner objects constructed from the
-     * StreamRead slices.
-     */
-    private fun mapStreamReadSlices(streamRead: StreamRead): List<ConnectorBuilderProjectStreamReadSlicesInner> =
-      streamRead.slices
-        .stream()
-        .map { slice: StreamReadSlicesInner ->
-          ConnectorBuilderProjectStreamReadSlicesInner()
-            .sliceDescriptor(slice.sliceDescriptor)
-            .state(if (CollectionUtils.isNotEmpty(slice.state)) slice.state else listOf())
-            .pages(
-              slice.pages
-                .stream()
-                .map { page: StreamReadSlicesInnerPagesInner ->
-                  ConnectorBuilderProjectStreamReadSlicesInnerPagesInner()
-                    .records(page.records)
-                    .request(convertHttpRequest(page.request))
-                    .response(convertHttpResponse(page.response))
-                }.toList(),
-            ).auxiliaryRequests(mapSliceAuxiliaryRequests(slice))
-        }.toList()
-
-    /**
-     * Converts a list of AuxiliaryRequest objects into a list of ConnectorBuilderAuxiliaryRequest
-     * objects.
-     *
-     *
-     *
-     * This method first checks if the provided list is not empty. If it is not empty, it streams over
-     * the list, mapping each AuxiliaryRequest into a ConnectorBuilderAuxiliaryRequest by copying the
-     * description, title, and converting the HTTP request and response fields as well as mapping the
-     * type using the TypeEnum. If the input list is empty, it returns an empty list.
-     *
-     * @param auxiliaryRequests the list of AuxiliaryRequest objects to be converted
-     * @return a list of converted ConnectorBuilderAuxiliaryRequest objects, or an empty list if the
-     * input is empty
-     */
-    private fun mapAuxiliaryRequests(auxiliaryRequests: List<AuxiliaryRequest?>?): List<ConnectorBuilderAuxiliaryRequest> =
-      if (CollectionUtils.isNotEmpty(auxiliaryRequests)) {
-        auxiliaryRequests!!
-          .stream()
-          .map { auxRequest: AuxiliaryRequest? ->
-            ConnectorBuilderAuxiliaryRequest()
-              .description(auxRequest!!.description)
-              .request(convertHttpRequest(auxRequest.request))
-              .response(convertHttpResponse(auxRequest.response))
-              .title(auxRequest.title)
-              .type(ConnectorBuilderAuxiliaryRequest.TypeEnum.fromString(auxRequest.type.value))
-          }.toList()
-      } else {
-        listOf()
-      }
-
-    /**
-     * Maps the global auxiliary requests from the provided StreamRead instance.
-     *
-     *
-     *
-     * This method retrieves the auxiliary requests from the StreamRead object and delegates the mapping
-     * to the mapAuxiliaryRequests method.
-     *
-     * @param streamRead the StreamRead instance that contains the auxiliary requests
-     * @return a list of ConnectorBuilderAuxiliaryRequest objects generated from the auxiliary requests
-     */
-    private fun mapGlobalAuxiliaryRequests(streamRead: StreamRead): List<ConnectorBuilderAuxiliaryRequest> =
-      mapAuxiliaryRequests(streamRead.auxiliaryRequests)
-
-    /**
-     * Maps the auxiliary requests from the given slice into a list of ConnectorBuilderAuxiliaryRequest
-     * instances.
-     *
-     * @param slice the input slice containing auxiliary request data
-     * @return a list of ConnectorBuilderAuxiliaryRequest objects mapped from the slice's auxiliary
-     * requests
-     */
-    private fun mapSliceAuxiliaryRequests(slice: StreamReadSlicesInner): List<ConnectorBuilderAuxiliaryRequest> =
-      mapAuxiliaryRequests(slice.auxiliaryRequests)
-
-    private fun convertHttpRequest(
-      @Nullable request: HttpRequest?,
-    ): ConnectorBuilderHttpRequest? =
-      if (request != null) {
-        ConnectorBuilderHttpRequest()
-          .url(request.url)
-          .httpMethod(ConnectorBuilderHttpRequest.HttpMethodEnum.fromString(request.httpMethod.value))
-          .body(request.body)
-          .headers(request.headers)
-      } else {
-        null
-      }
-
-    private fun convertHttpResponse(response: HttpResponse?): ConnectorBuilderHttpResponse? =
-      if (response != null) {
-        ConnectorBuilderHttpResponse()
-          .status(response.status)
-          .body(response.body)
-          .headers(response.headers)
-      } else {
-        null
-      }
 
     @Throws(JsonValidationException::class)
     private fun writeSecretsToSecretPersistence(

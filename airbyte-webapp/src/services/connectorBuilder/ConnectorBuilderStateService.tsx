@@ -38,7 +38,7 @@ import {
   HttpError,
 } from "core/api";
 import {
-  ConnectorBuilderProjectFullResolveResponse,
+  ConnectorBuilderResolvedManifest,
   ConnectorBuilderProjectTestingValues,
   ConnectorBuilderProjectTestingValuesUpdate,
   KnownExceptionInfo,
@@ -153,7 +153,7 @@ export interface TestReadContext {
     setStreamLimit: (newStreamLimit: number) => void;
     defaultGeneratedLimits: GeneratedStreamLimits;
   };
-  generateStreams: UseQueryResult<ConnectorBuilderProjectFullResolveResponse, unknown>;
+  generateStreams: UseQueryResult<ConnectorBuilderResolvedManifest, unknown>;
 }
 
 interface FormManagementStateContext {
@@ -785,7 +785,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
         : ("sync" as const),
     generatedStreamsLimits,
     generateStreams: { ...fullResolveManifest, refetch: doGenerateStreams } as UseQueryResult<
-      ConnectorBuilderProjectFullResolveResponse,
+      ConnectorBuilderResolvedManifest,
       unknown
     >,
   };

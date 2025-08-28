@@ -12,11 +12,11 @@ import okhttp3.OkHttpClient
 import okhttp3.Response
 
 /**
- * This class wraps all the generated Manifest Runner API clients and provides a single entry point.
- * This class is meant to consolidate all our Manifest Runner API endpoints into a fluent-ish client.
+ * This class wraps all the generated Manifest Server API clients and provides a single entry point.
+ * This class is meant to consolidate all our Manifest Server API endpoints into a fluent-ish client.
  *
  * Our open API generators create a separate class per API "root-route". This class wraps those
- * generated APIs to provide a unified interface for interacting with the Manifest Runner service.
+ * generated APIs to provide a unified interface for interacting with the Manifest Server service.
  *
  * The client is designed to:
  * 1. Use Kotlin for type safety and modern language features

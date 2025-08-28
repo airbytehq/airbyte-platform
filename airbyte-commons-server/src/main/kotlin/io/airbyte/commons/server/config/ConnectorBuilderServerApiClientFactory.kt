@@ -6,7 +6,7 @@ package io.airbyte.commons.server.config
 
 import dev.failsafe.RetryPolicy
 import io.airbyte.api.client.auth.InternalClientTokenInterceptor
-import io.airbyte.connectorbuilderserver.api.client.generated.ConnectorBuilderServerApi
+import io.airbyte.connectorbuilderserver.api.client.ConnectorBuilderServerApiClient
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
@@ -26,7 +26,7 @@ class ConnectorBuilderServerApiClientFactory {
     @Property(name = "airbyte.connector-builder-server-api.signature-secret") signatureSecret: String,
     @Property(name = "airbyte.connector-builder-server-api.connect-timeout-seconds") connectTimeoutSeconds: Long,
     @Property(name = "airbyte.connector-builder-server-api.read-timeout-seconds") readTimeoutSeconds: Long,
-  ): ConnectorBuilderServerApi {
+  ): ConnectorBuilderServerApiClient {
     val builder: OkHttpClient.Builder =
       OkHttpClient.Builder().apply {
         addInterceptor(InternalClientTokenInterceptor(applicationName, signatureSecret))
@@ -37,10 +37,10 @@ class ConnectorBuilderServerApiClientFactory {
     val okHttpClient: OkHttpClient = builder.build()
     val retryPolicy: RetryPolicy<Response> = RetryPolicy.builder<Response>().withMaxRetries(0).build()
 
-    return ConnectorBuilderServerApi(
+    return ConnectorBuilderServerApiClient(
       basePath = basePath,
       policy = retryPolicy,
-      client = okHttpClient,
+      httpClient = okHttpClient,
     )
   }
 }

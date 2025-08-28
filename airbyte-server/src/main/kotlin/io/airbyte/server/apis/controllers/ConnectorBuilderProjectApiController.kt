@@ -13,17 +13,19 @@ import io.airbyte.api.model.generated.CheckContributionRead
 import io.airbyte.api.model.generated.CheckContributionRequestBody
 import io.airbyte.api.model.generated.CompleteConnectorBuilderProjectOauthRequest
 import io.airbyte.api.model.generated.CompleteOAuthResponse
+import io.airbyte.api.model.generated.ConnectorBuilderCapabilities
 import io.airbyte.api.model.generated.ConnectorBuilderProjectForkRequestBody
 import io.airbyte.api.model.generated.ConnectorBuilderProjectFullResolveRequestBody
-import io.airbyte.api.model.generated.ConnectorBuilderProjectFullResolveResponse
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList
+import io.airbyte.api.model.generated.ConnectorBuilderProjectResolveRequestBody
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamRead
 import io.airbyte.api.model.generated.ConnectorBuilderProjectStreamReadRequestBody
 import io.airbyte.api.model.generated.ConnectorBuilderProjectTestingValuesUpdate
 import io.airbyte.api.model.generated.ConnectorBuilderProjectWithWorkspaceId
 import io.airbyte.api.model.generated.ConnectorBuilderPublishRequestBody
+import io.airbyte.api.model.generated.ConnectorBuilderResolvedManifest
 import io.airbyte.api.model.generated.DeclarativeManifestBaseImageRead
 import io.airbyte.api.model.generated.DeclarativeManifestRequestBody
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId
@@ -164,11 +166,39 @@ class ConnectorBuilderProjectApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun fullResolveManifestBuilderProject(
     @Body connectorBuilderProjectFullResolveRequestBody: ConnectorBuilderProjectFullResolveRequestBody,
-  ): ConnectorBuilderProjectFullResolveResponse? =
+  ): ConnectorBuilderResolvedManifest? =
     execute {
       connectorBuilderProjectsHandler.fullResolveManifestBuilderProject(
         connectorBuilderProjectFullResolveRequestBody,
       )
+    }
+
+  @Post(uri = "/resolve")
+  @Status(HttpStatus.OK)
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun resolveManifestBuilderProject(
+    @Body connectorBuilderProjectResolveRequestBody: ConnectorBuilderProjectResolveRequestBody,
+  ): ConnectorBuilderResolvedManifest? =
+    execute {
+      ConnectorBuilderResolvedManifest().manifest(
+        connectorBuilderProjectsHandler.resolveManifest(
+          connectorBuilderProjectResolveRequestBody.manifest,
+          connectorBuilderProjectResolveRequestBody.workspaceId,
+          connectorBuilderProjectResolveRequestBody.builderProjectId,
+        ),
+      )
+    }
+
+  @Post(uri = "/capabilities")
+  @Status(HttpStatus.OK)
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getConnectorBuilderCapabilities(
+    @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
+  ): ConnectorBuilderCapabilities? =
+    execute {
+      connectorBuilderProjectsHandler.getCapabilities(workspaceIdRequestBody.workspaceId)
     }
 
   @Post(uri = "/contribute/generate", produces = [MediaType.APPLICATION_JSON])

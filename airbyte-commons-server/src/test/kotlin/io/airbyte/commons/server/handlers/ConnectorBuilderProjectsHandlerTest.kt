@@ -36,6 +36,8 @@ import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.json.Jsons.serialize
+import io.airbyte.commons.server.builder.manifest.processor.ManifestProcessor
+import io.airbyte.commons.server.builder.manifest.processor.ManifestProcessorProvider
 import io.airbyte.commons.server.errors.NotFoundException
 import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector
@@ -54,13 +56,6 @@ import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.config.specs.RemoteDefinitionsProvider
-import io.airbyte.connectorbuilderserver.api.client.generated.ConnectorBuilderServerApi
-import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpRequest
-import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpResponse
-import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead
-import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody
-import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInner
-import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInnerPagesInner
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
 import io.airbyte.data.services.ActorDefinitionService
@@ -78,6 +73,7 @@ import io.airbyte.protocol.models.v0.AdvancedAuth
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
 import io.airbyte.validation.json.JsonValidationException
+import io.mockk.mockk
 import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -110,7 +106,8 @@ internal class ConnectorBuilderProjectsHandlerTest {
   private lateinit var secretPersistenceConfigService: SecretPersistenceConfigService
   private lateinit var sourceService: SourceService
   private lateinit var secretsProcessor: JsonSecretsProcessor
-  private lateinit var connectorBuilderServerApiClient: ConnectorBuilderServerApi
+  private lateinit var manifestProcessorProvider: ManifestProcessorProvider
+  private lateinit var manifestProcessor: ManifestProcessor
   private lateinit var actorDefinitionService: ActorDefinitionService
   private lateinit var remoteDefinitionsProvider: RemoteDefinitionsProvider
   private lateinit var adaptedConnectorSpecification: ConnectorSpecification
@@ -179,7 +176,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
     secretPersistenceConfigService = Mockito.mock(SecretPersistenceConfigService::class.java)
     sourceService = Mockito.mock(SourceService::class.java)
     secretsProcessor = Mockito.mock(JsonSecretsProcessor::class.java)
-    connectorBuilderServerApiClient = Mockito.mock(ConnectorBuilderServerApi::class.java)
+    manifestProcessorProvider = Mockito.mock(ManifestProcessorProvider::class.java)
     actorDefinitionService = Mockito.mock(ActorDefinitionService::class.java)
     remoteDefinitionsProvider = Mockito.mock(RemoteDefinitionsProvider::class.java)
     adaptedConnectorSpecification = Mockito.mock(ConnectorSpecification::class.java)
@@ -202,7 +199,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
         secretPersistenceConfigService,
         sourceService,
         secretsProcessor,
-        connectorBuilderServerApiClient,
+        manifestProcessorProvider,
         actorDefinitionService,
         remoteDefinitionsProvider,
         oauthImplementationFactory,
@@ -216,6 +213,9 @@ internal class ConnectorBuilderProjectsHandlerTest {
           anyOrNull(),
         ),
       ).thenReturn(A_DECLARATIVE_MANIFEST_IMAGE_VERSION)
+
+    manifestProcessor = mockk<ManifestProcessor>(relaxed = true)
+    Mockito.`when`(manifestProcessorProvider.getProcessor(anyOrNull())).thenReturn(manifestProcessor)
   }
 
   private fun generateBuilderProject(): ConnectorBuilderProject {
@@ -1202,21 +1202,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
         .pageLimit(null)
         .sliceLimit(null)
 
-    val streamReadRequestBody =
-      StreamReadRequestBody(
-        testingValues,
-        project.getManifestDraft(),
-        streamName,
-        null,
-        false,
-        project.getBuilderProjectId().toString(),
-        null,
-        null,
-        null,
-        mutableListOf(),
-        project.getWorkspaceId().toString(),
-      )
-
     val record1 =
       deserialize(
         """
@@ -1244,36 +1229,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
     val responseBody = "[" + serialize<JsonNode?>(record1) + "," + serialize<JsonNode?>(record2) + "]"
     val requestUrl = "https://api.com/users"
     val responseStatus = 200
-    val httpRequest = HttpRequest(requestUrl, HttpRequest.HttpMethod.GET, null, null)
-    val httpResponse = HttpResponse(responseStatus, responseBody, null)
-    val streamRead =
-      StreamRead(
-        mutableListOf(),
-        java.util.List.of(
-          StreamReadSlicesInner(
-            java.util.List.of(
-              StreamReadSlicesInnerPagesInner(
-                java.util.List.of(record1, record2),
-                httpRequest,
-                httpResponse,
-              ),
-            ),
-            null,
-            null,
-            mutableListOf(),
-          ),
-        ),
-        false,
-        null,
-        null,
-        null,
-        null,
-      )
-
-    Mockito
-      .`when`(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false))
-      .thenReturn(project)
-    Mockito.`when`(connectorBuilderServerApiClient.readStream(streamReadRequestBody)).thenReturn(streamRead)
 
     val expectedProjectStreamRead =
       ConnectorBuilderProjectStreamRead()
@@ -1291,6 +1246,26 @@ internal class ConnectorBuilderProjectsHandlerTest {
               ),
           ),
         ).testReadLimitReached(false)
+
+    Mockito
+      .`when`(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false))
+      .thenReturn(project)
+    io.mockk.every {
+      manifestProcessor.streamTestRead(
+        testingValues,
+        project.getManifestDraft(),
+        streamName,
+        null,
+        false,
+        project.getBuilderProjectId(),
+        null,
+        null,
+        null,
+        mutableListOf(),
+        project.getWorkspaceId(),
+      )
+    } returns expectedProjectStreamRead
+
     val actualProjectStreamRead =
       connectorBuilderProjectsHandler.readConnectorBuilderProjectStream(projectStreamReadRequestBody)
     Assertions.assertEquals(expectedProjectStreamRead, actualProjectStreamRead)
@@ -1317,21 +1292,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
         .recordLimit(null)
         .pageLimit(null)
         .sliceLimit(null)
-
-    val streamReadRequestBody =
-      StreamReadRequestBody(
-        testingValues,
-        project.getManifestDraft(),
-        streamName,
-        null,
-        false,
-        project.getBuilderProjectId().toString(),
-        null,
-        null,
-        null,
-        mutableListOf(),
-        project.getWorkspaceId().toString(),
-      )
 
     val newTestingValues =
       deserialize(
@@ -1362,13 +1322,32 @@ internal class ConnectorBuilderProjectsHandlerTest {
         }
         """.trimIndent(),
       )
-    val streamRead =
-      StreamRead(mutableListOf(), mutableListOf(), false, null, null, null, newTestingValues)
+
+    val expectedStreamRead =
+      ConnectorBuilderProjectStreamRead()
+        .logs(mutableListOf())
+        .slices(mutableListOf())
+        .testReadLimitReached(false)
+        .latestConfigUpdate(newTestingValues)
 
     Mockito
       .`when`(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false))
       .thenReturn(project)
-    Mockito.`when`(connectorBuilderServerApiClient.readStream(streamReadRequestBody)).thenReturn(streamRead)
+    io.mockk.every {
+      manifestProcessor.streamTestRead(
+        testingValues,
+        project.getManifestDraft(),
+        streamName,
+        null,
+        false,
+        project.getBuilderProjectId(),
+        null,
+        null,
+        null,
+        mutableListOf(),
+        project.getWorkspaceId(),
+      )
+    } returns expectedStreamRead
     Mockito
       .`when`(
         secretsRepositoryWriter.updateFromConfigLegacy(

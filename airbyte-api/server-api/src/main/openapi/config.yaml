@@ -1167,11 +1167,53 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectorBuilderProjectFullResolveResponse"
+                $ref: "#/components/schemas/ConnectorBuilderResolvedManifest"
         "400":
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connector_builder_projects/resolve:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Given a JSON manifest, returns a JSON manifest with all of the $refs and $parameters resolved and flattened
+      operationId: resolveManifestBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderProjectResolveRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorBuilderResolvedManifest"
+        "400":
+          $ref: "#/components/responses/ExceptionResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/connector_builder_projects/capabilities:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Get connector builder capabilities
+      operationId: getConnectorBuilderCapabilities
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorBuilderCapabilities"
   /v1/connector_builder_projects/fork:
     post:
       tags:
@@ -11796,7 +11838,7 @@ components:
           description: Maximum number of generated streams that will be returned to the client from connector builder test reads
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
-    ConnectorBuilderProjectFullResolveResponse:
+    ConnectorBuilderResolvedManifest:
       type: object
       required:
         - manifest
@@ -11804,6 +11846,25 @@ components:
         manifest:
           type: object
           description: The config-based connector manifest contents with $refs and $parameters resolved
+    ConnectorBuilderProjectResolveRequestBody:
+      type: object
+      required:
+        - manifest
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+    ConnectorBuilderCapabilities:
+      type: object
+      required:
+        - customCodeExecution
+      properties:
+        customCodeExecution:
+          type: boolean
+          description: Whether custom code execution is supported
     ConnectorBuilderAuxiliaryRequest:
       type: object
       required:
