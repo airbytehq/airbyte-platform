@@ -4,7 +4,7 @@ import { useIntl } from "react-intl";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { StreamReadSlicesItem } from "core/api/types/ConnectorBuilderClient";
+import { ConnectorBuilderProjectStreamReadSlicesItem } from "core/api/types/AirbyteClient";
 
 import { InnerListBox } from "./InnerListBox";
 import styles from "./SliceSelector.module.scss";
@@ -12,12 +12,12 @@ import { formatJson } from "../utils";
 
 interface SliceSelectorProps {
   className?: string;
-  slices: StreamReadSlicesItem[];
+  slices: ConnectorBuilderProjectStreamReadSlicesItem[];
   selectedSliceIndex: number;
   onSelect: (sliceIndex: number) => void;
 }
 
-const getSliceLabel = (slice: StreamReadSlicesItem) => {
+const getSliceLabel = (slice: ConnectorBuilderProjectStreamReadSlicesItem) => {
   if (!slice.slice_descriptor) {
     return null;
   }

@@ -43,8 +43,8 @@ import {
   ConnectorBuilderProjectTestingValuesUpdate,
   KnownExceptionInfo,
   SourceDefinitionIdBody,
+  ConnectorBuilderProjectStreamRead,
 } from "core/api/types/AirbyteClient";
-import { StreamRead } from "core/api/types/ConnectorBuilderClient";
 import {
   ConnectorManifest,
   DeclarativeComponentSchema,
@@ -833,7 +833,7 @@ const filterManifest = (manifest: ConnectorManifest, testStreamId: StreamId): Co
 };
 
 export function useSchemaWarnings(
-  streamRead: UseQueryResult<StreamRead, unknown>,
+  streamRead: UseQueryResult<ConnectorBuilderProjectStreamRead, unknown>,
   streamNumber: number,
   streamName: string
 ) {

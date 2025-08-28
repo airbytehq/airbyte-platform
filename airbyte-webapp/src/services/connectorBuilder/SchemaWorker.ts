@@ -1,12 +1,12 @@
 import { Validator } from "@cfworker/json-schema";
 import uniq from "lodash/uniq";
 
-import { StreamReadSlicesItemPagesItemRecordsItem } from "core/api/types/ConnectorBuilderClient";
+import { ConnectorBuilderProjectStreamReadSlicesItemPagesItemRecordsItem } from "core/api/types/AirbyteClient";
 import { InlineSchemaLoaderSchema } from "core/api/types/ConnectorManifest";
 
 export interface IncomingData {
   schema: InlineSchemaLoaderSchema;
-  records: StreamReadSlicesItemPagesItemRecordsItem[];
+  records: ConnectorBuilderProjectStreamReadSlicesItemPagesItemRecordsItem[];
   streamName: string;
 }
 

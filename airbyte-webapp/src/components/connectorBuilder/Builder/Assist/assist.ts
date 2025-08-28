@@ -5,7 +5,7 @@ import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError, useAssistApiMutation, useAssistApiProxyQuery } from "core/api";
-import { KnownExceptionInfo } from "core/api/types/ConnectorBuilderClient";
+import { KnownExceptionInfo } from "core/api/types/AirbyteClient";
 import {
   ConnectorManifest,
   DatetimeBasedCursor,

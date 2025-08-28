@@ -4,13 +4,16 @@ import { FlexContainer } from "components/ui/Flex";
 import { Message } from "components/ui/Message";
 import { Pre } from "components/ui/Pre";
 
-import { StreamReadLogsItem, StreamReadLogsItemLevel } from "core/api/types/ConnectorBuilderClient";
+import {
+  ConnectorBuilderProjectStreamReadLogsItem,
+  ConnectorBuilderProjectStreamReadLogsItemLevel,
+} from "core/api/types/AirbyteClient";
 
 import styles from "./LogsDisplay.module.scss";
 import { TestWarning } from "../useStreamTestMetadata";
 
 interface LogsDisplayProps {
-  logs: StreamReadLogsItem[];
+  logs: ConnectorBuilderProjectStreamReadLogsItem[];
   error?: string;
   testWarnings?: TestWarning[];
 }
@@ -44,7 +47,7 @@ export const LogsDisplay: React.FC<LogsDisplayProps> = ({ logs, error, testWarni
   );
 };
 
-const getMessageType = (logLevel: StreamReadLogsItemLevel) => {
+const getMessageType = (logLevel: ConnectorBuilderProjectStreamReadLogsItemLevel) => {
   switch (logLevel) {
     case "ERROR":
     case "FATAL":

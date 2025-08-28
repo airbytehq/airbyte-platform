@@ -13,7 +13,7 @@ import { Message } from "components/ui/Message";
 import { Pre } from "components/ui/Pre";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { StreamReadInferredSchema } from "core/api/types/ConnectorBuilderClient";
+import { ConnectorBuilderProjectStreamReadInferredSchema } from "core/api/types/AirbyteClient";
 import { DeclarativeStreamSchemaLoader, InlineSchemaLoaderType } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 
@@ -24,7 +24,7 @@ import { useStreamName } from "../useStreamNames";
 import { getStreamFieldPath, formatJson } from "../utils";
 
 interface SchemaDiffViewProps {
-  inferredSchema: StreamReadInferredSchema;
+  inferredSchema: ConnectorBuilderProjectStreamReadInferredSchema;
   incompatibleErrors?: string[];
 }
 

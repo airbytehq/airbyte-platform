@@ -1,6 +1,6 @@
 import { FieldValues, UseFormGetValues } from "react-hook-form";
 
-import { HttpRequest, HttpResponse } from "core/api/types/ConnectorBuilderClient";
+import { ConnectorBuilderHttpRequest, ConnectorBuilderHttpResponse } from "core/api/types/AirbyteClient";
 import {
   ConnectorManifest,
   DeclarativeComponentSchemaStreamsItem,
@@ -71,7 +71,7 @@ describe("connectorBuilder utils", () => {
     });
 
     it("formats HttpRequest without body", () => {
-      const request: HttpRequest = {
+      const request: ConnectorBuilderHttpRequest = {
         url: "https://api.example.com",
         headers: { "Content-Type": "application/json" },
         http_method: "GET",
@@ -83,7 +83,7 @@ describe("connectorBuilder utils", () => {
     });
 
     it("formats HttpRequest with JSON body", () => {
-      const request: HttpRequest = {
+      const request: ConnectorBuilderHttpRequest = {
         url: "https://api.example.com",
         headers: { "Content-Type": "application/json" },
         http_method: "POST",
@@ -94,7 +94,7 @@ describe("connectorBuilder utils", () => {
     });
 
     it("formats HttpRequest with non-JSON body", () => {
-      const request: HttpRequest = {
+      const request: ConnectorBuilderHttpRequest = {
         url: "https://api.example.com",
         headers: { "Content-Type": "text/plain" },
         http_method: "POST",
@@ -105,7 +105,7 @@ describe("connectorBuilder utils", () => {
     });
 
     it("formats HttpResponse correctly", () => {
-      const response: HttpResponse = {
+      const response: ConnectorBuilderHttpResponse = {
         status: 200,
         headers: { "Content-Type": "application/json" },
         body: '{"success": true}',
@@ -116,7 +116,7 @@ describe("connectorBuilder utils", () => {
     });
 
     it("handles invalid JSON in body gracefully", () => {
-      const request: HttpRequest = {
+      const request: ConnectorBuilderHttpRequest = {
         url: "https://api.example.com",
         headers: {},
         http_method: "POST",

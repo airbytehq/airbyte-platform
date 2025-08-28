@@ -10,8 +10,11 @@ import { getStreamHash } from "components/connectorBuilder/useStreamTestMetadata
 import { convertJsonToYaml, getStreamName } from "components/connectorBuilder/utils";
 
 import { HttpError, useBuilderProject, useResolveManifest } from "core/api";
-import { ConnectorBuilderProjectRead } from "core/api/types/AirbyteClient";
-import { KnownExceptionInfo, ResolveManifest } from "core/api/types/ConnectorBuilderClient";
+import {
+  ConnectorBuilderProjectRead,
+  ConnectorBuilderResolvedManifest,
+  KnownExceptionInfo,
+} from "core/api/types/AirbyteClient";
 import { ConnectorManifest } from "core/api/types/ConnectorManifest";
 
 interface ResolveContext {
@@ -19,7 +22,7 @@ interface ResolveContext {
   builderProject: ConnectorBuilderProjectRead;
   initialYaml: string;
   initialResolvedManifest: ConnectorManifest | null;
-  resolveManifest: (manifestToResolve: ConnectorManifest) => Promise<ResolveManifest>;
+  resolveManifest: (manifestToResolve: ConnectorManifest) => Promise<ConnectorBuilderResolvedManifest>;
   resolveError: HttpError<KnownExceptionInfo> | null;
   resolveErrorMessage: string | undefined;
   isResolving: boolean;

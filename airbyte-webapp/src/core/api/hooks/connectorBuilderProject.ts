@@ -2,13 +2,15 @@ import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/re
 import isArray from "lodash/isArray";
 import { useCallback } from "react";
 
+import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "components/connectorBuilder/constants";
+
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError, sourceDefinitionKeys } from "core/api";
 import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 
-import { useBuilderResolveManifestQuery } from "./connectorBuilderApi";
 import {
   checkContribution,
   createConnectorBuilderProject,
@@ -16,6 +18,7 @@ import {
   deleteConnectorBuilderProject,
   fullResolveManifestBuilderProject,
   generateContribution,
+  getConnectorBuilderCapabilities,
   getConnectorBuilderProject,
   getConnectorBuilderProjectIdForDefinitionId,
   getDeclarativeManifestBaseImage,
@@ -23,6 +26,7 @@ import {
   listDeclarativeManifests,
   publishConnectorBuilderProject,
   readConnectorBuilderProjectStream,
+  resolveManifestBuilderProject,
   updateConnectorBuilderProject,
   updateConnectorBuilderProjectTestingValues,
   updateDeclarativeManifestVersion,
@@ -39,6 +43,7 @@ import {
   ConnectorBuilderProjectIdWithWorkspaceId,
   ConnectorBuilderProjectRead,
   ConnectorBuilderProjectStreamRead,
+  DeclarativeManifest,
   ConnectorBuilderProjectStreamReadRequestBody,
   ConnectorBuilderProjectStreamReadSlicesItem,
   ConnectorBuilderProjectStreamReadSlicesItemPagesItem,
@@ -52,6 +57,8 @@ import {
   GenerateContributionRequestBody,
   SourceDefinitionId,
   SourceDefinitionIdBody,
+  KnownExceptionInfo,
+  ConnectorBuilderCapabilities,
 } from "../types/AirbyteClient";
 import {
   ConditionalStreamsType,
@@ -75,6 +82,8 @@ const connectorBuilderProjectsKeys = {
   getBaseImage: (version: string) => [...connectorBuilderProjectsKeys.all, "getBaseImage", version] as const,
   getProjectForDefinition: (sourceDefinitionId: string | undefined) =>
     [...connectorBuilderProjectsKeys.all, "getProjectByDefinition", sourceDefinitionId] as const,
+  resolveSuspense: (manifest?: DeclarativeManifest) =>
+    [...connectorBuilderProjectsKeys.all, "resolveSuspense", { manifest }] as const,
   fullResolve: (projectId?: string) => ["builder_project_full_resolve", projectId] as const,
   checkContribution: (imageName?: string) =>
     [...connectorBuilderProjectsKeys.all, "checkContribution", { imageName }] as const,
@@ -262,7 +271,7 @@ export const useBuilderProject = (builderProjectId: string) => {
 
 export const useResolvedBuilderProjectVersion = (projectId: string, version?: number) => {
   const requestOptions = useRequestOptions();
-  const resolveManifestQuery = useBuilderResolveManifestQuery();
+  const resolveManifestQuery = useBuilderProjectResolveManifestQuery();
   const workspaceId = useCurrentWorkspaceId();
 
   return useQuery(
@@ -533,6 +542,58 @@ export const useBuilderProjectReadStream = (
   );
 };
 
+export const useBuilderProjectResolveManifestQuery = () => {
+  const requestOptions = useRequestOptions();
+  const workspaceId = useCurrentWorkspaceId();
+  return (manifest: DeclarativeManifest, projectId?: string) =>
+    resolveManifestBuilderProject({ workspaceId, builderProjectId: projectId, manifest }, requestOptions);
+};
+
+export const useBuilderProjectResolvedManifestSuspense = (manifest?: DeclarativeManifest, projectId?: string) => {
+  const resolveManifestQuery = useBuilderProjectResolveManifestQuery();
+
+  return useSuspenseQuery(connectorBuilderProjectsKeys.resolveSuspense(manifest), async () => {
+    if (!manifest) {
+      return DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM;
+    }
+    try {
+      return (await resolveManifestQuery(manifest, projectId)).manifest as DeclarativeComponentSchema;
+    } catch {
+      return null;
+    }
+  });
+};
+
+export const useResolveManifest = () => {
+  const workspaceId = useCurrentWorkspaceId();
+  const requestOptions = useRequestOptions();
+
+  const mutation = useMutation(
+    ({ manifestToResolve, projectId }: { manifestToResolve: DeclarativeComponentSchema; projectId?: string }) => {
+      return resolveManifestBuilderProject(
+        {
+          workspaceId,
+          builderProjectId: projectId,
+          manifest: {
+            ...manifestToResolve,
+            // normalize the manifest in the CDK to produce properly linked fields and parent stream references
+            __should_normalize: true,
+            __should_migrate: true,
+          },
+        },
+        requestOptions
+      );
+    }
+  );
+
+  return {
+    resolveManifest: mutation.mutateAsync, // Returns a promise that resolves with the result or rejects with error
+    isResolving: mutation.isLoading,
+    resolveError: mutation.error as HttpError<KnownExceptionInfo> | null,
+    resetResolveState: mutation.reset,
+  };
+};
+
 export const useBuilderProjectFullResolveManifest = (params: ConnectorBuilderProjectFullResolveRequestBody) => {
   const requestOptions = useRequestOptions();
 
@@ -738,4 +799,30 @@ export const useBuilderCheckContribution = () => {
     getCachedCheck,
     fetchContributionCheck,
   };
+};
+
+export const useBuilderCapabilities = () => {
+  const workspaceId = useCurrentWorkspaceId();
+  const requestOptions = useRequestOptions();
+  return useQuery<ConnectorBuilderCapabilities, HttpError<KnownExceptionInfo>>(["builderCapabilities"], () =>
+    getConnectorBuilderCapabilities({ workspaceId }, requestOptions)
+  );
+};
+
+/**
+ * Hook to check if custom components are enabled.
+ * Returns true if either the feature flag is enabled or the global override is set.
+ *
+ * PROBLEM TO WORKAROUND: We do not have the ability to set feature flags for OSS/Enterprise customers.
+ *
+ * HACK: We in stead use a global override from the server in the form of an environment variable AIRBYTE_ENABLE_UNSAFE_CODE.
+ *       Any customer can set this environment variable to enable unsafe code execution.
+ *
+ * TODO: Remove this when we have the ability to set feature flags for OSS/Enterprise customers.
+ * @returns boolean indicating if custom components are enabled
+ */
+export const useCustomComponentsEnabled = () => {
+  const areCustomComponentsEnabled = useExperiment("connectorBuilder.customComponents");
+  const { data } = useBuilderCapabilities();
+  return areCustomComponentsEnabled || data?.customCodeExecution;
 };

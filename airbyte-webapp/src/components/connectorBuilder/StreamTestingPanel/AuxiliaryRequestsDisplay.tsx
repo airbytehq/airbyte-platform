@@ -5,7 +5,7 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
-import { AuxiliaryRequest } from "core/api/types/ConnectorBuilderClient";
+import { ConnectorBuilderAuxiliaryRequest } from "core/api/types/AirbyteClient";
 
 import styles from "./AuxiliaryRequestsDisplay.module.scss";
 import { InnerListBox } from "./InnerListBox";
@@ -13,8 +13,8 @@ import { TabData, TabbedDisplay } from "./TabbedDisplay";
 import { formatForDisplay } from "../utils";
 
 interface AuxiliaryRequestsDisplayProps {
-  globalRequests?: AuxiliaryRequest[];
-  sliceRequests?: AuxiliaryRequest[];
+  globalRequests?: ConnectorBuilderAuxiliaryRequest[];
+  sliceRequests?: ConnectorBuilderAuxiliaryRequest[];
   sliceIndex?: number;
 }
 

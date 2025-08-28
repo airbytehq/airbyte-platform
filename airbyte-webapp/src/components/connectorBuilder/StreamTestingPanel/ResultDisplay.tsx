@@ -5,7 +5,7 @@ import { Paginator } from "components/ui/Paginator";
 import { Text } from "components/ui/Text";
 
 import { Slice } from "core/api";
-import { StreamReadInferredSchema } from "core/api/types/ConnectorBuilderClient";
+import { ConnectorBuilderProjectStreamReadInferredSchema } from "core/api/types/AirbyteClient";
 import { useSelectedPageAndSlice } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { PageDisplay } from "./PageDisplay";
@@ -14,7 +14,7 @@ import { SliceSelector } from "./SliceSelector";
 
 interface ResultDisplayProps {
   slices: Slice[];
-  inferredSchema?: StreamReadInferredSchema;
+  inferredSchema?: ConnectorBuilderProjectStreamReadInferredSchema;
   className?: string;
 }
 

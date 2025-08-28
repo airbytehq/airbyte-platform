@@ -10,13 +10,6 @@ export const apiCall = async <T, U = unknown>(request: RequestOptions<U>, option
   return fetchApiCall<T>(request, options, `${buildConfig.apiUrl}/api`);
 };
 
-/**
- * Execute a call against the connector builder API.
- */
-export const connectorBuilderApiCall = async <T, U = unknown>(request: RequestOptions<U>, options: ApiCallOptions) => {
-  return fetchApiCall<T>(request, options, buildConfig.apiUrl);
-};
-
 export const sonarApiCall = async <T, U = unknown>(request: RequestOptions<U>, options: ApiCallOptions) => {
   const { sonarApiUrl } = await loadConfig();
 

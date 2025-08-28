@@ -10,9 +10,9 @@ import { InfoTooltip, Tooltip } from "components/ui/Tooltip";
 
 import { Page } from "core/api";
 import {
-  StreamReadInferredSchema,
-  StreamReadSlicesItemPagesItemRecordsItem,
-} from "core/api/types/ConnectorBuilderClient";
+  ConnectorBuilderProjectStreamReadInferredSchema,
+  ConnectorBuilderProjectStreamReadSlicesItemPagesItemRecordsItem,
+} from "core/api/types/AirbyteClient";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import {
   useConnectorBuilderFormManagementState,
@@ -30,7 +30,7 @@ import { formatForDisplay, formatJson } from "../utils";
 
 interface PageDisplayProps {
   page: Page;
-  inferredSchema?: StreamReadInferredSchema;
+  inferredSchema?: ConnectorBuilderProjectStreamReadInferredSchema;
   className?: string;
 }
 
@@ -144,7 +144,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
   return <TabbedDisplay className={className} tabs={tabs} defaultTabIndex={defaultTabIndex} />;
 };
 
-const RecordDisplay = ({ records }: { records: StreamReadSlicesItemPagesItemRecordsItem[] }) => {
+const RecordDisplay = ({ records }: { records: ConnectorBuilderProjectStreamReadSlicesItemPagesItemRecordsItem[] }) => {
   const [recordViewMode, setRecordViewMode] = useLocalStorage("connectorBuilderRecordView", "json");
   const formattedRecords = useMemo(() => formatJson(records), [records]);
 

@@ -1,7 +1,7 @@
 import { dump } from "js-yaml";
 import { FieldValues, UseFormGetValues } from "react-hook-form";
 
-import { HttpRequest, HttpResponse } from "core/api/types/ConnectorBuilderClient";
+import { ConnectorBuilderHttpRequest, ConnectorBuilderHttpResponse } from "core/api/types/AirbyteClient";
 import {
   ConditionalStreamsType,
   ConnectorManifest,
@@ -23,7 +23,7 @@ export function formatJson(json: unknown, order?: boolean): string {
   return JSON.stringify(order ? orderKeys(json) : json, null, 2);
 }
 
-export function formatForDisplay(obj: HttpRequest | HttpResponse | undefined): string {
+export function formatForDisplay(obj: ConnectorBuilderHttpRequest | ConnectorBuilderHttpResponse | undefined): string {
   if (!obj) {
     return "";
   }
