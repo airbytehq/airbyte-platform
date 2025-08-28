@@ -155,65 +155,6 @@ class WorkspacePersistence(
       .toList()
 
   /**
-   * List all workspaces in an organization that a particular user has access to based on their permissions.
-   * Uses similar logic to listActiveWorkspacesByUserId but filters by organization.
-   * Returns result ordered by workspace name. Supports keyword search.
-   */
-  @Throws(IOException::class)
-  fun listWorkspacesInOrganizationByUserId(
-    organizationId: UUID,
-    userId: UUID,
-    keyword: Optional<String>,
-  ): List<StandardWorkspace> {
-    val searchKeyword = getSearchKeyword(keyword)
-    return database
-      .query { ctx: DSLContext ->
-        ctx.fetch(
-          PermissionPersistenceHelper.LIST_WORKSPACES_IN_ORGANIZATION_BY_USER_ID_AND_PERMISSION_TYPES_QUERY,
-          userId,
-          PermissionPersistenceHelper.getGrantingPermissionTypeArray(Permission.PermissionType.WORKSPACE_READER),
-          organizationId,
-          searchKeyword,
-        )
-      }.stream()
-      .map { buildStandardWorkspace(it) }
-      .toList()
-  }
-
-  /**
-   * List all workspaces in an organization that a particular user has access to based on their permissions.
-   * Supports pagination and keyword search. Returns result ordered by workspace name.
-   */
-  @Throws(IOException::class)
-  fun listWorkspacesInOrganizationByUserIdPaginated(
-    query: ResourcesByOrganizationQueryPaginated,
-    userId: UUID,
-    keyword: Optional<String>,
-  ): List<StandardWorkspace> {
-    val searchKeyword = getSearchKeyword(keyword)
-    val workspaceQuery = (
-      PermissionPersistenceHelper.LIST_WORKSPACES_IN_ORGANIZATION_BY_USER_ID_AND_PERMISSION_TYPES_QUERY +
-        " LIMIT {4}" +
-        " OFFSET {5}"
-    )
-
-    return database
-      .query { ctx: DSLContext ->
-        ctx.fetch(
-          workspaceQuery,
-          userId,
-          PermissionPersistenceHelper.getGrantingPermissionTypeArray(Permission.PermissionType.WORKSPACE_READER),
-          query.organizationId,
-          searchKeyword,
-          query.pageSize,
-          query.rowOffset,
-        )
-      }.stream()
-      .map { buildStandardWorkspace(it) }
-      .toList()
-  }
-
-  /**
    * Get search keyword with flexible matching.
    */
   private fun getSearchKeyword(keyword: Optional<String>): String =

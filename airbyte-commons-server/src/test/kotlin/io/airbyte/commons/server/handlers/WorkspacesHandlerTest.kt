@@ -1240,65 +1240,6 @@ internal class WorkspacesHandlerTest {
     Assertions.assertEquals(2, result.getWorkspaces().size)
   }
 
-  @Test
-  @Throws(Exception::class)
-  fun testListWorkspacesInOrgForUserNoKeyword() {
-    val userId = UUID.randomUUID()
-    val request =
-      ListWorkspacesInOrganizationRequestBody().organizationId(ORGANIZATION_ID).pagination(Pagination().pageSize(100).rowOffset(0))
-    val expectedWorkspaces = listOf(generateWorkspace(), generateWorkspace())
-    Mockito
-      .`when`(
-        workspacePersistence.listWorkspacesInOrganizationByUserIdPaginated(
-          ResourcesByOrganizationQueryPaginated(ORGANIZATION_ID, false, 100, 0),
-          userId,
-          Optional.empty<String>(),
-        ),
-      ).thenReturn(expectedWorkspaces)
-    val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganizationForUser(userId, request)
-    Assertions.assertEquals(2, result.getWorkspaces().size)
-  }
-
-  @Test
-  @Throws(Exception::class)
-  fun testListWorkspacesInOrgForUserWithKeyword() {
-    val userId = UUID.randomUUID()
-    val request =
-      ListWorkspacesInOrganizationRequestBody()
-        .organizationId(ORGANIZATION_ID)
-        .nameContains("test")
-        .pagination(Pagination().pageSize(100).rowOffset(0))
-    val expectedWorkspaces = listOf(generateWorkspace())
-    Mockito
-      .`when`(
-        workspacePersistence.listWorkspacesInOrganizationByUserIdPaginated(
-          ResourcesByOrganizationQueryPaginated(ORGANIZATION_ID, false, 100, 0),
-          userId,
-          Optional.of<String>("test"),
-        ),
-      ).thenReturn(expectedWorkspaces)
-    val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganizationForUser(userId, request)
-    Assertions.assertEquals(1, result.getWorkspaces().size)
-  }
-
-  @Test
-  @Throws(Exception::class)
-  fun testListWorkspacesInOrgForUserNoPagination() {
-    val userId = UUID.randomUUID()
-    val request = ListWorkspacesInOrganizationRequestBody().organizationId(ORGANIZATION_ID)
-    val expectedWorkspaces = listOf(generateWorkspace(), generateWorkspace())
-    Mockito
-      .`when`(
-        workspacePersistence.listWorkspacesInOrganizationByUserId(
-          ORGANIZATION_ID,
-          userId,
-          Optional.empty<String>(),
-        ),
-      ).thenReturn(expectedWorkspaces)
-    val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganizationForUser(userId, request)
-    Assertions.assertEquals(2, result.getWorkspaces().size)
-  }
-
   companion object {
     const val UPDATED: String = "updated"
     private const val FAILURE_NOTIFICATION_WEBHOOK = "http://airbyte.notifications/failure"
