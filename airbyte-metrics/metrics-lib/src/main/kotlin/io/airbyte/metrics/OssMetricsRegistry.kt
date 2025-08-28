@@ -475,6 +475,14 @@ enum class OssMetricsRegistry(
     metricName = "workflows_healed",
     metricDescription = "number of workflow the self healing cron healed",
   ),
+  WORKLOAD_LAUNCHER_CRON(
+    metricName = "workload_launcher_cron",
+    metricDescription = "number of cron run for the workload_launcher",
+  ),
+  WORKLOAD_LAUNCHER_CRON_DURATION(
+    metricName = "workload_launcher_cron_duration",
+    metricDescription = "duration of a run of the workload_launcher",
+  ),
   WORKLOAD_MONITOR_RUN(
     metricName = "workload_monitor_run",
     metricDescription = "number of cron run for the workload_monitor",
@@ -754,6 +762,14 @@ enum class OssMetricsRegistry(
   WORKLOAD_PROCESSED(
     metricName = "workload_processed",
     metricDescription = "increments when the launcher processes a workload",
+  ),
+  WORKLOAD_RUNAWAY_POD(
+    metricName = "workload_runaway_pod",
+    metricDescription = "increments when an unexpected workload is found",
+  ),
+  WORKLOAD_RUNAWAY_POD_DELETED(
+    metricName = "workload_runaway_pod_deleted",
+    metricDescription = "increments when an unexpected workload is deleted",
   ),
   WORKLOAD_STAGE_START(
     metricName = "workload_stage_start",

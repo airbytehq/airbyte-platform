@@ -19,6 +19,11 @@ import java.util.UUID
  */
 @Transactional
 interface WorkloadHandler {
+  fun getActiveWorkloads(
+    dataplaneIds: List<String>?,
+    statuses: List<ApiWorkloadStatus>?,
+  ): List<ApiWorkloadSummary>
+
   fun getWorkload(workloadId: String): ApiWorkload
 
   fun getWorkloads(

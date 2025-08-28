@@ -23,6 +23,8 @@ import io.airbyte.workload.api.domain.WorkloadDepthResponse
 import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
 import io.airbyte.workload.api.domain.WorkloadLaunchedRequest
+import io.airbyte.workload.api.domain.WorkloadListActiveRequest
+import io.airbyte.workload.api.domain.WorkloadListActiveResponse
 import io.airbyte.workload.api.domain.WorkloadListRequest
 import io.airbyte.workload.api.domain.WorkloadListResponse
 import io.airbyte.workload.api.domain.WorkloadQueueCleanLimit
@@ -30,6 +32,7 @@ import io.airbyte.workload.api.domain.WorkloadQueuePollRequest
 import io.airbyte.workload.api.domain.WorkloadQueueQueryRequest
 import io.airbyte.workload.api.domain.WorkloadQueueStatsResponse
 import io.airbyte.workload.api.domain.WorkloadRunningRequest
+import io.airbyte.workload.api.domain.WorkloadStatus
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.airbyte.workload.common.DefaultDeadlineValues
 import io.airbyte.workload.common.WorkloadQueueService
@@ -479,6 +482,35 @@ open class WorkloadApi(
         expiredDeadlineWorkloadListRequest.status,
         expiredDeadlineWorkloadListRequest.deadline,
       ),
+    )
+  }
+
+  @POST
+  @Path("/list_active")
+  @Consumes("application/json")
+  @Produces("application/json")
+  @Operation(summary = "Get active workloads according to the filters.", tags = ["workload"])
+  @ApiResponses(
+    value = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Success",
+        content = [Content(schema = Schema(implementation = WorkloadListActiveResponse::class))],
+      ),
+    ],
+  )
+  fun workloadListActive(
+    @RequestBody(
+      content = [Content(schema = Schema(implementation = WorkloadListActiveRequest::class))],
+    ) @Body listActiveRequest: WorkloadListActiveRequest,
+  ): WorkloadListActiveResponse {
+    authorize(dataplanes = listActiveRequest.dataplane)
+    return WorkloadListActiveResponse(
+      workloads =
+        workloadHandler.getActiveWorkloads(
+          dataplaneIds = listActiveRequest.dataplane,
+          statuses = listOf(WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING),
+        ),
     )
   }
 

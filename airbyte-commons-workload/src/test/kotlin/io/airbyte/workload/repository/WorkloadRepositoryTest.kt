@@ -11,6 +11,7 @@ import io.airbyte.workload.repository.WorkloadRepositoryTest.Fixtures.defaultDea
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
+import io.airbyte.workload.repository.domain.WorkloadSummaryDTO
 import io.airbyte.workload.repository.domain.WorkloadType
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.env.PropertySource
@@ -638,6 +639,64 @@ class WorkloadRepositoryTest {
   }
 
   @Test
+  fun `searchActive returns the expected workloads`() {
+    val dataplaneId = UUID.randomUUID().toString()
+    val claimed =
+      Fixtures.workload(
+        id = "$dataplaneId-claimed",
+        status = WorkloadStatus.CLAIMED,
+        deadline = OffsetDateTime.now().plusMinutes(10),
+        dataplaneId = dataplaneId,
+        autoId = UUID.randomUUID(),
+      )
+    workloadRepo.save(claimed)
+    val launched =
+      Fixtures.workload(
+        id = "$dataplaneId-launched",
+        status = WorkloadStatus.LAUNCHED,
+        deadline = OffsetDateTime.now().plusMinutes(10),
+        dataplaneId = dataplaneId,
+        autoId = UUID.randomUUID(),
+      )
+    workloadRepo.save(launched)
+    val running =
+      Fixtures.workload(
+        id = "$dataplaneId-running",
+        status = WorkloadStatus.RUNNING,
+        deadline = OffsetDateTime.now().plusMinutes(10),
+        dataplaneId = dataplaneId,
+        autoId = UUID.randomUUID(),
+      )
+    workloadRepo.save(running)
+    val success =
+      Fixtures
+        .workload(
+          id = "$dataplaneId-success",
+          status = WorkloadStatus.SUCCESS,
+          dataplaneId = dataplaneId,
+          autoId = UUID.randomUUID(),
+        ).copy(deadline = null)
+    workloadRepo.save(success)
+    val failure =
+      Fixtures
+        .workload(
+          id = "$dataplaneId-failure",
+          status = WorkloadStatus.FAILURE,
+          dataplaneId = dataplaneId,
+          autoId = UUID.randomUUID(),
+        ).copy(deadline = null)
+    workloadRepo.save(failure)
+
+    val searchAll = workloadRepo.searchActive(dataplaneIds = listOf(dataplaneId), statuses = null).toSet()
+    val expectedSearchAll = listOf(claimed, launched, running).map { it.toWorkloadDTO() }.toSet()
+    assertEquals(expectedSearchAll, searchAll)
+
+    val searchLaunched = workloadRepo.searchActive(dataplaneIds = listOf(dataplaneId), statuses = listOf(WorkloadStatus.LAUNCHED)).toSet()
+    val expectedSearchLaunched = listOf(launched).map { it.toWorkloadDTO() }.toSet()
+    assertEquals(expectedSearchLaunched, searchLaunched)
+  }
+
+  @Test
   fun `test search by type status and creation date`() {
     val workload1 =
       Fixtures.workload(
@@ -774,6 +833,7 @@ class WorkloadRepositoryTest {
       signalInput: String = "",
       dataplaneGroup: String = "",
       priority: Int = 0,
+      autoId: UUID? = null,
     ): Workload =
       Workload(
         id = id,
@@ -790,6 +850,7 @@ class WorkloadRepositoryTest {
         signalInput = signalInput,
         dataplaneGroup = dataplaneGroup,
         priority = priority,
+        autoId = autoId,
       )
 
     /**
@@ -822,6 +883,7 @@ class WorkloadRepositoryTest {
           PropertySource.of(
             "test",
             mapOf(
+              "logger.levels.io.micronaut.data" to "DEBUG",
               "datasources.config.driverClassName" to "org.postgresql.Driver",
               "datasources.config.db-type" to "postgres",
               "datasources.config.dialect" to "POSTGRES",
@@ -885,5 +947,7 @@ class WorkloadRepositoryTest {
      * Utility for keeping timestamps at a consistent precision for test comparisons. Our test container sql truncates to millis.
      */
     private fun OffsetDateTime.truncateToTestPrecision(): OffsetDateTime = this.truncatedTo(ChronoUnit.MILLIS)
+
+    private fun Workload.toWorkloadDTO(): WorkloadSummaryDTO = WorkloadSummaryDTO(id = id, status = status, deadline = deadline, autoId = autoId)
   }
 }

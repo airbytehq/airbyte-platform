@@ -22,6 +22,8 @@ import io.airbyte.workload.api.domain.WorkloadDepthResponse
 import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
 import io.airbyte.workload.api.domain.WorkloadLaunchedRequest
+import io.airbyte.workload.api.domain.WorkloadListActiveRequest
+import io.airbyte.workload.api.domain.WorkloadListActiveResponse
 import io.airbyte.workload.api.domain.WorkloadListRequest
 import io.airbyte.workload.api.domain.WorkloadListResponse
 import io.airbyte.workload.api.domain.WorkloadQueueCleanLimit
@@ -66,6 +68,9 @@ class WorkloadApiClient internal constructor(
   fun workloadHeartbeat(workloadHeartbeatRequest: WorkloadHeartbeatRequest) = api.workloadHeartbeat(workloadHeartbeatRequest).unit()
 
   fun workloadList(workloadListRequest: WorkloadListRequest): WorkloadListResponse = api.workloadList(workloadListRequest).body()
+
+  fun workloadListActive(workloadListActiveRequest: WorkloadListActiveRequest): WorkloadListActiveResponse =
+    api.workloadListActive(workloadListActiveRequest).body()
 
   fun workloadListWithExpiredDeadline(expiredDeadlineWorkloadListRequest: ExpiredDeadlineWorkloadListRequest): WorkloadListResponse =
     api.workloadListWithExpiredDeadline(expiredDeadlineWorkloadListRequest).body()

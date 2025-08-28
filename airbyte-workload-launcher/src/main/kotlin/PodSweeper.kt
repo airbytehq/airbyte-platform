@@ -4,19 +4,18 @@
 
 package io.airbyte.workload.launcher
 
-import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
-import dev.failsafe.function.CheckedSupplier
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.annotations.Instrument
+import io.airbyte.metrics.annotations.Tag
+import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.workload.launcher.client.KubernetesClientWrapper
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.KUBECTL_COMPLETED_VALUE
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.KUBECTL_RUNNING_VALUE
-import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.SWEEPER_LABEL_KEY
-import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.SWEEPER_LABEL_VALUE
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodList
-import io.fabric8.kubernetes.client.KubernetesClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import io.micronaut.scheduling.annotation.Scheduled
@@ -24,7 +23,6 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Clock
 import java.time.Instant
-import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
 
@@ -38,21 +36,25 @@ import kotlin.time.toJavaDuration
  * @param unsuccessfulTtl If non-null, failed/unknown pods older than now - unsuccessfulTtl will be deleted
  */
 private val logger = KotlinLogging.logger {}
-private const val DELETE_TIMEOUT_MINUTES = 1L
 
+// this is open to support @Instrument AOP
 @Singleton
-class PodSweeper(
-  private val kubernetesClient: KubernetesClient,
+open class PodSweeper(
+  private val k8sWrapper: KubernetesClientWrapper,
   private val metricClient: MetricClient,
   private val clock: Clock,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String,
-  @Named("kubernetesClientRetryPolicy") private val kubernetesClientRetryPolicy: RetryPolicy<Any>,
   @Value("\${airbyte.pod-sweeper.runningTtl}") private val runningTtl: Long? = null,
   @Value("\${airbyte.pod-sweeper.succeededTtl}") private val succeededTtl: Long? = null,
   @Value("\${airbyte.pod-sweeper.unsuccessfulTtl}") private val unsuccessfulTtl: Long? = null,
 ) {
+  @Instrument(
+    start = "WORKLOAD_LAUNCHER_CRON",
+    duration = "WORKLOAD_LAUNCHER_CRON_DURATION",
+    tags = [Tag(key = MetricTags.CRON_TYPE, value = "pod_sweeper")],
+  )
   @Scheduled(fixedRate = "\${airbyte.pod-sweeper.rate}")
-  fun sweepPods() {
+  open fun sweepPods() {
     logger.info { "Starting pod sweeper cycle in namespace [$namespace]..." }
 
     val now = Instant.ofEpochMilli(clock.millis())
@@ -70,13 +72,7 @@ class PodSweeper(
       logger.info { "Will sweep unsuccessful pods older than $it (UTC)." }
     }
 
-    // List pods labeled 'airbyte=job-pod'
-    val podList: PodList =
-      kubernetesClient
-        .pods()
-        .inNamespace(namespace)
-        .withLabel(SWEEPER_LABEL_KEY, SWEEPER_LABEL_VALUE)
-        .list()
+    val podList: PodList = k8sWrapper.listJobPods(namespace)
 
     for (pod in podList.items) {
       val phase = pod.status?.phase
@@ -153,44 +149,8 @@ class PodSweeper(
     phase: String,
     reason: String,
   ) {
-    pod.metadata?.let {
-      it.name?.let { name ->
-        logger.info { "Deleting pod [$name]. Reason: $reason" }
-        runKubeCommand {
-          try {
-            kubernetesClient
-              .pods()
-              .inNamespace(namespace)
-              .resource(pod)
-              .withTimeout(DELETE_TIMEOUT_MINUTES, TimeUnit.MINUTES)
-              .delete()
-          } catch (e: Exception) {
-            // If we time out (or otherwise fail), force-delete immediately
-            logger.warn(e) {
-              "Timed out or error encountered while deleting pod [$name] in namespace [$namespace]. " +
-                "Forcing immediate deletion with gracePeriod=0."
-            }
-
-            kubernetesClient
-              .pods()
-              .inNamespace(namespace)
-              .resource(pod)
-              .withGracePeriod(0)
-              .delete()
-          }
-        }
-        metricClient.count(metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_POD_SWEEPER_COUNT, attributes = arrayOf(MetricAttribute("phase", phase)))
-      }
-    }
-  }
-
-  private fun <T> runKubeCommand(kubeCommand: () -> T) {
-    try {
-      Failsafe.with(kubernetesClientRetryPolicy).get(
-        CheckedSupplier { kubeCommand() },
-      )
-    } catch (e: Exception) {
-      logger.error(e) { "Could not delete the pod" }
+    if (k8sWrapper.deletePod(pod = pod, namespace = namespace, reason = reason)) {
+      metricClient.count(metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_POD_SWEEPER_COUNT, attributes = arrayOf(MetricAttribute("phase", phase)))
     }
   }
 }

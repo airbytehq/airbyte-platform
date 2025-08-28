@@ -15,6 +15,8 @@ import io.airbyte.workload.api.domain.WorkloadDepthResponse
 import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
 import io.airbyte.workload.api.domain.WorkloadLaunchedRequest
+import io.airbyte.workload.api.domain.WorkloadListActiveRequest
+import io.airbyte.workload.api.domain.WorkloadListActiveResponse
 import io.airbyte.workload.api.domain.WorkloadListRequest
 import io.airbyte.workload.api.domain.WorkloadListResponse
 import io.airbyte.workload.api.domain.WorkloadQueueCleanLimit
@@ -85,6 +87,11 @@ interface WorkloadApi {
   fun workloadList(
     @Body workloadListRequest: WorkloadListRequest,
   ): Call<WorkloadListResponse>
+
+  @POST("list_active")
+  fun workloadListActive(
+    @Body workloadListActiveRequest: WorkloadListActiveRequest,
+  ): Call<WorkloadListActiveResponse>
 
   @POST("expired_deadline_list")
   fun workloadListWithExpiredDeadline(

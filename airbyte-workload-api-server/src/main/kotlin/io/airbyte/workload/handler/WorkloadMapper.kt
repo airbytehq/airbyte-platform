@@ -8,12 +8,15 @@ import io.airbyte.config.WorkloadPriority
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
+import io.airbyte.workload.repository.domain.WorkloadSummaryDTO
 import io.airbyte.workload.repository.domain.WorkloadType
 import java.util.UUID
 
 typealias ApiWorkloadStatus = io.airbyte.workload.api.domain.WorkloadStatus
 typealias DomainWorkload = Workload
 typealias ApiWorkload = io.airbyte.workload.api.domain.Workload
+typealias DomainWorkloadDTO = WorkloadSummaryDTO
+typealias ApiWorkloadSummary = io.airbyte.workload.api.domain.WorkloadSummary
 typealias DomainWorkloadLabel = WorkloadLabel
 typealias ApiWorkloadLabel = io.airbyte.workload.api.domain.WorkloadLabel
 typealias ApiWorkloadType = io.airbyte.config.WorkloadType
@@ -76,6 +79,14 @@ fun DomainWorkload.toApi(): ApiWorkload =
     signalInput = this.signalInput,
     dataplaneGroup = this.dataplaneGroup,
     priority = this.priority?.let { WorkloadPriority.fromInt(it) },
+  )
+
+fun DomainWorkloadDTO.toApi(): ApiWorkloadSummary =
+  ApiWorkloadSummary(
+    id = id,
+    autoId = autoId.toString(),
+    status = status.toApi(),
+    deadline = deadline,
   )
 
 fun DomainWorkloadLabel.toApi(): ApiWorkloadLabel =

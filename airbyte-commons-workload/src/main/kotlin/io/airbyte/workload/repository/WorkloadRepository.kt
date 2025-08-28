@@ -6,6 +6,7 @@ package io.airbyte.workload.repository
 
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadStatus
+import io.airbyte.workload.repository.domain.WorkloadSummaryDTO
 import io.airbyte.workload.repository.domain.WorkloadType
 import io.micronaut.data.annotation.Expandable
 import io.micronaut.data.annotation.Id
@@ -37,6 +38,25 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
     @Expandable statuses: List<WorkloadStatus>?,
     updatedBefore: OffsetDateTime?,
   ): List<Workload>
+
+  /**
+   * Search for active workloads.
+   *
+   * Active workloads in this context have the expectation that the deadline is not null. This is to leverage the deadline index to avoid a
+   * full table scan to find active workloads.
+   */
+  @Query(
+    """
+      SELECT id, status, deadline, auto_id FROM workload
+      WHERE ((:dataplaneIds) IS NULL OR dataplane_id IN (:dataplaneIds))
+      AND ((:statuses) IS NULL OR status = ANY(CAST(ARRAY[:statuses] AS workload_status[])))
+      AND (deadline IS NOT NULL)
+    """,
+  )
+  fun searchActive(
+    @Expandable dataplaneIds: List<String>?,
+    @Expandable statuses: List<WorkloadStatus>? = null,
+  ): List<WorkloadSummaryDTO>
 
   @Query(
     """

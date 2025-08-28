@@ -5,6 +5,7 @@
 import dev.failsafe.RetryPolicy
 import io.airbyte.metrics.MetricClient
 import io.airbyte.workload.launcher.PodSweeper
+import io.airbyte.workload.launcher.client.KubernetesClientWrapper
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
 import io.fabric8.kubernetes.client.KubernetesClient
@@ -309,11 +310,10 @@ class PodSweeperTest {
     unSucceededTtl: Long?,
   ): PodSweeper =
     PodSweeper(
-      client,
+      KubernetesClientWrapper(client, mockRetryPolicy),
       mockMetricClient,
       Clock.systemUTC(),
       "default",
-      mockRetryPolicy,
       runningTtL,
       succeededTtl,
       unSucceededTtl,

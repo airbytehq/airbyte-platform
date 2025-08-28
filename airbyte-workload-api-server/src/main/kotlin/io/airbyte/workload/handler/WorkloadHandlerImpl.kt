@@ -220,6 +220,18 @@ class WorkloadHandlerImpl(
     workloadQueueRepository.cleanUpAckedEntries(limit)
   }
 
+  override fun getActiveWorkloads(
+    dataplaneIds: List<String>?,
+    statuses: List<ApiWorkloadStatus>?,
+  ): List<ApiWorkloadSummary> {
+    val domainWorkloadsDTO =
+      workloadRepository.searchActive(
+        dataplaneIds = dataplaneIds,
+        statuses = statuses?.map { it.toDomain() },
+      )
+    return domainWorkloadsDTO.map { it.toApi() }
+  }
+
   override fun getWorkloadsWithExpiredDeadline(
     dataplaneId: List<String>?,
     workloadStatus: List<ApiWorkloadStatus>?,
