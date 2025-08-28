@@ -55,6 +55,6 @@ open class LoadShedStage(
   override fun getStageName(): StageName = StageName.LOAD_SHED
 
   companion object {
-    const val LOAD_SHED_FAILURE_REASON = "Workload was failed because the associated context is being load shed."
+    const val LOAD_SHED_FAILURE_REASON = "Workload was failed because the associated context is being rate limited."
   }
 }
