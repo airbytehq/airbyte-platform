@@ -78,26 +78,32 @@ class EmbeddedController(
         )
       }
 
-    // Then map the filtered organizations to the desired output format
-    val organizationsListItems =
-      entitledOrganizations.map { organization ->
-        val organizationId = OrganizationId(organization.organizationId)
-        val permissionForOrg = permissions.find { it.organizationId != null && OrganizationId(it.organizationId) == organizationId }
+    // Map to organizations where the user has any permission
+    val organizationItems =
+      entitledOrganizations
+        .mapNotNull { organization ->
+          val organizationId = OrganizationId(organization.organizationId)
+          val permissionForOrg =
+            permissions.find {
+              it.organizationId != null &&
+                OrganizationId(it.organizationId) == organizationId
+            }
 
-        if (permissionForOrg == null) {
-          throw IllegalStateException(
-            "No permission found for user $currentUserId in organization ${organization.organizationName} (${organization.organizationId})",
-          )
+          // Only create an item if a permission exists for this organization
+          if (permissionForOrg != null) {
+            EmbeddedOrganizationListItem(
+              organizationId = organizationId.value,
+              organizationName = organization.organizationName,
+              permission = PermissionType.valueOf(permissionForOrg.permissionType.name),
+            )
+          } else {
+            null
+          }
         }
 
-        EmbeddedOrganizationListItem(
-          organizationId = organizationId.value,
-          organizationName = organization.organizationName,
-          permission = PermissionType.valueOf(permissionForOrg.permissionType.name),
-        )
-      }
-
-    return EmbeddedOrganizationsList(organizations = organizationsListItems).ok()
+    return EmbeddedOrganizationsList(
+      organizations = organizationItems,
+    ).ok()
   }
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)

@@ -10,7 +10,9 @@ import io.airbyte.api.model.generated.OrganizationReadList
 import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.Entitlement
+import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType
@@ -143,135 +145,223 @@ class EmbeddedControllerTest {
   }
 
   @Test
-  fun listEmbeddedOrganizations_filtersByEntitlement_andPermission() {
-    val entitledOrgId = UUID.randomUUID()
-    val notEntitledOrgId = UUID.randomUUID()
-    val userId = UUID.randomUUID()
+  fun listEmbeddedOrganizations_includesAllOrgsWithPermissions() {
+    val userIdString = UUID.randomUUID()
+    val orgId1 = UUID.randomUUID()
+    val orgId2 = UUID.randomUUID()
+    val orgId3 = UUID.randomUUID()
 
-    val currentUser = AuthenticatedUser().withUserId(userId)
-
-    val ctrl =
-      EmbeddedController(
-        jwtTokenGenerator = mockk(),
-        tokenExpirationConfig = TokenExpirationConfig(),
-        currentUserService =
-          mockk {
-            every { getCurrentUser() } returns currentUser
-          },
-        organizationsHandler =
-          mockk {
-            every {
-              listOrganizationsByUser(any())
-            } returns
-              OrganizationReadList().organizations(
-                mutableListOf(
-                  OrganizationRead()
-                    .organizationId(entitledOrgId)
-                    .organizationName("Entitled Org")
-                    .email("entitled@airbyte.io")
-                    .ssoRealm("entitled"),
-                  OrganizationRead()
-                    .organizationId(notEntitledOrgId)
-                    .organizationName("Not Entitled Org")
-                    .email("not-entitled@airbyte.io")
-                    .ssoRealm("notentitled"),
-                ),
-              )
-          },
-        permissionHandler =
-          mockk {
-            every { listPermissionsForUser(userId) } returns
-              listOf(
-                Permission()
-                  .withOrganizationId(entitledOrgId)
-                  .withPermissionType(PermissionType.ORGANIZATION_ADMIN),
-              )
-          },
-        embeddedWorkspacesHandler = mockk(),
-        licenseEntitlementChecker =
-          mockk {
-            every { checkEntitlements(entitledOrgId, Entitlement.CONFIG_TEMPLATE_ENDPOINTS) } returns true
-            every { checkEntitlements(notEntitledOrgId, Entitlement.CONFIG_TEMPLATE_ENDPOINTS) } returns false
-          },
-        airbyteUrl = "http://my.airbyte.com/",
-        tokenIssuer = "test-issuer",
+    val controller =
+      buildController(
+        userIdString,
+        listOf(
+          OrganizationRead().organizationId(orgId1).organizationName("Org 1"),
+          OrganizationRead().organizationId(orgId2).organizationName("Org 2"),
+          OrganizationRead().organizationId(orgId3).organizationName("Org 3"),
+        ),
+        mockk {
+          every { listPermissionsForUser(userIdString) } returns
+            listOf(
+              Permission()
+                .withOrganizationId(orgId1)
+                .withPermissionType(PermissionType.ORGANIZATION_ADMIN),
+              Permission()
+                .withOrganizationId(orgId2)
+                .withPermissionType(PermissionType.ORGANIZATION_READER),
+            )
+        },
+        mockk {
+          every { checkEntitlements(any(), any()) } returns true
+        },
       )
 
-    val res = ctrl.listEmbeddedOrganizationsByUser()
+    val response = controller.listEmbeddedOrganizationsByUser()
+    val orgs = response.entity as EmbeddedOrganizationsList
 
-    val data = res.entity as EmbeddedOrganizationsList
-    val result = data.organizations
+    // Should return all organizations for which the user has permissions
+    assertEquals(2, orgs.organizations.size)
 
-    assertEquals(1, result.size)
-    val item = result.first()
-    assertEquals(entitledOrgId, item.organizationId)
-    assertEquals("Entitled Org", item.organizationName)
-    assertEquals(PermissionType.ORGANIZATION_ADMIN.toString(), item.permission.toString())
+    val orgIds = orgs.organizations.map { it.organizationId }.toSet()
+    assertEquals(setOf(orgId1, orgId2), orgIds)
+
+    // Verify correct permission types are assigned
+    val org1 = orgs.organizations.find { it.organizationId == orgId1 }
+    val org2 = orgs.organizations.find { it.organizationId == orgId2 }
+
+    assertEquals(io.airbyte.publicApi.server.generated.models.PermissionType.ORGANIZATION_ADMIN, org1?.permission)
+    assertEquals(io.airbyte.publicApi.server.generated.models.PermissionType.ORGANIZATION_READER, org2?.permission)
+  }
+
+  @Test
+  fun listEmbeddedOrganizations_filtersOutOrgsWithNoPermissions() {
+    val userId = UUID.randomUUID()
+    val orgId1 = UUID.randomUUID()
+    val orgId2 = UUID.randomUUID()
+
+    val controller =
+      buildController(
+        userId,
+        listOf(
+          OrganizationRead().organizationId(orgId1).organizationName("Org 1"),
+          OrganizationRead().organizationId(orgId2).organizationName("Org 2"),
+        ),
+        mockk {
+          every { listPermissionsForUser(userId) } returns
+            listOf(
+              Permission()
+                .withOrganizationId(orgId1)
+                .withPermissionType(PermissionType.ORGANIZATION_EDITOR),
+            )
+        },
+        mockk {
+          every { checkEntitlements(any(), any()) } returns true
+        },
+      )
+
+    val response = controller.listEmbeddedOrganizationsByUser()
+    val orgs = response.entity as EmbeddedOrganizationsList
+
+    // Should only return organizations where the user has permissions
+    assertEquals(1, orgs.organizations.size)
+    assertEquals(orgId1, orgs.organizations[0].organizationId)
+    assertEquals("Org 1", orgs.organizations[0].organizationName)
+    assertEquals(io.airbyte.publicApi.server.generated.models.PermissionType.ORGANIZATION_EDITOR, orgs.organizations[0].permission)
+  }
+
+  @Test
+  fun listEmbeddedOrganizations_filtersOutNonEntitledOrgs() {
+    val userId = UUID.randomUUID()
+    val entitledOrgId = UUID.randomUUID()
+    val nonEntitledOrgId = UUID.randomUUID()
+
+    val controller =
+      buildController(
+        userId,
+        listOf(
+          OrganizationRead().organizationId(entitledOrgId).organizationName("Entitled Org"),
+          OrganizationRead().organizationId(nonEntitledOrgId).organizationName("Non-Entitled Org"),
+        ),
+        mockk {
+          every { listPermissionsForUser(userId) } returns
+            listOf(
+              Permission()
+                .withOrganizationId(entitledOrgId)
+                .withPermissionType(PermissionType.ORGANIZATION_ADMIN),
+              Permission()
+                .withOrganizationId(nonEntitledOrgId)
+                .withPermissionType(PermissionType.ORGANIZATION_ADMIN),
+            )
+        },
+        mockk {
+          every { checkEntitlements(entitledOrgId, any()) } returns true
+          every { checkEntitlements(nonEntitledOrgId, any()) } returns false
+        },
+      )
+
+    val response = controller.listEmbeddedOrganizationsByUser()
+    val orgs = response.entity as EmbeddedOrganizationsList
+
+    // Should only return organizations that are entitled
+    assertEquals(1, orgs.organizations.size)
+    assertEquals(entitledOrgId, orgs.organizations[0].organizationId)
   }
 
   @Test
   fun listEmbeddedOrganizations_handlesNullOrganizationId() {
-    val entitledOrgId = UUID.randomUUID()
     val userId = UUID.randomUUID()
+    val orgId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
 
-    val currentUser = AuthenticatedUser().withUserId(userId)
-
-    val ctrl =
-      EmbeddedController(
-        jwtTokenGenerator = mockk(),
-        tokenExpirationConfig = TokenExpirationConfig(),
-        currentUserService =
-          mockk {
-            every { getCurrentUser() } returns currentUser
-          },
-        organizationsHandler =
-          mockk {
-            every {
-              listOrganizationsByUser(any())
-            } returns
-              OrganizationReadList().organizations(
-                mutableListOf(
-                  OrganizationRead()
-                    .organizationId(entitledOrgId)
-                    .organizationName("Entitled Org")
-                    .email("entitled@airbyte.io")
-                    .ssoRealm("entitled"),
-                ),
-              )
-          },
-        permissionHandler =
-          mockk {
-            every { listPermissionsForUser(userId) } returns
-              listOf(
-                // Workspace permission with null organizationId appears first
-                Permission()
-                  .withWorkspaceId(workspaceId)
-                  .withPermissionType(PermissionType.WORKSPACE_ADMIN),
-                // Organization permission appears second
-                Permission()
-                  .withOrganizationId(entitledOrgId)
-                  .withPermissionType(PermissionType.ORGANIZATION_ADMIN),
-              )
-          },
-        embeddedWorkspacesHandler = mockk(),
-        licenseEntitlementChecker =
-          mockk {
-            every { checkEntitlements(entitledOrgId, Entitlement.CONFIG_TEMPLATE_ENDPOINTS) } returns true
-          },
-        airbyteUrl = "http://my.airbyte.com/",
-        tokenIssuer = "test-issuer",
+    val controller =
+      buildController(
+        userId,
+        listOf(
+          OrganizationRead().organizationId(orgId).organizationName("Org 1"),
+        ),
+        mockk {
+          every { listPermissionsForUser(userId) } returns
+            listOf(
+              // Workspace permission with null organizationId appears first
+              Permission()
+                .withWorkspaceId(workspaceId)
+                .withPermissionType(PermissionType.WORKSPACE_ADMIN),
+              Permission()
+                .withOrganizationId(orgId)
+                .withPermissionType(PermissionType.ORGANIZATION_ADMIN),
+            )
+        },
+        mockk {
+          every { checkEntitlements(any(), any()) } returns true
+        },
       )
 
-    val res = ctrl.listEmbeddedOrganizationsByUser()
+    val response = controller.listEmbeddedOrganizationsByUser()
+    val orgs = response.entity as EmbeddedOrganizationsList
 
-    val data = res.entity as EmbeddedOrganizationsList
-    val result = data.organizations
-
-    assertEquals(1, result.size)
-    val item = result.first()
-    assertEquals(entitledOrgId, item.organizationId)
-    assertEquals("Entitled Org", item.organizationName)
-    assertEquals(PermissionType.ORGANIZATION_ADMIN.toString(), item.permission.toString())
+    // Should handle null organizationId properly and still return org with permission
+    assertEquals(1, orgs.organizations.size)
+    assertEquals(orgId, orgs.organizations[0].organizationId)
   }
+
+  @Test
+  fun listEmbeddedOrganizations_returnsEmptyListWhenNoMatchingPermissions() {
+    val userId = UUID.randomUUID()
+    val orgId = UUID.randomUUID()
+    val otherOrgId = UUID.randomUUID()
+
+    val controller =
+      buildController(
+        userId,
+        listOf(
+          OrganizationRead().organizationId(orgId).organizationName("Org 1"),
+        ),
+        mockk {
+          every { listPermissionsForUser(userId) } returns
+            listOf(
+              Permission()
+                .withOrganizationId(otherOrgId) // Permission for a different org
+                .withPermissionType(PermissionType.ORGANIZATION_ADMIN),
+            )
+        },
+        mockk {
+          every { checkEntitlements(any(), any()) } returns true
+        },
+      )
+
+    val response = controller.listEmbeddedOrganizationsByUser()
+    val orgs = response.entity as EmbeddedOrganizationsList
+
+    // Should return empty list when no matching permissions
+    assertEquals(0, orgs.organizations.size)
+  }
+
+  // Helper method to build controller with mocks for testing
+  private fun buildController(
+    userId: UUID,
+    organizations: List<OrganizationRead>,
+    permissionHandler: PermissionHandler,
+    licenseEntitlementChecker: LicenseEntitlementChecker,
+  ): EmbeddedController =
+    EmbeddedController(
+      mockk(),
+      mockk(),
+      mockk {
+        every { getCurrentUser() } returns
+          AuthenticatedUser()
+            .withUserId(userId)
+            .withAuthUserId(userId.toString())
+      },
+      mockk {
+        every {
+          listOrganizationsByUser(
+            match<ListOrganizationsByUserRequestBody> { it.userId == userId },
+          )
+        } returns OrganizationReadList().organizations(organizations)
+      },
+      permissionHandler,
+      mockk(),
+      licenseEntitlementChecker,
+      "http://localhost:8000",
+      "test-issuer",
+    )
 }
