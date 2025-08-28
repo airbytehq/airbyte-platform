@@ -37,13 +37,12 @@ class DbPruneWorkflow(
     log.info { "Creating database pruning workflow" }
   }
 
+  /*
+   * Runs daily at 10pm PST (2am UTC) to reduce the chance of a deploy stopping it.
+   * Wanted a consistent time so we can see patterns if any arise.
+   */
   @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
-  // todo (cgardens) - We have a big back log to run through which takes a long time,
-  //  so we'll never get through it, because each deploy interrupts it. So for now,
-  //  kick this off as soon as we start the service each time. Once we work through
-  //  the backlog, delete the fixed rate and use cron instead.
-  @Scheduled(fixedRate = "1d")
-  //  @Scheduled(cron = "0 0 22 * * *", zoneId = "America/Los_Angeles") // Daily at 10:00 PM
+  @Scheduled(cron = "0 0 22 * * *", zoneId = "America/Los_Angeles") // Daily at 2:00 PM
   @Synchronized
   fun pruneRecords() {
     val startTime = OffsetDateTime.now(ZoneOffset.UTC)
