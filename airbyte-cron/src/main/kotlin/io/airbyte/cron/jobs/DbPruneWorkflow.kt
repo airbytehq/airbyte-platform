@@ -42,7 +42,7 @@ class DbPruneWorkflow(
    * Wanted a consistent time so we can see patterns if any arise.
    */
   @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
-  @Scheduled(cron = "0 0 22 * * *", zoneId = "America/Los_Angeles") // Daily at 2:00 PM
+  @Scheduled(cron = "0 0 22 * * *", zoneId = "America/Los_Angeles")
   @Synchronized
   fun pruneRecords() {
     val startTime = OffsetDateTime.now(ZoneOffset.UTC)
