@@ -183,6 +183,24 @@ Renders the common.connectorBuilderServer.apiHost environment variable
 {{- end }}
 
 {{/*
+Renders the global.manifestServer.apiHost value
+*/}}
+{{- define "airbyte.common.manifestServer.apiHost" }}
+    {{- (printf "http://%s-airbyte-manifest-runner-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.manifestRunner.service.port)) }}
+{{- end }}
+
+{{/*
+Renders the common.manifestServer.apiHost environment variable
+*/}}
+{{- define "airbyte.common.manifestServer.apiHost.env" }}
+- name: MANIFEST_SERVER_API_HOST
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: MANIFEST_SERVER_API_HOST
+{{- end }}
+
+{{/*
 Renders the global.deploymentEnv value
 */}}
 {{- define "airbyte.common.deploymentEnv" }}
@@ -296,6 +314,7 @@ Renders the set of all common environment variables
 {{- include "airbyte.common.server.host.env" . }}
 {{- include "airbyte.common.auth.enabled.env" . }}
 {{- include "airbyte.common.connectorBuilderServer.apiHost.env" . }}
+{{- include "airbyte.common.manifestServer.apiHost.env" . }}
 {{- include "airbyte.common.deploymentEnv.env" . }}
 {{- include "airbyte.common.api.internalHost.env" . }}
 {{- include "airbyte.common.local.env" . }}
@@ -316,6 +335,7 @@ AIRBYTE_API_HOST: {{ include "airbyte.common.api.host" . | quote }}
 AIRBYTE_SERVER_HOST: {{ include "airbyte.common.server.host" . | quote }}
 API_AUTHORIZATION_ENABLED: {{ include "airbyte.common.auth.enabled" . | quote }}
 CONNECTOR_BUILDER_SERVER_API_HOST: {{ include "airbyte.common.connectorBuilderServer.apiHost" . | quote }}
+MANIFEST_SERVER_API_HOST: {{ include "airbyte.common.manifestServer.apiHost" . | quote }}
 DEPLOYMENT_ENV: {{ include "airbyte.common.deploymentEnv" . | quote }}
 INTERNAL_API_HOST: {{ include "airbyte.common.api.internalHost" . | quote }}
 LOCAL: {{ include "airbyte.common.local" . | quote }}

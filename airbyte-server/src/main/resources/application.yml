@@ -439,6 +439,11 @@ airbyte:
     connect-timeout-seconds: ${CONNECTOR_BUILDER_SERVER_API_CONNECT_TIMEOUT_SECONDS:30}
     read-timeout-seconds: ${CONNECTOR_BUILDER_SERVER_API_READ_TIMEOUT_SECONDS:300}
 
+  manifest-server-api:
+    base-path: ${MANIFEST_SERVER_API_HOST:}
+    connect-timeout-seconds: ${MANIFEST_SERVER_API_CONNECT_TIMEOUT_SECONDS:30}
+    read-timeout-seconds: ${MANIFEST_SERVER_API_READ_TIMEOUT_SECONDS:300}
+
   # Enterprise feature
   audit:
     logging:

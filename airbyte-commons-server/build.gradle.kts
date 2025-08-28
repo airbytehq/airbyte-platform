@@ -42,6 +42,7 @@ dependencies {
 
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:connector-builder-api"))
+  implementation(project(":oss:airbyte-api:manifest-server-api"))
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-commons"))
