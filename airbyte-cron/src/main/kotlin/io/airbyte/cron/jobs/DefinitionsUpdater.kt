@@ -19,20 +19,19 @@ import jakarta.inject.Singleton
 
 private val log = KotlinLogging.logger {}
 
+/**
+ * Updates the catalog for an Airbyte instance. For Airbyte Cloud, we want this update to happen very
+ * quickly, so we have to split into two singletons with different schedules. At the time of writing,
+ * we are spending nearly $7K/month on egress costs from the connector metadata service due to all
+ * these updates.
+ */
 @Singleton
-@Requires(property = "airbyte.cron.update-definitions.enabled", value = "true")
-class DefinitionsUpdater(
+class BaseDefinitionsUpdater(
   private val applyDefinitionsHelper: ApplyDefinitionsHelper,
   private val airbyteEdition: Configs.AirbyteEdition,
   private val metricClient: MetricClient,
 ) {
-  init {
-    log.info { "Creating connector definitions updater " }
-  }
-
-  @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
-  @Scheduled(fixedRate = "30s", initialDelay = "1m")
-  fun updateDefinitions() {
+  fun doUpdate() {
     log.info { "Updating definitions" }
     metricClient.count(
       metric = OssMetricsRegistry.CRON_JOB_RUN_BY_CRON_TYPE,
@@ -41,4 +40,34 @@ class DefinitionsUpdater(
     applyDefinitionsHelper.apply(airbyteEdition == Configs.AirbyteEdition.CLOUD)
     log.info { "Done updating definitions" }
   }
+}
+
+@Singleton
+@Requires(property = "airbyte.cron.update-definitions.enabled", value = "true")
+@Requires(property = "airbyte.edition", value = "CLOUD")
+class CloudDefinitionsUpdater(
+  private val baseDefinitionsUpdater: BaseDefinitionsUpdater,
+) {
+  init {
+    log.info { "Creating connector definitions updater for CLOUD" }
+  }
+
+  @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
+  @Scheduled(fixedRate = "1m", initialDelay = "5m")
+  fun updateDefinitions() = baseDefinitionsUpdater.doUpdate()
+}
+
+@Singleton
+@Requires(property = "airbyte.cron.update-definitions.enabled", value = "true")
+@Requires(property = "airbyte.edition", notEquals = "CLOUD")
+class CommunityDefinitionsUpdater(
+  private val baseDefinitionsUpdater: BaseDefinitionsUpdater,
+) {
+  init {
+    log.info { "Creating connector definitions updater for COMMUNITY/ENTERPRISE" }
+  }
+
+  @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
+  @Scheduled(fixedRate = "1d", initialDelay = "1m")
+  fun updateDefinitions() = baseDefinitionsUpdater.doUpdate()
 }
