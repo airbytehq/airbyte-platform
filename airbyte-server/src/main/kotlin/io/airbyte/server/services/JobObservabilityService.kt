@@ -339,7 +339,13 @@ class JobObservabilityService(
         ?.getDurationSecondsFromSummary() ?: attempt.getDurationsSecondsWhenNoJobOutput()
     }
 
-  private fun StandardSyncSummary.getDurationSecondsFromSummary(): Long = (endTime - startTime) / 1000
+  private fun StandardSyncSummary.getDurationSecondsFromSummary(): Long? =
+    // The SyncSummary of a failed attempt may not have start/end times
+    if (endTime != null && startTime != null) {
+      (endTime - startTime) / 1000
+    } else {
+      null
+    }
 
   private fun Attempt.getDurationsSecondsWhenNoJobOutput(): Long = (endedAtInSecond ?: updatedAtInSecond) - createdAtInSecond
 
