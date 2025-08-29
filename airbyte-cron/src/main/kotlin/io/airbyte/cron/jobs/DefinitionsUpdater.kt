@@ -44,7 +44,7 @@ class BaseDefinitionsUpdater(
 
 @Singleton
 @Requires(property = "airbyte.cron.update-definitions.enabled", value = "true")
-@Requires(property = "airbyte.edition", value = "CLOUD")
+@Requires(property = "airbyte.edition", pattern = "(?i)^cloud$")
 class CloudDefinitionsUpdater(
   private val baseDefinitionsUpdater: BaseDefinitionsUpdater,
 ) {
@@ -59,7 +59,7 @@ class CloudDefinitionsUpdater(
 
 @Singleton
 @Requires(property = "airbyte.cron.update-definitions.enabled", value = "true")
-@Requires(property = "airbyte.edition", notEquals = "CLOUD")
+@Requires(property = "airbyte.edition", pattern = "(?i)^(?!cloud$).*$")
 class CommunityDefinitionsUpdater(
   private val baseDefinitionsUpdater: BaseDefinitionsUpdater,
 ) {
