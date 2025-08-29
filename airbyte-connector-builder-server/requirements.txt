@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==6.61.4
+airbyte-cdk==6.61.5
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.17.1
     # via airbyte-cdk
@@ -136,7 +136,7 @@ packaging==23.2
     #   airbyte-cdk
     #   dunamai
     #   langchain-core
-pandas==2.2.2
+pandas==2.2.3
     # via airbyte-cdk
 platformdirs==4.4.0
     # via requests-cache
