@@ -4,11 +4,10 @@ import { useIntl } from "react-intl";
 
 import { ExternalLink, Link } from "components/ui/Link";
 
-import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { links } from "core/utils/links";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
-import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
-import { RoutePaths } from "pages/routePaths";
+
+import { useLinkToBillingPage } from "./useLinkToBillingPage";
 
 interface BillingStatusBanner {
   content: React.ReactNode;
@@ -17,7 +16,6 @@ interface BillingStatusBanner {
 
 export const useBillingStatusBanner = (context: "top_level" | "billing_page"): BillingStatusBanner | undefined => {
   const { formatMessage } = useIntl();
-  const createLink = useCurrentWorkspaceLink();
   const {
     trialStatus,
     trialDaysLeft,
@@ -27,6 +25,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     accountType,
     gracePeriodEndsAt,
   } = useOrganizationSubscriptionStatus();
+  const linkToBilling = useLinkToBillingPage();
 
   if (!paymentStatus || !subscriptionStatus) {
     return undefined;
@@ -77,9 +76,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
               : "billing.banners.disabledPaymentStatus",
         },
         {
-          lnk: (node: React.ReactNode) => (
-            <Link to={createLink(`/${RoutePaths.Settings}/${CloudSettingsRoutePaths.Billing}`)}>{node}</Link>
-          ),
+          lnk: (node: React.ReactNode) => <Link to={linkToBilling}>{node}</Link>,
         }
       ),
     };
@@ -98,9 +95,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
         },
         {
           days: gracePeriodDaysLeft,
-          lnk: (node: React.ReactNode) => (
-            <Link to={createLink(`/${RoutePaths.Settings}/${CloudSettingsRoutePaths.Billing}`)}>{node}</Link>
-          ),
+          lnk: (node: React.ReactNode) => <Link to={linkToBilling}>{node}</Link>,
         }
       ),
     };
@@ -132,9 +127,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
           },
           {
             days: trialDaysLeft,
-            lnk: (node: React.ReactNode) => (
-              <Link to={createLink(`/${RoutePaths.Settings}/${CloudSettingsRoutePaths.Billing}`)}>{node}</Link>
-            ),
+            lnk: (node: React.ReactNode) => <Link to={linkToBilling}>{node}</Link>,
           }
         ),
       };
@@ -152,9 +145,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
               : "billing.banners.postTrial",
         },
         {
-          lnk: (node: React.ReactNode) => (
-            <Link to={createLink(`/${RoutePaths.Settings}/${CloudSettingsRoutePaths.Billing}`)}>{node}</Link>
-          ),
+          lnk: (node: React.ReactNode) => <Link to={linkToBilling}>{node}</Link>,
         }
       ),
     };

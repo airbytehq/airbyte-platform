@@ -15,7 +15,7 @@ export const useCurrentWorkspaceLimits = (workspaceId?: string): CurrentWorkspac
   const workspace = useGetWorkspace(workspaceId ?? currentWorkspaceId);
   const showProductLimitsUI = useExperiment("productLimitsUI");
 
-  if (!showProductLimitsUI || !workspace.workspaceLimits) {
+  if (!showProductLimitsUI || !workspace?.workspaceLimits) {
     return {
       activeConnectionLimitReached: false,
       sourceLimitReached: false,

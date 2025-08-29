@@ -1,0 +1,83 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/z-indices";
+
+.organizationPicker {
+  width: 100%;
+  background: colors.$foreground;
+
+  &__singleOrgWrapper {
+    width: 100%;
+    padding: variables.$spacing-md;
+  }
+
+  &__button {
+    all: unset;
+    cursor: pointer;
+    box-sizing: border-box;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: variables.$spacing-md;
+    padding: variables.$spacing-md;
+
+    &:focus-visible {
+      outline: variables.$border-thick solid colors.$blue;
+    }
+  }
+
+  &__logo {
+    width: 30px;
+    flex-shrink: 0;
+  }
+
+  &__icon {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  &__currentOrg {
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  &__orgName {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__panel {
+    width: variables.$width-org-picker-popover;
+    background: colors.$foreground;
+    border-radius: variables.$border-radius-sm;
+    border: variables.$border-thin solid colors.$grey-200;
+    overflow: hidden;
+    box-shadow: variables.$box-shadow-raised;
+    z-index: z-indices.$dropdownMenu;
+  }
+
+  &__search {
+    padding: variables.$spacing-md;
+  }
+
+  &__options {
+    max-height: variables.$height-org-picker-popover-list;
+    overflow: auto;
+  }
+
+  &__option {
+    display: block;
+    text-decoration: none;
+    padding: variables.$spacing-md;
+    width: 100%;
+
+    &--selected {
+      background-color: colors.$blue-50;
+    }
+
+    &:hover {
+      background-color: colors.$blue-40;
+      cursor: pointer;
+    }
+  }
+}

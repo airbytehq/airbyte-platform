@@ -14,17 +14,16 @@ import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
-import { NoWorkspacePermissionsContent } from "area/workspace/components/NoWorkspacesPermissionWarning";
 import {
-  useOrganization,
   useListUsersInOrganization,
   useListWorkspacesInOrganization,
   useGetWorkspacesStatusesCounts,
+  useOrgInfo,
 } from "core/api";
 import { WorkspaceRead, WebBackendConnectionStatusCounts } from "core/api/types/AirbyteClient";
 import { useWebappConfig } from "core/config";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { useIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
 
 import OrganizationWorkspaceItem from "./components/OrganizationWorkspaceItem";
 import { OrganizationWorkspacesCreateControl } from "./components/OrganizationWorkspacesCreateControl";
@@ -40,9 +39,9 @@ const OrganizationWorkspacesPage: React.FC = () => {
   const { edition } = useWebappConfig();
 
   const organizationId = useCurrentOrganizationId();
-  const organization = useOrganization(organizationId);
-  const memberCount = useListUsersInOrganization(organizationId).users.length;
-  const canViewOrganizationWorkspaces = useIntent("ViewOrganizationWorkspaces", { organizationId });
+  const organization = useOrgInfo(organizationId);
+  const canViewOrganizationDetails = useGeneratedIntent(Intent.ViewOrganizationDetails);
+  const memberCount = useListUsersInOrganization(canViewOrganizationDetails ? organizationId : undefined).users.length;
   const canCreateOrganizationWorkspaces = useIntent("CreateOrganizationWorkspaces", { organizationId });
 
   const [searchValue, setSearchValue] = useState("");
@@ -55,17 +54,13 @@ const OrganizationWorkspacesPage: React.FC = () => {
     pagination: {
       pageSize: 10,
     },
-    enabled: canViewOrganizationWorkspaces,
   });
 
   const allWorkspaces = useMemo(() => data?.pages.flatMap((page) => page.workspaces) ?? [], [data]);
   const workspaceIds = allWorkspaces.map((workspace) => workspace.workspaceId);
 
   // Get status counts for all workspaces
-  const statusCountsResults = useGetWorkspacesStatusesCounts(workspaceIds, {
-    refetchInterval: canViewOrganizationWorkspaces,
-    enabled: canViewOrganizationWorkspaces,
-  });
+  const statusCountsResults = useGetWorkspacesStatusesCounts(workspaceIds);
 
   const enrichedWorkspaces = useMemo(() => {
     const statusCountsMap = new Map<string, WebBackendConnectionStatusCounts | undefined>();
@@ -130,18 +125,18 @@ const OrganizationWorkspacesPage: React.FC = () => {
           <FlexContainer justifyContent="space-between" alignItems="center" className={styles.headerRow}>
             <Box>
               <Heading as="h1" size="lg">
-                {organization.organizationName}
+                {organization?.organizationName}
               </Heading>
-              <Text color="grey400" size="sm">
-                {formatMessage(
-                  { id: "organization.members" },
-                  { subscriptionName: capitalize(edition), count: memberCount }
-                )}
-              </Text>
+              {canViewOrganizationDetails && (
+                <Text color="grey400" size="sm">
+                  {formatMessage(
+                    { id: "organization.members" },
+                    { subscriptionName: capitalize(edition), count: memberCount }
+                  )}
+                </Text>
+              )}
             </Box>
-            <Box pb="lg">
-              <OrganizationWorkspacesCreateControl disabled={!canCreateOrganizationWorkspaces} onCreated={refetch} />
-            </Box>
+            <OrganizationWorkspacesCreateControl disabled={!canCreateOrganizationWorkspaces} onCreated={refetch} />
           </FlexContainer>
           <Box>
             <SearchInput value={searchValue} onChange={setSearchValue} data-testid="workspaces-page-search" />
@@ -157,9 +152,7 @@ const OrganizationWorkspacesPage: React.FC = () => {
             />
           </Box>
           <Box className={styles.workspacesList}>
-            {!canViewOrganizationWorkspaces ? (
-              <NoWorkspacePermissionsContent organizations={[organization]} />
-            ) : isLoading ? (
+            {isLoading ? (
               <Box p="md" pb="sm">
                 <LoadingSpinner />
               </Box>

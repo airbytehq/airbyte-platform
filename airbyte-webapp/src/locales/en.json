@@ -68,6 +68,7 @@
 
   "sidebar.billing": "Billing",
   "sidebar.homepage": "Homepage",
+  "sidebar.home": "Home",
   "sidebar.sources": "Sources",
   "sidebar.destinations": "Destinations",
   "sidebar.admin": "Admin",
@@ -95,6 +96,8 @@
   "sidebar.workspaceSettings": "Workspace settings",
   "sidebar.myWorkspace": "My Workspace",
   "sidebar.searchAllWorkspaces": "Search all workspaces",
+  "sidebar.searchOrganizations": "Search all organizations",
+  "sidebar.noOrganizationsFound": "No organizations found",
 
   "form.error": "Error: {message}",
   "form.error.pkAndCursor.required": "Primary key and cursor are missing",

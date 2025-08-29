@@ -5,6 +5,7 @@ import { Button } from "components/ui/Button";
 
 import { useCurrentWorkspace, useDeleteWorkspace } from "core/api";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 import { RoutePaths } from "pages/routePaths";
 
@@ -15,6 +16,10 @@ export const DeleteWorkspace: React.FC = () => {
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
+  const showOrgPicker = useExperiment("sidebar.showOrgPicker");
+  const redirectPathAfterDeletion = showOrgPicker
+    ? `/${RoutePaths.Organization}/${workspace.organizationId}`
+    : `/${RoutePaths.Workspaces}`;
 
   const onRemoveWorkspaceClick = () =>
     openConfirmationModal({
@@ -34,7 +39,7 @@ export const DeleteWorkspace: React.FC = () => {
           text: formatMessage({ id: "settings.workspaceSettings.delete.success" }),
           type: "success",
         });
-        navigate(`/${RoutePaths.Workspaces}`);
+        navigate(redirectPathAfterDeletion);
         closeConfirmationModal();
       },
       submitButtonDataId: "reset",

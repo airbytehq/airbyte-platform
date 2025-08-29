@@ -1,10 +1,11 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useLayoutEffect } from "react";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentUser } from "core/services/auth";
 
+import { organizationKeys } from "./organizations";
 import { useListPermissions } from "./permissions";
 import {
   createWorkspace,
@@ -51,7 +52,9 @@ export const useCurrentWorkspace = () => {
     throw new Error("Called useCurrentWorkspace outside of a workspace");
   }
 
-  return useGetWorkspace(workspaceId);
+  // Intentionally casting away undefined here, which would only be relevnat if the query was disabled. We do not allow
+  // disabling the query, so we can assert that this hook will always return a WorkspaceRead
+  return useGetWorkspace(workspaceId) as WorkspaceRead;
 };
 
 /**
@@ -81,11 +84,15 @@ export const useCreateWorkspace = () => {
 };
 
 export const useDeleteWorkspace = () => {
+  const organizationId = useCurrentOrganizationId();
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
 
   return useMutation(async (workspaceId: string) => deleteWorkspace({ workspaceId }, requestOptions), {
     onSuccess: (_, workspaceId) => {
+      queryClient.setQueryData(workspaceKeys.detail(workspaceId), null);
+      queryClient.resetQueries(organizationKeys.firstWorkspace(organizationId));
+      queryClient.resetQueries(organizationKeys.workspacesList(organizationId));
       queryClient.setQueryData<WorkspaceReadList>(workspaceKeys.lists(), (old) =>
         old ? { workspaces: old.workspaces.filter((workspace) => workspace.workspaceId !== workspaceId) } : undefined
       );
@@ -128,11 +135,33 @@ export const useGetWorkspaceQuery = (workspaceId: string) => {
   return () => getWorkspace({ workspaceId }, requestOptions);
 };
 
+/**
+ * Gets a workspace by ID, but returns null if any errors are encountered in the fetch request rather than throwing.
+ */
+export const useGetWorkspaceIgnoreErrors = (workspaceId: string) => {
+  const requestOptions = useRequestOptions();
+  return useQuery<WorkspaceRead | null>(
+    getWorkspaceQueryKey(workspaceId),
+    async () => {
+      let workspace: WorkspaceRead | null = null;
+      try {
+        workspace = await getWorkspace({ workspaceId }, requestOptions);
+      } finally {
+        return workspace;
+      }
+    },
+    {
+      suspense: true,
+      enabled: !!workspaceId,
+    }
+  ).data;
+};
+
 export const useGetWorkspace = (workspaceId: string, options?: { enabled?: boolean }) => {
   const queryKey = getWorkspaceQueryKey(workspaceId);
   const queryFn = useGetWorkspaceQuery(workspaceId);
 
-  return useSuspenseQuery(queryKey, queryFn, { ...options, staleTime: 30 * 60_000 });
+  return useSuspenseQuery<WorkspaceRead | undefined>(queryKey, queryFn, { ...options, staleTime: 30 * 60_000 });
 };
 
 export const useListWorkspacesInfinite = (pageSize: number, nameContains: string, suspense?: boolean) => {

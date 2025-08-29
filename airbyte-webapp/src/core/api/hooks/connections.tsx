@@ -897,7 +897,7 @@ export const useGetWorkspacesStatusesCounts = (
       }),
       staleTime: 1000 * 60, // 1 minute
       cacheTime: 1000 * 60 * 2, // 2 minutes
-      refetchInterval: options?.refetchInterval ? 1000 * 60 : undefined, // 1 minute if enabled
+      refetchInterval: 1000 * 60,
       enabled: options?.enabled ?? true,
     })),
   });

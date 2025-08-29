@@ -1,0 +1,64 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/z-indices";
+
+.workspacesPicker {
+  padding-inline: variables.$spacing-sm;
+
+  &__button {
+    all: unset;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    gap: variables.$spacing-md;
+    padding: variables.$spacing-md;
+    align-items: center;
+    cursor: pointer;
+    border: variables.$border-thin solid colors.$grey-200;
+    border-radius: variables.$border-radius-sm;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  &__orgName {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__icon {
+    flex-shrink: 0;
+  }
+
+  &__panel {
+    width: variables.$width-org-picker-popover;
+    background: colors.$foreground;
+    border-radius: variables.$border-radius-sm;
+    border: variables.$border-thin solid colors.$grey-200;
+    overflow: hidden;
+    box-shadow: variables.$box-shadow-raised;
+    z-index: z-indices.$dropdownMenu;
+  }
+
+  &__options {
+    max-height: variables.$height-org-picker-popover-list;
+    overflow: auto;
+  }
+
+  &__option {
+    display: block;
+    text-decoration: none;
+    padding: variables.$spacing-md;
+    width: 100%;
+
+    &--selected {
+      background-color: colors.$blue-50;
+    }
+
+    &:hover {
+      background-color: colors.$blue-40;
+      cursor: pointer;
+    }
+  }
+}

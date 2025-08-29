@@ -57,6 +57,7 @@ export const WorkspacesRoutes: React.FC = () => {
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
   const showOnboarding = useExperiment("onboarding.surveyEnabled");
+  const showOrgPicker = useExperiment("sidebar.showOrgPicker");
 
   useExperimentContext("organization", workspace.organizationId);
 
@@ -95,8 +96,12 @@ export const WorkspacesRoutes: React.FC = () => {
       <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
       {showOnboarding && <Route path={RoutePaths.Onboarding} element={<OnboardingPage />} />}
       <Route path={`${RoutePaths.Settings}/*`} element={<CloudSettingsPage />}>
-        <Route path={CloudSettingsRoutePaths.Account} element={<AccountSettingsView />} />
-        <Route path={CloudSettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
+        {!showOrgPicker && (
+          <>
+            <Route path={CloudSettingsRoutePaths.Account} element={<AccountSettingsView />} />
+            <Route path={CloudSettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
+          </>
+        )}
         <Route path={CloudSettingsRoutePaths.Workspace} element={<WorkspaceSettingsView />} />
         <Route path={CloudSettingsRoutePaths.WorkspaceMembers} element={<WorkspaceMembersPage />} />
         <Route path={CloudSettingsRoutePaths.Source} element={<SettingsSourcesPage />} />
@@ -120,7 +125,7 @@ export const WorkspacesRoutes: React.FC = () => {
           <Route path={CloudSettingsRoutePaths.OrganizationUsage} element={<OrganizationUsagePage />} />
         )}
         <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
-        <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Account} replace />} />
+        <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Workspace} replace />} />
       </Route>
       <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
       <Route path={`${SettingsRoutePaths.User}/*`} element={<UserSettingsRoutes />} />

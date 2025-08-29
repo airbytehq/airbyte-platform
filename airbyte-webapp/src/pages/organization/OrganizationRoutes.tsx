@@ -29,7 +29,6 @@ export const OrganizationRoutes: React.FC = () => {
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
-  const defaultPath = multiWorkspaceUI && canViewOrgSettings ? RoutePaths.Workspaces : RoutePaths.Settings;
   const isEmbedded = useExperiment("platform.allow-config-template-endpoints");
 
   return (
@@ -37,11 +36,9 @@ export const OrganizationRoutes: React.FC = () => {
       {isEmbedded && <Route path={RoutePaths.EmbeddedOnboarding} element={<EmbeddedOnboardingPage />} />}
       <Route path={`${SettingsRoutePaths.User}/*`} element={<UserSettingsRoutes />} />
       <Route element={<OrganizationSettingsLayout />}>
+        <Route path={RoutePaths.Workspaces} element={<OrganizationWorkspacesPage />} />
         {multiWorkspaceUI && canViewOrgSettings && (
-          <>
-            <Route path={RoutePaths.Workspaces} element={<OrganizationWorkspacesPage />} />
-            <Route path={CloudSettingsRoutePaths.OrganizationMembers} element={<OrganizationMembersPage />} />
-          </>
+          <Route path={CloudSettingsRoutePaths.OrganizationMembers} element={<OrganizationMembersPage />} />
         )}
         {canManageOrganizationBilling && (
           <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />
@@ -49,12 +46,9 @@ export const OrganizationRoutes: React.FC = () => {
         {canViewOrganizationUsage && (
           <Route path={CloudSettingsRoutePaths.OrganizationUsage} element={<OrganizationUsagePage />} />
         )}
-        <Route
-          path={`${RoutePaths.Settings}/${CloudSettingsRoutePaths.Organization}`}
-          element={<GeneralOrganizationSettingsPage />}
-        />
+        <Route path={RoutePaths.Settings} element={<GeneralOrganizationSettingsPage />} />
         <Route path={`${RoutePaths.Settings}/${CloudSettingsRoutePaths.Embedded}`} element={<EmbeddedSettingsPage />} />
-        <Route path="*" element={<Navigate to={defaultPath} replace />} />
+        <Route path="*" element={<Navigate to={RoutePaths.Workspaces} replace />} />
       </Route>
     </Routes>
   );

@@ -45,6 +45,15 @@ intents:
     roles:
       - ORGANIZATION_ADMIN
       - ADMIN
+  ViewOrganizationSettings:
+    name: View organization settings
+    description: Ability to see the settings of an organization
+    roles:
+      - ORGANIZATION_READER
+      - ORGANIZATION_RUNNER
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - ADMIN
   ViewOrganizationTrialStatus:
     name: View organization trial status
     description: Ability to see the trial status of an organization
@@ -66,9 +75,9 @@ intents:
     roles:
       - ORGANIZATION_ADMIN
       - ADMIN
-  ViewOrganizationBilling:
-    name: View organization billing
-    description: View billing information for the organization
+  ViewOrganizationDetails:
+    name: View organization details
+    description: View detailed information about the organization
     roles:
       - ORGANIZATION_MEMBER
       - ORGANIZATION_READER

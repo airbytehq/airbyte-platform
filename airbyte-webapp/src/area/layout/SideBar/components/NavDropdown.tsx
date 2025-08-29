@@ -13,6 +13,7 @@ interface NavDropdownProps {
   onChange?: (data: DropdownMenuOptionType) => false | void;
   buttonTestId?: string;
   placement?: Placement;
+  isActive?: boolean;
 }
 
 export const NavDropdown: React.FC<NavDropdownProps> = ({
@@ -23,11 +24,19 @@ export const NavDropdown: React.FC<NavDropdownProps> = ({
   onChange,
   buttonTestId,
   placement = "right-end",
+  isActive,
 }) => {
   return (
     <DropdownMenu placement={placement} displacement={10} options={options} onChange={onChange}>
       {({ open }) => (
-        <NavItem as="button" className={className} testId={buttonTestId} label={label} icon={icon} isActive={open} />
+        <NavItem
+          as="button"
+          className={className}
+          testId={buttonTestId}
+          label={label}
+          icon={icon}
+          isActive={isActive || open}
+        />
       )}
     </DropdownMenu>
   );

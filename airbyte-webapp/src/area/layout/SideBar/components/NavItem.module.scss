@@ -30,17 +30,11 @@
   }
 
   &.active {
-    background: colors.$grey-50;
+    background: colors.$blue-50;
     color: colors.$dark-blue-900;
 
     .badge {
       opacity: 1;
-    }
-
-    &:hover,
-    &:focus-visible {
-      color: colors.$dark-blue-900;
-      background: colors.$blue-30;
     }
   }
 

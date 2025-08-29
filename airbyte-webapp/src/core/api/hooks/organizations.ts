@@ -1,14 +1,12 @@
 import { useMutation, useQueryClient, useQuery, UseInfiniteQueryResult, useInfiniteQuery } from "@tanstack/react-query";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
-import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentUser } from "core/services/auth";
 
-import { useGetWorkspace } from "./workspaces";
+import { getWorkspaceQueryKey } from "./workspaces";
 import { ApiCallOptions } from "../apiCall";
 import {
   getOrganization,
-  getOrganizationInfo,
   getOrgInfo,
   listUsersInOrganization,
   updateOrganization,
@@ -36,6 +34,7 @@ import {
   ListOrganizationSummariesResponse,
   WorkspaceReadList,
   ListWorkspacesInOrganizationRequestBody,
+  WorkspaceRead,
 } from "../types/AirbyteClient";
 import { OnboardingStatusEnum, Organization } from "../types/SonarClient";
 import { useRequestOptions } from "../useRequestOptions";
@@ -52,8 +51,10 @@ export const organizationKeys = {
   trialStatus: (organizationId: string) => [SCOPE_ORGANIZATION, "trial", organizationId] as const,
   usage: (organizationId: string, timeWindow: string) =>
     [SCOPE_ORGANIZATION, "usage", organizationId, timeWindow] as const,
+  workspacesList: (organizationId: string) => [SCOPE_ORGANIZATION, "workspaces", "list", organizationId] as const,
   workspaces: (organizationId: string, pageSize: number, nameContains?: string) =>
-    [SCOPE_ORGANIZATION, "workspaces", "list", organizationId, pageSize, nameContains] as const,
+    [...organizationKeys.workspacesList(organizationId), pageSize, nameContains] as const,
+  firstWorkspace: (organizationId: string) => [SCOPE_ORGANIZATION, organizationId, "workspaces", "first"] as const,
   listByUser: (requestBody: ListOrganizationsByUserRequestBody) =>
     [...organizationKeys.all, "byUser", requestBody] as const,
   summaries: (requestBody: ListOrganizationSummariesRequestBody) =>
@@ -61,23 +62,11 @@ export const organizationKeys = {
   scopedTokenOrganization: () => [...organizationKeys.all, "scopedTokenOrganization"] as const,
 };
 
-/**
- * Returns the organization of the workspace the user is currently in. Throws an error if the
- * user isn't inside a workspace.
- */
 export const useCurrentOrganizationInfo = () => {
   const requestOptions = useRequestOptions();
-  const workspaceId = useCurrentWorkspaceId();
+  const organizationId = useCurrentOrganizationId();
 
-  if (!workspaceId) {
-    throw new Error(`Called useCurrentOrganizationInfo outside of a workspace`);
-  }
-
-  const workspace = useGetWorkspace(workspaceId);
-
-  return useSuspenseQuery(organizationKeys.info(workspace.organizationId), () =>
-    getOrganizationInfo({ workspaceId: workspace.workspaceId }, requestOptions)
-  );
+  return useSuspenseQuery(organizationKeys.info(organizationId), () => getOrgInfo({ organizationId }, requestOptions));
 };
 
 export const useOrganization = (organizationId: string) => {
@@ -167,6 +156,35 @@ export const useOrganizationUsage = ({ timeWindow }: { timeWindow: ConsumptionTi
   );
 };
 
+// Sometimes we need to get the first workspace in and organization, for example if the URL only contains an
+// organization id, but we still want to populate the workspace selector with a default workspace.
+export const useDefaultWorkspaceInOrganization = (organizationId: string, enabled: boolean = true) => {
+  const queryClient = useQueryClient();
+  const requestOptions = useRequestOptions();
+
+  return useSuspenseQuery<WorkspaceRead | null | undefined>(
+    organizationKeys.firstWorkspace(organizationId),
+    async () => {
+      const { workspaces } = await listWorkspacesInOrganization(
+        { organizationId, pagination: { pageSize: 1, rowOffset: 0 } },
+        requestOptions
+      );
+      const firstWorkspace = workspaces[0];
+      // We can set the query data for this workspace id at this point. This will mean that the cache is already
+      // populated for calls to useGetWorkspace(firstWorkspace.workspaceId). This is particularly useful in the sidebar,
+      // since we want to show the first workspace by default when the user selects an organization. This effectively
+      // pre-fetches the workspace in that case.
+      if (firstWorkspace) {
+        queryClient.setQueryData(getWorkspaceQueryKey(firstWorkspace.workspaceId), firstWorkspace);
+      }
+      // It is possible that there are no workspaces in an organization. react-query will throw if we return
+      // undefined, so we set null to indicate the lack of a default workspace
+      return firstWorkspace ?? null;
+    },
+    { enabled, staleTime: 30_000 }
+  );
+};
+
 export const useListWorkspacesInOrganization = ({
   organizationId,
   pagination,
@@ -196,8 +214,6 @@ export const useListWorkspacesInOrganization = ({
     enabled,
     queryKey,
     queryFn: listWorkspacesQueryFn,
-    staleTime: 1000 * 60 * 5,
-    cacheTime: 1000 * 60 * 30,
     getNextPageParam: (lastPage, allPages) => {
       const pageSize = pagination?.pageSize ?? 10;
       const workspaces = lastPage.workspaces ?? [];
@@ -213,9 +229,33 @@ export const useListWorkspacesInOrganization = ({
 
 export const useListOrganizationsByUser = (requestBody: ListOrganizationsByUserRequestBody) => {
   const requestOptions = useRequestOptions();
-  return useSuspenseQuery(organizationKeys.listByUser(requestBody), () =>
-    listOrganizationsByUser(requestBody, requestOptions)
+  return useSuspenseQuery(
+    organizationKeys.listByUser(requestBody),
+    () => listOrganizationsByUser(requestBody, requestOptions),
+    {
+      staleTime: 30_0000,
+    }
   );
+};
+
+export const useListOrganizationsByUserInfinite = (
+  requestBody: Omit<ListOrganizationSummariesRequestBody, "pagination">,
+  pageSize = 10
+) => {
+  const requestOptions = useRequestOptions();
+  return useInfiniteQuery({
+    queryKey: organizationKeys.listByUser({ ...requestBody, pagination: { pageSize } }),
+    queryFn: async ({ pageParam = 0 }) =>
+      listOrganizationsByUser(
+        { ...requestBody, pagination: { pageSize, rowOffset: pageParam * pageSize } },
+        requestOptions
+      ),
+    staleTime: 1000 * 60 * 5,
+    cacheTime: 1000 * 60 * 30,
+    getPreviousPageParam: (firstPage, allPages) =>
+      firstPage.organizations.length > 0 ? allPages.length - 1 : undefined,
+    getNextPageParam: (lastPage, allPages) => (lastPage.organizations.length < pageSize ? undefined : allPages.length),
+  });
 };
 
 const listOrgSummariesQueryFn =

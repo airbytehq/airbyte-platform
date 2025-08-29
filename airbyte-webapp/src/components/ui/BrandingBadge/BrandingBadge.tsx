@@ -8,6 +8,7 @@ import { useCurrentOrganizationId } from "area/organization/utils";
 import { useOrganizationTrialStatus } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 export interface BrandingBadgeProps {
   product: "enterprise" | "cloudForTeams" | "cloudInTrial" | null;
@@ -41,9 +42,10 @@ export const useGetProductBranding = (): "enterprise" | "cloudForTeams" | "cloud
   const isEnterprise = useFeature(FeatureItem.EnterpriseBranding);
   const isCloudApp = useIsCloudApp();
   const isCloudForTeams = useFeature(FeatureItem.CloudForTeamsBranding);
+  const canViewTrialStatus = useGeneratedIntent(Intent.ViewOrganizationTrialStatus);
   const isCloudInTrial =
     useOrganizationTrialStatus(currentOrganizationId, {
-      enabled: !!currentOrganizationId && isCloudApp,
+      enabled: !!currentOrganizationId && isCloudApp && canViewTrialStatus,
     })?.trialStatus === "in_trial";
   return isEnterprise ? "enterprise" : isCloudForTeams ? "cloudForTeams" : isCloudInTrial ? "cloudInTrial" : null;
 };

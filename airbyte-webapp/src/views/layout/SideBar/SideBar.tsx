@@ -13,7 +13,7 @@ import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
-import { RoutePaths } from "pages/routePaths";
+import { RoutePaths, SettingsRoutePaths } from "pages/routePaths";
 
 import { AirbyteHomeLink } from "./AirbyteHomeLink";
 import { MenuContent } from "./components/MenuContent";
@@ -101,7 +101,7 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({ bottomSlot,
               options={[
                 {
                   as: "a",
-                  href: workspacesPath + RoutePaths.Settings,
+                  href: `${workspacesPath}${RoutePaths.Settings}/${SettingsRoutePaths.Account}`,
                   displayName: formatMessage({ id: "sidebar.userSettings" }),
                   internal: true,
                   icon: <Icon type="gear" />,

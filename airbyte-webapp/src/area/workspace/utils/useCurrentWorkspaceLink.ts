@@ -1,8 +1,7 @@
 import { useCallback } from "react";
 
+import { useCurrentWorkspace } from "core/api";
 import { RoutePaths } from "pages/routePaths";
-
-import { useCurrentWorkspaceId } from "./useCurrentWorkspaceId";
 
 /**
  * Returns a function that will take an absolute link (must begin with a slash)
@@ -10,7 +9,7 @@ import { useCurrentWorkspaceId } from "./useCurrentWorkspaceId";
  * function would turn `/connections/123` into `/workspaces/<current-workspace-id>/connections/123`
  */
 export const useCurrentWorkspaceLink = () => {
-  const workspaceId = useCurrentWorkspaceId();
+  const { workspaceId } = useCurrentWorkspace();
 
   return useCallback((link: string) => `/${RoutePaths.Workspaces}/${workspaceId}${link}`, [workspaceId]);
 };

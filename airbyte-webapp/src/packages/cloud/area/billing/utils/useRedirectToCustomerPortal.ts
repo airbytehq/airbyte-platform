@@ -2,26 +2,17 @@ import { useCallback, useMemo, useState } from "react";
 import { useIntl } from "react-intl";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
-import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { useCurrentWorkspaceOrUndefined, useGetCustomerPortalUrl } from "core/api";
+import { useGetCustomerPortalUrl } from "core/api";
 import { CustomerPortalRequestBodyFlow } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
 import { useNotificationService } from "hooks/services/Notification";
-import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
-import { RoutePaths } from "pages/routePaths";
+
+import { useLinkToBillingPage } from "./useLinkToBillingPage";
 
 export const useRedirectToCustomerPortal = (flow: CustomerPortalRequestBodyFlow) => {
   const [redirecting, setRedirecting] = useState(false);
-  const workspace = useCurrentWorkspaceOrUndefined();
-  const createWorkspaceLink = useCurrentWorkspaceLink();
   const organizationId = useCurrentOrganizationId();
-
-  // NOTE: this is transitional code to support the transition to multi-org.
-  // Once multi-org is fully launched, we should remove the workspace check and
-  // just use the organizationId.
-  const pathToBilling = workspace
-    ? createWorkspaceLink(`/${RoutePaths.Settings}/${CloudSettingsRoutePaths.Billing}`)
-    : `/${RoutePaths.Organization}/${organizationId}/${CloudSettingsRoutePaths.Billing}`;
+  const pathToBilling = useLinkToBillingPage();
 
   const { mutateAsync: getCustomerPortalUrl, isLoading: isCustomerPortalUrlLoading } = useGetCustomerPortalUrl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
