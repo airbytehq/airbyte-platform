@@ -148,16 +148,16 @@ object StatsAggregationHelper {
     val jobIds = jobReads.stream().map { r: JobWithAttemptsRead -> r.job.id }.toList()
     val attemptStats: Map<JobAttemptPair, JobPersistence.AttemptStats> = jobPersistence.getAttemptStats(jobIds)
 
-    log.info("Attempt stats: {}", attemptStats)
+    log.debug { "Attempt stats: $attemptStats" }
     val jobToStreamStats: MutableMap<Long, Map<StreamNameAndNamespace, MutableList<StreamSyncStats>>> = HashMap()
     for (jwar in jobReads) {
       val streamAttemptStats: MutableMap<StreamNameAndNamespace, MutableList<StreamSyncStats>> = HashMap()
       jobToStreamStats.putIfAbsent(jwar.job.id, streamAttemptStats)
-      log.info("Hydrating job {}", jwar.job.id)
+      log.debug { "Hydrating job ${jwar.job.id}" }
       for (attempt in jwar.attempts) {
         val stat = attemptStats[JobAttemptPair(jwar.job.id, attempt.id.toInt())]
         if (stat == null) {
-          log.warn("Missing stats for job {} attempt {}", jwar.job.id, attempt.id.toInt())
+          log.debug { "Missing stats for job ${jwar.job.id} attempt ${attempt.id}" }
           continue
         }
 
@@ -185,7 +185,7 @@ object StatsAggregationHelper {
             ),
           )
 
-      log.debug("Job to stream sync mode: {}", jobToStreamSyncMode)
+      log.debug { "Job to stream sync mode: $jobToStreamSyncMode" }
       jobReads.forEach(
         Consumer { job: JobWithAttemptsRead ->
           val streamToAttemptStats =
@@ -254,7 +254,7 @@ object StatsAggregationHelper {
     streamToSyncMode.keys.forEach(
       Consumer<StreamNameAndNamespace> { streamNameAndNamespace: StreamNameAndNamespace ->
         if (!streamToAttemptStats.containsKey(streamNameAndNamespace)) {
-          log.debug("No stats have been persisted for job {} stream {}.", job.job.id, streamNameAndNamespace)
+          log.debug { "No stats have been persisted for job ${job.job.id} stream $streamNameAndNamespace." }
           return@Consumer
         }
         val streamStats: List<StreamSyncStats> = streamToAttemptStats[streamNameAndNamespace]!!
