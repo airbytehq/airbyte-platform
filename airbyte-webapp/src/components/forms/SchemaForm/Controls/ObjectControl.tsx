@@ -15,7 +15,7 @@ import { BaseControlComponentProps, BaseControlProps } from "./types";
 import { useToggleConfig } from "./useToggleConfig";
 import { useSchemaForm } from "../SchemaForm";
 import { useErrorAtPath } from "../useErrorAtPath";
-import { AirbyteJsonSchema, getDeclarativeSchemaTypeValue, displayName } from "../utils";
+import { AirbyteJsonSchema, getDeclarativeSchemaTypeValue, displayName, getConnectorSpecConstValue } from "../utils";
 
 export const ObjectControl = ({
   fieldSchema,
@@ -80,8 +80,8 @@ export const ObjectControl = ({
 
       const fullPath = baseProps.name ? `${baseProps.name}.${propertyName}` : propertyName;
 
-      // ~ declarative_component_schema type handling ~
-      if (getDeclarativeSchemaTypeValue(propertyName, property)) {
+      // ~ discriminator property handling ~
+      if (getDeclarativeSchemaTypeValue(propertyName, property) || getConnectorSpecConstValue(property)) {
         return;
       }
 

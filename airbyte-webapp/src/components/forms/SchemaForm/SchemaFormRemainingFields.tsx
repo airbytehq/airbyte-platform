@@ -1,7 +1,7 @@
 import { SchemaFormControl } from "./Controls/SchemaFormControl";
 import { OverrideByPath } from "./Controls/types";
 import { useSchemaForm } from "./SchemaForm";
-import { getDeclarativeSchemaTypeValue } from "./utils";
+import { getDeclarativeSchemaTypeValue, getConnectorSpecConstValue } from "./utils";
 
 /**
  * Component that renders form controls that haven't been rendered by other SchemaFormControl components
@@ -42,8 +42,8 @@ export const SchemaFormRemainingFields = ({ path = "", overrideByPath = {} }: Sc
           return null;
         }
 
-        // ~ declarative_component_schema type handling ~
-        if (getDeclarativeSchemaTypeValue(propertyName, property)) {
+        // ~ discriminator property handling ~
+        if (getDeclarativeSchemaTypeValue(propertyName, property) || getConnectorSpecConstValue(property)) {
           return null;
         }
 

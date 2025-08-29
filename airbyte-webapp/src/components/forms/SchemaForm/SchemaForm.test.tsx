@@ -1469,4 +1469,240 @@ describe("SchemaForm", () => {
       expect(mockOnSubmit).not.toHaveBeenCalled();
     });
   });
+
+  // Add tests for discriminator functionality
+  describe("discriminator functionality", () => {
+    // Schema with connector spec discriminators using const properties
+    const connectorSpecDiscriminatorSchema = {
+      type: "object",
+      properties: {
+        credentials: {
+          type: "object",
+          title: "Authentication",
+          description: "Choose your authentication method",
+          oneOf: [
+            {
+              title: "OAuth2.0",
+              properties: {
+                auth_type: {
+                  type: "string",
+                  const: "oauth2",
+                  default: "oauth2",
+                },
+                client_id: {
+                  type: "string",
+                  title: "Client ID",
+                },
+                client_secret: {
+                  type: "string",
+                  title: "Client Secret",
+                  airbyte_secret: true,
+                },
+                refresh_token: {
+                  type: "string",
+                  title: "Refresh Token",
+                  airbyte_secret: true,
+                },
+              },
+              required: ["auth_type", "client_id", "client_secret", "refresh_token"],
+            },
+            {
+              title: "Service Account Key",
+              properties: {
+                auth_type: {
+                  type: "string",
+                  const: "service_account",
+                  default: "service_account",
+                },
+                service_account_key: {
+                  type: "string",
+                  title: "Service Account Key",
+                  description: "JSON formatted service account key",
+                  multiline: true,
+                  airbyte_secret: true,
+                },
+              },
+              required: ["auth_type", "service_account_key"],
+            },
+            {
+              title: "API Key",
+              properties: {
+                auth_type: {
+                  type: "string",
+                  const: "api_key",
+                },
+                api_key: {
+                  type: "string",
+                  title: "API Key",
+                  airbyte_secret: true,
+                },
+              },
+              required: ["auth_type", "api_key"],
+            },
+          ],
+        },
+      },
+      required: ["credentials"],
+    } as const;
+
+    it("handles connector spec discriminators with const properties", async () => {
+      await render(
+        <SchemaForm schema={connectorSpecDiscriminatorSchema} onSubmit={() => Promise.resolve()}>
+          <SchemaFormControl />
+          <FormSubmissionButtons />
+        </SchemaForm>
+      );
+
+      // Check that OAuth2.0 is selected by default (first option with default const value)
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "OAuth2.0" })).toBeInTheDocument();
+        expect(screen.getByRole("textbox", { name: "Client ID" })).toBeInTheDocument();
+        expect(screen.getByRole("textbox", { name: "Client Secret" })).toBeInTheDocument();
+        expect(screen.getByRole("textbox", { name: "Refresh Token" })).toBeInTheDocument();
+      });
+
+      // Switch to Service Account Key
+      await userEvent.click(screen.getByRole("button", { name: "OAuth2.0" }));
+      await userEvent.click(screen.getByText("Service Account Key"));
+
+      // Check that service account fields appear
+      await waitFor(() => {
+        expect(screen.getByRole("textbox", { name: "Service Account Key" })).toBeInTheDocument();
+        expect(screen.queryByRole("textbox", { name: "Client ID" })).not.toBeInTheDocument();
+      });
+
+      // Switch to API Key
+      await userEvent.click(screen.getByRole("button", { name: "Service Account Key" }));
+      await userEvent.click(screen.getByText("API Key"));
+
+      // Check that API key fields appear
+      await waitFor(() => {
+        expect(screen.getByRole("textbox", { name: "API Key" })).toBeInTheDocument();
+        expect(screen.queryByRole("textbox", { name: "Service Account Key" })).not.toBeInTheDocument();
+      });
+    });
+
+    it("selects the correct option schema based on existing const values", async () => {
+      // Initialize with service account authentication
+      const initialValues = {
+        credentials: {
+          auth_type: "service_account",
+          service_account_key: "existing-key",
+        },
+      };
+
+      const mockOnSubmit = jest.fn().mockResolvedValue(undefined);
+
+      await render(
+        <SchemaForm schema={connectorSpecDiscriminatorSchema} initialValues={initialValues} onSubmit={mockOnSubmit}>
+          <SchemaFormControl />
+          <FormSubmissionButtons allowNonDirtySubmit />
+        </SchemaForm>
+      );
+
+      // Since we have initial values, the form should directly show the Service Account Key option
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "Service Account Key" })).toBeInTheDocument();
+        expect(screen.getByRole("textbox", { name: "Service Account Key" })).toBeInTheDocument();
+      });
+
+      // Verify the existing value is populated
+      const serviceAccountField = screen.getByRole("textbox", { name: "Service Account Key" });
+      expect(serviceAccountField).toHaveValue("existing-key");
+
+      // Submit the form to verify the correct structure
+      const submitButton = screen.getByRole("button", { name: "Submit" });
+      await userEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            credentials: expect.objectContaining({
+              auth_type: "service_account",
+              service_account_key: "existing-key",
+            }),
+          }),
+          expect.anything()
+        );
+      });
+    });
+
+    it("handles discriminators with enum properties", async () => {
+      // Schema with enum-based discriminators (existing pattern)
+      const enumDiscriminatorSchema = {
+        type: "object",
+        properties: {
+          destination_type: {
+            type: "object",
+            title: "Destination Type",
+            oneOf: [
+              {
+                title: "File System",
+                properties: {
+                  type: {
+                    type: "string",
+                    enum: ["filesystem"],
+                  },
+                  path: {
+                    type: "string",
+                    title: "File Path",
+                  },
+                },
+                required: ["type", "path"],
+              },
+              {
+                title: "Database",
+                properties: {
+                  type: {
+                    type: "string",
+                    enum: ["database"],
+                  },
+                  connection_string: {
+                    type: "string",
+                    title: "Connection String",
+                  },
+                },
+                required: ["type", "connection_string"],
+              },
+            ],
+          },
+        },
+        required: ["destination_type"],
+      } as const;
+
+      const initialValues = {
+        destination_type: {
+          type: "database",
+          connection_string: "postgresql://localhost:5432/mydb",
+        },
+      };
+
+      await render(
+        <SchemaForm schema={enumDiscriminatorSchema} initialValues={initialValues} onSubmit={() => Promise.resolve()}>
+          <SchemaFormControl />
+          <FormSubmissionButtons />
+        </SchemaForm>
+      );
+
+      // Since we have initial values, Database option should be directly shown
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "Database" })).toBeInTheDocument();
+        expect(screen.getByRole("textbox", { name: "Connection String" })).toBeInTheDocument();
+      });
+
+      // Verify the existing value is populated
+      const connectionField = screen.getByRole("textbox", { name: "Connection String" });
+      expect(connectionField).toHaveValue("postgresql://localhost:5432/mydb");
+
+      // Switch to File System
+      await userEvent.click(screen.getByRole("button", { name: "Database" }));
+      await userEvent.click(screen.getByText("File System"));
+
+      // Check that file system fields appear
+      await waitFor(() => {
+        expect(screen.getByRole("textbox", { name: "File Path" })).toBeInTheDocument();
+        expect(screen.queryByRole("textbox", { name: "Connection String" })).not.toBeInTheDocument();
+      });
+    });
+  });
 });

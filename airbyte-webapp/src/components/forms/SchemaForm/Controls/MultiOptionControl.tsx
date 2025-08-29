@@ -41,10 +41,9 @@ export const MultiOptionControl = ({
         ?.filter((optionSchema) => !isBoolean(optionSchema)) as AirbyteJsonSchema[],
     [optionSchemas, rootSchema]
   );
-  const currentlySelectedOption = useMemo(
-    () => (options ? getSelectedOptionSchema(options, value) : undefined),
-    [getSelectedOptionSchema, options, value]
-  );
+  const currentlySelectedOption = useMemo(() => {
+    return options ? getSelectedOptionSchema(options, value) : undefined;
+  }, [getSelectedOptionSchema, options, value]);
   const displayOptions = useMemo(() => {
     return options?.filter((option) => currentlySelectedOption === option || !option.deprecated);
   }, [currentlySelectedOption, options]);

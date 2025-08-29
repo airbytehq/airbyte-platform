@@ -14,6 +14,7 @@ import {
   resolveTopLevelRef,
   isEmptyObject,
   AirbyteJsonSchemaExtention,
+  getConnectorSpecConstValue,
 } from "./utils";
 import { FormSubmissionHandler } from "../Form";
 
@@ -292,10 +293,15 @@ const extractDefaultValuesFromSchema = (fieldSchema: AirbyteJsonSchema, rootSche
       return;
     }
 
-    // ~ declarative_component_schema type handling ~
+    // ~ discriminator property handling ~
     const declarativeSchemaTypeValue = getDeclarativeSchemaTypeValue(key, property);
     if (declarativeSchemaTypeValue) {
       defaultValues[key] = declarativeSchemaTypeValue;
+      return;
+    }
+    const connectorSpecConstValue = getConnectorSpecConstValue(property);
+    if (connectorSpecConstValue) {
+      defaultValues[key] = connectorSpecConstValue;
       return;
     }
 
@@ -398,10 +404,6 @@ const valueIsCompatibleWithSchema = (
     return schema.type === "array";
   }
 
-  if (typeof value === "object" && !("type" in value)) {
-    return schema.type === "object";
-  }
-
   if (typeof value !== "object") {
     if (typeof value === "number" && (schema.type === "integer" || schema.type === "number")) {
       return true;
@@ -419,21 +421,34 @@ const valueIsCompatibleWithSchema = (
     return false;
   }
 
-  // ~ declarative_component_schema type handling ~
-  const discriminatorSchema = schema.properties.type;
-
-  if (!discriminatorSchema || isBoolean(discriminatorSchema)) {
-    return false;
-  }
-  if (!discriminatorSchema.enum || !Array.isArray(discriminatorSchema.enum) || discriminatorSchema.enum.length !== 1) {
-    return false;
-  }
-
-  if (!("type" in value)) {
-    return false;
+  // ~ discriminator property handling ~ - CHECK THIS FIRST before generic object matching
+  const declarativeSchemaTypeValue = getDeclarativeSchemaTypeValue("type", schema.properties.type);
+  if (declarativeSchemaTypeValue) {
+    if (!("type" in value)) {
+      return false;
+    }
+    return value.type === declarativeSchemaTypeValue;
   }
 
-  return value.type === discriminatorSchema.enum[0];
+  const constEntry = Object.entries(schema.properties).find(([, property]) => {
+    return getConnectorSpecConstValue(property) !== undefined;
+  });
+  if (constEntry) {
+    const [constPropertyKey, constProperty] = constEntry;
+    const connectorSpecConstValue = getConnectorSpecConstValue(constProperty);
+    if (!(constPropertyKey in value)) {
+      return false;
+    }
+    const matches = (value as Record<string, unknown>)[constPropertyKey] === connectorSpecConstValue;
+    return matches;
+  }
+
+  // Generic object type check - only do this if no discriminator properties were found
+  if (typeof value === "object") {
+    return schema.type === "object";
+  }
+
+  return false;
 };
 
 export const getSchemaAtPath = (

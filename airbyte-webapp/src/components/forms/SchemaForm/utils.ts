@@ -35,6 +35,19 @@ export const getDeclarativeSchemaTypeValue = (
   return property.enum[0];
 };
 
+export const getConnectorSpecConstValue = (property: ExtendedJSONSchema<AirbyteJsonSchemaExtention> | undefined) => {
+  if (!property) {
+    return undefined;
+  }
+  if (isBoolean(property)) {
+    return undefined;
+  }
+  if (property.const === undefined) {
+    return undefined;
+  }
+  return property.const;
+};
+
 // eslint-disable-next-line @typescript-eslint/ban-types
 export const hasFields = <T extends object>(object: T | {}): object is T => {
   return Object.keys(object).length > 0;

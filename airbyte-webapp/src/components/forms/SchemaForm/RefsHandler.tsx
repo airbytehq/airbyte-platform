@@ -343,6 +343,9 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({
       ) {
         return `${refTargetPath}.${parentSchema.properties.type.enum[0]}.${fieldName}`;
       }
+      // ~ discriminator property handling ~
+      // NOTE: we are not handling connector spec const values here since this is not
+      // used for connector specs.
 
       // If there is no sibling type field, use the field name.
       // This has a higher chance of causing collisions, but it's the best we can do for now.
