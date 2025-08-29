@@ -15,12 +15,12 @@ import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody
 import io.airbyte.api.model.generated.NotificationConfig
 import io.airbyte.api.model.generated.NotificationsConfig
+import io.airbyte.api.model.generated.OrganizationInfoRead
 import io.airbyte.api.model.generated.SlugRequestBody
 import io.airbyte.api.model.generated.WorkspaceCreate
 import io.airbyte.api.model.generated.WorkspaceCreateWithId
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
-import io.airbyte.api.model.generated.WorkspaceOrganizationInfoRead
 import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.api.model.generated.WorkspaceReadList
 import io.airbyte.api.model.generated.WorkspaceUpdate
@@ -249,13 +249,13 @@ class WorkspacesHandler
     }
 
     @Throws(IOException::class, ConfigNotFoundException::class)
-    fun getWorkspaceOrganizationInfo(workspaceIdRequestBody: WorkspaceIdRequestBody): WorkspaceOrganizationInfoRead {
+    fun getWorkspaceOrganizationInfo(workspaceIdRequestBody: WorkspaceIdRequestBody): OrganizationInfoRead {
       val workspaceId = workspaceIdRequestBody.workspaceId
       val organization = organizationPersistence.getOrganizationByWorkspaceId(workspaceId)
       if (organization.isEmpty) {
         throw ConfigNotFoundException(io.airbyte.config.persistence.ConfigNotFoundException.NO_ORGANIZATION_FOR_WORKSPACE, workspaceId.toString())
       }
-      return buildWorkspaceOrganizationInfoRead(organization.get())
+      return buildOrganizationInfoRead(organization.get())
     }
 
     @Suppress("unused")
@@ -466,11 +466,11 @@ class WorkspacesHandler
       return domainToApiModel(workspace)
     }
 
-    private fun buildWorkspaceOrganizationInfoRead(organization: Organization): WorkspaceOrganizationInfoRead =
-      WorkspaceOrganizationInfoRead()
+    private fun buildOrganizationInfoRead(organization: Organization): OrganizationInfoRead =
+      OrganizationInfoRead()
         .organizationId(organization.organizationId)
         .organizationName(organization.name)
-        .sso(organization.ssoRealm != null && !organization.ssoRealm.isEmpty())
+        .sso(organization.ssoRealm != null && organization.ssoRealm.isNotEmpty())
 
     @Throws(IOException::class)
     private fun generateUniqueSlug(workspaceName: String): String {

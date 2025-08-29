@@ -9,6 +9,7 @@ import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody
+import io.airbyte.api.model.generated.OrganizationInfoRead
 import io.airbyte.api.model.generated.PermissionCheckRead
 import io.airbyte.api.model.generated.PermissionCheckRequest
 import io.airbyte.api.model.generated.PermissionType
@@ -19,7 +20,6 @@ import io.airbyte.api.model.generated.WorkspaceGetDbtJobsRequest
 import io.airbyte.api.model.generated.WorkspaceGetDbtJobsResponse
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
-import io.airbyte.api.model.generated.WorkspaceOrganizationInfoRead
 import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.api.model.generated.WorkspaceReadList
 import io.airbyte.api.model.generated.WorkspaceUpdate
@@ -128,7 +128,7 @@ open class WorkspaceApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getOrganizationInfo(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
-  ): WorkspaceOrganizationInfoRead? =
+  ): OrganizationInfoRead? =
     execute {
       workspacesHandler.getWorkspaceOrganizationInfo(
         workspaceIdRequestBody,

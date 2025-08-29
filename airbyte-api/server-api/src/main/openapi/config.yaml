@@ -363,7 +363,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkspaceOrganizationInfoRead"
+                $ref: "#/components/schemas/OrganizationInfoRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -11154,49 +11154,6 @@ components:
           $ref: "#/components/schemas/Limit"
         activeConnections:
           $ref: "#/components/schemas/Limit"
-    WorkspaceOrganizationInfoRead:
-      type: object
-      description: Limited info about a workspace's organization that is safe to expose to workspace readers who are not members of the org.
-      required:
-        - organizationId
-        - organizationName
-        - sso
-      properties:
-        organizationId:
-          type: string
-          format: uuid
-        organizationName:
-          type: string
-        sso:
-          type: boolean
-        billing:
-          type: object
-          required:
-            - paymentStatus
-          properties:
-            subscriptionStatus:
-              type: string
-              enum:
-                - pre_subscription
-                - unsubscribed
-                - subscribed
-            paymentStatus:
-              type: string
-              enum:
-                - uninitialized
-                - okay
-                - grace_period
-                - disabled
-                - locked
-                - manual
-            accountType:
-              type: string
-              enum:
-                - free
-                - internal
-            gracePeriodEndsAt:
-              type: integer
-              format: int64
     WebhookConfigRead:
       type: object
       description: the readable info for a webhook config; omits sensitive info e.g. auth token
