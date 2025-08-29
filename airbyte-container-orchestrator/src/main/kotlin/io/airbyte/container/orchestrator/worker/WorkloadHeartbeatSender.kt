@@ -38,6 +38,8 @@ class WorkloadHeartbeatSender(
   @Value("\${airbyte.job-id}") private val jobId: Long,
   @Named("attemptId") private val attempt: Int,
 ) {
+  private var sourceIsHanging = false
+
   /**
    * Sends periodic heartbeat requests until cancellation, terminal error, or heartbeat timeout.
    *
@@ -78,6 +80,12 @@ class WorkloadHeartbeatSender(
               )
             logger.warn(e) { "Source has timed out; failing the workload." }
             failWorkload(e)
+
+            // BUG: this is a hack to work around a bug where the source reader hangs
+            if (sourceIsHanging) {
+              source.close()
+            }
+
             break
           }
 
@@ -138,6 +146,7 @@ class WorkloadHeartbeatSender(
       } catch (_: Exception) {
         logger.warn { "Checking source.isFinished timed out after 1 minute, returning false" }
         future.cancel(true)
+        sourceIsHanging = true
         false
       }
     } catch (e: Exception) {
