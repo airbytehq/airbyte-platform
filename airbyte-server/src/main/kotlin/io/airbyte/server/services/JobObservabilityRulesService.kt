@@ -64,11 +64,6 @@ class JobObservabilityRulesService {
     }
   }
 
-  /**
-   * Default standard deviation threshold for stream metrics when evaluating a z-score.
-   */
-  private val defaultStdDevThreshold = Const(3.0)
-
   private val jobOutlierRules =
     listOf(
       OutlierRule(
@@ -76,7 +71,7 @@ class JobObservabilityRulesService {
         value = Dim.Job.durationSeconds.zScore,
         operator = GreaterThan,
         // Get the time coefficient from the duration in minutes for a more adequate drop-off.
-        threshold = defaultStdDevThreshold * Reciprocal(Dim.Job.durationSeconds.mean / Const(60.0)),
+        threshold = Const(3.0) * Reciprocal(Dim.Job.durationSeconds.mean / Const(60.0)),
       ),
       OutlierRule(
         name = Dim.Job.attemptCount.name,
@@ -87,6 +82,14 @@ class JobObservabilityRulesService {
       ),
     )
 
+  /**
+   * Standard deviation threshold for stream metrics when evaluating a z-score.
+   *
+   * 4.0 feels high; however, we are evaluating data from very different sources and usages. Our goal is to flag bigger variations that would
+   * generally be associated with broken connector changes rather than subtle variation in data usage trends.
+   */
+  private val dataStdDevThreshold = Const(4.0)
+
   private val streamOutlierRules =
     listOf(
       OutlierRule(
@@ -95,7 +98,7 @@ class JobObservabilityRulesService {
         operator = GreaterThan,
         // We are adjusting the threshold for loaded data based on the average record count as a proxy for volume. Rationale being that a stream
         // moving a little amount of data will be more susceptible to variations.
-        threshold = defaultStdDevThreshold * ReciprocalSqrt(Dim.Stream.recordsLoaded.mean),
+        threshold = dataStdDevThreshold * ReciprocalSqrt(Dim.Stream.recordsLoaded.mean),
       ),
       OutlierRule(
         name = Dim.Stream.recordsLoaded.name,
@@ -103,7 +106,7 @@ class JobObservabilityRulesService {
         operator = GreaterThan,
         // We are adjusting the threshold for loaded data based on the average record count as a proxy for volume. Rationale being that a stream
         // moving a little amount of data will be more susceptible to variations.
-        threshold = defaultStdDevThreshold * ReciprocalSqrt(Dim.Stream.recordsLoaded.mean),
+        threshold = dataStdDevThreshold * ReciprocalSqrt(Dim.Stream.recordsLoaded.mean),
       ),
       OutlierRule(
         name = Dim.Stream.recordsRejected.name,
@@ -111,7 +114,7 @@ class JobObservabilityRulesService {
         operator = GreaterThan,
         // RejectedRecords have their own deviation, mostly because they are more isolated events and shouldn't be tied to the same trend as the
         // "positive" amount of data loaded.
-        threshold = defaultStdDevThreshold * ReciprocalSqrt(Dim.Stream.recordsRejected.mean),
+        threshold = dataStdDevThreshold * ReciprocalSqrt(Dim.Stream.recordsRejected.mean),
       ),
     )
 }

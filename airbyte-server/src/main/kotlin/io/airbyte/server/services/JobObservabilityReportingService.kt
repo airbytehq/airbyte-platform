@@ -121,7 +121,8 @@ class JobObservabilityReportingService(
   private fun buildOutlierSummary(event: OutlierOutcome): Map<String, Any> =
     mapOf(
       "is_outlier" to event.isOutlier,
-      "is_job_outlier" to event.job.isOutlier,
+      "is_freshness_outlier" to event.job.isOutlier,
+      "is_correctness_outlier" to (event.numberOfOutlierStreams > 0),
       "number_of_historical_job_considered" to event.numberOfHistoricalJobsConsidered,
       "number_of_outlier_streams" to event.numberOfOutlierStreams,
       "number_of_streams" to event.streams.size,
