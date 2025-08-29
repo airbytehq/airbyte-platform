@@ -20,6 +20,7 @@ import io.airbyte.domain.models.OrganizationId
 import io.airbyte.publicApi.server.generated.apis.EmbeddedWidgetApi
 import io.airbyte.publicApi.server.generated.models.EmbeddedOrganizationListItem
 import io.airbyte.publicApi.server.generated.models.EmbeddedOrganizationsList
+import io.airbyte.publicApi.server.generated.models.EmbeddedScopedTokenRequest
 import io.airbyte.publicApi.server.generated.models.EmbeddedWidgetRequest
 import io.airbyte.publicApi.server.generated.models.PermissionType
 import io.airbyte.server.auth.TokenScopeClaim
@@ -104,6 +105,15 @@ class EmbeddedController(
     return EmbeddedOrganizationsList(
       organizations = organizationItems,
     ).ok()
+  }
+
+  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun generateEmbeddedScopedToken(embeddedScopedTokenRequest: EmbeddedScopedTokenRequest): Response {
+    val currentUser = currentUserService.getCurrentUser()
+    val workspaceId = embeddedScopedTokenRequest.workspaceId.toString()
+    return mapOf("token" to generateToken(workspaceId, currentUser.authUserId, workspaceId))
+      .ok()
   }
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)

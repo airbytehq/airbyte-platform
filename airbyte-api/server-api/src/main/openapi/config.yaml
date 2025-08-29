@@ -9883,7 +9883,7 @@ paths:
       operationId: getEmbeddedWidget
       x-sdk-alias: getEmbeddedWidget
       x-sdk-group: EmbeddedWidget
-      summary: Get a token for Airbyte Embedded
+      summary: Get a widget token for Airbyte Embedded
       requestBody:
         content:
           application/json:
@@ -9896,6 +9896,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EmbeddedWidgetResponse"
+          description: Success
+      tags:
+        - public
+        - embedded_widget
+
+  /public/v1/embedded/scoped_token:
+    post:
+      description: "Generate a token scoped to an end-user workspace."
+      operationId: generateEmbeddedScopedToken
+      x-sdk-alias: generateEmbeddedScopedToken
+      x-sdk-group: EmbeddedScopedToken
+      summary: Generate a scoped token for Airbyte Embedded
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmbeddedScopedTokenRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmbeddedScopedTokenResponse"
           description: Success
       tags:
         - public
@@ -20889,6 +20913,25 @@ components:
           format: uuid
       x-sdk-component: true
     EmbeddedWidgetResponse:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+      x-sdk-component: true
+
+    EmbeddedScopedTokenRequest:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+      x-sdk-component: true
+
+    EmbeddedScopedTokenResponse:
       type: object
       required:
         - token
