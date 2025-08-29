@@ -125,7 +125,7 @@ const OrganizationWorkspacesPage: React.FC = () => {
           <FlexContainer justifyContent="space-between" alignItems="center" className={styles.headerRow}>
             <Box>
               <Heading as="h1" size="lg">
-                {organization?.organizationName}
+                {organization?.organizationName || formatMessage({ id: "organization.emptyName" })}
               </Heading>
               {canViewOrganizationDetails && (
                 <Text color="grey400" size="sm">

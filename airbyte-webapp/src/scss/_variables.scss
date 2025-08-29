@@ -59,10 +59,7 @@ $height-breadcrumb: 45px;
 
 $height-soft-edge: 15px;
 
-$height-org-picker: 58px;
-$height-org-picker-search: 52px;
-$width-org-picker-popover: 240px;
-$height-org-picker-popover-list: calc($width-org-picker-popover * 1.618 - $height-org-picker-search); // golden ratio
+$width-sidebar-picker-popover: 240px;
 $button-height-xs: 32px;
 $button-height-sm: 36px;
 $button-height-lg: 44px;

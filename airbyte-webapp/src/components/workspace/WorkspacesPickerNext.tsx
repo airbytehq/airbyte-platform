@@ -1,10 +1,11 @@
 import { Popover, PopoverButton, PopoverPanel, useClose } from "@headlessui/react";
 import classNames from "classnames";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { FormattedMessage, useIntl } from "react-intl";
 // eslint-disable-next-line no-restricted-imports
 import { Link } from "react-router-dom";
+import { Components, Virtuoso, VirtuosoHandle, ItemContent } from "react-virtuoso";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
@@ -44,11 +45,23 @@ interface WorkspacesPickerNextProps {
   currentWorkspace: WorkspaceRead;
 }
 
+interface WorkspacePickerContext {
+  isFetchingNextPage: boolean;
+  closePopover: () => void;
+  currentWorkspaceId: string;
+}
+
 const WorkspacePickerPanelContent: React.FC<WorkspacesPickerNextProps> = ({ currentWorkspace }) => {
   const organizationId = useCurrentOrganizationId();
   const { formatMessage } = useIntl();
   const [searchValue, setSearchValue] = useState("");
-  const { data: workspaces, isLoading } = useListWorkspacesInOrganization({
+  const {
+    data: workspaces,
+    isLoading,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useListWorkspacesInOrganization({
     organizationId,
     nameContains: searchValue,
     pagination: { pageSize: 10 },
@@ -57,12 +70,17 @@ const WorkspacePickerPanelContent: React.FC<WorkspacesPickerNextProps> = ({ curr
 
   const infiniteWorkspaces = workspaces?.pages.flatMap((page) => page.workspaces) ?? [];
 
+  const virtuosoRef = useRef<VirtuosoHandle | null>(null);
+
   return (
     <>
       <Box p="md">
         <SearchInput
           value={searchValue}
-          onChange={setSearchValue}
+          onChange={(value) => {
+            setSearchValue(value);
+            virtuosoRef.current?.scrollTo({ top: 0 });
+          }}
           placeholder={formatMessage({ id: "sidebar.searchAllWorkspaces" })}
           debounceTimeout={150}
         />
@@ -85,20 +103,60 @@ const WorkspacePickerPanelContent: React.FC<WorkspacesPickerNextProps> = ({ curr
       )}
       {!isLoading && infiniteWorkspaces.length > 0 && (
         <div className={styles.workspacesPicker__options}>
-          {infiniteWorkspaces.map((workspace) => (
-            <Link
-              key={workspace.workspaceId}
-              onClick={() => flushSync(() => closePopover())}
-              to={`/${RoutePaths.Workspaces}/${workspace.workspaceId}`}
-              className={classNames(styles.workspacesPicker__option, {
-                [styles["workspacesPicker__option--selected"]]: workspace.workspaceId === currentWorkspace.workspaceId,
-              })}
-            >
-              <Text bold={workspace.workspaceId === currentWorkspace.workspaceId}>{workspace.name}</Text>
-            </Link>
-          ))}
+          <Virtuoso<WorkspaceRead, WorkspacePickerContext>
+            ref={virtuosoRef}
+            style={{
+              height: 300,
+              width: "100%",
+            }}
+            data={infiniteWorkspaces}
+            context={{
+              isFetchingNextPage,
+              closePopover,
+              currentWorkspaceId: currentWorkspace.workspaceId,
+            }}
+            endReached={() => {
+              if (hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+              }
+            }}
+            components={{
+              Footer,
+            }}
+            itemContent={WorkspaceLink}
+          />
         </div>
       )}
     </>
+  );
+};
+
+const WorkspaceLink: ItemContent<WorkspaceRead, WorkspacePickerContext> = (_index, workspace, context) => {
+  return (
+    <Link
+      key={workspace.workspaceId}
+      onClick={() => flushSync(() => context.closePopover())}
+      to={`/${RoutePaths.Workspaces}/${workspace.workspaceId}`}
+      className={classNames(styles.workspacesPicker__option, {
+        [styles["workspacesPicker__option--selected"]]: workspace.workspaceId === context.currentWorkspaceId,
+      })}
+    >
+      <Text bold={workspace.workspaceId === context.currentWorkspaceId}>{workspace.name}</Text>
+    </Link>
+  );
+};
+
+const Footer: Components<WorkspaceRead, WorkspacePickerContext>["Footer"] = ({ context }) => {
+  if (!context?.isFetchingNextPage) {
+    return null;
+  }
+  return (
+    <Box px="md" pb="md">
+      <FlexContainer direction="column" gap="md">
+        <LoadingSkeleton />
+        <LoadingSkeleton />
+        <LoadingSkeleton />
+      </FlexContainer>
+    </Box>
   );
 };
