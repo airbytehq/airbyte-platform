@@ -5,15 +5,9 @@
 package io.airbyte.workload.handler
 
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.generated.SignalApi
-import io.airbyte.api.client.model.generated.SignalInput
-import io.airbyte.config.SignalInput.Companion.SYNC_WORKFLOW
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.OssMetricsRegistry
-import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.common.DefaultDeadlineValues
 import io.airbyte.workload.errors.ConflictException
@@ -21,8 +15,6 @@ import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.DATAPLANE_ID
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.WORKLOAD_ID
-import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.metricClient
-import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.signalApi
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadHandler
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadQueueRepository
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadRepository
@@ -35,7 +27,6 @@ import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
 import io.airbyte.workload.services.WorkloadService
 import io.airbyte.workload.signal.ApiSignalSender
-import io.airbyte.workload.signal.SignalSender
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -59,7 +50,6 @@ import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
-import io.airbyte.config.SignalInput as ConfigSignalInput
 
 class WorkloadHandlerImplTest {
   private val now: OffsetDateTime = OffsetDateTime.now()
@@ -391,7 +381,6 @@ class WorkloadHandlerImplTest {
         mockk<WorkloadService>(),
         mockk<WorkloadRepository>(),
         mockk<WorkloadQueueRepository>(),
-        mockk<SignalSender>(),
         mockk<MetricClient>(),
         mockk<FeatureFlagClient>(),
         Fixtures.redeliveryWindow.toJavaDuration(),
@@ -447,7 +436,6 @@ class WorkloadHandlerImplTest {
     val metricClient: MetricClient = mockk(relaxed = true)
     private val airbyteApi: AirbyteApiClient = mockk()
     val featureFlagClient: FeatureFlagClient = mockk(relaxed = true)
-    val signalApi: SignalApi = mockk()
     val signalSender = ApiSignalSender(airbyteApi, metricClient)
     val workloadService =
       spyk(
@@ -457,6 +445,7 @@ class WorkloadHandlerImplTest {
           signalSender = signalSender,
           defaultDeadlineValues = DefaultDeadlineValues(),
           featureFlagClient = featureFlagClient,
+          metricClient = metricClient,
         ),
       )
     const val WORKLOAD_ID = "test"
@@ -468,54 +457,11 @@ class WorkloadHandlerImplTest {
           workloadService = workloadService,
           workloadRepository,
           workloadQueueRepository,
-          signalSender,
           metricClient,
           featureFlagClient,
           redeliveryWindow.toJavaDuration(),
         ),
       )
-
-    val configSignalInput =
-      ConfigSignalInput(
-        workflowType = SYNC_WORKFLOW,
-        workflowId = "workflowId",
-      )
-
-    val signalInput =
-      SignalInput(
-        workflowType = configSignalInput.workflowType,
-        workflowId = configSignalInput.workflowId,
-      )
-
-    fun mockApi() {
-      every { airbyteApi.signalApi } returns signalApi
-      every { signalApi.signal(signalInput) } returns Unit
-    }
-
-    fun verifyApi() {
-      verify { signalApi.signal(signalInput) }
-    }
-
-    fun mockApiFailingSignal() {
-      every { airbyteApi.signalApi } returns signalApi
-      every { signalApi.signal(signalInput) } throws Exception("Failed to signal")
-    }
-
-    fun verifyFailedSignal() {
-      verify {
-        metricClient.count(
-          metric = OssMetricsRegistry.WORKLOADS_SIGNAL,
-          value = 1,
-          attributes =
-            arrayOf(
-              MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
-              any(),
-              MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
-              any(),
-            ),
-        )
-      }
-    }
 
     fun workload(
       id: String = WORKLOAD_ID,

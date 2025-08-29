@@ -7,10 +7,7 @@ package io.airbyte.workload.handler
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.OssMetricsRegistry
-import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.api.domain.WorkloadQueueStats
@@ -21,7 +18,6 @@ import io.airbyte.workload.repository.WorkloadQueueRepository
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.services.WorkloadService
-import io.airbyte.workload.signal.SignalSender
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Property
 import jakarta.inject.Singleton
@@ -40,7 +36,6 @@ class WorkloadHandlerImpl(
   private val workloadService: WorkloadService,
   private val workloadRepository: WorkloadRepository,
   private val workloadQueueRepository: WorkloadQueueRepository,
-  private val signalSender: SignalSender,
   private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
   @Property(name = "airbyte.workload-api.workload-redelivery-window") private val workloadRedeliveryWindow: Duration,
@@ -107,15 +102,7 @@ class WorkloadHandlerImpl(
     workloadId: String,
     dataplaneId: String,
     deadline: OffsetDateTime,
-  ): Boolean {
-    val workload = workloadRepository.claim(workloadId, dataplaneId, deadline)
-    val claimed = workload != null && workload.status == WorkloadStatus.CLAIMED && workload.dataplaneId == dataplaneId
-    if (claimed) {
-      workload?.let { emitTimeToTransitionMetric(it, WorkloadStatus.CLAIMED) }
-      workloadQueueRepository.ackWorkloadQueueItem(workloadId)
-    }
-    return claimed
-  }
+  ): Boolean = workloadService.claimWorkload(workloadId, dataplaneId, deadline) != null
 
   override fun cancelWorkload(
     workloadId: String,
@@ -246,29 +233,6 @@ class WorkloadHandlerImpl(
 
     return domainWorkloads.map { it.toApi() }
   }
-
-  private fun emitTimeToTransitionMetric(
-    workload: DomainWorkload,
-    status: WorkloadStatus,
-  ) {
-    workload.timeSinceCreateInMillis()?.let {
-      metricClient.distribution(
-        OssMetricsRegistry.WORKLOAD_TIME_TO_TRANSITION_FROM_CREATE,
-        it.toDouble(),
-        MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, workload.type.name),
-        MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, workload.dataplaneGroup ?: "undefined"),
-        MetricAttribute(MetricTags.DATA_PLANE_ID_TAG, workload.dataplaneId ?: "undefined"),
-        MetricAttribute(MetricTags.STATUS_TAG, status.name),
-      )
-    }
-  }
-
-  private fun DomainWorkload.timeSinceCreateInMillis(): Long? =
-    createdAt?.let { createdAt ->
-      updatedAt?.let { updatedAt ->
-        updatedAt.toInstant().toEpochMilli() - createdAt.toInstant().toEpochMilli()
-      }
-    }
 
   private fun <T> withWorkloadServiceExceptionConverter(f: () -> T): T {
     try {

@@ -41,6 +41,7 @@ class WorkloadServiceTest {
         signalSender = signalSender,
         defaultDeadlineValues = DefaultDeadlineValues(),
         featureFlagClient = TestClient(emptyMap()),
+        metricClient = mockk(relaxed = true),
       )
   }
 

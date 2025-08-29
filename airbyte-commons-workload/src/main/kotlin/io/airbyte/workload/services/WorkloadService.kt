@@ -8,6 +8,10 @@ import io.airbyte.commons.enums.convertTo
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.common.DefaultDeadlineValues
 import io.airbyte.workload.repository.WorkloadQueueRepository
 import io.airbyte.workload.repository.WorkloadRepository
@@ -44,6 +48,7 @@ class WorkloadService(
   private val workloadQueueRepository: WorkloadQueueRepository,
   private val signalSender: SignalSender,
   private val defaultDeadlineValues: DefaultDeadlineValues,
+  private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
 ) {
   fun createWorkload(
@@ -137,6 +142,28 @@ class WorkloadService(
     }
   }
 
+  /**
+   * Claim a workload for [dataplaneId].
+   *
+   * Returns the workload if the claim was successful, null otherwise.
+   */
+  fun claimWorkload(
+    workloadId: String,
+    dataplaneId: String,
+    deadline: OffsetDateTime,
+  ): Workload? {
+    val workload = workloadRepository.claim(workloadId, dataplaneId, deadline)
+    if (workload != null) {
+      val claimed = workload.status == WorkloadStatus.CLAIMED && workload.dataplaneId == dataplaneId
+      if (claimed) {
+        emitTimeToTransitionMetric(workload, WorkloadStatus.CLAIMED)
+        workloadQueueRepository.ackWorkloadQueueItem(workloadId)
+        return workload
+      }
+    }
+    return null
+  }
+
   fun failWorkload(
     workloadId: String,
     source: String?,
@@ -168,21 +195,22 @@ class WorkloadService(
     workloadId: String,
     deadline: OffsetDateTime,
   ) {
-    val workload = workloadRepository.launch(workloadId, deadline)
-    if (workload == null) {
-      workloadRepository
-        .findById(workloadId)
-        .map { w ->
-          when (w.status) {
-            WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
-              "Trying to set a workload in a terminal state (${w.status}) to launched",
-            )
-            WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
-              "Can't set a workload status to running on a workload that hasn't been claimed",
-            )
-            else -> logger.error { "Failed to update workload ($workloadId) to launched. Current status is ${w.status}." }
-          }
-        }.orElseThrow { NotFoundException("Workload $workloadId not found") }
+    val workload =
+      workloadRepository.launch(workloadId, deadline)
+        ?: workloadRepository.findById(workloadId).orElseThrow { NotFoundException("Workload $workloadId not found") }
+
+    // Always emit this metric. Even though the workload state transition may have failed because the workload was already in a further state,
+    // this reflects when the launcher finished launching.
+    emitTimeToTransitionMetric(workload, WorkloadStatus.LAUNCHED)
+
+    when (workload.status) {
+      WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
+        "Trying to set a workload in a terminal state (${workload.status}) to launched",
+      )
+      WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
+        "Can't set a workload status to running on a workload that hasn't been claimed",
+      )
+      else -> logger.error { "Failed to update workload ($workloadId) to launched. Current status is ${workload.status}." }
     }
   }
 
@@ -210,21 +238,22 @@ class WorkloadService(
     workloadId: String,
     deadline: OffsetDateTime,
   ) {
-    val workload = workloadRepository.running(workloadId, deadline)
-    if (workload == null) {
-      workloadRepository
-        .findById(workloadId)
-        .map { w ->
-          when (w.status) {
-            WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
-              "Trying to set a workload in a terminal state (${w.status}) to running",
-            )
-            WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
-              "Can't set a workload status to running on a workload that hasn't been claimed",
-            )
-            else -> logger.error { "Failed to update workload ($workloadId) to running. Current status is ${w.status}." }
-          }
-        }.orElseThrow { NotFoundException("Workload $workloadId not found") }
+    val workload =
+      workloadRepository.running(workloadId, deadline)
+        ?: workloadRepository.findById(workloadId).orElseThrow { NotFoundException("Workload $workloadId not found") }
+
+    // Always emit this metric. Even though the workload state transition may have failed because the workload was already in a further state,
+    // this reflects when the workload reported it was up and running.
+    emitTimeToTransitionMetric(workload, WorkloadStatus.RUNNING)
+
+    when (workload.status) {
+      WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
+        "Trying to set a workload in a terminal state (${workload.status}) to running",
+      )
+      WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
+        "Can't set a workload status to running on a workload that hasn't been claimed",
+      )
+      else -> logger.error { "Failed to update workload ($workloadId) to running. Current status is ${workload.status}." }
     }
   }
 
@@ -256,6 +285,29 @@ class WorkloadService(
   fun getWorkload(workloadId: String): Workload =
     workloadRepository.findById(workloadId).orElseThrow {
       NotFoundException("Could not find workload with id: $workloadId")
+    }
+
+  private fun emitTimeToTransitionMetric(
+    workload: Workload,
+    status: WorkloadStatus,
+  ) {
+    workload.timeSinceCreateInMillis()?.let {
+      metricClient.distribution(
+        OssMetricsRegistry.WORKLOAD_TIME_TO_TRANSITION_FROM_CREATE,
+        it.toDouble(),
+        MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, workload.type.name),
+        MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, workload.dataplaneGroup ?: "undefined"),
+        MetricAttribute(MetricTags.DATA_PLANE_ID_TAG, workload.dataplaneId ?: "undefined"),
+        MetricAttribute(MetricTags.STATUS_TAG, status.name),
+      )
+    }
+  }
+
+  private fun Workload.timeSinceCreateInMillis(): Long? =
+    createdAt?.let { createdAt ->
+      updatedAt?.let { updatedAt ->
+        updatedAt.toInstant().toEpochMilli() - createdAt.toInstant().toEpochMilli()
+      }
     }
 
   companion object {
