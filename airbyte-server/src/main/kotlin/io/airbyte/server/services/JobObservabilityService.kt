@@ -7,7 +7,9 @@ package io.airbyte.server.services
 import io.airbyte.api.model.generated.AttemptRead
 import io.airbyte.api.model.generated.JobRead
 import io.airbyte.commons.server.handlers.JobHistoryHandler
+import io.airbyte.config.Attempt
 import io.airbyte.config.JobConfig
+import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.data.repositories.entities.ObsJobsStats
 import io.airbyte.data.repositories.entities.ObsStreamStats
@@ -100,6 +102,7 @@ class JobObservabilityService(
     val destinationImageTag: String,
     val job: JobRead,
     val attempts: List<AttemptRead>,
+    val attemptsDurationSeconds: Long,
   )
 
   fun finalizeStats(jobId: Long) {
@@ -121,12 +124,7 @@ class JobObservabilityService(
         jobType = details.job.configType.toString(),
         status = details.job.status.toString(),
         attemptCount = details.attempts.size,
-        durationSeconds =
-          (
-            details.attempts
-              .lastOrNull()
-              ?.endedAt ?: details.job.updatedAt
-          ) - details.job.createdAt,
+        durationSeconds = details.attemptsDurationSeconds,
       )
     obsStatsService.saveJobsStats(obsJobStats)
 
@@ -311,6 +309,7 @@ class JobObservabilityService(
     val job = jobPersistence.getJob(jobId)
     val destVersion = actorDefinitionService.getActorDefinitionVersion(job.config.getDestinationVersionId())
     val sourceVersion = job.config.getSourceVersionId()?.let { actorDefinitionService.getActorDefinitionVersion(it) }
+    val durationSeconds = getDurationSecondsFromAttempts(job.attempts)
 
     val workspaceId = job.config.getWorkspaceId()
     val orgId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId).orElse(UUID_ZERO)
@@ -328,8 +327,21 @@ class JobObservabilityService(
       destinationImageTag = destVersion.dockerImageTag,
       job = jobRead.job,
       attempts = jobRead.attempts.map { it.attempt },
+      attemptsDurationSeconds = durationSeconds,
     )
   }
+
+  private fun getDurationSecondsFromAttempts(attempts: List<Attempt>): Long =
+    attempts.sumOf { attempt ->
+      attempt.output
+        ?.sync
+        ?.standardSyncSummary
+        ?.getDurationSecondsFromSummary() ?: attempt.getDurationsSecondsWhenNoJobOutput()
+    }
+
+  private fun StandardSyncSummary.getDurationSecondsFromSummary(): Long = (endTime - startTime) / 1000
+
+  private fun Attempt.getDurationsSecondsWhenNoJobOutput(): Long = (endedAtInSecond ?: updatedAtInSecond) - createdAtInSecond
 
   /**
    * returns (souceImageName, destinationImageName) for a jobId
