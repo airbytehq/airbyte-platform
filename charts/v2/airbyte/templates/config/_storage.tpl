@@ -279,6 +279,24 @@ Renders the storage.gcs.credentialsJsonPath environment variable
 {{- end }}
 
 {{/*
+Renders the global.storage.gcs.credentialsSecretName value
+*/}}
+{{- define "airbyte.storage.gcs.credentialsSecretName" }}
+    {{- .Values.global.storage.gcs.credentialsSecretName | default (include "airbyte.storage.secretName" .) }}
+{{- end }}
+
+{{/*
+Renders the storage.gcs.credentialsSecretName environment variable
+*/}}
+{{- define "airbyte.storage.gcs.credentialsSecretName.env" }}
+- name: GCS_CREDENTIALS_SECRET_NAME
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: GCS_CREDENTIALS_SECRET_NAME
+{{- end }}
+
+{{/*
 Renders the global.storage.minio.accessKeyId value
 */}}
 {{- define "airbyte.storage.minio.accessKeyId" }}
@@ -387,6 +405,7 @@ Renders the set of all storage environment variables
 {{- if eq $opt "gcs" }}
 {{- include "airbyte.storage.gcs.credentialsJson.env" . }}
 {{- include "airbyte.storage.gcs.credentialsJsonPath.env" . }}
+{{- include "airbyte.storage.gcs.credentialsSecretName.env" . }}
 {{- end }}
 
 {{- if eq $opt "minio" }}
@@ -425,6 +444,7 @@ STORAGE_BUCKET_WORKLOAD_OUTPUT: {{ include "airbyte.storage.bucket.workloadOutpu
 
 {{- if eq $opt "gcs" }}
 GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.storage.gcs.credentialsJsonPath" . | quote }}
+GCS_CREDENTIALS_SECRET_NAME: {{ include "airbyte.storage.gcs.credentialsSecretName" . | quote }}
 {{- end }}
 
 {{- if eq $opt "minio" }}

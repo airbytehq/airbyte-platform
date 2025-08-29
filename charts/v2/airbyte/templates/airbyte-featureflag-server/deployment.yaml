@@ -143,7 +143,7 @@ spec:
       {{- if eq (include "airbyte.storage.type" .) "gcs" }}
       - name: gcs-log-creds-volume
         secret:
-          secretName: {{ include "airbyte.storage.secretName" }}
+          secretName: {{ include "airbyte.storage.secretName" . }}
           items:
             - key: {{ include "airbyte.storage.gcs.credentialsJson.secretKey" . }}
               path: "gcp.json"

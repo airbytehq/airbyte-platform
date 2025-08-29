@@ -1141,6 +1141,12 @@ storage:
         - gcs
       defaultValue: "/secrets/gcp-creds/gcp.json"
 
+    - env: GCS_CREDENTIALS_SECRET_NAME
+      key: gcs.credentialsSecretName
+      defaultValueExp: (include "airbyte.storage.secretName" .)
+      discriminatorOpts: 
+        - gcs
+
     - env: AWS_ACCESS_KEY_ID
       key: minio.accessKeyId
       discriminatorOpts: 
@@ -1545,6 +1551,10 @@ workloads:
       key: containerOrchestrator.secretName
       defaultValueExp: .Values.global.secretName
 
+    - env: CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH
+      key: containerOrchestrator.secretMountPath
+      defaultValue: /secrets/gcp-creds
+
     - env: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH
       key: containerOrchestrator.dataPlane.secretMountPath
       defaultValue: /secrets/dataplane-creds
@@ -1559,10 +1569,6 @@ workloads:
     - env: CONTAINER_ORCHESTRATOR_JAVA_OPTS
       key: containerOrchestrator.javaOpts
       defaultValue: -XX:+ExitOnOutOfMemoryError -XX:MaxRAMPercentage=75.0 -javaagent:/app/dd-java-agent.jar -Ddd.profiling.enabled=true -XX:FlightRecorderOptions=stackdepth=256 -Ddd.trace.sample.rate=0.5 -Ddd.trace.request_header.tags=User-Agent:http.useragent
-
-    - env: CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH
-      key: containerOrchestrator.secretMountPath
-      defaultValue: /secrets/gcp-creds
 
     - env: KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS
       key: kubernetesClientMaxIdleConnections

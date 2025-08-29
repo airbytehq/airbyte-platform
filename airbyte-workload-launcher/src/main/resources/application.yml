@@ -203,6 +203,9 @@ airbyte:
           data-plane-creds:
             mount-path: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH:}
             secret-name: ${CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME:}
+          gcs-creds:
+            mount-path: ${CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH:}
+            secret-name: ${GCS_CREDENTIALS_SECRET_NAME:}
           secret:
             mount-path: ${CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH:}
             secret-name: ${CONTAINER_ORCHESTRATOR_SECRET_NAME:}

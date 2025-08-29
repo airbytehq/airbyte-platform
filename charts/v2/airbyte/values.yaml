@@ -257,6 +257,8 @@ global:
 
     containerOrchestrator:
       secretName: ""
+      secretMountPath: ""
+
       dataPlane:
         secretName: ""
         secretMountPath: ""

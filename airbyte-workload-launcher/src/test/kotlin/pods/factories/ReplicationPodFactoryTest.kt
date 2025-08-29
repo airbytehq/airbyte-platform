@@ -182,8 +182,10 @@ class ReplicationPodFactoryTest {
     val defaultVolumeFactory =
       VolumeFactory(
         googleApplicationCredentials = null,
-        secretName = "test-vol-secret-name",
-        secretMountPath = "/secret-mount-path",
+        gcsCredsSecretName = null,
+        gcsCredsMountPath = null,
+        gsmCredsSecretName = "test-vol-secret-name",
+        gsmCredsMountPath = "/secret-mount-path",
         dataPlaneCredsSecretName = "test-dp-secret-name",
         dataPlaneCredsMountPath = "/dp-secret-mount-path",
         stagingMountPath = "/staging-mount-path",

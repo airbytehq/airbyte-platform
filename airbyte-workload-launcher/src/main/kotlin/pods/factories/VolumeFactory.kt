@@ -23,8 +23,10 @@ import jakarta.inject.Singleton
 @Singleton
 data class VolumeFactory(
   @Value("\${google.application.credentials}") private val googleApplicationCredentials: String?,
-  @Value("\${airbyte.worker.job.kube.volumes.secret.secret-name}") private val secretName: String?,
-  @Value("\${airbyte.worker.job.kube.volumes.secret.mount-path}") private val secretMountPath: String?,
+  @Value("\${airbyte.worker.job.kube.volumes.gcs-creds.secret-name}") private val gcsCredsSecretName: String?,
+  @Value("\${airbyte.worker.job.kube.volumes.gcs-creds.mount-path}") private val gcsCredsMountPath: String?,
+  @Value("\${airbyte.worker.job.kube.volumes.secret.secret-name}") private val gsmCredsSecretName: String?,
+  @Value("\${airbyte.worker.job.kube.volumes.secret.mount-path}") private val gsmCredsMountPath: String?,
   @Value("\${airbyte.worker.job.kube.volumes.data-plane-creds.secret-name}") private val dataPlaneCredsSecretName: String?,
   @Value("\${airbyte.worker.job.kube.volumes.data-plane-creds.mount-path}") private val dataPlaneCredsMountPath: String?,
   @Value("\${airbyte.worker.job.kube.volumes.staging.mount-path}") private val stagingMountPath: String,
@@ -85,12 +87,16 @@ data class VolumeFactory(
 
   private fun secret(): VolumeMountPair? {
     val hasSecrets =
-      StringUtils.isNotEmpty(secretName) &&
-        StringUtils.isNotEmpty(secretMountPath) &&
+      (StringUtils.isNotEmpty(gcsCredsSecretName) || StringUtils.isNotEmpty(gsmCredsSecretName)) &&
+        (StringUtils.isNotEmpty(gcsCredsMountPath) || StringUtils.isNotEmpty(gsmCredsMountPath)) &&
         StringUtils.isNotEmpty(googleApplicationCredentials)
+
     if (!hasSecrets) {
       return null
     }
+
+    val secretName = gcsCredsSecretName ?: gsmCredsSecretName
+    val secretMountPath = gsmCredsMountPath ?: gsmCredsMountPath
 
     val volume =
       VolumeBuilder()
