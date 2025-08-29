@@ -441,6 +441,7 @@ airbyte:
 
   manifest-server-api:
     base-path: ${MANIFEST_SERVER_API_HOST:}
+    signature-secret: ${AB_JWT_SIGNATURE_SECRET:}
     connect-timeout-seconds: ${MANIFEST_SERVER_API_CONNECT_TIMEOUT_SECONDS:30}
     read-timeout-seconds: ${MANIFEST_SERVER_API_READ_TIMEOUT_SECONDS:300}
 

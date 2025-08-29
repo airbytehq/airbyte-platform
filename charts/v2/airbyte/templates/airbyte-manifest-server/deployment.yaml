@@ -59,6 +59,7 @@ spec:
         imagePullPolicy: "{{ .Values.manifestServer.image.pullPolicy }}"
         env:
         {{- include "airbyte.common.envs" . | nindent 8 }}
+        {{- include "airbyte.auth.jwt.envs" . | nindent 8 }}
         {{- include "airbyte.logging.envs" . | nindent 8 }}
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
 
