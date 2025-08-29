@@ -637,53 +637,109 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
     val jobStateInput =
       JobCheckFailureInput(jobId, attemptId.toInt(), connectionId)
-    val isLastJobOrAttemptFailure =
-      runMandatoryActivityWithOutput(
-        Function { input: JobCheckFailureInput? ->
-          jobCreationAndStatusUpdateActivity?.isLastJobOrAttemptFailure(input!!)
-        },
-        jobStateInput,
-      )!!
 
-    if (!isLastJobOrAttemptFailure) {
-      log.info("SOURCE CHECK: Skipped, last attempt was not a failure")
-      log.info("DESTINATION CHECK: Skipped, last attempt was not a failure")
-      return checkConnectionResult
-    }
+    // Version check for using separate source/destination check methods
+    val separateCheckMethodsVersion =
+      Workflow.getVersion(SEPARATE_CHECK_METHODS_TAG, Workflow.DEFAULT_VERSION, SEPARATE_CHECK_METHODS_CURRENT_VERSION)
 
-    if (isReset) {
-      // reset jobs don't need to connect to any external source, so check connection is unnecessary
-      log.info("SOURCE CHECK: Skipped, reset job")
-    } else {
-      log.info("SOURCE CHECK: Starting")
-      val sourceCheckResponse: ConnectorJobOutput
-      sourceCheckResponse = runCheckWithCommandApiInChildWorkflow(sourceActorId, jobId.toString(), attemptId, ActorType.SOURCE.value())
+    if (separateCheckMethodsVersion >= SEPARATE_CHECK_METHODS_CURRENT_VERSION) {
+      // New version: use separate methods for source and destination checks
+      val shouldRunSourceCheck =
+        runMandatoryActivityWithOutput(
+          Function { input: JobCheckFailureInput? ->
+            jobCreationAndStatusUpdateActivity?.shouldRunSourceCheck(input!!)
+          },
+          jobStateInput,
+        )!!
+      if (shouldRunSourceCheck) {
+        log.info("SOURCE CHECK: Starting")
+        val sourceCheckResponse = runCheckWithCommandApiInChildWorkflow(sourceActorId, jobId.toString(), attemptId, ActorType.SOURCE.value())
 
-      if (isOutputFailed(sourceCheckResponse)) {
-        checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.SOURCE)
-        checkConnectionResult.setFailureOutput(sourceCheckResponse)
-        log.info("SOURCE CHECK: Failed")
-      } else {
-        log.info("SOURCE CHECK: Successful")
+        if (isOutputFailed(sourceCheckResponse)) {
+          checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.SOURCE)
+          checkConnectionResult.setFailureOutput(sourceCheckResponse)
+          log.info("SOURCE CHECK: Failed")
+        } else {
+          log.info("SOURCE CHECK: Successful")
+        }
       }
-    }
 
-    if (checkConnectionResult.isFailed) {
-      log.info("DESTINATION CHECK: Skipped, source check failed")
-    } else {
-      val destinationCheckResponse =
-        runCheckWithCommandApiInChildWorkflow(
-          destinationActorId,
-          jobId.toString(),
-          attemptId,
-          ActorType.DESTINATION.value(),
-        )
-      if (isOutputFailed(destinationCheckResponse)) {
-        checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.DESTINATION)
-        checkConnectionResult.setFailureOutput(destinationCheckResponse)
-        log.info("DESTINATION CHECK: Failed")
+      if (checkConnectionResult.isFailed) {
+        log.info("DESTINATION CHECK: Skipped, source check failed")
       } else {
-        log.info("DESTINATION CHECK: Successful")
+        val shouldRunDestinationCheck =
+          runMandatoryActivityWithOutput(
+            Function { input: JobCheckFailureInput? ->
+              jobCreationAndStatusUpdateActivity?.shouldRunDestinationCheck(input!!)
+            },
+            jobStateInput,
+          )!!
+
+        if (shouldRunDestinationCheck) {
+          val destinationCheckResponse =
+            runCheckWithCommandApiInChildWorkflow(
+              destinationActorId,
+              jobId.toString(),
+              attemptId,
+              ActorType.DESTINATION.value(),
+            )
+          if (isOutputFailed(destinationCheckResponse)) {
+            checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.DESTINATION)
+            checkConnectionResult.setFailureOutput(destinationCheckResponse)
+            log.info("DESTINATION CHECK: Failed")
+          } else {
+            log.info("DESTINATION CHECK: Successful")
+          }
+        }
+      }
+    } else {
+      // Old version: use the single method for backward compatibility
+      val isLastJobOrAttemptFailure =
+        runMandatoryActivityWithOutput(
+          Function { input: JobCheckFailureInput? ->
+            jobCreationAndStatusUpdateActivity?.isLastJobOrAttemptFailure(input!!)
+          },
+          jobStateInput,
+        )!!
+
+      if (!isLastJobOrAttemptFailure) {
+        log.info("SOURCE CHECK: Skipped, last attempt was not a failure")
+        log.info("DESTINATION CHECK: Skipped, last attempt was not a failure")
+        return checkConnectionResult
+      }
+      if (isReset) {
+        // reset jobs don't need to connect to any external source, so check connection is unnecessary
+      } else {
+        log.info("SOURCE CHECK: Starting")
+        val sourceCheckResponse: ConnectorJobOutput
+        sourceCheckResponse = runCheckWithCommandApiInChildWorkflow(sourceActorId, jobId.toString(), attemptId, ActorType.SOURCE.value())
+
+        if (isOutputFailed(sourceCheckResponse)) {
+          checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.SOURCE)
+          checkConnectionResult.setFailureOutput(sourceCheckResponse)
+          log.info("SOURCE CHECK: Failed")
+        } else {
+          log.info("SOURCE CHECK: Successful")
+        }
+      }
+
+      if (checkConnectionResult.isFailed) {
+        log.info("DESTINATION CHECK: Skipped, source check failed")
+      } else {
+        val destinationCheckResponse =
+          runCheckWithCommandApiInChildWorkflow(
+            destinationActorId,
+            jobId.toString(),
+            attemptId,
+            ActorType.DESTINATION.value(),
+          )
+        if (isOutputFailed(destinationCheckResponse)) {
+          checkConnectionResult.setFailureOrigin(FailureReason.FailureOrigin.DESTINATION)
+          checkConnectionResult.setFailureOutput(destinationCheckResponse)
+          log.info("DESTINATION CHECK: Failed")
+        } else {
+          log.info("DESTINATION CHECK: Successful")
+        }
       }
     }
 
@@ -1343,5 +1399,8 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
 
     private const val GET_FEATURE_FLAGS_TAG = "get_feature_flags"
     private const val GET_FEATURE_FLAGS_CURRENT_VERSION = 1
+
+    private const val SEPARATE_CHECK_METHODS_TAG = "separate_source_dest_check_methods"
+    private const val SEPARATE_CHECK_METHODS_CURRENT_VERSION = 1
   }
 }

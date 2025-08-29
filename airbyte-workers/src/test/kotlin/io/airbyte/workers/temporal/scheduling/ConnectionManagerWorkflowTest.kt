@@ -234,6 +234,14 @@ internal class ConnectionManagerWorkflowTest {
       .`when`(mJobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(any()))
       .thenReturn(true)
 
+    Mockito
+      .`when`(mJobCreationAndStatusUpdateActivity.shouldRunSourceCheck(any()))
+      .thenReturn(true)
+
+    Mockito
+      .`when`(mJobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(any()))
+      .thenReturn(true)
+
     val jobRunConfig = JobRunConfig()
     jobRunConfig.setJobId(JOB_ID.toString())
     jobRunConfig.setAttemptId(ATTEMPT_ID.toLong())
@@ -1461,6 +1469,14 @@ internal class ConnectionManagerWorkflowTest {
     fun testSourceCheckSkippedWhenReset() {
       Mockito
         .`when`(mJobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(any()))
+        .thenReturn(true)
+
+      Mockito
+        .`when`(mJobCreationAndStatusUpdateActivity.shouldRunSourceCheck(any()))
+        .thenReturn(false) // Source check should be skipped for reset
+
+      Mockito
+        .`when`(mJobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(any()))
         .thenReturn(true)
 
       val jobRunConfig = JobRunConfig()

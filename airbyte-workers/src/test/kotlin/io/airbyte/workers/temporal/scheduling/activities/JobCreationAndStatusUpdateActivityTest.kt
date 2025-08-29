@@ -17,6 +17,8 @@ import io.airbyte.api.client.model.generated.FailAttemptRequest
 import io.airbyte.api.client.model.generated.JobConfigType
 import io.airbyte.api.client.model.generated.JobCreate
 import io.airbyte.api.client.model.generated.JobFailureRequest
+import io.airbyte.api.client.model.generated.JobIdRequestBody
+import io.airbyte.api.client.model.generated.JobInfoLightRead
 import io.airbyte.api.client.model.generated.JobInfoRead
 import io.airbyte.api.client.model.generated.JobRead
 import io.airbyte.api.client.model.generated.JobStatus
@@ -195,6 +197,209 @@ internal class JobCreationAndStatusUpdateActivityTest {
         RetryableException::class.java,
         Executable { jobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(input) },
       )
+    }
+
+    // shouldRunSourceCheck tests
+    @Test
+    @Throws(IOException::class)
+    fun shouldRunSourceCheckReturnsFalseForResetJob() {
+      val input =
+        JobCheckFailureInput(
+          JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+        )
+
+      val jobRead =
+        JobRead(
+          id = JOB_ID,
+          configType = JobConfigType.RESET_CONNECTION,
+          configId = CONNECTION_ID.toString(),
+          createdAt = 0L,
+          updatedAt = 0L,
+          status = JobStatus.RUNNING,
+        )
+      val jobInfoLight = JobInfoLightRead(jobRead)
+
+      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      whenever(jobsApi.getJobInfoLight(JobIdRequestBody(JOB_ID)))
+        .thenReturn(jobInfoLight)
+
+      val result = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
+
+      Assertions.assertFalse(result)
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun shouldRunSourceCheckReturnsTrueForSyncJobOnFirstAttemptWithPreviousFailure() {
+      val input =
+        JobCheckFailureInput(
+          JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+        )
+
+      val jobRead =
+        JobRead(
+          id = JOB_ID,
+          configType = JobConfigType.SYNC,
+          configId = CONNECTION_ID.toString(),
+          createdAt = 0L,
+          updatedAt = 0L,
+          status = JobStatus.RUNNING,
+        )
+      val jobInfoLight = JobInfoLightRead(jobRead)
+
+      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      whenever(jobsApi.getJobInfoLight(JobIdRequestBody(JOB_ID)))
+        .thenReturn(jobInfoLight)
+      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
+        .thenReturn(BooleanRead(false))
+
+      val result = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
+
+      Assertions.assertTrue(result)
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun shouldRunSourceCheckReturnsFalseForSyncJobOnFirstAttemptWithPreviousSuccess() {
+      val input =
+        JobCheckFailureInput(
+          JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+        )
+
+      val jobRead =
+        JobRead(
+          id = JOB_ID,
+          configType = JobConfigType.SYNC,
+          configId = CONNECTION_ID.toString(),
+          createdAt = 0L,
+          updatedAt = 0L,
+          status = JobStatus.RUNNING,
+        )
+      val jobInfoLight = JobInfoLightRead(jobRead)
+
+      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      whenever(jobsApi.getJobInfoLight(JobIdRequestBody(JOB_ID)))
+        .thenReturn(jobInfoLight)
+      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
+        .thenReturn(BooleanRead(true))
+
+      val result = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
+
+      Assertions.assertFalse(result)
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun shouldRunSourceCheckReturnsTrueForSyncJobOnRetryAttempt() {
+      val input =
+        JobCheckFailureInput(
+          JOB_ID,
+          ATTEMPT_NUMBER_1, // Second attempt
+          CONNECTION_ID,
+        )
+
+      val jobRead =
+        JobRead(
+          id = JOB_ID,
+          configType = JobConfigType.SYNC,
+          configId = CONNECTION_ID.toString(),
+          createdAt = 0L,
+          updatedAt = 0L,
+          status = JobStatus.RUNNING,
+        )
+      val jobInfoLight = JobInfoLightRead(jobRead)
+
+      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      whenever(jobsApi.getJobInfoLight(JobIdRequestBody(JOB_ID)))
+        .thenReturn(jobInfoLight)
+
+      val result = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
+
+      Assertions.assertTrue(result)
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun shouldRunSourceCheckHandlesApiFailureGracefully() {
+      val input =
+        JobCheckFailureInput(
+          JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+        )
+
+      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      whenever(jobsApi.getJobInfoLight(any<JobIdRequestBody>()))
+        .thenThrow(IOException(TEST_EXCEPTION_MESSAGE))
+
+      // When API fails to get job info, it should fall back to isLastJobOrAttemptFailure logic
+      // For first attempt, it should check previous job status
+      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
+        .thenReturn(BooleanRead(false))
+
+      val result = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
+
+      Assertions.assertTrue(result)
+    }
+
+    // shouldRunDestinationCheck tests
+    @Test
+    @Throws(IOException::class)
+    fun shouldRunDestinationCheckReturnsTrueOnRetryAttempt() {
+      val input =
+        JobCheckFailureInput(
+          JOB_ID,
+          ATTEMPT_NUMBER_1, // Second attempt
+          CONNECTION_ID,
+        )
+
+      val result = jobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(input)
+
+      Assertions.assertTrue(result)
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun shouldRunDestinationCheckReturnsTrueOnFirstAttemptWithPreviousFailure() {
+      val input =
+        JobCheckFailureInput(
+          JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+        )
+
+      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
+        .thenReturn(BooleanRead(false))
+
+      val result = jobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(input)
+
+      Assertions.assertTrue(result)
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun shouldRunDestinationCheckReturnsFalseOnFirstAttemptWithPreviousSuccess() {
+      val input =
+        JobCheckFailureInput(
+          JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+        )
+
+      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
+        .thenReturn(BooleanRead(true))
+
+      val result = jobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(input)
+
+      Assertions.assertFalse(result)
     }
 
     @Test

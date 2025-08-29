@@ -482,4 +482,10 @@ interface JobCreationAndStatusUpdateActivity {
 
   @ActivityMethod
   fun isLastJobOrAttemptFailure(input: JobCheckFailureInput): Boolean
+
+  @ActivityMethod
+  fun shouldRunSourceCheck(input: JobCheckFailureInput): Boolean
+
+  @ActivityMethod
+  fun shouldRunDestinationCheck(input: JobCheckFailureInput): Boolean
 }

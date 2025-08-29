@@ -10,8 +10,10 @@ import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.ConnectionJobRequestBody
 import io.airbyte.api.client.model.generated.CreateNewAttemptNumberRequest
 import io.airbyte.api.client.model.generated.FailAttemptRequest
+import io.airbyte.api.client.model.generated.JobConfigType
 import io.airbyte.api.client.model.generated.JobCreate
 import io.airbyte.api.client.model.generated.JobFailureRequest
+import io.airbyte.api.client.model.generated.JobIdRequestBody
 import io.airbyte.api.client.model.generated.JobSuccessWithAttemptNumberRequest
 import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody
 import io.airbyte.api.client.model.generated.ReportJobStartRequest
@@ -292,6 +294,38 @@ class JobCreationAndStatusUpdateActivityImpl(
       return false
     }
   }
+
+  /**
+   * This method is used to determine if the source check should be run.
+   * For reset connections, we skip the source check since reset jobs don't need to connect
+   * to any external source. Otherwise, it delegates to isLastJobOrAttemptFailure.
+   *
+   * @param input - JobCheckFailureInput.
+   * @return - boolean.
+   */
+  override fun shouldRunSourceCheck(input: JobCheckFailureInput): Boolean =
+    when {
+      isResetJob(input.jobId!!) -> false
+      else -> isLastJobOrAttemptFailure(input)
+    }
+
+  /**
+   * This method is used to determine if the destination check should be run.
+   * Always delegates to isLastJobOrAttemptFailure.
+   *
+   * @param input - JobCheckFailureInput.
+   * @return - boolean.
+   */
+  override fun shouldRunDestinationCheck(input: JobCheckFailureInput): Boolean = isLastJobOrAttemptFailure(input)
+
+  private fun isResetJob(jobId: Long): Boolean =
+    try {
+      val jobInfoLight = airbyteApiClient.jobsApi.getJobInfoLight(JobIdRequestBody(jobId))
+      jobInfoLight.job.configType == JobConfigType.RESET_CONNECTION
+    } catch (e: Exception) {
+      log.error("Failed to fetch job info for job {}, assuming not a reset job", jobId, e)
+      false
+    }
 
   companion object {
     private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
