@@ -1,16 +1,23 @@
 import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
+import { BrandingBadge } from "components/ui/BrandingBadge";
 import { Text } from "components/ui/Text";
 
-import { FeatureItem, useFeature } from "core/services/features";
+import { FeatureItem, IfFeatureEnabled, useFeature } from "core/services/features";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { CancelInvitationMenuItem } from "./CancelInvitationMenuItem";
 import { ChangeRoleMenuItem } from "./ChangeRoleMenuItem";
 import { RemoveRoleMenuItem } from "./RemoveRoleMenuItem";
 import styles from "./RoleManagementMenuBody.module.scss";
-import { ResourceType, UnifiedUserModel, permissionStringDictionary, permissionsByResourceType } from "./util";
+import {
+  ResourceType,
+  UnifiedUserModel,
+  isTeamsFeaturePermissionType,
+  permissionStringDictionary,
+  permissionsByResourceType,
+} from "./util";
 interface RoleManagementMenuBodyProps {
   user: UnifiedUserModel;
   resourceType: ResourceType;
@@ -50,6 +57,11 @@ export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ 
                 }}
               />
             </Text>
+            {isTeamsFeaturePermissionType(user?.organizationPermission?.permissionType) && (
+              <IfFeatureEnabled feature={FeatureItem.CloudForTeamsBranding}>
+                <BrandingBadge product="cloudForTeams" />
+              </IfFeatureEnabled>
+            )}
           </Box>
         </li>
       )}

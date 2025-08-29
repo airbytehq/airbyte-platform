@@ -182,9 +182,8 @@ export const isTeamsFeaturePermissionType = (permission: PermissionType): boolea
   const warningPermissions: PermissionType[] = [
     PermissionType.workspace_editor,
     PermissionType.workspace_runner,
-    // TBD: ask do we need to handle organization level permissions
-    // PermissionType.organization_editor,
-    // PermissionType.organization_runner,
+    PermissionType.organization_editor,
+    PermissionType.organization_runner,
   ];
   return warningPermissions.includes(permission);
 };
