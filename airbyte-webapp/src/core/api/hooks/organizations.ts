@@ -5,6 +5,7 @@ import { useCurrentUser } from "core/services/auth";
 
 import { getWorkspaceQueryKey } from "./workspaces";
 import { ApiCallOptions } from "../apiCall";
+import { HttpError } from "../errors";
 import {
   getOrganization,
   getOrgInfo,
@@ -137,7 +138,13 @@ export const useOrganizationTrialStatus = (
   return useSuspenseQuery(
     organizationKeys.trialStatus(organizationId),
     () => {
-      return getOrganizationTrialStatus({ organizationId }, requestOptions);
+      return getOrganizationTrialStatus({ organizationId }, requestOptions).catch((error) => {
+        // The API will return 404 if there is no organization_payment_config, so we want to handle that gracefully
+        if (error instanceof HttpError && error.status === 404) {
+          return null;
+        }
+        throw error;
+      });
     },
     {
       enabled: options?.enabled,
