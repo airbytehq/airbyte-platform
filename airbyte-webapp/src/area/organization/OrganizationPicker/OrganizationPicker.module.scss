@@ -21,7 +21,7 @@
     gap: variables.$spacing-md;
     padding: variables.$spacing-md;
 
-    &:focus-visible {
+    &[data-headlessui-state="focus"] {
       outline: variables.$border-thick solid colors.$blue;
     }
   }

@@ -70,6 +70,9 @@ const WorkspacePickerPanelContent: React.FC<WorkspacesPickerNextProps> = ({ curr
 
   const infiniteWorkspaces = workspaces?.pages.flatMap((page) => page.workspaces) ?? [];
 
+  const [totalListHeight, setTotalListHeight] = useState(Infinity);
+  const listHeight = Math.min(300, totalListHeight);
+
   const virtuosoRef = useRef<VirtuosoHandle | null>(null);
 
   return (
@@ -106,7 +109,8 @@ const WorkspacePickerPanelContent: React.FC<WorkspacesPickerNextProps> = ({ curr
           <Virtuoso<WorkspaceRead, WorkspacePickerContext>
             ref={virtuosoRef}
             style={{
-              height: 300,
+              height: listHeight,
+              transition: "height 0.1s ease",
               width: "100%",
             }}
             data={infiniteWorkspaces}
@@ -120,6 +124,7 @@ const WorkspacePickerPanelContent: React.FC<WorkspacesPickerNextProps> = ({ curr
                 fetchNextPage();
               }
             }}
+            totalListHeightChanged={setTotalListHeight}
             components={{
               Footer,
             }}

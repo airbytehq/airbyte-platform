@@ -19,6 +19,10 @@
     border-radius: variables.$border-radius-sm;
     overflow: hidden;
     white-space: nowrap;
+
+    &[data-headlessui-state="focus"] {
+      outline: variables.$border-thick solid colors.$blue;
+    }
   }
 
   &__orgName {

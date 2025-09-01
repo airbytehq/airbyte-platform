@@ -114,6 +114,9 @@ const OrganizationPickerPanelContent = () => {
 
   const infiniteOrganizations = organizationPages?.pages.flatMap((page) => page.organizations) ?? [];
 
+  const [totalListHeight, setTotalListHeight] = useState(Infinity);
+  const listHeight = Math.min(300, totalListHeight);
+
   const virtuosoRef = useRef<VirtuosoHandle | null>(null);
 
   return (
@@ -149,7 +152,8 @@ const OrganizationPickerPanelContent = () => {
         <div className={styles.organizationPicker__options}>
           <Virtuoso<OrganizationRead, OrganizationPickerContext>
             style={{
-              height: 300,
+              height: listHeight,
+              transition: "height 0.1s ease",
               width: "100%",
             }}
             data={infiniteOrganizations}
@@ -163,6 +167,7 @@ const OrganizationPickerPanelContent = () => {
                 fetchNextPage();
               }
             }}
+            totalListHeightChanged={setTotalListHeight}
             components={{
               Footer,
             }}
