@@ -27,7 +27,7 @@ export const EnterpriseAuthService: React.FC<PropsWithChildren<unknown>> = ({ ch
     authority: auth.authorizationServerUrl != null ? auth.authorizationServerUrl : "",
     client_id: auth.clientId,
     redirect_uri: createUriWithoutSsoParams(),
-    scope: "openid profile email",
+    scope: auth.extraScopes ? `openid profile email ${auth.extraScopes}` : "openid profile email",
     extraQueryParams: !!auth.audience ? { audience: auth.audience } : undefined,
     onSigninCallback: () => {
       // Remove OIDC params from URL, but don't remove other params that might be present

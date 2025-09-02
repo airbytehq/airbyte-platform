@@ -17,4 +17,6 @@ data class GenericOidcConfig(
   val clientId: String,
   @Property(name = "airbyte.auth.identity-provider.oidc.audience")
   val audience: String?,
+  @Property(name = "airbyte.auth.identity-provider.oidc.extra-scopes")
+  val extraScopes: String?,
 )

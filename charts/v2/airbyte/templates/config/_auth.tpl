@@ -570,6 +570,24 @@ Renders the auth.identityProvider.genericOidc.issuer environment variable
 {{- end }}
 
 {{/*
+Renders the global.auth.identityProvider.genericOidc.extraScopes value
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.extraScopes" }}
+    {{- .Values.global.auth.identityProvider.genericOidc.extraScopes }}
+{{- end }}
+
+{{/*
+Renders the auth.identityProvider.genericOidc.extraScopes environment variable
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.extraScopes.env" }}
+- name: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_EXTRA_SCOPES
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_EXTRA_SCOPES
+{{- end }}
+
+{{/*
 Renders the global.auth.identityProvider.genericOidc.endpoints.authorizationServerEndpoint value
 */}}
 {{- define "airbyte.auth.identityProvider.genericOidc.endpoints.authorizationServerEndpoint" }}
@@ -698,6 +716,7 @@ Renders the set of all auth.identityProvider environment variables
 {{- include "airbyte.auth.identityProvider.genericOidc.clientId.env" . }}
 {{- include "airbyte.auth.identityProvider.genericOidc.audience.env" . }}
 {{- include "airbyte.auth.identityProvider.genericOidc.issuer.env" . }}
+{{- include "airbyte.auth.identityProvider.genericOidc.extraScopes.env" . }}
 {{- include "airbyte.auth.identityProvider.genericOidc.endpoints.authorizationServerEndpoint.env" . }}
 {{- include "airbyte.auth.identityProvider.genericOidc.endpoints.jwksEndpoint.env" . }}
 {{- include "airbyte.auth.identityProvider.genericOidc.fields.subject.env" . }}
@@ -727,6 +746,7 @@ OIDC_DISPLAY_NAME: {{ include "airbyte.auth.identityProvider.oidc.displayName" .
 AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_CLIENT_ID: {{ include "airbyte.auth.identityProvider.genericOidc.clientId" . | quote }}
 AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_AUDIENCE: {{ include "airbyte.auth.identityProvider.genericOidc.audience" . | quote }}
 DEFAULT_REALM: {{ include "airbyte.auth.identityProvider.genericOidc.issuer" . | quote }}
+AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_EXTRA_SCOPES: {{ include "airbyte.auth.identityProvider.genericOidc.extraScopes" . | quote }}
 AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_AUTHORIZATION_SERVER_ENDPOINT: {{ include "airbyte.auth.identityProvider.genericOidc.endpoints.authorizationServerEndpoint" . | quote }}
 AB_AIRBYTE_AUTH_JWKS_ENDPOINT: {{ include "airbyte.auth.identityProvider.genericOidc.endpoints.jwksEndpoint" . | quote }}
 AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_SUB: {{ include "airbyte.auth.identityProvider.genericOidc.fields.subject" . | quote }}

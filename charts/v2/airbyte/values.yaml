@@ -83,6 +83,7 @@ global:
       #  clientId: ""
       #  audience: ""
       #  issuer: ""
+      #  extraScopes: ""
       #  endpoints:
       #    authorizationServerEndpoint: ""
       #    jwksEndpoint: ""

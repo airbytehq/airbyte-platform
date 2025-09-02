@@ -135,6 +135,9 @@ open class InstanceConfigurationHandler(
           if (oidcEndpointConfig.get().audience != null) {
             authConfig.audience = oidcEndpointConfig.get().audience
           }
+          if (oidcEndpointConfig.get().extraScopes != null) {
+            authConfig.extraScopes = oidcEndpointConfig.get().extraScopes
+          }
         } else if (authConfigs.keycloakConfig != null && airbyteUrl.isPresent) {
           authConfig.clientId = authConfigs.keycloakConfig!!.webClientId
           authConfig.authorizationServerUrl = airbyteUrl.get() + "/auth/realms/" + authConfigs.keycloakConfig!!.airbyteRealm

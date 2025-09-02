@@ -188,6 +188,10 @@ auth.identityProvider:
       key: genericOidc.issuer
       discriminatorOpts:
         - generic-oidc
+    - env: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_EXTRA_SCOPES
+      key: genericOidc.extraScopes
+      discriminatorOpts:
+        - generic-oidc
 
     - env: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_AUTHORIZATION_SERVER_ENDPOINT
       key: genericOidc.endpoints.authorizationServerEndpoint

@@ -18009,6 +18009,8 @@ components:
           type: string
         audience:
           type: string
+        extraScopes:
+          type: string
     LicenseStatus:
       type: string
       enum:
