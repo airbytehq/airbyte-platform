@@ -129,6 +129,11 @@ val copySeed =
     dependsOn(project(":oss:airbyte-config:init").tasks.named("processResources"))
   }
 
+val cleanWebapp =
+  tasks.register<Delete>("cleanWebapp") {
+    delete("${project.layout.projectDirectory}/src/main/resources/webapp")
+  }
+
 val copyWebapp =
   tasks.register<Copy>("copyWebapp") {
     from("${project(":oss:airbyte-webapp").layout.buildDirectory.get()}/app")
@@ -142,6 +147,10 @@ val copyWebapp =
     }
 
     dependsOn(
+      // Always clean out the webapp assets before writing new ones,
+      // because the file names contain a hash, so assets will pile up
+      // over time.
+      cleanWebapp,
       project(":oss:airbyte-webapp").tasks.named("pnpmBuild"),
       "spotlessStyling",
     )
