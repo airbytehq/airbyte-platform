@@ -6,7 +6,7 @@ import { useCurrentOrganizationId } from "area/organization/utils";
 import { UserSettingsRoutes } from "area/settings/UserSettingsRoutes";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
-import { useExperiment } from "hooks/services/Experiment";
+import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
 import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
 import { EmbeddedOnboardingPage } from "pages/embedded/EmbeddedOnboardingPage/EmbeddedOnboardingPage";
 import { OrganizationSettingsPage } from "pages/SettingsPage/OrganizationSettingsPage";
@@ -31,6 +31,8 @@ export const OrganizationRoutes: React.FC = () => {
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
   const isEmbedded = useExperiment("platform.allow-config-template-endpoints");
+
+  useExperimentContext("organization", organizationId);
 
   return (
     <Routes>

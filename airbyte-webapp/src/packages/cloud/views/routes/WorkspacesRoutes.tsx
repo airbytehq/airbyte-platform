@@ -59,6 +59,7 @@ export const WorkspacesRoutes: React.FC = () => {
   const showOnboarding = useExperiment("onboarding.surveyEnabled");
   const showOrgPicker = useExperiment("sidebar.showOrgPicker");
 
+  useExperimentContext("workspace", workspace.workspaceId);
   useExperimentContext("organization", workspace.organizationId);
 
   const analyticsContext = React.useMemo(
