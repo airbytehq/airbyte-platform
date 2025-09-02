@@ -1,6 +1,11 @@
 micronaut:
   application:
     name: airbyte-workload-api-server
+  caches:
+    dataplane-name:
+      expire-after-write: 10m
+    dataplane-group-name:
+      expire-after-write: 10m
   executors:
     io:
       type: fixed
