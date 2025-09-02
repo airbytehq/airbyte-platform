@@ -15,8 +15,6 @@ import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
 import io.airbyte.commons.auth.config.AuthConfigs
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.commons.license.ActiveAirbyteLicense
-import io.airbyte.commons.license.AirbyteLicense
-import io.airbyte.commons.license.AirbyteLicense.LicenseType
 import io.airbyte.commons.server.helpers.KubernetesClientPermissionHelper
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.AuthenticatedUser
@@ -50,6 +48,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Arrays
+import java.util.Base64
 import java.util.Date
 import java.util.Optional
 import java.util.UUID
@@ -91,9 +90,8 @@ internal class InstanceConfigurationHandlerTest {
     keycloakConfiguration.airbyteRealm = AIRBYTE_REALM
     keycloakConfiguration.webClientId = WEB_CLIENT_ID
 
-    activeAirbyteLicense = ActiveAirbyteLicense()
-    activeAirbyteLicense.license =
-      AirbyteLicense(LicenseType.ENTERPRISE, EXPIRATION_DATE, MAX_NODES, MAX_EDITORS, ENTERPRISE_CONNECTOR_IDS, false)
+    // Create a valid license key for enterprise license
+    activeAirbyteLicense = ActiveAirbyteLicense(ENTERPRISE_LICENSE_KEY)
   }
 
   @ParameterizedTest
@@ -380,15 +378,15 @@ internal class InstanceConfigurationHandlerTest {
 
   @Test
   fun testInvalidLicenseTest() {
-    val license = ActiveAirbyteLicense()
-    license.license = null
+    // Create an invalid license by passing a malformed license key
+    val invalidLicense = ActiveAirbyteLicense("INVALID.KEY")
     val handler =
       InstanceConfigurationHandler(
         Optional.of(AIRBYTE_URL),
         "logging",
         AirbyteEdition.ENTERPRISE,
         AirbyteVersion("0.50.1"),
-        Optional.of(license),
+        Optional.of(invalidLicense),
         mWorkspacePersistence,
         mWorkspacesHandler,
         mUserPersistence,
@@ -513,7 +511,27 @@ internal class InstanceConfigurationHandlerTest {
     private const val DEFAULT_USER_EMAIL = "" // matches what we do in production code
     private const val MAX_NODES = 12
     private const val MAX_EDITORS = 50
-    private val ENTERPRISE_CONNECTOR_IDS = mutableSetOf<UUID>()
     private val EXPIRATION_DATE = Date(2025, 12, 3)
+
+    // Create a valid enterprise license key for testing
+    private val ENTERPRISE_LICENSE_KEY: String =
+      run {
+        val licensePayload =
+          """
+          {
+            "license": "enterprise",
+            "maxNodes": $MAX_NODES,
+            "maxEditors": $MAX_EDITORS,
+            "enterpriseConnectorIds": [],
+            "iat": ${System.currentTimeMillis() / 1000},
+            "iss": "Airbyte",
+            "aud": "Airbyte!",
+            "sub": "test@airbyte.io",
+            "exp": ${EXPIRATION_DATE.toInstant().toEpochMilli()}
+          }
+          """.trimIndent()
+        val encodedPayload = Base64.getEncoder().encodeToString(licensePayload.toByteArray())
+        "HEADER.$encodedPayload.SIGNATURE"
+      }
   }
 }
