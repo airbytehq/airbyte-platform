@@ -1,21 +1,23 @@
 import dayjs from "dayjs";
 import React from "react";
-import { useIntl } from "react-intl";
+import { FormattedTime, useIntl } from "react-intl";
 
 import { ExternalLink, Link } from "components/ui/Link";
 
 import { links } from "core/utils/links";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { useLinkToBillingPage } from "./useLinkToBillingPage";
 
 interface BillingStatusBanner {
   content: React.ReactNode;
-  level: "warning" | "info";
+  level: "warning" | "info" | "error";
 }
 
 export const useBillingStatusBanner = (context: "top_level" | "billing_page"): BillingStatusBanner | undefined => {
   const { formatMessage } = useIntl();
+  const showUpgradeTrialWarning = useExperiment("entitlements.showTeamsFeaturesWarnModal");
   const {
     trialStatus,
     trialDaysLeft,
@@ -24,6 +26,8 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     subscriptionStatus,
     accountType,
     gracePeriodEndsAt,
+    isTrialEndingWithin24Hours,
+    trialEndsAt,
   } = useOrganizationSubscriptionStatus();
   const linkToBilling = useLinkToBillingPage();
 
@@ -105,6 +109,27 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     return {
       level: "info",
       content: formatMessage({ id: "billing.banners.preTrial" }),
+    };
+  }
+
+  // Trial upgrade warnings with experimental flag
+  if (trialStatus === "in_trial" && showUpgradeTrialWarning) {
+    return {
+      level: isTrialEndingWithin24Hours ? "error" : "warning",
+      content: formatMessage(
+        {
+          id:
+            context === "top_level" && canManageOrganizationBilling
+              ? "billing.banners.entitlements.trialEndingWithLink"
+              : "billing.banners.entitlements.trialEnding",
+        },
+        {
+          isTrialEndingWithin24Hours,
+          exactTime: trialEndsAt ? <FormattedTime value={trialEndsAt} /> : undefined,
+          days: trialDaysLeft,
+          lnk: (node: React.ReactNode) => <Link to={linkToBilling}>{node}</Link>,
+        }
+      ),
     };
   }
 
