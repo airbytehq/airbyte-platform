@@ -1192,6 +1192,14 @@ temporal:
       key: prometheus.endpoint
       defaultValue: 0.0.0.0:9090
 
+    - env: BIND_ON_IP
+      key: bindOnIp
+      defaultValue: 0.0.0.0
+
+    - env: TEMPORAL_BROADCAST_ADDRESS
+      key: temporalBroadcastAddress
+      defaultValue: 0.0.0.0
+
 temporal.cli:
   keyBasePath: global.temporal.cli
   secretNamePath: global.temporal.secretName

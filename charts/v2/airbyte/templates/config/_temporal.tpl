@@ -82,6 +82,42 @@ Renders the temporal.prometheus.endpoint environment variable
 {{- end }}
 
 {{/*
+Renders the temporal.bindOnIp value
+*/}}
+{{- define "airbyte.temporal.bindOnIp" }}
+    {{- .Values.temporal.bindOnIp | default "0.0.0.0" }}
+{{- end }}
+
+{{/*
+Renders the temporal.bindOnIp environment variable
+*/}}
+{{- define "airbyte.temporal.bindOnIp.env" }}
+- name: BIND_ON_IP
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: BIND_ON_IP
+{{- end }}
+
+{{/*
+Renders the temporal.temporalBroadcastAddress value
+*/}}
+{{- define "airbyte.temporal.temporalBroadcastAddress" }}
+    {{- .Values.temporal.temporalBroadcastAddress | default "0.0.0.0" }}
+{{- end }}
+
+{{/*
+Renders the temporal.temporalBroadcastAddress environment variable
+*/}}
+{{- define "airbyte.temporal.temporalBroadcastAddress.env" }}
+- name: TEMPORAL_BROADCAST_ADDRESS
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: TEMPORAL_BROADCAST_ADDRESS
+{{- end }}
+
+{{/*
 Renders the set of all temporal environment variables
 */}}
 {{- define "airbyte.temporal.envs" }}
@@ -89,6 +125,8 @@ Renders the set of all temporal environment variables
 {{- include "airbyte.temporal.host.env" . }}
 {{- include "airbyte.temporal.configFilePath.env" . }}
 {{- include "airbyte.temporal.prometheus.endpoint.env" . }}
+{{- include "airbyte.temporal.bindOnIp.env" . }}
+{{- include "airbyte.temporal.temporalBroadcastAddress.env" . }}
 {{- end }}
 
 {{/*
@@ -99,6 +137,8 @@ AUTO_SETUP: {{ include "airbyte.temporal.autoSetup" . | quote }}
 TEMPORAL_HOST: {{ include "airbyte.temporal.host" . | quote }}
 DYNAMIC_CONFIG_FILE_PATH: {{ include "airbyte.temporal.configFilePath" . | quote }}
 PROMETHEUS_ENDPOINT: {{ include "airbyte.temporal.prometheus.endpoint" . | quote }}
+BIND_ON_IP: {{ include "airbyte.temporal.bindOnIp" . | quote }}
+TEMPORAL_BROADCAST_ADDRESS: {{ include "airbyte.temporal.temporalBroadcastAddress" . | quote }}
 {{- end }}
 
 {{/*
