@@ -62,7 +62,7 @@ class FailureHandlerTest {
 
     handler.accept(error, stageIO)
 
-    verify(exactly = 1) { workloadApiClient.reportFailure(workloadId, any()) }
+    verify(exactly = 1) { workloadApiClient.reportLaunchFailure(workloadId, any()) }
   }
 
   @Test
@@ -71,7 +71,7 @@ class FailureHandlerTest {
 
     handler.accept(error, launcherInput)
 
-    verify(exactly = 0) { workloadApiClient.reportFailure(workloadId, any()) }
+    verify(exactly = 0) { workloadApiClient.reportLaunchFailure(workloadId, any()) }
   }
 
   @Test
@@ -85,7 +85,7 @@ class FailureHandlerTest {
 
     handler.accept(error, stageIO)
 
-    verify(exactly = 0) { workloadApiClient.reportFailure(workloadId, any()) }
+    verify(exactly = 0) { workloadApiClient.reportLaunchFailure(workloadId, any()) }
   }
 
   object Fixtures {

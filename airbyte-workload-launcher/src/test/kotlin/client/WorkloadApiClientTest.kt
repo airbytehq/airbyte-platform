@@ -39,7 +39,7 @@ internal class WorkloadApiClientTest {
     every { internalWorkloadApiClient.workloadFailure(any()) } returns Unit
     val failure = RuntimeException("Cause")
 
-    workloadApiClient.reportFailure(workloadId, failure)
+    workloadApiClient.reportLaunchFailure(workloadId, failure)
 
     verify(exactly = 1) { internalWorkloadApiClient.workloadFailure(capture(requestCapture)) }
     assertEquals(workloadId, requestCapture.captured.workloadId)

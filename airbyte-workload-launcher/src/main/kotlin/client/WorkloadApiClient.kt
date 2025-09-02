@@ -5,6 +5,7 @@
 package io.airbyte.workload.launcher.client
 
 import com.amazonaws.internal.ExceptionUtils
+import io.airbyte.config.WorkloadConstants.Companion.LAUNCH_ERROR_SOURCE
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.ClaimResponse
@@ -26,12 +27,17 @@ class WorkloadApiClient(
   private val identityService: DataplaneIdentityService,
   @Value("\${micronaut.application.name}") private val applicationName: String,
 ) {
-  fun reportFailure(
+  /**
+   * Report launch failures specifically by using the [LAUNCH_ERROR_SOURCE] source.
+   *
+   * Other failures such as load-shedding shouldn't be reported as launch failures.
+   */
+  fun reportLaunchFailure(
     workloadId: String,
     error: Throwable,
   ) {
     try {
-      updateStatusToFailed(workloadId, ExceptionUtils.exceptionStackTrace(error))
+      updateStatusToFailed(workloadId = workloadId, source = LAUNCH_ERROR_SOURCE, reason = ExceptionUtils.exceptionStackTrace(error))
     } catch (e: Exception) {
       logger.warn(e) {
         "Could not set the status for workload $workloadId to failed.\n" +
@@ -46,10 +52,18 @@ class WorkloadApiClient(
     workloadId: String,
     reason: String? = null,
   ) {
+    updateStatusToFailed(workloadId = workloadId, source = applicationName.removePrefix("airbyte-"), reason = reason)
+  }
+
+  private fun updateStatusToFailed(
+    workloadId: String,
+    source: String,
+    reason: String? = null,
+  ) {
     val request =
       WorkloadFailureRequest(
         workloadId,
-        applicationName.removePrefix("airbyte-"),
+        source,
         reason,
       )
     logger.info { "Attempting to update workload: $workloadId to FAILED." }

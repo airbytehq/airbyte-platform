@@ -73,7 +73,7 @@ class FailureHandler(
     if (e is StageError && e.stageName == StageName.CLAIM) {
       logger.warn { "Unexpected StageError for stage: ${StageName.CLAIM}. Ignoring." }
     } else {
-      apiClient.reportFailure(io.msg.workloadId, e)
+      apiClient.reportLaunchFailure(io.msg.workloadId, e)
     }
     val attrs =
       arrayOf(

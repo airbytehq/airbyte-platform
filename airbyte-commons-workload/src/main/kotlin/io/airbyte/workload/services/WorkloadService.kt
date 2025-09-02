@@ -5,6 +5,7 @@
 package io.airbyte.workload.services
 
 import io.airbyte.commons.enums.convertTo
+import io.airbyte.config.WorkloadConstants.Companion.LAUNCH_ERROR_SOURCE
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.FeatureFlagClient
@@ -172,6 +173,10 @@ class WorkloadService(
     val workload = workloadRepository.fail(workloadId, reason = reason, source = source)
     if (workload != null) {
       workloadQueueRepository.ackWorkloadQueueItem(workloadId)
+      emitTimeToTransitionMetric(workload, WorkloadStatus.FAILURE)
+      if (source == LAUNCH_ERROR_SOURCE) {
+        emitWorkloadLaunchMetric(workload, MetricTags.FAILURE)
+      }
       signalSender.sendSignal(workload.type, workload.signalInput)
     } else {
       workloadRepository
@@ -202,6 +207,7 @@ class WorkloadService(
     // Always emit this metric. Even though the workload state transition may have failed because the workload was already in a further state,
     // this reflects when the launcher finished launching.
     emitTimeToTransitionMetric(workload, WorkloadStatus.LAUNCHED)
+    emitWorkloadLaunchMetric(workload, MetricTags.SUCCESS)
 
     when (workload.status) {
       WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
@@ -261,6 +267,7 @@ class WorkloadService(
     val workload = workloadRepository.succeed(workloadId)
     if (workload != null) {
       workloadQueueRepository.ackWorkloadQueueItem(workloadId)
+      emitTimeToTransitionMetric(workload, WorkloadStatus.SUCCESS)
       signalSender.sendSignal(workload.type, workload.signalInput)
     } else {
       workloadRepository
@@ -301,6 +308,23 @@ class WorkloadService(
         MetricAttribute(MetricTags.STATUS_TAG, status.name),
       )
     }
+  }
+
+  /**
+   * Add a metric to ease tracking launch success rate from the control plane.
+   */
+  private fun emitWorkloadLaunchMetric(
+    workload: Workload,
+    status: String,
+  ) {
+    metricClient.count(
+      OssMetricsRegistry.WORKLOAD_LAUNCH_STATUS,
+      1L,
+      MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, workload.type.name),
+      MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, workload.dataplaneGroup ?: "undefined"),
+      MetricAttribute(MetricTags.DATA_PLANE_ID_TAG, workload.dataplaneId ?: "undefined"),
+      MetricAttribute(MetricTags.STATUS_TAG, status),
+    )
   }
 
   private fun Workload.timeSinceCreateInMillis(): Long? =

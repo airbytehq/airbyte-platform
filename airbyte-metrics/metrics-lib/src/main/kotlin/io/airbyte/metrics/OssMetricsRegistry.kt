@@ -739,6 +739,10 @@ enum class OssMetricsRegistry(
     metricName = "workload_launch_duration",
     metricDescription = "tracks the duration of the launch of a workload",
   ),
+  WORKLOAD_LAUNCH_STATUS(
+    metricName = "workload_launch_status",
+    metricDescription = "tracks the outcome of a workload launch as reported to the control plane",
+  ),
   WORKLOAD_CLAIM_RESUMED(
     metricName = "workload_claim_resumed",
     metricDescription = "increments when a claimed workload is retrieved and processed on startup",
