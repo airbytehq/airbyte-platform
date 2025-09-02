@@ -28,7 +28,7 @@ interface WorkspacesPickerNextProps {
 export const WorkspacesPickerNext: React.FC<WorkspacesPickerNextProps> = ({ currentWorkspace }) => {
   return (
     <Popover className={styles.workspacesPicker}>
-      <PopoverButton className={styles.workspacesPicker__button}>
+      <PopoverButton className={styles.workspacesPicker__button} title={currentWorkspace?.name}>
         <Text as="span" className={styles.workspacesPicker__orgName}>
           {currentWorkspace?.name}
         </Text>
@@ -44,6 +44,8 @@ export const WorkspacesPickerNext: React.FC<WorkspacesPickerNextProps> = ({ curr
 interface WorkspacesPickerNextProps {
   currentWorkspace: WorkspaceRead;
 }
+
+type WorkspaceNameAndId = Pick<WorkspaceRead, "workspaceId" | "name">;
 
 interface WorkspacePickerContext {
   isFetchingNextPage: boolean;
@@ -70,6 +72,12 @@ const WorkspacePickerPanelContent: React.FC<WorkspacesPickerNextProps> = ({ curr
 
   const infiniteWorkspaces = workspaces?.pages.flatMap((page) => page.workspaces) ?? [];
 
+  // We want to pin the current workspace at the top of the list as long it matches the current search term
+  const workspaceList = [
+    ...(currentWorkspace.name.toLocaleLowerCase().includes(searchValue.toLocaleLowerCase()) ? [currentWorkspace] : []),
+    ...infiniteWorkspaces.filter((workspace) => workspace.workspaceId !== currentWorkspace.workspaceId),
+  ];
+
   const [totalListHeight, setTotalListHeight] = useState(Infinity);
   const listHeight = Math.min(300, totalListHeight);
 
@@ -88,7 +96,7 @@ const WorkspacePickerPanelContent: React.FC<WorkspacesPickerNextProps> = ({ curr
           debounceTimeout={150}
         />
       </Box>
-      {!isLoading && infiniteWorkspaces.length === 0 && (
+      {!isLoading && workspaceList.length === 0 && (
         <Box px="md" pb="md">
           <Text color="grey" align="center">
             <FormattedMessage id="workspaces.noWorkspaces" />
@@ -104,16 +112,16 @@ const WorkspacePickerPanelContent: React.FC<WorkspacesPickerNextProps> = ({ curr
           </FlexContainer>
         </Box>
       )}
-      {!isLoading && infiniteWorkspaces.length > 0 && (
+      {!isLoading && workspaceList.length > 0 && (
         <div className={styles.workspacesPicker__options}>
-          <Virtuoso<WorkspaceRead, WorkspacePickerContext>
+          <Virtuoso<WorkspaceNameAndId, WorkspacePickerContext>
             ref={virtuosoRef}
             style={{
               height: listHeight,
               transition: "height 0.1s ease",
               width: "100%",
             }}
-            data={infiniteWorkspaces}
+            data={workspaceList}
             context={{
               isFetchingNextPage,
               closePopover,
@@ -136,7 +144,7 @@ const WorkspacePickerPanelContent: React.FC<WorkspacesPickerNextProps> = ({ curr
   );
 };
 
-const WorkspaceLink: ItemContent<WorkspaceRead, WorkspacePickerContext> = (_index, workspace, context) => {
+const WorkspaceLink: ItemContent<WorkspaceNameAndId, WorkspacePickerContext> = (_index, workspace, context) => {
   return (
     <Link
       key={workspace.workspaceId}
@@ -151,7 +159,7 @@ const WorkspaceLink: ItemContent<WorkspaceRead, WorkspacePickerContext> = (_inde
   );
 };
 
-const Footer: Components<WorkspaceRead, WorkspacePickerContext>["Footer"] = ({ context }) => {
+const Footer: Components<WorkspaceNameAndId, WorkspacePickerContext>["Footer"] = ({ context }) => {
   if (!context?.isFetchingNextPage) {
     return null;
   }

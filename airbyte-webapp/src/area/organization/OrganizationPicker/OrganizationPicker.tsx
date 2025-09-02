@@ -17,12 +17,11 @@ import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationInfo, useListOrganizationsByUser, useListOrganizationsByUserInfinite } from "core/api";
-import { OrganizationRead } from "core/api/types/AirbyteClient";
+import { OrganizationInfoRead } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./OrganizationPicker.module.scss";
-import { useCurrentOrganizationId } from "../utils";
 
 export const useHasMultipleOrganizations = () => {
   const user = useCurrentUser();
@@ -32,6 +31,8 @@ export const useHasMultipleOrganizations = () => {
   });
   return organizations.length > 1;
 };
+
+type OrganizationNameAndId = Pick<OrganizationInfoRead, "organizationId" | "organizationName">;
 
 export const OrganizationPicker = () => {
   const currentOrganizationInfo = useCurrentOrganizationInfo();
@@ -46,7 +47,7 @@ export const OrganizationPicker = () => {
 
   if (!hasMultipleOrganizations) {
     return (
-      <FlexContainer className={styles.organizationPicker__singleOrgWrapper} alignItems="center">
+      <FlexContainer className={styles.organizationPicker__singleOrgWrapper} alignItems="center" title={currentOrgName}>
         <AirbyteLogoIcon className={styles.organizationPicker__logo} />
         <FlexContainer direction="column" gap="sm" className={styles.organizationPicker__currentOrg}>
           <Text
@@ -65,7 +66,7 @@ export const OrganizationPicker = () => {
 
   return (
     <Popover className={styles.organizationPicker}>
-      <PopoverButton className={styles.organizationPicker__button}>
+      <PopoverButton className={styles.organizationPicker__button} title={currentOrgName}>
         <AirbyteLogoIcon className={styles.organizationPicker__logo} />
         <FlexContainer direction="column" gap="sm" className={styles.organizationPicker__currentOrg}>
           <Text
@@ -97,7 +98,7 @@ interface OrganizationPickerContext {
 const OrganizationPickerPanelContent = () => {
   const { formatMessage } = useIntl();
   const user = useCurrentUser();
-  const currentOrganizationId = useCurrentOrganizationId();
+  const currentOrganization = useCurrentOrganizationInfo();
   const [searchValue, setSearchValue] = useState("");
   const closePopover = useClose();
 
@@ -113,6 +114,14 @@ const OrganizationPickerPanelContent = () => {
   });
 
   const infiniteOrganizations = organizationPages?.pages.flatMap((page) => page.organizations) ?? [];
+
+  // We want to pin the current organization at the top of the list as long it matches the current search term
+  const organizationsList = [
+    ...(currentOrganization.organizationName.toLocaleLowerCase().includes(searchValue.toLocaleLowerCase())
+      ? [currentOrganization]
+      : []),
+    ...infiniteOrganizations.filter((org) => org.organizationId !== currentOrganization.organizationId),
+  ];
 
   const [totalListHeight, setTotalListHeight] = useState(Infinity);
   const listHeight = Math.min(300, totalListHeight);
@@ -132,7 +141,7 @@ const OrganizationPickerPanelContent = () => {
           debounceTimeout={150}
         />
       </Box>
-      {!isLoading && infiniteOrganizations.length === 0 && (
+      {!isLoading && organizationsList.length === 0 && (
         <Box px="md" pb="md">
           <Text color="grey" align="center">
             <FormattedMessage id="sidebar.noOrganizationsFound" />
@@ -148,19 +157,19 @@ const OrganizationPickerPanelContent = () => {
           </FlexContainer>
         </Box>
       )}
-      {!isLoading && infiniteOrganizations.length > 0 && (
+      {!isLoading && organizationsList.length > 0 && (
         <div className={styles.organizationPicker__options}>
-          <Virtuoso<OrganizationRead, OrganizationPickerContext>
+          <Virtuoso<OrganizationNameAndId, OrganizationPickerContext>
             style={{
               height: listHeight,
               transition: "height 0.1s ease",
               width: "100%",
             }}
-            data={infiniteOrganizations}
+            data={organizationsList}
             context={{
               isFetchingNextPage,
               closePopover,
-              currentOrganizationId,
+              currentOrganizationId: currentOrganization.organizationId,
             }}
             endReached={() => {
               if (hasNextPage && !isFetchingNextPage) {
@@ -179,7 +188,11 @@ const OrganizationPickerPanelContent = () => {
   );
 };
 
-const OrganizationLink: ItemContent<OrganizationRead, OrganizationPickerContext> = (_index, organization, context) => {
+const OrganizationLink: ItemContent<OrganizationNameAndId, OrganizationPickerContext> = (
+  _index,
+  organization,
+  context
+) => {
   return (
     <Link
       key={organization.organizationId}
@@ -203,7 +216,7 @@ const OrganizationLink: ItemContent<OrganizationRead, OrganizationPickerContext>
   );
 };
 
-const Footer: Components<OrganizationRead, OrganizationPickerContext>["Footer"] = ({ context }) => {
+const Footer: Components<OrganizationNameAndId, OrganizationPickerContext>["Footer"] = ({ context }) => {
   if (!context?.isFetchingNextPage) {
     return null;
   }

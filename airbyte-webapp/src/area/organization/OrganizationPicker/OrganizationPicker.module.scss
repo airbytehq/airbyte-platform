@@ -67,6 +67,7 @@
   &__option {
     display: block;
     text-decoration: none;
+    word-break: break-word;
     padding: variables.$spacing-md;
     width: 100%;
 
