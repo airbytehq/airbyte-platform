@@ -16,7 +16,7 @@ import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
-import io.airbyte.commons.server.handlers.EnterpriseSourceStubsHandler
+import io.airbyte.commons.server.handlers.EnterpriseConnectorStubsHandler
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator
 import io.airbyte.config.persistence.ConfigNotFoundException
@@ -30,7 +30,7 @@ import java.util.UUID
 internal class SourceDefinitionApiControllerTest {
   private lateinit var controller: SourceDefinitionApiController
   private val sourceDefinitionsHandler: SourceDefinitionsHandler = mockk()
-  private val enterpriseSourceStubsHandler: EnterpriseSourceStubsHandler = mockk()
+  private val enterpriseConnectorStubsHandler: EnterpriseConnectorStubsHandler = mockk()
   private val actorDefinitionAccessValidator: ActorDefinitionAccessValidator = mockk()
 
   @BeforeEach
@@ -38,7 +38,7 @@ internal class SourceDefinitionApiControllerTest {
     controller =
       SourceDefinitionApiController(
         sourceDefinitionsHandler,
-        enterpriseSourceStubsHandler,
+        enterpriseConnectorStubsHandler,
         actorDefinitionAccessValidator,
       )
   }

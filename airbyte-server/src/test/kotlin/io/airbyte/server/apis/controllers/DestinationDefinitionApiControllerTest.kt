@@ -17,6 +17,7 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler
+import io.airbyte.commons.server.handlers.EnterpriseConnectorStubsHandler
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.mockk.every
@@ -30,16 +31,19 @@ internal class DestinationDefinitionApiControllerTest {
   private lateinit var destinationDefinitionApiController: DestinationDefinitionApiController
   private lateinit var destinationDefinitionsHandler: DestinationDefinitionsHandler
   private lateinit var actorDefinitionAccessValidator: ActorDefinitionAccessValidator
+  private lateinit var enterpriseConnectorStubsHandler: EnterpriseConnectorStubsHandler
 
   @BeforeEach
   fun setup() {
     destinationDefinitionsHandler = mockk()
     actorDefinitionAccessValidator = mockk()
+    enterpriseConnectorStubsHandler = mockk()
 
     destinationDefinitionApiController =
       DestinationDefinitionApiController(
         destinationDefinitionsHandler,
         actorDefinitionAccessValidator,
+        enterpriseConnectorStubsHandler,
       )
   }
 

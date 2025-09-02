@@ -7,7 +7,7 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.generated.SourceDefinitionApi
 import io.airbyte.api.model.generated.ActorDefinitionIdWithScope
 import io.airbyte.api.model.generated.CustomSourceDefinitionCreate
-import io.airbyte.api.model.generated.EnterpriseSourceStubsReadList
+import io.airbyte.api.model.generated.EnterpriseConnectorStubsReadList
 import io.airbyte.api.model.generated.PrivateSourceDefinitionRead
 import io.airbyte.api.model.generated.PrivateSourceDefinitionReadList
 import io.airbyte.api.model.generated.ScopeType
@@ -21,7 +21,7 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
-import io.airbyte.commons.server.handlers.EnterpriseSourceStubsHandler
+import io.airbyte.commons.server.handlers.EnterpriseConnectorStubsHandler
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator
@@ -43,7 +43,7 @@ import java.util.concurrent.Callable
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class SourceDefinitionApiController(
   private val sourceDefinitionsHandler: SourceDefinitionsHandler,
-  private val enterpriseSourceStubsHandler: EnterpriseSourceStubsHandler,
+  private val enterpriseConnectorStubsHandler: EnterpriseConnectorStubsHandler,
   private val accessValidator: ActorDefinitionAccessValidator,
 ) : SourceDefinitionApi {
   @Post("/create_custom")
@@ -131,10 +131,10 @@ open class SourceDefinitionApiController(
   @Post("/list_enterprise_source_stubs")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun listEnterpriseSourceStubs(): EnterpriseSourceStubsReadList? =
+  override fun listEnterpriseSourceStubs(): EnterpriseConnectorStubsReadList? =
     execute(
       Callable {
-        enterpriseSourceStubsHandler.listEnterpriseSourceStubs()
+        enterpriseConnectorStubsHandler.listEnterpriseSourceStubs()
       },
     )
 
@@ -143,9 +143,9 @@ open class SourceDefinitionApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listEnterpriseSourceStubsForWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
-  ): io.airbyte.api.model.generated.EnterpriseSourceStubsReadList? =
+  ): io.airbyte.api.model.generated.EnterpriseConnectorStubsReadList? =
     execute {
-      enterpriseSourceStubsHandler.listEnterpriseSourceStubsForWorkspace(
+      enterpriseConnectorStubsHandler.listEnterpriseSourceStubsForWorkspace(
         workspaceIdRequestBody.workspaceId,
       )
     }

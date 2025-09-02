@@ -2,23 +2,23 @@ import {
   DestinationDefinitionRead,
   DestinationDefinitionSpecificationRead,
   DestinationRead,
-  EnterpriseSourceStub,
+  EnterpriseConnectorStub,
   SourceDefinitionRead,
   SourceDefinitionSpecificationRead,
   SourceRead,
 } from "core/api/types/AirbyteClient";
 
 export interface EnterpriseSources {
-  enterpriseSourceDefinitions: EnterpriseSourceStubType[];
-  enterpriseSourceDefinitionsMap: Map<string, EnterpriseSourceStubType>;
+  enterpriseSourceDefinitions: EnterpriseConnectorStubType[];
+  enterpriseSourceDefinitionsMap: Map<string, EnterpriseConnectorStubType>;
 }
 
-export interface EnterpriseSourceStubType extends EnterpriseSourceStub {
+export interface EnterpriseConnectorStubType extends EnterpriseConnectorStub {
   isEnterprise: true;
 }
 
 export type ConnectorDefinition = SourceDefinitionRead | DestinationDefinitionRead;
-export type ConnectorDefinitionOrEnterpriseStub = ConnectorDefinition | EnterpriseSourceStubType;
+export type ConnectorDefinitionOrEnterpriseStub = ConnectorDefinition | EnterpriseConnectorStubType;
 
 export type SourceDefinitionSpecificationDraft = Pick<
   SourceDefinitionSpecificationRead,

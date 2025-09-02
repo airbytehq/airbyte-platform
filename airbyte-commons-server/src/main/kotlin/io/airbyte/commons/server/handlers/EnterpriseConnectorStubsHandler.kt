@@ -7,10 +7,11 @@ package io.airbyte.commons.server.handlers
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import io.airbyte.api.model.generated.EnterpriseSourceStub
-import io.airbyte.api.model.generated.EnterpriseSourceStubsReadList
+import io.airbyte.api.model.generated.EnterpriseConnectorStub
+import io.airbyte.api.model.generated.EnterpriseConnectorStubsReadList
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.config.ActorType
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -25,9 +26,9 @@ import java.util.UUID
 private val log = KotlinLogging.logger {}
 
 @Singleton
-open class EnterpriseSourceStubsHandler(
-  @Value("\${airbyte.connector-registry.enterprise.enterprise-source-stubs-url}")
-  private val enterpriseSourceStubsUrl: String,
+open class EnterpriseConnectorStubsHandler(
+  @Value("\${airbyte.connector-registry.enterprise.enterprise-stubs-url}")
+  private val enterpriseStubsUrl: String,
   @Value("\${airbyte.connector-registry.remote.timeout-ms}")
   private val remoteTimeoutMs: Long,
   private val workspaceHelper: WorkspaceHelper,
@@ -56,7 +57,7 @@ open class EnterpriseSourceStubsHandler(
       val request =
         Request
           .Builder()
-          .url(enterpriseSourceStubsUrl)
+          .url(enterpriseStubsUrl)
           .build()
 
       okHttpClient.newCall(request).execute().use { response ->
@@ -69,58 +70,68 @@ open class EnterpriseSourceStubsHandler(
         return objectMapper.readValue(jsonResponse, typeReference)
       }
     } catch (error: IOException) {
-      logger.error(error) {
+      log.error(error) {
         "Encountered an HTTP error fetching enterprise connectors. Message: ${error.message}"
       }
       throw IOException("HTTP error fetching enterprise sources", error)
     } catch (error: Exception) {
-      logger.error(error) { "Unexpected error fetching enterprise sources" }
+      log.error(error) { "Unexpected error fetching enterprise sources" }
       throw IOException("Encountered an unexpected error fetching enterprise sources", error)
     }
   }
 
-  fun listEnterpriseSourceStubs(): EnterpriseSourceStubsReadList {
+  private fun listEnterpriseConnectorStubs(actorType: ActorType): List<EnterpriseConnectorStub> {
     try {
       val registryStubs = getRegistryEnterpriseStubs()
-      return EnterpriseSourceStubsReadList().apply {
-        enterpriseSourceStubs =
-          registryStubs
-            .filter {
-              it.type == ENTERPRISE_SOURCE_TYPE
-            }.map {
-              EnterpriseSourceStub().apply {
-                id = it.id
-                name = it.name
-                url = it.url
-                icon = it.icon
-                label = it.label
-                type = it.type
-                definitionId = it.definitionId
-              }
-            }
-      }
+      val expectedType =
+        when (actorType) {
+          ActorType.SOURCE -> ENTERPRISE_SOURCE_TYPE
+          ActorType.DESTINATION -> ENTERPRISE_DESTINATION_TYPE
+        }
+
+      return registryStubs
+        .filter { it.type == expectedType }
+        .map {
+          EnterpriseConnectorStub().apply {
+            id = it.id
+            name = it.name
+            url = it.url
+            icon = it.icon
+            label = it.label
+            type = it.type
+            definitionId = it.definitionId
+          }
+        }
     } catch (error: Exception) {
-      logger.error("Unexpected error fetching enterprise sources", error)
-      return EnterpriseSourceStubsReadList()
+      log.error("Unexpected error fetching enterprise ${actorType}s", error)
+      return listOf()
     }
   }
 
-  fun listEnterpriseSourceStubsForWorkspace(workspaceId: UUID): EnterpriseSourceStubsReadList {
+  private fun listEnterpriseConnectorStubsForWorkspace(
+    workspaceId: UUID,
+    actorType: ActorType,
+  ): EnterpriseConnectorStubsReadList {
     try {
       val organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId)
-      val sourceStubs = listEnterpriseSourceStubs().enterpriseSourceStubs
+      val connectorStubs = listEnterpriseConnectorStubs(actorType)
+      val entitlement =
+        when (actorType) {
+          ActorType.SOURCE -> Entitlement.SOURCE_CONNECTOR
+          ActorType.DESTINATION -> Entitlement.DESTINATION_CONNECTOR
+        }
 
       // only return stubs for connectors that the org is NOT entitled to
-      return EnterpriseSourceStubsReadList().apply {
-        enterpriseSourceStubs =
-          sourceStubs.filter {
+      return EnterpriseConnectorStubsReadList().apply {
+        enterpriseConnectorStubs =
+          connectorStubs.filter {
             if (it.definitionId == null) {
               return@filter true
             }
 
             val isEntitled =
               try {
-                licenseEntitlementChecker.checkEntitlement(organizationId, Entitlement.SOURCE_CONNECTOR, UUID.fromString(it.definitionId!!))
+                licenseEntitlementChecker.checkEntitlement(organizationId, entitlement, UUID.fromString(it.definitionId!!))
               } catch (e: ConfigNotFoundException) {
                 false
               }
@@ -129,12 +140,22 @@ open class EnterpriseSourceStubsHandler(
           }
       }
     } catch (error: Exception) {
-      logger.error("Unexpected error fetching enterprise sources", error)
-      return EnterpriseSourceStubsReadList()
+      log.error("Unexpected error fetching enterprise ${actorType}s", error)
+      return EnterpriseConnectorStubsReadList()
     }
   }
 
+  fun listEnterpriseSourceStubs(): EnterpriseConnectorStubsReadList =
+    EnterpriseConnectorStubsReadList().enterpriseConnectorStubs(listEnterpriseConnectorStubs(ActorType.SOURCE))
+
+  fun listEnterpriseSourceStubsForWorkspace(workspaceId: UUID): EnterpriseConnectorStubsReadList =
+    listEnterpriseConnectorStubsForWorkspace(workspaceId, ActorType.SOURCE)
+
+  fun listEnterpriseDestinationStubsForWorkspace(workspaceId: UUID): EnterpriseConnectorStubsReadList =
+    listEnterpriseConnectorStubsForWorkspace(workspaceId, ActorType.DESTINATION)
+
   companion object {
     private const val ENTERPRISE_SOURCE_TYPE = "enterprise_source"
+    private const val ENTERPRISE_DESTINATION_TYPE = "enterprise_destination"
   }
 }

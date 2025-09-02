@@ -193,7 +193,7 @@ airbyte:
       base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
     enterprise:
-      enterprise-source-stubs-url: ${ENTERPRISE_SOURCE_STUBS_URL}
+      enterprise-stubs-url: ${ENTERPRISE_SOURCE_STUBS_URL}
   connector-rollout:
     gcs:
       application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}

@@ -8,4 +8,4 @@ micronaut:
 airbyte:
   connector-registry:
     enterprise:
-      enterprise-source-stubs-url: "http://test-url.com"
+      enterprise-stubs-url: "http://test-url.com"

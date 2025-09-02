@@ -11,7 +11,7 @@ import { PageHeaderWithNavigation } from "components/ui/PageHeader/PageHeaderWit
 import { Text } from "components/ui/Text";
 
 import { useListEnterpriseStubsForWorkspace } from "core/api";
-import { EnterpriseSourceStubType } from "core/domain/connector";
+import { EnterpriseConnectorStubType } from "core/domain/connector";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 import { RoutePaths } from "pages/routePaths";
 
@@ -32,7 +32,7 @@ export const EnterpriseSourcePage: React.FC = () => {
   const { enterpriseSourceDefinitionsMap } = useListEnterpriseStubsForWorkspace();
 
   const enterpriseSource = params.id
-    ? (enterpriseSourceDefinitionsMap.get(params.id) as EnterpriseSourceStubType)
+    ? (enterpriseSourceDefinitionsMap.get(params.id) as EnterpriseConnectorStubType)
     : undefined;
   const breadcrumbBasePath = `/${RoutePaths.Workspaces}/${params.workspaceId}/${RoutePaths.Source}`;
 

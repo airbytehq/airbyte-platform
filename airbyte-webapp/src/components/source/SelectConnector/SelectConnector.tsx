@@ -17,7 +17,7 @@ import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useCurrentWorkspace, useFilters, useListEnterpriseStubsForWorkspace } from "core/api";
-import { EnterpriseSourceStub } from "core/api/types/AirbyteClient";
+import { EnterpriseConnectorStub } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionOrEnterpriseStub } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
@@ -83,7 +83,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
 
   const createLink = useCurrentWorkspaceLink();
 
-  const onSelectEnterpriseSourceStub = (definition: EnterpriseSourceStub) => {
+  const onSelectEnterpriseSourceStub = (definition: EnterpriseConnectorStub) => {
     // This is a temporary routing solution to navigate to the enterprise stub sales funnel.
     // If/when we implement enterprise connectors in the catalog, we should use onSelectConnectorDefinition.
     navigate(createLink(`/${RoutePaths.Source}/${SourcePaths.EnterpriseSource.replace(":id", definition.id)}`));
@@ -137,7 +137,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const handleConnectorButtonClick = (definition: ConnectorDefinitionOrEnterpriseStub) => {
     const proceedWithConnectorSelection = () => {
       if ("isEnterprise" in definition) {
-        // Handle EnterpriseSourceStubs first
+        // Handle EnterpriseConnectorStubs first
         trackSelectEnterpriseStub(definition);
         onSelectEnterpriseSourceStub(definition);
       } else if (isSourceDefinition(definition)) {

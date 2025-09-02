@@ -12,6 +12,7 @@ import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId
 import io.airbyte.api.model.generated.DestinationDefinitionRead
 import io.airbyte.api.model.generated.DestinationDefinitionReadList
 import io.airbyte.api.model.generated.DestinationDefinitionUpdate
+import io.airbyte.api.model.generated.EnterpriseConnectorStubsReadList
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList
 import io.airbyte.api.model.generated.ScopeType
@@ -21,6 +22,7 @@ import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler
+import io.airbyte.commons.server.handlers.EnterpriseConnectorStubsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator
 import io.airbyte.server.apis.execute
@@ -41,6 +43,7 @@ import java.util.concurrent.Callable
 open class DestinationDefinitionApiController(
   private val destinationDefinitionsHandler: DestinationDefinitionsHandler,
   private val accessValidator: ActorDefinitionAccessValidator,
+  private val enterpriseConnectorStubsHandler: EnterpriseConnectorStubsHandler,
 ) : DestinationDefinitionApi {
   @Post(uri = "/create_custom")
   @RequiresIntent(Intent.UploadCustomConnector)
@@ -142,6 +145,18 @@ open class DestinationDefinitionApiController(
     execute {
       destinationDefinitionsHandler.listDestinationDefinitionsForWorkspace(
         workspaceIdRequestBody,
+      )
+    }
+
+  @Post(uri = "/list_enterprise_stubs_for_workspace")
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun listEnterpriseDestinationStubsForWorkspace(
+    @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
+  ): EnterpriseConnectorStubsReadList? =
+    execute {
+      enterpriseConnectorStubsHandler.listEnterpriseDestinationStubsForWorkspace(
+        workspaceIdRequestBody.workspaceId,
       )
     }
 

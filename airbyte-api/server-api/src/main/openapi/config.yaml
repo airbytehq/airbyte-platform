@@ -666,7 +666,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EnterpriseSourceStubsReadList"
+                $ref: "#/components/schemas/EnterpriseConnectorStubsReadList"
 
   /v1/source_definitions/list_enterprise_stubs_for_workspace:
     post:
@@ -685,7 +685,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EnterpriseSourceStubsReadList"
+                $ref: "#/components/schemas/EnterpriseConnectorStubsReadList"
 
   /v1/source_definitions/create_custom:
     post:
@@ -1826,6 +1826,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DestinationDefinitionReadList"
+  /v1/destination_definitions/list_enterprise_stubs_for_workspace:
+    post:
+      tags:
+        - destination_definition
+      summary: List all enterprise destination connector stubs for a specified workspace.
+      operationId: listEnterpriseDestinationStubsForWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceIdRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnterpriseConnectorStubsReadList"
+
   /v1/destination_definitions/create_custom:
     post:
       tags:
@@ -12167,7 +12186,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SourceDefinitionRead"
-    EnterpriseSourceStub:
+    EnterpriseConnectorStub:
       type: object
       required:
         - id
@@ -12196,15 +12215,15 @@ components:
         type:
           type: string
           description: The connector's type (ie, "enterprise_source")
-    EnterpriseSourceStubsReadList:
+    EnterpriseConnectorStubsReadList:
       type: object
       required:
-        - enterpriseSourceStubs
+        - enterpriseConnectorStubs
       properties:
-        enterpriseSourceStubs:
+        enterpriseConnectorStubs:
           type: array
           items:
-            $ref: "#/components/schemas/EnterpriseSourceStub"
+            $ref: "#/components/schemas/EnterpriseConnectorStub"
           description: A list of source stubs fetched from a JSON file.
     ScopeId:
       type: string

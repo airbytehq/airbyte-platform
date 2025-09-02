@@ -1,4 +1,4 @@
-import { EnterpriseSourceStubType } from "core/domain/connector";
+import { EnterpriseConnectorStubType } from "core/domain/connector";
 
 import { useCurrentWorkspace } from "./workspaces";
 import { listEnterpriseSourceStubsForWorkspace } from "../generated/AirbyteClient";
@@ -16,17 +16,17 @@ export const useListEnterpriseStubsForWorkspace = () => {
   const { workspaceId } = useCurrentWorkspace();
 
   return useSuspenseQuery(enterpriseSourceStubsKeys.lists(), async () => {
-    const enterpriseSourceDefinitions: EnterpriseSourceStubType[] = await listEnterpriseSourceStubsForWorkspace(
+    const enterpriseSourceDefinitions: EnterpriseConnectorStubType[] = await listEnterpriseSourceStubsForWorkspace(
       { workspaceId },
       requestOptions
-    ).then(({ enterpriseSourceStubs }) =>
-      enterpriseSourceStubs
+    ).then(({ enterpriseConnectorStubs }) =>
+      enterpriseConnectorStubs
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((stub) => {
           return { ...stub, isEnterprise: true as const };
         })
     );
-    const enterpriseSourceDefinitionsMap = new Map<string, EnterpriseSourceStubType>();
+    const enterpriseSourceDefinitionsMap = new Map<string, EnterpriseConnectorStubType>();
     enterpriseSourceDefinitions.forEach((enterpriseSource) => {
       enterpriseSourceDefinitionsMap.set(enterpriseSource.id, enterpriseSource);
     });
