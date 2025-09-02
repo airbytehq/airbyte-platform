@@ -1792,3 +1792,36 @@ components:
           type: string
         errorMessage:
           type: string
+    EntitlementServiceUnableToAddOrganizationProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 503
+            type:
+              type: string
+              default: error:entitlement-service/error-adding-organization
+            title:
+              type: string
+              default: entitlement-service-error-adding-organization
+            detail:
+              type: string
+              default: There was a problem adding the organization ot the entitlement service. Organization functionality may be limited.
+            data:
+              $ref: "#/components/schemas/ProblemEntitlementServiceData"
+    ProblemEntitlementServiceData:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        planId:
+          type: string
+        errorMessage:
+          type: string

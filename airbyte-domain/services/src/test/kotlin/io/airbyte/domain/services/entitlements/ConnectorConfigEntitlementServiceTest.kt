@@ -73,7 +73,7 @@ class ConnectorConfigEntitlementServiceTest {
           .withSpec(spec)
 
       every { connectorObjectStorageService.getObjectStorageConfigProperty(actorDefinitionVersion) } returns objectStorageProperty
-      every { entitlementService.checkEntitlement(organizationId.value, DestinationObjectStorageEntitlement) } returns
+      every { entitlementService.checkEntitlement(organizationId, DestinationObjectStorageEntitlement) } returns
         EntitlementResult(isEntitled = true, featureId = DestinationObjectStorageEntitlement.featureId)
 
       val result = connectorConfigEntitlementService.getEntitledConnectorSpec(organizationId, actorDefinitionVersion)
@@ -95,7 +95,7 @@ class ConnectorConfigEntitlementServiceTest {
           .withSpec(spec)
 
       every { connectorObjectStorageService.getObjectStorageConfigProperty(actorDefinitionVersion) } returns objectStorageProperty
-      every { entitlementService.checkEntitlement(organizationId.value, DestinationObjectStorageEntitlement) } returns
+      every { entitlementService.checkEntitlement(organizationId, DestinationObjectStorageEntitlement) } returns
         EntitlementResult(isEntitled = false, featureId = DestinationObjectStorageEntitlement.featureId)
 
       val result = connectorConfigEntitlementService.getEntitledConnectorSpec(organizationId, actorDefinitionVersion)
@@ -130,7 +130,7 @@ class ConnectorConfigEntitlementServiceTest {
           .withSpec(spec)
 
       every { connectorObjectStorageService.getObjectStorageConfigProperty(actorDefinitionVersion) } returns objectStorageProperty
-      every { entitlementService.checkEntitlement(organizationId.value, DestinationObjectStorageEntitlement) } returns
+      every { entitlementService.checkEntitlement(organizationId, DestinationObjectStorageEntitlement) } returns
         EntitlementResult(isEntitled = false, featureId = DestinationObjectStorageEntitlement.featureId)
 
       val result = connectorConfigEntitlementService.getEntitledConnectorSpec(organizationId, actorDefinitionVersion)
@@ -192,10 +192,10 @@ class ConnectorConfigEntitlementServiceTest {
       val actorDefinitionVersion = ActorDefinitionVersion().withVersionId(actorDefinitionVersionId)
 
       every { connectorObjectStorageService.getObjectStorageConfigProperty(actorDefinitionVersion) } returns objectStorageProperty
-      every { entitlementService.ensureEntitled(organizationId.value, DestinationObjectStorageEntitlement) } returns Unit
+      every { entitlementService.ensureEntitled(organizationId, DestinationObjectStorageEntitlement) } returns Unit
 
       connectorConfigEntitlementService.ensureEntitledConfig(organizationId, actorDefinitionVersion, config)
-      verify { entitlementService.ensureEntitled(organizationId.value, DestinationObjectStorageEntitlement) }
+      verify { entitlementService.ensureEntitled(organizationId, DestinationObjectStorageEntitlement) }
     }
 
     @Test
@@ -208,7 +208,7 @@ class ConnectorConfigEntitlementServiceTest {
       val expectedException = RuntimeException("Not entitled")
 
       every { connectorObjectStorageService.getObjectStorageConfigProperty(actorDefinitionVersion) } returns objectStorageProperty
-      every { entitlementService.ensureEntitled(organizationId.value, DestinationObjectStorageEntitlement) } throws expectedException
+      every { entitlementService.ensureEntitled(organizationId, DestinationObjectStorageEntitlement) } throws expectedException
 
       assertThrows<RuntimeException> {
         connectorConfigEntitlementService.ensureEntitledConfig(organizationId, actorDefinitionVersion, config)
@@ -253,12 +253,12 @@ class ConnectorConfigEntitlementServiceTest {
       val actorDefinitionVersion = ActorDefinitionVersion().withVersionId(actorDefinitionVersionId)
 
       every { connectorObjectStorageService.getObjectStorageConfigProperty(actorDefinitionVersion) } returns objectStorageProperty
-      every { entitlementService.ensureEntitled(organizationId.value, DestinationObjectStorageEntitlement) } returns Unit
+      every { entitlementService.ensureEntitled(organizationId, DestinationObjectStorageEntitlement) } returns Unit
 
       // Should call ensureEntitled because discriminator considers this as "set"
       connectorConfigEntitlementService.ensureEntitledConfig(organizationId, actorDefinitionVersion, config)
 
-      verify(exactly = 1) { entitlementService.ensureEntitled(organizationId.value, DestinationObjectStorageEntitlement) }
+      verify(exactly = 1) { entitlementService.ensureEntitled(organizationId, DestinationObjectStorageEntitlement) }
     }
   }
 

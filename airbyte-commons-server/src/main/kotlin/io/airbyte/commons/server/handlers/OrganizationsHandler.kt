@@ -20,6 +20,7 @@ import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
 import io.airbyte.api.model.generated.Pagination
 import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.api.model.generated.WorkspaceReadList
+import io.airbyte.commons.entitlements.EntitlementClient
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.Organization
 import io.airbyte.config.Permission
@@ -29,6 +30,8 @@ import io.airbyte.data.services.OrganizationPaymentConfigService
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated
+import io.airbyte.domain.models.EntitlementPlan
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.validation.json.JsonValidationException
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -46,6 +49,7 @@ open class OrganizationsHandler(
   private val organizationPaymentConfigService: OrganizationPaymentConfigService,
   private val workspacesHandler: WorkspacesHandler,
   private val permissionService: PermissionService,
+  private val entitlementClient: EntitlementClient,
 ) {
   companion object {
     private fun buildOrganizationRead(organization: Organization): OrganizationRead =
@@ -62,6 +66,25 @@ open class OrganizationsHandler(
     val email = request.email
     val userId = request.userId
     val orgId = uuidGenerator.get()
+
+    try {
+      // TODO: feature flag to determine which type of trial
+      // Add the organization to the Stigg trial.
+      // Note that Stigg is giving users access to features that they might need before they run a sync, so we need to
+      // add them to the EntitlementPlan immediately.
+      entitlementClient.addOrganization(OrganizationId(orgId), EntitlementPlan.STANDARD_TRIAL)
+    } catch (exception: Exception) {
+      logger.error(exception) { "Error while adding organization $orgId to the Entitlement service." }
+      // TODO: once we've integrated fully with Stigg, throw instead of just logging
+      // throw EntitlementServiceUnableToAddOrganizationProblem(
+      //  "Failed to register organization with entitlement service",
+      //  ProblemEntitlementServiceData()
+      //      .organizationId(orgId)
+      //      .planId(EntitlementPlan.STANDARD_TRIAL.toString())
+      //      .errorMessage(exception.message ?: "Unknown entitlement service error")
+      // )
+    }
+
     val organization =
       Organization()
         .withOrganizationId(orgId)

@@ -14,11 +14,14 @@ import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
 import io.airbyte.api.model.generated.Pagination
 import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.api.model.generated.WorkspaceReadList
+import io.airbyte.commons.entitlements.EntitlementClient
 import io.airbyte.config.Organization
 import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.data.repositories.OrgMemberCount
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.impls.data.OrganizationPaymentConfigServiceDataImpl
+import io.airbyte.domain.models.EntitlementPlan
+import io.airbyte.domain.models.OrganizationId
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -48,6 +51,7 @@ class OrganizationsHandlerTest {
   private lateinit var organizationPaymentConfigService: OrganizationPaymentConfigServiceDataImpl
   private lateinit var workspacesHandler: WorkspacesHandler
   private lateinit var permissionService: PermissionService
+  private lateinit var entitlementClient: EntitlementClient
 
   @BeforeEach
   fun setup() {
@@ -57,6 +61,7 @@ class OrganizationsHandlerTest {
     organizationPaymentConfigService = mockk(relaxed = true)
     workspacesHandler = mockk()
     permissionService = mockk()
+    entitlementClient = mockk(relaxed = true)
 
     organizationsHandler =
       spyk(
@@ -67,6 +72,7 @@ class OrganizationsHandlerTest {
           organizationPaymentConfigService,
           workspacesHandler,
           permissionService,
+          entitlementClient,
         ),
         recordPrivateCalls = true,
       )
@@ -277,4 +283,101 @@ class OrganizationsHandlerTest {
     assertEquals("test-workspace", summary.workspaces[0].name)
     assertEquals(5, summary.memberCount)
   }
+
+  @Test
+  fun `createOrganization calls EntitlementClient addOrganization`() {
+    val userId = UUID.randomUUID()
+    val orgId = UUID.randomUUID()
+    val newOrganization =
+      Organization()
+        .withOrganizationId(orgId)
+        .withEmail(organizationEmail)
+        .withName(organizationName)
+        .withUserId(userId)
+
+    every { uuidSupplier.get() } returns orgId
+    every { organizationPersistence.createOrganization(any()) } returns newOrganization
+
+    val request =
+      OrganizationCreateRequestBody()
+        .organizationName(organizationName)
+        .email(organizationEmail)
+        .userId(userId)
+
+    organizationsHandler.createOrganization(request)
+
+    verify { entitlementClient.addOrganization(OrganizationId(orgId), EntitlementPlan.STANDARD_TRIAL) }
+  }
+
+// TODO: enable these tests once we're ready to enable Stigg
+
+//  @Test
+//  fun `createOrganization throws EntitlementServiceUnableToAddOrganizationProblem when EntitlementClient fails`() {
+//    val userId = UUID.randomUUID()
+//    val orgId = UUID.randomUUID()
+//    val newOrganization =
+//      Organization()
+//        .withOrganizationId(orgId)
+//        .withEmail(organizationEmail)
+//        .withName(organizationName)
+//        .withUserId(userId)
+//
+//    every { uuidSupplier.get() } returns orgId
+//    every { organizationPersistence.createOrganization(any()) } returns newOrganization
+//    every { entitlementClient.addOrganization(any(), any()) } throws RuntimeException("Entitlement service unavailable")
+//
+//    val request =
+//      OrganizationCreateRequestBody()
+//        .organizationName(organizationName)
+//        .email(organizationEmail)
+//        .userId(userId)
+//
+//    val exception =
+//      assertThrows(EntitlementServiceUnableToAddOrganizationProblem::class.java) {
+//        organizationsHandler.createOrganization(request)
+//      }
+//
+//    assertEquals("Failed to register organization with entitlement service", exception.problem.getDetail())
+//    val data = exception.problem.getData() as ProblemEntitlementServiceData
+//    assertEquals(orgId, data.organizationId)
+//    assertEquals("Entitlement service unavailable", data.errorMessage)
+//  }
+//
+//  @Test
+//  fun `createOrganization handles plan downgrade validation errors`() {
+//    val userId = UUID.randomUUID()
+//    val orgId = UUID.randomUUID()
+//    val newOrganization =
+//      Organization()
+//        .withOrganizationId(orgId)
+//        .withEmail(organizationEmail)
+//        .withName(organizationName)
+//        .withUserId(userId)
+//
+//    every { uuidSupplier.get() } returns orgId
+//    every { organizationPersistence.createOrganization(any()) } returns newOrganization
+//    every { entitlementClient.addOrganization(any(), any()) } throws
+//      EntitlementServiceUnableToAddOrganizationProblem(
+//        ProblemEntitlementServiceData()
+//          .organizationId(orgId)
+//          .planId(EntitlementPlan.STANDARD_TRIAL.toString())
+//          .errorMessage("Cannot downgrade from PRO (value: 1) to STANDARD (value: 0)"),
+//      )
+//
+//    val request =
+//      OrganizationCreateRequestBody()
+//        .organizationName(organizationName)
+//        .email(organizationEmail)
+//        .userId(userId)
+//
+//    val exception =
+//      assertThrows(EntitlementServiceUnableToAddOrganizationProblem::class.java) {
+//        organizationsHandler.createOrganization(request)
+//      }
+//
+//    val data = exception.problem.getData() as ProblemEntitlementServiceData
+//    assertEquals(orgId, data.organizationId)
+//    assertEquals(EntitlementPlan.STANDARD_TRIAL.toString(), data.planId)
+//    assertTrue(data.errorMessage.contains("Cannot downgrade from PRO (value: 1) to STANDARD (value: 0)"))
+//  }
 }

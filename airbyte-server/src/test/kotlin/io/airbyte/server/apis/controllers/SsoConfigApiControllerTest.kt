@@ -10,6 +10,7 @@ import io.airbyte.api.server.generated.models.GetSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.UpdateSSOCredentialsRequestBody
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SsoConfigUpdateEntitlement
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SsoConfigRetrieval
 import io.airbyte.domain.services.sso.SsoConfigDomainService
 import io.mockk.Runs
@@ -33,9 +34,9 @@ class SsoConfigApiControllerTest {
 
   @Test
   fun `getSsoConfig returns the config`() {
-    val orgId = UUID.randomUUID()
+    val orgId = OrganizationId(UUID.randomUUID())
     every { entitlementService.ensureEntitled(orgId, SsoConfigUpdateEntitlement) } just Runs
-    every { ssoConfigDomainService.retrieveSsoConfig(orgId) } returns
+    every { ssoConfigDomainService.retrieveSsoConfig(orgId.value) } returns
       SsoConfigRetrieval(
         companyIdentifier = "id",
         clientId = "client-id",
@@ -45,12 +46,12 @@ class SsoConfigApiControllerTest {
 
     val result =
       ssoConfigController.getSsoConfig(
-        GetSSOConfigRequestBody(orgId),
+        GetSSOConfigRequestBody(orgId.value),
       )
 
     verify(exactly = 1) { entitlementService.ensureEntitled(orgId, SsoConfigUpdateEntitlement) }
 
-    assert(result.organizationId == orgId)
+    assert(result.organizationId == orgId.value)
     assert(result.companyIdentifier == "id")
     assert(result.clientId == "client-id")
     assert(result.clientSecret == "client-secret")
@@ -59,13 +60,13 @@ class SsoConfigApiControllerTest {
 
   @Test
   fun `createSsoConfig creates a new config`() {
-    val orgId = UUID.randomUUID()
+    val orgId = OrganizationId(UUID.randomUUID())
     every { entitlementService.ensureEntitled(orgId, SsoConfigUpdateEntitlement) } just Runs
     every { ssoConfigDomainService.createAndStoreSsoConfig(any()) } just Runs
 
     ssoConfigController.createSsoConfig(
       CreateSSOConfigRequestBody(
-        organizationId = orgId,
+        organizationId = orgId.value,
         companyIdentifier = "id",
         clientId = "client-id",
         clientSecret = "client-secret",
@@ -80,30 +81,30 @@ class SsoConfigApiControllerTest {
 
   @Test
   fun `deleteSsoConfig removes the existing config`() {
-    val orgId = UUID.randomUUID()
+    val orgId = OrganizationId(UUID.randomUUID())
     every { entitlementService.ensureEntitled(orgId, SsoConfigUpdateEntitlement) } just Runs
-    every { ssoConfigDomainService.deleteSsoConfig(orgId, any()) } just Runs
+    every { ssoConfigDomainService.deleteSsoConfig(orgId.value, any()) } just Runs
 
     ssoConfigController.deleteSsoConfig(
       DeleteSSOConfigRequestBody(
-        organizationId = orgId,
+        organizationId = orgId.value,
         companyIdentifier = "id",
       ),
     )
 
     verify(exactly = 1) { entitlementService.ensureEntitled(orgId, SsoConfigUpdateEntitlement) }
-    verify(exactly = 1) { ssoConfigDomainService.deleteSsoConfig(orgId, any()) }
+    verify(exactly = 1) { ssoConfigDomainService.deleteSsoConfig(orgId.value, any()) }
   }
 
   @Test
   fun `updateSsoConfig updates a new config`() {
-    val orgId = UUID.randomUUID()
+    val orgId = OrganizationId(UUID.randomUUID())
     every { entitlementService.ensureEntitled(orgId, SsoConfigUpdateEntitlement) } just Runs
     every { ssoConfigDomainService.updateClientCredentials(any()) } just Runs
 
     ssoConfigController.updateSsoCredentials(
       UpdateSSOCredentialsRequestBody(
-        organizationId = orgId,
+        organizationId = orgId.value,
         clientId = "client-id",
         clientSecret = "client-secret",
       ),

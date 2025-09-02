@@ -4,55 +4,59 @@
 
 package io.airbyte.commons.entitlements
 
+import io.airbyte.api.problems.model.generated.ProblemEntitlementServiceData
+import io.airbyte.api.problems.throwable.generated.EntitlementServiceUnableToAddOrganizationProblem
 import io.airbyte.commons.entitlements.models.Entitlement
-import io.airbyte.commons.entitlements.models.EntitlementPlan
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.data.services.OrganizationService
+import io.airbyte.domain.models.EntitlementPlan
+import io.airbyte.domain.models.OrganizationId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
 import io.stigg.api.client.Stigg
+import io.stigg.api.operations.GetActiveSubscriptionsListQuery
 import io.stigg.api.operations.GetEntitlementQuery
 import io.stigg.api.operations.GetEntitlementsQuery
 import io.stigg.api.operations.ProvisionCustomerMutation
 import io.stigg.api.operations.type.FetchEntitlementQuery
 import io.stigg.api.operations.type.FetchEntitlementsQuery
+import io.stigg.api.operations.type.GetActiveSubscriptionsInput
 import io.stigg.api.operations.type.ProvisionCustomerInput
 import io.stigg.api.operations.type.ProvisionCustomerSubscriptionInput
 import jakarta.inject.Singleton
-import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
 
 interface EntitlementClient {
   fun checkEntitlement(
-    organizationId: UUID,
+    organizationId: OrganizationId,
     entitlement: Entitlement,
   ): EntitlementResult
 
-  fun getEntitlements(organizationId: UUID): List<EntitlementResult>
+  fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult>
 
-  fun addOrganizationToPlan(
-    organizationId: UUID,
-    plan: EntitlementPlan?,
+  fun addOrganization(
+    organizationId: OrganizationId,
+    plan: EntitlementPlan,
   )
 }
 
 @Singleton
 class DefaultEntitlementClient : EntitlementClient {
   override fun checkEntitlement(
-    organizationId: UUID,
+    organizationId: OrganizationId,
     entitlement: Entitlement,
   ): EntitlementResult =
     EntitlementResult(featureId = entitlement.featureId, isEntitled = false, reason = "DefaultEntitlementClient grants no entitlements")
 
-  override fun getEntitlements(organizationId: UUID): List<EntitlementResult> = emptyList()
+  override fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult> = emptyList()
 
-  override fun addOrganizationToPlan(
-    organizationId: UUID,
-    plan: EntitlementPlan?,
+  override fun addOrganization(
+    organizationId: OrganizationId,
+    plan: EntitlementPlan,
   ) {}
 }
 
@@ -72,7 +76,7 @@ class StiggEntitlementClient(
   private val organizationService: OrganizationService,
 ) : EntitlementClient {
   override fun checkEntitlement(
-    organizationId: UUID,
+    organizationId: OrganizationId,
     entitlement: Entitlement,
   ): EntitlementResult {
     logger.debug { "Checking entitlement organizationId=$organizationId entitlement=$entitlement" }
@@ -102,7 +106,7 @@ class StiggEntitlementClient(
     )
   }
 
-  override fun getEntitlements(organizationId: UUID): List<EntitlementResult> {
+  override fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult> {
     logger.debug { "Getting entitlements organizationId=$organizationId" }
 
     val result =
@@ -130,22 +134,76 @@ class StiggEntitlementClient(
     }
   }
 
-  override fun addOrganizationToPlan(
-    organizationId: UUID,
-    plan: EntitlementPlan?,
+  fun getPlans(organizationId: OrganizationId): List<EntitlementPlan> {
+    val resp =
+      stigg.query(
+        GetActiveSubscriptionsListQuery
+          .builder()
+          .input(
+            GetActiveSubscriptionsInput
+              .builder()
+              .customerId(organizationId.toString())
+              .build(),
+          ).build(),
+      )
+
+    return resp.getActiveSubscriptions.map { EntitlementPlan.valueOf(it.slimSubscriptionFragmentV2.plan.planId) }.toList()
+  }
+
+  internal fun validatePlanChange(
+    organizationId: OrganizationId,
+    toPlan: EntitlementPlan,
+  ) {
+    logger.debug { "Validating plan change organizationId=$organizationId toPlan=$toPlan" }
+
+    val currentPlans = getPlans(organizationId)
+
+    // Check if any current plan has a higher value than the target plan
+    // (same value plans are allowed to move between each other)
+    val hasHigherPlan = currentPlans.any { it.value > toPlan.value }
+
+    if (hasHigherPlan) {
+      val highestCurrentPlan = currentPlans.maxByOrNull { it.value }
+      throw EntitlementServiceUnableToAddOrganizationProblem(
+        ProblemEntitlementServiceData()
+          .organizationId(organizationId.value)
+          .planId(toPlan.toString())
+          .errorMessage(
+            "Cannot automatically downgrade from ${highestCurrentPlan?.name} (value: ${highestCurrentPlan?.value}) to ${toPlan.name} (value: ${toPlan.value})",
+          ),
+      )
+    }
+
+    logger.debug { "Plan change validation passed organizationId=$organizationId toPlan=$toPlan currentPlans=$currentPlans" }
+  }
+
+  override fun addOrganization(
+    organizationId: OrganizationId,
+    plan: EntitlementPlan,
   ) {
     val org =
       organizationService
-        .getOrganization(organizationId)
-        ?.orElseThrow {
-          IllegalStateException("Organization $organizationId not found; could not add to plan ${plan ?: "null"}")
-        } ?: throw IllegalStateException("getOrganization() returned null for $organizationId; could not add to plan ${plan ?: "null"}")
+        .getOrganization(organizationId.value)
+        .orElseThrow {
+          IllegalStateException("Organization $organizationId not found; could not add to plan $plan")
+        } ?: throw IllegalStateException("getOrganization() returned null for $organizationId; could not add to plan $plan")
 
     val input =
       ProvisionCustomerInput
         .builder()
         .customerId(organizationId.toString())
         .additionalMetaData(mapOf("name" to org.name))
+
+    val plans = getPlans(organizationId)
+
+    if (plans.contains(plan)) {
+      logger.info { "Organization is already in plan. organizationId=$organizationId plan=$plan" }
+      return
+    }
+
+    if (plan != null) {
+      validatePlanChange(organizationId, plan)
+    }
 
     plan?.let {
       input.subscriptionParams(

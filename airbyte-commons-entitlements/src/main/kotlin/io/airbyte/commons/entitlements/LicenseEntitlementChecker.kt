@@ -9,6 +9,7 @@ import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.config.ActorType
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
+import io.airbyte.domain.models.OrganizationId
 import io.micronaut.cache.annotation.Cacheable
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -105,7 +106,8 @@ open class LicenseEntitlementChecker(
       ActorType.DESTINATION -> destinationService.getStandardDestinationDefinition(actorDefinitionId).enterprise
     }
 
-  private fun checkConfigTemplateEntitlement(organizationId: UUID): Boolean = entitlementService.hasConfigTemplateEntitlements(organizationId)
+  private fun checkConfigTemplateEntitlement(organizationId: UUID): Boolean =
+    entitlementService.hasConfigTemplateEntitlements(OrganizationId(organizationId))
 
   private fun checkConnectorEntitlements(
     organizationId: UUID,
@@ -113,7 +115,12 @@ open class LicenseEntitlementChecker(
     actorDefinitionIds: List<UUID>,
   ): Map<UUID, Boolean> {
     val enterpriseConnectorIds = actorDefinitionIds.filter { isEnterpriseConnector(actorType, it) }
-    val grantedEnterpriseConnectorMap = entitlementService.hasEnterpriseConnectorEntitlements(organizationId, actorType, enterpriseConnectorIds)
+    val grantedEnterpriseConnectorMap =
+      entitlementService.hasEnterpriseConnectorEntitlements(
+        OrganizationId(organizationId),
+        actorType,
+        enterpriseConnectorIds,
+      )
 
     // non-enterprise connectors are always granted
     return actorDefinitionIds.associateWith { grantedEnterpriseConnectorMap.getOrDefault(it, true) }

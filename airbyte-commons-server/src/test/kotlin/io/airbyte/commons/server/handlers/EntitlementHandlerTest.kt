@@ -7,6 +7,7 @@ package io.airbyte.commons.entitlements
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.PlatformLlmSyncJobFailureExplanation
 import io.airbyte.commons.server.handlers.EntitlementHandler
+import io.airbyte.domain.models.OrganizationId
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -20,7 +21,7 @@ internal class EntitlementHandlerTest {
   private val entitlementService = mockk<EntitlementService>()
   private val handler = EntitlementHandler(entitlementService)
 
-  private val organizationId = UUID.randomUUID()
+  private val organizationId = OrganizationId(UUID.randomUUID())
 
   @Test
   fun `isEntitled returns result from client for known entitlement`() {

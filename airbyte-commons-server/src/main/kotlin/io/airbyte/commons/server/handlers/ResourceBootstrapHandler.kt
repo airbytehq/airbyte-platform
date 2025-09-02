@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers
 import io.airbyte.api.model.generated.WorkspaceCreateWithId
 import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.entitlements.EntitlementClient
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.converters.WorkspaceConverter
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException
@@ -25,6 +26,8 @@ import io.airbyte.data.services.OrganizationPaymentConfigService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.domain.models.EntitlementPlan
+import io.airbyte.domain.models.OrganizationId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -44,6 +47,7 @@ open class ResourceBootstrapHandler(
   private val organizationPaymentConfigService: OrganizationPaymentConfigService,
   private val airbyteEdition: AirbyteEdition,
   private val dataplaneGroupService: DataplaneGroupService,
+  private val entitlementClient: EntitlementClient,
 ) : ResourceBootstrapHandlerInterface {
   /**
    * This is for bootstrapping a workspace and all the necessary links (organization) and permissions (workspace & organization).
@@ -113,6 +117,27 @@ open class ResourceBootstrapHandler(
         this.name = getDefaultOrganizationName(user)
         this.email = user.email
       }
+
+    try {
+      // TODO: feature flag to determine which type of trial
+      // Add the organization to the Stigg trial.
+      // Note that Stigg is giving users access to features that they might need before they run a sync, so we need to
+      // add them to the EntitlementPlan immediately.
+      entitlementClient.addOrganization(OrganizationId(organization.organizationId), EntitlementPlan.STANDARD_TRIAL)
+    } catch (exception: Exception) {
+      logger.error(exception) {
+        "Failed to add organization ${organization.organizationId} to entitlement service during user signup. "
+      }
+      // TODO: once we've integrated fully with Stigg, throw instead of just logging
+      // throw EntitlementServiceUnableToAddOrganizationProblem(
+      //   "Failed to register organization with entitlement service",
+      //   ProblemEntitlementServiceData()
+      //       .organizationId(organization.organizationId)
+      //       .planId(EntitlementPlan.STANDARD_TRIAL.toString())
+      //       .errorMessage(exception.message ?: "Unknown entitlement service error")
+      // )
+    }
+
     organizationService.writeOrganization(organization)
 
     organizationPaymentConfigService.saveDefaultPaymentConfig(organization.organizationId)

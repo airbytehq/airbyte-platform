@@ -10,10 +10,12 @@ import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
+import io.airbyte.commons.entitlements.EntitlementClient
 import io.airbyte.config.OrganizationPaymentConfig
 import io.airbyte.config.OrganizationPaymentConfig.PaymentStatus
 import io.airbyte.data.services.shared.ConnectionAutoDisabledReason
 import io.airbyte.domain.models.ConnectionId
+import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.transaction.annotation.Transactional
@@ -58,7 +60,10 @@ interface OrganizationService {
    *
    * @param organizationId the ID of the organization that started a new subscription
    */
-  fun handleSubscriptionStarted(organizationId: OrganizationId)
+  fun handleSubscriptionStarted(
+    organizationId: OrganizationId,
+    orbPlanId: String?,
+  )
 
   /**
    * Handle the end of a subscription for an organization
@@ -74,6 +79,7 @@ open class OrganizationServiceImpl(
   private val connectionRepository: ConnectionRepository,
   private val organizationPaymentConfigRepository: OrganizationPaymentConfigRepository,
   private val billingTrackingHelper: BillingTrackingHelper,
+  private val entitlementClient: EntitlementClient,
 ) : OrganizationService {
   @Transactional("config")
   override fun disableAllConnections(
@@ -121,12 +127,41 @@ open class OrganizationServiceImpl(
     disableAllConnections(organizationId, ConnectionAutoDisabledReason.INVOICE_MARKED_UNCOLLECTIBLE)
   }
 
-  override fun handleSubscriptionStarted(organizationId: OrganizationId) {
+  override fun handleSubscriptionStarted(
+    organizationId: OrganizationId,
+    orbPlanId: String?,
+  ) {
     val orgPaymentConfig =
       organizationPaymentConfigRepository.findByOrganizationId(organizationId.value)
         ?: throw ResourceNotFoundProblem(
           ProblemResourceData().resourceId(organizationId.toString()).resourceType(ResourceType.ORGANIZATION_PAYMENT_CONFIG),
         )
+
+    // For now we only support automatically adding users from "cloud-self-serve" in Orb to the STANDARD plan in Stigg
+    // All other subscriptions must be added manually.
+    val supportedPlan = EntitlementPlan.supportedOrbPlanExternalIds.keys.find { it.plan == orbPlanId }
+    if (orbPlanId == null || supportedPlan == null) {
+      logger.warn {
+        "Skipping adding organization ${orgPaymentConfig.organizationId} to Stigg. Organizations with Orb Plan $orbPlanId must be added manually."
+      }
+    } else {
+      logger.info { "Adding organization ${orgPaymentConfig.organizationId} and Orb Plan $orbPlanId to Stigg plan ${EntitlementPlan.STANDARD}" }
+      try {
+        entitlementClient.addOrganization(organizationId, EntitlementPlan.STANDARD)
+      } catch (exception: Exception) {
+        logger.error(exception) {
+          "Failed to add organization $organizationId to entitlement plan ${EntitlementPlan.STANDARD}. "
+        }
+        // TODO: once we've integrated fully with Stigg, throw instead of just logging
+        // throw EntitlementServiceUnableToAddOrganizationProblem(
+        //    "Failed to register organization with entitlement service",
+        //    ProblemEntitlementServiceData()
+        //        .organizationId(orgId)
+        //        .planId(EntitlementPlan.STANDARD_TRIAL)
+        //        .errorMessage(exception.message ?: "Unknown entitlement service error")
+        // )
+      }
+    }
 
     val currentSubscriptionStatus = orgPaymentConfig.subscriptionStatus
 

@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers
 
+import io.airbyte.commons.entitlements.EntitlementClient
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
@@ -13,6 +14,8 @@ import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.OrganizationPaymentConfigService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.domain.models.EntitlementPlan
+import io.airbyte.domain.models.OrganizationId
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -33,6 +36,7 @@ class ResourceBootstrapHandlerTest {
   private val organizationPaymentConfigService: OrganizationPaymentConfigService = mockk()
   private val dataplaneGroupService: DataplaneGroupService = mockk()
   private val roleResolver: RoleResolver = mockk()
+  private val entitlementClient: EntitlementClient = mockk(relaxed = true)
 
   private val handler =
     ResourceBootstrapHandler(
@@ -45,6 +49,7 @@ class ResourceBootstrapHandlerTest {
       organizationPaymentConfigService,
       AirbyteEdition.COMMUNITY,
       dataplaneGroupService,
+      entitlementClient,
     )
 
   @Nested
@@ -76,5 +81,67 @@ class ResourceBootstrapHandlerTest {
 
       // We no longer need to test the payment config saved because default config is always the same
     }
+
+    @Test
+    fun `calls EntitlementClient addOrganization when creating new organization`() {
+      val spy = spyk(handler)
+
+      every { spy.findExistingOrganization(any()) } returns null
+      every { organizationService.writeOrganization(any()) } returns Unit
+      every { organizationPaymentConfigService.saveDefaultPaymentConfig(any()) } returns Unit
+
+      spy.findOrCreateOrganizationAndPermission(user)
+
+      verify { entitlementClient.addOrganization(OrganizationId(orgId), EntitlementPlan.STANDARD_TRIAL) }
+    }
   }
+
+// TODO: enable these tests once we're ready to enable Stigg
+
+//    @Test
+//    fun `throws EntitlementServiceUnableToAddOrganizationProblem when EntitlementClient fails`() {
+//      val spy = spyk(handler)
+//
+//      every { spy.findExistingOrganization(any()) } returns null
+//      every { organizationService.writeOrganization(any()) } returns mockk()
+//
+//      every { entitlementClient.addOrganization(any(), any()) } throws RuntimeException("Entitlement service down")
+//
+//      val exception =
+//        assertThrows(EntitlementServiceUnableToAddOrganizationProblem::class.java) {
+//          spy.findOrCreateOrganizationAndPermission(user)
+//        }
+//
+//      assertEquals("Failed to register organization with entitlement service", exception.problem.getDetail())
+//      val data = exception.problem.getData() as ProblemEntitlementServiceData
+//      assertEquals(orgId, data.organizationId)
+//      assertEquals("Entitlement service down", data.errorMessage)
+//    }
+//
+//    @Test
+//    fun `throws EntitlementServiceUnableToAddOrganizationProblem when plan validation fails`() {
+//      val spy = spyk(handler)
+//
+//      every { spy.findExistingOrganization(any()) } returns null
+//      every { organizationService.writeOrganization(any()) } returns mockk()
+//
+//      every { entitlementClient.addOrganization(any(), any()) } throws
+//        EntitlementServiceUnableToAddOrganizationProblem(
+//          ProblemEntitlementServiceData()
+//            .organizationId(orgId)
+//            .planId("plan-downgrade-forbidden")
+//            .errorMessage("Cannot downgrade from PRO (value: 1) to STANDARD (value: 0)"),
+//        )
+//
+//      val exception =
+//        assertThrows(EntitlementServiceUnableToAddOrganizationProblem::class.java) {
+//          spy.findOrCreateOrganizationAndPermission(user)
+//        }
+//
+//      val data = exception.problem.getData() as ProblemEntitlementServiceData
+//      assertEquals(orgId, data.organizationId)
+//      assertEquals(EntitlementPlan.STANDARD_TRIAL.toString(), data.planId)
+//      assertTrue(data.errorMessage.contains("Cannot downgrade from PRO (value: 1) to STANDARD (value: 0)"))
+//    }
+//  }
 }

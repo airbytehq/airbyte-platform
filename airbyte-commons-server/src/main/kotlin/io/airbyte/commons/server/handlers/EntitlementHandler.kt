@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.Entitlements
+import io.airbyte.domain.models.OrganizationId
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -15,7 +16,7 @@ class EntitlementHandler(
   private val entitlementService: EntitlementService,
 ) {
   fun isEntitled(
-    organizationId: UUID,
+    organizationId: OrganizationId,
     entitlementId: String,
   ): EntitlementResult {
     val entitlement =
@@ -24,5 +25,5 @@ class EntitlementHandler(
     return entitlementService.checkEntitlement(organizationId, entitlement)
   }
 
-  fun getEntitlements(organizationId: UUID): List<EntitlementResult> = entitlementService.getEntitlements(organizationId)
+  fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult> = entitlementService.getEntitlements(organizationId)
 }

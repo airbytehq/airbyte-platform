@@ -24,6 +24,7 @@ import io.airbyte.config.Schedule
 import io.airbyte.config.StandardSync
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.WorkspaceHelper
@@ -33,6 +34,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import org.mockito.kotlin.anyOrNull
 import java.util.UUID
@@ -96,7 +98,7 @@ internal class ConnectionSchedulerHelperTest {
   @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun testPopulateSyncScheduleFromCron() {
     Mockito
-      .`when`(entitlementService.checkEntitlement(anyOrNull(), anyOrNull()))
+      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, PlatformSubOneHourSyncFrequency))
       .thenReturn(EntitlementResult(PlatformSubOneHourSyncFrequency.featureId, true, null))
 
     val actual = StandardSync().withSourceId(UUID.randomUUID())
@@ -120,7 +122,7 @@ internal class ConnectionSchedulerHelperTest {
   @ValueSource(booleans = [true, false])
   fun testScheduleValidation(hasEntitlement: Boolean) {
     Mockito
-      .`when`(entitlementService.checkEntitlement(anyOrNull(), anyOrNull()))
+      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, PlatformSubOneHourSyncFrequency))
       .thenReturn(EntitlementResult(PlatformSubOneHourSyncFrequency.featureId, hasEntitlement, null))
 
     val actual = StandardSync().withSourceId(UUID.randomUUID())
@@ -757,8 +759,8 @@ internal class ConnectionSchedulerHelperTest {
         Mockito
           .`when`(
             entitlementService.checkEntitlement(
-              anyOrNull(),
-              anyOrNull(),
+              TEST_ORG_ID,
+              PlatformSubOneHourSyncFrequency,
             ),
           ).thenReturn(EntitlementResult(PlatformSubOneHourSyncFrequency.featureId, true, null))
 
@@ -795,5 +797,6 @@ internal class ConnectionSchedulerHelperTest {
     private const val EXPECTED_CRON_EXPRESSION = "0 0 12 * * ?"
     private val WORKSPACE_ID: UUID = UUID.randomUUID()
     private val ORGANIZATION_ID: UUID = UUID.randomUUID()
+    private val TEST_ORG_ID = OrganizationId(ORGANIZATION_ID)
   }
 }

@@ -24,6 +24,7 @@ import io.airbyte.config.Schedule
 import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Organization
@@ -124,7 +125,7 @@ class ConnectionScheduleHelper(
               List.of(Organization(organizationId), Workspace(workspaceId)),
             ),
           ) ||
-            entitlementService.checkEntitlement(organizationId, PlatformSubOneHourSyncFrequency).isEntitled
+            entitlementService.checkEntitlement(OrganizationId(organizationId), PlatformSubOneHourSyncFrequency).isEntitled
 
         validateCronFrequency(cronExpression, canSyncUnderOneHour)
 

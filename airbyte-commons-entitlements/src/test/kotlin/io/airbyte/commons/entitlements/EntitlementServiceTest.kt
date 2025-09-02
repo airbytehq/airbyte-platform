@@ -8,6 +8,7 @@ import io.airbyte.commons.entitlements.models.ConnectorEntitlement
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.config.ActorType
+import io.airbyte.domain.models.OrganizationId
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -21,7 +22,7 @@ class EntitlementServiceTest {
 
   @Test
   fun `checkEntitlement delegates to entitlementClient`() {
-    val orgId = UUID.randomUUID()
+    val orgId = OrganizationId(UUID.randomUUID())
     val entitlement = mockk<Entitlement>()
     val expected = EntitlementResult("some-id", true, null)
 
@@ -34,7 +35,7 @@ class EntitlementServiceTest {
 
   @Test
   fun `hasEnterpriseConnectorEntitlements merges results with fallback to provider`() {
-    val orgId = UUID.randomUUID()
+    val orgId = OrganizationId(UUID.randomUUID())
     val actorType = ActorType.SOURCE
     val defA = UUID.randomUUID()
     val defB = UUID.randomUUID()
@@ -64,7 +65,7 @@ class EntitlementServiceTest {
 
     // A & C are enabled by the provider, B is disabled
     every {
-      entitlementProvider.hasEnterpriseConnectorEntitlements(orgId, actorType, listOf(defA, defB, defC))
+      entitlementProvider.hasEnterpriseConnectorEntitlements(orgId.value, actorType, listOf(defA, defB, defC))
     } returns mapOf(defA to true, defB to false, defC to true)
 
     val result = entitlementService.hasEnterpriseConnectorEntitlements(orgId, actorType, listOf(defA, defB, defC))
@@ -84,8 +85,8 @@ class EntitlementServiceTest {
 
   @Test
   fun `hasConfigTemplateEntitlements delegates to provider`() {
-    val orgId = UUID.randomUUID()
-    every { entitlementProvider.hasConfigTemplateEntitlements(orgId) } returns true
+    val orgId = OrganizationId(UUID.randomUUID())
+    every { entitlementProvider.hasConfigTemplateEntitlements(orgId.value) } returns true
 
     val result = entitlementService.hasConfigTemplateEntitlements(orgId)
 

@@ -186,6 +186,7 @@ import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.StreamStatusesService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService
 import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.domain.services.secrets.SecretReferenceService
@@ -221,6 +222,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
+import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.mockStatic
 import org.mockito.kotlin.anyOrNull
@@ -2223,7 +2225,7 @@ internal class ConnectionsHandlerTest {
       @Throws(Exception::class)
       fun testUpdateConnectionPatchScheduleToCron() {
         whenever(workspaceHelper.getWorkspaceForSourceId(anyOrNull())).thenReturn(UUID.randomUUID())
-        whenever(workspaceHelper.getOrganizationForWorkspace(anyOrNull())).thenReturn(UUID.randomUUID())
+        whenever(workspaceHelper.getOrganizationForWorkspace(anyOrNull())).thenReturn(organizationId)
 
         val cronScheduleData =
           ConnectionScheduleData().cron(
@@ -2252,8 +2254,8 @@ internal class ConnectionsHandlerTest {
         whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync)
         whenever(
           entitlementService.checkEntitlement(
-            anyOrNull(),
-            anyOrNull(),
+            OrganizationId(organizationId),
+            PlatformSubOneHourSyncFrequency,
           ),
         ).thenReturn(EntitlementResult(PlatformSubOneHourSyncFrequency.featureId, true, null))
 

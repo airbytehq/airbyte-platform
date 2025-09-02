@@ -12,6 +12,7 @@ import io.airbyte.api.model.generated.OrganizationIsEntitledResponse
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.EntitlementHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.server.apis.execute
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
@@ -35,7 +36,7 @@ class EntitlementsApiController(
   ): OrganizationIsEntitledResponse? =
     execute {
       val entitlementResult =
-        entitlementHandler.isEntitled(isEntitledRequestBody.organizationId, isEntitledRequestBody.featureId)
+        entitlementHandler.isEntitled(OrganizationId(isEntitledRequestBody.organizationId), isEntitledRequestBody.featureId)
       val response = OrganizationIsEntitledResponse()
       response.featureId(entitlementResult.featureId).isEntitled(entitlementResult.isEntitled).accessDeniedReason(entitlementResult.reason)
       response
@@ -49,7 +50,7 @@ class EntitlementsApiController(
   ): GetEntitlementsByOrganizationIdResponse? =
     execute {
       val result =
-        entitlementHandler.getEntitlements(getEntitlementsByOrganizationIdRequestBody.organizationId)
+        entitlementHandler.getEntitlements(OrganizationId(getEntitlementsByOrganizationIdRequestBody.organizationId))
       val response = GetEntitlementsByOrganizationIdResponse()
       response.entitlements(
         result.map { OrganizationIsEntitledResponse().featureId(it.featureId).isEntitled(it.isEntitled).accessDeniedReason(it.reason) },

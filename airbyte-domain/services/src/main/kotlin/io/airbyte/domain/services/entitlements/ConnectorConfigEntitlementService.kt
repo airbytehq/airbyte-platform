@@ -72,7 +72,7 @@ class ConnectorConfigEntitlementService(
 
     val missingEntitlements =
       entitlementRequirements.entries
-        .filterNot { (_, requirement) -> entitlementService.checkEntitlement(organizationId.value, requirement.entitlement).isEntitled }
+        .filterNot { (_, requirement) -> entitlementService.checkEntitlement(organizationId, requirement.entitlement).isEntitled }
 
     val spec = actorDefinitionVersion.spec
 
@@ -130,7 +130,7 @@ class ConnectorConfigEntitlementService(
       }
 
     for ((_, requirement) in usedProperties) {
-      entitlementService.ensureEntitled(organizationId.value, requirement.entitlement)
+      entitlementService.ensureEntitled(organizationId, requirement.entitlement)
     }
   }
 }

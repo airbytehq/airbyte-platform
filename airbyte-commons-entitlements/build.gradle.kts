@@ -19,6 +19,7 @@ dependencies {
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-commons-license"))
   implementation(project(":oss:airbyte-data"))
+  implementation(project(":oss:airbyte-domain:models"))
   implementation(project(":oss:airbyte-featureflag"))
 
   implementation(libs.micronaut.inject)
