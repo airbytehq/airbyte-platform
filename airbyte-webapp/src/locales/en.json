@@ -1418,6 +1418,8 @@
   "settings.accountSettings": "Account Settings",
   "settings.userId": "User ID: {id}",
   "settings.userId.copy": "Copy user ID",
+  "settings.workspaceId": "Workspace ID: {id}",
+  "settings.workspaceId.copy": "Copy workspace ID",
   "settings.accountSettings.logoutText": "Sign out",
   "settings.webhook": "Connection status Webhook",
   "settings.webhook.test.passed": "Webhook test passed!",
