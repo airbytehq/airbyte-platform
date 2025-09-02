@@ -64,7 +64,9 @@ import io.airbyte.api.problems.throwable.generated.ConnectionConflictingStreamPr
 import io.airbyte.api.problems.throwable.generated.ConnectionDoesNotSupportFileTransfersProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogInvalidAdditionalFieldProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogInvalidOperationProblem
+import io.airbyte.api.problems.throwable.generated.DestinationCatalogInvalidPrimaryKeyProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogMissingObjectNameProblem
+import io.airbyte.api.problems.throwable.generated.DestinationCatalogMissingPrimaryKeyProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogMissingRequiredFieldProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogRequiredProblem
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
@@ -221,6 +223,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.mock
@@ -3370,6 +3373,53 @@ internal class ConnectionsHandlerTest {
           DestinationCatalogInvalidAdditionalFieldProblem::class.java,
         ) { connectionsHandler.validateCatalogWithDestinationCatalog(catalog, destinationCatalog) }
       }
+
+      @ParameterizedTest
+      @MethodSource("io.airbyte.commons.server.handlers.ConnectionsHandlerTest#matchingKeysTestCases")
+      @Throws(JsonValidationException::class)
+      fun testValidateCatalogWithDestinationCatalogMatchingKeys(testCase: MatchingKeyTestCase) {
+        // Create test data
+        val catalog = generateBasicApiCatalog()
+        catalog
+          .getStreams()
+          .first()
+          .getConfig()
+          .destinationObjectName("test_table")
+          .primaryKey(testCase.primaryKey)
+
+        val configuredCatalog = catalogConverter.toConfiguredInternal(catalog)
+
+        val destinationSchema = generateBasicJsonSchema()
+        val destinationCatalog =
+          DestinationCatalog(
+            listOf(
+              DestinationOperation(
+                "test_table",
+                io.airbyte.config.DestinationSyncMode.APPEND,
+                destinationSchema,
+                testCase.matchingKeys,
+              ),
+            ),
+          )
+
+        val generationResult = CatalogGenerationResult(configuredCatalog, mapOf<StreamDescriptor, MutableMap<MapperConfig, MapperError>>())
+
+        whenever(
+          destinationCatalogGenerator.generateDestinationCatalog(
+            configuredCatalog,
+          ),
+        ).thenReturn(generationResult)
+
+        if (testCase.expectedException != null) {
+          Assertions.assertThrows(
+            testCase.expectedException,
+          ) { connectionsHandler.validateCatalogWithDestinationCatalog(catalog, destinationCatalog) }
+        } else {
+          Assertions.assertDoesNotThrow {
+            connectionsHandler.validateCatalogWithDestinationCatalog(catalog, destinationCatalog)
+          }
+        }
+      }
     }
   }
 
@@ -5667,4 +5717,81 @@ internal class ConnectionsHandlerTest {
   private val timezoneLosAngeles = "America/Los_Angeles"
   private val cronExpression = "0 0 */2 * * ?"
   private val streamSelectionData = "null/users-data0"
+
+  data class MatchingKeyTestCase(
+    val testName: String,
+    val matchingKeys: List<List<String>>?,
+    val primaryKey: List<List<String>>?,
+    val expectedException: Class<out Throwable>?,
+  )
+
+  companion object {
+    @JvmStatic
+    fun matchingKeysTestCases() =
+      listOf(
+        // Test case: No matching keys defined - should pass
+        MatchingKeyTestCase(
+          testName = "No matching keys",
+          matchingKeys = null,
+          primaryKey = listOf(listOf("id")),
+          expectedException = null,
+        ),
+        // Test case: Matching keys defined but no primary key - should fail
+        MatchingKeyTestCase(
+          testName = "Matching keys but no primary key",
+          matchingKeys = listOf(listOf("id"), listOf("email")),
+          primaryKey = null,
+          expectedException = DestinationCatalogMissingPrimaryKeyProblem::class.java,
+        ),
+        // Test case: Empty primary key with matching keys - should fail
+        MatchingKeyTestCase(
+          testName = "Matching keys but empty primary key",
+          matchingKeys = listOf(listOf("id"), listOf("email")),
+          primaryKey = emptyList(),
+          expectedException = DestinationCatalogMissingPrimaryKeyProblem::class.java,
+        ),
+        // Test case: Primary key matches one of the matching keys - should pass
+        MatchingKeyTestCase(
+          testName = "Primary key matches single matching key",
+          matchingKeys = listOf(listOf("id"), listOf("email")),
+          primaryKey = listOf(listOf("id")),
+          expectedException = null,
+        ),
+        // Test case: Primary key matches composite matching key - should pass
+        MatchingKeyTestCase(
+          testName = "Primary key matches composite matching key",
+          matchingKeys = listOf(listOf("id"), listOf("company", "email")),
+          primaryKey = listOf(listOf("company"), listOf("email")),
+          expectedException = null,
+        ),
+        // Test case: Primary key does not match any matching key - should fail
+        MatchingKeyTestCase(
+          testName = "Primary key not in matching keys",
+          matchingKeys = listOf(listOf("id"), listOf("email")),
+          primaryKey = listOf(listOf("name")),
+          expectedException = DestinationCatalogInvalidPrimaryKeyProblem::class.java,
+        ),
+        // Test case: Primary key has different order but same fields as composite matching key - should pass
+        MatchingKeyTestCase(
+          testName = "Primary key different order than composite matching key",
+          matchingKeys = listOf(listOf("id"), listOf("company", "email")),
+          primaryKey = listOf(listOf("email"), listOf("company")),
+          expectedException = null,
+        ),
+        // Test case: Primary key is subset of composite matching key - should fail
+        MatchingKeyTestCase(
+          testName = "Primary key subset of composite matching key",
+          matchingKeys = listOf(listOf("id"), listOf("company", "email")),
+          primaryKey = listOf(listOf("company")),
+          expectedException = DestinationCatalogInvalidPrimaryKeyProblem::class.java,
+        ),
+        // Test case: Primary key has extra fields compared to matching key - should fail
+        MatchingKeyTestCase(
+          testName = "Primary key superset of matching key",
+          matchingKeys = listOf(listOf("id"), listOf("company")),
+          primaryKey = listOf(listOf("id"), listOf("company"), listOf("extra")),
+          expectedException = DestinationCatalogInvalidPrimaryKeyProblem::class.java,
+        ),
+      )
+  }
 }

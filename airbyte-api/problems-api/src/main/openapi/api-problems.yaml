@@ -1591,6 +1591,48 @@ components:
               default: A destination catalog is required for data activation connections.
             data:
               $ref: "#/components/schemas/ProblemDestinationCatalogRequiredData"
+    DestinationCatalogMissingPrimaryKeyProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connection/destination-catalog/missing-primary-key
+            title:
+              type: string
+              default: Primary key required when matching keys are defined
+            detail:
+              type: string
+              default: When the destination operation defines matching keys, the stream must have a primary key configured.
+            data:
+              $ref: "#/components/schemas/ProblemDestinationCatalogMatchingKeyData"
+    DestinationCatalogInvalidPrimaryKeyProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connection/destination-catalog/invalid-primary-key
+            title:
+              type: string
+              default: Primary key must match one of the matching keys
+            detail:
+              type: string
+              default: The configured primary key must be one of the supported matching keys defined in the destination operation.
+            data:
+              $ref: "#/components/schemas/ProblemDestinationCatalogMatchingKeyData"
     ProblemDestinationCatalogStreamData:
       type: object
       required:
@@ -1668,6 +1710,32 @@ components:
           type: string
           format: uuid
           description: The ID of the destination
+    ProblemDestinationCatalogMatchingKeyData:
+      type: object
+      required:
+        - streamName
+        - matchingKeys
+      properties:
+        streamName:
+          type: string
+          description: Name of the configured stream
+        streamNamespace:
+          type: string
+          description: Namespace of the configured stream
+        matchingKeys:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+          description: The list of supported matching keys defined in the destination operation
+        primaryKey:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+          description: The configured primary key for the stream
     SSOConfigRetrievalProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object

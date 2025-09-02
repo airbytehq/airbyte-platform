@@ -64,6 +64,7 @@ import io.airbyte.api.problems.model.generated.ProblemConnectionConflictingStrea
 import io.airbyte.api.problems.model.generated.ProblemConnectionConflictingStreamsDataItem
 import io.airbyte.api.problems.model.generated.ProblemConnectionUnsupportedFileTransfersData
 import io.airbyte.api.problems.model.generated.ProblemDestinationCatalogAdditionalFieldData
+import io.airbyte.api.problems.model.generated.ProblemDestinationCatalogMatchingKeyData
 import io.airbyte.api.problems.model.generated.ProblemDestinationCatalogOperationData
 import io.airbyte.api.problems.model.generated.ProblemDestinationCatalogRequiredData
 import io.airbyte.api.problems.model.generated.ProblemDestinationCatalogRequiredFieldData
@@ -77,7 +78,9 @@ import io.airbyte.api.problems.throwable.generated.ConnectionConflictingStreamPr
 import io.airbyte.api.problems.throwable.generated.ConnectionDoesNotSupportFileTransfersProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogInvalidAdditionalFieldProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogInvalidOperationProblem
+import io.airbyte.api.problems.throwable.generated.DestinationCatalogInvalidPrimaryKeyProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogMissingObjectNameProblem
+import io.airbyte.api.problems.throwable.generated.DestinationCatalogMissingPrimaryKeyProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogMissingRequiredFieldProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogRequiredProblem
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem
@@ -1030,7 +1033,10 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       val result = destinationCatalogGenerator.generateDestinationCatalog(configuredCatalog)
       val configuredStreams = result.catalog.streams
 
-      for ((stream, _, destinationSyncMode, _, _, _, _, _, fields, _, _, destinationObjectName) in configuredStreams) {
+      for (configuredStream in configuredStreams) {
+        val stream = configuredStream.stream
+        val destinationObjectName = configuredStream.destinationObjectName
+        val destinationSyncMode = configuredStream.destinationSyncMode
         val configuredObjectName =
           destinationObjectName
             ?: throw DestinationCatalogMissingObjectNameProblem(
@@ -1054,9 +1060,43 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
               )
             }
 
+        // Matching Keys
+        // Note: Nested lists in matching keys refer to composite keys (multiple fields), while nested lists in PKs refer to nested fields.
+        // Nested fields are not supported as matching keys.
+        // Example:
+        //   Matching Keys: [["id"], ["company", "email"]] (could be composite)
+        //   PK: [["id"]] -> valid, [["company"], ["email"]] -> valid, [["email"]] -> invalid, [] -> invalid
+        val hasMatchingKeys = !destinationOperation.matchingKeys.isNullOrEmpty()
+        if (hasMatchingKeys) {
+          val primaryKey = configuredStream.primaryKey
+          if (primaryKey.isNullOrEmpty()) {
+            throw DestinationCatalogMissingPrimaryKeyProblem(
+              ProblemDestinationCatalogMatchingKeyData()
+                .streamName(stream.name)
+                .streamNamespace(stream.namespace)
+                .matchingKeys(destinationOperation.matchingKeys)
+                .primaryKey(primaryKey),
+            )
+          }
+
+          // Primary key must be one of the supported matching keys
+          val pkAsMatchingKey = primaryKey.flatten()
+          val matchingKeyIsSupported = destinationOperation.matchingKeys!!.any { it.sorted() == pkAsMatchingKey.sorted() }
+          if (!matchingKeyIsSupported) {
+            throw DestinationCatalogInvalidPrimaryKeyProblem(
+              ProblemDestinationCatalogMatchingKeyData()
+                .streamName(stream.name)
+                .streamNamespace(stream.namespace)
+                .matchingKeys(destinationOperation.matchingKeys)
+                .primaryKey(primaryKey),
+            )
+          }
+        }
+
         val destinationFields = destinationOperation.getFields()
 
         // Required fields must be present
+        val fields = configuredStream.fields
         val requiredFields = destinationFields.stream().filter(Field::required).toList()
         requiredFields.forEach(
           Consumer { field: Field ->
