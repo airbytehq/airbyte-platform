@@ -78,8 +78,10 @@ const WorkspacePickerPanelContent: React.FC<WorkspacesPickerNextProps> = ({ curr
     ...infiniteWorkspaces.filter((workspace) => workspace.workspaceId !== currentWorkspace.workspaceId),
   ];
 
-  const [totalListHeight, setTotalListHeight] = useState(Infinity);
-  const listHeight = Math.min(300, totalListHeight);
+  const [totalListHeight, setTotalListHeight] = useState(0);
+  // Single line rows in the picker are approximately 36px tall. This is used as an approximate fallback value in the
+  // first render when totalListHeight is unknown.
+  const listHeight = Math.min(Math.max(36 * infiniteWorkspaces.length, totalListHeight), 300);
 
   const virtuosoRef = useRef<VirtuosoHandle | null>(null);
 
@@ -90,6 +92,7 @@ const WorkspacePickerPanelContent: React.FC<WorkspacesPickerNextProps> = ({ curr
           value={searchValue}
           onChange={(value) => {
             setSearchValue(value);
+            setTotalListHeight(0);
             virtuosoRef.current?.scrollTo({ top: 0 });
           }}
           placeholder={formatMessage({ id: "sidebar.searchAllWorkspaces" })}
@@ -118,7 +121,6 @@ const WorkspacePickerPanelContent: React.FC<WorkspacesPickerNextProps> = ({ curr
             ref={virtuosoRef}
             style={{
               height: listHeight,
-              transition: "height 0.1s ease",
               width: "100%",
             }}
             data={workspaceList}
