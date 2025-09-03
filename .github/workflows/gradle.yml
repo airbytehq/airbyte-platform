@@ -169,18 +169,32 @@ jobs:
           AIRBYTE_TEAM_BOT_SLACK_TOKEN: ${{ secrets.SLACK_AIRBYTE_TEAM_READ_USERS }}
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish to OSS Build Failure Slack Channel
-        uses: abinoda/slack-action@master
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN_AIRBYTE_TEAM }}
+        uses: slackapi/slack-github-action@v2.1.1
         with:
-          args: >-
-            {\"channel\":\"C03BEADRPNY\", \"blocks\":[
-            {\"type\":\"divider\"},
-            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" Merge to OSS main failed! :bangbang: \n\n\"}},
-            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"_merged by_: *${{ github.actor }}* \n\"}},
-            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"<@${{ steps.match-github-to-slack-user.outputs.slack_user_ids }}> \n\"}},
-            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" :octavia-shocked: <https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}|View Action Run> :octavia-shocked: \n\"}},
-            {\"type\":\"divider\"}]}
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN_AIRBYTE_TEAM }}
+          payload: |
+            channel: C03BEADRPNY
+            text: "Merge to OSS main failed!"
+            blocks:
+              - type: divider
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: " Merge to OSS main failed! :bangbang: \n\n"
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: "_merged by_: *${{ github.actor }}* \n"
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: "<@${{ steps.match-github-to-slack-user.outputs.slack_user_ids }}> \n"
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: " :octavia-shocked: <https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}|View Action Run> :octavia-shocked: \n"
+              - type: divider
 
   notify-failure-slack-channel-fixed-broken-build:
     name: "Notify Slack Channel on Build Fixes"
@@ -197,14 +211,25 @@ jobs:
       # To avoid clogging up the channel, only publish build success if the previous build was a failure since this means the build was fixed.
       - name: Publish Build Fixed Message to OSS Build Failure Slack Channel
         if: ${{ steps.last_status.outputs.last_status == 'failure' }}
-        uses: abinoda/slack-action@master
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN_AIRBYTE_TEAM }}
+        uses: slackapi/slack-github-action@v2.1.1
         with:
-          args: >-
-            {\"channel\":\"C03BEADRPNY\", \"blocks\":[
-            {\"type\":\"divider\"},
-            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" OSS Main Fixed! :white_check_mark: \n\n\"}},
-            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"_merged by_: *${{ github.actor }}* \n\"}},
-            {\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\" :octavia-rocket: <https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}|View Action Run> :octavia-rocket: \n\"}},
-            {\"type\":\"divider\"}]}
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN_AIRBYTE_TEAM }}
+          payload: |
+            channel: C03BEADRPNY
+            text: "OSS Main Fixed!"
+            blocks:
+              - type: divider
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: " OSS Main Fixed! :white_check_mark: \n\n"
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: "_merged by_: *${{ github.actor }}* \n"
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: " :octavia-rocket: <https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}|View Action Run> :octavia-rocket: \n"
+              - type: divider
