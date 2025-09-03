@@ -137,7 +137,10 @@ const useCurrentWorkspaceForOrganization = () => {
       setOrganizationWorkspaceMap((map) => ({ ...map, [currentOrganizationId]: currentWorkspace.workspaceId }));
     }
   }, [currentWorkspace?.workspaceId, currentOrganizationId, setOrganizationWorkspaceMap]);
-  const defaultOrganizationWorkspace = useDefaultWorkspaceInOrganization(currentOrganizationId, !currentWorkspace);
+  const defaultOrganizationWorkspace = useDefaultWorkspaceInOrganization(
+    currentOrganizationId,
+    !currentWorkspace && !savedWorkspace
+  );
   return currentWorkspace ?? savedWorkspace ?? defaultOrganizationWorkspace ?? null;
 };
 

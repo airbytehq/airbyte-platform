@@ -2,6 +2,7 @@ import { useMutation, useQueryClient, useQuery, UseInfiniteQueryResult, useInfin
 
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentUser } from "core/services/auth";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import { getWorkspaceQueryKey } from "./workspaces";
 import { ApiCallOptions } from "../apiCall";
@@ -79,9 +80,21 @@ export const useOrganization = (organizationId: string) => {
 
 export const useOrgInfo = (organizationId: string, enabled?: boolean): OrganizationInfoRead | undefined => {
   const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+  const canViewOrganizationSettings = useGeneratedIntent(Intent.ViewOrganizationSettings);
   return useSuspenseQuery(
     organizationKeys.orgInfo(organizationId),
-    () => getOrgInfo({ organizationId }, requestOptions),
+    () => {
+      // If the user can access the organization, we can also pre-fetch the full organization. This will avoid a
+      // suspense loading boundary in case the user navigates to the organization settings page. It will load in the
+      // background here so we can show the settings immediately when the user clicks on that navigation item.
+      if (canViewOrganizationSettings) {
+        queryClient.prefetchQuery(organizationKeys.detail(organizationId), () =>
+          getOrganization({ organizationId }, requestOptions)
+        );
+      }
+      return getOrgInfo({ organizationId }, requestOptions);
+    },
     {
       enabled,
     }
