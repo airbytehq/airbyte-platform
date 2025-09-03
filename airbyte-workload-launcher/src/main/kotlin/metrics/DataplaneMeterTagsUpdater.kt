@@ -4,14 +4,12 @@
 
 package io.airbyte.workload.launcher.metrics
 
-import io.airbyte.config.WorkloadConstants.Companion.PUBLIC_ORG_ID
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.config.MeterFilter
 import io.micronaut.context.event.ApplicationEventListener
 import jakarta.inject.Singleton
-import java.util.UUID
 
 @Singleton
 @io.micronaut.configuration.metrics.annotation.RequiresMetrics
@@ -25,9 +23,5 @@ class DataplaneMeterTagsUpdater(
       .meterFilter(MeterFilter.replaceTagValues(MetricTags.DATA_PLANE_NAME_TAG, { event.dataplaneName }))
       .meterFilter(MeterFilter.replaceTagValues(MetricTags.DATA_PLANE_GROUP_TAG, { event.dataplaneGroupId.toString() }))
       .meterFilter(MeterFilter.replaceTagValues(MetricTags.DATA_PLANE_GROUP_NAME_TAG, { event.dataplaneGroupName }))
-      .meterFilter(MeterFilter.replaceTagValues(MetricTags.DATA_PLANE_VISIBILITY, { getDataplaneVisibility(event.dataplaneGroupId) }))
   }
-
-  private fun getDataplaneVisibility(dataplaneGroupId: UUID): String =
-    if (PUBLIC_ORG_ID == dataplaneGroupId) MetricTags.PUBLIC else MetricTags.PRIVATE
 }

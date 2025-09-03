@@ -23,7 +23,6 @@ class MeterFilterFactory {
         Tag.of(MetricTags.DATA_PLANE_NAME_TAG, UNDEFINED),
         Tag.of(MetricTags.DATA_PLANE_GROUP_TAG, UNDEFINED),
         Tag.of(MetricTags.DATA_PLANE_GROUP_NAME_TAG, UNDEFINED),
-        Tag.of(MetricTags.DATA_PLANE_VISIBILITY, UNDEFINED),
       ),
     )
 
