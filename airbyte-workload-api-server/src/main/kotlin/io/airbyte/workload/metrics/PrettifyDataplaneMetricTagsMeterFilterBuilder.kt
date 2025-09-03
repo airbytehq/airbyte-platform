@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.metrics
 
+import io.airbyte.config.WorkloadConstants.Companion.PUBLIC_ORG_ID
 import io.airbyte.metrics.lib.MetricTags
 import io.micrometer.core.instrument.Meter
 import io.micrometer.core.instrument.MeterRegistry
@@ -38,13 +39,17 @@ class PrettifyDataplaneMetricTagsMeterFilterBuilder(
           newTags.add(Tag.of(MetricTags.DATA_PLANE_NAME_TAG, cache.dataplaneNameById(UUID.fromString(dataplaneId))))
         }
       }
-      id.getTag(MetricTags.DATA_PLANE_GROUP_TAG)?.let { dataplaneGroupId ->
+      id.getTag(MetricTags.DATA_PLANE_GROUP_TAG)?.let { dataplaneGroupIdString ->
+        val dataplaneGroupId = UUID.fromString(dataplaneGroupIdString)
         if (id.getTag(MetricTags.DATA_PLANE_GROUP_NAME_TAG) == null) {
-          newTags.add(Tag.of(MetricTags.DATA_PLANE_GROUP_NAME_TAG, cache.dataplaneGroupNameById(UUID.fromString(dataplaneGroupId))))
+          newTags.add(Tag.of(MetricTags.DATA_PLANE_GROUP_NAME_TAG, cache.dataplaneGroupNameById(dataplaneGroupId)))
         }
+        newTags.add(Tag.of(MetricTags.DATA_PLANE_VISIBILITY, getDataplaneVisibility(dataplaneGroupId)))
       }
       return id.withTags(newTags)
     }
+
+    fun getDataplaneVisibility(dataplaneGroupId: UUID): String = if (dataplaneGroupId == PUBLIC_ORG_ID) MetricTags.PUBLIC else MetricTags.PRIVATE
   }
 
   // Register the filter ASAP

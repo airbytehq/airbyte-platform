@@ -52,6 +52,8 @@ object MetricTags {
   const val JOB_STATUS: String = "job_status"
   const val KILLED: String = "killed"
   const val MADE_PROGRESS: String = "made_progress"
+  const val PRIVATE: String = "private"
+  const val PUBLIC: String = "public"
 
   // the release stage of the highest release connector in the sync (GA > Beta > Alpha)
   const val MAX_CONNECTOR_RELEASE_STATE: String = "max_connector_release_stage"
@@ -94,6 +96,7 @@ object MetricTags {
   const val TASK_QUEUE: String = "task_queue"
 
   // workload tags
+  const val DATA_PLANE_VISIBILITY: String = "data_plane_visibility"
   const val DATA_PLANE_ID_TAG: String = "data_plane_id"
   const val DATA_PLANE_NAME_TAG: String = "data_plane_name"
   const val DATA_PLANE_GROUP_TAG: String = "data_plane_group"
