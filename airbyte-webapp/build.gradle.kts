@@ -93,7 +93,7 @@ var webappVersion = (ext["ossRootProject"] as Project).ext["webapp_version"] as 
 tasks.register<PnpmTask>("pnpmBuild") {
     dependsOn("pnpmInstall")
 
-    environment.put("VERSION", webappVersion)
+    environment.put("AIRBYTE_VERSION", webappVersion)
 
     args = listOf("build")
 
