@@ -231,10 +231,6 @@ internal class ConnectionManagerWorkflowTest {
   @Throws(Exception::class)
   private fun returnTrueForLastJobOrAttemptFailure() {
     Mockito
-      .`when`(mJobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(any()))
-      .thenReturn(true)
-
-    Mockito
       .`when`(mJobCreationAndStatusUpdateActivity.shouldRunSourceCheck(any()))
       .thenReturn(true)
 
@@ -1467,10 +1463,6 @@ internal class ConnectionManagerWorkflowTest {
     @DisplayName("Test that reset workflows do not CHECK the source")
     @Throws(Exception::class)
     fun testSourceCheckSkippedWhenReset() {
-      Mockito
-        .`when`(mJobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(any()))
-        .thenReturn(true)
-
       Mockito
         .`when`(mJobCreationAndStatusUpdateActivity.shouldRunSourceCheck(any()))
         .thenReturn(false) // Source check should be skipped for reset

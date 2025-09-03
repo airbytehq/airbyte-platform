@@ -253,7 +253,7 @@ class JobCreationAndStatusUpdateActivityImpl(
    * @param input - JobCheckFailureInput.
    * @return - boolean.
    */
-  override fun isLastJobOrAttemptFailure(input: JobCheckFailureInput): Boolean {
+  private fun isLastJobOrAttemptFailure(input: JobCheckFailureInput): Boolean {
     // This is a hack to enforce check operation before every sync. Please be mindful of this logic.
     // This is mainly for testing and to force our canary connections to always run CHECK
     if (shouldAlwaysRunCheckBeforeSync(input.connectionId!!)) {
@@ -303,9 +303,13 @@ class JobCreationAndStatusUpdateActivityImpl(
    * @param input - JobCheckFailureInput.
    * @return - boolean.
    */
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   override fun shouldRunSourceCheck(input: JobCheckFailureInput): Boolean =
     when {
-      isResetJob(input.jobId!!) -> false
+      isResetJob(input.jobId!!) -> {
+        log.info("Skipping source check for reset job")
+        false
+      }
       else -> isLastJobOrAttemptFailure(input)
     }
 
@@ -316,6 +320,7 @@ class JobCreationAndStatusUpdateActivityImpl(
    * @param input - JobCheckFailureInput.
    * @return - boolean.
    */
+  @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   override fun shouldRunDestinationCheck(input: JobCheckFailureInput): Boolean = isLastJobOrAttemptFailure(input)
 
   private fun isResetJob(jobId: Long): Boolean =

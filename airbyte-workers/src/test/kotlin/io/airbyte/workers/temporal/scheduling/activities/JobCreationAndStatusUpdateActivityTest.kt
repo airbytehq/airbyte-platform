@@ -145,60 +145,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
       )
     }
 
-    @ParameterizedTest
-    @ValueSource(ints = [1, 2, 3, 5, 20, 30, 1439, 11])
-    fun isLastJobOrAttemptFailureReturnsTrueIfNotFirstAttemptForJob(attemptNumber: Int) {
-      val input =
-        JobCheckFailureInput(
-          JOB_ID,
-          attemptNumber,
-          CONNECTION_ID,
-        )
-      val result = jobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(input)
-
-      Assertions.assertTrue(result)
-    }
-
-    @ParameterizedTest
-    @ValueSource(booleans = [false, true])
-    @Throws(IOException::class)
-    fun isLastJobOrAttemptFailureReturnsChecksPreviousJobIfFirstAttempt(didSucceed: Boolean) {
-      val input =
-        JobCheckFailureInput(
-          JOB_ID,
-          0,
-          CONNECTION_ID,
-        )
-
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
-        .thenReturn(BooleanRead(didSucceed))
-
-      val result = jobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(input)
-
-      Assertions.assertEquals(!didSucceed, result)
-    }
-
-    @Test
-    @Throws(IOException::class)
-    fun isLastJobOrAttemptFailureThrowsRetryableErrorIfApiCallFails() {
-      val input =
-        JobCheckFailureInput(
-          JOB_ID,
-          0,
-          CONNECTION_ID,
-        )
-
-      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
-        .thenThrow(IOException(EXCEPTION_MESSAGE))
-
-      Assertions.assertThrows<RetryableException?>(
-        RetryableException::class.java,
-        Executable { jobCreationAndStatusUpdateActivity.isLastJobOrAttemptFailure(input) },
-      )
-    }
-
     // shouldRunSourceCheck tests
     @Test
     @Throws(IOException::class)
@@ -338,7 +284,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
       whenever(jobsApi.getJobInfoLight(any<JobIdRequestBody>()))
         .thenThrow(IOException(TEST_EXCEPTION_MESSAGE))
 
-      // When API fails to get job info, it should fall back to isLastJobOrAttemptFailure logic
+      // When API fails to get job info, it should fall back to checking previous job status
       // For first attempt, it should check previous job status
       whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
         .thenReturn(BooleanRead(false))
@@ -400,6 +346,80 @@ internal class JobCreationAndStatusUpdateActivityTest {
       val result = jobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(input)
 
       Assertions.assertFalse(result)
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = [1, 2, 3, 5, 20, 30, 1439, 11])
+    fun isLastJobOrAttemptFailureReturnsTrueIfNotFirstAttemptForJob(attemptNumber: Int) {
+      // Test that non-first attempts always trigger checks (testing isLastJobOrAttemptFailure logic)
+      val input =
+        JobCheckFailureInput(
+          JOB_ID,
+          attemptNumber,
+          CONNECTION_ID,
+        )
+
+      // Both shouldRunSourceCheck and shouldRunDestinationCheck should return true for non-first attempts
+      val sourceResult = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
+      val destResult = jobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(input)
+
+      Assertions.assertTrue(sourceResult)
+      Assertions.assertTrue(destResult)
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    @Throws(IOException::class)
+    fun isLastJobOrAttemptFailureReturnsChecksPreviousJobIfFirstAttempt(didSucceed: Boolean) {
+      // Test that first attempts check previous job status (testing isLastJobOrAttemptFailure logic)
+      val input =
+        JobCheckFailureInput(
+          JOB_ID,
+          0,
+          CONNECTION_ID,
+        )
+
+      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
+        .thenReturn(BooleanRead(didSucceed))
+
+      // Both checks should return the opposite of didSucceed
+      val sourceResult = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
+      val destResult = jobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(input)
+
+      Assertions.assertEquals(!didSucceed, sourceResult)
+      Assertions.assertEquals(!didSucceed, destResult)
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun isLastJobOrAttemptFailureThrowsRetryableErrorIfApiCallFails() {
+      // Test that API failures result in RetryableException (testing isLastJobOrAttemptFailure error handling)
+      val input =
+        JobCheckFailureInput(
+          JOB_ID,
+          0,
+          CONNECTION_ID,
+        )
+
+      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
+        .thenThrow(IOException(EXCEPTION_MESSAGE))
+
+      // Both methods should throw RetryableException when the underlying API call fails
+      Assertions.assertThrows<RetryableException?>(
+        RetryableException::class.java,
+        Executable { jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input) },
+      )
+
+      // Reset mock for second call
+      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
+        .thenThrow(IOException(EXCEPTION_MESSAGE))
+
+      Assertions.assertThrows<RetryableException?>(
+        RetryableException::class.java,
+        Executable { jobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(input) },
+      )
     }
 
     @Test
