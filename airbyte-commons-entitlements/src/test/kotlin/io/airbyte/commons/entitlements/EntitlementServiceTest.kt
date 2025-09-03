@@ -18,7 +18,7 @@ import java.util.UUID
 class EntitlementServiceTest {
   private val entitlementClient = mockk<EntitlementClient>()
   private val entitlementProvider = mockk<EntitlementProvider>()
-  private val entitlementService = EntitlementService(entitlementClient, entitlementProvider)
+  private val entitlementService = EntitlementServiceImpl(entitlementClient, entitlementProvider)
 
   @Test
   fun `checkEntitlement delegates to entitlementClient`() {
@@ -65,7 +65,7 @@ class EntitlementServiceTest {
 
     // A & C are enabled by the provider, B is disabled
     every {
-      entitlementProvider.hasEnterpriseConnectorEntitlements(orgId.value, actorType, listOf(defA, defB, defC))
+      entitlementProvider.hasEnterpriseConnectorEntitlements(orgId, actorType, listOf(defA, defB, defC))
     } returns mapOf(defA to true, defB to false, defC to true)
 
     val result = entitlementService.hasEnterpriseConnectorEntitlements(orgId, actorType, listOf(defA, defB, defC))
@@ -86,7 +86,7 @@ class EntitlementServiceTest {
   @Test
   fun `hasConfigTemplateEntitlements delegates to provider`() {
     val orgId = OrganizationId(UUID.randomUUID())
-    every { entitlementProvider.hasConfigTemplateEntitlements(orgId.value) } returns true
+    every { entitlementProvider.hasConfigTemplateEntitlements(orgId) } returns true
 
     val result = entitlementService.hasConfigTemplateEntitlements(orgId)
 

@@ -7,7 +7,7 @@ package io.airbyte.commons.server.handlers
 import io.airbyte.api.model.generated.WorkspaceCreateWithId
 import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.commons.auth.roles.AuthRoleConstants
-import io.airbyte.commons.entitlements.EntitlementClient
+import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.converters.WorkspaceConverter
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException
@@ -47,7 +47,7 @@ open class ResourceBootstrapHandler(
   private val organizationPaymentConfigService: OrganizationPaymentConfigService,
   private val airbyteEdition: AirbyteEdition,
   private val dataplaneGroupService: DataplaneGroupService,
-  private val entitlementClient: EntitlementClient,
+  private val entitlementService: EntitlementService,
 ) : ResourceBootstrapHandlerInterface {
   /**
    * This is for bootstrapping a workspace and all the necessary links (organization) and permissions (workspace & organization).
@@ -123,7 +123,7 @@ open class ResourceBootstrapHandler(
       // Add the organization to the Stigg trial.
       // Note that Stigg is giving users access to features that they might need before they run a sync, so we need to
       // add them to the EntitlementPlan immediately.
-      entitlementClient.addOrganization(OrganizationId(organization.organizationId), EntitlementPlan.STANDARD_TRIAL)
+      entitlementService.addOrganization(OrganizationId(organization.organizationId), EntitlementPlan.STANDARD_TRIAL)
     } catch (exception: Exception) {
       logger.error(exception) {
         "Failed to add organization ${organization.organizationId} to entitlement service during user signup. "

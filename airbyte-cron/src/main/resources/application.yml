@@ -45,8 +45,13 @@ airbyte:
     db-prune:
       enabled: ${DB_PRUNE_CRON_ENABLED:true}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
-  entitlement:
-    client: ${ENTITLEMENT_CLIENT:}
+
+  stigg:
+    enabled: ${STIGG_ENABLED:false}
+    api-key: ${STIGG_API_KEY:}
+    sidecar-host: ${STIGG_SIDECAR_HOST:}
+    sidecar-port: ${STIGG_SIDECAR_PORT:}
+
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}

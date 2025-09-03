@@ -212,10 +212,13 @@ airbyte:
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
     base-url: ${FEATURE_FLAG_BASEURL:}
-  entitlement:
-    client: ${ENTITLEMENT_CLIENT:}
-    stigg:
-      api-key: ${STIGG_API_KEY:}
+
+  stigg:
+    enabled: ${STIGG_ENABLED:false}
+    api-key: ${STIGG_API_KEY:}
+    sidecar-host: ${STIGG_SIDECAR_HOST:}
+    sidecar-port: ${STIGG_SIDECAR_PORT:}
+
   flyway:
     configs:
       initialization-timeout-ms: ${CONFIGS_DATABASE_INITIALIZATION_TIMEOUT_MS:60000}

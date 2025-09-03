@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers
 
-import io.airbyte.commons.entitlements.EntitlementClient
+import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
@@ -36,7 +36,7 @@ class ResourceBootstrapHandlerTest {
   private val organizationPaymentConfigService: OrganizationPaymentConfigService = mockk()
   private val dataplaneGroupService: DataplaneGroupService = mockk()
   private val roleResolver: RoleResolver = mockk()
-  private val entitlementClient: EntitlementClient = mockk(relaxed = true)
+  private val entitlementService: EntitlementService = mockk(relaxed = true)
 
   private val handler =
     ResourceBootstrapHandler(
@@ -49,7 +49,7 @@ class ResourceBootstrapHandlerTest {
       organizationPaymentConfigService,
       AirbyteEdition.COMMUNITY,
       dataplaneGroupService,
-      entitlementClient,
+      entitlementService,
     )
 
   @Nested
@@ -92,7 +92,7 @@ class ResourceBootstrapHandlerTest {
 
       spy.findOrCreateOrganizationAndPermission(user)
 
-      verify { entitlementClient.addOrganization(OrganizationId(orgId), EntitlementPlan.STANDARD_TRIAL) }
+      verify { entitlementService.addOrganization(OrganizationId(orgId), EntitlementPlan.STANDARD_TRIAL) }
     }
   }
 

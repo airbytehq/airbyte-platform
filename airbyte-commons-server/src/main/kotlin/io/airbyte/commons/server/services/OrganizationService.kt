@@ -10,7 +10,7 @@ import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
-import io.airbyte.commons.entitlements.EntitlementClient
+import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.config.OrganizationPaymentConfig
 import io.airbyte.config.OrganizationPaymentConfig.PaymentStatus
 import io.airbyte.data.services.shared.ConnectionAutoDisabledReason
@@ -79,7 +79,7 @@ open class OrganizationServiceImpl(
   private val connectionRepository: ConnectionRepository,
   private val organizationPaymentConfigRepository: OrganizationPaymentConfigRepository,
   private val billingTrackingHelper: BillingTrackingHelper,
-  private val entitlementClient: EntitlementClient,
+  private val entitlementService: EntitlementService,
 ) : OrganizationService {
   @Transactional("config")
   override fun disableAllConnections(
@@ -147,7 +147,7 @@ open class OrganizationServiceImpl(
     } else {
       logger.info { "Adding organization ${orgPaymentConfig.organizationId} and Orb Plan $orbPlanId to Stigg plan ${EntitlementPlan.STANDARD}" }
       try {
-        entitlementClient.addOrganization(organizationId, EntitlementPlan.STANDARD)
+        entitlementService.addOrganization(organizationId, EntitlementPlan.STANDARD)
       } catch (exception: Exception) {
         logger.error(exception) {
           "Failed to add organization $organizationId to entitlement plan ${EntitlementPlan.STANDARD}. "

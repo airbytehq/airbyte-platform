@@ -23,7 +23,7 @@ import java.util.UUID
 class ActiveAirbyteLicense(
   @param:Value("\${airbyte.license-key}") private val licenceKey: String,
 ) {
-  val license: AirbyteLicense = extractLicense()
+  var license: AirbyteLicense = extractLicense()
 
   val isPro: Boolean
     get() = license.type == LicenseType.PRO

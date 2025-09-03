@@ -7,6 +7,7 @@ package io.airbyte.commons.entitlements
 import io.airbyte.commons.license.ActiveAirbyteLicense
 import io.airbyte.commons.license.AirbyteLicense
 import io.airbyte.config.ActorType
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.AllowConfigTemplateEndpoints
 import io.airbyte.featureflag.DestinationDefinition
 import io.airbyte.featureflag.LicenseAllowDestinationObjectStorageConfig
@@ -34,7 +35,7 @@ class EntitlementProviderTest {
     @ParameterizedTest
     @ValueSource(strings = ["SOURCE", "DESTINATION"])
     fun `test hasEnterpriseConnectorEntitlements`(actorType: ActorType) {
-      val organizationId = UUID.randomUUID()
+      val organizationId = OrganizationId(UUID.randomUUID())
       val actorDefinitionIds = listOf(UUID.randomUUID(), UUID.randomUUID())
       val res = entitlementProvider.hasEnterpriseConnectorEntitlements(organizationId, actorType, actorDefinitionIds)
       assertEquals(
@@ -48,14 +49,14 @@ class EntitlementProviderTest {
 
     @Test
     fun `test hasConfigTemplateEntitlements`() {
-      val organizationId = UUID.randomUUID()
+      val organizationId = OrganizationId(UUID.randomUUID())
       val res = entitlementProvider.hasConfigTemplateEntitlements(organizationId)
       assertFalse(res)
     }
 
     @Test
     fun `test hasDestinationObjectStorageEntitlement`() {
-      val organizationId = UUID.randomUUID()
+      val organizationId = OrganizationId(UUID.randomUUID())
       val res = entitlementProvider.hasDestinationObjectStorageEntitlement(organizationId)
       assertFalse(res)
     }
@@ -80,7 +81,7 @@ class EntitlementProviderTest {
       val notEntitledConnectorId = UUID.randomUUID()
       every { license.enterpriseConnectorIds } returns setOf(entitledConnectorId)
 
-      val organizationId = UUID.randomUUID()
+      val organizationId = OrganizationId(UUID.randomUUID())
       val actorDefinitionIds = listOf(entitledConnectorId, notEntitledConnectorId)
       val res = entitlementProvider.hasEnterpriseConnectorEntitlements(organizationId, actorType, actorDefinitionIds)
       assertEquals(
@@ -95,7 +96,7 @@ class EntitlementProviderTest {
     @ParameterizedTest
     @ValueSource(booleans = [true, false])
     fun `test hasConfigTemplateEntitlements returns value from the license`(isEmbedded: Boolean) {
-      val organizationId = UUID.randomUUID()
+      val organizationId = OrganizationId(UUID.randomUUID())
 
       every { license.isEmbedded } returns isEmbedded
       val res = entitlementProvider.hasConfigTemplateEntitlements(organizationId)
@@ -104,7 +105,7 @@ class EntitlementProviderTest {
 
     @Test
     fun `test hasDestinationObjectStorageEntitlement always returns true`() {
-      val organizationId = UUID.randomUUID()
+      val organizationId = OrganizationId(UUID.randomUUID())
       val res = entitlementProvider.hasDestinationObjectStorageEntitlement(organizationId)
       assertEquals(true, res)
     }
@@ -118,12 +119,12 @@ class EntitlementProviderTest {
     @ParameterizedTest
     @ValueSource(strings = ["SOURCE", "DESTINATION"])
     fun `test hasEnterpriseConnectorEntitlements`(actorType: ActorType) {
-      val organizationId = UUID.randomUUID()
+      val organizationId = OrganizationId(UUID.randomUUID())
       val entitledConnectorId = UUID.randomUUID()
       val notEntitledConnectorId = UUID.randomUUID()
 
-      mockEntitledEnterpriseConnector(actorType, organizationId, entitledConnectorId, true)
-      mockEntitledEnterpriseConnector(actorType, organizationId, notEntitledConnectorId, false)
+      mockEntitledEnterpriseConnector(actorType, organizationId.value, entitledConnectorId, true)
+      mockEntitledEnterpriseConnector(actorType, organizationId.value, notEntitledConnectorId, false)
 
       val actorDefinitionIds = listOf(entitledConnectorId, notEntitledConnectorId)
       val res = entitlementProvider.hasEnterpriseConnectorEntitlements(organizationId, actorType, actorDefinitionIds)
@@ -140,8 +141,8 @@ class EntitlementProviderTest {
     @ParameterizedTest
     @ValueSource(booleans = [true, false])
     fun `test hasConfigTemplateEntitlements returns value from feature flag`(isEntitled: Boolean) {
-      val organizationId = UUID.randomUUID()
-      every { featureFlagClient.boolVariation(AllowConfigTemplateEndpoints, Organization(organizationId)) } returns isEntitled
+      val organizationId = OrganizationId(UUID.randomUUID())
+      every { featureFlagClient.boolVariation(AllowConfigTemplateEndpoints, Organization(organizationId.value)) } returns isEntitled
 
       val res = entitlementProvider.hasConfigTemplateEntitlements(organizationId)
       assertEquals(res, isEntitled)
@@ -150,8 +151,8 @@ class EntitlementProviderTest {
     @ParameterizedTest
     @ValueSource(booleans = [true, false])
     fun `test hasDestinationObjectStorageEntitlement returns value from feature flag`(isEntitled: Boolean) {
-      val organizationId = UUID.randomUUID()
-      every { featureFlagClient.boolVariation(LicenseAllowDestinationObjectStorageConfig, Organization(organizationId)) } returns isEntitled
+      val organizationId = OrganizationId(UUID.randomUUID())
+      every { featureFlagClient.boolVariation(LicenseAllowDestinationObjectStorageConfig, Organization(organizationId.value)) } returns isEntitled
 
       val res = entitlementProvider.hasDestinationObjectStorageEntitlement(organizationId)
       assertEquals(res, isEntitled)

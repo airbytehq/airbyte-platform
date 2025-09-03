@@ -20,7 +20,7 @@ import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
 import io.airbyte.api.model.generated.Pagination
 import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.api.model.generated.WorkspaceReadList
-import io.airbyte.commons.entitlements.EntitlementClient
+import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.Organization
 import io.airbyte.config.Permission
@@ -49,7 +49,7 @@ open class OrganizationsHandler(
   private val organizationPaymentConfigService: OrganizationPaymentConfigService,
   private val workspacesHandler: WorkspacesHandler,
   private val permissionService: PermissionService,
-  private val entitlementClient: EntitlementClient,
+  private val entitlementService: EntitlementService,
 ) {
   companion object {
     private fun buildOrganizationRead(organization: Organization): OrganizationRead =
@@ -72,7 +72,7 @@ open class OrganizationsHandler(
       // Add the organization to the Stigg trial.
       // Note that Stigg is giving users access to features that they might need before they run a sync, so we need to
       // add them to the EntitlementPlan immediately.
-      entitlementClient.addOrganization(OrganizationId(orgId), EntitlementPlan.STANDARD_TRIAL)
+      entitlementService.addOrganization(OrganizationId(orgId), EntitlementPlan.STANDARD_TRIAL)
     } catch (exception: Exception) {
       logger.error(exception) { "Error while adding organization $orgId to the Entitlement service." }
       // TODO: once we've integrated fully with Stigg, throw instead of just logging

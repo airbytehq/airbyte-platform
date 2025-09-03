@@ -92,6 +92,12 @@ google-cloud-pubsub = { module = "com.google.cloud:google-cloud-pubsub", version
 google-cloud-sqladmin = { module = "com.google.apis:google-api-services-sqladmin", version = "v1-rev20240317-2.0.0" }
 google-cloud-api-client = { module = "com.google.api-client:google-api-client", version = "2.4.0" }
 grpc-inprocess = { module = "io.grpc:grpc-inprocess", version.ref = "grpc_version" }
+
+protobuf-java = { module = "com.google.protobuf:protobuf-java", version = "3.25.0" }
+grpc-protobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc_version" }
+grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc_version" }
+grpc-netty-shaded = { module = "io.grpc:grpc-netty-shaded", version.ref = "grpc_version" }
+
 guava = { module = "com.google.guava:guava", version = "33.1.0-jre" }
 gson = { module = "com.google.code.gson:gson", version = "2.10.1" }
 hamcrest-all = { module = "org.hamcrest:hamcrest-all", version = "1.3" }
@@ -192,7 +198,8 @@ slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 snakeyaml = { module = "org.yaml:snakeyaml", version = "2.3" }
 spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.8.6" }
 spring-core = { module = "org.springframework:spring-core", version = "6.2.5" }
-stigg-api-client = { module = "io.stigg:stigg-api-client", version = "2.438.3" }
+stigg-api-client = { module = "io.stigg:stigg-api-client", version = "3.27.1" }
+stigg-sidecar = { module = "io.stigg:stigg-sidecar-sdk", version = "3.29.1" }
 stripe = { module = "com.stripe:stripe-java", version = "26.7.0" }
 swagger-annotations = { module = "io.swagger:swagger-annotations", version.ref = "swagger" }
 v3-swagger-annotations = { module = "io.swagger.core.v3:swagger-annotations", version.ref = "v3-swagger" }
@@ -287,6 +294,7 @@ pmd = ["pmd-ant", "pmd-core", "pmd-java"]
 retrofit = ["retrofit", "retrofit-jackson"]
 secret-hydration = ["google-cloud-storage", "google-cloud-storage-secretmanager", "aws-secretsmanager-caching-java", "vault-java-driver", "azure-key-vault", "azure-identity"]
 slf4j = ["jul-to-slf4j", "jcl-over-slf4j"]
+stigg = ["stigg-api-client", "stigg-sidecar", "apollo-runtime", "apollo-api-jvm", "apollo-adapters-jvm", "protobuf-java", "grpc-protobuf", "grpc-stub", "grpc-netty-shaded"]
 temporal = ["temporal-sdk", "temporal-serviceclient"]
 temporal-telemetry = ["temporal-opentracing"]
 

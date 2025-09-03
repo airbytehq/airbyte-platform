@@ -14,7 +14,7 @@ import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
 import io.airbyte.api.model.generated.Pagination
 import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.api.model.generated.WorkspaceReadList
-import io.airbyte.commons.entitlements.EntitlementClient
+import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.config.Organization
 import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.data.repositories.OrgMemberCount
@@ -51,7 +51,7 @@ class OrganizationsHandlerTest {
   private lateinit var organizationPaymentConfigService: OrganizationPaymentConfigServiceDataImpl
   private lateinit var workspacesHandler: WorkspacesHandler
   private lateinit var permissionService: PermissionService
-  private lateinit var entitlementClient: EntitlementClient
+  private lateinit var entitlementService: EntitlementService
 
   @BeforeEach
   fun setup() {
@@ -61,7 +61,7 @@ class OrganizationsHandlerTest {
     organizationPaymentConfigService = mockk(relaxed = true)
     workspacesHandler = mockk()
     permissionService = mockk()
-    entitlementClient = mockk(relaxed = true)
+    entitlementService = mockk(relaxed = true)
 
     organizationsHandler =
       spyk(
@@ -72,7 +72,7 @@ class OrganizationsHandlerTest {
           organizationPaymentConfigService,
           workspacesHandler,
           permissionService,
-          entitlementClient,
+          entitlementService,
         ),
         recordPrivateCalls = true,
       )
@@ -306,7 +306,7 @@ class OrganizationsHandlerTest {
 
     organizationsHandler.createOrganization(request)
 
-    verify { entitlementClient.addOrganization(OrganizationId(orgId), EntitlementPlan.STANDARD_TRIAL) }
+    verify { entitlementService.addOrganization(OrganizationId(orgId), EntitlementPlan.STANDARD_TRIAL) }
   }
 
 // TODO: enable these tests once we're ready to enable Stigg
