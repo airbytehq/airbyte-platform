@@ -207,11 +207,11 @@ Renders all of the common environment variables which provide database credentia
 Renders a set of database secrets to be included in the shared Airbyte secret
 */}}
 {{- define "airbyte.database.secrets" }}
-{{ $user := (include "airbyte.database.user" .)}}
+{{ $user := (include "airbyte.database.user" .)| trim }}
 {{- if not (empty $user) }}
 DATABASE_USER: {{ $user }}
 {{- end }}
-{{ $password := (include "airbyte.database.password" .)}}
+{{ $password := (include "airbyte.database.password" .)| trim }}
 {{- if not (empty $password) }}
 DATABASE_PASSWORD: {{ $password }}
 {{- end}}
