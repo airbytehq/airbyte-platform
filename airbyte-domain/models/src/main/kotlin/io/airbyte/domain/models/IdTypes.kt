@@ -65,3 +65,13 @@ value class ActorId(
 value class DestinationCatalogId(
   val value: UUID,
 )
+
+@JvmInline
+value class DataplaneId(
+  val value: UUID,
+)
+
+@JvmInline
+value class DataplaneGroupId(
+  val value: UUID,
+)

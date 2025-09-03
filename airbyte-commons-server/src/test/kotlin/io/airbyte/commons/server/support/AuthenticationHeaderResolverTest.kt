@@ -12,6 +12,8 @@ import io.airbyte.commons.server.support.AuthenticationHttpHeaders.AIRBYTE_USER_
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_IDS_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.CREATOR_USER_ID_HEADER
+import io.airbyte.commons.server.support.AuthenticationHttpHeaders.DATAPLANE_GROUP_ID_HEADER
+import io.airbyte.commons.server.support.AuthenticationHttpHeaders.DATAPLANE_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTINATION_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.EXTERNAL_AUTH_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.JOB_ID_HEADER
@@ -23,8 +25,11 @@ import io.airbyte.commons.server.support.AuthenticationHttpHeaders.SCOPE_TYPE_HE
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.SOURCE_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_IDS_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_HEADER
+import io.airbyte.config.Dataplane
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.data.services.DataplaneService
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.validation.json.JsonValidationException
 import org.junit.jupiter.api.Assertions
@@ -41,6 +46,8 @@ internal class AuthenticationHeaderResolverTest {
   private lateinit var workspaceHelper: WorkspaceHelper
   private lateinit var permissionHandler: PermissionHandler
   private lateinit var userPersistence: UserPersistence
+  private lateinit var dataplaneGroupService: DataplaneGroupService
+  private lateinit var dataplaneService: DataplaneService
   private lateinit var resolver: AuthenticationHeaderResolver
 
   @BeforeEach
@@ -48,7 +55,9 @@ internal class AuthenticationHeaderResolverTest {
     this.workspaceHelper = Mockito.mock(WorkspaceHelper::class.java)
     this.permissionHandler = Mockito.mock(PermissionHandler::class.java)
     this.userPersistence = Mockito.mock(UserPersistence::class.java)
-    this.resolver = AuthenticationHeaderResolver(workspaceHelper, permissionHandler, userPersistence)
+    this.dataplaneGroupService = Mockito.mock(DataplaneGroupService::class.java)
+    this.dataplaneService = Mockito.mock(DataplaneService::class.java)
+    this.resolver = AuthenticationHeaderResolver(workspaceHelper, permissionHandler, userPersistence, dataplaneGroupService, dataplaneService)
   }
 
   @Test
@@ -290,6 +299,72 @@ internal class AuthenticationHeaderResolverTest {
 
     val result: List<UUID>? = resolver.resolveOrganization(properties)
     Assertions.assertEquals(listOf(organizationId), result)
+  }
+
+  @Test
+  fun testResolvingOrganizationFromDataplaneGroupId() {
+    val organizationId = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
+    val properties = mapOf(DATAPLANE_GROUP_ID_HEADER to dataplaneGroupId.toString())
+    Mockito.`when`(dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId)).thenReturn(organizationId)
+
+    val result: List<UUID>? = resolver.resolveOrganization(properties)
+    Assertions.assertEquals(listOf(organizationId), result)
+  }
+
+  @Test
+  fun testResolvingOrganizationFromDataplaneGroupIdWhenNotFound() {
+    val dataplaneGroupId = UUID.randomUUID()
+    val properties = mapOf(DATAPLANE_GROUP_ID_HEADER to dataplaneGroupId.toString())
+    Mockito.`when`(dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId)).thenReturn(null)
+
+    val result: List<UUID>? = resolver.resolveOrganization(properties)
+    Assertions.assertNull(result)
+  }
+
+  @Test
+  fun testResolvingOrganizationFromDataplaneId() {
+    val organizationId = UUID.randomUUID()
+    val dataplaneId = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
+    val mockDataplane =
+      Dataplane().apply {
+        id = dataplaneId
+        this.dataplaneGroupId = dataplaneGroupId
+      }
+    val properties = mapOf(DATAPLANE_ID_HEADER to dataplaneId.toString())
+    Mockito.`when`(dataplaneService.getDataplane(dataplaneId)).thenReturn(mockDataplane)
+    Mockito.`when`(dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId)).thenReturn(organizationId)
+
+    val result: List<UUID>? = resolver.resolveOrganization(properties)
+    Assertions.assertEquals(listOf(organizationId), result)
+  }
+
+  @Test
+  fun testResolvingOrganizationFromDataplaneIdWhenDataplaneNotFound() {
+    val dataplaneId = UUID.randomUUID()
+    val properties = mapOf(DATAPLANE_ID_HEADER to dataplaneId.toString())
+    Mockito.`when`(dataplaneService.getDataplane(dataplaneId)).thenThrow(RuntimeException("Dataplane not found: $dataplaneId"))
+
+    val result: List<UUID>? = resolver.resolveOrganization(properties)
+    Assertions.assertNull(result)
+  }
+
+  @Test
+  fun testResolvingOrganizationFromDataplaneIdWhenDataplaneGroupNotFound() {
+    val dataplaneId = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
+    val mockDataplane =
+      Dataplane().apply {
+        id = dataplaneId
+        this.dataplaneGroupId = dataplaneGroupId
+      }
+    val properties = mapOf(DATAPLANE_ID_HEADER to dataplaneId.toString())
+    Mockito.`when`(dataplaneService.getDataplane(dataplaneId)).thenReturn(mockDataplane)
+    Mockito.`when`(dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId)).thenReturn(null)
+
+    val result: List<UUID>? = resolver.resolveOrganization(properties)
+    Assertions.assertNull(result)
   }
 
   companion object {

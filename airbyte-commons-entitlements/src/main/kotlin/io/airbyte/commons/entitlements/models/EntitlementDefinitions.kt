@@ -24,6 +24,10 @@ object OrchestrationEntitlement : FeatureEntitlement(
   featureId = "feature-platform-orchestration",
 )
 
+object ManageDataplanesAndDataplaneGroupsEntitlement : FeatureEntitlement(
+  featureId = "feature-platform-manage-dataplanes-and-dataplane-groups",
+)
+
 object Entitlements {
   private val ALL =
     listOf(
@@ -32,6 +36,7 @@ object Entitlements {
       DestinationObjectStorageEntitlement,
       SsoConfigUpdateEntitlement,
       OrchestrationEntitlement,
+      ManageDataplanesAndDataplaneGroupsEntitlement,
     )
 
   private val byId = ALL.associateBy { it.featureId }

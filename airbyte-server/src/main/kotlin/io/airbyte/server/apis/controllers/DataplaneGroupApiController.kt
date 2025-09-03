@@ -14,10 +14,16 @@ import io.airbyte.api.model.generated.DataplaneGroupUpdateRequestBody
 import io.airbyte.api.model.generated.DataplaneRead
 import io.airbyte.api.problems.throwable.generated.DataplaneGroupNameAlreadyExistsProblem
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.auth.generated.Intent
+import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.ManageDataplanesAndDataplaneGroupsEntitlement
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.domain.models.DataplaneGroupId
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.server.services.DataplaneService
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
@@ -37,13 +43,15 @@ import java.time.ZoneOffset
 class DataplaneGroupApiController(
   protected val dataplaneGroupService: DataplaneGroupService,
   protected val dataplaneService: DataplaneService,
+  private val entitlementService: EntitlementService,
 ) : DataplaneGroupApi {
   @Post("/create")
-  @Secured(AuthRoleConstants.ADMIN)
+  @RequiresIntent(Intent.ManageDataplaneGroups)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun createDataplaneGroup(
     @Body dataplaneGroupCreateRequestBody: DataplaneGroupCreateRequestBody,
   ): DataplaneGroupRead? {
+    entitlementService.ensureEntitled(OrganizationId(dataplaneGroupCreateRequestBody.organizationId), ManageDataplanesAndDataplaneGroupsEntitlement)
     val createdDataplaneGroup =
       DataplaneGroup().apply {
         organizationId = dataplaneGroupCreateRequestBody.organizationId
@@ -54,11 +62,12 @@ class DataplaneGroupApiController(
   }
 
   @Post("/update")
-  @Secured(AuthRoleConstants.ADMIN)
+  @RequiresIntent(Intent.ManageDataplaneGroups)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun updateDataplaneGroup(
     @Body dataplaneGroupUpdateRequestBody: DataplaneGroupUpdateRequestBody,
   ): DataplaneGroupRead {
+    ensureManageDataplanesAndDataplaneGroupsEntitlement(DataplaneGroupId(dataplaneGroupUpdateRequestBody.dataplaneGroupId))
     val updatedDataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplaneGroupUpdateRequestBody.dataplaneGroupId)
 
     val dataplaneGroup =
@@ -71,11 +80,12 @@ class DataplaneGroupApiController(
   }
 
   @Post("/delete")
-  @Secured(AuthRoleConstants.ADMIN)
+  @RequiresIntent(Intent.ManageDataplaneGroups)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun deleteDataplaneGroup(
     @Body dataplaneGroupDeleteRequestBody: DataplaneGroupDeleteRequestBody,
   ): DataplaneGroupRead? {
+    ensureManageDataplanesAndDataplaneGroupsEntitlement(DataplaneGroupId(dataplaneGroupDeleteRequestBody.dataplaneGroupId))
     val deletedDataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplaneGroupDeleteRequestBody.dataplaneGroupId)
     val tombstonedGroup =
       deletedDataplaneGroup.apply {
@@ -88,6 +98,7 @@ class DataplaneGroupApiController(
   }
 
   @Post("/list")
+  // TODO: (parker) should this be more restrictive?
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listDataplaneGroups(
@@ -128,6 +139,11 @@ class DataplaneGroupApiController(
         },
       )
     return dataplaneGroupRead
+  }
+
+  private fun ensureManageDataplanesAndDataplaneGroupsEntitlement(dataplaneGroupId: DataplaneGroupId) {
+    val orgId = OrganizationId(dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId.value))
+    entitlementService.ensureEntitled(orgId, ManageDataplanesAndDataplaneGroupsEntitlement)
   }
 
   fun writeDataplaneGroup(dataplaneGroup: DataplaneGroup): DataplaneGroup {

@@ -88,4 +88,13 @@ object AuthenticationFields {
   const val SCOPE_TYPE_FIELD_NAME: String = "scopeType"
 
   const val SCOPE_ID_FIELD_NAME: String = "scopeId"
+
+  /**
+   * The dataplane and dataplane group APIs use snake case for their request body field names,
+   * which is inconsistent with the rest of the API. Unfortunately, this is already part of the
+   * public API interface, so for now we have to support it in order to avoid breaking changes.
+   */
+  const val DATAPLANE_GROUP_ID_SNAKE_CASE_FIELD_NAME: String = "dataplane_group_id"
+  const val DATAPLANE_ID_SNAKE_CASE_FIELD_NAME: String = "dataplane_id"
+  const val ORGANIZATION_ID_SNAKE_CASE_FIELD_NAME: String = "organization_id"
 }

@@ -9,6 +9,7 @@ import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled
 import io.airbyte.config.ActorType
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.AllowConfigTemplateEndpoints
+import io.airbyte.featureflag.AllowDataplaneAndDataplaneGroupManagement
 import io.airbyte.featureflag.DestinationDefinition
 import io.airbyte.featureflag.EnableOrchestration
 import io.airbyte.featureflag.EnableSsoConfigUpdate
@@ -38,6 +39,8 @@ interface EntitlementProvider {
   fun hasSsoConfigUpdateEntitlement(organizationId: OrganizationId): Boolean
 
   fun hasOrchestrationEntitlement(organizationId: OrganizationId): Boolean
+
+  fun hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId: OrganizationId): Boolean
 }
 
 /**
@@ -58,6 +61,8 @@ class DefaultEntitlementProvider : EntitlementProvider {
   override fun hasSsoConfigUpdateEntitlement(organizationId: OrganizationId): Boolean = false
 
   override fun hasOrchestrationEntitlement(organizationId: OrganizationId): Boolean = false
+
+  override fun hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId: OrganizationId): Boolean = false
 }
 
 /**
@@ -90,6 +95,9 @@ class EnterpriseEntitlementProvider(
   override fun hasSsoConfigUpdateEntitlement(organizationId: OrganizationId): Boolean = false
 
   override fun hasOrchestrationEntitlement(organizationId: OrganizationId): Boolean = false
+
+  // Allow all Enterprise users to manage dataplanes and dataplane groups by default
+  override fun hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId: OrganizationId): Boolean = true
 }
 
 /**
@@ -135,4 +143,10 @@ class CloudEntitlementProvider(
 
   override fun hasOrchestrationEntitlement(organizationId: OrganizationId): Boolean =
     featureFlagClient.boolVariation(EnableOrchestration, Organization(organizationId.value))
+
+  override fun hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId: OrganizationId): Boolean =
+    featureFlagClient.boolVariation(
+      AllowDataplaneAndDataplaneGroupManagement,
+      Organization(organizationId.value),
+    )
 }

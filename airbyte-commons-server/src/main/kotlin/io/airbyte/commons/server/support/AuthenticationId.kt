@@ -31,4 +31,13 @@ enum class AuthenticationId(
   PERMISSION_ID(AuthenticationFields.PERMISSION_ID_FIELD_NAME, AuthenticationHttpHeaders.PERMISSION_ID_HEADER),
   SCOPE_TYPE(AuthenticationFields.SCOPE_TYPE_FIELD_NAME, AuthenticationHttpHeaders.SCOPE_TYPE_HEADER),
   SCOPE_ID(AuthenticationFields.SCOPE_ID_FIELD_NAME, AuthenticationHttpHeaders.SCOPE_ID_HEADER),
+
+  /**
+   * The dataplane and dataplane group APIs use snake case for their request body field names,
+   * which is inconsistent with the rest of the API. Unfortunately, this is already part of the
+   * public API interface, so for now we have to support it in order to avoid breaking changes.
+   */
+  DATAPLANE_GROUP_ID_SNAKE_CASE(AuthenticationFields.DATAPLANE_GROUP_ID_SNAKE_CASE_FIELD_NAME, AuthenticationHttpHeaders.DATAPLANE_GROUP_ID_HEADER),
+  DATAPLANE_ID_SNAKE_CASE(AuthenticationFields.DATAPLANE_ID_SNAKE_CASE_FIELD_NAME, AuthenticationHttpHeaders.DATAPLANE_ID_HEADER),
+  ORGANIZATION_ID_SNAKE_CASE(AuthenticationFields.ORGANIZATION_ID_SNAKE_CASE_FIELD_NAME, AuthenticationHttpHeaders.ORGANIZATION_ID_HEADER),
 }

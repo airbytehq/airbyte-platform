@@ -18,13 +18,19 @@ import io.airbyte.api.model.generated.DataplaneListResponse
 import io.airbyte.api.model.generated.DataplaneRead
 import io.airbyte.api.model.generated.DataplaneTokenRequestBody
 import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
-import io.airbyte.commons.auth.roles.AuthRoleConstants.ADMIN
+import io.airbyte.commons.auth.generated.Intent
+import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants.DATAPLANE
+import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.ManageDataplanesAndDataplaneGroupsEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.Dataplane
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.ServiceAccountNotFound
+import io.airbyte.domain.models.DataplaneGroupId
+import io.airbyte.domain.models.DataplaneId
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.server.services.DataplaneService
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
@@ -46,13 +52,15 @@ open class DataplaneController(
   private val dataplaneService: DataplaneService,
   private val dataplaneGroupService: DataplaneGroupService,
   private val roleResolver: RoleResolver,
+  private val entitlementService: EntitlementService,
 ) : DataplaneApi {
   @Post("/create")
-  @Secured(ADMIN)
+  @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun createDataplane(
     @Body dataplaneCreateRequestBody: DataplaneCreateRequestBody,
   ): DataplaneCreateResponse {
+    ensureManageDataplanesAndDataplaneGroupsEntitlement(DataplaneGroupId(dataplaneCreateRequestBody.dataplaneGroupId))
     val dataplane =
       Dataplane().apply {
         id = UUID.randomUUID()
@@ -72,36 +80,40 @@ open class DataplaneController(
   }
 
   @Post("/update")
-  @Secured(ADMIN)
+  @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun updateDataplane(
     @Body dataplaneUpdateRequestBody: DataplaneUpdateRequestBody,
-  ): DataplaneRead =
-    toDataplaneRead(
+  ): DataplaneRead {
+    ensureManageDataplanesAndDataplaneGroupsEntitlement(DataplaneId(dataplaneUpdateRequestBody.dataplaneId))
+    return toDataplaneRead(
       dataplaneService.updateDataplane(
         dataplaneUpdateRequestBody.dataplaneId,
         dataplaneUpdateRequestBody.name,
         dataplaneUpdateRequestBody.enabled,
       ),
     )
+  }
 
   @Post("/delete")
-  @Secured(ADMIN)
+  @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun deleteDataplane(
     @Body dataplaneDeleteRequestBody: DataplaneDeleteRequestBody,
   ): DataplaneRead {
+    ensureManageDataplanesAndDataplaneGroupsEntitlement(DataplaneId(dataplaneDeleteRequestBody.dataplaneId))
     val tombstonedDataplane = dataplaneService.deleteDataplane(dataplaneDeleteRequestBody.dataplaneId)
 
     return toDataplaneRead(tombstonedDataplane)
   }
 
   @Post("/list")
-  @Secured(ADMIN)
+  @RequiresIntent(Intent.ManageDataplanes)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listDataplanes(
     @Body dataplaneListRequestBody: DataplaneListRequestBody,
   ): DataplaneListResponse {
+    ensureManageDataplanesAndDataplaneGroupsEntitlement(DataplaneGroupId(dataplaneListRequestBody.dataplaneGroupId))
     val dataplanes: List<Dataplane> = dataplaneService.listDataplanes(dataplaneListRequestBody.dataplaneGroupId)
     return DataplaneListResponse()
       .dataplanes(
@@ -196,5 +208,16 @@ open class DataplaneController(
       dataplaneGroupName = dataplaneGroup.name
       dataplaneGroupId = dataplaneGroup.id
     }
+  }
+
+  private fun ensureManageDataplanesAndDataplaneGroupsEntitlement(dataplaneGroupId: DataplaneGroupId) {
+    val orgId = OrganizationId(dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId.value))
+    entitlementService.ensureEntitled(orgId, ManageDataplanesAndDataplaneGroupsEntitlement)
+  }
+
+  private fun ensureManageDataplanesAndDataplaneGroupsEntitlement(dataplaneId: DataplaneId) {
+    val dataplaneGroupId = dataplaneService.getDataplane(dataplaneId.value.toString()).dataplaneGroupId
+    val orgId = OrganizationId(dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId))
+    entitlementService.ensureEntitled(orgId, ManageDataplanesAndDataplaneGroupsEntitlement)
   }
 }

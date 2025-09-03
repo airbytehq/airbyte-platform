@@ -13,6 +13,8 @@ import io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONFIG_ID_HEA
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_IDS_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.CONNECTION_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.CREATOR_USER_ID_HEADER
+import io.airbyte.commons.server.support.AuthenticationHttpHeaders.DATAPLANE_GROUP_ID_HEADER
+import io.airbyte.commons.server.support.AuthenticationHttpHeaders.DATAPLANE_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.DESTINATION_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.EXTERNAL_AUTH_ID_HEADER
 import io.airbyte.commons.server.support.AuthenticationHttpHeaders.IS_PUBLIC_API_HEADER
@@ -28,6 +30,8 @@ import io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_
 import io.airbyte.config.ScopeType
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.data.services.DataplaneService
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -44,11 +48,11 @@ class AuthenticationHeaderResolver(
   private val workspaceHelper: WorkspaceHelper,
   private val permissionHandler: PermissionHandler,
   private val userPersistence: UserPersistence?,
+  private val dataplaneGroupService: DataplaneGroupService,
+  private val dataplaneService: DataplaneService,
 ) {
   /**
-   * Resolve corresponding organization ID. Currently we support two ways to resolve organization ID:
-   * 1. If the organization ID is provided in the header, we will use it directly. 2. Otherwise, we
-   * infer the workspace ID from the header and use the workspace ID to find the organization Id.
+   * Resolve corresponding organization ID based on headers that were set by the AuthorizationServerHandler
    */
   @Nullable
   fun resolveOrganization(properties: Map<String, String>): List<UUID>? {
@@ -64,6 +68,16 @@ class AuthenticationHeaderResolver(
         // id.
         val organizationId = properties[SCOPE_ID_HEADER]
         return listOf(UUID.fromString(organizationId))
+      } else if (properties.containsKey(DATAPLANE_GROUP_ID_HEADER)) {
+        val organizationId = resolveOrganizationIdFromDataplaneGroupHeader(properties[DATAPLANE_GROUP_ID_HEADER])
+        if (organizationId != null) {
+          return listOf(organizationId)
+        }
+      } else if (properties.containsKey(DATAPLANE_ID_HEADER)) {
+        val organizationId = resolveOrganizationIdFromDataplaneHeader(properties[DATAPLANE_ID_HEADER])
+        if (organizationId != null) {
+          return listOf(organizationId)
+        }
       } else {
         // resolving by permission id requires a database fetch, so we
         // handle it last and with a dedicated check to minimize latency.
@@ -269,6 +283,33 @@ class AuthenticationHeaderResolver(
         }.toList()
     }
     return null
+  }
+
+  private fun resolveOrganizationIdFromDataplaneGroupHeader(dataplaneGroupHeaderValue: String?): UUID? {
+    if (dataplaneGroupHeaderValue == null) {
+      return null
+    }
+    return try {
+      val dataplaneGroupId = UUID.fromString(dataplaneGroupHeaderValue)
+      dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId)
+    } catch (e: Exception) {
+      log.debug("Unable to resolve organization ID from dataplane group header.", e)
+      null
+    }
+  }
+
+  private fun resolveOrganizationIdFromDataplaneHeader(dataplaneHeaderValue: String?): UUID? {
+    if (dataplaneHeaderValue == null) {
+      return null
+    }
+    return try {
+      val dataplaneId = UUID.fromString(dataplaneHeaderValue)
+      val dataplaneGroupId = dataplaneService.getDataplane(dataplaneId).dataplaneGroupId
+      dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId)
+    } catch (e: Exception) {
+      log.debug("Unable to resolve organization ID from dataplane header.", e)
+      null
+    }
   }
 
   companion object {

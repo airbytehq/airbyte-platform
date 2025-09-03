@@ -223,3 +223,8 @@ object ReplicationCommandFallsBackToWorkloadStatus : Temporary<Boolean>(
   key = "platform.replication-command-falls-back-to-workload-status",
   default = false,
 )
+
+object AllowDataplaneAndDataplaneGroupManagement : Temporary<Boolean>(
+  key = "platform.allow-dataplane-and-dataplane-group-management",
+  default = false,
+)

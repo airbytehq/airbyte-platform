@@ -12,12 +12,15 @@ import io.airbyte.api.model.generated.DataplaneInitResponse
 import io.airbyte.api.model.generated.DataplaneListRequestBody
 import io.airbyte.api.model.generated.DataplaneTokenRequestBody
 import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
+import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.ManageDataplanesAndDataplaneGroupsEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
+import io.airbyte.domain.models.OrganizationId
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -34,11 +37,13 @@ class DataplaneControllerTest {
     private val dataplaneService = mockk<ServerDataplaneService>()
     private val dataplaneGroupService = mockk<DataplaneGroupService>()
     private val roleResolver = mockk<RoleResolver>(relaxed = true)
+    private val entitlementService = mockk<EntitlementService>(relaxed = true)
     private val dataplaneController =
       DataplaneController(
         dataplaneService,
         dataplaneGroupService,
         roleResolver,
+        entitlementService,
       )
     private val MOCK_DATAPLANE_GROUP_ID = UUID.randomUUID()
   }
@@ -48,7 +53,11 @@ class DataplaneControllerTest {
     val mockDataplane = createDataplane()
     val newName = "new name"
     val newEnabled = true
+    val mockOrganizationId = UUID.randomUUID()
 
+    every { dataplaneService.getDataplane(mockDataplane.id.toString()) } returns mockDataplane
+    every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(mockDataplane.dataplaneGroupId) } returns mockOrganizationId
+    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), ManageDataplanesAndDataplaneGroupsEntitlement) } returns Unit
     every { dataplaneService.updateDataplane(any(), any(), any()) } returns
       mockDataplane.apply {
         name = newName
@@ -71,7 +80,11 @@ class DataplaneControllerTest {
   @Test
   fun `deleteDataplane tombstones dataplane`() {
     val mockDataplane = createDataplane()
+    val mockOrganizationId = UUID.randomUUID()
 
+    every { dataplaneService.getDataplane(mockDataplane.id.toString()) } returns mockDataplane
+    every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(mockDataplane.dataplaneGroupId) } returns mockOrganizationId
+    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), ManageDataplanesAndDataplaneGroupsEntitlement) } returns Unit
     every { dataplaneService.deleteDataplane(any()) } returns mockDataplane
 
     val dataplaneDeleteRequestBody =
@@ -86,7 +99,10 @@ class DataplaneControllerTest {
   fun `listDataplanes returns dataplanes`() {
     val dataplaneId1 = UUID.randomUUID()
     val dataplaneId2 = UUID.randomUUID()
+    val mockOrganizationId = UUID.randomUUID()
 
+    every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(MOCK_DATAPLANE_GROUP_ID) } returns mockOrganizationId
+    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), ManageDataplanesAndDataplaneGroupsEntitlement) } returns Unit
     every { dataplaneService.listDataplanes(MOCK_DATAPLANE_GROUP_ID) } returns
       listOf(
         createDataplane(dataplaneId1),

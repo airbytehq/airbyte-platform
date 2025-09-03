@@ -10,6 +10,7 @@ import io.airbyte.commons.entitlements.models.ConnectorEntitlement
 import io.airbyte.commons.entitlements.models.DestinationObjectStorageEntitlement
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
+import io.airbyte.commons.entitlements.models.ManageDataplanesAndDataplaneGroupsEntitlement
 import io.airbyte.commons.entitlements.models.OrchestrationEntitlement
 import io.airbyte.commons.entitlements.models.SsoConfigUpdateEntitlement
 import io.airbyte.config.ActorType
@@ -59,6 +60,7 @@ internal class EntitlementServiceImpl(
       DestinationObjectStorageEntitlement -> hasDestinationObjectStorageEntitlement(organizationId)
       SsoConfigUpdateEntitlement -> hasSsoConfigUpdateEntitlement(organizationId)
       OrchestrationEntitlement -> hasOrchestrationEntitlement(organizationId)
+      ManageDataplanesAndDataplaneGroupsEntitlement -> hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId)
       else -> entitlementClient.checkEntitlement(organizationId, entitlement)
     }
 
@@ -118,6 +120,12 @@ internal class EntitlementServiceImpl(
     EntitlementResult(
       isEntitled = entitlementProvider.hasOrchestrationEntitlement(organizationId),
       featureId = OrchestrationEntitlement.featureId,
+    )
+
+  private fun hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId: OrganizationId): EntitlementResult =
+    EntitlementResult(
+      isEntitled = entitlementProvider.hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId),
+      featureId = ManageDataplanesAndDataplaneGroupsEntitlement.featureId,
     )
 
   override fun hasConfigTemplateEntitlements(organizationId: OrganizationId): Boolean =

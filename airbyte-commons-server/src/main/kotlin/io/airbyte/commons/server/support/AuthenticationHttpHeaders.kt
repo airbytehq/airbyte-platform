@@ -88,4 +88,14 @@ object AuthenticationHttpHeaders {
    * HTTP header that contains the scope ID for authorization purposes.
    */
   const val SCOPE_ID_HEADER: String = AIRBYTE_HEADER_PREFIX + "Scope-Id"
+
+  /**
+   * HTTP header that contains the dataplane group ID for authorization purposes.
+   */
+  const val DATAPLANE_GROUP_ID_HEADER: String = AIRBYTE_HEADER_PREFIX + "Dataplane-Group-Id"
+
+  /**
+   * HTTP header that contains the dataplane ID for authorization purposes.
+   */
+  const val DATAPLANE_ID_HEADER: String = AIRBYTE_HEADER_PREFIX + "Dataplane-Id"
 }

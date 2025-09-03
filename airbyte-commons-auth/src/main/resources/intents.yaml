@@ -194,3 +194,15 @@ intents:
       - WORKSPACE_EDITOR
       - WORKSPACE_ADMIN
       - ADMIN
+  ManageDataplanes:
+    name: Manage dataplanes
+    description: Create, edit, list, and delete dataplanes
+    roles:
+      - ORGANIZATION_ADMIN
+      - ADMIN
+  ManageDataplaneGroups:
+    name: Manage dataplane groups
+    description: Create, edit, list, and delete dataplane groups
+    roles:
+      - ORGANIZATION_ADMIN
+      - ADMIN

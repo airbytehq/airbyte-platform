@@ -14,6 +14,8 @@ import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Permission
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.auth.TokenType
+import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.data.services.DataplaneService
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.utils.SecurityService
@@ -35,6 +37,8 @@ class RoleResolverTest {
   lateinit var currentUserService: CurrentUserService
   lateinit var securityService: SecurityService
   lateinit var permissionHandler: PermissionHandler
+  lateinit var dataplaneGroupService: DataplaneGroupService
+  lateinit var dataplaneService: DataplaneService
   lateinit var roleResolver: RoleResolver
 
   @BeforeEach
@@ -44,7 +48,10 @@ class RoleResolverTest {
     currentUserService = mockk()
     permissionHandler = mockk()
     securityService = mockk()
-    val authenticationHeaderResolver = AuthenticationHeaderResolver(workspaceHelper, permissionHandler, userPersistence)
+    dataplaneGroupService = mockk()
+    dataplaneService = mockk()
+    val authenticationHeaderResolver =
+      AuthenticationHeaderResolver(workspaceHelper, permissionHandler, userPersistence, dataplaneGroupService, dataplaneService)
     roleResolver = RoleResolver(authenticationHeaderResolver, currentUserService, securityService, permissionHandler)
   }
 
