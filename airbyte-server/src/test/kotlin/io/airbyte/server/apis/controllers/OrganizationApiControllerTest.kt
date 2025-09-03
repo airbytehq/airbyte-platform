@@ -13,6 +13,8 @@ import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.OrganizationsHandler
+import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.mockk.every
@@ -30,11 +32,13 @@ class OrganizationApiControllerTest {
   private lateinit var organizationsHandler: OrganizationsHandler
   private lateinit var roleResolver: RoleResolver
   private lateinit var workspacePersistence: WorkspacePersistence
+  private lateinit var currentUserService: CurrentUserService
   private lateinit var organizationApiController: OrganizationApiController
 
   private val organizationId = UUID.randomUUID()
   private val workspaceId1 = UUID.randomUUID()
   private val workspaceId2 = UUID.randomUUID()
+  private val userId = UUID.randomUUID()
   private val organizationInfoRead =
     OrganizationInfoRead()
       .organizationId(organizationId)
@@ -46,10 +50,17 @@ class OrganizationApiControllerTest {
     organizationsHandler = mockk()
     roleResolver = mockk(relaxed = true)
     workspacePersistence = mockk()
-    organizationApiController = OrganizationApiController(organizationsHandler, roleResolver, workspacePersistence)
+    currentUserService = mockk()
+    organizationApiController = OrganizationApiController(organizationsHandler, roleResolver, workspacePersistence, currentUserService)
 
     // Default behavior: organizationsHandler returns organization info
     every { organizationsHandler.getOrganizationInfo(organizationId) } returns organizationInfoRead
+
+    // Default behavior: currentUserService returns a mock user
+    val user = AuthenticatedUser()
+    user.userId = userId
+    user.email = "test@example.com"
+    every { currentUserService.getCurrentUser() } returns user
   }
 
   @Test
@@ -92,24 +103,19 @@ class OrganizationApiControllerTest {
   @Test
   fun `getOrgInfo succeeds with workspace-level permission when org permission fails`() {
     val orgRequest = mockk<RoleResolver.Request>(relaxed = true)
-    val workspaceRequest = mockk<RoleResolver.Request>(relaxed = true)
 
-    every { roleResolver.newRequest() } returnsMany listOf(orgRequest, workspaceRequest)
+    every { roleResolver.newRequest() } returns orgRequest
 
     // First request (org-level) - setup and failure
     every { orgRequest.withCurrentAuthentication() } returns orgRequest
     every { orgRequest.withOrg(organizationId) } returns orgRequest
     every { orgRequest.requireRole(AuthRoleConstants.ORGANIZATION_MEMBER) } throws ForbiddenProblem()
 
-    // Mock workspace persistence returning workspaces
+    // Mock workspace persistence returning workspaces user has access to
     val workspace1 = StandardWorkspace().apply { workspaceId = workspaceId1 }
     val workspace2 = StandardWorkspace().apply { workspaceId = workspaceId2 }
-    every { workspacePersistence.listWorkspacesByOrganizationId(organizationId, false, Optional.empty()) } returns listOf(workspace1, workspace2)
-
-    // Second request (workspace-level) - setup and success
-    every { workspaceRequest.withCurrentAuthentication() } returns workspaceRequest
-    every { workspaceRequest.withWorkspaces(listOf(workspaceId1, workspaceId2)) } returns workspaceRequest
-    every { workspaceRequest.requireRole(AuthRoleConstants.WORKSPACE_READER) } returns Unit // Success
+    every { workspacePersistence.listWorkspacesInOrganizationByUserId(organizationId, userId, Optional.empty()) } returns
+      listOf(workspace1, workspace2)
 
     val requestBody = OrganizationIdRequestBody().organizationId(organizationId)
 
@@ -118,16 +124,15 @@ class OrganizationApiControllerTest {
     assertNotNull(result)
     assertEquals(organizationId, result!!.organizationId)
     verify(exactly = 1) { organizationsHandler.getOrganizationInfo(organizationId) }
-    verify(exactly = 1) { workspacePersistence.listWorkspacesByOrganizationId(organizationId, false, Optional.empty()) }
-    verify(exactly = 1) { workspaceRequest.requireRole(AuthRoleConstants.WORKSPACE_READER) }
+    verify(exactly = 1) { workspacePersistence.listWorkspacesInOrganizationByUserId(organizationId, userId, Optional.empty()) }
+    verify(exactly = 1) { currentUserService.getCurrentUser() }
   }
 
   @Test
   fun `getOrgInfo fails when user has no organization or workspace permissions`() {
     val orgRequest = mockk<RoleResolver.Request>(relaxed = true)
-    val workspaceRequest = mockk<RoleResolver.Request>(relaxed = true)
 
-    every { roleResolver.newRequest() } returnsMany listOf(orgRequest, workspaceRequest)
+    every { roleResolver.newRequest() } returns orgRequest
 
     // First request (org-level) - failure
     every { orgRequest.withCurrentAuthentication() } returns orgRequest
@@ -135,24 +140,21 @@ class OrganizationApiControllerTest {
     val orgForbiddenException = ForbiddenProblem()
     every { orgRequest.requireRole(AuthRoleConstants.ORGANIZATION_MEMBER) } throws orgForbiddenException
 
-    // Mock workspace persistence returning workspaces
-    val workspace1 = StandardWorkspace().apply { workspaceId = workspaceId1 }
-    every { workspacePersistence.listWorkspacesByOrganizationId(organizationId, false, Optional.empty()) } returns listOf(workspace1)
-
-    // Second request (workspace-level) - failure
-    every { workspaceRequest.withCurrentAuthentication() } returns workspaceRequest
-    every { workspaceRequest.withWorkspaces(listOf(workspaceId1)) } returns workspaceRequest
-    every { workspaceRequest.requireRole(AuthRoleConstants.WORKSPACE_READER) } throws ForbiddenProblem()
+    // Mock workspace persistence returning empty list (user has no workspace access)
+    every { workspacePersistence.listWorkspacesInOrganizationByUserId(organizationId, userId, Optional.empty()) } returns emptyList()
 
     val requestBody = OrganizationIdRequestBody().organizationId(organizationId)
 
-    assertThrows<ForbiddenProblem> {
-      organizationApiController.getOrgInfo(requestBody)
-    }
+    val exception =
+      assertThrows<ForbiddenProblem> {
+        organizationApiController.getOrgInfo(requestBody)
+      }
 
-    // Should get the workspace permission error, not the original org error
+    // Should re-throw the original org permission error
+    assertEquals(orgForbiddenException, exception)
     verify(exactly = 0) { organizationsHandler.getOrganizationInfo(organizationId) } // Should not call handler
-    verify(exactly = 1) { workspacePersistence.listWorkspacesByOrganizationId(organizationId, false, Optional.empty()) }
+    verify(exactly = 1) { workspacePersistence.listWorkspacesInOrganizationByUserId(organizationId, userId, Optional.empty()) }
+    verify(exactly = 1) { currentUserService.getCurrentUser() }
   }
 
   @Test
@@ -168,7 +170,7 @@ class OrganizationApiControllerTest {
     every { orgRequest.requireRole(AuthRoleConstants.ORGANIZATION_MEMBER) } throws forbiddenException
 
     // Empty workspace list
-    every { workspacePersistence.listWorkspacesByOrganizationId(organizationId, false, Optional.empty()) } returns emptyList()
+    every { workspacePersistence.listWorkspacesInOrganizationByUserId(organizationId, userId, Optional.empty()) } returns emptyList()
 
     val requestBody = OrganizationIdRequestBody().organizationId(organizationId)
 
@@ -180,6 +182,64 @@ class OrganizationApiControllerTest {
     // Should re-throw the original org permission error
     assertEquals(forbiddenException, exception)
     verify(exactly = 0) { organizationsHandler.getOrganizationInfo(organizationId) }
-    verify(exactly = 1) { workspacePersistence.listWorkspacesByOrganizationId(organizationId, false, Optional.empty()) }
+    verify(exactly = 1) { workspacePersistence.listWorkspacesInOrganizationByUserId(organizationId, userId, Optional.empty()) }
+    verify(exactly = 1) { currentUserService.getCurrentUser() }
+  }
+
+  @Test
+  fun `getOrgInfo should succeed when user has access to only some workspaces in organization`() {
+    val orgRequest = mockk<RoleResolver.Request>(relaxed = true)
+
+    every { roleResolver.newRequest() } returns orgRequest
+
+    // First request (org-level) - failure
+    every { orgRequest.withCurrentAuthentication() } returns orgRequest
+    every { orgRequest.withOrg(organizationId) } returns orgRequest
+    every { orgRequest.requireRole(AuthRoleConstants.ORGANIZATION_MEMBER) } throws ForbiddenProblem()
+
+    // Mock workspace persistence returning workspaces that user has access to (only workspace1, not workspace2)
+    val workspace1 = StandardWorkspace().apply { workspaceId = workspaceId1 }
+    every { workspacePersistence.listWorkspacesInOrganizationByUserId(organizationId, userId, Optional.empty()) } returns listOf(workspace1)
+
+    val requestBody = OrganizationIdRequestBody().organizationId(organizationId)
+
+    // Should succeed because user has access to at least one workspace (workspace1)
+    val result = organizationApiController.getOrgInfo(requestBody)
+
+    assertNotNull(result)
+    assertEquals(organizationId, result!!.organizationId)
+    verify(exactly = 1) { organizationsHandler.getOrganizationInfo(organizationId) }
+    verify(exactly = 1) { workspacePersistence.listWorkspacesInOrganizationByUserId(organizationId, userId, Optional.empty()) }
+    verify(exactly = 1) { currentUserService.getCurrentUser() }
+  }
+
+  @Test
+  fun `getOrgInfo should fail when user has no workspace access in organization`() {
+    val orgRequest = mockk<RoleResolver.Request>(relaxed = true)
+
+    every { roleResolver.newRequest() } returns orgRequest
+
+    // First request (org-level) - failure
+    every { orgRequest.withCurrentAuthentication() } returns orgRequest
+    every { orgRequest.withOrg(organizationId) } returns orgRequest
+    val forbiddenException = ForbiddenProblem()
+    every { orgRequest.requireRole(AuthRoleConstants.ORGANIZATION_MEMBER) } throws forbiddenException
+
+    // Mock workspace persistence returning empty list (user has no workspace access)
+    every { workspacePersistence.listWorkspacesInOrganizationByUserId(organizationId, userId, Optional.empty()) } returns emptyList()
+
+    val requestBody = OrganizationIdRequestBody().organizationId(organizationId)
+
+    // Should fail because user has no access to any workspace in the organization
+    val exception =
+      assertThrows<ForbiddenProblem> {
+        organizationApiController.getOrgInfo(requestBody)
+      }
+
+    // Should re-throw the original org permission error
+    assertEquals(forbiddenException, exception)
+    verify(exactly = 0) { organizationsHandler.getOrganizationInfo(organizationId) }
+    verify(exactly = 1) { workspacePersistence.listWorkspacesInOrganizationByUserId(organizationId, userId, Optional.empty()) }
+    verify(exactly = 1) { currentUserService.getCurrentUser() }
   }
 }

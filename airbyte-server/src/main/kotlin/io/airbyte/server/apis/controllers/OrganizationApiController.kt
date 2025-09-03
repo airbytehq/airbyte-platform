@@ -26,6 +26,7 @@ import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.server.apis.execute
 import io.micronaut.http.annotation.Body
@@ -42,6 +43,7 @@ open class OrganizationApiController(
   val organizationsHandler: OrganizationsHandler,
   val roleResolver: RoleResolver,
   val workspacePersistence: WorkspacePersistence,
+  val currentUserService: CurrentUserService,
 ) : OrganizationApi {
   @Post("/get")
   @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)
@@ -116,27 +118,18 @@ open class OrganizationApiController(
         // User has org-level access, proceed
       } catch (e: ForbiddenProblem) {
         // No org-level access, check workspace-level access
-        val workspacesInOrg =
-          workspacePersistence.listWorkspacesByOrganizationId(
-            organizationId = organizationId,
-            includeDeleted = false,
-            keyword = Optional.empty(),
+        val accessibleWorkspaces =
+          workspacePersistence.listWorkspacesInOrganizationByUserId(
+            organizationId,
+            currentUserService.getCurrentUser().userId,
+            Optional.empty(),
           )
-        val workspaceIds = workspacesInOrg.map { it.workspaceId }
 
-        if (workspaceIds.isNotEmpty()) {
-          val workspaceAuth =
-            roleResolver
-              .newRequest()
-              .withCurrentAuthentication()
-              .withWorkspaces(workspaceIds)
-
-          // This will throw if user doesn't have workspace access to any workspace in the org
-          workspaceAuth.requireRole(AuthRoleConstants.WORKSPACE_READER)
-        } else {
-          // No workspaces in org, re-throw the original org permission error
+        if (accessibleWorkspaces.isEmpty()) {
+          // User has no workspace access in this org, re-throw the original org permission error
           throw e
         }
+        // If we reach here, user has access to at least one workspace in the organization
       }
 
       organizationsHandler.getOrganizationInfo(organizationIdRequestBody.organizationId)
