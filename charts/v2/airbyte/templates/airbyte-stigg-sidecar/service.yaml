@@ -1,0 +1,20 @@
+{{- if .Values.stiggSidecar.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-stigg-sidecar-svc
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.stiggSidecar.service.type }}
+  ports:
+  - port: {{ .Values.stiggSidecar.service.port }}
+    protocol: TCP
+    targetPort: 8800
+  selector:
+    {{- include "airbyte.selectorLabels" . | nindent 4 }}
+    {{- if .Values.stiggSidecar.extraSelectorLabels }}
+    {{ toYaml (mergeOverwrite .Values.stiggSidecar.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 4 }}
+    {{- end }}
+{{- end }}

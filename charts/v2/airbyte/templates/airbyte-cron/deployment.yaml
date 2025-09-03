@@ -89,6 +89,7 @@ spec:
             {{- include "airbyte.temporal.cloud.envs" . | nindent 12 }}
             {{- include "airbyte.orb.envs" . | nindent 12 }}
             {{- include "airbyte.temporal.cloud.credentials.envs" . | nindent 12 }}
+            {{- include "airbyte.stigg.envs" . | nindent 12 }}
             {{- end }}
 
             # Values from secret

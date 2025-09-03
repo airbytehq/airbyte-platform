@@ -1,0 +1,157 @@
+{{- if .Values.stiggSidecar.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-stigg-sidecar
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+    {{- if .Values.stiggSidecar.extraLabels }}
+    {{ toYaml (mergeOverwrite .Values.stiggSidecar.extraLabels .Values.global.extraLabels) | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{ toYaml .Values.stiggSidecar.annotations | nindent 4 }}
+spec:
+  minReadySeconds: 30
+  replicas: {{ .Values.stiggSidecar.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "airbyte.selectorLabels" . | nindent 6 }}
+      {{- if .Values.stiggSidecar.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.stiggSidecar.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
+      {{- end }}
+  strategy:
+    type: {{ .Values.stiggSidecar.deploymentStrategyType }} # Needed due to volume claims
+  template:
+    metadata:
+      labels:
+        {{- include "airbyte.selectorLabels" . | nindent 8 }}
+        {{- if .Values.stiggSidecar.extraSelectorLabels }}
+        {{ toYaml (mergeOverwrite .Values.stiggSidecar.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.stiggSidecar.podLabels }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.stiggSidecar.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.stiggSidecar.podAnnotations }}
+      annotations:
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.stiggSidecar.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ default .Values.global.serviceAccountName .Values.stiggSidecar.serviceAccountName }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.stiggSidecar.nodeSelector }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.stiggSidecar.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.stiggSidecar.tolerations }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.stiggSidecar.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.stiggSidecar.affinity }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.stiggSidecar.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.stiggSidecar.extraInitContainers }}
+      initContainers:
+      {{- toYaml .Values.stiggSidecar.extraInitContainers | nindent 6 }}
+      {{- end }}
+      containers:
+      - name: airbyte-stigg-sidecar
+        image: {{ include "imageUrl" (list .Values.stiggSidecar.image $) }}
+        imagePullPolicy: "{{ .Values.stiggSidecar.image.pullPolicy }}"
+        env:
+        - name: SERVER_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.stigg.secretName" . }}
+              key: {{ include "airbyte.stigg.apiKey.secretKey" . }}
+        - name: GRPC_PORT
+          value: "8800"
+
+        {{- include "airbyte.logging.envs" . | nindent 8 }}
+
+        # Values from secret
+        {{- if .Values.stiggSidecar.secrets }}
+        {{- range $k, $v := .Values.stiggSidecar.secrets }}
+        - name: {{ $k }}
+          valueFrom:
+            secretKeyRef:
+              name: stiggSidecar-secrets
+              key: {{ $k }}
+        {{- end }}
+        {{- end }}
+
+        # Values from env
+        {{- if or .Values.stiggSidecar.env_vars .Values.global.env_vars }}
+        {{- range $k, $v := mergeOverwrite .Values.stiggSidecar.env_vars .Values.global.env_vars }}
+        - name: {{ $k }}
+          value: {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+
+        # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
+        {{- if .Values.stiggSidecar.extraEnv }}
+        {{- toYaml .Values.stiggSidecar.extraEnv | nindent 8 }}
+        {{- end }}
+
+        {{- if .Values.stiggSidecar.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: metrics
+          initialDelaySeconds: {{ .Values.stiggSidecar.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.stiggSidecar.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.stiggSidecar.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.stiggSidecar.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.stiggSidecar.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.stiggSidecar.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: metrics
+          initialDelaySeconds: {{ .Values.stiggSidecar.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.stiggSidecar.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.stiggSidecar.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.stiggSidecar.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.stiggSidecar.readinessProbe.failureThreshold }}
+        {{- end }}
+        ports:
+        - name: http
+          containerPort: 8800
+          protocol: TCP
+        - name: metrics
+          containerPort: 8080
+          protocol: TCP
+        {{- if .Values.stiggSidecar.debug.enabled }}
+        - name: debug
+          containerPort: {{ .Values.stiggSidecar.debug.remoteDebugPort }}
+          protocol: TCP
+        {{- end}}
+        {{- if .Values.stiggSidecar.resources }}
+        resources: {{- toYaml .Values.stiggSidecar.resources | nindent 10 }}
+        {{- end }}
+        {{- if .Values.stiggSidecar.containerSecurityContext }}
+        securityContext: {{- toYaml .Values.stiggSidecar.containerSecurityContext | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+        {{- if .Values.stiggSidecar.extraVolumeMounts }}
+          {{ toYaml .Values.stiggSidecar.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+        {{- if .Values.global.extraVolumeMounts }}
+          {{ toYaml .Values.global.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+      {{- if .Values.stiggSidecar.extraContainers }}
+        {{ toYaml .Values.stiggSidecar.extraContainers | nindent 6 }}
+      {{- end }}
+      {{- if .Values.global.extraContainers }}
+        {{ toYaml .Values.global.extraContainers | nindent 6 }}
+      {{- end }}
+      securityContext: {{- toYaml .Values.stiggSidecar.podSecurityContext | nindent 8 }}
+      volumes:
+      {{- if .Values.stiggSidecar.extraVolumes }}
+      {{ toYaml .Values.stiggSidecar.extraVolumes | nindent 6 }}
+      {{- end }}
+{{- end }}

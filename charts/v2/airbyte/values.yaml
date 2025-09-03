@@ -440,6 +440,10 @@ global:
         longPollTimeout: 140s
         queryTimeout: 20s
 
+  stigg:
+    secretName: ""
+    apiKeySecretKey: ""
+
   datadog:
     enabled: false
     env: dev
@@ -2992,3 +2996,94 @@ testWebapp:
     repository: airbyte/utils
   # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   nodeSelector: {}
+
+stiggSidecar:
+  enabled: false
+  replicaCount: 1
+
+  serviceAccountName:
+
+  image:
+    repository: public.ecr.aws/stigg/sidecar
+    pullPolicy: IfNotPresent
+    tag: 3.56.0
+
+  service:
+    type: ClusterIP
+    port: 8800
+    annotations: {}
+
+  annotations: {}
+
+  podAnnotations: {}
+
+  podLabels: {}
+
+  # -- Security context for the container
+  podSecurityContext:
+    # gid=1000(airbyte)
+    fsGroup: 1000
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    runAsNonRoot: true
+    # uid=1000(airbyte)
+    runAsUser: 1000
+    # gid=1000(airbyte)
+    runAsGroup: 1000
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    timeoutSeconds: 1
+    failureThreshold: 3
+    successThreshold: 1
+
+  resources:
+    ## Example:
+    ## limits:
+    ##    cpu: 200m
+    ##    memory: 1Gi
+    limits: {}
+    ## Examples:
+    ## requests:
+    ##    memory: 256Mi
+    ##    cpu: 250m
+    requests: {}
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  log:
+    level: INFO
+
+  extraEnv: []
+
+  extraVolumeMounts: []
+  extraVolumes: []
+  extraInitContainers: []
+  extraContainers: []
+
+  env_vars: {}
+
+  hpa:
+    enabled: false
+
+  debug:
+    enabled: false
+    remoteDebugPort: 5005

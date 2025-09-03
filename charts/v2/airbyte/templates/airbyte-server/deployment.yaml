@@ -121,6 +121,7 @@ spec:
         {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
         {{- include "airbyte.orb.envs" . | nindent 8 -}}
         {{- include "airbyte.redis.envs" . | nindent 8 -}}
+        {{- include "airbyte.stigg.envs" . | nindent 8 }}
         {{- include "airbyte.stripe.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.cloud.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.cloud.billing.envs" . | nindent 8 }}

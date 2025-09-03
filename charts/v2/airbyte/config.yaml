@@ -1070,6 +1070,23 @@ shopify:
       key: apiSecretKey
       sensitive: true
 
+stigg:
+  keyBasePath: global.stigg
+  config:
+    - env: STIGG_API_KEY
+      key: apiKey
+      sensitive: true
+
+    - env: STIGG_SIDECAR_HOST
+      key: host
+      valueExp: (printf "%s-stigg-sidecar-svc.%s" .Release.Name .Release.Namespace)
+      includeIf: .Values.stiggSidecar.enabled
+
+    - env: STIGG_SIDECAR_PORT
+      key: port
+      valueExp: .Values.stiggSidecar.service.port
+      includeIf: .Values.stiggSidecar.enabled
+
 storage:
   keyBasePath: global.storage
   discriminatorField: type
