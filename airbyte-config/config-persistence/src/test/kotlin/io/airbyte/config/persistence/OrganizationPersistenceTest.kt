@@ -288,4 +288,130 @@ internal class OrganizationPersistenceTest : BaseConfigDatabaseTest() {
       Assertions.assertEquals(3, organizations.size)
     }
   }
+
+  @ParameterizedTest
+  @CsvSource(
+    "false, false",
+    "true, false",
+    "false, true",
+    "true, true",
+  )
+  @Throws(Exception::class)
+  fun testListOrganizationsByUserIdForInstanceAdmin(
+    withKeywordSearch: Boolean,
+    withPagination: Boolean,
+  ) {
+    // create an instance admin user
+    val instanceAdminUserId = UUID.randomUUID()
+    userPersistence.writeAuthenticatedUser(
+      AuthenticatedUser()
+        .withUserId(instanceAdminUserId)
+        .withName("instance_admin")
+        .withAuthUserId("instance_admin_auth_id")
+        .withEmail("admin@airbyte.io")
+        .withAuthProvider(AuthProvider.AIRBYTE),
+    )
+    // grant INSTANCE_ADMIN permission (no organization_id or workspace_id needed)
+    writePermission(
+      Permission()
+        .withPermissionId(UUID.randomUUID())
+        .withUserId(instanceAdminUserId)
+        .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN),
+    )
+
+    // create multiple organizations with different names for testing
+    val orgId1 = UUID.randomUUID()
+    organizationPersistence.createOrganization(
+      Organization()
+        .withOrganizationId(orgId1)
+        .withUserId(UUID.randomUUID())
+        .withName("AdminKeyword")
+        .withEmail("org1@test.com"),
+    )
+
+    val orgId2 = UUID.randomUUID()
+    organizationPersistence.createOrganization(
+      Organization()
+        .withOrganizationId(orgId2)
+        .withUserId(UUID.randomUUID())
+        .withName("AnotherKeyword")
+        .withEmail("org2@test.com"),
+    )
+
+    val orgId3 = UUID.randomUUID()
+    organizationPersistence.createOrganization(
+      Organization()
+        .withOrganizationId(orgId3)
+        .withUserId(UUID.randomUUID())
+        .withName("NoMatch")
+        .withEmail("org3@test.com"),
+    )
+
+    // total organizations in DB should be original MockData organizations + 3 new ones
+    val totalExpectedOrgs = MockData.organizations().size + 3
+    val keywordMatchCount = 2 // AdminKeyword and AnotherKeyword
+
+    var organizations: List<Organization>
+    if (withKeywordSearch && withPagination) {
+      organizations =
+        organizationPersistence.listOrganizationsByUserIdPaginated(
+          ResourcesByUserQueryPaginated(instanceAdminUserId, false, 10, 0),
+          Optional.of<String>("keyword"),
+        )
+      // Should contain organizations with "keyword" in the name
+      Assertions.assertEquals(keywordMatchCount, organizations.size)
+      // Verify they are sorted by name
+      Assertions.assertTrue(organizations[0].name <= organizations[1].name)
+    } else if (withPagination) {
+      organizations =
+        organizationPersistence.listOrganizationsByUserIdPaginated(
+          ResourcesByUserQueryPaginated(instanceAdminUserId, false, 10, 0),
+          Optional.empty<String>(),
+        )
+      // Should contain all organizations (including MockData ones)
+      Assertions.assertEquals(totalExpectedOrgs, organizations.size)
+
+      // Test pagination with smaller page size
+      organizations =
+        organizationPersistence.listOrganizationsByUserIdPaginated(
+          ResourcesByUserQueryPaginated(instanceAdminUserId, false, 2, 0),
+          Optional.empty<String>(),
+        )
+      Assertions.assertEquals(2, organizations.size)
+
+      // Test offset
+      val offsetOrganizations =
+        organizationPersistence.listOrganizationsByUserIdPaginated(
+          ResourcesByUserQueryPaginated(instanceAdminUserId, false, 2, 2),
+          Optional.empty<String>(),
+        )
+      Assertions.assertEquals(2, offsetOrganizations.size)
+      // Should be different organizations
+      Assertions.assertNotEquals(organizations[0].organizationId, offsetOrganizations[0].organizationId)
+    } else if (withKeywordSearch) {
+      organizations = organizationPersistence.listOrganizationsByUserId(instanceAdminUserId, Optional.of<String>("keyword"))
+      Assertions.assertEquals(keywordMatchCount, organizations.size)
+    } else {
+      organizations = organizationPersistence.listOrganizationsByUserId(instanceAdminUserId, Optional.empty<String>())
+      // Instance admin should see ALL organizations
+      Assertions.assertEquals(totalExpectedOrgs, organizations.size)
+    }
+
+    // Verify that instance admin can see organizations they don't have explicit permissions on
+    val allOrgIds = organizations.map { it.organizationId }
+    if (!withKeywordSearch && !withPagination) {
+      // Only check all organizations when not paginated (since we only get full results then)
+      // Should include all MockData organizations
+      for (mockOrg in MockData.organizations()) {
+        Assertions.assertTrue(
+          allOrgIds.contains(mockOrg!!.organizationId),
+          "Instance admin should see MockData organization ${mockOrg.organizationId}",
+        )
+      }
+      // Should include newly created organizations
+      Assertions.assertTrue(allOrgIds.contains(orgId1), "Instance admin should see org1")
+      Assertions.assertTrue(allOrgIds.contains(orgId2), "Instance admin should see org2")
+      Assertions.assertTrue(allOrgIds.contains(orgId3), "Instance admin should see org3")
+    }
+  }
 }

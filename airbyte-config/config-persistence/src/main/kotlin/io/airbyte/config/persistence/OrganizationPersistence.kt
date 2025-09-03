@@ -203,7 +203,8 @@ class OrganizationPersistence(
 
   /**
    * Core helper method that retrieves organizations accessible to a user based on their permissions.
-   * Handles instance admin privileges and gets accessible org IDs, then fetches organizations.
+   * For instance admins, queries all organizations directly to avoid large IN clauses.
+   * For regular users, gets accessible org IDs first, then fetches organizations.
    */
   private fun getOrganizationsForUser(
     ctx: DSLContext,
@@ -211,23 +212,24 @@ class OrganizationPersistence(
     keyword: Optional<String>,
     pagination: PaginationParams?,
   ): org.jooq.Result<Record> {
-    val accessibleOrgIds =
-      if (hasInstanceAdminPermission(ctx, userId)) {
-        getAllOrganizationIds(ctx)
-      } else {
-        getAccessibleOrganizationIds(ctx, userId)
+    return if (hasInstanceAdminPermission(ctx, userId)) {
+      // For instance admins, query all organizations directly without building a large IN clause
+      getAllOrganizationsForInstanceAdmin(ctx, keyword, pagination)
+    } else {
+      // For regular users, use the existing logic with accessible org IDs
+      val accessibleOrgIds = getAccessibleOrganizationIds(ctx, userId)
+
+      if (accessibleOrgIds.isEmpty()) {
+        return ctx.newResult()
       }
 
-    if (accessibleOrgIds.isEmpty()) {
-      return ctx.newResult()
-    }
+      val query = organizationsByIdWithKeyword(ctx, accessibleOrgIds, keyword)
 
-    val query = organizationsByIdWithKeyword(ctx, accessibleOrgIds, keyword)
-
-    return if (pagination != null) {
-      query.limit(pagination.limit).offset(pagination.offset).fetch()
-    } else {
-      query.fetch()
+      if (pagination != null) {
+        query.limit(pagination.limit).offset(pagination.offset).fetch()
+      } else {
+        query.fetch()
+      }
     }
   }
 
@@ -254,6 +256,27 @@ class OrganizationPersistence(
       .from(Tables.ORGANIZATION)
       .fetch()
       .mapTo(HashSet()) { it.value1() }
+
+  /**
+   * Gets all organizations for instance admin users directly, avoiding large IN clauses.
+   * This method queries all organizations with optional keyword filtering and pagination.
+   */
+  private fun getAllOrganizationsForInstanceAdmin(
+    ctx: DSLContext,
+    keyword: Optional<String>,
+    pagination: PaginationParams?,
+  ): org.jooq.Result<Record> {
+    val query =
+      organizationWithSso(ctx)
+        .where(if (keyword.isPresent) Tables.ORGANIZATION.NAME.containsIgnoreCase(keyword.get()) else DSL.noCondition())
+        .orderBy(Tables.ORGANIZATION.NAME.asc())
+
+    return if (pagination != null) {
+      query.limit(pagination.limit).offset(pagination.offset).fetch()
+    } else {
+      query.fetch()
+    }
+  }
 
   /**
    * Gets organization IDs accessible to a specific user via direct org permissions or workspace permissions.
