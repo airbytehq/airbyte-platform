@@ -54,6 +54,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.config.secrets.toInlined
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.SourceService
@@ -73,7 +74,6 @@ import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToTrace
 import io.airbyte.metrics.lib.MetricTags.SOURCE_ID
 import io.airbyte.metrics.lib.MetricTags.WORKSPACE_ID
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.ConnectorSpecification
@@ -717,7 +717,6 @@ class SourceHandler
             .createAndInsertSecretReferencesWithStorageId(
               reprocessedConfig,
               ActorId(sourceId),
-              WorkspaceId(workspaceId),
               SecretStorageId(secretStorageId.get()),
               currentUserService.getCurrentUserIdIfExists().map { UserId(it) }.orElse(null),
             ).value

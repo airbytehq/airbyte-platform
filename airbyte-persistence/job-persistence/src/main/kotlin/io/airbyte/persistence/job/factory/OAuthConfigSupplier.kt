@@ -15,10 +15,15 @@ import io.airbyte.config.DestinationOAuthParameter
 import io.airbyte.config.ScopeType
 import io.airbyte.config.SourceOAuthParameter
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
+import io.airbyte.config.secrets.InlinedConfigWithSecretRefs
+import io.airbyte.config.secrets.toInlined
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OAuthService
 import io.airbyte.data.services.SourceService
+import io.airbyte.domain.models.SecretReferenceScopeType
+import io.airbyte.domain.models.WorkspaceId
+import io.airbyte.domain.services.secrets.SecretReferenceService
 import io.airbyte.oauth.MoreOAuthParameters
 import io.airbyte.oauth.MoreOAuthParameters.flattenOAuthConfig
 import io.airbyte.oauth.MoreOAuthParameters.mergeJsons
@@ -26,6 +31,7 @@ import io.airbyte.persistence.job.tracker.TrackingMetadata
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import jakarta.inject.Singleton
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
@@ -36,12 +42,14 @@ import java.util.function.BiConsumer
  * or destination with workspace-wide credentials. This class provides too to handle the operations
  * safely.
  */
+@Singleton
 class OAuthConfigSupplier(
   private val trackingClient: TrackingClient,
   private val actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
   private val oAuthService: OAuthService,
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
+  private val secretReferenceService: SecretReferenceService,
 ) {
   /**
    * Mask secrets in OAuth params.
@@ -138,10 +146,18 @@ class OAuthConfigSupplier(
       oAuthService
         .getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId)
         .ifPresent { sourceOAuthParameter: SourceOAuthParameter ->
+          val inlinedConfig =
+            secretReferenceService
+              .getConfigWithSecretReferences(
+                sourceOAuthParameter.oauthParameterId,
+                SecretReferenceScopeType.ACTOR_OAUTH_PARAMETER,
+                sourceOAuthParameter.configuration,
+                WorkspaceId(workspaceId),
+              ).toInlined()
           if (injectOAuthParameters(
               sourceDefinition.name,
               sourceVersion.spec,
-              sourceOAuthParameter.configuration,
+              inlinedConfig,
               sourceConnectorConfig,
             )
           ) {
@@ -185,13 +201,22 @@ class OAuthConfigSupplier(
       val destinationDefinition = destinationService.getStandardDestinationDefinition(destinationDefinitionId)
       val destinationVersion =
         actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId)
+
       oAuthService
         .getDestinationOAuthParameterOptional(workspaceId, destinationDefinitionId)
         .ifPresent { destinationOAuthParameter: DestinationOAuthParameter ->
+          val inlinedConfig =
+            secretReferenceService
+              .getConfigWithSecretReferences(
+                destinationOAuthParameter.oauthParameterId,
+                SecretReferenceScopeType.ACTOR_OAUTH_PARAMETER,
+                destinationOAuthParameter.configuration,
+                WorkspaceId(workspaceId),
+              ).toInlined()
           if (injectOAuthParameters(
               destinationDefinition.name,
               destinationVersion.spec,
-              destinationOAuthParameter.configuration,
+              inlinedConfig,
               destinationConnectorConfig,
             )
           ) {
@@ -328,14 +353,14 @@ class OAuthConfigSupplier(
     private fun injectOAuthParameters(
       connectorName: String,
       spec: ConnectorSpecification?,
-      oauthParameters: JsonNode,
+      oauthParameters: InlinedConfigWithSecretRefs,
       connectorConfig: JsonNode,
     ): Boolean {
       if (!hasOAuthConfigSpecification(spec)) {
         // keep backward compatible behavior if connector does not declare an OAuth config spec
         mergeJsons(
           (connectorConfig as ObjectNode),
-          (oauthParameters as ObjectNode),
+          (oauthParameters.value as ObjectNode),
         )
         return true
       }
@@ -346,7 +371,7 @@ class OAuthConfigSupplier(
 
       // TODO: if we write a migration to flatten persisted configs in db, we don't need to flatten
       // here see https://github.com/airbytehq/airbyte/issues/7624
-      val flatOAuthParameters = flattenOAuthConfig(oauthParameters)
+      val flatOAuthParameters = flattenOAuthConfig(oauthParameters.value)
 
       val result = AtomicBoolean(false)
       traverseOAuthOutputPaths(

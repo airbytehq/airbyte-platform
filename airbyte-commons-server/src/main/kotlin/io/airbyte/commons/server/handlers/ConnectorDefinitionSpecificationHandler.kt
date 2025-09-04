@@ -20,13 +20,13 @@ import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OAuthService
 import io.airbyte.data.services.SourceService
 import io.airbyte.domain.models.EntitledConnectorSpec
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.protocol.models.v0.DestinationSyncMode
 import io.airbyte.validation.json.JsonValidationException
 import jakarta.inject.Singleton

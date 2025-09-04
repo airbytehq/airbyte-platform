@@ -44,6 +44,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.config.secrets.toInlined
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.shared.DEFAULT_PAGE_SIZE
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
@@ -58,7 +59,6 @@ import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService
 import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.domain.services.secrets.SecretReferenceService
 import io.airbyte.domain.services.secrets.SecretStorageService
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
@@ -542,7 +542,6 @@ class DestinationHandler
             .createAndInsertSecretReferencesWithStorageId(
               reprocessedConfig,
               ActorId(destinationId),
-              WorkspaceId(workspaceId),
               SecretStorageId(secretStorageId.get()),
               currentUserService.getCurrentUserIdIfExists().map { obj -> UserId(obj) }.orElse(null),
             ).value

@@ -17,8 +17,8 @@ import io.airbyte.api.server.generated.models.OrchestrationUpdateRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.OrchestrationEntitlement
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.domain.models.OrganizationId
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.security.annotation.Secured

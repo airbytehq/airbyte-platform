@@ -24,6 +24,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.ConfigInjector
 import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.secrets.JsonSecretsProcessor
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.ConnectorBuilderService
 import io.airbyte.data.services.DestinationService
@@ -49,11 +50,9 @@ import io.airbyte.oauth.OAuthImplementationFactory
 import io.airbyte.persistence.job.DefaultJobCreator
 import io.airbyte.persistence.job.JobNotifier
 import io.airbyte.persistence.job.JobPersistence
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.persistence.job.factory.DefaultSyncJobFactory
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.persistence.job.factory.SyncJobFactory
-import io.airbyte.persistence.job.tracker.JobTracker
 import io.airbyte.workers.models.ReplicationFeatureFlags
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.fabric8.kubernetes.client.KubernetesClientBuilder
@@ -78,28 +77,6 @@ class ApplicationBeanFactory {
 
   @Singleton
   fun eventRunner(temporalClient: TemporalClient): EventRunner = TemporalEventRunner(temporalClient)
-
-  @Singleton
-  fun jobTracker(
-    jobPersistence: JobPersistence,
-    trackingClient: TrackingClient,
-    actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
-    sourceService: SourceService,
-    destinationService: DestinationService,
-    connectionService: ConnectionService,
-    operationService: OperationService,
-    workspaceService: WorkspaceService,
-  ): JobTracker =
-    JobTracker(
-      jobPersistence,
-      trackingClient,
-      actorDefinitionVersionHelper,
-      sourceService,
-      destinationService,
-      connectionService,
-      operationService,
-      workspaceService,
-    )
 
   @Singleton
   fun jobNotifier(
@@ -136,7 +113,6 @@ class ApplicationBeanFactory {
 
   @Singleton
   fun jobFactory(
-    jobPersistence: JobPersistence,
     @Property(
       name = "airbyte.connector.specific-resource-defaults-enabled",
       defaultValue = "false",
@@ -150,13 +126,14 @@ class ApplicationBeanFactory {
     connectionService: ConnectionService,
     operationService: OperationService,
     workspaceService: WorkspaceService,
+    workspaceHelper: WorkspaceHelper,
   ): SyncJobFactory =
     DefaultSyncJobFactory(
       connectorSpecificResourceDefaultsEnabled,
       jobCreator,
       oAuthConfigSupplier,
       configInjector,
-      WorkspaceHelper(jobPersistence, connectionService, sourceService, destinationService, operationService, workspaceService),
+      workspaceHelper,
       actorDefinitionVersionHelper,
       sourceService,
       destinationService,

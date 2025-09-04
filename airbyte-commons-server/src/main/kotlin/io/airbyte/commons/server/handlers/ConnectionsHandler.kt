@@ -147,6 +147,7 @@ import io.airbyte.config.persistence.StatePersistence
 import io.airbyte.config.persistence.StreamGenerationRepository
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
 import io.airbyte.data.repositories.entities.ConnectionTimelineEventMinimal
 import io.airbyte.data.services.CatalogService
@@ -181,7 +182,6 @@ import io.airbyte.metrics.lib.ApmTraceUtils.addExceptionToTrace
 import io.airbyte.metrics.lib.ApmTraceUtils.addTagsToTrace
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.JobPersistence
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Inject

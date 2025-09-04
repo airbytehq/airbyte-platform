@@ -324,7 +324,7 @@ class OAuthServiceJooqImpl(
   @Throws(IOException::class, ConfigNotFoundException::class)
   private fun hydrateConfig(
     config: JsonNode,
-    organizationId: UUID?,
+    organizationId: UUID,
   ): JsonNode? {
     // TODO: this can probably be later replaced with a ConnectorSecretsHydrator
     if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId))) {

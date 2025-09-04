@@ -14,8 +14,8 @@ import io.airbyte.config.Schedule
 import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.ConnectionService
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.validation.json.JsonValidationException
 import jakarta.annotation.Nullable
 import jakarta.inject.Singleton

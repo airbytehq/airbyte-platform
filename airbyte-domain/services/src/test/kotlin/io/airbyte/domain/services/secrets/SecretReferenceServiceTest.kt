@@ -9,6 +9,8 @@ import io.airbyte.config.secrets.ConfigWithProcessedSecrets
 import io.airbyte.config.secrets.ProcessedSecretNode
 import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretReferenceConfig
+import io.airbyte.config.secrets.SecretsRepositoryReader
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.SecretConfigService
 import io.airbyte.data.services.SecretReferenceService
 import io.airbyte.domain.models.ActorId
@@ -26,7 +28,6 @@ import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.featureflag.PersistSecretConfigsAndReferences
 import io.airbyte.featureflag.ReadSecretReferenceIdsInConfigs
 import io.airbyte.featureflag.TestClient
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
@@ -44,7 +45,17 @@ class SecretReferenceServiceTest {
   private val secretConfigRepository = mockk<SecretConfigService>()
   private val workspaceHelper = mockk<WorkspaceHelper>()
   private val featureFlagClient = mockk<TestClient>()
-  private val secretReferenceService = SecretReferenceService(secretReferenceRepository, secretConfigRepository, featureFlagClient, workspaceHelper)
+  private val secretPersistenceService = mockk<SecretPersistenceService>()
+  private val secretsRepositoryReader = mockk<SecretsRepositoryReader>()
+  private val secretReferenceService =
+    SecretReferenceService(
+      secretReferenceRepository,
+      secretConfigRepository,
+      featureFlagClient,
+      workspaceHelper,
+      secretPersistenceService,
+      secretsRepositoryReader,
+    )
 
   @Nested
   inner class GetConfigWithSecretReferences {
@@ -417,7 +428,6 @@ class SecretReferenceServiceTest {
         secretReferenceService.createAndInsertSecretReferencesWithStorageId(
           inputActorConfig,
           actorId,
-          workspaceId,
           secretStorageId,
           currentUserId,
         )
@@ -448,45 +458,6 @@ class SecretReferenceServiceTest {
           actorId.value,
           "$.old.auth.clientSecret",
         )
-      }
-    }
-
-    @Test
-    fun `does not create secret configs and references when flag disabled`() {
-      every { featureFlagClient.boolVariation(PersistSecretConfigsAndReferences, any()) } returns false
-      every { workspaceHelper.getOrganizationForWorkspace(any()) } returns UUID.randomUUID()
-
-      val inputActorConfig =
-        ConfigWithProcessedSecrets(
-          Jsons.jsonNode(
-            mapOf(
-              "username" to "bob",
-              "auth" to
-                mapOf(
-                  "clientSecret" to mapOf("_secret" to externalClientSecretCoordinate),
-                ),
-              "password" to mapOf("_secret" to airbyteManagedPasswordCoordinate),
-            ),
-          ),
-          mapOf(
-            "$.password" to ProcessedSecretNode(SecretCoordinate.AirbyteManagedSecretCoordinate.fromFullCoordinate(airbyteManagedPasswordCoordinate)),
-            "$.auth.clientSecret" to ProcessedSecretNode(SecretCoordinate.ExternalSecretCoordinate(externalClientSecretCoordinate)),
-          ),
-        )
-
-      val result =
-        secretReferenceService.createAndInsertSecretReferencesWithStorageId(
-          inputActorConfig,
-          actorId,
-          workspaceId,
-          secretStorageId,
-          currentUserId,
-        )
-
-      result.value shouldBe inputActorConfig.originalConfig
-      verify(exactly = 0) {
-        secretConfigRepository.create(any())
-        secretReferenceRepository.createAndReplace(any())
       }
     }
   }

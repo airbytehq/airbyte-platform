@@ -57,9 +57,7 @@ class SecretStorageServiceTest {
   private val organizationRepository: OrganizationRepository = mockk()
   private val secretReferenceRepository: SecretReferenceRepository = mockk()
   private val secretsRepositoryReader: SecretsRepositoryReader = mockk()
-  private val secretsRepositoryWriter: SecretsRepositoryWriter = mockk()
   private val secretConfigService: SecretConfigService = mockk()
-  private val secretReferenceService: SecretReferenceService = mockk()
   private val featureFlagClient: TestClient = mockk()
 
   private val service =
@@ -68,9 +66,7 @@ class SecretStorageServiceTest {
       organizationRepository,
       secretReferenceRepository,
       secretsRepositoryReader,
-      secretsRepositoryWriter,
       secretConfigService,
-      secretReferenceService,
       featureFlagClient,
     )
 
@@ -113,36 +109,10 @@ class SecretStorageServiceTest {
         }
       every { secretStorageRepository.create(secretStorageCreate) } returns secretStorage
 
-      val newCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate()
-      every { secretsRepositoryWriter.storeInDefaultPersistence(any(), eq(Jsons.serialize(storageConfig))) } returns newCoordinate
-
-      val newSecretRefId = SecretReferenceId(UUID.randomUUID())
-      every {
-        secretReferenceService.createSecretConfigAndReference(
-          SecretStorage.DEFAULT_SECRET_STORAGE_ID,
-          externalCoordinate = newCoordinate.fullCoordinate,
-          airbyteManaged = true,
-          currentUserId = userId,
-          scopeType = SecretReferenceScopeType.SECRET_STORAGE,
-          scopeId = secretStorageId.value,
-          hydrationPath = null,
-        )
-      } returns newSecretRefId
-
       service.createSecretStorage(secretStorageCreate, storageConfig) shouldBe secretStorage
 
       verify {
         secretStorageRepository.create(secretStorageCreate)
-        secretsRepositoryWriter.storeInDefaultPersistence(any(), eq(Jsons.serialize(storageConfig)))
-        secretReferenceService.createSecretConfigAndReference(
-          SecretStorage.DEFAULT_SECRET_STORAGE_ID,
-          externalCoordinate = newCoordinate.fullCoordinate,
-          airbyteManaged = true,
-          currentUserId = userId,
-          scopeType = SecretReferenceScopeType.SECRET_STORAGE,
-          scopeId = secretStorageId.value,
-          hydrationPath = null,
-        )
       }
     }
 
@@ -168,19 +138,6 @@ class SecretStorageServiceTest {
 
       verify {
         secretStorageRepository.create(secretStorageCreate)
-      }
-
-      verify(exactly = 0) {
-        secretsRepositoryWriter.storeInDefaultPersistence(any(), any())
-        secretReferenceService.createSecretConfigAndReference(
-          any(),
-          any(),
-          any(),
-          any(),
-          any(),
-          any(),
-          any(),
-        )
       }
     }
 
@@ -273,19 +230,6 @@ class SecretStorageServiceTest {
       } returns true
 
       service.getByWorkspaceId(workspaceId) shouldBe expected
-    }
-
-    @Test
-    fun `should return null if runtime secret persistence feature flag is enabled`() {
-      every { featureFlagClient.boolVariation(any(), any()) } returns true
-      every { secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.WORKSPACE, workspaceId.value) } returns emptyList()
-      every { organizationRepository.getOrganizationForWorkspaceId(workspaceId.value) } returns Optional.of(org)
-      every { secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.ORGANIZATION, orgId.value) } returns emptyList()
-
-      val result = service.getByWorkspaceId(workspaceId)
-
-      result shouldBe null
-      verify(exactly = 0) { secretStorageRepository.findById(any()) }
     }
   }
 

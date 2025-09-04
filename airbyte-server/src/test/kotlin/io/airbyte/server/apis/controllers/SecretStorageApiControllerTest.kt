@@ -20,6 +20,7 @@ import io.airbyte.domain.models.SecretStorageScopeType
 import io.airbyte.domain.models.SecretStorageType
 import io.airbyte.domain.models.SecretStorageWithConfig
 import io.airbyte.domain.models.UserId
+import io.airbyte.domain.services.secrets.SecretStorageCredentialsService
 import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.server.assertStatus
 import io.micronaut.context.annotation.Factory
@@ -52,6 +53,10 @@ internal class SecretStorageApiControllerTest {
     fun secretStorageService(): SecretStorageService = mockk()
 
     @Singleton
+    @Replaces(SecretStorageCredentialsService::class)
+    fun secretStorageCredentialsService(): SecretStorageCredentialsService = mockk()
+
+    @Singleton
     @Replaces(RoleResolver::class)
     fun roleResolver(): RoleResolver = mockk(relaxed = true)
   }
@@ -61,6 +66,9 @@ internal class SecretStorageApiControllerTest {
 
   @Inject
   lateinit var secretStorageService: SecretStorageService
+
+  @Inject
+  lateinit var secretStorageCredentialsService: SecretStorageCredentialsService
 
   @Inject
   @Client("/")
@@ -161,19 +169,28 @@ internal class SecretStorageApiControllerTest {
       )
     val storageConfig = Jsons.jsonNode(mapOf("key" to "value"))
 
-    every {
-      secretStorageService.createSecretStorage(
-        SecretStorageCreate(
-          scopeType = SecretStorageScopeType.ORGANIZATION,
-          scopeId = secretStorage.scopeId,
-          storageType = SecretStorageType.AWS_SECRETS_MANAGER,
-          descriptor = "My Storage",
-          configuredFromEnvironment = false,
-          createdBy = UserId(currentUserId),
-        ),
-        storageConfig,
+    val secretStorageCreate =
+      SecretStorageCreate(
+        scopeType = SecretStorageScopeType.ORGANIZATION,
+        scopeId = secretStorage.scopeId,
+        storageType = SecretStorageType.AWS_SECRETS_MANAGER,
+        descriptor = "My Storage",
+        configuredFromEnvironment = false,
+        createdBy = UserId(currentUserId),
       )
+
+    every {
+      secretStorageService.createSecretStorage(secretStorageCreate, storageConfig)
     } returns secretStorage
+
+    every {
+      secretStorageCredentialsService.writeStorageCredentials(
+        secretStorageCreate,
+        storageConfig,
+        secretStorage.id,
+        UserId(currentUserId),
+      )
+    } returns Unit
 
     every {
       currentUserService.getCurrentUser()

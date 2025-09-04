@@ -14,9 +14,9 @@ import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Permission
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.auth.TokenType
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.utils.SecurityService
 import io.mockk.every

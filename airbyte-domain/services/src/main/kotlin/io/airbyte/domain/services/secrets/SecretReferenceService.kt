@@ -13,7 +13,11 @@ import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.SecretReferenceConfig
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers.ConfigWithSecretReferenceIdsInjected
+import io.airbyte.config.secrets.SecretsRepositoryReader
+import io.airbyte.config.secrets.persistence.SecretPersistence
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.domain.models.ActorId
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SecretConfigCreate
 import io.airbyte.domain.models.SecretReferenceCreate
 import io.airbyte.domain.models.SecretReferenceId
@@ -25,10 +29,8 @@ import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Organization
-import io.airbyte.featureflag.PersistSecretConfigsAndReferences
 import io.airbyte.featureflag.ReadSecretReferenceIdsInConfigs
 import io.airbyte.featureflag.Workspace
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -46,7 +48,46 @@ class SecretReferenceService(
   private val secretConfigRepository: SecretConfigRepository,
   private val featureFlagClient: FeatureFlagClient,
   private val workspaceHelper: WorkspaceHelper,
+  private val secretPersistenceService: SecretPersistenceService,
+  private val secretsRepositoryReader: SecretsRepositoryReader,
 ) {
+  @JvmName("createAndInsertSecretReferencesWithStorageId")
+  fun createAndInsertSecretReferencesWithStorageId(
+    config: ConfigWithProcessedSecrets,
+    scopeId: UUID,
+    scopeType: SecretReferenceScopeType,
+    secretStorageId: SecretStorageId,
+    currentUserId: UserId?,
+  ): ConfigWithSecretReferenceIdsInjected {
+    val createdSecretRefIdByPath = mutableMapOf<String, SecretReferenceId>()
+    config.processedSecrets.forEach { (path, secretNode) ->
+      if (secretNode.secretReferenceId != null) {
+        return@forEach
+      }
+      val coordinate =
+        secretNode.secretCoordinate ?: throw IllegalStateException(
+          "Secret node at path $path does not have a secret coordinate. This is unexpected and likely indicates a bug.",
+        )
+      val secretRefId =
+        createSecretConfigAndReference(
+          secretStorageId = secretStorageId,
+          externalCoordinate = coordinate.fullCoordinate,
+          airbyteManaged = coordinate is AirbyteManagedSecretCoordinate,
+          currentUserId = currentUserId,
+          hydrationPath = path,
+          scopeType = scopeType,
+          scopeId = scopeId,
+        )
+      createdSecretRefIdByPath[path] = secretRefId
+    }
+    cleanupDanglingSecretReferences(scopeId, scopeType, config)
+
+    return SecretReferenceHelpers.updateSecretNodesWithSecretReferenceIds(
+      config.originalConfig,
+      createdSecretRefIdByPath,
+    )
+  }
+
   /**
    * Given an [actorConfig], create SecretConfig/SecretReference records for each secret
    * coordinate and replace them with their respective secret reference IDs in the returned config.
@@ -62,74 +103,39 @@ class SecretReferenceService(
   fun createAndInsertSecretReferencesWithStorageId(
     actorConfig: ConfigWithProcessedSecrets,
     actorId: ActorId,
-    workspaceId: WorkspaceId,
     secretStorageId: SecretStorageId,
     currentUserId: UserId?,
-  ): ConfigWithSecretReferenceIdsInjected {
-    // If the feature flag to persist secret configs and references is not enabled,
-    // return the original config without any changes.
-    // Note: we cannot look up the workspace from the actorId, because the actor may not be
-    // persisted yet.
-    val orgId = workspaceHelper.getOrganizationForWorkspace(workspaceId.value)
-    if (!featureFlagClient.boolVariation(
-        PersistSecretConfigsAndReferences,
-        Multi(listOf(Workspace(workspaceId.value), Organization(orgId))),
-      )
-    ) {
-      return ConfigWithSecretReferenceIdsInjected(actorConfig.originalConfig)
-    }
-
-    val createdSecretRefIdByPath = mutableMapOf<String, SecretReferenceId>()
-    actorConfig.processedSecrets.forEach { path, secretNode ->
-      if (secretNode.secretReferenceId != null) {
-        return@forEach
-      }
-      val coordinate = secretNode.secretCoordinate
-      if (coordinate == null) {
-        throw IllegalStateException("Secret node at path $path does not have a secret coordinate. This is unexpected and likely indicates a bug.")
-      }
-      val secretRefId =
-        createSecretConfigAndReference(
-          secretStorageId = secretStorageId,
-          externalCoordinate = coordinate.fullCoordinate,
-          airbyteManaged = coordinate is AirbyteManagedSecretCoordinate,
-          currentUserId = currentUserId,
-          hydrationPath = path,
-          scopeType = SecretReferenceScopeType.ACTOR,
-          scopeId = actorId.value,
-        )
-      createdSecretRefIdByPath[path] = secretRefId
-    }
-
-    cleanupDanglingSecretReferences(actorId, actorConfig)
-
-    return SecretReferenceHelpers.updateSecretNodesWithSecretReferenceIds(
-      actorConfig.originalConfig,
-      createdSecretRefIdByPath,
+  ): ConfigWithSecretReferenceIdsInjected =
+    createAndInsertSecretReferencesWithStorageId(
+      config = actorConfig,
+      scopeId = actorId.value,
+      scopeType = SecretReferenceScopeType.ACTOR,
+      secretStorageId = secretStorageId,
+      currentUserId = currentUserId,
     )
-  }
 
   /**
    * For the given actorId, delete any secret references that are no longer referenced in its
    * provided config.
    */
   private fun cleanupDanglingSecretReferences(
-    actorId: ActorId,
+    scopeId: UUID,
+    scopeType: SecretReferenceScopeType,
     config: ConfigWithProcessedSecrets,
   ) {
     val secretPathsFromConfig = config.processedSecrets.keys.toSet()
     val secretPathsFromExistingReferences =
       secretReferenceRepository
-        .listByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, actorId.value)
+        .listByScopeTypeAndScopeId(scopeType, scopeId)
         .mapNotNull { it.hydrationPath }
         .toSet()
     val danglingSecretPaths = secretPathsFromExistingReferences - secretPathsFromConfig
     if (danglingSecretPaths.isNotEmpty()) {
-      logger.info { "Deleting dangling secret references for actor $actorId: $danglingSecretPaths" }
+      logger.info { "Deleting dangling secret references for $scopeType $scopeId: $danglingSecretPaths" }
       danglingSecretPaths.forEach {
         secretReferenceRepository.deleteByScopeTypeAndScopeIdAndHydrationPath(
-          scopeType = SecretReferenceScopeType.ACTOR,
-          scopeId = actorId.value,
+          scopeType = scopeType,
+          scopeId = scopeId,
           hydrationPath = it,
         )
       }
@@ -186,9 +192,21 @@ class SecretReferenceService(
     }
   }
 
-  @JvmName("getConfigWithSecretReferences")
   fun getConfigWithSecretReferences(
     actorId: ActorId,
+    config: JsonNode,
+    workspaceId: WorkspaceId,
+  ): ConfigWithSecretReferences =
+    getConfigWithSecretReferences(
+      scopeId = actorId.value,
+      scopeType = SecretReferenceScopeType.ACTOR,
+      config = config,
+      workspaceId = workspaceId,
+    )
+
+  fun getConfigWithSecretReferences(
+    scopeId: UUID,
+    scopeType: SecretReferenceScopeType,
     config: JsonNode,
     workspaceId: WorkspaceId,
   ): ConfigWithSecretReferences {
@@ -223,7 +241,7 @@ class SecretReferenceService(
       )
     ) {
       // Get all persisted secret refs
-      val result = secretReferenceRepository.listWithConfigByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, actorId.value)
+      val result = secretReferenceRepository.listWithConfigByScopeTypeAndScopeId(scopeType, scopeId)
       assertConfigReferenceIdsExist(config, result.map { it.secretReference.id }.toSet())
       refsForScope = result
 
@@ -259,6 +277,32 @@ class SecretReferenceService(
     // are updated
     val secretRefs = persistedSecretRefs + nonPersistedSecretRefsInConfig
     return ConfigWithSecretReferences(config, secretRefs)
+  }
+
+  fun getHydratedConfiguration(
+    config: ConfigWithSecretReferences,
+    workspaceId: WorkspaceId,
+  ): JsonNode {
+    val organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId.value)
+    val hydrationContext = SecretHydrationContext(OrganizationId(organizationId), workspaceId)
+    val secretPersistenceMap: Map<UUID?, SecretPersistence> = secretPersistenceService.getPersistenceMapFromConfig(config, hydrationContext)
+    return secretsRepositoryReader.hydrateConfig(config, secretPersistenceMap)
+  }
+
+  fun getHydratedConfiguration(
+    scopeId: UUID,
+    scopeType: SecretReferenceScopeType,
+    config: JsonNode,
+    workspaceId: WorkspaceId,
+  ): JsonNode {
+    val configWithSecretRefs =
+      getConfigWithSecretReferences(
+        scopeId = scopeId,
+        scopeType = scopeType,
+        config = config,
+        workspaceId = workspaceId,
+      )
+    return getHydratedConfiguration(configWithSecretRefs, workspaceId)
   }
 
   @JvmName("deleteActorSecretReferences")

@@ -7,11 +7,9 @@ package io.airbyte.domain.services.secrets
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
-import io.airbyte.commons.json.Jsons
 import io.airbyte.config.secrets.SecretCoordinate
-import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate.Companion.DEFAULT_VERSION
 import io.airbyte.config.secrets.SecretsRepositoryReader
-import io.airbyte.config.secrets.SecretsRepositoryWriter
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.PatchField.Companion.toPatch
 import io.airbyte.domain.models.SecretReference
 import io.airbyte.domain.models.SecretReferenceScopeType
@@ -27,7 +25,6 @@ import io.airbyte.featureflag.EnableDefaultSecretStorage
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Organization
-import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.featureflag.Workspace
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
@@ -47,9 +44,7 @@ open class SecretStorageService(
   private val organizationRepository: OrganizationRepository,
   private val secretReferenceRepository: SecretReferenceRepository,
   private val secretsRepositoryReader: SecretsRepositoryReader,
-  private val secretsRepositoryWriter: SecretsRepositoryWriter,
   private val secretConfigService: SecretConfigService,
-  private val secretReferenceService: SecretReferenceService,
   private val featureFlagClient: FeatureFlagClient,
 ) {
   /**
@@ -63,43 +58,9 @@ open class SecretStorageService(
       ?: throw ResourceNotFoundProblem(ProblemResourceData().resourceType(SecretStorage::class.simpleName).resourceId(id.value.toString()))
 
   /**
-   * Writes the credentials for the new secret storage to the default secret persistence.
-   * All credentials for custom secret storages are stored in the default secret persistence.
-   */
-  private fun writeStorageCredentials(
-    secretStorageCreate: SecretStorageCreate,
-    storageConfig: JsonNode?,
-    secretStorageId: SecretStorageId,
-    currentUserId: UserId?,
-  ) {
-    if (storageConfig == null) {
-      // No config to store
-      return
-    }
-
-    val secretCoordinate =
-      secretsRepositoryWriter.storeInDefaultPersistence(
-        SecretCoordinate.AirbyteManagedSecretCoordinate(
-          "storage_${secretStorageCreate.scopeType.name.lowercase()}",
-          secretStorageCreate.scopeId,
-          DEFAULT_VERSION,
-        ),
-        Jsons.serialize(storageConfig),
-      )
-
-    secretReferenceService.createSecretConfigAndReference(
-      DEFAULT_SECRET_STORAGE_ID,
-      externalCoordinate = secretCoordinate.fullCoordinate,
-      airbyteManaged = true,
-      currentUserId = currentUserId,
-      scopeType = SecretReferenceScopeType.SECRET_STORAGE,
-      scopeId = secretStorageId.value,
-      hydrationPath = null,
-    )
-  }
-
-  /**
    * Create a new secret storage.
+   * Note: This method only creates the secret storage metadata. The caller is responsible for
+   * storing the credentials using SecretStorageCredentialsService.writeStorageCredentials().
    */
   fun createSecretStorage(
     secretStorageCreate: SecretStorageCreate,
@@ -109,9 +70,7 @@ open class SecretStorageService(
       throw IllegalArgumentException("Storage config must be provided when `configuredFromEnvironment` is false")
     }
 
-    val secretStorage = secretStorageRepository.create(secretStorageCreate)
-    writeStorageCredentials(secretStorageCreate, storageConfig, secretStorage.id, secretStorageCreate.createdBy)
-    return secretStorage
+    return secretStorageRepository.create(secretStorageCreate)
   }
 
   /**
@@ -173,26 +132,9 @@ open class SecretStorageService(
       return null
     }
 
-    val orgStorage =
-      secretStorageRepository
-        .listByScopeTypeAndScopeId(SecretStorageScopeType.ORGANIZATION, orgId)
-        .filterNot { it.tombstone }
-        .firstOrNull()
-    if (orgStorage != null) {
-      return orgStorage
-    }
-
-    if (featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(orgId))) {
-      logger.info { "Runtime secret persistence flag is enabled for organization $orgId. Skipping default secret storage lookup." }
-      return null
-    }
-
-    return secretStorageRepository.findById(SecretStorage.DEFAULT_SECRET_STORAGE_ID)
-      ?: throw ResourceNotFoundProblem(
-        ProblemResourceData()
-          .resourceType(SecretStorage::class.simpleName)
-          .resourceId(SecretStorage.DEFAULT_SECRET_STORAGE_ID.toString()),
-      )
+    // If there's no workspace-specific secret storage, look for an organization-specific one.
+    // This also handles falling back to the default secret storage if no organization-specific storage exists.
+    return getByOrganizationId(OrganizationId(orgId))
   }
 
   /**
@@ -233,5 +175,33 @@ open class SecretStorageService(
       secretStorage,
       config,
     )
+  }
+
+  /**
+   * Get the secret storage that an org is configured to use for storing secrets.
+   *
+   * If the organization has the runtime secret persistence feature flag enabled and there is no scoped secret storage,
+   * return null so that the default secret storage is not used.
+   *
+   * @param organizationId the org to get the secret storage for
+   * @return the secret storage for the organization, or null if none exists
+   */
+  @JvmName("getByOrganizationId")
+  fun getByOrganizationId(organizationId: OrganizationId): SecretStorage {
+    val orgStorage =
+      secretStorageRepository
+        .listByScopeTypeAndScopeId(SecretStorageScopeType.ORGANIZATION, organizationId.value)
+        .filterNot { it.tombstone }
+        .firstOrNull()
+    if (orgStorage != null) {
+      return orgStorage
+    }
+
+    return secretStorageRepository.findById(DEFAULT_SECRET_STORAGE_ID)
+      ?: throw ResourceNotFoundProblem(
+        ProblemResourceData()
+          .resourceType(SecretStorage::class.simpleName)
+          .resourceId(DEFAULT_SECRET_STORAGE_ID.toString()),
+      )
   }
 }

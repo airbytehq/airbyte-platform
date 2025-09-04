@@ -4,12 +4,12 @@
 
 package io.airbyte.commons.server.builder.manifest.processor
 
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseManifestServer
 import io.airbyte.featureflag.Workspace
-import io.airbyte.persistence.job.WorkspaceHelper
 import jakarta.inject.Singleton
 import java.util.UUID
 

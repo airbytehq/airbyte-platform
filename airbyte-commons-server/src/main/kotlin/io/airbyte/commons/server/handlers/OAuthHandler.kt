@@ -25,7 +25,6 @@ import io.airbyte.api.model.generated.SourceOauthConsentRequest
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.JsonPaths
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.server.errors.BadObjectSchemaKnownException
 import io.airbyte.commons.server.handlers.helpers.OAuthHelper.extractOauthConfigurationPaths
 import io.airbyte.commons.server.handlers.helpers.OAuthHelper.mapToCompleteOAuthResponse
 import io.airbyte.commons.server.handlers.helpers.OAuthHelper.updateOauthConfigToAcceptAdditionalUserInputProperties
@@ -37,35 +36,27 @@ import io.airbyte.config.ScopeType
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.SourceOAuthParameter
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
-import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
-import io.airbyte.config.secrets.SecretsRepositoryReader
+import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers.processConfigSecrets
 import io.airbyte.config.secrets.SecretsRepositoryWriter
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
-import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OAuthService
-import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.domain.models.ActorDefinitionId
-import io.airbyte.domain.models.ActorId
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.models.SecretReferenceScopeType
 import io.airbyte.domain.models.WorkspaceId
-import io.airbyte.domain.services.secrets.SecretHydrationContext
-import io.airbyte.domain.services.secrets.SecretHydrationContext.Companion.fromJava
 import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.domain.services.secrets.SecretReferenceService
+import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.featureflag.DestinationDefinition
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.FieldSelectionWorkspaces.ConnectorOAuthConsentDisabled
 import io.airbyte.featureflag.Multi
-import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.SourceDefinition
-import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.featureflag.Workspace
-import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.DESTINATION_DEFINITION_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.SOURCE_DEFINITION_ID_KEY
 import io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY
@@ -84,6 +75,7 @@ import jakarta.inject.Singleton
 import java.io.IOException
 import java.util.Optional
 import java.util.UUID
+import kotlin.jvm.optionals.getOrNull
 
 /**
  * OAuthHandler. Javadocs suppressed because api docs should be used as source of truth.
@@ -93,17 +85,15 @@ open class OAuthHandler(
   @param:Named("oauthImplementationFactory") private val oAuthImplementationFactory: OAuthImplementationFactory,
   private val trackingClient: TrackingClient,
   private val secretsRepositoryWriter: SecretsRepositoryWriter,
-  private val secretsRepositoryReader: SecretsRepositoryReader,
   private val actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
   private val featureFlagClient: FeatureFlagClient,
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
   private val oAuthService: OAuthService,
-  private val secretPersistenceConfigService: SecretPersistenceConfigService,
   private val secretPersistenceService: SecretPersistenceService,
   private val secretReferenceService: SecretReferenceService,
   private val workspaceService: WorkspaceService,
-  private val metricClient: MetricClient,
+  private val secretStorageService: SecretStorageService,
 ) {
   @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun getSourceOAuthConsent(sourceOauthConsentRequest: SourceOauthConsentRequest): OAuthConsentRead {
@@ -120,7 +110,7 @@ open class OAuthHandler(
     if (featureFlagClient.boolVariation(
         ConnectorOAuthConsentDisabled,
         Multi(
-          java.util.List.of(
+          listOf(
             SourceDefinition(sourceOauthConsentRequest.sourceDefinitionId),
             Workspace(sourceOauthConsentRequest.workspaceId),
           ),
@@ -142,22 +132,13 @@ open class OAuthHandler(
       )
 
     val workspaceId = sourceOauthConsentRequest.workspaceId
-    val organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId).get()
 
     val spec = sourceVersion.spec
     val oAuthFlowImplementation = oAuthImplementationFactory.create(sourceVersion.dockerRepository, spec)
     val metadata: Map<String, Any?> = generateSourceDefinitionMetadata(sourceDefinition, sourceVersion)
     val result: OAuthConsentRead
 
-    val paramOptional =
-      oAuthService
-        .getSourceOAuthParameterWithSecretsOptional(sourceOauthConsentRequest.workspaceId, sourceOauthConsentRequest.sourceDefinitionId)
-    val sourceOAuthParamConfig =
-      if (paramOptional.isPresent) {
-        flattenOAuthConfig(paramOptional.get().configuration)
-      } else {
-        Jsons.emptyObject()
-      }
+    val sourceOAuthParamConfig = getSourceOAuthParameterConfigWithSecrets(workspaceId, sourceOauthConsentRequest.sourceDefinitionId)
 
     if (hasOAuthConfigSpecification(spec)) {
       val oauthConfigSpecification = spec.advancedAuth.oauthConfigSpecification
@@ -175,13 +156,13 @@ open class OAuthHandler(
           throw ConfigNotFoundException(e.type, e.configId)
         }
 
-        val configWithRefs =
-          secretReferenceService.getConfigWithSecretReferences(
-            ActorId(sourceConnection.sourceId),
+        val hydratedSourceConfig =
+          secretReferenceService.getHydratedConfiguration(
+            sourceConnection.sourceId,
+            SecretReferenceScopeType.ACTOR,
             sourceConnection.configuration,
             WorkspaceId(workspaceId),
           )
-        val hydratedSourceConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId)
         oAuthInputConfigurationForConsent =
           getOAuthInputConfigurationForConsent(
             spec,
@@ -219,7 +200,7 @@ open class OAuthHandler(
     try {
       trackingClient.track(sourceOauthConsentRequest.workspaceId, ScopeType.WORKSPACE, "Get Oauth Consent URL - Backend", metadata)
     } catch (e: Exception) {
-      log.error(ERROR_MESSAGE, e)
+      log.error(e) { ERROR_MESSAGE }
     }
     return result
   }
@@ -239,7 +220,7 @@ open class OAuthHandler(
     if (featureFlagClient.boolVariation(
         ConnectorOAuthConsentDisabled,
         Multi(
-          java.util.List.of(
+          listOf(
             DestinationDefinition(destinationOauthConsentRequest.destinationDefinitionId),
             Workspace(destinationOauthConsentRequest.workspaceId),
           ),
@@ -264,22 +245,14 @@ open class OAuthHandler(
     val metadata: Map<String, Any?> = generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion)
     val result: OAuthConsentRead
 
-    val paramOptional =
-      oAuthService.getDestinationOAuthParameterWithSecretsOptional(
+    val workspaceId = destinationOauthConsentRequest.workspaceId
+    val destinationOAuthParamConfig =
+      getDestinationOAuthParameterConfigWithSecrets(
         destinationOauthConsentRequest.workspaceId,
         destinationOauthConsentRequest.destinationDefinitionId,
       )
-    val destinationOAuthParamConfig =
-      if (paramOptional.isPresent) {
-        flattenOAuthConfig(paramOptional.get().configuration)
-      } else {
-        Jsons.emptyObject()
-      }
 
     if (hasOAuthConfigSpecification(spec)) {
-      val workspaceId = destinationOauthConsentRequest.workspaceId
-      val organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId).get()
-
       val oauthConfigSpecification = spec.advancedAuth.oauthConfigSpecification
       updateOauthConfigToAcceptAdditionalUserInputProperties(oauthConfigSpecification)
 
@@ -295,13 +268,13 @@ open class OAuthHandler(
           throw ConfigNotFoundException(e.type, e.configId)
         }
 
-        val configWithRefs =
-          secretReferenceService.getConfigWithSecretReferences(
-            ActorId(destinationConnection.destinationId),
+        val hydratedDestinationConfig =
+          secretReferenceService.getHydratedConfiguration(
+            destinationConnection.destinationId,
+            SecretReferenceScopeType.ACTOR,
             destinationConnection.configuration,
             WorkspaceId(workspaceId),
           )
-        val hydratedDestinationConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId)
         oAuthInputConfigurationForConsent =
           getOAuthInputConfigurationForConsent(
             spec,
@@ -339,7 +312,7 @@ open class OAuthHandler(
     try {
       trackingClient.track(destinationOauthConsentRequest.workspaceId, ScopeType.WORKSPACE, "Get Oauth Consent URL - Backend", metadata)
     } catch (e: Exception) {
-      log.error(ERROR_MESSAGE, e)
+      log.error(e) { ERROR_MESSAGE }
     }
     return result
   }
@@ -347,7 +320,7 @@ open class OAuthHandler(
   @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest: CompleteSourceOauthRequest): CompleteOAuthResponse? {
     val completeOAuthResponse = completeSourceOAuth(completeSourceOauthRequest)
-    return if (completeOAuthResponse != null && completeSourceOauthRequest.returnSecretCoordinate) {
+    return if (completeSourceOauthRequest.returnSecretCoordinate) {
       writeOAuthResponseSecret(completeSourceOauthRequest.workspaceId, completeOAuthResponse)
     } else {
       completeOAuthResponse
@@ -381,22 +354,17 @@ open class OAuthHandler(
       )
 
     val workspaceId = completeSourceOauthRequest.workspaceId
-    val organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId).get()
 
     val spec = sourceVersion.spec
     val oAuthFlowImplementation = oAuthImplementationFactory.create(sourceVersion.dockerRepository, spec)
     val metadata: Map<String, Any?> = generateSourceDefinitionMetadata(sourceDefinition, sourceVersion)
     val result: Map<String, Any>
 
-    val paramOptional =
-      oAuthService
-        .getSourceOAuthParameterWithSecretsOptional(completeSourceOauthRequest.workspaceId, completeSourceOauthRequest.sourceDefinitionId)
     val sourceOAuthParamConfig =
-      if (paramOptional.isPresent) {
-        flattenOAuthConfig(paramOptional.get().configuration)
-      } else {
-        Jsons.emptyObject()
-      }
+      getSourceOAuthParameterConfigWithSecrets(
+        completeSourceOauthRequest.workspaceId,
+        completeSourceOauthRequest.sourceDefinitionId,
+      )
 
     if (hasOAuthConfigSpecification(spec)) {
       val oauthConfigSpecification = spec.advancedAuth.oauthConfigSpecification
@@ -414,13 +382,13 @@ open class OAuthHandler(
           throw ConfigNotFoundException(e.type, e.configId)
         }
 
-        val configWithRefs =
-          secretReferenceService.getConfigWithSecretReferences(
-            ActorId(sourceConnection.sourceId),
+        val hydratedSourceConfig =
+          secretReferenceService.getHydratedConfiguration(
+            sourceConnection.sourceId,
+            SecretReferenceScopeType.ACTOR,
             sourceConnection.configuration,
             WorkspaceId(workspaceId),
           )
-        val hydratedSourceConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId)
         oAuthInputConfigurationForConsent =
           getOAuthInputConfigurationForConsent(
             spec,
@@ -455,7 +423,7 @@ open class OAuthHandler(
     try {
       trackingClient.track(completeSourceOauthRequest.workspaceId, ScopeType.WORKSPACE, "Complete OAuth Flow - Backend", metadata)
     } catch (e: Exception) {
-      log.error(ERROR_MESSAGE, e)
+      log.error(e) { ERROR_MESSAGE }
     }
     return mapToCompleteOAuthResponse(result)
   }
@@ -486,19 +454,12 @@ open class OAuthHandler(
     val result: Map<String, Any>
 
     val workspaceId = completeDestinationOAuthRequest.workspaceId
-    val organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId).get()
 
-    val paramOptional =
-      oAuthService.getDestinationOAuthParameterWithSecretsOptional(
+    val destinationOAuthParamConfig =
+      getDestinationOAuthParameterConfigWithSecrets(
         completeDestinationOAuthRequest.workspaceId,
         completeDestinationOAuthRequest.destinationDefinitionId,
       )
-    val destinationOAuthParamConfig =
-      if (paramOptional.isPresent) {
-        flattenOAuthConfig(paramOptional.get().configuration)
-      } else {
-        Jsons.emptyObject()
-      }
 
     if (hasOAuthConfigSpecification(spec)) {
       val oauthConfigSpecification = spec.advancedAuth.oauthConfigSpecification
@@ -516,13 +477,14 @@ open class OAuthHandler(
           throw ConfigNotFoundException(e.type, e.configId)
         }
 
-        val configWithRefs =
-          secretReferenceService.getConfigWithSecretReferences(
-            ActorId(destinationConnection.destinationId),
+        val hydratedDestinationConfig =
+          secretReferenceService.getHydratedConfiguration(
+            destinationConnection.destinationId,
+            SecretReferenceScopeType.ACTOR,
             destinationConnection.configuration,
             WorkspaceId(workspaceId),
           )
-        val hydratedDestinationConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId)
+
         oAuthInputConfigurationForConsent =
           getOAuthInputConfigurationForConsent(
             spec,
@@ -557,7 +519,7 @@ open class OAuthHandler(
     try {
       trackingClient.track(completeDestinationOAuthRequest.workspaceId, ScopeType.WORKSPACE, "Complete OAuth Flow - Backend", metadata)
     } catch (e: Exception) {
-      log.error(ERROR_MESSAGE, e)
+      log.error(e) { ERROR_MESSAGE }
     }
     return mapToCompleteOAuthResponse(result)
   }
@@ -567,7 +529,6 @@ open class OAuthHandler(
     val sourceDefinition =
       sourceService.getStandardSourceDefinition(revokeSourceOauthTokensRequest.sourceDefinitionId)
     val workspaceId = revokeSourceOauthTokensRequest.workspaceId
-    val organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId).get()
     val sourceVersion =
       actorDefinitionVersionHelper.getSourceVersion(
         sourceDefinition,
@@ -585,19 +546,18 @@ open class OAuthHandler(
     } catch (e: ConfigNotFoundException) {
       throw ConfigNotFoundException(e.type, e.configId)
     }
-    val sourceOAuthParamConfig =
-      getSourceOAuthParamConfig(revokeSourceOauthTokensRequest.workspaceId, revokeSourceOauthTokensRequest.sourceDefinitionId)
-    val configWithRefs =
-      secretReferenceService.getConfigWithSecretReferences(
-        ActorId(sourceConnection.sourceId),
+    val sourceOAuthParamConfig = getSourceOAuthParameterConfigWithSecrets(workspaceId, sourceConnection.sourceDefinitionId)
+    val hydratedSourceConfig =
+      secretReferenceService.getHydratedConfiguration(
+        sourceConnection.sourceId,
+        SecretReferenceScopeType.ACTOR,
         sourceConnection.configuration,
         WorkspaceId(workspaceId),
       )
-    val hydratedSourceConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId)
     oAuthFlowImplementation!!.revokeSourceOauth(
       revokeSourceOauthTokensRequest.workspaceId,
       revokeSourceOauthTokensRequest.sourceDefinitionId,
-      hydratedSourceConfig!!,
+      hydratedSourceConfig,
       sourceOAuthParamConfig,
     )
   }
@@ -676,7 +636,7 @@ open class OAuthHandler(
           log.warn { "Missing the key $k in the config store in DB" }
         }
       } else {
-        result.set<JsonNode>(k, v)
+        result.set(k, v)
       }
     }
 
@@ -763,7 +723,6 @@ open class OAuthHandler(
     when (requestBody.actorType) {
       ActorType.SOURCE -> setSourceWorkspaceOverrideOauthParams(requestBody)
       ActorType.DESTINATION -> setDestinationWorkspaceOverrideOauthParams(requestBody)
-      else -> throw BadObjectSchemaKnownException("actorType must be one of ['source', 'destination']")
     }
   }
 
@@ -782,7 +741,6 @@ open class OAuthHandler(
     when (actorType) {
       ActorTypeEnum.SOURCE -> setSourceOrganizationOverrideOauthParams(organizationId, actorDefinitionId, params)
       ActorTypeEnum.DESTINATION -> setDestinationOrganizationOverrideOauthParams(organizationId, actorDefinitionId, params)
-      else -> throw BadObjectSchemaKnownException("actorType must be one of ['source', 'destination']")
     }
   }
 
@@ -809,13 +767,15 @@ open class OAuthHandler(
 
     val connectorSpecification = actorDefinitionVersion.spec
 
-    val sanitizedOauthConfiguration =
-      sanitizeOauthConfiguration(organizationId.value, connectorSpecification, params, Optional.empty())
-
-    val param =
+    val oauthParameter =
       oAuthService
         .getSourceOAuthParamByDefinitionIdOptional(Optional.empty(), Optional.of(organizationId.value), actorDefinitionId.value)
         .orElseGet { SourceOAuthParameter().withOauthParameterId(UUID.randomUUID()) }
+    val sanitizedOauthConfiguration =
+      sanitizeOauthConfiguration(organizationId.value, connectorSpecification, oauthParameter.oauthParameterId, params, Optional.empty())
+
+    val param =
+      oauthParameter
         .withConfiguration(sanitizedOauthConfiguration)
         .withSourceDefinitionId(actorDefinitionId.value)
         .withOrganizationId(organizationId.value)
@@ -823,12 +783,6 @@ open class OAuthHandler(
     oAuthService.writeSourceOAuthParam(param)
   }
 
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun setSourceWorkspaceOverrideOauthParams(requestBody: WorkspaceOverrideOauthParamsRequestBody) {
     val definitionId = requestBody.definitionId
     val standardSourceDefinition =
@@ -843,13 +797,22 @@ open class OAuthHandler(
     val oauthParamConfiguration = Jsons.jsonNode(requestBody.params)
 
     val organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId).get()
-    val sanitizedOauthConfiguration =
-      sanitizeOauthConfiguration(organizationId, connectorSpecification, oauthParamConfiguration, Optional.of(workspaceId))
 
-    val param =
+    val oauthParameter =
       oAuthService
         .getSourceOAuthParamByDefinitionIdOptional(Optional.of(workspaceId), Optional.empty(), definitionId)
         .orElseGet { SourceOAuthParameter().withOauthParameterId(UUID.randomUUID()) }
+    val sanitizedOauthConfiguration =
+      sanitizeOauthConfiguration(
+        organizationId,
+        connectorSpecification,
+        oauthParameter.oauthParameterId,
+        oauthParamConfiguration,
+        Optional.of(workspaceId),
+      )
+
+    val param =
+      oauthParameter
         .withConfiguration(sanitizedOauthConfiguration)
         .withSourceDefinitionId(definitionId)
         .withWorkspaceId(workspaceId)
@@ -880,13 +843,16 @@ open class OAuthHandler(
 
     val connectorSpecification = actorDefinitionVersion.spec
 
-    val sanitizedOauthConfiguration =
-      sanitizeOauthConfiguration(organizationId.value, connectorSpecification, params, Optional.empty())
-
-    val param =
+    val oauthParameter =
       oAuthService
         .getDestinationOAuthParamByDefinitionIdOptional(Optional.empty(), Optional.of(organizationId.value), actorDefinitionId.value)
         .orElseGet { DestinationOAuthParameter().withOauthParameterId(UUID.randomUUID()) }
+
+    val sanitizedOauthConfiguration =
+      sanitizeOauthConfiguration(organizationId.value, connectorSpecification, oauthParameter.oauthParameterId, params, Optional.empty())
+
+    val param =
+      oauthParameter
         .withConfiguration(sanitizedOauthConfiguration)
         .withDestinationDefinitionId(actorDefinitionId.value)
         .withOrganizationId(organizationId.value)
@@ -909,28 +875,27 @@ open class OAuthHandler(
 
     val organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId).get()
 
-    val sanitizedOauthConfiguration =
-      sanitizeOauthConfiguration(organizationId, connectorSpecification, oauthParamConfiguration, Optional.of(workspaceId))
-
-    val param =
+    val oauthParameter =
       oAuthService
         .getDestinationOAuthParamByDefinitionIdOptional(Optional.of(workspaceId), Optional.empty(), definitionId)
         .orElseGet { DestinationOAuthParameter().withOauthParameterId(UUID.randomUUID()) }
+
+    val sanitizedOauthConfiguration =
+      sanitizeOauthConfiguration(
+        organizationId,
+        connectorSpecification,
+        oauthParameter.oauthParameterId,
+        oauthParamConfiguration,
+        Optional.of(workspaceId),
+      )
+
+    val param =
+      oauthParameter
         .withConfiguration(sanitizedOauthConfiguration)
         .withDestinationDefinitionId(definitionId)
         .withWorkspaceId(workspaceId)
 
     oAuthService.writeDestinationOAuthParam(param)
-  }
-
-  private fun getHydratedConfiguration(
-    config: ConfigWithSecretReferences,
-    organizationId: UUID,
-    workspaceId: UUID,
-  ): JsonNode {
-    val hydrationContext: SecretHydrationContext = fromJava(organizationId, workspaceId)
-    val secretPersistenceMap: Map<UUID?, SecretPersistence> = secretPersistenceService.getPersistenceMapFromConfig(config, hydrationContext)
-    return secretsRepositoryReader.hydrateConfig(config, secretPersistenceMap)
   }
 
   /**
@@ -949,6 +914,7 @@ open class OAuthHandler(
   private fun sanitizeOauthConfiguration(
     organizationId: UUID,
     connectorSpecification: ConnectorSpecification,
+    oauthParameterId: UUID,
     oauthParamConfiguration: JsonNode,
     workspaceId: Optional<UUID>,
   ): JsonNode {
@@ -961,7 +927,15 @@ open class OAuthHandler(
         validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(connectorSpecification, oauthParamConfiguration)
       log.debug { "AdvancedAuthSpecification: $advancedAuthSpecification" }
 
-      return statefulSplitSecrets(organizationId, oauthParamConfiguration, advancedAuthSpecification, id, secretPrefix)
+      return statefulSplitSecrets(
+        workspaceId.getOrNull(),
+        organizationId,
+        oauthParameterId,
+        oauthParamConfiguration,
+        advancedAuthSpecification,
+        id,
+        secretPrefix,
+      )
     } else {
       // This works because:
       // 1. In non advanced_auth specs, the connector configuration matches the oauth param configuration,
@@ -969,107 +943,119 @@ open class OAuthHandler(
       // 2. For these non advanced_auth specs, the actual variables are present and tagged as secrets so
       // statefulSplitSecrets can find and
       // store them in our secrets manager and replace the values appropriately.
-      return statefulSplitSecrets(organizationId, oauthParamConfiguration, connectorSpecification, id, secretPrefix)
-    }
-  }
-
-  @VisibleForTesting
-  @Throws(IOException::class, ConfigNotFoundException::class)
-  fun getSourceOAuthParamConfig(
-    workspaceId: UUID,
-    sourceDefinitionId: UUID,
-  ): JsonNode {
-    val paramOptional = oAuthService.getSourceOAuthParameterWithSecretsOptional(workspaceId, sourceDefinitionId)
-    if (paramOptional.isPresent) {
-      // TODO: if we write a flyway migration to flatten persisted configs in db, we don't need to flatten
-      // here see https://github.com/airbytehq/airbyte/issues/7624
-      // Should already be hydrated.
-      return flattenOAuthConfig(paramOptional.get().configuration)
-    } else {
-      throw ConfigNotFoundException(
-        ConfigNotFoundType.SOURCE_OAUTH_PARAM,
-        String.format("workspaceId: %s, sourceDefinitionId: %s", workspaceId, sourceDefinitionId),
+      return statefulSplitSecrets(
+        workspaceId.getOrNull(),
+        organizationId,
+        oauthParameterId,
+        oauthParamConfiguration,
+        connectorSpecification,
+        id,
+        secretPrefix,
       )
     }
   }
 
-  @VisibleForTesting
-  @Throws(IOException::class, ConfigNotFoundException::class)
-  fun getDestinationOAuthParamConfig(
+  fun statefulSplitSecrets(
+    workspaceId: UUID?,
+    organizationId: UUID,
+    oauthParameterId: UUID,
+    oauthParamConfiguration: JsonNode?,
+    connectorSpecification: ConnectorSpecification,
+    secretBaseId: UUID?,
+    secretBasePrefix: String?,
+  ): JsonNode {
+    val secretStorage =
+      workspaceId?.let {
+        secretStorageService.getByWorkspaceId(WorkspaceId(workspaceId))
+      } ?: secretStorageService.getByOrganizationId(OrganizationId(organizationId))
+    val secretStorageId = secretStorage.id
+    val secretPersistence = secretPersistenceService.getPersistenceByStorageId(secretStorageId)
+
+    // TODO this entire block should be some kind of consolidated method or something like that - next time we touch this code we should fix that.
+    // This processes out the prefixed external references
+    val processedConfig =
+      processConfigSecrets(
+        oauthParamConfiguration!!,
+        connectorSpecification.connectionSpecification,
+        secretStorageId,
+      )
+
+    val partialConfig =
+      secretsRepositoryWriter.createFromConfig(
+        secretBaseId!!,
+        processedConfig,
+        secretPersistence,
+        secretBasePrefix!!,
+      )
+
+    // After the createFromConfig has slotted in coordinates, pulls those out
+    val reprocessedConfig =
+      processConfigSecrets(
+        partialConfig,
+        connectorSpecification.connectionSpecification,
+        secretStorageId,
+      )
+
+    return secretReferenceService
+      .createAndInsertSecretReferencesWithStorageId(
+        reprocessedConfig,
+        oauthParameterId,
+        SecretReferenceScopeType.ACTOR_OAUTH_PARAMETER,
+        secretStorageId,
+        null,
+      ).value
+  }
+
+  fun getSourceOAuthParameterConfigWithSecrets(
+    workspaceId: UUID,
+    sourceDefinitionId: UUID,
+  ): JsonNode {
+    val paramOptional =
+      oAuthService
+        .getSourceOAuthParameterOptional(workspaceId, sourceDefinitionId)
+    return if (paramOptional.isPresent) {
+      getDefinitionOAuthParameterConfigWithSecrets(
+        workspaceId,
+        paramOptional.get().oauthParameterId,
+        paramOptional.get().configuration,
+      )
+    } else {
+      Jsons.emptyObject()
+    }
+  }
+
+  fun getDestinationOAuthParameterConfigWithSecrets(
     workspaceId: UUID,
     destinationDefinitionId: UUID,
   ): JsonNode {
     val paramOptional =
-      oAuthService.getDestinationOAuthParameterWithSecretsOptional(workspaceId, destinationDefinitionId)
-    if (paramOptional.isPresent) {
-      // TODO: if we write a flyway migration to flatten persisted configs in db, we don't need to flatten
-      // here see https://github.com/airbytehq/airbyte/issues/7624
-      // Should already be hydrated.
-      return flattenOAuthConfig(paramOptional.get().configuration)
-    } else {
-      throw ConfigNotFoundException(
-        ConfigNotFoundType.DESTINATION_OAUTH_PARAM,
-        String.format("workspaceId: %s, destinationDefinitionId: %s", workspaceId, destinationDefinitionId),
-      )
-    }
-  }
-
-  /**
-   * Wrapper around {SecretsRepositoryWriter#statefulSplitSecrets} that fetches organization and uses
-   * runtime secret persistence appropriately.
-   *
-   * @param workspaceId workspace ID
-   * @param oauthParamConfiguration oauth param config
-   * @param connectorSpecification either the advancedAuthSpecification or the connectorSpecification.
-   * @return OAuth param config with secrets split out.
-   */
-  @Throws(IOException::class, ConfigNotFoundException::class)
-  fun statefulSplitSecrets(
-    workspaceId: UUID,
-    oauthParamConfiguration: JsonNode,
-    connectorSpecification: ConnectorSpecification,
-  ): JsonNode {
-    val organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId)
-
-    if (organizationId.isPresent) {
-      return statefulSplitSecrets(
-        organizationId.get(),
-        oauthParamConfiguration,
-        connectorSpecification,
+      oAuthService
+        .getDestinationOAuthParameterOptional(workspaceId, destinationDefinitionId)
+    return if (paramOptional.isPresent) {
+      getDefinitionOAuthParameterConfigWithSecrets(
         workspaceId,
-        AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
+        paramOptional.get().oauthParameterId,
+        paramOptional.get().configuration,
       )
     } else {
-      throw RuntimeException("Could not find organization ID for workspace ID: $workspaceId. This should never happen.")
+      Jsons.emptyObject()
     }
   }
 
-  @Throws(IOException::class, ConfigNotFoundException::class)
-  fun statefulSplitSecrets(
-    organizationId: UUID,
-    oauthParamConfiguration: JsonNode,
-    connectorSpecification: ConnectorSpecification,
-    secretBaseId: UUID,
-    secretBasePrefix: String,
+  fun getDefinitionOAuthParameterConfigWithSecrets(
+    workspaceId: UUID,
+    oauthParameterId: UUID,
+    config: JsonNode,
   ): JsonNode {
-    var secretPersistence: RuntimeSecretPersistence? = null
-
-    if (featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId))) {
-      try {
-        val secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId)
-        secretPersistence = RuntimeSecretPersistence(secretPersistenceConfig, metricClient)
-      } catch (e: ConfigNotFoundException) {
-        throw ConfigNotFoundException(e.type, e.configId)
-      }
-    }
-
-    return secretsRepositoryWriter.createFromConfigLegacy(
-      secretBaseId,
-      oauthParamConfiguration,
-      connectorSpecification.connectionSpecification,
-      secretPersistence,
-      secretBasePrefix,
-    )
+    val configWithSecretRefs =
+      secretReferenceService.getConfigWithSecretReferences(
+        oauthParameterId,
+        SecretReferenceScopeType.ACTOR_OAUTH_PARAMETER,
+        config,
+        WorkspaceId(workspaceId),
+      )
+    val hydratedConfig = secretReferenceService.getHydratedConfiguration(configWithSecretRefs, WorkspaceId(workspaceId))
+    return flattenOAuthConfig(hydratedConfig)
   }
 
   companion object {

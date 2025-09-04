@@ -19,9 +19,12 @@ dependencies {
   implementation(project(":oss:airbyte-commons-protocol"))
   implementation(project(":oss:airbyte-oauth"))
   implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-secrets"))
   implementation(project(":oss:airbyte-db:jooq"))
   implementation(project(":oss:airbyte-db:db-lib"))
   implementation(project(":oss:airbyte-data"))
+  implementation(project(":oss:airbyte-domain:services"))
+  implementation(project(":oss:airbyte-domain:models"))
   implementation(libs.airbyte.protocol)
   implementation(project(":oss:airbyte-config:config-persistence"))
   implementation(project(":oss:airbyte-featureflag"))
@@ -53,4 +56,5 @@ dependencies {
 
   testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockito.kotlin)
+  testImplementation(libs.mockk)
 }

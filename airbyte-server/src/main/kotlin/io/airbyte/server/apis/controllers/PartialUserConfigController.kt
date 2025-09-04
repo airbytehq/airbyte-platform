@@ -22,12 +22,12 @@ import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithActorDetails
 import io.airbyte.config.PartialUserConfigWithFullDetails
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseSonarServer
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.server.handlers.PartialUserConfigHandler
 import io.airbyte.server.helpers.ConfigTemplateAdvancedAuthHelper
 import io.micronaut.http.annotation.Body

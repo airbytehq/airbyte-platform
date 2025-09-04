@@ -17,13 +17,13 @@ import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.config.ConfigTemplateWithActorDetails
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseSonarServer
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.server.helpers.ConfigTemplateAdvancedAuthHelper
 import io.micronaut.http.annotation.Controller
 import java.util.UUID

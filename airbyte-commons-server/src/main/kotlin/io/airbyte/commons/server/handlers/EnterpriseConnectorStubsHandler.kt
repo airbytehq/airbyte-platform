@@ -13,7 +13,7 @@ import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.config.ActorType
 import io.airbyte.data.ConfigNotFoundException
-import io.airbyte.persistence.job.WorkspaceHelper
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton

@@ -8,7 +8,7 @@ import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.data.ConfigNotFoundException
-import io.airbyte.persistence.job.WorkspaceHelper
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.mockk.every
 import io.mockk.mockk
 import okhttp3.mockwebserver.MockResponse

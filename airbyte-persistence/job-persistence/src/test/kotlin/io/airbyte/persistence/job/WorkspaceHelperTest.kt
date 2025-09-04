@@ -5,7 +5,6 @@
 package io.airbyte.persistence.job
 
 import io.airbyte.commons.json.Jsons.deserialize
-import io.airbyte.config.Attempt
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.DestinationConnection
@@ -18,8 +17,10 @@ import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardSyncOperation
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.JobService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
@@ -28,7 +29,6 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
@@ -38,7 +38,7 @@ import java.io.IOException
 import java.util.UUID
 
 internal class WorkspaceHelperTest {
-  lateinit var jobPersistence: JobPersistence
+  lateinit var jobService: JobService
   lateinit var workspaceHelper: WorkspaceHelper
   private lateinit var sourceService: SourceService
   private lateinit var destinationService: DestinationService
@@ -49,7 +49,7 @@ internal class WorkspaceHelperTest {
   @BeforeEach
   @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun setup() {
-    jobPersistence = mock<JobPersistence>()
+    jobService = mock<JobService>()
     sourceService = mock<SourceService>()
     destinationService = mock<DestinationService>()
     connectionService = mock<ConnectionService>()
@@ -80,105 +80,93 @@ internal class WorkspaceHelperTest {
     ).thenThrow(ConfigNotFoundException::class.java)
 
     workspaceHelper =
-      WorkspaceHelper(jobPersistence, connectionService, sourceService, destinationService, operationService, workspaceService)
+      WorkspaceHelper(jobService, connectionService, sourceService, destinationService, operationService, workspaceService)
   }
 
   @Test
   fun testMissingObjectsRuntimeException() {
-    Assertions.assertThrows<RuntimeException?>(
+    Assertions.assertThrows(
       RuntimeException::class.java,
-      Executable {
-        workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(
-          UUID.randomUUID(),
-        )
-      },
-    )
-    Assertions.assertThrows<RuntimeException?>(
+    ) {
+      workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(
+        UUID.randomUUID(),
+      )
+    }
+    Assertions.assertThrows(
       RuntimeException::class.java,
-      Executable {
-        workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(
-          UUID.randomUUID(),
-        )
-      },
-    )
-    Assertions.assertThrows<RuntimeException?>(
+    ) {
+      workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(
+        UUID.randomUUID(),
+      )
+    }
+    Assertions.assertThrows(
       RuntimeException::class.java,
-      Executable {
-        workspaceHelper.getWorkspaceForConnectionIdIgnoreExceptions(
-          UUID.randomUUID(),
-        )
-      },
-    )
-    Assertions.assertThrows<RuntimeException?>(
+    ) {
+      workspaceHelper.getWorkspaceForConnectionIdIgnoreExceptions(
+        UUID.randomUUID(),
+      )
+    }
+    Assertions.assertThrows(
       RuntimeException::class.java,
-      Executable {
-        workspaceHelper.getWorkspaceForConnectionIgnoreExceptions(
-          UUID.randomUUID(),
-          UUID.randomUUID(),
-        )
-      },
-    )
-    Assertions.assertThrows<RuntimeException?>(
+    ) {
+      workspaceHelper.getWorkspaceForConnectionIgnoreExceptions(
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+      )
+    }
+    Assertions.assertThrows(
       RuntimeException::class.java,
-      Executable {
-        workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(
-          UUID.randomUUID(),
-        )
-      },
-    )
-    Assertions.assertThrows<RuntimeException?>(
+    ) {
+      workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(
+        UUID.randomUUID(),
+      )
+    }
+    Assertions.assertThrows(
       RuntimeException::class.java,
-      Executable { workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(0L) },
-    )
+    ) { workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(0L) }
   }
 
   @Test
   fun testMissingObjectsProperException() {
-    Assertions.assertThrows<ConfigNotFoundException?>(
+    Assertions.assertThrows(
       ConfigNotFoundException::class.java,
-      Executable {
-        workspaceHelper.getWorkspaceForSourceId(
-          UUID.randomUUID(),
-        )
-      },
-    )
-    Assertions.assertThrows<ConfigNotFoundException?>(
+    ) {
+      workspaceHelper.getWorkspaceForSourceId(
+        UUID.randomUUID(),
+      )
+    }
+    Assertions.assertThrows(
       ConfigNotFoundException::class.java,
-      Executable {
-        workspaceHelper.getWorkspaceForDestinationId(
-          UUID.randomUUID(),
-        )
-      },
-    )
-    Assertions.assertThrows<ConfigNotFoundException?>(
+    ) {
+      workspaceHelper.getWorkspaceForDestinationId(
+        UUID.randomUUID(),
+      )
+    }
+    Assertions.assertThrows(
       ConfigNotFoundException::class.java,
-      Executable {
-        workspaceHelper.getWorkspaceForConnectionId(
-          UUID.randomUUID(),
-        )
-      },
-    )
-    Assertions.assertThrows<ConfigNotFoundException?>(
+    ) {
+      workspaceHelper.getWorkspaceForConnectionId(
+        UUID.randomUUID(),
+      )
+    }
+    Assertions.assertThrows(
       ConfigNotFoundException::class.java,
-      Executable {
-        workspaceHelper.getWorkspaceForConnection(
-          UUID.randomUUID(),
-          UUID.randomUUID(),
-        )
-      },
-    )
-    Assertions.assertThrows<ConfigNotFoundException?>(
+    ) {
+      workspaceHelper.getWorkspaceForConnection(
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+      )
+    }
+    Assertions.assertThrows(
       ConfigNotFoundException::class.java,
-      Executable {
-        workspaceHelper.getWorkspaceForOperationId(
-          UUID.randomUUID(),
-        )
-      },
-    )
-    Assertions.assertThrows<ConfigNotFoundException?>(
+    ) {
+      workspaceHelper.getWorkspaceForOperationId(
+        UUID.randomUUID(),
+      )
+    }
+    Assertions.assertThrows(
       ConfigNotFoundException::class.java,
-      Executable { workspaceHelper.getWorkspaceForJobId(0L) },
-    )
+    ) { workspaceHelper.getWorkspaceForJobId(0L) }
   }
 
   @Test
@@ -247,14 +235,14 @@ internal class WorkspaceHelperTest {
         ConfigType.SYNC,
         CONNECTION_ID.toString(),
         JobConfig().withConfigType(ConfigType.SYNC).withSync(JobSyncConfig()),
-        mutableListOf<Attempt>(),
+        mutableListOf(),
         JobStatus.PENDING,
         System.currentTimeMillis(),
         System.currentTimeMillis(),
         System.currentTimeMillis(),
         true,
       )
-    whenever(jobPersistence.getJob(jobId)).thenReturn(job)
+    whenever(jobService.findById(jobId)).thenReturn(job)
 
     val jobWorkspace = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId)
     Assertions.assertEquals(WORKSPACE_ID, jobWorkspace)

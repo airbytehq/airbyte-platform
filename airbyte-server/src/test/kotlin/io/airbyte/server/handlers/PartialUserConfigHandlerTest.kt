@@ -37,6 +37,7 @@ import io.airbyte.config.PartialUserConfigWithActorDetails
 import io.airbyte.config.PartialUserConfigWithConfigTemplateAndActorDetails
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.secrets.JsonSecretsProcessor
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.repositories.ConnectionTemplateRepository
 import io.airbyte.data.repositories.WorkspaceRepository
 import io.airbyte.data.repositories.entities.ConnectionTemplate
@@ -46,7 +47,6 @@ import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionType
 import io.airbyte.db.instance.configs.jooq.generated.enums.NonBreakingChangePreferenceType
 import io.airbyte.db.instance.configs.jooq.generated.enums.ScheduleType
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.publicApi.server.generated.models.JobResponse
 import io.airbyte.publicApi.server.generated.models.JobStatusEnum

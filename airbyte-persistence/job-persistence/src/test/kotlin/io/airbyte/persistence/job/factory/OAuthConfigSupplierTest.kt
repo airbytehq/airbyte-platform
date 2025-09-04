@@ -7,7 +7,6 @@ package io.airbyte.persistence.job.factory
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.analytics.TrackingClient
-import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.config.ActorDefinitionVersion
@@ -15,26 +14,24 @@ import io.airbyte.config.ScopeType
 import io.airbyte.config.SourceOAuthParameter
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
+import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OAuthService
 import io.airbyte.data.services.SourceService
+import io.airbyte.domain.services.secrets.SecretReferenceService
 import io.airbyte.oauth.MoreOAuthParameters
 import io.airbyte.protocol.models.v0.AdvancedAuth
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
 import io.airbyte.validation.json.JsonValidationException
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.eq
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
 import java.io.IOException
-import java.util.List
 import java.util.Map
 import java.util.Optional
 import java.util.UUID
@@ -50,17 +47,19 @@ internal class OAuthConfigSupplierTest {
   private lateinit var oAuthService: OAuthService
   private lateinit var sourceService: SourceService
   private lateinit var destinationService: DestinationService
+  private lateinit var secretReferenceService: SecretReferenceService
 
   @BeforeEach
   @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun setup() {
-    trackingClient = mock<TrackingClient>()
-    sourceService = mock<SourceService>()
-    destinationService = mock<DestinationService>()
-    actorDefinitionVersionHelper = mock<ActorDefinitionVersionHelper>()
-    oAuthService = mock<OAuthService>()
+    trackingClient = mockk<TrackingClient>(relaxed = true)
+    sourceService = mockk<SourceService>()
+    destinationService = mockk<DestinationService>()
+    actorDefinitionVersionHelper = mockk<ActorDefinitionVersionHelper>()
+    oAuthService = mockk<OAuthService>()
+    secretReferenceService = mockk<SecretReferenceService>()
     oAuthConfigSupplier =
-      OAuthConfigSupplier(trackingClient, actorDefinitionVersionHelper, oAuthService, sourceService, destinationService)
+      OAuthConfigSupplier(trackingClient, actorDefinitionVersionHelper, oAuthService, sourceService, destinationService, secretReferenceService)
     sourceDefinitionId = UUID.randomUUID()
     testSourceDefinition =
       StandardSourceDefinition()
@@ -88,7 +87,7 @@ internal class OAuthConfigSupplierTest {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
-    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone<JsonNode>(config))
+    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
     Assertions.assertEquals(config, actualConfig)
     assertNoTracking()
   }
@@ -99,7 +98,7 @@ internal class OAuthConfigSupplierTest {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
     val actualConfig =
-      oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, clone<JsonNode>(config), testConnectorSpecification)
+      oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, clone(config), testConnectorSpecification)
     Assertions.assertEquals(config, actualConfig)
   }
 
@@ -108,14 +107,14 @@ internal class OAuthConfigSupplierTest {
   fun testNoOAuthInjectionBecauseMissingPredicateKey() {
     setupStandardDefinitionMock(
       createAdvancedAuth()!!
-        .withPredicateKey(List.of<String?>("some_random_fields", AUTH_TYPE))
+        .withPredicateKey(listOf<String?>("some_random_fields", AUTH_TYPE))
         .withPredicateValue(OAUTH),
     )
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
-    setupOAuthParamMocks(generateOAuthParameters())
-    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone<JsonNode>(config))
+    setupOAuthParamMocks(generateOAuthParameters(), workspaceId)
+    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
     Assertions.assertEquals(config, actualConfig)
     assertNoTracking()
   }
@@ -125,14 +124,14 @@ internal class OAuthConfigSupplierTest {
   fun testNoOAuthInjectionBecauseWrongPredicateValue() {
     setupStandardDefinitionMock(
       createAdvancedAuth()!!
-        .withPredicateKey(List.of<String?>(CREDENTIALS, AUTH_TYPE))
+        .withPredicateKey(listOf<String?>(CREDENTIALS, AUTH_TYPE))
         .withPredicateValue("wrong_auth_type"),
     )
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
-    setupOAuthParamMocks(generateOAuthParameters())
-    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone<JsonNode>(config))
+    setupOAuthParamMocks(generateOAuthParameters(), workspaceId)
+    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
     Assertions.assertEquals(config, actualConfig)
     assertNoTracking()
   }
@@ -145,11 +144,11 @@ internal class OAuthConfigSupplierTest {
     val spec: ConnectorSpecification? =
       createConnectorSpecification(
         createAdvancedAuth()!!
-          .withPredicateKey(List.of<String?>(CREDENTIALS, AUTH_TYPE))
+          .withPredicateKey(listOf<String?>(CREDENTIALS, AUTH_TYPE))
           .withPredicateValue("wrong_auth_type"),
       )
-    setupOAuthParamMocks(generateOAuthParameters())
-    val actualConfig = oAuthConfigSupplier!!.maskSourceOAuthParameters(sourceDefinitionId!!, workspaceId, clone<JsonNode>(config), spec)
+    setupOAuthParamMocks(generateOAuthParameters(), workspaceId)
+    val actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, clone(config), spec)
     Assertions.assertEquals(config, actualConfig)
   }
 
@@ -160,10 +159,10 @@ internal class OAuthConfigSupplierTest {
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
     val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
-    setupOAuthParamMocks(oauthParameters)
-    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone<JsonNode>(config))
+    setupOAuthParamMocks(oauthParameters, workspaceId)
+    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
     val expectedConfig: JsonNode =
-      Companion.getExpectedNode((oauthParameters.get(OAuthConfigSupplierTest.Companion.API_CLIENT) as kotlin.String?)!!)
+      getExpectedNode((oauthParameters[API_CLIENT] as String?)!!)
     Assertions.assertEquals(expectedConfig, actualConfig)
     assertTracking(workspaceId)
   }
@@ -174,9 +173,9 @@ internal class OAuthConfigSupplierTest {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
     val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
-    setupOAuthParamMocks(oauthParameters)
+    setupOAuthParamMocks(oauthParameters, workspaceId)
     val actualConfig =
-      oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, clone<JsonNode>(config), testConnectorSpecification)
+      oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, clone(config), testConnectorSpecification)
     val expectedConfig: JsonNode = getExpectedNode(MoreOAuthParameters.SECRET_MASK)
     Assertions.assertEquals(expectedConfig, actualConfig)
   }
@@ -193,10 +192,10 @@ internal class OAuthConfigSupplierTest {
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
     val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
-    setupOAuthParamMocks(oauthParameters)
-    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone<JsonNode>(config))
+    setupOAuthParamMocks(oauthParameters, workspaceId)
+    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
     val expectedConfig: JsonNode =
-      Companion.getExpectedNode((oauthParameters.get(OAuthConfigSupplierTest.Companion.API_CLIENT) as kotlin.String?)!!)
+      getExpectedNode((oauthParameters[API_CLIENT] as String?)!!)
     Assertions.assertEquals(expectedConfig, actualConfig)
     assertTracking(workspaceId)
   }
@@ -213,8 +212,8 @@ internal class OAuthConfigSupplierTest {
           .withPredicateValue(null),
       )
     val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
-    setupOAuthParamMocks(oauthParameters)
-    val actualConfig = oAuthConfigSupplier!!.maskSourceOAuthParameters(sourceDefinitionId!!, workspaceId, clone<JsonNode>(config), spec)
+    setupOAuthParamMocks(oauthParameters, workspaceId)
+    val actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, clone(config), spec)
     val expectedConfig: JsonNode = getExpectedNode(MoreOAuthParameters.SECRET_MASK)
     Assertions.assertEquals(expectedConfig, actualConfig)
   }
@@ -224,17 +223,17 @@ internal class OAuthConfigSupplierTest {
   fun testOAuthInjectionWithoutPredicateValue() {
     setupStandardDefinitionMock(
       createAdvancedAuth()!!
-        .withPredicateKey(List.of<String?>(CREDENTIALS, AUTH_TYPE))
+        .withPredicateKey(listOf<String?>(CREDENTIALS, AUTH_TYPE))
         .withPredicateValue(""),
     )
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
     val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
-    setupOAuthParamMocks(oauthParameters)
-    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone<JsonNode>(config))
+    setupOAuthParamMocks(oauthParameters, workspaceId)
+    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
     val expectedConfig: JsonNode =
-      Companion.getExpectedNode((oauthParameters.get(OAuthConfigSupplierTest.Companion.API_CLIENT) as kotlin.String?)!!)
+      getExpectedNode((oauthParameters[API_CLIENT] as String?)!!)
     Assertions.assertEquals(expectedConfig, actualConfig)
     assertTracking(workspaceId)
   }
@@ -247,12 +246,12 @@ internal class OAuthConfigSupplierTest {
     val spec: ConnectorSpecification? =
       createConnectorSpecification(
         createAdvancedAuth()!!
-          .withPredicateKey(List.of<String?>(CREDENTIALS, AUTH_TYPE))
+          .withPredicateKey(listOf<String?>(CREDENTIALS, AUTH_TYPE))
           .withPredicateValue(""),
       )
     val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
-    setupOAuthParamMocks(oauthParameters)
-    val actualConfig = oAuthConfigSupplier!!.maskSourceOAuthParameters(sourceDefinitionId!!, workspaceId, clone<JsonNode>(config), spec)
+    setupOAuthParamMocks(oauthParameters, workspaceId)
+    val actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, clone(config), spec)
     val expectedConfig: JsonNode = getExpectedNode(MoreOAuthParameters.SECRET_MASK)
     Assertions.assertEquals(expectedConfig, actualConfig)
   }
@@ -264,20 +263,18 @@ internal class OAuthConfigSupplierTest {
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
     val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
-    whenever(
-      actorDefinitionVersionHelper!!.getSourceVersion(
+    every {
+      actorDefinitionVersionHelper.getSourceVersion(
         any<StandardSourceDefinition>(),
-        eq(workspaceId),
-        eq(sourceId),
-      ),
-    ).thenReturn(
-      testSourceVersion!!.withSpec(null),
-    )
-    setupOAuthParamMocks(oauthParameters)
-    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone<JsonNode>(config))
-    val expectedConfig = (clone<JsonNode>(config) as ObjectNode)
+        workspaceId,
+        sourceId,
+      )
+    } returns testSourceVersion.withSpec(null)
+    setupOAuthParamMocks(oauthParameters, workspaceId)
+    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
+    val expectedConfig = (clone(config) as ObjectNode)
     for (key in oauthParameters.keys) {
-      expectedConfig.set<JsonNode?>(key, jsonNode<Any?>(oauthParameters.get(key)))
+      expectedConfig.set<JsonNode?>(key, jsonNode<Any?>(oauthParameters[key]))
     }
     Assertions.assertEquals(expectedConfig, actualConfig)
     assertTracking(workspaceId)
@@ -289,8 +286,8 @@ internal class OAuthConfigSupplierTest {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
     val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
-    setupOAuthParamMocks(oauthParameters)
-    val actualConfig = oAuthConfigSupplier!!.maskSourceOAuthParameters(sourceDefinitionId!!, workspaceId, clone<JsonNode>(config), null)
+    setupOAuthParamMocks(oauthParameters, workspaceId)
+    val actualConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, clone(config), null)
     Assertions.assertEquals(config, actualConfig)
   }
 
@@ -301,23 +298,44 @@ internal class OAuthConfigSupplierTest {
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
     val oauthParameters: MutableMap<String?, Any?> = generateOAuthParameters()
-    whenever(
+    val oauthParameterId = UUID.randomUUID()
+    val configuration = jsonNode<MutableMap<String?, Any?>?>(oauthParameters)
+    every {
       oAuthService.getSourceOAuthParameterOptional(
         any<UUID>(),
         any<UUID>(),
-      ),
-    ).thenReturn(
-      Optional.of<SourceOAuthParameter>(
+      )
+    } returns
+      Optional.of(
         SourceOAuthParameter()
-          .withOauthParameterId(UUID.randomUUID())
+          .withOauthParameterId(oauthParameterId)
           .withSourceDefinitionId(sourceDefinitionId)
           .withWorkspaceId(workspaceId)
-          .withConfiguration(jsonNode<MutableMap<String?, Any?>?>(oauthParameters)),
-      ),
-    )
-    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone<JsonNode>(config))
+          .withConfiguration(configuration),
+      )
+    every {
+      secretReferenceService.getConfigWithSecretReferences(
+        any(),
+        any(),
+        any(),
+        any(),
+      )
+    } returns
+      ConfigWithSecretReferences(
+        originalConfig = configuration,
+        referencedSecrets = emptyMap(),
+      )
+    every {
+      secretReferenceService.getHydratedConfiguration(
+        any(),
+        any(),
+        any(),
+        any(),
+      )
+    } returns configuration
+    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
     val expectedConfig: JsonNode =
-      Companion.getExpectedNode((oauthParameters.get(OAuthConfigSupplierTest.Companion.API_CLIENT) as kotlin.String?)!!)
+      getExpectedNode((oauthParameters[API_CLIENT] as String?)!!)
     Assertions.assertEquals(expectedConfig, actualConfig)
     assertTracking(workspaceId)
   }
@@ -331,8 +349,8 @@ internal class OAuthConfigSupplierTest {
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
     val oauthParameters: MutableMap<String?, Any?> = generateNestedOAuthParameters()
-    setupOAuthParamMocks(oauthParameters)
-    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone<JsonNode>(config))
+    setupOAuthParamMocks(oauthParameters, workspaceId)
+    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
     val expectedConfig =
       jsonNode<MutableMap<String, Any>?>(
         Map.of<String?, Any?>(
@@ -345,7 +363,7 @@ internal class OAuthConfigSupplierTest {
             AUTH_TYPE,
             OAUTH,
             API_CLIENT,
-            (oauthParameters.get(CREDENTIALS) as MutableMap<String?, String?>).get(API_CLIENT),
+            (oauthParameters[CREDENTIALS] as MutableMap<String?, String?>)[API_CLIENT],
           ),
         ),
       )
@@ -362,14 +380,12 @@ internal class OAuthConfigSupplierTest {
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
     val oauthParameters: MutableMap<String?, Any?> = generateNestedOAuthParameters()
-    setupOAuthParamMocks(oauthParameters)
-    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone<JsonNode>(config))
+    setupOAuthParamMocks(oauthParameters, workspaceId)
+    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
     val expectedConfig: JsonNode =
-      Companion.getExpectedNode(
+      getExpectedNode(
         (
-          (oauthParameters.get(OAuthConfigSupplierTest.Companion.CREDENTIALS) as kotlin.collections.MutableMap<kotlin.String?, kotlin.Any?>).get(
-            OAuthConfigSupplierTest.Companion.API_CLIENT,
-          ) as kotlin.String?
+          (oauthParameters[CREDENTIALS] as MutableMap<String?, Any?>)[API_CLIENT] as String?
         )!!,
       )
     Assertions.assertEquals(expectedConfig, actualConfig)
@@ -384,9 +400,9 @@ internal class OAuthConfigSupplierTest {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
     val oauthParameters: MutableMap<String?, Any?> = generateNestedOAuthParameters()
-    setupOAuthParamMocks(oauthParameters)
+    setupOAuthParamMocks(oauthParameters, workspaceId)
     val actualConfig =
-      oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, clone<JsonNode>(config), testConnectorSpecification)
+      oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, clone(config), testConnectorSpecification)
     val expectedConfig: JsonNode = getExpectedNode(MoreOAuthParameters.SECRET_MASK)
     Assertions.assertEquals(expectedConfig, actualConfig)
   }
@@ -398,68 +414,97 @@ internal class OAuthConfigSupplierTest {
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
     val oauthParameters = Map.of<String?, Any?>(CREDENTIALS, generateSecretOAuthParameters())
-    setupOAuthParamMocks(oauthParameters)
+    setupOAuthParamMocks(oauthParameters, workspaceId)
 
-    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone<JsonNode>(config))
+    val actualConfig = oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefinitionId, sourceId, workspaceId, clone(config))
     val expectedConfig: JsonNode = getExpectedNode(secretCoordinateMap())
     Assertions.assertEquals(expectedConfig, actualConfig)
   }
 
   @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   private fun setupStandardDefinitionMock(advancedAuth: AdvancedAuth?) {
-    whenever(sourceService.getStandardSourceDefinition(any<UUID>()))
-      .thenReturn(testSourceDefinition)
-    whenever(
+    every { sourceService.getStandardSourceDefinition(any<UUID>()) } returns testSourceDefinition
+    every {
       actorDefinitionVersionHelper.getSourceVersion(
         any<StandardSourceDefinition>(),
         any<UUID>(),
         any<UUID>(),
-      ),
-    ).thenReturn(
-      testSourceVersion
-        .withSpec(createConnectorSpecification(advancedAuth)),
-    )
+      )
+    } returns testSourceVersion.withSpec(createConnectorSpecification(advancedAuth))
+
+    every {
+      oAuthService.getSourceOAuthParameterOptional(any<UUID>(), any<UUID>())
+    } returns Optional.empty()
   }
 
   @Throws(JsonValidationException::class, IOException::class)
-  private fun setupOAuthParamMocks(oauthParameters: MutableMap<String?, Any?>?) {
-    whenever(
+  private fun setupOAuthParamMocks(
+    oauthParameters: MutableMap<String?, Any?>?,
+    workspaceId: UUID,
+  ): UUID {
+    val oauthParameterId = UUID.randomUUID()
+    val configuration = jsonNode<MutableMap<String?, Any?>?>(oauthParameters)
+    every {
       oAuthService.getSourceOAuthParameterOptional(
+        workspaceId,
         any<UUID>(),
-        any<UUID>(),
-      ),
-    ).thenReturn(
-      Optional.of<SourceOAuthParameter>(
+      )
+    } returns
+      Optional.of(
         SourceOAuthParameter()
-          .withOauthParameterId(UUID.randomUUID())
+          .withOauthParameterId(oauthParameterId)
           .withSourceDefinitionId(sourceDefinitionId)
-          .withWorkspaceId(null)
-          .withConfiguration(jsonNode<MutableMap<String?, Any?>?>(oauthParameters)),
-      ),
-    )
+          .withWorkspaceId(workspaceId)
+          .withConfiguration(configuration),
+      )
+    every {
+      secretReferenceService.getConfigWithSecretReferences(
+        any(),
+        any(),
+        any(),
+        any(),
+      )
+    } returns
+      ConfigWithSecretReferences(
+        originalConfig = configuration,
+        referencedSecrets = emptyMap(),
+      )
+    every {
+      secretReferenceService.getHydratedConfiguration(
+        any(),
+        any(),
+        any(),
+        any(),
+      )
+    } returns configuration
+    return oauthParameterId
   }
 
   private fun assertNoTracking() {
-    verify(trackingClient, times(0)).track(
-      any<UUID>(),
-      any<ScopeType>(),
-      any<String>(),
-      any<kotlin.collections.Map<String, Any?>>(),
-    )
+    verify(exactly = 0) {
+      trackingClient.track(
+        any<UUID>(),
+        any<ScopeType>(),
+        any<String>(),
+        any<kotlin.collections.Map<String, Any?>>(),
+      )
+    }
   }
 
   private fun assertTracking(workspaceId: UUID) {
-    verify(trackingClient, times(1)).track(
-      workspaceId,
-      ScopeType.WORKSPACE,
-      "OAuth Injection - Backend",
-      mapOf(
-        "connector_source" to "test",
-        "connector_source_definition_id" to sourceDefinitionId,
-        "connector_source_docker_repository" to "test/test",
-        "connector_source_version" to "dev",
-      ),
-    )
+    verify(exactly = 1) {
+      trackingClient.track(
+        workspaceId,
+        ScopeType.WORKSPACE,
+        "OAuth Injection - Backend",
+        mapOf(
+          "connector_source" to "test",
+          "connector_source_definition_id" to sourceDefinitionId,
+          "connector_source_docker_repository" to "test/test",
+          "connector_source_version" to "dev",
+        ),
+      )
+    }
   }
 
   companion object {
@@ -487,7 +532,7 @@ internal class OAuthConfigSupplierTest {
         .withOauthConfigSpecification(
           OAuthConfigSpecification()
             .withCompleteOauthServerOutputSpecification(
-              Jsons.jsonNode(
+              jsonNode(
                 mapOf(
                   PROPERTIES to
                     mapOf(

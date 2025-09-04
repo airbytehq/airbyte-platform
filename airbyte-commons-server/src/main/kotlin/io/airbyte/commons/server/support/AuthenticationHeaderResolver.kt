@@ -30,9 +30,9 @@ import io.airbyte.commons.server.support.AuthenticationHttpHeaders.WORKSPACE_ID_
 import io.airbyte.config.ScopeType
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.Nullable

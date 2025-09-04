@@ -35,6 +35,7 @@ import io.airbyte.config.PartialUserConfigWithFullDetails
 import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync
 import io.airbyte.config.secrets.JsonSecretsProcessor
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.repositories.ConnectionTemplateRepository
 import io.airbyte.data.repositories.WorkspaceRepository
 import io.airbyte.data.services.ActorDefinitionService
@@ -43,7 +44,6 @@ import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.domain.models.ActorDefinitionId
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.server.apis.publicapi.services.JobService
 import io.airbyte.server.apis.publicapi.services.SourceService

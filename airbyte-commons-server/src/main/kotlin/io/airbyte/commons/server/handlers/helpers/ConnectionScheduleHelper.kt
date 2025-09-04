@@ -24,13 +24,13 @@ import io.airbyte.config.Schedule
 import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.SubOneHourSyncSchedules
 import io.airbyte.featureflag.Workspace
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.validation.json.JsonValidationException
 import jakarta.inject.Singleton
 import org.joda.time.DateTimeZone

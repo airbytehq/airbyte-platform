@@ -30,15 +30,17 @@ import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.StandardSync
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.JobService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.persistence.job.JobPersistence
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
+import jakarta.inject.Singleton
 import java.io.IOException
 import java.util.Collections
 import java.util.List
@@ -51,6 +53,7 @@ import java.util.stream.Collectors
 /**
  * Tracking calls to each job type.
  */
+@Singleton
 class JobTracker
   @VisibleForTesting
   internal constructor(
@@ -63,6 +66,7 @@ class JobTracker
     private val connectionService: ConnectionService,
     private val operationService: OperationService,
     private val workspaceService: WorkspaceService,
+    private val jobService: JobService,
   ) {
     /**
      * Job state.
@@ -72,27 +76,6 @@ class JobTracker
       SUCCEEDED,
       FAILED,
     }
-
-    constructor(
-      jobPersistence: JobPersistence,
-      trackingClient: TrackingClient,
-      actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
-      sourceService: SourceService,
-      destinationService: DestinationService,
-      connectionService: ConnectionService,
-      operationService: OperationService,
-      workspaceService: WorkspaceService,
-    ) : this(
-      jobPersistence,
-      WorkspaceHelper(jobPersistence, connectionService, sourceService, destinationService, operationService, workspaceService),
-      trackingClient,
-      actorDefinitionVersionHelper,
-      sourceService,
-      destinationService,
-      connectionService,
-      operationService,
-      workspaceService,
-    )
 
     /**
      * Track telemetry for check connection.

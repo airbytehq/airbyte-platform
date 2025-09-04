@@ -25,6 +25,7 @@ import io.airbyte.domain.models.SecretStorageType
 import io.airbyte.domain.models.SecretStorageWithConfig
 import io.airbyte.domain.models.UserId
 import io.airbyte.domain.services.secrets.SecretMigrationService
+import io.airbyte.domain.services.secrets.SecretStorageCredentialsService
 import io.airbyte.domain.services.secrets.SecretStorageService
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -34,10 +35,14 @@ import io.micronaut.security.rules.SecurityRule.IS_AUTHENTICATED
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull
 
+typealias ApiScopeType = io.airbyte.api.model.generated.ScopeType
+typealias ApiSecretStorageType = io.airbyte.api.model.generated.SecretStorageType
+
 @Controller("/api/v1/secret_storage")
 @ExecuteOn(AirbyteTaskExecutors.IO)
 class SecretStorageApiController(
   private val secretStorageService: SecretStorageService,
+  private val secretStorageCredentialsService: SecretStorageCredentialsService,
   private val secretMigrationService: SecretMigrationService,
   private val currentUserService: CurrentUserService,
   private val roleResolver: RoleResolver,
@@ -48,29 +53,37 @@ class SecretStorageApiController(
       @Valid @NotNull
       SecretStorageCreateRequestBody,
   ): SecretStorageRead {
-    val secretStorage =
-      secretStorageService.createSecretStorage(
-        SecretStorageCreate(
-          scopeType =
-            when (secretStorageCreateRequestBody.scopeType) {
-              io.airbyte.api.model.generated.ScopeType.ORGANIZATION -> io.airbyte.domain.models.SecretStorageScopeType.ORGANIZATION
-              io.airbyte.api.model.generated.ScopeType.WORKSPACE -> io.airbyte.domain.models.SecretStorageScopeType.WORKSPACE
-            },
-          scopeId = secretStorageCreateRequestBody.scopeId,
-          storageType =
-            when (secretStorageCreateRequestBody.secretStorageType) {
-              io.airbyte.api.model.generated.SecretStorageType.VAULT -> SecretStorageType.VAULT
-              io.airbyte.api.model.generated.SecretStorageType.AWS_SECRETS_MANAGER -> SecretStorageType.AWS_SECRETS_MANAGER
-              io.airbyte.api.model.generated.SecretStorageType.GOOGLE_SECRET_MANAGER -> SecretStorageType.GOOGLE_SECRET_MANAGER
-              io.airbyte.api.model.generated.SecretStorageType.AZURE_KEY_VAULT -> SecretStorageType.AZURE_KEY_VAULT
-              io.airbyte.api.model.generated.SecretStorageType.LOCAL_TESTING -> SecretStorageType.LOCAL_TESTING
-            },
-          descriptor = secretStorageCreateRequestBody.descriptor,
-          configuredFromEnvironment = secretStorageCreateRequestBody.isConfiguredFromEnvironment ?: false,
-          createdBy = UserId(currentUserService.getCurrentUser().userId),
-        ),
-        storageConfig = secretStorageCreateRequestBody.config,
+    val secretStorageCreate =
+      SecretStorageCreate(
+        scopeType =
+          when (secretStorageCreateRequestBody.scopeType) {
+            ApiScopeType.ORGANIZATION -> SecretStorageScopeType.ORGANIZATION
+            ApiScopeType.WORKSPACE -> SecretStorageScopeType.WORKSPACE
+          },
+        scopeId = secretStorageCreateRequestBody.scopeId,
+        storageType =
+          when (secretStorageCreateRequestBody.secretStorageType) {
+            ApiSecretStorageType.VAULT -> SecretStorageType.VAULT
+            ApiSecretStorageType.AWS_SECRETS_MANAGER -> SecretStorageType.AWS_SECRETS_MANAGER
+            ApiSecretStorageType.GOOGLE_SECRET_MANAGER -> SecretStorageType.GOOGLE_SECRET_MANAGER
+            ApiSecretStorageType.AZURE_KEY_VAULT -> SecretStorageType.AZURE_KEY_VAULT
+            ApiSecretStorageType.LOCAL_TESTING -> SecretStorageType.LOCAL_TESTING
+          },
+        descriptor = secretStorageCreateRequestBody.descriptor,
+        configuredFromEnvironment = secretStorageCreateRequestBody.isConfiguredFromEnvironment ?: false,
+        createdBy = UserId(currentUserService.getCurrentUser().userId),
       )
+
+    val secretStorage = secretStorageService.createSecretStorage(secretStorageCreate, secretStorageCreateRequestBody.config)
+
+    // Store the credentials for the secret storage
+    secretStorageCredentialsService.writeStorageCredentials(
+      secretStorageCreate,
+      secretStorageCreateRequestBody.config,
+      secretStorage.id,
+      secretStorageCreate.createdBy,
+    )
+
     return SecretStorageWithConfig(secretStorage, null).toApiModel()
   }
 
@@ -117,8 +130,8 @@ class SecretStorageApiController(
         secretStorageService
           .listSecretStorage(
             when (secretStorageListRequestBody.scopeType) {
-              io.airbyte.api.model.generated.ScopeType.ORGANIZATION -> io.airbyte.domain.models.SecretStorageScopeType.ORGANIZATION
-              io.airbyte.api.model.generated.ScopeType.WORKSPACE -> io.airbyte.domain.models.SecretStorageScopeType.WORKSPACE
+              io.airbyte.api.model.generated.ScopeType.ORGANIZATION -> SecretStorageScopeType.ORGANIZATION
+              io.airbyte.api.model.generated.ScopeType.WORKSPACE -> SecretStorageScopeType.WORKSPACE
             },
             secretStorageListRequestBody.scopeId,
           ).map { SecretStorageWithConfig(it, null).toApiModel() },
@@ -148,8 +161,8 @@ private fun SecretStorageWithConfig.toApiModel(): SecretStorageRead {
   secretStorageRead.scopeId(this.secretStorage.scopeId)
   secretStorageRead.scopeType(
     when (this.secretStorage.scopeType) {
-      io.airbyte.domain.models.SecretStorageScopeType.ORGANIZATION -> io.airbyte.api.model.generated.ScopeType.ORGANIZATION
-      io.airbyte.domain.models.SecretStorageScopeType.WORKSPACE -> io.airbyte.api.model.generated.ScopeType.WORKSPACE
+      SecretStorageScopeType.ORGANIZATION -> io.airbyte.api.model.generated.ScopeType.ORGANIZATION
+      SecretStorageScopeType.WORKSPACE -> io.airbyte.api.model.generated.ScopeType.WORKSPACE
     },
   )
   secretStorageRead.secretStorageType(

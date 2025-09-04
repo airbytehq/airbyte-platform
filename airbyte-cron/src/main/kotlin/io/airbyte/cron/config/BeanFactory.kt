@@ -7,11 +7,6 @@ package io.airbyte.cron.config
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants
 import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.config.persistence.StreamResetPersistence
-import io.airbyte.data.services.ConnectionService
-import io.airbyte.data.services.DestinationService
-import io.airbyte.data.services.OperationService
-import io.airbyte.data.services.SourceService
-import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.DataSourceUnwrapper
 import io.airbyte.db.Database
 import io.airbyte.db.check.DatabaseMigrationCheck
@@ -21,7 +16,6 @@ import io.airbyte.persistence.job.DefaultJobPersistence
 import io.airbyte.persistence.job.DefaultMetadataPersistence
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.MetadataPersistence
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
@@ -55,16 +49,6 @@ class BeanFactory {
       .multipliedBy(12) // multipliedBy only takes whole numbers
       .dividedBy(10)
   }
-
-  @Singleton
-  fun workspaceHelper(
-    jobPersistence: JobPersistence,
-    connectionService: ConnectionService,
-    sourceService: SourceService,
-    destinationService: DestinationService,
-    operationService: OperationService,
-    workspaceService: WorkspaceService,
-  ): WorkspaceHelper = WorkspaceHelper(jobPersistence, connectionService, sourceService, destinationService, operationService, workspaceService)
 
   @Singleton
   fun timeProvider(): Function1<ZoneId, OffsetDateTime> = { zone: ZoneId -> OffsetDateTime.now(zone) }

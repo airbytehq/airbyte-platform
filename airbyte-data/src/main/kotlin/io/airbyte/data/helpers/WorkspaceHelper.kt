@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.persistence.job
+package io.airbyte.data.helpers
 
 import com.google.common.base.Preconditions
 import com.google.common.cache.CacheBuilder
@@ -12,111 +12,94 @@ import io.airbyte.config.Job
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.JobService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import jakarta.inject.Singleton
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.ExecutionException
 import java.util.function.Supplier
 
-// todo (cgardens) - this class is in an unintuitive module. it is weird that you need to import
-// scheduler:persistence in order to get workspace ids for configs (e.g. source). Our options are to
-// split this helper by database or put it in a new module.
-
 /**
  * Helpers for interacting with Workspaces.
  */
+@Singleton
 class WorkspaceHelper(
-  jobPersistence: JobPersistence,
+  jobService: JobService,
   connectionService: ConnectionService,
   sourceService: SourceService,
   destinationService: DestinationService,
   operationService: OperationService,
   workspaceService: WorkspaceService,
 ) {
-  private val sourceToWorkspaceCache: LoadingCache<UUID, UUID>
-  private val destinationToWorkspaceCache: LoadingCache<UUID, UUID>
-  private val connectionToWorkspaceCache: LoadingCache<UUID, UUID>
-  private val operationToWorkspaceCache: LoadingCache<UUID, UUID>
-  private val jobToWorkspaceCache: LoadingCache<Long, UUID>
-
-  private val workspaceToOrganizationCache: LoadingCache<UUID, UUID>
-
-  init {
-    this.sourceToWorkspaceCache =
-      getExpiringCache(
-        object : CacheLoader<UUID, UUID>() {
-          @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
-          override fun load(sourceId: UUID): UUID {
-            val source = sourceService.getSourceConnection(sourceId)
-            return source.workspaceId
+  private val sourceToWorkspaceCache: LoadingCache<UUID, UUID> =
+    getExpiringCache(
+      object : CacheLoader<UUID, UUID>() {
+        @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
+        override fun load(sourceId: UUID): UUID {
+          val source = sourceService.getSourceConnection(sourceId)
+          return source.workspaceId
+        }
+      },
+    )
+  private val destinationToWorkspaceCache: LoadingCache<UUID, UUID> =
+    getExpiringCache(
+      object : CacheLoader<UUID, UUID>() {
+        @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
+        override fun load(destinationId: UUID): UUID {
+          val destination = destinationService.getDestinationConnection(destinationId)
+          return destination.workspaceId
+        }
+      },
+    )
+  private val connectionToWorkspaceCache: LoadingCache<UUID, UUID> =
+    getExpiringCache(
+      object : CacheLoader<UUID, UUID>() {
+        @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
+        override fun load(connectionId: UUID): UUID {
+          val connection = connectionService.getStandardSync(connectionId)
+          return getWorkspaceForConnectionIgnoreExceptions(connection.sourceId, connection.destinationId)
+        }
+      },
+    )
+  private val operationToWorkspaceCache: LoadingCache<UUID, UUID> =
+    getExpiringCache(
+      object : CacheLoader<UUID, UUID>() {
+        @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
+        override fun load(operationId: UUID): UUID {
+          val operation = operationService.getStandardSyncOperation(operationId)
+          return operation.workspaceId
+        }
+      },
+    )
+  private val jobToWorkspaceCache: LoadingCache<Long, UUID> =
+    getExpiringCache(
+      object : CacheLoader<Long, UUID>() {
+        @Throws(ConfigNotFoundException::class, IOException::class)
+        override fun load(jobId: Long): UUID {
+          val job =
+            jobService.findById(jobId)
+              ?: throw ConfigNotFoundException(Job::class.java.toString(), jobId.toString())
+          if (Job.Companion.REPLICATION_TYPES.contains(job.configType)) {
+            return getWorkspaceForConnectionIdIgnoreExceptions(UUID.fromString(job.scope))
+          } else {
+            throw IllegalArgumentException("Only sync/reset jobs are associated with workspaces! A " + job.configType + " job was requested!")
           }
-        },
-      )
+        }
+      },
+    )
 
-    this.destinationToWorkspaceCache =
-      getExpiringCache(
-        object : CacheLoader<UUID, UUID>() {
-          @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
-          override fun load(destinationId: UUID): UUID {
-            val destination = destinationService.getDestinationConnection(destinationId)
-            return destination.workspaceId
-          }
-        },
-      )
-
-    this.connectionToWorkspaceCache =
-      getExpiringCache(
-        object : CacheLoader<UUID, UUID>() {
-          @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
-          override fun load(connectionId: UUID): UUID {
-            val connection = connectionService.getStandardSync(connectionId)
-            val sourceId = connection.sourceId
-            val destinationId = connection.destinationId
-            return getWorkspaceForConnectionIgnoreExceptions(sourceId, destinationId)
-          }
-        },
-      )
-
-    this.operationToWorkspaceCache =
-      getExpiringCache(
-        object : CacheLoader<UUID, UUID>() {
-          @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
-          override fun load(operationId: UUID): UUID {
-            val operation = operationService.getStandardSyncOperation(operationId)
-            return operation.workspaceId
-          }
-        },
-      )
-
-    this.jobToWorkspaceCache =
-      getExpiringCache(
-        object : CacheLoader<Long, UUID>() {
-          @Throws(ConfigNotFoundException::class, IOException::class)
-          override fun load(jobId: Long): UUID {
-            val job =
-              jobPersistence.getJob(jobId)
-                ?: throw ConfigNotFoundException(Job::class.java.toString(), jobId.toString())
-            if (Job.REPLICATION_TYPES.contains(job.configType)) {
-              return getWorkspaceForConnectionIdIgnoreExceptions(UUID.fromString(job.scope))
-            } else {
-              throw IllegalArgumentException("Only sync/reset jobs are associated with workspaces! A " + job.configType + " job was requested!")
-            }
-          }
-        },
-      )
-
-    this.workspaceToOrganizationCache =
-      getExpiringCache(
-        object : CacheLoader<UUID, UUID>() {
-          @Throws(Exception::class)
-          override fun load(workspaceId: UUID): UUID = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).organizationId
-        },
-      )
-  }
+  private val workspaceToOrganizationCache: LoadingCache<UUID, UUID> =
+    getExpiringCache(
+      object : CacheLoader<UUID, UUID>() {
+        @Throws(Exception::class)
+        override fun load(workspaceId: UUID): UUID = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).organizationId
+      },
+    )
 
   // SOURCE ID
 

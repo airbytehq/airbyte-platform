@@ -12,13 +12,13 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.ConfigInjector
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.config.persistence.domain.StreamRefresh
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.persistence.job.DefaultJobCreator
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.persistence.job.helper.model.JobCreatorInput
 import io.airbyte.validation.json.JsonValidationException
 import java.io.IOException

@@ -98,7 +98,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(ID, Optional.empty(), Optional.empty(), ActorType.SOURCE)
 
       val fetchedOAuthParam =
-        oAuthService.getSourceOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
 
@@ -111,7 +111,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     @Throws(IOException::class, ConfigNotFoundException::class)
     fun testGetNoInstanceWideSourceOAuthParam() {
       val fetchedOAuthParam =
-        oAuthService.getSourceOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
       Assertions.assertTrue(fetchedOAuthParam.isEmpty())
     }
 
@@ -121,7 +121,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(ID, Optional.of<UUID>(WORKSPACE_ID), Optional.empty(), ActorType.SOURCE)
 
       val fetchedOAuthParam =
-        oAuthService.getSourceOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
 
@@ -136,7 +136,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(ID, Optional.of<UUID>(WORKSPACE_ID), Optional.empty(), ActorType.SOURCE)
 
       val fetchedOAuthParam =
-        oAuthService.getSourceOAuthParameterWithSecretsOptional(A_DIFFERENT_WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getSourceOAuthParameterOptional(A_DIFFERENT_WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isEmpty())
     }
@@ -147,7 +147,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(ID, Optional.empty(), Optional.of<UUID>(ORGANIZATION_ID), ActorType.SOURCE)
 
       val fetchedOAuthParam =
-        oAuthService.getSourceOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
 
@@ -162,7 +162,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(ID, Optional.empty(), Optional.of<UUID>(A_DIFFERENT_ORGANIZATION_ID), ActorType.SOURCE)
 
       val fetchedOAuthParam =
-        oAuthService.getSourceOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isEmpty())
     }
@@ -177,7 +177,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(organizationWideParamId, Optional.empty(), Optional.of<UUID>(ORGANIZATION_ID), ActorType.SOURCE)
 
       val fetchedOAuthParam =
-        oAuthService.getSourceOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
       Assertions.assertEquals(organizationWideParamId, fetchedOAuthParam.get().oauthParameterId)
@@ -193,7 +193,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(instanceWideParamId, Optional.empty(), Optional.empty(), ActorType.SOURCE)
 
       val fetchedOAuthParam =
-        oAuthService.getSourceOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
       Assertions.assertEquals(organizationWideParamId, fetchedOAuthParam.get().oauthParameterId)
@@ -217,7 +217,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       oAuthService.writeSourceOAuthParam(orgWideParam)
 
       val fetchedOAuthParam =
-        oAuthService.getSourceOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
       Assertions.assertEquals(workspaceWideParamId, fetchedOAuthParam.get().oauthParameterId)
@@ -233,7 +233,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(instanceWideParamId, Optional.empty(), Optional.empty(), ActorType.SOURCE)
 
       val fetchedOAuthParam =
-        oAuthService.getSourceOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
       Assertions.assertEquals(workspaceWideParamId, fetchedOAuthParam.get().oauthParameterId)
@@ -249,7 +249,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(organizationWideParamId, Optional.empty(), Optional.of<UUID>(ORGANIZATION_ID), ActorType.SOURCE)
 
       val fetchedOAuthParam =
-        oAuthService.getSourceOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
       Assertions.assertEquals(workspaceWideParamId, fetchedOAuthParam.get().oauthParameterId)
@@ -265,7 +265,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(workspaceWideParamId, Optional.of<UUID>(WORKSPACE_ID), Optional.empty(), ActorType.SOURCE)
 
       val fetchedOAuthParam =
-        oAuthService.getSourceOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
       Assertions.assertEquals(workspaceWideParamId, fetchedOAuthParam.get().oauthParameterId)
@@ -280,7 +280,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(ID, Optional.empty(), Optional.empty(), ActorType.DESTINATION)
 
       val fetchedOAuthParam =
-        oAuthService.getDestinationOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getDestinationOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
 
@@ -293,7 +293,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     @Throws(IOException::class, ConfigNotFoundException::class)
     fun testGetNoInstanceWideDestinationOAuthParam() {
       val fetchedOAuthParam =
-        oAuthService.getDestinationOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getDestinationOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
       Assertions.assertTrue(fetchedOAuthParam.isEmpty())
     }
 
@@ -303,7 +303,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(ID, Optional.of<UUID>(WORKSPACE_ID), Optional.empty(), ActorType.DESTINATION)
 
       val fetchedOAuthParam =
-        oAuthService.getDestinationOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getDestinationOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
 
@@ -318,7 +318,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(ID, Optional.of<UUID>(WORKSPACE_ID), Optional.empty(), ActorType.DESTINATION)
 
       val fetchedOAuthParam =
-        oAuthService.getDestinationOAuthParameterWithSecretsOptional(A_DIFFERENT_WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getDestinationOAuthParameterOptional(A_DIFFERENT_WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isEmpty())
     }
@@ -329,7 +329,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(ID, Optional.empty(), Optional.of<UUID>(ORGANIZATION_ID), ActorType.DESTINATION)
 
       val fetchedOAuthParam =
-        oAuthService.getDestinationOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getDestinationOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
 
@@ -344,7 +344,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(ID, Optional.empty(), Optional.of<UUID>(A_DIFFERENT_ORGANIZATION_ID), ActorType.DESTINATION)
 
       val fetchedOAuthParam =
-        oAuthService.getDestinationOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getDestinationOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isEmpty())
     }
@@ -359,7 +359,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(organizationWideParamId, Optional.empty(), Optional.of<UUID>(ORGANIZATION_ID), ActorType.DESTINATION)
 
       val fetchedOAuthParam =
-        oAuthService.getDestinationOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getDestinationOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
       Assertions.assertEquals(organizationWideParamId, fetchedOAuthParam.get().oauthParameterId)
@@ -375,7 +375,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(instanceWideParamId, Optional.empty(), Optional.empty(), ActorType.DESTINATION)
 
       val fetchedOAuthParam =
-        oAuthService.getDestinationOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getDestinationOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
       Assertions.assertEquals(organizationWideParamId, fetchedOAuthParam.get().oauthParameterId)
@@ -391,7 +391,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(workspaceWideParamId, Optional.of<UUID>(WORKSPACE_ID), Optional.empty(), ActorType.DESTINATION)
 
       val fetchedOAuthParam =
-        oAuthService.getDestinationOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getDestinationOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
       Assertions.assertEquals(workspaceWideParamId, fetchedOAuthParam.get().oauthParameterId)
@@ -407,7 +407,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(instanceWideParamId, Optional.empty(), Optional.empty(), ActorType.DESTINATION)
 
       val fetchedOAuthParam =
-        oAuthService.getDestinationOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getDestinationOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
       Assertions.assertEquals(workspaceWideParamId, fetchedOAuthParam.get().oauthParameterId)
@@ -423,7 +423,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(organizationWideParamId, Optional.empty(), Optional.of<UUID>(ORGANIZATION_ID), ActorType.DESTINATION)
 
       val fetchedOAuthParam =
-        oAuthService.getDestinationOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getDestinationOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
       Assertions.assertEquals(workspaceWideParamId, fetchedOAuthParam.get().oauthParameterId)
@@ -439,7 +439,7 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
       createActorOAuthParameter(workspaceWideParamId, Optional.of<UUID>(WORKSPACE_ID), Optional.empty(), ActorType.DESTINATION)
 
       val fetchedOAuthParam =
-        oAuthService.getDestinationOAuthParameterWithSecretsOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
+        oAuthService.getDestinationOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
 
       Assertions.assertTrue(fetchedOAuthParam.isPresent)
       Assertions.assertEquals(workspaceWideParamId, fetchedOAuthParam.get().oauthParameterId)

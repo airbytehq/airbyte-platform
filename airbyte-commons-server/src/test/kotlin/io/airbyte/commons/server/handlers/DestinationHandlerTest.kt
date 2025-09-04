@@ -49,6 +49,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.config.secrets.buildConfigWithSecretRefsJava
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.shared.DestinationConnectionWithCount
 import io.airbyte.data.services.shared.WorkspaceResourceCursorPagination
@@ -60,7 +61,6 @@ import io.airbyte.domain.services.entitlements.ConnectorConfigEntitlementService
 import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.domain.services.secrets.SecretReferenceService
 import io.airbyte.domain.services.secrets.SecretStorageService
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
@@ -151,13 +151,13 @@ internal class DestinationHandlerTest {
 
     destinationDefinitionSpecificationRead =
       DestinationDefinitionSpecificationRead()
-        .connectionSpecification(connectorSpecification.getConnectionSpecification())
-        .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-        .documentationUrl(connectorSpecification.getDocumentationUrl().toString())
+        .connectionSpecification(connectorSpecification.connectionSpecification)
+        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
+        .documentationUrl(connectorSpecification.documentationUrl.toString())
 
     destinationConnection =
       DestinationHelpers.generateDestination(
-        standardDestinationDefinition.getDestinationDefinitionId(),
+        standardDestinationDefinition.destinationDefinitionId,
         apiPojoConverters.scopedResourceReqsToInternal(RESOURCE_ALLOCATION),
       )
 
@@ -190,8 +190,8 @@ internal class DestinationHandlerTest {
     every {
       actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
-        destinationConnection.getDestinationId(),
+        destinationConnection.workspaceId,
+        destinationConnection.destinationId,
       )
     } returns destinationDefinitionVersionWithOverrideStatus
     every { workspaceHelper.getOrganizationForWorkspace(any()) } returns UUID.randomUUID()
@@ -213,36 +213,36 @@ internal class DestinationHandlerTest {
     // Create the DestinationCreate request with the necessary fields.
     val destinationCreate =
       DestinationCreate()
-        .name(destinationConnection.getName())
-        .workspaceId(destinationConnection.getWorkspaceId())
-        .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-        .connectionConfiguration(destinationConnection.getConfiguration())
+        .name(destinationConnection.name)
+        .workspaceId(destinationConnection.workspaceId)
+        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
+        .connectionConfiguration(destinationConnection.configuration)
         .resourceAllocation(RESOURCE_ALLOCATION)
 
     // Set up basic mocks.
-    every { uuidGenerator.get() } returns destinationConnection.getDestinationId()
+    every { uuidGenerator.get() } returns destinationConnection.destinationId
     every {
-      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId())
+      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.destinationDefinitionId)
     } returns standardDestinationDefinition
     every {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
+        destinationConnection.workspaceId,
       )
     } returns destinationDefinitionVersion
     every {
       oAuthConfigSupplier.maskDestinationOAuthParameters(
-        destinationDefinitionSpecificationRead.getDestinationDefinitionId(),
-        destinationConnection.getWorkspaceId(),
-        destinationCreate.getConnectionConfiguration(),
-        destinationDefinitionVersion.getSpec(),
+        destinationDefinitionSpecificationRead.destinationDefinitionId,
+        destinationConnection.workspaceId,
+        destinationCreate.connectionConfiguration,
+        destinationDefinitionVersion.spec,
       )
-    } returns destinationCreate.getConnectionConfiguration()
+    } returns destinationCreate.connectionConfiguration
     every {
       actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
-        destinationConnection.getDestinationId(),
+        destinationConnection.workspaceId,
+        destinationConnection.destinationId,
       )
     } returns destinationDefinitionVersionWithOverrideStatus
 
@@ -257,11 +257,11 @@ internal class DestinationHandlerTest {
     every { secretStorageService.getByWorkspaceId(any()) } returns secretStorage
 
     // Set up secret reference service mocks for the input configuration.
-    val configWithRefs = buildConfigWithSecretRefsJava(destinationConnection.getConfiguration())
+    val configWithRefs = buildConfigWithSecretRefsJava(destinationConnection.configuration)
     every {
       secretReferenceService.getConfigWithSecretReferences(
         any(),
-        destinationCreate.getConnectionConfiguration(),
+        destinationCreate.connectionConfiguration,
         any(),
       )
     } returns configWithRefs
@@ -269,19 +269,19 @@ internal class DestinationHandlerTest {
     // Simulate secret persistence and reference ID insertion.
     val configWithProcessedSecrets =
       SecretReferenceHelpers.processConfigSecrets(
-        destinationCreate.getConnectionConfiguration(),
-        destinationDefinitionSpecificationRead.getConnectionSpecification(),
+        destinationCreate.connectionConfiguration,
+        destinationDefinitionSpecificationRead.connectionSpecification,
         SecretStorageId(secretStorageId),
       )
     every {
       secretsRepositoryWriter.createFromConfig(
-        destinationConnection.getWorkspaceId(),
+        destinationConnection.workspaceId,
         configWithProcessedSecrets,
         secretPersistence,
       )
-    } returns destinationCreate.getConnectionConfiguration()
+    } returns destinationCreate.connectionConfiguration
 
-    val configWithSecretRefIds = clone(destinationCreate.getConnectionConfiguration())
+    val configWithSecretRefIds = clone(destinationCreate.connectionConfiguration)
     (configWithSecretRefIds as ObjectNode).put("updated_with", "secret_reference_ids")
     every {
       secretReferenceService.createAndInsertSecretReferencesWithStorageId(
@@ -296,7 +296,7 @@ internal class DestinationHandlerTest {
     // Mock the persisted destination connection that is retrieved after creation.
     val persistedConnection = clone(destinationConnection).withConfiguration(configWithSecretRefIds)
     every {
-      destinationService.getDestinationConnection(destinationConnection.getDestinationId())
+      destinationService.getDestinationConnection(destinationConnection.destinationId)
     } returns persistedConnection
     val configWithRefsAfterPersist = buildConfigWithSecretRefsJava(configWithSecretRefIds)
     every {
@@ -311,7 +311,7 @@ internal class DestinationHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         configWithSecretRefIds,
-        destinationDefinitionSpecificationRead.getConnectionSpecification(),
+        destinationDefinitionSpecificationRead.connectionSpecification,
       )
     } returns configWithSecretRefIds
 
@@ -333,47 +333,47 @@ internal class DestinationHandlerTest {
     Assertions.assertEquals(expectedDestinationRead, actualDestinationRead)
 
     verify {
-      secretsProcessor.prepareSecretsForOutput(configWithSecretRefIds, destinationDefinitionSpecificationRead.getConnectionSpecification())
+      secretsProcessor.prepareSecretsForOutput(configWithSecretRefIds, destinationDefinitionSpecificationRead.connectionSpecification)
     }
     verify {
       oAuthConfigSupplier.maskDestinationOAuthParameters(
-        destinationDefinitionSpecificationRead.getDestinationDefinitionId(),
-        destinationConnection.getWorkspaceId(),
-        destinationCreate.getConnectionConfiguration(),
-        destinationDefinitionVersion.getSpec(),
+        destinationDefinitionSpecificationRead.destinationDefinitionId,
+        destinationConnection.workspaceId,
+        destinationCreate.connectionConfiguration,
+        destinationDefinitionVersion.spec,
       )
     }
-    verify { destinationService.writeDestinationConnectionNoSecrets(persistedConnection) }
+    verify { destinationService.writeDestinationConnectionNoSecrets(any()) }
     verify {
-      actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId())
+      actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.workspaceId)
     }
     verify {
-      validator.ensure(destinationDefinitionSpecificationRead.getConnectionSpecification(), destinationCreate.getConnectionConfiguration())
+      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification, destinationCreate.connectionConfiguration)
     }
   }
 
   @Test
   @Throws(JsonValidationException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun testCreateDestinationNoEntitlementThrows() {
-    every { uuidGenerator.get() } returns destinationConnection.getDestinationId()
+    every { uuidGenerator.get() } returns destinationConnection.destinationId
     every {
-      destinationService.getDestinationConnection(destinationConnection.getDestinationId())
+      destinationService.getDestinationConnection(destinationConnection.destinationId)
     } returns destinationConnection
     every {
-      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId())
+      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.destinationDefinitionId)
     } returns standardDestinationDefinition
     every {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
+        destinationConnection.workspaceId,
       )
     } returns destinationDefinitionVersion
 
     val destinationCreate =
       DestinationCreate()
-        .name(destinationConnection.getName())
-        .workspaceId(destinationConnection.getWorkspaceId())
-        .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
+        .name(destinationConnection.name)
+        .workspaceId(destinationConnection.workspaceId)
+        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
         .connectionConfiguration(DestinationHelpers.testDestinationJson)
         .resourceAllocation(RESOURCE_ALLOCATION)
 
@@ -382,7 +382,7 @@ internal class DestinationHandlerTest {
       licenseEntitlementChecker.ensureEntitled(
         any(),
         Entitlement.DESTINATION_CONNECTOR,
-        standardDestinationDefinition.getDestinationDefinitionId(),
+        standardDestinationDefinition.destinationDefinitionId,
       )
     } throws LicenseEntitlementProblem()
 
@@ -392,35 +392,35 @@ internal class DestinationHandlerTest {
     )
 
     verify {
-      validator.ensure(destinationDefinitionSpecificationRead.getConnectionSpecification(), destinationConnection.getConfiguration())
+      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification, destinationConnection.configuration)
     }
     verify {
-      actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId())
+      actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.workspaceId)
     }
   }
 
   @Test
   @Throws(JsonValidationException::class, io.airbyte.data.ConfigNotFoundException::class, IOException::class)
   fun testCreateDestinationChecksConfigEntitlements() {
-    every { uuidGenerator.get() } returns destinationConnection.getDestinationId()
+    every { uuidGenerator.get() } returns destinationConnection.destinationId
     every {
-      destinationService.getDestinationConnection(destinationConnection.getDestinationId())
+      destinationService.getDestinationConnection(destinationConnection.destinationId)
     } returns destinationConnection
     every {
-      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId())
+      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.destinationDefinitionId)
     } returns standardDestinationDefinition
     every {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
+        destinationConnection.workspaceId,
       )
     } returns destinationDefinitionVersion
 
     val destinationCreate =
       DestinationCreate()
-        .name(destinationConnection.getName())
-        .workspaceId(destinationConnection.getWorkspaceId())
-        .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
+        .name(destinationConnection.name)
+        .workspaceId(destinationConnection.workspaceId)
+        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
         .connectionConfiguration(DestinationHelpers.testDestinationJson)
         .resourceAllocation(RESOURCE_ALLOCATION)
 
@@ -429,7 +429,7 @@ internal class DestinationHandlerTest {
       connectorConfigEntitlementService.ensureEntitledConfig(
         any(),
         destinationDefinitionVersion,
-        destinationConnection.getConfiguration(),
+        destinationConnection.configuration,
       )
     } throws LicenseEntitlementProblem()
 
@@ -439,10 +439,10 @@ internal class DestinationHandlerTest {
     )
 
     verify {
-      validator.ensure(destinationDefinitionSpecificationRead.getConnectionSpecification(), destinationConnection.getConfiguration())
+      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification, destinationConnection.configuration)
     }
     verify {
-      actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId())
+      actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.workspaceId)
     }
   }
 
@@ -475,9 +475,9 @@ internal class DestinationHandlerTest {
 
     val destinationCreate =
       DestinationCreate()
-        .name(destinationConnection.getName())
-        .workspaceId(destinationConnection.getWorkspaceId())
-        .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
+        .name(destinationConnection.name)
+        .workspaceId(destinationConnection.workspaceId)
+        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
         .connectionConfiguration(DestinationHelpers.testDestinationJson)
         .resourceAllocation(RESOURCE_ALLOCATION)
 
@@ -494,7 +494,7 @@ internal class DestinationHandlerTest {
     // ===== GIVEN =====
     // Update the destination name and configuration.
     val updatedDestName = "my updated dest name"
-    val newConfiguration = clone(destinationConnection.getConfiguration())
+    val newConfiguration = clone(destinationConnection.configuration)
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
     val newResourceAllocation: ScopedResourceRequirements? = getResourceRequirementsForDestinationRequest("3", "3 GB")
 
@@ -508,35 +508,35 @@ internal class DestinationHandlerTest {
     val destinationUpdate =
       DestinationUpdate()
         .name(updatedDestName)
-        .destinationId(destinationConnection.getDestinationId())
+        .destinationId(destinationConnection.destinationId)
         .connectionConfiguration(newConfiguration)
         .resourceAllocation(newResourceAllocation)
 
     // Set up basic mocks for the update.
     every {
       oAuthConfigSupplier.maskDestinationOAuthParameters(
-        destinationDefinitionSpecificationRead.getDestinationDefinitionId(),
-        destinationConnection.getWorkspaceId(),
+        destinationDefinitionSpecificationRead.destinationDefinitionId,
+        destinationConnection.workspaceId,
         newConfiguration,
-        destinationDefinitionVersion.getSpec(),
+        destinationDefinitionVersion.spec,
       )
     } returns newConfiguration
     every {
-      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId())
+      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.destinationDefinitionId)
     } returns standardDestinationDefinition
     every {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
-        destinationConnection.getDestinationId(),
+        destinationConnection.workspaceId,
+        destinationConnection.destinationId,
       )
     } returns destinationDefinitionVersion
     every {
-      destinationService.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId())
+      destinationService.getDestinationDefinitionFromDestination(destinationConnection.destinationId)
     } returns standardDestinationDefinition
     every {
       configurationUpdate.destination(
-        destinationConnection.getDestinationId(),
+        destinationConnection.destinationId,
         updatedDestName,
         newConfiguration,
       )
@@ -544,12 +544,12 @@ internal class DestinationHandlerTest {
     every {
       actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
-        destinationConnection.getDestinationId(),
+        destinationConnection.workspaceId,
+        destinationConnection.destinationId,
       )
     } returns destinationDefinitionVersionWithOverrideStatus
     every {
-      destinationService.getDestinationConnectionIfExists(destinationConnection.getDestinationId())
+      destinationService.getDestinationConnectionIfExists(destinationConnection.destinationId)
     } returns Optional.of(destinationConnection)
 
     // Set up current user context.
@@ -563,12 +563,12 @@ internal class DestinationHandlerTest {
     every { secretStorageService.getByWorkspaceId(any()) } returns secretStorage
 
     // Set up secret reference service mocks for the previous config.
-    val previousConfigWithRefs = buildConfigWithSecretRefsJava(destinationConnection.getConfiguration())
+    val previousConfigWithRefs = buildConfigWithSecretRefsJava(destinationConnection.configuration)
     every {
       secretReferenceService.getConfigWithSecretReferences(
-        ActorId(destinationConnection.getDestinationId()),
-        destinationConnection.getConfiguration(),
-        WorkspaceId(destinationConnection.getWorkspaceId()),
+        ActorId(destinationConnection.destinationId),
+        destinationConnection.configuration,
+        WorkspaceId(destinationConnection.workspaceId),
       )
     } returns previousConfigWithRefs
 
@@ -576,15 +576,15 @@ internal class DestinationHandlerTest {
     val newConfigWithProcessedSecrets =
       SecretReferenceHelpers.processConfigSecrets(
         newConfiguration,
-        destinationDefinitionSpecificationRead.getConnectionSpecification(),
+        destinationDefinitionSpecificationRead.connectionSpecification,
         SecretStorageId(secretStorageId),
       )
     every {
       secretsRepositoryWriter.updateFromConfig(
-        destinationConnection.getWorkspaceId(),
+        destinationConnection.workspaceId,
         previousConfigWithRefs,
         newConfigWithProcessedSecrets,
-        destinationDefinitionVersion.getSpec().getConnectionSpecification(),
+        destinationDefinitionVersion.spec.connectionSpecification,
         secretPersistence,
       )
     } returns newConfigWithProcessedSecrets.originalConfig
@@ -594,8 +594,7 @@ internal class DestinationHandlerTest {
     every {
       secretReferenceService.createAndInsertSecretReferencesWithStorageId(
         newConfigWithProcessedSecrets,
-        ActorId(destinationConnection.getDestinationId()),
-        WorkspaceId(destinationConnection.getWorkspaceId()),
+        ActorId(destinationConnection.destinationId),
         SecretStorageId(secretStorageId),
         any(),
       )
@@ -605,15 +604,15 @@ internal class DestinationHandlerTest {
     val updatedDestinationWithSecretRefIds =
       clone(updatedDestinationConnection).withConfiguration(newConfigWithSecretRefIds)
     every {
-      destinationService.getDestinationConnection(destinationConnection.getDestinationId())
+      destinationService.getDestinationConnection(destinationConnection.destinationId)
     } returns updatedDestinationWithSecretRefIds
 
     val configWithRefsAfterPersist = buildConfigWithSecretRefsJava(newConfigWithSecretRefIds)
     every {
       secretReferenceService.getConfigWithSecretReferences(
-        ActorId(destinationConnection.getDestinationId()),
+        ActorId(destinationConnection.destinationId),
         newConfigWithSecretRefIds,
-        WorkspaceId(destinationConnection.getWorkspaceId()),
+        WorkspaceId(destinationConnection.workspaceId),
       )
     } returns configWithRefsAfterPersist
 
@@ -621,7 +620,7 @@ internal class DestinationHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         newConfigWithSecretRefIds,
-        destinationDefinitionSpecificationRead.getConnectionSpecification(),
+        destinationDefinitionSpecificationRead.connectionSpecification,
       )
     } returns newConfigWithSecretRefIds
 
@@ -645,26 +644,26 @@ internal class DestinationHandlerTest {
     Assertions.assertEquals(expectedDestinationRead, actualDestinationRead)
 
     verify {
-      secretsProcessor.prepareSecretsForOutput(newConfigWithSecretRefIds, destinationDefinitionSpecificationRead.getConnectionSpecification())
+      secretsProcessor.prepareSecretsForOutput(newConfigWithSecretRefIds, destinationDefinitionSpecificationRead.connectionSpecification)
     }
     verify {
       oAuthConfigSupplier.maskDestinationOAuthParameters(
-        destinationDefinitionSpecificationRead.getDestinationDefinitionId(),
-        destinationConnection.getWorkspaceId(),
+        destinationDefinitionSpecificationRead.destinationDefinitionId,
+        destinationConnection.workspaceId,
         newConfiguration,
-        destinationDefinitionVersion.getSpec(),
+        destinationDefinitionVersion.spec,
       )
     }
     verify { destinationService.writeDestinationConnectionNoSecrets(updatedDestinationWithSecretRefIds) }
     verify {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
-        destinationConnection.getDestinationId(),
+        destinationConnection.workspaceId,
+        destinationConnection.destinationId,
       )
     }
     verify {
-      validator.ensure(destinationDefinitionSpecificationRead.getConnectionSpecification(), newConfiguration)
+      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification, newConfiguration)
     }
   }
 
@@ -672,13 +671,13 @@ internal class DestinationHandlerTest {
   @Throws(JsonValidationException::class, io.airbyte.data.ConfigNotFoundException::class, IOException::class, ConfigNotFoundException::class)
   fun testUpdateDestinationChecksConfigEntitlements() {
     val updatedDestName = "my updated dest name for config entitlements"
-    val newConfiguration = destinationConnection.getConfiguration()
+    val newConfiguration = destinationConnection.configuration
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
     val newResourceAllocation: ScopedResourceRequirements? = getResourceRequirementsForDestinationRequest("1", "1 GB")
     val destinationUpdate =
       DestinationUpdate()
         .name(updatedDestName)
-        .destinationId(destinationConnection.getDestinationId())
+        .destinationId(destinationConnection.destinationId)
         .connectionConfiguration(newConfiguration)
         .resourceAllocation(newResourceAllocation)
 
@@ -692,30 +691,30 @@ internal class DestinationHandlerTest {
     every {
       secretsProcessor
         .copySecrets(
-          destinationConnection.getConfiguration(),
+          destinationConnection.configuration,
           newConfiguration,
-          destinationDefinitionSpecificationRead.getConnectionSpecification(),
+          destinationDefinitionSpecificationRead.connectionSpecification,
         )
     } returns newConfiguration
     every {
-      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId())
+      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.destinationDefinitionId)
     } returns standardDestinationDefinition
     every {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
-        destinationConnection.getDestinationId(),
+        destinationConnection.workspaceId,
+        destinationConnection.destinationId,
       )
     } returns destinationDefinitionVersion
     every {
-      destinationService.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId())
+      destinationService.getDestinationDefinitionFromDestination(destinationConnection.destinationId)
     } returns standardDestinationDefinition
     every {
-      destinationService.getDestinationConnection(destinationConnection.getDestinationId())
+      destinationService.getDestinationConnection(destinationConnection.destinationId)
     } returns expectedDestinationConnection
     every {
       configurationUpdate.destination(
-        destinationConnection.getDestinationId(),
+        destinationConnection.destinationId,
         updatedDestName,
         newConfiguration,
       )
@@ -739,12 +738,12 @@ internal class DestinationHandlerTest {
     verify {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
-        destinationConnection.getDestinationId(),
+        destinationConnection.workspaceId,
+        destinationConnection.destinationId,
       )
     }
     verify {
-      validator.ensure(destinationDefinitionSpecificationRead.getConnectionSpecification(), newConfiguration)
+      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification, newConfiguration)
     }
   }
 
@@ -752,13 +751,13 @@ internal class DestinationHandlerTest {
   @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun testUpdateDestinationNoEntitlementThrows() {
     val updatedDestName = "my updated dest name"
-    val newConfiguration = destinationConnection.getConfiguration()
+    val newConfiguration = destinationConnection.configuration
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
     val newResourceAllocation: ScopedResourceRequirements? = getResourceRequirementsForDestinationRequest("3", "3 GB")
     val destinationUpdate =
       DestinationUpdate()
         .name(updatedDestName)
-        .destinationId(destinationConnection.getDestinationId())
+        .destinationId(destinationConnection.destinationId)
         .connectionConfiguration(newConfiguration)
         .resourceAllocation(newResourceAllocation)
 
@@ -772,30 +771,30 @@ internal class DestinationHandlerTest {
     every {
       secretsProcessor
         .copySecrets(
-          destinationConnection.getConfiguration(),
+          destinationConnection.configuration,
           newConfiguration,
-          destinationDefinitionSpecificationRead.getConnectionSpecification(),
+          destinationDefinitionSpecificationRead.connectionSpecification,
         )
     } returns newConfiguration
     every {
-      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId())
+      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.destinationDefinitionId)
     } returns standardDestinationDefinition
     every {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
-        destinationConnection.getDestinationId(),
+        destinationConnection.workspaceId,
+        destinationConnection.destinationId,
       )
     } returns destinationDefinitionVersion
     every {
-      destinationService.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId())
+      destinationService.getDestinationDefinitionFromDestination(destinationConnection.destinationId)
     } returns standardDestinationDefinition
     every {
-      destinationService.getDestinationConnection(destinationConnection.getDestinationId())
+      destinationService.getDestinationConnection(destinationConnection.destinationId)
     } returns expectedDestinationConnection
     every {
       configurationUpdate.destination(
-        destinationConnection.getDestinationId(),
+        destinationConnection.destinationId,
         updatedDestName,
         newConfiguration,
       )
@@ -807,7 +806,7 @@ internal class DestinationHandlerTest {
         .ensureEntitled(
           any(),
           Entitlement.DESTINATION_CONNECTOR,
-          standardDestinationDefinition.getDestinationDefinitionId(),
+          standardDestinationDefinition.destinationDefinitionId,
         )
     } throws LicenseEntitlementProblem()
 
@@ -819,12 +818,12 @@ internal class DestinationHandlerTest {
     verify {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
-        destinationConnection.getDestinationId(),
+        destinationConnection.workspaceId,
+        destinationConnection.destinationId,
       )
     }
     verify {
-      validator.ensure(destinationDefinitionSpecificationRead.getConnectionSpecification(), newConfiguration)
+      validator.ensure(destinationDefinitionSpecificationRead.connectionSpecification, newConfiguration)
     }
   }
 
@@ -855,13 +854,13 @@ internal class DestinationHandlerTest {
       )
 
     val updatedDestName = "my updated dest name"
-    val newConfiguration = destinationConnection.getConfiguration()
+    val newConfiguration = destinationConnection.configuration
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
     val newResourceAllocation: ScopedResourceRequirements? = getResourceRequirementsForDestinationRequest("3", "3 GB")
     val destinationUpdate =
       DestinationUpdate()
         .name(updatedDestName)
-        .destinationId(destinationConnection.getDestinationId())
+        .destinationId(destinationConnection.destinationId)
         .connectionConfiguration(newConfiguration)
         .resourceAllocation(newResourceAllocation)
 
@@ -875,13 +874,13 @@ internal class DestinationHandlerTest {
   @Test
   @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun testUpgradeDestinationVersion() {
-    val requestBody = DestinationIdRequestBody().destinationId(destinationConnection.getDestinationId())
+    val requestBody = DestinationIdRequestBody().destinationId(destinationConnection.destinationId)
 
     every {
-      destinationService.getDestinationConnection(destinationConnection.getDestinationId())
+      destinationService.getDestinationConnection(destinationConnection.destinationId)
     } returns destinationConnection
     every {
-      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId())
+      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.destinationDefinitionId)
     } returns standardDestinationDefinition
 
     destinationHandler.upgradeDestinationVersion(requestBody)
@@ -897,40 +896,40 @@ internal class DestinationHandlerTest {
   fun testGetDestination() {
     val expectedDestinationRead =
       DestinationRead()
-        .name(destinationConnection.getName())
-        .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-        .workspaceId(destinationConnection.getWorkspaceId())
-        .destinationId(destinationConnection.getDestinationId())
-        .connectionConfiguration(destinationConnection.getConfiguration())
-        .destinationName(standardDestinationDefinition.getName())
+        .name(destinationConnection.name)
+        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
+        .workspaceId(destinationConnection.workspaceId)
+        .destinationId(destinationConnection.destinationId)
+        .connectionConfiguration(destinationConnection.configuration)
+        .destinationName(standardDestinationDefinition.name)
         .icon(ICON_URL)
         .isEntitled(IS_ENTITLED)
         .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
         .supportState(SUPPORT_STATE)
         .resourceAllocation(RESOURCE_ALLOCATION)
     val destinationIdRequestBody =
-      DestinationIdRequestBody().destinationId(expectedDestinationRead.getDestinationId())
+      DestinationIdRequestBody().destinationId(expectedDestinationRead.destinationId)
 
     every {
       secretsProcessor.prepareSecretsForOutput(
-        destinationConnection.getConfiguration(),
-        destinationDefinitionSpecificationRead.getConnectionSpecification(),
+        destinationConnection.configuration,
+        destinationDefinitionSpecificationRead.connectionSpecification,
       )
-    } returns destinationConnection.getConfiguration()
+    } returns destinationConnection.configuration
     every {
-      destinationService.getDestinationConnection(destinationConnection.getDestinationId())
+      destinationService.getDestinationConnection(destinationConnection.destinationId)
     } returns destinationConnection
     every {
-      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId())
+      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.destinationDefinitionId)
     } returns standardDestinationDefinition
     every {
-      destinationService.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId())
+      destinationService.getDestinationDefinitionFromDestination(destinationConnection.destinationId)
     } returns standardDestinationDefinition
     every {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
-        destinationConnection.getDestinationId(),
+        destinationConnection.workspaceId,
+        destinationConnection.destinationId,
       )
     } returns destinationDefinitionVersion
     every {
@@ -951,19 +950,19 @@ internal class DestinationHandlerTest {
     Assertions.assertEquals(expectedDestinationRead, actualDestinationRead)
 
     // make sure the icon was loaded into actual svg content
-    Assertions.assertTrue(expectedDestinationRead.getIcon().startsWith("https://"))
+    Assertions.assertTrue(expectedDestinationRead.icon.startsWith("https://"))
 
     verify {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
-        destinationConnection.getDestinationId(),
+        destinationConnection.workspaceId,
+        destinationConnection.destinationId,
       )
     }
     verify {
       secretsProcessor.prepareSecretsForOutput(
-        destinationConnection.getConfiguration(),
-        destinationDefinitionSpecificationRead.getConnectionSpecification(),
+        destinationConnection.configuration,
+        destinationDefinitionSpecificationRead.connectionSpecification,
       )
     }
   }
@@ -973,12 +972,12 @@ internal class DestinationHandlerTest {
   fun testListDestinationForWorkspace() {
     val expectedDestinationRead =
       DestinationRead()
-        .name(destinationConnectionWithCount.destination.getName())
-        .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-        .workspaceId(destinationConnectionWithCount.destination.getWorkspaceId())
-        .destinationId(destinationConnectionWithCount.destination.getDestinationId())
-        .connectionConfiguration(destinationConnectionWithCount.destination.getConfiguration())
-        .destinationName(standardDestinationDefinition.getName())
+        .name(destinationConnectionWithCount.destination.name)
+        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
+        .workspaceId(destinationConnectionWithCount.destination.workspaceId)
+        .destinationId(destinationConnectionWithCount.destination.destinationId)
+        .connectionConfiguration(destinationConnectionWithCount.destination.configuration)
+        .destinationName(standardDestinationDefinition.name)
         .icon(ICON_URL)
         .isEntitled(IS_ENTITLED)
         .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
@@ -987,10 +986,10 @@ internal class DestinationHandlerTest {
         .resourceAllocation(RESOURCE_ALLOCATION)
         .numConnections(0)
     val workspaceIdRequestBody =
-      WorkspaceIdRequestBody().workspaceId(destinationConnectionWithCount.destination.getWorkspaceId())
+      WorkspaceIdRequestBody().workspaceId(destinationConnectionWithCount.destination.workspaceId)
 
     every {
-      destinationService.getDestinationConnection(destinationConnectionWithCount.destination.getDestinationId())
+      destinationService.getDestinationConnection(destinationConnectionWithCount.destination.destinationId)
     } returns destinationConnectionWithCount.destination
     every {
       destinationService.buildCursorPagination(
@@ -1009,27 +1008,27 @@ internal class DestinationHandlerTest {
     } returns listOf(destinationConnectionWithCount)
     every {
       destinationService.getStandardDestinationDefinition(
-        standardDestinationDefinition.getDestinationDefinitionId(),
+        standardDestinationDefinition.destinationDefinitionId,
       )
     } returns standardDestinationDefinition
     every {
       destinationService.getDestinationDefinitionFromDestination(
-        destinationConnectionWithCount.destination.getDestinationId(),
+        destinationConnectionWithCount.destination.destinationId,
       )
     } returns standardDestinationDefinition
     every {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
-        destinationConnectionWithCount.destination.getWorkspaceId(),
-        destinationConnectionWithCount.destination.getDestinationId(),
+        destinationConnectionWithCount.destination.workspaceId,
+        destinationConnectionWithCount.destination.destinationId,
       )
     } returns destinationDefinitionVersion
     every {
       secretsProcessor.prepareSecretsForOutput(
-        destinationConnectionWithCount.destination.getConfiguration(),
-        destinationDefinitionSpecificationRead.getConnectionSpecification(),
+        destinationConnectionWithCount.destination.configuration,
+        destinationDefinitionSpecificationRead.connectionSpecification,
       )
-    } returns destinationConnectionWithCount.destination.getConfiguration()
+    } returns destinationConnectionWithCount.destination.configuration
     every {
       secretReferenceService.getConfigWithSecretReferences(any(), any(), any())
     } answers {
@@ -1043,25 +1042,25 @@ internal class DestinationHandlerTest {
       destinationHandler
         .listDestinationsForWorkspace(
           ActorListCursorPaginatedRequestBody()
-            .workspaceId(workspaceIdRequestBody.getWorkspaceId())
+            .workspaceId(workspaceIdRequestBody.workspaceId)
             .pageSize(10),
         )
 
-    Assertions.assertEquals(expectedDestinationRead, actualDestinationRead.getDestinations().get(0))
-    Assertions.assertEquals(1, actualDestinationRead.getNumConnections())
-    Assertions.assertEquals(10, actualDestinationRead.getPageSize())
+    Assertions.assertEquals(expectedDestinationRead, actualDestinationRead.destinations.get(0))
+    Assertions.assertEquals(1, actualDestinationRead.numConnections)
+    Assertions.assertEquals(10, actualDestinationRead.pageSize)
 
     verify {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
-        destinationConnectionWithCount.destination.getWorkspaceId(),
-        destinationConnectionWithCount.destination.getDestinationId(),
+        destinationConnectionWithCount.destination.workspaceId,
+        destinationConnectionWithCount.destination.destinationId,
       )
     }
     verify {
       secretsProcessor.prepareSecretsForOutput(
-        destinationConnectionWithCount.destination.getConfiguration(),
-        destinationDefinitionSpecificationRead.getConnectionSpecification(),
+        destinationConnectionWithCount.destination.configuration,
+        destinationDefinitionSpecificationRead.connectionSpecification,
       )
     }
     verify {
@@ -1098,7 +1097,7 @@ internal class DestinationHandlerTest {
     val destinations: List<DestinationConnectionWithCount> =
       listOf(destination1, destination2)
 
-    val workspaceId = destination1.destination.getWorkspaceId()
+    val workspaceId = destination1.destination.workspaceId
     val requestBody =
       ActorListCursorPaginatedRequestBody()
         .workspaceId(workspaceId)
@@ -1174,21 +1173,21 @@ internal class DestinationHandlerTest {
 
     // Verify the results
     Assertions.assertNotNull(result)
-    Assertions.assertEquals(2, result.getDestinations().size)
-    Assertions.assertEquals(2, result.getNumConnections())
-    Assertions.assertEquals(10, result.getPageSize())
+    Assertions.assertEquals(2, result.destinations.size)
+    Assertions.assertEquals(2, result.numConnections)
+    Assertions.assertEquals(10, result.pageSize)
 
     // Verify the first destination
-    val firstDestination = result.getDestinations().get(0)
-    Assertions.assertEquals("dest1", firstDestination.getName())
-    Assertions.assertEquals(2, firstDestination.getNumConnections())
-    Assertions.assertEquals(ActorStatus.ACTIVE, firstDestination.getStatus()) // Has connections, so should be active
+    val firstDestination = result.destinations.get(0)
+    Assertions.assertEquals("dest1", firstDestination.name)
+    Assertions.assertEquals(2, firstDestination.numConnections)
+    Assertions.assertEquals(ActorStatus.ACTIVE, firstDestination.status) // Has connections, so should be active
 
     // Verify the second destination
-    val secondDestination = result.getDestinations().get(1)
-    Assertions.assertEquals("dest2", secondDestination.getName())
-    Assertions.assertEquals(1, secondDestination.getNumConnections())
-    Assertions.assertEquals(ActorStatus.ACTIVE, secondDestination.getStatus()) // Has connections, so should be active
+    val secondDestination = result.destinations.get(1)
+    Assertions.assertEquals("dest2", secondDestination.name)
+    Assertions.assertEquals(1, secondDestination.numConnections)
+    Assertions.assertEquals(ActorStatus.ACTIVE, secondDestination.status) // Has connections, so should be active
 
     verify {
       destinationService.buildCursorPagination(
@@ -1218,7 +1217,7 @@ internal class DestinationHandlerTest {
   @Test
   @Throws(JsonValidationException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun testListDestinationsForWorkspaceWithFilters() {
-    val workspaceId = destinationConnectionWithCount.destination.getWorkspaceId()
+    val workspaceId = destinationConnectionWithCount.destination.workspaceId
     val requestBody =
       ActorListCursorPaginatedRequestBody()
         .workspaceId(workspaceId)
@@ -1282,7 +1281,7 @@ internal class DestinationHandlerTest {
         any(),
         any(),
       )
-    } returns destinationConnectionWithCount.destination.getConfiguration()
+    } returns destinationConnectionWithCount.destination.configuration
     every {
       secretReferenceService.getConfigWithSecretReferences(
         any(),
@@ -1301,9 +1300,9 @@ internal class DestinationHandlerTest {
 
     // Verify the results
     Assertions.assertNotNull(result)
-    Assertions.assertEquals(1, result.getDestinations().size)
-    Assertions.assertEquals(1, result.getNumConnections())
-    Assertions.assertEquals(5, result.getPageSize())
+    Assertions.assertEquals(1, result.destinations.size)
+    Assertions.assertEquals(1, result.numConnections)
+    Assertions.assertEquals(5, result.pageSize)
 
     verify {
       destinationService.buildCursorPagination(
@@ -1338,7 +1337,7 @@ internal class DestinationHandlerTest {
       DestinationConnection()
         .withDestinationId(UUID.randomUUID())
         .withWorkspaceId(UUID.randomUUID())
-        .withDestinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
+        .withDestinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
         .withName(name)
         .withConfiguration(emptyObject())
         .withTombstone(false)
@@ -1356,54 +1355,54 @@ internal class DestinationHandlerTest {
   @Test
   @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun testDeleteDestinationAndDeleteSecrets() {
-    val newConfiguration = destinationConnection.getConfiguration()
+    val newConfiguration = destinationConnection.configuration
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
 
     val expectedSourceConnection = clone(destinationConnection).withTombstone(true)
 
-    val destinationIdRequestBody = DestinationIdRequestBody().destinationId(destinationConnection.getDestinationId())
-    val standardSync = ConnectionHelpers.generateSyncWithDestinationId(destinationConnection.getDestinationId())
-    standardSync.setBreakingChange(false)
+    val destinationIdRequestBody = DestinationIdRequestBody().destinationId(destinationConnection.destinationId)
+    val standardSync = ConnectionHelpers.generateSyncWithDestinationId(destinationConnection.destinationId)
+    standardSync.breakingChange = false
     val connectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
     val connectionReadList = ConnectionReadList().connections(mutableListOf(connectionRead))
-    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(destinationConnection.getWorkspaceId())
+    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(destinationConnection.workspaceId)
 
     every {
-      destinationService.getDestinationConnection(destinationConnection.getDestinationId())
+      destinationService.getDestinationConnection(destinationConnection.destinationId)
     } returns destinationConnection andThen expectedSourceConnection
     every {
       oAuthConfigSupplier.maskSourceOAuthParameters(
-        destinationDefinitionSpecificationRead.getDestinationDefinitionId(),
-        destinationConnection.getWorkspaceId(),
+        destinationDefinitionSpecificationRead.destinationDefinitionId,
+        destinationConnection.workspaceId,
         newConfiguration,
-        destinationDefinitionVersion.getSpec(),
+        destinationDefinitionVersion.spec,
       )
     } returns newConfiguration
     every {
-      destinationService.getStandardDestinationDefinition(destinationDefinitionSpecificationRead.getDestinationDefinitionId())
+      destinationService.getStandardDestinationDefinition(destinationDefinitionSpecificationRead.destinationDefinitionId)
     } returns standardDestinationDefinition
     every {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
-        destinationConnection.getDestinationId(),
+        destinationConnection.workspaceId,
+        destinationConnection.destinationId,
       )
     } returns destinationDefinitionVersion
     every {
-      destinationService.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId())
+      destinationService.getDestinationDefinitionFromDestination(destinationConnection.destinationId)
     } returns standardDestinationDefinition
     every { connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody) } returns connectionReadList
     every {
       secretsProcessor.prepareSecretsForOutput(
-        destinationConnection.getConfiguration(),
-        destinationDefinitionSpecificationRead.getConnectionSpecification(),
+        destinationConnection.configuration,
+        destinationDefinitionSpecificationRead.connectionSpecification,
       )
-    } returns destinationConnection.getConfiguration()
+    } returns destinationConnection.configuration
     every {
       actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
-        destinationConnection.getDestinationId(),
+        destinationConnection.workspaceId,
+        destinationConnection.destinationId,
       )
     } returns destinationDefinitionVersionWithOverrideStatus
     every {
@@ -1428,8 +1427,8 @@ internal class DestinationHandlerTest {
       destinationService.tombstoneDestination(any(), any(), any())
     }
     verify { connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody) }
-    verify { connectionsHandler.deleteConnection(connectionRead.getConnectionId()) }
-    verify { secretReferenceService.deleteActorSecretReferences(ActorId(destinationConnection.getDestinationId())) }
+    verify { connectionsHandler.deleteConnection(connectionRead.connectionId) }
+    verify { secretReferenceService.deleteActorSecretReferences(ActorId(destinationConnection.destinationId)) }
   }
 
   @Test
@@ -1437,12 +1436,12 @@ internal class DestinationHandlerTest {
   fun testSearchDestinations() {
     val expectedDestinationRead =
       DestinationRead()
-        .name(destinationConnection.getName())
-        .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
-        .workspaceId(destinationConnection.getWorkspaceId())
-        .destinationId(destinationConnection.getDestinationId())
-        .connectionConfiguration(destinationConnection.getConfiguration())
-        .destinationName(standardDestinationDefinition.getName())
+        .name(destinationConnection.name)
+        .destinationDefinitionId(standardDestinationDefinition.destinationDefinitionId)
+        .workspaceId(destinationConnection.workspaceId)
+        .destinationId(destinationConnection.destinationId)
+        .connectionConfiguration(destinationConnection.configuration)
+        .destinationName(standardDestinationDefinition.name)
         .icon(ICON_URL)
         .isEntitled(IS_ENTITLED)
         .isVersionOverrideApplied(IS_VERSION_OVERRIDE_APPLIED)
@@ -1450,30 +1449,30 @@ internal class DestinationHandlerTest {
         .resourceAllocation(RESOURCE_ALLOCATION)
 
     every {
-      destinationService.getDestinationConnection(destinationConnection.getDestinationId())
+      destinationService.getDestinationConnection(destinationConnection.destinationId)
     } returns destinationConnection
     every {
       destinationService.listDestinationConnection()
     } returns Lists.newArrayList(destinationConnection)
     every {
-      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.getDestinationDefinitionId())
+      destinationService.getStandardDestinationDefinition(standardDestinationDefinition.destinationDefinitionId)
     } returns standardDestinationDefinition
     every {
-      destinationService.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId())
+      destinationService.getDestinationDefinitionFromDestination(destinationConnection.destinationId)
     } returns standardDestinationDefinition
     every {
       actorDefinitionVersionHelper.getDestinationVersion(
         standardDestinationDefinition,
-        destinationConnection.getWorkspaceId(),
-        destinationConnection.getDestinationId(),
+        destinationConnection.workspaceId,
+        destinationConnection.destinationId,
       )
     } returns destinationDefinitionVersion
     every {
       secretsProcessor.prepareSecretsForOutput(
-        destinationConnection.getConfiguration(),
-        destinationDefinitionSpecificationRead.getConnectionSpecification(),
+        destinationConnection.configuration,
+        destinationDefinitionSpecificationRead.connectionSpecification,
       )
-    } returns destinationConnection.getConfiguration()
+    } returns destinationConnection.configuration
     every {
       secretReferenceService.getConfigWithSecretReferences(
         any(),
@@ -1487,20 +1486,20 @@ internal class DestinationHandlerTest {
       )
     }
 
-    val validDestinationSearch = DestinationSearch().name(destinationConnection.getName())
+    val validDestinationSearch = DestinationSearch().name(destinationConnection.name)
     var actualDestinationRead = destinationHandler.searchDestinations(validDestinationSearch)
-    Assertions.assertEquals(1, actualDestinationRead.getDestinations().size)
-    Assertions.assertEquals(expectedDestinationRead, actualDestinationRead.getDestinations().get(0))
+    Assertions.assertEquals(1, actualDestinationRead.destinations.size)
+    Assertions.assertEquals(expectedDestinationRead, actualDestinationRead.destinations.get(0))
     verify {
       secretsProcessor.prepareSecretsForOutput(
-        destinationConnection.getConfiguration(),
-        destinationDefinitionSpecificationRead.getConnectionSpecification(),
+        destinationConnection.configuration,
+        destinationDefinitionSpecificationRead.connectionSpecification,
       )
     }
 
     val invalidDestinationSearch = DestinationSearch().name("invalid")
     actualDestinationRead = destinationHandler.searchDestinations(invalidDestinationSearch)
-    Assertions.assertEquals(0, actualDestinationRead.getDestinations().size)
+    Assertions.assertEquals(0, actualDestinationRead.destinations.size)
   }
 
   companion object {

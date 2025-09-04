@@ -61,6 +61,7 @@ import io.airbyte.config.secrets.buildConfigWithSecretRefsJava
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.SourceService
@@ -75,7 +76,6 @@ import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.domain.services.secrets.SecretReferenceService
 import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.mappers.transformations.Mapper
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.AirbyteCatalog
@@ -193,13 +193,13 @@ internal class SourceHandlerTest {
 
     sourceDefinitionSpecificationRead =
       SourceDefinitionSpecificationRead()
-        .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
-        .connectionSpecification(connectorSpecification.getConnectionSpecification())
-        .documentationUrl(connectorSpecification.getDocumentationUrl().toString())
+        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
+        .connectionSpecification(connectorSpecification.connectionSpecification)
+        .documentationUrl(connectorSpecification.documentationUrl.toString())
 
     sourceConnection =
       SourceHelpers.generateSource(
-        standardSourceDefinition.getSourceDefinitionId(),
+        standardSourceDefinition.sourceDefinitionId,
         apiPojoConverters.scopedResourceReqsToInternal(RESOURCE_ALLOCATION),
       )
 
@@ -246,34 +246,34 @@ internal class SourceHandlerTest {
     // Create the SourceCreate request with the necessary fields.
     val sourceCreate =
       SourceCreate()
-        .name(sourceConnection.getName())
-        .workspaceId(sourceConnection.getWorkspaceId())
-        .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
-        .connectionConfiguration(sourceConnection.getConfiguration())
+        .name(sourceConnection.name)
+        .workspaceId(sourceConnection.workspaceId)
+        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
+        .connectionConfiguration(sourceConnection.configuration)
         .resourceAllocation(RESOURCE_ALLOCATION)
 
     // Set up basic mocks.
-    every { uuidGenerator.get() } returns sourceConnection.getSourceId()
-    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()) } returns standardSourceDefinition
+    every { uuidGenerator.get() } returns sourceConnection.sourceId
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
     every {
       actorDefinitionVersionHelper.getSourceVersion(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
+        sourceConnection.workspaceId,
       )
     } returns sourceDefinitionVersion
     every {
       oAuthConfigSupplier.maskSourceOAuthParameters(
-        sourceDefinitionSpecificationRead.getSourceDefinitionId(),
-        sourceConnection.getWorkspaceId(),
-        sourceCreate.getConnectionConfiguration(),
-        sourceDefinitionVersion.getSpec(),
+        sourceDefinitionSpecificationRead.sourceDefinitionId,
+        sourceConnection.workspaceId,
+        sourceCreate.connectionConfiguration,
+        sourceDefinitionVersion.spec,
       )
-    } returns sourceCreate.getConnectionConfiguration()
+    } returns sourceCreate.connectionConfiguration
     every {
       actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     } returns sourceDefinitionVersionWithOverrideStatus
 
@@ -285,40 +285,39 @@ internal class SourceHandlerTest {
     val secretStorage = mockk<SecretStorage>()
     val secretStorageId = SecretStorageId(UUID.randomUUID())
     every { secretStorage.id } returns secretStorageId
-    every { secretStorageService.getByWorkspaceId(WorkspaceId(sourceConnection.getWorkspaceId())) } returns secretStorage
+    every { secretStorageService.getByWorkspaceId(WorkspaceId(sourceConnection.workspaceId)) } returns secretStorage
 
     // Set up secret reference service mocks for the input configuration.
-    val configWithRefs = buildConfigWithSecretRefsJava(sourceConnection.getConfiguration())
+    val configWithRefs = buildConfigWithSecretRefsJava(sourceConnection.configuration)
     every {
       secretReferenceService.getConfigWithSecretReferences(
-        ActorId(sourceConnection.getSourceId()),
-        sourceCreate.getConnectionConfiguration(),
-        WorkspaceId(sourceConnection.getWorkspaceId()),
+        ActorId(sourceConnection.sourceId),
+        sourceCreate.connectionConfiguration,
+        WorkspaceId(sourceConnection.workspaceId),
       )
     } returns configWithRefs
 
     // Simulate secret persistence and reference ID insertion.
     val configWithProcessedSecrets =
       SecretReferenceHelpers.processConfigSecrets(
-        sourceCreate.getConnectionConfiguration(),
-        sourceDefinitionSpecificationRead.getConnectionSpecification(),
+        sourceCreate.connectionConfiguration,
+        sourceDefinitionSpecificationRead.connectionSpecification,
         secretStorageId,
       )
     every {
       secretsRepositoryWriter.createFromConfig(
-        sourceConnection.getWorkspaceId(),
+        sourceConnection.workspaceId,
         configWithProcessedSecrets,
         secretPersistence,
       )
-    } returns sourceCreate.getConnectionConfiguration()
+    } returns sourceCreate.connectionConfiguration
 
-    val configWithSecretRefIds = clone<JsonNode>(sourceCreate.getConnectionConfiguration())
+    val configWithSecretRefIds = clone<JsonNode>(sourceCreate.connectionConfiguration)
     (configWithSecretRefIds as ObjectNode).put("updated_with", "secret_reference_ids")
     every {
       secretReferenceService.createAndInsertSecretReferencesWithStorageId(
         configWithProcessedSecrets,
-        ActorId(sourceConnection.getSourceId()),
-        WorkspaceId(sourceConnection.getWorkspaceId()),
+        ActorId(sourceConnection.sourceId),
         secretStorageId,
         any(),
       )
@@ -326,13 +325,13 @@ internal class SourceHandlerTest {
 
     // Mock the persisted config that is retrieved after creation and persistence.
     val persistedConfig = clone(sourceConnection).withConfiguration(configWithSecretRefIds)
-    every { sourceService.getSourceConnection(sourceConnection.getSourceId()) } returns persistedConfig
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns persistedConfig
     val configWithRefsAfterPersist = buildConfigWithSecretRefsJava(configWithSecretRefIds)
     every {
       secretReferenceService.getConfigWithSecretReferences(
-        ActorId(sourceConnection.getSourceId()),
+        ActorId(sourceConnection.sourceId),
         configWithSecretRefIds,
-        WorkspaceId(sourceConnection.getWorkspaceId()),
+        WorkspaceId(sourceConnection.workspaceId),
       )
     } returns configWithRefsAfterPersist
 
@@ -340,7 +339,7 @@ internal class SourceHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         configWithSecretRefIds,
-        sourceDefinitionSpecificationRead.getConnectionSpecification(),
+        sourceDefinitionSpecificationRead.connectionSpecification,
       )
     } returns configWithSecretRefIds
 
@@ -359,22 +358,22 @@ internal class SourceHandlerTest {
     Assertions.assertEquals(expectedSourceRead, actualSourceRead)
 
     verify {
-      secretsProcessor.prepareSecretsForOutput(configWithSecretRefIds, sourceDefinitionSpecificationRead.getConnectionSpecification())
+      secretsProcessor.prepareSecretsForOutput(configWithSecretRefIds, sourceDefinitionSpecificationRead.connectionSpecification)
     }
     verify {
       oAuthConfigSupplier.maskSourceOAuthParameters(
-        sourceDefinitionSpecificationRead.getSourceDefinitionId(),
-        sourceConnection.getWorkspaceId(),
-        sourceCreate.getConnectionConfiguration(),
-        sourceDefinitionVersion.getSpec(),
+        sourceDefinitionSpecificationRead.sourceDefinitionId,
+        sourceConnection.workspaceId,
+        sourceCreate.connectionConfiguration,
+        sourceDefinitionVersion.spec,
       )
     }
     verify { sourceService.writeSourceConnectionNoSecrets(persistedConfig) }
     verify {
-      actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId())
+      actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.workspaceId)
     }
     verify {
-      validator.ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), sourceCreate.getConnectionConfiguration())
+      validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification, sourceCreate.connectionConfiguration)
     }
   }
 
@@ -388,19 +387,19 @@ internal class SourceHandlerTest {
   fun testCreateSourceChecksConfigEntitlements() {
     val sourceCreate =
       SourceCreate()
-        .name(sourceConnection.getName())
-        .workspaceId(sourceConnection.getWorkspaceId())
-        .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
-        .connectionConfiguration(sourceConnection.getConfiguration())
+        .name(sourceConnection.name)
+        .workspaceId(sourceConnection.workspaceId)
+        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
+        .connectionConfiguration(sourceConnection.configuration)
         .resourceAllocation(RESOURCE_ALLOCATION)
 
-    every { uuidGenerator.get() } returns sourceConnection.getSourceId()
-    every { sourceService.getSourceConnection(sourceConnection.getSourceId()) } returns sourceConnection
-    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()) } returns standardSourceDefinition
+    every { uuidGenerator.get() } returns sourceConnection.sourceId
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
     every {
       actorDefinitionVersionHelper.getSourceVersion(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
+        sourceConnection.workspaceId,
       )
     } returns sourceDefinitionVersion
 
@@ -409,7 +408,7 @@ internal class SourceHandlerTest {
       connectorConfigEntitlementService.ensureEntitledConfig(
         any(),
         sourceDefinitionVersion,
-        sourceConnection.getConfiguration(),
+        sourceConnection.configuration,
       )
     } throws LicenseEntitlementProblem()
 
@@ -418,10 +417,10 @@ internal class SourceHandlerTest {
     ) { sourceHandler.createSource(sourceCreate) }
 
     verify {
-      actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId())
+      actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.workspaceId)
     }
     verify {
-      validator.ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), sourceConnection.getConfiguration())
+      validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification, sourceConnection.configuration)
     }
   }
 
@@ -435,19 +434,19 @@ internal class SourceHandlerTest {
   fun testCreateSourceNoEntitlementThrows() {
     val sourceCreate =
       SourceCreate()
-        .name(sourceConnection.getName())
-        .workspaceId(sourceConnection.getWorkspaceId())
-        .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
-        .connectionConfiguration(sourceConnection.getConfiguration())
+        .name(sourceConnection.name)
+        .workspaceId(sourceConnection.workspaceId)
+        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
+        .connectionConfiguration(sourceConnection.configuration)
         .resourceAllocation(RESOURCE_ALLOCATION)
 
-    every { uuidGenerator.get() } returns sourceConnection.getSourceId()
-    every { sourceService.getSourceConnection(sourceConnection.getSourceId()) } returns sourceConnection
-    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()) } returns standardSourceDefinition
+    every { uuidGenerator.get() } returns sourceConnection.sourceId
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
     every {
       actorDefinitionVersionHelper.getSourceVersion(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
+        sourceConnection.workspaceId,
       )
     } returns sourceDefinitionVersion
 
@@ -456,7 +455,7 @@ internal class SourceHandlerTest {
       licenseEntitlementChecker.ensureEntitled(
         any(),
         Entitlement.SOURCE_CONNECTOR,
-        standardSourceDefinition.getSourceDefinitionId(),
+        standardSourceDefinition.sourceDefinitionId,
       )
     } throws LicenseEntitlementProblem()
 
@@ -465,10 +464,10 @@ internal class SourceHandlerTest {
     ) { sourceHandler.createSource(sourceCreate) }
 
     verify {
-      actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId())
+      actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.workspaceId)
     }
     verify {
-      validator.ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), sourceConnection.getConfiguration())
+      validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification, sourceConnection.configuration)
     }
   }
 
@@ -505,9 +504,9 @@ internal class SourceHandlerTest {
 
     val sourceCreate =
       SourceCreate()
-        .name(sourceConnection.getName())
-        .workspaceId(sourceConnection.getWorkspaceId())
-        .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
+        .name(sourceConnection.name)
+        .workspaceId(sourceConnection.workspaceId)
+        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
         .connectionConfiguration(DestinationHelpers.testDestinationJson)
         .resourceAllocation(RESOURCE_ALLOCATION)
 
@@ -529,7 +528,7 @@ internal class SourceHandlerTest {
     // ===== GIVEN =====
     // Update the source name and configuration.
     val updatedSourceName = "my updated source name"
-    val newConfiguration = clone<JsonNode>(sourceConnection.getConfiguration())
+    val newConfiguration = clone<JsonNode>(sourceConnection.configuration)
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
     val newResourceAllocation: ScopedResourceRequirements? = getResourceRequirementsForSourceRequest("3", "3 GB")
 
@@ -543,37 +542,37 @@ internal class SourceHandlerTest {
     val sourceUpdate =
       SourceUpdate()
         .name(updatedSourceName)
-        .sourceId(sourceConnection.getSourceId())
+        .sourceId(sourceConnection.sourceId)
         .connectionConfiguration(newConfiguration)
         .resourceAllocation(newResourceAllocation)
 
     // Set up basic mocks for the update.
     every {
       oAuthConfigSupplier.maskSourceOAuthParameters(
-        sourceDefinitionSpecificationRead.getSourceDefinitionId(),
-        sourceConnection.getWorkspaceId(),
+        sourceDefinitionSpecificationRead.sourceDefinitionId,
+        sourceConnection.workspaceId,
         newConfiguration,
-        sourceDefinitionVersion.getSpec(),
+        sourceDefinitionVersion.spec,
       )
     } returns newConfiguration
-    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()) } returns standardSourceDefinition
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
     every {
       actorDefinitionVersionHelper.getSourceVersion(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     } returns sourceDefinitionVersion
-    every { sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId()) } returns standardSourceDefinition
-    every { configurationUpdate.source(sourceConnection.getSourceId(), updatedSourceName, newConfiguration) } returns updatedSource
+    every { sourceService.getSourceDefinitionFromSource(sourceConnection.sourceId) } returns standardSourceDefinition
+    every { configurationUpdate.source(sourceConnection.sourceId, updatedSourceName, newConfiguration) } returns updatedSource
     every {
       actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     } returns sourceDefinitionVersionWithOverrideStatus
-    every { sourceService.getSourceConnectionIfExists(sourceConnection.getSourceId()) } returns Optional.of<SourceConnection>(sourceConnection)
+    every { sourceService.getSourceConnectionIfExists(sourceConnection.sourceId) } returns Optional.of<SourceConnection>(sourceConnection)
 
     // Set up current user context.
     val currentUserId = UUID.randomUUID()
@@ -583,15 +582,15 @@ internal class SourceHandlerTest {
     val secretStorage = mockk<SecretStorage>()
     val secretStorageId = SecretStorageId(UUID.randomUUID())
     every { secretStorage.id } returns secretStorageId
-    every { secretStorageService.getByWorkspaceId(WorkspaceId(sourceConnection.getWorkspaceId())) } returns secretStorage
+    every { secretStorageService.getByWorkspaceId(WorkspaceId(sourceConnection.workspaceId)) } returns secretStorage
 
     // Set up secret reference service mocks for the previous config.
-    val previousConfigWithRefs = buildConfigWithSecretRefsJava(sourceConnection.getConfiguration())
+    val previousConfigWithRefs = buildConfigWithSecretRefsJava(sourceConnection.configuration)
     every {
       secretReferenceService.getConfigWithSecretReferences(
-        ActorId(sourceConnection.getSourceId()),
-        sourceConnection.getConfiguration(),
-        WorkspaceId(sourceConnection.getWorkspaceId()),
+        ActorId(sourceConnection.sourceId),
+        sourceConnection.configuration,
+        WorkspaceId(sourceConnection.workspaceId),
       )
     } returns previousConfigWithRefs
 
@@ -599,15 +598,15 @@ internal class SourceHandlerTest {
     val newConfigWithProcessedSecrets =
       SecretReferenceHelpers.processConfigSecrets(
         newConfiguration,
-        sourceDefinitionSpecificationRead.getConnectionSpecification(),
+        sourceDefinitionSpecificationRead.connectionSpecification,
         secretStorageId,
       )
     every {
       secretsRepositoryWriter.updateFromConfig(
-        sourceConnection.getWorkspaceId(),
+        sourceConnection.workspaceId,
         previousConfigWithRefs,
         newConfigWithProcessedSecrets,
-        sourceDefinitionVersion.getSpec().getConnectionSpecification(),
+        sourceDefinitionVersion.spec.connectionSpecification,
         secretPersistence,
       )
     } returns newConfigWithProcessedSecrets.originalConfig
@@ -617,8 +616,7 @@ internal class SourceHandlerTest {
     every {
       secretReferenceService.createAndInsertSecretReferencesWithStorageId(
         newConfigWithProcessedSecrets,
-        ActorId(sourceConnection.getSourceId()),
-        WorkspaceId(sourceConnection.getWorkspaceId()),
+        ActorId(sourceConnection.sourceId),
         secretStorageId,
         any(),
       )
@@ -628,14 +626,14 @@ internal class SourceHandlerTest {
     val updatedSourceWithSecretRefIds = clone<SourceConnection>(updatedSource).withConfiguration(newConfigWithSecretRefIds)
 
     // First call returns the original source connection, second call returns the updated one.
-    every { sourceService.getSourceConnection(sourceConnection.getSourceId()) } returns sourceConnection andThen updatedSourceWithSecretRefIds
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection andThen updatedSourceWithSecretRefIds
 
     val configWithRefsAfterPersist = buildConfigWithSecretRefsJava(newConfigWithSecretRefIds)
     every {
       secretReferenceService.getConfigWithSecretReferences(
-        ActorId(sourceConnection.getSourceId()),
+        ActorId(sourceConnection.sourceId),
         newConfigWithSecretRefIds,
-        WorkspaceId(sourceConnection.getWorkspaceId()),
+        WorkspaceId(sourceConnection.workspaceId),
       )
     } returns configWithRefsAfterPersist
 
@@ -643,7 +641,7 @@ internal class SourceHandlerTest {
     every {
       secretsProcessor.prepareSecretsForOutput(
         newConfigWithSecretRefIds,
-        sourceDefinitionSpecificationRead.getConnectionSpecification(),
+        sourceDefinitionSpecificationRead.connectionSpecification,
       )
     } returns newConfigWithSecretRefIds
 
@@ -667,25 +665,25 @@ internal class SourceHandlerTest {
     Assertions.assertEquals(expectedSourceRead, actualSourceRead)
 
     verify {
-      secretsProcessor.prepareSecretsForOutput(newConfigWithSecretRefIds, sourceDefinitionSpecificationRead.getConnectionSpecification())
+      secretsProcessor.prepareSecretsForOutput(newConfigWithSecretRefIds, sourceDefinitionSpecificationRead.connectionSpecification)
     }
     verify {
       oAuthConfigSupplier.maskSourceOAuthParameters(
-        sourceDefinitionSpecificationRead.getSourceDefinitionId(),
-        sourceConnection.getWorkspaceId(),
+        sourceDefinitionSpecificationRead.sourceDefinitionId,
+        sourceConnection.workspaceId,
         newConfiguration,
-        sourceDefinitionVersion.getSpec(),
+        sourceDefinitionVersion.spec,
       )
     }
     verify { sourceService.writeSourceConnectionNoSecrets(updatedSourceWithSecretRefIds) }
     verify {
       actorDefinitionVersionHelper.getSourceVersion(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     }
-    verify { validator.ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), newConfiguration) }
+    verify { validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification, newConfiguration) }
   }
 
   @Test
@@ -697,7 +695,7 @@ internal class SourceHandlerTest {
   )
   fun testUpdateSourceChecksConfigEntitlements() {
     val updatedSourceName = "my updated source name for config entitlements"
-    val newConfiguration = sourceConnection.getConfiguration()
+    val newConfiguration = sourceConnection.configuration
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
     val newResourceAllocation: ScopedResourceRequirements? = getResourceRequirementsForSourceRequest("1", "1 GB")
 
@@ -711,28 +709,28 @@ internal class SourceHandlerTest {
     val sourceUpdate =
       SourceUpdate()
         .name(updatedSourceName)
-        .sourceId(sourceConnection.getSourceId())
+        .sourceId(sourceConnection.sourceId)
         .connectionConfiguration(newConfiguration)
         .resourceAllocation(newResourceAllocation)
 
     every {
       secretsProcessor.copySecrets(
-        sourceConnection.getConfiguration(),
+        sourceConnection.configuration,
         newConfiguration,
-        sourceDefinitionSpecificationRead.getConnectionSpecification(),
+        sourceDefinitionSpecificationRead.connectionSpecification,
       )
     } returns newConfiguration
-    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()) } returns standardSourceDefinition
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
     every {
       actorDefinitionVersionHelper.getSourceVersion(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     } returns sourceDefinitionVersion
-    every { sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId()) } returns standardSourceDefinition
-    every { sourceService.getSourceConnection(sourceConnection.getSourceId()) } returns sourceConnection andThen expectedSourceConnection
-    every { configurationUpdate.source(sourceConnection.getSourceId(), updatedSourceName, newConfiguration) } returns expectedSourceConnection
+    every { sourceService.getSourceDefinitionFromSource(sourceConnection.sourceId) } returns standardSourceDefinition
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection andThen expectedSourceConnection
+    every { configurationUpdate.source(sourceConnection.sourceId, updatedSourceName, newConfiguration) } returns expectedSourceConnection
 
     // Not entitled
     every {
@@ -750,11 +748,11 @@ internal class SourceHandlerTest {
     verify {
       actorDefinitionVersionHelper.getSourceVersion(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     }
-    verify { validator.ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), newConfiguration) }
+    verify { validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification, newConfiguration) }
   }
 
   @Test
@@ -766,7 +764,7 @@ internal class SourceHandlerTest {
   )
   fun testUpdateSourceNoEntitlementThrows() {
     val updatedSourceName = "my updated source name"
-    val newConfiguration = sourceConnection.getConfiguration()
+    val newConfiguration = sourceConnection.configuration
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
     val newResourceAllocation: ScopedResourceRequirements? = getResourceRequirementsForSourceRequest("3", "3 GB")
 
@@ -780,35 +778,35 @@ internal class SourceHandlerTest {
     val sourceUpdate =
       SourceUpdate()
         .name(updatedSourceName)
-        .sourceId(sourceConnection.getSourceId())
+        .sourceId(sourceConnection.sourceId)
         .connectionConfiguration(newConfiguration)
         .resourceAllocation(newResourceAllocation)
 
     every {
       secretsProcessor.copySecrets(
-        sourceConnection.getConfiguration(),
+        sourceConnection.configuration,
         newConfiguration,
-        sourceDefinitionSpecificationRead.getConnectionSpecification(),
+        sourceDefinitionSpecificationRead.connectionSpecification,
       )
     } returns newConfiguration
-    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()) } returns standardSourceDefinition
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
     every {
       actorDefinitionVersionHelper.getSourceVersion(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     } returns sourceDefinitionVersion
-    every { sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId()) } returns standardSourceDefinition
-    every { sourceService.getSourceConnection(sourceConnection.getSourceId()) } returns sourceConnection andThen expectedSourceConnection
-    every { configurationUpdate.source(sourceConnection.getSourceId(), updatedSourceName, newConfiguration) } returns expectedSourceConnection
+    every { sourceService.getSourceDefinitionFromSource(sourceConnection.sourceId) } returns standardSourceDefinition
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection andThen expectedSourceConnection
+    every { configurationUpdate.source(sourceConnection.sourceId, updatedSourceName, newConfiguration) } returns expectedSourceConnection
 
     // Not entitled
     every {
       licenseEntitlementChecker.ensureEntitled(
         any(),
         Entitlement.SOURCE_CONNECTOR,
-        standardSourceDefinition.getSourceDefinitionId(),
+        standardSourceDefinition.sourceDefinitionId,
       )
     } throws LicenseEntitlementProblem()
 
@@ -819,11 +817,11 @@ internal class SourceHandlerTest {
     verify {
       actorDefinitionVersionHelper.getSourceVersion(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     }
-    verify { validator.ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), newConfiguration) }
+    verify { validator.ensure(sourceDefinitionSpecificationRead.connectionSpecification, newConfiguration) }
   }
 
   @Test
@@ -857,14 +855,14 @@ internal class SourceHandlerTest {
       )
 
     val updatedSourceName = "my updated source name"
-    val newConfiguration = sourceConnection.getConfiguration()
+    val newConfiguration = sourceConnection.configuration
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
     val newResourceAllocation: ScopedResourceRequirements? = getResourceRequirementsForSourceRequest("3", "3 GB")
 
     val sourceUpdate =
       SourceUpdate()
         .name(updatedSourceName)
-        .sourceId(sourceConnection.getSourceId())
+        .sourceId(sourceConnection.sourceId)
         .connectionConfiguration(newConfiguration)
         .resourceAllocation(newResourceAllocation)
 
@@ -878,10 +876,10 @@ internal class SourceHandlerTest {
   @Test
   @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testUpgradeSourceVersion() {
-    val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceConnection.getSourceId())
+    val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceConnection.sourceId)
 
-    every { sourceService.getSourceConnection(sourceConnection.getSourceId()) } returns sourceConnection
-    every { sourceService.getStandardSourceDefinition(standardSourceDefinition.getSourceDefinitionId()) } returns standardSourceDefinition
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
+    every { sourceService.getStandardSourceDefinition(standardSourceDefinition.sourceDefinitionId) } returns standardSourceDefinition
 
     sourceHandler.upgradeSourceVersion(sourceIdRequestBody)
 
@@ -903,29 +901,29 @@ internal class SourceHandlerTest {
         SUPPORT_STATE,
         RESOURCE_ALLOCATION,
       )
-    val sourceIdRequestBody = SourceIdRequestBody().sourceId(expectedSourceRead.getSourceId())
+    val sourceIdRequestBody = SourceIdRequestBody().sourceId(expectedSourceRead.sourceId)
 
-    every { sourceService.getSourceConnection(sourceConnection.getSourceId()) } returns sourceConnection
-    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()) } returns standardSourceDefinition
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
     every {
       actorDefinitionVersionHelper.getSourceVersion(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     } returns sourceDefinitionVersion
-    every { sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId()) } returns standardSourceDefinition
+    every { sourceService.getSourceDefinitionFromSource(sourceConnection.sourceId) } returns standardSourceDefinition
     every {
       secretsProcessor.prepareSecretsForOutput(
-        sourceConnection.getConfiguration(),
-        sourceDefinitionSpecificationRead.getConnectionSpecification(),
+        sourceConnection.configuration,
+        sourceDefinitionSpecificationRead.connectionSpecification,
       )
-    } returns sourceConnection.getConfiguration()
+    } returns sourceConnection.configuration
     every {
       actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     } returns sourceDefinitionVersionWithOverrideStatus
     every {
@@ -948,14 +946,14 @@ internal class SourceHandlerTest {
     verify {
       actorDefinitionVersionHelper.getSourceVersion(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     }
     verify {
       secretsProcessor.prepareSecretsForOutput(
-        sourceConnection.getConfiguration(),
-        sourceDefinitionSpecificationRead.getConnectionSpecification(),
+        sourceConnection.configuration,
+        sourceDefinitionSpecificationRead.connectionSpecification,
       )
     }
   }
@@ -1141,7 +1139,7 @@ internal class SourceHandlerTest {
       SourceConnection()
         .withSourceId(UUID.randomUUID())
         .withWorkspaceId(UUID.randomUUID())
-        .withSourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
+        .withSourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
         .withName(name)
         .withConfiguration(emptyObject())
         .withTombstone(false)
@@ -1169,29 +1167,29 @@ internal class SourceHandlerTest {
         RESOURCE_ALLOCATION,
       )
 
-    every { sourceService.getSourceConnection(sourceConnection.getSourceId()) } returns sourceConnection
-    every { sourceService.listSourcesForDefinition(sourceConnection.getSourceDefinitionId()) } returns
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
+    every { sourceService.listSourcesForDefinition(sourceConnection.sourceDefinitionId) } returns
       Lists.newArrayList<SourceConnection>(sourceConnection)
-    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()) } returns standardSourceDefinition
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
     every {
       actorDefinitionVersionHelper.getSourceVersion(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     } returns sourceDefinitionVersion
-    every { sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId()) } returns standardSourceDefinition
+    every { sourceService.getSourceDefinitionFromSource(sourceConnection.sourceId) } returns standardSourceDefinition
     every {
       secretsProcessor.prepareSecretsForOutput(
-        sourceConnection.getConfiguration(),
-        sourceDefinitionSpecificationRead.getConnectionSpecification(),
+        sourceConnection.configuration,
+        sourceDefinitionSpecificationRead.connectionSpecification,
       )
-    } returns sourceConnection.getConfiguration()
+    } returns sourceConnection.configuration
     every {
       actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     } returns sourceDefinitionVersionWithOverrideStatus
     every {
@@ -1207,13 +1205,13 @@ internal class SourceHandlerTest {
       )
     }
 
-    val actualSourceReadList = sourceHandler.listSourcesForSourceDefinition(sourceConnection.getSourceDefinitionId())
+    val actualSourceReadList = sourceHandler.listSourcesForSourceDefinition(sourceConnection.sourceDefinitionId)
 
-    Assertions.assertEquals(expectedSourceRead, actualSourceReadList.getSources().get(0))
+    Assertions.assertEquals(expectedSourceRead, actualSourceReadList.sources.get(0))
     verify {
       secretsProcessor.prepareSecretsForOutput(
-        sourceConnection.getConfiguration(),
-        sourceDefinitionSpecificationRead.getConnectionSpecification(),
+        sourceConnection.configuration,
+        sourceDefinitionSpecificationRead.connectionSpecification,
       )
     }
   }
@@ -1231,28 +1229,28 @@ internal class SourceHandlerTest {
         RESOURCE_ALLOCATION,
       )
 
-    every { sourceService.getSourceConnection(sourceConnection.getSourceId()) } returns sourceConnection
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
     every { sourceService.listSourceConnection() } returns Lists.newArrayList<SourceConnection>(sourceConnection)
-    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()) } returns standardSourceDefinition
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
     every {
       actorDefinitionVersionHelper.getSourceVersion(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     } returns sourceDefinitionVersion
-    every { sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId()) } returns standardSourceDefinition
+    every { sourceService.getSourceDefinitionFromSource(sourceConnection.sourceId) } returns standardSourceDefinition
     every {
       secretsProcessor.prepareSecretsForOutput(
-        sourceConnection.getConfiguration(),
-        sourceDefinitionSpecificationRead.getConnectionSpecification(),
+        sourceConnection.configuration,
+        sourceDefinitionSpecificationRead.connectionSpecification,
       )
-    } returns sourceConnection.getConfiguration()
+    } returns sourceConnection.configuration
     every {
       actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     } returns sourceDefinitionVersionWithOverrideStatus
     every {
@@ -1268,14 +1266,14 @@ internal class SourceHandlerTest {
       )
     }
 
-    val validSourceSearch = SourceSearch().name(sourceConnection.getName())
+    val validSourceSearch = SourceSearch().name(sourceConnection.name)
     var actualSourceReadList = sourceHandler.searchSources(validSourceSearch)
-    Assertions.assertEquals(1, actualSourceReadList.getSources().size)
-    Assertions.assertEquals(expectedSourceRead, actualSourceReadList.getSources().get(0))
+    Assertions.assertEquals(1, actualSourceReadList.sources.size)
+    Assertions.assertEquals(expectedSourceRead, actualSourceReadList.sources.get(0))
 
     val invalidSourceSearch = SourceSearch().name("invalid")
     actualSourceReadList = sourceHandler.searchSources(invalidSourceSearch)
-    Assertions.assertEquals(0, actualSourceReadList.getSources().size)
+    Assertions.assertEquals(0, actualSourceReadList.sources.size)
   }
 
   @Test
@@ -1286,47 +1284,47 @@ internal class SourceHandlerTest {
     io.airbyte.config.persistence.ConfigNotFoundException::class,
   )
   fun testDeleteSourceAndDeleteSecrets() {
-    val newConfiguration = sourceConnection.getConfiguration()
+    val newConfiguration = sourceConnection.configuration
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
 
     val expectedSourceConnection = clone(sourceConnection).withTombstone(true)
 
-    val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceConnection.getSourceId())
-    val standardSync = ConnectionHelpers.generateSyncWithSourceId(sourceConnection.getSourceId())
+    val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceConnection.sourceId)
+    val standardSync = ConnectionHelpers.generateSyncWithSourceId(sourceConnection.sourceId)
     val connectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
     val connectionReadList = ConnectionReadList().connections(mutableListOf<@Valid ConnectionRead?>(connectionRead))
-    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(sourceConnection.getWorkspaceId())
+    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(sourceConnection.workspaceId)
 
-    every { sourceService.getSourceConnection(sourceConnection.getSourceId()) } returns sourceConnection andThen expectedSourceConnection
+    every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection andThen expectedSourceConnection
     every {
       oAuthConfigSupplier.maskSourceOAuthParameters(
-        sourceDefinitionSpecificationRead.getSourceDefinitionId(),
-        sourceConnection.getWorkspaceId(),
+        sourceDefinitionSpecificationRead.sourceDefinitionId,
+        sourceConnection.workspaceId,
         newConfiguration,
-        sourceDefinitionVersion.getSpec(),
+        sourceDefinitionVersion.spec,
       )
     } returns newConfiguration
-    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()) } returns standardSourceDefinition
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
     every {
       actorDefinitionVersionHelper.getSourceVersion(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     } returns sourceDefinitionVersion
-    every { sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId()) } returns standardSourceDefinition
+    every { sourceService.getSourceDefinitionFromSource(sourceConnection.sourceId) } returns standardSourceDefinition
     every { connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody) } returns connectionReadList
     every {
       secretsProcessor.prepareSecretsForOutput(
-        sourceConnection.getConfiguration(),
-        sourceDefinitionSpecificationRead.getConnectionSpecification(),
+        sourceConnection.configuration,
+        sourceDefinitionSpecificationRead.connectionSpecification,
       )
-    } returns sourceConnection.getConfiguration()
+    } returns sourceConnection.configuration
     every {
       actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
         standardSourceDefinition,
-        sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId(),
+        sourceConnection.workspaceId,
+        sourceConnection.sourceId,
       )
     } returns sourceDefinitionVersionWithOverrideStatus
     every {
@@ -1346,8 +1344,8 @@ internal class SourceHandlerTest {
 
     verify { sourceService.tombstoneSource(any(), any(), any()) }
     verify { connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody) }
-    verify { connectionsHandler.deleteConnection(connectionRead.getConnectionId()) }
-    verify { secretReferenceService.deleteActorSecretReferences(ActorId(sourceConnection.getSourceId())) }
+    verify { connectionsHandler.deleteConnection(connectionRead.connectionId) }
+    verify { secretReferenceService.deleteActorSecretReferences(ActorId(sourceConnection.sourceId)) }
   }
 
   @Test
@@ -1358,7 +1356,7 @@ internal class SourceHandlerTest {
     val connectorVersion = "0.0.1"
     val hashValue = "0123456789abcd"
     val expectedCatalog = clone(airbyteCatalog)
-    expectedCatalog.getStreams().forEach(Consumer { s: AirbyteStream? -> s!!.withSourceDefinedCursor(false) })
+    expectedCatalog.streams.forEach(Consumer { s: AirbyteStream? -> s!!.withSourceDefinedCursor(false) })
 
     val request =
       SourceDiscoverSchemaWriteRequestBody()
@@ -1371,7 +1369,7 @@ internal class SourceHandlerTest {
     val result = sourceHandler.writeDiscoverCatalogResult(request)
 
     verify { catalogService.writeActorCatalogWithFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue) }
-    Assertions.assertEquals(result.getCatalogId(), catalogId)
+    Assertions.assertEquals(result.catalogId, catalogId)
   }
 
   @Test
@@ -1427,43 +1425,43 @@ internal class SourceHandlerTest {
         .connectorVersion(connectorVersion)
         .configurationHash(hashValue)
 
-    Assertions.assertEquals(1, requestOne.getCatalog().getStreams().size)
+    Assertions.assertEquals(1, requestOne.catalog.streams.size)
     requestOne
-      .getCatalog()
-      .getStreams()
-      .forEach(Consumer { s: AirbyteStreamAndConfiguration? -> Assertions.assertEquals(true, s!!.getConfig().getSelected()) })
+      .catalog
+      .streams
+      .forEach(Consumer { s: AirbyteStreamAndConfiguration? -> Assertions.assertEquals(true, s!!.config.selected) })
     requestOne
-      .getCatalog()
-      .getStreams()
-      .forEach(Consumer { s: AirbyteStreamAndConfiguration? -> Assertions.assertEquals(true, s!!.getConfig().getSuggested()) })
+      .catalog
+      .streams
+      .forEach(Consumer { s: AirbyteStreamAndConfiguration? -> Assertions.assertEquals(true, s!!.config.suggested) })
 
-    Assertions.assertEquals(2, requestTwo.getCatalog().getStreams().size)
+    Assertions.assertEquals(2, requestTwo.catalog.streams.size)
     requestTwo
-      .getCatalog()
-      .getStreams()
-      .forEach(Consumer { s: AirbyteStreamAndConfiguration? -> Assertions.assertEquals(false, s!!.getConfig().getSelected()) })
+      .catalog
+      .streams
+      .forEach(Consumer { s: AirbyteStreamAndConfiguration? -> Assertions.assertEquals(false, s!!.config.selected) })
     requestTwo
-      .getCatalog()
-      .getStreams()
-      .forEach(Consumer { s: AirbyteStreamAndConfiguration? -> Assertions.assertEquals(false, s!!.getConfig().getSuggested()) })
+      .catalog
+      .streams
+      .forEach(Consumer { s: AirbyteStreamAndConfiguration? -> Assertions.assertEquals(false, s!!.config.suggested) })
 
-    Assertions.assertEquals(2, requestThree.getCatalog().getStreams().size)
+    Assertions.assertEquals(2, requestThree.catalog.streams.size)
     val firstStreamConfig =
       requestThree
-        .getCatalog()
-        .getStreams()
+        .catalog
+        .streams
         .get(0)
-        .getConfig()
-    Assertions.assertEquals(true, firstStreamConfig.getSuggested())
-    Assertions.assertEquals(true, firstStreamConfig.getSelected())
+        .config
+    Assertions.assertEquals(true, firstStreamConfig.suggested)
+    Assertions.assertEquals(true, firstStreamConfig.selected)
     val secondStreamConfig =
       requestThree
-        .getCatalog()
-        .getStreams()
+        .catalog
+        .streams
         .get(1)
-        .getConfig()
-    Assertions.assertEquals(false, secondStreamConfig.getSuggested())
-    Assertions.assertEquals(false, secondStreamConfig.getSelected())
+        .config
+    Assertions.assertEquals(false, secondStreamConfig.suggested)
+    Assertions.assertEquals(false, secondStreamConfig.selected)
   }
 
   @Test
@@ -1482,18 +1480,18 @@ internal class SourceHandlerTest {
     val sourceHandlerSpy = spyk(sourceHandler)
     val sourceCreate =
       SourceCreate()
-        .name(sourceConnection.getName())
-        .workspaceId(sourceConnection.getWorkspaceId())
-        .sourceDefinitionId(standardSourceDefinition.getSourceDefinitionId())
-        .connectionConfiguration(sourceConnection.getConfiguration())
+        .name(sourceConnection.name)
+        .workspaceId(sourceConnection.workspaceId)
+        .sourceDefinitionId(standardSourceDefinition.sourceDefinitionId)
+        .connectionConfiguration(sourceConnection.configuration)
 
     every { sourceHandlerSpy.createSource(any()) } returns SourceRead()
     every { sourceHandlerSpy.hydrateOAuthResponseSecret(any(), any()) } returns emptyObject()
-    every { sourceService.getStandardSourceDefinition(sourceCreate.getSourceDefinitionId()) } returns standardSourceDefinition
+    every { sourceService.getStandardSourceDefinition(sourceCreate.sourceDefinitionId) } returns standardSourceDefinition
     every {
       actorDefinitionVersionHelper.getSourceVersion(
         standardSourceDefinition,
-        sourceCreate.getWorkspaceId(),
+        sourceCreate.workspaceId,
       )
     } returns oauthDefinitionVersion
 
@@ -1507,7 +1505,7 @@ internal class SourceHandlerTest {
 
     // Test that calling createSourceHandleSecret hits new code path if we have a secretId set.
     val secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_test", 1)
-    sourceCreate.setSecretId(secretCoordinate.fullCoordinate)
+    sourceCreate.secretId = secretCoordinate.fullCoordinate
     sourceHandlerSpy.createSourceWithOptionalSecret(sourceCreate)
     verify(exactly = 2) { sourceHandlerSpy.createSource(sourceCreate) }
     verify { sourceHandlerSpy.hydrateOAuthResponseSecret(any(), any()) }

@@ -25,7 +25,6 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import secrets.persistence.SecretCoordinateException
 import java.util.UUID
 import java.util.function.Supplier
-import kotlin.collections.set
 
 private val logger = KotlinLogging.logger {}
 
@@ -565,12 +564,18 @@ object SecretsHelpers {
       return secretRefConfigs
     }
 
+    /**
+     * Recursively searches a config for any secret reference IDs and returns them as a set.
+     * This will not return secret reference IDs that are already inlined (i.e. those that have a
+     * secret storage ID field).
+     */
     fun getSecretReferenceIdsFromConfig(config: JsonNode): Set<UUID> {
       val secretRefIds = mutableSetOf<UUID>()
       config.fields().forEach { (key, value) ->
         if (key == SECRET_REF_ID_FIELD) {
           secretRefIds.add(UUID.fromString(value.asText()))
-        } else if (value.isObject) {
+        } else if (value.isObject && !value.has(SECRET_STORAGE_ID_FIELD)) {
+          // Only recurse into objects that aren't already inlined
           secretRefIds.addAll(getSecretReferenceIdsFromConfig(value))
         }
       }

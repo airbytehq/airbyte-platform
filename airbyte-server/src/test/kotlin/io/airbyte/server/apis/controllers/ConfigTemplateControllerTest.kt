@@ -12,12 +12,12 @@ import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.ConfigTemplateWithActorDetails
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseSonarServer
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every

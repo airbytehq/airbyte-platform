@@ -52,13 +52,14 @@ import io.airbyte.config.helpers.CatalogHelpers
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.JobService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.persistence.job.JobPersistence
-import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.persistence.job.tracker.JobTracker.Companion.configToMetadata
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.ConnectorSpecification
@@ -73,7 +74,6 @@ import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.reset
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
@@ -98,6 +98,7 @@ internal class JobTrackerTest {
   private lateinit var connectionService: ConnectionService
   private lateinit var operationService: OperationService
   private lateinit var workspaceService: WorkspaceService
+  private lateinit var jobService: JobService
 
   @BeforeEach
   fun setup() {
@@ -110,6 +111,7 @@ internal class JobTrackerTest {
     operationService = mock<OperationService>()
     workspaceService = mock<WorkspaceService>()
     actorDefinitionVersionHelper = mock<ActorDefinitionVersionHelper>()
+    jobService = mock<JobService>()
     jobTracker =
       JobTracker(
         jobPersistence,
@@ -121,6 +123,7 @@ internal class JobTrackerTest {
         connectionService,
         operationService,
         workspaceService,
+        jobService,
       )
   }
 
@@ -147,16 +150,16 @@ internal class JobTrackerTest {
       ActorDefinitionVersion()
         .withDockerRepository(CONNECTOR_REPOSITORY)
         .withDockerImageTag(CONNECTOR_VERSION)
-    whenever(sourceService!!.getStandardSourceDefinition(UUID1))
+    whenever(sourceService.getStandardSourceDefinition(UUID1))
       .thenReturn(sourceDefinition)
-    whenever(actorDefinitionVersionHelper!!.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID))
+    whenever(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, SOURCE_ID))
       .thenReturn(sourceVersion)
-    whenever(workspaceService!!.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
+    whenever(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
       .thenReturn(StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME))
 
     assertCheckConnCorrectMessageForEachState(
-      BiConsumer { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
-        jobTracker!!.trackCheckConnectionSource<Any?>(
+      { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
+        jobTracker.trackCheckConnectionSource<Any?>(
           JOB_ID,
           UUID1,
           WORKSPACE_ID,
@@ -173,7 +176,7 @@ internal class JobTrackerTest {
       .thenReturn(sourceVersion)
     assertCheckConnCorrectMessageForEachState(
       BiConsumer { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
-        jobTracker!!.trackCheckConnectionSource<Any?>(
+        jobTracker.trackCheckConnectionSource<Any?>(
           JOB_ID,
           UUID1,
           WORKSPACE_ID,
@@ -459,7 +462,7 @@ internal class JobTrackerTest {
   ) {
     // for sync the job id is a long not a uuid.
     val jobId = 10L
-    whenever(workspaceHelper!!.getWorkspaceForJobIdIgnoreExceptions(jobId)).thenReturn(WORKSPACE_ID)
+    whenever(workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId)).thenReturn(WORKSPACE_ID)
 
     val metadata = getJobMetadata(configType, jobId)
     val job = getJobMock(configType, jobId)
@@ -474,7 +477,7 @@ internal class JobTrackerTest {
           .withCatalog(CATALOG)
           .withManual(true),
       )
-    whenever(workspaceService!!.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
+    whenever(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true))
       .thenReturn(StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME))
     val manualMetadata: MutableMap<String?, Any?> =
       mergeMaps<String?, Any?>(
@@ -482,10 +485,10 @@ internal class JobTrackerTest {
         Map.of<String?, Any?>(FREQUENCY_KEY, "manual"),
         additionalExpectedMetadata,
       )
-    assertCorrectMessageForEachState(Consumer { jobState: JobTracker.JobState? -> jobTracker!!.trackSync(job, jobState!!) }, manualMetadata)
+    assertCorrectMessageForEachState(Consumer { jobState: JobTracker.JobState? -> jobTracker.trackSync(job, jobState!!) }, manualMetadata)
 
     // test when frequency is scheduled.
-    whenever(connectionService!!.getStandardSync(CONNECTION_ID))
+    whenever(connectionService.getStandardSync(CONNECTION_ID))
       .thenReturn(
         StandardSync()
           .withConnectionId(CONNECTION_ID)
@@ -915,14 +918,14 @@ internal class JobTrackerTest {
     get() {
       val attemptWithSingleFailure = this.attemptMock
       val singleFailureSummary = mock<AttemptFailureSummary>()
-      whenever(singleFailureSummary.getFailures())
+      whenever(singleFailureSummary.failures)
         .thenReturn(List.of<FailureReason?>(this.configFailureReasonMock))
       whenever(attemptWithSingleFailure.getFailureSummary())
         .thenReturn(Optional.of<AttemptFailureSummary>(singleFailureSummary))
 
       val attemptWithMultipleFailures = this.attemptMock
       val multipleFailuresSummary = mock<AttemptFailureSummary>()
-      whenever(multipleFailuresSummary.getFailures())
+      whenever(multipleFailuresSummary.failures)
         .thenReturn(List.of<FailureReason?>(this.systemFailureReasonMock, this.unknownFailureReasonMock))
       whenever(attemptWithMultipleFailures.getFailureSummary())
         .thenReturn(Optional.of<AttemptFailureSummary>(multipleFailuresSummary))
@@ -980,14 +983,14 @@ internal class JobTrackerTest {
     jobStateConsumer.accept(JobTracker.JobState.STARTED, null)
 
     val connectionCheckSuccessOutput = StandardCheckConnectionOutput()
-    connectionCheckSuccessOutput.setStatus(StandardCheckConnectionOutput.Status.SUCCEEDED)
+    connectionCheckSuccessOutput.status = StandardCheckConnectionOutput.Status.SUCCEEDED
     val checkConnectionSuccessJobOutput = ConnectorJobOutput().withCheckConnection(connectionCheckSuccessOutput)
     jobStateConsumer.accept(JobTracker.JobState.SUCCEEDED, checkConnectionSuccessJobOutput)
     val checkConnSuccessMetadata: MutableMap<String?, Any?> = ImmutableMap.of<String?, Any?>("check_connection_outcome", "succeeded")
 
     val connectionCheckFailureOutput = StandardCheckConnectionOutput()
-    connectionCheckFailureOutput.setStatus(StandardCheckConnectionOutput.Status.FAILED)
-    connectionCheckFailureOutput.setMessage("Please check your Personal Access Token.")
+    connectionCheckFailureOutput.status = StandardCheckConnectionOutput.Status.FAILED
+    connectionCheckFailureOutput.message = "Please check your Personal Access Token."
     val checkConnectionFailureJobOutput = ConnectorJobOutput().withCheckConnection(connectionCheckFailureOutput)
     jobStateConsumer.accept(
       JobTracker.JobState.SUCCEEDED,
@@ -1003,7 +1006,7 @@ internal class JobTrackerTest {
 
     // Failure implies the job threw an exception which almost always meant no output.
     val failedCheckJobOutput = ConnectorJobOutput()
-    failedCheckJobOutput.setFailureReason(this.configFailureReasonMock)
+    failedCheckJobOutput.failureReason = this.configFailureReasonMock
     jobStateConsumer.accept(JobTracker.JobState.FAILED, failedCheckJobOutput)
     val failedCheckJobMetadata: MutableMap<String?, Any?> = ImmutableMap.of<String?, Any?>("failure_reason", configFailureJson().toString())
 
@@ -1069,7 +1072,7 @@ internal class JobTrackerTest {
 
     // Failure implies the job threw an exception which almost always meant no output.
     val failedDiscoverOutput = ConnectorJobOutput()
-    failedDiscoverOutput.setFailureReason(this.systemFailureReasonMock)
+    failedDiscoverOutput.failureReason = this.systemFailureReasonMock
     jobStateConsumer.accept(JobTracker.JobState.FAILED, failedDiscoverOutput)
 
     val failedDiscoverMetadata: MutableMap<String?, Any?> = ImmutableMap.of<String?, Any?>("failure_reason", systemFailureJson().toString())
