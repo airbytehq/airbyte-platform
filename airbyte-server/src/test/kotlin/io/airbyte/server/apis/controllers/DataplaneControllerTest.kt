@@ -44,6 +44,7 @@ class DataplaneControllerTest {
         dataplaneGroupService,
         roleResolver,
         entitlementService,
+        mockk(relaxed = true),
       )
     private val MOCK_DATAPLANE_GROUP_ID = UUID.randomUUID()
   }

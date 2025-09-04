@@ -26,11 +26,17 @@ import io.airbyte.commons.entitlements.models.ManageDataplanesAndDataplaneGroups
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.Dataplane
+import io.airbyte.config.DataplaneGroup
+import io.airbyte.config.WorkloadConstants.Companion.PUBLIC_ORG_ID
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.ServiceAccountNotFound
 import io.airbyte.domain.models.DataplaneGroupId
 import io.airbyte.domain.models.DataplaneId
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.server.services.DataplaneService
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
@@ -53,6 +59,7 @@ open class DataplaneController(
   private val dataplaneGroupService: DataplaneGroupService,
   private val roleResolver: RoleResolver,
   private val entitlementService: EntitlementService,
+  private val metricClient: MetricClient,
 ) : DataplaneApi {
   @Post("/create")
   @RequiresIntent(Intent.ManageDataplanes)
@@ -180,6 +187,8 @@ open class DataplaneController(
     resp.dataplaneGroupName = dataplaneGroup.name
     resp.dataplaneGroupId = dataplaneGroup.id
 
+    reportDataplaneMetric(OssMetricsRegistry.DATAPLANE_INITIALIZE, dataplane, dataplaneGroup)
+
     return resp
   }
 
@@ -201,6 +210,8 @@ open class DataplaneController(
       .withOrg(dataplaneGroup.organizationId)
       .requireRole(DATAPLANE)
 
+    reportDataplaneMetric(OssMetricsRegistry.DATAPLANE_HEARTBEAT, dataplane, dataplaneGroup)
+
     return DataplaneHeartbeatResponse().apply {
       dataplaneName = dataplane.name
       dataplaneId = dataplane.id
@@ -208,6 +219,22 @@ open class DataplaneController(
       dataplaneGroupName = dataplaneGroup.name
       dataplaneGroupId = dataplaneGroup.id
     }
+  }
+
+  private fun reportDataplaneMetric(
+    metric: OssMetricsRegistry,
+    dataplane: Dataplane,
+    dataplaneGroup: DataplaneGroup,
+  ) {
+    metricClient.count(
+      metric,
+      1,
+      MetricAttribute(MetricTags.DATA_PLANE_ID_TAG, dataplane.id.toString()),
+      MetricAttribute(MetricTags.DATA_PLANE_NAME_TAG, dataplane.name),
+      MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, dataplaneGroup.id.toString()),
+      MetricAttribute(MetricTags.DATA_PLANE_GROUP_NAME_TAG, dataplaneGroup.name),
+      MetricAttribute(MetricTags.DATA_PLANE_VISIBILITY, if (dataplaneGroup.id == PUBLIC_ORG_ID) MetricTags.PUBLIC else MetricTags.PRIVATE),
+    )
   }
 
   private fun ensureManageDataplanesAndDataplaneGroupsEntitlement(dataplaneGroupId: DataplaneGroupId) {

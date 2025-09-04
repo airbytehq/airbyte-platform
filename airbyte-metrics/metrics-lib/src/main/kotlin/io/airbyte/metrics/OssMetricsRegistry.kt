@@ -177,6 +177,14 @@ enum class OssMetricsRegistry(
     metricName = "connector_registry_definition_processed",
     metricDescription = "increments when a connector registry definition is processed by the ApplyDefinitionsHelper",
   ),
+  DATAPLANE_HEARTBEAT(
+    metricName = "dataplane_heartbeat",
+    metricDescription = "increments when a dataplane heartbeat is called",
+  ),
+  DATAPLANE_INITIALIZE(
+    metricName = "dataplane_initialize",
+    metricDescription = "increments when a dataplane initialize is called",
+  ),
   ERROR_REPORTING_EVENT_COUNT(
     metricName = "error_reporting_event_count",
     metricDescription = "whenever when we report an error event",
