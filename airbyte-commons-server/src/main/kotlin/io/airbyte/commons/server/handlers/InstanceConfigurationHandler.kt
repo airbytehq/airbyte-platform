@@ -168,11 +168,9 @@ open class InstanceConfigurationHandler(
     // not update the default user's email to the provided email since it would cause a conflict.
     val existingUserWithEmail = userPersistence.getUserByEmail(requestBody.email)
     if (existingUserWithEmail.isPresent) {
-      log.info(
-        "User ID {} already has the provided email {}. Not updating default user's email.",
-        existingUserWithEmail.get().userId,
-        requestBody.email,
-      )
+      log.info {
+        "User ID ${existingUserWithEmail.get().userId} already has the provided email ${requestBody.email}. Not updating default user's email."
+      }
     } else {
       defaultUser.email = requestBody.email
     }

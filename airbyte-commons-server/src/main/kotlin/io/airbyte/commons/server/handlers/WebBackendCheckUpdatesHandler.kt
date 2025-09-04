@@ -54,7 +54,7 @@ open class WebBackendCheckUpdatesHandler(
             .map { def: DestinationDefinitionRead -> java.util.Map.entry(def.destinationDefinitionId, def.dockerImageTag) }
             .toList()
       } catch (e: IOException) {
-        log.error("Failed to get current list of standard destination definitions", e)
+        log.error(e) { "Failed to get current list of standard destination definitions" }
         return NO_CHANGES_FOUND
       }
 
@@ -87,7 +87,7 @@ open class WebBackendCheckUpdatesHandler(
             .map { def: SourceDefinitionRead -> java.util.Map.entry(def.sourceDefinitionId, def.dockerImageTag) }
             .toList()
       } catch (e: IOException) {
-        log.error("Failed to get current list of standard source definitions", e)
+        log.error(e) { "Failed to get current list of standard source definitions" }
         return NO_CHANGES_FOUND
       }
 

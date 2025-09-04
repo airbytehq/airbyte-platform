@@ -106,10 +106,10 @@ object Asserts {
     }
 
     log.debug { "source tables count: ${inputSchemas.size}" }
-    log.debug("tables found in source: ${sourceTables.joinToString(", ") { it.getFullyQualifiedTableName() }}")
+    log.debug { "tables found in source: ${sourceTables.joinToString(", ") { it.getFullyQualifiedTableName() }}" }
 
     val expDestTables = addAirbyteGeneratedTables(outputSchema, withNormalizedTable, withScdTable, sourceTables)
-    log.debug("expected destination tables: ${expDestTables.joinToString(", ")}")
+    log.debug { "expected destination tables: ${expDestTables.joinToString(", ")}" }
 
     val destinationTables = Databases.listAllTables(destination, outputSchema)
     Assertions.assertEquals(
@@ -119,13 +119,13 @@ object Asserts {
     )
 
     log.debug { "destination tables count: ${destinationTables.size}" }
-    log.debug("tables found in destination: ${destinationTables.joinToString(", ") { it.getFullyQualifiedTableName() }}")
+    log.debug { "tables found in destination: ${destinationTables.joinToString(", ") { it.getFullyQualifiedTableName() }}" }
 
     for (pair in sourceTables) {
       log.debug { "searching for table: ${pair.getFullyQualifiedTableName()}" }
       val sourceRecords = Databases.retrieveRecordsFromDatabase(source, pair.getFullyQualifiedTableName())
       log.debug { "records found in source count: ${sourceRecords.size}" }
-      log.debug("records found in source: ${sourceRecords.joinToString(", ") { it.asText() }}")
+      log.debug { "records found in source: ${sourceRecords.joinToString(", ") { it.asText() }}" }
       // generate the raw stream with the correct schema
       // retrieve and assert the records
       assertRawDestinationContains(destination, sourceRecords, outputSchema, pair.tableName)
@@ -248,7 +248,7 @@ object Asserts {
         log.debug { "Stream status result for connection {}: $connectionId, result" }
         results = result.streamStatuses ?: emptyList()
       } catch (e: Exception) {
-        log.info("Unable to call stream status API.", e)
+        log.info(e) { "Unable to call stream status API." }
       }
       count++
 
@@ -256,7 +256,7 @@ object Asserts {
         try {
           Thread.sleep(5000)
         } catch (e: InterruptedException) {
-          log.debug("Failed to sleep.", e)
+          log.debug(e) { "Failed to sleep." }
         }
       }
     }

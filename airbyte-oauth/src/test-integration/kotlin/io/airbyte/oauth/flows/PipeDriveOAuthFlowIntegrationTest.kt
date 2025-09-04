@@ -80,7 +80,7 @@ class PipeDriveOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
         null,
         sourceOAuthParameter.configuration,
       )
-    log.info("Waiting for user consent at: {}", url)
+    log.info { "Waiting for user consent at: $url" }
     waitForResponse(20)
     Assertions.assertTrue(serverHandler.isSucceeded, "Failed to get User consent on time")
     val params =
@@ -91,7 +91,7 @@ class PipeDriveOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
         getRedirectUrl(),
         sourceOAuthParameter.configuration,
       )
-    log.info("Response from completing OAuth Flow is: {}", params.toString())
+    log.info { "Response from completing OAuth Flow is: $params" }
     Assertions.assertTrue(params.containsKey("authorization"))
     val creds = params["authorization"] as Map<String, String>?
     Assertions.assertTrue(creds!!["refresh_token"].toString().length > 0)

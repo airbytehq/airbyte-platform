@@ -103,7 +103,7 @@ open class EnterpriseConnectorStubsHandler(
           }
         }
     } catch (error: Exception) {
-      log.error("Unexpected error fetching enterprise ${actorType}s", error)
+      log.error { "Unexpected error fetching enterprise ${actorType}s" }
       return listOf()
     }
   }
@@ -140,7 +140,7 @@ open class EnterpriseConnectorStubsHandler(
           }
       }
     } catch (error: Exception) {
-      log.error("Unexpected error fetching enterprise ${actorType}s", error)
+      log.error { "Unexpected error fetching enterprise ${actorType}s" }
       return EnterpriseConnectorStubsReadList()
     }
   }

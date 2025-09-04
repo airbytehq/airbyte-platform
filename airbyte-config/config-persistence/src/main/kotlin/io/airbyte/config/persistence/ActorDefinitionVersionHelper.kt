@@ -44,10 +44,7 @@ class ActorDefinitionVersionHelper(
   )
 
   init {
-    log.info(
-      "ActorDefinitionVersionHelper initialized with override provider: {}",
-      configOverrideProvider.javaClass.simpleName,
-    )
+    log.info { "ActorDefinitionVersionHelper initialized with override provider: ${configOverrideProvider.javaClass.simpleName}" }
   }
 
   @Throws(IOException::class, io.airbyte.data.ConfigNotFoundException::class)
@@ -130,7 +127,7 @@ class ActorDefinitionVersionHelper(
 
       return sourceVersions
     } catch (e: IOException) {
-      log.error(e.localizedMessage)
+      log.error { e.localizedMessage }
       throw RuntimeException(e)
     }
   }
@@ -187,7 +184,7 @@ class ActorDefinitionVersionHelper(
 
       return destinationVersions
     } catch (e: IOException) {
-      log.error(e.localizedMessage)
+      log.error { e.localizedMessage }
       throw RuntimeException(e)
     }
   }

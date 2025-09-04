@@ -79,11 +79,7 @@ open class RemoteDefinitionsProvider(
         .Builder()
         .callTimeout(Duration.ofMillis(remoteCatalogTimeoutMs))
         .build()
-    log.info(
-      "Created remote definitions provider for URL '{}' and registry '{}'...",
-      remoteRegistryBaseUrlUri,
-      getRegistryName(airbyteEdition),
-    )
+    log.info { "Created remote definitions provider for URL '$remoteRegistryBaseUrlUri' and registry '${getRegistryName(airbyteEdition)}'..." }
   }
 
   private fun getSourceDefinitionsMap(): Map<UUID, ConnectorRegistrySourceDefinition> {

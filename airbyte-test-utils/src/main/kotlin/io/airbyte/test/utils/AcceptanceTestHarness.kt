@@ -280,7 +280,7 @@ class AcceptanceTestHarness
           close(sourceDataSource)
           close(destinationDataSource)
         } catch (e: Exception) {
-          log.warn("Failed to close data sources", e)
+          log.warn(e) { "Failed to close data sources" }
         }
       } else {
         sourcePsql!!.stop()
@@ -424,7 +424,7 @@ class AcceptanceTestHarness
         }
         log.info { "ensureCleanSlate completed!" }
       } catch (e: Exception) {
-        log.warn("An exception occurred while ensuring a clean slate. Proceeding, but a clean slate is not guaranteed for this run.", e)
+        log.warn(e) { "An exception occurred while ensuring a clean slate. Proceeding, but a clean slate is not guaranteed for this run." }
       }
     }
 
@@ -1147,7 +1147,7 @@ class AcceptanceTestHarness
             "Unsuccessful job attempt " + attempt.id +
               " with status " + job.status + " produced log output as follows: " + logs!!.logLines
           )
-          log.warn(msg)
+          log.warn { msg }
           debugInfo.add(msg)
         }
       }

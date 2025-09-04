@@ -32,11 +32,11 @@ class WebClientConfigurator(
 
     if (existingClient.isPresent) {
       keycloakRealm.clients()[existingClient.get().id].update(applyConfigToExistingClientRepresentation(existingClient.get()))
-      log.info(clientConfig.clientId + " client updated successfully.")
+      log.info { clientConfig.clientId + " client updated successfully." }
     } else {
       keycloakRealm.clients().create(clientConfig).use { response ->
         if (response.status == HTTP_STATUS_CREATED) {
-          log.info(clientConfig.clientId + " client created successfully. Status: " + response.statusInfo)
+          log.info { clientConfig.clientId + " client created successfully. Status: " + response.statusInfo }
         } else {
           val errorMessage =
             String.format(
@@ -45,7 +45,7 @@ class WebClientConfigurator(
               response.statusInfo.reasonPhrase,
               response.readEntity(String::class.java),
             )
-          log.error(errorMessage)
+          log.error { errorMessage }
           throw RuntimeException(errorMessage)
         }
       }

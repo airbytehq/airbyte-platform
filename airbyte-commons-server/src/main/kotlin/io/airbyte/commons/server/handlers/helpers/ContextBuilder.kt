@@ -51,11 +51,11 @@ class ContextBuilder(
       destination = destinationService.getDestinationConnection(connection.destinationId)
       workspace = workspaceService.getStandardWorkspaceNoSecrets(destination.workspaceId, false)
     } catch (e: JsonValidationException) {
-      log.error("Failed to get connection information for connection id: {}", connectionId, e)
+      log.error(e) { "Failed to get connection information for connection id: $connectionId" }
     } catch (e: IOException) {
-      log.error("Failed to get connection information for connection id: {}", connectionId, e)
+      log.error(e) { "Failed to get connection information for connection id: $connectionId" }
     } catch (e: ConfigNotFoundException) {
-      log.error("Failed to get connection information for connection id: {}", connectionId, e)
+      log.error(e) { "Failed to get connection information for connection id: $connectionId" }
     }
 
     val context = ConnectionContext()
@@ -95,11 +95,11 @@ class ContextBuilder(
     try {
       organizationId = workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, false).organizationId
     } catch (e: ConfigNotFoundException) {
-      log.error("Failed to get organization id for source id: {}", source.sourceId, e)
+      log.error(e) { "Failed to get organization id for source id: ${source.sourceId}" }
     } catch (e: IOException) {
-      log.error("Failed to get organization id for source id: {}", source.sourceId, e)
+      log.error(e) { "Failed to get organization id for source id: ${source.sourceId}" }
     } catch (e: JsonValidationException) {
-      log.error("Failed to get organization id for source id: {}", source.sourceId, e)
+      log.error(e) { "Failed to get organization id for source id: ${source.sourceId}" }
     }
     return ActorContext()
       .withActorId(source.sourceId)
@@ -121,11 +121,11 @@ class ContextBuilder(
     try {
       organizationId = workspaceService.getStandardWorkspaceNoSecrets(destination.workspaceId, false).organizationId
     } catch (e: ConfigNotFoundException) {
-      log.error("Failed to get organization id for destination id: {}", destination.destinationId, e)
+      log.error(e) { "Failed to get organization id for destination id: ${destination.destinationId}" }
     } catch (e: IOException) {
-      log.error("Failed to get organization id for destination id: {}", destination.destinationId, e)
+      log.error(e) { "Failed to get organization id for destination id: ${destination.destinationId}" }
     } catch (e: JsonValidationException) {
-      log.error("Failed to get organization id for destination id: {}", destination.destinationId, e)
+      log.error(e) { "Failed to get organization id for destination id: ${destination.destinationId}" }
     }
     return ActorContext()
       .withActorId(destination.destinationId)
@@ -144,11 +144,11 @@ class ContextBuilder(
     try {
       organizationId = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).organizationId
     } catch (e: ConfigNotFoundException) {
-      log.error("Failed to get organization id for workspace id: {}", workspaceId, e)
+      log.error(e) { "Failed to get organization id for workspace id: $workspaceId" }
     } catch (e: IOException) {
-      log.error("Failed to get organization id for workspace id: {}", workspaceId, e)
+      log.error(e) { "Failed to get organization id for workspace id: $workspaceId" }
     } catch (e: JsonValidationException) {
-      log.error("Failed to get organization id for workspace id: {}", workspaceId, e)
+      log.error(e) { "Failed to get organization id for workspace id: $workspaceId" }
     }
     return ActorContext()
       .withActorDefinitionId(actorDefinitionId)

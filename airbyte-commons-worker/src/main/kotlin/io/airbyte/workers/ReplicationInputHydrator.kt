@@ -52,15 +52,8 @@ import io.airbyte.workers.models.ReplicationActivityInput
 import io.github.oshai.kotlinlogging.KotlinLogging
 import secrets.persistence.SecretCoordinateException
 import java.io.IOException
-import java.lang.String
 import java.time.Duration
 import java.util.UUID
-import kotlin.Any
-import kotlin.Boolean
-import kotlin.Exception
-import kotlin.Long
-import kotlin.Throws
-import kotlin.requireNotNull
 
 class ReplicationInputHydrator(
   private val airbyteApiClient: AirbyteApiClient,
@@ -158,12 +151,9 @@ class ReplicationInputHydrator(
         streamsToBackfill,
       )
     } catch (e: Exception) {
-      log.error(
-        "Failed to track stream metadata for connectionId:{} attempt:{}",
-        replicationActivityInput.connectionId,
-        replicationActivityInput.jobRunConfig!!.attemptId,
-        e,
-      )
+      log.error(e) {
+        "Failed to track stream metadata for connectionId:${replicationActivityInput.connectionId} attempt:${replicationActivityInput.jobRunConfig!!.attemptId}"
+      }
     }
 
     // Hydrate the secrets.
@@ -264,10 +254,18 @@ class ReplicationInputHydrator(
   ): State? {
     if (schemaRefreshOutput?.appliedDiff != null) {
       val streamsToBackfill: List<StreamDescriptor?> = backfillHelper.getStreamsToBackfill(schemaRefreshOutput.appliedDiff, catalog)
-      log.debug(
-        "Backfilling streams: {}",
-        String.join(", ", streamsToBackfill.stream().map { obj: StreamDescriptor? -> obj!!.name }.toList()),
-      )
+      log.debug {
+        "Backfilling streams: {}".format(
+          java.lang.String.join(
+            ", ",
+            streamsToBackfill
+              .stream()
+              .map { obj: StreamDescriptor? ->
+                obj!!.name
+              }.toList(),
+          ),
+        )
+      }
       val resetState = backfillHelper.clearStateForStreamsToBackfill(state, streamsToBackfill)
       if (resetState != null) {
         // We persist the state here in case the attempt fails, the subsequent attempt will continue the

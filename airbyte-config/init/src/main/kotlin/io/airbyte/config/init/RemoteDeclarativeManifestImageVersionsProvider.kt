@@ -43,7 +43,7 @@ class RemoteDeclarativeManifestImageVersionsProvider(
       semverStandardDeclarativeManifestImageVersions
         .groupBy { it.majorVersion }
         .map { entry -> entry.value.maxWith(semverComparator) }
-    log.info("Latest versions for $repository: ${latestVersionsByMajor.map { it.imageVersion }}")
+    log.info { "Latest versions for $repository: ${latestVersionsByMajor.map { it.imageVersion }}" }
     return latestVersionsByMajor
   }
 
@@ -55,7 +55,7 @@ class RemoteDeclarativeManifestImageVersionsProvider(
     // 100 is max allowed page size for DockerHub
     var nextUrl: String? = "https://hub.docker.com/v2/repositories/$repository/tags?page_size=100"
 
-    log.info("Fetching image tags and SHAs for $repository...")
+    log.info { "Fetching image tags and SHAs for $repository..." }
     while (nextUrl != null) {
       val request = Request.Builder().url(nextUrl).build()
       okHttpClient.newCall(request).execute().use { response ->
@@ -73,7 +73,7 @@ class RemoteDeclarativeManifestImageVersionsProvider(
         nextUrl = if (!body.get("next").isNull) body.get("next").asText() else null
       }
     }
-    log.info("DockerHub tags and SHAs for $repository: $tagsAndShas")
+    log.info { "DockerHub tags and SHAs for $repository: $tagsAndShas" }
     return tagsAndShas
   }
 

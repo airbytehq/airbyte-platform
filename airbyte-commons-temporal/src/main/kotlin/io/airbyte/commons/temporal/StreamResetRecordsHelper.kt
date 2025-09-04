@@ -32,7 +32,7 @@ class StreamResetRecordsHelper(
     connectionId: UUID?,
   ) {
     if (jobId == null) {
-      log.info("deleteStreamResetRecordsForJob was called with a null job id; returning.")
+      log.info { "deleteStreamResetRecordsForJob was called with a null job id; returning." }
       return
     }
 
@@ -40,17 +40,14 @@ class StreamResetRecordsHelper(
       val job = jobPersistence.getJob(jobId)
       val configType = job.config.configType
       if (ConfigType.RESET_CONNECTION != configType) {
-        log.info(
-          "deleteStreamResetRecordsForJob was called for job {} with config type {}. Returning, as config type is not {}.",
-          jobId,
-          configType,
-          ConfigType.RESET_CONNECTION,
-        )
+        log.info {
+          "deleteStreamResetRecordsForJob was called for job $jobId with config type $configType. Returning, as config type is not ${ConfigType.RESET_CONNECTION}."
+        }
         return
       }
 
       val resetStreams = job.config.resetConnection.resetSourceConfiguration.streamsToReset
-      log.info("Deleting the following streams for reset job {} from the stream_reset table: {}", jobId, resetStreams)
+      log.info { "Deleting the following streams for reset job $jobId from the stream_reset table: $resetStreams" }
       streamResetPersistence.deleteStreamResets(connectionId, resetStreams)
     } catch (e: IOException) {
       throw RetryableException(e)

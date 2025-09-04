@@ -76,7 +76,7 @@ abstract class OAuthFlowIntegrationTest {
 
     override fun handle(t: HttpExchange) {
       val query = t.requestURI.query
-      log.info("Received query: '{}'", query)
+      log.info { "Received query: '$query'" }
       val data: Map<String, String>?
       try {
         data = deserialize(query)
@@ -89,7 +89,7 @@ abstract class OAuthFlowIntegrationTest {
               expectedParam,
               paramValue,
             )
-          log.info(response)
+          log.info { response }
           t.sendResponseHeaders(200, response.length.toLong())
           isSucceeded = true
         } else {
@@ -100,9 +100,9 @@ abstract class OAuthFlowIntegrationTest {
         os.write(response.toByteArray(StandardCharsets.UTF_8))
         os.close()
       } catch (e: RuntimeException) {
-        log.error("Failed to parse from body {}", query, e)
+        log.error(e) { "Failed to parse from body $query" }
       } catch (e: IOException) {
-        log.error("Failed to parse from body {}", query, e)
+        log.error(e) { "Failed to parse from body $query" }
       }
     }
 

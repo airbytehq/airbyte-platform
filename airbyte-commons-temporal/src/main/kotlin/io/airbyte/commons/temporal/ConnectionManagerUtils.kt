@@ -45,7 +45,7 @@ class ConnectionManagerUtils(
         workflowClientWrapped.newWorkflowStub(ConnectionManagerWorkflow::class.java, getConnectionManagerName(connectionId))
       connectionManagerWorkflow.deleteConnection()
     } catch (e: Exception) {
-      log.warn("The workflow is not reachable when trying to cancel it, for the connection $connectionId", e)
+      log.warn(e) { "The workflow is not reachable when trying to cancel it, for the connection $connectionId" }
     }
   }
 
@@ -81,7 +81,7 @@ class ConnectionManagerUtils(
   ): ConnectionManagerWorkflow {
     try {
       val connectionManagerWorkflow = getConnectionManagerWorkflow(connectionId)
-      log.info("Retrieved existing connection manager workflow for connection {}. Executing signal.", connectionId)
+      log.info { "Retrieved existing connection manager workflow for connection $connectionId. Executing signal." }
       // retrieve the signal from the lambda
       val signal = signalMethod.apply(connectionManagerWorkflow)
       // execute the signal
@@ -97,14 +97,12 @@ class ConnectionManagerUtils(
         1L,
         MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
       )
-      log.error(
+      log.error(e) {
         String.format(
-          "Failed to retrieve ConnectionManagerWorkflow for connection %s. " +
-            "Repairing state by creating new workflow and starting with the signal.",
+          "Failed to retrieve ConnectionManagerWorkflow for connection %s. Repairing state by creating new workflow and starting with the signal.",
           connectionId,
-        ),
-        e,
-      )
+        )
+      }
 
       // in case there is an existing workflow in a bad state, attempt to terminate it first before
       // starting a new workflow
@@ -129,7 +127,7 @@ class ConnectionManagerUtils(
       }
 
       workflowClientWrapped.signalWithStart(batchRequest)
-      log.info("Connection manager workflow for connection {} has been started and signaled.", connectionId)
+      log.info { "Connection manager workflow for connection $connectionId has been started and signaled." }
 
       return connectionManagerWorkflow
     }
@@ -139,15 +137,13 @@ class ConnectionManagerUtils(
     workflowId: String,
     reason: String,
   ) {
-    log.info("Attempting to terminate existing workflow for workflowId {}.", workflowId)
+    log.info { "Attempting to terminate existing workflow for workflowId $workflowId." }
     try {
       workflowClientWrapped.terminateWorkflow(workflowId, reason)
     } catch (e: Exception) {
-      log.warn(
-        "Could not terminate temporal workflow due to the following error; " +
-          "this may be because there is currently no running workflow for this connection.",
-        e,
-      )
+      log.warn(e) {
+        "Could not terminate temporal workflow due to the following error; this may be because there is currently no running workflow for this connection."
+      }
     }
   }
 
@@ -235,7 +231,7 @@ class ConnectionManagerUtils(
         )
       return Optional.of(connectionManagerWorkflow.getState())
     } catch (e: Exception) {
-      log.error("Exception thrown while checking workflow state for connection id {}", connectionId, e)
+      log.error(e) { "Exception thrown while checking workflow state for connection id $connectionId" }
       return Optional.empty()
     }
   }

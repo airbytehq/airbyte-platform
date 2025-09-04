@@ -820,7 +820,7 @@ class DestinationServiceJooqImpl
       try {
         return Optional.of(getDestinationConnection(destinationId))
       } catch (_: Exception) {
-        log.warn("Unable to find destination with ID $destinationId")
+        log.warn { "Unable to find destination with ID $destinationId" }
         return Optional.empty()
       }
     }

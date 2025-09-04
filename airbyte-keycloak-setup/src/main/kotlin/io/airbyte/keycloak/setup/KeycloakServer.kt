@@ -35,12 +35,12 @@ class KeycloakServer(
 
   fun setupAirbyteRealm() {
     if (airbyteRealmDoesNotExist()) {
-      log.info("Creating realm {}...", keycloakConfiguration.airbyteRealm)
+      log.info { "Creating realm ${keycloakConfiguration.airbyteRealm}..." }
       createRealm()
-      log.info("Realm created successfully.")
+      log.info { "Realm created successfully." }
     }
     configureRealm()
-    log.info("Realm configured successfully.")
+    log.info { "Realm configured successfully." }
   }
 
   private fun airbyteRealmDoesNotExist(): Boolean =
@@ -51,7 +51,7 @@ class KeycloakServer(
       .noneMatch { realmRepresentation: RealmRepresentation -> realmRepresentation.realm == keycloakConfiguration.airbyteRealm }
 
   private fun createRealm() {
-    log.info("Creating realm {}...", keycloakConfiguration.airbyteRealm)
+    log.info { "Creating realm ${keycloakConfiguration.airbyteRealm}..." }
     val airbyteRealmRepresentation = buildRealmRepresentation()
     keycloakAdminClient.realms().create(airbyteRealmRepresentation)
   }
@@ -106,18 +106,18 @@ class KeycloakServer(
   @Deprecated("")
   fun destroyAndRecreateAirbyteRealm() {
     if (airbyteRealmDoesNotExist()) {
-      log.info("Ignoring reset because realm {} does not exist. Creating it...", keycloakConfiguration.airbyteRealm)
+      log.info { "Ignoring reset because realm ${keycloakConfiguration.airbyteRealm} does not exist. Creating it..." }
       setupAirbyteRealm()
       return
     }
-    log.info("Recreating realm {}...", keycloakConfiguration.airbyteRealm)
+    log.info { "Recreating realm ${keycloakConfiguration.airbyteRealm}..." }
     val airbyteRealm = keycloakAdminClient.realm(keycloakConfiguration.airbyteRealm)
     airbyteRealm.remove()
-    log.info("Realm removed successfully. Recreating...")
+    log.info { "Realm removed successfully. Recreating..." }
     createRealm()
-    log.info("Realm recreated successfully. Configuring...")
+    log.info { "Realm recreated successfully. Configuring..." }
     configureRealm()
-    log.info("Realm configured successfully.")
+    log.info { "Realm configured successfully." }
   }
 
   companion object {

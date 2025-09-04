@@ -416,7 +416,7 @@ open class JobInputHandler(
         scopedConfigurationService.getScopedConfigurations(NetworkSecurityTokenKey, scopes)
       return podLabelConfigurations.stream().map { obj: ScopedConfiguration -> obj.value }.toList()
     } catch (e: IllegalArgumentException) {
-      log.error(e.message)
+      log.error { e.message }
       return emptyList()
     }
   }

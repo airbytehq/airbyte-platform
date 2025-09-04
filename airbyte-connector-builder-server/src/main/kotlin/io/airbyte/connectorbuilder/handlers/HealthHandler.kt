@@ -34,7 +34,7 @@ open class HealthHandler(
         .cdkVersion(cdkVersion)
         .capabilities(capabilities)
     } catch (e: Exception) {
-      log.error("Health check failed:", e)
+      log.error(e) { "Health check failed:" }
 
       // return a HealthCheckRead indicating that the server is not available
       return HealthCheckRead().available(false)

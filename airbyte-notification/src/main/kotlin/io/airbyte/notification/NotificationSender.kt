@@ -51,7 +51,7 @@ class WebhookNotificationSender(
 
     okHttpClient.newCall(request).execute().use { response ->
       if (response.isSuccessful) {
-        log.info("Successful notification (${response.code}): {${response.body}")
+        log.info { "Successful notification (${response.code}): {${response.body}" }
       } else {
         throw IOException("Failed to  notification (${response.code}): ${response.body}")
       }

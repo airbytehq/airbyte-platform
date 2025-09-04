@@ -63,7 +63,7 @@ interface CancellationHandler {
         ApmTraceUtils.addExceptionToTrace(e)
         ApmTraceUtils.addTagsToTrace(Map.of<String, Any>(ApmTraceConstants.Tags.FAILURE_TYPES_KEY, e.javaClass.name))
         onCancellationCallback.run()
-        log.warn("Job was cancelled.", e)
+        log.warn(e) { "Job was cancelled." }
       } catch (e: ActivityCompletionException) {
         ApmTraceUtils.addExceptionToTrace(e)
         ApmTraceUtils.addTagsToTrace(Map.of<String, Any>(ApmTraceConstants.Tags.FAILURE_TYPES_KEY, e.javaClass.name))
@@ -73,13 +73,12 @@ interface CancellationHandler {
             .lowercase(Locale.getDefault())
             .startsWith("sync")
         ) {
-          log.warn("The job timeout and was not a sync, we will destroy the pods related to it", e)
+          log.warn(e) { "The job timeout and was not a sync, we will destroy the pods related to it" }
           onCancellationCallback.run()
         } else {
           log.debug(
-            "An error happened while checking that the temporal activity is still alive but is not a cancellation, forcing the activity to retry",
             e,
-          )
+          ) { "An error happened while checking that the temporal activity is still alive but is not a cancellation, forcing the activity to retry" }
         }
         throw RetryableException(e)
       }

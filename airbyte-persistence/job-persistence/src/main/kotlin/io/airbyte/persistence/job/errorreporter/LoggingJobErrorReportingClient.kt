@@ -19,16 +19,16 @@ class LoggingJobErrorReportingClient : JobErrorReportingClient {
     metadata: Map<String?, String?>?,
     attemptConfig: AttemptConfigReportingContext?,
   ) {
-    log.info(
-      "Report Job Error -> workspaceId: {}, dockerImage: {}, failureReason: {}, metadata: {}, state: {}, sourceConfig: {}, destinationConfig: {}",
-      if (workspace != null) workspace.workspaceId else "null",
-      dockerImage,
-      reason,
-      metadata,
-      if (attemptConfig != null) attemptConfig.state else "null",
-      if (attemptConfig != null) attemptConfig.sourceConfig else "null",
-      if (attemptConfig != null) attemptConfig.destinationConfig else "null",
-    )
+    var err =
+      mapOf(
+        "workspaceId" to workspace?.workspaceId,
+        "dockerImage" to dockerImage,
+        "metadata" to metadata,
+        "state" to attemptConfig?.state,
+        "sourceConfig" to attemptConfig?.sourceConfig,
+        "destinationConfig" to attemptConfig?.destinationConfig,
+      )
+    log.info { "Report Job Error -> $err" }
   }
 
   companion object {

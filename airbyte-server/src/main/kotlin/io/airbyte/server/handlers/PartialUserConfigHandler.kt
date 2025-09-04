@@ -185,16 +185,14 @@ class PartialUserConfigHandler(
 
         if (connectionTemplate.syncOnCreate) {
           val syncId = jobService.sync(connection.connectionId)
-          logger.info(
-            "Created connection: ${connection.connectionId} and started sync with id $syncId",
-          )
+          logger.info { "Created connection: ${connection.connectionId} and started sync with id $syncId" }
         } else {
-          logger.info("Created connection: ${connection.connectionId} but did not start sync")
+          logger.info { "Created connection: ${connection.connectionId} but did not start sync" }
         }
       } else {
-        logger.info(
-          "Did not create a connection for source ${sourceRead.sourceId} because no matching destination was found for ${connectionTemplate.destinationName}",
-        )
+        logger.info {
+          "Did not create a connection for source ${sourceRead.sourceId} because no matching destination was found for ${connectionTemplate.destinationName}"
+        }
       }
     }
 

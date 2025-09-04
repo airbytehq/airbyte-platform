@@ -470,10 +470,7 @@ class DefaultSynchronousSchedulerClient(
           )
 
         else ->
-          log.error(
-            "Tried to report job failure for type {}, but this job type is not supported",
-            configType,
-          )
+          log.error { "Tried to report job failure for type $configType, but this job type is not supported" }
       }
     }
   }

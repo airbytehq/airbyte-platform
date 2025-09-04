@@ -78,7 +78,7 @@ class SnapchatMarketingOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
         null,
         sourceOAuthParameter.configuration,
       )
-    log.info("Waiting for user consent at: {}", url)
+    log.info { "Waiting for user consent at: $url" }
     waitForResponse(20)
     Assertions.assertTrue(serverHandler.isSucceeded, "Failed to get User consent on time")
     val params =
@@ -89,7 +89,7 @@ class SnapchatMarketingOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
         getRedirectUrl(),
         sourceOAuthParameter.configuration,
       )
-    log.info("Response from completing OAuth Flow is: {}", params.toString())
+    log.info { "Response from completing OAuth Flow is: $params" }
     Assertions.assertTrue(params.containsKey("refresh_token"))
     Assertions.assertTrue(params["refresh_token"].toString().length > 0)
   }

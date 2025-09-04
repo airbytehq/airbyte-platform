@@ -91,7 +91,7 @@ class WorkflowServiceStubsFactory(
       try {
         SimpleSslContextBuilder.forPKCS8(clientCert, clientKey).build()
       } catch (e: SSLException) {
-        log.error("SSL Exception occurred attempting to establish Temporal Cloud options.", e)
+        log.error(e) { "SSL Exception occurred attempting to establish Temporal Cloud options." }
         throw RuntimeException(e)
       }
 

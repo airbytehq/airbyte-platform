@@ -33,26 +33,26 @@ class TemporalInitializationUtils(
       try {
         // This is to allow the configured namespace to be available in the Temporal
         // cache before continuing on with any additional configuration/bean creation.
-        log.info("temporal service : $temporalService")
-        log.info("temporal namespace : $temporalNamespace")
+        log.info { "temporal service : $temporalService" }
+        log.info { "temporal namespace : $temporalNamespace" }
         temporalService!!.blockingStub().describeNamespace(DescribeNamespaceRequest.newBuilder().setNamespace(temporalNamespace).build())
         namespaceExists = true
         // This is to allow the configured namespace to be available in the Temporal
         // cache before continuing on with any additional configuration/bean creation.
         Thread.sleep(TimeUnit.SECONDS.toMillis(5))
       } catch (e: InterruptedException) {
-        log.debug("Namespace '{}' does not exist yet.  Re-checking...", temporalNamespace)
+        log.debug { "Namespace '$temporalNamespace' does not exist yet.  Re-checking..." }
         try {
           Thread.sleep(TimeUnit.SECONDS.toMillis(5))
         } catch (ie: InterruptedException) {
-          log.debug("Sleep interrupted.  Exiting loop...")
+          log.debug { "Sleep interrupted.  Exiting loop..." }
         }
       } catch (e: StatusRuntimeException) {
-        log.debug("Namespace '{}' does not exist yet.  Re-checking...", temporalNamespace)
+        log.debug { "Namespace '$temporalNamespace' does not exist yet.  Re-checking..." }
         try {
           Thread.sleep(TimeUnit.SECONDS.toMillis(5))
         } catch (ie: InterruptedException) {
-          log.debug("Sleep interrupted.  Exiting loop...")
+          log.debug { "Sleep interrupted.  Exiting loop..." }
         }
       }
     }

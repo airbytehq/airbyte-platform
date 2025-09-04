@@ -73,7 +73,7 @@ class AirbyteHttpRequestFieldExtractor {
       val contentAsJson = Jsons.deserialize(contentAsString)
       return Optional.of(contentAsJson)
     } catch (e: RuntimeException) {
-      log.error("Failed to parse content as JSON: {}", contentAsString, e)
+      log.error(e) { "Failed to parse content as JSON: $contentAsString" }
       return Optional.empty()
     }
   }

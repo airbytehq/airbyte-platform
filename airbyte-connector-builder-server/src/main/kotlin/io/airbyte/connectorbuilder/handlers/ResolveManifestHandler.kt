@@ -31,11 +31,9 @@ open class ResolveManifestHandler
     fun resolveManifest(resolveManifestRequestBody: ResolveManifestRequestBody): ResolveManifest {
       try {
         addWorkspaceAndProjectIdsToTrace(resolveManifestRequestBody.workspaceId, resolveManifestRequestBody.projectId)
-        log.info(
-          "Handling resolve_manifest request for workspace '{}' with project ID = '{}'",
-          resolveManifestRequestBody.workspaceId,
-          resolveManifestRequestBody.projectId,
-        )
+        log.info {
+          "Handling resolve_manifest request for workspace '${resolveManifestRequestBody.workspaceId}' with project ID = '${resolveManifestRequestBody.projectId}'"
+        }
         return requester.resolveManifest(resolveManifestRequestBody.manifest)
       } catch (exc: IOException) {
         log.error(exc) { "Error handling resolve_manifest request." }

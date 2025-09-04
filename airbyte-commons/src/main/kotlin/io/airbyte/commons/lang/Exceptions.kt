@@ -66,7 +66,7 @@ object Exceptions {
     try {
       procedure()
     } catch (e: Exception) {
-      log.error("Swallowed error.", e)
+      log.error(e) { "Swallowed error." }
     }
   }
 

@@ -30,23 +30,21 @@ class KeycloakSetup(
           .toBlocking()
           .exchange(HttpRequest.GET<Any>(keycloakUrl), String::class.java)
 
-      log.info("Keycloak server response: {}", response.status)
-      log.info("Starting admin Keycloak client with url: {}", keycloakUrl)
+      log.info { "Keycloak server response: ${response.status}" }
+      log.info { "Starting admin Keycloak client with url: $keycloakUrl" }
 
       if (keycloakConfiguration.resetRealm) {
         keycloakServer.destroyAndRecreateAirbyteRealm()
-        log.info("Successfully destroyed and recreated Airbyte Realm. Now deleting Airbyte User/Permission records...")
+        log.info { "Successfully destroyed and recreated Airbyte Realm. Now deleting Airbyte User/Permission records..." }
         try {
           configDbResetHelper.deleteConfigDbUsers()
         } catch (e: SQLException) {
-          log.error(
-            "Encountered an error while cleaning up Airbyte User/Permission records. " +
-              "You likely need to re-run this KEYCLOAK_RESET_REALM operation.",
-            e,
-          )
+          log.error(e) {
+            "Encountered an error while cleaning up Airbyte User/Permission records. You likely need to re-run this KEYCLOAK_RESET_REALM operation."
+          }
           throw RuntimeException(e)
         }
-        log.info("Successfully cleaned existing Airbyte User/Permission records. Reset finished successfully.")
+        log.info { "Successfully cleaned existing Airbyte User/Permission records. Reset finished successfully." }
       } else {
         keycloakServer.setupAirbyteRealm()
       }

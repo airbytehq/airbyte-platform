@@ -297,10 +297,10 @@ class DefaultJobCreator(
 
     if (!isReset) {
       if (source == null || source.isEmpty) {
-        log.error(
+        log.error {
           "`source` is expected for all jobs except reset, but was not present. " +
-            "Resource requirements set for the source are being skipped.",
-        )
+            "Resource requirements set for the source are being skipped."
+        }
         return syncResourceRequirements
       }
       val mergedSrcResourceReq =
@@ -425,7 +425,7 @@ class DefaultJobCreator(
     try {
       return parse(destOverrides)
     } catch (e: Exception) {
-      log.warn("Could not parse DESTINATION resource overrides '{}' from feature flag string: {}", destOverrides, e.message)
+      log.warn { "Could not parse DESTINATION resource overrides '$destOverrides' from feature flag string: ${e.message}" }
       return null
     }
   }
@@ -435,7 +435,7 @@ class DefaultJobCreator(
     try {
       return parse(orchestratorOverrides)
     } catch (e: Exception) {
-      log.warn("Could not parse ORCHESTRATOR resource overrides '{}' from feature flag string: {}", orchestratorOverrides, e.message)
+      log.warn { "Could not parse ORCHESTRATOR resource overrides '$orchestratorOverrides' from feature flag string: ${e.message}" }
       return null
     }
   }
@@ -445,7 +445,7 @@ class DefaultJobCreator(
     try {
       return parse(sourceOverrides)
     } catch (e: Exception) {
-      log.warn("Could not parse SOURCE resource overrides '{}' from feature flag string: {}", sourceOverrides, e.message)
+      log.warn { "Could not parse SOURCE resource overrides '$sourceOverrides' from feature flag string: ${e.message}" }
       return null
     }
   }

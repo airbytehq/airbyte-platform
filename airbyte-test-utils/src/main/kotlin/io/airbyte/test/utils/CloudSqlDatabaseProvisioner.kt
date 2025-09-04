@@ -115,7 +115,7 @@ class CloudSqlDatabaseProvisioner {
         if (e.statusCode == HttpStatus.SC_CONFLICT) {
           attempts++
           log.info { "Attempt $attempts failed with 409 error" }
-          log.info("Exception thrown by API: " + e.message)
+          log.info { "Exception thrown by API: " + e.message }
           Thread.sleep(1000)
         }
       } catch (e: Exception) {

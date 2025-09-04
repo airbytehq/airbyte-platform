@@ -707,7 +707,7 @@ open class ConnectorBuilderProjectsHandler
             val errorMessage =
               "Could not fork connector: no manifest file available " +
                 "for ${defaultVersion.dockerRepository}:${defaultVersion.dockerImageTag}"
-            log.error(errorMessage)
+            log.error { errorMessage }
             throw NotFoundException(errorMessage)
           }
 

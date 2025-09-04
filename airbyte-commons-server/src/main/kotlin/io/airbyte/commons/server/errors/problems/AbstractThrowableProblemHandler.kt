@@ -28,7 +28,7 @@ class AbstractThrowableProblemHandler : ExceptionHandler<AbstractThrowableProble
     exception: AbstractThrowableProblem?,
   ): HttpResponse<*>? {
     if (exception != null) {
-      log.error("Throwable Problem Handler caught exception: ", exception)
+      log.error(exception) { "Throwable Problem Handler caught exception: " }
       val problem: ProblemResponse = exception.problem
 
       val status: HttpStatus = HttpStatus.valueOf(problem.getStatus()!!)

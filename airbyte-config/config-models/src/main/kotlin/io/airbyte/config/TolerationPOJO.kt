@@ -80,10 +80,7 @@ data class TolerationPOJO(
           tolerationMap["operator"],
         )
       } else {
-        log.warn(
-          "Ignoring toleration {}, missing one of key,effect or operator",
-          singleTolerationStr,
-        )
+        log.warn { "Ignoring toleration $singleTolerationStr, missing one of key,effect or operator" }
         return null
       }
     }

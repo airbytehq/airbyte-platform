@@ -84,7 +84,7 @@ class BreakingChangeNotificationHelper {
           BreakingChangeNotificationType.DISABLED,
         )
       } catch (e: Exception) {
-        log.error("Failed to notify disabled syncs for {} {}", actorType, connectorName, e)
+        log.error(e) { "Failed to notify disabled syncs for $actorType $connectorName" }
       }
     }
   }
@@ -105,7 +105,7 @@ class BreakingChangeNotificationHelper {
           BreakingChangeNotificationType.WARNING,
         )
       } catch (e: Exception) {
-        log.error("Failed to notify breaking change warning for {} {}", actorType, connectorName, e)
+        log.error(e) { "Failed to notify breaking change warning for $actorType $connectorName" }
       }
     }
   }
@@ -121,7 +121,7 @@ class BreakingChangeNotificationHelper {
           BreakingChangeNotificationType.UPCOMING_UPGRADE,
         )
       } catch (e: Exception) {
-        log.error("Failed to notify upcoming upgrade sync for {} {}", actorType, connectorName, e)
+        log.error(e) { "Failed to notify upcoming upgrade sync for $actorType $connectorName" }
       }
     }
   }
@@ -140,7 +140,7 @@ class BreakingChangeNotificationHelper {
           BreakingChangeNotificationType.UPGRADED,
         )
       } catch (e: Exception) {
-        log.error("Failed to notify auto-upgraded sync for {} {}", actorType, connectorName, e)
+        log.error(e) { "Failed to notify auto-upgraded sync for $actorType $connectorName" }
       }
     }
   }
@@ -172,7 +172,8 @@ class BreakingChangeNotificationHelper {
 
       // Note: we only send emails for now
       // Slack can't be enabled due to not being able to handle bulk Slack notifications reliably
-      if (notificationItem != null && workspace.email != null &&
+      if (notificationItem != null &&
+        workspace.email != null &&
         notificationItem.notificationType.contains(Notification.NotificationType.CUSTOMERIO)
       ) {
         receiverEmails.add(workspace.email)
@@ -180,53 +181,30 @@ class BreakingChangeNotificationHelper {
     }
 
     if (receiverEmails.isEmpty()) {
-      log.info(
-        "No emails to send for breaking change {} ({} {}). {} workspaces had disabled notifications.",
-        notificationType,
-        actorType,
-        connectorName,
-        workspaceIds.size,
-      )
+      log.info {
+        "No emails to send for breaking change $notificationType ($actorType $connectorName). ${workspaceIds.size} workspaces had disabled notifications."
+      }
       return
     }
 
     try {
       if (notificationType == BreakingChangeNotificationType.WARNING) {
-        log.info(
-          "Sending breaking change warning for {} {} v{} to {} emails",
-          actorType,
-          connectorName,
-          breakingChange.version.serialize(),
-          receiverEmails.size,
-        )
+        log.info {
+          "Sending breaking change warning for $actorType $connectorName v${breakingChange.version.serialize()} to ${receiverEmails.size} emails"
+        }
         notificationClient.notifyBreakingChangeWarning(receiverEmails, connectorName, actorType, breakingChange)
       } else if (notificationType == BreakingChangeNotificationType.DISABLED) {
-        log.info(
-          "Sending breaking change syncs disabled for {} {} to {} emails",
-          actorType,
-          connectorName,
-          receiverEmails.size,
-        )
+        log.info { "Sending breaking change syncs disabled for $actorType $connectorName to ${receiverEmails.size} emails" }
         notificationClient.notifyBreakingChangeSyncsDisabled(receiverEmails, connectorName, actorType, breakingChange)
       } else if (notificationType == BreakingChangeNotificationType.UPGRADED) {
-        log.info(
-          "Sending breaking change sync upgraded for {} {} to {} emails",
-          actorType,
-          connectorName,
-          receiverEmails.size,
-        )
+        log.info { "Sending breaking change sync upgraded for $actorType $connectorName to ${receiverEmails.size} emails" }
         notificationClient.notifyBreakingChangeSyncsUpgraded(receiverEmails, connectorName, actorType, breakingChange)
       } else if (notificationType == BreakingChangeNotificationType.UPCOMING_UPGRADE) {
-        log.info(
-          "Sending breaking change sync upcoming upgrade for {} {} to {} emails",
-          actorType,
-          connectorName,
-          receiverEmails.size,
-        )
+        log.info { "Sending breaking change sync upcoming upgrade for $actorType $connectorName to ${receiverEmails.size} emails" }
         notificationClient.notifyBreakingUpcomingAutoUpgrade(receiverEmails, connectorName, actorType, breakingChange)
       }
     } catch (e: Exception) {
-      log.error("Failed to send breaking change notification to customer.io", e)
+      log.error(e) { "Failed to send breaking change notification to customer.io" }
     }
   }
 }

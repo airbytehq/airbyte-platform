@@ -64,11 +64,7 @@ class ProcessOutputParser {
 
     if (trace.isPresent) {
       val traceMessage = trace.get()
-      log.debug(
-        "Error response from CDK: {}\n{}",
-        traceMessage.error.message,
-        traceMessage.error.stackTrace,
-      )
+      log.debug { "Error response from CDK: ${traceMessage.error.message}\n${traceMessage.error.stackTrace}" }
       throw AirbyteCdkInvalidInputException(
         String.format("AirbyteTraceMessage response from CDK: %s", traceMessage.error.message),
         traceMessage,
@@ -95,7 +91,7 @@ class ProcessOutputParser {
           cdkCommand,
           process.exitValue(),
         )
-      log.error(errorMessage)
+      log.error { errorMessage }
       return CdkUnknownException(errorMessage)
     }
 
@@ -104,7 +100,7 @@ class ProcessOutputParser {
     val error = stderr.lines().collect(Collectors.joining())
 
     val errorMessage = String.format("CDK subprocess for %s finished with exit code %d. error=%s", cdkCommand, exitCode, error)
-    log.error(errorMessage)
+    log.error { errorMessage }
     return CdkProcessException(errorMessage)
   }
 

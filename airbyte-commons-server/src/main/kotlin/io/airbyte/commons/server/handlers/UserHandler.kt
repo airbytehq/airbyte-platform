@@ -436,12 +436,7 @@ open class UserHandler
           val existingApplications = appService.listApplicationsByUser(authedUser)
           for (application in existingApplications) {
             appService.deleteApplication(authedUser, application.id)
-            log.info(
-              "Revoked application {} for user {} (auth user {})...",
-              application.id,
-              existingUser.userId,
-              authUser.authUserId,
-            )
+            log.info { "Revoked application ${application.id} for user ${existingUser.userId} (auth user ${authUser.authUserId})..." }
           }
         }
       }
@@ -715,10 +710,9 @@ open class UserHandler
         return
       }
 
-      log.info(
-        "creating instance_admin permission for user ID {} because their email matches this instance's configured initial_user",
-        createdUser.userId,
-      )
+      log.info {
+        "creating instance_admin permission for user ID ${createdUser.userId} because their email matches this instance's configured initial_user"
+      }
 
       try {
         permissionHandler.grantInstanceAdmin(createdUser.userId)

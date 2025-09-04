@@ -643,7 +643,7 @@ class ConnectionServiceJooqImpl
      */
     fun buildCursorConditionLastSyncDesc(cursor: Cursor?): Condition {
       if (cursor == null || cursor.cursorId == null) {
-        log.info("First page; cursor == null || cursor.connectionId == null")
+        log.info { "First page; cursor == null || cursor.connectionId == null" }
         return DSL.noCondition()
       }
 

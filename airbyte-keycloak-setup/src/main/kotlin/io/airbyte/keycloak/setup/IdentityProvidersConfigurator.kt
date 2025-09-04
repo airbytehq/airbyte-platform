@@ -25,7 +25,7 @@ class IdentityProvidersConfigurator(
 ) {
   fun configureIdp(keycloakRealm: RealmResource) {
     if (oidcConfig.isEmpty) {
-      log.info("No identity provider configuration found. Skipping IDP setup.")
+      log.info { "No identity provider configuration found. Skipping IDP setup." }
       return
     }
 
@@ -34,7 +34,7 @@ class IdentityProvidersConfigurator(
     val existingIdps = keycloakRealm.identityProviders().findAll()
     // if no IDPs exist, create one and mark it as airbyte-managed
     if (existingIdps.isEmpty()) {
-      log.info("No existing identity providers found. Creating new IDP.")
+      log.info { "No existing identity providers found. Creating new IDP." }
       createNewIdp(keycloakRealm, idp)
       return
     }
@@ -63,25 +63,22 @@ class IdentityProvidersConfigurator(
     }
 
     if (existingManagedIdps.size == expNumManagedIdp) {
-      log.info("Found existing managed IDP. Updating it.")
+      log.info { "Found existing managed IDP. Updating it." }
       updateExistingIdp(keycloakRealm, existingManagedIdps.first(), idp)
       return
     }
 
     // if no managed IDPs exist, but there is exactly one IDP, update it and mark it as airbyte-managed
     if (existingIdps.size == expNumManagedIdp) {
-      log.info("Found exactly one existing IDP. Updating it and marking it as airbyte-managed.")
+      log.info { "Found exactly one existing IDP. Updating it and marking it as airbyte-managed." }
       updateExistingIdp(keycloakRealm, existingIdps.first(), idp)
       return
     }
 
     // if there are multiple IDPs and none are managed, log a warning and do nothing.
-    log.warn(
-      "Multiple identity providers exist and none are marked as airbyte-managed. Skipping IDP update. If you want your OIDC configuration to " +
-        "apply to a specific IDP, please add a Config entry with key {} and value {} to that IDP and try again.",
-      AIRBYTE_MANAGED_IDP_KEY,
-      AIRBYTE_MANAGED_IDP_VALUE,
-    )
+    log.warn {
+      "Multiple identity providers exist and none are marked as airbyte-managed. Skipping IDP update. If you want your OIDC configuration to apply to a specific IDP, please add a Config entry with key $AIRBYTE_MANAGED_IDP_KEY and value $AIRBYTE_MANAGED_IDP_VALUE to that IDP and try again."
+    }
   }
 
   private fun createNewIdp(
@@ -90,7 +87,7 @@ class IdentityProvidersConfigurator(
   ) {
     keycloakRealm.identityProviders().create(idp).use { response ->
       if (response.status == Response.Status.CREATED.statusCode) {
-        log.info("Identity Provider {} created successfully!", idp.alias)
+        log.info { "Identity Provider ${idp.alias} created successfully!" }
       } else {
         val errorMessage =
           String.format(
@@ -98,7 +95,7 @@ class IdentityProvidersConfigurator(
             response.statusInfo.reasonPhrase,
             response.readEntity(String::class.java),
           )
-        log.error(errorMessage)
+        log.error { errorMessage }
         throw RuntimeException(errorMessage)
       }
     }

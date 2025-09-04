@@ -53,10 +53,7 @@ object WorkerUtils {
 
     if (process.info() != null) {
       process.info().commandLine().ifPresent { commandLine: String? ->
-        log.debug(
-          "Gently closing process {}",
-          commandLine,
-        )
+        log.debug { "Gently closing process $commandLine" }
       }
     }
 

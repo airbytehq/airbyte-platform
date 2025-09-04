@@ -28,7 +28,7 @@ open class CommunityCurrentUserService(
     if (this.retrievedDefaultUser == null) {
       try {
         this.retrievedDefaultUser = userPersistence?.getDefaultUser()?.orElseThrow()
-        log.debug("Setting current user for request to retrieved default user: {}", retrievedDefaultUser)
+        log.debug { "Setting current user for request to retrieved default user: $retrievedDefaultUser" }
       } catch (e: Exception) {
         throw RuntimeException("Could not get the current user due to an internal error.", e)
       }
@@ -40,7 +40,7 @@ open class CommunityCurrentUserService(
     try {
       return Optional.of(getCurrentUser().userId)
     } catch (e: Exception) {
-      log.error("Unable to get current user associated with the request", e)
+      log.error(e) { "Unable to get current user associated with the request" }
       return Optional.empty()
     }
   }

@@ -272,12 +272,7 @@ class OAuthConfigSupplier(
       if (outputSpecTop != null && outputSpecTop.has(PROPERTIES)) {
         outputSpec = outputSpecTop[PROPERTIES]
       } else {
-        log.error(
-          String.format(
-            "In %s's advanced_auth spec, completeOAuthServerOutputSpecification does not declare properties.",
-            connectorName,
-          ),
-        )
+        log.error { "In $connectorName's advanced_auth spec, completeOAuthServerOutputSpecification does not declare properties." }
         return
       }
 
@@ -294,33 +289,17 @@ class OAuthConfigSupplier(
             if (!propertyPath.isEmpty()) {
               consumer.accept(key, propertyPath)
             } else {
-              log.error(
-                String.format(
-                  "In %s's advanced_auth spec, completeOAuthServerOutputSpecification includes an invalid empty %s for %s",
-                  connectorName,
-                  PATH_IN_CONNECTOR_CONFIG,
-                  key,
-                ),
-              )
+              log.error {
+                "In $connectorName's advanced_auth spec, completeOAuthServerOutputSpecification includes an invalid empty $PATH_IN_CONNECTOR_CONFIG for $key"
+              }
             }
           } else {
-            log.error(
-              String.format(
-                "In %s's advanced_auth spec, completeOAuthServerOutputSpecification does not declare an Array<String> %s for %s",
-                connectorName,
-                PATH_IN_CONNECTOR_CONFIG,
-                key,
-              ),
-            )
+            log.error {
+              "In $connectorName's advanced_auth spec, completeOAuthServerOutputSpecification does not declare an Array<String> $PATH_IN_CONNECTOR_CONFIG for $key"
+            }
           }
         } else {
-          log.error(
-            String.format(
-              "In %s's advanced_auth spec, completeOAuthServerOutputSpecification does not declare an ObjectNode for %s",
-              connectorName,
-              key,
-            ),
-          )
+          log.error { "In $connectorName's advanced_auth spec, completeOAuthServerOutputSpecification does not declare an ObjectNode for $key" }
         }
       }
     }

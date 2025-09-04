@@ -25,7 +25,7 @@ fun main(args: Array<String>) {
     keycloakSetup.run()
     System.exit(0)
   } catch (e: Exception) {
-    log.error("Unable to setup Keycloak.", e)
+    log.error(e) { "Unable to setup Keycloak." }
     System.exit(-1)
   }
 }

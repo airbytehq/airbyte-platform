@@ -1503,13 +1503,12 @@ class DefaultJobPersistence
         // Flagging this because this would be highly suspicious but not bad enough that we should fail
         // hard.
         // If the new config is fine, the system should self-heal.
-        log.warn(
-          "Inconsistent AirbyteProtocolVersion found, only one of min/max was found. (min:{}, max:{})",
-          min.map { obj: Version -> obj.serialize() }.orElse(""),
+        val minMsg = min.map { obj: Version -> obj.serialize() }.orElse("")
+        val maxMsg =
           max
             .map { obj: Version -> obj.serialize() }
-            .orElse(""),
-        )
+            .orElse("")
+        log.warn { "Inconsistent AirbyteProtocolVersion found, only one of min/max was found. (min:$minMsg, max:$maxMsg)" }
       }
 
       if (min.isEmpty && max.isEmpty) {
@@ -2006,10 +2005,7 @@ class DefaultJobPersistence
 
             val key = JobAttemptPair(r.get(Tables.ATTEMPTS.JOB_ID), r.get(Tables.ATTEMPTS.ATTEMPT_NUMBER))
             if (!attemptStats.containsKey(key)) {
-              log.error(
-                "{} stream stats entry does not have a corresponding sync stats entry. This suggest the database is in a bad state.",
-                key,
-              )
+              log.error { "$key stream stats entry does not have a corresponding sync stats entry. This suggest the database is in a bad state." }
               return@Consumer
             }
             // todo (cgardens) - did I do this right?

@@ -98,12 +98,12 @@ class JobCreationAndStatusUpdateHelper(
         }
 
         val attemptNumber = attempt.getAttemptNumber()
-        log.info("Failing non-terminal attempt {} for non-terminal job {}", attemptNumber, jobId)
+        log.info { "Failing non-terminal attempt $attemptNumber for non-terminal job $jobId" }
         jobPersistence.failAttempt(jobId, attemptNumber)
         jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummaryForTemporalCleaningJobState(jobId, attemptNumber))
       }
 
-      log.info("Failing non-terminal job {}", jobId)
+      log.info { "Failing non-terminal job $jobId" }
       jobPersistence.failJob(jobId)
 
       val attemptStats: MutableList<JobPersistence.AttemptStats> = ArrayList()
@@ -261,7 +261,7 @@ class JobCreationAndStatusUpdateHelper(
     try {
       emitAttemptEvent(OssMetricsRegistry.ATTEMPTS_COMPLETED, job, attempt.getAttemptNumber(), additionalAttributes)
     } catch (e: IOException) {
-      log.info("Failed to record attempt completed metric for attempt {} of job {}", attempt.getAttemptNumber(), job.id)
+      log.info { "Failed to record attempt completed metric for attempt ${attempt.getAttemptNumber()} of job ${job.id}" }
     }
   }
 

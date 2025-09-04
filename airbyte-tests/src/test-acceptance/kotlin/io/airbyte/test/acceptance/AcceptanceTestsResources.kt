@@ -127,7 +127,7 @@ class AcceptanceTestsResources {
     val connectionSyncRead1 = testHarness.syncConnection(connectionId)
     testHarness.waitForSuccessfulJob(connectionSyncRead1.job)
 
-    log.info(STATE_AFTER_SYNC_ONE, testHarness.getConnectionState(connectionId))
+    log.info { STATE_AFTER_SYNC_ONE.format(testHarness.getConnectionState(connectionId)) }
 
     // postgres_init.sql inserts 5 records. Assert that we wrote stats correctly.
     // (this is a bit sketchy, in that theoretically the source could emit a state message,
@@ -222,7 +222,7 @@ class AcceptanceTestsResources {
     val connectionSyncRead2 = testHarness.syncConnection(connectionId)
     testHarness.waitForSuccessfulJob(connectionSyncRead2.job)
 
-    log.info(STATE_AFTER_SYNC_TWO, testHarness.getConnectionState(connectionId))
+    log.info { STATE_AFTER_SYNC_TWO.format(testHarness.getConnectionState(connectionId)) }
 
     assertRawDestinationContains(
       dst = dst,
@@ -359,7 +359,7 @@ class AcceptanceTestsResources {
     val connectionSyncRead1 = testHarness.syncConnection(connectionId)
     testHarness.waitForSuccessfulJob(connectionSyncRead1.job)
 
-    log.info(STATE_AFTER_SYNC_ONE, testHarness.getConnectionState(connectionId))
+    log.info { STATE_AFTER_SYNC_ONE.format(testHarness.getConnectionState(connectionId)) }
 
     val src = testHarness.getSourceDatabase()
     val dst = testHarness.getDestinationDatabase()

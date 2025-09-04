@@ -113,7 +113,7 @@ class TemporalUtils(
    */
   fun configureTemporalNamespace(temporalService: WorkflowServiceStubs) {
     if (temporalCloudEnabled) {
-      log.info("Skipping Temporal Namespace configuration because Temporal Cloud is in use.")
+      log.info { "Skipping Temporal Namespace configuration because Temporal Cloud is in use." }
       return
     }
 
@@ -125,12 +125,7 @@ class TemporalUtils(
     val humanReadableWorkflowExecutionTtl = formatMilli(workflowExecutionTtl.toMillis())
 
     if (currentRetention == workflowExecutionTtl) {
-      log.info(
-        (
-          "Workflow execution TTL already set for namespace " + DEFAULT_NAMESPACE + ". Remains unchanged as: " +
-            humanReadableWorkflowExecutionTtl
-        ),
-      )
+      log.info { ("Workflow execution TTL already set for namespace $DEFAULT_NAMESPACE. Remains unchanged as: $humanReadableWorkflowExecutionTtl") }
     } else {
       val newGrpcDuration =
         com.google.protobuf.Duration
@@ -145,12 +140,9 @@ class TemporalUtils(
           .setNamespace(DEFAULT_NAMESPACE)
           .setConfig(namespaceConfig)
           .build()
-      log.info(
-        (
-          "Workflow execution TTL differs for namespace " + DEFAULT_NAMESPACE + ". Changing from (" + humanReadableCurrentRetention + ") to (" +
-            humanReadableWorkflowExecutionTtl + "). "
-        ),
-      )
+      log.info {
+        "Workflow execution TTL differs for namespace $DEFAULT_NAMESPACE. Changing from ($humanReadableCurrentRetention) to ($humanReadableWorkflowExecutionTtl). "
+      }
       client.updateNamespace(updateNamespaceRequest)
     }
   }
@@ -169,7 +161,7 @@ class TemporalUtils(
     temporalServiceSupplier: Supplier<WorkflowServiceStubs>,
     namespace: String,
   ): WorkflowServiceStubs {
-    log.info("Waiting for temporal server...")
+    log.info { "Waiting for temporal server..." }
 
     var temporalNamespaceInitialized = false
     var temporalService: WorkflowServiceStubs? = null
@@ -180,7 +172,7 @@ class TemporalUtils(
         throw RuntimeException("Could not create Temporal client within max timeout!")
       }
 
-      log.warn("Waiting for namespace {} to be initialized in temporal...", namespace)
+      log.warn { "Waiting for namespace $namespace to be initialized in temporal..." }
       Exceptions.toRuntime { Thread.sleep(waitInterval.toMillis()) }
       millisWaited = millisWaited + waitInterval.toMillis()
 
@@ -190,14 +182,14 @@ class TemporalUtils(
         temporalNamespaceInitialized = namespaceInfo.isInitialized
       } catch (e: Exception) {
         // Ignore the exception because this likely means that the Temporal service is still initializing.
-        log.warn("Ignoring exception while trying to request Temporal namespace:", e)
+        log.warn(e) { "Ignoring exception while trying to request Temporal namespace:" }
       }
     }
 
     // sometimes it takes a few additional seconds for workflow queue listening to be available
     Exceptions.toRuntime { Thread.sleep(waitAfterConnection.toMillis()) }
 
-    log.info("Temporal namespace {} initialized!", namespace)
+    log.info { "Temporal namespace $namespace initialized!" }
 
     return temporalService!!
   }

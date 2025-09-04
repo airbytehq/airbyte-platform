@@ -31,11 +31,9 @@ open class StreamHandler
     fun readStream(streamReadRequestBody: StreamReadRequestBody): StreamRead {
       try {
         addWorkspaceAndProjectIdsToTrace(streamReadRequestBody.workspaceId, streamReadRequestBody.projectId)
-        log.info(
-          "Handling test_read request for workspace '{}' with project ID = '{}'",
-          streamReadRequestBody.workspaceId,
-          streamReadRequestBody.projectId,
-        )
+        log.info {
+          "Handling test_read request for workspace '${streamReadRequestBody.workspaceId}' with project ID = '${streamReadRequestBody.projectId}'"
+        }
         return requester.readStream(
           streamReadRequestBody.manifest,
           streamReadRequestBody.customComponentsCode,

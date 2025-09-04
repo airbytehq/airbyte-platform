@@ -64,7 +64,9 @@ class PayloadChecker(
       inspectionMap[fieldName] =
         Jsons.serialize(jsonData[fieldName]).length
     }
-    log.info("PayloadSize exceeded for object: {}", Jsons.serialize<Map<String, Int>>(inspectionMap))
+    Jsons.serialize<Map<String, Int>>(inspectionMap).run {
+      log.info { "PayloadSize exceeded for object: $it" }
+    }
   }
 
   companion object {

@@ -71,7 +71,7 @@ open class SourceDefinitionApiController(
   override fun deleteSourceDefinition(
     @Body sourceDefinitionIdRequestBody: SourceDefinitionIdRequestBody,
   ) {
-    log.info("about to call access validator")
+    log.info { "about to call access validator" }
     accessValidator.validateWriteAccess(sourceDefinitionIdRequestBody.sourceDefinitionId)
     execute<Any?> {
       sourceDefinitionsHandler.deleteSourceDefinition(sourceDefinitionIdRequestBody.sourceDefinitionId)

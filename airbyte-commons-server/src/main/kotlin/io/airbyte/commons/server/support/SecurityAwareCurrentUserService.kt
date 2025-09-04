@@ -37,7 +37,7 @@ open class SecurityAwareCurrentUserService(
       try {
         val authUserId = securityService.username().orElseThrow()
         this.retrievedCurrentUser = userPersistence.getUserByAuthId(authUserId).orElseThrow()
-        log.debug("Setting current user for request to: {}", retrievedCurrentUser)
+        log.debug { "Setting current user for request to: $retrievedCurrentUser" }
       } catch (e: Exception) {
         throw AuthException("Could not get the current Airbyte user due to an internal error.", e)
       }
@@ -49,7 +49,7 @@ open class SecurityAwareCurrentUserService(
     try {
       return Optional.of(getCurrentUser().userId)
     } catch (e: Exception) {
-      log.error("Unable to get current user associated with the request", e)
+      log.error(e) { "Unable to get current user associated with the request" }
       return Optional.empty()
     }
   }

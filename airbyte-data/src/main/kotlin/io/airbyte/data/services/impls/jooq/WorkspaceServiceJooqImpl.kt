@@ -826,13 +826,13 @@ class WorkspaceServiceJooqImpl
       try {
         return Optional.of(getStandardWorkspaceNoSecrets(workspaceId, false))
       } catch (e: ConfigNotFoundException) {
-        log.warn("Unable to find workspace with ID {}", workspaceId)
+        log.warn { "Unable to find workspace with ID $workspaceId" }
         return Optional.empty()
       } catch (e: JsonValidationException) {
-        log.warn("Unable to find workspace with ID {}", workspaceId)
+        log.warn { "Unable to find workspace with ID $workspaceId" }
         return Optional.empty()
       } catch (e: IOException) {
-        log.warn("Unable to find workspace with ID {}", workspaceId)
+        log.warn { "Unable to find workspace with ID $workspaceId" }
         return Optional.empty()
       }
     }

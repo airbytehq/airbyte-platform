@@ -418,13 +418,11 @@ open class SchedulerHandler
       io.airbyte.config.persistence.ConfigNotFoundException::class,
     )
     fun applySchemaChangeForSource(sourceAutoPropagateChange: SourceAutoPropagateChange) {
-      log.info(
-        "Applying schema changes for source '{}' in workspace '{}'",
-        sourceAutoPropagateChange.sourceId,
-        sourceAutoPropagateChange.workspaceId,
-      )
+      log.info {
+        "Applying schema changes for source '${sourceAutoPropagateChange.sourceId}' in workspace '${sourceAutoPropagateChange.workspaceId}'"
+      }
       if (sourceAutoPropagateChange.sourceId == null) {
-        log.warn("Missing required field sourceId for applying schema change.")
+        log.warn { "Missing required field sourceId for applying schema change." }
         return
       }
 
@@ -437,13 +435,9 @@ open class SchedulerHandler
           1L,
           MetricAttribute(MetricTags.SOURCE_ID, sourceAutoPropagateChange.sourceId.toString()),
         )
-        log.warn(
-          "Missing required fields for applying schema change. sourceId: {}, workspaceId: {}, catalogId: {}, catalog: {}",
-          sourceAutoPropagateChange.sourceId,
-          sourceAutoPropagateChange.workspaceId,
-          sourceAutoPropagateChange.catalogId,
-          sourceAutoPropagateChange.catalog,
-        )
+        log.warn {
+          "Missing required fields for applying schema change. sourceId: ${sourceAutoPropagateChange.sourceId}, workspaceId: ${sourceAutoPropagateChange.workspaceId}, catalogId: ${sourceAutoPropagateChange.catalogId}, catalog: ${sourceAutoPropagateChange.catalog}"
+        }
         return
       }
 
@@ -538,7 +532,7 @@ open class SchedulerHandler
 
       val standardSync = connectionService.getStandardSync(jobCreate.connectionId)
       val streamsToReset = streamResetPersistence.getStreamResets(jobCreate.connectionId)
-      log.info("Found the following streams to reset for connection {}: {}", jobCreate.connectionId, streamsToReset)
+      log.info { "Found the following streams to reset for connection ${jobCreate.connectionId}: $streamsToReset" }
       val streamsToRefresh = streamRefreshesHandler.getRefreshesForConnection(jobCreate.connectionId)
 
       if (!streamsToReset.isEmpty()) {
@@ -584,7 +578,7 @@ open class SchedulerHandler
       } else if (!streamsToRefresh.isEmpty()) {
         val jobId = jobFactory.createRefresh(jobCreate.connectionId, streamsToRefresh)
 
-        log.info("New refresh job created, with id: $jobId")
+        log.info { "New refresh job created, with id: $jobId" }
         val job = jobPersistence.getJob(jobId)
         jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CREATED_BY_RELEASE_STAGE, job)
 
@@ -592,7 +586,7 @@ open class SchedulerHandler
       } else {
         val jobId = jobFactory.createSync(jobCreate.connectionId, jobCreate.isScheduled)
 
-        log.info("New job created, with id: $jobId")
+        log.info { "New job created, with id: $jobId" }
         val job = jobPersistence.getJob(jobId)
         jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CREATED_BY_RELEASE_STAGE, job)
 
@@ -602,7 +596,7 @@ open class SchedulerHandler
 
     @Throws(IOException::class)
     fun cancelJob(jobIdRequestBody: JobIdRequestBody): JobInfoRead {
-      log.info("Canceling job {}", jobIdRequestBody.id)
+      log.info { "Canceling job ${jobIdRequestBody.id}" }
       return submitCancellationToWorker(jobIdRequestBody.id)
     }
 
@@ -626,19 +620,14 @@ open class SchedulerHandler
       val job = jobPersistence.getJob(jobId)
 
       val cancellationResult = eventRunner.startNewCancellation(UUID.fromString(job.scope))
-      log.info(
-        "Cancellation result for job {}: failingReason={} errorCode={}",
-        jobId,
-        cancellationResult.failingReason,
-        cancellationResult.errorCode,
-      )
+      log.info { "Cancellation result for job $jobId: failingReason=${cancellationResult.failingReason} errorCode=${cancellationResult.errorCode}" }
       check(cancellationResult.failingReason == null) { cancellationResult.failingReason!! }
       // log connection timeline event (job cancellation).
       val attemptStats: MutableList<JobPersistence.AttemptStats> = ArrayList()
       for (attempt in job.attempts) {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()))
       }
-      log.info("Adding connection timeline event for job {} attemptStats={}", jobId, attemptStats)
+      log.info { "Adding connection timeline event for job $jobId attemptStats=$attemptStats" }
       connectionTimelineEventHelper.logJobCancellationEventInConnectionTimeline(job, attemptStats)
       // query same job ID again to get updated job info after cancellation
       return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId))

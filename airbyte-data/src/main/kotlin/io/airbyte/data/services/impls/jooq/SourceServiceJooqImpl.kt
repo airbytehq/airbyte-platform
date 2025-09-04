@@ -900,7 +900,7 @@ class SourceServiceJooqImpl(
     try {
       return Optional.of(getSourceConnection(sourceId))
     } catch (_: Exception) {
-      log.warn("Unable to find source with ID $sourceId")
+      log.warn { "Unable to find source with ID $sourceId" }
       return Optional.empty()
     }
   }

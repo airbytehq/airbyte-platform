@@ -34,7 +34,6 @@ import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.Sch
 import io.airbyte.workers.temporal.scheduling.activities.ConfigFetchActivity.ScheduleRetrieverOutput
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity
 import io.airbyte.workers.temporal.scheduling.activities.FeatureFlagFetchActivity.FeatureFlagFetchOutput
-import io.airbyte.workers.temporal.scheduling.activities.FinalizeJobStatsInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberCreationOutput
@@ -42,7 +41,6 @@ import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpd
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCancelledInputWithAttemptNumber
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobCreationOutput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.JobSuccessInputWithAttemptNumber
-import io.airbyte.workers.temporal.scheduling.activities.JobPostProcessingActivity
 import io.airbyte.workers.temporal.scheduling.activities.RecordMetricActivity
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity
 import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceActivity.HydrateInput
@@ -105,8 +103,6 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.function.Predicate
 import java.util.stream.Stream
-import kotlin.collections.ArrayList
-import kotlin.collections.MutableList
 
 // Forcing SAME_THREAD execution as we seem to face the issues described in
 // https://github.com/mockito/mockito/wiki/FAQ#is-mockito-thread-safe

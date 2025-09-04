@@ -34,7 +34,7 @@ class UserConfigurator(
     } else {
       keycloakRealm.users().create(userConfig).use { response ->
         if (response.status == HTTP_STATUS_CREATED) {
-          log.info(userConfig.username + " user created successfully. Status: " + response.statusInfo)
+          log.info { userConfig.username + " user created successfully. Status: " + response.statusInfo }
         } else {
           val errorMessage =
             String.format(
@@ -43,7 +43,7 @@ class UserConfigurator(
               response.statusInfo.reasonPhrase,
               response.readEntity(String::class.java),
             )
-          log.error(errorMessage)
+          log.error { errorMessage }
           throw RuntimeException(errorMessage)
         }
       }

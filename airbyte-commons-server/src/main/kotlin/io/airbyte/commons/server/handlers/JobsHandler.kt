@@ -80,7 +80,7 @@ open class JobsHandler(
 
       val connectionId = UUID.fromString(job.scope)
       if (connectionId != input.connectionId) {
-        log.warn("inconsistent connectionId for jobId '{}' (input:'{}', db:'{}')", jobId, input.connectionId, connectionId)
+        log.warn { "inconsistent connectionId for jobId '$jobId' (input:'${input.connectionId}', db:'$connectionId')" }
         metricClient.count(OssMetricsRegistry.INCONSISTENT_ACTIVITY_INPUT)
       }
 
@@ -138,12 +138,12 @@ open class JobsHandler(
         }
 
         jobErrorReporter.reportSyncJobFailure(connectionId, failureSummary, jobContext, attemptConfig)
-        log.info("Successfully reported failure for job id '{}' connectionId: '{}'", job.id, connectionId)
+        log.info { "Successfully reported failure for job id '${job.id}' connectionId: '$connectionId'" }
       } else {
-        log.info("Failure summary is missing, skipping reporting for jobId '{}', connectionId '{}'", job.id, connectionId)
+        log.info { "Failure summary is missing, skipping reporting for jobId '${job.id}', connectionId '$connectionId'" }
       }
     } else {
-      log.info("Last failed attempt is missing, skipping reporting for jobId '{}', connectionId '{}'", job.id, connectionId)
+      log.info { "Last failed attempt is missing, skipping reporting for jobId '${job.id}', connectionId '$connectionId'" }
     }
   }
 
@@ -165,7 +165,7 @@ open class JobsHandler(
           )
         jobPersistence.writeOutput(jobId, attemptNumber, jobOutput)
       } else {
-        log.warn("The job {} doesn't have any output for the attempt {}", jobId, attemptNumber)
+        log.warn { "The job $jobId doesn't have any output for the attempt $attemptNumber" }
       }
       jobPersistence.succeedAttempt(jobId, attemptNumber)
       val job = jobPersistence.getJob(jobId)

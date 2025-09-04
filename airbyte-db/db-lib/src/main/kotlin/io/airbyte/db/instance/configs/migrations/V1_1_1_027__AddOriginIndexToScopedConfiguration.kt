@@ -13,10 +13,7 @@ import org.jooq.impl.DSL
 class V1_1_1_027__AddOriginIndexToScopedConfiguration : BaseJavaMigration() {
   @Throws(Exception::class)
   override fun migrate(context: Context) {
-    log.info(
-      "Running migration: {}",
-      javaClass.simpleName,
-    )
+    log.info { "Running migration: ${javaClass.simpleName}" }
 
     val ctx = DSL.using(context.connection)
 

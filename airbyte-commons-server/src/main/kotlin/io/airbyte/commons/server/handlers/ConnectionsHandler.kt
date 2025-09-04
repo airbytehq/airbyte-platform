@@ -861,16 +861,18 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
                 .namespace(s.stream.namespace)
             }.collect(Collectors.toSet())
         newCatalogActiveStream.forEach(Consumer { o: io.airbyte.api.model.generated.StreamDescriptor -> deactivatedStreams.remove(o) })
-        log.debug(
-          "Wiping out the state of deactivated streams: [{}]",
-          java.lang.String.join(
-            ", ",
-            deactivatedStreams
-              .stream()
-              .map { obj: io.airbyte.api.model.generated.StreamDescriptor -> buildFullyQualifiedName(obj) }
-              .toList(),
-          ),
-        )
+        log.debug {
+          "Wiping out the state of deactivated streams: [{}]".format(
+            java.lang.String.join(
+              ", ",
+              deactivatedStreams
+                .stream()
+                .map { obj: io.airbyte.api.model.generated.StreamDescriptor ->
+                  buildFullyQualifiedName(obj)
+                }.toList(),
+            ),
+          )
+        }
         statePersistence.bulkDelete(
           connectionId,
           deactivatedStreams
@@ -2040,11 +2042,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
             supportedDestinationSyncModes,
           )
         updateConnection(updateObject, ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name, autoApply)
-        log.info(
-          "Propagating changes for connectionId: '{}', new catalogId '{}'",
-          connection.connectionId,
-          catalogId,
-        )
+        log.info { "Propagating changes for connectionId: '${connection.connectionId}', new catalogId '$catalogId'" }
         connectionTimelineEventHelper.logSchemaChangeAutoPropagationEventInConnectionTimeline(connectionId, appliedDiff)
         if (workspace.notificationSettings != null && workspace.email != null) {
           try {
@@ -2058,7 +2056,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
               workspace.email,
             )
           } catch (e: Exception) {
-            log.info("Failed to send notification", e)
+            log.error(e) { "Failed to send notification" }
             addExceptionToTrace(e)
           }
         }
@@ -2078,7 +2076,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
               connection.nonBreakingChangesPreference == NonBreakingChangesPreference.DISABLE,
             )
           } catch (e: Exception) {
-            log.info("Failed to send notification", e)
+            log.error(e) { "Failed to send notification" }
             addExceptionToTrace(e)
           }
         }

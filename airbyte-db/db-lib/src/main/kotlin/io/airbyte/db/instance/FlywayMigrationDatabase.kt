@@ -97,7 +97,7 @@ abstract class FlywayMigrationDatabase : PostgresDatabase() {
     try {
       close(dataSource)
     } catch (e: Exception) {
-      log.warn("Unable to close data source.", e)
+      log.warn(e) { "Unable to close data source." }
     }
     super.close()
   }

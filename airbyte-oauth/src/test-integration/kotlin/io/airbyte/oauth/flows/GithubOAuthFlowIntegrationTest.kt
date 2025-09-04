@@ -84,7 +84,7 @@ class GithubOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
         null,
         sourceOAuthParameter.configuration,
       )
-    log.info("Waiting for user consent at: {}", url)
+    log.info { "Waiting for user consent at: $url" }
     // TODO: To automate, start a selenium job to navigate to the Consent URL and click on allowing
     // access...
     while (!serverHandler.isSucceeded && limit > 0) {
@@ -100,7 +100,7 @@ class GithubOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
         REDIRECT_URL,
         sourceOAuthParameter.configuration,
       )
-    log.info("Response from completing OAuth Flow is: {}", params.toString())
+    log.info { "Response from completing OAuth Flow is: $params" }
     Assertions.assertTrue(params.containsKey("access_token"))
     Assertions.assertTrue(params["access_token"].toString().length > 0)
   }

@@ -34,11 +34,9 @@ internal open class FullResolveManifestHandler
           fullResolveManifestRequestBody.workspaceId,
           fullResolveManifestRequestBody.projectId,
         )
-        log.info(
-          "Handling full_resolve_manifest request for workspace '{}' with project ID = '{}'",
-          fullResolveManifestRequestBody.workspaceId,
-          fullResolveManifestRequestBody.projectId,
-        )
+        log.info {
+          "Handling full_resolve_manifest request for workspace '${fullResolveManifestRequestBody.workspaceId}' with project ID = '${fullResolveManifestRequestBody.projectId}'"
+        }
         return requester.fullResolveManifest(
           fullResolveManifestRequestBody.manifest,
           fullResolveManifestRequestBody.config,

@@ -76,7 +76,7 @@ class KeycloakTokenValidator(
     return validateTokenWithKeycloak(token)
       .flatMap<Authentication> { valid: Boolean ->
         if (valid) {
-          log.debug("Token is valid, will now getAuthentication for token: {}", token)
+          log.debug { "Token is valid, will now getAuthentication for token: $token" }
           return@flatMap Mono.just<Authentication>(
             getAuthentication(
               token,
@@ -85,7 +85,7 @@ class KeycloakTokenValidator(
           )
         } else {
           // pass to the next validator, if one exists
-          log.debug("Token was not a valid Keycloak token: {}", token)
+          log.debug { "Token was not a valid Keycloak token: $token" }
           metricClient.ifPresent { m: MetricClient ->
             m.count(
               OssMetricsRegistry.KEYCLOAK_TOKEN_VALIDATION,
@@ -108,12 +108,12 @@ class KeycloakTokenValidator(
     try {
       val jwtPayloadString = String(Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8)
       val jwtPayload = Jsons.deserialize(jwtPayloadString)
-      log.debug("jwtPayload: {}", jwtPayload)
+      log.debug { "jwtPayload: $jwtPayload" }
 
       val userAttributeMap = convertJwtPayloadToUserAttributes(jwtPayload).toMutableMap()
 
       val authUserId = jwtPayload["sub"].asText()
-      log.debug("Performing authentication for auth user '{}'...", authUserId)
+      log.debug { "Performing authentication for auth user '$authUserId'..." }
 
       if (StringUtils.isNotBlank(authUserId)) {
         metricClient.ifPresent { m: MetricClient ->
@@ -136,7 +136,7 @@ class KeycloakTokenValidator(
         throw AuthenticationException("Failed to authenticate the user because the userId was blank.")
       }
     } catch (e: Exception) {
-      log.error("Encountered an exception while validating the token.", e)
+      log.error(e) { "Encountered an exception while validating the token." }
       throw AuthenticationException("Failed to authenticate the user.")
     }
   }
@@ -146,19 +146,19 @@ class KeycloakTokenValidator(
     try {
       val jwtAttributes = tokenToAttributes(token)
       realm = jwtAttributes[JWT_SSO_REALM] as String?
-      log.debug("Extracted realm {}", realm)
+      log.debug { "Extracted realm $realm" }
     } catch (e: Exception) {
-      log.debug("Failed to parse realm from JWT token: {}", token, e)
+      log.debug { "Failed to parse realm from JWT token: $token" }
       return Mono.just(false)
     }
 
     if (realm == null) {
-      log.debug("Unable to extract realm from token {}", token)
+      log.debug { "Unable to extract realm from token $token" }
       return Mono.just(false)
     }
 
     val userInfoEndpoint = keycloakConfiguration.getKeycloakUserInfoEndpointForRealm(realm)
-    log.debug("Validating token with Keycloak userinfo endpoint: {}", userInfoEndpoint)
+    log.debug { "Validating token with Keycloak userinfo endpoint: $userInfoEndpoint" }
 
     val request =
       Request
@@ -174,15 +174,15 @@ class KeycloakTokenValidator(
         if (response.isSuccessful) {
           checkNotNull(response.body)
           val responseBody = response.body!!.string()
-          log.debug("Response from userinfo endpoint: {}", responseBody)
+          log.debug { "Response from userinfo endpoint: $responseBody" }
           return validateUserInfo(responseBody)
         } else {
-          log.debug("Non-200 response from userinfo endpoint: {}", response.code)
+          log.debug { "Non-200 response from userinfo endpoint: ${response.code}" }
           return Mono.just(false)
         }
       }
     } catch (e: Exception) {
-      log.error("Failed to validate access token.", e)
+      log.error(e) { "Failed to validate access token." }
       return Mono.error(e)
     }
   }
@@ -192,10 +192,10 @@ class KeycloakTokenValidator(
     try {
       val userInfo = objectMapper.readTree(responseBody)
       val sub = userInfo.path("sub").asText()
-      log.debug("validated Keycloak sub: {}", sub)
+      log.debug { "validated Keycloak sub: $sub" }
       return Mono.just(StringUtils.isNotBlank(sub))
     } catch (e: JsonProcessingException) {
-      log.error("Failed to process JSON.", e)
+      log.error(e) { "Failed to process JSON." }
       return Mono.error(e)
     }
   }

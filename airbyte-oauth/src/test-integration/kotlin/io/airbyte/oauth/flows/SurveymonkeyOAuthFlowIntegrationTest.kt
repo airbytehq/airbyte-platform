@@ -83,7 +83,7 @@ class SurveymonkeyOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
         null,
         sourceOAuthParameter.configuration,
       )
-    log.info("Waiting for user consent at: {}", url)
+    log.info { "Waiting for user consent at: $url" }
     waitForResponse(20)
     Assertions.assertTrue(serverHandler.isSucceeded, "Failed to get User consent on time")
     val params =
@@ -94,7 +94,7 @@ class SurveymonkeyOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
         REDIRECT_URL,
         sourceOAuthParameter.configuration,
       )
-    log.info("Response from completing OAuth Flow is: {}", params.toString())
+    log.info { "Response from completing OAuth Flow is: $params" }
     Assertions.assertTrue(params.containsKey("access_token"))
     Assertions.assertTrue(params["access_token"].toString().length > 0)
   }

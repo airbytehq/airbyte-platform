@@ -60,12 +60,9 @@ class JobErrorReporter(
   ) {
     Exceptions.swallow {
       try {
-        log.info(
-          "{} failures incoming for jobId '{}' connectionId '{}'",
-          if (failureSummary.failures == null) 0 else failureSummary.failures.size,
-          jobContext.jobId,
-          connectionId,
-        )
+        log.info {
+          "${if (failureSummary.failures == null) 0 else failureSummary.failures.size} failures incoming for jobId '${jobContext.jobId}' connectionId '$connectionId'"
+        }
         val traceMessageFailures =
           failureSummary.failures
             .stream()
@@ -81,20 +78,10 @@ class JobErrorReporter(
         commonMetadata.putAll(java.util.Map.of(JOB_ID_KEY, jobContext.jobId.toString()))
         commonMetadata.putAll(getConnectionMetadata(workspace.workspaceId, connectionId))
 
-        log.info(
-          "{} failures to report for jobId '{}' connectionId '{}'",
-          traceMessageFailures.size,
-          jobContext.jobId,
-          connectionId,
-        )
+        log.info { "${traceMessageFailures.size} failures to report for jobId '${jobContext.jobId}' connectionId '$connectionId'" }
         for (failureReason in traceMessageFailures) {
           val failureOrigin = failureReason.failureOrigin
-          log.info(
-            "Reporting failure for jobId '{}' connectionId '{}' origin '{}'",
-            jobContext.jobId,
-            connectionId,
-            failureOrigin,
-          )
+          log.info { "Reporting failure for jobId '${jobContext.jobId}' connectionId '$connectionId' origin '$failureOrigin'" }
 
           // We only care about the failure origins listed below, i.e. those that come from connectors.
           // The rest are ignored.
@@ -131,12 +118,7 @@ class JobErrorReporter(
           }
         }
       } catch (e: Exception) {
-        log.error(
-          "Failed to report status for jobId '{}' connectionId '{}': {}",
-          jobContext.jobId,
-          connectionId,
-          e,
-        )
+        log.error(e) { "Failed to report status for jobId '${jobContext.jobId}' connectionId '$connectionId': {}" }
         throw e
       }
     }

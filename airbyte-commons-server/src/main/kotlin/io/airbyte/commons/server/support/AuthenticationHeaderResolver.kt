@@ -56,7 +56,7 @@ class AuthenticationHeaderResolver(
    */
   @Nullable
   fun resolveOrganization(properties: Map<String, String>): List<UUID>? {
-    log.debug("properties: {}", properties)
+    log.debug { "properties: $properties" }
     try {
       if (properties.containsKey(ORGANIZATION_ID_HEADER)) {
         return listOf<UUID>(UUID.fromString(properties[ORGANIZATION_ID_HEADER]))
@@ -94,18 +94,18 @@ class AuthenticationHeaderResolver(
         try {
           organizationIds.add(workspaceHelper.getOrganizationForWorkspace(workspaceId))
         } catch (e: Exception) {
-          log.debug("Unable to resolve organization ID for workspace ID: {}", workspaceId, e)
+          log.debug { "Unable to resolve organization ID for workspace ID: $workspaceId" }
         }
       }
       return organizationIds
     } catch (e: IllegalArgumentException) {
-      log.debug("Unable to resolve organization ID.", e)
+      log.debug(e) { "Unable to resolve organization ID." }
       return null
     } catch (e: ConfigNotFoundException) {
-      log.debug("Unable to resolve organization ID.", e)
+      log.debug(e) { "Unable to resolve organization ID." }
       return null
     } catch (e: io.airbyte.config.persistence.ConfigNotFoundException) {
-      log.debug("Unable to resolve organization ID.", e)
+      log.debug(e) { "Unable to resolve organization ID." }
       return null
     } catch (e: IOException) {
       throw RuntimeException(e)
@@ -117,7 +117,7 @@ class AuthenticationHeaderResolver(
    */
   @Nullable // This is an indication that the workspace ID as a group for auth needs refactoring
   fun resolveWorkspace(properties: Map<String, String>): List<UUID>? {
-    log.debug("properties: {}", properties)
+    log.debug { "properties: $properties" }
     try {
       if (properties.containsKey(WORKSPACE_ID_HEADER)) {
         val workspaceId = properties[WORKSPACE_ID_HEADER]
@@ -172,20 +172,20 @@ class AuthenticationHeaderResolver(
           return listOf(workspaceId)
         }
 
-        log.debug("Request does not contain any headers that resolve to a workspace ID.")
+        log.debug { "Request does not contain any headers that resolve to a workspace ID." }
         return null
       }
     } catch (e: IllegalArgumentException) {
-      log.debug("Unable to resolve workspace ID.", e)
+      log.debug(e) { "Unable to resolve workspace ID." }
       return null
     } catch (e: JsonValidationException) {
-      log.debug("Unable to resolve workspace ID.", e)
+      log.debug(e) { "Unable to resolve workspace ID." }
       return null
     } catch (e: ConfigNotFoundException) {
-      log.debug("Unable to resolve workspace ID.", e)
+      log.debug(e) { "Unable to resolve workspace ID." }
       return null
     } catch (e: io.airbyte.config.persistence.ConfigNotFoundException) {
-      log.debug("Unable to resolve workspace ID.", e)
+      log.debug(e) { "Unable to resolve workspace ID." }
       return null
     } catch (e: IOException) {
       throw RuntimeException(e)
@@ -194,7 +194,7 @@ class AuthenticationHeaderResolver(
 
   @Nullable
   fun resolveAuthUserIds(properties: Map<String?, String?>): Set<String>? {
-    log.debug("properties: {}", properties)
+    log.debug { "properties: $properties" }
     try {
       if (properties.containsKey(EXTERNAL_AUTH_ID_HEADER)) {
         val authUserId = properties[EXTERNAL_AUTH_ID_HEADER]
@@ -204,11 +204,11 @@ class AuthenticationHeaderResolver(
       } else if (properties.containsKey(CREATOR_USER_ID_HEADER)) {
         return resolveAirbyteUserIdToAuthUserIds(properties[CREATOR_USER_ID_HEADER]!!)
       } else {
-        log.debug("Request does not contain any headers that resolve to a user ID.")
+        log.debug { "Request does not contain any headers that resolve to a user ID." }
         return null
       }
     } catch (e: Exception) {
-      log.debug("Unable to resolve user ID.", e)
+      log.debug(e) { "Unable to resolve user ID." }
       return null
     }
   }
@@ -248,7 +248,7 @@ class AuthenticationHeaderResolver(
 
   private fun resolveWorkspaces(properties: Map<String, String>): List<UUID>? {
     val workspaceIds: String? = properties[WORKSPACE_IDS_HEADER]
-    log.debug("workspaceIds from header: {}", workspaceIds)
+    log.debug { "workspaceIds from header: $workspaceIds" }
     if (workspaceIds != null) {
       // todo (cgardens) -- spooky
       val deserialized: List<String> =
@@ -258,7 +258,7 @@ class AuthenticationHeaderResolver(
         )
       return deserialized.stream().map { name: String? -> UUID.fromString(name) }.toList()
     }
-    log.debug("Request does not contain any headers that resolve to a list of workspace IDs.")
+    log.debug { "Request does not contain any headers that resolve to a list of workspace IDs." }
     return null
   }
 
