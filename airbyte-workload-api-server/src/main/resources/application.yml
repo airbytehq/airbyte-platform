@@ -4,7 +4,7 @@ micronaut:
   caches:
     dataplane-name:
       expire-after-write: 10m
-    dataplane-group-name:
+    dataplane-group:
       expire-after-write: 10m
   executors:
     io:

@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.metrics
 
+import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -30,12 +31,16 @@ open class MetricTagsPrettifierCache(
       dataplaneId.toString()
     }
 
-  @Cacheable("dataplaneGroupName")
-  open fun dataplaneGroupNameById(dataplaneGroupId: UUID): String =
+  fun dataplaneGroupNameById(dataplaneGroupId: UUID): String = dataplaneGroupById(dataplaneGroupId)?.name ?: dataplaneGroupId.toString()
+
+  fun orgIdForDataplaneGroupId(dataplaneGroupId: UUID): UUID? = dataplaneGroupById(dataplaneGroupId)?.organizationId
+
+  @Cacheable("dataplaneGroup")
+  open fun dataplaneGroupById(dataplaneGroupId: UUID): DataplaneGroup? =
     try {
-      dataplaneGroupService.getDataplaneGroup(dataplaneGroupId).name
+      dataplaneGroupService.getDataplaneGroup(dataplaneGroupId)
     } catch (e: Exception) {
       logger.warn(e) { "Error retrieving Dataplane Group name for Dataplane Group ID: $dataplaneGroupId" }
-      dataplaneGroupId.toString()
+      null
     }
 }
