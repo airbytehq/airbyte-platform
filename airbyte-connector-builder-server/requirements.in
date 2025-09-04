@@ -1,2 +1,2 @@
-airbyte-cdk==6.61.5
+airbyte-cdk==6.61.6.post3.dev17473738577
 certifi==2025.01.31
