@@ -47,3 +47,17 @@ pnpm test -- --cloud --serverHost=https://local.airbyte.dev --webappUrl=https://
 
 - `--help, -h`  
   Show help.
+
+### Running Specific Tests
+
+You can run a subset of tests by passing test paths as arguments:
+
+```bash
+# Single test path
+pnpm test -- --serverHost="https://local.airbyte.dev" tests/builder
+
+# Multiple test paths
+pnpm test -- --serverHost="https://local.airbyte.dev" tests/builder tests/connector-crud
+```
+
+> **Important:** Test paths must come **after** all the flags/options. The script automatically ensures the setup project runs first to handle authentication.

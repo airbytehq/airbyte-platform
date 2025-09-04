@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 const { execSync } = require("child_process");
+const fs = require("fs");
 
 // todo: maybe support running cloud tests using frontend-dev?
 const optionator = require("optionator")({
-  prepend: "Usage: node run-playwright.js [options]",
+  prepend: "Usage: node run-playwright.js [options] [test-paths]",
   options: [
     {
       option: "cloud",
@@ -63,6 +64,9 @@ async function main() {
       return;
     }
 
+    // Extract any additional arguments (test paths) that weren't parsed as options
+    const additionalArgs = options._;
+
     if (options.cloud) {
       command.push("--config=playwright.cloud-config.ts");
     }
@@ -91,6 +95,27 @@ async function main() {
     }
     if (options.debug) {
       command.push("--debug");
+    }
+
+    // Handle test path specification via additional args
+    const testPaths = [];
+    if (additionalArgs && additionalArgs.length > 0) {
+      testPaths.push(...additionalArgs);
+    }
+
+    if (testPaths.length > 0) {
+      // Validate test paths exist before running
+      const invalidPaths = testPaths.filter((path) => !fs.existsSync(path));
+      if (invalidPaths.length > 0) {
+        console.error(`❌ Invalid test paths: ${invalidPaths.join(", ")}`);
+        console.error("Please check that the paths exist and try again.");
+        process.exit(1);
+      }
+
+      // When targeting specific tests, force setup to still run first
+      command.push("--project=setup");
+      command.push("--project=chromium");
+      command.push(...testPaths);
     }
 
     console.log(`Running: ${command.join(" ")}`);
