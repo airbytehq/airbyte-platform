@@ -17,6 +17,7 @@ import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl
 import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated
+import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.test.utils.BaseConfigDatabaseTest
@@ -413,5 +414,137 @@ internal class OrganizationPersistenceTest : BaseConfigDatabaseTest() {
       Assertions.assertTrue(allOrgIds.contains(orgId2), "Instance admin should see org2")
       Assertions.assertTrue(allOrgIds.contains(orgId3), "Instance admin should see org3")
     }
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+    "false, false",
+    "true, false",
+    "false, true",
+    "true, true",
+  )
+  @Throws(Exception::class)
+  fun testListOrganizationsByUserIdWithTombstoneFiltering(
+    withPagination: Boolean,
+    isInstanceAdmin: Boolean,
+  ) {
+    // Create a regular user and optionally make them instance admin
+    val userId = UUID.randomUUID()
+    userPersistence.writeAuthenticatedUser(
+      AuthenticatedUser()
+        .withUserId(userId)
+        .withName("test_user")
+        .withAuthUserId("test_auth_id")
+        .withEmail("test@example.com")
+        .withAuthProvider(AuthProvider.AIRBYTE),
+    )
+
+    if (isInstanceAdmin) {
+      writePermission(
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(userId)
+          .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN),
+      )
+    }
+
+    // Create 3 organizations
+    val activeOrgId1 = UUID.randomUUID()
+    val activeOrgId2 = UUID.randomUUID()
+    val tombstonedOrgId = UUID.randomUUID()
+
+    organizationPersistence.createOrganization(
+      Organization()
+        .withOrganizationId(activeOrgId1)
+        .withUserId(userId)
+        .withName("Active Org 1")
+        .withEmail("active1@test.com"),
+    )
+
+    organizationPersistence.createOrganization(
+      Organization()
+        .withOrganizationId(activeOrgId2)
+        .withUserId(userId)
+        .withName("Active Org 2")
+        .withEmail("active2@test.com"),
+    )
+
+    organizationPersistence.createOrganization(
+      Organization()
+        .withOrganizationId(tombstonedOrgId)
+        .withUserId(userId)
+        .withName("Tombstoned Org")
+        .withEmail("tombstoned@test.com"),
+    )
+
+    if (!isInstanceAdmin) {
+      // Grant user permissions to all organizations for regular user testing
+      writePermission(
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withOrganizationId(activeOrgId1)
+          .withUserId(userId)
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN),
+      )
+      writePermission(
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withOrganizationId(activeOrgId2)
+          .withUserId(userId)
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN),
+      )
+      writePermission(
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withOrganizationId(tombstonedOrgId)
+          .withUserId(userId)
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN),
+      )
+    }
+
+    // Tombstone one organization by directly updating the database
+    database!!.transaction<Any?> { ctx ->
+      ctx
+        .update(Tables.ORGANIZATION)
+        .set(Tables.ORGANIZATION.TOMBSTONE, true)
+        .where(Tables.ORGANIZATION.ID.eq(tombstonedOrgId))
+        .execute()
+      null
+    }
+
+    // Test with includeDeleted = false (default behavior)
+    var organizations: List<Organization>
+    if (withPagination) {
+      organizations =
+        organizationPersistence.listOrganizationsByUserIdPaginated(
+          ResourcesByUserQueryPaginated(userId, false, 10, 0),
+          Optional.empty<String>(),
+        )
+    } else {
+      organizations = organizationPersistence.listOrganizationsByUserId(userId, Optional.empty<String>(), false)
+    }
+
+    // Should only contain non-tombstoned organizations
+    val activeOrgIds = organizations.map { it.organizationId }.toSet()
+    Assertions.assertTrue(activeOrgIds.contains(activeOrgId1), "Should contain active org 1")
+    Assertions.assertTrue(activeOrgIds.contains(activeOrgId2), "Should contain active org 2")
+    Assertions.assertFalse(activeOrgIds.contains(tombstonedOrgId), "Should NOT contain tombstoned org")
+
+    // Test with includeDeleted = true
+    if (withPagination) {
+      organizations =
+        organizationPersistence.listOrganizationsByUserIdPaginated(
+          ResourcesByUserQueryPaginated(userId, true, 10, 0),
+          Optional.empty<String>(),
+        )
+    } else {
+      organizations = organizationPersistence.listOrganizationsByUserId(userId, Optional.empty<String>(), true)
+    }
+
+    // Should contain ALL organizations including tombstoned ones
+    val allOrgIds = organizations.map { it.organizationId }.toSet()
+    Assertions.assertTrue(allOrgIds.contains(activeOrgId1), "Should contain active org 1")
+    Assertions.assertTrue(allOrgIds.contains(activeOrgId2), "Should contain active org 2")
+    Assertions.assertTrue(allOrgIds.contains(tombstonedOrgId), "Should contain tombstoned org when includeDeleted=true")
   }
 }

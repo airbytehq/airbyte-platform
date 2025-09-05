@@ -42,8 +42,10 @@ class OrganizationPersistence(
     ctx: DSLContext,
     organizationIds: Collection<UUID>,
     keyword: Optional<String>,
+    includeDeleted: Boolean = false,
   ) = organizationWithSso(ctx)
     .where(Tables.ORGANIZATION.ID.`in`(organizationIds))
+    .and(if (includeDeleted) DSL.noCondition() else Tables.ORGANIZATION.TOMBSTONE.eq(false))
     .and(if (keyword.isPresent) Tables.ORGANIZATION.NAME.containsIgnoreCase(keyword.get()) else DSL.noCondition())
     .orderBy(Tables.ORGANIZATION.NAME.asc())
 
@@ -168,10 +170,11 @@ class OrganizationPersistence(
   fun listOrganizationsByUserId(
     userId: UUID,
     keyword: Optional<String>,
+    includeDeleted: Boolean = false,
   ): List<Organization> =
     database
       .query { ctx: DSLContext ->
-        getOrganizationsForUser(ctx, userId, keyword, null)
+        getOrganizationsForUser(ctx, userId, keyword, null, includeDeleted)
       }.stream()
       .map { record: Record -> createOrganizationFromRecord(record) }
       .toList()
@@ -191,7 +194,7 @@ class OrganizationPersistence(
   ): List<Organization> =
     database
       .query { ctx: DSLContext ->
-        getOrganizationsForUser(ctx, query.userId, keyword, PaginationParams(query.pageSize, query.rowOffset))
+        getOrganizationsForUser(ctx, query.userId, keyword, PaginationParams(query.pageSize, query.rowOffset), query.includeDeleted)
       }.stream()
       .map { record: Record -> createOrganizationFromRecord(record) }
       .toList()
@@ -211,10 +214,11 @@ class OrganizationPersistence(
     userId: UUID,
     keyword: Optional<String>,
     pagination: PaginationParams?,
+    includeDeleted: Boolean = false,
   ): org.jooq.Result<Record> {
     return if (hasInstanceAdminPermission(ctx, userId)) {
       // For instance admins, query all organizations directly without building a large IN clause
-      getAllOrganizationsForInstanceAdmin(ctx, keyword, pagination)
+      getAllOrganizationsForInstanceAdmin(ctx, keyword, pagination, includeDeleted)
     } else {
       // For regular users, use the existing logic with accessible org IDs
       val accessibleOrgIds = getAccessibleOrganizationIds(ctx, userId)
@@ -223,7 +227,7 @@ class OrganizationPersistence(
         return ctx.newResult()
       }
 
-      val query = organizationsByIdWithKeyword(ctx, accessibleOrgIds, keyword)
+      val query = organizationsByIdWithKeyword(ctx, accessibleOrgIds, keyword, includeDeleted)
 
       if (pagination != null) {
         query.limit(pagination.limit).offset(pagination.offset).fetch()
@@ -265,10 +269,12 @@ class OrganizationPersistence(
     ctx: DSLContext,
     keyword: Optional<String>,
     pagination: PaginationParams?,
+    includeDeleted: Boolean = false,
   ): org.jooq.Result<Record> {
     val query =
       organizationWithSso(ctx)
-        .where(if (keyword.isPresent) Tables.ORGANIZATION.NAME.containsIgnoreCase(keyword.get()) else DSL.noCondition())
+        .where(if (includeDeleted) DSL.noCondition() else Tables.ORGANIZATION.TOMBSTONE.eq(false))
+        .and(if (keyword.isPresent) Tables.ORGANIZATION.NAME.containsIgnoreCase(keyword.get()) else DSL.noCondition())
         .orderBy(Tables.ORGANIZATION.NAME.asc())
 
     return if (pagination != null) {
