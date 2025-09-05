@@ -223,6 +223,33 @@ class DestinationDiscoverServiceTest {
   }
 
   @Nested
+  inner class GetDestinationCatalogIfSupported {
+    @Test
+    fun `should return null when destination version does not support data activation`() {
+      val destination =
+        DestinationConnection()
+          .withWorkspaceId(workspaceId)
+          .withDestinationDefinitionId(destinationDefinitionId)
+          .withDestinationId(destinationId.value)
+          .withConfiguration(Jsons.emptyObject())
+
+      val destinationDefinition = StandardDestinationDefinition()
+      val destinationVersion =
+        ActorDefinitionVersion()
+          .withDockerImageTag("1.0.1")
+          .withSupportsDataActivation(false)
+
+      every { destinationService.getDestinationConnection(destinationId.value) } returns destination
+      every { destinationService.getStandardDestinationDefinition(destinationDefinitionId) } returns destinationDefinition
+      every { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId.value) } returns destinationVersion
+
+      val result = service.getDestinationCatalogIfSupported(destinationId)
+
+      result shouldBe null
+    }
+  }
+
+  @Nested
   inner class WriteCatalogResult {
     @Test
     fun `should write discovered catalog result for destination`() {

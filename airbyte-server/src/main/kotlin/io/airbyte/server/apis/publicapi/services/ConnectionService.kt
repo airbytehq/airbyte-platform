@@ -35,6 +35,7 @@ interface ConnectionService {
   fun createConnection(
     connectionCreateRequest: ConnectionCreateRequest,
     catalogId: UUID,
+    destinationCatalogId: UUID?,
     configuredCatalog: AirbyteCatalog,
     workspaceId: UUID,
   ): ConnectionResponse
@@ -79,6 +80,7 @@ class ConnectionServiceImpl(
   override fun createConnection(
     connectionCreateRequest: ConnectionCreateRequest,
     catalogId: UUID,
+    destinationCatalogId: UUID?,
     configuredCatalog: AirbyteCatalog,
     workspaceId: UUID,
   ): ConnectionResponse {
@@ -86,6 +88,7 @@ class ConnectionServiceImpl(
       ConnectionCreateMapper.from(
         connectionCreateRequest,
         catalogId,
+        destinationCatalogId,
         configuredCatalog,
       )
 

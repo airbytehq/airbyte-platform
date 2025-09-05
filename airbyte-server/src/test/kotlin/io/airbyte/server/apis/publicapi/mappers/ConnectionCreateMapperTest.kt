@@ -24,6 +24,7 @@ class ConnectionCreateMapperTest {
   @Test
   fun testConnectionCreateMapper() {
     val catalogId = UUID.randomUUID()
+    val destinationCatalogId = UUID.randomUUID()
 
     val catalog =
       AirbyteCatalog().apply {
@@ -59,6 +60,7 @@ class ConnectionCreateMapperTest {
         this.prefix = "test"
         this.scheduleType = ConnectionScheduleType.CRON
         this.sourceCatalogId = catalogId
+        this.destinationCatalogId = destinationCatalogId
         this.syncCatalog = catalog
         this.status = ConnectionStatus.INACTIVE
         val connectionScheduleDataCron =
@@ -72,6 +74,6 @@ class ConnectionCreateMapperTest {
           }
         this.scheduleData = connectionScheduleData
       }
-    assertEquals(expectedOssConnectionCreateRequest, ConnectionCreateMapper.from(connectionCreateRequest, catalogId, catalog))
+    assertEquals(expectedOssConnectionCreateRequest, ConnectionCreateMapper.from(connectionCreateRequest, catalogId, destinationCatalogId, catalog))
   }
 }

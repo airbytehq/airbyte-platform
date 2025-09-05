@@ -88,6 +88,16 @@ class DestinationDiscoverService(
     return actorCatalogToDestinationCatalog(actorCatalog)
   }
 
+  fun getDestinationCatalogIfSupported(
+    destinationId: ActorId,
+    skipCache: Boolean = false,
+  ): DestinationCatalogWithId? =
+    try {
+      getDestinationCatalog(destinationId, skipCache)
+    } catch (_: DestinationDiscoverNotSupportedProblem) {
+      null
+    }
+
   /**
    * Retrieves the destination catalog associated with a given connection.
    *

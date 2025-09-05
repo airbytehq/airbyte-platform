@@ -29,6 +29,7 @@ object ConnectionCreateMapper {
   fun from(
     connectionCreateRequest: ConnectionCreateRequest,
     catalogId: UUID?,
+    destinationCatalogId: UUID?,
     configuredCatalog: AirbyteCatalog?,
   ): ConnectionCreate {
     val connectionCreateOss = ConnectionCreate()
@@ -66,6 +67,9 @@ object ConnectionCreateMapper {
     }
     if (configuredCatalog != null) {
       connectionCreateOss.syncCatalog = configuredCatalog
+    }
+    if (destinationCatalogId != null) {
+      connectionCreateOss.destinationCatalogId = destinationCatalogId
     }
     if (connectionCreateRequest.status != null) {
       connectionCreateOss.status = ConnectionStatus.fromValue(connectionCreateRequest.status.toString())

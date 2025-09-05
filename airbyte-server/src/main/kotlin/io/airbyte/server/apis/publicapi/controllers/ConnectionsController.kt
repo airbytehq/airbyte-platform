@@ -11,8 +11,11 @@ import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.commons.server.services.DestinationDiscoverService
 import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.DestinationCatalog
+import io.airbyte.domain.models.ActorId
 import io.airbyte.publicApi.server.generated.apis.PublicConnectionsApi
 import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionPatchRequest
@@ -48,6 +51,7 @@ open class ConnectionsController(
   private val connectionService: ConnectionService,
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
+  private val destinationDiscoverService: DestinationDiscoverService,
   private val trackingHelper: TrackingHelper,
   private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
@@ -105,6 +109,14 @@ open class ConnectionsController(
         userId,
       ) as List<DestinationSyncMode>
 
+    // get destination_catalog_id
+    val destinationCatalogId =
+      destinationDiscoverService
+        .getDestinationCatalogIfSupported(
+          destinationId = ActorId(connectionCreateRequest.destinationId),
+          skipCache = false,
+        )?.catalogId
+
     // refer to documentation to understand what we need to do for the catalog
     // https://docs.airbyte.com/understanding-airbyte/airbyte-protocol/#catalog
     var configuredCatalog = AirbyteCatalog()
@@ -135,6 +147,7 @@ open class ConnectionsController(
         connectionService.createConnection(
           validConnectionCreateRequest,
           catalogId!!,
+          destinationCatalogId?.value,
           finalConfiguredCatalog,
           destinationRead.workspaceId,
         )
