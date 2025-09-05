@@ -22,7 +22,7 @@ import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants.DATAPLANE
 import io.airbyte.commons.entitlements.EntitlementService
-import io.airbyte.commons.entitlements.models.ManageDataplanesAndDataplaneGroupsEntitlement
+import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.Dataplane
@@ -242,12 +242,12 @@ open class DataplaneController(
 
   private fun ensureManageDataplanesAndDataplaneGroupsEntitlement(dataplaneGroupId: DataplaneGroupId) {
     val orgId = OrganizationId(dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId.value))
-    entitlementService.ensureEntitled(orgId, ManageDataplanesAndDataplaneGroupsEntitlement)
+    entitlementService.ensureEntitled(orgId, SelfManagedRegionsEntitlement)
   }
 
   private fun ensureManageDataplanesAndDataplaneGroupsEntitlement(dataplaneId: DataplaneId) {
     val dataplaneGroupId = dataplaneService.getDataplane(dataplaneId.value.toString()).dataplaneGroupId
     val orgId = OrganizationId(dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId))
-    entitlementService.ensureEntitled(orgId, ManageDataplanesAndDataplaneGroupsEntitlement)
+    entitlementService.ensureEntitled(orgId, SelfManagedRegionsEntitlement)
   }
 }

@@ -77,7 +77,7 @@ import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.entitlements.models.EntitlementResult
-import io.airbyte.commons.entitlements.models.PlatformSubOneHourSyncFrequency
+import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.enums.isCompatible
 import io.airbyte.commons.jackson.MoreMappers.initMapper
@@ -225,7 +225,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.mockStatic
 import org.mockito.kotlin.anyOrNull
@@ -2258,9 +2257,9 @@ internal class ConnectionsHandlerTest {
         whenever(
           entitlementService.checkEntitlement(
             OrganizationId(organizationId),
-            PlatformSubOneHourSyncFrequency,
+            FasterSyncFrequencyEntitlement,
           ),
-        ).thenReturn(EntitlementResult(PlatformSubOneHourSyncFrequency.featureId, true, null))
+        ).thenReturn(EntitlementResult(FasterSyncFrequencyEntitlement.featureId, true, null))
 
         val actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false)
 

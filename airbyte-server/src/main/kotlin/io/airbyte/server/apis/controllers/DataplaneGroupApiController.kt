@@ -18,7 +18,7 @@ import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
-import io.airbyte.commons.entitlements.models.ManageDataplanesAndDataplaneGroupsEntitlement
+import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
@@ -51,7 +51,7 @@ class DataplaneGroupApiController(
   override fun createDataplaneGroup(
     @Body dataplaneGroupCreateRequestBody: DataplaneGroupCreateRequestBody,
   ): DataplaneGroupRead? {
-    entitlementService.ensureEntitled(OrganizationId(dataplaneGroupCreateRequestBody.organizationId), ManageDataplanesAndDataplaneGroupsEntitlement)
+    entitlementService.ensureEntitled(OrganizationId(dataplaneGroupCreateRequestBody.organizationId), SelfManagedRegionsEntitlement)
     val createdDataplaneGroup =
       DataplaneGroup().apply {
         organizationId = dataplaneGroupCreateRequestBody.organizationId
@@ -143,7 +143,7 @@ class DataplaneGroupApiController(
 
   private fun ensureManageDataplanesAndDataplaneGroupsEntitlement(dataplaneGroupId: DataplaneGroupId) {
     val orgId = OrganizationId(dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId.value))
-    entitlementService.ensureEntitled(orgId, ManageDataplanesAndDataplaneGroupsEntitlement)
+    entitlementService.ensureEntitled(orgId, SelfManagedRegionsEntitlement)
   }
 
   fun writeDataplaneGroup(dataplaneGroup: DataplaneGroup): DataplaneGroup {

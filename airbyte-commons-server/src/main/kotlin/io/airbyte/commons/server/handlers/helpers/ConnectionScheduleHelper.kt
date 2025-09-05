@@ -16,7 +16,7 @@ import io.airbyte.api.problems.throwable.generated.CronValidationMissingComponen
 import io.airbyte.api.problems.throwable.generated.CronValidationMissingCronProblem
 import io.airbyte.api.problems.throwable.generated.CronValidationUnderOneHourNotAllowedProblem
 import io.airbyte.commons.entitlements.EntitlementService
-import io.airbyte.commons.entitlements.models.PlatformSubOneHourSyncFrequency
+import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.helpers.CronExpressionHelper
 import io.airbyte.config.BasicSchedule
@@ -125,7 +125,7 @@ class ConnectionScheduleHelper(
               List.of(Organization(organizationId), Workspace(workspaceId)),
             ),
           ) ||
-            entitlementService.checkEntitlement(OrganizationId(organizationId), PlatformSubOneHourSyncFrequency).isEntitled
+            entitlementService.checkEntitlement(OrganizationId(organizationId), FasterSyncFrequencyEntitlement).isEntitled
 
         validateCronFrequency(cronExpression, canSyncUnderOneHour)
 

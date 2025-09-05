@@ -14,7 +14,7 @@ import io.airbyte.api.problems.throwable.generated.CronValidationMissingComponen
 import io.airbyte.api.problems.throwable.generated.CronValidationMissingCronProblem
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.EntitlementResult
-import io.airbyte.commons.entitlements.models.PlatformSubOneHourSyncFrequency
+import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper
@@ -34,7 +34,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import org.mockito.kotlin.anyOrNull
 import java.util.UUID
@@ -98,8 +97,8 @@ internal class ConnectionSchedulerHelperTest {
   @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun testPopulateSyncScheduleFromCron() {
     Mockito
-      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, PlatformSubOneHourSyncFrequency))
-      .thenReturn(EntitlementResult(PlatformSubOneHourSyncFrequency.featureId, true, null))
+      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement))
+      .thenReturn(EntitlementResult(FasterSyncFrequencyEntitlement.featureId, true, null))
 
     val actual = StandardSync().withSourceId(UUID.randomUUID())
     connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
@@ -122,8 +121,8 @@ internal class ConnectionSchedulerHelperTest {
   @ValueSource(booleans = [true, false])
   fun testScheduleValidation(hasEntitlement: Boolean) {
     Mockito
-      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, PlatformSubOneHourSyncFrequency))
-      .thenReturn(EntitlementResult(PlatformSubOneHourSyncFrequency.featureId, hasEntitlement, null))
+      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement))
+      .thenReturn(EntitlementResult(FasterSyncFrequencyEntitlement.featureId, hasEntitlement, null))
 
     val actual = StandardSync().withSourceId(UUID.randomUUID())
     Assertions.assertThrows(JsonValidationException::class.java) {
@@ -760,9 +759,9 @@ internal class ConnectionSchedulerHelperTest {
           .`when`(
             entitlementService.checkEntitlement(
               TEST_ORG_ID,
-              PlatformSubOneHourSyncFrequency,
+              FasterSyncFrequencyEntitlement,
             ),
-          ).thenReturn(EntitlementResult(PlatformSubOneHourSyncFrequency.featureId, true, null))
+          ).thenReturn(EntitlementResult(FasterSyncFrequencyEntitlement.featureId, true, null))
 
         // NOTE: this method call is the one that parses the given timezone string
         // and will throw an exception if it isn't supported. This method is called

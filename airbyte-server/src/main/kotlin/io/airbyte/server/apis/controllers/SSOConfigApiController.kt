@@ -14,7 +14,7 @@ import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
-import io.airbyte.commons.entitlements.models.SsoConfigUpdateEntitlement
+import io.airbyte.commons.entitlements.models.SsoEntitlement
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SsoConfig
@@ -33,7 +33,7 @@ open class SSOConfigApiController(
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getSsoConfig(getSSOConfigRequestBody: GetSSOConfigRequestBody): SSOConfigRead {
-    entitlementService.ensureEntitled(OrganizationId(getSSOConfigRequestBody.organizationId), SsoConfigUpdateEntitlement)
+    entitlementService.ensureEntitled(OrganizationId(getSSOConfigRequestBody.organizationId), SsoEntitlement)
 
     val ssoConfig = ssoConfigDomainService.retrieveSsoConfig(getSSOConfigRequestBody.organizationId)
     return SSOConfigRead(
@@ -49,7 +49,7 @@ open class SSOConfigApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   override fun createSsoConfig(createSSOConfigRequestBody: CreateSSOConfigRequestBody) {
-    entitlementService.ensureEntitled(OrganizationId(createSSOConfigRequestBody.organizationId), SsoConfigUpdateEntitlement)
+    entitlementService.ensureEntitled(OrganizationId(createSSOConfigRequestBody.organizationId), SsoEntitlement)
 
     execute<Any?> {
       ssoConfigDomainService.createAndStoreSsoConfig(
@@ -70,7 +70,7 @@ open class SSOConfigApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   override fun deleteSsoConfig(deleteSSOConfigRequestBody: DeleteSSOConfigRequestBody) {
-    entitlementService.ensureEntitled(OrganizationId(deleteSSOConfigRequestBody.organizationId), SsoConfigUpdateEntitlement)
+    entitlementService.ensureEntitled(OrganizationId(deleteSSOConfigRequestBody.organizationId), SsoEntitlement)
 
     execute<Any?> {
       ssoConfigDomainService.deleteSsoConfig(
@@ -84,7 +84,7 @@ open class SSOConfigApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
   override fun updateSsoCredentials(updateSSOCredentialsRequestBody: UpdateSSOCredentialsRequestBody) {
-    entitlementService.ensureEntitled(OrganizationId(updateSSOCredentialsRequestBody.organizationId), SsoConfigUpdateEntitlement)
+    entitlementService.ensureEntitled(OrganizationId(updateSSOCredentialsRequestBody.organizationId), SsoEntitlement)
 
     execute<Any?> {
       ssoConfigDomainService.updateClientCredentials(

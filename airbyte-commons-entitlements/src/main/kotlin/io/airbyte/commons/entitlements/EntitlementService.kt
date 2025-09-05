@@ -10,9 +10,9 @@ import io.airbyte.commons.entitlements.models.ConnectorEntitlement
 import io.airbyte.commons.entitlements.models.DestinationObjectStorageEntitlement
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
-import io.airbyte.commons.entitlements.models.ManageDataplanesAndDataplaneGroupsEntitlement
 import io.airbyte.commons.entitlements.models.OrchestrationEntitlement
-import io.airbyte.commons.entitlements.models.SsoConfigUpdateEntitlement
+import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
+import io.airbyte.commons.entitlements.models.SsoEntitlement
 import io.airbyte.config.ActorType
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
@@ -58,9 +58,9 @@ internal class EntitlementServiceImpl(
     when (entitlement) {
       // TODO: Remove once we've migrated the entitlement to Stigg
       DestinationObjectStorageEntitlement -> hasDestinationObjectStorageEntitlement(organizationId)
-      SsoConfigUpdateEntitlement -> hasSsoConfigUpdateEntitlement(organizationId)
+      SsoEntitlement -> hasSsoConfigUpdateEntitlement(organizationId)
       OrchestrationEntitlement -> hasOrchestrationEntitlement(organizationId)
-      ManageDataplanesAndDataplaneGroupsEntitlement -> hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId)
+      SelfManagedRegionsEntitlement -> hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId)
       else -> entitlementClient.checkEntitlement(organizationId, entitlement)
     }
 
@@ -113,7 +113,7 @@ internal class EntitlementServiceImpl(
   private fun hasSsoConfigUpdateEntitlement(organizationId: OrganizationId): EntitlementResult =
     EntitlementResult(
       isEntitled = entitlementProvider.hasSsoConfigUpdateEntitlement(organizationId),
-      featureId = SsoConfigUpdateEntitlement.featureId,
+      featureId = SsoEntitlement.featureId,
     )
 
   private fun hasOrchestrationEntitlement(organizationId: OrganizationId): EntitlementResult =
@@ -125,7 +125,7 @@ internal class EntitlementServiceImpl(
   private fun hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId: OrganizationId): EntitlementResult =
     EntitlementResult(
       isEntitled = entitlementProvider.hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId),
-      featureId = ManageDataplanesAndDataplaneGroupsEntitlement.featureId,
+      featureId = SelfManagedRegionsEntitlement.featureId,
     )
 
   override fun hasConfigTemplateEntitlements(organizationId: OrganizationId): Boolean =

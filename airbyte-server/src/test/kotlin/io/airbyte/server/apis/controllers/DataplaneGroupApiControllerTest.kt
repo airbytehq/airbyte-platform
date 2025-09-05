@@ -11,7 +11,7 @@ import io.airbyte.api.model.generated.DataplaneGroupUpdateRequestBody
 import io.airbyte.api.problems.throwable.generated.DataplaneGroupNameAlreadyExistsProblem
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.entitlements.EntitlementService
-import io.airbyte.commons.entitlements.models.ManageDataplanesAndDataplaneGroupsEntitlement
+import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
@@ -40,7 +40,7 @@ class DataplaneGroupApiControllerTest {
 
   @Test
   fun `createDataplaneGroup returns the dataplane group`() {
-    every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), ManageDataplanesAndDataplaneGroupsEntitlement) } returns Unit
+    every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), SelfManagedRegionsEntitlement) } returns Unit
     every { dataplaneGroupService.writeDataplaneGroup(any()) } returns createDataplaneGroup()
     every { dataplaneService.listDataplanes(any()) } returns emptyList()
 
@@ -52,7 +52,7 @@ class DataplaneGroupApiControllerTest {
 
   @Test
   fun `createDataplaneGroup with a duplicate name returns a problem`() {
-    every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), ManageDataplanesAndDataplaneGroupsEntitlement) } returns Unit
+    every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), SelfManagedRegionsEntitlement) } returns Unit
     every { dataplaneGroupService.writeDataplaneGroup(any()) } throws DataAccessException(DATAPLANE_GROUP_NAME_CONSTRAINT_VIOLATION_MESSAGE)
 
     val dataplaneGroupCreateRequestBody = DataplaneGroupCreateRequestBody().organizationId(MOCK_ORGANIZATION_ID)
@@ -69,7 +69,7 @@ class DataplaneGroupApiControllerTest {
     val newEnabled = true
 
     every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(mockDataplaneGroup.id) } returns MOCK_ORGANIZATION_ID
-    every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), ManageDataplanesAndDataplaneGroupsEntitlement) } returns Unit
+    every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), SelfManagedRegionsEntitlement) } returns Unit
     every { dataplaneGroupService.getDataplaneGroup(any()) } returns mockDataplaneGroup
     every { dataplaneGroupService.writeDataplaneGroup(any()) } returns
       mockDataplaneGroup.apply {
@@ -97,7 +97,7 @@ class DataplaneGroupApiControllerTest {
     val mockDataplaneGroup = createDataplaneGroup()
 
     every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(mockDataplaneGroup.id) } returns MOCK_ORGANIZATION_ID
-    every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), ManageDataplanesAndDataplaneGroupsEntitlement) } returns Unit
+    every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), SelfManagedRegionsEntitlement) } returns Unit
     every { dataplaneGroupService.getDataplaneGroup(any()) } returns mockDataplaneGroup
     every { dataplaneGroupService.writeDataplaneGroup(any()) } throws DataAccessException(DATAPLANE_GROUP_NAME_CONSTRAINT_VIOLATION_MESSAGE)
 
@@ -116,7 +116,7 @@ class DataplaneGroupApiControllerTest {
       }
 
     every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(mockDataplaneGroup.id) } returns MOCK_ORGANIZATION_ID
-    every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), ManageDataplanesAndDataplaneGroupsEntitlement) } returns Unit
+    every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), SelfManagedRegionsEntitlement) } returns Unit
     every { dataplaneGroupService.getDataplaneGroup(mockDataplaneGroup.id) } returns mockDataplaneGroup
     every { dataplaneGroupService.writeDataplaneGroup(any()) } answers { firstArg() }
     every { dataplaneService.listDataplanes(any()) } returns emptyList()
@@ -142,7 +142,7 @@ class DataplaneGroupApiControllerTest {
       }
 
     every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(mockDataplaneGroup.id) } returns MOCK_ORGANIZATION_ID
-    every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), ManageDataplanesAndDataplaneGroupsEntitlement) } returns Unit
+    every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), SelfManagedRegionsEntitlement) } returns Unit
     every { dataplaneGroupService.getDataplaneGroup(mockDataplaneGroup.id) } returns mockDataplaneGroup
     every { dataplaneGroupService.writeDataplaneGroup(any()) } answers { firstArg() }
     every { dataplaneService.listDataplanes(any()) } returns emptyList()
@@ -172,7 +172,7 @@ class DataplaneGroupApiControllerTest {
       }
 
     every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(mockDataplaneGroup.id) } returns MOCK_ORGANIZATION_ID
-    every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), ManageDataplanesAndDataplaneGroupsEntitlement) } returns Unit
+    every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), SelfManagedRegionsEntitlement) } returns Unit
     every { dataplaneGroupService.getDataplaneGroup(any()) } returns mockDataplaneGroup
     every { dataplaneGroupService.writeDataplaneGroup(mockDataplaneGroup.apply { tombstone = true }) } returns
       mockDataplaneGroup.apply { tombstone = true }

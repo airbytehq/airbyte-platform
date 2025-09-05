@@ -13,7 +13,7 @@ import io.airbyte.api.model.generated.DataplaneListRequestBody
 import io.airbyte.api.model.generated.DataplaneTokenRequestBody
 import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
 import io.airbyte.commons.entitlements.EntitlementService
-import io.airbyte.commons.entitlements.models.ManageDataplanesAndDataplaneGroupsEntitlement
+import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
@@ -58,7 +58,7 @@ class DataplaneControllerTest {
 
     every { dataplaneService.getDataplane(mockDataplane.id.toString()) } returns mockDataplane
     every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(mockDataplane.dataplaneGroupId) } returns mockOrganizationId
-    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), ManageDataplanesAndDataplaneGroupsEntitlement) } returns Unit
+    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) } returns Unit
     every { dataplaneService.updateDataplane(any(), any(), any()) } returns
       mockDataplane.apply {
         name = newName
@@ -85,7 +85,7 @@ class DataplaneControllerTest {
 
     every { dataplaneService.getDataplane(mockDataplane.id.toString()) } returns mockDataplane
     every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(mockDataplane.dataplaneGroupId) } returns mockOrganizationId
-    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), ManageDataplanesAndDataplaneGroupsEntitlement) } returns Unit
+    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) } returns Unit
     every { dataplaneService.deleteDataplane(any()) } returns mockDataplane
 
     val dataplaneDeleteRequestBody =
@@ -103,7 +103,7 @@ class DataplaneControllerTest {
     val mockOrganizationId = UUID.randomUUID()
 
     every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(MOCK_DATAPLANE_GROUP_ID) } returns mockOrganizationId
-    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), ManageDataplanesAndDataplaneGroupsEntitlement) } returns Unit
+    every { entitlementService.ensureEntitled(OrganizationId(mockOrganizationId), SelfManagedRegionsEntitlement) } returns Unit
     every { dataplaneService.listDataplanes(MOCK_DATAPLANE_GROUP_ID) } returns
       listOf(
         createDataplane(dataplaneId1),

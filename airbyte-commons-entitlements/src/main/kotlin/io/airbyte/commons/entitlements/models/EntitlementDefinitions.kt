@@ -8,35 +8,100 @@ object PlatformLlmSyncJobFailureExplanation : FeatureEntitlement(
   featureId = "feature-platform-llm-sync-job-failure-explanation",
 )
 
-object PlatformSubOneHourSyncFrequency : FeatureEntitlement(
-  featureId = "feature-platform-sub-one-hour-sync-frequency",
-)
-
 object DestinationObjectStorageEntitlement : FeatureEntitlement(
   featureId = "feature-destination-object-storage",
 )
 
-object SsoConfigUpdateEntitlement : FeatureEntitlement(
-  featureId = "feature-platform-sso-config-update",
+object FasterSyncFrequencyEntitlement : FeatureEntitlement(
+  featureId = "feature-faster-sync-frequency",
+)
+
+object SsoEntitlement : FeatureEntitlement(
+  featureId = "feature-sso",
 )
 
 object OrchestrationEntitlement : FeatureEntitlement(
-  featureId = "feature-platform-orchestration",
+  featureId = "feature-orchestration",
 )
 
-object ManageDataplanesAndDataplaneGroupsEntitlement : FeatureEntitlement(
-  featureId = "feature-platform-manage-dataplanes-and-dataplane-groups",
+object SelfManagedRegionsEntitlement : FeatureEntitlement(
+  featureId = "feature-self-managed-regions",
+)
+
+object AiCopilotEntitlement : FeatureEntitlement(
+  featureId = "feature-ai-copilot",
+)
+
+object PlanPillEntitlement : FeatureEntitlement(
+  featureId = "feature-plan-pill",
+)
+
+object DataWorkerCapacityEntitlement : FeatureEntitlement(
+  featureId = "feature-data-worker-capacity",
+)
+
+object MultipleWorkspacesEntitlement : FeatureEntitlement(
+  featureId = "feature-multiple-workspaces",
+)
+
+object MultipleUsersEntitlement : FeatureEntitlement(
+  featureId = "feature-multiple-users",
+)
+
+object ExternalSecretsManagerEntitlement : FeatureEntitlement(
+  featureId = "feature-external-secrets-manager",
+)
+
+object SecretReferencesEntitlement : FeatureEntitlement(
+  featureId = "feature-secret-references",
+)
+
+object PrivateLinkEntitlement : FeatureEntitlement(
+  featureId = "feature-privatelink",
+)
+
+object MappersEntitlement : FeatureEntitlement(
+  featureId = "feature-mappers",
+)
+
+object RbacRolesEntitlement : FeatureEntitlement(
+  featureId = "feature-rbac-roles",
+)
+
+object RejectedRecordsStorage : FeatureEntitlement(
+  featureId = "feature-rejected-records-storage",
+)
+
+object UserInvitationsEntitlement : FeatureEntitlement(
+  featureId = "feature-user-invitations",
+)
+
+object DbtCloudIntegrationEntitlement : FeatureEntitlement(
+  featureId = "feature-dbt-cloud-integration",
 )
 
 object Entitlements {
   private val ALL =
     listOf(
       PlatformLlmSyncJobFailureExplanation,
-      PlatformSubOneHourSyncFrequency,
+      FasterSyncFrequencyEntitlement,
       DestinationObjectStorageEntitlement,
-      SsoConfigUpdateEntitlement,
+      SsoEntitlement,
       OrchestrationEntitlement,
-      ManageDataplanesAndDataplaneGroupsEntitlement,
+      SelfManagedRegionsEntitlement,
+      AiCopilotEntitlement,
+      PlanPillEntitlement,
+      DataWorkerCapacityEntitlement,
+      MultipleWorkspacesEntitlement,
+      MultipleUsersEntitlement,
+      ExternalSecretsManagerEntitlement,
+      SecretReferencesEntitlement,
+      PrivateLinkEntitlement,
+      MappersEntitlement,
+      RbacRolesEntitlement,
+      RejectedRecordsStorage,
+      UserInvitationsEntitlement,
+      DbtCloudIntegrationEntitlement,
     )
 
   private val byId = ALL.associateBy { it.featureId }
