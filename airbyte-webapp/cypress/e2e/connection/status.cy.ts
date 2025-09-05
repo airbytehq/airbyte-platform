@@ -1,4 +1,5 @@
 import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "@cy/commands/api";
+import { getWorkspaceId } from "@cy/commands/api/workspace";
 import {
   createNewConnectionViaApi,
   createPostgresDestinationViaApi,
@@ -55,14 +56,22 @@ describe("Status tab", () => {
 
   it("should initialize as pending", () => {
     cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-      cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Status}/`);
+      cy.visit(
+        `/workspaces/${getWorkspaceId()}/${RoutePaths.Connections}/${connection.connectionId}/${
+          ConnectionRoutePaths.Status
+        }/`
+      );
       statusPage.connectionStatusShouldBe("pending");
     });
   });
 
   it("should allow starting a sync", () => {
     cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-      cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Status}/`);
+      cy.visit(
+        `/workspaces/${getWorkspaceId()}/${RoutePaths.Connections}/${connection.connectionId}/${
+          ConnectionRoutePaths.Status
+        }/`
+      );
 
       // sync & verify the button enters and exits its disabled state as the status updates
       startManualSync();
@@ -81,7 +90,11 @@ describe("Status tab", () => {
   // skipping for now, these controls have gone away but the logic is still a useful thing to test
   it.skip("should allow clearing data", () => {
     cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-      cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Status}/`);
+      cy.visit(
+        `/workspaces/${getWorkspaceId()}/${RoutePaths.Connections}/${connection.connectionId}/${
+          ConnectionRoutePaths.Status
+        }/`
+      );
 
       // reset & verify the button enters and exits its disabled state as the status updates
       startManualReset();

@@ -20,7 +20,7 @@ export const AirbyteHomeLink: React.FC = () => {
         aria-label={formatMessage({ id: "sidebar.homepage" })}
         className={styles.homeLink__link}
       >
-        <AirbyteLogo height={20} className={styles.homeLink__logo} />
+        <AirbyteLogo height={25} className={styles.homeLink__logo} />
       </Link>
       <IfFeatureEnabled feature={FeatureItem.EnterpriseBranding}>
         <BrandingBadge product="enterprise" testId="enterprise-badge" />

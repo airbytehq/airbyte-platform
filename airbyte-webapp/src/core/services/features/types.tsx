@@ -27,6 +27,7 @@ export enum FeatureItem {
   IndicateGuestUsers = "INDICATE_GUEST_USERS",
   MappingsUI = "MAPPINGS_UI",
   MultiWorkspaceUI = "MULTI_WORKSPACE_UI",
+  OrganizationUI = "ORGANIZATION_UI",
   RBAC = "RBAC",
   RestrictAdminInForeignWorkspace = "RESTRICT_ADMIN_IN_FOREIGN_WORKSPACE",
   ShowAdminWarningInWorkspace = "SHOW_ADMIN_WARNING_IN_WORKSPACE",

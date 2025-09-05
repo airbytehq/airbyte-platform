@@ -1,3 +1,5 @@
+import { requestWorkspaceId } from "commands/api";
+import { getWorkspaceId } from "commands/api/workspace";
 import { clickOnCellInTable } from "commands/common";
 
 const newSource = "button[data-id='new-source']";
@@ -6,7 +8,9 @@ const sourceNameColumn = "Name";
 
 export const goToSourcePage = () => {
   cy.intercept("/api/v1/sources/list").as("getSourcesList");
-  cy.visit("/source");
+  requestWorkspaceId().then(() => {
+    cy.visit(`/workspaces/${getWorkspaceId()}/source`);
+  });
 };
 
 export const openSourceConnectionsPage = (sourceName: string) => {
@@ -20,5 +24,5 @@ export const openNewSourcePage = () => {
       cy.get(newSource).click();
     }
   });
-  cy.url().should("include", `/source/new-source`);
+  cy.url().should("include", `/workspaces/${getWorkspaceId()}/source/new-source`);
 };

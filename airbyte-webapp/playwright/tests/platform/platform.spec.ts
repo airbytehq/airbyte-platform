@@ -1,5 +1,7 @@
 import { test, expect, Page } from "@playwright/test";
 
+import { getWorkspaceId } from "../../helpers/workspace";
+
 const OSS_SECURITY_CHECK_URL = "https://oss.airbyte.com/security-check";
 
 // Helper function for filling setup form
@@ -120,6 +122,7 @@ test.describe("Setup actions", () => {
     await fillSetupForm(page);
     await submitButtonClick(page);
 
-    await expect(page).toHaveURL(/.*\/connections/, { timeout: 10000 });
+    const workspaceId = await getWorkspaceId(page);
+    await expect(page).toHaveURL(new RegExp(`.*\\/workspaces\\/${workspaceId}\\/connections`), { timeout: 10000 });
   });
 });

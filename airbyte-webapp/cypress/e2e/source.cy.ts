@@ -1,3 +1,5 @@
+import { requestWorkspaceId } from "@cy/commands/api";
+import { getWorkspaceId } from "@cy/commands/api/workspace";
 import { createPokeApiSourceViaApi, createPostgresSourceViaApi } from "@cy/commands/connection";
 import { submitButtonClick, updateField } from "commands/common";
 import { fillPokeAPIForm } from "commands/connector";
@@ -9,16 +11,18 @@ import { goToSourcePage, openNewSourcePage } from "pages/sourcePage";
 
 describe("Source main actions", () => {
   it("Should redirect from source list page to create source page if no sources are configured", () => {
-    cy.intercept("POST", "/api/v1/sources/list", {
-      statusCode: 200,
-      body: {
-        sources: [],
-      },
+    requestWorkspaceId().then(() => {
+      cy.intercept("POST", "/api/v1/sources/list", {
+        statusCode: 200,
+        body: {
+          sources: [],
+        },
+      });
+
+      cy.visit(`/workspaces/${getWorkspaceId()}/source`);
+
+      cy.url().should("match", new RegExp(`.*\\/workspaces\\/${getWorkspaceId()}\\/source\\/new-source`));
     });
-
-    cy.visit("/source");
-
-    cy.url().should("match", /.*\/source\/new-source/);
   });
 
   it("Create new source", () => {
@@ -26,7 +30,7 @@ describe("Source main actions", () => {
     createPostgresSource("Test source cypress");
 
     cy.wait("@createSource", { timeout: 30000 }).then(({ response }) => {
-      cy.url().should("include", `/source/${response?.body.sourceId}`);
+      cy.url().should("include", `/workspaces/${getWorkspaceId()}/source/${response?.body.sourceId}`);
     });
   });
 
@@ -56,7 +60,7 @@ describe("Source main actions", () => {
     createPostgresSourceViaApi().then((postgresSource) => {
       deleteSource(postgresSource.sourceName);
 
-      cy.visit("/source");
+      cy.visit(`/workspaces/${getWorkspaceId()}/source`);
       cy.get("div").contains(postgresSource.sourceName).should("not.exist");
     });
   });
@@ -69,7 +73,7 @@ describe("Unsaved changes modal on create source page", () => {
 
     openHomepage();
 
-    cy.url().should("include", "/connections");
+    cy.url().should("include", `/workspaces/${getWorkspaceId()}/connections`);
     cy.get("[data-testid='confirmationModal']").should("not.exist");
   });
 
@@ -80,7 +84,7 @@ describe("Unsaved changes modal on create source page", () => {
 
     openHomepage();
 
-    cy.url().should("include", "/connections");
+    cy.url().should("include", `/workspaces/${getWorkspaceId()}/connections`);
     cy.get("[data-testid='confirmationModal']").should("not.exist");
   });
 

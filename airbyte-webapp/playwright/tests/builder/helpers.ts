@@ -1,4 +1,5 @@
 import { Page } from "@playwright/test";
+import { getWorkspaceId } from "helpers/workspace";
 
 // Selects a dropdown option within a field container by clicking on a span first, then the target option
 export const selectDropdownOption = async (
@@ -46,7 +47,8 @@ export const appendRandomString = (string: string) => {
 // Opens a builder connector project and configures the /items endpoint stream
 export const initializeBuilderConnector = async (page: Page) => {
   // Navigate to the connector builder
-  await page.goto("/connector-builder/create", { waitUntil: "networkidle" });
+  const workspaceId = await getWorkspaceId(page);
+  await page.goto(`/workspaces/${workspaceId}/connector-builder/create`, { waitUntil: "networkidle" });
 
   // Select the "Start from scratch" option
   await page.locator('button[data-testid="start-from-scratch"]').click({ timeout: 10000 });

@@ -17,7 +17,7 @@ export interface BrandingBadgeProps {
 
 export const BrandingBadge: React.FC<BrandingBadgeProps> = ({ product, testId }) =>
   product === null ? null : (
-    <Badge variant={product === "enterprise" ? "darkBlue" : "blue"} data-testid={testId}>
+    <Badge variant="blue" data-testid={testId}>
       <FlexContainer alignItems="center">
         <FormattedMessage
           id={

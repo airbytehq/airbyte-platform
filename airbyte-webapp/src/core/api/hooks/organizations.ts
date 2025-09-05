@@ -109,6 +109,7 @@ export const useUpdateOrganization = () => {
     (organization: OrganizationUpdateRequestBody) => updateOrganization(organization, requestOptions),
     {
       onSuccess: (data) => {
+        queryClient.invalidateQueries(organizationKeys.info(data.organizationId));
         queryClient.setQueryData(organizationKeys.detail(data.organizationId), data);
       },
     }

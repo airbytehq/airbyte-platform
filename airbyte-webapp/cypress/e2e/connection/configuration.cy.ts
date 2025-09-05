@@ -5,6 +5,7 @@ import {
   requestDeleteSource,
   requestUpdateConnection,
 } from "@cy/commands/api";
+import { getWorkspaceId } from "@cy/commands/api/workspace";
 import { deleteEntity, submitButtonClick } from "@cy/commands/common";
 import {
   createNewConnectionViaApi,
@@ -359,7 +360,11 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
           .as("pokeConnection");
 
         cy.get<WebBackendConnectionRead>("@pokeConnection").then((connection) => {
-          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Settings}`);
+          cy.visit(
+            `/workspaces/${getWorkspaceId()}/${RoutePaths.Connections}/${connection.connectionId}/${
+              ConnectionRoutePaths.Settings
+            }`
+          );
         });
 
         connectionForm.toggleAdvancedSettingsSection();
@@ -405,7 +410,7 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
     });
 
     it("should not be listed on connection list page", () => {
-      cy.visit(`/${RoutePaths.Connections}`);
+      cy.visit(`/workspaces/${getWorkspaceId()}/${RoutePaths.Connections}`);
       cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
         cy.get("td").contains(connection.name).should("not.exist");
       });
@@ -413,13 +418,21 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
     describe("Job History tab", () => {
       it("can visit the connection", () => {
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.JobHistory}/`);
+          cy.visit(
+            `/workspaces/${getWorkspaceId()}/${RoutePaths.Connections}/${connection.connectionId}/${
+              ConnectionRoutePaths.JobHistory
+            }/`
+          );
           cy.get("div").contains("This connection has been deleted").should("exist");
         });
       });
       it("cannot toggle enabled/disabled state or trigger a sync", () => {
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.JobHistory}/`);
+          cy.visit(
+            `/workspaces/${getWorkspaceId()}/${RoutePaths.Connections}/${connection.connectionId}/${
+              ConnectionRoutePaths.JobHistory
+            }/`
+          );
           getSyncEnabledSwitch().should("be.disabled");
           cy.contains(/Sync now/).should("be.disabled");
         });
@@ -429,7 +442,11 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
     describe("Settings tab", () => {
       it("Cannot edit non-name fields", () => {
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Settings}`);
+          cy.visit(
+            `/workspaces/${getWorkspaceId()}/${RoutePaths.Connections}/${connection.connectionId}/${
+              ConnectionRoutePaths.Settings
+            }`
+          );
           connectionForm.toggleAdvancedSettingsSection();
           cy.get(getTestId("connectionName")).should("be.disabled");
           cy.get(connectionForm.scheduleTypeDropdown).should("be.disabled");
@@ -441,7 +458,11 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
 
       it("cannot reset data or delete connection", () => {
         cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
-          cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/${ConnectionRoutePaths.Settings}/`);
+          cy.visit(
+            `/workspaces/${getWorkspaceId()}/${RoutePaths.Connections}/${connection.connectionId}/${
+              ConnectionRoutePaths.Settings
+            }/`
+          );
           cy.get(connectionSettings.resetDataButton).should("not.exist");
           cy.get(connectionSettings.deleteConnectionButton).should("not.exist");
         });
@@ -464,14 +485,14 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
 
     it("should show empty streams table", () => {
       cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
-        cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/`);
+        cy.visit(`/workspaces/${getWorkspaceId()}/${RoutePaths.Connections}/${connection.connectionId}/`);
         cy.contains("users").should("exist");
       });
     });
 
     it("should not be allowed to trigger a reset or a sync", () => {
       cy.get<WebBackendConnectionRead>("@postgresConnection").then((connection) => {
-        cy.visit(`/${RoutePaths.Connections}/${connection.connectionId}/`);
+        cy.visit(`/workspaces/${getWorkspaceId()}/${RoutePaths.Connections}/${connection.connectionId}/`);
         cy.get(statusPage.manualSyncButton).should("be.disabled");
       });
     });
@@ -479,10 +500,18 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
     it("should be able to edit the connection and refresh source schema", () => {
       interceptUpdateConnectionRequest();
       cy.get<WebBackendConnectionRead>("@postgresConnection").then((postgresConnection) => {
-        cy.visit(`/${RoutePaths.Connections}/${postgresConnection.connectionId}/${ConnectionRoutePaths.Replication}`);
+        cy.visit(
+          `/workspaces/${getWorkspaceId()}/${RoutePaths.Connections}/${postgresConnection.connectionId}/${
+            ConnectionRoutePaths.Replication
+          }`
+        );
         streamsTable.isRefreshSourceSchemaBtnEnabled(true);
 
-        cy.visit(`/${RoutePaths.Connections}/${postgresConnection.connectionId}/${ConnectionRoutePaths.Settings}`);
+        cy.visit(
+          `/workspaces/${getWorkspaceId()}/${RoutePaths.Connections}/${postgresConnection.connectionId}/${
+            ConnectionRoutePaths.Settings
+          }`
+        );
         connectionForm.selectScheduleType("Scheduled");
         submitButtonClick();
 

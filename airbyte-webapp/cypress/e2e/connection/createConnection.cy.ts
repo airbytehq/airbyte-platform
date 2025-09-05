@@ -99,7 +99,9 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
       interceptDiscoverSchemaRequest();
 
       cy.visit(
-        `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}?sourceId=${source.sourceId}&destinationId=${destination.destinationId}`
+        `/workspaces/${getWorkspaceId()}/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${
+          ConnectionRoutePaths.Configure
+        }?sourceId=${source.sourceId}&destinationId=${destination.destinationId}`
       );
       waitForDiscoverSchemaRequest();
     });
@@ -164,7 +166,9 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
       interceptDiscoverSchemaRequest();
 
       cy.visit(
-        `/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}?sourceId=${source.sourceId}&destinationId=${destination.destinationId}`
+        `/workspaces/${getWorkspaceId()}/${RoutePaths.Connections}/${ConnectionRoutePaths.ConnectionNew}/${
+          ConnectionRoutePaths.Configure
+        }?sourceId=${source.sourceId}&destinationId=${destination.destinationId}`
       );
       waitForDiscoverSchemaRequest();
     });

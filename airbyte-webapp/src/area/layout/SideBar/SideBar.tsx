@@ -5,7 +5,6 @@ import { matchPath, useLocation } from "react-router-dom";
 
 import { AdminWorkspaceWarning } from "components/ui/AdminWorkspaceWarning";
 import { Box } from "components/ui/Box";
-import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Separator } from "components/ui/Separator";
 import { Text } from "components/ui/Text";
@@ -29,6 +28,7 @@ import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 import { CloudHelpDropdown } from "packages/cloud/views/layout/CloudMainView/CloudHelpDropdown";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, SettingsRoutePaths } from "pages/routePaths";
+import { AirbyteHomeLink } from "views/layout/SideBar/AirbyteHomeLink";
 
 import { HelpDropdown } from "./components/HelpDropdown";
 import { MenuContent } from "./components/MenuContent";
@@ -150,6 +150,7 @@ export const SideBar: React.FC<PropsWithChildren> = () => {
   const { pathname } = useLocation();
   const isHidden = HIDDEN_SIDEBAR_PATHS.some((path) => !!matchPath(path, pathname));
   const isCloudApp = useIsCloudApp();
+  const showOrganizationUI = useFeature(FeatureItem.OrganizationUI);
 
   const workspace = useCurrentWorkspaceForOrganization();
 
@@ -168,68 +169,78 @@ export const SideBar: React.FC<PropsWithChildren> = () => {
 
   return (
     <nav className={classNames(styles.sidebar, { [styles.hidden]: isHidden })}>
-      <OrganizationPicker />
+      {showOrganizationUI ? <OrganizationPicker /> : <AirbyteHomeLink />}
 
-      <FlexContainer className={styles.sidebar__menuItems} direction="column" justifyContent="flex-start">
-        <Separator />
-        <IfFeatureEnabled feature={FeatureItem.ShowAdminWarningInWorkspace}>
-          <AdminWorkspaceWarning />
-        </IfFeatureEnabled>
-        <Box pt="md">
+      <Separator />
+
+      <IfFeatureEnabled feature={FeatureItem.ShowAdminWarningInWorkspace}>
+        <AdminWorkspaceWarning />
+      </IfFeatureEnabled>
+
+      <IfFeatureEnabled feature={FeatureItem.OrganizationUI}>
+        <Box mt="xl" mb="md">
           <Text size="sm" bold color="grey" className={styles.sidebar__sectionTitle}>
             <FormattedMessage id="settings.organization" />
           </Text>
         </Box>
         <OrganizationNavItems />
-        {workspace && (
-          <>
-            <Separator />
-            <Box py="md">
-              <Text size="sm" bold color="grey" className={styles.sidebar__sectionTitle}>
-                <FormattedMessage id="settings.workspaceSettings" />
-              </Text>
-              <Box pt="md" pb="sm">
-                <WorkspacesPickerNext currentWorkspace={workspace} />
-              </Box>
-              <WorkspaceNavItems workspace={workspace} />
+        <Box mt="md">
+          <Separator />
+        </Box>
+      </IfFeatureEnabled>
+
+      {workspace && (
+        <>
+          <Box mt="xl">
+            <Text size="sm" bold color="grey" className={styles.sidebar__sectionTitle}>
+              <FormattedMessage id="settings.workspaceSettings" />
+            </Text>
+          </Box>
+          <IfFeatureEnabled feature={FeatureItem.MultiWorkspaceUI}>
+            <Box mt="md">
+              <WorkspacesPickerNext currentWorkspace={workspace} />
             </Box>
-          </>
-        )}
-        <div className={styles.sidebar__userSettings}>
-          <MenuContent>
-            {isCloudApp ? <CloudHelpDropdown /> : <HelpDropdown />}
-            <ThemeToggle />
-            {logout && user && (
-              <NavDropdown
-                isActive={areUserSettingsActive}
-                buttonTestId="sidebar.userDropdown"
-                onChange={({ value }) => {
-                  value === "logout" && logout();
-                }}
-                options={[
-                  {
-                    as: "a",
-                    href: `${basePath}/${SettingsRoutePaths.User}`,
-                    displayName: formatMessage({ id: "sidebar.userSettings" }),
-                    internal: true,
-                    icon: <Icon type="gear" />,
-                  },
-                  {
-                    as: "button",
-                    displayName: formatMessage({ id: "sidebar.logout" }),
-                    icon: <Icon type="signout" />,
-                    value: "logout",
-                    className: styles.sidebar__logoutButton,
-                    "data-testid": "sidebar.signout",
-                  },
-                ]}
-                icon="user"
-                label={username}
-              />
-            )}
-          </MenuContent>
-        </div>
-      </FlexContainer>
+          </IfFeatureEnabled>
+          <Box mt="sm">
+            <WorkspaceNavItems workspace={workspace} />
+          </Box>
+        </>
+      )}
+
+      <div className={styles.sidebar__userSettings}>
+        <MenuContent>
+          {isCloudApp ? <CloudHelpDropdown /> : <HelpDropdown />}
+          <ThemeToggle />
+          {logout && user && (
+            <NavDropdown
+              isActive={areUserSettingsActive}
+              buttonTestId="sidebar.userDropdown"
+              onChange={({ value }) => {
+                value === "logout" && logout();
+              }}
+              options={[
+                {
+                  as: "a",
+                  href: `${basePath}/${SettingsRoutePaths.User}`,
+                  displayName: formatMessage({ id: "sidebar.userSettings" }),
+                  internal: true,
+                  icon: <Icon type="gear" />,
+                },
+                {
+                  as: "button",
+                  displayName: formatMessage({ id: "sidebar.logout" }),
+                  icon: <Icon type="signout" />,
+                  value: "logout",
+                  className: styles.sidebar__logoutButton,
+                  "data-testid": "sidebar.signout",
+                },
+              ]}
+              icon="user"
+              label={username}
+            />
+          )}
+        </MenuContent>
+      </div>
     </nav>
   );
 };

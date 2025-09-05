@@ -1,3 +1,4 @@
+import { getWorkspaceId } from "@cy/commands/api/workspace";
 import { getTestId } from "@cy/utils/selectors";
 
 export type ConnectorType = "source" | "destination";
@@ -24,7 +25,7 @@ export const isNextPageButtonEnabled = (expectedResult: boolean) => {
 };
 
 export const isAtConnectionConfigurationStep = () =>
-  cy.url().should("include", `/connections/new-connection/configure`);
+  cy.url().should("include", `/workspaces/${getWorkspaceId()}/connections/new-connection/configure`);
 
 export const isAtConnectionOverviewPage = (connectionId: string) =>
-  cy.url().should("include", `connections/${connectionId}/status`);
+  cy.url().should("include", `/workspaces/${getWorkspaceId()}/connections/${connectionId}/status`);

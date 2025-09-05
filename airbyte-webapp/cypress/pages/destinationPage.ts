@@ -1,3 +1,5 @@
+import { requestWorkspaceId } from "@cy/commands/api";
+import { getWorkspaceId } from "@cy/commands/api/workspace";
 import { clickOnCellInTable } from "@cy/commands/common";
 
 const newDestination = "button[data-id='new-destination']";
@@ -8,7 +10,9 @@ const destinationNameColumn = "Name";
 
 export const goToDestinationPage = () => {
   cy.intercept("/api/v1/destinations/list").as("getDestinationsList");
-  cy.visit("/destination");
+  requestWorkspaceId().then(() => {
+    cy.visit(`/workspaces/${getWorkspaceId()}/destination`);
+  });
 };
 
 export const openDestinationConnectionsPage = (destinationName: string) => {
@@ -22,7 +26,7 @@ export const openNewDestinationForm = () => {
       cy.get(newDestination).click();
     }
   });
-  cy.url().should("include", `/destination/new-destination`);
+  cy.url().should("include", `/workspaces/${getWorkspaceId()}/destination/new-destination`);
 };
 
 export const openCreateConnection = () => {

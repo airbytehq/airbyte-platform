@@ -1,4 +1,5 @@
 import { test } from "@playwright/test";
+import { getWorkspaceId } from "helpers/workspace";
 
 import {
   assertAutoImportSchemaMatches,
@@ -107,7 +108,8 @@ test("can return to saved connector after exiting project", async ({ page }) => 
   await configureListPartitionRouter(page, 10);
   await testStream(page);
   await waitForDraftToSave(page);
-  await page.goto("/connector-builder", { timeout: 10000 });
+  const workspaceId = await getWorkspaceId(page);
+  await page.goto(`/workspaces/${workspaceId}/connector-builder`, { timeout: 10000 });
   await page.locator(`[data-testid="edit-project-button-${name}"]`).click({ timeout: 10000 });
   await page.waitForSelector('input[data-field-path="manifest.streams.0.name"]', { state: "visible", timeout: 10000 });
   await assertUrlPath(page, "items/{{ stream_slice.item_id }}");

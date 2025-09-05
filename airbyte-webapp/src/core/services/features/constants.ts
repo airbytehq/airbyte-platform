@@ -22,6 +22,7 @@ export const defaultEnterpriseFeatures = [
   FeatureItem.IndicateGuestUsers,
   FeatureItem.MappingsUI, // Indicates configuration UI is present.  connection.mappingsUI experiment also required to be true.
   FeatureItem.MultiWorkspaceUI,
+  FeatureItem.OrganizationUI,
   FeatureItem.RBAC,
 ];
 
@@ -35,6 +36,7 @@ export const defaultCloudFeatures = [
   FeatureItem.EmailNotifications,
   FeatureItem.ExternalInvitations,
   FeatureItem.MultiWorkspaceUI,
+  FeatureItem.OrganizationUI,
   FeatureItem.RBAC,
   FeatureItem.RestrictAdminInForeignWorkspace,
   FeatureItem.ShowInviteUsersHint,

@@ -96,5 +96,5 @@ export const defaultExperimentValues: Experiments = {
   "settings.downloadDiagnostics": false,
   "settings.organizationRbacImprovements": true,
   "settings.showAdvancedSettings": false,
-  "sidebar.showOrgPicker": false,
+  "sidebar.showOrgPicker": true,
 };
