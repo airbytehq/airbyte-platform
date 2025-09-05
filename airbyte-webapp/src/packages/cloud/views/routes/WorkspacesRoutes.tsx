@@ -26,7 +26,6 @@ import {
   SourcesPage as SettingsSourcesPage,
   DestinationsPage as SettingsDestinationsPage,
 } from "pages/SettingsPage/pages/ConnectorsPage";
-import { EmbeddedSettingsPage } from "pages/SettingsPage/pages/EmbbededSettingsPage/EmbeddedSettingsPage";
 import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
 import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
 import { OrganizationMembersPage } from "pages/SettingsPage/pages/Organization/OrganizationMembersPage";
@@ -108,7 +107,6 @@ export const WorkspacesRoutes: React.FC = () => {
         <Route path={CloudSettingsRoutePaths.Source} element={<SettingsSourcesPage />} />
         <Route path={CloudSettingsRoutePaths.Destination} element={<SettingsDestinationsPage />} />
         <Route path={CloudSettingsRoutePaths.Notifications} element={<NotificationPage />} />
-        <Route path={SettingsRoutePaths.Embedded} element={<EmbeddedSettingsPage />} />
         {supportsCloudDbtIntegration && (
           <Route path={CloudSettingsRoutePaths.DbtCloud} element={<DbtCloudSettingsView />} />
         )}

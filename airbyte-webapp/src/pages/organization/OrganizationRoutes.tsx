@@ -18,11 +18,6 @@ import { RoutePaths, SettingsRoutePaths } from "../routePaths";
 const OrganizationWorkspacesPage = React.lazy(() => import("pages/workspaces/OrganizationWorkspacesPage"));
 const OrganizationBillingPage = React.lazy(() => import("packages/cloud/views/billing/OrganizationBillingPage"));
 const OrganizationUsagePage = React.lazy(() => import("packages/cloud/views/billing/OrganizationUsagePage"));
-const EmbeddedSettingsPage = React.lazy(() =>
-  import("pages/SettingsPage/pages/EmbbededSettingsPage/EmbeddedSettingsPage").then((module) => ({
-    default: module.EmbeddedSettingsPage,
-  }))
-);
 
 export const OrganizationRoutes: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
@@ -53,7 +48,6 @@ export const OrganizationRoutes: React.FC = () => {
         {canViewOrganizationUsage && (
           <Route path={CloudSettingsRoutePaths.OrganizationUsage} element={<OrganizationUsagePage />} />
         )}
-        <Route path={CloudSettingsRoutePaths.Embedded} element={<EmbeddedSettingsPage />} />
         <Route path="*" element={<Navigate to={SettingsRoutePaths.Organization} replace />} />
       </Route>
     </Routes>
