@@ -80,77 +80,60 @@ internal class StiggCloudEntitlementClientTest {
   }
 
   @Test
-  fun `addOrganization with no org throws`() {
-    val stigg = mockk<StiggWrapper>()
+  fun `addOrganization calls validatePlanChange and provisionCustomer`() {
+    val stigg = mockk<StiggWrapper>(relaxed = true)
     val client = StiggCloudEntitlementClient(stigg, orgService)
     val plan = EntitlementPlan.STANDARD
 
-    every { orgService.getOrganization(org1.value) } returns Optional.empty()
+    every { stigg.getPlans(org1) } returns emptyList()
 
-    assertThrows<IllegalStateException> { client.addOrganization(org1, plan) }
+    client.addOrganization(org1, plan)
+
+    verify { stigg.getPlans(org1) }
+    verify { stigg.provisionCustomer(org1, plan) }
   }
 
   @Test
   fun addOrganization() {
     val stigg = mockk<StiggWrapper>(relaxed = true)
     val client = StiggCloudEntitlementClient(stigg, orgService)
-    val org =
-      Organization()
-        .withOrganizationId(org1.value)
-        .withName("Org 1")
 
-    // mock organization
-    every { orgService.getOrganization(org1.value) } returns Optional.of(org)
+    every { stigg.getPlans(org1) } returns emptyList()
 
     client.addOrganization(org1, EntitlementPlan.PRO)
 
-    verify { stigg.provisionCustomer(org1, org.name, EntitlementPlan.PRO) }
+    verify { stigg.provisionCustomer(org1, EntitlementPlan.PRO) }
   }
 
   @Test
   fun `upgrade from standard to pro`() {
     val stigg = mockk<StiggWrapper>(relaxed = true)
     val client = StiggCloudEntitlementClient(stigg, orgService)
-    val org =
-      Organization()
-        .withOrganizationId(org1.value)
-        .withName("Org 1")
 
-    every { orgService.getOrganization(org1.value) } returns Optional.of(org)
     every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.STANDARD)
 
     client.addOrganization(org1, EntitlementPlan.PRO)
 
-    verify { stigg.provisionCustomer(org1, org.name, EntitlementPlan.PRO) }
+    verify { stigg.provisionCustomer(org1, EntitlementPlan.PRO) }
   }
 
   @Test
   fun `adding back to same plan is a no-op`() {
     val stigg = mockk<StiggWrapper>(relaxed = true)
     val client = StiggCloudEntitlementClient(stigg, orgService)
-    val org =
-      Organization()
-        .withOrganizationId(org1.value)
-        .withName("Org 1")
 
-    every { orgService.getOrganization(org1.value) } returns Optional.of(org)
     every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.STANDARD)
 
     client.addOrganization(org1, EntitlementPlan.STANDARD)
 
-    verify { stigg.provisionCustomer(org1, org.name, EntitlementPlan.STANDARD) }
+    verify { stigg.provisionCustomer(org1, EntitlementPlan.STANDARD) }
   }
 
   @Test
   fun `cannot downgrade from pro to standard`() {
     val stigg = mockk<StiggWrapper>(relaxed = true)
     val client = StiggCloudEntitlementClient(stigg, orgService)
-    val org =
-      Organization()
-        .withOrganizationId(org1.value)
-        .withName("Org 1")
 
-    every { orgService.getOrganization(org1.value) } returns Optional.of(org)
     every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.PRO)
 
     val exception =
@@ -171,12 +154,7 @@ internal class StiggCloudEntitlementClientTest {
   fun `cannot downgrade from pro trial to standard`() {
     val stigg = mockk<StiggWrapper>(relaxed = true)
     val client = StiggCloudEntitlementClient(stigg, orgService)
-    val org =
-      Organization()
-        .withOrganizationId(org1.value)
-        .withName("Org 1")
 
-    every { orgService.getOrganization(org1.value) } returns Optional.of(org)
     every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.PRO_TRIAL)
 
     val exception =
@@ -197,12 +175,7 @@ internal class StiggCloudEntitlementClientTest {
   fun `plan validation handles multiple plans when checking for downgrades`() {
     val stigg = mockk<StiggWrapper>(relaxed = true)
     val client = StiggCloudEntitlementClient(stigg, orgService)
-    val org =
-      Organization()
-        .withOrganizationId(org1.value)
-        .withName("Org 1")
 
-    every { orgService.getOrganization(org1.value) } returns Optional.of(org)
     every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.CORE, EntitlementPlan.PRO)
 
     val exception =
@@ -218,6 +191,31 @@ internal class StiggCloudEntitlementClientTest {
       "Cannot automatically downgrade from PRO (value: 2) to STANDARD (value: 0)",
       data.errorMessage,
     )
+  }
+
+  @Test
+  fun `addOrganization handles stigg wrapper exceptions gracefully`() {
+    val stigg = mockk<StiggWrapper>(relaxed = true)
+    val client = StiggCloudEntitlementClient(stigg, orgService)
+
+    every { stigg.getPlans(org1) } throws RuntimeException("Stigg service unavailable")
+
+    assertThrows<RuntimeException> {
+      client.addOrganization(org1, EntitlementPlan.STANDARD)
+    }
+  }
+
+  @Test
+  fun `addOrganization works with organization not found in stigg`() {
+    val stigg = mockk<StiggWrapper>(relaxed = true)
+    val client = StiggCloudEntitlementClient(stigg, orgService)
+
+    // Simulate organization not being found in Stigg (empty plans)
+    every { stigg.getPlans(org1) } returns emptyList()
+
+    client.addOrganization(org1, EntitlementPlan.STANDARD)
+
+    verify { stigg.provisionCustomer(org1, EntitlementPlan.STANDARD) }
   }
 }
 
@@ -242,7 +240,7 @@ private fun buildOfflineClient(vararg entitlements: Pair<OrganizationId, String>
                 .groupBy({ it.first }, { it.second })
                 .entries
                 .associate { entry ->
-                  entry.key.toString() to
+                  entry.key.value.toString() to
                     CustomerEntitlements
                       .builder()
                       .entitlements(

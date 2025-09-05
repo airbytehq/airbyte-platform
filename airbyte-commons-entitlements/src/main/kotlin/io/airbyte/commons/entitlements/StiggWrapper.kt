@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.entitlements
 
+import com.apollographql.apollo3.exception.ApolloException
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.domain.models.EntitlementPlan
@@ -17,6 +18,7 @@ import io.stigg.api.operations.type.ProvisionCustomerSubscriptionInput
 import io.stigg.sidecar.proto.v1.GetBooleanEntitlementRequest
 import io.stigg.sidecar.proto.v1.GetEntitlementsRequest
 import io.stigg.sidecar.sdk.Stigg
+import java.io.IOException
 
 private val logger = KotlinLogging.logger {}
 
@@ -35,32 +37,37 @@ internal class StiggWrapper(
   private val stigg: Stigg,
 ) {
   fun getPlans(organizationId: OrganizationId): List<EntitlementPlan> {
-    val resp =
-      stigg.api().query(
-        GetActiveSubscriptionsListQuery
-          .builder()
-          .input(
-            GetActiveSubscriptionsInput
-              .builder()
-              .customerId(organizationId.toString())
-              .build(),
-          ).build(),
-      )
-
-    return resp.getActiveSubscriptions.map { EntitlementPlan.valueOf(it.slimSubscriptionFragmentV2.plan.planId) }.toList()
+    try {
+      val resp =
+        stigg.api().query(
+          GetActiveSubscriptionsListQuery
+            .builder()
+            .input(
+              GetActiveSubscriptionsInput
+                .builder()
+                .customerId(organizationId.value.toString())
+                .build(),
+            ).build(),
+        )
+      return resp.getActiveSubscriptions.map { EntitlementPlan.valueOf(it.slimSubscriptionFragmentV2.plan.planId) }.toList()
+    } catch (e: ApolloException) {
+      if (e.localizedMessage != null && e.localizedMessage!!.contains("Customer not found")) {
+        logger.info { "No active subscriptions; organization not present in Stigg. organizationId=$organizationId" }
+        return emptyList()
+      }
+      throw e
+    }
   }
 
   fun provisionCustomer(
     orgId: OrganizationId,
-    orgName: String,
     plan: EntitlementPlan,
   ) {
     stigg.api().mutation(
       ProvisionCustomerMutation(
         ProvisionCustomerInput
           .builder()
-          .customerId(orgId.toString())
-          .additionalMetaData(mapOf("name" to orgName))
+          .customerId(orgId.value.toString())
           .subscriptionParams(
             ProvisionCustomerSubscriptionInput
               .builder()
@@ -81,7 +88,7 @@ internal class StiggWrapper(
       stigg.getBooleanEntitlement(
         GetBooleanEntitlementRequest
           .newBuilder()
-          .setCustomerId(organizationId.toString())
+          .setCustomerId(organizationId.value.toString())
           .setFeatureId(entitlement.featureId)
           .build(),
       )
@@ -105,7 +112,7 @@ internal class StiggWrapper(
       stigg.getEntitlements(
         GetEntitlementsRequest
           .newBuilder()
-          .setCustomerId(organizationId.toString())
+          .setCustomerId(organizationId.value.toString())
           .build(),
       )
 

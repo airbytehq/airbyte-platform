@@ -40,7 +40,7 @@ class StiggEnterpriseEntitlementClient(
           .entitlements(
             OfflineEntitlements
               .builder()
-              .customers(mapOf(smeOrgId.toString() to entitlements))
+              .customers(mapOf(smeOrgId.value.toString() to entitlements))
               .build(),
           ).build(),
       ),

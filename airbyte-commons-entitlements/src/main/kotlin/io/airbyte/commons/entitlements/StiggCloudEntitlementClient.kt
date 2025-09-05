@@ -36,15 +36,8 @@ internal class StiggCloudEntitlementClient(
     organizationId: OrganizationId,
     plan: EntitlementPlan,
   ) {
-    val org =
-      organizationService
-        .getOrganization(organizationId.value)
-        .orElseThrow {
-          IllegalStateException("Organization $organizationId not found; could not add to plan $plan")
-        } ?: throw IllegalStateException("getOrganization() returned null for $organizationId; could not add to plan $plan")
-
     validatePlanChange(organizationId, plan)
-    stigg.provisionCustomer(organizationId, org.name, plan)
+    stigg.provisionCustomer(organizationId, plan)
 
     logger.info { "Added organization to plan. organizationId=$organizationId plan=$plan" }
   }
