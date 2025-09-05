@@ -58,7 +58,7 @@ class SlackNotificationClient : NotificationClient {
 
   override fun notifyJobFailure(
     summary: SyncSummary,
-    receiverEmail: String,
+    receiverEmail: String?,
   ): Boolean {
     val legacyMessage: String
     try {
@@ -97,7 +97,7 @@ class SlackNotificationClient : NotificationClient {
 
   override fun notifyJobSuccess(
     summary: SyncSummary,
-    receiverEmail: String,
+    receiverEmail: String?,
   ): Boolean {
     val legacyMessage: String
     try {
@@ -136,7 +136,7 @@ class SlackNotificationClient : NotificationClient {
 
   override fun notifyConnectionDisabled(
     summary: SyncSummary,
-    receiverEmail: String,
+    receiverEmail: String?,
   ): Boolean {
     val legacyMessage: String
     try {
@@ -179,7 +179,7 @@ class SlackNotificationClient : NotificationClient {
 
   override fun notifyConnectionDisableWarning(
     summary: SyncSummary,
-    receiverEmail: String,
+    receiverEmail: String?,
   ): Boolean {
     val legacyMessage: String
     try {

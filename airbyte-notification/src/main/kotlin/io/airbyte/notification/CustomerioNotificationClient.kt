@@ -99,8 +99,11 @@ class CustomerioNotificationClient(
 
   override fun notifyJobFailure(
     summary: SyncSummary,
-    receiverEmail: String,
+    receiverEmail: String?,
   ): Boolean {
+    if (receiverEmail == null) {
+      return false
+    }
     val node = buildSyncCompletedJson(summary, receiverEmail, SYNC_FAILURE_MESSAGE_ID)
     val payload = Jsons.serialize(node)
     return try {
@@ -113,8 +116,11 @@ class CustomerioNotificationClient(
 
   override fun notifyJobSuccess(
     summary: SyncSummary,
-    receiverEmail: String,
+    receiverEmail: String?,
   ): Boolean {
+    if (receiverEmail == null) {
+      return false
+    }
     val node = buildSyncCompletedJson(summary, receiverEmail, SYNC_SUCCEED_MESSAGE_ID)
     val payload = Jsons.serialize(node)
     return try {
@@ -130,8 +136,11 @@ class CustomerioNotificationClient(
   // instead of being passed in
   override fun notifyConnectionDisabled(
     summary: SyncSummary,
-    receiverEmail: String,
+    receiverEmail: String?,
   ): Boolean {
+    if (receiverEmail == null) {
+      return false
+    }
     val node = buildSyncCompletedJson(summary, receiverEmail, AUTO_DISABLE_TRANSACTION_MESSAGE_ID)
     val payload = Jsons.serialize(node)
     return try {
@@ -144,8 +153,11 @@ class CustomerioNotificationClient(
 
   override fun notifyConnectionDisableWarning(
     summary: SyncSummary,
-    receiverEmail: String,
+    receiverEmail: String?,
   ): Boolean {
+    if (receiverEmail == null) {
+      return false
+    }
     val node = buildSyncCompletedJson(summary, receiverEmail, AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID)
     val payload = Jsons.serialize(node)
     return try {

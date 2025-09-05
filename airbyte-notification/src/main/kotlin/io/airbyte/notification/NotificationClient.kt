@@ -17,22 +17,22 @@ import java.util.UUID
 abstract class NotificationClient {
   abstract fun notifyJobFailure(
     summary: SyncSummary,
-    receiverEmail: String,
+    receiverEmail: String?,
   ): Boolean
 
   abstract fun notifyJobSuccess(
     summary: SyncSummary,
-    receiverEmail: String,
+    receiverEmail: String?,
   ): Boolean
 
   abstract fun notifyConnectionDisabled(
     summary: SyncSummary,
-    receiverEmail: String,
+    receiverEmail: String?,
   ): Boolean
 
   abstract fun notifyConnectionDisableWarning(
     summary: SyncSummary,
-    receiverEmail: String,
+    receiverEmail: String?,
   ): Boolean
 
   abstract fun notifyBreakingChangeWarning(
