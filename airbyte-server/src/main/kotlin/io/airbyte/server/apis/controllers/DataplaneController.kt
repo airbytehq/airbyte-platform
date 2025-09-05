@@ -233,7 +233,10 @@ open class DataplaneController(
       MetricAttribute(MetricTags.DATA_PLANE_NAME_TAG, dataplane.name),
       MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, dataplaneGroup.id.toString()),
       MetricAttribute(MetricTags.DATA_PLANE_GROUP_NAME_TAG, dataplaneGroup.name),
-      MetricAttribute(MetricTags.DATA_PLANE_VISIBILITY, if (dataplaneGroup.id == PUBLIC_ORG_ID) MetricTags.PUBLIC else MetricTags.PRIVATE),
+      MetricAttribute(
+        MetricTags.DATA_PLANE_VISIBILITY,
+        if (dataplaneGroup.organizationId == PUBLIC_ORG_ID) MetricTags.PUBLIC else MetricTags.PRIVATE,
+      ),
     )
   }
 
