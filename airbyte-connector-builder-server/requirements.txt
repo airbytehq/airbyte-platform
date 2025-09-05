@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==6.61.6.post3.dev17473738577
+airbyte-cdk==7.0.1
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.17.1
     # via airbyte-cdk
@@ -32,7 +32,7 @@ cachetools==5.5.2
     # via
     #   airbyte-cdk
     #   google-auth
-cattrs==25.1.1
+cattrs==25.2.0
     # via requests-cache
 certifi==2025.1.31
     # via
@@ -201,7 +201,7 @@ referencing==0.36.2
     #   airbyte-cdk
     #   jsonschema
     #   jsonschema-specifications
-regex==2025.8.29
+regex==2025.9.1
     # via
     #   dateparser
     #   nltk

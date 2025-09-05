@@ -45,7 +45,7 @@ dependencies {
 }
 
 val openapiSpecFilePath: String = "${layout.buildDirectory.get()}/openapi/manifest-server-openapi.yaml"
-val remoteSpecUrl = "https://raw.githubusercontent.com/airbytehq/airbyte-python-cdk/refs/tags/v6.61.6.post3.dev17473738577/airbyte_cdk/manifest_server/openapi.yaml"
+val remoteSpecUrl = "https://raw.githubusercontent.com/airbytehq/airbyte-python-cdk/refs/tags/v7.0.1/airbyte_cdk/manifest_server/openapi.yaml"
 
 val downloadManifestServerSpec =
   tasks.register("downloadManifestServerSpec") {
@@ -80,6 +80,11 @@ val genManifestServerApiClient =
     apiPackage = "io.airbyte.manifestserver.api.client.generated"
     invokerPackage = "io.airbyte.manifestserver.api.client.invoker.generated"
     modelPackage = "io.airbyte.manifestserver.api.client.model.generated"
+
+    typeMappings =
+      mapOf(
+        "SliceDescriptor" to "kotlin.Any",
+      )
 
     schemaMappings =
       mapOf(
