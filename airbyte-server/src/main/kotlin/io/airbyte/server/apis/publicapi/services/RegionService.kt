@@ -5,6 +5,7 @@
 package io.airbyte.server.apis.publicapi.services
 
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
@@ -38,6 +39,8 @@ interface RegionService {
   ): Response
 
   fun controllerDeleteRegion(regionId: UUID): Response
+
+  fun getOrganizationIdFromRegion(regionId: UUID): UUID
 }
 
 private val log = KotlinLogging.logger {}
@@ -48,6 +51,7 @@ class RegionServiceImpl(
   private val dataplaneService: DataplaneService,
   private val trackingHelper: TrackingHelper,
   private val currentUserService: CurrentUserService,
+  private val entitlementService: EntitlementService,
 ) : RegionService {
   override fun controllerListRegions(organizationId: UUID): Response {
     val userId = currentUserService.getCurrentUser().userId
@@ -182,4 +186,6 @@ class RegionServiceImpl(
 
     return Response.ok().entity(RegionResponseMapper.from(delete)).build()
   }
+
+  override fun getOrganizationIdFromRegion(regionId: UUID): UUID = dataplaneGroupService.getOrganizationIdFromDataplaneGroup(regionId)
 }

@@ -36,6 +36,8 @@ interface DataplaneService {
   ): Response
 
   fun controllerDeleteDataplane(dataplaneId: UUID): Response
+
+  fun getRegionIdFromDataplane(dataplaneId: UUID): UUID
 }
 
 private val log = KotlinLogging.logger {}
@@ -170,4 +172,6 @@ class DataplaneServiceImpl(
 
     return Response.ok().entity(DataplaneResponseMapper.from(result)).build()
   }
+
+  override fun getRegionIdFromDataplane(dataplaneId: UUID): UUID = dataplaneDataService.getDataplane(dataplaneId).dataplaneGroupId
 }
