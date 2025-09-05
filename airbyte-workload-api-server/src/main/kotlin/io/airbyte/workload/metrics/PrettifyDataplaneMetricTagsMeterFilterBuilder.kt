@@ -34,13 +34,12 @@ class PrettifyDataplaneMetricTagsMeterFilterBuilder(
   ) : MeterFilter {
     override fun map(id: Meter.Id): Meter.Id {
       val newTags = mutableListOf<Tag>()
-      id.getTag(MetricTags.DATA_PLANE_ID_TAG)?.let { dataplaneId ->
+      id.getTag(MetricTags.DATA_PLANE_ID_TAG)?.asUuid()?.let { dataplaneId ->
         if (id.getTag(MetricTags.DATA_PLANE_NAME_TAG) == null) {
-          newTags.add(Tag.of(MetricTags.DATA_PLANE_NAME_TAG, cache.dataplaneNameById(UUID.fromString(dataplaneId))))
+          newTags.add(Tag.of(MetricTags.DATA_PLANE_NAME_TAG, cache.dataplaneNameById(dataplaneId)))
         }
       }
-      id.getTag(MetricTags.DATA_PLANE_GROUP_TAG)?.let { dataplaneGroupIdString ->
-        val dataplaneGroupId = UUID.fromString(dataplaneGroupIdString)
+      id.getTag(MetricTags.DATA_PLANE_GROUP_TAG)?.asUuid()?.let { dataplaneGroupId ->
         if (id.getTag(MetricTags.DATA_PLANE_GROUP_NAME_TAG) == null) {
           newTags.add(Tag.of(MetricTags.DATA_PLANE_GROUP_NAME_TAG, cache.dataplaneGroupNameById(dataplaneGroupId)))
         }
@@ -64,3 +63,13 @@ class PrettifyDataplaneMetricTagsMeterFilterBuilder(
   // We cannot inherit MeterFilter directly here because it creates a dependency cycle.
   override fun onApplicationEvent(event: ApplicationStartupEvent) {}
 }
+
+// In some cases, a workload will have null dataplane ID / dataplane group ID.
+// In those cases, we emit a metric tagged with `undefined` in place of the ID.
+// So we have to parse the UUID defensively.
+private fun String.asUuid(): UUID? =
+  try {
+    UUID.fromString(this)
+  } catch (e: Exception) {
+    null
+  }
