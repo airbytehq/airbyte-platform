@@ -49,7 +49,7 @@ open class DataplaneController(
       .withCurrentUser()
       .withRef(AuthenticationId.ORGANIZATION_ID, orgId)
       .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
-    ensureSelfManagedRegionsEntitlement(orgId)
+    ensureSelfManagedRegionsEntitlement(OrganizationId(orgId))
 
     return dataplaneService.controllerCreateDataplane(dataplaneCreateRequest)
   }
@@ -59,7 +59,7 @@ open class DataplaneController(
   override fun publicGetDataplane(dataplaneId: UUID): Response {
     val regionId = dataplaneService.getRegionIdFromDataplane(dataplaneId)
     val orgId = regionService.getOrganizationIdFromRegion(regionId)
-    ensureSelfManagedRegionsEntitlement(orgId)
+    ensureSelfManagedRegionsEntitlement(OrganizationId(orgId))
     roleResolver
       .newRequest()
       .withCurrentUser()
@@ -78,7 +78,7 @@ open class DataplaneController(
   ): Response {
     val regionId = dataplaneService.getRegionIdFromDataplane(dataplaneId)
     val orgId = regionService.getOrganizationIdFromRegion(regionId)
-    ensureSelfManagedRegionsEntitlement(orgId)
+    ensureSelfManagedRegionsEntitlement(OrganizationId(orgId))
     roleResolver
       .newRequest()
       .withCurrentUser()
@@ -93,7 +93,7 @@ open class DataplaneController(
   override fun publicDeleteDataplane(dataplaneId: UUID): Response {
     val regionId = dataplaneService.getRegionIdFromDataplane(dataplaneId)
     val orgId = regionService.getOrganizationIdFromRegion(regionId)
-    ensureSelfManagedRegionsEntitlement(orgId)
+    ensureSelfManagedRegionsEntitlement(OrganizationId(orgId))
     roleResolver
       .newRequest()
       .withCurrentUser()
@@ -103,8 +103,7 @@ open class DataplaneController(
     return dataplaneService.controllerDeleteDataplane(dataplaneId)
   }
 
-  private fun ensureSelfManagedRegionsEntitlement(regionId: UUID) {
-    val orgId = OrganizationId(regionService.getOrganizationIdFromRegion(regionId))
+  private fun ensureSelfManagedRegionsEntitlement(orgId: OrganizationId) {
     entitlementService.ensureEntitled(orgId, SelfManagedRegionsEntitlement)
   }
 }
