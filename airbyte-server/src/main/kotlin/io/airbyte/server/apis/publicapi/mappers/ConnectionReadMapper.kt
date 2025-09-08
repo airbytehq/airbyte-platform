@@ -57,6 +57,7 @@ object ConnectionReadMapper {
                   }
                 StreamConfiguration(
                   name = streamAndConfiguration.stream.name,
+                  destinationObjectName = streamAndConfiguration.config.destinationObjectName,
                   namespace = streamAndConfiguration.stream.namespace,
                   primaryKey = streamAndConfiguration.config.primaryKey,
                   cursorField = streamAndConfiguration.config.cursorField,
