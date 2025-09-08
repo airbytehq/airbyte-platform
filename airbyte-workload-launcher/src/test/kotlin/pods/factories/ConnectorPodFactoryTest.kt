@@ -145,7 +145,7 @@ class ConnectorPodFactoryTest {
       )
 
     assertEquals(expectedNodeSelection.nodeSelectors, pod.spec.nodeSelector)
-    assertEquals(defaultToleration + expectedNodeSelection.tolerations, pod.spec.tolerations)
+    assertEquals(expectedNodeSelection.tolerations, pod.spec.tolerations)
     assertEquals(expectedNodeSelection.podAffinity, pod.spec.affinity)
   }
 

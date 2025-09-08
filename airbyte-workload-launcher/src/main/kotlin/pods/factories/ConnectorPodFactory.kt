@@ -90,7 +90,7 @@ data class ConnectorPodFactory(
       .withInitContainers(init)
       .withVolumes(volumeMountPairs.volumes)
       .withNodeSelector<String, String>(nodeSelection.nodeSelectors)
-      .withTolerations(tolerations + nodeSelection.tolerations)
+      .withTolerations(nodeSelection.tolerations)
       .withAffinity(nodeSelection.podAffinity)
       .withImagePullSecrets(imagePullSecrets) // An empty list or an empty LocalObjectReference turns this into a no-op setting.
       .withSecurityContext(workloadSecurityContextProvider.defaultPodSecurityContext())
