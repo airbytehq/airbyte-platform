@@ -215,10 +215,6 @@ object UseManifestServer : Temporary<Boolean>(key = "platform.use-manifest-serve
 
 object EnableOrchestration : Permanent<Boolean>(key = "platform.enable-orchestration", default = false)
 
-object DetectRunawayWorkloadsCron : Temporary<Boolean>(key = "platform.detect-runaway-workloads-cron", default = false)
-
-object DeleteRunawayWorkloadsCron : Temporary<Boolean>(key = "platform.delete-runaway-workloads-cron", default = false)
-
 object ReplicationCommandFallsBackToWorkloadStatus : Temporary<Boolean>(
   key = "platform.replication-command-falls-back-to-workload-status",
   default = false,

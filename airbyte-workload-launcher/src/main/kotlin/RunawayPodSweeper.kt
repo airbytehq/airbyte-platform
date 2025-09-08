@@ -5,9 +5,6 @@
 package io.airbyte.workload.launcher
 
 import io.airbyte.commons.annotation.InternalForTesting
-import io.airbyte.featureflag.Dataplane
-import io.airbyte.featureflag.DeleteRunawayWorkloadsCron
-import io.airbyte.featureflag.DetectRunawayWorkloadsCron
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -58,9 +55,7 @@ open class RunawayPodSweeper(
   @Scheduled(cron = "35 * * * *")
   open fun mark() {
     dataplaneId?.let {
-      if (featureFlagClient.boolVariation(DetectRunawayWorkloadsCron, Dataplane(it.toString()))) {
-        mark(it)
-      }
+      mark(it)
     }
   }
 
@@ -123,12 +118,6 @@ open class RunawayPodSweeper(
 
   @InternalForTesting
   internal fun sweep(dataplaneId: UUID) {
-    val context = Dataplane(dataplaneId.toString())
-    if (!featureFlagClient.boolVariation(DetectRunawayWorkloadsCron, context)) {
-      return
-    }
-    val shouldDelete = featureFlagClient.boolVariation(DeleteRunawayWorkloadsCron, context)
-
     logger.info { "Sweeping for runaway pods" }
 
     val currentEpochSeconds = clock.instant().epochSecond
@@ -139,13 +128,8 @@ open class RunawayPodSweeper(
       .forEach { pod ->
         val deleteBy = pod.metadata.labels[DELETE_BY]?.toLongOrNull()
         if (deleteBy != null && deleteBy <= currentEpochSeconds) {
-          if (shouldDelete) {
-            if (k8sWrapper.deletePod(pod = pod, namespace = namespace, reason = "Runaway pod")) {
-              metricClient.count(metric = OssMetricsRegistry.WORKLOAD_RUNAWAY_POD_DELETED, value = 1)
-            } else {
-              logger.info { "RunawaySweeperDryRun: would have deleted pod ${pod.metadata.name}" }
-              metricClient.count(metric = OssMetricsRegistry.WORKLOAD_RUNAWAY_POD_DELETED, value = 1)
-            }
+          if (k8sWrapper.deletePod(pod = pod, namespace = namespace, reason = "Runaway pod")) {
+            metricClient.count(metric = OssMetricsRegistry.WORKLOAD_RUNAWAY_POD_DELETED, value = 1)
           }
         }
       }
