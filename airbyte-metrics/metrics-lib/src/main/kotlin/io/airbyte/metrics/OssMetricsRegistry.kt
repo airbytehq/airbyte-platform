@@ -35,42 +35,6 @@ enum class OssMetricsRegistry(
   ),
 
   // Internal Metrics
-  ACTIVITY_CHECK_CONNECTION(
-    metricName = "activity_check_connection",
-    metricDescription = "increments when we start a check connection activity",
-  ),
-  ACTIVITY_DISCOVER_CATALOG(
-    metricName = "activity_discover_catalog",
-    metricDescription = "increments when we start a discover catalog activity",
-  ),
-  ACTIVITY_NORMALIZATION(
-    metricName = "activity_normalization",
-    metricDescription = "increments when we start a normalization activity",
-  ),
-  ACTIVITY_NORMALIZATION_SUMMARY_CHECK(
-    metricName = "activity_normalization_summary_check",
-    metricDescription = "increments when we start a normalization summary check activity",
-  ),
-  ACTIVITY_REFRESH_SCHEMA(
-    metricName = "activity_refresh_schema",
-    metricDescription = "increments when we start a refresh schema activity",
-  ),
-  ACTIVITY_REPLICATION(
-    metricName = "activity_replication",
-    metricDescription = "increments when we start a replication activity",
-  ),
-  ACTIVITY_SPEC(
-    metricName = "activity_spec",
-    metricDescription = "increments when we start a spec activity",
-  ),
-  ACTIVITY_SUBMIT_CHECK_DESTINATION_CONNECTION(
-    metricName = "activity_submit_check_destination_connection",
-    metricDescription = "increments when we start a submit check connection activity",
-  ),
-  ACTIVITY_SUBMIT_CHECK_SOURCE_CONNECTION(
-    metricName = "activity_submit_check_source_connection",
-    metricDescription = "increments when we start a submit check connection activity",
-  ),
   ACTIVITY_WEBHOOK_OPERATION(
     metricName = "activity_webhook_operation",
     metricDescription = "increments when we start a webhook operation activity",
@@ -417,16 +381,6 @@ enum class OssMetricsRegistry(
     metricName = "state_processed_from_source",
     metricDescription = "counter for number of state messages received from source",
   ),
-
-  // TEMPORARY, delete after the migration.
-  STATS_TRACKER_IMPLEMENTATION(
-    metricName = "stats_tracker_implementation",
-    metricDescription = "count the number of syncs by implementation of stats tracker",
-  ),
-  STREAM_STATS_WRITE_NUM_QUERIES(
-    metricName = "stream_stats_write_num_queries",
-    metricDescription = "number of separate queries to update the stream stats table",
-  ),
   TEMPORAL_API_TRANSIENT_ERROR_RETRY(
     metricName = "temporal_api_transient_error_retry",
     metricDescription = "whenever we retry a temporal api call for transient errors",
@@ -447,10 +401,6 @@ enum class OssMetricsRegistry(
     metricName = "schema_change_auto_propagated",
     metricDescription = "a schema change have been propagated",
   ),
-  WORKER_DESTINATION_BUFFER_SIZE(
-    metricName = "worker_destination_buffer_size",
-    metricDescription = "the size of the replication worker destination buffer queue",
-  ),
   WORKER_DESTINATION_MESSAGE_READ(
     metricName = "worker_destination_message_read",
     metricDescription = "whenever a message is read from the destination",
@@ -462,10 +412,6 @@ enum class OssMetricsRegistry(
   WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT(
     metricName = "notify_end_of_input_timeout",
     metricDescription = "destination call to notify end of input has timed out",
-  ),
-  WORKER_SOURCE_BUFFER_SIZE(
-    metricName = "worker_source_buffer_size",
-    metricDescription = "the size of the replication worker source buffer queue",
   ),
   WORKER_DESTINATION_ACCEPT_TIMEOUT(
     metricName = "accept_timeout",
@@ -630,22 +576,6 @@ enum class OssMetricsRegistry(
   NOTIFICATION_FAILED(
     metricName = "notification_failure",
     metricDescription = "A notification failed to send",
-  ),
-  REPLICATION_CONTEXT_NOT_INITIALIZED_ERROR(
-    metricName = "replication_context_not_initialized_error",
-    metricDescription = "The replication context was not initialized when it was expected to be.",
-  ),
-  DISCOVER_CATALOG_RUN_TIME(
-    metricName = "discover_catalog_run_time",
-    metricDescription = "Time to run a discover catalog before a replication.",
-  ),
-  REPLICATION_RUN_TIME(
-    metricName = "replication_run_time",
-    metricDescription = "Time to run a replication withing a sync.",
-  ),
-  SYNC_TOTAL_TIME(
-    metricName = "sync_total_time",
-    metricDescription = "Time to run a sync workflow.",
   ),
   SYNC_WITH_EMPTY_CATALOG(
     metricName = "sync_with_empty_catalog",
