@@ -16,7 +16,6 @@ import { SettingsRoutePaths } from "pages/routePaths";
 export const OrganizationSettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();
   const organizationId = useCurrentOrganizationId();
-  const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
@@ -34,7 +33,7 @@ export const OrganizationSettingsPage: React.FC = () => {
               to={SettingsRoutePaths.Organization}
             />
           )}
-          {((multiWorkspaceUI && canViewOrganizationSettings && displayOrganizationUsers) ||
+          {((canViewOrganizationSettings && displayOrganizationUsers) ||
             (isCloudApp && canViewOrganizationSettings)) && (
             <SettingsLink
               iconType="community"

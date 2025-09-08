@@ -35,7 +35,6 @@ export const defaultCloudFeatures = [
   FeatureItem.ConnectorBreakingChangeDeadlines,
   FeatureItem.EmailNotifications,
   FeatureItem.ExternalInvitations,
-  FeatureItem.MultiWorkspaceUI,
   FeatureItem.OrganizationUI,
   FeatureItem.RBAC,
   FeatureItem.RestrictAdminInForeignWorkspace,

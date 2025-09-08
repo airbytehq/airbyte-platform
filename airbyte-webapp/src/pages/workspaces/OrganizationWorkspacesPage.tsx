@@ -23,6 +23,7 @@ import {
 import { WorkspaceRead, WebBackendConnectionStatusCounts } from "core/api/types/AirbyteClient";
 import { useWebappConfig } from "core/config";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
 
 import OrganizationWorkspaceItem from "./components/OrganizationWorkspaceItem";
@@ -42,7 +43,6 @@ const OrganizationWorkspacesPage: React.FC = () => {
   const organization = useOrgInfo(organizationId);
   const canViewOrganizationDetails = useGeneratedIntent(Intent.ViewOrganizationDetails);
   const memberCount = useListUsersInOrganization(canViewOrganizationDetails ? organizationId : undefined).users.length;
-  const canCreateOrganizationWorkspaces = useIntent("CreateOrganizationWorkspaces", { organizationId });
 
   const [searchValue, setSearchValue] = useState("");
   const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
@@ -56,8 +56,31 @@ const OrganizationWorkspacesPage: React.FC = () => {
     },
   });
 
-  const allWorkspaces = useMemo(() => data?.pages.flatMap((page) => page.workspaces) ?? [], [data]);
-  const workspaceIds = allWorkspaces.map((workspace) => workspace.workspaceId);
+  // This query is only used to check if the org has more than one workspace, which "grandfathers" the org into
+  // multi-workspace mode.  It intentionally uses the same default parameters as the query above so that only one fetch
+  // request fires when this page is loaded.
+  const { data: moreThanOneWorkspaceData } = useListWorkspacesInOrganization({
+    organizationId,
+    nameContains: "",
+    pagination: {
+      pageSize: 10,
+    },
+  });
+
+  const workspaces = useMemo(() => data?.pages.flatMap((page) => page.workspaces) ?? [], [data]);
+  const workspaceIds = workspaces.map((workspace) => workspace.workspaceId);
+
+  const firstPageOfWorkspaces = moreThanOneWorkspaceData?.pages?.[0]?.workspaces ?? [];
+  const hasCreateWorkspacePermission = useIntent("CreateOrganizationWorkspaces", { organizationId });
+  const hasMultiWorkspaceFeature = useFeature(FeatureItem.MultiWorkspaceUI);
+
+  // Determine if the organization is "grandfathered" into multi-workspace mode. Some existing cloud self serve
+  // organizations created multiple workspaces before this limitation was introduced, so they should retain access.
+  const isGrandfatheredInToMultiWorkspaceUI = firstPageOfWorkspaces.length > 1;
+  const hasNoWorkspaces = !isLoading && firstPageOfWorkspaces.length === 0;
+  const isCreateWorkspaceEnabled =
+    hasCreateWorkspacePermission &&
+    (hasNoWorkspaces || hasMultiWorkspaceFeature || isGrandfatheredInToMultiWorkspaceUI);
 
   // Get status counts for all workspaces
   const statusCountsResults = useGetWorkspacesStatusesCounts(workspaceIds);
@@ -70,11 +93,11 @@ const OrganizationWorkspacesPage: React.FC = () => {
         statusCountsMap.set(workspaceId, result.data.statusCounts);
       }
     });
-    return allWorkspaces.map((workspace) => {
+    return workspaces.map((workspace) => {
       const statusCounts = statusCountsMap.get(workspace.workspaceId);
       return { ...workspace, statusCounts };
     });
-  }, [allWorkspaces, statusCountsResults]);
+  }, [workspaces, statusCountsResults]);
 
   const filteredWorkspaces = useMemo(() => {
     if (statusFilter === "all") {
@@ -136,7 +159,7 @@ const OrganizationWorkspacesPage: React.FC = () => {
                 </Text>
               )}
             </Box>
-            <OrganizationWorkspacesCreateControl disabled={!canCreateOrganizationWorkspaces} onCreated={refetch} />
+            <OrganizationWorkspacesCreateControl disabled={!isCreateWorkspaceEnabled} onCreated={refetch} />
           </FlexContainer>
           <Box>
             <SearchInput value={searchValue} onChange={setSearchValue} data-testid="workspaces-page-search" />
@@ -173,7 +196,7 @@ const OrganizationWorkspacesPage: React.FC = () => {
                   </Text>
                 </Box>
                 <OrganizationWorkspacesCreateControl
-                  disabled={!canCreateOrganizationWorkspaces}
+                  disabled={!isCreateWorkspaceEnabled}
                   secondary
                   onCreated={refetch}
                 />

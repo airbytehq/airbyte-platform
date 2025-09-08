@@ -88,7 +88,6 @@ const WorkspacesRoutes: React.FC = () => {
   useAddAnalyticsContextForWorkspace(workspace);
 
   const { organizationId } = workspace;
-  const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const { applicationSupport } = useAuthService();
   const licenseSettings = useFeature(FeatureItem.EnterpriseLicenseChecking);
   const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
@@ -126,7 +125,7 @@ const WorkspacesRoutes: React.FC = () => {
             <Route path={SettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
           )}
           <Route path={SettingsRoutePaths.Workspace} element={<GeneralWorkspaceSettingsPage />} />
-          {canViewWorkspaceSettings && multiWorkspaceUI ? (
+          {canViewWorkspaceSettings ? (
             <Route path={SettingsRoutePaths.WorkspaceMembers} element={<WorkspaceMembersPage />} />
           ) : null}
           {canViewWorkspaceSettings && (
@@ -137,7 +136,7 @@ const WorkspacesRoutes: React.FC = () => {
           )}
           <Route path={SettingsRoutePaths.Notifications} element={<NotificationPage />} />
           <Route path={SettingsRoutePaths.Metrics} element={<MetricsPage />} />
-          {multiWorkspaceUI && canViewOrganizationSettings && (
+          {canViewOrganizationSettings && (
             <>
               <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
               {isAccessManagementEnabled && displayOrganizationUsers && (

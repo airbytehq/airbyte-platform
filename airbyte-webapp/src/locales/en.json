@@ -2425,6 +2425,7 @@
   "organization.unhealthyWorkspaces": "Unhealthy workspaces",
   "organization.runningSyncs": "Running syncs",
   "organization.emptyName": "'<no name>'",
+  "organization.upgradePlanToAddMoreWorkspaces": "Upgrade your plan to add more workspaces",
   "workspaces.statusFilter.placeholder": "Filter by status",
   "onboarding.title": "Welcome to Airbyte",
   "onboarding.description": "Let's get you started",

@@ -4,7 +4,6 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import OrganizationSettingsLayout from "area/organization/OrganizationSettingsLayout";
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { UserSettingsRoutes } from "area/settings/UserSettingsRoutes";
-import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
 import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
 import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
@@ -21,7 +20,6 @@ const OrganizationUsagePage = React.lazy(() => import("packages/cloud/views/bill
 
 export const OrganizationRoutes: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
-  const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
@@ -39,7 +37,7 @@ export const OrganizationRoutes: React.FC = () => {
       </Route>
       <Route path={`${RoutePaths.Settings}/*`} element={<OrganizationSettingsPage />}>
         <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
-        {multiWorkspaceUI && canViewOrgSettings && (
+        {canViewOrgSettings && (
           <Route path={SettingsRoutePaths.OrganizationMembers} element={<OrganizationMembersPage />} />
         )}
         {canManageOrganizationBilling && (

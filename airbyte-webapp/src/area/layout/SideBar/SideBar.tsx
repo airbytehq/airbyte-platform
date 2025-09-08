@@ -91,18 +91,15 @@ const WorkspaceNavItems: React.FC<WorkspaceNavItemsProps> = ({ workspace }) => {
 const OrganizationNavItems = () => {
   const organizationId = useCurrentOrganizationId();
   const canViewOrganizationSettings = useGeneratedIntent(Intent.ViewOrganizationSettings);
-  const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const basePath = `${RoutePaths.Organization}/${organizationId}/`;
   return (
     <MenuContent data-testid="navMainItems">
-      {multiWorkspaceUI && (
-        <NavItem
-          label={<FormattedMessage id="sidebar.home" />}
-          icon="house"
-          to={basePath + RoutePaths.Workspaces}
-          testId="workspacesLink"
-        />
-      )}
+      <NavItem
+        label={<FormattedMessage id="sidebar.home" />}
+        icon="house"
+        to={basePath + RoutePaths.Workspaces}
+        testId="workspacesLink"
+      />
       {canViewOrganizationSettings && (
         <NavItem
           label={<FormattedMessage id="settings.organizationSettings" />}

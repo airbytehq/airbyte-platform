@@ -3,7 +3,6 @@ import { Navigate } from "react-router-dom";
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useListWorkspacesInfinite } from "core/api";
 import { useCurrentUser } from "core/services/auth";
-import { FeatureItem, useFeature } from "core/services/features";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useRedirectFromChatConnectorBuilder } from "core/utils/useRedirectFromChatConnectorBuilder";
 import { useExperiment } from "hooks/services/Experiment";
@@ -13,7 +12,6 @@ export const DefaultView: React.FC = () => {
   const { data: workspacesData } = useListWorkspacesInfinite(2, "", true);
   const workspaces = workspacesData?.pages.flatMap((page) => page.data.workspaces) ?? [];
   const organizationId = useCurrentOrganizationId();
-  const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const isOrgPickerEnabled = useExperiment("sidebar.showOrgPicker");
   const isSurveyEnabled = useExperiment("onboarding.surveyEnabled");
   const user = useCurrentUser();
@@ -36,7 +34,7 @@ export const DefaultView: React.FC = () => {
   return (
     <Navigate
       to={
-        multiWorkspaceUI && workspaces.length !== 1
+        workspaces.length !== 1 && false
           ? isOrgPickerEnabled
             ? `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Workspaces}`
             : `/${RoutePaths.Workspaces}`

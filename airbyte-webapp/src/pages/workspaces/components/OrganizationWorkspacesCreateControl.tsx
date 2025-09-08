@@ -8,6 +8,7 @@ import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { TeamsFeaturesWarnModal } from "components/TeamsFeaturesWarnModal";
 import { Button } from "components/ui/Button";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useCreateWorkspace, useListDataplaneGroups } from "core/api";
@@ -17,8 +18,6 @@ import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSub
 import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
-
-import { useOrganizationsToCreateWorkspaces } from "./useOrganizationsToCreateWorkspaces";
 
 const OrganizationCreateWorkspaceFormValidationSchema = z.object({
   name: z.string().trim().nonempty("form.empty.error"),
@@ -35,15 +34,9 @@ export const OrganizationWorkspacesCreateControl: React.FC<{
 }> = ({ disabled = false, secondary = false, onCreated }) => {
   const { isInTrial } = useOrganizationSubscriptionStatus();
   const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
-  const { organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
   const dataplaneGroups = useListDataplaneGroups();
   const { openModal } = useModalService();
   const { formatMessage } = useIntl();
-
-  // if the user does not have create permissions in any organizations, do not show the control at all
-  if (organizationsToCreateIn.length === 0) {
-    return null;
-  }
 
   const handleButtonClick = () => {
     const openCreateWorkspaceModal = () =>
@@ -65,6 +58,20 @@ export const OrganizationWorkspacesCreateControl: React.FC<{
     }
   };
 
+  if (disabled) {
+    return (
+      <Tooltip
+        control={
+          <Button variant={secondary ? "secondary" : "primary"} size="sm" icon="lock" disabled>
+            <FormattedMessage id="workspaces.createNew" />
+          </Button>
+        }
+      >
+        <FormattedMessage id="organization.upgradePlanToAddMoreWorkspaces" />
+      </Tooltip>
+    );
+  }
+
   return (
     <Button
       onClick={handleButtonClick}
@@ -72,7 +79,6 @@ export const OrganizationWorkspacesCreateControl: React.FC<{
       data-testid="workspaces.createNew"
       size="sm"
       icon={isInTrial ? "lock" : "plus"}
-      disabled={disabled}
     >
       <FormattedMessage id="workspaces.createNew" />
     </Button>
