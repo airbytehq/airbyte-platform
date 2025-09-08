@@ -73,10 +73,22 @@ internal class CheckException(
 ) : RuntimeException(msg)
 
 /**
- * Class that supports running the checks
+ * Cloud Service Provider (CSP) environment validation checker for Airbyte deployments.
  *
- * @property storageType injected value which indicates which [StorageType] these checks should run with.
- * @property storageFactory injected instance of the [StorageClientFactory] which is used to create the [StorageClient].
+ * This service validates that the Airbyte deployment has proper permissions and access
+ * to essential cloud storage services. It performs comprehensive storage checks across
+ * all document types to ensure the deployment can read, write, list, and delete files
+ * as required for normal operation.
+ *
+ * The checker validates storage access for:
+ * - Connection state storage
+ * - Log storage
+ * - Workload output storage
+ * - Activity payload storage
+ * - Audit log storage
+ *
+ * @property storageType The configured storage type for this deployment (S3, GCS, etc.)
+ * @property storageFactory Factory for creating storage clients for different document types
  */
 @Singleton
 class CspChecker(
@@ -84,11 +96,24 @@ class CspChecker(
   private val storageFactory: StorageClientFactory,
 ) {
   /**
-   * The method which performs the environment checks.
+   * Performs comprehensive environment validation checks.
+   *
+   * This method executes storage permission tests across all configured storage buckets
+   * and document types. Each test validates the four core storage operations (read, write,
+   * list, delete) required for Airbyte to function properly.
+   *
+   * @return CheckResult containing detailed results of all performed validation checks
    */
   fun check(): CheckResult = CheckResult(storage = checkStorage())
 
-  /** Performs the storage checks. */
+  /**
+   * Executes storage validation checks across all document types.
+   *
+   * Creates storage clients for each document type and runs comprehensive
+   * permission tests on each associated storage bucket.
+   *
+   * @return Storage object containing results for all tested buckets
+   */
   private fun checkStorage(): Storage =
     storageDocTypes
       .map { storageFactory.create(it) }
@@ -100,7 +125,18 @@ class CspChecker(
 }
 
 /**
- * Runs a series of storage specific checks, returning a [Bucket] response.
+ * Validates storage permissions for a specific bucket by testing core operations.
+ *
+ * This function performs a comprehensive test of storage permissions by:
+ * 1. Writing a test document to verify write permissions
+ * 2. Reading the document back to verify read permissions and data integrity
+ * 3. Listing the document to verify list permissions
+ * 4. Deleting the document to verify delete permissions and cleanup
+ *
+ * Each operation is wrapped in error handling to capture specific failure modes.
+ *
+ * @param client The storage client configured for a specific document type and bucket
+ * @return Bucket object containing test results for all storage operations
  */
 private fun checkBucket(client: StorageClient): Bucket {
   val results =

@@ -51,6 +51,16 @@ internal class EntitlementServiceImpl(
   private val entitlementClient: EntitlementClient,
   private val entitlementProvider: EntitlementProvider,
 ) : EntitlementService {
+  /**
+   * Checks if an organization is entitled to a specific feature or capability.
+   *
+   * This method evaluates entitlements through multiple sources, prioritizing legacy
+   * entitlement providers for certain features during migration to Stigg platform.
+   *
+   * @param organizationId The unique identifier of the organization to check
+   * @param entitlement The specific entitlement/feature to verify access for
+   * @return EntitlementResult indicating whether the organization has access and the feature ID
+   */
   override fun checkEntitlement(
     organizationId: OrganizationId,
     entitlement: Entitlement,
@@ -71,6 +81,16 @@ internal class EntitlementServiceImpl(
     entitlementClient.addOrganization(organizationId, plan)
   }
 
+  /**
+   * Verifies that an organization has access to a specific entitlement, throwing an exception if not.
+   *
+   * This is a convenience method that combines entitlement checking with enforcement.
+   * Use this when you need to ensure access before proceeding with an operation.
+   *
+   * @param organizationId The unique identifier of the organization to verify
+   * @param entitlement The specific entitlement/feature that must be available
+   * @throws LicenseEntitlementProblem if the organization does not have the required entitlement
+   */
   override fun ensureEntitled(
     organizationId: OrganizationId,
     entitlement: Entitlement,
@@ -83,6 +103,12 @@ internal class EntitlementServiceImpl(
     }
   }
 
+  /**
+   * Retrieves all entitlements available to an organization.
+   *
+   * @param organizationId The unique identifier of the organization
+   * @return List of EntitlementResult objects representing all available entitlements and their status
+   */
   override fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult> = entitlementClient.getEntitlements(organizationId)
 
   override fun hasEnterpriseConnectorEntitlements(
