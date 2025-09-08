@@ -3,11 +3,9 @@ import { FormattedMessage } from "react-intl";
 import { Navigate } from "react-router-dom";
 
 import { HeadTitle } from "components/HeadTitle";
-import { PageViewContainer } from "components/PageViewContainer";
-import { Box } from "components/ui/Box";
+import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { Text } from "components/ui/Text";
 
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useExperiment } from "hooks/services/Experiment";
@@ -26,20 +24,18 @@ export const OnboardingPage: React.FC = () => {
   }
 
   return (
-    <PageViewContainer>
+    <>
       <HeadTitle titles={[{ id: "onboarding.title" }]} />
-      <FlexContainer direction="column" gap="xl" alignItems="center">
-        <Heading as="h1" size="lg">
-          <FormattedMessage id="onboarding.title" />
-        </Heading>
-        <Box className={styles.content}>
-          <Text size="lg" align="center">
-            <FormattedMessage id="onboarding.description" />
-          </Text>
-        </Box>
-
-        <OnboardingSurvey />
-      </FlexContainer>
-    </PageViewContainer>
+      <main className={styles.onboardingPage}>
+        <Card className={styles.onboardingCard}>
+          <FlexContainer direction="column" gap="xl" alignItems="center">
+            <Heading as="h1" size="lg">
+              <FormattedMessage id="onboarding.title" />
+            </Heading>
+            <OnboardingSurvey />
+          </FlexContainer>
+        </Card>
+      </main>
+    </>
   );
 };

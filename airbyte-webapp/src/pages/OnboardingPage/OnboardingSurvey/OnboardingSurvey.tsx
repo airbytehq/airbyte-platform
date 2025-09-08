@@ -244,20 +244,24 @@ export const OnboardingSurvey: React.FC = () => {
 
             <FlexContainer justifyContent="space-between" className={styles.navigationButtons}>
               <FlexContainer gap="md">
-                <Button type="button" variant="secondary" onClick={handleBack} disabled={currentStep === 1}>
-                  <FormattedMessage id="onboarding.survey.back" />
-                </Button>
+                {currentStep > 1 && (
+                  <Button type="button" variant="secondary" onClick={handleBack}>
+                    <FormattedMessage id="onboarding.survey.back" />
+                  </Button>
+                )}
+              </FlexContainer>
+              <FlexContainer gap="md">
                 <Button type="button" variant="clear" onClick={handleSkip}>
                   <FormattedMessage id="onboarding.survey.skip" />
                 </Button>
+                <Button type="button" onClick={handleNext} disabled={!isStepComplete}>
+                  {currentStep === totalSteps ? (
+                    <FormattedMessage id="onboarding.survey.complete" />
+                  ) : (
+                    <FormattedMessage id="onboarding.survey.next" />
+                  )}
+                </Button>
               </FlexContainer>
-              <Button type="button" onClick={handleNext} disabled={!isStepComplete}>
-                {currentStep === totalSteps ? (
-                  <FormattedMessage id="onboarding.survey.complete" />
-                ) : (
-                  <FormattedMessage id="onboarding.survey.next" />
-                )}
-              </Button>
             </FlexContainer>
           </form>
         </FormProvider>

@@ -1,8 +1,16 @@
 @use "scss/variables";
 @use "scss/colors";
 
-.content {
-  max-width: 600px;
-  margin: 0 auto;
+.onboardingPage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: colors.$grey-50;
+}
+
+.onboardingCard {
+  width: 500px;
+  max-width: 90%;
   padding: variables.$spacing-xl;
 }

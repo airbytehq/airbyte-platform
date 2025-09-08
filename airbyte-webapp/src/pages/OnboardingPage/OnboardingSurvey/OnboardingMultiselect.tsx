@@ -62,7 +62,7 @@ export const ShowSelectedValues = ({ selectedValues, options, label }: ShowSelec
       </span>
     );
   }
-  return <Text>{label}</Text>;
+  return <Text color="grey">{label}</Text>;
 };
 
 export const OnboardingMultiselect = ({
@@ -134,7 +134,7 @@ export const OnboardingMultiselect = ({
                 <ShowSelectedValues selectedValues={selectedValues} options={options} label={label} />
               ) : (
                 <>
-                  <Text>{label}</Text>
+                  <Text color={selectedValues.length > 0 ? undefined : "grey"}>{label}</Text>
                   {selectedValues.length > 0 && <Badge variant="blue">{selectedValues.length}</Badge>}
                 </>
               )}

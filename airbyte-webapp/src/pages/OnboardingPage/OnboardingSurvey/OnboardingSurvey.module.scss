@@ -2,12 +2,7 @@
 @use "scss/colors";
 
 .surveyContainer {
-  width: 450px;
-  margin: 0 auto;
-  padding: variables.$spacing-xl;
-  background: colors.$foreground;
-  border-radius: variables.$border-radius-lg;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 8%);
+  width: 100%;
 }
 
 .form {
@@ -26,12 +21,10 @@
 
 .navigationButtons {
   margin-top: variables.$spacing-xl;
-  padding-top: variables.$spacing-lg;
-  border-top: 1px solid colors.$grey-100;
 }
 
 .required {
-  color: colors.$red;
+  color: inherit;
   margin-left: 4px;
 }
 

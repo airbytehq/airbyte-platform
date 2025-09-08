@@ -73,7 +73,7 @@ export const OnboardingDropdown = ({ options, selectedValue, onSelect }: Onboard
         <FloatLayout shift={5}>
           <ListboxButton className={styles.dropdown__button}>
             <FlexContainer justifyContent="space-between" alignItems="center">
-              <Text>{getSelectedLabel()}</Text>
+              <Text color={selectedValue ? undefined : "grey"}>{getSelectedLabel()}</Text>
             </FlexContainer>
           </ListboxButton>
           <ListboxOptions>
