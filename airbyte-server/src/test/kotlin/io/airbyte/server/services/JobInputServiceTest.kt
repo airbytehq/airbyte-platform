@@ -43,7 +43,9 @@ import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
 import io.airbyte.domain.services.secrets.SecretReferenceService
+import io.airbyte.featureflag.DisableOAuthMaskingForCommands
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -310,6 +312,7 @@ class JobInputServiceTest {
     every { mockActorDefinitionVersion.protocolVersion } returns "0.1.0"
     every { mockActorDefinitionVersion.allowedHosts } returns emptyAllowedHosts
     every { mockActorDefinitionVersion.spec } returns ConnectorSpecification()
+    every { featureFlagClient.boolVariation(DisableOAuthMaskingForCommands, Workspace(workspaceId)) } returns true
 
     every { actorDefinitionRepository.findByActorDefinitionId(sourceDefinitionId) } returns mockActorDefinition
     every { sourceService.getStandardSourceDefinition(sourceDefinitionId) } returns mockSourceDefinition
@@ -380,6 +383,7 @@ class JobInputServiceTest {
     every { mockActorDefinitionVersion.protocolVersion } returns "0.2.0"
     every { mockActorDefinitionVersion.allowedHosts } returns emptyAllowedHosts
     every { mockActorDefinitionVersion.spec } returns ConnectorSpecification()
+    every { featureFlagClient.boolVariation(DisableOAuthMaskingForCommands, Workspace(workspaceId)) } returns true
 
     every { actorDefinitionRepository.findByActorDefinitionId(destinationDefinitionId) } returns mockActorDefinition
     every { destinationService.getStandardDestinationDefinition(destinationDefinitionId) } returns mockDestinationDefinition

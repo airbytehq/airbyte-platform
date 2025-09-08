@@ -228,3 +228,8 @@ object AllowDataplaneAndDataplaneGroupManagement : Temporary<Boolean>(
   key = "platform.allow-dataplane-and-dataplane-group-management",
   default = false,
 )
+
+object DisableOAuthMaskingForCommands : Temporary<Boolean>(
+  key = "platform.disable-oauth-masking-for-commands",
+  default = false,
+)

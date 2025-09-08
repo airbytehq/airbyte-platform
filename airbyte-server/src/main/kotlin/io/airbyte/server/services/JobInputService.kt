@@ -53,6 +53,7 @@ import io.airbyte.domain.services.secrets.SecretReferenceService
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.Destination
+import io.airbyte.featureflag.DisableOAuthMaskingForCommands
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Source
@@ -451,13 +452,18 @@ class JobInputService(
     val (sourceDefinition, sourceDefinitionVersion, resourceRequirements) = getSourceInformationByDefinitionId(sourceDefinitionId, workspaceId)
 
     val dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceDefinitionVersion)
+
     val configWithOauthParams: JsonNode =
-      oAuthConfigSupplier.maskSourceOAuthParameters(
-        sourceDefinition.sourceDefinitionId,
-        workspaceId,
-        configuration,
-        sourceDefinitionVersion.spec,
-      )
+      if (featureFlagClient.boolVariation(DisableOAuthMaskingForCommands, Workspace(workspaceId))) {
+        configuration
+      } else {
+        oAuthConfigSupplier.maskSourceOAuthParameters(
+          sourceDefinition.sourceDefinitionId,
+          workspaceId,
+          configuration,
+          sourceDefinitionVersion.spec,
+        )
+      }
 
     val jobId = UUID.randomUUID().toString()
     val attemptId = 0L
@@ -490,12 +496,16 @@ class JobInputService(
 
     val dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationInformation.destinationDefinitionVersion)
     val configWithOauthParams: JsonNode =
-      oAuthConfigSupplier.maskDestinationOAuthParameters(
-        destinationDefinition.destinationDefinitionId,
-        workspaceId,
-        configuration,
-        destinationInformation.destinationDefinitionVersion.spec,
-      )
+      if (featureFlagClient.boolVariation(DisableOAuthMaskingForCommands, Workspace(workspaceId))) {
+        configuration
+      } else {
+        oAuthConfigSupplier.maskDestinationOAuthParameters(
+          destinationDefinition.destinationDefinitionId,
+          workspaceId,
+          configuration,
+          destinationInformation.destinationDefinitionVersion.spec,
+        )
+      }
 
     val jobId = UUID.randomUUID().toString()
     val attemptId = 0L
