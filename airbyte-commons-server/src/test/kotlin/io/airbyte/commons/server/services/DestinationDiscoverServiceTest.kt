@@ -149,7 +149,7 @@ class DestinationDiscoverServiceTest {
       every { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId.value) } returns destinationVersion
       every { catalogService.getActorCatalog(destinationId.value, "1.0.0", any()) } returns Optional.empty()
       every { synchronousSchedulerClient.createDestinationDiscoverJob(destination, destinationDefinition, destinationVersion) } returns
-        SynchronousResponse(catalogId, mockk())
+        SynchronousResponse(catalogId, mockk { every { isSucceeded } returns true })
       every { catalogService.getActorCatalogById(catalogId) } returns discoveredCatalog
 
       val result = service.getDestinationCatalog(destinationId)
@@ -185,6 +185,45 @@ class DestinationDiscoverServiceTest {
 
       assertThrows<DestinationDiscoverNotSupportedProblem> {
         service.getDestinationCatalog(destinationId)
+      }
+    }
+
+    @Test
+    fun `should throw DestinationCatalogNotFoundProblem when createDestinationDiscoverJob fails`() {
+      val destination =
+        DestinationConnection()
+          .withWorkspaceId(workspaceId)
+          .withDestinationDefinitionId(destinationDefinitionId)
+          .withDestinationId(destinationId.value)
+          .withConfiguration(Jsons.emptyObject())
+
+      val destinationDefinition = StandardDestinationDefinition()
+      val destinationVersion =
+        ActorDefinitionVersion()
+          .withDockerImageTag("1.0.0")
+          .withSupportsDataActivation(true)
+
+      val failedResponse =
+        mockk<SynchronousResponse<UUID>> {
+          every { isSuccess } returns false
+        }
+
+      every { destinationService.getDestinationConnection(destinationId.value) } returns destination
+      every { destinationService.getStandardDestinationDefinition(destinationDefinitionId) } returns destinationDefinition
+      every { actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId.value) } returns destinationVersion
+      every { catalogService.getActorCatalog(destinationId.value, "1.0.0", any()) } returns Optional.empty()
+      every { synchronousSchedulerClient.createDestinationDiscoverJob(destination, destinationDefinition, destinationVersion) } returns failedResponse
+
+      assertThrows<DestinationCatalogNotFoundProblem> {
+        service.getDestinationCatalog(destinationId)
+      }
+
+      verify {
+        catalogService.getActorCatalog(destinationId.value, "1.0.0", any())
+        synchronousSchedulerClient.createDestinationDiscoverJob(destination, destinationDefinition, destinationVersion)
+      }
+      verify(exactly = 0) {
+        catalogService.getActorCatalogById(any())
       }
     }
 

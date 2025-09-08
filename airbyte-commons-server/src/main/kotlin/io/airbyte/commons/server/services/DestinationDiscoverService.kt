@@ -82,6 +82,10 @@ class DestinationDiscoverService(
 
     val discoveredCatalogResponse = synchronousSchedulerClient.createDestinationDiscoverJob(destination, destinationDefinition, destinationVersion)
 
+    if (!discoveredCatalogResponse.isSuccess) {
+      throw DestinationCatalogNotFoundProblem()
+    }
+
     val discoveredCatalogId = DestinationCatalogId(discoveredCatalogResponse.output)
 
     val actorCatalog = catalogService.getActorCatalogById(discoveredCatalogId.value)
