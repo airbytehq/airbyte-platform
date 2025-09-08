@@ -18,6 +18,7 @@ import io.airbyte.manifestserver.api.client.ManifestServerApiClient
 import io.airbyte.manifestserver.api.client.model.generated.FullResolveRequest
 import io.airbyte.manifestserver.api.client.model.generated.HttpRequest
 import io.airbyte.manifestserver.api.client.model.generated.HttpResponse
+import io.airbyte.manifestserver.api.client.model.generated.RequestContext
 import io.airbyte.manifestserver.api.client.model.generated.ResolveRequest
 import io.airbyte.manifestserver.api.client.model.generated.StreamTestReadRequest
 import jakarta.inject.Singleton
@@ -35,7 +36,12 @@ class ManifestServerManifestProcessor(
     builderProjectId: UUID?,
     workspaceId: UUID?,
   ): JsonNode {
-    val resolveRequest = ResolveRequest(manifest = manifest)
+    val requestContext =
+      RequestContext(
+        workspaceId = workspaceId?.toString(),
+        projectId = builderProjectId?.toString(),
+      )
+    val resolveRequest = ResolveRequest(manifest = manifest, requestContext)
     val resolveManifest = manifestServerApiClient.manifestApi.resolve(resolveRequest)
     return resolveManifest.manifest
   }
@@ -47,11 +53,17 @@ class ManifestServerManifestProcessor(
     builderProjectId: UUID?,
     workspaceId: UUID?,
   ): ConnectorBuilderResolvedManifest {
+    val requestContext =
+      RequestContext(
+        workspaceId = workspaceId?.toString(),
+        projectId = builderProjectId?.toString(),
+      )
     val fullResolveRequest =
       FullResolveRequest(
         config = config,
         manifest = manifest,
         streamLimit = streamLimit,
+        context = requestContext,
       )
     val resolveManifest =
       manifestServerApiClient.manifestApi.fullResolve(
@@ -74,6 +86,11 @@ class ManifestServerManifestProcessor(
     state: List<Any>?,
     workspaceId: UUID?,
   ): ConnectorBuilderProjectStreamRead {
+    val requestContext =
+      RequestContext(
+        workspaceId = workspaceId?.toString(),
+        projectId = builderProjectId?.toString(),
+      )
     val testReadRequest =
       StreamTestReadRequest(
         config = config,
@@ -84,9 +101,10 @@ class ManifestServerManifestProcessor(
         recordLimit = recordLimit,
         pageLimit = pageLimit,
         sliceLimit = sliceLimit,
+        context = requestContext,
       )
-    val manifestserverStreamRead = manifestServerApiClient.manifestApi.testRead(testReadRequest)
-    return convertStreamRead(manifestserverStreamRead)
+    val manifestServerStreamRead = manifestServerApiClient.manifestApi.testRead(testReadRequest)
+    return convertStreamRead(manifestServerStreamRead)
   }
 
   override fun getCapabilities(): ConnectorBuilderCapabilities {
@@ -95,11 +113,11 @@ class ManifestServerManifestProcessor(
   }
 
   private fun convertStreamRead(
-    manifestserverStreamRead: io.airbyte.manifestserver.api.client.model.generated.StreamReadResponse,
+    manifestServerStreamRead: io.airbyte.manifestserver.api.client.model.generated.StreamReadResponse,
   ): ConnectorBuilderProjectStreamRead {
     // Convert logs
     val convertedLogs =
-      manifestserverStreamRead.logs.map { log ->
+      manifestServerStreamRead.logs.map { log ->
         ConnectorBuilderProjectStreamReadLogsInner()
           .message(log.message)
           .level(ConnectorBuilderProjectStreamReadLogsInner.LevelEnum.valueOf(log.level.uppercase()))
@@ -109,7 +127,7 @@ class ManifestServerManifestProcessor(
 
     // Convert slices
     val convertedSlices =
-      manifestserverStreamRead.slices.map { slice ->
+      manifestServerStreamRead.slices.map { slice ->
         ConnectorBuilderProjectStreamReadSlicesInner()
           .sliceDescriptor(slice.sliceDescriptor)
           .state(slice.state ?: listOf())
@@ -124,15 +142,15 @@ class ManifestServerManifestProcessor(
       }
 
     // Convert auxiliary requests
-    val convertedAuxiliaryRequests = convertAuxiliaryRequests(manifestserverStreamRead.auxiliaryRequests)
+    val convertedAuxiliaryRequests = convertAuxiliaryRequests(manifestServerStreamRead.auxiliaryRequests)
 
     return ConnectorBuilderProjectStreamRead()
       .logs(convertedLogs)
       .slices(convertedSlices)
-      .testReadLimitReached(manifestserverStreamRead.testReadLimitReached)
+      .testReadLimitReached(manifestServerStreamRead.testReadLimitReached)
       .auxiliaryRequests(convertedAuxiliaryRequests)
-      .inferredSchema(manifestserverStreamRead.inferredSchema)
-      .inferredDatetimeFormats(manifestserverStreamRead.inferredDatetimeFormats)
+      .inferredSchema(manifestServerStreamRead.inferredSchema)
+      .inferredDatetimeFormats(manifestServerStreamRead.inferredDatetimeFormats)
   }
 
   private fun convertAuxiliaryRequests(

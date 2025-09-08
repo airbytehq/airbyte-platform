@@ -16,6 +16,7 @@ import io.airbyte.manifestserver.api.client.model.generated.HttpRequest
 import io.airbyte.manifestserver.api.client.model.generated.HttpResponse
 import io.airbyte.manifestserver.api.client.model.generated.LogMessage
 import io.airbyte.manifestserver.api.client.model.generated.ManifestResponse
+import io.airbyte.manifestserver.api.client.model.generated.RequestContext
 import io.airbyte.manifestserver.api.client.model.generated.ResolveRequest
 import io.airbyte.manifestserver.api.client.model.generated.StreamReadPages
 import io.airbyte.manifestserver.api.client.model.generated.StreamReadResponse
@@ -44,6 +45,7 @@ internal class ManifestServerManifestProcessorTest {
   private val configJson = Jsons.deserialize("{\"api_key\": \"test_key\"}")
   private val workspaceId = UUID.randomUUID()
   private val builderProjectId = UUID.randomUUID()
+  private val requestContext = RequestContext(workspaceId = workspaceId.toString(), projectId = builderProjectId.toString())
 
   @BeforeEach
   fun setUp() {
@@ -62,7 +64,7 @@ internal class ManifestServerManifestProcessorTest {
     val resolvedManifestJson = Jsons.deserialize("{\"streams\": [{\"name\": \"test\", \"url_base\": \"https://api.example.com\"}]}")
     val response = ManifestResponse(manifest = resolvedManifestJson)
 
-    val expectedRequest = ResolveRequest(manifest = manifestJson)
+    val expectedRequest = ResolveRequest(manifest = manifestJson, context = requestContext)
 
     every { manifestApi.resolve(expectedRequest) } returns response
 
@@ -77,7 +79,7 @@ internal class ManifestServerManifestProcessorTest {
     val resolvedManifestJson = Jsons.deserialize("{\"streams\": [{\"name\": \"test\", \"url_base\": \"https://api.example.com\"}]}")
     val response = ManifestResponse(manifest = resolvedManifestJson)
 
-    val expectedRequest = ResolveRequest(manifest = manifestJson)
+    val expectedRequest = ResolveRequest(manifest = manifestJson, context = RequestContext())
 
     every { manifestApi.resolve(expectedRequest) } returns response
 
@@ -98,6 +100,7 @@ internal class ManifestServerManifestProcessorTest {
         config = configJson,
         manifest = manifestJson,
         streamLimit = streamLimit,
+        context = requestContext,
       )
 
     every { manifestApi.fullResolve(expectedRequest) } returns response
@@ -118,6 +121,7 @@ internal class ManifestServerManifestProcessorTest {
         config = configJson,
         manifest = manifestJson,
         streamLimit = null,
+        context = RequestContext(),
       )
 
     every { manifestApi.fullResolve(expectedRequest) } returns response
@@ -147,6 +151,7 @@ internal class ManifestServerManifestProcessorTest {
         recordLimit = recordLimit,
         pageLimit = pageLimit,
         sliceLimit = sliceLimit,
+        context = requestContext,
       )
 
     val httpRequest = HttpRequest("https://api.example.com/users", null, "GET", null)
@@ -238,6 +243,7 @@ internal class ManifestServerManifestProcessorTest {
         recordLimit = null,
         pageLimit = null,
         sliceLimit = null,
+        context = requestContext,
       )
 
     val streamReadResponse =
