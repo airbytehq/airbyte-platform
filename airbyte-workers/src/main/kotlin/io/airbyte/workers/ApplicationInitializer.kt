@@ -4,7 +4,6 @@
 
 package io.airbyte.workers
 
-import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.GlobalTracer
 import io.airbyte.commons.temporal.TemporalInitializationUtils
 import io.airbyte.commons.temporal.TemporalJobType
@@ -304,7 +303,7 @@ class ApplicationInitializer(
     WorkerOptions
       .newBuilder()
       .setMaxConcurrentActivityExecutionSize(max)
-      .setMaxConcurrentWorkflowTaskExecutionSize(inferWorkflowExecSizeFromActivityExecutionSize(max))
+      .setMaxConcurrentWorkflowTaskExecutionSize(max)
       .build()
 
   /**
@@ -368,15 +367,5 @@ class ApplicationInitializer(
 
   companion object {
     private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
-
-    @JvmStatic
-    @VisibleForTesting
-    fun inferWorkflowExecSizeFromActivityExecutionSize(max: Int): Int {
-      // Divide by 5 seems to be a good ratio given current empirical observations
-      // Keeping floor at 2 to ensure we keep always return a valid value
-      val floor = 2
-      val maxWorkflowSize = max / 5
-      return max(maxWorkflowSize.toDouble(), floor.toDouble()).toInt()
-    }
   }
 }
