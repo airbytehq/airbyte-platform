@@ -70,18 +70,12 @@ const WorkspacePickerPanelContent: React.FC<WorkspacesPickerNextProps> = ({ curr
   });
   const closePopover = useClose();
 
-  const infiniteWorkspaces = workspaces?.pages.flatMap((page) => page.workspaces) ?? [];
-
-  // We want to pin the current workspace at the top of the list as long it matches the current search term
-  const workspaceList = [
-    ...(currentWorkspace.name.toLocaleLowerCase().includes(searchValue.toLocaleLowerCase()) ? [currentWorkspace] : []),
-    ...infiniteWorkspaces.filter((workspace) => workspace.workspaceId !== currentWorkspace.workspaceId),
-  ];
+  const workspaceList = workspaces?.pages.flatMap((page) => page.workspaces) ?? [];
 
   const [totalListHeight, setTotalListHeight] = useState(0);
   // Single line rows in the picker are approximately 36px tall. This is used as an approximate fallback value in the
   // first render when totalListHeight is unknown.
-  const listHeight = Math.min(Math.max(36 * infiniteWorkspaces.length, totalListHeight), 300);
+  const listHeight = Math.min(Math.max(36 * workspaceList.length, totalListHeight), 300);
 
   const virtuosoRef = useRef<VirtuosoHandle | null>(null);
 

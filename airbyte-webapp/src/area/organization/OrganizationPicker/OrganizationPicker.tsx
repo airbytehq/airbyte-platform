@@ -113,20 +113,12 @@ const OrganizationPickerPanelContent = () => {
     userId: user.userId,
   });
 
-  const infiniteOrganizations = organizationPages?.pages.flatMap((page) => page.organizations) ?? [];
-
-  // We want to pin the current organization at the top of the list as long it matches the current search term
-  const organizationsList = [
-    ...(currentOrganization.organizationName.toLocaleLowerCase().includes(searchValue.toLocaleLowerCase())
-      ? [currentOrganization]
-      : []),
-    ...infiniteOrganizations.filter((org) => org.organizationId !== currentOrganization.organizationId),
-  ];
+  const organizationsList = organizationPages?.pages.flatMap((page) => page.organizations) ?? [];
 
   const [totalListHeight, setTotalListHeight] = useState(0);
   // Single line rows in the picker are approximately 36px tall. This is used as an approximate fallback value in the
   // first render when totalListHeight is unknown.
-  const listHeight = Math.min(Math.max(36 * infiniteOrganizations.length, totalListHeight), 300);
+  const listHeight = Math.min(Math.max(36 * organizationsList.length, totalListHeight), 300);
 
   const virtuosoRef = useRef<VirtuosoHandle | null>(null);
 
