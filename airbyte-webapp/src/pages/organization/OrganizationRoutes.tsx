@@ -4,11 +4,14 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import OrganizationSettingsLayout from "area/organization/OrganizationSettingsLayout";
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { UserSettingsRoutes } from "area/settings/UserSettingsRoutes";
-import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
+import { FeatureItem, useFeature } from "core/services/features";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
 import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
 import { EmbeddedOnboardingPage } from "pages/embedded/EmbeddedOnboardingPage/EmbeddedOnboardingPage";
 import { OrganizationSettingsPage } from "pages/SettingsPage/OrganizationSettingsPage";
+import { DestinationsPage, SourcesPage } from "pages/SettingsPage/pages/ConnectorsPage";
+import { LicenseSettingsPage } from "pages/SettingsPage/pages/LicenseDetailsPage/LicenseSettingsPage";
 import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
 import { OrganizationMembersPage } from "pages/SettingsPage/pages/Organization/OrganizationMembersPage";
 
@@ -20,7 +23,8 @@ const OrganizationUsagePage = React.lazy(() => import("packages/cloud/views/bill
 
 export const OrganizationRoutes: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
-  const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId });
+  const licenseUi = useFeature(FeatureItem.EnterpriseLicenseChecking);
+  const canViewOrgSettings = useGeneratedIntent(Intent.ViewOrganizationSettings, { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
   const isEmbedded = useExperiment("platform.allow-config-template-endpoints");
@@ -35,19 +39,24 @@ export const OrganizationRoutes: React.FC = () => {
         <Route path={RoutePaths.Workspaces} element={<OrganizationWorkspacesPage />} />
         <Route path="*" element={<Navigate to={RoutePaths.Workspaces} replace />} />
       </Route>
-      <Route path={`${RoutePaths.Settings}/*`} element={<OrganizationSettingsPage />}>
-        <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
-        {canViewOrgSettings && (
-          <Route path={SettingsRoutePaths.OrganizationMembers} element={<OrganizationMembersPage />} />
-        )}
-        {canManageOrganizationBilling && (
-          <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />
-        )}
-        {canViewOrganizationUsage && (
-          <Route path={CloudSettingsRoutePaths.OrganizationUsage} element={<OrganizationUsagePage />} />
-        )}
-        <Route path="*" element={<Navigate to={SettingsRoutePaths.Organization} replace />} />
-      </Route>
+      {canViewOrgSettings && (
+        <Route path={`${RoutePaths.Settings}/*`} element={<OrganizationSettingsPage />}>
+          <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
+          {canViewOrgSettings && (
+            <Route path={SettingsRoutePaths.OrganizationMembers} element={<OrganizationMembersPage />} />
+          )}
+          {licenseUi && <Route path={SettingsRoutePaths.License} element={<LicenseSettingsPage />} />}
+          {canManageOrganizationBilling && (
+            <Route path={CloudSettingsRoutePaths.Billing} element={<OrganizationBillingPage />} />
+          )}
+          {canViewOrganizationUsage && (
+            <Route path={CloudSettingsRoutePaths.OrganizationUsage} element={<OrganizationUsagePage />} />
+          )}
+          <Route path={SettingsRoutePaths.Source} element={<SourcesPage />} />
+          <Route path={SettingsRoutePaths.Destination} element={<DestinationsPage />} />
+          <Route path="*" element={<Navigate to={SettingsRoutePaths.Organization} replace />} />
+        </Route>
+      )}
     </Routes>
   );
 };

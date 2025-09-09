@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { isDefined } from "core/utils/common";
 import { trackError } from "core/utils/datadog";
 
 import { connectorDefinitionKeys } from "./connectorUpdates";
+import { useDefaultWorkspaceInOrganization } from "./organizations";
 import {
   createCustomSourceDefinition,
   deleteSourceDefinition,
@@ -37,13 +39,15 @@ interface SourceDefinitions {
 
 export const useSourceDefinitionList = ({ filterByUsed }: { filterByUsed?: boolean } = {}): SourceDefinitions => {
   const requestOptions = useRequestOptions();
-  const workspaceId = useCurrentWorkspaceId();
+  const currentWorkspaceId = useCurrentWorkspaceId();
+  const defaultWorkspaceId = useDefaultWorkspaceInOrganization(useCurrentOrganizationId());
+  const workspaceId = currentWorkspaceId || defaultWorkspaceId?.workspaceId;
 
   return useQuery(
     sourceDefinitionKeys.lists(filterByUsed),
     async () => {
       const { sourceDefinitions } = await listSourceDefinitionsForWorkspace(
-        { workspaceId, filterByUsed },
+        { workspaceId: workspaceId || "", filterByUsed },
         requestOptions
       ).then(({ sourceDefinitions }) => ({
         sourceDefinitions: sourceDefinitions.sort((a, b) => a.name.localeCompare(b.name)),

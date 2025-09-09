@@ -11,6 +11,7 @@ import { InstanceConfigurationResponseTrackingStrategy } from "core/api/types/Ai
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
+import { useExperiment } from "hooks/services/Experiment";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 import { SettingsRoutePaths } from "pages/routePaths";
 
@@ -26,8 +27,11 @@ export const SettingsPage: React.FC = () => {
   const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canViewWorkspaceSettings = useGeneratedIntent(Intent.ViewWorkspaceSettings);
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
+  const showOrgPicker = useExperiment("sidebar.showOrgPicker");
 
   const showLicenseUi = licenseUi && canViewLicenseSettings;
+  const showOrganizationSection =
+    !showOrgPicker && multiWorkspaceUI && (canViewOrganizationSettings || canViewWorkspaceSettings);
 
   return (
     <SettingsLayout>
@@ -91,7 +95,7 @@ export const SettingsPage: React.FC = () => {
             />
           )}
         </SettingsNavigationBlock>
-        {multiWorkspaceUI && (canViewOrganizationSettings || canViewWorkspaceSettings) && (
+        {showOrganizationSection && (
           <SettingsNavigationBlock title={formatMessage({ id: "settings.organization" })}>
             {canViewOrganizationSettings && (
               <>

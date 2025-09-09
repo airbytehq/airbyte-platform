@@ -12,7 +12,8 @@ import { Heading } from "components/ui/Heading";
 import { Table } from "components/ui/Table";
 import { InfoTooltip } from "components/ui/Tooltip";
 
-import { BuilderProject, useCurrentWorkspace } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils";
+import { BuilderProject } from "core/api";
 import { DestinationDefinitionRead, SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector, ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
@@ -63,9 +64,9 @@ const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   connectorBuilderProjects,
 }) => {
   const [updatingAllConnectors, setUpdatingAllConnectors] = useState(false);
-  const workspace = useCurrentWorkspace();
+  const organizationId = useCurrentOrganizationId();
   const canUpdateConnectors = useIntent("UpdateConnectorVersions", {
-    organizationId: workspace.organizationId,
+    organizationId,
   });
   const canUpdateOrDeleteCustomConnectors = useGeneratedIntent(Intent.UpdateOrDeleteCustomConnector);
   const allowUpdateConnectors = useFeature(FeatureItem.AllowUpdateConnectors) && canUpdateConnectors;

@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { isDefined } from "core/utils/common";
 import { trackError } from "core/utils/datadog";
 
 import { connectorDefinitionKeys } from "./connectorUpdates";
+import { useDefaultWorkspaceInOrganization } from "./organizations";
 import {
   createCustomDestinationDefinition,
   deleteDestinationDefinition,
@@ -54,13 +56,15 @@ export const useDestinationDefinitionList = ({
 }: { filterByUsed?: boolean } = {}): DestinationDefinitions => {
   const requestOptions = useRequestOptions();
 
-  const workspaceId = useCurrentWorkspaceId();
+  const currentWorkspaceId = useCurrentWorkspaceId();
+  const defaultWorkspace = useDefaultWorkspaceInOrganization(useCurrentOrganizationId());
+  const workspaceId = currentWorkspaceId || defaultWorkspace?.workspaceId;
 
   return useQuery(
     destinationDefinitionKeys.lists(filterByUsed),
     async () => {
       const { destinationDefinitions } = await listDestinationDefinitionsForWorkspace(
-        { workspaceId, filterByUsed },
+        { workspaceId: workspaceId || "", filterByUsed },
         requestOptions
       ).then(({ destinationDefinitions }) => ({
         destinationDefinitions: destinationDefinitions.sort((a, b) => a.name.localeCompare(b.name)),

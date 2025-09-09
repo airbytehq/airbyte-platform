@@ -6,8 +6,9 @@ import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { Icon } from "components/ui/Icon";
 
+import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useCreateDestinationDefinition, useCreateSourceDefinition } from "core/api";
+import { useCreateDestinationDefinition, useCreateSourceDefinition, useDefaultWorkspaceInOrganization } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useModalService } from "hooks/services/Modal";
@@ -33,7 +34,9 @@ export const AddNewConnectorButton: React.FC<AddNewConnectorButtonProps> = ({ ty
   const allowUploadCustomDockerImage =
     useFeature(FeatureItem.AllowUploadCustomImage) && hasUploadCustomConnectorPermissions;
   const navigate = useNavigate();
-  const workspaceId = useCurrentWorkspaceId();
+  const currentWorkspaceId = useCurrentWorkspaceId();
+  const defaultWorkspace = useDefaultWorkspaceInOrganization(useCurrentOrganizationId());
+  const workspaceId = currentWorkspaceId || defaultWorkspace?.workspaceId;
   const { openModal } = useModalService();
 
   const { mutateAsync: createSourceDefinition } = useCreateSourceDefinition();
@@ -88,7 +91,7 @@ export const AddNewConnectorButton: React.FC<AddNewConnectorButtonProps> = ({ ty
           options={[
             {
               as: "a",
-              href: `../../${RoutePaths.ConnectorBuilder}/${ConnectorBuilderRoutePaths.Create}`,
+              href: `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.ConnectorBuilder}/${ConnectorBuilderRoutePaths.Create}`,
               icon: <Icon type="wrench" />,
               displayName: formatMessage({ id: "admin.newConnector.build" }),
               internal: true,

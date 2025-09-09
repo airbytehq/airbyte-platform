@@ -28,6 +28,7 @@ export enum FeatureItem {
   MappingsUI = "MAPPINGS_UI",
   MultiWorkspaceUI = "MULTI_WORKSPACE_UI",
   OrganizationUI = "ORGANIZATION_UI",
+  OrganizationConnectorSettings = "ORGANIZATION_CONNECTOR_SETTINGS", // show sources and destinations in organization settings
   RBAC = "RBAC",
   RestrictAdminInForeignWorkspace = "RESTRICT_ADMIN_IN_FOREIGN_WORKSPACE",
   ShowAdminWarningInWorkspace = "SHOW_ADMIN_WARNING_IN_WORKSPACE",

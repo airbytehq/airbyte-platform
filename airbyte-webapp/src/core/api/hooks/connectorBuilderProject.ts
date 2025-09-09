@@ -4,8 +4,9 @@ import { useCallback } from "react";
 
 import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "components/connectorBuilder/constants";
 
+import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { HttpError, sourceDefinitionKeys } from "core/api";
+import { HttpError, sourceDefinitionKeys, useDefaultWorkspaceInOrganization } from "core/api";
 import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useExperiment } from "hooks/services/Experiment";
@@ -111,14 +112,19 @@ export interface BuilderProjectWithManifest {
 
 export const useListBuilderProjects = () => {
   const requestOptions = useRequestOptions();
-  const workspaceId = useCurrentWorkspaceId();
+  const currentWorkspaceId = useCurrentWorkspaceId();
+  const defaultWorkspaceId = useDefaultWorkspaceInOrganization(useCurrentOrganizationId());
+  const workspaceId = currentWorkspaceId || defaultWorkspaceId?.workspaceId;
 
   return useSuspenseQuery(
-    connectorBuilderProjectsKeys.list(workspaceId),
+    connectorBuilderProjectsKeys.list(workspaceId || ""),
     async () =>
-      (await listConnectorBuilderProjects({ workspaceId }, requestOptions)).projects.map(
-        convertProjectDetailsReadToBuilderProject
-      ),
+      (
+        await listConnectorBuilderProjects(
+          { workspaceId: workspaceId || defaultWorkspaceId?.workspaceId || "" },
+          requestOptions
+        )
+      ).projects.map(convertProjectDetailsReadToBuilderProject),
     {
       refetchOnMount: "always",
     }

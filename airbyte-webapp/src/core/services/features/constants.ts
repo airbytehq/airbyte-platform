@@ -23,6 +23,7 @@ export const defaultEnterpriseFeatures = [
   FeatureItem.MappingsUI, // Indicates configuration UI is present.  connection.mappingsUI experiment also required to be true.
   FeatureItem.MultiWorkspaceUI,
   FeatureItem.OrganizationUI,
+  FeatureItem.OrganizationConnectorSettings,
   FeatureItem.RBAC,
 ];
 

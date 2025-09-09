@@ -14,7 +14,7 @@ import {
 import { useCurrentWorkspace } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { isOsanoActive, showOsanoDrawer } from "core/utils/dataPrivacy";
-import { Intent, useIntent, useGeneratedIntent } from "core/utils/rbac";
+import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { CloudSettingsRoutePaths } from "./routePaths";
@@ -23,7 +23,9 @@ export const CloudSettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();
   const supportsCloudDbtIntegration = useFeature(FeatureItem.AllowDBTCloudIntegration);
   const workspace = useCurrentWorkspace();
-  const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
+  const canViewOrgSettings = useGeneratedIntent(Intent.ViewOrganizationSettings, {
+    organizationId: workspace.organizationId,
+  });
   const showAdvancedSettings = useExperiment("settings.showAdvancedSettings");
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
