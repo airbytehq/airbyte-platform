@@ -22,7 +22,7 @@ import { useListUsersToAdd } from "./useListUsersToAdd";
 import { getInitialPermissionType } from "./util";
 
 const ValidationSchema = z.object({
-  email: z.string().trim().email("form.email.error"),
+  email: z.string().trim().nonempty("form.empty.error"),
   permission: z.nativeEnum(PermissionType),
 });
 
