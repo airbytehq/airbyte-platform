@@ -9,6 +9,7 @@ import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.config.ActorType
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.metrics.MetricClient
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -18,7 +19,8 @@ import java.util.UUID
 class EntitlementServiceTest {
   private val entitlementClient = mockk<EntitlementClient>()
   private val entitlementProvider = mockk<EntitlementProvider>()
-  private val entitlementService = EntitlementServiceImpl(entitlementClient, entitlementProvider)
+  private val metricClient = mockk<MetricClient>(relaxed = true)
+  private val entitlementService = EntitlementServiceImpl(entitlementClient, entitlementProvider, metricClient)
 
   @Test
   fun `checkEntitlement delegates to entitlementClient`() {

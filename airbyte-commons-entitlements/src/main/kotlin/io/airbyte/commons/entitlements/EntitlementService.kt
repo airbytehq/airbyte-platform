@@ -16,6 +16,10 @@ import io.airbyte.commons.entitlements.models.SsoEntitlement
 import io.airbyte.config.ActorType
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -50,6 +54,7 @@ interface EntitlementService {
 internal class EntitlementServiceImpl(
   private val entitlementClient: EntitlementClient,
   private val entitlementProvider: EntitlementProvider,
+  private val metricClient: MetricClient,
 ) : EntitlementService {
   /**
    * Checks if an organization is entitled to a specific feature or capability.
@@ -71,7 +76,11 @@ internal class EntitlementServiceImpl(
       SsoEntitlement -> hasSsoConfigUpdateEntitlement(organizationId)
       OrchestrationEntitlement -> hasOrchestrationEntitlement(organizationId)
       SelfManagedRegionsEntitlement -> hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId)
-      else -> entitlementClient.checkEntitlement(organizationId, entitlement)
+      else -> {
+        val result = entitlementClient.checkEntitlement(organizationId, entitlement)
+        sendCountMetric(OssMetricsRegistry.ENTITLEMENT_CHECK, organizationId, true)
+        result
+      }
     }
 
   override fun addOrganization(
@@ -79,6 +88,7 @@ internal class EntitlementServiceImpl(
     plan: EntitlementPlan,
   ) {
     entitlementClient.addOrganization(organizationId, plan)
+    sendCountMetric(OssMetricsRegistry.ENTITLEMENTS_ORGANIZATION_ENROLMENT, organizationId, true)
   }
 
   /**
@@ -109,7 +119,11 @@ internal class EntitlementServiceImpl(
    * @param organizationId The unique identifier of the organization
    * @return List of EntitlementResult objects representing all available entitlements and their status
    */
-  override fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult> = entitlementClient.getEntitlements(organizationId)
+  override fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult> {
+    val result = entitlementClient.getEntitlements(organizationId)
+    sendCountMetric(OssMetricsRegistry.ENTITLEMENT_RETRIEVAL, organizationId, true)
+    return result
+  }
 
   override fun hasEnterpriseConnectorEntitlements(
     organizationId: OrganizationId,
@@ -129,6 +143,9 @@ internal class EntitlementServiceImpl(
     // Until we're 100% on Stigg, provider results (from LD) overwrite any overlapping client results
     return clientResults.toMutableMap().apply { putAll(providerResults) }
   }
+
+  override fun hasConfigTemplateEntitlements(organizationId: OrganizationId): Boolean =
+    entitlementProvider.hasConfigTemplateEntitlements(organizationId)
 
   private fun hasDestinationObjectStorageEntitlement(organizationId: OrganizationId): EntitlementResult =
     EntitlementResult(
@@ -154,6 +171,18 @@ internal class EntitlementServiceImpl(
       featureId = SelfManagedRegionsEntitlement.featureId,
     )
 
-  override fun hasConfigTemplateEntitlements(organizationId: OrganizationId): Boolean =
-    entitlementProvider.hasConfigTemplateEntitlements(organizationId)
+  private fun sendCountMetric(
+    metric: OssMetricsRegistry,
+    organizationId: OrganizationId,
+    wasSuccess: Boolean,
+  ) {
+    metricClient.count(
+      metric,
+      attributes =
+        arrayOf(
+          MetricAttribute(MetricTags.ORGANIZATION_ID, organizationId.toString()),
+          MetricAttribute(MetricTags.SUCCESS, wasSuccess.toString()),
+        ),
+    )
+  }
 }

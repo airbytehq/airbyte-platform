@@ -761,6 +761,18 @@ enum class OssMetricsRegistry(
     metricName = "database_pruning_duration",
     metricDescription = "duration of database pruning operation",
   ),
+  ENTITLEMENT_CHECK(
+    metricName = "entitlement_check",
+    metricDescription = "a request was made to check a single entitlement",
+  ),
+  ENTITLEMENTS_ORGANIZATION_ENROLMENT(
+    metricName = "entitlements_organization_enrolment",
+    metricDescription = "an airbyte organization was added to entitlements platform",
+  ),
+  ENTITLEMENT_RETRIEVAL(
+    metricName = "entitlement_retrieval",
+    metricDescription = "a request was made to retrieve all entitlements for a customer",
+  ),
   ;
 
   override fun getMetricName(): String = metricName

@@ -18,7 +18,6 @@ import io.stigg.api.operations.type.ProvisionCustomerSubscriptionInput
 import io.stigg.sidecar.proto.v1.GetBooleanEntitlementRequest
 import io.stigg.sidecar.proto.v1.GetEntitlementsRequest
 import io.stigg.sidecar.sdk.Stigg
-import java.io.IOException
 
 private val logger = KotlinLogging.logger {}
 
