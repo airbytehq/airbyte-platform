@@ -1,8 +1,7 @@
+
 import com.github.gradle.node.NodeExtension
 import com.github.gradle.node.pnpm.task.PnpmTask
 import groovy.json.JsonSlurper
-import io.airbyte.gradle.plugins.TASK_DOCKER_BUILD
-import io.airbyte.gradle.tasks.DockerBuildxTask
 import java.io.FileReader
 
 plugins {
@@ -65,6 +64,7 @@ tasks.named("pnpmInstall") {
     thus wouldn't rerun in case a patch get changed
      */
     inputs.dir("patches")
+    doNotTrackState("gradle is slower at caching than pnpm install")
 }
 
 // fileTree to watch node_modules, but exclude the .cache dir since that might have changes on every build
@@ -103,6 +103,7 @@ tasks.register<PnpmTask>("pnpmBuild") {
     inputs.files(allFiles, outsideWebappDependencies)
 
     outputs.dir(project.ext.get("appBuildDir") as String)
+    outputs.cacheIf { true }
 }
 
 tasks.register<PnpmTask>("test") {
