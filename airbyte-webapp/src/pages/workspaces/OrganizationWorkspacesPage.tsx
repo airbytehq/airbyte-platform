@@ -5,6 +5,7 @@ import { useDebounce } from "react-use";
 import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
 
 import { Box } from "components/ui/Box";
+import { BrandingBadge } from "components/ui/BrandingBadge";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
@@ -23,14 +24,12 @@ import {
 import { WorkspaceRead, WebBackendConnectionStatusCounts } from "core/api/types/AirbyteClient";
 import { useWebappConfig } from "core/config";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { FeatureItem, useFeature } from "core/services/features";
+import { FeatureItem, IfFeatureEnabled, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
 
 import OrganizationWorkspaceItem from "./components/OrganizationWorkspaceItem";
 import { OrganizationWorkspacesCreateControl } from "./components/OrganizationWorkspacesCreateControl";
 import styles from "./OrganizationWorkspacesPage.module.scss";
-
-export const WORKSPACE_LIST_LENGTH = 10;
 
 type StatusFilter = "all" | "running" | "healthy" | "paused" | "failed";
 
@@ -159,7 +158,12 @@ const OrganizationWorkspacesPage: React.FC = () => {
                 </Text>
               )}
             </Box>
-            <OrganizationWorkspacesCreateControl disabled={!isCreateWorkspaceEnabled} onCreated={refetch} />
+            <FlexContainer alignItems="center" gap="sm">
+              <IfFeatureEnabled feature={FeatureItem.CloudForTeamsBranding}>
+                <BrandingBadge product="cloudForTeams" />
+              </IfFeatureEnabled>
+              <OrganizationWorkspacesCreateControl disabled={!isCreateWorkspaceEnabled} onCreated={refetch} />
+            </FlexContainer>
           </FlexContainer>
           <Box>
             <SearchInput value={searchValue} onChange={setSearchValue} data-testid="workspaces-page-search" />

@@ -77,7 +77,7 @@ export const OrganizationWorkspacesCreateControl: React.FC<{
       onClick={handleButtonClick}
       variant={secondary ? "secondary" : "primary"}
       data-testid="workspaces.createNew"
-      size="sm"
+      size="xs"
       icon={isInTrial ? "lock" : "plus"}
     >
       <FormattedMessage id="workspaces.createNew" />

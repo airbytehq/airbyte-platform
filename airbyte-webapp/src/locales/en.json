@@ -20,7 +20,6 @@
   "workspaces.createSuccess": "Workspace created successfully",
   "workspaces.createError": "Something went wrong while creating the workspace. Please try again.",
   "workspaces.createNew": "New workspace",
-  "workspaces.createANewWorkspace": "Create a new workspace",
   "workspaces.noWorkspaces": "No workspaces found",
   "workspaces.noWorkspacesYet": "No workspaces yet",
   "workspaces.workspace": "Workspace",
