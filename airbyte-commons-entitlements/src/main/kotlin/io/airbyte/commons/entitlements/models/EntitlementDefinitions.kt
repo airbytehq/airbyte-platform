@@ -4,10 +4,6 @@
 
 package io.airbyte.commons.entitlements.models
 
-object PlatformLlmSyncJobFailureExplanation : FeatureEntitlement(
-  featureId = "feature-platform-llm-sync-job-failure-explanation",
-)
-
 object DestinationObjectStorageEntitlement : FeatureEntitlement(
   featureId = "feature-destination-object-storage",
 )
@@ -32,32 +28,8 @@ object AiCopilotEntitlement : FeatureEntitlement(
   featureId = "feature-ai-copilot",
 )
 
-object PlanPillEntitlement : FeatureEntitlement(
-  featureId = "feature-plan-pill",
-)
-
-object DataWorkerCapacityEntitlement : FeatureEntitlement(
-  featureId = "feature-data-worker-capacity",
-)
-
 object MultipleWorkspacesEntitlement : FeatureEntitlement(
   featureId = "feature-multiple-workspaces",
-)
-
-object MultipleUsersEntitlement : FeatureEntitlement(
-  featureId = "feature-multiple-users",
-)
-
-object ExternalSecretsManagerEntitlement : FeatureEntitlement(
-  featureId = "feature-external-secrets-manager",
-)
-
-object SecretReferencesEntitlement : FeatureEntitlement(
-  featureId = "feature-secret-references",
-)
-
-object PrivateLinkEntitlement : FeatureEntitlement(
-  featureId = "feature-privatelink",
 )
 
 object MappersEntitlement : FeatureEntitlement(
@@ -72,36 +44,19 @@ object RejectedRecordsStorage : FeatureEntitlement(
   featureId = "feature-rejected-records-storage",
 )
 
-object UserInvitationsEntitlement : FeatureEntitlement(
-  featureId = "feature-user-invitations",
-)
-
-object DbtCloudIntegrationEntitlement : FeatureEntitlement(
-  featureId = "feature-dbt-cloud-integration",
-)
-
 object Entitlements {
   private val ALL =
     listOf(
-      PlatformLlmSyncJobFailureExplanation,
       FasterSyncFrequencyEntitlement,
       DestinationObjectStorageEntitlement,
       SsoEntitlement,
       OrchestrationEntitlement,
       SelfManagedRegionsEntitlement,
       AiCopilotEntitlement,
-      PlanPillEntitlement,
-      DataWorkerCapacityEntitlement,
       MultipleWorkspacesEntitlement,
-      MultipleUsersEntitlement,
-      ExternalSecretsManagerEntitlement,
-      SecretReferencesEntitlement,
-      PrivateLinkEntitlement,
       MappersEntitlement,
       RbacRolesEntitlement,
       RejectedRecordsStorage,
-      UserInvitationsEntitlement,
-      DbtCloudIntegrationEntitlement,
     )
 
   private val byId = ALL.associateBy { it.featureId }

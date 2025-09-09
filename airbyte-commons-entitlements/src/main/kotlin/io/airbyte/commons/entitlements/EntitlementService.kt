@@ -10,7 +10,6 @@ import io.airbyte.commons.entitlements.models.ConnectorEntitlement
 import io.airbyte.commons.entitlements.models.DestinationObjectStorageEntitlement
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
-import io.airbyte.commons.entitlements.models.OrchestrationEntitlement
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.commons.entitlements.models.SsoEntitlement
 import io.airbyte.config.ActorType
@@ -74,7 +73,6 @@ internal class EntitlementServiceImpl(
       // TODO: Remove once we've migrated the entitlement to Stigg
       DestinationObjectStorageEntitlement -> hasDestinationObjectStorageEntitlement(organizationId)
       SsoEntitlement -> hasSsoConfigUpdateEntitlement(organizationId)
-      OrchestrationEntitlement -> hasOrchestrationEntitlement(organizationId)
       SelfManagedRegionsEntitlement -> hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId)
       else -> {
         val result = entitlementClient.checkEntitlement(organizationId, entitlement)
@@ -157,12 +155,6 @@ internal class EntitlementServiceImpl(
     EntitlementResult(
       isEntitled = entitlementProvider.hasSsoConfigUpdateEntitlement(organizationId),
       featureId = SsoEntitlement.featureId,
-    )
-
-  private fun hasOrchestrationEntitlement(organizationId: OrganizationId): EntitlementResult =
-    EntitlementResult(
-      isEntitled = entitlementProvider.hasOrchestrationEntitlement(organizationId),
-      featureId = OrchestrationEntitlement.featureId,
     )
 
   private fun hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId: OrganizationId): EntitlementResult =

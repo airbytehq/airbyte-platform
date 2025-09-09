@@ -4,8 +4,8 @@
 
 package io.airbyte.commons.entitlements
 
+import io.airbyte.commons.entitlements.models.AiCopilotEntitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
-import io.airbyte.commons.entitlements.models.PlatformLlmSyncJobFailureExplanation
 import io.airbyte.commons.server.handlers.EntitlementHandler
 import io.airbyte.domain.models.OrganizationId
 import io.mockk.every
@@ -25,7 +25,7 @@ internal class EntitlementHandlerTest {
 
   @Test
   fun `isEntitled returns result from client for known entitlement`() {
-    val expectedEntitlement = PlatformLlmSyncJobFailureExplanation
+    val expectedEntitlement = AiCopilotEntitlement
     val expectedResult = EntitlementResult(expectedEntitlement.featureId, true, null)
 
     every { entitlementService.checkEntitlement(organizationId, expectedEntitlement) } returns expectedResult
