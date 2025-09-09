@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.container.orchestrator.worker.model
+package io.airbyte.container.orchestrator.worker.state
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.protocol.models.v0.AirbyteGlobalState

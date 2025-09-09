@@ -14,7 +14,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.container.orchestrator.bookkeeping.StateCheckSumCountEventHandler.Companion.DUMMY_STATE_MESSAGE
 import io.airbyte.container.orchestrator.worker.exception.InvalidChecksumException
 import io.airbyte.container.orchestrator.worker.model.StateCheckSumCountEvent
-import io.airbyte.container.orchestrator.worker.model.attachIdToStateMessageFromSource
+import io.airbyte.container.orchestrator.worker.state.attachIdToStateMessageFromSource
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.ReplicationInput

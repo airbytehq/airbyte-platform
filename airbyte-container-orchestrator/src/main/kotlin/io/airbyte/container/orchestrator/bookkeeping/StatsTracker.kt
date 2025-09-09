@@ -8,7 +8,7 @@ import com.google.common.hash.HashFunction
 import com.google.common.util.concurrent.AtomicDouble
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FileTransferInformations
-import io.airbyte.container.orchestrator.worker.model.getIdFromStateMessage
+import io.airbyte.container.orchestrator.worker.state.getIdFromStateMessage
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
@@ -436,6 +436,12 @@ class StreamStatsTracker(
     }
     return stagedStats?.emittedStatsCounters?.remittedRecordsCount?.get() ?: 0
   }
+
+  // returns counts pre-rollover
+  fun getEmittedRecordCountForCurrentState() = emittedStats.remittedRecordsCount.get()
+
+  // returns counts pre-rollover
+  fun getFilteredRecordCountForCurrentState() = emittedStats.filteredOutRecords.get()
 
   fun getTrackedFilteredOutRecordsSinceLastStateMessage(stateMessage: AirbyteStateMessage): Long {
     val stateId = stateMessage.getStateIdForStatsTracking()

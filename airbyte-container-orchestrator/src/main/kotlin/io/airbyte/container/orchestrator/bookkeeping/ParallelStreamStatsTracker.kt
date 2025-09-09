@@ -4,6 +4,7 @@
 
 package io.airbyte.container.orchestrator.bookkeeping
 
+import com.google.common.annotations.VisibleForTesting
 import io.airbyte.config.SyncStats
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum
@@ -21,6 +22,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import java.lang.IllegalStateException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
@@ -169,6 +171,41 @@ class ParallelStreamStatsTracker(
     streamTrackers
       .filterValues { it.nameNamespacePair.name != null }
       .mapValues { StreamStatsView(it.value, hasEstimatesErrors) }
+
+  // ForCurrentState methods are used for "backfilling" StateStats when not present on state messages sent from the source
+  @VisibleForTesting
+  fun getEmittedCountForCurrentState(desc: AirbyteStreamNameNamespacePair) = streamTrackers[desc]?.getEmittedRecordCountForCurrentState()
+
+  @VisibleForTesting
+  fun getFilteredCountForCurrentState(desc: AirbyteStreamNameNamespacePair) = streamTrackers[desc]?.getFilteredRecordCountForCurrentState()
+
+  fun getEmittedCountForCurrentState(state: AirbyteStateMessage) =
+    when (state.type) {
+      AirbyteStateMessage.AirbyteStateType.STREAM ->
+        getEmittedCountForCurrentState(
+          getNameNamespacePair(state.stream.streamDescriptor),
+        )
+      AirbyteStateMessage.AirbyteStateType.GLOBAL ->
+        state.global.streamStates.sumOf {
+          getEmittedCountForCurrentState(getNameNamespacePair(it.streamDescriptor))
+            ?: 0
+        }
+      else -> throw IllegalArgumentException("LEGACY states are deprecated.")
+    }
+
+  fun getFilteredCountForCurrentState(state: AirbyteStateMessage) =
+    when (state.type) {
+      AirbyteStateMessage.AirbyteStateType.STREAM ->
+        getFilteredCountForCurrentState(
+          getNameNamespacePair(state.stream.streamDescriptor),
+        )
+      AirbyteStateMessage.AirbyteStateType.GLOBAL ->
+        state.global.streamStates.sumOf {
+          getFilteredCountForCurrentState(getNameNamespacePair(it.streamDescriptor))
+            ?: 0
+        }
+      else -> throw IllegalArgumentException("LEGACY states are deprecated.")
+    }
 
   fun isChecksumValidationEnabled(): Boolean = checksumValidationEnabled
 

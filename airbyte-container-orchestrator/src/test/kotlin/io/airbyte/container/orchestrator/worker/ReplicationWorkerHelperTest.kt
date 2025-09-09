@@ -20,6 +20,7 @@ import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
 import io.airbyte.container.orchestrator.worker.filter.FieldSelector
 import io.airbyte.container.orchestrator.worker.model.adapter.AirbyteJsonRecordAdapter
+import io.airbyte.container.orchestrator.worker.state.StateEnricher
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.MetricClient
@@ -87,6 +88,9 @@ class ReplicationWorkerHelperTest {
   lateinit var context: ReplicationContextProvider.Context
 
   @MockK(relaxed = true)
+  lateinit var stateEnricher: StateEnricher
+
+  @MockK(relaxed = true)
   lateinit var destinationCatalogGenerator: DestinationCatalogGenerator
 
   @MockK(relaxed = true)
@@ -110,6 +114,7 @@ class ReplicationWorkerHelperTest {
     every { destinationCatalogGenerator.generateDestinationCatalog(configuredCatalog) } answers {
       DestinationCatalogGenerator.CatalogGenerationResult(configuredCatalog, emptyMap())
     }
+    every { stateEnricher.enrich(any()) } answers { firstArg<AirbyteMessage>() }
   }
 
   @Test
@@ -260,6 +265,7 @@ class ReplicationWorkerHelperTest {
           recordMapper,
           replicationWorkerState,
           context,
+          stateEnricher,
           destinationCatalogGenerator,
           metricClient,
         ),

@@ -17,7 +17,7 @@ import io.airbyte.config.FailureReason
 import io.airbyte.config.ScopeType
 import io.airbyte.container.orchestrator.worker.exception.InvalidChecksumException
 import io.airbyte.container.orchestrator.worker.model.StateCheckSumCountEvent
-import io.airbyte.container.orchestrator.worker.model.attachIdToStateMessageFromSource
+import io.airbyte.container.orchestrator.worker.state.attachIdToStateMessageFromSource
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EmitStateStatsToSegment
 import io.airbyte.featureflag.FeatureFlagClient

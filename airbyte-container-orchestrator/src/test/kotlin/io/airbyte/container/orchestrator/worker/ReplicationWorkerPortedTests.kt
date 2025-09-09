@@ -28,6 +28,7 @@ import io.airbyte.container.orchestrator.worker.fixtures.SimpleAirbyteDestinatio
 import io.airbyte.container.orchestrator.worker.fixtures.SimpleAirbyteSource
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
+import io.airbyte.container.orchestrator.worker.state.StateEnricher
 import io.airbyte.container.orchestrator.worker.util.ClosableChannelQueue
 import io.airbyte.container.orchestrator.worker.util.ReplicationMetricReporter
 import io.airbyte.featureflag.RemoveValidationLimit
@@ -93,8 +94,6 @@ class ReplicationWorkerPortedTests {
     private val CONFIG_CONNECTOR: Config = Config().withAdditionalProperty("my_key", "my_new_value")
     private val CONFIG_MESSAGE: AirbyteMessage =
       AirbyteMessageUtils.createConfigControlMessage(CONFIG_CONNECTOR, 1.0)
-    private const val SOURCE_IMAGE = "source-img:latest"
-    private const val DESTINATION_IMAGE = "dest-img:latest"
   }
 
   private lateinit var jobRoot: Path
@@ -113,6 +112,7 @@ class ReplicationWorkerPortedTests {
   private lateinit var streamStatusCompletionTracker: StreamStatusCompletionTracker
   private lateinit var streamStatusTracker: StreamStatusTracker
   private lateinit var recordMapper: RecordMapper
+  private lateinit var stateEnricher: StateEnricher
   private lateinit var destinationCatalogGenerator: DestinationCatalogGenerator
 
   private lateinit var replicationInput: ReplicationInput
@@ -158,6 +158,10 @@ class ReplicationWorkerPortedTests {
     analyticsMessageTracker = mockk(relaxed = true)
     streamStatusCompletionTracker = mockk(relaxed = true)
     recordMapper = mockk(relaxed = true)
+    stateEnricher =
+      mockk<StateEnricher>(relaxed = true) {
+        every { enrich(any()) } answers { firstArg() }
+      }
     destinationCatalogGenerator = mockk(relaxed = true)
     replicationMdcScopeBuilder = mockk(relaxed = true)
 
@@ -197,6 +201,7 @@ class ReplicationWorkerPortedTests {
           recordMapper,
           replicationWorkerState,
           ReplicationContextProvider.Context(replicationContext, replicationInput.catalog, false, replicationInput),
+          stateEnricher,
           destinationCatalogGenerator,
           metricClient,
         ),
@@ -419,6 +424,7 @@ class ReplicationWorkerPortedTests {
         recordMapper,
         replicationWorkerState,
         ReplicationContextProvider.Context(replicationContext, replicationInput.catalog, false, replicationInput),
+        stateEnricher,
         destinationCatalogGenerator,
         metricClient,
       )
@@ -485,6 +491,7 @@ class ReplicationWorkerPortedTests {
         recordMapper,
         replicationWorkerState,
         ReplicationContextProvider.Context(replicationContext, replicationInput.catalog, false, replicationInput),
+        stateEnricher,
         destinationCatalogGenerator,
         metricClient,
       )

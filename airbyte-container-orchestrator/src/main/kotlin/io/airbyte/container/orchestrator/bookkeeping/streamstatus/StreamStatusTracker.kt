@@ -10,7 +10,7 @@ import io.airbyte.api.client.model.generated.StreamStatusRead
 import io.airbyte.container.orchestrator.RateLimitedMessageHelper
 import io.airbyte.container.orchestrator.bookkeeping.events.StreamStatusUpdateEvent
 import io.airbyte.container.orchestrator.worker.ReplicationContextProvider
-import io.airbyte.container.orchestrator.worker.model.getIdFromStateMessage
+import io.airbyte.container.orchestrator.worker.state.getIdFromStateMessage
 import io.airbyte.container.orchestrator.worker.util.AirbyteMessageDataExtractor
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage

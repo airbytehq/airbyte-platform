@@ -34,7 +34,8 @@ import io.airbyte.container.orchestrator.worker.filter.FieldSelector
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.model.adapter.AirbyteJsonRecordAdapter
-import io.airbyte.container.orchestrator.worker.model.attachIdToStateMessageFromSource
+import io.airbyte.container.orchestrator.worker.state.StateEnricher
+import io.airbyte.container.orchestrator.worker.state.attachIdToStateMessageFromSource
 import io.airbyte.container.orchestrator.worker.util.BytesSizeHelper.byteCountToDisplaySize
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
@@ -74,6 +75,7 @@ class ReplicationWorkerHelper(
   private val recordMapper: RecordMapper,
   private val replicationWorkerState: ReplicationWorkerState,
   private val context: ReplicationContextProvider.Context,
+  private val stateEnricher: StateEnricher,
   destinationCatalogGenerator: DestinationCatalogGenerator,
   private val metricClient: MetricClient,
 ) {
@@ -319,7 +321,7 @@ class ReplicationWorkerHelper(
   }
 
   fun processMessageFromSource(sourceRawMessage: AirbyteMessage): Optional<AirbyteMessage> =
-    internalProcessMessageFromSource(attachIdToStateMessageFromSource(sourceRawMessage))
+    internalProcessMessageFromSource(stateEnricher.enrich(sourceRawMessage))
       ?.let { mapper?.mapMessage(it) ?: it }
       ?.let { Optional.of(it) } ?: Optional.empty()
 

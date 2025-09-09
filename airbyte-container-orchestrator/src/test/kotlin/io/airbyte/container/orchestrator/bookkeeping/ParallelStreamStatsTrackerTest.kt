@@ -13,7 +13,7 @@ import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.container.orchestrator.worker.exception.InvalidChecksumException
-import io.airbyte.container.orchestrator.worker.model.attachIdToStateMessageFromSource
+import io.airbyte.container.orchestrator.worker.state.attachIdToStateMessageFromSource
 import io.airbyte.featureflag.EmitStateStatsToSegment
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum
 import io.airbyte.featureflag.FeatureFlagClient
@@ -1251,6 +1251,194 @@ class ParallelStreamStatsTrackerTest {
       stateMessage2.state.sourceStats.recordCount = recordCountStream1.toDouble()
       statsTracker.updateDestinationStateStats(stateMessage2.state)
     }
+  }
+
+  @Test
+  fun `getEmittedCountForCurrentState for stream state`() {
+    val streamState = createStreamState(STREAM1_NAME, 1)
+
+    // Track some records before state
+    statsTracker.updateStats(stream1Message1)
+    statsTracker.updateStats(stream1Message2)
+    statsTracker.updateStats(stream1Message3)
+
+    // Verify we can get tracked records for the stream
+    val recordsBeforeState = statsTracker.getEmittedCountForCurrentState(streamState)
+    assertEquals(3L, recordsBeforeState)
+
+    // Update source state - this should reset the counter
+    statsTracker.updateSourceStatesStats(streamState)
+
+    // Track more records after state
+    statsTracker.updateStats(stream1Message1)
+    statsTracker.updateStats(stream1Message2)
+
+    // Create new state and check count since last state
+    val streamState2 = createStreamState(STREAM1_NAME, 2)
+    val recordsAfterState = statsTracker.getEmittedCountForCurrentState(streamState2)
+    assertEquals(2L, recordsAfterState)
+  }
+
+  @Test
+  fun `getEmittedCountForCurrentState for global state`() {
+    // Track records for multiple streams
+    statsTracker.updateStats(stream1Message1)
+    statsTracker.updateStats(stream1Message2)
+    statsTracker.updateStats(stream2Message1)
+    statsTracker.updateStats(stream2Message2)
+    statsTracker.updateStats(stream2Message3)
+
+    // Create global state with both streams
+    val globalState = createGlobalState(1, STREAM1_NAME, STREAM2_NAME)
+
+    // Should return sum of all streams
+    val totalRecords = statsTracker.getEmittedCountForCurrentState(globalState)
+    assertEquals(5L, totalRecords) // 2 from stream1 + 3 from stream2
+
+    // Update source state
+    statsTracker.updateSourceStatesStats(globalState)
+
+    // Track more records
+    statsTracker.updateStats(stream1Message3)
+    statsTracker.updateStats(stream2Message1)
+
+    val globalState2 = createGlobalState(2, STREAM1_NAME, STREAM2_NAME)
+    val recordsAfterState = statsTracker.getEmittedCountForCurrentState(globalState2)
+    assertEquals(2L, recordsAfterState)
+  }
+
+  @Test
+  fun `getEmittedCountForCurrentState returns throws for unknown state type`() {
+    val nonStreamOrGlobalState = AirbyteMessageUtils.createStateMessage(1).state
+
+    val exception =
+      assertThrows(IllegalArgumentException::class.java) {
+        statsTracker.getEmittedCountForCurrentState(nonStreamOrGlobalState)
+      }
+    assertEquals("LEGACY states are deprecated.", exception.message)
+  }
+
+  @Test
+  fun `getEmittedCountForCurrentState by stream descriptor`() {
+    // Track records for stream
+    statsTracker.updateStats(stream1Message1)
+    statsTracker.updateStats(stream1Message2)
+
+    // Get tracked records by stream descriptor
+    val records = statsTracker.getEmittedCountForCurrentState(stream1)
+    assertEquals(2L, records)
+
+    // Non-existent stream should return null
+    val nonExistentStream = AirbyteStreamNameNamespacePair("non_existent", null)
+    val result = statsTracker.getEmittedCountForCurrentState(nonExistentStream)
+    assertNull(result)
+  }
+
+  @Test
+  fun `getFilteredCountForCurrentState for stream state`() {
+    val streamState = createStreamState(STREAM1_NAME, 1)
+
+    // Track some records before state (simulating filtering)
+    statsTracker.updateStats(stream1Message1)
+    statsTracker.updateStats(stream1Message2)
+    statsTracker.updateFilteredOutRecordsStats(stream1Message1)
+    statsTracker.updateFilteredOutRecordsStats(stream1Message2)
+    statsTracker.updateFilteredOutRecordsStats(stream1Message3)
+
+    // Verify we can get filtered records for the stream
+    val filteredBeforeState = statsTracker.getFilteredCountForCurrentState(streamState)
+    assertEquals(3L, filteredBeforeState)
+
+    // Update source state - this should reset the counter
+    statsTracker.updateSourceStatesStats(streamState)
+
+    // Track more filtered records after state
+    statsTracker.updateFilteredOutRecordsStats(stream1Message1)
+
+    // Create new state and check filtered count since last state
+    val streamState2 = createStreamState(STREAM1_NAME, 2)
+    val filteredAfterState = statsTracker.getFilteredCountForCurrentState(streamState2)
+    assertEquals(1L, filteredAfterState)
+  }
+
+  @Test
+  fun `getFilteredCountForCurrentState for global state`() {
+    // Track filtered records for multiple streams
+    statsTracker.updateFilteredOutRecordsStats(stream1Message1)
+    statsTracker.updateFilteredOutRecordsStats(stream1Message2)
+    statsTracker.updateFilteredOutRecordsStats(stream2Message1)
+    statsTracker.updateFilteredOutRecordsStats(stream2Message2)
+    statsTracker.updateFilteredOutRecordsStats(stream2Message3)
+
+    // Create global state with both streams
+    val globalState = createGlobalState(1, STREAM1_NAME, STREAM2_NAME)
+
+    // Should return sum of all filtered records from all streams
+    val totalFiltered = statsTracker.getFilteredCountForCurrentState(globalState)
+    assertEquals(5L, totalFiltered) // 2 from stream1 + 3 from stream2
+
+    // Update source state
+    statsTracker.updateSourceStatesStats(globalState)
+
+    // Track more filtered records
+    statsTracker.updateFilteredOutRecordsStats(stream1Message1)
+    statsTracker.updateFilteredOutRecordsStats(stream2Message1)
+
+    val globalState2 = createGlobalState(2, STREAM1_NAME, STREAM2_NAME)
+    val filteredAfterState = statsTracker.getFilteredCountForCurrentState(globalState2)
+    assertEquals(2L, filteredAfterState)
+  }
+
+  @Test
+  fun `getFilteredCountForCurrentState returns throws for unknown state type`() {
+    val nonStreamOrGlobalState = AirbyteMessageUtils.createStateMessage(1).state
+
+    val exception =
+      assertThrows(IllegalArgumentException::class.java) {
+        statsTracker.getFilteredCountForCurrentState(nonStreamOrGlobalState)
+      }
+    assertEquals("LEGACY states are deprecated.", exception.message)
+  }
+
+  @Test
+  fun `getFilteredCountForCurrentState by stream descriptor`() {
+    // Track filtered records for stream
+    statsTracker.updateFilteredOutRecordsStats(stream1Message1)
+    statsTracker.updateFilteredOutRecordsStats(stream1Message2)
+    statsTracker.updateFilteredOutRecordsStats(stream1Message3)
+
+    // Get filtered records by stream descriptor
+    val filtered = statsTracker.getFilteredCountForCurrentState(stream1)
+    assertEquals(3L, filtered)
+
+    // Non-existent stream should return null
+    val nonExistentStream = AirbyteStreamNameNamespacePair("non_existent", null)
+    val result = statsTracker.getFilteredCountForCurrentState(nonExistentStream)
+    assertNull(result)
+  }
+
+  @Test
+  fun `getEmittedCountForCurrentState handles empty global state`() {
+    // Create global state with no stream states
+    val globalState =
+      AirbyteStateMessage()
+        .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
+        .withGlobal(AirbyteGlobalState().withStreamStates(emptyList()))
+
+    val result = statsTracker.getEmittedCountForCurrentState(globalState)
+    assertEquals(0L, result)
+  }
+
+  @Test
+  fun `getFilteredCountForCurrentState handles empty global state`() {
+    // Create global state with no stream states
+    val globalState =
+      AirbyteStateMessage()
+        .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
+        .withGlobal(AirbyteGlobalState().withStreamStates(emptyList()))
+
+    val result = statsTracker.getFilteredCountForCurrentState(globalState)
+    assertEquals(0L, result)
   }
 
   /**

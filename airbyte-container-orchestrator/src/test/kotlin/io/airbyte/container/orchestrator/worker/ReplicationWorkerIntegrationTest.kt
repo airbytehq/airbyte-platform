@@ -44,6 +44,7 @@ import io.airbyte.container.orchestrator.worker.fixtures.EmptyAirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.io.EmptyAirbyteSource
+import io.airbyte.container.orchestrator.worker.state.StateEnricher
 import io.airbyte.container.orchestrator.worker.util.ClosableChannelQueue
 import io.airbyte.container.orchestrator.worker.util.ReplicationMetricReporter
 import io.airbyte.mappers.application.RecordMapper
@@ -343,6 +344,7 @@ object ReplicationWorkerIntegrationTestUtil {
         RecordMapper(mappers),
         replicationWorkerState,
         ReplicationContextProvider(attempt = attempt, jobId = jobId).provideContext(replicationInput),
+        StateEnricher(syncStatsTracker),
         DestinationCatalogGenerator(mappers = mappers, MoreMappers.initMapper()),
         metricClient,
       )
