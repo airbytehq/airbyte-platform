@@ -16,7 +16,7 @@ export const DeleteWorkspace: React.FC = () => {
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const showOrgPicker = useExperiment("sidebar.showOrgPicker");
+  const showOrgPicker = useExperiment("sidebar.showOrgPickerV2");
   const redirectPathAfterDeletion = showOrgPicker
     ? `/${RoutePaths.Organization}/${workspace.organizationId}`
     : `/${RoutePaths.Workspaces}`;

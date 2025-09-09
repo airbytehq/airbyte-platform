@@ -42,7 +42,7 @@ export interface Experiments {
   "settings.downloadDiagnostics": boolean;
   "settings.organizationRbacImprovements": boolean;
   "settings.showAdvancedSettings": boolean;
-  "sidebar.showOrgPicker": boolean;
+  "sidebar.showOrgPickerV2": boolean;
 }
 
 export const defaultExperimentValues: Experiments = {
@@ -96,5 +96,5 @@ export const defaultExperimentValues: Experiments = {
   "settings.downloadDiagnostics": false,
   "settings.organizationRbacImprovements": true,
   "settings.showAdvancedSettings": false,
-  "sidebar.showOrgPicker": true,
+  "sidebar.showOrgPickerV2": true,
 };

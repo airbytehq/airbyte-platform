@@ -234,7 +234,7 @@ const AuthenticatedRoutes = () => {
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const { initialSetupComplete } = useGetInstanceConfiguration();
   useEnterpriseLicenseCheck();
-  const isOrgPickerEnabled = useExperiment("sidebar.showOrgPicker");
+  const isOrgPickerEnabled = useExperiment("sidebar.showOrgPickerV2");
 
   if (loginRedirect) {
     return <Navigate to={loginRedirect} replace />;

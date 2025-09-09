@@ -27,7 +27,7 @@ export const SettingsPage: React.FC = () => {
   const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canViewWorkspaceSettings = useGeneratedIntent(Intent.ViewWorkspaceSettings);
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
-  const showOrgPicker = useExperiment("sidebar.showOrgPicker");
+  const showOrgPicker = useExperiment("sidebar.showOrgPickerV2");
 
   const showLicenseUi = licenseUi && canViewLicenseSettings;
   const showOrganizationSection =

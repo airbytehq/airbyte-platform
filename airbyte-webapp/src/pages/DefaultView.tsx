@@ -12,7 +12,7 @@ export const DefaultView: React.FC = () => {
   const { data: workspacesData } = useListWorkspacesInfinite(2, "", true);
   const workspaces = workspacesData?.pages.flatMap((page) => page.data.workspaces) ?? [];
   const organizationId = useCurrentOrganizationId();
-  const isOrgPickerEnabled = useExperiment("sidebar.showOrgPicker");
+  const isOrgPickerEnabled = useExperiment("sidebar.showOrgPickerV2");
   const isSurveyEnabled = useExperiment("onboarding.surveyEnabled");
   const user = useCurrentUser();
   const [isNewSignup] = useLocalStorage("airbyte_new-signup", false);

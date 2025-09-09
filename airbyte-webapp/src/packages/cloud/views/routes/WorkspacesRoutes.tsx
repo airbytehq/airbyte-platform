@@ -56,7 +56,7 @@ export const WorkspacesRoutes: React.FC = () => {
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
   const showOnboarding = useExperiment("onboarding.surveyEnabled");
-  const showOrgPicker = useExperiment("sidebar.showOrgPicker");
+  const showOrgPicker = useExperiment("sidebar.showOrgPickerV2");
 
   useExperimentContext("workspace", workspace.workspaceId);
   useExperimentContext("organization", workspace.organizationId);

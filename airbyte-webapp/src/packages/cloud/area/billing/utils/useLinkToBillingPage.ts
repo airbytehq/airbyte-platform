@@ -15,7 +15,7 @@ import { RoutePaths } from "pages/routePaths";
  * https://github.com/airbytehq/airbyte-internal-issues/issues/13025
  */
 export const useLinkToBillingPage = () => {
-  const showOrgPicker = useExperiment("sidebar.showOrgPicker");
+  const showOrgPicker = useExperiment("sidebar.showOrgPickerV2");
   const workspaceId = useCurrentWorkspaceId();
   const organizationId = useCurrentOrganizationId();
   return showOrgPicker

@@ -42,7 +42,7 @@ const EmbeddedSignupPage = React.lazy(() => import("./views/auth/SignupPage/Embe
 
 const CloudMainViewRoutes = () => {
   const { loginRedirect } = useQuery<{ loginRedirect: string }>();
-  const isOrgPickerEnabled = useExperiment("sidebar.showOrgPicker");
+  const isOrgPickerEnabled = useExperiment("sidebar.showOrgPickerV2");
   const isEmbeddedOnboardingEnabled = useExperiment("embedded.operatorOnboarding");
 
   if (loginRedirect) {

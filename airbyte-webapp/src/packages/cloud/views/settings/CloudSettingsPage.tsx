@@ -29,7 +29,7 @@ export const CloudSettingsPage: React.FC = () => {
   const showAdvancedSettings = useExperiment("settings.showAdvancedSettings");
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
-  const showOrgPicker = useExperiment("sidebar.showOrgPicker");
+  const showOrgPicker = useExperiment("sidebar.showOrgPickerV2");
 
   return (
     <SettingsLayout>
