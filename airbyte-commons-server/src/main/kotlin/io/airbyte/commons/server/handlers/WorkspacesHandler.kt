@@ -26,7 +26,11 @@ import io.airbyte.api.model.generated.WorkspaceReadList
 import io.airbyte.api.model.generated.WorkspaceUpdate
 import io.airbyte.api.model.generated.WorkspaceUpdateName
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization
+import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.random.randomAlpha
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.converters.NotificationConverter.toConfigList
 import io.airbyte.commons.server.converters.NotificationSettingsConverter.toConfig
 import io.airbyte.commons.server.converters.WorkspaceConverter.domainToApiModel
@@ -55,6 +59,8 @@ import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated
 import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
+import io.airbyte.domain.models.DataplaneGroupId
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.HydrateLimits
 import io.airbyte.featureflag.Workspace
@@ -91,6 +97,7 @@ class WorkspacesHandler
     private val consumptionService: ConsumptionService,
     private val ffClient: FeatureFlagClient,
     private val airbyteEdition: AirbyteEdition,
+    private val roleResolver: RoleResolver,
   ) {
     @Throws(JsonValidationException::class, IOException::class, ValueConflictKnownException::class, ConfigNotFoundException::class)
     fun createWorkspace(workspaceCreate: WorkspaceCreate): WorkspaceRead {
@@ -110,6 +117,31 @@ class WorkspacesHandler
           .securityUpdates(workspaceCreate.securityUpdates)
 
       return createWorkspaceIfNotExist(workspaceCreateWithId)
+    }
+
+    private fun validateDataplaneGroupAssignment(
+      dataplaneGroupId: DataplaneGroupId,
+      organizationId: OrganizationId,
+    ) {
+      // First, ensure the current user is at least an org editor of the target org.
+      roleResolver
+        .newRequest()
+        .withCurrentUser()
+        .withOrg(organizationId.value)
+        .requireRole(AuthRoleConstants.ORGANIZATION_EDITOR)
+
+      // Then, check if the dataplaneGroupId is one of the defaults that every org can use.
+      if (dataplaneGroupService.listDefaultDataplaneGroups().map { it.id }.contains(dataplaneGroupId.value)) {
+        return
+      }
+
+      // Finally, since it's not a default, ensure the dataplane group belongs to the target org.
+      val dataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplaneGroupId.value)
+      if (dataplaneGroup.organizationId != organizationId.value) {
+        throw ForbiddenProblem(
+          ProblemMessageData().message("Dataplane group ${dataplaneGroupId.value} does not belong to organization ${organizationId.value}."),
+        )
+      }
     }
 
     @Throws(JsonValidationException::class, IOException::class, ValueConflictKnownException::class, ConfigNotFoundException::class)
@@ -134,6 +166,12 @@ class WorkspacesHandler
         val defaultDataplaneGroup = dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition)
         dataplaneGroupId = defaultDataplaneGroup.id
       } else {
+        // If an explicit dataplane group ID is provided, ensure it is a valid assignment for the workspace.
+        validateDataplaneGroupAssignment(
+          DataplaneGroupId(workspaceCreateWithId.dataplaneGroupId),
+          OrganizationId(workspaceCreateWithId.organizationId),
+        )
+
         dataplaneGroupId = workspaceCreateWithId.dataplaneGroupId
       }
 
@@ -544,8 +582,11 @@ class WorkspacesHandler
       } else if (workspacePatch.notificationsConfig != null) {
         patchNotifications(workspace, workspacePatch.notificationsConfig)
       }
-
       if (workspacePatch.dataplaneGroupId != null) {
+        validateDataplaneGroupAssignment(
+          DataplaneGroupId(workspacePatch.dataplaneGroupId),
+          OrganizationId(workspace.organizationId),
+        )
         workspace.dataplaneGroupId = workspacePatch.dataplaneGroupId
       }
       if (workspacePatch.name != null) {

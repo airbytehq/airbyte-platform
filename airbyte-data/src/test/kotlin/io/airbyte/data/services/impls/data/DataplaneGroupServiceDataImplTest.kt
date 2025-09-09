@@ -20,6 +20,7 @@ import org.junit.jupiter.api.assertThrows
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
+import io.airbyte.config.DataplaneGroup as ConfigDataplaneGroup
 
 private val MOCK_ORGANIZATION_ID = UUID.randomUUID()
 private val MOCK_NAME = "test"
@@ -221,6 +222,57 @@ class DataplaneGroupServiceDataImplTest {
     assertThrows<RuntimeException> {
       dataplaneGroupServiceDataImpl.validateDataplaneGroupName(dataplaneGroup.toConfigModel())
     }
+  }
+
+  @Test
+  fun `test list default dataplane groups`() {
+    val defaultDataplaneGroupId1 = UUID.randomUUID()
+    val defaultDataplaneGroupId2 = UUID.randomUUID()
+
+    val defaultDataplaneGroups =
+      listOf(
+        DataplaneGroup(
+          id = defaultDataplaneGroupId1,
+          organizationId = DEFAULT_ORGANIZATION_ID,
+          name = "Default Group 1",
+          enabled = true,
+          tombstone = false,
+          createdAt = OffsetDateTime.now(),
+          updatedAt = OffsetDateTime.now(),
+        ),
+        DataplaneGroup(
+          id = defaultDataplaneGroupId2,
+          organizationId = DEFAULT_ORGANIZATION_ID,
+          name = "Default Group 2",
+          enabled = true,
+          tombstone = false,
+          createdAt = OffsetDateTime.now(),
+          updatedAt = OffsetDateTime.now(),
+        ),
+      )
+
+    every { dataplaneGroupRepository.findAllByOrganizationIdInAndTombstoneFalseOrderByUpdatedAtDesc(listOf(DEFAULT_ORGANIZATION_ID)) } returns
+      defaultDataplaneGroups
+
+    val retrievedDataplaneGroups = dataplaneGroupServiceDataImpl.listDefaultDataplaneGroups()
+
+    assertEquals(2, retrievedDataplaneGroups.size)
+    assertEquals(defaultDataplaneGroups.map { it.toConfigModel() }, retrievedDataplaneGroups)
+
+    verify { dataplaneGroupRepository.findAllByOrganizationIdInAndTombstoneFalseOrderByUpdatedAtDesc(listOf(DEFAULT_ORGANIZATION_ID)) }
+  }
+
+  @Test
+  fun `test list default dataplane groups returns empty list when none exist`() {
+    every { dataplaneGroupRepository.findAllByOrganizationIdInAndTombstoneFalseOrderByUpdatedAtDesc(listOf(DEFAULT_ORGANIZATION_ID)) } returns
+      emptyList()
+
+    val retrievedDataplaneGroups = dataplaneGroupServiceDataImpl.listDefaultDataplaneGroups()
+
+    assertEquals(0, retrievedDataplaneGroups.size)
+    assertEquals(emptyList<ConfigDataplaneGroup>(), retrievedDataplaneGroups)
+
+    verify { dataplaneGroupRepository.findAllByOrganizationIdInAndTombstoneFalseOrderByUpdatedAtDesc(listOf(DEFAULT_ORGANIZATION_ID)) }
   }
 
   private fun createDataplaneGroup(id: UUID): DataplaneGroup =

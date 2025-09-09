@@ -31,9 +31,11 @@ import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.api.model.generated.WorkspaceUpdate
 import io.airbyte.api.model.generated.WorkspaceUpdateName
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization
+import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.json.Jsons.jsonNode
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.converters.NotificationConverter.toApiList
 import io.airbyte.commons.server.converters.NotificationSettingsConverter.toApi
 import io.airbyte.commons.server.limits.ConsumptionService
@@ -65,6 +67,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.EnumSource
@@ -95,6 +98,8 @@ internal class WorkspacesHandlerTest {
   lateinit var limitsProvider: ProductLimitsProvider
   lateinit var consumptionService: ConsumptionService
   lateinit var ffClient: FeatureFlagClient
+  lateinit var roleResolver: RoleResolver
+  lateinit var roleRequest: RoleResolver.Request
 
   @BeforeEach
   fun setUp() {
@@ -112,6 +117,14 @@ internal class WorkspacesHandlerTest {
     limitsProvider = Mockito.mock(ProductLimitsProvider::class.java)
     consumptionService = Mockito.mock(ConsumptionService::class.java)
     ffClient = Mockito.mock(TestClient::class.java)
+    roleResolver = Mockito.mock(RoleResolver::class.java)
+    roleRequest = Mockito.mock(RoleResolver.Request::class.java)
+
+    // Setup roleResolver mock chain
+    Mockito.`when`(roleResolver.newRequest()).thenReturn(roleRequest)
+    Mockito.`when`(roleRequest.withCurrentUser()).thenReturn(roleRequest)
+    Mockito.`when`(roleRequest.withOrg(any())).thenReturn(roleRequest)
+    Mockito.doNothing().`when`(roleRequest).requireRole(any())
 
     workspace = generateWorkspace()
   }
@@ -132,6 +145,7 @@ internal class WorkspacesHandlerTest {
       consumptionService,
       ffClient,
       airbyteEdition,
+      roleResolver,
     )
 
   private fun generateWorkspace(): StandardWorkspace =
@@ -300,6 +314,13 @@ internal class WorkspacesHandlerTest {
     val uuid = UUID.randomUUID()
     Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
 
+    // Mock dataplane group service for DATAPLANE_GROUP_ID_1
+    val defaultDataplaneGroups =
+      listOf(
+        DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
+      )
+    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
 
     val workspaceCreate =
@@ -355,6 +376,13 @@ internal class WorkspacesHandlerTest {
 
     val uuid = UUID.randomUUID()
     Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+
+    // Mock dataplane group service for DATAPLANE_GROUP_ID_1
+    val defaultDataplaneGroups =
+      listOf(
+        DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
+      )
+    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
 
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
 
@@ -794,6 +822,13 @@ internal class WorkspacesHandlerTest {
 
     Mockito.`when`(uuidSupplier.get()).thenReturn(WEBHOOK_CONFIG_ID)
 
+    // Mock dataplane group validation for the update
+    val defaultDataplaneGroups =
+      listOf(
+        DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
+      )
+    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+
     Mockito
       .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
       .thenReturn(workspace)
@@ -1003,6 +1038,13 @@ internal class WorkspacesHandlerTest {
         .dataplaneGroupId(DATAPLANE_GROUP_ID_2)
         .email(expectedNewEmail)
 
+    // Mock dataplane group validation for the update
+    val defaultDataplaneGroups =
+      listOf(
+        DataplaneGroup().withId(DATAPLANE_GROUP_ID_2).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
+      )
+    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+
     val expectedWorkspace =
       clone(workspace)
         .withEmail(expectedNewEmail)
@@ -1160,10 +1202,18 @@ internal class WorkspacesHandlerTest {
         consumptionService,
         ffClient,
         airbyteEdition,
+        roleResolver,
       )
 
     val uuid = UUID.randomUUID()
     Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+
+    // Mock dataplane group validation for creation
+    val defaultDataplaneGroups =
+      listOf(
+        DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
+      )
+    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
 
     val workspaceCreate =
       WorkspaceCreate()
@@ -1297,6 +1347,281 @@ internal class WorkspacesHandlerTest {
       ).thenReturn(expectedWorkspaces)
     val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganizationForUser(userId, request)
     Assertions.assertEquals(2, result.getWorkspaces().size)
+  }
+
+  @ParameterizedTest
+  @EnumSource(AirbyteEdition::class)
+  @DisplayName("Creating workspace with explicit dataplane group requires org editor permission")
+  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
+  fun testCreateWorkspaceWithDataplaneGroupRequiresOrgEditor(airbyteEdition: AirbyteEdition) {
+    workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
+    Mockito
+      .`when`(
+        workspaceService.getStandardWorkspaceNoSecrets(
+          anyOrNull(),
+          eq(false),
+        ),
+      ).thenReturn(workspace)
+
+    val uuid = UUID.randomUUID()
+    Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+
+    // Mock that DATAPLANE_GROUP_ID_2 is not a default group
+    val defaultDataplaneGroups =
+      listOf(
+        DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
+      )
+    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+
+    // Mock the dataplane group that belongs to the same organization
+    val dataplaneGroup = DataplaneGroup().withId(DATAPLANE_GROUP_ID_2).withOrganizationId(ORGANIZATION_ID)
+    Mockito.`when`(dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID_2)).thenReturn(dataplaneGroup)
+
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace)
+
+    val workspaceCreate =
+      WorkspaceCreate()
+        .name(NEW_WORKSPACE)
+        .email(TEST_EMAIL)
+        .news(false)
+        .anonymousDataCollection(false)
+        .securityUpdates(false)
+        .notifications(listOf<@Valid io.airbyte.api.model.generated.Notification?>(generateApiNotification()))
+        .notificationSettings(generateApiNotificationSettings())
+        .dataplaneGroupId(DATAPLANE_GROUP_ID_2) // Explicit dataplane group
+        .webhookConfigs(listOf<@Valid WebhookConfigWrite?>(WebhookConfigWrite().name(TEST_NAME).authToken(TEST_AUTH_TOKEN)))
+        .organizationId(ORGANIZATION_ID)
+
+    Mockito.`when`(secretPersistence.read(anyOrNull())).thenReturn("")
+
+    getWorkspacesHandler(airbyteEdition).createWorkspace(workspaceCreate)
+
+    // Verify that role check was performed
+    Mockito.verify(roleResolver).newRequest()
+    Mockito.verify(roleRequest).withCurrentUser()
+    Mockito.verify(roleRequest).withOrg(ORGANIZATION_ID)
+    Mockito.verify(roleRequest).requireRole("ORGANIZATION_EDITOR")
+  }
+
+  @ParameterizedTest
+  @EnumSource(AirbyteEdition::class)
+  @DisplayName("Updating workspace dataplane group requires org editor permission")
+  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
+  fun testUpdateWorkspaceDataplaneGroupRequiresOrgEditor(airbyteEdition: AirbyteEdition) {
+    // Mock that DATAPLANE_GROUP_ID_2 is not a default group
+    val defaultDataplaneGroups =
+      listOf(
+        DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
+      )
+    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+
+    // Mock the dataplane group that belongs to the same organization
+    val dataplaneGroup = DataplaneGroup().withId(DATAPLANE_GROUP_ID_2).withOrganizationId(ORGANIZATION_ID)
+    Mockito.`when`(dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID_2)).thenReturn(dataplaneGroup)
+
+    val workspaceUpdate =
+      WorkspaceUpdate()
+        .workspaceId(workspace.getWorkspaceId())
+        .dataplaneGroupId(DATAPLANE_GROUP_ID_2) // Changing dataplane group
+
+    val expectedWorkspace =
+      clone(workspace)
+        .withDataplaneGroupId(DATAPLANE_GROUP_ID_2)
+        .withWebhookOperationConfigs(
+          jsonNode<WebhookOperationConfigs?>(
+            WebhookOperationConfigs()
+              .withWebhookConfigs(mutableListOf<WebhookConfig?>()),
+          ),
+        )
+
+    Mockito
+      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+      .thenReturn(workspace)
+      .thenReturn(expectedWorkspace)
+
+    getWorkspacesHandler(airbyteEdition).updateWorkspace(workspaceUpdate)
+
+    // Verify that role check was performed
+    Mockito.verify(roleResolver).newRequest()
+    Mockito.verify(roleRequest).withCurrentUser()
+    Mockito.verify(roleRequest).withOrg(ORGANIZATION_ID)
+    Mockito.verify(roleRequest).requireRole("ORGANIZATION_EDITOR")
+  }
+
+  @ParameterizedTest
+  @EnumSource(AirbyteEdition::class)
+  @DisplayName("Creating workspace with default dataplane group should not require org editor permission")
+  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
+  fun testCreateWorkspaceWithDefaultDataplaneGroupDoesNotRequireOrgEditor(airbyteEdition: AirbyteEdition) {
+    workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
+    Mockito
+      .`when`(
+        workspaceService.getStandardWorkspaceNoSecrets(
+          anyOrNull(),
+          eq(false),
+        ),
+      ).thenReturn(workspace)
+
+    val uuid = UUID.randomUUID()
+    Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+
+    // Mock default dataplane group
+    val defaultDataplaneGroups =
+      listOf(
+        DataplaneGroup().withId(DATAPLANE_GROUP_ID_2).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
+      )
+    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace)
+
+    val workspaceCreate =
+      WorkspaceCreate()
+        .name(NEW_WORKSPACE)
+        .email(TEST_EMAIL)
+        .news(false)
+        .anonymousDataCollection(false)
+        .securityUpdates(false)
+        .notifications(listOf(generateApiNotification()))
+        .notificationSettings(generateApiNotificationSettings())
+        .dataplaneGroupId(DATAPLANE_GROUP_ID_2) // This is a default group
+        .webhookConfigs(listOf(WebhookConfigWrite().name(TEST_NAME).authToken(TEST_AUTH_TOKEN)))
+        .organizationId(ORGANIZATION_ID)
+
+    Mockito.`when`(secretPersistence.read(anyOrNull())).thenReturn("")
+
+    getWorkspacesHandler(airbyteEdition).createWorkspace(workspaceCreate)
+
+    // Verify that role check was still performed (but won't throw since it's a default group)
+    Mockito.verify(roleResolver).newRequest()
+    Mockito.verify(roleRequest).withCurrentUser()
+    Mockito.verify(roleRequest).withOrg(ORGANIZATION_ID)
+    Mockito.verify(roleRequest).requireRole("ORGANIZATION_EDITOR")
+  }
+
+  @ParameterizedTest
+  @EnumSource(AirbyteEdition::class)
+  @DisplayName("Creating workspace with non-default dataplane group from wrong org should throw forbidden")
+  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
+  fun testCreateWorkspaceWithWrongOrgDataplaneGroupThrowsForbidden(airbyteEdition: AirbyteEdition) {
+    workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
+    Mockito
+      .`when`(
+        workspaceService.getStandardWorkspaceNoSecrets(
+          anyOrNull(),
+          eq(false),
+        ),
+      ).thenReturn(workspace)
+
+    val uuid = UUID.randomUUID()
+    Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+
+    // Mock that DATAPLANE_GROUP_ID_2 is not a default group
+    val defaultDataplaneGroups =
+      listOf(
+        DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
+      )
+    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+
+    // Mock that the dataplane group belongs to a different organization
+    val wrongOrgId = UUID.randomUUID()
+    val dataplaneGroupFromWrongOrg = DataplaneGroup().withId(DATAPLANE_GROUP_ID_2).withOrganizationId(wrongOrgId)
+    Mockito.`when`(dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID_2)).thenReturn(dataplaneGroupFromWrongOrg)
+
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace)
+
+    val workspaceCreate =
+      WorkspaceCreate()
+        .name(NEW_WORKSPACE)
+        .email(TEST_EMAIL)
+        .news(false)
+        .anonymousDataCollection(false)
+        .securityUpdates(false)
+        .notifications(listOf(generateApiNotification()))
+        .notificationSettings(generateApiNotificationSettings())
+        .dataplaneGroupId(DATAPLANE_GROUP_ID_2) // This belongs to wrong org
+        .webhookConfigs(listOf(WebhookConfigWrite().name(TEST_NAME).authToken(TEST_AUTH_TOKEN)))
+        .organizationId(ORGANIZATION_ID)
+
+    Mockito.`when`(secretPersistence.read(anyOrNull())).thenReturn("")
+
+    // Should throw ForbiddenProblem
+    assertThrows<ForbiddenProblem> {
+      getWorkspacesHandler(airbyteEdition).createWorkspace(workspaceCreate)
+    }
+  }
+
+  @ParameterizedTest
+  @EnumSource(AirbyteEdition::class)
+  @DisplayName("Updating workspace with default dataplane group should not require additional validation")
+  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
+  fun testUpdateWorkspaceWithDefaultDataplaneGroupSucceeds(airbyteEdition: AirbyteEdition) {
+    // Mock that DATAPLANE_GROUP_ID_2 is a default group
+    val defaultDataplaneGroups =
+      listOf(
+        DataplaneGroup().withId(DATAPLANE_GROUP_ID_2).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
+      )
+    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+
+    val workspaceUpdate =
+      WorkspaceUpdate()
+        .workspaceId(workspace.getWorkspaceId())
+        .dataplaneGroupId(DATAPLANE_GROUP_ID_2) // This is a default group
+
+    val expectedWorkspace =
+      clone(workspace)
+        .withDataplaneGroupId(DATAPLANE_GROUP_ID_2)
+        .withWebhookOperationConfigs(
+          jsonNode<WebhookOperationConfigs?>(
+            WebhookOperationConfigs()
+              .withWebhookConfigs(mutableListOf<WebhookConfig?>()),
+          ),
+        )
+
+    Mockito
+      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+      .thenReturn(workspace)
+      .thenReturn(expectedWorkspace)
+
+    getWorkspacesHandler(airbyteEdition).updateWorkspace(workspaceUpdate)
+
+    // Verify that role check was still performed (but passed because it's a default group)
+    Mockito.verify(roleResolver).newRequest()
+    Mockito.verify(roleRequest).withCurrentUser()
+    Mockito.verify(roleRequest).withOrg(ORGANIZATION_ID)
+    Mockito.verify(roleRequest).requireRole("ORGANIZATION_EDITOR")
+    Mockito.verify(workspaceService).writeStandardWorkspaceNoSecrets(expectedWorkspace)
+  }
+
+  @ParameterizedTest
+  @EnumSource(AirbyteEdition::class)
+  @DisplayName("Updating workspace with non-default dataplane group from wrong org should throw forbidden")
+  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
+  fun testUpdateWorkspaceWithWrongOrgDataplaneGroupThrowsForbidden(airbyteEdition: AirbyteEdition) {
+    // Mock that DATAPLANE_GROUP_ID_2 is not a default group
+    val defaultDataplaneGroups =
+      listOf(
+        DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
+      )
+    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+
+    // Mock that the dataplane group belongs to a different organization
+    val wrongOrgId = UUID.randomUUID()
+    val dataplaneGroupFromWrongOrg = DataplaneGroup().withId(DATAPLANE_GROUP_ID_2).withOrganizationId(wrongOrgId)
+    Mockito.`when`(dataplaneGroupService.getDataplaneGroup(DATAPLANE_GROUP_ID_2)).thenReturn(dataplaneGroupFromWrongOrg)
+
+    val workspaceUpdate =
+      WorkspaceUpdate()
+        .workspaceId(workspace.getWorkspaceId())
+        .dataplaneGroupId(DATAPLANE_GROUP_ID_2) // This belongs to wrong org
+
+    Mockito
+      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+      .thenReturn(workspace)
+
+    // Should throw ForbiddenProblem
+    assertThrows<ForbiddenProblem> {
+      getWorkspacesHandler(airbyteEdition).updateWorkspace(workspaceUpdate)
+    }
   }
 
   companion object {
