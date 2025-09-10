@@ -1220,7 +1220,7 @@ data class AirbyteWorkerConfig(
         data class AirbyteWorkerJobKubernetesMainContainerConfig(
           val image: String = "",
           val imagePullPolicy: String = DEFAULT_WORKER_KUBE_IMAGE_PULL_POLICY,
-          val imagePullSecret: String = "",
+          val imagePullSecret: List<String> = emptyList(),
         )
       }
 

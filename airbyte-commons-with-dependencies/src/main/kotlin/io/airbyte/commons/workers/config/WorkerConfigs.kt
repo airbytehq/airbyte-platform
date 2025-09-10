@@ -109,7 +109,7 @@ class WorkerConfigsProvider(
       workerIsolatedKubeNodeSelectors = if (airbyteWorkerConfig.isolated.kube.useCustomNodeSelector) isolatedNodeSelectors else null,
       workerKubeAnnotations = annotations,
       workerKubeLabels = kubeResourceConfig.labels.toKeyValues(),
-      jobImagePullSecrets = listOf(airbyteWorkerConfig.job.kubernetes.main.container.imagePullSecret),
+      jobImagePullSecrets = airbyteWorkerConfig.job.kubernetes.main.container.imagePullSecret,
       jobImagePullPolicy = airbyteWorkerConfig.job.kubernetes.main.container.imagePullPolicy,
     )
   }
