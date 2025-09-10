@@ -8,6 +8,7 @@ import io.airbyte.api.client.ApiException
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
+import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.oshai.kotlinlogging.withLoggingContext
 import io.micronaut.context.annotation.Parameter
@@ -28,6 +29,7 @@ class HeartbeatMonitor(
   @param:Parameter private val clock: Clock = Clock.systemUTC(),
   @param:Parameter private val executorService: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(),
 ) {
+  private val logger = KotlinLogging.logger {}
   private val abort = AtomicBoolean(false)
   private val heartbeatStarted = AtomicBoolean(false)
 
@@ -37,6 +39,15 @@ class HeartbeatMonitor(
     if (heartbeatStarted.getAndSet(true)) {
       return
     }
+
+    try {
+      workloadApiClient.workloadRunning(WorkloadRunningRequest(sidecarInput.workloadId))
+    } catch (e: Exception) {
+      abort.set(true)
+      logger.error(e) { "Failed to set workload to running." }
+      return
+    }
+
     val heartbeatTimeoutDuration = Duration.ofMinutes(5)
     val heartbeatInterval = Duration.ofSeconds(30)
 

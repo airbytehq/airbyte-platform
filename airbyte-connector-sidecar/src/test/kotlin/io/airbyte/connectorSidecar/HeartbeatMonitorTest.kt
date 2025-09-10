@@ -7,15 +7,19 @@ package io.airbyte.connectorSidecar
 import io.airbyte.api.client.ApiException
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workload.api.client.WorkloadApiClient
+import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.micronaut.http.HttpStatus
+import io.mockk.Ordering
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicBoolean
 
 class HeartbeatMonitorTest {
@@ -123,5 +127,74 @@ class HeartbeatMonitorTest {
     heartbeatTask.run()
 
     assertFalse(abort.get())
+  }
+
+  @Test
+  fun `should call workloadRunning and then start the heartbeat thread`() {
+    // Given
+    val workloadId = "test-workload-id"
+    val sidecarInput =
+      mockk<SidecarInput> {
+        every { this@mockk.workloadId } returns workloadId
+      }
+    val workloadApiClient = mockk<WorkloadApiClient>(relaxed = true)
+    val logContextFactory = mockk<SidecarLogContextFactory>()
+    val clock = mockk<Clock>(relaxed = true)
+    val executorService = mockk<ScheduledExecutorService>(relaxed = true)
+
+    val heartbeatMonitor =
+      HeartbeatMonitor(
+        logContextFactory = logContextFactory,
+        workloadApiClient = workloadApiClient,
+        clock = clock,
+        executorService = executorService,
+      )
+
+    // When
+    heartbeatMonitor.startHeartbeatThread(sidecarInput)
+
+    // Then
+    verify(ordering = Ordering.ORDERED) {
+      workloadApiClient.workloadRunning(WorkloadRunningRequest(workloadId))
+      executorService.scheduleAtFixedRate(any(), any(), any(), any())
+    }
+  }
+
+  @Test
+  fun `should not start the heartbeat thread if workloadRunning throws`() {
+    // Given
+    val workloadId = "test-workload-id"
+    val sidecarInput =
+      mockk<SidecarInput> {
+        every { this@mockk.workloadId } returns workloadId
+      }
+    val workloadApiClient =
+      mockk<WorkloadApiClient>(relaxed = true) {
+        every { workloadRunning(any()) } throws ApiException(HttpStatus.GONE.code, "http://localhost.test", "")
+      }
+    val logContextFactory = mockk<SidecarLogContextFactory>()
+    val clock = mockk<Clock>(relaxed = true)
+    val executorService = mockk<ScheduledExecutorService>()
+
+    val heartbeatMonitor =
+      HeartbeatMonitor(
+        logContextFactory = logContextFactory,
+        workloadApiClient = workloadApiClient,
+        clock = clock,
+        executorService = executorService,
+      )
+
+    // When
+    heartbeatMonitor.startHeartbeatThread(sidecarInput)
+
+    assertTrue(heartbeatMonitor.shouldAbort())
+
+    // Then
+    verify(exactly = 1) {
+      workloadApiClient.workloadRunning(WorkloadRunningRequest(workloadId))
+    }
+    verify(exactly = 0) {
+      executorService.scheduleAtFixedRate(any(), any(), any(), any())
+    }
   }
 }
