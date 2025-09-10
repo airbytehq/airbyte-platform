@@ -773,6 +773,10 @@ enum class OssMetricsRegistry(
     metricName = "entitlement_retrieval",
     metricDescription = "a request was made to retrieve all entitlements for a customer",
   ),
+  STIGG_FALLBACK(
+    metricName = "stigg_fallback",
+    metricDescription = "stigg entitlement check returned a fallback value",
+  ),
   ;
 
   override fun getMetricName(): String = metricName

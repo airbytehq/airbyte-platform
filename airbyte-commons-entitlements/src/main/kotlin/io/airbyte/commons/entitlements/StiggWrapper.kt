@@ -9,6 +9,10 @@ import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.stigg.api.operations.GetActiveSubscriptionsListQuery
 import io.stigg.api.operations.ProvisionCustomerMutation
@@ -34,6 +38,7 @@ private val logger = KotlinLogging.logger {}
  */
 internal class StiggWrapper(
   private val stigg: Stigg,
+  private val metricClient: MetricClient? = null,
 ) {
   fun getPlans(organizationId: OrganizationId): List<EntitlementPlan> {
     try {
@@ -94,8 +99,19 @@ internal class StiggWrapper(
 
     logger
       .debug {
-        "Got entitlement organizationId=$organizationId entitlement=$entitlement isGranted=${result.hasAccess} accessDeniedReason=${result.accessDeniedReason.name}"
+        "Got entitlement organizationId=$organizationId entitlement=$entitlement hasAccess=${result.hasAccess} isFallback=${result.isFallback} accessDeniedReason=${result.accessDeniedReason.name}"
       }
+
+    if (result.isFallback) {
+      metricClient?.count(
+        OssMetricsRegistry.STIGG_FALLBACK,
+        attributes =
+          arrayOf(
+            MetricAttribute(MetricTags.ORGANIZATION_ID, organizationId.toString()),
+            MetricAttribute(MetricTags.FEATURE_ID, entitlement.featureId),
+          ),
+      )
+    }
 
     return EntitlementResult(
       entitlement.featureId,

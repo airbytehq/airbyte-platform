@@ -19,8 +19,11 @@ import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.util.UUID
+
+private val logger = KotlinLogging.logger {}
 
 interface EntitlementService {
   fun checkEntitlement(
@@ -28,10 +31,27 @@ interface EntitlementService {
     entitlement: Entitlement,
   ): EntitlementResult
 
+  /**
+   * Verifies that an organization has access to a specific entitlement, throwing an exception if not.
+   *
+   * This is a convenience method that combines entitlement checking with enforcement.
+   * Use this when you need to ensure access before proceeding with an operation.
+   *
+   * @param organizationId The unique identifier of the organization to verify
+   * @param entitlement The specific entitlement/feature that must be available
+   * @throws LicenseEntitlementProblem if the organization does not have the required entitlement
+   */
   fun ensureEntitled(
     organizationId: OrganizationId,
     entitlement: Entitlement,
-  )
+  ) {
+    if (!checkEntitlement(organizationId, entitlement).isEntitled) {
+      throw LicenseEntitlementProblem(
+        ProblemLicenseEntitlementData()
+          .entitlement(entitlement.featureId),
+      )
+    }
+  }
 
   fun addOrganization(
     organizationId: OrganizationId,
@@ -69,18 +89,27 @@ internal class EntitlementServiceImpl(
     organizationId: OrganizationId,
     entitlement: Entitlement,
   ): EntitlementResult =
-    when (entitlement) {
-      // TODO: These entitlements need to check LD for  FF, in addition ot checking Stigg. We can
-      //  remove the special handling (and the EntitlementProvider) once we're ready to turn off LD
-      //  for these entitlements
-      DestinationObjectStorageEntitlement -> hasDestinationObjectStorageEntitlement(organizationId)
-      SsoEntitlement -> hasSsoConfigUpdateEntitlement(organizationId)
-      SelfManagedRegionsEntitlement -> hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId)
-      else -> {
-        val result = entitlementClient.checkEntitlement(organizationId, entitlement)
-        sendCountMetric(OssMetricsRegistry.ENTITLEMENT_CHECK, organizationId, true)
-        result
+    try {
+      when (entitlement) {
+        // TODO: These entitlements need to check LD for  FF, in addition ot checking Stigg. We can
+        //  remove the special handling (and the EntitlementProvider) once we're ready to turn off LD
+        //  for these entitlements
+        DestinationObjectStorageEntitlement -> hasDestinationObjectStorageEntitlement(organizationId)
+        SsoEntitlement -> hasSsoConfigUpdateEntitlement(organizationId)
+        SelfManagedRegionsEntitlement -> hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId)
+        else -> {
+          val result = entitlementClient.checkEntitlement(organizationId, entitlement)
+          sendCountMetric(OssMetricsRegistry.ENTITLEMENT_CHECK, organizationId, true)
+          result
+        }
       }
+    } catch (e: Exception) {
+      sendCountMetric(OssMetricsRegistry.ENTITLEMENT_CHECK, organizationId, false)
+      EntitlementResult(
+        featureId = entitlement.featureId,
+        isEntitled = false,
+        reason = "Exception while checking entitlement: ${e.message}",
+      )
     }
 
   override fun addOrganization(
@@ -92,37 +121,21 @@ internal class EntitlementServiceImpl(
   }
 
   /**
-   * Verifies that an organization has access to a specific entitlement, throwing an exception if not.
-   *
-   * This is a convenience method that combines entitlement checking with enforcement.
-   * Use this when you need to ensure access before proceeding with an operation.
-   *
-   * @param organizationId The unique identifier of the organization to verify
-   * @param entitlement The specific entitlement/feature that must be available
-   * @throws LicenseEntitlementProblem if the organization does not have the required entitlement
-   */
-  override fun ensureEntitled(
-    organizationId: OrganizationId,
-    entitlement: Entitlement,
-  ) {
-    if (!checkEntitlement(organizationId, entitlement).isEntitled) {
-      throw LicenseEntitlementProblem(
-        ProblemLicenseEntitlementData()
-          .entitlement(entitlement.featureId),
-      )
-    }
-  }
-
-  /**
    * Retrieves all entitlements available to an organization.
    *
    * @param organizationId The unique identifier of the organization
    * @return List of EntitlementResult objects representing all available entitlements and their status
    */
   override fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult> {
-    val result = entitlementClient.getEntitlements(organizationId)
-    sendCountMetric(OssMetricsRegistry.ENTITLEMENT_RETRIEVAL, organizationId, true)
-    return result
+    try {
+      val result = entitlementClient.getEntitlements(organizationId)
+      sendCountMetric(OssMetricsRegistry.ENTITLEMENT_RETRIEVAL, organizationId, true)
+      return result
+    } catch (e: Exception) {
+      logger.error(e) { "Exception while getting entitlements" }
+      sendCountMetric(OssMetricsRegistry.ENTITLEMENT_RETRIEVAL, organizationId, false)
+      return emptyList()
+    }
   }
 
   override fun hasEnterpriseConnectorEntitlements(
@@ -130,18 +143,24 @@ internal class EntitlementServiceImpl(
     actorType: ActorType,
     actorDefinitionIds: List<UUID>,
   ): Map<UUID, Boolean> {
-    val clientResults: Map<UUID, Boolean> =
-      actorDefinitionIds.associateWith { actorDefinitionId ->
-        entitlementClient
-          .checkEntitlement(organizationId, ConnectorEntitlement(actorDefinitionId))
-          .isEntitled
-      }
+    try {
+      val clientResults: Map<UUID, Boolean> =
+        actorDefinitionIds.associateWith { actorDefinitionId ->
+          entitlementClient
+            .checkEntitlement(organizationId, ConnectorEntitlement(actorDefinitionId))
+            .isEntitled
+        }
 
-    val providerResults: Map<UUID, Boolean> =
-      entitlementProvider.hasEnterpriseConnectorEntitlements(organizationId, actorType, actorDefinitionIds)
+      val providerResults: Map<UUID, Boolean> =
+        entitlementProvider.hasEnterpriseConnectorEntitlements(organizationId, actorType, actorDefinitionIds)
 
-    // Until we're 100% on Stigg, provider results (from LD) overwrite any overlapping client results
-    return clientResults.toMutableMap().apply { putAll(providerResults) }
+      // Until we're 100% on Stigg, provider results (from LD) overwrite any overlapping client results
+      return clientResults.toMutableMap().apply { putAll(providerResults) }
+    } catch (e: Exception) {
+      logger.error(e) { "Exception while getting connector entitlements" }
+      sendCountMetric(OssMetricsRegistry.ENTITLEMENT_RETRIEVAL, organizationId, false)
+      return emptyMap()
+    }
   }
 
   override fun hasConfigTemplateEntitlements(organizationId: OrganizationId): Boolean =

@@ -40,6 +40,7 @@ object MetricTags {
   const val FAILURE_CAUSE: String = "failure_cause"
   const val FAILURE_ORIGIN: String = "failure_origin"
   const val FAILURE_TYPE: String = "failure_type"
+  const val FEATURE_ID: String = "feature_id"
   const val INTERNAL_MESSAGE: String = "internal_message"
   const val EXTERNAL_MESSAGE: String = "external_message"
   const val GEOGRAPHY: String = "geography"
