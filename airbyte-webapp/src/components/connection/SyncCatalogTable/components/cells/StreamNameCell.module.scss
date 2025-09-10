@@ -2,6 +2,11 @@
   opacity: 0.5;
 }
 
+.streamNameContainer {
+  min-width: 0;
+  flex: 1;
+}
+
 .tooltip {
   max-width: 250px;
 }

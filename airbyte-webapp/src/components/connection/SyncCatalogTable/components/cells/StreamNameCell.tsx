@@ -1,4 +1,5 @@
 import { Row } from "@tanstack/react-table";
+import classNames from "classnames";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
@@ -106,7 +107,12 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
         data-testid="expand-collapse-stream-btn"
         aria-expanded={row.getIsExpanded()}
       />
-      <FlexContainer alignItems="center" {...(isUnsupportedFileBasedStream && { className: styles.disabled })}>
+      <FlexContainer
+        alignItems="center"
+        className={classNames(styles.streamNameContainer, {
+          [styles.disabled]: isUnsupportedFileBasedStream,
+        })}
+      >
         <TextWithOverflowTooltip>
           {globalFilterValue ? (
             <TextHighlighter searchWords={[globalFilterValue]} textToHighlight={value} />
