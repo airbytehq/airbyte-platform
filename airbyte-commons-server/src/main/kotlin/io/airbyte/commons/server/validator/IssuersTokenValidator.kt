@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.validator
 
-import io.airbyte.commons.server.config.JwtIdentityProvidersConfig
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.security.token.Claims
@@ -16,11 +16,11 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 @Requires(property = "airbyte.auth.identity-provider.verify-issuer", value = "true")
 class IssuersTokenValidator<T>(
-  private val jwtIdentityProvidersConfig: JwtIdentityProvidersConfig,
+  private val airbyteAuthConfig: AirbyteAuthConfig,
 ) : GenericJwtClaimsValidator<T> {
   init {
-    if (jwtIdentityProvidersConfig.verifyIssuer) {
-      logger.info { "Validating issuer for the configured issuers ${jwtIdentityProvidersConfig.issuers}" }
+    if (airbyteAuthConfig.identityProvider.verifyIssuer) {
+      logger.info { "Validating issuer for the configured issuers ${airbyteAuthConfig.identityProvider.issuers}" }
     } else {
       logger.info { "Not validating issuers, this is recommended for a production system" }
     }
@@ -30,7 +30,7 @@ class IssuersTokenValidator<T>(
     claims: Claims?,
     request: T,
   ): Boolean {
-    if (!jwtIdentityProvidersConfig.verifyIssuer) {
+    if (!airbyteAuthConfig.identityProvider.verifyIssuer) {
       logger.debug { "Verifying the issuer has been set to false, not verifying issuer" }
       return true
     }
@@ -39,9 +39,9 @@ class IssuersTokenValidator<T>(
       logger.debug { "The claims were null or there is no issuer in the jwt claims" }
       return false
     }
-    logger.debug { "Validating issuer for the configured issuers ${jwtIdentityProvidersConfig.issuers}" }
+    logger.debug { "Validating issuer for the configured issuers ${airbyteAuthConfig.identityProvider.issuers}" }
 
-    return jwtIdentityProvidersConfig.issuers.any {
+    return airbyteAuthConfig.identityProvider.issuers.any {
       logger.debug { "Verifying the issuer $it against the iss claim: ${claims["iss"]}" }
       it.trim() == claims["iss"].toString().trim()
     }

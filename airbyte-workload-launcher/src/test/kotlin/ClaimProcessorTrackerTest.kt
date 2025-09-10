@@ -2,6 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
+import io.airbyte.micronaut.runtime.AirbyteWorkloadLauncherConfig
 import io.airbyte.workload.launcher.ClaimProcessorTracker
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -12,53 +13,117 @@ import kotlin.concurrent.thread
 class ClaimProcessorTrackerTest {
   @Test
   fun `claim processor should initialize the latch from parallelism`() {
-    val tracker = ClaimProcessorTracker(parallelism = 50, parallelismMaxSurge = 0)
+    val configuration =
+      AirbyteWorkloadLauncherConfig(
+        parallelism =
+          AirbyteWorkloadLauncherConfig.AirbyteWorkloadLauncherParallelismConfig(
+            defaultQueue = 50,
+            maxSurge = 0,
+          ),
+      )
+    val tracker = ClaimProcessorTracker(configuration)
     assertEquals(50, tracker.count)
   }
 
   @Test
   fun `claim processor should apply max surge on initialization`() {
-    val tracker = ClaimProcessorTracker(parallelism = 50, parallelismMaxSurge = 10)
+    val configuration =
+      AirbyteWorkloadLauncherConfig(
+        parallelism =
+          AirbyteWorkloadLauncherConfig.AirbyteWorkloadLauncherParallelismConfig(
+            defaultQueue = 50,
+            maxSurge = 10,
+          ),
+      )
+    val tracker = ClaimProcessorTracker(configuration)
     assertEquals(45, tracker.count)
   }
 
   @Test
   fun `claim processor should treat overflow max surge as 100`() {
-    val tracker = ClaimProcessorTracker(parallelism = 50, parallelismMaxSurge = 200)
+    val configuration =
+      AirbyteWorkloadLauncherConfig(
+        parallelism =
+          AirbyteWorkloadLauncherConfig.AirbyteWorkloadLauncherParallelismConfig(
+            defaultQueue = 50,
+            maxSurge = 100,
+          ),
+      )
+    val tracker = ClaimProcessorTracker(configuration)
     assertEquals(0, tracker.count)
   }
 
   @Test
   fun `trackNumberOfClaimsToResumes updates the latch count to the number of claims to resume`() {
-    val tracker = ClaimProcessorTracker(parallelism = 10, parallelismMaxSurge = 0)
+    val configuration =
+      AirbyteWorkloadLauncherConfig(
+        parallelism =
+          AirbyteWorkloadLauncherConfig.AirbyteWorkloadLauncherParallelismConfig(
+            defaultQueue = 10,
+            maxSurge = 0,
+          ),
+      )
+    val tracker = ClaimProcessorTracker(configuration)
     tracker.trackNumberOfClaimsToResume(3)
     assertEquals(3, tracker.count)
   }
 
   @Test
   fun `trackNumberOfClaimsToResumes can clear the latch count`() {
-    val tracker = ClaimProcessorTracker(parallelism = 10, parallelismMaxSurge = 0)
+    val configuration =
+      AirbyteWorkloadLauncherConfig(
+        parallelism =
+          AirbyteWorkloadLauncherConfig.AirbyteWorkloadLauncherParallelismConfig(
+            defaultQueue = 10,
+            maxSurge = 0,
+          ),
+      )
+    val tracker = ClaimProcessorTracker(configuration)
     tracker.trackNumberOfClaimsToResume(0)
     assertEquals(0, tracker.count)
   }
 
   @Test
   fun `trackNumberOfClaimsToResumes supports a number of claims bigger than parallelism`() {
-    val tracker = ClaimProcessorTracker(parallelism = 10, parallelismMaxSurge = 0)
+    val configuration =
+      AirbyteWorkloadLauncherConfig(
+        parallelism =
+          AirbyteWorkloadLauncherConfig.AirbyteWorkloadLauncherParallelismConfig(
+            defaultQueue = 10,
+            maxSurge = 0,
+          ),
+      )
+    val tracker = ClaimProcessorTracker(configuration)
     tracker.trackNumberOfClaimsToResume(15)
     assertEquals(15, tracker.count)
   }
 
   @Test
   fun `trackNumberOfClaimsToResumes supports a number of claims bigger than parallelism and still applies surge`() {
-    val tracker = ClaimProcessorTracker(parallelism = 100, parallelismMaxSurge = 10)
+    val configuration =
+      AirbyteWorkloadLauncherConfig(
+        parallelism =
+          AirbyteWorkloadLauncherConfig.AirbyteWorkloadLauncherParallelismConfig(
+            defaultQueue = 100,
+            maxSurge = 10,
+          ),
+      )
+    val tracker = ClaimProcessorTracker(configuration)
     tracker.trackNumberOfClaimsToResume(150)
     assertEquals(140, tracker.count)
   }
 
   @Test
   fun `trackResumed decrements the count`() {
-    val tracker = ClaimProcessorTracker(parallelism = 10, parallelismMaxSurge = 0)
+    val configuration =
+      AirbyteWorkloadLauncherConfig(
+        parallelism =
+          AirbyteWorkloadLauncherConfig.AirbyteWorkloadLauncherParallelismConfig(
+            defaultQueue = 10,
+            maxSurge = 0,
+          ),
+      )
+    val tracker = ClaimProcessorTracker(configuration)
     tracker.trackResumed()
     assertEquals(9, tracker.count)
     tracker.trackResumed()
@@ -67,7 +132,15 @@ class ClaimProcessorTrackerTest {
 
   @Test
   fun `trackResumed decrements the count correctly with overflow and latches unblocks when expected`() {
-    val tracker = ClaimProcessorTracker(parallelism = 2, parallelismMaxSurge = 0)
+    val configuration =
+      AirbyteWorkloadLauncherConfig(
+        parallelism =
+          AirbyteWorkloadLauncherConfig.AirbyteWorkloadLauncherParallelismConfig(
+            defaultQueue = 2,
+            maxSurge = 0,
+          ),
+      )
+    val tracker = ClaimProcessorTracker(configuration)
     val awaitUnblocked = AtomicBoolean(false)
     val awaitThread =
       thread {

@@ -4,7 +4,6 @@
 
 package io.airbyte.persistence.job
 
-import com.google.common.collect.ImmutableMap
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.config.ActorDefinitionVersion
@@ -31,6 +30,7 @@ import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.notification.NotificationClient
 import io.airbyte.validation.json.JsonValidationException
 import org.junit.jupiter.api.BeforeEach
@@ -42,7 +42,8 @@ import java.time.Instant
 import java.util.UUID
 
 internal class JobNotifierTest {
-  private val webUrlHelper = WebUrlHelper(WEBAPP_URL)
+  private val airbyteConfig = AirbyteConfig(airbyteUrl = WEBAPP_URL)
+  private val webUrlHelper = WebUrlHelper(airbyteConfig)
 
   private lateinit var jobNotifier: JobNotifier
   private lateinit var notificationClient: NotificationClient
@@ -149,18 +150,20 @@ internal class JobNotifierTest {
     jobNotifier.failJob(job, attemptStats)
     Mockito.verify(notificationClient).notifyJobFailure(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull())
 
-    val metadata = ImmutableMap.builder<String, Any?>()
-    metadata.put("connection_id", UUID.fromString(job.scope))
-    metadata.put("connector_source_definition_id", sourceDefinition.sourceDefinitionId)
-    metadata.put("connector_source", "source-test")
-    metadata.put("connector_source_version", TEST_DOCKER_TAG)
-    metadata.put("connector_source_docker_repository", actorDefinitionVersion.dockerRepository)
-    metadata.put("connector_destination_definition_id", destinationDefinition.destinationDefinitionId)
-    metadata.put("connector_destination", "destination-test")
-    metadata.put("connector_destination_version", TEST_DOCKER_TAG)
-    metadata.put("connector_destination_docker_repository", actorDefinitionVersion.dockerRepository)
-    metadata.put("notification_type", java.util.List.of(Notification.NotificationType.SLACK.toString()))
-    Mockito.verify(trackingClient).track(WORKSPACE_ID, ScopeType.WORKSPACE, JobNotifier.FAILURE_NOTIFICATION, metadata.build())
+    val metadata =
+      mapOf(
+        "connection_id" to UUID.fromString(job.scope),
+        "connector_source_definition_id" to sourceDefinition.sourceDefinitionId,
+        "connector_source" to "source-test",
+        "connector_source_version" to TEST_DOCKER_TAG,
+        "connector_source_docker_repository" to actorDefinitionVersion.dockerRepository,
+        "connector_destination_definition_id" to destinationDefinition.destinationDefinitionId,
+        "connector_destination" to "destination-test",
+        "connector_destination_version" to TEST_DOCKER_TAG,
+        "connector_destination_docker_repository" to actorDefinitionVersion.dockerRepository,
+        "notification_type" to listOf(Notification.NotificationType.SLACK.toString()),
+      )
+    Mockito.verify(trackingClient).track(WORKSPACE_ID, ScopeType.WORKSPACE, JobNotifier.FAILURE_NOTIFICATION, metadata)
   }
 
   @Test

@@ -15,7 +15,6 @@ dependencies {
   implementation(project(":oss:airbyte-json-validation"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-domain:models"))
-  implementation(project(":oss:airbyte-featureflag"))
 
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.datadog)

@@ -17,6 +17,7 @@ import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.micronaut.runtime.AirbyteApiConfig
 import io.airbyte.publicApi.server.generated.models.InitiateOauthRequest
 import io.airbyte.publicApi.server.generated.models.SourceCreateRequest
 import io.airbyte.publicApi.server.generated.models.SourcePatchRequest
@@ -30,7 +31,6 @@ import io.airbyte.server.apis.publicapi.mappers.SourceReadMapper
 import io.airbyte.server.apis.publicapi.mappers.SourcesResponseMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Secondary
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import jakarta.ws.rs.core.Response
 import java.util.UUID
@@ -82,10 +82,8 @@ open class SourceServiceImpl(
   private val sourceHandler: SourceHandler,
   private val schedulerHandler: SchedulerHandler,
   private val currentUserService: CurrentUserService,
+  private val airbyteApiConfig: AirbyteApiConfig,
 ) : SourceService {
-  @Value("\${airbyte.api.host}")
-  var publicApiHost: String? = null
-
   /**
    * Creates a source.
    */
@@ -262,7 +260,7 @@ open class SourceServiceImpl(
       includeDeleted,
       limit,
       offset,
-      publicApiHost!!,
+      airbyteApiConfig.host,
     )
   }
 

@@ -13,6 +13,7 @@ import io.airbyte.api.model.generated.Pagination
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.micronaut.runtime.AirbyteApiConfig
 import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionPatchRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionResponse
@@ -26,7 +27,6 @@ import io.airbyte.server.apis.publicapi.mappers.ConnectionUpdateMapper
 import io.airbyte.server.apis.publicapi.mappers.ConnectionsResponseMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Secondary
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import java.util.Collections
 import java.util.UUID
@@ -70,10 +70,8 @@ class ConnectionServiceImpl(
   private val sourceService: SourceService,
   private val connectionHandler: ConnectionsHandler,
   private val currentUserService: CurrentUserService,
+  private val airbyteApiConfig: AirbyteApiConfig,
 ) : ConnectionService {
-  @Value("\${airbyte.api.host}")
-  var publicApiHost: String? = null
-
   /**
    * Creates a connection.
    */
@@ -229,7 +227,7 @@ class ConnectionServiceImpl(
       includeDeleted,
       limit,
       offset,
-      publicApiHost!!,
+      airbyteApiConfig.host,
     )
   }
 }

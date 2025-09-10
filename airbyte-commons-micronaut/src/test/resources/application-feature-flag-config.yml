@@ -1,0 +1,4 @@
+airbyte:
+  feature-flag:
+    client: configfile
+    path: /some/path

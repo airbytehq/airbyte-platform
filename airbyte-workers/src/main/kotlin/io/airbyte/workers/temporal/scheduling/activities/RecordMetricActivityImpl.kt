@@ -76,15 +76,16 @@ open class RecordMetricActivityImpl(
    */
   private fun generateMetricAttributes(connectionUpdaterInput: ConnectionUpdaterInput): MutableList<MetricAttribute> {
     val metricAttributes: MutableList<MetricAttribute> = mutableListOf()
-    metricAttributes.add(MetricAttribute(MetricTags.CONNECTION_ID, connectionUpdaterInput.connectionId.toString()))
-
-    val workspaceId = getWorkspaceId(connectionUpdaterInput.connectionId!!)
-    if (workspaceId != null) {
-      metricAttributes.add(MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId))
-    } else {
-      log.warn("unable to find a workspace for connectionId {}", connectionUpdaterInput.connectionId)
+    connectionUpdaterInput.connectionId?.let { connectionId ->
+      metricAttributes.add(MetricAttribute(MetricTags.CONNECTION_ID, connectionUpdaterInput.connectionId.toString()))
+      val workspaceId = getWorkspaceId(connectionId)
+      if (workspaceId != null) {
+        metricAttributes.add(MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId))
+      } else {
+        log.warn("unable to find a workspace for connectionId {}", connectionId)
+      }
+      log.debug("generated metric attributes for workspaceId {} and connectionId {}", workspaceId, connectionId)
     }
-    log.debug("generated metric attributes for workspaceId {} and connectionId {}", workspaceId, connectionUpdaterInput.connectionId)
     return metricAttributes
   }
 
@@ -99,7 +100,7 @@ open class RecordMetricActivityImpl(
 
     if (connectionUpdaterInput != null) {
       if (connectionUpdaterInput.connectionId != null) {
-        tags.put(CONNECTION_ID_KEY, connectionUpdaterInput.connectionId)
+        tags[CONNECTION_ID_KEY] = connectionUpdaterInput.connectionId
         val workspaceId = getWorkspaceId(connectionUpdaterInput.connectionId!!)
         if (workspaceId != null) {
           tags.put(WORKSPACE_ID_KEY, workspaceId)
@@ -109,7 +110,7 @@ open class RecordMetricActivityImpl(
         }
       }
       if (connectionUpdaterInput.jobId != null) {
-        tags.put(JOB_ID_KEY, connectionUpdaterInput.jobId)
+        tags[JOB_ID_KEY] = connectionUpdaterInput.jobId
       }
     }
 

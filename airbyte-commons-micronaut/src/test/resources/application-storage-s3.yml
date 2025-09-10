@@ -1,0 +1,15 @@
+airbyte:
+  cloud:
+    storage:
+      type: "s3"
+      bucket:
+        log: "test-log"
+        state: "test-state"
+        workload-output: "test-workload-output"
+        activity-payload: "test-activity-payload"
+        audit-logging: "test-audit-logging"
+        replication-dump: "test-replication-dump"
+      s3:
+        access-key: "test-aws-access-key"
+        region: "US-WEST-1"
+        secret-access-key: "test-aws-secret-access-key"

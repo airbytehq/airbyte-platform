@@ -7,7 +7,8 @@ package io.airbyte.commons.csp
 import io.airbyte.commons.storage.DocumentType
 import io.airbyte.commons.storage.StorageClient
 import io.airbyte.commons.storage.StorageClientFactory
-import io.airbyte.commons.storage.StorageType
+import io.airbyte.micronaut.runtime.AirbyteStorageConfig
+import io.airbyte.micronaut.runtime.StorageType
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -37,7 +38,17 @@ class CspCheckerTest {
         every { create(any()) } returns client
       }
 
-    val checkResult = CspChecker(storageType = storageType, storageFactory = factory).check()
+    val storageConfiguration =
+      AirbyteStorageConfig(
+        type = storageType,
+        bucket = AirbyteStorageConfig.AirbyteStorageBucketConfig(),
+        s3 = mockk<AirbyteStorageConfig.S3StorageConfig>(relaxed = true),
+        azure = mockk<AirbyteStorageConfig.AzureStorageConfig>(relaxed = true),
+        gcs = mockk<AirbyteStorageConfig.GcsStorageConfig>(relaxed = true),
+        local = mockk<AirbyteStorageConfig.LocalStorageConfig>(relaxed = true),
+        minio = mockk<AirbyteStorageConfig.MinioStorageConfig>(relaxed = true),
+      )
+    val checkResult = CspChecker(storageFactory = factory, storageConfiguration = storageConfiguration).check()
 
     assertEquals(StorageType.LOCAL, checkResult.storage.type)
     assertEquals(
@@ -76,7 +87,17 @@ class CspCheckerTest {
         every { create(any()) } returns client
       }
 
-    val checkResult = CspChecker(storageType = storageType, storageFactory = factory).check()
+    val storageConfiguration =
+      AirbyteStorageConfig(
+        type = storageType,
+        bucket = AirbyteStorageConfig.AirbyteStorageBucketConfig(),
+        s3 = mockk<AirbyteStorageConfig.S3StorageConfig>(relaxed = true),
+        azure = mockk<AirbyteStorageConfig.AzureStorageConfig>(relaxed = true),
+        gcs = mockk<AirbyteStorageConfig.GcsStorageConfig>(relaxed = true),
+        local = mockk<AirbyteStorageConfig.LocalStorageConfig>(relaxed = true),
+        minio = mockk<AirbyteStorageConfig.MinioStorageConfig>(relaxed = true),
+      )
+    val checkResult = CspChecker(storageConfiguration = storageConfiguration, storageFactory = factory).check()
 
     with(
       checkResult.storage.buckets
@@ -111,7 +132,17 @@ class CspCheckerTest {
         every { create(any()) } returns client
       }
 
-    val checkResult = CspChecker(storageType = storageType, storageFactory = factory).check()
+    val storageConfiguration =
+      AirbyteStorageConfig(
+        type = storageType,
+        bucket = AirbyteStorageConfig.AirbyteStorageBucketConfig(),
+        s3 = mockk<AirbyteStorageConfig.S3StorageConfig>(relaxed = true),
+        azure = mockk<AirbyteStorageConfig.AzureStorageConfig>(relaxed = true),
+        gcs = mockk<AirbyteStorageConfig.GcsStorageConfig>(relaxed = true),
+        local = mockk<AirbyteStorageConfig.LocalStorageConfig>(relaxed = true),
+        minio = mockk<AirbyteStorageConfig.MinioStorageConfig>(relaxed = true),
+      )
+    val checkResult = CspChecker(storageConfiguration = storageConfiguration, storageFactory = factory).check()
 
     with(
       checkResult.storage.buckets
@@ -146,7 +177,17 @@ class CspCheckerTest {
         every { create(any()) } returns client
       }
 
-    val checkResult = CspChecker(storageType = storageType, storageFactory = factory).check()
+    val storageConfiguration =
+      AirbyteStorageConfig(
+        type = storageType,
+        bucket = AirbyteStorageConfig.AirbyteStorageBucketConfig(),
+        s3 = mockk<AirbyteStorageConfig.S3StorageConfig>(relaxed = true),
+        azure = mockk<AirbyteStorageConfig.AzureStorageConfig>(relaxed = true),
+        gcs = mockk<AirbyteStorageConfig.GcsStorageConfig>(relaxed = true),
+        local = mockk<AirbyteStorageConfig.LocalStorageConfig>(relaxed = true),
+        minio = mockk<AirbyteStorageConfig.MinioStorageConfig>(relaxed = true),
+      )
+    val checkResult = CspChecker(storageConfiguration = storageConfiguration, storageFactory = factory).check()
 
     with(
       checkResult.storage.buckets
@@ -181,7 +222,17 @@ class CspCheckerTest {
         every { create(any()) } returns client
       }
 
-    val checkResult = CspChecker(storageType = storageType, storageFactory = factory).check()
+    val storageConfiguration =
+      AirbyteStorageConfig(
+        type = storageType,
+        bucket = AirbyteStorageConfig.AirbyteStorageBucketConfig(),
+        s3 = mockk<AirbyteStorageConfig.S3StorageConfig>(relaxed = true),
+        azure = mockk<AirbyteStorageConfig.AzureStorageConfig>(relaxed = true),
+        gcs = mockk<AirbyteStorageConfig.GcsStorageConfig>(relaxed = true),
+        local = mockk<AirbyteStorageConfig.LocalStorageConfig>(relaxed = true),
+        minio = mockk<AirbyteStorageConfig.MinioStorageConfig>(relaxed = true),
+      )
+    val checkResult = CspChecker(storageConfiguration = storageConfiguration, storageFactory = factory).check()
 
     with(
       checkResult.storage.buckets

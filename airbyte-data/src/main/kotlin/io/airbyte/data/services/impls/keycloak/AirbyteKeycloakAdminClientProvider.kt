@@ -4,20 +4,20 @@
 
 package io.airbyte.data.services.impls.keycloak
 
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import jakarta.inject.Singleton
 import org.keycloak.admin.client.Keycloak
 import org.keycloak.admin.client.KeycloakBuilder
 
 /**
  * This class creates an instance of a keycloak admin client based on the config
- * variables provided in [AirbyteKeycloakConfiguration]. This is a copy of the logic located in
+ * variables provided in [AirbyteKeycloakConfig]. This is a copy of the logic located in
  * [KeycloakAdminClientProvider], in the airbyte-keycloak-setup package. We don't import that here,
  * as it is considered standalone and only runs on startup.
  */
 @Singleton
 class AirbyteKeycloakAdminClientProvider(
-  private val keycloakConfiguration: AirbyteKeycloakConfiguration,
+  private val keycloakConfiguration: AirbyteKeycloakConfig,
 ) {
   @Synchronized
   fun createKeycloakAdminClient(): Keycloak =

@@ -11,7 +11,7 @@ import io.airbyte.commons.auth.RequiresAuthMode
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.commons.auth.roles.AuthRole
 import io.airbyte.config.persistence.OrganizationPersistence
-import io.airbyte.data.config.InstanceAdminConfig
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.AuthenticationRequest
 import io.micronaut.security.authentication.AuthenticationResponse
@@ -27,7 +27,7 @@ const val SESSION_ID = "sessionId"
 @Singleton
 @RequiresAuthMode(AuthMode.SIMPLE)
 class CommunityAuthProvider<B>(
-  private val instanceAdminConfig: InstanceAdminConfig,
+  private val airbyteAuthConfig: AirbyteAuthConfig,
   private val organizationPersistence: OrganizationPersistence,
 ) : HttpRequestAuthenticationProvider<B> {
   override fun authenticate(
@@ -42,7 +42,7 @@ class CommunityAuthProvider<B>(
           ForbiddenProblem(ProblemMessageData().message("Default organization not found. Cannot authenticate."))
         }.email
 
-    if (authRequest.identity == defaultOrgEmail && authRequest.secret == instanceAdminConfig.password) {
+    if (authRequest.identity == defaultOrgEmail && authRequest.secret == airbyteAuthConfig.instanceAdmin.password) {
       val sessionId = UUID.randomUUID()
       val authenticationResponse =
         AuthenticationResponse.success(

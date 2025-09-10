@@ -59,7 +59,7 @@ airbyte:
       publish-delay-threshold-ms: ${PUB_SUB_PUBLISH_DELAY_THRESHOLD_MS:100}
       error-reporting:
         sentry:
-          dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
+          dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN:}
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
     storage:
       type: ${STORAGE_TYPE}
@@ -70,7 +70,7 @@ airbyte:
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
         audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
       azure:
-        connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
+        connection-string: ${AZURE_STORAGE_CONNECTION_STRING:}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       minio:
@@ -90,7 +90,7 @@ airbyte:
         credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
         email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
   feature-flag:
-    client: ${FEATURE_FLAG_CLIENT:config}
+    client: ${FEATURE_FLAG_CLIENT:CONFIGFILE}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
     base-url: ${FEATURE_FLAG_BASEURL:}

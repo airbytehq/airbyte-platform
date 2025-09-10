@@ -16,9 +16,9 @@ import io.airbyte.featureflag.ShouldFailSyncIfHeartbeatFailure
 import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout
 import io.airbyte.featureflag.WorkloadHeartbeatRate
 import io.airbyte.featureflag.WorkloadHeartbeatTimeout
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.workers.models.ReplicationFeatureFlags
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.nio.file.Path
@@ -32,9 +32,7 @@ import java.util.function.Supplier
 class ApplicationBeanFactory {
   @Singleton
   @Named("workspaceRoot")
-  fun workspaceRoot(
-    @Value("\${airbyte.workspace.root}") workspaceRoot: String,
-  ): Path = Path.of(workspaceRoot)
+  fun workspaceRoot(airbyteConfig: AirbyteConfig): Path = Path.of(airbyteConfig.workspaceRoot)
 
   @Singleton
   @Named("currentSecondsSupplier")

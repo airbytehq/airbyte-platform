@@ -4,9 +4,9 @@
 
 package io.airbyte.keycloak.setup
 
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
 import io.airbyte.commons.auth.config.OidcConfig
-import io.micronaut.context.annotation.Property
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import jakarta.inject.Singleton
 import org.keycloak.admin.client.resource.RealmResource
 
@@ -16,8 +16,8 @@ import org.keycloak.admin.client.resource.RealmResource
  */
 @Singleton
 class ConfigurationMapService(
-  @Property(name = "airbyte.airbyte-url") private val airbyteUrl: String,
-  private val keycloakConfiguration: AirbyteKeycloakConfiguration,
+  private val airbyteConfig: AirbyteConfig,
+  private val keycloakConfiguration: AirbyteKeycloakConfig,
 ) {
   fun importProviderFrom(
     keycloakRealm: RealmResource,
@@ -49,7 +49,15 @@ class ConfigurationMapService(
   }
 
   private fun getProviderRedirectUrl(oidcConfig: OidcConfig): String {
-    val airbyteUrlWithTrailingSlash = if (airbyteUrl.endsWith("/")) airbyteUrl else "$airbyteUrl/"
+    val airbyteUrlWithTrailingSlash =
+      if (airbyteConfig.airbyteUrl.endsWith(
+          "/",
+        )
+      ) {
+        airbyteConfig.airbyteUrl
+      } else {
+        "${airbyteConfig.airbyteUrl}/"
+      }
     return (
       airbyteUrlWithTrailingSlash + "auth/realms/" + keycloakConfiguration.airbyteRealm + "/broker/" + oidcConfig.appName +
         "/endpoint"

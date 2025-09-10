@@ -25,6 +25,7 @@ import io.fabric8.kubernetes.api.model.Quantity
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation
 import io.fabric8.kubernetes.client.dsl.Resource
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
@@ -44,6 +45,8 @@ internal const val AIRBYTE_CSP_CHECKS = "airbyte_csp_checks.yaml"
 private const val DIAGNOSTIC_REPORT_FILE_NAME = "diagnostic_report"
 private const val DIAGNOSTIC_REPORT_FILE_FORMAT = ".zip"
 private const val UNKNOWN = "Unknown"
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * DiagnosticToolHandler.

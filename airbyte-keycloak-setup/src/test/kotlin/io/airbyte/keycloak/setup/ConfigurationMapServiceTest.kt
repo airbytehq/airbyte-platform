@@ -4,8 +4,9 @@
 
 package io.airbyte.keycloak.setup
 
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
 import io.airbyte.commons.auth.config.OidcConfig
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -30,13 +31,16 @@ internal class ConfigurationMapServiceTest {
   private lateinit var oidcConfig: OidcConfig
 
   @Mock
-  private lateinit var keycloakConfiguration: AirbyteKeycloakConfiguration
+  private lateinit var keycloakConfiguration: AirbyteKeycloakConfig
 
   private lateinit var configurationMapService: ConfigurationMapService
 
+  private lateinit var airbyteConfig: AirbyteConfig
+
   @BeforeEach
   fun setUp() {
-    configurationMapService = ConfigurationMapService(WEBAPP_URL, keycloakConfiguration)
+    airbyteConfig = AirbyteConfig(airbyteUrl = WEBAPP_URL)
+    configurationMapService = ConfigurationMapService(airbyteConfig, keycloakConfiguration)
   }
 
   @ParameterizedTest

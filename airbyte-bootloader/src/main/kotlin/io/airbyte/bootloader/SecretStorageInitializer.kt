@@ -6,7 +6,6 @@ package io.airbyte.bootloader
 
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.DEFAULT_USER_ID
-import io.airbyte.config.secrets.persistence.SecretPersistence.ImplementationTypes
 import io.airbyte.data.services.SecretStorageService
 import io.airbyte.domain.models.PatchField.Companion.toPatch
 import io.airbyte.domain.models.SecretStorage
@@ -14,8 +13,14 @@ import io.airbyte.domain.models.SecretStorageCreate
 import io.airbyte.domain.models.SecretStorageScopeType
 import io.airbyte.domain.models.SecretStorageType
 import io.airbyte.domain.models.UserId
+import io.airbyte.micronaut.runtime.AirbyteSecretsManagerConfig
+import io.airbyte.micronaut.runtime.SECRET_MANAGER_AWS
+import io.airbyte.micronaut.runtime.SECRET_MANAGER_AZURE_KEY_VAULT
+import io.airbyte.micronaut.runtime.SECRET_MANAGER_GOOGLE
+import io.airbyte.micronaut.runtime.SECRET_MANAGER_TESTING_CONFIG_DB_TABLE
+import io.airbyte.micronaut.runtime.SECRET_MANAGER_VAULT
+import io.airbyte.micronaut.runtime.toSecretPersistenceTypeName
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Property
 import jakarta.inject.Singleton
 
 private val logger = KotlinLogging.logger {}
@@ -23,7 +28,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class SecretStorageInitializer(
   private val secretStorageService: SecretStorageService,
-  @Property(name = "airbyte.secret.persistence") private val configuredSecretPersistenceType: String,
+  private val config: AirbyteSecretsManagerConfig,
 ) {
   companion object {
     private const val DEFAULT_SECRET_STORAGE_DESCRIPTOR = "Default Secret Storage"
@@ -38,7 +43,7 @@ class SecretStorageInitializer(
    * secret storage type if it differs from the existing one.
    */
   fun createOrUpdateDefaultSecretStorage() {
-    val configuredSecretStorageType = mapConfiguredSecretPersistenceType(configuredSecretPersistenceType)
+    val configuredSecretStorageType = mapConfiguredSecretStorageType(config.persistence.toSecretPersistenceTypeName())
 
     when (val existingStorage = secretStorageService.findById(SecretStorage.DEFAULT_SECRET_STORAGE_ID)) {
       null -> {
@@ -59,7 +64,7 @@ class SecretStorageInitializer(
         logger.info { "Default secret storage already exists." }
         if (existingStorage.storageType != configuredSecretStorageType) {
           logger.info {
-            "Existing secret storage type ${existingStorage.storageType} does not match configured secret storage type $configuredSecretPersistenceType. Updating..."
+            "Existing secret storage type ${existingStorage.storageType} does not match configured secret storage type ${config.persistence.name}. Updating..."
           }
           secretStorageService.patch(
             id = existingStorage.id,
@@ -79,13 +84,13 @@ class SecretStorageInitializer(
    * mapping may become more important especially if we want to support multiple
    * environment-configured secret storage types within the same Airbyte instance.
    */
-  private fun mapConfiguredSecretPersistenceType(configuredType: String): SecretStorageType =
-    when (configuredType.lowercase()) {
-      ImplementationTypes.AWS_SECRET_MANAGER -> SecretStorageType.AWS_SECRETS_MANAGER
-      ImplementationTypes.GOOGLE_SECRET_MANAGER -> SecretStorageType.GOOGLE_SECRET_MANAGER
-      ImplementationTypes.VAULT -> SecretStorageType.VAULT
-      ImplementationTypes.AZURE_KEY_VAULT -> SecretStorageType.AZURE_KEY_VAULT
-      ImplementationTypes.TESTING_CONFIG_DB_TABLE -> SecretStorageType.LOCAL_TESTING
+  private fun mapConfiguredSecretStorageType(configuredType: String): SecretStorageType =
+    when (configuredType) {
+      SECRET_MANAGER_AWS -> SecretStorageType.AWS_SECRETS_MANAGER
+      SECRET_MANAGER_GOOGLE -> SecretStorageType.GOOGLE_SECRET_MANAGER
+      SECRET_MANAGER_VAULT -> SecretStorageType.VAULT
+      SECRET_MANAGER_AZURE_KEY_VAULT -> SecretStorageType.AZURE_KEY_VAULT
+      SECRET_MANAGER_TESTING_CONFIG_DB_TABLE -> SecretStorageType.LOCAL_TESTING
       else -> {
         logger.warn { "Unknown secret storage type: $configuredType. Defaulting to local testing." }
         SecretStorageType.LOCAL_TESTING

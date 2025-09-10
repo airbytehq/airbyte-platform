@@ -4,8 +4,9 @@
 
 package io.airbyte.keycloak.setup
 
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
 import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -24,7 +25,7 @@ internal class KeycloakServerTest {
   private lateinit var keycloakAdminClientProvider: KeycloakAdminClientProvider
 
   @Mock
-  private lateinit var keycloakConfiguration: AirbyteKeycloakConfiguration
+  private lateinit var keycloakConfiguration: AirbyteKeycloakConfig
 
   @Mock
   private lateinit var userConfigurator: UserConfigurator
@@ -76,7 +77,7 @@ internal class KeycloakServerTest {
         webClientConfigurator,
         identityProvidersConfigurator,
         clientScopeConfigurator,
-        WEBAPP_URL,
+        AirbyteConfig(airbyteUrl = WEBAPP_URL),
       )
   }
 

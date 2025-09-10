@@ -1,0 +1,5 @@
+airbyte:
+  tracking:
+    flush-interval-sec: 60
+    strategy: SEGMENT
+    write-key: "test-write-key"

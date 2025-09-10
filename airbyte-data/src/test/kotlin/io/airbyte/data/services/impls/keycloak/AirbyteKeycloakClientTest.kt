@@ -6,6 +6,7 @@ package io.airbyte.data.services.impls.keycloak
 
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -27,6 +28,7 @@ import java.util.UUID
 
 class AirbyteKeycloakClientTest {
   private val airbyteUrl: String = "https://cloud.airbyte.com"
+  private val airbyteConfig: AirbyteConfig = AirbyteConfig(airbyteUrl = airbyteUrl)
   private lateinit var airbyteKeycloakAdminClientProvider: AirbyteKeycloakAdminClientProvider
   private lateinit var airbyteKeycloakClient: AirbyteKeycloakClient
 
@@ -36,7 +38,7 @@ class AirbyteKeycloakClientTest {
   fun setup() {
     airbyteKeycloakAdminClientProvider = mockk<AirbyteKeycloakAdminClientProvider>(relaxed = true)
     every { airbyteKeycloakAdminClientProvider.createKeycloakAdminClient() } returns keycloakClientMock
-    airbyteKeycloakClient = AirbyteKeycloakClient(airbyteKeycloakAdminClientProvider, airbyteUrl)
+    airbyteKeycloakClient = AirbyteKeycloakClient(airbyteKeycloakAdminClientProvider, airbyteConfig)
   }
 
   @AfterEach

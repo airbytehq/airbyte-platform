@@ -1,0 +1,4 @@
+airbyte:
+  internal:
+    documentation:
+      host: test-host

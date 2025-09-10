@@ -6,6 +6,7 @@ package io.airbyte.analytics
 
 import com.segment.analytics.Analytics
 import com.segment.analytics.messages.TrackMessage
+import io.airbyte.micronaut.runtime.AirbyteAnalyticsConfig
 import io.micronaut.http.HttpStatus
 import io.mockk.every
 import io.mockk.mockk
@@ -22,7 +23,8 @@ class BlockingShutdownAnalyticsPluginTest {
   @Test
   fun `test that the plugin handles the timeout waiting on the client to flush messages`() {
     val flushInterval = 2L
-    val blockingShutdownAnalyticsPlugin = BlockingShutdownAnalyticsPlugin(flushInterval)
+    val airbyteAnalyticsConfiguration = AirbyteAnalyticsConfig(flushIntervalSec = flushInterval)
+    val blockingShutdownAnalyticsPlugin = BlockingShutdownAnalyticsPlugin(airbyteAnalyticsConfiguration)
 
     assertDoesNotThrow {
       blockingShutdownAnalyticsPlugin.waitForFlush()
@@ -37,7 +39,8 @@ class BlockingShutdownAnalyticsPluginTest {
     val response: Response = mockk()
     val flushInterval = 3L
     val writeKey = "write-key"
-    val plugin = BlockingShutdownAnalyticsPlugin(flushInterval)
+    val airbyteAnalyticsConfiguration = AirbyteAnalyticsConfig(flushIntervalSec = flushInterval)
+    val plugin = BlockingShutdownAnalyticsPlugin(airbyteAnalyticsConfiguration)
 
     every { body.`in`() } returns bodyJson.byteInputStream()
     every { body.length() } returns bodyJson.toByteArray().size.toLong()

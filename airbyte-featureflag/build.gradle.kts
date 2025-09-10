@@ -15,6 +15,7 @@ dependencies {
   implementation(libs.jackson.kotlin)
   implementation(libs.okhttp)
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(libs.kotlin.logging)
 
   kspTest(platform(libs.micronaut.platform))

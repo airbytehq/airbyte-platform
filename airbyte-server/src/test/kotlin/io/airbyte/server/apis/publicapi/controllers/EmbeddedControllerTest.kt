@@ -7,7 +7,6 @@ package io.airbyte.server.apis.publicapi.controllers
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.api.model.generated.OrganizationRead
 import io.airbyte.api.model.generated.OrganizationReadList
-import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
@@ -17,6 +16,8 @@ import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType
 import io.airbyte.domain.models.WorkspaceId
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.publicApi.server.generated.models.EmbeddedOrganizationsList
 import io.airbyte.publicApi.server.generated.models.EmbeddedScopedTokenRequest
 import io.airbyte.publicApi.server.generated.models.EmbeddedWidgetRequest
@@ -47,7 +48,13 @@ class EmbeddedControllerTest {
           mockk {
             every { generateToken(capture(claims)) } returns Optional.of("mock-token")
           },
-        tokenExpirationConfig = TokenExpirationConfig(),
+        airbyteConfig =
+          AirbyteConfig(
+            airbyteUrl = "http://my.airbyte.com/",
+          ),
+        AirbyteAuthConfig(
+          tokenIssuer = "test-token-issuer",
+        ),
         currentUserService =
           mockk {
             every { getCurrentUser() } returns AuthenticatedUser().withAuthUserId("user-id-1")
@@ -58,8 +65,6 @@ class EmbeddedControllerTest {
               ensureEntitled(organizationId, Entitlement.CONFIG_TEMPLATE_ENDPOINTS)
             } returns Unit
           },
-        airbyteUrl = "http://my.airbyte.com/",
-        tokenIssuer = "test-token-issuer",
         embeddedWorkspacesHandler =
           mockk {
             every {
@@ -157,7 +162,8 @@ class EmbeddedControllerTest {
           mockk {
             every { generateToken(capture(claims)) } returns Optional.of("mock-token")
           },
-        tokenExpirationConfig = TokenExpirationConfig(),
+        airbyteConfig = AirbyteConfig(airbyteUrl = "http://my.airbyte.com/"),
+        airbyteAuthConfig = AirbyteAuthConfig(tokenIssuer = "test-token-issuer"),
         currentUserService =
           mockk {
             every { getCurrentUser() } returns AuthenticatedUser().withAuthUserId("user-id-1")
@@ -168,8 +174,6 @@ class EmbeddedControllerTest {
               ensureEntitled(organizationId, Entitlement.CONFIG_TEMPLATE_ENDPOINTS)
             } returns Unit
           },
-        airbyteUrl = "http://my.airbyte.com/",
-        tokenIssuer = "test-token-issuer",
         embeddedWorkspacesHandler =
           mockk {
             every {
@@ -280,7 +284,6 @@ class EmbeddedControllerTest {
           every { checkEntitlements(any(), any()) } returns true
         },
       )
-
     val response = controller.listEmbeddedOrganizationsByUser()
     val orgs = response.entity as EmbeddedOrganizationsList
 
@@ -377,7 +380,6 @@ class EmbeddedControllerTest {
     val userId = UUID.randomUUID()
     val orgId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
-
     val controller =
       buildController(
         userId,
@@ -450,7 +452,8 @@ class EmbeddedControllerTest {
   ): EmbeddedController =
     EmbeddedController(
       mockk(),
-      mockk(),
+      AirbyteConfig(airbyteUrl = "http://localhost:8000"),
+      AirbyteAuthConfig(tokenIssuer = "test-issuer"),
       mockk {
         every { getCurrentUser() } returns
           AuthenticatedUser()
@@ -467,7 +470,5 @@ class EmbeddedControllerTest {
       permissionHandler,
       mockk(),
       licenseEntitlementChecker,
-      "http://localhost:8000",
-      "test-issuer",
     )
 }

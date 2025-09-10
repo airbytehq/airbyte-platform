@@ -7,9 +7,9 @@ package io.airbyte.metrics.config
 import io.airbyte.commons.version.AirbyteVersion
 import io.micrometer.registry.otlp.OtlpMeterRegistry
 import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
 import io.micronaut.core.annotation.Order
 import io.micronaut.core.order.Ordered
+import io.micronaut.runtime.ApplicationConfiguration
 import io.opentelemetry.semconv.ServiceAttributes
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -22,12 +22,12 @@ const val OTEL_SERVICE_NAME_ENV_VAR = "OTEL_SERVICE_NAME"
 @io.micronaut.configuration.metrics.annotation.RequiresMetrics
 @Requires(property = "micronaut.metrics.export.otlp.enabled", value = "true", defaultValue = "false")
 class OtlpRegistryConfigurer(
-  @Value("\${micronaut.application.name}") private val applicationName: String,
   private val airbyteVersion: AirbyteVersion,
+  private val applicationConfiguration: ApplicationConfiguration,
 ) : io.micronaut.configuration.metrics.aggregator.MeterRegistryConfigurer<OtlpMeterRegistry>,
   Ordered {
   override fun configure(meterRegistry: OtlpMeterRegistry?) {
-    val serviceName = System.getenv().getOrDefault(OTEL_SERVICE_NAME_ENV_VAR, applicationName)
+    val serviceName = System.getenv().getOrDefault(OTEL_SERVICE_NAME_ENV_VAR, applicationConfiguration.name.get())
     val version = airbyteVersion.serialize()
 
     meterRegistry?.config()?.commonTags(

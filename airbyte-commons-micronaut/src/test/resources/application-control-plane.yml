@@ -1,0 +1,3 @@
+airbyte:
+  control-plane:
+    auth-endpoint: http://test-auth-endpoint

@@ -9,6 +9,10 @@ import io.airbyte.commons.storage.STORAGE_MOUNT
 import io.airbyte.commons.storage.STORAGE_VOLUME_NAME
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.featureflag.TestClient
+import io.airbyte.micronaut.runtime.AirbyteContainerConfig
+import io.airbyte.micronaut.runtime.AirbyteStorageConfig
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
+import io.airbyte.micronaut.runtime.StorageType
 import io.airbyte.workload.launcher.context.WorkloadSecurityContextProvider
 import io.airbyte.workload.launcher.pods.KubeContainerInfo
 import io.airbyte.workload.launcher.pods.KubePodInfo
@@ -67,8 +71,25 @@ class ConnectorPodFactoryTest {
         Fixtures.defaultConnectorPodFactory.copy(
           volumeFactory =
             Fixtures.defaultVolumeFactory.copy(
-              cloudStorageType = "LOCAL",
-              localVolumeEnabled = true,
+              airbyteWorkerConfig =
+                AirbyteWorkerConfig(
+                  job =
+                    AirbyteWorkerConfig.AirbyteWorkerJobConfig(
+                      kubernetes =
+                        AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig(
+                          volumes =
+                            Fixtures.airbyteWorkerConfig.job.kubernetes.volumes.copy(
+                              local =
+                                AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig
+                                  .AirbyteWorkerJobKubernetesVolumeConfig
+                                  .AirbyteWorkerJobKubernetesVolumeLocalConfig(
+                                    enabled = true,
+                                  ),
+                            ),
+                        ),
+                    ),
+                ),
+              airbyteStorageConfig = Fixtures.airbyteStorageConfig.copy(type = StorageType.LOCAL),
             ),
         ),
       )
@@ -137,8 +158,25 @@ class ConnectorPodFactoryTest {
           tolerations = defaultToleration,
           volumeFactory =
             Fixtures.defaultVolumeFactory.copy(
-              cloudStorageType = "LOCAL",
-              localVolumeEnabled = true,
+              airbyteWorkerConfig =
+                AirbyteWorkerConfig(
+                  job =
+                    AirbyteWorkerConfig.AirbyteWorkerJobConfig(
+                      kubernetes =
+                        AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig(
+                          volumes =
+                            Fixtures.airbyteWorkerConfig.job.kubernetes.volumes.copy(
+                              local =
+                                AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig
+                                  .AirbyteWorkerJobKubernetesVolumeConfig
+                                  .AirbyteWorkerJobKubernetesVolumeLocalConfig(
+                                    enabled = true,
+                                  ),
+                            ),
+                        ),
+                    ),
+                ),
+              airbyteStorageConfig = Fixtures.airbyteStorageConfig.copy(type = StorageType.LOCAL),
             ),
           nodeSelectionFactory = nodeSelectionFactory,
         ),
@@ -150,7 +188,8 @@ class ConnectorPodFactoryTest {
   }
 
   object Fixtures {
-    val workloadSecurityContextProvider = WorkloadSecurityContextProvider(rootlessWorkload = true)
+    val airbyteContainerConfig = AirbyteContainerConfig(rootlessWorkload = true)
+    val workloadSecurityContextProvider = WorkloadSecurityContextProvider(airbyteContainerConfig)
     val featureFlagClient = TestClient()
 
     val resourceRequirements =
@@ -176,18 +215,53 @@ class ConnectorPodFactoryTest {
         KubeContainerInfo("main-image", "Always"),
       )
 
+    val airbyteStorageConfig = AirbyteStorageConfig(type = StorageType.GCS)
+    val airbyteWorkerConfig =
+      AirbyteWorkerConfig(
+        job =
+          AirbyteWorkerConfig.AirbyteWorkerJobConfig(
+            kubernetes =
+              AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig(
+                volumes =
+                  AirbyteWorkerConfig.AirbyteWorkerJobConfig
+                    .AirbyteWorkerJobKubernetesConfig
+                    .AirbyteWorkerJobKubernetesVolumeConfig(
+                      dataPlaneCreds =
+                        AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig
+                          .AirbyteWorkerJobKubernetesVolumeConfig
+                          .AirbyteWorkerJobKubernetesVolumeDataPlaneCredentialsConfig(
+                            secretName = "test-dp-secret-name",
+                            mountPath = "/dp-secret-mount-path",
+                          ),
+                      secret =
+                        AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig
+                          .AirbyteWorkerJobKubernetesVolumeConfig
+                          .AirbyteWorkerJobKubernetesVolumeSecretConfig(
+                            secretName = "test-vol-secret-name",
+                            mountPath = "/secret-mount-path",
+                          ),
+                      staging =
+                        AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig
+                          .AirbyteWorkerJobKubernetesVolumeConfig
+                          .AirbyteWorkerJobKubernetesVolumeStagingConfig(
+                            mountPath = "/staging-mount-path",
+                          ),
+                      local =
+                        AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig
+                          .AirbyteWorkerJobKubernetesVolumeConfig
+                          .AirbyteWorkerJobKubernetesVolumeLocalConfig(
+                            enabled = false,
+                          ),
+                    ),
+              ),
+          ),
+      )
+
     val defaultVolumeFactory =
       VolumeFactory(
         googleApplicationCredentials = null,
-        gcsCredsSecretName = null,
-        gcsCredsMountPath = null,
-        gsmCredsSecretName = "test-vol-secret-name",
-        gsmCredsMountPath = "/secret-mount-path",
-        dataPlaneCredsSecretName = "test-dp-secret-name",
-        dataPlaneCredsMountPath = "/dp-secret-mount-path",
-        stagingMountPath = "/staging-mount-path",
-        cloudStorageType = "gcs",
-        localVolumeEnabled = false,
+        airbyteStorageConfig = airbyteStorageConfig,
+        airbyteWorkerConfig = airbyteWorkerConfig,
       )
 
     val spotToleration = Toleration().apply { key = "spotToleration" }

@@ -17,13 +17,13 @@ import io.airbyte.db.check.JobsDatabaseAvailabilityCheck
 import io.airbyte.db.factory.DSLContextFactory
 import io.airbyte.db.factory.DatabaseCheckFactory
 import io.airbyte.db.instance.DatabaseConstants
+import io.airbyte.micronaut.runtime.AirbyteFlywayConfig
 import io.airbyte.persistence.job.DefaultJobPersistence
 import io.airbyte.persistence.job.DefaultMetadataPersistence
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.MetadataPersistence
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Value
 import io.micronaut.data.connection.jdbc.advice.DelegatingDataSource
 import io.micronaut.flyway.FlywayConfigurationProperties
 import jakarta.inject.Named
@@ -52,11 +52,11 @@ class DatabaseBeanFactory {
   fun configFlyway(
     @Named("config") configFlywayConfigurationProperties: FlywayConfigurationProperties,
     @Named("config") configDataSource: DataSource,
-    @Value("\${airbyte.flyway.configs.minimum-migration-version}") baselineVersion: String?,
+    airbyteFlywayConfig: AirbyteFlywayConfig,
   ): Flyway =
     configFlywayConfigurationProperties.fluentConfiguration
       .dataSource(unwrapDataSource(configDataSource))
-      .baselineVersion(baselineVersion)
+      .baselineVersion(airbyteFlywayConfig.config.minimumMigrationVersion)
       .baselineDescription(BASELINE_DESCRIPTION)
       .baselineOnMigrate(BASELINE_ON_MIGRATION)
       .installedBy(INSTALLED_BY)
@@ -67,12 +67,12 @@ class DatabaseBeanFactory {
   @Named("jobsFlyway")
   fun jobsFlyway(
     @Named("jobs") jobsFlywayConfigurationProperties: FlywayConfigurationProperties,
-    @Named("config") jobsDataSource: DataSource,
-    @Value("\${airbyte.flyway.jobs.minimum-migration-version}") baselineVersion: String?,
+    @Named("jobs") jobsDataSource: DataSource,
+    airbyteFlywayConfig: AirbyteFlywayConfig,
   ): Flyway =
     jobsFlywayConfigurationProperties.fluentConfiguration
       .dataSource(unwrapDataSource(jobsDataSource))
-      .baselineVersion(baselineVersion)
+      .baselineVersion(airbyteFlywayConfig.jobs.minimumMigrationVersion)
       .baselineDescription(BASELINE_DESCRIPTION)
       .baselineOnMigrate(BASELINE_ON_MIGRATION)
       .installedBy(INSTALLED_BY)
@@ -120,33 +120,33 @@ class DatabaseBeanFactory {
   fun configsDatabaseMigrationCheck(
     @Named("config") dslContext: DSLContext,
     @Named("configFlyway") configsFlyway: Flyway,
-    @Value("\${airbyte.flyway.configs.minimum-migration-version}") configsDatabaseMinimumFlywayMigrationVersion: String,
-    @Value("\${airbyte.flyway.configs.initialization-timeout-ms}") configsDatabaseInitializationTimeoutMs: Long,
+    airbyteFlywayConfig: AirbyteFlywayConfig,
   ): DatabaseMigrationCheck {
-    log.info { "${"Configs database configuration: {} {}"} $configsDatabaseMinimumFlywayMigrationVersion $configsDatabaseInitializationTimeoutMs" }
+    log.info {
+      "${"Configs database configuration: {} {}"} ${airbyteFlywayConfig.config.minimumMigrationVersion} ${airbyteFlywayConfig.config.initializationTimeoutMs}"
+    }
     return DatabaseCheckFactory
       .createConfigsDatabaseMigrationCheck(
         unwrapContext(dslContext),
         configsFlyway,
-        configsDatabaseMinimumFlywayMigrationVersion,
-        configsDatabaseInitializationTimeoutMs,
+        airbyteFlywayConfig.config.minimumMigrationVersion,
+        airbyteFlywayConfig.config.initializationTimeoutMs,
       )
   }
 
   @Singleton
   @Named("jobsDatabaseMigrationCheck")
   fun jobsDatabaseMigrationCheck(
-    @Named("config") dslContext: DSLContext,
+    @Named("jobs") dslContext: DSLContext,
     @Named("jobsFlyway") jobsFlyway: Flyway,
-    @Value("\${airbyte.flyway.jobs.minimum-migration-version}") jobsDatabaseMinimumFlywayMigrationVersion: String,
-    @Value("\${airbyte.flyway.jobs.initialization-timeout-ms}") jobsDatabaseInitializationTimeoutMs: Long,
+    airbyteFlywayConfig: AirbyteFlywayConfig,
   ): DatabaseMigrationCheck =
     DatabaseCheckFactory
       .createJobsDatabaseMigrationCheck(
         unwrapContext(dslContext),
         jobsFlyway,
-        jobsDatabaseMinimumFlywayMigrationVersion,
-        jobsDatabaseInitializationTimeoutMs,
+        airbyteFlywayConfig.jobs.minimumMigrationVersion,
+        airbyteFlywayConfig.jobs.initializationTimeoutMs,
       )
 
   @Singleton

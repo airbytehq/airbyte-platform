@@ -1,0 +1,14 @@
+airbyte:
+  keycloak:
+    airbyte-realm: test-airbyte-realm
+    base-path: test-base-path
+    client-id: test-client-id
+    client-realm: test-client-realm
+    host: test-host
+    internal-realm: test-internal-realm
+    password: test-password
+    protocol: test-protocol
+    realm: test-realm
+    reset-realm: true
+    username: test-username
+    web-client-id: test-web-client-id

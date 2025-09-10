@@ -5,7 +5,7 @@
 package io.airbyte.workers.helpers
 
 import io.airbyte.api.client.model.generated.ConnectionScheduleType
-import io.micronaut.context.annotation.Value
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import jakarta.inject.Singleton
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -18,25 +18,7 @@ import java.util.Random
  */
 @Singleton
 class ScheduleJitterHelper(
-  @param:Value("\${airbyte.worker.connection.schedule-jitter.no-jitter-cutoff-minutes}") private val noJitterCutoffMinutes: Int,
-  @param:Value("\${airbyte.worker.connection.schedule-jitter.high-frequency-bucket.threshold-minutes}") private val highFrequencyThresholdMinutes:
-    Int,
-  @param:Value(
-    "\${airbyte.worker.connection.schedule-jitter.high-frequency-bucket.jitter-amount-minutes}",
-  ) private val highFrequencyJitterAmountMinutes: Int,
-  @param:Value(
-    "\${airbyte.worker.connection.schedule-jitter.medium-frequency-bucket.threshold-minutes}",
-  ) private val mediumFrequencyThresholdMinutes: Int,
-  @param:Value(
-    "\${airbyte.worker.connection.schedule-jitter.medium-frequency-bucket.jitter-amount-minutes}",
-  ) private val mediumFrequencyJitterAmountMinutes: Int,
-  @param:Value("\${airbyte.worker.connection.schedule-jitter.low-frequency-bucket.threshold-minutes}") private val lowFrequencyThresholdMinutes: Int,
-  @param:Value(
-    "\${airbyte.worker.connection.schedule-jitter.low-frequency-bucket.jitter-amount-minutes}",
-  ) private val lowFrequencyJitterAmountMinutes: Int,
-  @param:Value(
-    "\${airbyte.worker.connection.schedule-jitter.very-low-frequency-bucket.jitter-amount-minutes}",
-  ) private val veryLowFrequencyJitterAmountMinutes: Int,
+  private val airbyteWorkerConfig: AirbyteWorkerConfig,
 ) {
   /**
    * Defines which frequency bucket a connection's wait time falls into. Then, based on the bucket,
@@ -49,11 +31,11 @@ class ScheduleJitterHelper(
     scheduleType: ConnectionScheduleType?,
   ): Duration {
     // If the wait time is less than the cutoff, don't add any jitter.
-    if (waitTime.toMinutes() <= noJitterCutoffMinutes) {
+    if (waitTime.toMinutes() <= airbyteWorkerConfig.connection.scheduleJitter.noJitterCutoffMinutes) {
       log.debug(
         "Wait time {} minutes was less than jitter cutoff of {} minutes. Not adding any jitter.",
         waitTime.toMinutes(),
-        noJitterCutoffMinutes,
+        airbyteWorkerConfig.connection.scheduleJitter.noJitterCutoffMinutes,
       )
       return waitTime
     }
@@ -71,28 +53,28 @@ class ScheduleJitterHelper(
         FrequencyBucket.HIGH_FREQUENCY_BUCKET ->
           getRandomJitterSeconds(
             random,
-            highFrequencyJitterAmountMinutes,
+            airbyteWorkerConfig.connection.scheduleJitter.highFrequencyBucket.jitterAmountMinutes,
             includeNegativeJitter,
           )
 
         FrequencyBucket.MEDIUM_FREQUENCY_BUCKET ->
           getRandomJitterSeconds(
             random,
-            mediumFrequencyJitterAmountMinutes,
+            airbyteWorkerConfig.connection.scheduleJitter.mediumFrequencyBucket.jitterAmountMinutes,
             includeNegativeJitter,
           )
 
         FrequencyBucket.LOW_FREQUENCY_BUCKET ->
           getRandomJitterSeconds(
             random,
-            lowFrequencyJitterAmountMinutes,
+            airbyteWorkerConfig.connection.scheduleJitter.lowFrequencyBucket.jitterAmountMinutes,
             includeNegativeJitter,
           )
 
         FrequencyBucket.VERY_LOW_FREQUENCY_BUCKET ->
           getRandomJitterSeconds(
             random,
-            veryLowFrequencyJitterAmountMinutes,
+            airbyteWorkerConfig.connection.scheduleJitter.veryLowFrequencyBucket.jitterAmountMinutes,
             includeNegativeJitter,
           )
 
@@ -123,13 +105,13 @@ class ScheduleJitterHelper(
     val waitMinutes = waitTime.toMinutes()
 
     return when {
-      waitMinutes <= this.highFrequencyThresholdMinutes -> {
+      waitMinutes <= this.airbyteWorkerConfig.connection.scheduleJitter.highFrequencyBucket.thresholdMinutes -> {
         FrequencyBucket.HIGH_FREQUENCY_BUCKET
       }
-      waitMinutes <= this.mediumFrequencyThresholdMinutes -> {
+      waitMinutes <= this.airbyteWorkerConfig.connection.scheduleJitter.mediumFrequencyBucket.thresholdMinutes -> {
         FrequencyBucket.MEDIUM_FREQUENCY_BUCKET
       }
-      waitMinutes <= this.lowFrequencyThresholdMinutes -> {
+      waitMinutes <= this.airbyteWorkerConfig.connection.scheduleJitter.lowFrequencyBucket.thresholdMinutes -> {
         FrequencyBucket.LOW_FREQUENCY_BUCKET
       }
       else -> {

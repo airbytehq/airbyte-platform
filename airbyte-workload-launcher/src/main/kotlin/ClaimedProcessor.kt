@@ -15,6 +15,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.micronaut.runtime.AirbyteWorkloadLauncherConfig
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.WorkloadListRequest
 import io.airbyte.workload.api.domain.WorkloadListResponse
@@ -25,7 +26,6 @@ import io.airbyte.workload.launcher.pipeline.LaunchPipeline
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
@@ -43,11 +43,11 @@ class ClaimedProcessor(
   private val pipe: LaunchPipeline,
   private val metricClient: MetricClient,
   private val claimProcessorTracker: ClaimProcessorTracker,
-  @Value("\${airbyte.workload-launcher.parallelism.default-queue}") parallelism: Int,
+  private val workloadLauncherConfiguration: AirbyteWorkloadLauncherConfig,
   @Named("claimedProcessorBackoffDuration") private val backoffDuration: Duration,
   @Named("claimedProcessorBackoffMaxDelay") private val backoffMaxDelay: Duration,
 ) {
-  private val scheduler = Schedulers.newParallel("process-claimed-scheduler", parallelism)
+  private val scheduler = Schedulers.newParallel("process-claimed-scheduler", workloadLauncherConfiguration.parallelism.defaultQueue)
 
   @Trace(operationName = RESUME_CLAIMED_OPERATION_NAME)
   fun retrieveAndProcess(dataplaneId: String) {

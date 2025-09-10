@@ -4,6 +4,7 @@
 
 import io.airbyte.api.client.ApiException
 import io.airbyte.config.WorkloadType
+import io.airbyte.micronaut.runtime.AirbyteWorkloadLauncherConfig
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadListResponse
@@ -47,8 +48,10 @@ class ClaimedProcessorTest {
         workloadApiClient = workloadApiClient,
         pipe = launchPipeline,
         metricClient = mockk(relaxed = true),
-        parallelism = 10,
         claimProcessorTracker = claimProcessorTracker,
+        AirbyteWorkloadLauncherConfig(
+          parallelism = AirbyteWorkloadLauncherConfig.AirbyteWorkloadLauncherParallelismConfig(defaultQueue = 10),
+        ),
         backoffDuration = 1.milliseconds.toKotlinDuration().toJavaDuration(),
         backoffMaxDelay = 2.milliseconds.toKotlinDuration().toJavaDuration(),
       )

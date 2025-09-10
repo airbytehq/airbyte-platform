@@ -27,6 +27,8 @@ import io.airbyte.data.services.WorkspaceService
 import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.ReplicationCommandFallsBackToWorkloadStatus
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.server.helpers.WorkloadIdGenerator
 import io.airbyte.server.repositories.CommandsRepository
 import io.airbyte.server.repositories.domain.Command
@@ -42,8 +44,6 @@ import io.airbyte.workload.services.ConflictException
 import io.airbyte.workload.services.InvalidStatusTransitionException
 import io.airbyte.workload.services.NotFoundException
 import io.airbyte.workload.services.WorkloadService
-import io.micronaut.context.annotation.Property
-import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.nio.file.Path
 import java.time.OffsetDateTime
@@ -89,12 +89,18 @@ class CommandService(
   private val workloadOutputReader: WorkloadOutputDocStoreReader,
   private val workloadIdGenerator: WorkloadIdGenerator,
   private val workspaceService: WorkspaceService,
+  private val airbyteConfig: AirbyteConfig,
+  private val airbyteWorkerConfig: AirbyteWorkerConfig,
   private val featureFlagClient: FeatureFlagClient,
-  @Named("workspaceRoot") private val workspaceRoot: Path,
-  @Property(name = "airbyte.worker.discover.auto-refresh-window") discoverAutoRefreshWindowMinutes: Int,
 ) {
   private val discoverAutoRefreshWindow: Duration =
-    if (discoverAutoRefreshWindowMinutes > 0) discoverAutoRefreshWindowMinutes.minutes else Duration.INFINITE
+    if (airbyteWorkerConfig.discover.autoRefreshWindow >
+      0
+    ) {
+      airbyteWorkerConfig.discover.autoRefreshWindow.minutes
+    } else {
+      Duration.INFINITE
+    }
 
   /** Create a Check command for an actorDefinitionId and a configuration
    *
@@ -210,7 +216,7 @@ class CommandService(
       workloadId = workloadId,
       labels = labels,
       workloadInput = Jsons.serialize(checkInput),
-      logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber)),
+      logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(Path.of(airbyteConfig.workspaceRoot), jobId, attemptNumber)),
       type = WorkloadType.CHECK,
       priority = workloadPriority,
       dataplaneGroupId = dataplaneGroupId,
@@ -299,7 +305,7 @@ class CommandService(
             val discoverCatalogInput = discoverInput.discoverCatalogInput
           },
         ),
-      logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber)),
+      logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(Path.of(airbyteConfig.workspaceRoot), jobId, attemptNumber)),
       type = WorkloadType.DISCOVER,
       priority = workloadPriority,
       dataplaneGroupId = dataplaneGroupId,
@@ -379,7 +385,7 @@ class CommandService(
       workloadId = workloadId,
       labels = labels,
       workloadInput = Jsons.serialize(replicationInput),
-      logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId.toString(), attemptNumber)),
+      logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(Path.of(airbyteConfig.workspaceRoot), jobId.toString(), attemptNumber)),
       type = WorkloadType.SYNC,
       priority = WorkloadPriority.DEFAULT,
       dataplaneGroupId = dataplaneGroupId,

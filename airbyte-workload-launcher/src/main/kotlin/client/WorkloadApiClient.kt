@@ -16,7 +16,7 @@ import io.airbyte.workload.api.domain.WorkloadLaunchedRequest
 import io.airbyte.workload.api.domain.WorkloadQueuePollRequest
 import io.airbyte.workload.launcher.authn.DataplaneIdentityService
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
+import io.micronaut.runtime.ApplicationConfiguration
 import jakarta.inject.Singleton
 
 private val logger = KotlinLogging.logger {}
@@ -25,7 +25,7 @@ private val logger = KotlinLogging.logger {}
 class WorkloadApiClient(
   private val workloadApiClient: WorkloadApiClient,
   private val identityService: DataplaneIdentityService,
-  @Value("\${micronaut.application.name}") private val applicationName: String,
+  private val applicationConfig: ApplicationConfiguration,
 ) {
   /**
    * Report launch failures specifically by using the [LAUNCH_ERROR_SOURCE] source.
@@ -52,7 +52,7 @@ class WorkloadApiClient(
     workloadId: String,
     reason: String? = null,
   ) {
-    updateStatusToFailed(workloadId = workloadId, source = applicationName.removePrefix("airbyte-"), reason = reason)
+    updateStatusToFailed(workloadId = workloadId, source = applicationConfig.name.get().removePrefix("airbyte-"), reason = reason)
   }
 
   private fun updateStatusToFailed(

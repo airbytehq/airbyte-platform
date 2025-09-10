@@ -7,6 +7,7 @@ dependencies {
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
   annotationProcessor(libs.micronaut.jaxrs.processor)
+  ksp(project(":oss:airbyte-configuration-processor"))
 
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
@@ -50,6 +51,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-entitlements"))
   implementation(project(":oss:airbyte-commons-license"))
+  implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-protocol"))
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal"))

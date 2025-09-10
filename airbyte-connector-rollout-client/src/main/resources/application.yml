@@ -20,7 +20,8 @@ micronaut:
         port: ${STATSD_PORT:8125}
 
 airbyte:
-  control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
+  control-plane:
+    auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   internal-api:
     base-path: ${INTERNAL_API_HOST}/api
@@ -32,24 +33,23 @@ airbyte:
     auth:
       type: INTERNAL_CLIENT_TOKEN
       signature-secret: ${AB_JWT_SIGNATURE_SECRET:}
-  acceptance.test.enabled: ${ACCEPTANCE_TEST_ENABLED:false}
+  acceptance-test-enabled: ${ACCEPTANCE_TEST_ENABLED:false}
   role: ${AIRBYTE_ROLE:dev}
-
-temporal:
-  cloud:
-    client:
-      cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
-      key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
-    enabled: ${TEMPORAL_CLOUD_ENABLED:false}
-    host: ${TEMPORAL_CLOUD_HOST:}
-    namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
-  host: ${TEMPORAL_HOST:`localhost:7233`}
-  retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
-  sdk:
-    timeouts:
-      rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
-      rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
-      rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
+  temporal:
+    cloud:
+      client:
+        cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
+        key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
+      enabled: ${TEMPORAL_CLOUD_ENABLED:false}
+      host: ${TEMPORAL_CLOUD_HOST:}
+      namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
+    host: ${TEMPORAL_HOST:`localhost:7233`}
+    retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
+    sdk:
+      timeouts:
+        rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
+        rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
+        rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
 
 jackson:
   mapper:

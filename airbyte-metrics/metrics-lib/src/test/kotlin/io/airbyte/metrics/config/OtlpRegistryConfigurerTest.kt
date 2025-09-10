@@ -7,6 +7,7 @@ package io.airbyte.metrics.config
 import io.airbyte.commons.version.AirbyteVersion
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.registry.otlp.OtlpMeterRegistry
+import io.micronaut.runtime.ApplicationConfiguration
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -37,11 +38,13 @@ internal class OtlpRegistryConfigurerTest {
       mockk {
         every { config() } returns config
       }
-    val airbyteVersion =
-      mockk<AirbyteVersion> {
+    val airbyteVersion: AirbyteVersion =
+      mockk {
         every { serialize() } returns version
       }
-    val configurer = OtlpRegistryConfigurer(applicationName = applicationName, airbyteVersion = airbyteVersion)
+    val applicationConfiguration = ApplicationConfiguration()
+    applicationConfiguration.setName(applicationName)
+    val configurer = OtlpRegistryConfigurer(airbyteVersion = airbyteVersion, applicationConfiguration = applicationConfiguration)
     configurer.configure(meterRegistry)
     verify(exactly = 1) {
       config.commonTags(
@@ -69,11 +72,13 @@ internal class OtlpRegistryConfigurerTest {
       mockk {
         every { config() } returns config
       }
-    val airbyteVersion =
-      mockk<AirbyteVersion> {
+    val airbyteVersion: AirbyteVersion =
+      mockk {
         every { serialize() } returns version
       }
-    val configurer = OtlpRegistryConfigurer(applicationName = applicationName, airbyteVersion = airbyteVersion)
+    val applicationConfiguration = ApplicationConfiguration()
+    applicationConfiguration.setName(applicationName)
+    val configurer = OtlpRegistryConfigurer(airbyteVersion = airbyteVersion, applicationConfiguration = applicationConfiguration)
     configurer.configure(meterRegistry)
     verify(exactly = 1) {
       config.commonTags(
@@ -93,11 +98,13 @@ internal class OtlpRegistryConfigurerTest {
   fun testConfigureNullMeterRegistry() {
     val applicationName = "test-app"
     val version = "1.5.0"
-    val airbyteVersion =
-      mockk<AirbyteVersion> {
+    val airbyteVersion: AirbyteVersion =
+      mockk {
         every { serialize() } returns version
       }
-    val configurer = OtlpRegistryConfigurer(applicationName = applicationName, airbyteVersion = airbyteVersion)
+    val applicationConfiguration = ApplicationConfiguration()
+    applicationConfiguration.setName(applicationName)
+    val configurer = OtlpRegistryConfigurer(airbyteVersion = airbyteVersion, applicationConfiguration = applicationConfiguration)
     assertDoesNotThrow { configurer.configure(null) }
   }
 }

@@ -14,11 +14,10 @@ import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageOptions
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.io.IOs
-import io.micronaut.context.ApplicationContext
+import io.airbyte.micronaut.runtime.AirbyteStorageConfig
+import io.airbyte.micronaut.runtime.StorageType
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Prototype
-import io.micronaut.context.annotation.Value
-import io.micronaut.kotlin.context.createBean
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
@@ -51,32 +50,48 @@ private fun prependIfMissing(
   id: String,
 ) = if (id.startsWith(prefix)) id else "${prefix.trimEnd('/')}/${id.trimStart('/')}"
 
-enum class StorageType {
-  AZURE,
-  GCS,
-  LOCAL,
-  MINIO,
-  S3,
-}
-
 /**
- * Factory for creating a [StorageClient] based on the value of [STORAGE_TYPE] and a [DocumentType].
+ * Factory for creating a [StorageClient] based on the value of [io.airbyte.micronaut.runtime.STORAGE_TYPE] and a [DocumentType].
  */
 @Singleton
 class StorageClientFactory(
-  private val appCtx: ApplicationContext,
-  @Value("\${$STORAGE_TYPE}") private val storageType: StorageType,
+  private val storageConfiguration: AirbyteStorageConfig,
 ) {
   /**
    * Returns a [StorageClient] for the specified [type]
    */
   fun create(type: DocumentType): StorageClient =
-    when (storageType) {
-      StorageType.AZURE -> appCtx.createBean<AzureStorageClient>(type)
-      StorageType.GCS -> appCtx.createBean<GcsStorageClient>(type)
-      StorageType.LOCAL -> appCtx.createBean<LocalStorageClient>(type)
-      StorageType.MINIO -> appCtx.createBean<MinioStorageClient>(type)
-      StorageType.S3 -> appCtx.createBean<S3StorageClient>(type)
+    when (storageConfiguration.type) {
+      StorageType.AZURE ->
+        AzureStorageClient(
+          storageConfiguration.bucket,
+          storageConfiguration.getStorageConfig() as AirbyteStorageConfig.AzureStorageConfig,
+          type,
+        )
+      StorageType.GCS ->
+        GcsStorageClient(
+          storageConfiguration.bucket,
+          storageConfiguration.getStorageConfig() as AirbyteStorageConfig.GcsStorageConfig,
+          type,
+        )
+      StorageType.LOCAL ->
+        LocalStorageClient(
+          storageConfiguration.bucket,
+          storageConfiguration.getStorageConfig() as AirbyteStorageConfig.LocalStorageConfig,
+          type,
+        )
+      StorageType.MINIO ->
+        MinioStorageClient(
+          storageConfiguration.bucket,
+          storageConfiguration.getStorageConfig() as AirbyteStorageConfig.MinioStorageConfig,
+          type,
+        )
+      StorageType.S3 ->
+        S3StorageClient(
+          storageConfiguration.bucket,
+          storageConfiguration.getStorageConfig() as AirbyteStorageConfig.S3StorageConfig,
+          type,
+        )
     }
 }
 
@@ -163,25 +178,26 @@ interface StorageClient {
 /**
  * Constructs a [AzureStorageClient] implementation of the [StorageClient].
  *
- * @param config The [AzureStorageConfig] for configuring this [StorageConfig]
+ * @param bucketConfig The [AirbyteStorageConfig.AirbyteStorageBucketConfig] for configuring this [StorageClient]
  * @param type which [DocumentType] this client represents
  * @param azureClient the [Storage] client, should only be specified for testing purposes
  */
 @Prototype
 class AzureStorageClient(
-  config: AzureStorageConfig,
+  bucketConfig: AirbyteStorageConfig.AirbyteStorageBucketConfig,
   private val type: DocumentType,
   private val azureClient: BlobServiceClient,
 ) : StorageClient {
   override val storageType = StorageType.AZURE
   override val documentType = type
-  override val bucketName = config.bucketName(type)
+  override val bucketName = bucketConfig.bucketName(type)
 
   @Inject
   constructor(
-    config: AzureStorageConfig,
+    bucketConfig: AirbyteStorageConfig.AirbyteStorageBucketConfig,
+    storageConfig: AirbyteStorageConfig.AzureStorageConfig,
     @Parameter type: DocumentType,
-  ) : this(config = config, type = type, azureClient = config.azureClient())
+  ) : this(bucketConfig = bucketConfig, type = type, azureClient = storageConfig.azureClient())
 
   init {
     runCatching { createBucketIfNotExists() }
@@ -234,25 +250,26 @@ class AzureStorageClient(
 /**
  * Constructs a [GcsStorageClient] implementation of the [StorageClient].
  *
- * @param config The [GcsStorageConfig] for configuring this [StorageConfig]
+ * @param bucketConfig The [AirbyteStorageConfig.AirbyteStorageBucketConfig] for configuring this [StorageClient]
  * @param type which [DocumentType] this client represents
  * @param gcsClient the [Storage] client, should only be specified for testing purposes
  */
 @Prototype
 class GcsStorageClient(
-  config: GcsStorageConfig,
+  bucketConfig: AirbyteStorageConfig.AirbyteStorageBucketConfig,
   private val type: DocumentType,
   private val gcsClient: Storage,
 ) : StorageClient {
   override val storageType = StorageType.GCS
   override val documentType = type
-  override val bucketName = config.bucketName(type)
+  override val bucketName = bucketConfig.bucketName(type)
 
   @Inject
   constructor(
-    config: GcsStorageConfig,
+    bucketConfig: AirbyteStorageConfig.AirbyteStorageBucketConfig,
+    storageConfig: AirbyteStorageConfig.GcsStorageConfig,
     @Parameter type: DocumentType,
-  ) : this(config = config, type = type, gcsClient = config.gcsClient())
+  ) : this(bucketConfig = bucketConfig, type = type, gcsClient = storageConfig.gcsClient())
 
   init {
     runCatching { createBucketIfNotExists() }
@@ -298,17 +315,19 @@ class GcsStorageClient(
 /**
  * Constructs a [LocalStorageClient] implementation of the [StorageClient].
  *
- * @param config The [LocalStorageConfig] for configuring this [StorageConfig]
+ * @param bucketConfig The [AirbyteStorageConfig.AirbyteStorageBucketConfig] for configuring this [StorageClient]
+ * @param storageConfig The [AirbyteStorageConfig.AirbyteStorageBucketConfig] for configuring this [StorageClient]
  * @param type which [DocumentType] this client represents
  */
 @Prototype
 class LocalStorageClient(
-  private val config: LocalStorageConfig,
+  private val bucketConfig: AirbyteStorageConfig.AirbyteStorageBucketConfig,
+  private val storageConfig: AirbyteStorageConfig.LocalStorageConfig,
   @Parameter private val type: DocumentType,
 ) : StorageClient {
   override val storageType = StorageType.LOCAL
   override val documentType = type
-  override val bucketName = config.bucketName(type)
+  override val bucketName = bucketConfig.bucketName(type)
 
   override fun list(id: String): List<String> {
     val res =
@@ -340,52 +359,58 @@ class LocalStorageClient(
       .deleteIfExists()
 
   /** Converts an ID [String] to an absolute [Path]. */
-  internal fun toPath(id: String): Path = Path.of(config.root, type.prefix.toString(), id)
+  internal fun toPath(id: String): Path = Path.of(storageConfig.root, type.prefix.toString(), id)
 
   /** Converts an absolute [Path] to an ID [String]. */
-  private fun toId(abspath: Path): String = abspath.relativeTo(Path.of(config.root, type.prefix.toString())).pathString
+  private fun toId(abspath: Path): String = abspath.relativeTo(Path.of(storageConfig.root, type.prefix.toString())).pathString
 }
 
 /**
  * Constructs a [MinioStorageClient] implementation of the [StorageClient].
  *
- * @param config The [MinioStorageClient] for configuring this [StorageConfig]
+ * @param bucketConfig The [AirbyteStorageConfig.AirbyteStorageBucketConfig] for configuring this [StorageClient]
+ * @param storageConfig The [MinioStorageConfiguration] for configuring this [StorageClient]
  * @param type which [DocumentType] this client represents
  * @param s3Client the [S3Client] client, should only be specified for testing purposes
  */
 @Prototype
 class MinioStorageClient(
-  config: MinioStorageConfig,
+  bucketConfig: AirbyteStorageConfig.AirbyteStorageBucketConfig,
+  storageConfig: AirbyteStorageConfig.MinioStorageConfig,
   type: DocumentType,
-  s3Client: S3Client = config.s3Client(),
-) : AbstractS3StorageClient(config = config, type = type, s3Client = s3Client) {
+  s3Client: S3Client = storageConfig.s3Client(),
+) : AbstractS3StorageClient(bucketConfig = bucketConfig, type = type, s3Client = s3Client) {
   override val storageType = StorageType.MINIO
 
   @Inject
   constructor(
-    config: MinioStorageConfig,
+    bucketConfig: AirbyteStorageConfig.AirbyteStorageBucketConfig,
+    storageConfig: AirbyteStorageConfig.MinioStorageConfig,
     @Parameter type: DocumentType,
-  ) : this(config = config, type = type, s3Client = config.s3Client())
+  ) : this(bucketConfig = bucketConfig, storageConfig = storageConfig, type = type, s3Client = storageConfig.s3Client())
 }
 
 /**
  * Constructs a [S3StorageClient] implementation of the [StorageClient].
  *
- * @param config The [S3StorageClient] for configuring this [StorageConfig]
+ * @param bucketConfig The [AirbyteStorageConfig.AirbyteStorageBucketConfig] for configuring this [StorageClient]
+ * @param storageConfig The [AirbyteStorageConfig.S3StorageConfig] for configuring this [StorageClient]
  * @param type which [DocumentType] this client represents
  * @param s3Client the [S3Client] client, should only be specified for testing purposes
  */
 @Prototype
 class S3StorageClient(
-  config: S3StorageConfig,
+  bucketConfig: AirbyteStorageConfig.AirbyteStorageBucketConfig,
+  storageConfig: AirbyteStorageConfig.S3StorageConfig,
   type: DocumentType,
-  s3Client: S3Client = config.s3Client(),
-) : AbstractS3StorageClient(config = config, type = type, s3Client = s3Client) {
+  s3Client: S3Client = storageConfig.s3Client(),
+) : AbstractS3StorageClient(bucketConfig = bucketConfig, type = type, s3Client = s3Client) {
   @Inject
   constructor(
-    config: S3StorageConfig,
+    bucketConfig: AirbyteStorageConfig.AirbyteStorageBucketConfig,
+    storageConfig: AirbyteStorageConfig.S3StorageConfig,
     @Parameter type: DocumentType,
-  ) : this(config = config, type = type, s3Client = config.s3Client())
+  ) : this(bucketConfig = bucketConfig, storageConfig = storageConfig, type = type, s3Client = storageConfig.s3Client())
 
   override val storageType = StorageType.S3
 }
@@ -395,17 +420,17 @@ class S3StorageClient(
  *
  * As both [MinioStorageClient] and [S3StorageClient] adhere to the S3 API, this consolidates these to a single abstract class.
  *
- * @param config The [StorageConfig] for configuring this [StorageClient]
+ * @param bucketConfig The [AirbyteStorageConfig.AirbyteStorageBucketConfig] for configuring this [StorageClient]
  * @param type which [DocumentType] this client represents
  * @param s3Client the [S3Client] client, should only be specified for testing purposes
  */
 abstract class AbstractS3StorageClient internal constructor(
-  config: StorageConfig,
+  bucketConfig: AirbyteStorageConfig.AirbyteStorageBucketConfig,
   private val type: DocumentType,
   private val s3Client: S3Client,
 ) : StorageClient {
   override val documentType: DocumentType = type
-  override val bucketName = config.bucketName(type)
+  override val bucketName = bucketConfig.bucketName(type)
 
   init {
     runCatching { createBucketIfNotExists() }
@@ -451,7 +476,7 @@ abstract class AbstractS3StorageClient internal constructor(
             .key(key(id))
             .build(),
         ).asString(StandardCharsets.UTF_8)
-    } catch (e: NoSuchKeyException) {
+    } catch (_: NoSuchKeyException) {
       null
     }
 
@@ -466,7 +491,7 @@ abstract class AbstractS3StorageClient internal constructor(
             .build(),
         )
         true
-      } catch (e: NoSuchKeyException) {
+      } catch (_: NoSuchKeyException) {
         false
       }
 
@@ -492,7 +517,7 @@ abstract class AbstractS3StorageClient internal constructor(
     return try {
       s3Client.headBucket(headBucketRequest)
       true
-    } catch (e: Exception) {
+    } catch (_: Exception) {
       false
     }
   }
@@ -501,21 +526,21 @@ abstract class AbstractS3StorageClient internal constructor(
 /**
  * Extension function for extracting a [Storage] client out of the [GcsStorageConfig].
  *
- * @receiver [GcsStorageConfig]
+ * @receiver [AirbyteStorageConfig.AzureStorageConfig]
  * internal for mocking purposes
  */
-internal fun AzureStorageConfig.azureClient(): BlobServiceClient =
+internal fun AirbyteStorageConfig.AzureStorageConfig.azureClient(): BlobServiceClient =
   BlobServiceClientBuilder()
     .connectionString(this@azureClient.connectionString)
     .buildClient()
 
 /**
- * Extension function for extracting a [Storage] client out of the [GcsStorageConfig].
+ * Extension function for extracting a [Storage] client out of the [AirbyteStorageConfig.GcsStorageConfig].
  *
- * @receiver [GcsStorageConfig]
+ * @receiver [AirbyteStorageConfig.GcsStorageConfig]
  * internal for mocking purposes
  */
-internal fun GcsStorageConfig.gcsClient(): Storage {
+internal fun AirbyteStorageConfig.GcsStorageConfig.gcsClient(): Storage {
   val credentialsByteStream = ByteArrayInputStream(Files.readAllBytes(Path.of(this.applicationCredentials)))
   val credentials = ServiceAccountCredentials.fromStream(credentialsByteStream)
   return StorageOptions
@@ -526,11 +551,11 @@ internal fun GcsStorageConfig.gcsClient(): Storage {
 }
 
 /**
- * Extension function for extracting a [Storage] client out of the [MinioStorageConfig].
+ * Extension function for extracting a [Storage] client out of the [AirbyteStorageConfig.MinioStorageConfig].
  *
- * @receiver [MinioStorageConfig]
+ * @receiver [AirbyteStorageConfig.MinioStorageConfig]
  */
-internal fun MinioStorageConfig.s3Client(): S3Client =
+internal fun AirbyteStorageConfig.MinioStorageConfig.s3Client(): S3Client =
   S3Client
     .builder()
     .serviceConfiguration { it.pathStyleAccessEnabled(true) }
@@ -541,15 +566,15 @@ internal fun MinioStorageConfig.s3Client(): S3Client =
     .build()
 
 /**
- * Extension function for extracting a [Storage] client out of the [S3StorageConfig].
+ * Extension function for extracting a [Storage] client out of the [AirbyteStorageConfig.S3StorageConfig].
  *
- * @receiver [S3StorageConfig]
+ * @receiver [AirbyteStorageConfig.S3StorageConfig]
  */
-internal fun S3StorageConfig.s3Client(): S3Client {
+internal fun AirbyteStorageConfig.S3StorageConfig.s3Client(): S3Client {
   val builder = S3Client.builder().region(Region.of(this.region))
 
   // If credentials are part of this config, specify them. Otherwise, let the SDK default credential provider take over.
-  if (!this.accessKey.isNullOrBlank()) {
+  if (this.accessKey.isNotBlank()) {
     builder.credentialsProvider {
       AwsBasicCredentials.create(this.accessKey, this.secretAccessKey)
     }
@@ -561,13 +586,13 @@ internal fun S3StorageConfig.s3Client(): S3Client {
 /**
  * Helper method to extract a bucket name for the given [DocumentType].
  */
-fun StorageConfig.bucketName(type: DocumentType): String =
+fun AirbyteStorageConfig.AirbyteStorageBucketConfig.bucketName(type: DocumentType): String =
   when (type) {
-    DocumentType.STATE -> this.buckets.state
-    DocumentType.WORKLOAD_OUTPUT -> this.buckets.workloadOutput
-    DocumentType.LOGS -> this.buckets.log
-    DocumentType.ACTIVITY_PAYLOADS -> this.buckets.activityPayload
-    DocumentType.AUDIT_LOGS -> this.buckets.auditLogging?.takeIf { it.isNotBlank() } ?: ""
-    DocumentType.REPLICATION_DUMP -> this.buckets.replicationDump?.takeIf { it.isNotBlank() } ?: REPLICATION_DUMP
-    DocumentType.PROFILER_OUTPUT -> this.buckets.profilerOutput?.takeIf { it.isNotBlank() } ?: ""
+    DocumentType.STATE -> this.state
+    DocumentType.WORKLOAD_OUTPUT -> this.workloadOutput
+    DocumentType.LOGS -> this.log
+    DocumentType.ACTIVITY_PAYLOADS -> this.activityPayload
+    DocumentType.AUDIT_LOGS -> this.auditLogging
+    DocumentType.PROFILER_OUTPUT -> this.profilerOutput
+    DocumentType.REPLICATION_DUMP -> this.replicationDump
   }

@@ -6,10 +6,10 @@ package io.airbyte.workload.launcher.pipeline.consumer
 
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.micronaut.runtime.AirbyteWorkloadLauncherConfig
 import io.airbyte.workload.launcher.metrics.ReactorMetricsWrapper
 import io.airbyte.workload.launcher.pipeline.LaunchPipeline
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.scheduler.Schedulers
@@ -23,12 +23,14 @@ private val logger = KotlinLogging.logger { }
 class WorkloadApiQueueConsumer(
   private val reactorMetricsWrapper: ReactorMetricsWrapper,
   private val pipeline: LaunchPipeline,
+  private val workloadLauncherConfiguration: AirbyteWorkloadLauncherConfig,
   @Named("highPriorityQueuePoller") private val highPriorityQueuePoller: WorkloadApiQueuePoller,
   @Named("defaultPriorityQueuePoller") private val defaultPriorityQueuePoller: WorkloadApiQueuePoller,
-  @Value("\${airbyte.workload-launcher.parallelism.default-queue}") private val defaultPriorityParallelism: Int,
-  @Value("\${airbyte.workload-launcher.parallelism.high-priority-queue}") private val highPriorityParallelism: Int,
-  @Value("\${airbyte.workload-launcher.consumer.queue-task-cap}") private val queueTaskCap: Int,
 ) {
+  private val defaultPriorityParallelism = workloadLauncherConfiguration.parallelism.defaultQueue
+  private val highPriorityParallelism = workloadLauncherConfiguration.parallelism.highPriorityQueue
+  private val queueTaskCap = workloadLauncherConfiguration.consumer.queueTaskCap
+
   companion object {
     const val QUEUE_CONSUMER_METRIC_PREFIX = "workload_queue_consumer"
     const val DEFAULT_PRIORITY_NAME = "default"

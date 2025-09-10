@@ -1,0 +1,5 @@
+airbyte:
+  bootloader:
+    auto-upgrade-connectors: true
+    migration-baseline-version: 1.0.0
+    run-migration-at-startup: false

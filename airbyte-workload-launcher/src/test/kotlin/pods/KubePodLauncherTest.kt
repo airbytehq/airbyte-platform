@@ -8,6 +8,7 @@ import dev.failsafe.RetryPolicy
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.workload.launcher.config.ApplicationBeanFactory
 import io.fabric8.kubernetes.api.model.HasMetadata
 import io.fabric8.kubernetes.api.model.ObjectMeta
@@ -53,14 +54,24 @@ class KubePodLauncherTest {
 
   private lateinit var kubernetesClientRetryPolicy: RetryPolicy<Any>
 
+  private lateinit var airbyteWorkerConfig: AirbyteWorkerConfig
+
   @BeforeEach
   fun setup() {
+    airbyteWorkerConfig =
+      AirbyteWorkerConfig(
+        job =
+          AirbyteWorkerConfig.AirbyteWorkerJobConfig(
+            kubernetes =
+              AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig(namespace = "namespace"),
+          ),
+      )
     kubernetesClientRetryPolicy = RetryPolicy.ofDefaults()
     kubePodLauncher =
       KubePodLauncher(
         kubernetesClient,
         metricClient,
-        "namespace",
+        airbyteWorkerConfig,
         kubernetesClientRetryPolicy,
       )
 
@@ -151,7 +162,7 @@ class KubePodLauncherTest {
       KubePodLauncher(
         kubernetesClient,
         metricClient,
-        "namespace",
+        airbyteWorkerConfig,
         kubernetesClientRetryPolicy,
       )
 
@@ -189,7 +200,7 @@ class KubePodLauncherTest {
       KubePodLauncher(
         kubernetesClient,
         metricClient,
-        "namespace",
+        airbyteWorkerConfig,
         kubernetesClientRetryPolicy,
       )
 
@@ -230,7 +241,7 @@ class KubePodLauncherTest {
       KubePodLauncher(
         kubernetesClient,
         metricClient,
-        "namespace",
+        airbyteWorkerConfig,
         kubernetesClientRetryPolicy,
       )
 
@@ -269,7 +280,7 @@ class KubePodLauncherTest {
       KubePodLauncher(
         kubernetesClient,
         metricClient,
-        "namespace",
+        airbyteWorkerConfig,
         kubernetesClientRetryPolicy,
       )
 
@@ -310,7 +321,7 @@ class KubePodLauncherTest {
       KubePodLauncher(
         kubernetesClient,
         metricClient,
-        "namespace",
+        airbyteWorkerConfig,
         kubernetesClientRetryPolicy,
       )
 

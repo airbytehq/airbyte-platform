@@ -15,6 +15,9 @@ import io.airbyte.data.services.ServiceAccountNotFound
 import io.airbyte.data.services.ServiceAccountsService
 import io.airbyte.data.services.shared.DataplaneWithServiceAccount
 import io.airbyte.domain.models.ServiceAccount
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.kotest.assertions.throwables.shouldThrow
 import io.mockk.Called
@@ -80,6 +83,9 @@ class DataplaneInitializerTest {
   private val groupService = mockk<DataplaneGroupService>()
   private val k8sClient = mockk<KubernetesClient>()
   private val serviceAccountsService = mockk<ServiceAccountsService>()
+  private lateinit var airbyteConfig: AirbyteConfig
+  private lateinit var airbyteWorkerConfig: AirbyteWorkerConfig
+  private lateinit var airbyteAuthConfig: AirbyteAuthConfig
 
   @BeforeEach
   fun setup() {
@@ -87,6 +93,28 @@ class DataplaneInitializerTest {
     every { K8sSecretHelper.createOrUpdateSecret(any(), any(), any()) } returns Unit
     every { K8sSecretHelper.copySecretToNamespace(any(), any(), any(), any()) } returns Unit
     every { K8sSecretHelper.getAndDecodeSecret(any(), any()) } returns null
+
+    airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.COMMUNITY)
+    airbyteAuthConfig =
+      AirbyteAuthConfig(
+        kubernetesSecret =
+          AirbyteAuthConfig.AirbyteAuthKubernetesSecretConfig(
+            name = SECRET_NAME,
+          ),
+        dataplaneCredentials =
+          AirbyteAuthConfig.AirbyteAuthDataplaneCredentialsConfig(
+            clientIdSecretKey = CLIENT_ID_SECRET_KEY,
+            clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
+          ),
+      )
+    airbyteWorkerConfig =
+      AirbyteWorkerConfig(
+        job =
+          AirbyteWorkerConfig.AirbyteWorkerJobConfig(
+            kubernetes =
+              AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig(namespace = JOBS_NAMESPACE),
+          ),
+      )
   }
 
   @AfterEach
@@ -107,11 +135,9 @@ class DataplaneInitializerTest {
         dataplaneService = service,
         groupService = groupService,
         k8sClient = k8sClient,
-        edition = Configs.AirbyteEdition.COMMUNITY,
-        secretName = SECRET_NAME,
-        clientIdSecretKey = CLIENT_ID_SECRET_KEY,
-        clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
-        jobsNamespace = JOBS_NAMESPACE,
+        airbyteConfig = airbyteConfig,
+        airbyteAuthConfig = airbyteAuthConfig,
+        airbyteWorkerConfig = airbyteWorkerConfig,
         serviceAccountsService = serviceAccountsService,
       )
 
@@ -147,11 +173,9 @@ class DataplaneInitializerTest {
         dataplaneService = service,
         groupService = groupService,
         k8sClient = k8sClient,
-        edition = Configs.AirbyteEdition.COMMUNITY,
-        secretName = SECRET_NAME,
-        clientIdSecretKey = CLIENT_ID_SECRET_KEY,
-        clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
-        jobsNamespace = JOBS_NAMESPACE,
+        airbyteConfig = airbyteConfig,
+        airbyteAuthConfig = airbyteAuthConfig,
+        airbyteWorkerConfig = airbyteWorkerConfig,
         serviceAccountsService = serviceAccountsService,
       )
 
@@ -188,11 +212,9 @@ class DataplaneInitializerTest {
         dataplaneService = service,
         groupService = groupService,
         k8sClient = k8sClient,
-        edition = Configs.AirbyteEdition.COMMUNITY,
-        secretName = SECRET_NAME,
-        clientIdSecretKey = CLIENT_ID_SECRET_KEY,
-        clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
-        jobsNamespace = JOBS_NAMESPACE,
+        airbyteConfig = airbyteConfig,
+        airbyteAuthConfig = airbyteAuthConfig,
+        airbyteWorkerConfig = airbyteWorkerConfig,
         serviceAccountsService = serviceAccountsService,
       )
 
@@ -225,11 +247,9 @@ class DataplaneInitializerTest {
         dataplaneService = service,
         groupService = groupService,
         k8sClient = k8sClient,
-        edition = Configs.AirbyteEdition.COMMUNITY,
-        secretName = SECRET_NAME,
-        clientIdSecretKey = CLIENT_ID_SECRET_KEY,
-        clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
-        jobsNamespace = JOBS_NAMESPACE,
+        airbyteConfig = airbyteConfig,
+        airbyteAuthConfig = airbyteAuthConfig,
+        airbyteWorkerConfig = airbyteWorkerConfig,
         serviceAccountsService = serviceAccountsService,
       )
 
@@ -251,11 +271,9 @@ class DataplaneInitializerTest {
         dataplaneService = service,
         groupService = groupService,
         k8sClient = k8sClient,
-        edition = Configs.AirbyteEdition.CLOUD,
-        secretName = SECRET_NAME,
-        clientIdSecretKey = CLIENT_ID_SECRET_KEY,
-        clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
-        jobsNamespace = JOBS_NAMESPACE,
+        airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.CLOUD),
+        airbyteAuthConfig = airbyteAuthConfig,
+        airbyteWorkerConfig = airbyteWorkerConfig,
         serviceAccountsService = serviceAccountsService,
       )
 
@@ -289,11 +307,9 @@ class DataplaneInitializerTest {
         dataplaneService = service,
         groupService = groupService,
         k8sClient = k8sClient,
-        edition = Configs.AirbyteEdition.COMMUNITY,
-        secretName = SECRET_NAME,
-        clientIdSecretKey = CLIENT_ID_SECRET_KEY,
-        clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
-        jobsNamespace = JOBS_NAMESPACE,
+        airbyteConfig = airbyteConfig,
+        airbyteAuthConfig = airbyteAuthConfig,
+        airbyteWorkerConfig = airbyteWorkerConfig,
         serviceAccountsService = serviceAccountsService,
       )
 
@@ -314,11 +330,9 @@ class DataplaneInitializerTest {
         dataplaneService = service,
         groupService = groupService,
         k8sClient = k8sClient,
-        edition = Configs.AirbyteEdition.COMMUNITY,
-        secretName = SECRET_NAME,
-        clientIdSecretKey = CLIENT_ID_SECRET_KEY,
-        clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
-        jobsNamespace = JOBS_NAMESPACE,
+        airbyteConfig = airbyteConfig,
+        airbyteAuthConfig = airbyteAuthConfig,
+        airbyteWorkerConfig = airbyteWorkerConfig,
         serviceAccountsService = serviceAccountsService,
       )
 

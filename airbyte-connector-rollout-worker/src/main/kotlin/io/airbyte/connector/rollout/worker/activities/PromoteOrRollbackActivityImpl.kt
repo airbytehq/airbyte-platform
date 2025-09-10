@@ -12,9 +12,9 @@ import io.airbyte.connector.rollout.shared.ConnectorRolloutActivityHelpers
 import io.airbyte.connector.rollout.shared.models.ActionType
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPromoteOrRollback
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
+import io.airbyte.connector.rollout.worker.runtime.AirbyteConnectorRolloutConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import okhttp3.Call
 import okhttp3.Callback
@@ -32,8 +32,7 @@ private val logger = KotlinLogging.logger {}
 @Requires(property = "airbyte.connector_rollouts.github_workflow.github_token")
 class PromoteOrRollbackActivityImpl(
   private val airbyteApiClient: AirbyteApiClient,
-  @Value("\${airbyte.connector_rollouts.github_workflow.dispatch_url}") private val url: String,
-  @Value("\${airbyte.connector_rollouts.github_workflow.github_token}") private val token: String,
+  private val airbyteConnectorRolloutConfig: AirbyteConnectorRolloutConfig,
 ) : PromoteOrRollbackActivity {
   init {
     logger.info { "Initialized PromotePromoteOrRollbackActivityImpl" }
@@ -71,9 +70,9 @@ class PromoteOrRollbackActivityImpl(
     val request =
       Request
         .Builder()
-        .url(url)
+        .url(airbyteConnectorRolloutConfig.githubRollout.dispatchUrl)
         .post(body)
-        .addHeader("Authorization", "Bearer $token")
+        .addHeader("Authorization", "Bearer ${airbyteConnectorRolloutConfig.githubRollout.githubToken}")
         .addHeader("Accept", "application/vnd.github+json")
         .addHeader("X-GitHub-Api-Version", "2022-11-28")
         .build()

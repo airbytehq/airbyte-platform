@@ -154,11 +154,12 @@ airbyte:
       verify-audience: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_AUDIENCE:false}
       issuers:
         - ${WEBAPP_URL}
-        - ${DEFAULT_REALM}
+        - ${DEFAULT_REALM:airbyte}
         - ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ISSUER:}
       audiences:
         - ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_AUDIENCE:airbyte-server}
         - ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_AUDIENCE:}
+      type: simple
   cloud:
     storage:
       type: ${STORAGE_TYPE}
@@ -169,7 +170,7 @@ airbyte:
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
         audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
       azure:
-        connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
+        connection-string: ${AZURE_STORAGE_CONNECTION_STRING:}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       minio:
@@ -208,7 +209,7 @@ airbyte:
     oss: ""
     cloud: "airbyte.io"
   feature-flag:
-    client: ${FEATURE_FLAG_CLIENT:}
+    client: ${FEATURE_FLAG_CLIENT:CONFIGFILE}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
     base-url: ${FEATURE_FLAG_BASEURL:}
@@ -366,7 +367,7 @@ airbyte:
     job:
       error-reporting:
         sentry:
-          dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
+          dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN:}
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
       kube:
         main:
@@ -393,6 +394,23 @@ airbyte:
         max-jobs: ${MAX_FAILED_JOBS_IN_A_ROW_BEFORE_CONNECTION_DISABLE:30}
         max-fields-per-connection: ${MAX_FIELDS_PER_CONNECTION:20000}
   temporal:
+    cloud:
+      client:
+        cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
+        key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
+      enabled: ${TEMPORAL_CLOUD_ENABLED:false}
+      host: ${TEMPORAL_CLOUD_HOST:}
+      namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
+      connector-rollout:
+        host: ${TEMPORAL_CLOUD_HOST_CONNECTOR_ROLLOUT:}
+        namespace: ${TEMPORAL_CLOUD_NAMESPACE_CONNECTOR_ROLLOUT:}
+    host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
+    retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
+    sdk:
+      timeouts:
+        rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
+        rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
+        rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
   web-app:
     url: ${WEBAPP_URL:}
     datadog_application_id: ${WEBAPP_DATADOG_APPLICATION_ID:}
@@ -409,8 +427,7 @@ airbyte:
     posthog_api_key: ${WEBAPP_POSTHOG_API_KEY:}
     posthog_host: ${WEBAPP_POSTHOG_HOST:}
 
-  workspace:
-    root: ${WORKSPACE_ROOT}
+  workspace-root: ${WORKSPACE_ROOT}
   protocol:
     min-version: ${AIRBYTE_PROTOCOL_VERSION_MIN:0.0.0}
     max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}
@@ -453,27 +470,21 @@ airbyte:
     logging:
       enabled: ${AUDIT_LOGGING_ENABLED:false}
 
-temporal:
-  cloud:
-    client:
-      cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
-      key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
-    enabled: ${TEMPORAL_CLOUD_ENABLED:false}
-    host: ${TEMPORAL_CLOUD_HOST:}
-    namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
-    connector-rollout:
-      host: ${TEMPORAL_CLOUD_HOST_CONNECTOR_ROLLOUT:}
-      namespace: ${TEMPORAL_CLOUD_NAMESPACE_CONNECTOR_ROLLOUT:}
-  host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
-  retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
-  sdk:
-    timeouts:
-      rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
-      rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
-      rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
-
 datasources:
   config:
+    connection-test-query: SELECT 1
+    connection-timeout: 30000
+    maximum-pool-size: ${CONFIG_DB_MAX_POOL_SIZE:10}
+    minimum-idle: 0
+    idle-timeout: 600000
+    initialization-fail-timeout: -1 # Disable fail fast checking to avoid issues due to other pods not being started in time
+    url: ${DATABASE_URL}
+    driverClassName: org.postgresql.Driver
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD:}
+    leak-detection-threshold: 40000 # This should be slightly higher than the connection-timeout setting but not too high to avoid false positives and negatives.
+    max-lifetime: 600000
+  jobs:
     connection-test-query: SELECT 1
     connection-timeout: 30000
     maximum-pool-size: ${CONFIG_DB_MAX_POOL_SIZE:10}

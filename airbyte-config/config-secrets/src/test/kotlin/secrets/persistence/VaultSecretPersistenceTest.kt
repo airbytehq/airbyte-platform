@@ -5,6 +5,7 @@
 package io.airbyte.config.secrets.persistence
 
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
+import io.airbyte.micronaut.runtime.AirbyteSecretsManagerConfig.AirbyteSecretsManagerStoreConfig.VaultSecretsManagerConfig
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -23,8 +24,16 @@ internal class VaultSecretPersistenceTest {
     vaultContainer = VaultContainer("hashicorp/vault").withVaultToken("vault-dev-token-id")
     vaultContainer.start()
     val vaultAddress = "http://${vaultContainer.host}:${vaultContainer.firstMappedPort}"
-    vaultClient = VaultClient(address = vaultAddress, token = "vault-dev-token-id")
-    persistence = VaultSecretPersistence(vaultClient = vaultClient, pathPrefix = "secret/testing")
+    vaultClient =
+      SystemVaultClient(
+        systemConfig =
+          VaultSecretsManagerConfig(
+            address = vaultAddress,
+            prefix = "secret/testing",
+            token = "vault-dev-token-id",
+          ),
+      )
+    persistence = VaultSecretPersistence(vaultClient = vaultClient)
     baseCoordinate = "airbyte_VaultSecretPersistenceIntegrationTest_coordinate_${Random.nextInt() % 20000}"
   }
 

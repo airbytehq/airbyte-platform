@@ -1,0 +1,17 @@
+airbyte:
+  internal-api:
+    base-path: http://localhost:8080/api
+  cloud:
+    storage:
+      type: local
+      bucket:
+        log: log
+        state: state
+        workload-output: workload
+        activity-payload: payload
+        audit-logging: audit-logging
+  worker:
+    job:
+      error-reporting:
+        sentry:
+          dsn: test-dsn

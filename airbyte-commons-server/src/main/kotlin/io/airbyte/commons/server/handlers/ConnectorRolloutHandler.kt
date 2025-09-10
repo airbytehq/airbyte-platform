@@ -27,6 +27,7 @@ import io.airbyte.data.exceptions.InvalidRequestException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -35,6 +36,8 @@ import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.math.ceil
 import kotlin.math.min
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * OperationsHandler. Javadocs suppressed because api docs should be used as source of truth.

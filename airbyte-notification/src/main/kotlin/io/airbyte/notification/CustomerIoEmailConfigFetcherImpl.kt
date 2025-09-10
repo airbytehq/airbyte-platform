@@ -18,7 +18,7 @@ private val log = KotlinLogging.logger { }
  * Fetch the configuration to send a notification using customerIo.
  */
 @Singleton
-@Requires(property = "airbyte.notification.customerio.apikey", notEquals = "")
+@Requires(property = "airbyte.notification.customerio.api-key", pattern = ".+")
 class CustomerIoEmailConfigFetcherImpl(
   private val airbyteApiClient: AirbyteApiClient,
 ) : CustomerIoEmailConfigFetcher {

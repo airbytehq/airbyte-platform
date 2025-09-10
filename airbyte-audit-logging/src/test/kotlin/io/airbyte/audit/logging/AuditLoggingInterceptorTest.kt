@@ -15,6 +15,8 @@ import io.airbyte.commons.storage.StorageClient
 import io.airbyte.commons.storage.StorageClientFactory
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.StoreAuditLogs
+import io.airbyte.micronaut.runtime.AirbyteAuditLoggingConfig
+import io.airbyte.micronaut.runtime.AirbyteStorageConfig
 import io.micronaut.aop.MethodInvocationContext
 import io.micronaut.context.ApplicationContext
 import io.micronaut.core.annotation.AnnotationValue
@@ -42,6 +44,7 @@ class AuditLoggingInterceptorTest {
   private lateinit var context: MethodInvocationContext<Any, Any>
   private lateinit var applicationContext: ApplicationContext
   private lateinit var auditLoggingHelper: AuditLoggingHelper
+  private lateinit var airbyteStorageConfig: AirbyteStorageConfig
   private lateinit var storageClientFactory: StorageClientFactory
   private lateinit var featureFlagClient: FeatureFlagClient
 
@@ -52,6 +55,7 @@ class AuditLoggingInterceptorTest {
     auditLoggingHelper = mockk()
     storageClientFactory = mockk(relaxed = true)
     featureFlagClient = mockk()
+    airbyteStorageConfig = mockk(relaxed = true)
   }
 
   @AfterEach
@@ -63,11 +67,11 @@ class AuditLoggingInterceptorTest {
   fun `should only proceed the request without logging the result if it is not enabled`() {
     interceptor =
       AuditLoggingInterceptor(
-        false,
-        null,
+        AirbyteAuditLoggingConfig(enabled = false),
         applicationContext,
         auditLoggingHelper,
         featureFlagClient,
+        airbyteStorageConfig,
         storageClientFactory,
       )
 
@@ -88,14 +92,16 @@ class AuditLoggingInterceptorTest {
 
   @Test
   fun `should proceed the request and log the result`() {
+    every { airbyteStorageConfig.bucket.log } returns "test-audit-log-bucket"
+    every { airbyteStorageConfig.bucket.auditLogging } returns "test-audit-log-bucket"
     interceptor =
       spyk(
         AuditLoggingInterceptor(
-          true,
-          "test-audit-log-bucket",
+          AirbyteAuditLoggingConfig(enabled = true),
           applicationContext,
           auditLoggingHelper,
           featureFlagClient,
+          airbyteStorageConfig,
           storageClientFactory,
         ),
       )

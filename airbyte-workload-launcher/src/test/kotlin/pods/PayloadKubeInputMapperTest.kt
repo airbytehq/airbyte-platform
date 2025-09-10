@@ -17,6 +17,7 @@ import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.NodeSelectorOverride
 import io.airbyte.featureflag.TestClient
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -50,7 +51,7 @@ internal class PayloadKubeInputMapperTest {
   fun `builds a kube input from a replication payload`(useCustomConnector: Boolean) {
     val labeler: PodLabeler = mockk()
     val namespace = "test-namespace"
-    val imageRegistry = null
+    val imageRegistry = ""
     val podName = "a-repl-pod"
     val podNameGenerator: PodNameGenerator = mockk()
     every { podNameGenerator.getReplicationPodName(any(), any()) } returns podName
@@ -77,8 +78,16 @@ internal class PayloadKubeInputMapperTest {
       PayloadKubeInputMapper(
         labeler,
         podNameGenerator,
-        namespace,
-        imageRegistry,
+        AirbyteWorkerConfig(
+          job =
+            AirbyteWorkerConfig.AirbyteWorkerJobConfig(
+              kubernetes =
+                AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig(
+                  connectorImageRegistry = imageRegistry,
+                  namespace = namespace,
+                ),
+            ),
+        ),
         containerInfo,
         replConfigs,
         checkConfigs,
@@ -191,7 +200,7 @@ internal class PayloadKubeInputMapperTest {
 
     val labeler: PodLabeler = mockk()
     val namespace = "test-namespace"
-    val imageRegistry = null
+    val imageRegistry = ""
     val podName = "check-pod"
     val podNameGenerator: PodNameGenerator = mockk()
     every { podNameGenerator.getCheckPodName(any(), any(), any()) } returns podName
@@ -217,8 +226,16 @@ internal class PayloadKubeInputMapperTest {
       PayloadKubeInputMapper(
         labeler,
         podNameGenerator,
-        namespace,
-        imageRegistry,
+        AirbyteWorkerConfig(
+          job =
+            AirbyteWorkerConfig.AirbyteWorkerJobConfig(
+              kubernetes =
+                AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig(
+                  connectorImageRegistry = imageRegistry,
+                  namespace = namespace,
+                ),
+            ),
+        ),
         orchestratorContainerInfo,
         replConfigs,
         checkConfigs,
@@ -306,7 +323,7 @@ internal class PayloadKubeInputMapperTest {
 
     val labeler: PodLabeler = mockk()
     val namespace = "test-namespace"
-    val imageRegistry = null
+    val imageRegistry = ""
     val podName = "check-pod"
     val podNameGenerator: PodNameGenerator = mockk()
     every { podNameGenerator.getDiscoverPodName(any(), any(), any()) } returns podName
@@ -332,8 +349,16 @@ internal class PayloadKubeInputMapperTest {
       PayloadKubeInputMapper(
         labeler,
         podNameGenerator,
-        namespace,
-        imageRegistry,
+        AirbyteWorkerConfig(
+          job =
+            AirbyteWorkerConfig.AirbyteWorkerJobConfig(
+              kubernetes =
+                AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig(
+                  connectorImageRegistry = imageRegistry,
+                  namespace = namespace,
+                ),
+            ),
+        ),
         orchestratorContainerInfo,
         replConfigs,
         checkConfigs,
@@ -419,7 +444,7 @@ internal class PayloadKubeInputMapperTest {
 
     val labeler: PodLabeler = mockk()
     val namespace = "test-namespace"
-    val imageRegistry = null
+    val imageRegistry = ""
     val podName = "check-pod"
     val podNameGenerator: PodNameGenerator = mockk()
     every { podNameGenerator.getSpecPodName(any(), any(), any()) } returns podName
@@ -443,8 +468,16 @@ internal class PayloadKubeInputMapperTest {
       PayloadKubeInputMapper(
         labeler,
         podNameGenerator,
-        namespace,
-        imageRegistry,
+        AirbyteWorkerConfig(
+          job =
+            AirbyteWorkerConfig.AirbyteWorkerJobConfig(
+              kubernetes =
+                AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig(
+                  connectorImageRegistry = imageRegistry,
+                  namespace = namespace,
+                ),
+            ),
+        ),
         orchestratorContainerInfo,
         replConfigs,
         checkConfigs,
@@ -519,7 +552,7 @@ internal class PayloadKubeInputMapperTest {
     val envVarFactory: RuntimeEnvVarFactory = mockk()
     val podNetworkSecurityLabeler: PodNetworkSecurityLabeler = mockk()
     val labeler = PodLabeler(podNetworkSecurityLabeler)
-    val podNameGenerator = PodNameGenerator("test-ns")
+    val podNameGenerator = PodNameGenerator()
     val orchestratorContainerInfo = KubeContainerInfo("orch-img", "Always")
     val reqs = ResourceRequirements()
     val resourceReqFactory = ResourceRequirementsFactory(reqs, reqs, reqs, reqs, reqs)
@@ -594,8 +627,16 @@ internal class PayloadKubeInputMapperTest {
       PayloadKubeInputMapper(
         labeler,
         podNameGenerator,
-        "test-ns",
-        "custom-image-registry",
+        AirbyteWorkerConfig(
+          job =
+            AirbyteWorkerConfig.AirbyteWorkerJobConfig(
+              kubernetes =
+                AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig(
+                  connectorImageRegistry = "custom-image-registry",
+                  namespace = "test-ns",
+                ),
+            ),
+        ),
         orchestratorContainerInfo,
         workerConfigs,
         workerConfigs,
@@ -626,8 +667,16 @@ internal class PayloadKubeInputMapperTest {
       PayloadKubeInputMapper(
         labeler,
         podNameGenerator,
-        "test-ns",
-        "custom-image-registry/",
+        AirbyteWorkerConfig(
+          job =
+            AirbyteWorkerConfig.AirbyteWorkerJobConfig(
+              kubernetes =
+                AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig(
+                  connectorImageRegistry = "custom-image-registry/",
+                  namespace = "test-ns",
+                ),
+            ),
+        ),
         orchestratorContainerInfo,
         workerConfigs,
         workerConfigs,

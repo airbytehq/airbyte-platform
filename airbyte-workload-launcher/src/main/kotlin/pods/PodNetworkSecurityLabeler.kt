@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.launcher.pods
 
+import io.airbyte.micronaut.runtime.WORKLOAD_LAUNCHER_NETWORK_POLICY_INTROSPECTION
 import io.airbyte.workers.hashing.Hasher
 import io.fabric8.kubernetes.api.model.networking.v1.NetworkPolicy
 import io.fabric8.kubernetes.client.KubernetesClient
@@ -72,7 +73,7 @@ class PodNetworkSecurityLabeler(
 }
 
 @Singleton
-@Requires(property = "airbyte.workload-launcher.network-policy-introspection", value = "true")
+@Requires(property = WORKLOAD_LAUNCHER_NETWORK_POLICY_INTROSPECTION, value = "true")
 class NetworkPolicyFetcher(
   private val kubernetesClient: KubernetesClient,
 ) {

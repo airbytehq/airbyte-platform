@@ -14,9 +14,9 @@ import io.airbyte.config.specs.RemoteDefinitionsProvider
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DeclarativeManifestImageVersionService
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.micronaut.runtime.AirbyteConnectorRegistryConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Value
 import io.micronaut.core.util.StringUtils
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -49,16 +49,16 @@ class SeedBeanFactory {
     }
 
   @Singleton
-  fun seedDefinitionsProviderType(
-    @Value("\${airbyte.connector-registry.seed-provider}") seedProvider: String,
-  ): SeedDefinitionsProviderType {
-    if (StringUtils.isEmpty(seedProvider) || LOCAL_SEED_PROVIDER.equals(seedProvider, ignoreCase = true)) {
+  fun seedDefinitionsProviderType(airbyteConnectorRegistryConfig: AirbyteConnectorRegistryConfig): SeedDefinitionsProviderType {
+    if (StringUtils.isEmpty(airbyteConnectorRegistryConfig.seedProvider) ||
+      LOCAL_SEED_PROVIDER.equals(airbyteConnectorRegistryConfig.seedProvider, ignoreCase = true)
+    ) {
       return SeedDefinitionsProviderType.LOCAL
-    } else if (REMOTE_SEED_PROVIDER.equals(seedProvider, ignoreCase = true)) {
+    } else if (REMOTE_SEED_PROVIDER.equals(airbyteConnectorRegistryConfig.seedProvider, ignoreCase = true)) {
       return SeedDefinitionsProviderType.REMOTE
     }
 
-    throw IllegalArgumentException("Invalid seed provider: $seedProvider")
+    throw IllegalArgumentException("Invalid seed provider: ${airbyteConnectorRegistryConfig.seedProvider}")
   }
 
   @Singleton

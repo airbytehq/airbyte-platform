@@ -49,6 +49,7 @@ dependencies {
   implementation(libs.swagger.annotations)
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
+  implementation(project(":oss:airbyte-commons-micronaut"))
 
   compileOnly(libs.v3.swagger.annotations)
 

@@ -29,7 +29,7 @@ common:
 
     - env: API_AUTHORIZATION_ENABLED
       key: auth.enabled
-      defaultValue: true
+      defaultValueExp: (ternary "true" "false" (eq .Values.global.edition "enterprise"))
 
     - env: CONNECTOR_BUILDER_SERVER_API_HOST
       key: connectorBuilderServer.apiHost
@@ -917,6 +917,11 @@ secretsManager:
       discriminatorOpts: 
         - AZURE_KEY_VAULT
 
+    - env: AB_AZURE_KEY_VAULT_TAGS
+      key: azureKeyVault.tags
+      discriminatorOpts:
+        - AZURE_KEY_VAULT
+
     - env: SECRET_STORE_GCP_PROJECT_ID
       key: googleSecretManager.projectId
       discriminatorOpts: 
@@ -977,7 +982,7 @@ secretsManager:
       defaultValueExp: (include "airbyte.secretsManager.vault.authToken.secretKey" .)
 
 server:
-  keybasePath: server
+  keyBasePath: server
   config:  
     - env: AUDIT_LOGGING_ENABLED
       key: auditLoggingEnabled

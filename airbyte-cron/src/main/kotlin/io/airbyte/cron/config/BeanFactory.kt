@@ -11,6 +11,7 @@ import io.airbyte.data.services.shared.DataSourceUnwrapper
 import io.airbyte.db.Database
 import io.airbyte.db.check.DatabaseMigrationCheck
 import io.airbyte.db.factory.DatabaseCheckFactory
+import io.airbyte.micronaut.runtime.AirbyteFlywayConfig
 import io.airbyte.persistence.job.DbPrune
 import io.airbyte.persistence.job.DefaultJobPersistence
 import io.airbyte.persistence.job.DefaultMetadataPersistence
@@ -19,7 +20,6 @@ import io.airbyte.persistence.job.MetadataPersistence
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
 import io.micronaut.flyway.FlywayConfigurationProperties
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -79,11 +79,11 @@ class BeanFactory {
   fun configFlyway(
     @Named("config") configFlywayConfigurationProperties: FlywayConfigurationProperties,
     @Named("config") configDataSource: DataSource,
-    @Value("\${airbyte.flyway.configs.minimum-migration-version}") baselineVersion: String,
+    airbyteFlywayConfig: AirbyteFlywayConfig,
   ): Flyway =
     configFlywayConfigurationProperties.fluentConfiguration
       .dataSource(DataSourceUnwrapper.unwrapDataSource(configDataSource))
-      .baselineVersion(baselineVersion)
+      .baselineVersion(airbyteFlywayConfig.config.minimumMigrationVersion)
       .baselineDescription(BASELINE_DESCRIPTION)
       .baselineOnMigrate(BASELINE_ON_MIGRATION)
       .installedBy(INSTALLED_BY)
@@ -104,19 +104,18 @@ class BeanFactory {
   fun configsDatabaseMigrationCheck(
     @Named("config") dslContext: DSLContext,
     @Named("configFlyway") configsFlyway: Flyway,
-    @Value("\${airbyte.flyway.configs.minimum-migration-version}") configsDatabaseMinimumFlywayMigrationVersion: String,
-    @Value("\${airbyte.flyway.configs.initialization-timeout-ms}") configsDatabaseInitializationTimeoutMs: Long,
+    airbyteFlywayConfig: AirbyteFlywayConfig,
   ): DatabaseMigrationCheck {
     log.info {
-      "Configs database configuration: $configsDatabaseMinimumFlywayMigrationVersion $configsDatabaseInitializationTimeoutMs"
+      "Configs database configuration: ${airbyteFlywayConfig.config.minimumMigrationVersion} ${airbyteFlywayConfig.config.initializationTimeoutMs}"
     }
 
     return DatabaseCheckFactory
       .createConfigsDatabaseMigrationCheck(
         DataSourceUnwrapper.unwrapContext(dslContext),
         configsFlyway,
-        configsDatabaseMinimumFlywayMigrationVersion,
-        configsDatabaseInitializationTimeoutMs,
+        airbyteFlywayConfig.config.minimumMigrationVersion,
+        airbyteFlywayConfig.config.initializationTimeoutMs,
       )
   }
 

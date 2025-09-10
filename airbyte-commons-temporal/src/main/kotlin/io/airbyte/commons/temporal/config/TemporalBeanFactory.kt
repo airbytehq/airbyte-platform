@@ -9,8 +9,8 @@ import io.airbyte.commons.temporal.WorkflowClientWrapped
 import io.airbyte.commons.temporal.WorkflowServiceStubsWrapped
 import io.airbyte.commons.temporal.factories.WorkflowClientFactory
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Value
 import io.temporal.client.WorkflowClient
 import io.temporal.common.converter.DataConverter
 import io.temporal.serviceclient.WorkflowServiceStubs
@@ -27,10 +27,7 @@ class TemporalBeanFactory {
    * WorkflowServiceStubs shouldn't be used directly, use WorkflowServiceStubsWrapped instead.
    */
   @Singleton
-  fun temporalService(
-    temporalUtils: TemporalUtils,
-    temporalSdkTimeouts: TemporalSdkTimeouts,
-  ): WorkflowServiceStubs = temporalUtils.createTemporalService(temporalSdkTimeouts)
+  fun temporalService(temporalUtils: TemporalUtils): WorkflowServiceStubs = temporalUtils.createTemporalService()
 
   @Singleton
   fun temporalServiceWrapped(
@@ -57,7 +54,5 @@ class TemporalBeanFactory {
 
   @Singleton
   @Named("workspaceRootTemporal")
-  fun workspaceRoot(
-    @Value("\${airbyte.workspace.root}") workspaceRoot: String,
-  ): Path = Path.of(workspaceRoot)
+  fun workspaceRoot(airbyteConfig: AirbyteConfig): Path = Path.of(airbyteConfig.workspaceRoot)
 }

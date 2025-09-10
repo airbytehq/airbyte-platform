@@ -62,7 +62,7 @@ airbyte:
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
         audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
       azure:
-        connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
+        connection-string: ${AZURE_STORAGE_CONNECTION_STRING:}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       minio:
@@ -82,20 +82,21 @@ airbyte:
   control:
     plane:
       auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
-  data:
+  data-plane:
     check:
       task-queue: ${DATA_CHECK_TASK_QUEUES:CHECK_CONNECTION}
     discover:
       task-queue: ${DATA_DISCOVER_TASK_QUEUES:DISCOVER_SCHEMA}
     sync:
       task-queue: ${DATA_SYNC_TASK_QUEUES:SYNC}
+  data:
     plane:
       service-account:
         credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
         email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   feature-flag:
-    client: ${FEATURE_FLAG_CLIENT:}
+    client: ${FEATURE_FLAG_CLIENT:CONFIGFILE}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
     base-url: ${FEATURE_FLAG_BASEURL:}
@@ -156,7 +157,7 @@ airbyte:
     job:
       error-reporting:
         sentry:
-          dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
+          dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN:}
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
     spec:
       enabled: ${SHOULD_RUN_GET_SPEC_WORKFLOWS:true}
@@ -194,6 +195,21 @@ airbyte:
         client-id: ${AB_AZURE_KEY_VAULT_CLIENT_ID:}
         client-secret: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET:}
         tags: ${AB_AZURE_KEY_VAULT_TAGS:}
+  temporal:
+    cloud:
+      client:
+        cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
+        key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
+      enabled: ${TEMPORAL_CLOUD_ENABLED:false}
+      host: ${TEMPORAL_CLOUD_HOST:}
+      namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
+    host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
+    retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
+    sdk:
+      timeouts:
+        rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
+        rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
+        rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}
@@ -210,19 +226,7 @@ airbyte:
     retries:
       delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
       max: ${WORKLOAD_API_MAX_RETRIES:5}
-  workspace:
-    root: ${WORKSPACE_ROOT}
-
-datadog:
-  agent:
-    host: ${DD_AGENT_HOST:}
-    port: ${DD_DOGSTATSD_PORT:}
-  orchestrator:
-    disabled:
-      integrations: ${DD_ORCHESTRATOR_DISABLED_INTEGRATIONS:GRPC,GRPC_CLIENT,GRPC_SERVER,NETTY,NETTY_4_1,GOOGLE_HTTP_CLIENT,HTTPURLCONNECTION,URLCONNECTION}
-
-docker:
-  network: ${DOCKER_NETWORK:host}
+  workspace-root: ${WORKSPACE_ROOT}
 
 endpoints:
   beans:
@@ -261,22 +265,6 @@ endpoints:
 google:
   application:
     credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
-
-temporal:
-  cloud:
-    client:
-      cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
-      key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
-    enabled: ${TEMPORAL_CLOUD_ENABLED:false}
-    host: ${TEMPORAL_CLOUD_HOST:}
-    namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
-  host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
-  retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
-  sdk:
-    timeouts:
-      rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
-      rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
-      rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
 
 logger:
   levels:

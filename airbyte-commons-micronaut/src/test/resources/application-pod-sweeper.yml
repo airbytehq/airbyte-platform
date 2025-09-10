@@ -1,0 +1,6 @@
+airbyte:
+  pod-sweeper:
+    runningTtl: 1
+    succeededTtl: 2
+    unsuccessfulTtl: 3
+    rate: 1m

@@ -78,7 +78,6 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.resources.Resources
 import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.commons.temporal.TemporalWorkflowUtils
-import io.airbyte.commons.temporal.config.TemporalSdkTimeouts
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState
 import io.airbyte.db.Database
@@ -88,6 +87,7 @@ import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.Flag
 import io.airbyte.featureflag.tests.TestFlagsSetter
 import io.airbyte.featureflag.tests.TestFlagsSetter.FlagOverride
+import io.airbyte.micronaut.runtime.AirbyteTemporalConfig
 import io.airbyte.test.utils.Databases.createDataSource
 import io.airbyte.test.utils.Databases.createDslContext
 import io.airbyte.test.utils.Databases.listAllTables
@@ -447,20 +447,13 @@ class AcceptanceTestHarness
       get() {
         val temporalUtils =
           TemporalUtils(
-            null,
-            null,
-            false,
-            null,
-            null,
-            null,
-            10,
+            AirbyteTemporalConfig(retention = 10),
             Optional.empty(),
           )
         val temporalService =
           temporalUtils.createTemporalService(
             TemporalWorkflowUtils.getAirbyteTemporalOptions(
-              TEMPORAL_HOST,
-              TemporalSdkTimeouts(),
+              AirbyteTemporalConfig(host = TEMPORAL_HOST),
             ),
             TemporalUtils.DEFAULT_NAMESPACE,
           )

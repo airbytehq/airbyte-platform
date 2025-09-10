@@ -10,6 +10,7 @@ import dev.failsafe.function.CheckedSupplier
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.workers.models.InitContainerConstants
 import io.airbyte.workload.launcher.constants.ContainerConstants
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.FABRIC8_COMPLETED_REASON_VALUE
@@ -28,7 +29,6 @@ import io.fabric8.kubernetes.client.dsl.PodResource
 import io.fabric8.kubernetes.client.readiness.Readiness
 import io.fabric8.kubernetes.client.utils.PodStatusUtil
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
@@ -45,7 +45,7 @@ private val logger = KotlinLogging.logger {}
 class KubePodLauncher(
   private val kubernetesClient: KubernetesClient,
   private val metricClient: MetricClient,
-  @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String?,
+  private val airbyteWorkerConfig: AirbyteWorkerConfig,
   @Named("kubernetesClientRetryPolicy") private val kubernetesClientRetryPolicy: RetryPolicy<Any>,
 ) {
   fun create(pod: Pod): Pod =
@@ -53,7 +53,7 @@ class KubePodLauncher(
       {
         kubernetesClient
           .pods()
-          .inNamespace(namespace)
+          .inNamespace(airbyteWorkerConfig.job.kubernetes.namespace)
           .resource(pod)
           .serverSideApply()
       },
@@ -168,7 +168,7 @@ class KubePodLauncher(
       {
         kubernetesClient
           .pods()
-          .inNamespace(namespace)
+          .inNamespace(airbyteWorkerConfig.job.kubernetes.namespace)
           .withLabels(labels)
           .waitUntilCondition(
             { p: Pod? ->
@@ -210,7 +210,7 @@ class KubePodLauncher(
         {
           kubernetesClient
             .pods()
-            .inNamespace(namespace)
+            .inNamespace(airbyteWorkerConfig.job.kubernetes.namespace)
             .withLabels(labels)
             .list()
             .items
@@ -237,7 +237,7 @@ class KubePodLauncher(
             .flatMap { p ->
               kubernetesClient
                 .pods()
-                .inNamespace(namespace)
+                .inNamespace(airbyteWorkerConfig.job.kubernetes.namespace)
                 .resource(p)
                 .withPropagationPolicy(DeletionPropagation.FOREGROUND)
                 .delete()
@@ -265,7 +265,7 @@ class KubePodLauncher(
       return false
     }
 
-    val hasInitContainerStatus = pod.status.initContainerStatuses.size > 0
+    val hasInitContainerStatus = pod.status.initContainerStatuses.isNotEmpty()
     if (!hasInitContainerStatus) {
       return false
     }
@@ -309,7 +309,7 @@ class KubePodLauncher(
   private fun listActivePods(labels: Map<String, String>): FilterWatchListDeletable<Pod, PodList, PodResource> {
     return kubernetesClient
       .pods()
-      .inNamespace(namespace)
+      .inNamespace(airbyteWorkerConfig.job.kubernetes.namespace)
       .withLabels(labels)
       .withoutField(KUBECTL_PHASE_FIELD_NAME, KUBECTL_COMPLETED_VALUE) // filters out completed pods
   }

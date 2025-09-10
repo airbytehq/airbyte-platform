@@ -37,7 +37,7 @@ airbyte:
   pod-sweeper:
     # Time-to-live (in minutes) for running pods. Empty string (mapped to null) by default,
     # meaning running pods are preserved indefinitely.
-    runningTtl: ${RUNNING_TTL_MINUTES:""}
+    runningTtl: ${RUNNING_TTL_MINUTES:-1}
     succeededTtl: ${SUCCEEDED_TTL_MINUTES:10}
     unsuccessfulTtl: ${UNSUCCESSFUL_TTL_MINUTES:120}
     rate: PT2M
@@ -53,15 +53,24 @@ airbyte:
             secret-name: ${AWS_ASSUME_ROLE_SECRET_NAME:}
   container:
     rootless-workload: ${ROOTLESS_WORKLOAD:false}
-  control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
-  data-plane-credentials:
-    client-id-secret-key: ${DATAPLANE_CLIENT_ID_SECRET_KEY}
-    client-id-secret-name: ${DATAPLANE_CLIENT_ID_SECRET_NAME}
-    client-secret-secret-key: ${DATAPLANE_CLIENT_SECRET_SECRET_KEY}
-    client-secret-secret-name: ${DATAPLANE_CLIENT_SECRET_SECRET_NAME}
+  control-plane:
+    auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
+  datadog:
+    agent:
+      host: ${DD_AGENT_HOST:}
+      port: ${DD_DOGSTATSD_PORT:}
+    orchestrator-disabled-integrations: ${DD_ORCHESTRATOR_DISABLED_INTEGRATIONS:GRPC,GRPC_CLIENT,GRPC_SERVER,NETTY,NETTY_4_1,GOOGLE_HTTP_CLIENT,HTTPURLCONNECTION,URLCONNECTION}
+    env: ${DD_ENV:}
+    version: ${DD_VERSION:}
+  data-plane:
+    credentials:
+      client-id-secret-key: ${DATAPLANE_CLIENT_ID_SECRET_KEY}
+      client-id-secret-name: ${DATAPLANE_CLIENT_ID_SECRET_NAME}
+      client-secret-secret-key: ${DATAPLANE_CLIENT_SECRET_SECRET_KEY}
+      client-secret-secret-name: ${DATAPLANE_CLIENT_SECRET_SECRET_NAME}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   feature-flag:
-    client: ${FEATURE_FLAG_CLIENT:}
+    client: ${FEATURE_FLAG_CLIENT:CONFIGFILE}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
     base-url: ${FEATURE_FLAG_BASEURL:}
@@ -171,7 +180,7 @@ airbyte:
     job:
       error-reporting:
         sentry:
-          dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN}
+          dsn: ${JOB_ERROR_REPORTING_SENTRY_DSN:}
         strategy: ${JOB_ERROR_REPORTING_STRATEGY:LOGGING}
       kube:
         connector-image-registry: ${JOB_KUBE_CONNECTOR_IMAGE_REGISTRY:}
@@ -260,11 +269,13 @@ airbyte:
       kube:
         use-custom-node-selector: ${USE_CUSTOM_NODE_SELECTOR:false}
         node-selectors: ${JOB_ISOLATED_KUBE_NODE_SELECTORS:}
-  data.plane.service-account:
-    credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
-    email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
-  control.plane.auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
-  acceptance.test.enabled: ${ACCEPTANCE_TEST_ENABLED:false}
+  data.plane:
+    service-account:
+      credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
+      email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
+  control.plane:
+    auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
+  acceptance-test-enabled: ${ACCEPTANCE_TEST_ENABLED:false}
   cloud:
     storage:
       type: ${STORAGE_TYPE}
@@ -275,7 +286,7 @@ airbyte:
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
         audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
       azure:
-        connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
+        connection-string: ${AZURE_STORAGE_CONNECTION_STRING:}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       minio:
@@ -286,16 +297,8 @@ airbyte:
         access-key: ${AWS_ACCESS_KEY_ID:}
         region: ${AWS_DEFAULT_REGION:}
         secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
-  workspace:
-    root: ${WORKSPACE_ROOT}
+  workspace-root: ${WORKSPACE_ROOT}
 
-datadog:
-  agent:
-    host: ${DD_AGENT_HOST:}
-    port: ${DD_DOGSTATSD_PORT:}
-  orchestrator.disabled.integrations: ${DD_ORCHESTRATOR_DISABLED_INTEGRATIONS:GRPC,GRPC_CLIENT,GRPC_SERVER,NETTY,NETTY_4_1,GOOGLE_HTTP_CLIENT,HTTPURLCONNECTION,URLCONNECTION}
-  env: ${DD_ENV:}
-  version: ${DD_VERSION:}
 google.application.credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
 
 endpoints:

@@ -10,7 +10,6 @@ import io.airbyte.commons.csp.CheckResult
 import io.airbyte.commons.csp.CspChecker
 import io.airbyte.commons.csp.Storage
 import io.airbyte.commons.server.helpers.KubernetesClientPermissionHelper
-import io.airbyte.commons.storage.StorageType
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
@@ -22,6 +21,7 @@ import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.micronaut.runtime.StorageType
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.Node
 import io.fabric8.kubernetes.api.model.NodeCondition

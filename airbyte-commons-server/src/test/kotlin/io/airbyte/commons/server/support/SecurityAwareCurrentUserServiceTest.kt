@@ -27,6 +27,7 @@ import java.util.UUID
 @MicronautTest
 @Requires(env = [Environment.TEST])
 @Property(name = "micronaut.security.enabled", value = "true")
+@Property(name = "INTERNAL_API_HOST", value = "http://localhost:8080")
 internal class SecurityAwareCurrentUserServiceTest {
   @MockBean(SecurityService::class)
   fun mockSecurityService(): SecurityService = Mockito.mock(SecurityService::class.java)

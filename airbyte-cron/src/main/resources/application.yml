@@ -53,7 +53,7 @@ airbyte:
     sidecar-port: ${STIGG_SIDECAR_PORT:}
 
   feature-flag:
-    client: ${FEATURE_FLAG_CLIENT:}
+    client: ${FEATURE_FLAG_CLIENT:CONFIGFILE}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
   flyway:
@@ -63,7 +63,7 @@ airbyte:
   protocol:
     min-version: ${AIRBYTE_PROTOCOL_VERSION_MIN:0.0.0}
     max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}
-  role: ${AIRBYTE_ROLE:}
+  role: ${AIRBYTE_ROLE:dev}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}
@@ -95,8 +95,7 @@ airbyte:
     retries:
       delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
       max: ${WORKLOAD_API_MAX_RETRIES:5}
-  workspace:
-    root: ${WORKSPACE_ROOT}
+  workspace-root: ${WORKSPACE_ROOT}
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
@@ -120,6 +119,24 @@ airbyte:
         client-id: ${AB_AZURE_KEY_VAULT_CLIENT_ID:}
         client-secret: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET:}
         tags: ${AB_AZURE_KEY_VAULT_TAGS:}
+  temporal:
+    cloud:
+      client:
+        cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
+        key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
+      enabled: ${TEMPORAL_CLOUD_ENABLED:false}
+      host: ${TEMPORAL_CLOUD_HOST:}
+      namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
+      connector-rollout:
+        host: ${TEMPORAL_CLOUD_HOST_CONNECTOR_ROLLOUT:}
+        namespace: ${TEMPORAL_CLOUD_NAMESPACE_CONNECTOR_ROLLOUT:}
+    host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
+    retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
+    sdk:
+      timeouts:
+        rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
+        rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
+        rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
 
 datasources:
   config:
@@ -212,17 +229,6 @@ jooq:
     jobs:
       jackson-converter-enabled: true
       sql-dialect: POSTGRES
-
-temporal:
-  cloud:
-    client:
-      cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
-      key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
-    enabled: ${TEMPORAL_CLOUD_ENABLED:false}
-    host: ${TEMPORAL_CLOUD_HOST:}
-    namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
-  host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
-  retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
 
 logger:
   levels:

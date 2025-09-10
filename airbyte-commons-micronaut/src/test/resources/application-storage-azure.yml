@@ -1,0 +1,13 @@
+airbyte:
+  cloud:
+    storage:
+      type: "azure"
+      bucket:
+        log: "test-log"
+        state: "test-state"
+        workload-output: "test-workload-output"
+        activity-payload: "test-activity-payload"
+        audit-logging: "test-audit-logging"
+        replication-dump: "test-replication-dump"
+      azure:
+        connection-string: "test-connection-string"

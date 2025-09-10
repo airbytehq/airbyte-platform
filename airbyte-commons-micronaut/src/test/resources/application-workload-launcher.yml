@@ -1,0 +1,17 @@
+airbyte:
+  workload-launcher:
+    heartbeat-rate: PT10S
+    workload-start-timeout: PT1H
+    parallelism:
+      default-queue: 1
+      high-priority-queue: 10
+      max-surge: 100
+    network-policy-introspection: true
+    consumer:
+      queue-task-cap: 100
+      default-queue:
+        poll-interval-seconds: 5
+        poll-size-items: 20
+      high-priority-queue:
+        poll-interval-seconds: 5
+        poll-size-items: 20

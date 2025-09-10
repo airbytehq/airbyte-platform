@@ -65,7 +65,7 @@ airbyte:
   license-key: ${AIRBYTE_LICENSE_KEY:empty}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   feature-flag:
-    client: ${FEATURE_FLAG_CLIENT:}
+    client: ${FEATURE_FLAG_CLIENT:CONFIGFILE}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
     base-url: ${FEATURE_FLAG_BASEURL:}

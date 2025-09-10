@@ -1,0 +1,4 @@
+airbyte:
+  workflow:
+    failure:
+      restart-delay: 100

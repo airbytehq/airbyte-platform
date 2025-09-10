@@ -9,6 +9,7 @@ import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.workers.input.getAttemptId
 import io.airbyte.workers.input.getJobId
 import io.airbyte.workers.input.getOrganizationId
@@ -21,7 +22,6 @@ import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.ResourceRequirements
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -33,8 +33,7 @@ import java.util.UUID
 class PayloadKubeInputMapper(
   private val labeler: PodLabeler,
   private val podNameGenerator: PodNameGenerator,
-  @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String?,
-  @Value("\${airbyte.worker.job.kube.connector-image-registry}") private val imageRegistry: String?,
+  private val airbyteWorkerConfig: AirbyteWorkerConfig,
   @Named("orchestratorKubeContainerInfo") private val orchestratorKubeContainerInfo: KubeContainerInfo,
   @Named("replicationWorkerConfigs") private val replicationWorkerConfigs: WorkerConfigs,
   @Named("checkWorkerConfigs") private val checkWorkerConfigs: WorkerConfigs,
@@ -128,7 +127,7 @@ class PayloadKubeInputMapper(
 
     val connectorPodInfo =
       KubePodInfo(
-        namespace,
+        airbyteWorkerConfig.job.kubernetes.namespace,
         podName,
         KubeContainerInfo(
           input.launcherConfig.dockerImage.withImageRegistry(),
@@ -176,7 +175,7 @@ class PayloadKubeInputMapper(
 
     val connectorPodInfo =
       KubePodInfo(
-        namespace,
+        airbyteWorkerConfig.job.kubernetes.namespace,
         podName,
         KubeContainerInfo(
           input.launcherConfig.dockerImage.withImageRegistry(),
@@ -224,7 +223,7 @@ class PayloadKubeInputMapper(
 
     val connectorPodInfo =
       KubePodInfo(
-        namespace,
+        airbyteWorkerConfig.job.kubernetes.namespace,
         podName,
         KubeContainerInfo(
           input.launcherConfig.dockerImage.withImageRegistry(),
@@ -251,7 +250,9 @@ class PayloadKubeInputMapper(
 
   // Return an image ref with the image registry prefix, if the image registry is configured.
   private fun String.withImageRegistry(): String {
-    if (imageRegistry.isNullOrEmpty()) {
+    if (airbyteWorkerConfig.job.kubernetes.connectorImageRegistry
+        .isEmpty()
+    ) {
       return this
     }
     // Custom connectors may contain a fully-qualified image registry name, e.g. my.registry.com/my/image.
@@ -270,7 +271,7 @@ class PayloadKubeInputMapper(
 
     // Ensure there's a trailing slash between the image registry and the image ref
     // by stripping the slash (no-op if it doesn't exit) and adding it back.
-    return "${imageRegistry.trimEnd('/')}/$this"
+    return "${airbyteWorkerConfig.job.kubernetes.connectorImageRegistry.trimEnd('/')}/$this"
   }
 }
 

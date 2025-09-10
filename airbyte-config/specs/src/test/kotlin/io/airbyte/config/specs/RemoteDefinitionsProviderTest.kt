@@ -15,6 +15,8 @@ import io.airbyte.config.SupportLevel
 import io.airbyte.config.specs.RemoteDefinitionsProvider.Companion.getDocPath
 import io.airbyte.config.specs.RemoteDefinitionsProvider.Companion.getManifestPath
 import io.airbyte.config.specs.RemoteDefinitionsProvider.Companion.getRegistryName
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteConnectorRegistryConfig
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -38,8 +40,10 @@ import java.util.zip.ZipOutputStream
 internal class RemoteDefinitionsProviderTest {
   private var webServer: MockWebServer? = null
   private var validCatalogResponse: MockResponse? = null
-  private var baseUrl: String? = null
+  private lateinit var baseUrl: String
   private var jsonCatalog: JsonNode? = null
+  private lateinit var airbyteConfig: AirbyteConfig
+  private lateinit var airbyteConnectorRegistryConfig: AirbyteConnectorRegistryConfig
 
   @BeforeEach
   @Throws(IOException::class)
@@ -56,6 +60,16 @@ internal class RemoteDefinitionsProviderTest {
         .addHeader("Content-Type", "application/json; charset=utf-8")
         .addHeader("Cache-Control", "no-cache")
         .setBody(jsonBody)
+
+    airbyteConfig = AirbyteConfig(edition = AIRBYTE_EDITION)
+    airbyteConnectorRegistryConfig =
+      AirbyteConnectorRegistryConfig(
+        remote =
+          AirbyteConnectorRegistryConfig.AirbyteConnectorRegistryRemoteConfig(
+            baseUrl = baseUrl,
+            timeoutMs = TimeUnit.SECONDS.toMillis(30),
+          ),
+      )
   }
 
   // Helper method to create a test zip file with specified content
@@ -79,7 +93,7 @@ internal class RemoteDefinitionsProviderTest {
   fun testGetSourceDefinition() {
     webServer!!.enqueue(validCatalogResponse!!)
     val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
+      RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val stripeSourceId = UUID.fromString("e094cb9a-26de-4645-8761-65c0c425d1de")
     val stripeSource = remoteDefinitionsProvider.getSourceDefinition(stripeSourceId)
     Assertions.assertEquals(stripeSourceId, stripeSource.sourceDefinitionId)
@@ -99,7 +113,7 @@ internal class RemoteDefinitionsProviderTest {
   fun testGetDestinationDefinition() {
     webServer!!.enqueue(validCatalogResponse!!)
     val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
+      RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val s3DestinationId = UUID.fromString("4816b78f-1489-44c1-9060-4b19d5fa9362")
     val s3Destination =
       remoteDefinitionsProvider
@@ -121,7 +135,7 @@ internal class RemoteDefinitionsProviderTest {
     webServer!!.enqueue(validCatalogResponse!!)
 
     val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
+      RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val invalidDefinitionId = UUID.fromString("1a7c360c-1289-4b96-a171-2ac1c86fb7ca")
 
     Assertions.assertThrows(
@@ -136,7 +150,7 @@ internal class RemoteDefinitionsProviderTest {
   fun testGetSourceDefinitions() {
     webServer!!.enqueue(validCatalogResponse!!)
     val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
+      RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val sourceDefinitions = remoteDefinitionsProvider.getSourceDefinitions()
     val expectedNumberOfSources =
       jsonCatalog!!["sources"]
@@ -154,7 +168,7 @@ internal class RemoteDefinitionsProviderTest {
   fun testGetDestinationDefinitions() {
     webServer!!.enqueue(validCatalogResponse!!)
     val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
+      RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val destinationDefinitions = remoteDefinitionsProvider.getDestinationDefinitions()
     val expectedNumberOfDestinations =
       jsonCatalog!!["destinations"]
@@ -193,15 +207,15 @@ internal class RemoteDefinitionsProviderTest {
   @Test
   fun testBadResponseStatus() {
     webServer!!.enqueue(MockResponse().setResponseCode(404))
+    val airbyteConnectorRegistryConfig =
+      AirbyteConnectorRegistryConfig(
+        remote = AirbyteConnectorRegistryConfig.AirbyteConnectorRegistryRemoteConfig(baseUrl = baseUrl, timeoutMs = 1),
+      )
     val ex =
       Assertions.assertThrows(
         RuntimeException::class.java,
       ) {
-        RemoteDefinitionsProvider(
-          baseUrl,
-          AIRBYTE_EDITION,
-          TimeUnit.SECONDS.toMillis(1),
-        ).getDestinationDefinitions()
+        RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig).getDestinationDefinitions()
       }
 
     Assertions.assertTrue(ex.message!!.contains("Failed to fetch remote connector registry"))
@@ -215,11 +229,11 @@ internal class RemoteDefinitionsProviderTest {
       Assertions.assertThrows(
         RuntimeException::class.java,
       ) {
-        RemoteDefinitionsProvider(
-          baseUrl,
-          AIRBYTE_EDITION,
-          TimeUnit.SECONDS.toMillis(1),
-        ).getDestinationDefinitions()
+        val airbyteConnectorRegistryConfig =
+          AirbyteConnectorRegistryConfig(
+            remote = AirbyteConnectorRegistryConfig.AirbyteConnectorRegistryRemoteConfig(baseUrl = baseUrl, timeoutMs = 1),
+          )
+        RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig).getDestinationDefinitions()
       }
 
     Assertions.assertTrue(ex.message!!.contains("Failed to fetch remote connector registry"))
@@ -233,19 +247,23 @@ internal class RemoteDefinitionsProviderTest {
     Assertions.assertThrows(
       RuntimeException::class.java,
     ) {
-      RemoteDefinitionsProvider(
-        baseUrl,
-        AIRBYTE_EDITION,
-        TimeUnit.SECONDS.toMillis(1),
-      ).getDestinationDefinitions()
+      val airbyteConnectorRegistryConfig =
+        AirbyteConnectorRegistryConfig(
+          remote = AirbyteConnectorRegistryConfig.AirbyteConnectorRegistryRemoteConfig(baseUrl = baseUrl, timeoutMs = 1),
+        )
+      RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig).getDestinationDefinitions()
     }
   }
 
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
   fun testGetPaths(airbyteEdition: AirbyteEdition) {
-    val definitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, airbyteEdition, TimeUnit.SECONDS.toMillis(1))
+    val airbyteConfig = AirbyteConfig(edition = airbyteEdition)
+    val airbyteConnectorRegistryConfig =
+      AirbyteConnectorRegistryConfig(
+        remote = AirbyteConnectorRegistryConfig.AirbyteConnectorRegistryRemoteConfig(baseUrl = baseUrl, timeoutMs = 1),
+      )
+    val definitionsProvider = RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val connectorName = "airbyte/source-github"
     val version = "1.0.0"
 
@@ -277,12 +295,11 @@ internal class RemoteDefinitionsProviderTest {
   @Test
   fun getRemoteRegistryUrlForPath() {
     val baseUrl = "https://connectors.airbyte.com/files/"
-    val definitionsProvider =
-      RemoteDefinitionsProvider(
-        baseUrl,
-        AIRBYTE_EDITION,
-        TimeUnit.SECONDS.toMillis(1),
+    val airbyteConnectorRegistryConfig =
+      AirbyteConnectorRegistryConfig(
+        remote = AirbyteConnectorRegistryConfig.AirbyteConnectorRegistryRemoteConfig(baseUrl = baseUrl, timeoutMs = 1),
       )
+    val definitionsProvider = RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val registryPath = "registries/v0/oss_registry.json"
 
     val registryUrl = definitionsProvider.getRemoteRegistryUrlForPath(registryPath)
@@ -295,8 +312,7 @@ internal class RemoteDefinitionsProviderTest {
   @Test
   fun testGetMissingEntryByVersion() {
     webServer!!.enqueue(makeResponse(404, "not found"))
-    val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
+    val remoteDefinitionsProvider = RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val definition = remoteDefinitionsProvider.getConnectorRegistryEntryJson(CONNECTOR_REPOSITORY, CONNECTOR_VERSION)
     Assertions.assertTrue(definition.isEmpty)
   }
@@ -314,8 +330,7 @@ internal class RemoteDefinitionsProviderTest {
     val validResponse = makeResponse(200, Jsons.serialize(sourceDef))
 
     webServer!!.enqueue(validResponse)
-    val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
+    val remoteDefinitionsProvider = RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val definition = remoteDefinitionsProvider.getConnectorRegistryEntryJson(CONNECTOR_REPOSITORY, CONNECTOR_VERSION)
     Assertions.assertTrue(definition.isPresent)
     Assertions.assertEquals(Jsons.jsonNode(sourceDef), definition.get())
@@ -334,8 +349,7 @@ internal class RemoteDefinitionsProviderTest {
     val validResponse = makeResponse(200, Jsons.serialize(sourceDef))
     webServer!!.enqueue(validResponse)
 
-    val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
+    val remoteDefinitionsProvider = RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val definition =
       remoteDefinitionsProvider.getSourceDefinitionByVersion(CONNECTOR_REPOSITORY, CONNECTOR_VERSION)
     Assertions.assertTrue(definition.isPresent)
@@ -355,8 +369,7 @@ internal class RemoteDefinitionsProviderTest {
     val validResponse = makeResponse(200, Jsons.serialize(destinationDef))
     webServer!!.enqueue(validResponse)
 
-    val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
+    val remoteDefinitionsProvider = RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val definition =
       remoteDefinitionsProvider.getDestinationDefinitionByVersion(CONNECTOR_REPOSITORY, CONNECTOR_VERSION)
     Assertions.assertTrue(definition.isPresent)
@@ -370,8 +383,7 @@ internal class RemoteDefinitionsProviderTest {
     val validResponse = makeResponse(200, connectorDocumentationBody)
     webServer!!.enqueue(validResponse)
 
-    val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
+    val remoteDefinitionsProvider = RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val documentationResult = remoteDefinitionsProvider.getConnectorDocumentation(CONNECTOR_REPOSITORY, CONNECTOR_VERSION)
     Assertions.assertTrue(documentationResult.isPresent)
     Assertions.assertEquals(documentationResult.get(), connectorDocumentationBody)
@@ -380,8 +392,7 @@ internal class RemoteDefinitionsProviderTest {
   @Test
   fun testGetMissingConnectorDocumentation() {
     webServer!!.enqueue(makeResponse(404, "not found"))
-    val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
+    val remoteDefinitionsProvider = RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val documentationResult = remoteDefinitionsProvider.getConnectorDocumentation(CONNECTOR_REPOSITORY, CONNECTOR_VERSION)
     Assertions.assertTrue(documentationResult.isEmpty)
   }
@@ -393,8 +404,7 @@ internal class RemoteDefinitionsProviderTest {
     val validResponse = makeResponse(200, connectorManifestBody)
     webServer!!.enqueue(validResponse)
 
-    val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
+    val remoteDefinitionsProvider = RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val manifestResult = remoteDefinitionsProvider.getConnectorManifest(CONNECTOR_REPOSITORY, CONNECTOR_VERSION)
     Assertions.assertTrue(manifestResult.isPresent)
     Assertions.assertEquals(manifestResult.get(), Yamls.deserialize(connectorManifestBody))
@@ -415,8 +425,7 @@ internal class RemoteDefinitionsProviderTest {
 
     webServer!!.enqueue(validResponse)
 
-    val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
+    val remoteDefinitionsProvider = RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val customComponentsResult =
       remoteDefinitionsProvider.getConnectorCustomComponents(CONNECTOR_REPOSITORY, CONNECTOR_VERSION)
 
@@ -427,8 +436,7 @@ internal class RemoteDefinitionsProviderTest {
   @Test
   fun testGetMissingConnectorCustomComponents() {
     webServer!!.enqueue(makeResponse(404, "not found"))
-    val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
+    val remoteDefinitionsProvider = RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val customComponentsResult =
       remoteDefinitionsProvider.getConnectorCustomComponents(CONNECTOR_REPOSITORY, CONNECTOR_VERSION)
     Assertions.assertTrue(customComponentsResult.isEmpty)
@@ -449,8 +457,7 @@ internal class RemoteDefinitionsProviderTest {
 
     webServer!!.enqueue(validResponse)
 
-    val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
+    val remoteDefinitionsProvider = RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val customComponentsResult =
       remoteDefinitionsProvider.getConnectorCustomComponents(CONNECTOR_REPOSITORY, CONNECTOR_VERSION)
 
@@ -471,8 +478,7 @@ internal class RemoteDefinitionsProviderTest {
 
     webServer!!.enqueue(invalidResponse)
 
-    val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(baseUrl, AIRBYTE_EDITION, TimeUnit.SECONDS.toMillis(30))
+    val remoteDefinitionsProvider = RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val customComponentsResult =
       remoteDefinitionsProvider.getConnectorCustomComponents(CONNECTOR_REPOSITORY, CONNECTOR_VERSION)
 
@@ -483,12 +489,7 @@ internal class RemoteDefinitionsProviderTest {
   @Test
   fun missingConnectorManifest() {
     webServer!!.enqueue(makeResponse(404, "not found"))
-    val remoteDefinitionsProvider =
-      RemoteDefinitionsProvider(
-        baseUrl,
-        AIRBYTE_EDITION,
-        TimeUnit.SECONDS.toMillis(30),
-      )
+    val remoteDefinitionsProvider = RemoteDefinitionsProvider(airbyteConfig, airbyteConnectorRegistryConfig)
     val manifestResult =
       remoteDefinitionsProvider.getConnectorManifest(
         CONNECTOR_REPOSITORY,

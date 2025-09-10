@@ -4,6 +4,7 @@
 
 package io.airbyte.bootloader
 
+import io.airbyte.bootloader.runtime.AirbyteBootloaderConfig
 import io.airbyte.commons.AUTO_DATAPLANE_GROUP
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.US_DATAPLANE_GROUP
@@ -22,9 +23,9 @@ import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.db.init.DatabaseInitializer
 import io.airbyte.db.instance.DatabaseMigrator
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.persistence.job.JobPersistence
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -37,7 +38,8 @@ private val log = KotlinLogging.logger {}
  */
 @Singleton
 class Bootloader(
-  @param:Value("\${airbyte.bootloader.auto-upgrade-connectors}") private val autoUpgradeConnectors: Boolean,
+  private val airbyteBootloaderConfig: AirbyteBootloaderConfig,
+  private val airbyteAuthConfig: AirbyteAuthConfig,
   private val workspaceService: WorkspaceService,
   @param:Named("configsDatabaseInitializer") private val configsDatabaseInitializer: DatabaseInitializer,
   @param:Named("configsDatabaseMigrator") private val configsDatabaseMigrator: DatabaseMigrator,
@@ -47,8 +49,6 @@ class Bootloader(
   private val jobPersistence: JobPersistence,
   private val organizationPersistence: OrganizationPersistence,
   private val protocolVersionChecker: ProtocolVersionChecker,
-  @param:Value("\${airbyte.bootloader.run-migration-on-startup}") private val runMigrationOnStartup: Boolean,
-  @param:Value("\${airbyte.auth.default-realm}") private val defaultRealm: String,
   private val postLoadExecution: PostLoadExecutor?,
   private val dataplaneGroupService: DataplaneGroupService,
   private val dataplaneInitializer: DataplaneInitializer,
@@ -83,10 +83,10 @@ class Bootloader(
     assertNonBreakingMigration(jobPersistence, currentAirbyteVersion)
 
     log.info { "Checking protocol version constraints..." }
-    assertNonBreakingProtocolVersionConstraints(protocolVersionChecker, jobPersistence, autoUpgradeConnectors)
+    assertNonBreakingProtocolVersionConstraints(protocolVersionChecker, jobPersistence, airbyteBootloaderConfig.autoUpgradeConnectors)
 
     log.info { "Running database migrations..." }
-    runFlywayMigration(runMigrationOnStartup, configsDatabaseMigrator, jobsDatabaseMigrator)
+    runFlywayMigration(airbyteBootloaderConfig.runMigrationAtStartup, configsDatabaseMigrator, jobsDatabaseMigrator)
 
     log.info { "Creating dataplane group (if none exists)..." }
     createDataplaneGroupIfNoneExists(dataplaneGroupService, airbyteEdition)
@@ -172,14 +172,16 @@ class Bootloader(
       .getSsoConfigForOrganization(DEFAULT_ORGANIZATION_ID)
       .getOrNull()
       ?.let {
-        if (it.keycloakRealm != defaultRealm) {
+        if (it.keycloakRealm != airbyteAuthConfig.defaultRealm) {
           log.info { "SsoConfig already exists for the default organization, updating the config." }
-          organizationPersistence.updateSsoConfig(it.apply { it.keycloakRealm = defaultRealm })
+          organizationPersistence.updateSsoConfig(it.apply { it.keycloakRealm = airbyteAuthConfig.defaultRealm })
         }
         return
       }
-    if (organizationPersistence.getSsoConfigByRealmName(defaultRealm).isPresent) {
-      log.info { "An SsoConfig with realm $defaultRealm already exists, so one cannot be created for the default organization." }
+    if (organizationPersistence.getSsoConfigByRealmName(airbyteAuthConfig.defaultRealm).isPresent) {
+      log.info {
+        "An SsoConfig with realm ${airbyteAuthConfig.defaultRealm} already exists, so one cannot be created for the default organization."
+      }
       return
     }
 
@@ -187,7 +189,7 @@ class Bootloader(
       SsoConfig()
         .withSsoConfigId(UUID.randomUUID())
         .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-        .withKeycloakRealm(defaultRealm),
+        .withKeycloakRealm(airbyteAuthConfig.defaultRealm),
     )
   }
 

@@ -9,6 +9,7 @@ import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
+import io.airbyte.micronaut.runtime.AirbyteConnectorRegistryConfig
 import io.mockk.every
 import io.mockk.mockk
 import okhttp3.mockwebserver.MockResponse
@@ -26,6 +27,7 @@ class EnterpriseConnectorStubsHandlerTest {
   private lateinit var mockWebServer: MockWebServer
   private val workspaceHelper = mockk<WorkspaceHelper>()
   private val licenseEntitlementChecker = mockk<LicenseEntitlementChecker>()
+  private lateinit var airbyteConnectorRegistryConfig: AirbyteConnectorRegistryConfig
 
   @BeforeEach
   fun setUp() {
@@ -33,7 +35,23 @@ class EnterpriseConnectorStubsHandlerTest {
     mockWebServer.start()
     val baseUrl = mockWebServer.url("/").toString()
 
-    enterpriseConnectorHandler = EnterpriseConnectorStubsHandler(baseUrl, 5000, workspaceHelper, licenseEntitlementChecker)
+    airbyteConnectorRegistryConfig =
+      AirbyteConnectorRegistryConfig(
+        enterprise =
+          AirbyteConnectorRegistryConfig.AirbyteConnectorRegistryEnterpriseConfig(
+            enterpriseSourceStubsUrl = baseUrl,
+          ),
+        remote =
+          AirbyteConnectorRegistryConfig.AirbyteConnectorRegistryRemoteConfig(
+            timeoutMs = 5000L,
+          ),
+      )
+    enterpriseConnectorHandler =
+      EnterpriseConnectorStubsHandler(
+        airbyteConnectorRegistryConfig = airbyteConnectorRegistryConfig,
+        workspaceHelper = workspaceHelper,
+        licenseEntitlementChecker = licenseEntitlementChecker,
+      )
   }
 
   @AfterEach

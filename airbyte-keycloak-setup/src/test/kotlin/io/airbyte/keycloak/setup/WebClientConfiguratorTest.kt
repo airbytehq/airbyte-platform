@@ -4,7 +4,8 @@
 
 package io.airbyte.keycloak.setup
 
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import jakarta.ws.rs.core.Response
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -21,7 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension
 @ExtendWith(MockitoExtension::class)
 internal class WebClientConfiguratorTest {
   @Mock
-  private lateinit var keycloakConfiguration: AirbyteKeycloakConfiguration
+  private lateinit var keycloakConfiguration: AirbyteKeycloakConfig
 
   @Mock
   private lateinit var realmResource: RealmResource
@@ -37,7 +38,7 @@ internal class WebClientConfiguratorTest {
   @BeforeEach
   fun setUp() {
     Mockito.`when`(keycloakConfiguration.webClientId).thenReturn(WEB_CLIENT_ID)
-    webClientConfigurator = WebClientConfigurator(WEBAPP_URL, keycloakConfiguration)
+    webClientConfigurator = WebClientConfigurator(AirbyteConfig(airbyteUrl = WEBAPP_URL), keycloakConfiguration)
   }
 
   @Test

@@ -11,6 +11,8 @@ import io.airbyte.api.client.model.generated.DataplaneInitRequestBody
 import io.airbyte.api.client.model.generated.DataplaneInitResponse
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
+import io.airbyte.micronaut.runtime.AirbyteInternalApiClientConfig
+import io.airbyte.micronaut.runtime.AirbyteInternalApiClientConfig.AuthConfig
 import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.micronaut.context.event.ApplicationEventPublisher
 import io.mockk.Ordering
@@ -25,7 +27,7 @@ import org.junit.jupiter.api.assertThrows
 import org.openapitools.client.infrastructure.ClientException
 import java.util.UUID
 
-class DataplaneIdentityServiceTest {
+internal class DataplaneIdentityServiceTest {
   val dataplaneClientId = "test-dp-client-id-1"
 
   lateinit var apiClient: AirbyteApiClient
@@ -33,6 +35,7 @@ class DataplaneIdentityServiceTest {
   lateinit var featureFlagClient: FeatureFlagClient
   lateinit var eventPublisher: ApplicationEventPublisher<DataplaneConfig>
   lateinit var service: DataplaneIdentityService
+  lateinit var airbyteInternalApiClientConfig: AirbyteInternalApiClientConfig
 
   @BeforeEach
   fun setup() {
@@ -40,9 +43,10 @@ class DataplaneIdentityServiceTest {
     featureFlagMap = mutableMapOf()
     featureFlagClient = TestClient(featureFlagMap)
     eventPublisher = mockk(relaxed = true)
+    airbyteInternalApiClientConfig = AirbyteInternalApiClientConfig(auth = AuthConfig(clientId = dataplaneClientId))
     service =
       DataplaneIdentityService(
-        dataplaneClientId = dataplaneClientId,
+        airbyteInternalApiClientConfig = airbyteInternalApiClientConfig,
         airbyteApiClient = apiClient,
         eventPublisher = eventPublisher,
       )

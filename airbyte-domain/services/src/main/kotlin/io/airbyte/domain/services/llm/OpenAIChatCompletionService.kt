@@ -9,20 +9,20 @@ import com.openai.client.okhttp.OpenAIOkHttpClient
 import com.openai.models.ChatModel
 import com.openai.models.chat.completions.ChatCompletionCreateParams
 import datadog.trace.api.Trace
+import io.airbyte.micronaut.runtime.AirbyteOpenAiConfig
 import io.micronaut.cache.annotation.Cacheable
-import io.micronaut.context.annotation.ConfigurationProperties
 import jakarta.inject.Singleton
 
 @Singleton
 open class OpenAIChatCompletionService(
-  private val apiKeys: OpenAIProjectAPIKeyConfig,
+  private val airbyteOpenAiConfig: AirbyteOpenAiConfig,
 ) {
   private val clientCache: MutableMap<OpenAIProjectId, OpenAIClient> = mutableMapOf()
 
   private fun getClient(projectId: OpenAIProjectId): OpenAIClient {
     val apiKey =
       when (projectId) {
-        OpenAIProjectId.FailedSyncAssistant -> apiKeys.failedSyncAssistant
+        OpenAIProjectId.FailedSyncAssistant -> airbyteOpenAiConfig.apiKeys.failedSyncAssistant
       }
 
     return clientCache.computeIfAbsent(projectId) {
@@ -63,11 +63,6 @@ open class OpenAIChatCompletionService(
       ?.orElse(null) ?: throw IllegalStateException("OpenAI response is missing content")
   }
 }
-
-@ConfigurationProperties("airbyte.openai.api-keys")
-data class OpenAIProjectAPIKeyConfig(
-  val failedSyncAssistant: String,
-)
 
 enum class OpenAIProjectId {
   FailedSyncAssistant,

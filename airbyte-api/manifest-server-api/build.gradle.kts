@@ -19,6 +19,7 @@ dependencies {
 
   api(project(":oss:airbyte-api:commons"))
   api(project(":oss:airbyte-api:server-api"))
+  api(project(":oss:airbyte-commons-micronaut"))
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)

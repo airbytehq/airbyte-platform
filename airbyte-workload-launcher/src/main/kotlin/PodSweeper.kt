@@ -4,63 +4,82 @@
 
 package io.airbyte.workload.launcher
 
-import dev.failsafe.RetryPolicy
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.micronaut.runtime.AirbytePodSweeperConfig
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
+import io.airbyte.micronaut.runtime.POD_SWEEPER_PREFIX
 import io.airbyte.workload.launcher.client.KubernetesClientWrapper
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.KUBECTL_COMPLETED_VALUE
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.KUBECTL_RUNNING_VALUE
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodList
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import io.micronaut.scheduling.annotation.Scheduled
-import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Clock
 import java.time.Instant
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
 
-/**
- * A class that sweeps pods (labeled airbyte=job-pod) older than certain TTLs.
- *
- * @param client Fabric8 KubernetesClient
- * @param namespace The Kubernetes namespace to search in (defaults to "default")
- * @param runningTtl If non-null, running pods older than now - runningTtl will be deleted
- * @param succeededTtl If non-null, succeeded pods older than now - succeededTtl will be deleted
- * @param unsuccessfulTtl If non-null, failed/unknown pods older than now - unsuccessfulTtl will be deleted
- */
 private val logger = KotlinLogging.logger {}
 
-// this is open to support @Instrument AOP
+/**
+ * A class that sweeps pods (labeled airbyte=job-pod) older than certain TTLs.  This class
+ * is marked open to support @Instrument AOP.
+ *
+ * @param k8sWrapper The wrapped Fabric8 KubernetesClient
+ * @param metricClient The [MetricClient]
+ * @param clock The [Clock] used to determine what to sweep
+ * @param airbyteWorkerConfig The [AirbyteWorkerConfig] that contains the K8s cluster namespace
+ * @param airbytePodSweeperConfig The [AirbytePodSweeperConfig] that contains the TTLs for sweeping
+ */
 @Singleton
 open class PodSweeper(
   private val k8sWrapper: KubernetesClientWrapper,
   private val metricClient: MetricClient,
   private val clock: Clock,
-  @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String,
-  @Value("\${airbyte.pod-sweeper.runningTtl}") private val runningTtl: Long? = null,
-  @Value("\${airbyte.pod-sweeper.succeededTtl}") private val succeededTtl: Long? = null,
-  @Value("\${airbyte.pod-sweeper.unsuccessfulTtl}") private val unsuccessfulTtl: Long? = null,
+  private val airbyteWorkerConfig: AirbyteWorkerConfig,
+  private val airbytePodSweeperConfig: AirbytePodSweeperConfig,
 ) {
   @Instrument(
     start = "WORKLOAD_LAUNCHER_CRON",
     duration = "WORKLOAD_LAUNCHER_CRON_DURATION",
     tags = [Tag(key = MetricTags.CRON_TYPE, value = "pod_sweeper")],
   )
-  @Scheduled(fixedRate = "\${airbyte.pod-sweeper.rate}")
+  @Scheduled(fixedRate = "\${$POD_SWEEPER_PREFIX.rate}")
   open fun sweepPods() {
-    logger.info { "Starting pod sweeper cycle in namespace [$namespace]..." }
+    logger.info { "Starting pod sweeper cycle in namespace [${airbyteWorkerConfig.job.kubernetes.namespace}]..." }
 
     val now = Instant.ofEpochMilli(clock.millis())
-    val runningCutoff = runningTtl?.minutes?.let { now.minus(it.toJavaDuration()) }
-    val succeededCutoff = succeededTtl?.minutes?.let { now.minus(it.toJavaDuration()) }
-    val unsuccessfulCutoff = unsuccessfulTtl?.minutes?.let { now.minus(it.toJavaDuration()) }
+    val runningCutoff =
+      if (airbytePodSweeperConfig.runningTtl >
+        0
+      ) {
+        airbytePodSweeperConfig.runningTtl.minutes.let { now.minus(it.toJavaDuration()) }
+      } else {
+        null
+      }
+    val succeededCutoff =
+      if (airbytePodSweeperConfig.succeededTtl >
+        0
+      ) {
+        airbytePodSweeperConfig.succeededTtl.minutes.let { now.minus(it.toJavaDuration()) }
+      } else {
+        null
+      }
+    val unsuccessfulCutoff =
+      if (airbytePodSweeperConfig.unsuccessfulTtl >
+        0
+      ) {
+        airbytePodSweeperConfig.unsuccessfulTtl.minutes.let { now.minus(it.toJavaDuration()) }
+      } else {
+        null
+      }
 
     runningCutoff?.let {
       logger.info { "Will sweep Running pods older than $it (UTC)." }
@@ -72,7 +91,7 @@ open class PodSweeper(
       logger.info { "Will sweep unsuccessful pods older than $it (UTC)." }
     }
 
-    val podList: PodList = k8sWrapper.listJobPods(namespace)
+    val podList: PodList = k8sWrapper.listJobPods(airbyteWorkerConfig.job.kubernetes.namespace)
 
     for (pod in podList.items) {
       val phase = pod.status?.phase
@@ -149,7 +168,7 @@ open class PodSweeper(
     phase: String,
     reason: String,
   ) {
-    if (k8sWrapper.deletePod(pod = pod, namespace = namespace, reason = reason)) {
+    if (k8sWrapper.deletePod(pod = pod, namespace = airbyteWorkerConfig.job.kubernetes.namespace, reason = reason)) {
       metricClient.count(metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_POD_SWEEPER_COUNT, attributes = arrayOf(MetricAttribute("phase", phase)))
     }
   }

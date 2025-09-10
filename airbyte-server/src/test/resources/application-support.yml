@@ -1,0 +1,4 @@
+airbyte:
+  support-email-domains:
+    oss: test-oss-domain
+    cloud: test-cloud-domain

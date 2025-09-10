@@ -146,11 +146,7 @@ Renders the common.server.host environment variable
 Renders the global.auth.enabled value
 */}}
 {{- define "airbyte.common.auth.enabled" }}
-	{{- if eq .Values.global.auth.enabled nil }}
-    	{{- true }}
-	{{- else }}
-    	{{- .Values.global.auth.enabled }}
-	{{- end }}
+    {{- .Values.global.auth.enabled | default (ternary "true" "false" (eq .Values.global.edition "enterprise")) }}
 {{- end }}
 
 {{/*

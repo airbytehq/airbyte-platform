@@ -5,13 +5,13 @@
 package io.airbyte.data.services.impls.keycloak
 
 import io.airbyte.commons.auth.RequiresAuthMode
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
 import io.airbyte.commons.auth.config.AuthMode
-import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator
 import io.airbyte.config.Application
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.data.services.ApplicationService
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import jakarta.ws.rs.BadRequestException
@@ -35,9 +35,9 @@ import java.util.UUID
 @RequiresAuthMode(AuthMode.OIDC)
 class ApplicationServiceKeycloakImpl(
   private val keycloakAdminClient: Keycloak,
-  private val keycloakConfiguration: AirbyteKeycloakConfiguration,
+  private val keycloakConfiguration: AirbyteKeycloakConfig,
   private val clientScopeConfigurator: ClientScopeConfigurator,
-  private val tokenExpirationConfig: TokenExpirationConfig,
+  private val airbyteAuthConfig: AirbyteAuthConfig,
 ) : ApplicationService {
   /**
    * An ID that uniquely identifies the Application in the downstream service. Is used for deletion.
@@ -218,7 +218,7 @@ class ApplicationServiceKeycloakImpl(
           "access.token.signed.response.alg" to "RS256",
           // Note: No matter the configured value, this is limited to keycloak's Realm settings -> sessions ->
           // SSO Session Max
-          "access.token.lifespan" to (tokenExpirationConfig.applicationTokenExpirationInMinutes * 60).toString(),
+          "access.token.lifespan" to (airbyteAuthConfig.tokenExpiration.applicationTokenExpirationInMinutes * 60).toString(),
           "use.refresh.tokens" to "false",
         )
     }

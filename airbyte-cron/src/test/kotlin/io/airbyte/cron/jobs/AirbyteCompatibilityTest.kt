@@ -23,7 +23,7 @@ import java.util.UUID
 
 @MicronautTest(environments = [Environment.TEST])
 @Property(name = "airbyte.version", value = "1.2.0")
-@Property(name = "airbyte.workspace.root", value = "./build/tmp/workspace")
+@Property(name = "airbyte.workspace-root", value = "./build/tmp/workspace")
 @Property(name = "airbyte.edition", value = "COMMUNITY")
 @Property(name = "micronaut.http.services.workload-api.url", value = "http://localhost")
 @Requires(env = ["internal"])

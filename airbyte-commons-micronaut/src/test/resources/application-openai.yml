@@ -1,0 +1,4 @@
+airbyte:
+  openai:
+    api-keys:
+      failed-sync-assistant: test-failed-sync-assistant

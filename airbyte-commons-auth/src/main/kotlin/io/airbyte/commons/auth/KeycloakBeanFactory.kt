@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.auth
 
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Singleton
 import org.keycloak.admin.client.Keycloak
@@ -12,7 +12,7 @@ import org.keycloak.admin.client.KeycloakBuilder
 
 @Factory
 class KeycloakBeanFactory(
-  private val keycloakConfiguration: AirbyteKeycloakConfiguration,
+  private val keycloakConfiguration: AirbyteKeycloakConfig,
 ) {
   @Singleton
   fun createKeycloakAdminClient(): Keycloak =

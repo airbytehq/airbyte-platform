@@ -9,6 +9,12 @@ micronaut:
       event-loop-group: other
 
 airbyte:
+  auth:
+    identity-provider:
+      issuers:
+        - http://test-url.com
+        - airbyte
+    token-issuer: "http://test-url.com"
   flyway:
     configs:
       initialization-timeout-ms: 60000
@@ -16,10 +22,7 @@ airbyte:
     jobs:
       initialization-timeout-ms: 60000
       minimum-migration-version: "0.40.23.002"
-  workspace:
-    root: /tmp
-  shutdown:
-    delay_ms: 0
+  workspace-root: /tmp
   cloud:
     storage:
       type: local
@@ -28,16 +31,26 @@ airbyte:
         state: state
         workload-output: workload
         activity-payload: payload
+        audit-logging: audit-logging
   connector-registry:
     enterprise:
       enterprise-stubs-url: "http://test-url.com"
   api:
     host: https://api.airbyte.com
+  connector-builder-server-api:
+    base-path: "http://test-url.com"
+    token: TEST_TOKEN
+  manifest-server-api:
+    base-path: "http://test-url.com"
+  shutdown:
+    delayMs: 1
   web-app:
     url: "http://test-url.com"
-    config: null
-  connector-builder-server-api:
-    token: TEST_TOKEN
+  worker:
+    job:
+      error-reporting:
+        sentry:
+          dsn: test-dsn
 
 datasources:
   config:

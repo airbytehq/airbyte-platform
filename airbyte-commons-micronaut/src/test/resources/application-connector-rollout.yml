@@ -1,0 +1,11 @@
+airbyte:
+  connector-rollout:
+    gcs:
+      application-credentials: test-application-credentials
+      project-id: test-project-id
+      bucket-name: test-bucket-name
+      object-prefix: test-object-prefix
+    timeouts:
+      wait_between_rollout_seconds: 10
+      wait_between_sync_results_queries_seconds: 20
+      rollout_expiration_seconds: 30

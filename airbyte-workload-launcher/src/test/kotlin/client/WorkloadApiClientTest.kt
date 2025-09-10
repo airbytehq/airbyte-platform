@@ -9,6 +9,7 @@ import io.airbyte.workload.api.domain.ClaimResponse
 import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.airbyte.workload.launcher.authn.DataplaneIdentityService
 import io.micronaut.http.HttpStatus
+import io.micronaut.runtime.ApplicationConfiguration
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -20,15 +21,18 @@ import org.junit.jupiter.api.Test
 private const val APPLICATION_NAME = "airbyte-workload-launcher"
 
 internal class WorkloadApiClientTest {
+  private lateinit var applicationConfiguration: ApplicationConfiguration
   private lateinit var identifyService: DataplaneIdentityService
   private lateinit var workloadApiClient: WorkloadApiClient
   private lateinit var internalWorkloadApiClient: io.airbyte.workload.api.client.WorkloadApiClient
 
   @BeforeEach
   internal fun setup() {
+    applicationConfiguration = ApplicationConfiguration()
+    applicationConfiguration.setName(APPLICATION_NAME)
     internalWorkloadApiClient = mockk()
     identifyService = mockk(relaxed = true)
-    workloadApiClient = WorkloadApiClient(internalWorkloadApiClient, identifyService, APPLICATION_NAME)
+    workloadApiClient = WorkloadApiClient(internalWorkloadApiClient, identifyService, applicationConfiguration)
   }
 
   @Test

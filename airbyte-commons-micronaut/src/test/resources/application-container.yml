@@ -1,0 +1,3 @@
+airbyte:
+  container:
+    rootless-workload: true

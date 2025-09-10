@@ -21,6 +21,7 @@ dependencies {
   api(libs.jackson.kotlin)
 
   api(project(":oss:airbyte-commons"))
+  api(project(":oss:airbyte-commons-micronaut"))
   api(project(":oss:airbyte-metrics:metrics-lib"))
   api(project(":oss:airbyte-featureflag"))
 

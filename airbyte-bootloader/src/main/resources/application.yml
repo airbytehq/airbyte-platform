@@ -33,7 +33,6 @@ airbyte:
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   feature-flag:
-    client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
     api-key: ${LAUNCHDARKLY_KEY:}
   flyway:

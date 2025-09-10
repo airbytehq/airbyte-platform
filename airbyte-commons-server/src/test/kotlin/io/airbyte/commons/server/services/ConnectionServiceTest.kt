@@ -6,6 +6,8 @@ package io.airbyte.commons.server.services
 
 import io.airbyte.api.model.generated.ConnectionStatus
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
+import io.airbyte.commons.server.runtime.AirbyteServerConfiguration
+import io.airbyte.commons.server.runtime.AirbyteServerConfiguration.AirbyteServerConnectionLimitConfiguration.AirbyteServerConnectionLimitsConfiguration
 import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
@@ -156,10 +158,18 @@ class ConnectionServiceTest {
         jobService,
         jobPersistence,
         jobNotifier,
-        maxDaysBeforeDisable,
-        maxJobsBeforeDisable,
-        maxDaysBeforeWarning,
-        maxJobsBeforeWarning,
+        AirbyteServerConfiguration(
+          connectionLimits =
+            AirbyteServerConfiguration.AirbyteServerConnectionLimitConfiguration(
+              limits =
+                AirbyteServerConnectionLimitsConfiguration(
+                  maxJobsWarning = maxJobsBeforeWarning.toLong(),
+                  maxDays = maxDaysBeforeDisable.toLong(),
+                  maxJobs = maxJobsBeforeDisable.toLong(),
+                  maxDaysWarning = maxDaysBeforeWarning.toLong(),
+                ),
+            ),
+        ),
       )
 
     private fun mockJob(

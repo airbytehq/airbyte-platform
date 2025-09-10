@@ -509,7 +509,7 @@ open class ConnectorBuilderProjectsHandler
     }
 
     @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
-    fun readConnectorBuilderProjectStream(requestBody: ConnectorBuilderProjectStreamReadRequestBody): ConnectorBuilderProjectStreamRead {
+    fun readConnectorBuilderProjectStream(requestBody: ConnectorBuilderProjectStreamReadRequestBody): ConnectorBuilderProjectStreamRead? {
       try {
         val project = connectorBuilderService.getConnectorBuilderProject(requestBody.builderProjectId, false)
         val secretPersistenceConfig = getSecretPersistenceConfig(project.workspaceId)
@@ -546,7 +546,7 @@ open class ConnectorBuilderProjectsHandler
           connectorBuilderService.updateBuilderProjectTestingValues(project.builderProjectId, updatedTestingValuesWithSecretCoordinates)
           val updatedTestingValuesWithObfuscatedSecrets =
             secretsProcessor.prepareSecretsForOutput(updatedTestingValuesWithSecretCoordinates, spec)
-          builderProjectStreamRead.latestConfigUpdate = updatedTestingValuesWithObfuscatedSecrets
+          builderProjectStreamRead?.latestConfigUpdate = updatedTestingValuesWithObfuscatedSecrets
         }
 
         return builderProjectStreamRead

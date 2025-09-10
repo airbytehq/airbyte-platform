@@ -9,7 +9,7 @@ import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.auth.roles.AuthRole
 import io.airbyte.config.Organization
 import io.airbyte.config.persistence.OrganizationPersistence
-import io.airbyte.data.config.InstanceAdminConfig
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.UsernamePasswordCredentials
 import io.mockk.every
@@ -26,8 +26,8 @@ private const val PASSWORD = "hunter2"
 
 class CommunityAuthProviderTest {
   private val organizationPersistence = mockk<OrganizationPersistence>()
-  private val instanceAdminConfig = mockk<InstanceAdminConfig>()
-  private val authProvider = CommunityAuthProvider<Any>(instanceAdminConfig, organizationPersistence)
+  private val instanceAdminConfig = mockk<AirbyteAuthConfig.AirbyteAuthInstanceAdminConfig>()
+  private val authProvider = CommunityAuthProvider<Any>(AirbyteAuthConfig(instanceAdmin = instanceAdminConfig), organizationPersistence)
 
   @Test
   fun `should authenticate successfully with valid credentials`() {

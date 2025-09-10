@@ -6,8 +6,8 @@ package io.airbyte.connectorbuilder.handlers
 
 import io.airbyte.connectorbuilder.api.model.generated.HealthCheckRead
 import io.airbyte.connectorbuilder.api.model.generated.HealthCheckReadCapabilities
+import io.airbyte.micronaut.runtime.AirbyteConnectorBuilderConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 
@@ -18,7 +18,7 @@ import jakarta.inject.Singleton
 @Singleton
 open class HealthHandler(
   @param:Named("buildCdkVersion") val cdkVersion: String,
-  @param:Value("\${airbyte.connector-builder-server.capabilities.enable-unsafe-code}") val enableUnsafeCodeGlobalOverride: Boolean,
+  val airbyteConnectorBuilderConfig: AirbyteConnectorBuilderConfig,
 ) {
   /**
    * Get the server status and the version of the CDK used.
@@ -27,7 +27,7 @@ open class HealthHandler(
     try {
       // Define the capabilities available for the builder server
       val capabilities =
-        HealthCheckReadCapabilities().customCodeExecution(enableUnsafeCodeGlobalOverride)
+        HealthCheckReadCapabilities().customCodeExecution(airbyteConnectorBuilderConfig.capabilities.enableUnsafeCode)
 
       return HealthCheckRead()
         .available(true)

@@ -11,6 +11,7 @@ import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.WorkloadListActiveRequest
 import io.airbyte.workload.api.domain.WorkloadSummary
@@ -19,7 +20,6 @@ import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.airbyte.workload.launcher.pods.AUTO_ID
 import io.fabric8.kubernetes.api.model.Pod
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.scheduling.annotation.Scheduled
 import jakarta.inject.Singleton
@@ -38,7 +38,7 @@ open class RunawayPodSweeper(
   private val metricClient: MetricClient,
   private val clock: Clock,
   private val featureFlagClient: FeatureFlagClient,
-  @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String,
+  private val airbyteWorkerConfig: AirbyteWorkerConfig,
 ) : ApplicationEventListener<DataplaneConfig> {
   private var dataplaneId: UUID? = null
 
@@ -73,7 +73,7 @@ open class RunawayPodSweeper(
     // This is to report overall counts of runaway pods rather than just the new ones.
     val activePodsByAutoId: Map<String, Pod> =
       k8sWrapper
-        .listJobPods(namespace)
+        .listJobPods(airbyteWorkerConfig.job.kubernetes.namespace)
         .items
         .filter { it.status.phase == "Running" }
         .mapNotNull { pod ->
@@ -123,12 +123,12 @@ open class RunawayPodSweeper(
     val currentEpochSeconds = clock.instant().epochSecond
 
     k8sWrapper
-      .listJobPods(namespace) { it.withLabel(DELETE_BY) }
+      .listJobPods(airbyteWorkerConfig.job.kubernetes.namespace) { it.withLabel(DELETE_BY) }
       .items
       .forEach { pod ->
         val deleteBy = pod.metadata.labels[DELETE_BY]?.toLongOrNull()
         if (deleteBy != null && deleteBy <= currentEpochSeconds) {
-          if (k8sWrapper.deletePod(pod = pod, namespace = namespace, reason = "Runaway pod")) {
+          if (k8sWrapper.deletePod(pod = pod, namespace = airbyteWorkerConfig.job.kubernetes.namespace, reason = "Runaway pod")) {
             metricClient.count(metric = OssMetricsRegistry.WORKLOAD_RUNAWAY_POD_DELETED, value = 1)
           }
         }

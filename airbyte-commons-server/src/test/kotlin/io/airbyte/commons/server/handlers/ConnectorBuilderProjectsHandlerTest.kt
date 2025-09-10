@@ -234,31 +234,31 @@ internal class ConnectorBuilderProjectsHandlerTest {
   fun testCreateConnectorBuilderProject() {
     val project = generateBuilderProject()
 
-    Mockito.`when`(uuidSupplier.get()).thenReturn(project.getBuilderProjectId())
+    Mockito.`when`(uuidSupplier.get()).thenReturn(project.builderProjectId)
 
     val create =
       ConnectorBuilderProjectWithWorkspaceId()
         .builderProject(
           ConnectorBuilderProjectDetails()
-            .name(project.getName())
-            .draftManifest(project.getManifestDraft()),
+            .name(project.name)
+            .draftManifest(project.manifestDraft),
         ).workspaceId(workspaceId)
 
     val response = connectorBuilderProjectsHandler.createConnectorBuilderProject(create)
-    Assertions.assertEquals(project.getBuilderProjectId(), response.getBuilderProjectId())
-    Assertions.assertEquals(project.getWorkspaceId(), response.getWorkspaceId())
+    Assertions.assertEquals(project.builderProjectId, response.builderProjectId)
+    Assertions.assertEquals(project.workspaceId, response.workspaceId)
 
     Mockito
       .verify(connectorBuilderService, Mockito.times(1))
       .writeBuilderProjectDraft(
-        project.getBuilderProjectId(),
-        project.getWorkspaceId(),
-        project.getName(),
-        project.getManifestDraft(),
+        project.builderProjectId,
+        project.workspaceId,
+        project.name,
+        project.manifestDraft,
         null,
-        project.getBaseActorDefinitionVersionId(),
-        project.getContributionPullRequestUrl(),
-        project.getContributionActorDefinitionId(),
+        project.baseActorDefinitionVersionId,
+        project.contributionPullRequestUrl,
+        project.contributionActorDefinitionId,
       )
   }
 
@@ -275,7 +275,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
         ),
       ).thenReturn(project)
 
-    Mockito.`when`(uuidSupplier.get()).thenReturn(project.getBuilderProjectId())
+    Mockito.`when`(uuidSupplier.get()).thenReturn(project.builderProjectId)
     Mockito
       .`when`(
         declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(
@@ -286,7 +286,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
     val publish =
       ConnectorBuilderPublishRequestBody()
         .name("")
-        .builderProjectId(project.getBuilderProjectId())
+        .builderProjectId(project.builderProjectId)
         .workspaceId(workspaceId)
         .initialDeclarativeManifest(DeclarativeSourceManifest().spec(A_SPEC).manifest(A_MANIFEST))
 
@@ -295,8 +295,8 @@ internal class ConnectorBuilderProjectsHandlerTest {
       Assertions
         .assertThrows(
           IllegalStateException::class.java,
-          Executable { connectorBuilderProjectsHandler.publishConnectorBuilderProject(publish) },
-        ).message,
+        ) { connectorBuilderProjectsHandler.publishConnectorBuilderProject(publish) }
+        .message,
     )
   }
 
@@ -307,7 +307,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
     val project = generateBuilderProject()
 
     Mockito
-      .`when`(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false))
+      .`when`(connectorBuilderService.getConnectorBuilderProject(project.builderProjectId, false))
       .thenReturn(project)
 
     val update =
@@ -340,15 +340,15 @@ internal class ConnectorBuilderProjectsHandlerTest {
         .builderProject(
           ConnectorBuilderProjectDetails()
             .name(project.getName())
-            .draftManifest(project.getManifestDraft()),
+            .draftManifest(project.manifestDraft),
         ).workspaceId(workspaceId)
-        .builderProjectId(project.getBuilderProjectId())
+        .builderProjectId(project.builderProjectId)
 
     project.setWorkspaceId(wrongWorkspace)
     Mockito
       .`when`(
         connectorBuilderService.getConnectorBuilderProject(
-          project.getBuilderProjectId(),
+          project.builderProjectId,
           false,
         ),
       ).thenReturn(project)
@@ -376,16 +376,16 @@ internal class ConnectorBuilderProjectsHandlerTest {
     val project = generateBuilderProject()
     val wrongWorkspace = UUID.randomUUID()
 
-    project.setWorkspaceId(wrongWorkspace)
+    project.workspaceId = wrongWorkspace
     Mockito
-      .`when`(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false))
+      .`when`(connectorBuilderService.getConnectorBuilderProject(project.builderProjectId, false))
       .thenReturn(project)
 
     Assertions.assertThrows(
       ConfigNotFoundException::class.java,
       Executable {
         connectorBuilderProjectsHandler.deleteConnectorBuilderProject(
-          ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(project.getBuilderProjectId()).workspaceId(workspaceId),
+          ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(project.builderProjectId).workspaceId(workspaceId),
         )
       },
     )
@@ -401,7 +401,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
   fun testPublishConnectorBuilderProjectValidateWorkspace() {
     val project = generateBuilderProject()
     Mockito
-      .`when`(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false))
+      .`when`(connectorBuilderService.getConnectorBuilderProject(project.builderProjectId, false))
       .thenReturn(project)
 
     val wrongWorkspaceId = UUID.randomUUID()
@@ -411,7 +411,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
       )
     val publishReq: ConnectorBuilderPublishRequestBody =
       anyConnectorBuilderProjectRequest()
-        .builderProjectId(project.getBuilderProjectId())
+        .builderProjectId(project.builderProjectId)
         .workspaceId(wrongWorkspaceId)
         .initialDeclarativeManifest(manifest)
 
@@ -440,17 +440,17 @@ internal class ConnectorBuilderProjectsHandlerTest {
     val project = generateBuilderProject()
 
     Mockito
-      .`when`(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false))
+      .`when`(connectorBuilderService.getConnectorBuilderProject(project.builderProjectId, false))
       .thenReturn(project)
 
     connectorBuilderProjectsHandler.deleteConnectorBuilderProject(
-      ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(project.getBuilderProjectId()).workspaceId(workspaceId),
+      ConnectorBuilderProjectIdWithWorkspaceId().builderProjectId(project.builderProjectId).workspaceId(workspaceId),
     )
 
     Mockito
       .verify(connectorBuilderService, Mockito.times(1))
       .deleteBuilderProject(
-        project.getBuilderProjectId(),
+        project.builderProjectId,
       )
   }
 
@@ -464,28 +464,28 @@ internal class ConnectorBuilderProjectsHandlerTest {
     project1.setActiveDeclarativeManifestVersion(A_VERSION)
     project1.setActorDefinitionId(UUID.randomUUID())
 
-    Mockito.`when`(connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId!!)).thenReturn(
+    Mockito.`when`(connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId)).thenReturn(
       Stream.of(project1, project2),
     )
 
     val response =
       connectorBuilderProjectsHandler.listConnectorBuilderProjects(WorkspaceIdRequestBody().workspaceId(workspaceId))
 
-    Assertions.assertEquals(project1.getBuilderProjectId(), response.getProjects().get(0).getBuilderProjectId())
-    Assertions.assertEquals(project2.getBuilderProjectId(), response.getProjects().get(1).getBuilderProjectId())
+    Assertions.assertEquals(project1.builderProjectId, response.projects[0].builderProjectId)
+    Assertions.assertEquals(project2.builderProjectId, response.projects[1].builderProjectId)
 
-    Assertions.assertTrue(response.getProjects().get(0).getHasDraft())
-    Assertions.assertFalse(response.getProjects().get(1).getHasDraft())
+    Assertions.assertTrue(response.projects[0].hasDraft)
+    Assertions.assertFalse(response.projects[1].hasDraft)
 
-    Assertions.assertEquals(project1.getActiveDeclarativeManifestVersion(), response.getProjects().get(0).getActiveDeclarativeManifestVersion())
-    Assertions.assertEquals(project1.getActorDefinitionId(), response.getProjects().get(0).getSourceDefinitionId())
-    Assertions.assertNull(project2.getActiveDeclarativeManifestVersion())
-    Assertions.assertNull(project2.getActorDefinitionId())
+    Assertions.assertEquals(project1.activeDeclarativeManifestVersion, response.projects[0].activeDeclarativeManifestVersion)
+    Assertions.assertEquals(project1.actorDefinitionId, response.projects[0].sourceDefinitionId)
+    Assertions.assertNull(project2.activeDeclarativeManifestVersion)
+    Assertions.assertNull(project2.actorDefinitionId)
 
     Mockito
       .verify(connectorBuilderService, Mockito.times(1))
       .getConnectorBuilderProjectsByWorkspace(
-        workspaceId!!,
+        workspaceId,
       )
   }
 
@@ -495,22 +495,22 @@ internal class ConnectorBuilderProjectsHandlerTest {
   fun testListForkedAndNonForkedProjects() {
     val unforkedProject = generateBuilderProject()
     val forkedProject = generateBuilderProject().withActorDefinitionId(UUID.randomUUID())
-    forkedProject.setBaseActorDefinitionVersionId(FORKED_ADV.getVersionId())
+    forkedProject.baseActorDefinitionVersionId = FORKED_ADV.versionId
 
-    Mockito.`when`(connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId!!)).thenReturn(
+    Mockito.`when`(connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceId)).thenReturn(
       Stream.of(unforkedProject, forkedProject),
     )
     Mockito
-      .`when`(actorDefinitionService.getActorDefinitionVersions(java.util.List.of(FORKED_ADV.getVersionId())))
+      .`when`(actorDefinitionService.getActorDefinitionVersions(listOf(FORKED_ADV.versionId)))
       .thenReturn(
-        java.util.List.of(
+        listOf(
           FORKED_ADV,
         ),
       )
     Mockito
       .`when`(sourceService.listStandardSourceDefinitions(false))
       .thenReturn(
-        java.util.List.of(
+        listOf(
           StandardSourceDefinition().withSourceDefinitionId(UUID.randomUUID()),
           FORKED_SOURCE,
         ),
@@ -1041,7 +1041,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
           anyOrNull(),
         ),
       ).thenReturn(project)
-    Mockito.`when`(uuidSupplier.get()).thenReturn(project.getBuilderProjectId())
+    Mockito.`when`(uuidSupplier.get()).thenReturn(project.builderProjectId)
 
     connectorBuilderProjectsHandler.publishConnectorBuilderProject(
       anyConnectorBuilderProjectRequest()
@@ -1082,10 +1082,10 @@ internal class ConnectorBuilderProjectsHandlerTest {
       )
 
     Mockito
-      .`when`(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false))
+      .`when`(connectorBuilderService.getConnectorBuilderProject(project.builderProjectId, false))
       .thenReturn(project)
     Mockito
-      .`when`(secretsRepositoryWriter.createFromConfigLegacy(workspaceId!!, testingValues, spec, null))
+      .`when`(secretsRepositoryWriter.createFromConfigLegacy(workspaceId, testingValues, spec, null))
       .thenReturn(testingValuesWithSecretCoordinates)
     Mockito
       .`when`(secretsProcessor.prepareSecretsForOutput(testingValuesWithSecretCoordinates, spec))
@@ -1141,7 +1141,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
     Mockito
       .`when`(
         secretsRepositoryWriter.updateFromConfigLegacy(
-          workspaceId!!,
+          workspaceId,
           testingValuesWithSecretCoordinates,
           newTestingValues,
           spec,
@@ -1163,7 +1163,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
     Assertions.assertEquals(response, testingValuesWithObfuscatedSecrets)
     Mockito
       .verify(connectorBuilderService, Mockito.times(1))
-      .updateBuilderProjectTestingValues(project.getBuilderProjectId(), newTestingValuesWithSecretCoordinates)
+      .updateBuilderProjectTestingValues(project.builderProjectId, newTestingValuesWithSecretCoordinates)
   }
 
   @Test
@@ -1234,12 +1234,12 @@ internal class ConnectorBuilderProjectsHandlerTest {
       ConnectorBuilderProjectStreamRead()
         .logs(mutableListOf<@Valid ConnectorBuilderProjectStreamReadLogsInner?>())
         .slices(
-          java.util.List.of<@Valid ConnectorBuilderProjectStreamReadSlicesInner?>(
+          listOf<@Valid ConnectorBuilderProjectStreamReadSlicesInner?>(
             ConnectorBuilderProjectStreamReadSlicesInner()
               .pages(
-                java.util.List.of<@Valid ConnectorBuilderProjectStreamReadSlicesInnerPagesInner?>(
+                listOf<@Valid ConnectorBuilderProjectStreamReadSlicesInnerPagesInner?>(
                   ConnectorBuilderProjectStreamReadSlicesInnerPagesInner()
-                    .records(java.util.List.of<Any?>(record1, record2))
+                    .records(listOf<Any?>(record1, record2))
                     .request(ConnectorBuilderHttpRequest().url(requestUrl).httpMethod(ConnectorBuilderHttpRequest.HttpMethodEnum.GET))
                     .response(ConnectorBuilderHttpResponse().status(responseStatus).body(responseBody)),
                 ),
@@ -1331,7 +1331,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
         .latestConfigUpdate(newTestingValues)
 
     Mockito
-      .`when`(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false))
+      .`when`(connectorBuilderService.getConnectorBuilderProject(project.builderProjectId, false))
       .thenReturn(project)
     io.mockk.every {
       manifestProcessor.streamTestRead(
@@ -1351,7 +1351,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
     Mockito
       .`when`(
         secretsRepositoryWriter.updateFromConfigLegacy(
-          workspaceId!!,
+          workspaceId,
           testingValuesWithSecretCoordinates,
           newTestingValues,
           spec,
@@ -1365,10 +1365,10 @@ internal class ConnectorBuilderProjectsHandlerTest {
     val projectStreamRead =
       connectorBuilderProjectsHandler.readConnectorBuilderProjectStream(projectStreamReadRequestBody)
 
-    Assertions.assertEquals(newTestingValuesWithObfuscatedSecrets, projectStreamRead.getLatestConfigUpdate())
+    Assertions.assertEquals(newTestingValuesWithObfuscatedSecrets, projectStreamRead?.latestConfigUpdate)
     Mockito
       .verify(connectorBuilderService, Mockito.times(1))
-      .updateBuilderProjectTestingValues(project.getBuilderProjectId(), newTestingValuesWithSecretCoordinates)
+      .updateBuilderProjectTestingValues(project.builderProjectId, newTestingValuesWithSecretCoordinates)
   }
 
   @Test
@@ -1405,8 +1405,8 @@ internal class ConnectorBuilderProjectsHandlerTest {
         BuilderProjectForDefinitionRequestBody().actorDefinitionId(actorDefinitionId).workspaceId(workspaceId),
       )
 
-    Assertions.assertEquals(projectId, response.getBuilderProjectId())
-    Assertions.assertEquals(workspaceId, response.getWorkspaceId())
+    Assertions.assertEquals(projectId, response.builderProjectId)
+    Assertions.assertEquals(workspaceId, response.workspaceId)
   }
 
   @Test
@@ -1443,7 +1443,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
         BuilderProjectForDefinitionRequestBody().actorDefinitionId(actorDefinitionId).workspaceId(workspaceId),
       )
 
-    Assertions.assertEquals(projectId, response.getBuilderProjectId())
+    Assertions.assertEquals(projectId, response.builderProjectId)
     Assertions.assertNull(response.getWorkspaceId())
   }
 
@@ -1454,7 +1454,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
     Mockito
       .`when`(manifestInjector.createDeclarativeManifestConnectorSpecification(spec))
       .thenReturn(adaptedConnectorSpecification)
-    Mockito.`when`(adaptedConnectorSpecification!!.getDocumentationUrl()).thenReturn(URI.create(documentationUrl))
+    Mockito.`when`(adaptedConnectorSpecification.documentationUrl).thenReturn(URI.create(documentationUrl))
   }
 
   private fun addSpec(manifest: JsonNode): JsonNode {
@@ -1475,8 +1475,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
     Assertions.assertThrows(
       ConfigNotFoundException::class.java,
-      Executable { connectorBuilderProjectsHandler.createForkedConnectorBuilderProject(requestBody) },
-    )
+    ) { connectorBuilderProjectsHandler.createForkedConnectorBuilderProject(requestBody) }
   }
 
   @Test
@@ -1505,8 +1504,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
     Assertions.assertThrows(
       NotFoundException::class.java,
-      Executable { connectorBuilderProjectsHandler.createForkedConnectorBuilderProject(requestBody) },
-    )
+    ) { connectorBuilderProjectsHandler.createForkedConnectorBuilderProject(requestBody) }
   }
 
   @Test

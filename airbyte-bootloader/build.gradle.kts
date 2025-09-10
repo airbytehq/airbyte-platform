@@ -7,6 +7,7 @@ plugins {
 dependencies {
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
+  ksp(project(":oss:airbyte-configuration-processor"))
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)

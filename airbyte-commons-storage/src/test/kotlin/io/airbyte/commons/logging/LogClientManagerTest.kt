@@ -5,6 +5,7 @@
 package io.airbyte.commons.logging
 
 import ch.qos.logback.classic.Level
+import io.airbyte.micronaut.runtime.AirbyteLoggingConfig
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -21,12 +22,14 @@ internal class LogClientManagerTest {
       mockk<LogClient> {
         every { tailCloudLogs(any(), any()) } returns logLines
       }
+    val airbyteLoggingConfig =
+      AirbyteLoggingConfig(client = AirbyteLoggingConfig.AirbyteLoggingClientConfig(logTailSize = 100))
     val logMdcHelper = mockk<LogMdcHelper> {}
     val logClientManager =
       LogClientManager(
         logClient = logClient,
         logMdcHelper = logMdcHelper,
-        logTailSize = 100,
+        airbyteLoggingConfig = airbyteLoggingConfig,
       )
     val lines = logClientManager.getJobLogFile(logPath = Path.of("log-path"))
     assertEquals(logLines, lines)
@@ -36,11 +39,13 @@ internal class LogClientManagerTest {
   fun testGetJobLogNullPath() {
     val logClient = mockk<LogClient> {}
     val logMdcHelper = mockk<LogMdcHelper> {}
+    val airbyteLoggingConfig =
+      AirbyteLoggingConfig(client = AirbyteLoggingConfig.AirbyteLoggingClientConfig(logTailSize = 100))
     val logClientManager =
       LogClientManager(
         logClient = logClient,
         logMdcHelper = logMdcHelper,
-        logTailSize = 100,
+        airbyteLoggingConfig = airbyteLoggingConfig,
       )
     val lines = logClientManager.getJobLogFile(logPath = null)
     assertEquals(0, lines.size)
@@ -50,11 +55,13 @@ internal class LogClientManagerTest {
   fun testGetJobLogEmptyPath() {
     val logClient = mockk<LogClient> {}
     val logMdcHelper = mockk<LogMdcHelper> {}
+    val airbyteLoggingConfig =
+      AirbyteLoggingConfig(client = AirbyteLoggingConfig.AirbyteLoggingClientConfig(logTailSize = 100))
     val logClientManager =
       LogClientManager(
         logClient = logClient,
         logMdcHelper = logMdcHelper,
-        logTailSize = 100,
+        airbyteLoggingConfig = airbyteLoggingConfig,
       )
     val lines = logClientManager.getJobLogFile(logPath = Path.of(""))
     assertEquals(0, lines.size)
@@ -78,11 +85,13 @@ internal class LogClientManagerTest {
         every { getLogs(any(), any()) } returns logEvents
       }
     val logMdcHelper = mockk<LogMdcHelper> {}
+    val airbyteLoggingConfig =
+      AirbyteLoggingConfig(client = AirbyteLoggingConfig.AirbyteLoggingClientConfig(logTailSize = logTailSize))
     val logClientManager =
       LogClientManager(
         logClient = logClient,
         logMdcHelper = logMdcHelper,
-        logTailSize = logTailSize,
+        airbyteLoggingConfig = airbyteLoggingConfig,
       )
     val result = logClientManager.getLogs(logPath = Path.of("log-path"))
     assertEquals(logEvents, result)
@@ -92,11 +101,13 @@ internal class LogClientManagerTest {
   fun testGetStructuredLogsNullPath() {
     val logClient = mockk<LogClient> {}
     val logMdcHelper = mockk<LogMdcHelper> {}
+    val airbyteLoggingConfig =
+      AirbyteLoggingConfig(client = AirbyteLoggingConfig.AirbyteLoggingClientConfig(logTailSize = 100))
     val logClientManager =
       LogClientManager(
         logClient = logClient,
         logMdcHelper = logMdcHelper,
-        logTailSize = 100,
+        airbyteLoggingConfig = airbyteLoggingConfig,
       )
     val logEvents = logClientManager.getLogs(logPath = null)
     assertNotNull(logEvents)
@@ -108,11 +119,13 @@ internal class LogClientManagerTest {
   fun testGetStructuredLogsEmptyPath() {
     val logClient = mockk<LogClient> {}
     val logMdcHelper = mockk<LogMdcHelper> {}
+    val airbyteLoggingConfig =
+      AirbyteLoggingConfig(client = AirbyteLoggingConfig.AirbyteLoggingClientConfig(logTailSize = 100))
     val logClientManager =
       LogClientManager(
         logClient = logClient,
         logMdcHelper = logMdcHelper,
-        logTailSize = 100,
+        airbyteLoggingConfig = airbyteLoggingConfig,
       )
     val logEvents = logClientManager.getLogs(logPath = Path.of(""))
     assertNotNull(logEvents)
@@ -128,11 +141,13 @@ internal class LogClientManagerTest {
         every { deleteLogs(any()) } returns Unit
       }
     val logMdcHelper = mockk<LogMdcHelper> {}
+    val airbyteLoggingConfig =
+      AirbyteLoggingConfig(client = AirbyteLoggingConfig.AirbyteLoggingClientConfig(logTailSize = 100))
     val logClientManager =
       LogClientManager(
         logClient = logClient,
         logMdcHelper = logMdcHelper,
-        logTailSize = 100,
+        airbyteLoggingConfig = airbyteLoggingConfig,
       )
     logClientManager.deleteLogs(logPath = logPath)
     verify(exactly = 1) { logClient.deleteLogs(logPath = logPath) }
@@ -146,11 +161,13 @@ internal class LogClientManagerTest {
         every { deleteLogs(any()) } returns Unit
       }
     val logMdcHelper = mockk<LogMdcHelper> {}
+    val airbyteLoggingConfig =
+      AirbyteLoggingConfig(client = AirbyteLoggingConfig.AirbyteLoggingClientConfig(logTailSize = 100))
     val logClientManager =
       LogClientManager(
         logClient = logClient,
         logMdcHelper = logMdcHelper,
-        logTailSize = 100,
+        airbyteLoggingConfig = airbyteLoggingConfig,
       )
     logClientManager.deleteLogs(logPath = logPath)
     verify(exactly = 0) { logClient.deleteLogs(logPath = logPath) }
@@ -164,11 +181,13 @@ internal class LogClientManagerTest {
       mockk<LogMdcHelper> {
         every { setJobMdc(any()) } returns Unit
       }
+    val airbyteLoggingConfig =
+      AirbyteLoggingConfig(client = AirbyteLoggingConfig.AirbyteLoggingClientConfig(logTailSize = 100))
     val logClientManager =
       LogClientManager(
         logClient = logClient,
         logMdcHelper = logMdcHelper,
-        logTailSize = 100,
+        airbyteLoggingConfig = airbyteLoggingConfig,
       )
     logClientManager.setJobMdc(path = logPath)
     verify(exactly = 1) { logMdcHelper.setJobMdc(logPath) }
@@ -183,11 +202,13 @@ internal class LogClientManagerTest {
       mockk<LogMdcHelper> {
         every { fullLogPath(any()) } returns Path.of(logPath.toString(), logFilename).toString()
       }
+    val airbyteLoggingConfig =
+      AirbyteLoggingConfig(client = AirbyteLoggingConfig.AirbyteLoggingClientConfig(logTailSize = 100))
     val logClientManager =
       LogClientManager(
         logClient = logClient,
         logMdcHelper = logMdcHelper,
-        logTailSize = 100,
+        airbyteLoggingConfig = airbyteLoggingConfig,
       )
     val fullPath = logClientManager.fullLogPath(path = logPath)
     assertEquals(Path.of(logPath.toString(), logFilename).toString(), fullPath)

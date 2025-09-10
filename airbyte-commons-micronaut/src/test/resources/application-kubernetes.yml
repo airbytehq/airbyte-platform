@@ -1,0 +1,14 @@
+airbyte:
+  kubernetes:
+    client:
+      call-timeout-sec: 1
+      connect-timeout-sec: 2
+      read-timeout-sec: 3
+      write-timeout-sec: 4
+      connection-pool:
+        keep-alive-sec: 5
+        max-idle-connections: 6
+      retries:
+        delay-seconds: 7
+        max: 8
+    resource-check-rate: 10s

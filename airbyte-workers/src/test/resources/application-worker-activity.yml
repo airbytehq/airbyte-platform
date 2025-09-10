@@ -1,0 +1,8 @@
+airbyte:
+  activity:
+    initial-delay: 1
+    max-attempts: 2
+    max-delay: 3
+    max-timeout: 4
+    check-timeout: 5
+    discovery-timeout: 6

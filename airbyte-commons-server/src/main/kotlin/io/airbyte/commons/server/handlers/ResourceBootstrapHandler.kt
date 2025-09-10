@@ -34,7 +34,7 @@ import jakarta.inject.Singleton
 import java.util.UUID
 import java.util.function.Supplier
 
-val logger = KotlinLogging.logger { }
+private val logger = KotlinLogging.logger { }
 
 @Singleton
 open class ResourceBootstrapHandler(

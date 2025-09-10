@@ -1,0 +1,6 @@
+airbyte:
+  connector-builder-server-api:
+    base-path: test-base-path
+    signature-secret: test-signature-secret
+    connect-timeout-seconds: 1
+    read-timeout-seconds: 2

@@ -16,6 +16,7 @@ import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.micronaut.runtime.AirbyteApiConfig
 import io.airbyte.publicApi.server.generated.models.JobResponse
 import io.airbyte.publicApi.server.generated.models.JobTypeEnum
 import io.airbyte.publicApi.server.generated.models.JobsResponse
@@ -26,7 +27,6 @@ import io.airbyte.server.apis.publicapi.mappers.JobResponseMapper
 import io.airbyte.server.apis.publicapi.mappers.JobsResponseMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Secondary
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -63,10 +63,8 @@ class JobServiceImpl(
   private val schedulerHandler: SchedulerHandler,
   private val jobHistoryHandler: JobHistoryHandler,
   private val currentUserService: CurrentUserService,
+  private val airbyteApiConfig: AirbyteApiConfig,
 ) : JobService {
-  @Value("\${airbyte.api.host}")
-  var publicApiHost: String? = null
-
   /**
    * Starts a sync job for the given connection ID.
    */
@@ -169,7 +167,7 @@ class JobServiceImpl(
       jobsFilter.jobType,
       jobsFilter.limit!!,
       jobsFilter.offset!!,
-      publicApiHost!!,
+      airbyteApiConfig.host,
     )
   }
 
@@ -215,7 +213,7 @@ class JobServiceImpl(
       jobsFilter.jobType,
       jobsFilter.limit!!,
       jobsFilter.offset!!,
-      publicApiHost!!,
+      airbyteApiConfig.host,
     )
   }
 

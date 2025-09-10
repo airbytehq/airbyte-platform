@@ -4,11 +4,11 @@
 
 package io.airbyte.commons.auth.resolvers
 
-import io.airbyte.commons.auth.config.GenericOidcFieldMappingConfig
 import io.airbyte.commons.auth.support.JwtUserAuthenticationResolver
 import io.airbyte.commons.auth.support.UserAuthenticationResolver
 import io.airbyte.config.AuthProvider
 import io.airbyte.config.AuthenticatedUser
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.security.authentication.Authentication
@@ -22,9 +22,9 @@ import java.util.Optional
 @Replaces(JwtUserAuthenticationResolver::class)
 class GenericOidcUserAuthenticationResolver(
   private val securityService: SecurityService,
-  private val fieldMappings: GenericOidcFieldMappingConfig,
+  private val airbyteAuthConfig: AirbyteAuthConfig,
 ) : UserAuthenticationResolver {
-  override fun resolveUser(unused: String): AuthenticatedUser {
+  override fun resolveUser(expectedAuthUserId: String): AuthenticatedUser {
     val authUserId: String =
       securityService
         .username()
@@ -37,6 +37,7 @@ class GenericOidcUserAuthenticationResolver(
         .orElseThrow {
           AuthenticationException("Unable to parse the jwt body")
         }
+    val fieldMappings = airbyteAuthConfig.identityProvider.oidc.fields
     val name: String = (jwtMap.attributes[fieldMappings.name] ?: authUserId).toString()
     val email: String = (jwtMap.attributes[fieldMappings.email] ?: authUserId).toString()
     return AuthenticatedUser()
@@ -51,6 +52,7 @@ class GenericOidcUserAuthenticationResolver(
     if (jwtMap.isEmpty) {
       return null
     }
+    val fieldMappings = airbyteAuthConfig.identityProvider.oidc.fields
     val issuer: String = jwtMap.get().attributes[fieldMappings.issuer] as String
     if (issuer.isBlank()) {
       return null

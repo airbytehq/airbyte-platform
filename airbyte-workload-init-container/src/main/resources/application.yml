@@ -19,10 +19,12 @@ micronaut:
 airbyte:
   platform-mode: ${PLATFORM_MODE:ORCHESTRATOR}
   license-key: ${AIRBYTE_LICENSE_KEY:empty}
-  control.plane.auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT}
-  data.plane.service-account:
-    credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
-    email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
+  control.plane:
+    auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT}
+  data-plane:
+    service-account:
+      credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
+      email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   init:
     operation: ${OPERATION_TYPE:}

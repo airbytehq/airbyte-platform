@@ -5,15 +5,17 @@
 package io.airbyte.featureflag.config
 
 import com.launchdarkly.sdk.server.LDClient
-import io.airbyte.featureflag.CONFIG_FF_APIKEY
 import io.airbyte.featureflag.CONFIG_FF_CLIENT
 import io.airbyte.featureflag.CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY
+import io.airbyte.micronaut.runtime.FEATURE_FLAG_PREFIX
 import io.micronaut.context.annotation.Property
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+
+internal const val CONFIG_FF_APIKEY = "${FEATURE_FLAG_PREFIX}.api-key"
 
 @MicronautTest(rebuildContext = true)
 class FactoryTest {

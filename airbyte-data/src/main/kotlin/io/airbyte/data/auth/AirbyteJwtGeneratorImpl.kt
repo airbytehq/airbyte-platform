@@ -4,8 +4,7 @@
 
 package io.airbyte.data.auth
 
-import io.airbyte.data.auth.TokenType
-import io.micronaut.context.annotation.Property
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
@@ -20,8 +19,8 @@ private const val AIRBYTE_SERVER_AUDIENCE = "airbyte-server"
 @Requires(property = "micronaut.security.token.jwt.enabled", value = "true")
 @Replaces(AirbyteJwtGeneratorNoAuthImpl::class)
 class AirbyteJwtGeneratorImpl(
+  private val airbyteAuthConfig: AirbyteAuthConfig,
   private val jwtGenerator: JwtTokenGenerator,
-  @Property(name = "airbyte.auth.token-issuer") private val tokenIssuer: String = "airbyte",
 ) : AirbyteJwtGenerator {
   var clock: Clock = Clock.systemUTC()
 
@@ -33,7 +32,7 @@ class AirbyteJwtGeneratorImpl(
   ): String {
     val claims: MutableMap<String, Any> =
       mutableMapOf(
-        "iss" to tokenIssuer,
+        "iss" to airbyteAuthConfig.tokenIssuer,
         "aud" to AIRBYTE_SERVER_AUDIENCE,
         "sub" to tokenSubject,
         "typ" to tokenType,

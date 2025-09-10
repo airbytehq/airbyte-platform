@@ -1,0 +1,119 @@
+airbyte:
+  worker:
+    check:
+      enabled: false
+      max-workers: 1
+    connection:
+      enabled: false
+      schedule-jitter:
+        no-jitter-cutoff-minutes: 1
+        high-frequency-bucket:
+          jitter-amount-minutes: 10
+          threshold-minutes: 20
+        medium-frequency-bucket:
+          jitter-amount-minutes: 30
+          threshold-minutes: 40
+        low-frequency-bucket:
+          jitter-amount-minutes: 50
+          threshold-minutes: 60
+        very-low-frequency-bucket:
+          jitter-amount-minutes: 70
+    connector-sidecar:
+      resources:
+        cpu-limit: 10
+        cpu-request: 11
+        memory-limit: 12
+        memory-request: 13
+    discover:
+      auto-refresh-window: 1
+      enabled: false
+      max-workers: 2
+    file-transfer:
+      resources:
+        ephemeral-storage-limit: 1G
+        ephemeral-storage-request: 2G
+    job:
+      error-reporting:
+        sentry:
+          dsn: test-sentry-dsn
+        strategy: SENTRY
+      kube:
+        connector-image-registry: test-connector-image-registry
+        namespace: test-namespace
+        service-account: test-service-account
+        main:
+          container:
+            image: test-main-image
+            image-pull-policy: test-main-image-pull-policy
+            image-pull-secret: test-main-image-pull-secret
+        init:
+          container:
+            image: test-init-image
+            image-pull-policy: test-init-image-pull-policy
+            image-pull-secret: test-init-image-pull-secret
+        sidecar:
+          container:
+            image: test-sidecar-image
+            image-pull-policy: test-sidecar-image-pull-policy
+            image-pull-secret: test-sidecar-image-pull-secret
+        profiler:
+          container:
+            image: test-profiler-image
+            image-pull-policy: test-profiler-image-pull-policy
+            image-pull-secret: test-profiler-image-pull-secret
+            cpu-limit: 2
+            cpu-request: 3
+            memory-limit: 4
+            memory-request: 5
+        volumes:
+          data-plane-creds:
+            mount-path: test-data-plane-mount-path
+            secret-name: test-data-plane-secret-name
+          gcs-creds:
+            mount-path: test-gcs-creds-mount-path
+            secret-name: test-gcs-creds-secret-name
+          secret:
+            mount-path: test-secret-mount-path
+            secret-name: test-secret-secret-name
+          staging:
+            mount-path: test-staging-mount-path
+          local:
+            enabled: true
+        tolerations: test-worker-tolerations
+    isolated:
+      kube:
+        use-custom-node-selector: true
+        node-selectors: test-node-selectors
+    kube-job-configs:
+      default:
+        annotations: test-default-annotations
+        labels: test-default-labels
+        node-selectors: test-default-node-selectors
+        cpu-limit: test-default-cpu-limit
+        cpu-request: test-default-cpu-request
+        memory-limit: test-default-memory-limit
+        memory-request: test-default-memory-request
+        ephemeral-storage-limit: test-default-ephemeral-storage-limit
+        ephemeral-storage-request: test-default-ephemeral-storage-request
+      test1:
+        annotations: test-test1-annotations
+        labels: test-test1-labels
+        node-selectors: test-test1-node-selectors
+        cpu-limit: test-test1-cpu-limit
+        cpu-request: test-test1-cpu-request
+        memory-limit: test-test1-memory-limit
+        memory-request: test-test1-memory-request
+        ephemeral-storage-limit: test-test1-ephemeral-storage-limit
+        ephemeral-storage-request: test-test1-ephemeral-storage-request
+    notify:
+      enabled: false
+      max-workers: 3
+    spec:
+      enabled: false
+      max-workers: 4
+    sync:
+      enabled: false
+      max-workers: 10
+      max-attempts: 6
+      max-timeout: 7
+      max-init-timeout: 8

@@ -17,17 +17,16 @@ import io.airbyte.api.client.model.generated.ReleaseStage
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody
 import io.airbyte.api.client.model.generated.SourceIdRequestBody
 import io.airbyte.commons.json.Jsons
-import io.airbyte.config.Configs
 import io.airbyte.config.FailureReason
 import io.airbyte.config.Metadata
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.State
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
@@ -40,8 +39,7 @@ private val logger = KotlinLogging.logger { }
 @Singleton
 class StateCheckSumErrorReporter(
   @Named("stateCheckSumErrorReportingClient") private val jobErrorReportingClient: Optional<JobErrorReportingClient>,
-  @Value("\${airbyte.version}") private val airbyteVersion: String,
-  private val airbyteEdition: Configs.AirbyteEdition,
+  private val airbyteConfig: AirbyteConfig,
   private val airbyteApiClient: AirbyteApiClient,
   private val webUrlHelper: WebUrlHelper,
 ) {
@@ -157,8 +155,8 @@ class StateCheckSumErrorReporter(
 
   fun airbyteMetadata(): Map<String, String> =
     mapOf(
-      JobErrorReporter.AIRBYTE_VERSION_META_KEY to airbyteVersion,
-      JobErrorReporter.AIRBYTE_EDITION_META_KEY to airbyteEdition.name,
+      JobErrorReporter.AIRBYTE_VERSION_META_KEY to airbyteConfig.version,
+      JobErrorReporter.AIRBYTE_EDITION_META_KEY to airbyteConfig.edition.name,
     )
 
   fun getFailureReasonMetadata(failureReason: FailureReason): Map<String, String> =

@@ -4,11 +4,11 @@
 
 package io.airbyte.data.services.impls.keycloak
 
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
-import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator
 import io.airbyte.config.Application
 import io.airbyte.config.AuthenticatedUser
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import jakarta.ws.rs.BadRequestException
 import jakarta.ws.rs.core.Response
 import org.junit.jupiter.api.Assertions
@@ -31,7 +31,7 @@ import java.util.Optional
 import java.util.UUID
 
 internal class ApplicationServiceKeycloakImplTests {
-  private var keycloakConfiguration: AirbyteKeycloakConfiguration? = null
+  private var keycloakConfiguration: AirbyteKeycloakConfig? = null
 
   private val keycloakClient: Keycloak = Mockito.mock<Keycloak>(Keycloak::class.java)
   private val realmResource: RealmResource = Mockito.mock<RealmResource>(RealmResource::class.java)
@@ -45,9 +45,7 @@ internal class ApplicationServiceKeycloakImplTests {
 
   @BeforeEach
   fun setUp() {
-    keycloakConfiguration = AirbyteKeycloakConfiguration()
-    keycloakConfiguration!!.protocol = "http"
-    keycloakConfiguration!!.host = "localhost:8080"
+    keycloakConfiguration = AirbyteKeycloakConfig(protocol = "http", host = "localhost:8080")
 
     Mockito.`when`<RealmResource?>(keycloakClient.realm(REALM_NAME)).thenReturn(realmResource)
     Mockito.`when`<ClientsResource?>(realmResource.clients()).thenReturn(clientsResource)
@@ -63,7 +61,7 @@ internal class ApplicationServiceKeycloakImplTests {
           keycloakClient,
           keycloakConfiguration!!,
           clientScopeConfigurator,
-          TokenExpirationConfig(),
+          AirbyteAuthConfig(),
         ),
       )
   }

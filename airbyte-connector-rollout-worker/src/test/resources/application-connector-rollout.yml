@@ -1,0 +1,5 @@
+airbyte:
+  connector_rollouts:
+    github_workflow:
+      dispatch_url: http://test-dispatch-url
+      github_token: test-token

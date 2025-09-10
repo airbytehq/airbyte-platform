@@ -4,6 +4,7 @@
 
 package io.airbyte.bootloader
 
+import io.airbyte.bootloader.runtime.AirbyteBootloaderConfig
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.resources.Resources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
@@ -53,6 +54,7 @@ import io.airbyte.db.instance.jobs.migrations.V1_1_0_005__AdddScopeUpdatedAtInde
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.persistence.job.DefaultJobPersistence
 import io.mockk.every
 import io.mockk.mockk
@@ -263,7 +265,11 @@ internal class BootloaderTest {
 
     val bootloader =
       Bootloader(
-        autoUpgradeConnectors = false,
+        airbyteBootloaderConfig = AirbyteBootloaderConfig(autoUpgradeConnectors = false, runMigrationAtStartup = runMigrationOnStartup),
+        airbyteAuthConfig =
+          AirbyteAuthConfig(
+            defaultRealm = DEFAULT_REALM,
+          ),
         workspaceService = workspaceService,
         configsDatabaseInitializer = configDatabaseInitializer,
         configsDatabaseMigrator = configsDatabaseMigrator,
@@ -273,8 +279,6 @@ internal class BootloaderTest {
         jobPersistence = jobsPersistence,
         organizationPersistence = organizationPersistence,
         protocolVersionChecker = protocolVersionChecker,
-        runMigrationOnStartup = runMigrationOnStartup,
-        defaultRealm = DEFAULT_REALM,
         postLoadExecution = postLoadExecutor,
         dataplaneGroupService = dataplaneGroupService,
         dataplaneInitializer = dataplaneInitializer,
@@ -449,7 +453,11 @@ internal class BootloaderTest {
 
     val bootloader =
       Bootloader(
-        autoUpgradeConnectors = false,
+        airbyteBootloaderConfig = AirbyteBootloaderConfig(autoUpgradeConnectors = false, runMigrationAtStartup = runMigrationOnStartup),
+        airbyteAuthConfig =
+          AirbyteAuthConfig(
+            defaultRealm = DEFAULT_REALM,
+          ),
         workspaceService = workspaceService,
         configsDatabaseInitializer = configDatabaseInitializer,
         configsDatabaseMigrator = configsDatabaseMigrator,
@@ -459,8 +467,6 @@ internal class BootloaderTest {
         jobPersistence = jobsPersistence,
         organizationPersistence = organizationPersistence,
         protocolVersionChecker = protocolVersionChecker,
-        runMigrationOnStartup = runMigrationOnStartup,
-        defaultRealm = DEFAULT_REALM,
         postLoadExecution = postLoadExecutor,
         dataplaneGroupService = dataplaneGroupService,
         dataplaneInitializer = dataplaneInitializer,
@@ -726,7 +732,11 @@ internal class BootloaderTest {
 
     val bootloader =
       Bootloader(
-        autoUpgradeConnectors = false,
+        airbyteBootloaderConfig = AirbyteBootloaderConfig(autoUpgradeConnectors = false, runMigrationAtStartup = runMigrationOnStartup),
+        airbyteAuthConfig =
+          AirbyteAuthConfig(
+            defaultRealm = DEFAULT_REALM,
+          ),
         workspaceService = workspaceService,
         configsDatabaseInitializer = configDatabaseInitializer,
         configsDatabaseMigrator = configsDatabaseMigrator,
@@ -736,8 +746,6 @@ internal class BootloaderTest {
         jobPersistence = jobsPersistence,
         organizationPersistence = organizationPersistence,
         protocolVersionChecker = protocolVersionChecker,
-        runMigrationOnStartup = runMigrationOnStartup,
-        defaultRealm = DEFAULT_REALM,
         postLoadExecution = postLoadExecutor,
         dataplaneGroupService = dataplaneGroupService,
         dataplaneInitializer = dataplaneInitializer,

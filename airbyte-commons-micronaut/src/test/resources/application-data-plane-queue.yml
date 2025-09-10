@@ -1,0 +1,8 @@
+airbyte:
+  data-plane:
+    check:
+      task-queue: "CHECK_CONNECTION_OVERRIDE"
+    discover:
+      task-queue: "DISCOVER_SCHEMA_OVERRIDE"
+    sync:
+      task-queue: "SYNC_OVERRIDE"

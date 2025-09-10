@@ -4,13 +4,15 @@
 
 package io.airbyte.commons.temporal
 
+import io.airbyte.micronaut.runtime.AirbyteTemporalConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.grpc.StatusRuntimeException
-import io.micronaut.context.annotation.Value
 import io.temporal.api.workflowservice.v1.DescribeNamespaceRequest
 import io.temporal.serviceclient.WorkflowServiceStubs
 import jakarta.inject.Singleton
 import java.util.concurrent.TimeUnit
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Utils for verifying that temporal is running and available. Used at the startup of an
@@ -19,7 +21,7 @@ import java.util.concurrent.TimeUnit
 @Singleton
 class TemporalInitializationUtils(
   private val temporalService: WorkflowServiceStubs,
-  @Value("\${temporal.cloud.namespace}") private val temporalCloudNamespace: String?,
+  private val airbyteTemporalConfig: AirbyteTemporalConfig,
 ) {
   /**
    * Blocks until the Temporal [TemporalUtils.DEFAULT_NAMESPACE] has been created. This is
@@ -33,26 +35,26 @@ class TemporalInitializationUtils(
       try {
         // This is to allow the configured namespace to be available in the Temporal
         // cache before continuing on with any additional configuration/bean creation.
-        log.info { "temporal service : $temporalService" }
-        log.info { "temporal namespace : $temporalNamespace" }
-        temporalService!!.blockingStub().describeNamespace(DescribeNamespaceRequest.newBuilder().setNamespace(temporalNamespace).build())
+        logger.info { "temporal service : $temporalService" }
+        logger.info { "temporal namespace : $temporalNamespace" }
+        temporalService.blockingStub().describeNamespace(DescribeNamespaceRequest.newBuilder().setNamespace(temporalNamespace).build())
         namespaceExists = true
         // This is to allow the configured namespace to be available in the Temporal
         // cache before continuing on with any additional configuration/bean creation.
         Thread.sleep(TimeUnit.SECONDS.toMillis(5))
       } catch (e: InterruptedException) {
-        log.debug { "Namespace '$temporalNamespace' does not exist yet.  Re-checking..." }
+        logger.debug(e) { "Namespace '$temporalNamespace' does not exist yet.  Re-checking..." }
         try {
           Thread.sleep(TimeUnit.SECONDS.toMillis(5))
         } catch (ie: InterruptedException) {
-          log.debug { "Sleep interrupted.  Exiting loop..." }
+          logger.debug(ie) { "Sleep interrupted.  Exiting loop..." }
         }
       } catch (e: StatusRuntimeException) {
-        log.debug { "Namespace '$temporalNamespace' does not exist yet.  Re-checking..." }
+        logger.debug(e) { "Namespace '$temporalNamespace' does not exist yet.  Re-checking..." }
         try {
           Thread.sleep(TimeUnit.SECONDS.toMillis(5))
         } catch (ie: InterruptedException) {
-          log.debug { "Sleep interrupted.  Exiting loop..." }
+          logger.debug(ie) { "Sleep interrupted.  Exiting loop..." }
         }
       }
     }
@@ -64,13 +66,7 @@ class TemporalInitializationUtils(
    * @return The Temporal namespace.
    */
   private fun getTemporalNamespace(): String =
-    if (temporalCloudNamespace != null && temporalCloudNamespace.isNotEmpty()) {
-      temporalCloudNamespace
-    } else {
+    airbyteTemporalConfig.cloud.namespace.ifBlank {
       TemporalUtils.DEFAULT_NAMESPACE
     }
-
-  companion object {
-    private val log = KotlinLogging.logger {}
-  }
 }

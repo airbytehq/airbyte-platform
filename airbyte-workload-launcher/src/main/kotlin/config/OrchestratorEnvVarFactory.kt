@@ -4,7 +4,8 @@
 
 package io.airbyte.workload.launcher.config
 
-import io.airbyte.commons.storage.StorageConfig
+import io.airbyte.micronaut.runtime.AirbyteConnectorConfig
+import io.airbyte.micronaut.runtime.StorageEnvironmentVariableProvider
 import io.airbyte.workload.launcher.constants.EnvVarConstants
 import io.airbyte.workload.launcher.constants.OrchestratorConstants
 import io.airbyte.workload.launcher.model.toEnvVarList
@@ -12,23 +13,22 @@ import io.airbyte.workload.launcher.model.toRefEnvVarList
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.EnvVarSource
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import io.airbyte.commons.envvar.EnvVar as AbEnvVar
 
 @Factory
 class OrchestratorEnvVarFactory(
-  private val storageConfig: StorageConfig,
+  private val storageEnvironmentVariableProvider: StorageEnvironmentVariableProvider,
   @Named("workloadApiEnvMap") private val workloadApiEnvMap: Map<String, String>,
   @Named("metricsEnvMap") private val metricsEnvMap: Map<String, String>,
   @Named("micronautEnvMap") private val micronautEnvMap: Map<String, String>,
   @Named("apiClientEnvMap") private val apiClientEnvMap: Map<String, String>,
-  @Value("\${airbyte.connector.source.credentials.aws.assumed-role.secret-name}") private val awsAssumedRoleSecretName: String,
   @Named("orchestratorSecretsEnvMap") private val secretsEnvMap: Map<String, EnvVarSource>,
   @Named("airbyteMetadataEnvMap") private val airbyteMetadataEnvMap: Map<String, String>,
   @Named("featureFlagEnvMap") private val ffEnvVars: Map<String, String>,
   @Named("dataplaneCredentialsSecretsEnvMap") private val dataplaneCredentialsSecretsEnvMap: Map<String, EnvVarSource>,
+  private val airbyteConnectorConfig: AirbyteConnectorConfig,
 ) {
   /**
    * The list of environment variables to be passed to the orchestrator.
@@ -45,10 +45,10 @@ class OrchestratorEnvVarFactory(
     envMap[EnvVarConstants.DD_SERVICE_ENV_VAR] = "airbyte-container-orchestrator"
 
     // secret name used by orchestrator for assumed role look-ups
-    envMap[AbEnvVar.AWS_ASSUME_ROLE_SECRET_NAME.name] = awsAssumedRoleSecretName
+    envMap[AbEnvVar.AWS_ASSUME_ROLE_SECRET_NAME.name] = airbyteConnectorConfig.source.credentials.aws.assumedRole.secretName
 
     // Cloud storage config
-    envMap.putAll(storageConfig.toEnvVarMap())
+    envMap.putAll(storageEnvironmentVariableProvider.toEnvVarMap())
 
     // Workload Api configuration
     envMap.putAll(workloadApiEnvMap)

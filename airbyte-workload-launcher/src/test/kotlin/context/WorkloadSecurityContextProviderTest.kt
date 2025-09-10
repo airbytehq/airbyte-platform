@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.launcher.context
 
+import io.airbyte.micronaut.runtime.AirbyteContainerConfig
 import io.fabric8.kubernetes.api.model.SeccompProfileBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -15,7 +16,8 @@ internal class WorkloadSecurityContextProviderTest {
   internal fun testDefaultContainerSecurityContext() {
     val userId = 12345L
     val groupId = 67890L
-    val context = WorkloadSecurityContextProvider(rootlessWorkload = true)
+    val airbyteContainerConfig = AirbyteContainerConfig(rootlessWorkload = true)
+    val context = WorkloadSecurityContextProvider(airbyteContainerConfig)
 
     val securityContext = context.defaultContainerSecurityContext(user = userId, group = groupId)
     assertNotNull(securityContext)
@@ -30,7 +32,8 @@ internal class WorkloadSecurityContextProviderTest {
   internal fun testDefaultContainerSecurityContextDisabled() {
     val userId = 12345L
     val groupId = 67890L
-    val context = WorkloadSecurityContextProvider(rootlessWorkload = false)
+    val airbyteContainerConfig = AirbyteContainerConfig(rootlessWorkload = false)
+    val context = WorkloadSecurityContextProvider(airbyteContainerConfig)
 
     val securityContext = context.defaultContainerSecurityContext(user = userId, group = groupId)
     assertNull(securityContext)
@@ -39,7 +42,8 @@ internal class WorkloadSecurityContextProviderTest {
   @Test
   internal fun testRootlessContainerSecurityContext() {
     val secComp = SeccompProfileBuilder().withType(SECCOMP_PROFILE_TYPE).build()
-    val context = WorkloadSecurityContextProvider(rootlessWorkload = true)
+    val airbyteContainerConfig = AirbyteContainerConfig(rootlessWorkload = true)
+    val context = WorkloadSecurityContextProvider(airbyteContainerConfig)
 
     val securityContext = context.rootlessContainerSecurityContext()
     assertNotNull(securityContext)
@@ -54,7 +58,8 @@ internal class WorkloadSecurityContextProviderTest {
 
   @Test
   internal fun testRootlessContainerSecurityContextDisabled() {
-    val context = WorkloadSecurityContextProvider(rootlessWorkload = false)
+    val airbyteContainerConfig = AirbyteContainerConfig(rootlessWorkload = false)
+    val context = WorkloadSecurityContextProvider(airbyteContainerConfig)
     val securityContext = context.rootlessContainerSecurityContext()
     assertNull(securityContext)
   }
@@ -64,7 +69,8 @@ internal class WorkloadSecurityContextProviderTest {
     val userId = 12345L
     val groupId = 67890L
     val secComp = SeccompProfileBuilder().withType(SECCOMP_PROFILE_TYPE).build()
-    val context = WorkloadSecurityContextProvider(rootlessWorkload = true)
+    val airbyteContainerConfig = AirbyteContainerConfig(rootlessWorkload = true)
+    val context = WorkloadSecurityContextProvider(airbyteContainerConfig)
 
     val securityContext = context.rootlessPodSecurityContext(user = userId, group = groupId)
     assertNotNull(securityContext)
@@ -79,14 +85,16 @@ internal class WorkloadSecurityContextProviderTest {
   internal fun testRootlessPodSecurityContextDisabled() {
     val userId = 12345L
     val groupId = 67890L
-    val context = WorkloadSecurityContextProvider(rootlessWorkload = false)
+    val airbyteContainerConfig = AirbyteContainerConfig(rootlessWorkload = false)
+    val context = WorkloadSecurityContextProvider(airbyteContainerConfig)
     val securityContext = context.rootlessPodSecurityContext(user = userId, group = groupId)
     assertNull(securityContext)
   }
 
   @Test
   internal fun testDefaultPodSecurityContext() {
-    val context = WorkloadSecurityContextProvider(rootlessWorkload = true)
+    val airbyteContainerConfig = AirbyteContainerConfig(rootlessWorkload = true)
+    val context = WorkloadSecurityContextProvider(airbyteContainerConfig)
 
     val securityContext = context.defaultPodSecurityContext()
     assertNotNull(securityContext)
@@ -95,7 +103,8 @@ internal class WorkloadSecurityContextProviderTest {
 
   @Test
   internal fun testDefaultPodSecurityContextDisabled() {
-    val context = WorkloadSecurityContextProvider(rootlessWorkload = false)
+    val airbyteContainerConfig = AirbyteContainerConfig(rootlessWorkload = false)
+    val context = WorkloadSecurityContextProvider(airbyteContainerConfig)
     val securityContext = context.defaultPodSecurityContext()
     assertNull(securityContext)
   }

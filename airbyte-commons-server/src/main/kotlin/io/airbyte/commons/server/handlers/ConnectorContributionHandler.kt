@@ -14,23 +14,26 @@ import io.airbyte.commons.server.builder.contributions.ContributionCreateResult
 import io.airbyte.commons.server.builder.contributions.ContributionRead
 import io.airbyte.commons.server.builder.contributions.ContributionTemplates
 import io.airbyte.commons.server.builder.contributions.GithubContributionService
-import io.micronaut.context.annotation.Value
+import io.airbyte.micronaut.runtime.AirbyteConnectorBuilderConfig
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import org.kohsuke.github.GHFileNotFoundException
 import org.kohsuke.github.HttpException
 import java.util.UUID
 
+private val logger = KotlinLogging.logger {}
+
 @Singleton
 class ConnectorContributionHandler(
   private val contributionTemplates: ContributionTemplates,
-  @Value("\${airbyte.connector-builder-server.github.airbyte-pat-token}") private val publicPatToken: String?,
+  private val airbyteConnectorBuilderConfig: AirbyteConnectorBuilderConfig,
 ) {
   fun checkContribution(connectorImageName: String): ContributionRead {
     // Validate the request connector name
     checkConnectorImageNameIsValid(connectorImageName)
 
     // Instantiate the Connectors Contribution Service
-    val githubContributionService = GithubContributionService(connectorImageName, publicPatToken)
+    val githubContributionService = GithubContributionService(connectorImageName, airbyteConnectorBuilderConfig.github.airbytePatToken)
 
     // Check for existing connector
     val connectorExists = githubContributionService.checkIfConnectorExistsOnMain()

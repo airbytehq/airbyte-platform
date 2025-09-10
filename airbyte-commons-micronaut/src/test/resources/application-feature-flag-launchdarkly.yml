@@ -1,0 +1,4 @@
+airbyte:
+  feature-flag:
+    api-key: "test-api-key"
+    client: launchdarkly

@@ -7,9 +7,10 @@ package io.airbyte.workload.launcher.authn
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.DataplaneHeartbeatRequestBody
 import io.airbyte.api.client.model.generated.DataplaneInitRequestBody
+import io.airbyte.micronaut.runtime.AirbyteInternalApiClientConfig
+import io.airbyte.micronaut.runtime.WORKLOAD_LAUNCHER_HEARTBEAT_RATE
 import io.airbyte.workload.launcher.model.DataplaneConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Property
 import io.micronaut.context.event.ApplicationEventPublisher
 import io.micronaut.http.HttpStatus
 import io.micronaut.scheduling.annotation.Scheduled
@@ -28,7 +29,7 @@ private val logger = KotlinLogging.logger {}
  */
 @Singleton
 class DataplaneIdentityService(
-  @Property(name = "airbyte.internal-api.auth.client-id") private val dataplaneClientId: String,
+  private val airbyteInternalApiClientConfig: AirbyteInternalApiClientConfig,
   private val airbyteApiClient: AirbyteApiClient,
   private val eventPublisher: ApplicationEventPublisher<DataplaneConfig>,
 ) {
@@ -39,7 +40,7 @@ class DataplaneIdentityService(
     try {
       val initResponse =
         airbyteApiClient.dataplaneApi.initializeDataplane(
-          DataplaneInitRequestBody(clientId = dataplaneClientId),
+          DataplaneInitRequestBody(clientId = airbyteInternalApiClientConfig.auth.clientId),
         )
       val config =
         DataplaneConfig(
@@ -61,12 +62,12 @@ class DataplaneIdentityService(
 
   fun getDataplaneName(): String = authNDrivenDataplaneConfig!!.dataplaneName
 
-  @Scheduled(fixedRate = "\${airbyte.workload-launcher.heartbeat-rate}")
+  @Scheduled(fixedRate = "\${$WORKLOAD_LAUNCHER_HEARTBEAT_RATE}")
   fun heartbeat() {
     try {
       val heartbeatResponse =
         airbyteApiClient.dataplaneApi.heartbeatDataplane(
-          DataplaneHeartbeatRequestBody(clientId = dataplaneClientId),
+          DataplaneHeartbeatRequestBody(clientId = airbyteInternalApiClientConfig.auth.clientId),
         )
       publishConfigChange(
         DataplaneConfig(

@@ -4,6 +4,7 @@
 
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.WorkloadListActiveResponse
 import io.airbyte.workload.api.domain.WorkloadSummary
@@ -25,12 +26,13 @@ import java.util.UUID
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
-class RunawayPodSweeperTest {
+internal class RunawayPodSweeperTest {
   lateinit var runawayPodSweeper: RunawayPodSweeper
   lateinit var workloadApi: WorkloadApiClient
   lateinit var k8sWrapper: KubernetesClientWrapper
   lateinit var metricClient: MetricClient
   lateinit var clock: Clock
+  lateinit var airbyteWorkerConfig: AirbyteWorkerConfig
 
   @BeforeEach
   fun setup() {
@@ -38,6 +40,16 @@ class RunawayPodSweeperTest {
     k8sWrapper = mockk()
     metricClient = mockk(relaxed = true)
     clock = mockk(relaxed = true)
+    airbyteWorkerConfig =
+      AirbyteWorkerConfig(
+        job =
+          AirbyteWorkerConfig.AirbyteWorkerJobConfig(
+            kubernetes =
+              AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig(
+                namespace = "yolo",
+              ),
+          ),
+      )
 
     runawayPodSweeper =
       RunawayPodSweeper(
@@ -46,7 +58,7 @@ class RunawayPodSweeperTest {
         metricClient = metricClient,
         clock = clock,
         featureFlagClient = mockk { every { boolVariation(any(), any()) } returns true },
-        namespace = "yolo",
+        airbyteWorkerConfig = airbyteWorkerConfig,
       )
   }
 

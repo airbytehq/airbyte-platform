@@ -5,12 +5,12 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
-import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Application
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.data.services.ApplicationService
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.publicApi.server.generated.apis.PublicApplicationsApi
 import io.airbyte.publicApi.server.generated.models.ApplicationCreate
 import io.airbyte.publicApi.server.generated.models.ApplicationRead
@@ -39,7 +39,7 @@ import kotlin.time.Duration.Companion.minutes
 @Requires(bean = ApplicationService::class)
 open class ApplicationsController(
   private val applicationService: ApplicationService,
-  private val tokenExpirationConfig: TokenExpirationConfig,
+  private val airbyteAuthConfig: AirbyteAuthConfig,
   private val currentUserService: CurrentUserService,
   private val trackingHelper: TrackingHelper,
 ) : PublicApplicationsApi {
@@ -109,7 +109,7 @@ open class ApplicationsController(
                 clientSecret = applicationTokenRequestWithGrant.clientSecret,
               ),
           PublicAccessTokenResponse.TokenType.BEARER,
-          tokenExpirationConfig.applicationTokenExpirationInMinutes.minutes.inWholeSeconds,
+          airbyteAuthConfig.tokenExpiration.applicationTokenExpirationInMinutes.minutes.inWholeSeconds,
         ),
       ).build()
 

@@ -1,0 +1,12 @@
+airbyte:
+  retries:
+    complete-failures:
+      max-successive: 4
+      max-total: 5
+      backoff:
+        min-interval-s: 3
+        max-interval-s: 2
+        base: 1
+    partial-failures:
+      max-successive: 6
+      max-total: 7

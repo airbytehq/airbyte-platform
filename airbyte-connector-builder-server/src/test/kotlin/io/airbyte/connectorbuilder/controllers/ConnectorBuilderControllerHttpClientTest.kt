@@ -30,6 +30,7 @@ private const val CUSTOM_CODE_EXECUTION = false
 @MicronautTest
 @Property(name = "CDK_PYTHON", value = "python")
 @Property(name = "CDK_ENTRYPOINT", value = "entry")
+@Property(name = "airbyte.version", value = "dev")
 internal class ConnectorBuilderControllerHttpClientTest {
   @Inject
   lateinit var controller: ConnectorBuilderController

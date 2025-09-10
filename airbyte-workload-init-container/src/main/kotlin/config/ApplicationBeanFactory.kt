@@ -13,6 +13,7 @@ import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.initContainer.hydration.CheckConnectionInputHydrator
 import io.airbyte.initContainer.hydration.DiscoverCatalogInputHydrator
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteSecretsManagerConfig
 import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.helper.BackfillHelper
 import io.airbyte.workers.helper.MapperSecretHydrationHelper
@@ -20,7 +21,6 @@ import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.airbyte.workers.hydration.ConnectorSecretsHydrator
 import io.airbyte.workers.input.ReplicationInputMapper
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 
 @Factory
@@ -35,7 +35,7 @@ class ApplicationBeanFactory {
     catalogClientConverters: CatalogClientConverters,
     metricClient: MetricClient,
     mapper: ReplicationInputMapper,
-    @Value("\${airbyte.secret.use-runtime-persistence}") useRuntimeSecretPersistence: Boolean,
+    airbyteSecretsManagerConfig: AirbyteSecretsManagerConfig,
   ): ReplicationInputHydrator =
     ReplicationInputHydrator(
       airbyteApiClient,
@@ -46,7 +46,7 @@ class ApplicationBeanFactory {
       mapper,
       metricClient,
       connectorSecretsHydrator,
-      useRuntimeSecretPersistence,
+      airbyteSecretsManagerConfig.useRuntimeSecretPersistence,
     )
 
   @Singleton
@@ -54,13 +54,13 @@ class ApplicationBeanFactory {
     airbyteApiClient: AirbyteApiClient,
     metricClient: MetricClient,
     secretsRepositoryReader: SecretsRepositoryReader,
-    @Value("\${airbyte.secret.use-runtime-persistence}") useRuntimeSecretPersistence: Boolean,
+    airbyteSecretsManagerConfig: AirbyteSecretsManagerConfig,
     defaultSecretPersistence: SecretPersistence,
   ): ConnectorSecretsHydrator =
     ConnectorSecretsHydrator(
       secretsRepositoryReader = secretsRepositoryReader,
       airbyteApiClient = airbyteApiClient,
-      useRuntimeSecretPersistence = useRuntimeSecretPersistence,
+      useRuntimeSecretPersistence = airbyteSecretsManagerConfig.useRuntimeSecretPersistence,
       environmentSecretPersistence = defaultSecretPersistence,
       metricClient = metricClient,
     )

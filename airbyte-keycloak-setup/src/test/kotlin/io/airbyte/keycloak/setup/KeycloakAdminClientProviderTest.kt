@@ -4,7 +4,7 @@
 
 package io.airbyte.keycloak.setup
 
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -17,7 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension
 @ExtendWith(MockitoExtension::class)
 internal class KeycloakAdminClientProviderTest {
   @Mock
-  private lateinit var keycloakConfiguration: AirbyteKeycloakConfiguration
+  private lateinit var keycloakConfiguration: AirbyteKeycloakConfig
 
   @InjectMocks
   private lateinit var keycloakAdminClientProvider: KeycloakAdminClientProvider

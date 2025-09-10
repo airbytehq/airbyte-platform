@@ -28,7 +28,9 @@ import java.nio.file.Path
 
 @MicronautTest
 @Property(name = "STORAGE_TYPE", value = "yo")
+@Property(name = "JOB_ERROR_REPORTING_SENTRY_DSN", value = "yo")
 @Property(name = "micronaut.http.services.workload-api.url", value = "http://localhost")
+@Property(name = "INTERNAL_API_HOST", value = "http://localhost:8080")
 class ConnectorCommandWorkflowMicronautTest {
   @Named("workspaceRoot")
   @Bean

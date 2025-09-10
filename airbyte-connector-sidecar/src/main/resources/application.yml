@@ -36,7 +36,7 @@ airbyte:
         activity-payload: ${STORAGE_BUCKET_ACTIVITY_PAYLOAD}
         audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
       azure:
-        connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
+        connection-string: ${AZURE_STORAGE_CONNECTION_STRING:}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
       minio:
@@ -59,10 +59,12 @@ airbyte:
     retries:
       delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
       max: ${AIRBYTE_API_MAX_RETRIES:5}
-  control.plane.auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT}
-  data.plane.service-account:
-    credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
-    email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
+  control.plane:
+    auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT}
+  data.plane:
+    service-account:
+      credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
+      email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
   sidecar:
     # Can we bump this value? Does it need to be configured per operation?
     # Should we pass it in from the launcher?

@@ -18,6 +18,9 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.UseAllowCustomCode
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.featureflag.Workspace
+import io.airbyte.micronaut.runtime.AirbyteContainerOrchestratorConfig
+import io.airbyte.micronaut.runtime.AirbyteLoggingConfig
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -33,6 +36,7 @@ import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixt
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.organizationId
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.workspaceId
 import io.fabric8.kubernetes.api.model.EnvVar
+import io.micronaut.logging.LogLevel
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -63,6 +67,12 @@ class RuntimeEnvVarFactoryTest {
 
   private lateinit var airbyteEdition: AirbyteEdition
 
+  private lateinit var airbyteWorkerConfig: AirbyteWorkerConfig
+
+  private lateinit var airbyteLoggingConfig: AirbyteLoggingConfig
+
+  private lateinit var airbyteContainerOrchestratorConfig: AirbyteContainerOrchestratorConfig
+
   @BeforeEach
   fun setup() {
     connectorApmSupportHelper = mockk()
@@ -72,14 +82,40 @@ class RuntimeEnvVarFactoryTest {
     every { ffClient.boolVariation(ReplicationDebugLogLevelEnabled, any()) } returns false
     airbyteEdition = AirbyteEdition.COMMUNITY
 
+    airbyteWorkerConfig =
+      AirbyteWorkerConfig(
+        job =
+          AirbyteWorkerConfig.AirbyteWorkerJobConfig(
+            kubernetes =
+              AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig(
+                volumes =
+                  AirbyteWorkerConfig.AirbyteWorkerJobConfig
+                    .AirbyteWorkerJobKubernetesConfig
+                    .AirbyteWorkerJobKubernetesVolumeConfig(
+                      staging =
+                        AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig
+                          .AirbyteWorkerJobKubernetesVolumeConfig
+                          .AirbyteWorkerJobKubernetesVolumeStagingConfig(
+                            mountPath = stagingMountPath,
+                          ),
+                    ),
+              ),
+          ),
+      )
+    airbyteLoggingConfig = AirbyteLoggingConfig(logLevel = LogLevel.INFO)
+    airbyteContainerOrchestratorConfig =
+      AirbyteContainerOrchestratorConfig(
+        enableUnsafeCode = false,
+        javaOpts = CONTAINER_ORCH_JAVA_OPTS,
+      )
+
     factory =
       spyk(
         RuntimeEnvVarFactory(
           connectorAwsAssumedRoleSecretEnvList,
-          stagingMountPath,
-          CONTAINER_ORCH_JAVA_OPTS,
-          false,
-          "info",
+          airbyteContainerOrchestratorConfig,
+          airbyteWorkerConfig,
+          airbyteLoggingConfig,
           connectorApmSupportHelper,
           ffClient,
           airbyteEdition,
@@ -210,10 +246,9 @@ class RuntimeEnvVarFactoryTest {
       spyk(
         RuntimeEnvVarFactory(
           connectorAwsAssumedRoleSecretEnvList,
-          stagingMountPath,
-          CONTAINER_ORCH_JAVA_OPTS,
-          false,
-          "info",
+          airbyteContainerOrchestratorConfig,
+          airbyteWorkerConfig,
+          airbyteLoggingConfig,
           connectorApmSupportHelper,
           ffClient,
           airbyteEdition,
@@ -416,14 +451,18 @@ class RuntimeEnvVarFactoryTest {
   ) {
     every { ffClient.boolVariation(UseAllowCustomCode, any()) } returns useAllowCustomCode
 
+    val airbyteContainerOrchestratorConfig =
+      AirbyteContainerOrchestratorConfig(
+        enableUnsafeCode = globalOverride,
+        javaOpts = CONTAINER_ORCH_JAVA_OPTS,
+      )
     val envFactory =
       spyk(
         RuntimeEnvVarFactory(
           connectorAwsAssumedRoleSecretEnvList,
-          stagingMountPath,
-          CONTAINER_ORCH_JAVA_OPTS,
-          globalOverride,
-          "info",
+          airbyteContainerOrchestratorConfig,
+          airbyteWorkerConfig,
+          airbyteLoggingConfig,
           connectorApmSupportHelper,
           ffClient,
           airbyteEdition,
@@ -473,7 +512,7 @@ class RuntimeEnvVarFactoryTest {
         EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, expectedOpts, null),
         EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
         EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, useRuntimeSecretPersistence.toString(), null),
-        EnvVar(EnvVarConstants.LOG_LEVEL, "info", null),
+        EnvVar(EnvVarConstants.LOG_LEVEL, LogLevel.INFO.name, null),
       ),
       result,
     )
@@ -500,7 +539,7 @@ class RuntimeEnvVarFactoryTest {
     val result = factory.getLogLevelEnvVars(context)
 
     assertEquals(
-      listOf(EnvVar(EnvVarConstants.LOG_LEVEL, "info", null)),
+      listOf(EnvVar(EnvVarConstants.LOG_LEVEL, LogLevel.INFO.name, null)),
       result,
     )
   }

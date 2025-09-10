@@ -5,7 +5,6 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
-import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
@@ -17,6 +16,8 @@ import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.data.auth.TokenType
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.publicApi.server.generated.apis.EmbeddedWidgetApi
 import io.airbyte.publicApi.server.generated.models.EmbeddedOrganizationListItem
 import io.airbyte.publicApi.server.generated.models.EmbeddedOrganizationsList
@@ -24,9 +25,7 @@ import io.airbyte.publicApi.server.generated.models.EmbeddedScopedTokenRequest
 import io.airbyte.publicApi.server.generated.models.EmbeddedWidgetRequest
 import io.airbyte.publicApi.server.generated.models.PermissionType
 import io.airbyte.server.auth.TokenScopeClaim
-import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.context.ServerRequestContext
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -48,14 +47,13 @@ import java.util.UUID
 @Controller
 class EmbeddedController(
   val jwtTokenGenerator: JwtTokenGenerator,
-  val tokenExpirationConfig: TokenExpirationConfig,
+  val airbyteConfig: AirbyteConfig,
+  val airbyteAuthConfig: AirbyteAuthConfig,
   val currentUserService: CurrentUserService,
   private val organizationsHandler: OrganizationsHandler,
   val permissionHandler: PermissionHandler,
   val embeddedWorkspacesHandler: EmbeddedWorkspacesHandler,
   val licenseEntitlementChecker: LicenseEntitlementChecker,
-  @Value("\${airbyte.airbyte-url}") val airbyteUrl: String,
-  @Property(name = "airbyte.auth.token-issuer") private val tokenIssuer: String,
 ) : EmbeddedWidgetApi {
   var clock: Clock = Clock.systemUTC()
 
@@ -136,7 +134,7 @@ class EmbeddedController(
       )
 
     val widgetUrl =
-      airbyteUrl
+      airbyteConfig.airbyteUrl
         .toHttpUrlOrNull()!!
         .newBuilder()
         .encodedPath("/embedded-widget")
@@ -176,14 +174,14 @@ class EmbeddedController(
     jwtTokenGenerator
       .generateToken(
         mapOf(
-          "iss" to tokenIssuer,
+          "iss" to airbyteAuthConfig.tokenIssuer,
           "aud" to "airbyte-server",
           "sub" to currentUserId,
           TokenType.EMBEDDED_V1.toClaim(),
           "act" to mapOf("sub" to externalUserId),
           TokenScopeClaim.CLAIM_ID to TokenScopeClaim(workspaceId),
           "roles" to listOf(AuthRoleConstants.EMBEDDED_END_USER),
-          "exp" to clock.instant().plus(tokenExpirationConfig.embeddedTokenExpirationInMinutes, ChronoUnit.MINUTES).epochSecond,
+          "exp" to clock.instant().plus(airbyteAuthConfig.tokenExpiration.embeddedTokenExpirationInMinutes, ChronoUnit.MINUTES).epochSecond,
         ),
       ).orElseThrow {
         IllegalStateException("Could not generate token")

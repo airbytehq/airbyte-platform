@@ -11,6 +11,8 @@ import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration
 import io.airbyte.api.model.generated.SelectedFieldInfo
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.server.runtime.AirbyteServerConfiguration
+import io.airbyte.commons.server.runtime.AirbyteServerConfiguration.AirbyteServerConnectionLimitConfiguration.AirbyteServerConnectionLimitsConfiguration
 import io.airbyte.commons.server.validation.CatalogValidator.Constants.PROPERTIES_KEY
 import io.airbyte.commons.server.validation.CatalogValidatorTest.Fixtures.CTX
 import io.airbyte.commons.server.validation.CatalogValidatorTest.Fixtures.MAX_FIELD_LIMIT
@@ -47,13 +49,25 @@ internal class CatalogValidatorTest {
   private lateinit var featureFlagClient: TestClient
 
   private lateinit var validator: CatalogValidator
+  private lateinit var airbyteServerConfiguration: AirbyteServerConfiguration
 
   @BeforeEach
   internal fun setup() {
     every { featureFlagClient.intVariation(ConnectionFieldLimitOverride, any()) } returns -1
     every { metricClient.distribution(metric = any(), any(), *anyVararg()) } returns mockk<DistributionSummary>()
 
-    validator = CatalogValidator(MAX_FIELD_LIMIT, metricClient, featureFlagClient)
+    airbyteServerConfiguration =
+      AirbyteServerConfiguration(
+        connectionLimits =
+          AirbyteServerConfiguration.AirbyteServerConnectionLimitConfiguration(
+            limits =
+              AirbyteServerConnectionLimitsConfiguration(
+                maxFieldsPerConnection = MAX_FIELD_LIMIT.toLong(),
+              ),
+          ),
+      )
+
+    validator = CatalogValidator(airbyteServerConfiguration, metricClient, featureFlagClient)
   }
 
   @ParameterizedTest
@@ -100,14 +114,126 @@ internal class CatalogValidatorTest {
     }
     val catalog = AirbyteCatalog().streams(streams)
 
-    val validator1 = CatalogValidator(10, metricClient, featureFlagClient)
-    val validator2 = CatalogValidator(11, metricClient, featureFlagClient)
-    val validator3 = CatalogValidator(100, metricClient, featureFlagClient)
-    val validator4 = CatalogValidator(20000, metricClient, featureFlagClient)
-    val validator5 = CatalogValidator(0, metricClient, featureFlagClient)
-    val validator6 = CatalogValidator(1, metricClient, featureFlagClient)
-    val validator7 = CatalogValidator(9, metricClient, featureFlagClient)
-    val validator8 = CatalogValidator(4, metricClient, featureFlagClient)
+    val validator1 =
+      CatalogValidator(
+        airbyteServerConfiguration =
+          AirbyteServerConfiguration(
+            connectionLimits =
+              AirbyteServerConfiguration.AirbyteServerConnectionLimitConfiguration(
+                limits =
+                  AirbyteServerConnectionLimitsConfiguration(
+                    maxFieldsPerConnection = 10L,
+                  ),
+              ),
+          ),
+        metricClient,
+        featureFlagClient,
+      )
+    val validator2 =
+      CatalogValidator(
+        airbyteServerConfiguration =
+          AirbyteServerConfiguration(
+            connectionLimits =
+              AirbyteServerConfiguration.AirbyteServerConnectionLimitConfiguration(
+                limits =
+                  AirbyteServerConnectionLimitsConfiguration(
+                    maxFieldsPerConnection = 11L,
+                  ),
+              ),
+          ),
+        metricClient,
+        featureFlagClient,
+      )
+    val validator3 =
+      CatalogValidator(
+        airbyteServerConfiguration =
+          AirbyteServerConfiguration(
+            connectionLimits =
+              AirbyteServerConfiguration.AirbyteServerConnectionLimitConfiguration(
+                limits =
+                  AirbyteServerConnectionLimitsConfiguration(
+                    maxFieldsPerConnection = 100L,
+                  ),
+              ),
+          ),
+        metricClient,
+        featureFlagClient,
+      )
+    val validator4 =
+      CatalogValidator(
+        airbyteServerConfiguration =
+          AirbyteServerConfiguration(
+            connectionLimits =
+              AirbyteServerConfiguration.AirbyteServerConnectionLimitConfiguration(
+                limits =
+                  AirbyteServerConnectionLimitsConfiguration(
+                    maxFieldsPerConnection = 200L,
+                  ),
+              ),
+          ),
+        metricClient,
+        featureFlagClient,
+      )
+    val validator5 =
+      CatalogValidator(
+        airbyteServerConfiguration =
+          AirbyteServerConfiguration(
+            connectionLimits =
+              AirbyteServerConfiguration.AirbyteServerConnectionLimitConfiguration(
+                limits =
+                  AirbyteServerConnectionLimitsConfiguration(
+                    maxFieldsPerConnection = 0L,
+                  ),
+              ),
+          ),
+        metricClient,
+        featureFlagClient,
+      )
+    val validator6 =
+      CatalogValidator(
+        airbyteServerConfiguration =
+          AirbyteServerConfiguration(
+            connectionLimits =
+              AirbyteServerConfiguration.AirbyteServerConnectionLimitConfiguration(
+                limits =
+                  AirbyteServerConnectionLimitsConfiguration(
+                    maxFieldsPerConnection = 1L,
+                  ),
+              ),
+          ),
+        metricClient,
+        featureFlagClient,
+      )
+    val validator7 =
+      CatalogValidator(
+        airbyteServerConfiguration =
+          AirbyteServerConfiguration(
+            connectionLimits =
+              AirbyteServerConfiguration.AirbyteServerConnectionLimitConfiguration(
+                limits =
+                  AirbyteServerConnectionLimitsConfiguration(
+                    maxFieldsPerConnection = 9L,
+                  ),
+              ),
+          ),
+        metricClient,
+        featureFlagClient,
+      )
+    val validator8 =
+      CatalogValidator(
+        airbyteServerConfiguration =
+          AirbyteServerConfiguration(
+            connectionLimits =
+              AirbyteServerConfiguration.AirbyteServerConnectionLimitConfiguration(
+                limits =
+                  AirbyteServerConnectionLimitsConfiguration(
+                    maxFieldsPerConnection = 4L,
+                  ),
+              ),
+          ),
+        metricClient,
+        featureFlagClient,
+      )
 
     assertNull(validator1.fieldCount(catalog, CTX))
     assertNull(validator2.fieldCount(catalog, CTX))

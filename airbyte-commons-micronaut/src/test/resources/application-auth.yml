@@ -1,0 +1,57 @@
+airbyte:
+  auth:
+    dataplane-credentials:
+      client-id-secret-key: test-dataplane-client-id-secret-key
+      client-secret-secret-key: test-dataplane-client-secret-secret-key
+    default-realm: test-realm
+    initial-user:
+      email: test@airbyte.io
+      first-name: test-first-name
+      last-name: test-last-name
+      password: test-password
+    identity-provider:
+      audiences: test-audience-1,test-audience-2
+      issuers:
+        - test-issuer-1
+        - test-issuer-2
+      oidc:
+        app-name: test-oidc-app-name
+        audience: test-oidc-audience
+        client-id: test-oidc-client-id
+        client-secret: test-oidc-client-secret
+        display-name: test-oidc-display-name
+        domain: test-oidc-domain
+        endpoints:
+          authorization-server-endpoint: test-oidc-authorization-server-endpoint
+        extra-scopes: test-oidc-extra-scopes
+        fields:
+          email: test-oidc-email
+          issuer: test-oidc-issuer
+          name: test-oidc-name
+          sub: test-oidc-sub
+      type: oidc
+      verify-audience: true
+      verify-issuer: true
+    instanceAdmin:
+      clientId: test-instance-admin-client-id
+      clientSecret: test-instance-admin-client-secret
+      password: test-instance-admin-password
+    kubernetes-secret:
+      creation-enabled: false
+      name: test-name
+      keys:
+        instance-admin-password-secret-key: test-instance-admin-password-secret-key
+        instance-admin-client-id-secret-key: test-instance-admin-client-id-secret-key
+        instance-admin-client-secret-secret-key: test-instance-admin-client-secret-secret-key
+        jwt-signature-secret-key: test-jwt-signature-secret-key
+      values:
+        instance-admin-password: test-instance-admin-password
+        instance-admin-client-id: test-instance-admin-client-id
+        instance-admin-client-secret: test-instance-admin-client-secret
+        jwt-signature-secret: test-jwt-signature-secret
+    token-expiration:
+      application-token-expiration-in-minutes: 30
+      dataplane-token-expiration-in-minutes: 10
+      embedded-token-expiration-in-minutes: 5
+      service-account-token-expiration-in-minutes: 45
+    token-issuer: http://test-token-issuer

@@ -15,10 +15,11 @@ import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.ConnectorRegistry
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
 import io.airbyte.config.ConnectorRegistrySourceDefinition
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteConnectorRegistryConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.cache.annotation.CacheConfig
 import io.micronaut.cache.annotation.Cacheable
-import io.micronaut.context.annotation.Value
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.MediaType
 import jakarta.inject.Singleton
@@ -47,9 +48,8 @@ import java.util.zip.ZipInputStream
 @Singleton
 @CacheConfig("remote-definitions-provider")
 open class RemoteDefinitionsProvider(
-  @Value("\${airbyte.connector-registry.remote.base-url}") remoteRegistryBaseUrl: String?,
-  airbyteEdition: AirbyteEdition,
-  @Value("\${airbyte.connector-registry.remote.timeout-ms}") remoteCatalogTimeoutMs: Long,
+  airbyteConfig: AirbyteConfig,
+  airbyteConnectorRegistryConfig: AirbyteConnectorRegistryConfig,
 ) : DefinitionsProvider {
   private val okHttpClient: OkHttpClient
 
@@ -70,14 +70,14 @@ open class RemoteDefinitionsProvider(
   }
 
   init {
-    val remoteRegistryBaseUrlUri = parsedRemoteRegistryBaseUrlOrDefault(remoteRegistryBaseUrl)
+    val remoteRegistryBaseUrlUri = parsedRemoteRegistryBaseUrlOrDefault(airbyteConnectorRegistryConfig.remote.baseUrl)
 
     this.remoteRegistryBaseUrl = remoteRegistryBaseUrlUri
-    this.airbyteEdition = airbyteEdition
+    this.airbyteEdition = airbyteConfig.edition
     this.okHttpClient =
       OkHttpClient
         .Builder()
-        .callTimeout(Duration.ofMillis(remoteCatalogTimeoutMs))
+        .callTimeout(Duration.ofMillis(airbyteConnectorRegistryConfig.remote.timeoutMs))
         .build()
     log.info { "Created remote definitions provider for URL '$remoteRegistryBaseUrlUri' and registry '${getRegistryName(airbyteEdition)}'..." }
   }

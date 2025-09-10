@@ -8,18 +8,14 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.AppenderBase
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.storage.AzureStorageClient
-import io.airbyte.commons.storage.AzureStorageConfig
 import io.airbyte.commons.storage.DocumentType
 import io.airbyte.commons.storage.GcsStorageClient
-import io.airbyte.commons.storage.GcsStorageConfig
 import io.airbyte.commons.storage.LocalStorageClient
-import io.airbyte.commons.storage.LocalStorageConfig
 import io.airbyte.commons.storage.MinioStorageClient
-import io.airbyte.commons.storage.MinioStorageConfig
 import io.airbyte.commons.storage.S3StorageClient
-import io.airbyte.commons.storage.S3StorageConfig
-import io.airbyte.commons.storage.StorageBucketConfig
 import io.airbyte.commons.storage.StorageClient
+import io.airbyte.micronaut.runtime.AirbyteStorageConfig
+import io.airbyte.micronaut.runtime.StorageType
 import java.util.concurrent.TimeUnit
 
 /**
@@ -71,40 +67,40 @@ internal fun buildStorageClient(
   val bucketConfig = buildBucketConfig(storageConfig = storageConfig)
 
   return when (storageType.lowercase()) {
-    "azure" ->
+    StorageType.AZURE.name.lowercase() ->
       AzureStorageClient(
-        config =
-          AzureStorageConfig(
-            buckets = bucketConfig,
+        bucketConfig = bucketConfig,
+        storageConfig =
+          AirbyteStorageConfig.AzureStorageConfig(
             connectionString = storageConfig[EnvVar.AZURE_STORAGE_CONNECTION_STRING]!!,
           ),
         type = documentType,
       )
-    "gcs" ->
+    StorageType.GCS.name.lowercase() ->
       GcsStorageClient(
-        config =
-          GcsStorageConfig(
-            buckets = bucketConfig,
+        bucketConfig = bucketConfig,
+        storageConfig =
+          AirbyteStorageConfig.GcsStorageConfig(
             applicationCredentials = storageConfig[EnvVar.GOOGLE_APPLICATION_CREDENTIALS]!!,
           ),
         type = documentType,
       )
-    "minio" ->
+    StorageType.MINIO.name.lowercase() ->
       MinioStorageClient(
-        config =
-          MinioStorageConfig(
-            buckets = bucketConfig,
+        bucketConfig = bucketConfig,
+        storageConfig =
+          AirbyteStorageConfig.MinioStorageConfig(
             accessKey = storageConfig[EnvVar.AWS_ACCESS_KEY_ID]!!,
             secretAccessKey = storageConfig[EnvVar.AWS_SECRET_ACCESS_KEY]!!,
             endpoint = storageConfig[EnvVar.MINIO_ENDPOINT]!!,
           ),
         type = documentType,
       )
-    "s3" ->
+    StorageType.S3.name.lowercase() ->
       S3StorageClient(
-        config =
-          S3StorageConfig(
-            buckets = bucketConfig,
+        bucketConfig = bucketConfig,
+        storageConfig =
+          AirbyteStorageConfig.S3StorageConfig(
             accessKey = storageConfig[EnvVar.AWS_ACCESS_KEY_ID]!!,
             secretAccessKey = storageConfig[EnvVar.AWS_SECRET_ACCESS_KEY]!!,
             region = storageConfig[EnvVar.AWS_DEFAULT_REGION]!!,
@@ -113,17 +109,16 @@ internal fun buildStorageClient(
       )
     else ->
       LocalStorageClient(
-        config =
-          LocalStorageConfig(
-            buckets = bucketConfig,
-          ),
+        bucketConfig = bucketConfig,
+        storageConfig =
+          AirbyteStorageConfig.LocalStorageConfig(),
         type = documentType,
       )
   }
 }
 
-internal fun buildBucketConfig(storageConfig: Map<EnvVar, String>): StorageBucketConfig =
-  StorageBucketConfig(
+internal fun buildBucketConfig(storageConfig: Map<EnvVar, String>): AirbyteStorageConfig.AirbyteStorageBucketConfig =
+  AirbyteStorageConfig.AirbyteStorageBucketConfig(
     log = storageConfig[EnvVar.STORAGE_BUCKET_LOG] ?: throw IllegalArgumentException("Missing ${EnvVar.STORAGE_BUCKET_LOG.name} env-var"),
     state = "",
     workloadOutput = "",

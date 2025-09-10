@@ -4,10 +4,10 @@
 
 package io.airbyte.keycloak.setup
 
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
 import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import org.keycloak.admin.client.Keycloak
 import org.keycloak.admin.client.resource.RealmResource
@@ -20,12 +20,12 @@ import org.keycloak.representations.idm.RealmRepresentation
 @Singleton
 class KeycloakServer(
   private val keycloakAdminClientProvider: KeycloakAdminClientProvider,
-  private val keycloakConfiguration: AirbyteKeycloakConfiguration,
+  private val keycloakConfiguration: AirbyteKeycloakConfig,
   private val userConfigurator: UserConfigurator,
   private val webClientConfigurator: WebClientConfigurator,
   private val identityProvidersConfigurator: IdentityProvidersConfigurator,
   private val clientScopeConfigurator: ClientScopeConfigurator,
-  @Value("\${airbyte.airbyte-url}") val airbyteUrl: String,
+  private val airbyteConfig: AirbyteConfig,
 ) {
   private val keycloakAdminClient: Keycloak
 
@@ -79,7 +79,7 @@ class KeycloakServer(
   private fun updateRealmFrontendUrl(realm: RealmResource) {
     val realmRep = realm.toRepresentation()
     val attributes = realmRep.attributesOrEmpty
-    attributes[FRONTEND_URL_ATTRIBUTE] = airbyteUrl + keycloakConfiguration.basePath
+    attributes[FRONTEND_URL_ATTRIBUTE] = airbyteConfig.airbyteUrl + keycloakConfiguration.basePath
     realmRep.attributes = attributes
     realm.update(realmRep)
   }

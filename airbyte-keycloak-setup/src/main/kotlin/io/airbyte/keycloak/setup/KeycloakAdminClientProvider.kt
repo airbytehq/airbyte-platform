@@ -4,7 +4,7 @@
 
 package io.airbyte.keycloak.setup
 
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import jakarta.inject.Singleton
 import org.keycloak.admin.client.Keycloak
 import org.keycloak.admin.client.KeycloakBuilder
@@ -15,7 +15,7 @@ import org.keycloak.admin.client.KeycloakBuilder
  */
 @Singleton
 class KeycloakAdminClientProvider(
-  private val keycloakConfiguration: AirbyteKeycloakConfiguration,
+  private val keycloakConfiguration: AirbyteKeycloakConfig,
 ) {
   @Synchronized
   fun createKeycloakAdminClient(keycloakUrl: String?): Keycloak =

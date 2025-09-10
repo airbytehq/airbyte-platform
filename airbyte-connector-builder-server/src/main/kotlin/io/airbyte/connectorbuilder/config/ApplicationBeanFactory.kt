@@ -14,6 +14,7 @@ import io.airbyte.connectorbuilder.commandrunner.SynchronousCdkCommandRunner
 import io.airbyte.connectorbuilder.commandrunner.SynchronousPythonCdkCommandRunner
 import io.airbyte.connectorbuilder.filewriter.AirbyteFileWriterImpl
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteConnectorBuilderConfig
 import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory
 import io.micronaut.context.annotation.Factory
@@ -30,7 +31,7 @@ private const val PATH_TO_CONNECTORS = "/connectors"
  */
 @Factory
 class ApplicationBeanFactory(
-  @Value("\${airbyte.connector-builder-server.capabilities.enable-unsafe-code}") private val enableUnsafeCodeGlobalOverride: Boolean,
+  private val airbyteConnectorBuilderConfig: AirbyteConnectorBuilderConfig,
   @Value("\${CDK_PYTHON}") private val cdkPython: String,
   @Value("\${CDK_ENTRYPOINT}") private val cdkEntrypoint: String,
 ) {
@@ -64,7 +65,7 @@ class ApplicationBeanFactory(
       cdkPython,
       cdkEntrypoint,
       pythonPath(),
-      enableUnsafeCodeGlobalOverride,
+      airbyteConnectorBuilderConfig.capabilities.enableUnsafeCode,
     )
 
   @Singleton

@@ -15,24 +15,23 @@ import io.airbyte.api.model.generated.LicenseStatus
 import io.airbyte.api.model.generated.WorkspaceUpdate
 import io.airbyte.commons.auth.config.AuthConfigs
 import io.airbyte.commons.auth.config.AuthMode
-import io.airbyte.commons.auth.config.GenericOidcConfig
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.license.ActiveAirbyteLicense
 import io.airbyte.commons.license.AirbyteLicense
 import io.airbyte.commons.server.helpers.KubernetesClientPermissionHelper
 import io.airbyte.commons.server.helpers.PermissionDeniedException
-import io.airbyte.commons.version.AirbyteVersion
-import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.Organization
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.micronaut.runtime.AirbyteAnalyticsConfig
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AnalyticsTrackingStrategy
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Property
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import java.io.IOException
 import java.time.Clock
@@ -46,10 +45,9 @@ import java.util.UUID
  */
 @Singleton
 open class InstanceConfigurationHandler(
-  @Property(name = "airbyte.airbyte-url") private val airbyteUrl: Optional<String>,
-  @param:Value("\${airbyte.tracking.strategy:}") private val trackingStrategy: String,
-  private val airbyteEdition: AirbyteEdition,
-  private val airbyteVersion: AirbyteVersion,
+  private val airbyteConfig: AirbyteConfig,
+  private val airbyteAuthConfig: AirbyteAuthConfig,
+  private val airbyteAnalyticsConfig: AirbyteAnalyticsConfig,
   private val activeAirbyteLicense: Optional<ActiveAirbyteLicense>,
   private val workspacePersistence: WorkspacePersistence,
   private val workspacesHandler: WorkspacesHandler,
@@ -58,7 +56,6 @@ open class InstanceConfigurationHandler(
   private val authConfigs: AuthConfigs,
   private val permissionHandler: PermissionHandler,
   clock: Optional<Clock>,
-  private val oidcEndpointConfig: Optional<GenericOidcConfig>,
   private val kubernetesClientPermissionHelper: Optional<KubernetesClientPermissionHelper>,
 ) {
   private val clock: Clock = clock.orElse(Clock.systemUTC())
@@ -70,9 +67,9 @@ open class InstanceConfigurationHandler(
       val initialSetupComplete = workspacePersistence.getInitialSetupComplete()
 
       return InstanceConfigurationResponse()
-        .airbyteUrl(airbyteUrl.orElse("airbyte-url-not-configured"))
-        .edition(airbyteEdition.convertTo<EditionEnum>())
-        .version(airbyteVersion.serialize())
+        .airbyteUrl(airbyteConfig.airbyteUrl.ifBlank { "airbyte-url-not-configured" })
+        .edition(airbyteConfig.edition.convertTo<EditionEnum>())
+        .version(airbyteConfig.version)
         .licenseStatus(currentLicenseStatus())
         .licenseExpirationDate(licenseExpirationDate())
         .auth(authConfiguration)
@@ -81,14 +78,9 @@ open class InstanceConfigurationHandler(
         .defaultOrganizationId(defaultOrganization.organizationId)
         .defaultOrganizationEmail(defaultOrganization.email)
         .trackingStrategy(
-          if ("segment".equals(
-              trackingStrategy,
-              ignoreCase = true,
-            )
-          ) {
-            TrackingStrategyEnum.SEGMENT
-          } else {
-            TrackingStrategyEnum.LOGGING
+          when (airbyteAnalyticsConfig.strategy) {
+            AnalyticsTrackingStrategy.SEGMENT -> TrackingStrategyEnum.SEGMENT
+            else -> TrackingStrategyEnum.LOGGING
           },
         )
     }
@@ -124,23 +116,27 @@ open class InstanceConfigurationHandler(
     get() {
       val authConfig =
         AuthConfiguration().mode(
-          authConfigs.authMode?.convertTo<AuthConfiguration.ModeEnum>(),
+          authConfigs.authMode.convertTo<AuthConfiguration.ModeEnum>(),
         )
 
       // if Enterprise configurations are present, set OIDC-specific configs
       if (authConfigs.authMode == AuthMode.OIDC) {
-        if (oidcEndpointConfig.isPresent) {
-          authConfig.authorizationServerUrl = oidcEndpointConfig.get().authorizationServerEndpoint
-          authConfig.clientId = oidcEndpointConfig.get().clientId
-          if (oidcEndpointConfig.get().audience != null) {
-            authConfig.audience = oidcEndpointConfig.get().audience
+        if (airbyteAuthConfig.identityProvider.type == "generic-oidc") {
+          authConfig.authorizationServerUrl = airbyteAuthConfig.identityProvider.oidc.endpoints.authorizationServerEndpoint
+          authConfig.clientId = airbyteAuthConfig.identityProvider.oidc.clientId
+          if (airbyteAuthConfig.identityProvider.oidc.audience
+              .isNotBlank()
+          ) {
+            authConfig.audience = airbyteAuthConfig.identityProvider.oidc.audience
           }
-          if (oidcEndpointConfig.get().extraScopes != null) {
-            authConfig.extraScopes = oidcEndpointConfig.get().extraScopes
+          if (airbyteAuthConfig.identityProvider.oidc.extraScopes
+              .isNotBlank()
+          ) {
+            authConfig.extraScopes = airbyteAuthConfig.identityProvider.oidc.extraScopes
           }
-        } else if (authConfigs.keycloakConfig != null && airbyteUrl.isPresent) {
+        } else if (authConfigs.keycloakConfig != null && airbyteConfig.airbyteUrl.isNotBlank()) {
           authConfig.clientId = authConfigs.keycloakConfig!!.webClientId
-          authConfig.authorizationServerUrl = airbyteUrl.get() + "/auth/realms/" + authConfigs.keycloakConfig!!.airbyteRealm
+          authConfig.authorizationServerUrl = airbyteConfig.airbyteUrl + "/auth/realms/" + authConfigs.keycloakConfig!!.airbyteRealm
         } else {
           // TODO: This is a bad error message. Once we figure out what the final config should look like
           throw IllegalStateException("OIDC must be configured either for Keycloak or in generic oidc mode.")

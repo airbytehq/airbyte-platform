@@ -13,6 +13,7 @@ dependencies {
   api(libs.bundles.micronaut.annotation)
 
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-json-validation"))
 

@@ -35,6 +35,7 @@ dependencies {
   implementation(libs.slf4j.api)
   implementation(libs.swagger.annotations)
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-micronaut"))
 
   compileOnly(libs.v3.swagger.annotations)
 

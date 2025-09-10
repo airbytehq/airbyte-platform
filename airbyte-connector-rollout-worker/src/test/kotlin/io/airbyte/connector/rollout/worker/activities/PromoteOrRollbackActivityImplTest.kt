@@ -11,6 +11,7 @@ import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.connector.rollout.shared.models.ActionType
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPromoteOrRollback
 import io.airbyte.connector.rollout.worker.activities.PromoteOrRollbackActivityImpl
+import io.airbyte.connector.rollout.worker.runtime.AirbyteConnectorRolloutConfig
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -26,6 +27,7 @@ class PromoteOrRollbackActivityImplTest {
   private lateinit var airbyteApiClient: AirbyteApiClient
   private lateinit var connectorRolloutApi: ConnectorRolloutApi
   private lateinit var promoteOrRollbackActivity: PromoteOrRollbackActivityImpl
+  private lateinit var airbyteConnectorRolloutConfig: AirbyteConnectorRolloutConfig
 
   companion object {
     private const val DOCKER_REPOSITORY = "airbyte/source-faker"
@@ -54,7 +56,15 @@ class PromoteOrRollbackActivityImplTest {
           )
         }
       }
-    promoteOrRollbackActivity = PromoteOrRollbackActivityImpl(airbyteApiClient, "http://fakeUrl.com", "fakeToken")
+    airbyteConnectorRolloutConfig =
+      AirbyteConnectorRolloutConfig(
+        githubRollout =
+          AirbyteConnectorRolloutConfig.AirbyteConnectorGithubRolloutConfig(
+            dispatchUrl = "http://fakeUrl.com",
+            githubToken = "fakeToken",
+          ),
+      )
+    promoteOrRollbackActivity = PromoteOrRollbackActivityImpl(airbyteApiClient, airbyteConnectorRolloutConfig)
   }
 
   @ParameterizedTest

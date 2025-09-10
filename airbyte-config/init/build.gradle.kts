@@ -11,6 +11,7 @@ dependencies {
   api(libs.micronaut.cache.caffeine)
 
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-config:specs"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-config:config-persistence"))

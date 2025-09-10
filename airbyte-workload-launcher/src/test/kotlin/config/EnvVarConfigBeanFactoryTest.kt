@@ -4,6 +4,7 @@
 
 package config
 
+import io.airbyte.micronaut.runtime.AirbyteConnectorConfig
 import io.airbyte.workers.pod.Metadata.AWS_ACCESS_KEY_ID
 import io.airbyte.workers.pod.Metadata.AWS_SECRET_ACCESS_KEY
 import io.airbyte.workload.launcher.config.EnvVarConfigBeanFactory
@@ -22,12 +23,29 @@ class EnvVarConfigBeanFactoryTest {
   @Test
   fun `orchestrator aws assumed role secret creation`() {
     val factory = EnvVarConfigBeanFactory()
-    val envMap =
-      factory.awsAssumedRoleSecretEnv(
-        AWS_ASSUMED_ROLE_ACCESS_KEY,
-        AWS_ASSUMED_ROLE_SECRET_KEY,
-        AWS_ASSUMED_ROLE_SECRET_NAME,
+    val airbyteConnectorConfig =
+      AirbyteConnectorConfig(
+        source =
+          AirbyteConnectorConfig.AirbyteSourceConnectorConfig(
+            credentials =
+              AirbyteConnectorConfig.AirbyteSourceConnectorConfig.AirbyteSourceConnectorCredentialsConfig(
+                aws =
+                  AirbyteConnectorConfig.AirbyteSourceConnectorConfig.AirbyteSourceConnectorCredentialsConfig
+                    .AirbyteSourceConnectorAwsCredentialsConfig(
+                      assumedRole =
+                        AirbyteConnectorConfig.AirbyteSourceConnectorConfig.AirbyteSourceConnectorCredentialsConfig
+                          .AirbyteSourceConnectorAwsCredentialsConfig
+                          .AirbyteSourceConnectorAwsAssumedRoleConfig(
+                            accessKey = AWS_ASSUMED_ROLE_ACCESS_KEY,
+                            secretKey = AWS_ASSUMED_ROLE_SECRET_KEY,
+                            secretName = AWS_ASSUMED_ROLE_SECRET_NAME,
+                          ),
+                    ),
+              ),
+          ),
       )
+    val envMap =
+      factory.awsAssumedRoleSecretEnv(airbyteConnectorConfig)
 
     assertEquals(2, envMap.size)
     val awsAccessKey = envMap[AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR]
@@ -44,24 +62,58 @@ class EnvVarConfigBeanFactoryTest {
   @Test
   fun `orchestrator aws assumed role secret creation with blank names`() {
     val factory = EnvVarConfigBeanFactory()
-    val envMap =
-      factory.awsAssumedRoleSecretEnv(
-        AWS_ASSUMED_ROLE_ACCESS_KEY,
-        AWS_ASSUMED_ROLE_SECRET_KEY,
-        "",
+    val airbyteConnectorConfig =
+      AirbyteConnectorConfig(
+        source =
+          AirbyteConnectorConfig.AirbyteSourceConnectorConfig(
+            credentials =
+              AirbyteConnectorConfig.AirbyteSourceConnectorConfig.AirbyteSourceConnectorCredentialsConfig(
+                aws =
+                  AirbyteConnectorConfig.AirbyteSourceConnectorConfig.AirbyteSourceConnectorCredentialsConfig
+                    .AirbyteSourceConnectorAwsCredentialsConfig(
+                      assumedRole =
+                        AirbyteConnectorConfig.AirbyteSourceConnectorConfig.AirbyteSourceConnectorCredentialsConfig
+                          .AirbyteSourceConnectorAwsCredentialsConfig
+                          .AirbyteSourceConnectorAwsAssumedRoleConfig(
+                            accessKey = AWS_ASSUMED_ROLE_ACCESS_KEY,
+                            secretKey = AWS_ASSUMED_ROLE_SECRET_KEY,
+                          ),
+                    ),
+              ),
+          ),
       )
+    val envMap =
+      factory.awsAssumedRoleSecretEnv(airbyteConnectorConfig)
     assertEquals(0, envMap.size)
   }
 
   @Test
   fun `connector aws assumed role secret creation`() {
     val factory = EnvVarConfigBeanFactory()
-    val envList =
-      factory.connectorAwsAssumedRoleSecretEnv(
-        AWS_ASSUMED_ROLE_ACCESS_KEY,
-        AWS_ASSUMED_ROLE_SECRET_KEY,
-        AWS_ASSUMED_ROLE_SECRET_NAME,
+    val airbyteConnectorConfig =
+      AirbyteConnectorConfig(
+        source =
+          AirbyteConnectorConfig.AirbyteSourceConnectorConfig(
+            credentials =
+              AirbyteConnectorConfig.AirbyteSourceConnectorConfig.AirbyteSourceConnectorCredentialsConfig(
+                aws =
+                  AirbyteConnectorConfig.AirbyteSourceConnectorConfig
+                    .AirbyteSourceConnectorCredentialsConfig
+                    .AirbyteSourceConnectorAwsCredentialsConfig(
+                      assumedRole =
+                        AirbyteConnectorConfig.AirbyteSourceConnectorConfig.AirbyteSourceConnectorCredentialsConfig
+                          .AirbyteSourceConnectorAwsCredentialsConfig
+                          .AirbyteSourceConnectorAwsAssumedRoleConfig(
+                            accessKey = AWS_ASSUMED_ROLE_ACCESS_KEY,
+                            secretKey = AWS_ASSUMED_ROLE_SECRET_KEY,
+                            secretName = AWS_ASSUMED_ROLE_SECRET_NAME,
+                          ),
+                    ),
+              ),
+          ),
       )
+    val envList =
+      factory.connectorAwsAssumedRoleSecretEnv(airbyteConnectorConfig)
 
     val awsAccessKey = envList.find { it.name == AWS_ACCESS_KEY_ID }
     val awsAccessKeySecretRef = awsAccessKey!!.valueFrom.secretKeyRef

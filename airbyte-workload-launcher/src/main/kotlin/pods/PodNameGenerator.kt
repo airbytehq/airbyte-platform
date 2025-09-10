@@ -6,13 +6,10 @@ package io.airbyte.workload.launcher.pods
 
 import io.airbyte.commons.random.randomAlpha
 import io.airbyte.workload.launcher.constants.PodConstants.KUBE_NAME_LEN_LIMIT
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 
 @Singleton
-class PodNameGenerator(
-  @Value("\${airbyte.worker.job.kube.namespace}") val namespace: String,
-) {
+class PodNameGenerator {
   fun getReplicationPodName(
     jobId: String,
     attemptId: Long,

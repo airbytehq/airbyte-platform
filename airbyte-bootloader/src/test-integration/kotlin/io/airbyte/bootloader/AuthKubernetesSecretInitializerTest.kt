@@ -5,6 +5,7 @@
 package io.airbyte.bootloader
 
 import io.airbyte.bootloader.K8sSecretHelper.base64Encode
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.env.Environment
@@ -31,10 +32,13 @@ internal const val PROVIDED_JWT_SIGNATURE_VALUE = "myJwtSignature"
 
 @MicronautTest(environments = [Environment.TEST])
 @Property(name = "airbyte.auth.kubernetes-secret.name", value = SECRET_NAME)
+@Property(name = "airbyte.version", value = "dev")
 class AuthKubernetesSecretInitializerTest {
   private val k8sClient = mockk<KubernetesClient>()
-  private val secretKeysConfig = mockk<AuthKubernetesSecretKeysConfig>()
-  private val providedSecretValuesConfig = mockk<AuthKubernetesSecretValuesConfig>()
+  private val secretKeysConfig =
+    mockk<AirbyteAuthConfig.AirbyteAuthKubernetesSecretConfig.AirbyteAuthKubernetesSecretKeysConfig>()
+  private val providedSecretValuesConfig =
+    mockk<AirbyteAuthConfig.AirbyteAuthKubernetesSecretConfig.AirbyteAuthKubernetesSecretValuesConfig>()
 
   lateinit var authKubernetesSecretInitializer: AuthKubernetesSecretInitializer
 
@@ -42,10 +46,16 @@ class AuthKubernetesSecretInitializerTest {
   fun setUp() {
     authKubernetesSecretInitializer =
       AuthKubernetesSecretInitializer(
-        SECRET_NAME,
-        k8sClient,
-        secretKeysConfig,
-        providedSecretValuesConfig,
+        airbyteAuthConfig =
+          AirbyteAuthConfig(
+            kubernetesSecret =
+              AirbyteAuthConfig.AirbyteAuthKubernetesSecretConfig(
+                name = SECRET_NAME,
+                keys = secretKeysConfig,
+                values = providedSecretValuesConfig,
+              ),
+          ),
+        kubernetesClient = k8sClient,
       )
     mockkObject(K8sSecretHelper)
     every { K8sSecretHelper.createOrUpdateSecret(any(), any(), any()) } returns Unit
@@ -122,8 +132,8 @@ class AuthKubernetesSecretInitializerTest {
           )
       }
 
-    every { providedSecretValuesConfig.instanceAdminPassword } returns null
-    every { providedSecretValuesConfig.instanceAdminClientId } returns null
+    every { providedSecretValuesConfig.instanceAdminPassword } returns ""
+    every { providedSecretValuesConfig.instanceAdminClientId } returns ""
     every { providedSecretValuesConfig.instanceAdminClientSecret } returns PROVIDED_CLIENT_SECRET_VALUE
     every { providedSecretValuesConfig.jwtSignatureSecret } returns PROVIDED_JWT_SIGNATURE_VALUE
 

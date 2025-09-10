@@ -1,0 +1,22 @@
+airbyte:
+  temporal:
+    cloud:
+      billing:
+        host: test-temporal-cloud-billing-host
+        namespace: test-temporal-cloud-billing-namespace
+      client:
+        cert: test-temporal-cloud-client-cert
+        key: test-temporal-cloud-client-key
+      enabled: true
+      host: test-temporal-cloud-host
+      namespace: test-temporal-cloud-namespace
+      connector-rollout:
+        host: test-temporal-cloud-connector-rollout-host
+        namespace: test-temporal-cloud-connector-rollout-namespace
+    host: test-temporal-host:7233
+    retention: 10
+    sdk:
+      timeouts:
+        rpc-timeout: 5s
+        rpc-long-poll-timeout: 6s
+        rpc-query-timeout: 7s

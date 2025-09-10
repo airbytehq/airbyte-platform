@@ -18,6 +18,7 @@ dependencies {
   implementation(libs.kotlin.logging)
 
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-config:config-models"))

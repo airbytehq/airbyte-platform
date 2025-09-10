@@ -1,0 +1,12 @@
+airbyte:
+  workload-api:
+    base-path: "http://localhost:8002"
+    connect-timeout-seconds: 90
+    read-timeout-seconds: 150
+    heartbeat:
+      interval-seconds: 100
+      timeout-seconds: 10
+    retries:
+      delay-seconds: 21
+      jitter-factor: 1.125
+      max: 15

@@ -24,7 +24,7 @@ import io.airbyte.featureflag.SuccessivePartialFailureLimit
 import io.airbyte.featureflag.TotalCompleteFailureLimit
 import io.airbyte.featureflag.TotalPartialFailureLimit
 import io.airbyte.featureflag.Workspace
-import io.micronaut.context.annotation.Value
+import io.airbyte.workers.runtime.AirbyteWorkerRetryConfig
 import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ApiResponse
@@ -43,13 +43,7 @@ import java.util.UUID
 class RetryStateClient(
   val airbyteApiClient: AirbyteApiClient,
   val featureFlagClient: FeatureFlagClient,
-  @param:Value("\${airbyte.retries.complete-failures.max-successive}") val successiveCompleteFailureLimit: Int,
-  @param:Value("\${airbyte.retries.complete-failures.max-total}") val totalCompleteFailureLimit: Int,
-  @param:Value("\${airbyte.retries.partial-failures.max-successive}") val successivePartialFailureLimit: Int,
-  @param:Value("\${airbyte.retries.partial-failures.max-total}") val totalPartialFailureLimit: Int,
-  @param:Value("\${airbyte.retries.complete-failures.backoff.min-interval-s}") val minInterval: Int,
-  @param:Value("\${airbyte.retries.complete-failures.backoff.max-interval-s}") val maxInterval: Int,
-  @param:Value("\${airbyte.retries.complete-failures.backoff.base}") val backoffBase: Int,
+  val airbyteWorkerRetryConfig: AirbyteWorkerRetryConfig,
 ) {
   /**
    * Returns a RetryManager hydrated from persistence or a fresh RetryManager if there's no persisted
@@ -130,10 +124,10 @@ class RetryStateClient(
     return RetryManager(
       buildBackOffPolicy(ffContext),
       null,
-      initializedOrElse(ffSuccessiveCompleteFailureLimit, successiveCompleteFailureLimit),
-      initializedOrElse(ffSuccessivePartialFailureLimit, successivePartialFailureLimit),
-      initializedOrElse(ffTotalCompleteFailureLimit, totalCompleteFailureLimit),
-      initializedOrElse(ffTotalPartialFailureLimit, totalPartialFailureLimit),
+      initializedOrElse(ffSuccessiveCompleteFailureLimit, airbyteWorkerRetryConfig.completeFailures.maxSuccessive),
+      initializedOrElse(ffSuccessivePartialFailureLimit, airbyteWorkerRetryConfig.partialFailures.maxSuccessive),
+      initializedOrElse(ffTotalCompleteFailureLimit, airbyteWorkerRetryConfig.completeFailures.maxTotal),
+      initializedOrElse(ffTotalPartialFailureLimit, airbyteWorkerRetryConfig.partialFailures.maxTotal),
     )
   }
 
@@ -143,9 +137,9 @@ class RetryStateClient(
     val ffBase = featureFlagClient.intVariation(CompleteFailureBackoffBase, ffContext)
 
     return BackoffPolicy(
-      Duration.ofSeconds(initializedOrElse(ffMin, minInterval).toLong()),
-      Duration.ofSeconds(initializedOrElse(ffMax, maxInterval).toLong()),
-      initializedOrElse(ffBase, backoffBase).toLong(),
+      Duration.ofSeconds(initializedOrElse(ffMin, airbyteWorkerRetryConfig.completeFailures.backoff.minIntervalS).toLong()),
+      Duration.ofSeconds(initializedOrElse(ffMax, airbyteWorkerRetryConfig.completeFailures.backoff.maxIntervalS).toLong()),
+      initializedOrElse(ffBase, airbyteWorkerRetryConfig.completeFailures.backoff.base).toLong(),
     )
   }
 

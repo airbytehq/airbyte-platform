@@ -12,6 +12,7 @@ import io.airbyte.commons.server.handlers.helpers.CompositeBuilderProjectUpdater
 import io.airbyte.commons.server.handlers.helpers.ConfigRepositoryBuilderProjectUpdater
 import io.airbyte.commons.server.handlers.helpers.LocalFileSystemBuilderProjectUpdater
 import io.airbyte.commons.server.limits.ProductLimitsProvider
+import io.airbyte.commons.server.runtime.AirbyteServerConfiguration
 import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.commons.server.scheduler.TemporalEventRunner
 import io.airbyte.commons.storage.DocumentType
@@ -46,6 +47,10 @@ import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout
 import io.airbyte.featureflag.WorkloadHeartbeatRate
 import io.airbyte.featureflag.WorkloadHeartbeatTimeout
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteConnectorConfig
+import io.airbyte.micronaut.runtime.AirbyteSupportEmailDomainsConfig
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.oauth.OAuthImplementationFactory
 import io.airbyte.persistence.job.DefaultJobCreator
 import io.airbyte.persistence.job.JobNotifier
@@ -57,8 +62,6 @@ import io.airbyte.workers.models.ReplicationFeatureFlags
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.fabric8.kubernetes.client.KubernetesClientBuilder
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Property
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.net.http.HttpClient
@@ -108,15 +111,19 @@ class ApplicationBeanFactory {
     workerConfigsProvider: WorkerConfigsProvider,
     featureFlagClient: FeatureFlagClient,
     streamRefreshesRepository: StreamRefreshesRepository,
-    @Value("\${airbyte.worker.kube-job-config-variant-override}") variantOverride: String?,
-  ): DefaultJobCreator = DefaultJobCreator(jobPersistence, workerConfigsProvider, featureFlagClient, streamRefreshesRepository, variantOverride)
+    airbyteWorkerConfig: AirbyteWorkerConfig,
+  ): DefaultJobCreator =
+    DefaultJobCreator(
+      jobPersistence,
+      workerConfigsProvider,
+      featureFlagClient,
+      streamRefreshesRepository,
+      airbyteWorkerConfig.kubeJobConfigVariantOverride,
+    )
 
   @Singleton
   fun jobFactory(
-    @Property(
-      name = "airbyte.connector.specific-resource-defaults-enabled",
-      defaultValue = "false",
-    ) connectorSpecificResourceDefaultsEnabled: Boolean,
+    airbyteConnectorConfig: AirbyteConnectorConfig,
     jobCreator: DefaultJobCreator,
     oAuthConfigSupplier: OAuthConfigSupplier,
     configInjector: ConfigInjector,
@@ -129,7 +136,7 @@ class ApplicationBeanFactory {
     workspaceHelper: WorkspaceHelper,
   ): SyncJobFactory =
     DefaultSyncJobFactory(
-      connectorSpecificResourceDefaultsEnabled,
+      airbyteConnectorConfig.specificResourceDefaultsEnabled,
       jobCreator,
       oAuthConfigSupplier,
       configInjector,
@@ -144,19 +151,22 @@ class ApplicationBeanFactory {
 
   @Singleton
   @Named("workspaceRoot")
-  fun workspaceRoot(
-    @Value("\${airbyte.workspace.root}") workspaceRoot: String,
-  ): Path = Path.of(workspaceRoot)
+  fun workspaceRoot(airbyteConfig: AirbyteConfig): Path = Path.of(airbyteConfig.workspaceRoot)
 
   @Singleton
   @Named("airbyteSupportEmailDomains")
   fun airbyteSupportEmailDomains(
-    airbyteEdition: Configs.AirbyteEdition,
-    @Value("\${airbyte.support-email-domains.oss}") ossSupportEmailDomains: String,
-    @Value("\${airbyte.support-email-domains.cloud}") cloudSupportEmailDomains: String?,
+    airbyteConfig: AirbyteConfig,
+    airbyteSupportEmailDomainsConfig: AirbyteSupportEmailDomainsConfig,
   ): Set<String> {
     val supportEmailDomains =
-      if (airbyteEdition == Configs.AirbyteEdition.CLOUD) cloudSupportEmailDomains!! else ossSupportEmailDomains
+      if (airbyteConfig.edition ==
+        Configs.AirbyteEdition.CLOUD
+      ) {
+        airbyteSupportEmailDomainsConfig.cloud
+      } else {
+        airbyteSupportEmailDomainsConfig.oss
+      }
     if (supportEmailDomains.isEmpty()) {
       return setOf()
     }
@@ -203,17 +213,19 @@ class ApplicationBeanFactory {
   fun kubernetesClient(): KubernetesClient = KubernetesClientBuilder().build()
 
   @Singleton
-  fun defaultWorkspaceLimits(
-    @Value("\${airbyte.server.limits.connections}") maxConnections: Long,
-    @Value("\${airbyte.server.limits.sources}") maxSources: Long,
-    @Value("\${airbyte.server.limits.destinations}") maxDestinations: Long,
-  ): ProductLimitsProvider.WorkspaceLimits = ProductLimitsProvider.WorkspaceLimits(maxConnections, maxSources, maxDestinations)
+  fun defaultWorkspaceLimits(airbyteServerConfiguration: AirbyteServerConfiguration): ProductLimitsProvider.WorkspaceLimits =
+    ProductLimitsProvider.WorkspaceLimits(
+      airbyteServerConfiguration.limits.connections,
+      airbyteServerConfiguration.limits.sources,
+      airbyteServerConfiguration.limits.destinations,
+    )
 
   @Singleton
-  fun defaultOrganizationLimits(
-    @Value("\${airbyte.server.limits.workspaces}") maxWorkspaces: Long,
-    @Value("\${airbyte.server.limits.users}") maxUsers: Long,
-  ): ProductLimitsProvider.OrganizationLimits = ProductLimitsProvider.OrganizationLimits(maxWorkspaces, maxUsers)
+  fun defaultOrganizationLimits(airbyteServerConfiguration: AirbyteServerConfiguration): ProductLimitsProvider.OrganizationLimits =
+    ProductLimitsProvider.OrganizationLimits(
+      airbyteServerConfiguration.limits.workspaces,
+      airbyteServerConfiguration.limits.users,
+    )
 
   /**
    * This bean is duplicated from the bean in the config of the airbyte workers module.

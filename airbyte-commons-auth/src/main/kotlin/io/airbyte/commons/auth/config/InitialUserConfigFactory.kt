@@ -4,9 +4,9 @@
 
 package io.airbyte.commons.auth.config
 
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 
 @Factory
@@ -20,20 +20,20 @@ class InitialUserConfigFactory {
    */
   @Singleton
   @Requires(property = "airbyte.auth.initial-user.email", pattern = ".+")
-  fun defaultInitialUserConfig(
-    @Value("\${airbyte.auth.initial-user.email}") email: String?,
-    @Value("\${airbyte.auth.initial-user.first-name}") firstName: String?,
-    @Value("\${airbyte.auth.initial-user.last-name}") lastName: String?,
-    @Value("\${airbyte.auth.initial-user.password}") password: String?,
-  ): InitialUserConfig {
-    if (email.isNullOrEmpty() || password.isNullOrEmpty()) {
+  fun defaultInitialUserConfig(airbyteAuthConfig: AirbyteAuthConfig): InitialUserConfig {
+    if (airbyteAuthConfig.initialUser.email.isEmpty() || airbyteAuthConfig.initialUser.password.isEmpty()) {
       throw IllegalStateException(
         "Missing required initial user configuration. Please ensure all of the following properties are set: " +
           "airbyte.auth.initial-user.email, " +
           "airbyte.auth.initial-user.password",
       )
     }
-    return InitialUserConfig(email, firstName, lastName, password)
+    return InitialUserConfig(
+      email = airbyteAuthConfig.initialUser.email,
+      firstName = airbyteAuthConfig.initialUser.firstName,
+      lastName = airbyteAuthConfig.initialUser.lastName,
+      password = airbyteAuthConfig.initialUser.password,
+    )
   }
 }
 

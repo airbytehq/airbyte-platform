@@ -6,7 +6,6 @@ package io.airbyte.bootloader
 
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.DEFAULT_USER_ID
-import io.airbyte.config.secrets.persistence.SecretPersistence.ImplementationTypes
 import io.airbyte.data.services.SecretStorageService
 import io.airbyte.domain.models.PatchField
 import io.airbyte.domain.models.SecretStorage
@@ -14,6 +13,8 @@ import io.airbyte.domain.models.SecretStorageCreate
 import io.airbyte.domain.models.SecretStorageScopeType
 import io.airbyte.domain.models.SecretStorageType
 import io.airbyte.domain.models.UserId
+import io.airbyte.micronaut.runtime.AirbyteSecretsManagerConfig
+import io.airbyte.micronaut.runtime.SecretPersistenceType
 import io.kotest.matchers.shouldBe
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -59,7 +60,12 @@ class SecretStorageInitializerTest {
     val createSlot = slot<SecretStorageCreate>()
     every { secretStorageService.create(capture(createSlot)) } returns makeDomain(SecretStorageType.AWS_SECRETS_MANAGER)
 
-    val init = SecretStorageInitializer(secretStorageService, ImplementationTypes.AWS_SECRET_MANAGER)
+    val secretsConfig =
+      AirbyteSecretsManagerConfig(
+        persistence = SecretPersistenceType.AWS_SECRET_MANAGER,
+        store = AirbyteSecretsManagerConfig.AirbyteSecretsManagerStoreConfig(),
+      )
+    val init = SecretStorageInitializer(secretStorageService, secretsConfig)
     init.createOrUpdateDefaultSecretStorage()
 
     verifySequence {
@@ -80,7 +86,12 @@ class SecretStorageInitializerTest {
   fun `when one exists with matching type, initializer should do nothing`() {
     every { secretStorageService.findById(defaultId) } returns makeDomain(SecretStorageType.GOOGLE_SECRET_MANAGER)
 
-    val init = SecretStorageInitializer(secretStorageService, ImplementationTypes.GOOGLE_SECRET_MANAGER)
+    val secretsConfig =
+      AirbyteSecretsManagerConfig(
+        persistence = SecretPersistenceType.GOOGLE_SECRET_MANAGER,
+        store = AirbyteSecretsManagerConfig.AirbyteSecretsManagerStoreConfig(),
+      )
+    val init = SecretStorageInitializer(secretStorageService, secretsConfig)
     init.createOrUpdateDefaultSecretStorage()
 
     verify(exactly = 1) { secretStorageService.findById(defaultId) }
@@ -103,7 +114,12 @@ class SecretStorageInitializerTest {
   fun `when one exists with different type, initializer should PATCH with toPatch`() {
     every { secretStorageService.findById(defaultId) } returns makeDomain(SecretStorageType.LOCAL_TESTING)
 
-    val init = SecretStorageInitializer(secretStorageService, ImplementationTypes.VAULT)
+    val secretsConfig =
+      AirbyteSecretsManagerConfig(
+        persistence = SecretPersistenceType.VAULT,
+        store = AirbyteSecretsManagerConfig.AirbyteSecretsManagerStoreConfig(),
+      )
+    val init = SecretStorageInitializer(secretStorageService, secretsConfig)
     init.createOrUpdateDefaultSecretStorage()
 
     verifySequence {

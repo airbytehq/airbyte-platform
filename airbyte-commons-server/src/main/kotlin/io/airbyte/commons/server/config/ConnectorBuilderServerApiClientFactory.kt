@@ -7,9 +7,10 @@ package io.airbyte.commons.server.config
 import dev.failsafe.RetryPolicy
 import io.airbyte.api.client.auth.InternalClientTokenInterceptor
 import io.airbyte.connectorbuilderserver.api.client.ConnectorBuilderServerApiClient
+import io.airbyte.micronaut.runtime.AirbyteConnectorBuilderApiConfig
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
+import io.micronaut.runtime.ApplicationConfiguration
 import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
 import okhttp3.Response
@@ -19,26 +20,23 @@ import kotlin.time.toJavaDuration
 @Factory
 class ConnectorBuilderServerApiClientFactory {
   @Singleton
-  @Requires(property = "airbyte.connector-builder-server-api.base-path")
+  @Requires(property = "airbyte.connector-builder-server-api.base-path", pattern = ".+")
   fun connectorBuilderServerApiClient(
-    @Property(name = "micronaut.application.name") applicationName: String,
-    @Property(name = "airbyte.connector-builder-server-api.base-path") basePath: String,
-    @Property(name = "airbyte.connector-builder-server-api.signature-secret") signatureSecret: String,
-    @Property(name = "airbyte.connector-builder-server-api.connect-timeout-seconds") connectTimeoutSeconds: Long,
-    @Property(name = "airbyte.connector-builder-server-api.read-timeout-seconds") readTimeoutSeconds: Long,
+    applicationConfiguration: ApplicationConfiguration,
+    airbyteConnectorBuilderApiConfig: AirbyteConnectorBuilderApiConfig,
   ): ConnectorBuilderServerApiClient {
     val builder: OkHttpClient.Builder =
       OkHttpClient.Builder().apply {
-        addInterceptor(InternalClientTokenInterceptor(applicationName, signatureSecret))
-        readTimeout(readTimeoutSeconds.seconds.toJavaDuration())
-        connectTimeout(connectTimeoutSeconds.seconds.toJavaDuration())
+        addInterceptor(InternalClientTokenInterceptor(applicationConfiguration.name.get(), airbyteConnectorBuilderApiConfig.signatureSecret))
+        readTimeout(airbyteConnectorBuilderApiConfig.readTimeoutSeconds.seconds.toJavaDuration())
+        connectTimeout(airbyteConnectorBuilderApiConfig.connectTimeoutSeconds.seconds.toJavaDuration())
       }
 
     val okHttpClient: OkHttpClient = builder.build()
     val retryPolicy: RetryPolicy<Response> = RetryPolicy.builder<Response>().withMaxRetries(0).build()
 
     return ConnectorBuilderServerApiClient(
-      basePath = basePath,
+      basePath = airbyteConnectorBuilderApiConfig.basePath,
       policy = retryPolicy,
       httpClient = okHttpClient,
     )

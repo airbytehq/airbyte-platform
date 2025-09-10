@@ -1,0 +1,8 @@
+airbyte:
+  flyway:
+    config:
+      initialization-timeout-ms: 10
+      minimum-migration-version: "1.0.0"
+    jobs:
+      initialization-timeout-ms: 20
+      minimum-migration-version: "2.0.0"

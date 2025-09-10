@@ -5,6 +5,8 @@
 package io.airbyte.workers.helpers
 
 import io.airbyte.api.client.model.generated.ConnectionScheduleType
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
+import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Value
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
@@ -17,42 +19,14 @@ import java.time.Duration
  * Test the ScheduleJitterHelper with values from application-schedule-jitter-test.yaml.
  */
 @MicronautTest(environments = ["schedule-jitter-test"])
+@Property(name = "INTERNAL_API_HOST", value = "http://localhost:8080")
 internal class ScheduleJitterHelperMicronautTest {
+  @Inject
+  lateinit var airbyteWorkerConfig: AirbyteWorkerConfig
+
   @Inject
   @Value("\${sanity-check}")
   var sanityCheck: String? = null
-
-  @Inject
-  @Value("\${airbyte.worker.connection.schedule-jitter.no-jitter-cutoff-minutes}")
-  var noJitterCutoffMinutes: Int = 0
-
-  @Inject
-  @Value("\${airbyte.worker.connection.schedule-jitter.high-frequency-bucket.threshold-minutes}")
-  var highFrequencyThresholdMinutes: Int = 0
-
-  @Inject
-  @Value("\${airbyte.worker.connection.schedule-jitter.high-frequency-bucket.jitter-amount-minutes}")
-  var highFrequencyJitterAmountMinutes: Int = 0
-
-  @Inject
-  @Value("\${airbyte.worker.connection.schedule-jitter.medium-frequency-bucket.threshold-minutes}")
-  var mediumFrequencyThresholdMinutes: Int = 0
-
-  @Inject
-  @Value("\${airbyte.worker.connection.schedule-jitter.medium-frequency-bucket.jitter-amount-minutes}")
-  var mediumFrequencyJitterAmountMinutes: Int = 0
-
-  @Inject
-  @Value("\${airbyte.worker.connection.schedule-jitter.low-frequency-bucket.threshold-minutes}")
-  var lowFrequencyThresholdMinutes: Int = 0
-
-  @Inject
-  @Value("\${airbyte.worker.connection.schedule-jitter.low-frequency-bucket.jitter-amount-minutes}")
-  var lowFrequencyJitterAmountMinutes: Int = 0
-
-  @Inject
-  @Value("\${airbyte.worker.connection.schedule-jitter.very-low-frequency-bucket.jitter-amount-minutes}")
-  var veryLowFrequencyJitterAmountMinutes: Int = 0
 
   @Inject
   var scheduleJitterHelper: ScheduleJitterHelper? = null
@@ -64,7 +38,7 @@ internal class ScheduleJitterHelperMicronautTest {
 
   @Test
   fun testNoJitterCutoffMinutes() {
-    val waitTime = Duration.ofMinutes((noJitterCutoffMinutes - 1).toLong())
+    val waitTime = Duration.ofMinutes((airbyteWorkerConfig.connection.scheduleJitter.noJitterCutoffMinutes - 1).toLong())
 
     // normally would use @ParameterizedTest for this, but it can't be combined with @RepeatedTest
     val jitteredWaitTimeForBasic = scheduleJitterHelper!!.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.BASIC)
@@ -76,51 +50,91 @@ internal class ScheduleJitterHelperMicronautTest {
 
   @RepeatedTest(50)
   fun testHighFreqBucket() {
-    val waitTime = Duration.ofMinutes((highFrequencyThresholdMinutes - 1).toLong())
+    val waitTime = Duration.ofMinutes((airbyteWorkerConfig.connection.scheduleJitter.highFrequencyBucket.thresholdMinutes - 1).toLong())
 
     // normally would use @ParameterizedTest for this, but it can't be combined with @RepeatedTest
     val jitteredWaitTimeForBasic = scheduleJitterHelper!!.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.BASIC)
     val jitteredWaitTimeForCron = scheduleJitterHelper!!.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.CRON)
 
-    assertJitterBetween(waitTime, jitteredWaitTimeForBasic, highFrequencyJitterAmountMinutes, true)
-    assertJitterBetween(waitTime, jitteredWaitTimeForCron, highFrequencyJitterAmountMinutes, false)
+    assertJitterBetween(
+      waitTime,
+      jitteredWaitTimeForBasic,
+      airbyteWorkerConfig.connection.scheduleJitter.highFrequencyBucket.jitterAmountMinutes,
+      true,
+    )
+    assertJitterBetween(
+      waitTime,
+      jitteredWaitTimeForCron,
+      airbyteWorkerConfig.connection.scheduleJitter.highFrequencyBucket.jitterAmountMinutes,
+      false,
+    )
   }
 
   @RepeatedTest(50)
   fun testMediumFreqBucket() {
-    val waitTime = Duration.ofMinutes((mediumFrequencyThresholdMinutes - 1).toLong())
+    val waitTime = Duration.ofMinutes((airbyteWorkerConfig.connection.scheduleJitter.mediumFrequencyBucket.thresholdMinutes - 1).toLong())
 
     // normally would use @ParameterizedTest for this, but it can't be combined with @RepeatedTest
     val jitteredWaitTimeForBasic = scheduleJitterHelper!!.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.BASIC)
     val jitteredWaitTimeForCron = scheduleJitterHelper!!.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.CRON)
 
-    assertJitterBetween(waitTime, jitteredWaitTimeForBasic, mediumFrequencyJitterAmountMinutes, true)
-    assertJitterBetween(waitTime, jitteredWaitTimeForCron, mediumFrequencyJitterAmountMinutes, false)
+    assertJitterBetween(
+      waitTime,
+      jitteredWaitTimeForBasic,
+      airbyteWorkerConfig.connection.scheduleJitter.mediumFrequencyBucket.jitterAmountMinutes,
+      true,
+    )
+    assertJitterBetween(
+      waitTime,
+      jitteredWaitTimeForCron,
+      airbyteWorkerConfig.connection.scheduleJitter.mediumFrequencyBucket.jitterAmountMinutes,
+      false,
+    )
   }
 
   @RepeatedTest(50)
   fun testLowFreqBucket() {
-    val waitTime = Duration.ofMinutes((lowFrequencyThresholdMinutes - 1).toLong())
+    val waitTime = Duration.ofMinutes((airbyteWorkerConfig.connection.scheduleJitter.lowFrequencyBucket.thresholdMinutes - 1).toLong())
 
     // normally would use @ParameterizedTest for this, but it can't be combined with @RepeatedTest
     val jitteredWaitTimeForBasic = scheduleJitterHelper!!.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.BASIC)
     val jitteredWaitTimeForCron = scheduleJitterHelper!!.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.CRON)
 
     // normally would use @ParameterizedTest for this, but it can't be combined with @RepeatedTest
-    assertJitterBetween(waitTime, jitteredWaitTimeForBasic, lowFrequencyJitterAmountMinutes, true)
-    assertJitterBetween(waitTime, jitteredWaitTimeForCron, lowFrequencyJitterAmountMinutes, false)
+    assertJitterBetween(
+      waitTime,
+      jitteredWaitTimeForBasic,
+      airbyteWorkerConfig.connection.scheduleJitter.lowFrequencyBucket.jitterAmountMinutes,
+      true,
+    )
+    assertJitterBetween(
+      waitTime,
+      jitteredWaitTimeForCron,
+      airbyteWorkerConfig.connection.scheduleJitter.lowFrequencyBucket.jitterAmountMinutes,
+      false,
+    )
   }
 
   @RepeatedTest(50)
   fun testVeryLowFreqBucket() {
-    val waitTime = Duration.ofMinutes((lowFrequencyThresholdMinutes + 1).toLong())
+    val waitTime = Duration.ofMinutes((airbyteWorkerConfig.connection.scheduleJitter.lowFrequencyBucket.thresholdMinutes + 1).toLong())
 
     // normally would use @ParameterizedTest for this, but it can't be combined with @RepeatedTest
     val jitteredWaitTimeForBasic = scheduleJitterHelper!!.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.BASIC)
     val jitteredWaitTimeForCron = scheduleJitterHelper!!.addJitterBasedOnWaitTime(waitTime, ConnectionScheduleType.CRON)
 
-    assertJitterBetween(waitTime, jitteredWaitTimeForBasic, veryLowFrequencyJitterAmountMinutes, true)
-    assertJitterBetween(waitTime, jitteredWaitTimeForCron, veryLowFrequencyJitterAmountMinutes, false)
+    assertJitterBetween(
+      waitTime,
+      jitteredWaitTimeForBasic,
+      airbyteWorkerConfig.connection.scheduleJitter.veryLowFrequencyBucket.jitterAmountMinutes,
+      true,
+    )
+    assertJitterBetween(
+      waitTime,
+      jitteredWaitTimeForCron,
+      airbyteWorkerConfig.connection.scheduleJitter.veryLowFrequencyBucket.jitterAmountMinutes,
+      false,
+    )
   }
 
   private fun assertJitterBetween(

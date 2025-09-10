@@ -4,6 +4,7 @@
 
 package io.airbyte.api.client
 
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -16,11 +17,13 @@ internal class WebUrlHelperTest {
   private val sourceId: UUID = UUID.randomUUID()
   private val workspaceId: UUID = UUID.randomUUID()
 
+  private lateinit var airbyteConfig: AirbyteConfig
   private lateinit var webUrlHelper: WebUrlHelper
 
   @BeforeEach
   fun setup() {
-    webUrlHelper = WebUrlHelper(airbyteUrl)
+    airbyteConfig = AirbyteConfig(airbyteUrl = airbyteUrl)
+    webUrlHelper = WebUrlHelper(airbyteConfig)
   }
 
   @Test

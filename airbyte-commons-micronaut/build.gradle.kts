@@ -6,6 +6,7 @@ plugins {
 dependencies {
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
+  ksp(project(":oss:airbyte-configuration-processor"))
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut.kotlin)
@@ -24,4 +25,10 @@ dependencies {
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockito.inline)
   testImplementation(libs.mockk)
+}
+
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java dependencies.
+// Once the code has been migrated to kotlin, this can also be removed.
+tasks.withType<Copy>().configureEach {
+  duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }

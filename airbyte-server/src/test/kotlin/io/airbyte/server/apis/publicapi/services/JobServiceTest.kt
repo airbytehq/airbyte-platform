@@ -8,7 +8,7 @@ import io.airbyte.api.problems.throwable.generated.StateConflictProblem
 import io.airbyte.api.problems.throwable.generated.TryAgainLaterConflictProblem
 import io.airbyte.commons.server.errors.ValueConflictKnownException
 import io.airbyte.commons.server.handlers.SchedulerHandler
-import io.airbyte.data.services.ApplicationService
+import io.airbyte.micronaut.runtime.AirbyteApiConfig
 import io.airbyte.server.apis.publicapi.errorHandlers.JOB_NOT_RUNNING_MESSAGE
 import io.mockk.every
 import io.mockk.mockk
@@ -20,7 +20,6 @@ import java.util.UUID
 class JobServiceTest {
   private lateinit var jobService: JobServiceImpl
   private val schedulerHandler: SchedulerHandler = mockk()
-  private val applicationService: ApplicationService = mockk()
 
   private val connectionId = UUID.randomUUID()
 
@@ -32,6 +31,7 @@ class JobServiceTest {
         jobHistoryHandler = mockk(),
         currentUserService = mockk(),
         userService = mockk(),
+        airbyteApiConfig = AirbyteApiConfig(),
       )
   }
 

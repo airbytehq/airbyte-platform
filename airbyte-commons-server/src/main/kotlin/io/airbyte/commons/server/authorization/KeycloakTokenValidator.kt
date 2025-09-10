@@ -10,7 +10,6 @@ import com.nimbusds.jwt.JWT
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.PlainJWT
 import io.airbyte.commons.auth.RequiresAuthMode
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.commons.auth.support.JwtTokenParser.JWT_SSO_REALM
 import io.airbyte.commons.auth.support.JwtTokenParser.convertJwtPayloadToUserAttributes
@@ -22,6 +21,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.MetricTags.AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.common.util.StringUtils
 import io.micronaut.context.annotation.Primary
@@ -59,7 +59,7 @@ import java.util.Optional
 @Requires(property = "airbyte.auth.identity-provider.type", notEquals = "simple")
 class KeycloakTokenValidator(
   @param:Named("keycloakTokenValidatorHttpClient") private val client: OkHttpClient,
-  private val keycloakConfiguration: AirbyteKeycloakConfiguration,
+  private val keycloakConfiguration: AirbyteKeycloakConfig,
   private val authenticationFactory: JwtAuthenticationFactory,
   private val metricClient: Optional<MetricClient>,
 ) : TokenValidator<HttpRequest<*>> {

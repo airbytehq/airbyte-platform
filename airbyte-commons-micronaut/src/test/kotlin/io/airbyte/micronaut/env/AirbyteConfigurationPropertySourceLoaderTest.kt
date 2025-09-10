@@ -4,6 +4,7 @@
 
 package io.airbyte.micronaut.env
 
+import io.micronaut.context.env.PropertySource
 import io.micronaut.context.exceptions.ConfigurationException
 import io.micronaut.core.io.ResourceLoader
 import io.mockk.every
@@ -27,7 +28,7 @@ internal class AirbyteConfigurationPropertySourceLoaderTest {
 
   @Test
   fun testLoadingAirbyteConfigurations() {
-    val configFiles = Stream.of(javaClass.getResource("/airbyte-configuration.yml"))
+    val configFiles = Stream.of(javaClass.getResource("/test-airbyte-configuration.yml"))
     every { resourceLoader.getResources(any()) } returns configFiles
 
     val propertySource = loader.load("test", resourceLoader)
@@ -53,5 +54,18 @@ internal class AirbyteConfigurationPropertySourceLoaderTest {
         loader.load("test", resourceLoader)
       }
     assertEquals(IOException::class.java, e.cause?.javaClass)
+  }
+
+  @Test
+  fun testPropertySourceDetails() {
+    val configFiles = Stream.of(javaClass.getResource("/test-airbyte-configuration.yml"))
+    every { resourceLoader.getResources(any()) } returns configFiles
+
+    val propertySource = loader.load("test", resourceLoader)
+    assertTrue(propertySource.isPresent)
+    assertEquals(NAME, propertySource.get().name)
+    assertEquals("$NAME.yml", propertySource.get().origin.location())
+    assertEquals(DEFAULT_POSITION, propertySource.get().order)
+    assertEquals(PropertySource.PropertyConvention.JAVA_PROPERTIES, propertySource.get().convention)
   }
 }

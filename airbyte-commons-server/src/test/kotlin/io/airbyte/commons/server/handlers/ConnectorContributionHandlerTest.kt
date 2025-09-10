@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers
 import io.airbyte.commons.server.builder.contributions.BuilderContributionInfo
 import io.airbyte.commons.server.builder.contributions.ContributionTemplates
 import io.airbyte.commons.server.builder.contributions.GithubContributionService
+import io.airbyte.micronaut.runtime.AirbyteConnectorBuilderConfig
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkConstructor
@@ -23,7 +24,7 @@ class ConnectorContributionHandlerTest {
   fun setUp() {
     mockkConstructor(GithubContributionService::class)
     val templateService = ContributionTemplates()
-    connectorContributionHandler = ConnectorContributionHandler(templateService, null)
+    connectorContributionHandler = ConnectorContributionHandler(templateService, AirbyteConnectorBuilderConfig())
   }
 
   @Test

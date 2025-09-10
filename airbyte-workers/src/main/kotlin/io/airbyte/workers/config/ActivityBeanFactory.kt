@@ -8,6 +8,7 @@ import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.commons.temporal.TemporalConstants
 import io.airbyte.commons.temporal.utils.PayloadChecker
 import io.airbyte.metrics.MetricClient
+import io.airbyte.workers.runtime.AirbyteWorkerActivityConfig
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivity
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity
@@ -23,7 +24,6 @@ import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity
 import io.airbyte.workers.temporal.sync.InvokeOperationsActivity
 import io.airbyte.workers.temporal.workflows.ConnectorCommandActivity
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
 import io.temporal.activity.ActivityCancellationType
 import io.temporal.activity.ActivityOptions
@@ -92,12 +92,12 @@ class ActivityBeanFactory {
   @Singleton
   @Named("shortActivityOptions")
   fun shortActivityOptions(
-    @Property(name = "airbyte.activity.max-timeout", defaultValue = "120") maxTimeout: Long,
+    airbyteWorkerActivityConfig: AirbyteWorkerActivityConfig,
     @Named("shortRetryOptions") shortRetryOptions: RetryOptions?,
   ): ActivityOptions =
     ActivityOptions
       .newBuilder()
-      .setStartToCloseTimeout(Duration.ofSeconds(maxTimeout))
+      .setStartToCloseTimeout(Duration.ofSeconds(airbyteWorkerActivityConfig.maxTimeout))
       .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
       .setRetryOptions(shortRetryOptions)
       .setHeartbeatTimeout(TemporalConstants.HEARTBEAT_TIMEOUT)
@@ -105,15 +105,11 @@ class ActivityBeanFactory {
 
   @Singleton
   @Named("shortRetryOptions")
-  fun shortRetryOptions(
-    @Property(name = "airbyte.activity.max-attempts", defaultValue = "5") activityNumberOfAttempts: Int,
-    @Property(name = "airbyte.activity.initial-delay", defaultValue = "30") initialDelayBetweenActivityAttemptsSeconds: Int,
-    @Property(name = "airbyte.activity.max-delay", defaultValue = "600") maxDelayBetweenActivityAttemptsSeconds: Int,
-  ): RetryOptions =
+  fun shortRetryOptions(airbyteWorkerActivityConfig: AirbyteWorkerActivityConfig): RetryOptions =
     RetryOptions
       .newBuilder()
-      .setMaximumAttempts(activityNumberOfAttempts)
-      .setInitialInterval(Duration.ofSeconds(initialDelayBetweenActivityAttemptsSeconds.toLong()))
-      .setMaximumInterval(Duration.ofSeconds(maxDelayBetweenActivityAttemptsSeconds.toLong()))
+      .setMaximumAttempts(airbyteWorkerActivityConfig.maxAttempts)
+      .setInitialInterval(Duration.ofSeconds(airbyteWorkerActivityConfig.initialDelay.toLong()))
+      .setMaximumInterval(Duration.ofSeconds(airbyteWorkerActivityConfig.maxDelay.toLong()))
       .build()
 }

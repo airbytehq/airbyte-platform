@@ -9,6 +9,7 @@ import io.airbyte.commons.temporal.factories.TemporalSelfHostedConfig
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsFactory
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsTimeouts
 import io.airbyte.connector.rollout.shared.Constants
+import io.airbyte.micronaut.runtime.AirbyteTemporalConfig
 import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Value
@@ -18,22 +19,25 @@ import java.time.Duration
 
 @Singleton
 class ConnectorRolloutTemporalWorkflowServiceFactory(
-  @Property(name = "temporal.cloud.client.cert") temporalCloudClientCert: String?,
-  @Property(name = "temporal.cloud.client.key") temporalCloudClientKey: String?,
-  @Property(name = "temporal.cloud.enabled", defaultValue = "false") temporalCloudEnabled: Boolean,
-  @Value("\${temporal.cloud.connector-rollout.host}") temporalCloudHost: String?,
-  @Value("\${temporal.cloud.connector-rollout.namespace}") temporalCloudNamespace: String?,
-  @Value("\${temporal.host}") temporalHost: String?,
+  airbyteTemporalConfig: AirbyteTemporalConfig,
   meterRegistry: MeterRegistry?,
 ) {
   private val temporalCloudConfig: TemporalCloudConfig =
-    TemporalCloudConfig(temporalCloudClientCert, temporalCloudClientKey, temporalCloudHost, temporalCloudNamespace)
+    TemporalCloudConfig(
+      airbyteTemporalConfig.cloud.client.cert,
+      airbyteTemporalConfig.cloud.client.key,
+      airbyteTemporalConfig.cloud.host,
+      airbyteTemporalConfig.cloud.namespace,
+    )
 
   private val workflowServiceStubsFactory: WorkflowServiceStubsFactory =
     WorkflowServiceStubsFactory(
       temporalCloudConfig,
-      TemporalSelfHostedConfig(temporalHost, if (temporalCloudEnabled) temporalCloudNamespace else Constants.DEFAULT_NAMESPACE),
-      temporalCloudEnabled,
+      TemporalSelfHostedConfig(
+        airbyteTemporalConfig.host,
+        if (airbyteTemporalConfig.cloud.enabled) airbyteTemporalConfig.cloud.namespace else Constants.DEFAULT_NAMESPACE,
+      ),
+      airbyteTemporalConfig.cloud.enabled,
       meterRegistry,
     )
 

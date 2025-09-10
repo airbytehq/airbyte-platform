@@ -14,8 +14,8 @@ import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.config.ActorType
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
+import io.airbyte.micronaut.runtime.AirbyteConnectorRegistryConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -23,21 +23,18 @@ import java.io.IOException
 import java.time.Duration
 import java.util.UUID
 
-private val log = KotlinLogging.logger {}
+private val logger = KotlinLogging.logger {}
 
 @Singleton
 open class EnterpriseConnectorStubsHandler(
-  @Value("\${airbyte.connector-registry.enterprise.enterprise-stubs-url}")
-  private val enterpriseStubsUrl: String,
-  @Value("\${airbyte.connector-registry.remote.timeout-ms}")
-  private val remoteTimeoutMs: Long,
+  private val airbyteConnectorRegistryConfig: AirbyteConnectorRegistryConfig,
   private val workspaceHelper: WorkspaceHelper,
   private val licenseEntitlementChecker: LicenseEntitlementChecker,
 ) {
   private val okHttpClient: OkHttpClient =
     OkHttpClient
       .Builder()
-      .callTimeout(Duration.ofMillis(remoteTimeoutMs))
+      .callTimeout(Duration.ofMillis(airbyteConnectorRegistryConfig.remote.timeoutMs))
       .build()
 
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -57,7 +54,7 @@ open class EnterpriseConnectorStubsHandler(
       val request =
         Request
           .Builder()
-          .url(enterpriseStubsUrl)
+          .url(airbyteConnectorRegistryConfig.enterprise.enterpriseSourceStubsUrl)
           .build()
 
       okHttpClient.newCall(request).execute().use { response ->
@@ -70,12 +67,12 @@ open class EnterpriseConnectorStubsHandler(
         return objectMapper.readValue(jsonResponse, typeReference)
       }
     } catch (error: IOException) {
-      log.error(error) {
+      logger.error(error) {
         "Encountered an HTTP error fetching enterprise connectors. Message: ${error.message}"
       }
       throw IOException("HTTP error fetching enterprise sources", error)
     } catch (error: Exception) {
-      log.error(error) { "Unexpected error fetching enterprise sources" }
+      logger.error(error) { "Unexpected error fetching enterprise sources" }
       throw IOException("Encountered an unexpected error fetching enterprise sources", error)
     }
   }
@@ -103,7 +100,7 @@ open class EnterpriseConnectorStubsHandler(
           }
         }
     } catch (error: Exception) {
-      log.error { "Unexpected error fetching enterprise ${actorType}s" }
+      logger.error(error) { "Unexpected error fetching enterprise ${actorType}s" }
       return listOf()
     }
   }
@@ -132,7 +129,7 @@ open class EnterpriseConnectorStubsHandler(
             val isEntitled =
               try {
                 licenseEntitlementChecker.checkEntitlement(organizationId, entitlement, UUID.fromString(it.definitionId!!))
-              } catch (e: ConfigNotFoundException) {
+              } catch (_: ConfigNotFoundException) {
                 false
               }
 
@@ -140,7 +137,7 @@ open class EnterpriseConnectorStubsHandler(
           }
       }
     } catch (error: Exception) {
-      log.error { "Unexpected error fetching enterprise ${actorType}s" }
+      logger.error(error) { "Unexpected error fetching enterprise ${actorType}s" }
       return EnterpriseConnectorStubsReadList()
     }
   }

@@ -32,11 +32,11 @@ import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.metrics.lib.TracingHelper
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteWebappConfig
 import io.airbyte.server.apis.execute
 import io.airbyte.server.handlers.WebBackendCronExpressionHandler
 import io.airbyte.server.handlers.WebBackendMappersHandler
-import io.micronaut.context.annotation.ConfigurationProperties
-import io.micronaut.context.annotation.Value
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
@@ -53,7 +53,8 @@ open class WebBackendApiController(
   private val webBackendCheckUpdatesHandler: WebBackendCheckUpdatesHandler,
   private val webBackendCronExpressionHandler: WebBackendCronExpressionHandler,
   private val webBackendMappersHandler: WebBackendMappersHandler,
-  private val webappConfig: WebappConfig,
+  private val airbyteConfig: AirbyteConfig,
+  private val airbyteWebappConfig: AirbyteWebappConfig,
   private val roleResolver: RoleResolver,
 ) : WebBackendApi {
   @Post("/state/get_type")
@@ -183,36 +184,20 @@ open class WebBackendApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getWebappConfig(): WebappConfigResponse =
     WebappConfigResponse().apply {
-      version = webappConfig.version
-      edition = webappConfig.edition.lowercase()
-      datadogApplicationId = webappConfig.webApp["datadog-application-id"]
-      datadogClientToken = webappConfig.webApp["datadog-client-token"]
-      datadogEnv = webappConfig.webApp["datadog-env"]
-      datadogService = webappConfig.webApp["datadog-service"]
-      datadogSite = webappConfig.webApp["datadog-site"]
-      hockeystackApiKey = webappConfig.webApp["hockeystick-api-key"]
-      launchdarklyKey = webappConfig.webApp["launchdarkly-key"]
-      osanoKey = webappConfig.webApp["osano-key"]
-      segmentToken = webappConfig.webApp["segment-token"]
-      sonarApiUrl = webappConfig.webApp["sonar-api-url"]
-      zendeskKey = webappConfig.webApp["zendesk-key"]
-      posthogApiKey = webappConfig.webApp["posthog-api-key"]
-      posthogHost = webappConfig.webApp["posthog-host"]
+      version = airbyteConfig.version
+      edition = airbyteConfig.edition.name.lowercase()
+      datadogApplicationId = airbyteWebappConfig.datadogApplicationId
+      datadogClientToken = airbyteWebappConfig.datadogClientToken
+      datadogEnv = airbyteWebappConfig.datadogEnv
+      datadogService = airbyteWebappConfig.datadogService
+      datadogSite = airbyteWebappConfig.datadogSite
+      hockeystackApiKey = airbyteWebappConfig.hockeystackApiKey
+      launchdarklyKey = airbyteWebappConfig.launchdarklyKey
+      osanoKey = airbyteWebappConfig.osanoKey
+      segmentToken = airbyteWebappConfig.segmentToken
+      sonarApiUrl = airbyteWebappConfig.sonarApiUrl
+      zendeskKey = airbyteWebappConfig.zendeskKey
+      posthogApiKey = airbyteWebappConfig.posthogApiKey
+      posthogHost = airbyteWebappConfig.posthogHost
     }
 }
-
-/**
- * This class is populated by Micronaut with the values from the `airbyte.web-app` section in the
- * application.yaml.
- *
- * It is only used for by [WebBackendApiController.getWebappConfig].
- *
- * This class should be internal, but due to airbyte-server-wrapped extending the
- * [WebBackendApiController] class, this must be public.
- */
-@ConfigurationProperties("airbyte")
-data class WebappConfig(
-  @Value("\${AIRBYTE_VERSION}") val version: String,
-  @Value("\${AIRBYTE_EDITION}") val edition: String,
-  val webApp: Map<String, String>,
-)

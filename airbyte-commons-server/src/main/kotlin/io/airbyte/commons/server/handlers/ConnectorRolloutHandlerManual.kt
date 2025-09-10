@@ -32,7 +32,8 @@ import io.airbyte.connector.rollout.shared.Constants.AIRBYTE_API_CLIENT_EXCEPTIO
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
-import io.micronaut.context.annotation.Value
+import io.airbyte.micronaut.runtime.AirbyteConnectorRolloutConfig
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.client.WorkflowUpdateException
 import io.temporal.failure.ApplicationFailure
 import jakarta.inject.Inject
@@ -42,6 +43,8 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
 
+private val logger = KotlinLogging.logger {}
+
 /**
  * OperationsHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
@@ -49,12 +52,7 @@ import java.util.UUID
 open class ConnectorRolloutHandlerManual
   @Inject
   constructor(
-    @Value("\${airbyte.connector-rollout.timeouts.wait_between_rollout_seconds}")
-    private val waitBetweenRolloutSeconds: Int,
-    @Value("\${airbyte.connector-rollout.timeouts.wait_between_sync_results_queries_seconds}")
-    private val waitBetweenSyncResultsQueriesSeconds: Int,
-    @Value("\${airbyte.connector-rollout.timeouts.rollout_expiration_seconds}")
-    private val rolloutExpirationSeconds: Int,
+    private val airbyteConnectorRolloutConfig: AirbyteConnectorRolloutConfig,
     private val connectorRolloutService: ConnectorRolloutService,
     private val actorDefinitionService: ActorDefinitionService,
     private val actorDefinitionVersionUpdater: ActorDefinitionVersionUpdater,
@@ -181,7 +179,7 @@ open class ConnectorRolloutHandlerManual
         return null
       }
 
-      return filters!!
+      return filters
         .customerTierFilters
         .flatMap { it.value }
         .sortedBy { it.name }
@@ -250,9 +248,9 @@ open class ConnectorRolloutHandlerManual
           connectorRolloutManualStart.actorDefinitionId,
           actorDefinitionService.getActorDefinitionVersion(rollout.initialVersionId).dockerImageTag,
           connectorRolloutManualStart.migratePins,
-          waitBetweenRolloutSeconds,
-          waitBetweenSyncResultsQueriesSeconds,
-          rolloutExpirationSeconds,
+          airbyteConnectorRolloutConfig.timeouts.waitBetweenRolloutSeconds,
+          airbyteConnectorRolloutConfig.timeouts.waitBetweenSyncResultsQueriesSeconds,
+          airbyteConnectorRolloutConfig.timeouts.rolloutExpirationSeconds,
           rollout.updatedBy,
           getRolloutStrategyForManualStart(connectorRolloutManualStart.rolloutStrategy),
         )

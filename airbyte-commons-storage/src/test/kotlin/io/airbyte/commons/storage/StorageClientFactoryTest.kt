@@ -7,6 +7,8 @@ package io.airbyte.commons.storage
 import com.google.cloud.storage.Bucket
 import com.google.cloud.storage.BucketInfo
 import com.google.cloud.storage.Storage
+import io.airbyte.micronaut.runtime.AirbyteStorageConfig
+import io.airbyte.micronaut.runtime.STORAGE_TYPE
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Property
@@ -30,14 +32,14 @@ import software.amazon.awssdk.services.s3.model.NoSuchBucketException
  */
 
 private val bucket =
-  StorageBucketConfig(
+  AirbyteStorageConfig.AirbyteStorageBucketConfig(
     log = "log",
     state = "state",
     workloadOutput = "workload",
     activityPayload = "payload",
-    auditLogging = null,
-    profilerOutput = null,
-    replicationDump = null,
+    auditLogging = "",
+    profilerOutput = "",
+    replicationDump = "",
   )
 
 @MicronautTest
@@ -52,20 +54,14 @@ class LocalStorageClientFactoryTest {
    */
   @get:Primary
   @get:Bean
-  val localStorageConfig: LocalStorageConfig =
+  val localStorageConfig: AirbyteStorageConfig.LocalStorageConfig =
     mockk {
       every { root } returns "/tmp/test"
-      every { buckets } returns
-        StorageBucketConfig(
-          log = "log",
-          state = "state",
-          workloadOutput = "wo",
-          activityPayload = "ap",
-          auditLogging = null,
-          profilerOutput = null,
-          replicationDump = null,
-        )
     }
+
+  @get:Primary
+  @get:Bean
+  val bucketConfiguration: AirbyteStorageConfig.AirbyteStorageBucketConfig = bucket
 
   @Test
   fun `get returns correct class`() {
@@ -88,9 +84,8 @@ class LocalStorageClientFactoryTest {
 class GcsStorageClientFactoryTest {
   @get:Primary
   @get:Bean
-  val storageConfig: GcsStorageConfig =
+  val storageConfig: AirbyteStorageConfig.GcsStorageConfig =
     mockk {
-      every { buckets } returns bucket
       every { applicationCredentials } returns "mock-app-creds"
     }
 
@@ -101,7 +96,7 @@ class GcsStorageClientFactoryTest {
     }
 
   init {
-    mockkStatic(GcsStorageConfig::gcsClient)
+    mockkStatic(AirbyteStorageConfig.GcsStorageConfig::gcsClient)
     every { storageConfig.gcsClient() } returns gcsClient
   }
 
@@ -122,9 +117,8 @@ class GcsStorageClientFactoryTest {
 class MinioStorageClientFactoryTest {
   @get:Primary
   @get:Bean
-  val storageConfig: MinioStorageConfig =
+  val storageConfig: AirbyteStorageConfig.MinioStorageConfig =
     mockk {
-      every { buckets } returns bucket
       every { accessKey } returns "mock-access"
       every { secretAccessKey } returns "mock-secret"
       every { endpoint } returns "mock-endpoint"
@@ -137,7 +131,7 @@ class MinioStorageClientFactoryTest {
     }
 
   init {
-    mockkStatic(MinioStorageConfig::s3Client)
+    mockkStatic(AirbyteStorageConfig.MinioStorageConfig::s3Client)
     every { storageConfig.s3Client() } returns s3Client
   }
 
@@ -158,9 +152,8 @@ class MinioStorageClientFactoryTest {
 class S3StorageClientFactoryTest {
   @get:Primary
   @get:Bean
-  val storageConfig: S3StorageConfig =
+  val storageConfig: AirbyteStorageConfig.S3StorageConfig =
     mockk {
-      every { buckets } returns bucket
       every { accessKey } returns "mock-access"
       every { secretAccessKey } returns "mock-secret"
       every { region } returns "mock-region"
@@ -173,7 +166,7 @@ class S3StorageClientFactoryTest {
     }
 
   init {
-    mockkStatic(S3StorageConfig::s3Client)
+    mockkStatic(AirbyteStorageConfig.S3StorageConfig::s3Client)
     every { storageConfig.s3Client() } returns s3Client
   }
 

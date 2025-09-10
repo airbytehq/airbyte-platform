@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.builder.contributions
 
-import io.airbyte.commons.server.handlers.logger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.kohsuke.github.GHBranch
 import org.kohsuke.github.GHCommit
 import org.kohsuke.github.GHContent
@@ -17,6 +17,8 @@ import org.kohsuke.github.GitHubBuilder
 import org.kohsuke.github.HttpException
 import org.yaml.snakeyaml.Yaml
 import kotlin.collections.iterator
+
+private val logger = KotlinLogging.logger {}
 
 class GithubContributionService(
   var connectorImageName: String,

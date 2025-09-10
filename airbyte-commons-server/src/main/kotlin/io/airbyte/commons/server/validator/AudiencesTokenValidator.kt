@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.validator
 
-import io.airbyte.commons.server.config.JwtIdentityProvidersConfig
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.security.token.Claims
@@ -16,11 +16,11 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 @Requires(property = "airbyte.auth.identity-provider.verify-audience", value = "true")
 class AudiencesTokenValidator<T>(
-  private val jwtIdentityProvidersConfig: JwtIdentityProvidersConfig,
+  private val airbyteAuthConfig: AirbyteAuthConfig,
 ) : GenericJwtClaimsValidator<T> {
   init {
-    if (jwtIdentityProvidersConfig.verifyAudience) {
-      logger.info { "Validating the configured audiences ${jwtIdentityProvidersConfig.audiences}" }
+    if (airbyteAuthConfig.identityProvider.verifyAudience) {
+      logger.info { "Validating the configured audiences ${airbyteAuthConfig.identityProvider.audiences}" }
     } else {
       logger.info { "Not validating audiences, this is recommended for a production system" }
     }
@@ -30,7 +30,7 @@ class AudiencesTokenValidator<T>(
     claims: Claims?,
     request: T,
   ): Boolean {
-    if (!jwtIdentityProvidersConfig.verifyAudience) {
+    if (!airbyteAuthConfig.identityProvider.verifyAudience) {
       logger.debug { "Verifying the audience has been set to false, not verifying audiences" }
       return true
     }
@@ -42,7 +42,7 @@ class AudiencesTokenValidator<T>(
 
     when (val audience = claims["aud"]) {
       is String -> {
-        return jwtIdentityProvidersConfig.audiences.any {
+        return airbyteAuthConfig.identityProvider.audiences.any {
           logger.debug { "Verifying the audience $it against the single aud claim: ${claims["aud"]}" }
           it == claims["aud"]
         }
@@ -51,8 +51,10 @@ class AudiencesTokenValidator<T>(
         return (audience)
           .filterIsInstance<String>()
           .any {
-            logger.debug { "Verifying the audiences $it against the single the configured list of audiences ${jwtIdentityProvidersConfig.audiences}" }
-            jwtIdentityProvidersConfig.audiences.contains(it)
+            logger.debug {
+              "Verifying the audiences $it against the single the configured list of audiences ${airbyteAuthConfig.identityProvider.audiences}"
+            }
+            airbyteAuthConfig.identityProvider.audiences.contains(it)
           }
       }
       else -> {

@@ -4,8 +4,8 @@
 
 package io.airbyte.config.init.config
 
+import io.airbyte.micronaut.runtime.AirbytePlatformCompatibilityConfig
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
@@ -15,11 +15,9 @@ import java.time.Duration
 class PlatformCompatibilityFactory {
   @Singleton
   @Named("platformCompatibilityClient")
-  fun platformCompatibilityClient(
-    @Value("\${airbyte.platform-compatibility.remote.timeout-ms:30000}") platformCompatibilityRemoteTimeoutMs: Long,
-  ): OkHttpClient =
+  fun platformCompatibilityClient(airbytePlatformCompatibilityConfig: AirbytePlatformCompatibilityConfig): OkHttpClient =
     OkHttpClient
       .Builder()
-      .callTimeout(Duration.ofMillis(platformCompatibilityRemoteTimeoutMs))
+      .callTimeout(Duration.ofMillis(airbytePlatformCompatibilityConfig.remote.timeoutMs))
       .build()
 }

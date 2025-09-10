@@ -7,15 +7,13 @@ package io.airbyte.commons.temporal
 import io.airbyte.commons.duration.formatMilli
 import io.airbyte.commons.lang.Exceptions
 import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
-import io.airbyte.commons.temporal.config.TemporalSdkTimeouts
 import io.airbyte.commons.temporal.factories.TemporalCloudConfig
 import io.airbyte.commons.temporal.factories.TemporalSelfHostedConfig
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsFactory
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsTimeouts
+import io.airbyte.micronaut.runtime.AirbyteTemporalConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.MeterRegistry
-import io.micronaut.context.annotation.Property
-import io.micronaut.context.annotation.Value
 import io.temporal.api.namespace.v1.NamespaceConfig
 import io.temporal.api.namespace.v1.NamespaceInfo
 import io.temporal.api.workflowservice.v1.DescribeNamespaceRequest
@@ -25,7 +23,6 @@ import io.temporal.serviceclient.WorkflowServiceStubsOptions
 import jakarta.inject.Singleton
 import java.nio.file.Path
 import java.time.Duration
-import java.util.Objects
 import java.util.Optional
 import java.util.function.Supplier
 
@@ -36,30 +33,32 @@ import java.util.function.Supplier
  */
 @Singleton
 class TemporalUtils(
-  @Property(name = "temporal.cloud.client.cert") temporalCloudClientCert: String?,
-  @Property(name = "temporal.cloud.client.key") temporalCloudClientKey: String?,
-  @Property(name = "temporal.cloud.enabled", defaultValue = "false") temporalCloudEnabled: Boolean,
-  @Value("\${temporal.cloud.host}") temporalCloudHost: String?,
-  @Value("\${temporal.cloud.namespace}") temporalCloudNamespace: String?,
-  @Value("\${temporal.host}") temporalHost: String?,
-  @Property(name = "temporal.retention", defaultValue = "30") temporalRetentionInDays: Int,
+  private val airbyteTemporalConfig: AirbyteTemporalConfig,
   meterRegistry: Optional<MeterRegistry>,
 ) {
   private val temporalCloudConfig =
-    TemporalCloudConfig(temporalCloudClientCert, temporalCloudClientKey, temporalCloudHost, temporalCloudNamespace)
+    TemporalCloudConfig(
+      airbyteTemporalConfig.cloud.client.cert,
+      airbyteTemporalConfig.cloud.client.key,
+      airbyteTemporalConfig.cloud.host,
+      airbyteTemporalConfig.cloud.namespace,
+    )
   private val workflowServiceStubsFactory: WorkflowServiceStubsFactory
-  private val temporalCloudEnabled: Boolean = Objects.requireNonNullElse(temporalCloudEnabled, false)
+  private val temporalCloudEnabled: Boolean = airbyteTemporalConfig.cloud.enabled
   private val temporalRetentionInDays: Int
 
   init {
     this.workflowServiceStubsFactory =
       WorkflowServiceStubsFactory(
         temporalCloudConfig,
-        TemporalSelfHostedConfig(temporalHost, if (this.temporalCloudEnabled) temporalCloudNamespace else DEFAULT_NAMESPACE),
+        TemporalSelfHostedConfig(
+          airbyteTemporalConfig.host,
+          if (this.temporalCloudEnabled) airbyteTemporalConfig.cloud.namespace else DEFAULT_NAMESPACE,
+        ),
         this.temporalCloudEnabled,
         meterRegistry.orElse(null),
       )
-    this.temporalRetentionInDays = temporalRetentionInDays
+    this.temporalRetentionInDays = airbyteTemporalConfig.retention
   }
 
   /**
@@ -90,12 +89,12 @@ class TemporalUtils(
    *
    * @return temporal service client
    */
-  fun createTemporalService(temporalSdkTimeouts: TemporalSdkTimeouts): WorkflowServiceStubs {
+  fun createTemporalService(): WorkflowServiceStubs {
     val timeouts =
       WorkflowServiceStubsTimeouts(
-        temporalSdkTimeouts.rpcTimeout,
-        temporalSdkTimeouts.rpcLongPollTimeout,
-        temporalSdkTimeouts.rpcQueryTimeout,
+        airbyteTemporalConfig.sdk.timeouts.rpcTimeout,
+        airbyteTemporalConfig.sdk.timeouts.rpcLongPollTimeout,
+        airbyteTemporalConfig.sdk.timeouts.rpcQueryTimeout,
         MAX_TIME_TO_CONNECT,
       )
     val options = workflowServiceStubsFactory.createWorkflowServiceStubsOptions(timeouts)
@@ -125,7 +124,7 @@ class TemporalUtils(
     val humanReadableWorkflowExecutionTtl = formatMilli(workflowExecutionTtl.toMillis())
 
     if (currentRetention == workflowExecutionTtl) {
-      log.info { ("Workflow execution TTL already set for namespace $DEFAULT_NAMESPACE. Remains unchanged as: $humanReadableWorkflowExecutionTtl") }
+      log.info { "Workflow execution TTL already set for namespace $DEFAULT_NAMESPACE. Remains unchanged as: $humanReadableWorkflowExecutionTtl" }
     } else {
       val newGrpcDuration =
         com.google.protobuf.Duration
@@ -141,7 +140,7 @@ class TemporalUtils(
           .setConfig(namespaceConfig)
           .build()
       log.info {
-        "Workflow execution TTL differs for namespace $DEFAULT_NAMESPACE. Changing from ($humanReadableCurrentRetention) to ($humanReadableWorkflowExecutionTtl). "
+        "Workflow execution TTL differs for namespace $DEFAULT_NAMESPACE. Changing from ($humanReadableCurrentRetention) to ($humanReadableWorkflowExecutionTtl)."
       }
       client.updateNamespace(updateNamespaceRequest)
     }
@@ -174,7 +173,7 @@ class TemporalUtils(
 
       log.warn { "Waiting for namespace $namespace to be initialized in temporal..." }
       Exceptions.toRuntime { Thread.sleep(waitInterval.toMillis()) }
-      millisWaited = millisWaited + waitInterval.toMillis()
+      millisWaited += waitInterval.toMillis()
 
       try {
         temporalService = temporalServiceSupplier.get()

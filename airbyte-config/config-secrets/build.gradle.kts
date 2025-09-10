@@ -29,6 +29,7 @@ dependencies {
    * that do need these dependencies will already have them declared, as they will
    * need to define singletons from these modules in order for everything work.
    */
+  implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-domain:models"))
   implementation(project(":oss:airbyte-json-validation"))

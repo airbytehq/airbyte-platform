@@ -14,6 +14,7 @@ dependencies {
   api(libs.bundles.micronaut.kotlin)
   api(libs.kotlin.logging)
   api(project(":oss:airbyte-commons"))
+  api(project(":oss:airbyte-commons-micronaut"))
   api(project(":oss:airbyte-config:config-models"))
   api(project(":oss:airbyte-api:server-api"))
   api(project(":oss:airbyte-data"))

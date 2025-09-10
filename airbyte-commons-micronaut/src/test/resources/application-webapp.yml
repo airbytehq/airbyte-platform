@@ -1,0 +1,16 @@
+airbyte:
+  web-app:
+    url: test-url
+    datadog-application-id: test-datadog-application-id
+    datadog-client-token: test-datadog-client-token
+    datadog-env: test-datadog-env
+    datadog-service: test-datadog-service
+    datadog-site: test-datadog-site
+    hockeystack-api-key: test-hockeystack-api-key
+    launchdarkly-key: test-launchdarkly-key
+    osano-key: test-osano-key
+    segment-token: test-segment-token
+    sonar-api-url: test-sonar-api-url
+    zendesk-key: test-zendesk-key
+    posthog-api-key: test-posthog-api-key
+    posthog-host: test-posthog-host

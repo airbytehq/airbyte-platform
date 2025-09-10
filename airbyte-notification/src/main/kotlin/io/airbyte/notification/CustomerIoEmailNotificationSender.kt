@@ -9,10 +9,10 @@ import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.micronaut.runtime.AirbyteNotificationConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import okhttp3.MediaType
@@ -32,13 +32,13 @@ private val log = KotlinLogging.logger { }
  * Send a notification using customerIo.
  */
 @Singleton
-@Requires(property = "airbyte.notification.customerio.apikey", notEquals = "")
+@Requires(property = "airbyte.notification.customerio.api-key", pattern = ".+")
 @Replaces(
   FakeCustomerIoEmailNotificationSender::class,
 )
 open class CustomerIoEmailNotificationSender(
   @param:Named("webhookHttpClient") private val okHttpClient: OkHttpClient,
-  @param:Value("\${airbyte.notification.customerio.apikey}") private val apiToken: String,
+  private val airbyteNotificationConfig: AirbyteNotificationConfig,
   private val metricClient: MetricClient,
 ) : NotificationSender<CustomerIoEmailConfig> {
   override fun sendNotification(
@@ -157,7 +157,7 @@ open class CustomerIoEmailNotificationSender(
       Request
         .Builder()
         .addHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-        .addHeader(HttpHeaders.AUTHORIZATION, "Bearer $apiToken")
+        .addHeader(HttpHeaders.AUTHORIZATION, "Bearer ${airbyteNotificationConfig.customerIo.apiKey}")
         .url(CUSTOMER_IO_URL)
         .post(requestBody)
         .build()

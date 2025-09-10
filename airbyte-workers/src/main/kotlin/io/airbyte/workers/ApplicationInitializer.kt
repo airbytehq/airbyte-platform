@@ -10,6 +10,8 @@ import io.airbyte.commons.temporal.TemporalJobType
 import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.commons.temporal.config.TemporalQueueConfiguration
 import io.airbyte.config.MaxWorkersConfig
+import io.airbyte.micronaut.runtime.AirbyteDataPlaneQueueConfig
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.micronaut.temporal.TemporalProxyHelper
 import io.airbyte.workers.temporal.TemporalWorkerShutdownHook
 import io.airbyte.workers.temporal.check.connection.CheckConnectionWorkflowImpl
@@ -24,7 +26,6 @@ import io.airbyte.workers.temporal.workflows.DiscoverCatalogAndAutoPropagateWork
 import io.airbyte.workers.tracing.StorageObjectGetInterceptor
 import io.airbyte.workers.tracing.TemporalSdkInterceptor
 import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
 import io.micronaut.context.env.Environment
 import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.core.util.StringUtils
@@ -53,31 +54,19 @@ import kotlin.math.max
 @Singleton
 @Requires(notEnv = [Environment.TEST])
 class ApplicationInitializer(
-  @param:Named("uiCommandsActivities") private val uiCommandsActivities: Optional<List<Any>>,
-  @param:Named("connectionManagerActivities") private val connectionManagerActivities: Optional<List<Any>>,
-  @param:Named("jobPostProcessingActivities") private val jobPostProcessingActivities: Optional<List<Any>>,
+  @param:Named("uiCommandsActivities") private val uiCommandsActivities: Optional<MutableList<Any>>,
+  @param:Named("connectionManagerActivities") private val connectionManagerActivities: Optional<MutableList<Any>>,
+  @param:Named("jobPostProcessingActivities") private val jobPostProcessingActivities: Optional<MutableList<Any>>,
   @param:Named(TaskExecutors.IO) private val executorService: ExecutorService,
-  @param:Value("\${airbyte.worker.check.max-workers}") private val maxCheckWorkers: Int,
-  @param:Value("\${airbyte.worker.notify.max-workers}") private val maxNotifyWorkers: Int,
-  @param:Value("\${airbyte.worker.discover.max-workers}") private val maxDiscoverWorkers: Int,
-  @param:Value("\${airbyte.worker.spec.max-workers}") private val maxSpecWorkers: Int,
-  @param:Value("\${airbyte.worker.sync.max-workers}") private val maxSyncWorkers: Int,
-  @param:Value("\${airbyte.worker.check.enabled}") private val shouldRunCheckConnectionWorkflows: Boolean,
-  @param:Value("\${airbyte.worker.connection.enabled}") private val shouldRunConnectionManagerWorkflows: Boolean,
-  @param:Value("\${airbyte.worker.discover.enabled}") private val shouldRunDiscoverWorkflows: Boolean,
-  @param:Value("\${airbyte.worker.spec.enabled}") private val shouldRunGetSpecWorkflows: Boolean,
-  @param:Value("\${airbyte.worker.sync.enabled}") private val shouldRunSyncWorkflows: Boolean,
-  @param:Named("syncActivities") private val syncActivities: Optional<List<Any>>,
+  @param:Named("syncActivities") private val syncActivities: Optional<MutableList<Any>>,
   private val temporalInitializationUtils: TemporalInitializationUtils,
   private val temporalProxyHelper: TemporalProxyHelper,
   private val temporalService: WorkflowServiceStubs,
   private val temporalUtils: TemporalUtils,
   private val workerFactory: WorkerFactory,
-  private val workerFactoryShutdownHook: TemporalWorkerShutdownHook,
   private val temporalQueueConfiguration: TemporalQueueConfiguration,
-  @param:Value("\${airbyte.data.sync.task-queue}") private val syncTaskQueue: String,
-  @param:Value("\${airbyte.data.check.task-queue}") private val checkTaskQueue: String,
-  @param:Value("\${airbyte.data.discover.task-queue}") private val discoverTaskQueue: String,
+  private val airbyteDataPlaneQueueConfig: AirbyteDataPlaneQueueConfig,
+  private val airbyteWorkerConfig: AirbyteWorkerConfig,
 ) : ApplicationEventListener<ServiceReadyEvent?> {
   override fun onApplicationEvent(event: ServiceReadyEvent?) {
     try {
@@ -87,11 +76,11 @@ class ApplicationInitializer(
       registerWorkerFactory(
         workerFactory,
         MaxWorkersConfig(
-          maxCheckWorkers,
-          maxDiscoverWorkers,
-          maxSpecWorkers,
-          maxSyncWorkers,
-          maxNotifyWorkers,
+          airbyteWorkerConfig.check.maxWorkers,
+          airbyteWorkerConfig.discover.maxWorkers,
+          airbyteWorkerConfig.spec.maxWorkers,
+          airbyteWorkerConfig.sync.maxWorkers,
+          airbyteWorkerConfig.notify.maxWorkers,
         ),
       )
 
@@ -131,23 +120,23 @@ class ApplicationInitializer(
     log.info("Registering worker factories....")
     registerUiCommandsWorker(workerFactory, maxWorkersConfiguration)
 
-    if (shouldRunSyncWorkflows) {
+    if (airbyteWorkerConfig.sync.enabled) {
       registerSync(workerFactory, maxWorkersConfiguration)
     }
 
-    if (shouldRunConnectionManagerWorkflows) {
+    if (airbyteWorkerConfig.connection.enabled) {
       registerConnectionManager(workerFactory, maxWorkersConfiguration)
     }
 
-    if (shouldRunGetSpecWorkflows) {
+    if (airbyteWorkerConfig.spec.enabled) {
       registerGetSpec(workerFactory)
     }
 
-    if (shouldRunCheckConnectionWorkflows) {
+    if (airbyteWorkerConfig.check.enabled) {
       registerCheckConnection(workerFactory)
     }
 
-    if (shouldRunDiscoverWorkflows) {
+    if (airbyteWorkerConfig.discover.enabled) {
       registerDiscover(workerFactory)
     }
   }
@@ -335,10 +324,13 @@ class ApplicationInitializer(
    * @return A set of Temporal task queues for the sync workflow.
    */
   private fun getSyncTaskQueue(): Set<String> {
-    if (StringUtils.isEmpty(syncTaskQueue)) {
+    if (StringUtils.isEmpty(airbyteDataPlaneQueueConfig.sync.taskQueue)) {
       return setOf()
     }
-    return syncTaskQueue.split(",").filter { it.isNotEmpty() }.toSet()
+    return airbyteDataPlaneQueueConfig.sync.taskQueue
+      .split(",")
+      .filter { it.isNotEmpty() }
+      .toSet()
   }
 
   /**
@@ -347,10 +339,13 @@ class ApplicationInitializer(
    * @return A set of Temporal task queues for the sync workflow.
    */
   private fun getCheckTaskQueue(): Set<String> {
-    if (StringUtils.isEmpty(checkTaskQueue)) {
+    if (StringUtils.isEmpty(airbyteDataPlaneQueueConfig.check.taskQueue)) {
       return setOf()
     }
-    return checkTaskQueue.split(",").filter { it.isNotEmpty() }.toSet()
+    return airbyteDataPlaneQueueConfig.check.taskQueue
+      .split(",")
+      .filter { it.isNotEmpty() }
+      .toSet()
   }
 
   /**
@@ -359,10 +354,13 @@ class ApplicationInitializer(
    * @return A set of Temporal task queues for the sync workflow.
    */
   private fun getDiscoverTaskQueue(): Set<String> {
-    if (StringUtils.isEmpty(discoverTaskQueue)) {
+    if (StringUtils.isEmpty(airbyteDataPlaneQueueConfig.discover.taskQueue)) {
       return setOf()
     }
-    return discoverTaskQueue.split(",").filter { it.isNotEmpty() }.toSet()
+    return airbyteDataPlaneQueueConfig.discover.taskQueue
+      .split(",")
+      .filter { it.isNotEmpty() }
+      .toSet()
   }
 
   companion object {

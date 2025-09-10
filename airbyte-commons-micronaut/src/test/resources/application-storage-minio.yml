@@ -1,0 +1,15 @@
+airbyte:
+  cloud:
+    storage:
+      type: "minio"
+      bucket:
+        log: "test-log"
+        state: "test-state"
+        workload-output: "test-workload-output"
+        activity-payload: "test-activity-payload"
+        audit-logging: "test-audit-logging"
+        replication-dump: "test-replication-dump"
+      minio:
+        access-key: "test-aws-access-key"
+        endpoint: "test-minio-endpoint"
+        secret-access-key: "test-aws-secret-access-key"

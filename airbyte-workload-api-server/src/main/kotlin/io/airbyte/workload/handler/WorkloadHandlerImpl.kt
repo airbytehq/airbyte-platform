@@ -6,8 +6,7 @@ package io.airbyte.workload.handler
 
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteWorkloadApiClientConfig
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.api.domain.WorkloadQueueStats
@@ -18,15 +17,10 @@ import io.airbyte.workload.repository.WorkloadQueueRepository
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.services.WorkloadService
-import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Property
 import jakarta.inject.Singleton
-import java.time.Duration
 import java.time.OffsetDateTime
 import java.util.UUID
 import io.airbyte.workload.repository.domain.Workload as DomainWorkload
-
-private val logger = KotlinLogging.logger {}
 
 /**
  * Interface layer between the API and Persistence layers.
@@ -36,9 +30,7 @@ class WorkloadHandlerImpl(
   private val workloadService: WorkloadService,
   private val workloadRepository: WorkloadRepository,
   private val workloadQueueRepository: WorkloadQueueRepository,
-  private val metricClient: MetricClient,
-  private val featureFlagClient: FeatureFlagClient,
-  @Property(name = "airbyte.workload-api.workload-redelivery-window") private val workloadRedeliveryWindow: Duration,
+  private val airbyteWorkloadApiClientConfig: AirbyteWorkloadApiClientConfig,
 ) : WorkloadHandler {
   override fun getWorkload(workloadId: String): ApiWorkload = getDomainWorkload(workloadId).toApi()
 
@@ -185,7 +177,7 @@ class WorkloadHandlerImpl(
         dataplaneGroup,
         priority?.toInt(),
         quantity,
-        redeliveryWindowSecs = workloadRedeliveryWindow.seconds.toInt(),
+        redeliveryWindowSecs = airbyteWorkloadApiClientConfig.workloadRedeliveryWindowSeconds,
       )
 
     return domainWorkloads.map { it.toApi() }

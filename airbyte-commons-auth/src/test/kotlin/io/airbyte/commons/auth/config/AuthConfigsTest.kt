@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.auth.config
 
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
+import io.airbyte.micronaut.runtime.DEFAULT_AUTH_IDENTITY_PROVIDER_TYPE
 import io.micronaut.context.annotation.Bean
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Property
@@ -11,7 +13,8 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.inject.Inject
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 
 @MicronautTest(rebuildContext = true)
@@ -19,17 +22,7 @@ import org.junit.jupiter.api.Test
 class AuthConfigsTest {
   @get:Primary
   @get:Bean
-  val oidcConfig: OidcConfig =
-    mockk {
-      every { domain } returns "test-domain"
-      every { appName } returns "test-app-name"
-      every { clientId } returns "test-client-id"
-      every { clientSecret } returns "test-client-secret"
-    }
-
-  @get:Primary
-  @get:Bean
-  val keycloakConfig: AirbyteKeycloakConfiguration =
+  val keycloakConfig: AirbyteKeycloakConfig =
     mockk {
       every { host } returns "test-host"
       every { realm } returns "test-realm"
@@ -49,63 +42,70 @@ class AuthConfigsTest {
   lateinit var authConfigs: AuthConfigs
 
   @Test
+  @Property(name = "micronaut.security.enabled", value = "false")
   fun `test default OSS AuthConfigs sets mode to NONE`() {
-    Assertions.assertTrue(authConfigs.authMode == AuthMode.NONE)
+    assertEquals(AuthMode.NONE, authConfigs.authMode)
   }
 
   @Test
-  @Property(name = "airbyte.edition", value = "ENTERPRISE")
-  fun `test Enterprise AuthConfigs sets mode to OIDC`() {
-    Assertions.assertTrue(authConfigs.authMode == AuthMode.OIDC)
+  @Property(name = "micronaut.security.enabled", value = "true")
+  fun `test OSS AuthConfigs when Micronaut Security enabled sets mode to SIMPLE`() {
+    assertEquals(AuthMode.SIMPLE, authConfigs.authMode)
   }
 
   @Test
-  @Property(name = "airbyte.edition", value = "ENTERPRISE")
-  @Property(name = "airbyte.auth.identity-provider.type", value = SIMPLE)
-  fun `test Enterprise AuthConfigs sets mode to SIMPLE when doing simple auth`() {
-    Assertions.assertTrue(authConfigs.authMode == AuthMode.SIMPLE)
-  }
-
-  @Test
-  @Property(name = "airbyte.auth")
   fun `test AuthConfigs inject subconfigurations`() {
-    Assertions.assertTrue(authConfigs.keycloakConfig != null)
-    Assertions.assertTrue(authConfigs.oidcConfig != null)
-    Assertions.assertTrue(authConfigs.initialUserConfig != null)
-
-    Assertions.assertEquals("test-host", authConfigs.keycloakConfig!!.host)
-    Assertions.assertEquals("test-realm", authConfigs.keycloakConfig!!.realm)
-
-    Assertions.assertEquals("test-client-id", authConfigs.oidcConfig!!.clientId)
-    Assertions.assertEquals("test-client-secret", authConfigs.oidcConfig!!.clientSecret)
-    Assertions.assertEquals("test-domain", authConfigs.oidcConfig!!.domain)
-
-    Assertions.assertEquals("test-email", authConfigs.initialUserConfig!!.email)
-    Assertions.assertEquals("test-password", authConfigs.initialUserConfig!!.password)
+    assertNotNull(authConfigs.keycloakConfig)
+    assertNotNull(authConfigs.initialUserConfig)
+    assertEquals("test-host", authConfigs.keycloakConfig!!.host)
+    assertEquals("test-realm", authConfigs.keycloakConfig!!.realm)
+    assertEquals("test-email", authConfigs.initialUserConfig!!.email)
+    assertEquals("test-password", authConfigs.initialUserConfig!!.password)
   }
 }
 
 @MicronautTest
+@Property(name = "airbyte.edition", value = "cloud")
 class AuthConfigsForCloudTest {
   @Inject
   lateinit var authConfigs: AuthConfigs
 
   @Test
-  @Property(name = "airbyte.edition", value = "cloud")
   fun `test cloud environment sets mode to OIDC`() {
-    Assertions.assertTrue(authConfigs.authMode == AuthMode.OIDC)
+    assertEquals(AuthMode.OIDC, authConfigs.authMode)
   }
 }
 
-@MicronautTest
-@Property(name = "airbyte.edition", value = "community")
-@Property(name = "micronaut.security.enabled", value = "true")
-class AuthConfigsForCommunityAuthTest {
+@MicronautTest(rebuildContext = true)
+@Property(name = "airbyte.edition", value = "enterprise")
+class AuthConfigsForEnterpriseTest {
+  @get:Primary
+  @get:Bean
+  val oidcConfig: OidcConfig =
+    mockk {
+      every { domain } returns "test-domain"
+      every { appName } returns "test-app-name"
+      every { clientId } returns "test-client-id"
+      every { clientSecret } returns "test-client-secret"
+    }
+
   @Inject
   lateinit var authConfigs: AuthConfigs
 
   @Test
-  fun `test community-auth environment sets mode to SIMPLE`() {
-    Assertions.assertTrue(authConfigs.authMode == AuthMode.SIMPLE)
+  @Property(name = "airbyte.auth.identity-provider.type", value = "oidc")
+  fun `test Enterprise AuthConfigs sets mode to OIDC`() {
+    assertEquals(AuthMode.OIDC, authConfigs.authMode)
+    assertNotNull(authConfigs.oidcConfig)
+    assertEquals("test-client-id", authConfigs.oidcConfig!!.clientId)
+    assertEquals("test-client-secret", authConfigs.oidcConfig!!.clientSecret)
+    assertEquals("test-domain", authConfigs.oidcConfig!!.domain)
+    assertEquals("test-app-name", authConfigs.oidcConfig!!.appName)
+  }
+
+  @Test
+  @Property(name = "airbyte.auth.identity-provider.type", value = DEFAULT_AUTH_IDENTITY_PROVIDER_TYPE)
+  fun `test Enterprise AuthConfigs sets mode to SIMPLE when doing simple auth`() {
+    assertEquals(AuthMode.SIMPLE, authConfigs.authMode)
   }
 }

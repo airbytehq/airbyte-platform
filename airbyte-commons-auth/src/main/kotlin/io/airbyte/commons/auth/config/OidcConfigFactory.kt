@@ -4,9 +4,9 @@
 
 package io.airbyte.commons.auth.config
 
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 
 @Factory
@@ -17,14 +17,16 @@ class OidcConfigFactory {
    */
   @Singleton
   @Requires(property = "airbyte.auth.identity-provider.type", value = "oidc")
-  fun defaultOidcConfig(
-    @Value("\${airbyte.auth.identity-provider.oidc.domain}") domain: String?,
-    @Value("\${airbyte.auth.identity-provider.oidc.app-name}") appName: String?,
-    @Value("\${airbyte.auth.identity-provider.oidc.display-name}") displayName: String?,
-    @Value("\${airbyte.auth.identity-provider.oidc.client-id}") clientId: String?,
-    @Value("\${airbyte.auth.identity-provider.oidc.client-secret}") clientSecret: String?,
-  ): OidcConfig {
-    if (domain.isNullOrEmpty() || appName.isNullOrEmpty() || clientId.isNullOrEmpty() || clientSecret.isNullOrEmpty()) {
+  fun defaultOidcConfig(airbyteAuthConfig: AirbyteAuthConfig): OidcConfig {
+    if (airbyteAuthConfig.identityProvider.oidc.domain
+        .isEmpty() ||
+      airbyteAuthConfig.identityProvider.oidc.appName
+        .isEmpty() ||
+      airbyteAuthConfig.identityProvider.oidc.clientId
+        .isEmpty() ||
+      airbyteAuthConfig.identityProvider.oidc.clientSecret
+        .isEmpty()
+    ) {
       throw IllegalStateException(
         "Missing required OIDC configuration. Please ensure all of the following properties are set: " +
           "airbyte.auth.identity-provider.oidc.domain, " +
@@ -34,9 +36,17 @@ class OidcConfigFactory {
       )
     }
 
-    val displayName = displayName ?: appName
+    val displayName =
+      airbyteAuthConfig.identityProvider.oidc.displayName
+        .ifBlank { airbyteAuthConfig.identityProvider.oidc.appName }
 
-    return OidcConfig(domain, appName, displayName, clientId, clientSecret)
+    return OidcConfig(
+      domain = airbyteAuthConfig.identityProvider.oidc.domain,
+      appName = airbyteAuthConfig.identityProvider.oidc.appName,
+      displayName = displayName,
+      clientId = airbyteAuthConfig.identityProvider.oidc.clientId,
+      clientSecret = airbyteAuthConfig.identityProvider.oidc.clientSecret,
+    )
   }
 }
 

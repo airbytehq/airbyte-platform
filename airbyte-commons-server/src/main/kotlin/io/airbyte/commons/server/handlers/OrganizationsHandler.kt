@@ -33,6 +33,7 @@ import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import org.jooq.tools.StringUtils
@@ -40,6 +41,8 @@ import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
+
+private val logger = KotlinLogging.logger {}
 
 @Singleton
 open class OrganizationsHandler(

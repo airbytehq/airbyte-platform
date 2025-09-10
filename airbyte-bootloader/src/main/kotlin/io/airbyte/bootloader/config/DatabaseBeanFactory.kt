@@ -4,6 +4,7 @@
 
 package io.airbyte.bootloader.config
 
+import io.airbyte.bootloader.runtime.AirbyteBootloaderConfig
 import io.airbyte.commons.resources.Resources
 import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.UserPersistence
@@ -17,12 +18,12 @@ import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.DatabaseMigrator
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator
+import io.airbyte.micronaut.runtime.AirbyteFlywayConfig
 import io.airbyte.persistence.job.DefaultJobPersistence
 import io.airbyte.persistence.job.DefaultMetadataPersistence
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.MetadataPersistence
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Value
 import io.micronaut.flyway.FlywayConfigurationProperties
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -61,11 +62,11 @@ class DatabaseBeanFactory {
   fun configFlyway(
     @Named("config") configFlywayConfigurationProperties: FlywayConfigurationProperties,
     @Named("config") configDataSource: DataSource,
-    @Value("\${airbyte.bootloader.migration-baseline-version}") baselineVersion: String,
+    airbyteBootloaderConfig: AirbyteBootloaderConfig,
   ): Flyway =
     configFlywayConfigurationProperties.fluentConfiguration
       .dataSource(DataSourceUnwrapper.unwrapDataSource(configDataSource))
-      .baselineVersion(baselineVersion)
+      .baselineVersion(airbyteBootloaderConfig.migrationBaselineVersion)
       .baselineDescription(BASELINE_DESCRIPTION)
       .baselineOnMigrate(BASELINE_ON_MIGRATION)
       .installedBy(INSTALLED_BY)
@@ -85,12 +86,12 @@ class DatabaseBeanFactory {
   fun jobsFlyway(
     @Named("jobs") jobsFlywayConfigurationProperties: FlywayConfigurationProperties,
     @Named("jobs") jobsDataSource: DataSource,
-    @Value("\${airbyte.bootloader.migration-baseline-version}") baselineVersion: String,
+    airbyteBootloaderConfig: AirbyteBootloaderConfig,
   ): Flyway {
     val flywayConfiguration =
       jobsFlywayConfigurationProperties.fluentConfiguration
         .dataSource(DataSourceUnwrapper.unwrapDataSource(jobsDataSource))
-        .baselineVersion(baselineVersion)
+        .baselineVersion(airbyteBootloaderConfig.migrationBaselineVersion)
         .baselineDescription(BASELINE_DESCRIPTION)
         .baselineOnMigrate(BASELINE_ON_MIGRATION)
         .installedBy(INSTALLED_BY)
@@ -120,11 +121,11 @@ class DatabaseBeanFactory {
   @Named("configsDatabaseInitializer")
   fun configsDatabaseInitializer(
     @Named("config") configsDslContext: DSLContext,
-    @Value("\${airbyte.flyway.configs.initialization-timeout-ms}") configsDatabaseInitializationTimeoutMs: Long,
+    airbyteFlywayConfig: AirbyteFlywayConfig,
   ): DatabaseInitializer =
     DatabaseCheckFactory.createConfigsDatabaseInitializer(
       DataSourceUnwrapper.unwrapContext(configsDslContext),
-      configsDatabaseInitializationTimeoutMs,
+      airbyteFlywayConfig.config.initializationTimeoutMs,
       Resources.read(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH),
     )
 
@@ -132,11 +133,11 @@ class DatabaseBeanFactory {
   @Named("jobsDatabaseInitializer")
   fun jobsDatabaseInitializer(
     @Named("jobs") jobsDslContext: DSLContext,
-    @Value("\${airbyte.flyway.jobs.initialization-timeout-ms}") jobsDatabaseInitializationTimeoutMs: Long,
+    airbyteFlywayConfig: AirbyteFlywayConfig,
   ): DatabaseInitializer =
     DatabaseCheckFactory.createJobsDatabaseInitializer(
       DataSourceUnwrapper.unwrapContext(jobsDslContext),
-      jobsDatabaseInitializationTimeoutMs,
+      airbyteFlywayConfig.jobs.initializationTimeoutMs,
       Resources.read(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH),
     )
 

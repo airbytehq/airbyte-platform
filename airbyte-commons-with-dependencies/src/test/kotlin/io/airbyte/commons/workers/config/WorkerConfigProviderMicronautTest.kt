@@ -5,12 +5,12 @@
 package io.airbyte.commons.workers.config
 
 import io.airbyte.config.ResourceRequirementsType
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.micronaut.context.annotation.Value
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
 import jakarta.inject.Named
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 
 @MicronautTest
@@ -22,11 +22,11 @@ class WorkerConfigProviderMicronautTest {
 
   @Inject
   @Named("check")
-  lateinit var checkKubeResourceConfig: KubeResourceConfig
+  lateinit var checkKubeResourceConfig: AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig
 
   @Inject
   @Named("spec")
-  lateinit var specKubeResourceConfig: KubeResourceConfig
+  lateinit var specKubeResourceConfig: AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig
 
   @Inject
   lateinit var workerConfigsProvider: WorkerConfigsProvider
@@ -54,8 +54,8 @@ class WorkerConfigProviderMicronautTest {
     assertEquals("spec annotations", specKubeResourceConfig.annotations)
     assertEquals("spec labels", specKubeResourceConfig.labels)
     assertEquals("spec node selectors", specKubeResourceConfig.nodeSelectors)
-    assertNull(specKubeResourceConfig.cpuLimit)
-    assertNull(specKubeResourceConfig.cpuRequest)
+    assertEquals("", specKubeResourceConfig.cpuLimit)
+    assertEquals("", specKubeResourceConfig.cpuRequest)
     assertEquals("spec memory limit", specKubeResourceConfig.memoryLimit)
     assertEquals("", specKubeResourceConfig.memoryRequest)
   }

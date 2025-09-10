@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.builder.assist
 
-import io.micronaut.context.annotation.Value
+import io.airbyte.micronaut.runtime.AirbyteConnectorBuilderConfig
 import jakarta.inject.Singleton
 import org.jooq.tools.StringUtils
 import java.io.IOException
@@ -18,15 +18,15 @@ import java.net.URL
  */
 @Singleton
 class AssistConfigurationImpl(
-  @Value("\${airbyte.connector-builder-server.ai-assist.url-base}") private val targetApiBaseUrl: String,
+  private val airbyteConnectorBuilderConfig: AirbyteConnectorBuilderConfig,
 ) : AssistConfiguration {
   @Throws(IOException::class)
   override fun getConnection(path: String): HttpURLConnection {
-    if (StringUtils.isBlank(targetApiBaseUrl)) {
+    if (StringUtils.isBlank(airbyteConnectorBuilderConfig.aiAssist.urlBase)) {
       throw RuntimeException("Assist Service URL is not set.")
     }
     try {
-      val url = URL("$targetApiBaseUrl$path")
+      val url = URL("${airbyteConnectorBuilderConfig.aiAssist.urlBase}$path")
       val connection = url.openConnection() as HttpURLConnection
       return connection
     } catch (e: ProtocolException) {

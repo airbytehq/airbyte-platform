@@ -22,6 +22,9 @@ import io.airbyte.featureflag.ReplicationDebugLogLevelEnabled
 import io.airbyte.featureflag.UseAllowCustomCode
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.featureflag.Workspace
+import io.airbyte.micronaut.runtime.AirbyteContainerOrchestratorConfig
+import io.airbyte.micronaut.runtime.AirbyteLoggingConfig
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.input.getAttemptId
@@ -32,7 +35,6 @@ import io.airbyte.workload.launcher.helper.ConnectorApmSupportHelper
 import io.airbyte.workload.launcher.model.toEnvVarList
 import io.airbyte.workload.launcher.pods.ResourceConversionUtils
 import io.fabric8.kubernetes.api.model.EnvVar
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -55,10 +57,9 @@ internal const val OSS_DEPLOYMENT_MODE = "OSS"
 @Singleton
 class RuntimeEnvVarFactory(
   @Named("connectorAwsAssumedRoleSecretEnv") private val connectorAwsAssumedRoleSecretEnvList: List<EnvVar>,
-  @Value("\${airbyte.worker.job.kube.volumes.staging.mount-path}") private val stagingMountPath: String,
-  @Value("\${airbyte.container.orchestrator.java-opts}") private val containerOrchestratorJavaOpts: String,
-  @Value("\${airbyte.container.orchestrator.enable-unsafe-code}") private val enableUnsafeCodeGlobalOverride: Boolean,
-  @Value("\${airbyte.logging.log-level}") private val logLevel: String,
+  private val airbyteContainerOrchestratorConfig: AirbyteContainerOrchestratorConfig,
+  private val airbyteWorkerConfig: AirbyteWorkerConfig,
+  private val airbyteLoggingConfig: AirbyteLoggingConfig,
   private val connectorApmSupportHelper: ConnectorApmSupportHelper,
   private val featureFlagClient: FeatureFlagClient,
   private val airbyteEdition: Configs.AirbyteEdition,
@@ -68,7 +69,7 @@ class RuntimeEnvVarFactory(
     workloadId: String,
   ): List<EnvVar> {
     val optionsOverride: String = featureFlagClient.stringVariation(ContainerOrchestratorJavaOpts, Connection(replicationInput.connectionId))
-    val javaOpts = optionsOverride.trim().ifEmpty { containerOrchestratorJavaOpts }
+    val javaOpts = optionsOverride.trim().ifEmpty { airbyteContainerOrchestratorConfig.javaOpts }
     val secretPersistenceEnvVars = getSecretPersistenceEnvVars(replicationInput.connectionContext.organizationId)
     val useFileTransferEnvVar =
       replicationInput.useFileTransfer == true &&
@@ -86,7 +87,7 @@ class RuntimeEnvVarFactory(
       EnvVar(AirbyteEnvVar.CONNECTION_ID.toString(), replicationInput.connectionId.toString(), null),
       EnvVar(EnvVarConstants.USE_FILE_TRANSFER, useFileTransferEnvVar.toString(), null),
       EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, javaOpts, null),
-      EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
+      EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, airbyteWorkerConfig.job.kubernetes.volumes.staging.mountPath, null),
     ) + secretPersistenceEnvVars + logLevelEnvVars
   }
 
@@ -165,7 +166,7 @@ class RuntimeEnvVarFactory(
     return if (replicationDebugLogLevelEnabled) {
       listOf(EnvVar(EnvVarConstants.LOG_LEVEL, "debug", null))
     } else {
-      listOf(EnvVar(EnvVarConstants.LOG_LEVEL, logLevel, null))
+      listOf(EnvVar(EnvVarConstants.LOG_LEVEL, airbyteLoggingConfig.logLevel.name, null))
     }
   }
 
@@ -212,7 +213,7 @@ class RuntimeEnvVarFactory(
     envVars.add(EnvVar(EnvVarConstants.USE_STREAM_CAPABLE_STATE_ENV_VAR, true.toString(), null))
     envVars.add(EnvVar(EnvVarConstants.USE_FILE_TRANSFER, useFileTransfers.toString(), null))
     if (useFileTransfers) {
-      envVars.add(EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null))
+      envVars.add(EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, airbyteWorkerConfig.job.kubernetes.volumes.staging.mountPath, null))
     }
     val concurrentSourceStreamReadEnabled =
       dockerImage.startsWith(MYSQL_SOURCE_NAME) &&
@@ -247,7 +248,7 @@ class RuntimeEnvVarFactory(
     // HACK: We in stead use a global override in the form of an environment variable AIRBYTE_ENABLE_UNSAFE_CODE.
     //       Any customer can set this environment variable to enable unsafe code execution.
     // WHEN TO REMOVE: When we have the ability to set feature flags for OSS/Enterprise customers.
-    val useUnsafeCode = useAllowCustomCode || enableUnsafeCodeGlobalOverride
+    val useUnsafeCode = useAllowCustomCode || airbyteContainerOrchestratorConfig.enableUnsafeCode
 
     return listOf(
       EnvVar(EnvVarConstants.AIRBYTE_ENABLE_UNSAFE_CODE_ENV_VAR, useUnsafeCode.toString(), null),

@@ -7,6 +7,7 @@ package io.airbyte.metrics.config
 import io.airbyte.commons.version.AirbyteVersion
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.statsd.StatsdMeterRegistry
+import io.micronaut.runtime.ApplicationConfiguration
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -38,11 +39,13 @@ internal class StatsDRegistryConfigurerTest {
       mockk {
         every { config() } returns config
       }
-    val airbyteVersion =
-      mockk<AirbyteVersion> {
+    val airbyteVersion: AirbyteVersion =
+      mockk {
         every { serialize() } returns version
       }
-    val configurer = StatsDRegistryConfigurer(applicationName = service, airbyteVersion = airbyteVersion)
+    val applicationConfiguration = ApplicationConfiguration()
+    applicationConfiguration.setName(service)
+    val configurer = StatsDRegistryConfigurer(airbyteVersion = airbyteVersion, applicationConfiguration = applicationConfiguration)
     configurer.configure(meterRegistry)
 
     verify(exactly = 1) { config.commonTags(SERVICE_TAG, service, VERSION_TAG, version) }
@@ -64,11 +67,13 @@ internal class StatsDRegistryConfigurerTest {
       mockk {
         every { config() } returns config
       }
-    val airbyteVersion =
-      mockk<AirbyteVersion> {
+    val airbyteVersion: AirbyteVersion =
+      mockk {
         every { serialize() } returns version
       }
-    val configurer = StatsDRegistryConfigurer(applicationName = service, airbyteVersion = airbyteVersion)
+    val applicationConfiguration = ApplicationConfiguration()
+    applicationConfiguration.setName(service)
+    val configurer = StatsDRegistryConfigurer(airbyteVersion = airbyteVersion, applicationConfiguration = applicationConfiguration)
     configurer.configure(meterRegistry)
 
     verify(exactly = 1) { config.commonTags(SERVICE_TAG, service, VERSION_TAG, version) }
@@ -78,11 +83,13 @@ internal class StatsDRegistryConfigurerTest {
   fun testConfigureNullMeterRegistry() {
     val service = "test-service"
     val version = "1.0.0"
-    val airbyteVersion =
-      mockk<AirbyteVersion> {
+    val airbyteVersion: AirbyteVersion =
+      mockk {
         every { serialize() } returns version
       }
-    val configurer = StatsDRegistryConfigurer(applicationName = service, airbyteVersion = airbyteVersion)
+    val applicationConfiguration = ApplicationConfiguration()
+    applicationConfiguration.setName(service)
+    val configurer = StatsDRegistryConfigurer(airbyteVersion = airbyteVersion, applicationConfiguration = applicationConfiguration)
     assertDoesNotThrow { configurer.configure(null) }
   }
 }

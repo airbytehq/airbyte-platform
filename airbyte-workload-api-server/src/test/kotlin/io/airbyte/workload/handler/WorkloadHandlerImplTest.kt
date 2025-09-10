@@ -8,6 +8,7 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteWorkloadApiClientConfig
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.common.DefaultDeadlineValues
 import io.airbyte.workload.errors.ConflictException
@@ -381,9 +382,15 @@ class WorkloadHandlerImplTest {
         mockk<WorkloadService>(),
         mockk<WorkloadRepository>(),
         mockk<WorkloadQueueRepository>(),
-        mockk<MetricClient>(),
-        mockk<FeatureFlagClient>(),
-        Fixtures.redeliveryWindow.toJavaDuration(),
+        AirbyteWorkloadApiClientConfig(
+          retries = mockk<AirbyteWorkloadApiClientConfig.RetryConfig>(relaxed = true),
+          heartbeat = mockk<AirbyteWorkloadApiClientConfig.WorkloadApiHeartbeatConfig>(relaxed = true),
+          workloadRedeliveryWindowSeconds =
+            Fixtures.redeliveryWindow
+              .toJavaDuration()
+              .toSeconds()
+              .toInt(),
+        ),
       )
     val offsetDateTime = workloadHandlerImpl.offsetDateTime()
     Thread.sleep(10)
@@ -457,9 +464,11 @@ class WorkloadHandlerImplTest {
           workloadService = workloadService,
           workloadRepository,
           workloadQueueRepository,
-          metricClient,
-          featureFlagClient,
-          redeliveryWindow.toJavaDuration(),
+          AirbyteWorkloadApiClientConfig(
+            retries = mockk<AirbyteWorkloadApiClientConfig.RetryConfig>(relaxed = true),
+            heartbeat = mockk<AirbyteWorkloadApiClientConfig.WorkloadApiHeartbeatConfig>(relaxed = true),
+            workloadRedeliveryWindowSeconds = redeliveryWindow.toJavaDuration().toSeconds().toInt(),
+          ),
         ),
       )
 

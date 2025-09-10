@@ -10,7 +10,6 @@ import io.airbyte.audit.logging.provider.AuditProvider
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.storage.AUDIT_LOGGING
 import io.airbyte.commons.storage.AirbyteCloudStorageBulkUploader
 import io.airbyte.commons.storage.DocumentType
 import io.airbyte.commons.storage.StorageClientFactory
@@ -18,12 +17,14 @@ import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.StoreAuditLogs
 import io.airbyte.featureflag.Workspace
+import io.airbyte.micronaut.runtime.AirbyteAuditLoggingConfig
+import io.airbyte.micronaut.runtime.AirbyteStorageConfig
+import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.aop.InterceptorBean
 import io.micronaut.aop.MethodInterceptor
 import io.micronaut.aop.MethodInvocationContext
 import io.micronaut.context.ApplicationContext
-import io.micronaut.context.annotation.Value
 import io.micronaut.context.event.ShutdownEvent
 import io.micronaut.context.event.StartupEvent
 import io.micronaut.http.context.ServerRequestContext
@@ -33,24 +34,24 @@ import io.micronaut.runtime.event.annotation.EventListener
 import jakarta.inject.Singleton
 import java.util.UUID
 
-private val logger = KotlinLogging.logger { AUDIT_LOGGING }
-
 /**
  * Interceptor that logs the requests and stores the log entries.
  */
 @Singleton
 @InterceptorBean(AuditLogging::class)
 class AuditLoggingInterceptor(
-  @Value("\${airbyte.audit.logging.enabled}") private val auditLoggingEnabled: Boolean,
-  @Value("\${airbyte.cloud.storage.bucket.audit-logging:}") private val auditLoggingBucket: String?,
+  private val airbyteAuditLoggingConfig: AirbyteAuditLoggingConfig,
   private val applicationContext: ApplicationContext,
   private val auditLoggingHelper: AuditLoggingHelper,
   private val featureFlagClient: FeatureFlagClient,
+  private val storageConfiguration: AirbyteStorageConfig,
   storageClientFactory: StorageClientFactory,
 ) : MethodInterceptor<Any, Any> {
+  private val logger: KLogger = KotlinLogging.logger { storageConfiguration.bucket.auditLogging }
+
   private val appender =
     AirbyteCloudStorageBulkUploader<AuditLogEntry>(
-      AUDIT_LOGGING,
+      storageConfiguration.bucket.auditLogging,
       storageClientFactory.create(DocumentType.AUDIT_LOGS),
     )
 
@@ -73,7 +74,7 @@ class AuditLoggingInterceptor(
     // In cloud, the AUDIT_LOGGING_ENABLED var should never be set, thus we fall back to the flag. In enterprise
     // deployments, the feature flag is not present (and will default to false), so the env var must be
     // present in order to proceed.
-    if (!auditLoggingEnabled && !canStoreAuditLogs) {
+    if (!airbyteAuditLoggingConfig.enabled && !canStoreAuditLogs) {
       logger.debug { "Proceeding with the request without audit logging because it is disabled." }
       return context.proceed() ?: Unit
     }
@@ -165,7 +166,7 @@ class AuditLoggingInterceptor(
       )
 
     val serializedAuditLogEntry = Jsons.serialize(auditLogEntry)
-    if (auditLoggingBucket.isNullOrBlank()) {
+    if (storageConfiguration.bucket.auditLogging.isBlank()) {
       logger.info { "Audit logging storage bucket is not configured! Logging to console only: $serializedAuditLogEntry" }
       return
     }

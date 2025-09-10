@@ -1,0 +1,4 @@
+airbyte:
+  platform-compatibility:
+    remote:
+      timeout-ms: 100

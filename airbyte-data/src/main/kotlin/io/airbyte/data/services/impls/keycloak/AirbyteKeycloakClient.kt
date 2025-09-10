@@ -6,8 +6,8 @@ package io.airbyte.data.services.impls.keycloak
 
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import jakarta.ws.rs.core.Response
 import org.keycloak.admin.client.Keycloak
@@ -21,7 +21,7 @@ private val logger = KotlinLogging.logger { "airbyte-keycloak" }
 @Singleton
 class AirbyteKeycloakClient(
   keycloakAdminClientProvider: AirbyteKeycloakAdminClientProvider,
-  @Value("\${airbyte.airbyte-url}") private val airbyteUrl: String,
+  private val airbyteConfig: AirbyteConfig,
 ) {
   private val keycloakAdminClient: Keycloak = keycloakAdminClientProvider.createKeycloakAdminClient()
 
@@ -98,9 +98,9 @@ class AirbyteKeycloakClient(
         clientId = AIRBYTE_WEBAPP_CLIENT_ID
         name = AIRBYTE_WEBAPP_CLIENT_NAME
         protocol = "openid-connect"
-        redirectUris = listOf("$airbyteUrl/*")
-        webOrigins = listOf(airbyteUrl)
-        baseUrl = airbyteUrl
+        redirectUris = listOf("${airbyteConfig.airbyteUrl}/*")
+        webOrigins = listOf(airbyteConfig.airbyteUrl)
+        baseUrl = airbyteConfig.airbyteUrl
         isEnabled = true
         isDirectAccessGrantsEnabled = false
         isStandardFlowEnabled = true

@@ -4,13 +4,13 @@
 
 package io.airbyte.workload.launcher.context
 
+import io.airbyte.micronaut.runtime.AirbyteContainerConfig
 import io.fabric8.kubernetes.api.model.CapabilitiesBuilder
 import io.fabric8.kubernetes.api.model.PodSecurityContext
 import io.fabric8.kubernetes.api.model.PodSecurityContextBuilder
 import io.fabric8.kubernetes.api.model.SeccompProfileBuilder
 import io.fabric8.kubernetes.api.model.SecurityContext
 import io.fabric8.kubernetes.api.model.SecurityContextBuilder
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 
 val DEFAULT_CAPABILITIES = listOf("ALL")
@@ -21,7 +21,7 @@ const val SECCOMP_PROFILE_TYPE = "RuntimeDefault"
 
 @Singleton
 class WorkloadSecurityContextProvider(
-  @Value("\${airbyte.container.rootless-workload}") private val rootlessWorkload: Boolean,
+  private val airbyteContainerConfig: AirbyteContainerConfig,
 ) {
   /**
    * Returns a default [io.fabric8.kubernetes.api.model.SecurityContext] specific to containers.
@@ -32,7 +32,7 @@ class WorkloadSecurityContextProvider(
     user: Long,
     group: Long,
   ): SecurityContext? {
-    if (rootlessWorkload) {
+    if (airbyteContainerConfig.rootlessWorkload) {
       return baseContainerSecurityContext(user = user, group = group).build()
     }
 
@@ -45,7 +45,7 @@ class WorkloadSecurityContextProvider(
    * @return SecurityContext if ROOTLESS_WORKLOAD is enabled, null otherwise.
    */
   fun rootlessContainerSecurityContext(): SecurityContext? =
-    when (rootlessWorkload) {
+    when (airbyteContainerConfig.rootlessWorkload) {
       true ->
         baseContainerSecurityContext(user = ROOTLESS_USER_ID, group = ROOTLESS_GROUP_ID)
           .withRunAsNonRoot(true)
@@ -63,7 +63,7 @@ class WorkloadSecurityContextProvider(
     user: Long,
     group: Long,
   ): PodSecurityContext? =
-    when (rootlessWorkload) {
+    when (airbyteContainerConfig.rootlessWorkload) {
       true ->
         PodSecurityContextBuilder()
           .withRunAsUser(user)
@@ -81,7 +81,7 @@ class WorkloadSecurityContextProvider(
    * @return SecurityContext if ROOTLESS_WORKLOAD is enabled, null otherwise.
    */
   fun defaultPodSecurityContext(): PodSecurityContext? =
-    when (rootlessWorkload) {
+    when (airbyteContainerConfig.rootlessWorkload) {
       true -> PodSecurityContextBuilder().withFsGroup(ROOTLESS_GROUP_ID).build()
       false -> null
     }

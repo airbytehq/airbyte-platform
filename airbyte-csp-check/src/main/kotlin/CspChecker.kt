@@ -6,11 +6,10 @@ package io.airbyte.commons.csp
 
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.storage.DocumentType
-import io.airbyte.commons.storage.STORAGE_TYPE
 import io.airbyte.commons.storage.StorageClient
 import io.airbyte.commons.storage.StorageClientFactory
-import io.airbyte.commons.storage.StorageType
-import io.micronaut.context.annotation.Value
+import io.airbyte.micronaut.runtime.AirbyteStorageConfig
+import io.airbyte.micronaut.runtime.StorageType
 import jakarta.inject.Singleton
 
 /** The document-id used by the storage checks. */
@@ -87,12 +86,12 @@ internal class CheckException(
  * - Activity payload storage
  * - Audit log storage
  *
- * @property storageType The configured storage type for this deployment (S3, GCS, etc.)
- * @property storageFactory Factory for creating storage clients for different document types
+ * @property storageConfiguration injected [AirbyteStorageConfig]
+ * @property storageFactory injected instance of the [StorageClientFactory] which is used to create the [StorageClient].
  */
 @Singleton
 class CspChecker(
-  @Value("\${$STORAGE_TYPE}") private val storageType: StorageType,
+  private val storageConfiguration: AirbyteStorageConfig,
   private val storageFactory: StorageClientFactory,
 ) {
   /**
@@ -120,7 +119,7 @@ class CspChecker(
       .map { checkBucket(it) }
       .toList()
       .let {
-        Storage(type = storageType, buckets = it)
+        Storage(type = storageConfiguration.type, buckets = it)
       }
 }
 

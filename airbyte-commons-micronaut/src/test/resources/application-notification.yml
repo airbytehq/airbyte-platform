@@ -1,0 +1,4 @@
+airbyte:
+  notification:
+    customerio:
+      api-key: test-api-key

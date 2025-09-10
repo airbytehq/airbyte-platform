@@ -23,6 +23,7 @@ import io.airbyte.config.SyncMode
 import io.airbyte.config.mapper.configs.HashingConfig
 import io.airbyte.mappers.helpers.createHashingMapper
 import io.airbyte.validation.json.JsonValidationException
+import io.micronaut.context.annotation.Property
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions
@@ -32,6 +33,7 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.util.UUID
 
 @MicronautTest
+@Property(name = "INTERNAL_API_HOST", value = "http://localhost:8080")
 internal class CatalogConverterTest {
   @Inject
   lateinit var catalogConverter: CatalogConverter

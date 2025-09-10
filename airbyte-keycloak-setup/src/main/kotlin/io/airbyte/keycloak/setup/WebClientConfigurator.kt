@@ -4,9 +4,9 @@
 
 package io.airbyte.keycloak.setup
 
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Property
 import jakarta.inject.Singleton
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.representations.idm.ClientRepresentation
@@ -17,8 +17,8 @@ import org.keycloak.representations.idm.ClientRepresentation
  */
 @Singleton
 class WebClientConfigurator(
-  @Property(name = "airbyte.airbyte-url") private val airbyteUrl: String,
-  private val keycloakConfiguration: AirbyteKeycloakConfiguration,
+  private val airbyteConfig: AirbyteConfig,
+  private val keycloakConfiguration: AirbyteKeycloakConfig,
 ) {
   fun configureWebClient(keycloakRealm: RealmResource) {
     val clientConfig = clientRepresentationFromConfig
@@ -58,7 +58,7 @@ class WebClientConfigurator(
       client.clientId = keycloakConfiguration.webClientId
       client.isPublicClient = true // Client authentication disabled
       client.isDirectAccessGrantsEnabled = true // Standard flow authentication
-      client.redirectUris = getWebClientRedirectUris(airbyteUrl)
+      client.redirectUris = getWebClientRedirectUris(airbyteConfig.airbyteUrl)
       client.attributes = clientAttributes
 
       return client
@@ -66,7 +66,7 @@ class WebClientConfigurator(
 
   private fun applyConfigToExistingClientRepresentation(clientRepresentation: ClientRepresentation): ClientRepresentation {
     // only change the attributes that come from external configuration
-    clientRepresentation.redirectUris = getWebClientRedirectUris(airbyteUrl)
+    clientRepresentation.redirectUris = getWebClientRedirectUris(airbyteConfig.airbyteUrl)
     return clientRepresentation
   }
 

@@ -32,6 +32,7 @@ import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
+import io.airbyte.micronaut.runtime.AirbyteConnectorRolloutConfig
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -70,9 +71,14 @@ internal class ConnectorRolloutHandlerManualTest {
     )
   private val connectorRolloutHandler =
     ConnectorRolloutHandlerManual(
-      1,
-      1,
-      1,
+      AirbyteConnectorRolloutConfig(
+        timeouts =
+          AirbyteConnectorRolloutConfig.AirbyteConnectorRolloutTimeoutsConfig(
+            waitBetweenRolloutSeconds = 1,
+            waitBetweenSyncResultsQueriesSeconds = 1,
+            rolloutExpirationSeconds = 1,
+          ),
+      ),
       connectorRolloutService,
       actorDefinitionService,
       actorDefinitionVersionUpdater,

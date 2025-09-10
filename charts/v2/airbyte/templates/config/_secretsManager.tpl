@@ -297,6 +297,24 @@ Renders the secretsManager.azureKeyVault.clientSecretRefKey environment variable
 {{- end }}
 
 {{/*
+Renders the global.secretsManager.azureKeyVault.tags value
+*/}}
+{{- define "airbyte.secretsManager.azureKeyVault.tags" }}
+    {{- .Values.global.secretsManager.azureKeyVault.tags }}
+{{- end }}
+
+{{/*
+Renders the secretsManager.azureKeyVault.tags environment variable
+*/}}
+{{- define "airbyte.secretsManager.azureKeyVault.tags.env" }}
+- name: AB_AZURE_KEY_VAULT_TAGS
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AB_AZURE_KEY_VAULT_TAGS
+{{- end }}
+
+{{/*
 Renders the global.secretsManager.googleSecretManager.projectId value
 */}}
 {{- define "airbyte.secretsManager.googleSecretManager.projectId" }}
@@ -514,6 +532,7 @@ Renders the set of all secretsManager environment variables
 {{- include "airbyte.secretsManager.azureKeyVault.clientIdRefKey.env" . }}
 {{- include "airbyte.secretsManager.azureKeyVault.clientSecretRefName.env" . }}
 {{- include "airbyte.secretsManager.azureKeyVault.clientSecretRefKey.env" . }}
+{{- include "airbyte.secretsManager.azureKeyVault.tags.env" . }}
 {{- end }}
 
 {{- if eq $opt "GOOGLE_SECRET_MANAGER" }}
@@ -557,6 +576,7 @@ AB_AZURE_KEY_CLIENT_ID_REF_NAME: {{ include "airbyte.secretsManager.secretName" 
 AB_AZURE_KEY_CLIENT_ID_REF_KEY: {{ .Values.global.secretsManager.azureKeyVault.clientIdSecretKey | default "AB_AZURE_KEY_VAULT_CLIENT_ID" | quote }}
 AB_AZURE_KEY_CLIENT_SECRET_REF_NAME: {{ include "airbyte.secretsManager.secretName" . | quote }}
 AB_AZURE_KEY_CLIENT_SECRET_REF_KEY: {{ .Values.global.secretsManager.azureKeyVault.clientSecretSecretKey | default "AB_AZURE_KEY_VAULT_CLIENT_SECRET" | quote }}
+AB_AZURE_KEY_VAULT_TAGS: {{ include "airbyte.secretsManager.azureKeyVault.tags" . | quote }}
 {{- end }}
 
 {{- if eq $opt "GOOGLE_SECRET_MANAGER" }}

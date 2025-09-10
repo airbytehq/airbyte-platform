@@ -16,6 +16,7 @@ import io.airbyte.api.model.generated.PartialDestinationUpdate
 import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.micronaut.runtime.AirbyteApiConfig
 import io.airbyte.publicApi.server.generated.models.DestinationCreateRequest
 import io.airbyte.publicApi.server.generated.models.DestinationPatchRequest
 import io.airbyte.publicApi.server.generated.models.DestinationPutRequest
@@ -28,7 +29,6 @@ import io.airbyte.server.apis.publicapi.mappers.DestinationReadMapper
 import io.airbyte.server.apis.publicapi.mappers.DestinationsResponseMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Secondary
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -78,10 +78,8 @@ class DestinationServiceImpl(
   private val destinationHandler: DestinationHandler,
   private val connectorDefinitionSpecificationHandler: ConnectorDefinitionSpecificationHandler,
   private val currentUserService: CurrentUserService,
+  private val airbyteApiConfig: AirbyteApiConfig,
 ) : DestinationService {
-  @Value("\${airbyte.api.host}")
-  var publicApiHost: String? = null
-
   /**
    * Creates a destination.
    */
@@ -254,7 +252,7 @@ class DestinationServiceImpl(
       includeDeleted,
       limit,
       offset,
-      publicApiHost!!,
+      airbyteApiConfig.host,
     )
   }
 

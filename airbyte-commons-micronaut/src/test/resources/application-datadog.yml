@@ -1,0 +1,8 @@
+airbyte:
+  datadog:
+    agent:
+      host: test-datadog-agent-host
+      port: 1
+    orchestrator-disabled-integrations: test-datadog-orchestrator-disabled-integrations
+    env: test-datadog-env
+    version: test-datadog-version

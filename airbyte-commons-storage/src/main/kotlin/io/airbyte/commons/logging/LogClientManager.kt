@@ -5,13 +5,12 @@
 package io.airbyte.commons.logging
 
 import com.google.common.annotations.VisibleForTesting
-import io.micronaut.context.annotation.Value
+import io.airbyte.micronaut.runtime.AirbyteLoggingConfig
 import jakarta.inject.Singleton
 import java.io.IOException
 import java.nio.file.Path
 
 /** The default log file name. */
-const val DEFAULT_LOG_TAIL_SIZE = 1000000
 val EMPTY_PATH = Path.of("")
 
 /**
@@ -22,7 +21,7 @@ val EMPTY_PATH = Path.of("")
 class LogClientManager(
   private val logClient: LogClient,
   private val logMdcHelper: LogMdcHelper,
-  @Value("\${airbyte.logging.client.log-tail-size:$DEFAULT_LOG_TAIL_SIZE}") private val logTailSize: Int,
+  private val airbyteLoggingConfig: AirbyteLoggingConfig,
 ) {
   /**
    * Tail log file.
@@ -35,7 +34,7 @@ class LogClientManager(
   fun getJobLogFile(logPath: Path?): List<String> =
     when {
       logPath == null || logPath == EMPTY_PATH -> emptyList()
-      else -> logClient.tailCloudLogs(logPath = logPath.toString(), numLines = logTailSize)
+      else -> logClient.tailCloudLogs(logPath = logPath.toString(), numLines = airbyteLoggingConfig.client.logTailSize)
     }
 
   /**
@@ -47,7 +46,7 @@ class LogClientManager(
   fun getLogs(logPath: Path?): LogEvents =
     when {
       logPath == null || logPath == EMPTY_PATH -> LogEvents(events = emptyList())
-      else -> logClient.getLogs(logPath = logPath.toString(), numLines = logTailSize)
+      else -> logClient.getLogs(logPath = logPath.toString(), numLines = airbyteLoggingConfig.client.logTailSize)
     }
 
   /**

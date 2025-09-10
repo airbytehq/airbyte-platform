@@ -11,10 +11,10 @@ import io.airbyte.api.client.config.ClientConfigurationSupport.generateDefaultRe
 import io.airbyte.api.client.interceptor.ThrowOn5xxInterceptor
 import io.airbyte.api.client.interceptor.UserAgentInterceptor
 import io.airbyte.metrics.MetricClient
-import io.micronaut.context.annotation.ConfigurationProperties
+import io.airbyte.micronaut.runtime.AirbyteInternalApiClientConfig
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
+import io.micronaut.runtime.ApplicationConfiguration
 import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
 import org.openapitools.client.infrastructure.ClientException
@@ -22,52 +22,18 @@ import org.openapitools.client.infrastructure.ServerException
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-@ConfigurationProperties("airbyte.internal-api")
-data class InternalApiClientConfig(
-  val basePath: String?,
-  val workloadApiHost: String?,
-  val connectorBuilderApiHost: String?,
-  val connectTimeoutSeconds: Long = 30,
-  val readTimeoutSeconds: Long = 600,
-  val throwsOn5xx: Boolean = true,
-  val retries: RetryConfig,
-  val auth: AuthConfig,
-) {
-  enum class AuthType {
-    DATAPLANE_ACCESS_TOKEN,
-    INTERNAL_CLIENT_TOKEN,
-  }
-
-  @ConfigurationProperties("auth")
-  data class AuthConfig(
-    val type: AuthType,
-    val clientId: String?,
-    val clientSecret: String?,
-    val tokenEndpoint: String?,
-    val token: String?,
-    val signatureSecret: String?,
-  )
-
-  @ConfigurationProperties("retries")
-  data class RetryConfig(
-    val max: Int = 5,
-    val delaySeconds: Long = 2,
-    val jitterFactor: Double = .25,
-  )
-}
-
 @Factory
 class ApiClientSupportFactory(
-  @Property(name = "micronaut.application.name") private val applicationName: String,
-  private val config: InternalApiClientConfig,
+  private val micronautApplicationConfiguration: ApplicationConfiguration,
+  private val config: AirbyteInternalApiClientConfig,
   private val metricClient: MetricClient,
 ) {
   companion object {
-    fun newAccessTokenInterceptorFromConfig(config: InternalApiClientConfig) =
+    fun newAccessTokenInterceptorFromConfig(config: AirbyteInternalApiClientConfig) =
       AccessTokenInterceptor(
-        clientId = config.auth.clientId!!,
-        clientSecret = config.auth.clientSecret!!,
-        tokenEndpoint = config.auth.tokenEndpoint!!,
+        clientId = config.auth.clientId,
+        clientSecret = config.auth.clientSecret,
+        tokenEndpoint = config.auth.tokenEndpoint,
         httpClient =
           OkHttpClient
             .Builder()
@@ -78,7 +44,7 @@ class ApiClientSupportFactory(
   }
 
   @Singleton
-  @Requires(property = "airbyte.internal-api.base-path")
+  @Requires(property = "airbyte.internal-api.base-path", pattern = ".+")
   fun airbyteInternalApiClient(): AirbyteApiClient {
     val httpClient =
       OkHttpClient
@@ -89,15 +55,20 @@ class ApiClientSupportFactory(
           }
 
           when (config.auth.type) {
-            InternalApiClientConfig.AuthType.DATAPLANE_ACCESS_TOKEN -> {
+            AirbyteInternalApiClientConfig.AuthType.DATAPLANE_ACCESS_TOKEN -> {
               addInterceptor(newAccessTokenInterceptorFromConfig(config))
             }
-            InternalApiClientConfig.AuthType.INTERNAL_CLIENT_TOKEN -> {
-              addInterceptor(InternalClientTokenInterceptor(applicationName, config.auth.signatureSecret))
+            AirbyteInternalApiClientConfig.AuthType.INTERNAL_CLIENT_TOKEN -> {
+              addInterceptor(
+                InternalClientTokenInterceptor(
+                  micronautApplicationConfiguration.name.get(),
+                  config.auth.signatureSecret,
+                ),
+              )
             }
           }
 
-          addInterceptor(UserAgentInterceptor(applicationName))
+          addInterceptor(UserAgentInterceptor(micronautApplicationConfiguration.name.get()))
           readTimeout(config.readTimeoutSeconds, TimeUnit.SECONDS)
           connectTimeout(config.connectTimeoutSeconds, TimeUnit.SECONDS)
         }.build()
@@ -119,6 +90,6 @@ class ApiClientSupportFactory(
           ),
       )
 
-    return AirbyteApiClient(config.basePath!!, retryPolicy, httpClient)
+    return AirbyteApiClient(config.basePath, retryPolicy, httpClient)
   }
 }

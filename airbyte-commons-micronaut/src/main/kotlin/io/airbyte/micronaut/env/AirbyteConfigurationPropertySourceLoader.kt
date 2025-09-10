@@ -15,8 +15,8 @@ import java.net.URL
 import java.util.Optional
 
 private const val AIRBYTE_CONFIGURATION_FILE_PATH = "classpath:airbyte-configuration.yml"
-private const val DEFAULT_POSITION = YamlPropertySourceLoader.DEFAULT_POSITION - 100
-private const val NAME = "airbyte-configuration"
+internal const val DEFAULT_POSITION = YamlPropertySourceLoader.DEFAULT_POSITION - 100
+internal const val NAME = "airbyte-configuration"
 
 /**
  * Custom Micronaut [PropertySourceLoader] that is responsible for finding all airbyte-configuration.yml files
@@ -35,6 +35,7 @@ class AirbyteConfigurationPropertySourceLoader : PropertySourceLoader {
         PropertySource.of(
           NAME,
           loadConfiguration(resourceLoader).flatMap { it.entries }.associate { it.key to it.value },
+          PropertySource.Origin.of("$NAME.yml"),
           DEFAULT_POSITION,
         ),
       )

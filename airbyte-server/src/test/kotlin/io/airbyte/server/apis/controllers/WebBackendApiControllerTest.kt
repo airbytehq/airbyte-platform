@@ -7,7 +7,6 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionStateType
 import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead
-import io.airbyte.api.model.generated.WebBackendConnectionCreate
 import io.airbyte.api.model.generated.WebBackendConnectionListRequestBody
 import io.airbyte.api.model.generated.WebBackendConnectionRead
 import io.airbyte.api.model.generated.WebBackendConnectionReadList
@@ -18,6 +17,9 @@ import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler
+import io.airbyte.config.Configs
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteWebappConfig
 import io.airbyte.server.handlers.WebBackendCronExpressionHandler
 import io.mockk.every
 import io.mockk.mockk
@@ -41,7 +43,8 @@ internal class WebBackendApiControllerTest {
         webBackendCronExpressionHandler = webBackendCronExpressionHandler,
         roleResolver = roleResolver,
         webBackendMappersHandler = mockk(),
-        webappConfig = WebappConfig(version = "1.1.1", edition = "community", webApp = emptyMap()),
+        airbyteConfig = AirbyteConfig(version = "1.1.1", edition = Configs.AirbyteEdition.COMMUNITY),
+        airbyteWebappConfig = AirbyteWebappConfig(),
       )
   }
 

@@ -7,7 +7,7 @@ package io.airbyte.workers.temporal.scheduling.activities
 import datadog.trace.api.Trace
 import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME
-import io.micronaut.context.annotation.Property
+import io.airbyte.micronaut.runtime.AirbyteWorkflowConfig
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
 import java.time.Duration
@@ -19,11 +19,8 @@ import java.time.Duration
 @Singleton
 @Requires(env = [EnvConstants.CONTROL_PLANE])
 class WorkflowConfigActivityImpl(
-  @param:Property(
-    name = "airbyte.workflow.failure.restart-delay",
-    defaultValue = "600",
-  ) private val workflowRestartDelaySeconds: Long,
+  private val airbyteWorkflowConfig: AirbyteWorkflowConfig,
 ) : WorkflowConfigActivity {
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  override fun getWorkflowRestartDelaySeconds(): Duration = Duration.ofSeconds(workflowRestartDelaySeconds)
+  override fun getWorkflowRestartDelaySeconds(): Duration = Duration.ofSeconds(airbyteWorkflowConfig.failure.restartDelay)
 }

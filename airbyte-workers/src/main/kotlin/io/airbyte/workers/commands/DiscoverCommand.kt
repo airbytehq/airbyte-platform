@@ -12,6 +12,7 @@ import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.workers.input.isReset
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.pod.Metadata
@@ -20,7 +21,6 @@ import io.airbyte.workers.workload.DataplaneGroupResolver
 import io.airbyte.workers.workload.WorkloadIdGenerator
 import io.airbyte.workload.api.domain.WorkloadCreateRequest
 import io.airbyte.workload.api.domain.WorkloadLabel
-import io.micronaut.context.annotation.Property
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.nio.file.Path
@@ -32,7 +32,7 @@ class DiscoverCommand(
   @Named("workspaceRoot") private val workspaceRoot: Path,
   airbyteApiClient: AirbyteApiClient,
   workloadClient: WorkloadClient,
-  @Property(name = "airbyte.worker.discover.auto-refresh-window") discoverAutoRefreshWindowMinutes: Int,
+  airbyteWorkerConfig: AirbyteWorkerConfig,
   private val workloadIdGenerator: WorkloadIdGenerator,
   private val logClientManager: LogClientManager,
   private val dataplaneGroupResolver: DataplaneGroupResolver,
@@ -45,7 +45,13 @@ class DiscoverCommand(
   }
 
   private val discoverAutoRefreshWindow: Duration =
-    if (discoverAutoRefreshWindowMinutes > 0) discoverAutoRefreshWindowMinutes.minutes else Duration.INFINITE
+    if (airbyteWorkerConfig.discover.autoRefreshWindow >
+      0
+    ) {
+      airbyteWorkerConfig.discover.autoRefreshWindow.minutes
+    } else {
+      Duration.INFINITE
+    }
 
   override val name: String = "discover"
 

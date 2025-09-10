@@ -1,0 +1,3 @@
+airbyte:
+  api:
+    host: test-host

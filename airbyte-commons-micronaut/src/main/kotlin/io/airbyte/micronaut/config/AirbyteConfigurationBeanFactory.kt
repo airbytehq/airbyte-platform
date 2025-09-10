@@ -8,9 +8,9 @@ import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.commons.version.Version
 import io.airbyte.config.Configs.AirbyteEdition
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 
 /**
@@ -19,24 +19,16 @@ import jakarta.inject.Singleton
 @Factory
 class AirbyteConfigurationBeanFactory {
   @Singleton
-  fun airbyteVersion(
-    @Value("\${airbyte.version}") airbyteVersion: String,
-  ): AirbyteVersion = AirbyteVersion(airbyteVersion)
+  fun airbyteVersion(airbyteConfig: AirbyteConfig): AirbyteVersion = AirbyteVersion(airbyteConfig.version)
 
   /**
    * Fetch the configured edition of the Airbyte instance. Defaults to COMMUNITY.
    */
   @Singleton
-  fun airbyteEdition(
-    @Value("\${airbyte.edition:COMMUNITY}") airbyteEdition: String,
-  ): AirbyteEdition =
-    runCatching { AirbyteEdition.valueOf(airbyteEdition.uppercase()) }
-      .getOrDefault(AirbyteEdition.COMMUNITY)
+  fun airbyteEdition(airbyteConfig: AirbyteConfig): AirbyteEdition = airbyteConfig.edition
 
   @Singleton
   @Requires(property = "airbyte.protocol.min-version")
-  fun airbyteProtocolVersionRange(
-    @Value("\${airbyte.protocol.min-version}") minVersion: String,
-    @Value("\${airbyte.protocol.max-version}") maxVersion: String,
-  ): AirbyteProtocolVersionRange = AirbyteProtocolVersionRange(Version(minVersion), Version(maxVersion))
+  fun airbyteProtocolVersionRange(airbyteConfig: AirbyteConfig): AirbyteProtocolVersionRange =
+    AirbyteProtocolVersionRange(Version(airbyteConfig.protocol.minVersion), Version(airbyteConfig.protocol.maxVersion))
 }

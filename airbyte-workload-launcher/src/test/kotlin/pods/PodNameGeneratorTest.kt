@@ -15,12 +15,11 @@ import org.junit.jupiter.params.provider.CsvSource
 const val RANDOM_SUFFIX_PATTERN = "[a-z]{5}"
 
 internal class PodNameGeneratorTest {
-  private val namespace = "namespace"
   private lateinit var podNameGenerator: PodNameGenerator
 
   @BeforeEach
   fun setUp() {
-    podNameGenerator = PodNameGenerator(namespace = namespace)
+    podNameGenerator = PodNameGenerator()
   }
 
   @Test

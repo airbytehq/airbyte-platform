@@ -46,8 +46,8 @@ class InitialUserConfigFactoryTest {
     Assertions.assertTrue(initialUserConfig.isPresent)
     Assertions.assertEquals("test@airbyte.io", initialUserConfig.get().email)
     Assertions.assertEquals("myPassword", initialUserConfig.get().password)
-    Assertions.assertNull(initialUserConfig.get().firstName)
-    Assertions.assertNull(initialUserConfig.get().lastName)
+    Assertions.assertEquals("", initialUserConfig.get().firstName)
+    Assertions.assertEquals("", initialUserConfig.get().lastName)
   }
 
   @Test

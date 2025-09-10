@@ -7,6 +7,7 @@ package io.airbyte.featureflag.server
 import io.airbyte.featureflag.server.model.Context
 import io.airbyte.featureflag.server.model.FeatureFlag
 import io.airbyte.featureflag.server.model.Rule
+import io.airbyte.micronaut.runtime.AirbyteFeatureFlagConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -14,11 +15,13 @@ import org.junit.jupiter.api.assertThrows
 import java.nio.file.Path
 
 class FeatureFlagServiceTest {
+  private lateinit var airbyteFeatureFlagConfig: AirbyteFeatureFlagConfig
   private lateinit var ffs: FeatureFlagService
 
   @BeforeEach
   fun setup() {
-    ffs = FeatureFlagService(null)
+    airbyteFeatureFlagConfig = AirbyteFeatureFlagConfig()
+    ffs = FeatureFlagService(airbyteFeatureFlagConfig)
   }
 
   @Test
@@ -165,7 +168,9 @@ class FeatureFlagServiceTest {
   @Test
   fun `verify file loading`() {
     val workspace = "workspace"
-    val ffs = FeatureFlagService(Path.of("src", "test", "resources", "flags.yml"))
+    val path = Path.of("src", "test", "resources", "flags.yml")
+    val airbyteFeatureFlagConfig = AirbyteFeatureFlagConfig(path = path)
+    val ffs = FeatureFlagService(airbyteFeatureFlagConfig = airbyteFeatureFlagConfig)
 
     assertEquals("true", ffs.get("test-true")?.default)
     assertEquals("false", ffs.get("test-false")?.default)

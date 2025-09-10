@@ -4,6 +4,8 @@
 
 package io.airbyte.analytics
 
+import io.airbyte.micronaut.runtime.AirbyteAnalyticsConfig
+import io.airbyte.micronaut.runtime.AnalyticsTrackingStrategy
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -13,6 +15,7 @@ import org.junit.jupiter.api.Test
 class SegmentAnalyticsClientTest {
   private val writeKey = "write-key"
   private val flushIntervalSec: Long = 2L
+  private lateinit var airbyteAnalyticsConfig: AirbyteAnalyticsConfig
   private lateinit var blockingShutdownAnalyticsPlugin: BlockingShutdownAnalyticsPlugin
   private lateinit var segmentAnalyticsClient: SegmentAnalyticsClient
 
@@ -22,10 +25,16 @@ class SegmentAnalyticsClientTest {
 
     every { blockingShutdownAnalyticsPlugin.configure(any()) } returns Unit
 
+    airbyteAnalyticsConfig =
+      AirbyteAnalyticsConfig(
+        strategy = AnalyticsTrackingStrategy.SEGMENT,
+        flushIntervalSec = flushIntervalSec,
+        writeKey = writeKey,
+      )
+
     segmentAnalyticsClient =
       SegmentAnalyticsClient(
-        flushInterval = flushIntervalSec,
-        writeKey = writeKey,
+        airbyteAnalyticsConfiguration = airbyteAnalyticsConfig,
         blockingShutdownAnalyticsPlugin = blockingShutdownAnalyticsPlugin,
       )
   }

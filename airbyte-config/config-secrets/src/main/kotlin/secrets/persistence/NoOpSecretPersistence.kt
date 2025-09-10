@@ -6,13 +6,14 @@ package io.airbyte.config.secrets.persistence
 
 import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
-import io.airbyte.config.secrets.persistence.SecretPersistence.ImplementationTypes.NO_OP
+import io.airbyte.micronaut.runtime.SECRET_MANAGER_NO_OP
+import io.airbyte.micronaut.runtime.SECRET_PERSISTENCE
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 
 @Singleton
-@Requires(property = "airbyte.secret.persistence", pattern = "(?i)^$NO_OP$")
+@Requires(property = SECRET_PERSISTENCE, pattern = "(?i)^$SECRET_MANAGER_NO_OP$")
 @Named("secretPersistence")
 class NoOpSecretPersistence : SecretPersistence {
   override fun read(coordinate: SecretCoordinate): String = coordinate.fullCoordinate

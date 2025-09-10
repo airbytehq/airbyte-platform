@@ -79,7 +79,7 @@ airbyte:
         credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
         email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
-  role: ${AIRBYTE_ROLE:}
+  role: ${AIRBYTE_ROLE:dev}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}
@@ -87,8 +87,7 @@ airbyte:
   workflow:
     failure:
       restart-delay: ${WORKFLOW_FAILURE_RESTART_DELAY_SECONDS:600}
-  workspace:
-    root: ${WORKSPACE_ROOT}
+  workspace-root: ${WORKSPACE_ROOT:/workspace}
 
   # minimal configuration to authenticate internal service accounts w/ keycloak
   keycloak:

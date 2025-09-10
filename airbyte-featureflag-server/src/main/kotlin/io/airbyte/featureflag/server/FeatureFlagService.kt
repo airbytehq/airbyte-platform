@@ -11,10 +11,9 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.featureflag.server.model.Context
 import io.airbyte.featureflag.server.model.FeatureFlag
 import io.airbyte.featureflag.server.model.Rule
+import io.airbyte.micronaut.runtime.AirbyteFeatureFlagConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Property
 import jakarta.inject.Singleton
-import java.nio.file.Path
 import kotlin.io.path.exists
 import kotlin.io.path.isRegularFile
 
@@ -23,12 +22,12 @@ private val logger = KotlinLogging.logger {}
 // This is open for testing, creating an interface might be the way to go
 @Singleton
 open class FeatureFlagService(
-  @Property(name = "airbyte.feature-flag.path") configPath: Path?,
+  airbyteFeatureFlagConfig: AirbyteFeatureFlagConfig,
 ) {
   private val flags = mutableMapOf<String, MutableFeatureFlag>()
 
   init {
-    configPath?.also { path ->
+    airbyteFeatureFlagConfig.path.also { path ->
       if (path.exists() && path.isRegularFile()) {
         val yamlMapper = ObjectMapper(YAMLFactory()).registerKotlinModule()
         val config = yamlMapper.readValue(path.toFile(), ConfigFileFlags::class.java)

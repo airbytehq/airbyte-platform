@@ -11,12 +11,10 @@ import io.airbyte.api.model.generated.InstanceConfigurationResponse.TrackingStra
 import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody
 import io.airbyte.api.model.generated.LicenseStatus
 import io.airbyte.api.model.generated.WorkspaceUpdate
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
 import io.airbyte.commons.auth.config.AuthConfigs
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.commons.license.ActiveAirbyteLicense
 import io.airbyte.commons.server.helpers.KubernetesClientPermissionHelper
-import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.Organization
@@ -26,6 +24,11 @@ import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.micronaut.runtime.AirbyteAnalyticsConfig
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
+import io.airbyte.micronaut.runtime.AnalyticsTrackingStrategy
 import io.airbyte.validation.json.JsonValidationException
 import io.fabric8.kubernetes.api.model.Node
 import io.fabric8.kubernetes.api.model.NodeList
@@ -79,16 +82,14 @@ internal class InstanceConfigurationHandlerTest {
   @Mock
   private lateinit var kubernetesClientPermissionHelperMock: KubernetesClientPermissionHelper
 
-  private lateinit var keycloakConfiguration: AirbyteKeycloakConfiguration
+  private lateinit var keycloakConfiguration: AirbyteKeycloakConfig
   private lateinit var activeAirbyteLicense: ActiveAirbyteLicense
   private lateinit var instanceConfigurationHandler: InstanceConfigurationHandler
 
   @BeforeEach
   @Throws(IOException::class)
   fun setup() {
-    keycloakConfiguration = AirbyteKeycloakConfiguration()
-    keycloakConfiguration.airbyteRealm = AIRBYTE_REALM
-    keycloakConfiguration.webClientId = WEB_CLIENT_ID
+    keycloakConfiguration = AirbyteKeycloakConfig(airbyteRealm = AIRBYTE_REALM, webClientId = WEB_CLIENT_ID)
 
     // Create a valid license key for enterprise license
     activeAirbyteLicense = ActiveAirbyteLicense(ENTERPRISE_LICENSE_KEY)
@@ -138,7 +139,7 @@ internal class InstanceConfigurationHandlerTest {
         .defaultOrganizationId(ORGANIZATION_ID)
         .defaultOrganizationEmail(EMAIL)
         .trackingStrategy(TrackingStrategyEnum.LOGGING)
-        .licenseExpirationDate(if (isEnterprise) EXPIRATION_DATE.toInstant().getEpochSecond() else null)
+        .licenseExpirationDate(if (isEnterprise) EXPIRATION_DATE.toInstant().epochSecond else null)
 
     val actual = instanceConfigurationHandler.instanceConfiguration
 
@@ -151,8 +152,6 @@ internal class InstanceConfigurationHandlerTest {
     "LOGGING, LOGGING", // upper case env works
     "segment, SEGMENT", // lower case segment env works
     "SEGMENT, SEGMENT", // upper case segment env works
-    "'' ,LOGGING", // empty env variable will become logging
-    "unknownValue, LOGGING", // Unknown value will be treated as logging (since servers won't send segment events either)
   )
   @Throws(IOException::class)
   fun testGetInstanceConfigurationTrackingStrategy(
@@ -167,10 +166,10 @@ internal class InstanceConfigurationHandlerTest {
 
     val handler =
       InstanceConfigurationHandler(
-        Optional.of(AIRBYTE_URL),
-        envValue,
-        AirbyteEdition.COMMUNITY,
-        AirbyteVersion("0.50.1"),
+        AirbyteConfig(airbyteUrl = AIRBYTE_URL, edition = AirbyteEdition.COMMUNITY, version = "0.50.1"),
+        AirbyteAuthConfig(),
+        // Micronaut handles mapping lower and upper case to the enumerated class, so simulate that here
+        AirbyteAnalyticsConfig(strategy = AnalyticsTrackingStrategy.valueOf(envValue.uppercase())),
         Optional.empty(),
         mWorkspacePersistence,
         mWorkspacesHandler,
@@ -178,7 +177,6 @@ internal class InstanceConfigurationHandlerTest {
         mOrganizationPersistence,
         mAuthConfigs,
         permissionHandler,
-        Optional.empty(),
         Optional.empty(),
         mKubernetesClientHelper,
       )
@@ -344,7 +342,7 @@ internal class InstanceConfigurationHandlerTest {
   fun testLicenseInfoWithUsedNodes() {
     val mockNodesOperation = mock<NonNamespaceOperation<Node, NodeList, Resource<Node>>>()
     val nodeList = NodeList()
-    nodeList.setItems(Arrays.asList(Node(), Node(), Node(), Node(), Node()))
+    nodeList.items = listOf(Node(), Node(), Node(), Node(), Node())
 
     whenever(kubernetesClientPermissionHelperMock.listNodes())
       .thenReturn(mockNodesOperation)
@@ -352,10 +350,9 @@ internal class InstanceConfigurationHandlerTest {
 
     val handler =
       InstanceConfigurationHandler(
-        Optional.of(AIRBYTE_URL),
-        "logging",
-        AirbyteEdition.ENTERPRISE,
-        AirbyteVersion("0.50.1"),
+        AirbyteConfig(airbyteUrl = AIRBYTE_URL, edition = AirbyteEdition.ENTERPRISE, version = "0.50.1"),
+        AirbyteAuthConfig(),
+        AirbyteAnalyticsConfig(strategy = AnalyticsTrackingStrategy.LOGGING),
         Optional.of(activeAirbyteLicense),
         mWorkspacePersistence,
         mWorkspacesHandler,
@@ -364,16 +361,15 @@ internal class InstanceConfigurationHandlerTest {
         mAuthConfigs,
         permissionHandler,
         Optional.empty(),
-        Optional.empty(),
         Optional.of(kubernetesClientPermissionHelperMock),
       )
 
     val licenseInfoResponse = handler.licenseInfo()
 
-    Assertions.assertEquals(licenseInfoResponse?.getExpirationDate(), EXPIRATION_DATE.toInstant().getEpochSecond())
-    Assertions.assertEquals(licenseInfoResponse?.getMaxEditors(), MAX_EDITORS)
-    Assertions.assertEquals(licenseInfoResponse?.getMaxNodes(), MAX_NODES)
-    Assertions.assertEquals(licenseInfoResponse?.getUsedNodes(), nodeList.getItems().size)
+    Assertions.assertEquals(licenseInfoResponse?.expirationDate, EXPIRATION_DATE.toInstant().epochSecond)
+    Assertions.assertEquals(licenseInfoResponse?.maxEditors, MAX_EDITORS)
+    Assertions.assertEquals(licenseInfoResponse?.maxNodes, MAX_NODES)
+    Assertions.assertEquals(licenseInfoResponse?.usedNodes, nodeList.items.size)
   }
 
   @Test
@@ -382,10 +378,9 @@ internal class InstanceConfigurationHandlerTest {
     val invalidLicense = ActiveAirbyteLicense("INVALID.KEY")
     val handler =
       InstanceConfigurationHandler(
-        Optional.of(AIRBYTE_URL),
-        "logging",
-        AirbyteEdition.ENTERPRISE,
-        AirbyteVersion("0.50.1"),
+        AirbyteConfig(airbyteUrl = AIRBYTE_URL, edition = AirbyteEdition.ENTERPRISE, version = "0.50.1"),
+        AirbyteAuthConfig(),
+        AirbyteAnalyticsConfig(strategy = AnalyticsTrackingStrategy.LOGGING),
         Optional.of(invalidLicense),
         mWorkspacePersistence,
         mWorkspacesHandler,
@@ -393,7 +388,6 @@ internal class InstanceConfigurationHandlerTest {
         mOrganizationPersistence,
         mAuthConfigs,
         permissionHandler,
-        Optional.empty(),
         Optional.empty(),
         mKubernetesClientHelper,
       )
@@ -404,10 +398,9 @@ internal class InstanceConfigurationHandlerTest {
   fun testExpiredLicenseTest() {
     val handler =
       InstanceConfigurationHandler(
-        Optional.of(AIRBYTE_URL),
-        "logging",
-        AirbyteEdition.ENTERPRISE,
-        AirbyteVersion("0.50.1"),
+        AirbyteConfig(airbyteUrl = AIRBYTE_URL, edition = AirbyteEdition.ENTERPRISE, version = "0.50.1"),
+        AirbyteAuthConfig(),
+        AirbyteAnalyticsConfig(strategy = AnalyticsTrackingStrategy.LOGGING),
         Optional.of(activeAirbyteLicense),
         mWorkspacePersistence,
         mWorkspacesHandler,
@@ -416,7 +409,6 @@ internal class InstanceConfigurationHandlerTest {
         mAuthConfigs,
         permissionHandler,
         Optional.of(Clock.fixed(Instant.MAX, ZoneId.systemDefault())),
-        Optional.empty(),
         mKubernetesClientHelper,
       )
     Assertions.assertEquals(handler.currentLicenseStatus(), LicenseStatus.EXPIRED)
@@ -426,10 +418,9 @@ internal class InstanceConfigurationHandlerTest {
   fun testExceededEditorsLicenseTest() {
     val handler =
       InstanceConfigurationHandler(
-        Optional.of(AIRBYTE_URL),
-        "logging",
-        AirbyteEdition.ENTERPRISE,
-        AirbyteVersion("0.50.1"),
+        AirbyteConfig(airbyteUrl = AIRBYTE_URL, edition = AirbyteEdition.ENTERPRISE, version = "0.50.1"),
+        AirbyteAuthConfig(),
+        AirbyteAnalyticsConfig(strategy = AnalyticsTrackingStrategy.LOGGING),
         Optional.of(activeAirbyteLicense),
         mWorkspacePersistence,
         mWorkspacesHandler,
@@ -437,7 +428,6 @@ internal class InstanceConfigurationHandlerTest {
         mOrganizationPersistence,
         mAuthConfigs,
         permissionHandler,
-        Optional.empty(),
         Optional.empty(),
         mKubernetesClientHelper,
       )
@@ -481,10 +471,13 @@ internal class InstanceConfigurationHandlerTest {
 
   private fun getInstanceConfigurationHandler(isEnterprise: Boolean): InstanceConfigurationHandler =
     InstanceConfigurationHandler(
-      Optional.of(AIRBYTE_URL),
-      "logging",
-      if (isEnterprise) AirbyteEdition.ENTERPRISE else AirbyteEdition.COMMUNITY,
-      AirbyteVersion("0.50.1"),
+      AirbyteConfig(
+        airbyteUrl = AIRBYTE_URL,
+        edition = if (isEnterprise) AirbyteEdition.ENTERPRISE else AirbyteEdition.COMMUNITY,
+        version = "0.50.1",
+      ),
+      AirbyteAuthConfig(),
+      AirbyteAnalyticsConfig(strategy = AnalyticsTrackingStrategy.LOGGING),
       if (isEnterprise) Optional.of(activeAirbyteLicense) else Optional.empty(),
       mWorkspacePersistence,
       mWorkspacesHandler,
@@ -492,7 +485,6 @@ internal class InstanceConfigurationHandlerTest {
       mOrganizationPersistence,
       mAuthConfigs,
       permissionHandler,
-      Optional.empty(),
       Optional.empty(),
       mKubernetesClientHelper,
     )

@@ -6,18 +6,16 @@ package io.airbyte.data.services.impls.micronaut
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
-import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.resources.Resources.read
 import io.airbyte.config.AuthenticatedUser
-import io.airbyte.data.config.InstanceAdminConfig
 import io.airbyte.data.services.impls.data.ApplicationServiceMicronautImpl
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
 import jakarta.ws.rs.BadRequestException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import org.mockito.Mockito.mock
@@ -27,9 +25,9 @@ import java.util.Base64
 import java.util.Optional
 
 internal class ApplicationServiceMicronautImplTests {
-  private var instanceAdminConfig: InstanceAdminConfig? = null
+  private lateinit var instanceAdminConfig: AirbyteAuthConfig.AirbyteAuthInstanceAdminConfig
 
-  private var tokenExpirationConfig: TokenExpirationConfig? = null
+  private lateinit var airbyteAuthConfig: AirbyteAuthConfig
 
   private var tokenGenerator: JwtTokenGenerator? = null
 
@@ -41,13 +39,15 @@ internal class ApplicationServiceMicronautImplTests {
   @Throws(IOException::class)
   fun setup() {
     token = read("test.token")
-    instanceAdminConfig = InstanceAdminConfig()
-    instanceAdminConfig!!.username = "test"
-    instanceAdminConfig!!.password = "test-password"
-    instanceAdminConfig!!.clientId = "test-client-id"
-    instanceAdminConfig!!.clientSecret = "test-client-secret"
+    instanceAdminConfig =
+      AirbyteAuthConfig.AirbyteAuthInstanceAdminConfig(
+        clientId = "test-client-id",
+        clientSecret = "test-client-secret",
+        password = "test-password",
+        username = "test",
+      )
     tokenGenerator = mock<JwtTokenGenerator>()
-    tokenExpirationConfig = TokenExpirationConfig()
+    airbyteAuthConfig = AirbyteAuthConfig(instanceAdmin = instanceAdminConfig, tokenIssuer = issuer)
     Mockito.`when`(tokenGenerator!!.generateToken(ArgumentMatchers.anyMap())).thenReturn(Optional.of(token!!))
   }
 
@@ -55,10 +55,8 @@ internal class ApplicationServiceMicronautImplTests {
   fun testGetToken() {
     val applicationServer =
       ApplicationServiceMicronautImpl(
-        instanceAdminConfig!!,
-        tokenExpirationConfig!!,
+        airbyteAuthConfig,
         tokenGenerator!!,
-        issuer,
       )
 
     // For some reason, this test suite loads a mock token from a resource instead of running the actual
@@ -92,26 +90,21 @@ internal class ApplicationServiceMicronautImplTests {
   fun testGetTokenWithInvalidCredentials() {
     val applicationServer =
       ApplicationServiceMicronautImpl(
-        instanceAdminConfig!!,
-        tokenExpirationConfig!!,
+        airbyteAuthConfig,
         tokenGenerator!!,
-        issuer,
       )
 
     Assertions.assertThrows<BadRequestException?>(
       BadRequestException::class.java,
-      Executable { applicationServer.getToken("test-client-id", "wrong-secret") },
-    )
+    ) { applicationServer.getToken("test-client-id", "wrong-secret") }
   }
 
   @Test
   fun testListingApplications() {
     val applicationServer =
       ApplicationServiceMicronautImpl(
-        instanceAdminConfig!!,
-        tokenExpirationConfig!!,
+        airbyteAuthConfig,
         tokenGenerator!!,
-        issuer,
       )
 
     val applications = applicationServer.listApplicationsByUser(AuthenticatedUser().withName("Test User"))
@@ -122,32 +115,26 @@ internal class ApplicationServiceMicronautImplTests {
   fun testCreateApplication() {
     val applicationServer =
       ApplicationServiceMicronautImpl(
-        instanceAdminConfig!!,
-        tokenExpirationConfig!!,
+        airbyteAuthConfig,
         tokenGenerator!!,
-        issuer,
       )
 
     Assertions.assertThrows<UnsupportedOperationException?>(
       UnsupportedOperationException::class.java,
-      Executable { applicationServer.createApplication(AuthenticatedUser(), "Test Application") },
-    )
+    ) { applicationServer.createApplication(AuthenticatedUser(), "Test Application") }
   }
 
   @Test
   fun testDeleteApplication() {
     val applicationServer =
       ApplicationServiceMicronautImpl(
-        instanceAdminConfig!!,
-        tokenExpirationConfig!!,
+        airbyteAuthConfig,
         tokenGenerator!!,
-        issuer,
       )
 
     Assertions.assertThrows<UnsupportedOperationException?>(
       UnsupportedOperationException::class.java,
-      Executable { applicationServer.deleteApplication(AuthenticatedUser(), "Test Application") },
-    )
+    ) { applicationServer.deleteApplication(AuthenticatedUser(), "Test Application") }
   }
 
   private fun getTokenClaims(token: String): JsonNode {

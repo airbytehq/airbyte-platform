@@ -26,6 +26,7 @@ import io.airbyte.container.orchestrator.worker.util.ClosableChannelQueue
 import io.airbyte.container.orchestrator.worker.withBufferSize
 import io.airbyte.container.orchestrator.worker.withDefaultConfiguration
 import io.airbyte.featureflag.ReplicationBufferOverride
+import io.airbyte.micronaut.runtime.AirbyteWorkloadApiClientConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteMessage
@@ -43,8 +44,6 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.function.Supplier
-import kotlin.time.Duration.Companion.seconds
-import kotlin.time.toJavaDuration
 
 /**
  * Defines and creates any singletons that are only required when running in any mode.
@@ -222,15 +221,13 @@ class CommonBeanFactory {
 
   @Singleton
   @Named("workloadHeartbeatInterval")
-  fun workloadHeartbeatInterval(
-    @Value("\${airbyte.workload-api.heartbeat.interval-seconds}") interval: Long,
-  ): Duration = interval.seconds.toJavaDuration()
+  fun workloadHeartbeatInterval(airbyteWorkloadApiClientConfig: AirbyteWorkloadApiClientConfig): Duration =
+    Duration.ofSeconds(airbyteWorkloadApiClientConfig.heartbeat.intervalSeconds)
 
   @Singleton
   @Named("workloadHeartbeatTimeout")
-  fun workloadHeartbeatTimeout(
-    @Value("\${airbyte.workload-api.heartbeat.timeout-seconds}") timeout: Long,
-  ): Duration = timeout.seconds.toJavaDuration()
+  fun workloadHeartbeatTimeout(airbyteWorkloadApiClientConfig: AirbyteWorkloadApiClientConfig): Duration =
+    Duration.ofSeconds(airbyteWorkloadApiClientConfig.heartbeat.timeoutSeconds)
 
   @Singleton
   @Named("hardExitCallable")

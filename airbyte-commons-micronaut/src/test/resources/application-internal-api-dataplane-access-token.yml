@@ -1,0 +1,15 @@
+airbyte:
+  internal-api:
+    base-path: "http://localhost:8001/api"
+    connect-timeout-seconds: 60
+    read-timeout-seconds: 300
+    retries:
+      delay-seconds: 10
+      jitter-factor: .75
+      max: 2
+    auth:
+      client-id: "test-client-id"
+      client-secret: "test-client-secret"
+      token: "test-token"
+      token-endpoint: "test-token-endpoint"
+      type: DATAPLANE_ACCESS_TOKEN

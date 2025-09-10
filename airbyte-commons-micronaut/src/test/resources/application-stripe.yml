@@ -1,0 +1,4 @@
+airbyte:
+  stripe:
+    api-key: test-api-key
+    endpoint-secret: test-endpoint-secret

@@ -11,8 +11,8 @@ import io.airbyte.config.ResourceRequirementsType
 import io.airbyte.config.TolerationPOJO
 import io.airbyte.config.provider.ResourceRequirementsProvider
 import io.airbyte.config.provider.ResourceRequirementsProvider.Companion.DEFAULT_VARIANT
-import io.micronaut.context.annotation.Value
-import jakarta.inject.Named
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
+import io.airbyte.micronaut.runtime.DEFAULT_WORKER_KUBE_JOB_CONFIGURATION
 import jakarta.inject.Singleton
 import java.util.EnumMap
 import java.util.regex.Pattern
@@ -51,20 +51,20 @@ data class WorkerConfigs(
  */
 @Singleton
 class WorkerConfigsProvider(
-  kubeResourceConfigs: List<KubeResourceConfig>,
-  private val workerConfigsDefaults: WorkerConfigsDefaults,
+  private val airbyteWorkerConfig: AirbyteWorkerConfig,
 ) : ResourceRequirementsProvider {
-  private val kubeResourceConfigs: Map<String, Map<ResourceType, Map<ResourceSubType, KubeResourceConfig>>>
+  private val kubeResourceConfigs: Map<String, Map<ResourceType, Map<ResourceSubType, AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig>>>
 
   init {
-    val resourceConfigs = mutableMapOf<String, MutableMap<ResourceType, MutableMap<ResourceSubType, KubeResourceConfig>>>()
-    kubeResourceConfigs.forEach { config ->
+    val resourceConfigs =
+      mutableMapOf<String, MutableMap<ResourceType, MutableMap<ResourceSubType, AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig>>>()
+    airbyteWorkerConfig.kubeJobConfigs.forEach { config ->
       val key: KubeResourceKey = parseKubeResourceKey(config.name) ?: throw IllegalArgumentException("Unsupported config name ${config.name}.")
 
-      val typeMap: MutableMap<ResourceType, MutableMap<ResourceSubType, KubeResourceConfig>> =
+      val typeMap: MutableMap<ResourceType, MutableMap<ResourceSubType, AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig>> =
         resourceConfigs.computeIfAbsent(key.variant) { _ -> EnumMap(ResourceType::class.java) }
 
-      val subTypeMap: MutableMap<ResourceSubType, KubeResourceConfig> =
+      val subTypeMap: MutableMap<ResourceSubType, AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig> =
         typeMap.computeIfAbsent(key.type) { _ -> EnumMap(ResourceSubType::class.java) }
 
       subTypeMap[key.subType] = config
@@ -85,28 +85,32 @@ class WorkerConfigsProvider(
   private fun getConfig(key: KubeResourceKey): WorkerConfigs {
     val kubeResourceConfig = getKubeResourceConfig(key) ?: throw NoSuchElementException("Unable to find config: $key")
 
-    val isolatedNodeSelectors: Map<String, String> = workerConfigsDefaults.isolatedNodeSelectors.toKeyValues()
-    if (workerConfigsDefaults.useCustomNodeSelector && isolatedNodeSelectors.isEmpty()) {
+    val isolatedNodeSelectors: Map<String, String> =
+      airbyteWorkerConfig.isolated.kube.nodeSelectors
+        .toKeyValues()
+    if (airbyteWorkerConfig.isolated.kube.useCustomNodeSelector && isolatedNodeSelectors.isEmpty()) {
       throw IllegalStateException("Isolated Node selectors is empty while useCustomNodeSelector is set to true.")
     }
 
+    val defaultKubeResourceConfig = airbyteWorkerConfig.kubeJobConfigs.find { it.name == DEFAULT_WORKER_KUBE_JOB_CONFIGURATION }
+
     // if annotations are not defined for this specific resource, fallback to the default resource annotations
     val annotations: Map<String, String> =
-      if (kubeResourceConfig.annotations.isNullOrEmpty()) {
-        workerConfigsDefaults.defaultKubeResourceConfig.annotations.toKeyValues()
+      if (kubeResourceConfig.annotations.isEmpty() && defaultKubeResourceConfig != null) {
+        defaultKubeResourceConfig.annotations.toKeyValues()
       } else {
         kubeResourceConfig.annotations.toKeyValues()
       }
 
     return WorkerConfigs(
-      resourceRequirements = getResourceRequirementsFrom(kubeResourceConfig, workerConfigsDefaults.defaultKubeResourceConfig),
-      workerKubeTolerations = TolerationPOJO.getJobKubeTolerations(workerConfigsDefaults.jobKubeTolerations),
+      resourceRequirements = getResourceRequirementsFrom(kubeResourceConfig, defaultKubeResourceConfig),
+      workerKubeTolerations = TolerationPOJO.getJobKubeTolerations(airbyteWorkerConfig.job.kubernetes.tolerations),
       workerKubeNodeSelectors = kubeResourceConfig.nodeSelectors.toKeyValues(),
-      workerIsolatedKubeNodeSelectors = if (workerConfigsDefaults.useCustomNodeSelector) isolatedNodeSelectors else null,
+      workerIsolatedKubeNodeSelectors = if (airbyteWorkerConfig.isolated.kube.useCustomNodeSelector) isolatedNodeSelectors else null,
       workerKubeAnnotations = annotations,
       workerKubeLabels = kubeResourceConfig.labels.toKeyValues(),
-      jobImagePullSecrets = workerConfigsDefaults.mainContainerImagePullSecret,
-      jobImagePullPolicy = workerConfigsDefaults.mainContainerImagePullPolicy,
+      jobImagePullSecrets = listOf(airbyteWorkerConfig.job.kubernetes.main.container.imagePullSecret),
+      jobImagePullPolicy = airbyteWorkerConfig.job.kubernetes.main.container.imagePullPolicy,
     )
   }
 
@@ -117,7 +121,7 @@ class WorkerConfigsProvider(
    * Keeping in mind that we have defaults we want to fallback to, we should perform a complete scan of the
    * configs until we find a match to make sure we do not overlook a match.
    */
-  private fun getKubeResourceConfig(key: KubeResourceKey): KubeResourceConfig? {
+  private fun getKubeResourceConfig(key: KubeResourceKey): AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig? {
     // Look up by actual variant
     getKubeResourceConfigByType(kubeResourceConfigs[key.variant], key)?.let { return it }
 
@@ -240,20 +244,10 @@ private fun parseKubeResourceKey(value: String): KubeResourceKey? {
   )
 }
 
-@Singleton
-data class WorkerConfigsDefaults(
-  @Named("default") val defaultKubeResourceConfig: KubeResourceConfig,
-  @Value("\${airbyte.worker.job.kube.tolerations}")val jobKubeTolerations: String,
-  @Value("\${airbyte.worker.isolated.kube.node-selectors}") val isolatedNodeSelectors: String,
-  @Value("\${airbyte.worker.isolated.kube.use-custom-node-selector}") val useCustomNodeSelector: Boolean,
-  @Value("\${airbyte.worker.job.kube.main.container.image-pull-secret}")val mainContainerImagePullSecret: List<String>,
-  @Value("\${airbyte.worker.job.kube.main.container.image-pull-policy}") val mainContainerImagePullPolicy: String,
-)
-
 private fun getKubeResourceConfigByType(
-  configs: Map<ResourceType, Map<ResourceSubType, KubeResourceConfig>>?,
+  configs: Map<ResourceType, Map<ResourceSubType, AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig>>?,
   key: KubeResourceKey,
-): KubeResourceConfig? {
+): AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig? {
   if (configs == null) {
     return null
   }
@@ -264,9 +258,9 @@ private fun getKubeResourceConfigByType(
 }
 
 private fun getKubeResourceConfigBySubType(
-  configBySubtype: Map<ResourceSubType, KubeResourceConfig>?,
+  configBySubtype: Map<ResourceSubType, AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig>?,
   key: KubeResourceKey,
-): KubeResourceConfig? {
+): AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig? {
   if (configBySubtype == null) {
     return null
   }
@@ -289,16 +283,16 @@ private fun String?.toKeyValues(): Map<String, String> {
 }
 
 private fun getResourceRequirementsFrom(
-  cfg: KubeResourceConfig,
-  default: KubeResourceConfig,
+  cfg: AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig,
+  default: AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig?,
 ): ResourceRequirements =
   ResourceRequirements()
-    .withCpuLimit(cfg.cpuLimit.ifBlankOrNull { default.cpuLimit })
-    .withCpuRequest(cfg.cpuRequest.ifBlankOrNull { default.cpuRequest })
-    .withMemoryLimit(cfg.memoryLimit.ifBlankOrNull { default.memoryLimit })
-    .withMemoryRequest(cfg.memoryRequest.ifBlankOrNull { default.memoryRequest })
-    .withEphemeralStorageLimit(cfg.ephemeralStorageLimit.ifBlankOrNull { default.ephemeralStorageLimit })
-    .withEphemeralStorageRequest(cfg.ephemeralStorageRequest.ifBlankOrNull { default.ephemeralStorageRequest })
+    .withCpuLimit(cfg.cpuLimit.ifBlankOrNull { default?.cpuLimit })
+    .withCpuRequest(cfg.cpuRequest.ifBlankOrNull { default?.cpuRequest })
+    .withMemoryLimit(cfg.memoryLimit.ifBlankOrNull { default?.memoryLimit })
+    .withMemoryRequest(cfg.memoryRequest.ifBlankOrNull { default?.memoryRequest })
+    .withEphemeralStorageLimit(cfg.ephemeralStorageLimit.ifBlankOrNull { default?.ephemeralStorageLimit })
+    .withEphemeralStorageRequest(cfg.ephemeralStorageRequest.ifBlankOrNull { default?.ephemeralStorageRequest })
 
 private fun String?.ifBlankOrNull(default: () -> String?): String? =
   if (this.isNullOrBlank()) {
@@ -306,9 +300,3 @@ private fun String?.ifBlankOrNull(default: () -> String?): String? =
   } else {
     this
   }
-// private fun String?.ifEmpty(default: String) =
-//  if (this.isNullOrBlank()) {
-//    default
-//  } else {
-//    this
-//  }

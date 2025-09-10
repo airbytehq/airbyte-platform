@@ -1,0 +1,8 @@
+airbyte:
+  connector-builder-server:
+    github:
+      airbyte-pat-token: test-token
+    ai-assist:
+      url-base: http://test-ai-assist
+    capabilities:
+      enable-unsafe-code: true

@@ -20,12 +20,11 @@ import io.airbyte.api.model.generated.StreamFieldStatusChanged
 import io.airbyte.api.model.generated.StreamPrimaryKeyDiff
 import io.airbyte.api.model.generated.StreamSyncModeDiff
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
-import io.airbyte.commons.server.handlers.logger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.io.IOException
 
-private val log = KotlinLogging.logger {}
+private val logger = KotlinLogging.logger {}
 
 @Singleton
 class CatalogConfigDiffHelper {
@@ -44,7 +43,7 @@ class CatalogConfigDiffHelper {
         try {
           jsonMapper.readTree(connectorSchema.traverse())
         } catch (e: IOException) {
-          log.error { "Error getting stream fields from schema: ${e.message}" }
+          logger.error { "Error getting stream fields from schema: ${e.message}" }
           throw UnexpectedProblem()
         }
 

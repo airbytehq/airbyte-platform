@@ -16,6 +16,9 @@ import com.google.cloud.storage.BlobInfo
 import com.google.cloud.storage.BucketInfo
 import com.google.cloud.storage.Storage
 import io.airbyte.commons.envvar.EnvVar
+import io.airbyte.micronaut.runtime.AirbyteStorageConfig
+import io.airbyte.micronaut.runtime.StorageEnvironmentVariableProvider
+import io.airbyte.micronaut.runtime.StorageType
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -58,14 +61,14 @@ private const val DOC1 = "hello"
 private const val DOC2 = "bye"
 
 private val buckets =
-  StorageBucketConfig(
+  AirbyteStorageConfig.AirbyteStorageBucketConfig(
     log = "log",
     state = "state",
     workloadOutput = "workload",
     activityPayload = "payload",
-    auditLogging = null,
-    profilerOutput = null,
-    replicationDump = null,
+    auditLogging = "",
+    profilerOutput = "",
+    replicationDump = "",
   )
 
 internal class DocumentTypeTest {
@@ -79,7 +82,7 @@ internal class DocumentTypeTest {
 }
 
 internal class AzureStorageClientTest {
-  private val config = AzureStorageConfig(buckets = buckets, connectionString = "connect")
+  private val config = AirbyteStorageConfig.AzureStorageConfig(connectionString = "connect")
 
   @Test
   fun `key matches`() {
@@ -90,10 +93,10 @@ internal class AzureStorageClientTest {
     every { blobContainerClient.exists() } returns false
     every { blobContainerClient.createIfNotExists() } returns true
 
-    val clientState = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
+    val clientState = AzureStorageClient(bucketConfig = buckets, type = DocumentType.STATE, azureClient = azureClient)
     assertEquals("/state/$KEY", clientState.key(KEY))
 
-    val workloadState = AzureStorageClient(config = config, type = DocumentType.WORKLOAD_OUTPUT, azureClient = azureClient)
+    val workloadState = AzureStorageClient(bucketConfig = buckets, type = DocumentType.WORKLOAD_OUTPUT, azureClient = azureClient)
     assertEquals("/workload/output/$KEY", workloadState.key(KEY))
   }
 
@@ -102,13 +105,13 @@ internal class AzureStorageClientTest {
     val azureClient: BlobServiceClient = mockk()
     val blobContainerClient: BlobContainerClient = mockk()
 
-    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns blobContainerClient
+    every { azureClient.getBlobContainerClient(buckets.bucketName(DocumentType.STATE)) } returns blobContainerClient
     every { blobContainerClient.exists() } returns false
     every { blobContainerClient.createIfNotExists() } returns true
 
-    val client = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
+    val client = AzureStorageClient(bucketConfig = buckets, type = DocumentType.STATE, azureClient = azureClient)
 
-    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns
+    every { azureClient.getBlobContainerClient(buckets.bucketName(DocumentType.STATE)) } returns
       mockk {
         every { getBlobClient(client.key(KEY)) } returns
           mockk {
@@ -124,13 +127,13 @@ internal class AzureStorageClientTest {
     val azureClient: BlobServiceClient = mockk()
     val blobContainerClient: BlobContainerClient = mockk()
 
-    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns blobContainerClient
+    every { azureClient.getBlobContainerClient(buckets.bucketName(DocumentType.STATE)) } returns blobContainerClient
     every { blobContainerClient.exists() } returns false
     every { blobContainerClient.createIfNotExists() } returns true
 
-    val client = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
+    val client = AzureStorageClient(bucketConfig = buckets, type = DocumentType.STATE, azureClient = azureClient)
 
-    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns
+    every { azureClient.getBlobContainerClient(buckets.bucketName(DocumentType.STATE)) } returns
       mockk {
         every { getBlobClient(client.key(KEY)) } returns
           mockk {
@@ -154,14 +157,14 @@ internal class AzureStorageClientTest {
     val blobClient: BlobClient = mockk()
     val blobContainerClient: BlobContainerClient = mockk()
 
-    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns blobContainerClient
+    every { azureClient.getBlobContainerClient(buckets.bucketName(DocumentType.STATE)) } returns blobContainerClient
     every { blobContainerClient.exists() } returns false
     every { blobContainerClient.createIfNotExists() } returns true
 
     every { blobClient.exists() } returns true
     every { blobClient.upload(any<InputStream>()) } returns Unit
 
-    val client = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
+    val client = AzureStorageClient(bucketConfig = buckets, type = DocumentType.STATE, azureClient = azureClient)
     every { blobContainerClient.getBlobClient(client.key(KEY)) } returns blobClient
 
     client.write(KEY, DOC1)
@@ -173,14 +176,14 @@ internal class AzureStorageClientTest {
     val azureClient: BlobServiceClient = mockk()
     val blobContainerClient: BlobContainerClient = mockk()
 
-    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns blobContainerClient
+    every { azureClient.getBlobContainerClient(buckets.bucketName(DocumentType.STATE)) } returns blobContainerClient
     every { blobContainerClient.exists() } returns false
     every { blobContainerClient.createIfNotExists() } returns true
 
-    val client = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
+    val client = AzureStorageClient(bucketConfig = buckets, type = DocumentType.STATE, azureClient = azureClient)
 
     // doc not deleted
-    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns
+    every { azureClient.getBlobContainerClient(buckets.bucketName(DocumentType.STATE)) } returns
       mockk {
         every { getBlobClient(client.key(KEY)) } returns
           mockk {
@@ -190,7 +193,7 @@ internal class AzureStorageClientTest {
     assertFalse(client.delete(KEY))
 
     // doc deleted
-    every { azureClient.getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns
+    every { azureClient.getBlobContainerClient(buckets.bucketName(DocumentType.STATE)) } returns
       mockk {
         every { getBlobClient(client.key(KEY)) } returns
           mockk {
@@ -219,10 +222,10 @@ internal class AzureStorageClientTest {
 
     val azureClient: BlobServiceClient =
       mockk {
-        every { getBlobContainerClient(config.bucketName(DocumentType.STATE)) } returns blobContainerClient
+        every { getBlobContainerClient(buckets.bucketName(DocumentType.STATE)) } returns blobContainerClient
       }
 
-    val client = AzureStorageClient(config = config, type = DocumentType.STATE, azureClient = azureClient)
+    val client = AzureStorageClient(bucketConfig = buckets, type = DocumentType.STATE, azureClient = azureClient)
 
     val result = client.list(id = KEY)
     assertEquals(files, result)
@@ -230,7 +233,7 @@ internal class AzureStorageClientTest {
 }
 
 internal class GcsStorageClientTest {
-  private val config = GcsStorageConfig(buckets = buckets, applicationCredentials = "app-creds")
+  private val config = AirbyteStorageConfig.GcsStorageConfig(applicationCredentials = "app-creds")
 
   @Test
   fun `blobId matches`() {
@@ -240,10 +243,10 @@ internal class GcsStorageClientTest {
         every { create(any<BucketInfo>()) } returns mockk<GcsBucket>()
       }
 
-    val clientState = GcsStorageClient(config = config, type = DocumentType.STATE, gcsClient = gcsClient)
+    val clientState = GcsStorageClient(bucketConfig = buckets, type = DocumentType.STATE, gcsClient = gcsClient)
     assertEquals(BlobId.of(buckets.state, "/state/$KEY"), clientState.blobId(KEY))
 
-    val workloadState = GcsStorageClient(config = config, type = DocumentType.WORKLOAD_OUTPUT, gcsClient = gcsClient)
+    val workloadState = GcsStorageClient(bucketConfig = buckets, type = DocumentType.WORKLOAD_OUTPUT, gcsClient = gcsClient)
     assertEquals(BlobId.of(buckets.workloadOutput, "/workload/output/$KEY"), workloadState.blobId(KEY))
   }
 
@@ -251,10 +254,10 @@ internal class GcsStorageClientTest {
   fun `read missing doc`() {
     val gcsClient: Storage =
       mockk {
-        every { get(config.bucketName(DocumentType.STATE), *anyVararg()) } returns null
+        every { get(buckets.bucketName(DocumentType.STATE), *anyVararg()) } returns null
         every { create(any<BucketInfo>()) } returns mockk<GcsBucket>()
       }
-    val client = GcsStorageClient(config = config, type = DocumentType.STATE, gcsClient = gcsClient)
+    val client = GcsStorageClient(bucketConfig = buckets, type = DocumentType.STATE, gcsClient = gcsClient)
 
     // verify no blob is returned
     every { gcsClient.get(any<BlobId>()) } returns null
@@ -272,10 +275,10 @@ internal class GcsStorageClientTest {
   fun `read existing doc`() {
     val gcsClient: Storage =
       mockk {
-        every { get(config.bucketName(DocumentType.STATE), *anyVararg()) } returns null
+        every { get(buckets.bucketName(DocumentType.STATE), *anyVararg()) } returns null
         every { create(any<BucketInfo>()) } returns mockk<GcsBucket>()
       }
-    val client = GcsStorageClient(config = config, type = DocumentType.STATE, gcsClient = gcsClient)
+    val client = GcsStorageClient(bucketConfig = buckets, type = DocumentType.STATE, gcsClient = gcsClient)
 
     val blobId = client.blobId(KEY)
     every { gcsClient.get(blobId) } returns
@@ -295,10 +298,10 @@ internal class GcsStorageClientTest {
   fun `write doc`() {
     val gcsClient: Storage =
       mockk {
-        every { get(config.bucketName(DocumentType.STATE), *anyVararg()) } returns null
+        every { get(buckets.bucketName(DocumentType.STATE), *anyVararg()) } returns null
         every { create(any<BucketInfo>()) } returns mockk<GcsBucket>()
       }
-    val client = GcsStorageClient(config = config, type = DocumentType.STATE, gcsClient = gcsClient)
+    val client = GcsStorageClient(bucketConfig = buckets, type = DocumentType.STATE, gcsClient = gcsClient)
 
     val blobId = client.blobId(KEY)
     every {
@@ -313,10 +316,10 @@ internal class GcsStorageClientTest {
   fun `delete doc`() {
     val gcsClient: Storage =
       mockk {
-        every { get(config.bucketName(DocumentType.STATE), *anyVararg()) } returns null
+        every { get(buckets.bucketName(DocumentType.STATE), *anyVararg()) } returns null
         every { create(any<BucketInfo>()) } returns mockk<GcsBucket>()
       }
-    val client = GcsStorageClient(config = config, type = DocumentType.STATE, gcsClient = gcsClient)
+    val client = GcsStorageClient(bucketConfig = buckets, type = DocumentType.STATE, gcsClient = gcsClient)
 
     val blobId = client.blobId(KEY)
 
@@ -348,7 +351,7 @@ internal class GcsStorageClientTest {
         every { list(any<String>(), any()) } returns page
       }
 
-    val client = GcsStorageClient(config = config, type = DocumentType.STATE, gcsClient = gcsClient)
+    val client = GcsStorageClient(bucketConfig = buckets, type = DocumentType.STATE, gcsClient = gcsClient)
 
     val result = client.list(id = KEY)
     assertEquals(files, result)
@@ -360,8 +363,8 @@ internal class LocalStorageClientTest {
   fun `happy path`(
     @TempDir tempDir: Path,
   ) {
-    val config = LocalStorageConfig(buckets = buckets, root = tempDir.toString())
-    val client = LocalStorageClient(config = config, type = DocumentType.STATE)
+    val config = AirbyteStorageConfig.LocalStorageConfig(root = tempDir.toString())
+    val client = LocalStorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.STATE)
 
     with(client.read(KEY)) {
       assertNull(this, "key $KEY should not exist")
@@ -397,8 +400,8 @@ internal class LocalStorageClientTest {
     val file = createTempFile(directory = stateDir, suffix = ".log")
     file.toFile().writeText(text = "log line")
 
-    val config = LocalStorageConfig(buckets = buckets, root = root.pathString)
-    val client = LocalStorageClient(config = config, type = DocumentType.STATE)
+    val config = AirbyteStorageConfig.LocalStorageConfig(root = root.pathString)
+    val client = LocalStorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.STATE)
 
     val result = client.list("/")
     assertEquals(listOf(file.fileName.toString()), result)
@@ -407,8 +410,8 @@ internal class LocalStorageClientTest {
   @Test
   fun `it can write and read state files correctly`() {
     val root = createTempDirectory(prefix = "local-test")
-    val config = LocalStorageConfig(buckets = buckets, root = root.pathString)
-    val client = LocalStorageClient(config = config, type = DocumentType.STATE)
+    val config = AirbyteStorageConfig.LocalStorageConfig(root = root.pathString)
+    val client = LocalStorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.STATE)
 
     client.write("foo", "foodoc")
     client.write("bar/baz", "barbaz")
@@ -433,27 +436,33 @@ internal class LocalStorageClientTest {
   internal fun testToEnvVarMap() {
     val root = "/root/path"
     val bucketConfig =
-      StorageBucketConfig(
+      AirbyteStorageConfig.AirbyteStorageBucketConfig(
         state = "state",
         workloadOutput = "workload-output",
         log = "log",
         activityPayload = "activity-payload",
         // Audit logging is null by default as it is SME feature only
-        auditLogging = null,
-        profilerOutput = null,
-        replicationDump = null,
+        auditLogging = "",
+        profilerOutput = "",
+        replicationDump = "",
       )
     val localStorageConfig =
-      LocalStorageConfig(
-        buckets = bucketConfig,
+      AirbyteStorageConfig.LocalStorageConfig(
         root = root,
       )
-    val envVarMap = localStorageConfig.toEnvVarMap()
-    assertEquals(5, envVarMap.size)
+    val storageEnvironmentVariableProvider =
+      StorageEnvironmentVariableProvider(
+        buckets = bucketConfig,
+        storageConfig = localStorageConfig,
+      )
+    val envVarMap = storageEnvironmentVariableProvider.toEnvVarMap()
+    assertEquals(7, envVarMap.size)
     assertEquals(bucketConfig.log, envVarMap[EnvVar.STORAGE_BUCKET_LOG.name])
     assertEquals(bucketConfig.workloadOutput, envVarMap[EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT.name])
     assertEquals(bucketConfig.activityPayload, envVarMap[EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD.name])
     assertEquals(bucketConfig.state, envVarMap[EnvVar.STORAGE_BUCKET_STATE.name])
+    assertEquals(bucketConfig.auditLogging, envVarMap[EnvVar.STORAGE_BUCKET_AUDIT_LOGGING.name])
+    assertEquals(bucketConfig.replicationDump, envVarMap[EnvVar.STORAGE_BUCKET_REPLICATION_DUMP.name])
     assertEquals(StorageType.LOCAL.name, envVarMap[EnvVar.STORAGE_TYPE.name])
   }
 
@@ -461,33 +470,43 @@ internal class LocalStorageClientTest {
   internal fun testToEnvVarMapWithAuditLogging() {
     val root = "/root/path"
     val bucketConfig =
-      StorageBucketConfig(
+      AirbyteStorageConfig.AirbyteStorageBucketConfig(
         state = "state",
         workloadOutput = "workload-output",
         log = "log",
         activityPayload = "activity-payload",
         auditLogging = "audit-logging",
-        profilerOutput = null,
-        replicationDump = null,
+        profilerOutput = "",
+        replicationDump = "",
       )
     val localStorageConfig =
-      LocalStorageConfig(
-        buckets = bucketConfig,
+      AirbyteStorageConfig.LocalStorageConfig(
         root = root,
       )
-    val envVarMap = localStorageConfig.toEnvVarMap()
-    assertEquals(6, envVarMap.size)
+    val storageEnvironmentVariableProvider =
+      StorageEnvironmentVariableProvider(
+        buckets = bucketConfig,
+        storageConfig = localStorageConfig,
+      )
+    val envVarMap = storageEnvironmentVariableProvider.toEnvVarMap()
+    assertEquals(7, envVarMap.size)
     assertEquals(bucketConfig.log, envVarMap[EnvVar.STORAGE_BUCKET_LOG.name])
     assertEquals(bucketConfig.workloadOutput, envVarMap[EnvVar.STORAGE_BUCKET_WORKLOAD_OUTPUT.name])
     assertEquals(bucketConfig.activityPayload, envVarMap[EnvVar.STORAGE_BUCKET_ACTIVITY_PAYLOAD.name])
     assertEquals(bucketConfig.state, envVarMap[EnvVar.STORAGE_BUCKET_STATE.name])
     assertEquals(bucketConfig.auditLogging, envVarMap[EnvVar.STORAGE_BUCKET_AUDIT_LOGGING.name])
+    assertEquals(bucketConfig.replicationDump, envVarMap[EnvVar.STORAGE_BUCKET_REPLICATION_DUMP.name])
     assertEquals(StorageType.LOCAL.name, envVarMap[EnvVar.STORAGE_TYPE.name])
   }
 }
 
 internal class MinioStorageClientTest {
-  private val config = MinioStorageConfig(buckets = buckets, accessKey = "access", secretAccessKey = "secret", endpoint = "endpoint")
+  private val config =
+    AirbyteStorageConfig.MinioStorageConfig(
+      accessKey = "access",
+      secretAccessKey = "secret",
+      endpoint = "endpoint",
+    )
 
   @Test
   fun `key matches`() {
@@ -497,10 +516,10 @@ internal class MinioStorageClientTest {
         every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
       }
 
-    val clientState = MinioStorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
+    val clientState = MinioStorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.STATE, s3Client = s3Client)
     assertEquals("/state/$KEY", clientState.key(KEY))
 
-    val workloadState = MinioStorageClient(config = config, type = DocumentType.WORKLOAD_OUTPUT, s3Client = s3Client)
+    val workloadState = MinioStorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.WORKLOAD_OUTPUT, s3Client = s3Client)
     assertEquals("/workload/output/$KEY", workloadState.key(KEY))
   }
 
@@ -511,7 +530,7 @@ internal class MinioStorageClientTest {
         every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
         every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
       }
-    val client = MinioStorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
+    val client = MinioStorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
       GetObjectRequest
@@ -534,7 +553,7 @@ internal class MinioStorageClientTest {
         every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
         every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
       }
-    val client = MinioStorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
+    val client = MinioStorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
       GetObjectRequest
@@ -561,7 +580,7 @@ internal class MinioStorageClientTest {
         every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
         every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
       }
-    val client = MinioStorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
+    val client = MinioStorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
       PutObjectRequest
@@ -583,7 +602,7 @@ internal class MinioStorageClientTest {
         every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
         every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
       }
-    val client = MinioStorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
+    val client = MinioStorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val existsRequest =
       HeadObjectRequest
@@ -632,7 +651,7 @@ internal class MinioStorageClientTest {
         every { listObjectsV2Paginator(any<ListObjectsV2Request>()) } returns iterable
       }
 
-    val client = MinioStorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
+    val client = MinioStorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val result = client.list(id = KEY)
     assertEquals(files, result)
@@ -640,7 +659,12 @@ internal class MinioStorageClientTest {
 }
 
 internal class S3StorageClientTest {
-  private val config = S3StorageConfig(buckets = buckets, accessKey = "access", secretAccessKey = "secret", region = "us-east-1")
+  private val config =
+    AirbyteStorageConfig.S3StorageConfig(
+      accessKey = "access",
+      secretAccessKey = "secret",
+      region = "us-east-1",
+    )
 
   @Test
   fun `key matches`() {
@@ -650,10 +674,10 @@ internal class S3StorageClientTest {
         every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
       }
 
-    val clientState = S3StorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
+    val clientState = S3StorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.STATE, s3Client = s3Client)
     assertEquals("/state/$KEY", clientState.key(KEY))
 
-    val workloadState = S3StorageClient(config = config, type = DocumentType.WORKLOAD_OUTPUT, s3Client = s3Client)
+    val workloadState = S3StorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.WORKLOAD_OUTPUT, s3Client = s3Client)
     assertEquals("/workload/output/$KEY", workloadState.key(KEY))
   }
 
@@ -664,7 +688,7 @@ internal class S3StorageClientTest {
         every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
         every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
       }
-    val client = S3StorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
+    val client = S3StorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
       GetObjectRequest
@@ -687,7 +711,7 @@ internal class S3StorageClientTest {
         every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
         every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
       }
-    val client = S3StorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
+    val client = S3StorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
       GetObjectRequest
@@ -714,7 +738,7 @@ internal class S3StorageClientTest {
         every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
         every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
       }
-    val client = S3StorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
+    val client = S3StorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val request =
       PutObjectRequest
@@ -736,7 +760,7 @@ internal class S3StorageClientTest {
         every { createBucket(any<CreateBucketRequest>()) } returns mockk<CreateBucketResponse>()
         every { headBucket(any<HeadBucketRequest>()) } throws NoSuchBucketException.builder().build()
       }
-    val client = S3StorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
+    val client = S3StorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val existsRequest =
       HeadObjectRequest
@@ -785,7 +809,7 @@ internal class S3StorageClientTest {
         every { listObjectsV2Paginator(any<ListObjectsV2Request>()) } returns iterable
       }
 
-    val client = S3StorageClient(config = config, type = DocumentType.STATE, s3Client = s3Client)
+    val client = S3StorageClient(bucketConfig = buckets, storageConfig = config, type = DocumentType.STATE, s3Client = s3Client)
 
     val result = client.list(id = KEY)
     assertEquals(files, result)

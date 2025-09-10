@@ -4,7 +4,7 @@
 
 package io.airbyte.keycloak.setup
 
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.client.HttpClient
@@ -19,7 +19,7 @@ import java.sql.SQLException
 class KeycloakSetup(
   private val httpClient: HttpClient,
   private val keycloakServer: KeycloakServer,
-  private val keycloakConfiguration: AirbyteKeycloakConfiguration,
+  private val keycloakConfiguration: AirbyteKeycloakConfig,
   private val configDbResetHelper: ConfigDbResetHelper,
 ) {
   fun run() {

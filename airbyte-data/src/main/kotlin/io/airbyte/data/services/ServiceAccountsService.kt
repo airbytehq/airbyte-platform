@@ -4,11 +4,11 @@
 
 package io.airbyte.data.services
 
-import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.data.auth.AirbyteJwtGenerator
 import io.airbyte.data.auth.TokenType
 import io.airbyte.data.repositories.ServiceAccountsRepository
 import io.airbyte.domain.models.ServiceAccount
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import jakarta.inject.Singleton
 import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder
 import java.security.MessageDigest
@@ -20,7 +20,7 @@ import io.airbyte.data.repositories.entities.ServiceAccount as ServiceAccountEnt
 class ServiceAccountsService internal constructor(
   private val jwtTokenGenerator: AirbyteJwtGenerator,
   private val repo: ServiceAccountsRepository,
-  private val tokenExpirationConfig: TokenExpirationConfig,
+  private val airbyteAuthConfig: AirbyteAuthConfig,
 ) {
   fun create(
     id: UUID = UUID.randomUUID(),
@@ -78,7 +78,7 @@ class ServiceAccountsService internal constructor(
       .generateToken(
         tokenSubject = id.toString(),
         tokenType = TokenType.SERVICE_ACCOUNT,
-        tokenExpirationLength = tokenExpirationConfig.serviceAccountTokenExpirationInMinutes,
+        tokenExpirationLength = airbyteAuthConfig.tokenExpiration.serviceAccountTokenExpirationInMinutes,
       )
   }
 

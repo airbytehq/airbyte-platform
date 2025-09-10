@@ -4,12 +4,11 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.commons.auth.roles.AuthRole
 import io.airbyte.data.auth.TokenType
 import io.airbyte.data.services.DataplaneTokenService
 import io.airbyte.data.services.ServiceAccountsService
-import io.micronaut.context.annotation.Property
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
@@ -24,9 +23,8 @@ import java.util.UUID
 @Replaces(DataplaneTokenServiceNoAuthImpl::class)
 class DataplaneTokenServiceDataImpl(
   private val jwtTokenGenerator: JwtTokenGenerator,
-  private val tokenExpirationConfig: TokenExpirationConfig,
+  private val airbyteAuthConfig: AirbyteAuthConfig,
   private val serviceAccountsService: ServiceAccountsService,
-  @Property(name = "airbyte.auth.token-issuer") private val tokenIssuer: String,
 ) : DataplaneTokenService {
   /**
    * Gets a token
@@ -43,11 +41,11 @@ class DataplaneTokenServiceDataImpl(
     return jwtTokenGenerator
       .generateToken(
         mapOf(
-          "iss" to tokenIssuer,
+          "iss" to airbyteAuthConfig.tokenIssuer,
           "sub" to serviceAccount.id,
           TokenType.DATAPLANE_V1.toClaim(),
           "roles" to AuthRole.getInstanceAdminRoles(),
-          "exp" to Instant.now().plus(tokenExpirationConfig.dataplaneTokenExpirationInMinutes, ChronoUnit.MINUTES).epochSecond,
+          "exp" to Instant.now().plus(airbyteAuthConfig.tokenExpiration.dataplaneTokenExpirationInMinutes, ChronoUnit.MINUTES).epochSecond,
         ),
       ).orElseThrow {
         IllegalStateException(

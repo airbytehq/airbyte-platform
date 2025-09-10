@@ -8,6 +8,7 @@ import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseCustomK8sScheduler
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.workload.launcher.ArchitectureDecider
 import io.airbyte.workload.launcher.context.WorkloadSecurityContextProvider
 import io.airbyte.workload.launcher.pipeline.stages.model.ArchitectureEnvironmentVariables
@@ -16,7 +17,6 @@ import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.Pod
 import io.fabric8.kubernetes.api.model.PodBuilder
 import io.fabric8.kubernetes.api.model.ResourceRequirements
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -29,9 +29,9 @@ data class ReplicationPodFactory(
   private val profilerContainerFactory: ProfilerContainerFactory,
   private val volumeFactory: VolumeFactory,
   private val workloadSecurityContextProvider: WorkloadSecurityContextProvider,
-  @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
   private val nodeSelectionFactory: NodeSelectionFactory,
   @Named("replicationImagePullSecrets") private val imagePullSecrets: List<LocalObjectReference>,
+  private val airbyteWorkerConfig: AirbyteWorkerConfig,
 ) {
   internal fun create(
     podName: String,
@@ -107,7 +107,7 @@ data class ReplicationPodFactory(
       .endMetadata()
       .withNewSpec()
       .withSchedulerName(schedulerName)
-      .withServiceAccount(serviceAccount)
+      .withServiceAccount(airbyteWorkerConfig.job.kubernetes.serviceAccount)
       .withAutomountServiceAccountToken(true)
       .withRestartPolicy("Never")
       .withInitContainers(initContainer)
@@ -186,7 +186,7 @@ data class ReplicationPodFactory(
       .endMetadata()
       .withNewSpec()
       .withSchedulerName(schedulerName)
-      .withServiceAccount(serviceAccount)
+      .withServiceAccount(airbyteWorkerConfig.job.kubernetes.serviceAccount)
       .withAutomountServiceAccountToken(true)
       .withRestartPolicy("Never")
       .withInitContainers(initContainer)

@@ -19,6 +19,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Configs
 import io.airbyte.config.FailureReason
 import io.airbyte.config.State
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient
@@ -50,6 +51,7 @@ class StateCheckSumErrorReporterTest {
 
   private val airbyteVersion = "0.1.0"
   private val airbyteEdition = Configs.AirbyteEdition.CLOUD
+  private val airbyteConfig = AirbyteConfig(version = airbyteVersion, edition = airbyteEdition)
 
   @BeforeEach
   fun setup() {
@@ -60,8 +62,7 @@ class StateCheckSumErrorReporterTest {
     stateCheckSumErrorReporter =
       StateCheckSumErrorReporter(
         Optional.of(jobErrorReportingClient),
-        airbyteVersion,
-        airbyteEdition,
+        airbyteConfig,
         airbyteApiClient,
         webUrlHelper,
       )
@@ -221,8 +222,7 @@ class StateCheckSumErrorReporterTest {
     stateCheckSumErrorReporter =
       StateCheckSumErrorReporter(
         Optional.of(jobErrorReportingClient),
-        airbyteVersion,
-        airbyteEdition,
+        airbyteConfig,
         airbyteApiClient,
         webUrlHelper,
       )

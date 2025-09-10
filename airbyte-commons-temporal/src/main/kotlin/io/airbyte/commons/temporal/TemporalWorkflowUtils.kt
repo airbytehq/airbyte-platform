@@ -5,8 +5,8 @@
 package io.airbyte.commons.temporal
 
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.commons.temporal.config.TemporalSdkTimeouts
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput
+import io.airbyte.micronaut.runtime.AirbyteTemporalConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.temporal.client.WorkflowOptions
 import io.temporal.common.RetryOptions
@@ -136,20 +136,16 @@ object TemporalWorkflowUtils {
   /**
    * Get workflow service client.
    *
-   * @param temporalHost temporal host
-   * @param temporalSdkTimeouts The SDK RPC timeouts
+   * @param airbyteTemporalConfig The Airbyte Temporal configuration
    * @return temporal service client
    */
   @VisibleForTesting
-  fun getAirbyteTemporalOptions(
-    temporalHost: String?,
-    temporalSdkTimeouts: TemporalSdkTimeouts,
-  ): WorkflowServiceStubsOptions =
+  fun getAirbyteTemporalOptions(airbyteTemporalConfig: AirbyteTemporalConfig): WorkflowServiceStubsOptions =
     WorkflowServiceStubsOptions
       .newBuilder()
-      .setRpcTimeout(temporalSdkTimeouts.rpcTimeout)
-      .setRpcLongPollTimeout(temporalSdkTimeouts.rpcLongPollTimeout)
-      .setRpcQueryTimeout(temporalSdkTimeouts.rpcQueryTimeout)
-      .setTarget(temporalHost)
+      .setRpcTimeout(airbyteTemporalConfig.sdk.timeouts.rpcTimeout)
+      .setRpcLongPollTimeout(airbyteTemporalConfig.sdk.timeouts.rpcLongPollTimeout)
+      .setRpcQueryTimeout(airbyteTemporalConfig.sdk.timeouts.rpcQueryTimeout)
+      .setTarget(airbyteTemporalConfig.host)
       .build()
 }

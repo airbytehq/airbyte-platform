@@ -12,8 +12,8 @@ import com.launchdarkly.sdk.ContextKind
 import com.launchdarkly.sdk.LDContext
 import com.launchdarkly.sdk.server.LDClient
 import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.micronaut.runtime.AirbyteFeatureFlagConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Secondary
 import jakarta.inject.Inject
@@ -100,15 +100,6 @@ internal const val CONFIG_FF_CLIENT = "airbyte.feature-flag.client"
 internal const val CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY = "launchdarkly"
 internal const val CONFIG_FF_CLIENT_VAL_FFS = "ffs"
 
-/** Config key to provide the api-key as required by the [LaunchDarklyClient]. */
-internal const val CONFIG_FF_APIKEY = "airbyte.feature-flag.api-key"
-
-/** Config key to provide the location of the flags config file used by the [ConfigFileClient]. */
-internal const val CONFIG_FF_PATH = "airbyte.feature-flag.path"
-
-/** Config key to provide the base URL used by the [FeatureFlagServiceClient] */
-internal const val CONFIG_FF_BASEURL = "airbyte.feature-flag.base-url"
-
 /**
  * A file-based feature flag client that reads flag configurations from YAML files.
  *
@@ -136,7 +127,7 @@ internal const val CONFIG_FF_BASEURL = "airbyte.feature-flag.base-url"
 @Requires(property = CONFIG_FF_CLIENT, notEquals = CONFIG_FF_CLIENT_VAL_FFS)
 @Requires(property = CONFIG_FF_CLIENT, notEquals = CONFIG_FF_CLIENT_VAL_LAUNCHDARKLY)
 class ConfigFileClient(
-  @Property(name = CONFIG_FF_PATH) config: Path?,
+  airbyteFeatureFlagConfig: AirbyteFeatureFlagConfig,
 ) : FeatureFlagClient {
   /** [flags] holds the mappings of the flag-name to the flag properties */
   private var flags: Map<String, ConfigFileFlag> = mapOf()
@@ -145,14 +136,14 @@ class ConfigFileClient(
   private val lock = ReentrantReadWriteLock()
 
   init {
-    config?.also { path ->
+    airbyteFeatureFlagConfig.path.also { path ->
       when {
         path.notExists() -> log.info { "path $path does not exist, will return default flag values" }
         !path.isRegularFile() -> log.info { "path $path does not reference a file, will return default values" }
         else -> {
           flags = readConfig(path)
           path.onChange {
-            lock.write { flags = readConfig(config) }
+            lock.write { flags = readConfig(path) }
           }
         }
       }
@@ -253,7 +244,7 @@ class LaunchDarklyClient(
 @Requires(property = CONFIG_FF_CLIENT, value = CONFIG_FF_CLIENT_VAL_FFS)
 class FeatureFlagServiceClient(
   @Named("ffsHttpClient") private val httpClient: OkHttpClient,
-  @Property(name = CONFIG_FF_BASEURL) private val baseUrl: String,
+  private val airbyteFeatureFlagConfig: AirbyteFeatureFlagConfig,
 ) : FeatureFlagClient {
   private val basePath = "/api/v1/feature-flags"
 
@@ -279,7 +270,7 @@ class FeatureFlagServiceClient(
     val request =
       Request
         .Builder()
-        .url("$baseUrl$basePath/$key/evaluate?${context.toQueryParams()}")
+        .url("${airbyteFeatureFlagConfig.baseUrl}$basePath/$key/evaluate?${context.toQueryParams()}")
         .build()
     return httpClient.newCall(request).execute().use {
       if (it.code == 200) it.body?.string() else null

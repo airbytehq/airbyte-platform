@@ -5,9 +5,8 @@
 package io.airbyte.commons.server.authorization
 
 import com.auth0.jwt.algorithms.Algorithm
-import com.nimbusds.jwt.JWT
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.netty.NettyHttpHeaders
@@ -33,7 +32,7 @@ import java.util.function.Predicate
 internal class KeycloakTokenValidatorTest {
   private lateinit var keycloakTokenValidator: KeycloakTokenValidator
   private lateinit var httpClient: OkHttpClient
-  private lateinit var keycloakConfiguration: AirbyteKeycloakConfiguration
+  private lateinit var keycloakConfiguration: AirbyteKeycloakConfig
   private lateinit var authenticationFactory: JwtAuthenticationFactory
 
   @BeforeEach

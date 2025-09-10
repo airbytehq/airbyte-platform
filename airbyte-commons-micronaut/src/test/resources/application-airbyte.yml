@@ -1,0 +1,12 @@
+airbyte:
+  acceptance-test-enabled: true
+  airbyte-url: "http://some-url"
+  deployment-environment: "test"
+  license-key: "test-license-key"
+  edition: "enterprise"
+  role: "test-user"
+  version: "dev-test"
+  workspace-root: "/workspace-test"
+  protocol:
+    min-version: "0.0.1"
+    max-version: "0.0.2"

@@ -4,6 +4,8 @@
 
 import dev.failsafe.RetryPolicy
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbytePodSweeperConfig
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.workload.launcher.PodSweeper
 import io.airbyte.workload.launcher.client.KubernetesClientWrapper
 import io.fabric8.kubernetes.api.model.Pod
@@ -77,7 +79,7 @@ class PodSweeperTest {
       .resource(runningPod)
       .create()
 
-    val sweeper = podSweeper(ttlMinutes, null, null)
+    val sweeper = podSweeper(ttlMinutes, -1, -1)
 
     // Act
     sweeper.sweepPods()
@@ -127,7 +129,7 @@ class PodSweeperTest {
       .resource(runningPod)
       .create()
 
-    val sweeper = podSweeper(ttlMinutes, null, null)
+    val sweeper = podSweeper(ttlMinutes, -1, -1)
 
     // Act
     sweeper.sweepPods()
@@ -177,7 +179,7 @@ class PodSweeperTest {
       .resource(succeededPod)
       .create()
 
-    val sweeper = podSweeper(null, succeededTtlMinutes, null)
+    val sweeper = podSweeper(-1, succeededTtlMinutes, -1)
 
     // Act
     sweeper.sweepPods()
@@ -226,7 +228,7 @@ class PodSweeperTest {
       .resource(failedPod)
       .create()
 
-    val sweeper = podSweeper(null, null, unsuccessfulTtlMinutes)
+    val sweeper = podSweeper(-1, -1, unsuccessfulTtlMinutes)
 
     // Act
     sweeper.sweepPods()
@@ -305,17 +307,24 @@ class PodSweeperTest {
   }
 
   private fun podSweeper(
-    runningTtL: Long?,
-    succeededTtl: Long?,
-    unSucceededTtl: Long?,
+    runningTtL: Long,
+    succeededTtl: Long,
+    unSucceededTtl: Long,
   ): PodSweeper =
     PodSweeper(
       KubernetesClientWrapper(client, mockRetryPolicy),
       mockMetricClient,
       Clock.systemUTC(),
-      "default",
-      runningTtL,
-      succeededTtl,
-      unSucceededTtl,
+      AirbyteWorkerConfig(
+        job =
+          AirbyteWorkerConfig.AirbyteWorkerJobConfig(
+            kubernetes = AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig(namespace = "default"),
+          ),
+      ),
+      AirbytePodSweeperConfig(
+        runningTtl = runningTtL,
+        succeededTtl = succeededTtl,
+        unsuccessfulTtl = unSucceededTtl,
+      ),
     )
 }

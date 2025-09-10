@@ -17,6 +17,7 @@ import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.micronaut.runtime.AirbyteApiConfig
 import io.airbyte.publicApi.server.generated.models.EmailNotificationConfig
 import io.airbyte.publicApi.server.generated.models.NotificationConfig
 import io.airbyte.publicApi.server.generated.models.NotificationsConfig
@@ -38,7 +39,6 @@ import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.airbyte.server.apis.publicapi.mappers.WorkspaceResponseMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Secondary
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import jakarta.ws.rs.core.Response
 import java.util.UUID
@@ -94,7 +94,7 @@ open class WorkspaceServiceImpl(
   private val userService: UserService,
   private val trackingHelper: TrackingHelper,
   private val workspacesHandler: WorkspacesHandler,
-  @Value("\${airbyte.api.host}") open val publicApiHost: String,
+  private val airbyteApiConfig: AirbyteApiConfig,
   private val currentUserService: CurrentUserService,
   private val dataplaneGroupService: DataplaneGroupService,
 ) : WorkspaceService {
@@ -320,7 +320,7 @@ open class WorkspaceServiceImpl(
       includeDeleted,
       limit,
       offset,
-      publicApiHost,
+      airbyteApiConfig.host,
     )
   }
 

@@ -5,6 +5,7 @@
 package io.airbyte.commons.temporal
 
 import io.airbyte.commons.concurrency.VoidCallable
+import io.airbyte.micronaut.runtime.AirbyteTemporalConfig
 import io.micrometer.core.instrument.MeterRegistry
 import io.temporal.activity.Activity
 import io.temporal.activity.ActivityCancellationType
@@ -37,7 +38,8 @@ import java.util.function.Supplier
 internal class TemporalUtilsTest {
   @Test
   fun testWaitForTemporalServerAndLogThrowsException() {
-    val temporalUtils = TemporalUtils(null, null, false, null, null, null, 10, Optional.empty<MeterRegistry>())
+    val airbyteTemporalConfig = AirbyteTemporalConfig(retention = 10)
+    val temporalUtils = TemporalUtils(airbyteTemporalConfig = airbyteTemporalConfig, meterRegistry = Optional.empty<MeterRegistry>())
     val workflowServiceStubs = Mockito.mock(WorkflowServiceStubs::class.java, Mockito.RETURNS_DEEP_STUBS)
     val describeNamespaceResponse = Mockito.mock(DescribeNamespaceResponse::class.java)
     val namespaceInfo = Mockito.mock(NamespaceInfo::class.java)
@@ -63,7 +65,8 @@ internal class TemporalUtilsTest {
 
   @Test
   fun testWaitThatTimesOut() {
-    val temporalUtils = TemporalUtils(null, null, false, null, null, null, 10, Optional.empty<MeterRegistry>())
+    val airbyteTemporalConfig = AirbyteTemporalConfig(retention = 10)
+    val temporalUtils = TemporalUtils(airbyteTemporalConfig = airbyteTemporalConfig, meterRegistry = Optional.empty<MeterRegistry>())
     val workflowServiceStubs = Mockito.mock(WorkflowServiceStubs::class.java, Mockito.RETURNS_DEEP_STUBS)
     val describeNamespaceResponse = Mockito.mock(DescribeNamespaceResponse::class.java)
     val namespaceInfo = Mockito.mock(NamespaceInfo::class.java)

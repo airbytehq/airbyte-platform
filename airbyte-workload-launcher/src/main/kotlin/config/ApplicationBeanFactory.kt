@@ -8,9 +8,9 @@ import dev.failsafe.RetryPolicy
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.micronaut.runtime.AirbyteKubernetesConfig
 import io.fabric8.kubernetes.client.KubernetesClientTimeoutException
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import okhttp3.internal.http2.StreamResetException
@@ -38,8 +38,7 @@ class ApplicationBeanFactory {
   @Singleton
   @Named("kubernetesClientRetryPolicy")
   fun kubernetesClientRetryPolicy(
-    @Value("\${airbyte.kubernetes.client.retries.delay-seconds}") retryDelaySeconds: Long,
-    @Value("\${airbyte.kubernetes.client.retries.max}") maxRetries: Int,
+    airbyteKubernetesConfig: AirbyteKubernetesConfig,
     @Named("kubeHttpErrorRetryPredicate") predicate: (Throwable) -> Boolean,
     metricClient: MetricClient,
   ): RetryPolicy<Any> =
@@ -51,7 +50,11 @@ class ApplicationBeanFactory {
           metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_API_CLIENT_RETRY,
           attributes =
             arrayOf(
-              MetricAttribute("max_retries", maxRetries.toString()),
+              MetricAttribute(
+                "max_retries",
+                airbyteKubernetesConfig.client.retries.max
+                  .toString(),
+              ),
               MetricAttribute("retry_attempt", l.attemptCount.toString()),
               l.lastException.message?.let { m ->
                 MetricAttribute("exception_message", m)
@@ -64,7 +67,11 @@ class ApplicationBeanFactory {
           metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_API_CLIENT_ABORT,
           attributes =
             arrayOf(
-              MetricAttribute("max_retries", maxRetries.toString()),
+              MetricAttribute(
+                "max_retries",
+                airbyteKubernetesConfig.client.retries.max
+                  .toString(),
+              ),
               MetricAttribute("retry_attempt", l.attemptCount.toString()),
             ),
         )
@@ -73,7 +80,11 @@ class ApplicationBeanFactory {
           metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_API_CLIENT_FAILED,
           attributes =
             arrayOf(
-              MetricAttribute("max_retries", maxRetries.toString()),
+              MetricAttribute(
+                "max_retries",
+                airbyteKubernetesConfig.client.retries.max
+                  .toString(),
+              ),
               MetricAttribute("retry_attempt", l.attemptCount.toString()),
             ),
         )
@@ -82,12 +93,16 @@ class ApplicationBeanFactory {
           metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_API_CLIENT_SUCCESS,
           attributes =
             arrayOf(
-              MetricAttribute("max_retries", maxRetries.toString()),
+              MetricAttribute(
+                "max_retries",
+                airbyteKubernetesConfig.client.retries.max
+                  .toString(),
+              ),
               MetricAttribute("retry_attempt", l.attemptCount.toString()),
             ),
         )
-      }.withDelay(Duration.ofSeconds(retryDelaySeconds))
-      .withMaxRetries(maxRetries)
+      }.withDelay(Duration.ofSeconds(airbyteKubernetesConfig.client.retries.delaySeconds))
+      .withMaxRetries(airbyteKubernetesConfig.client.retries.max)
       .build()
 
   @Singleton

@@ -1,0 +1,10 @@
+airbyte:
+  data-plane:
+    credentials:
+      client-id-secret-key: test-client-id-secret-key
+      client-id-secret-name: test-client-id-secret-name
+      client-secret-secret-key: test-client-secret-secret-key
+      client-secret-secret-name: test-client-secret-secret-name
+    service-account:
+      credentials-path: test-credentials-path
+      email: test@airbyte.io

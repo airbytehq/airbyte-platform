@@ -14,9 +14,11 @@ import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService
 import io.airbyte.data.services.ServiceAccountsService
 import io.airbyte.data.services.shared.DataplaneWithServiceAccount
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Property
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -28,11 +30,9 @@ class DataplaneInitializer(
   private val groupService: DataplaneGroupService,
   private val serviceAccountsService: ServiceAccountsService,
   private val k8sClient: KubernetesClient,
-  private val edition: AirbyteEdition,
-  @Property(name = "airbyte.auth.kubernetes-secret.name") private val secretName: String,
-  @Property(name = "airbyte.auth.dataplane-credentials.client-id-secret-key") private val clientIdSecretKey: String,
-  @Property(name = "airbyte.auth.dataplane-credentials.client-secret-secret-key") private val clientSecretSecretKey: String,
-  @Property(name = "airbyte.worker.job.kube.namespace") private val jobsNamespace: String,
+  private val airbyteConfig: AirbyteConfig,
+  private val airbyteAuthConfig: AirbyteAuthConfig,
+  private val airbyteWorkerConfig: AirbyteWorkerConfig,
 ) {
   /**
    * Creates a dataplane if the following conditions are met
@@ -63,19 +63,22 @@ class DataplaneInitializer(
 
     // Cloud puts dataplane pods in the jobs namespace, so we need to copy the secret containing
     // the dataplane credentials to the jobs namespace.
-    if (edition == AirbyteEdition.CLOUD && jobsNamespace.isNotBlank()) {
-      log.info { "Copying secret $secretName to jobs namespace" }
+    if (airbyteConfig.edition == AirbyteEdition.CLOUD &&
+      airbyteWorkerConfig.job.kubernetes.namespace
+        .isNotBlank()
+    ) {
+      log.info { "Copying secret ${airbyteAuthConfig.kubernetesSecret.name} to jobs namespace" }
       K8sSecretHelper.copySecretToNamespace(
         k8sClient,
-        secretName,
+        airbyteAuthConfig.kubernetesSecret.name,
         k8sClient.namespace,
-        jobsNamespace,
+        airbyteWorkerConfig.job.kubernetes.namespace,
       )
     }
   }
 
   private fun getOneGroup(): DataplaneGroup? =
-    when (edition) {
+    when (airbyteConfig.edition) {
       AirbyteEdition.CLOUD ->
         groupService.getDataplaneGroupByOrganizationIdAndName(
           DEFAULT_ORGANIZATION_ID,
@@ -96,11 +99,11 @@ class DataplaneInitializer(
 
   private fun isValidServiceAccount(): Boolean {
     // Get the secret that stores the credentials.
-    val secret = K8sSecretHelper.getAndDecodeSecret(k8sClient, secretName)
+    val secret = K8sSecretHelper.getAndDecodeSecret(k8sClient, airbyteAuthConfig.kubernetesSecret.name)
 
     // Check to see whether the secret contains credentials that match an existing service account.
-    val clientId = secret?.get(clientIdSecretKey)
-    val clientSecret = secret?.get(clientSecretSecretKey)
+    val clientId = secret?.get(airbyteAuthConfig.dataplaneCredentials.clientIdSecretKey)
+    val clientSecret = secret?.get(airbyteAuthConfig.dataplaneCredentials.clientSecretSecretKey)
 
     if (clientId == null || clientSecret == null) {
       return false
@@ -109,7 +112,7 @@ class DataplaneInitializer(
     try {
       serviceAccountsService.getAndVerify(UUID.fromString(clientId), clientSecret)
       return true
-    } catch (e: Exception) {
+    } catch (_: Exception) {
       return false
     }
   }
@@ -133,14 +136,14 @@ class DataplaneInitializer(
   }
 
   /**
-   * Creates or updates a k8s secret [secretName] with the [DataplaneClientCredentials].
+   * Creates or updates a k8s secret [AirbyteBootloaderAuthConfiguration.AirbyteAuthKubernetesSecretConfiguration.name] with the [DataplaneClientCredentials].
    */
   private fun createK8sSecret(dataplaneWithServiceAccount: DataplaneWithServiceAccount) {
     val secretData =
       mapOf(
-        clientIdSecretKey to dataplaneWithServiceAccount.serviceAccount.id.toString(),
-        clientSecretSecretKey to dataplaneWithServiceAccount.serviceAccount.secret,
+        airbyteAuthConfig.dataplaneCredentials.clientIdSecretKey to dataplaneWithServiceAccount.serviceAccount.id.toString(),
+        airbyteAuthConfig.dataplaneCredentials.clientSecretSecretKey to dataplaneWithServiceAccount.serviceAccount.secret,
       )
-    K8sSecretHelper.createOrUpdateSecret(k8sClient, secretName, secretData)
+    K8sSecretHelper.createOrUpdateSecret(k8sClient, airbyteAuthConfig.kubernetesSecret.name, secretData)
   }
 }

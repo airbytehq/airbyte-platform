@@ -9,6 +9,8 @@ import io.airbyte.commons.workers.config.ResourceType
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.commons.workers.config.WorkerConfigsProvider
 import io.airbyte.config.ResourceRequirements
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.workload.launcher.pods.KubeContainerInfo
 import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.Toleration
@@ -17,8 +19,6 @@ import io.fabric8.kubernetes.client.KubernetesClient
 import io.fabric8.kubernetes.client.KubernetesClientBuilder
 import io.fabric8.kubernetes.client.utils.KubernetesSerialization
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Value
-import io.micronaut.core.util.StringUtils
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.concurrent.ExecutorService
@@ -47,98 +47,86 @@ class ContainerConfigBeanFactory {
   @Singleton
   @Named("containerOrchestratorImage")
   fun containerOrchestratorImage(
-    @Value("\${airbyte.version}") airbyteVersion: String,
-    @Value("\${airbyte.worker.job.kube.main.container.image}") injectedImage: String?,
-  ): String {
-    if (injectedImage != null && StringUtils.isNotEmpty(injectedImage)) {
-      return injectedImage
+    airbyteConfig: AirbyteConfig,
+    airbyteWorkerConfig: AirbyteWorkerConfig,
+  ): String =
+    airbyteWorkerConfig.job.kubernetes.main.container.image.ifBlank {
+      "airbyte/container-orchestrator:${airbyteConfig.version}"
     }
-
-    return "airbyte/container-orchestrator:$airbyteVersion"
-  }
 
   @Singleton
   @Named("connectorSidecarImage")
   fun connectorSidecarImage(
-    @Value("\${airbyte.version}") airbyteVersion: String,
-    @Value("\${airbyte.worker.job.kube.sidecar.container.image}") injectedImage: String?,
-  ): String {
-    if (injectedImage != null && StringUtils.isNotEmpty(injectedImage)) {
-      return injectedImage
+    airbyteConfig: AirbyteConfig,
+    airbyteWorkerConfig: AirbyteWorkerConfig,
+  ): String =
+    airbyteWorkerConfig.job.kubernetes.sidecar.container.image.ifBlank {
+      if (airbyteConfig.version.endsWith("-cloud")) {
+        "airbyte/connector-sidecar:${airbyteConfig.version.dropLast(6)}"
+      } else {
+        "airbyte/connector-sidecar:${airbyteConfig.version}"
+      }
     }
-
-    return if (airbyteVersion.endsWith("-cloud")) {
-      "airbyte/connector-sidecar:${airbyteVersion.dropLast(6)}"
-    } else {
-      "airbyte/connector-sidecar:$airbyteVersion"
-    }
-  }
 
   @Singleton
   @Named("initContainerImage")
   fun initContainerImage(
-    @Value("\${airbyte.version}") airbyteVersion: String,
-    @Value("\${airbyte.worker.job.kube.init.container.image}") injectedImage: String?,
-  ): String {
-    if (injectedImage != null && StringUtils.isNotEmpty(injectedImage)) {
-      return injectedImage
+    airbyteConfig: AirbyteConfig,
+    airbyteWorkerConfig: AirbyteWorkerConfig,
+  ): String =
+    airbyteWorkerConfig.job.kubernetes.init.container.image.ifBlank {
+      if (airbyteConfig.version.endsWith("-cloud")) {
+        "airbyte/workload-init-container:${airbyteConfig.version.dropLast(6)}"
+      } else {
+        "airbyte/workload-init-container:${airbyteConfig.version}"
+      }
     }
-
-    return if (airbyteVersion.endsWith("-cloud")) {
-      "airbyte/workload-init-container:${airbyteVersion.dropLast(6)}"
-    } else {
-      "airbyte/workload-init-container:$airbyteVersion"
-    }
-  }
 
   @Singleton
   @Named("profilerContainerImage")
   fun profilerContainerImage(
-    @Value("\${airbyte.version}") airbyteVersion: String,
-    @Value("\${airbyte.worker.job.kube.profiler.container.image}") injectedImage: String?,
-  ): String {
-    if (injectedImage != null && StringUtils.isNotEmpty(injectedImage)) {
-      return injectedImage
+    airbyteConfig: AirbyteConfig,
+    airbyteWorkerConfig: AirbyteWorkerConfig,
+  ): String =
+    airbyteWorkerConfig.job.kubernetes.profiler.container.image.ifBlank {
+      if (airbyteConfig.version.endsWith("-cloud")) {
+        "airbyte/async-profiler:${airbyteConfig.version.dropLast(6)}"
+      } else {
+        "airbyte/async-profiler:${airbyteConfig.version}"
+      }
     }
-
-    return if (airbyteVersion.endsWith("-cloud")) {
-      "airbyte/async-profiler:${airbyteVersion.dropLast(6)}"
-    } else {
-      "airbyte/async-profiler:$airbyteVersion"
-    }
-  }
 
   @Singleton
   @Named("orchestratorKubeContainerInfo")
   fun orchestratorKubeContainerInfo(
     @Named("containerOrchestratorImage") containerOrchestratorImage: String,
-    @Value("\${airbyte.worker.job.kube.main.container.image-pull-policy}") containerOrchestratorImagePullPolicy: String,
+    airbyteWorkerConfig: AirbyteWorkerConfig,
   ): KubeContainerInfo =
     KubeContainerInfo(
       containerOrchestratorImage,
-      containerOrchestratorImagePullPolicy,
+      airbyteWorkerConfig.job.kubernetes.main.container.imagePullPolicy,
     )
 
   @Singleton
   @Named("sidecarKubeContainerInfo")
   fun sidecarKubeContainerInfo(
     @Named("connectorSidecarImage") connectorSidecarImage: String,
-    @Value("\${airbyte.worker.job.kube.sidecar.container.image-pull-policy}") connectorSidecarImagePullPolicy: String,
-  ): KubeContainerInfo = KubeContainerInfo(connectorSidecarImage, connectorSidecarImagePullPolicy)
+    airbyteWorkerConfig: AirbyteWorkerConfig,
+  ): KubeContainerInfo = KubeContainerInfo(connectorSidecarImage, airbyteWorkerConfig.job.kubernetes.sidecar.container.imagePullPolicy)
 
   @Singleton
   @Named("profilerKubeContainerInfo")
   fun profilerKubeContainerInfo(
     @Named("profilerContainerImage") profilerContainerImage: String,
-    @Value("\${airbyte.worker.job.kube.profiler.container.image-pull-policy}") profilerImagePullPolicy: String,
-  ): KubeContainerInfo = KubeContainerInfo(profilerContainerImage, profilerImagePullPolicy)
+    airbyteWorkerConfig: AirbyteWorkerConfig,
+  ): KubeContainerInfo = KubeContainerInfo(profilerContainerImage, airbyteWorkerConfig.job.kubernetes.profiler.container.imagePullPolicy)
 
   @Singleton
   @Named("initContainerInfo")
   fun initContainerInfo(
     @Named("initContainerImage") initContainerImage: String,
-    @Value("\${airbyte.worker.job.kube.sidecar.container.image-pull-policy}") initContainerImagePullPolicy: String,
-  ): KubeContainerInfo = KubeContainerInfo(initContainerImage, initContainerImagePullPolicy)
+    airbyteWorkerConfig: AirbyteWorkerConfig,
+  ): KubeContainerInfo = KubeContainerInfo(initContainerImage, airbyteWorkerConfig.job.kubernetes.init.container.imagePullPolicy)
 
   @Singleton
   @Named("replicationWorkerConfigs")
@@ -159,90 +147,62 @@ class ContainerConfigBeanFactory {
 
   @Singleton
   @Named("checkConnectorReqs")
-  fun checkConnectorReqs(
-    @Value("\${airbyte.worker.kube-job-configs.check.cpu-limit}") cpuLimit: String,
-    @Value("\${airbyte.worker.kube-job-configs.check.cpu-request}") cpuRequest: String,
-    @Value("\${airbyte.worker.kube-job-configs.check.memory-limit}") memoryLimit: String,
-    @Value("\${airbyte.worker.kube-job-configs.check.memory-request}") memoryRequest: String,
-  ): ResourceRequirements =
+  fun checkConnectorReqs(airbyteWorkerConfig: AirbyteWorkerConfig): ResourceRequirements =
     ResourceRequirements()
-      .withCpuLimit(cpuLimit)
-      .withCpuRequest(cpuRequest)
-      .withMemoryLimit(memoryLimit)
-      .withMemoryRequest(memoryRequest)
+      .withCpuLimit(airbyteWorkerConfig.kubeJobConfigs.find { it.name == "check" }?.cpuLimit)
+      .withCpuRequest(airbyteWorkerConfig.kubeJobConfigs.find { it.name == "check" }?.cpuRequest)
+      .withMemoryLimit(airbyteWorkerConfig.kubeJobConfigs.find { it.name == "check" }?.memoryLimit)
+      .withMemoryRequest(airbyteWorkerConfig.kubeJobConfigs.find { it.name == "check" }?.memoryRequest)
 
   @Singleton
   @Named("profilerReqs")
-  fun profilerReqs(
-    @Value("\${airbyte.worker.job.kube.profiler.container.cpu-limit}") cpuLimit: String,
-    @Value("\${airbyte.worker.job.kube.profiler.container.cpu-request}") cpuRequest: String,
-    @Value("\${airbyte.worker.job.kube.profiler.container.memory-limit}") memoryLimit: String,
-    @Value("\${airbyte.worker.job.kube.profiler.container.memory-request}") memoryRequest: String,
-  ): ResourceRequirements =
+  fun profilerReqs(airbyteWorkerConfig: AirbyteWorkerConfig): ResourceRequirements =
     ResourceRequirements()
-      .withCpuLimit(cpuLimit)
-      .withCpuRequest(cpuRequest)
-      .withMemoryLimit(memoryLimit)
-      .withMemoryRequest(memoryRequest)
+      .withCpuLimit(airbyteWorkerConfig.job.kubernetes.profiler.container.cpuLimit)
+      .withCpuRequest(airbyteWorkerConfig.job.kubernetes.profiler.container.cpuRequest)
+      .withMemoryLimit(airbyteWorkerConfig.job.kubernetes.profiler.container.memoryLimit)
+      .withMemoryRequest(airbyteWorkerConfig.job.kubernetes.profiler.container.memoryRequest)
 
   @Singleton
   @Named("discoverConnectorReqs")
-  fun discoverConnectorReqs(
-    @Value("\${airbyte.worker.kube-job-configs.discover.cpu-limit}") cpuLimit: String,
-    @Value("\${airbyte.worker.kube-job-configs.discover.cpu-request}") cpuRequest: String,
-    @Value("\${airbyte.worker.kube-job-configs.discover.memory-limit}") memoryLimit: String,
-    @Value("\${airbyte.worker.kube-job-configs.discover.memory-request}") memoryRequest: String,
-  ): ResourceRequirements =
+  fun discoverConnectorReqs(airbyteWorkerConfig: AirbyteWorkerConfig): ResourceRequirements =
     ResourceRequirements()
-      .withCpuLimit(cpuLimit)
-      .withCpuRequest(cpuRequest)
-      .withMemoryLimit(memoryLimit)
-      .withMemoryRequest(memoryRequest)
+      .withCpuLimit(airbyteWorkerConfig.kubeJobConfigs.find { it.name == "discover" }?.cpuLimit)
+      .withCpuRequest(airbyteWorkerConfig.kubeJobConfigs.find { it.name == "discover" }?.cpuRequest)
+      .withMemoryLimit(airbyteWorkerConfig.kubeJobConfigs.find { it.name == "discover" }?.memoryLimit)
+      .withMemoryRequest(airbyteWorkerConfig.kubeJobConfigs.find { it.name == "discover" }?.memoryRequest)
 
   @Singleton
   @Named("specConnectorReqs")
-  fun specConnectorReqs(
-    @Value("\${airbyte.worker.kube-job-configs.spec.cpu-limit}") cpuLimit: String,
-    @Value("\${airbyte.worker.kube-job-configs.spec.cpu-request}") cpuRequest: String,
-    @Value("\${airbyte.worker.kube-job-configs.spec.memory-limit}") memoryLimit: String,
-    @Value("\${airbyte.worker.kube-job-configs.spec.memory-request}") memoryRequest: String,
-  ): ResourceRequirements =
+  fun specConnectorReqs(airbyteWorkerConfig: AirbyteWorkerConfig): ResourceRequirements =
     ResourceRequirements()
-      .withCpuLimit(cpuLimit)
-      .withCpuRequest(cpuRequest)
-      .withMemoryLimit(memoryLimit)
-      .withMemoryRequest(memoryRequest)
+      .withCpuLimit(airbyteWorkerConfig.kubeJobConfigs.find { it.name == "spec" }?.cpuLimit)
+      .withCpuRequest(airbyteWorkerConfig.kubeJobConfigs.find { it.name == "spec" }?.cpuRequest)
+      .withMemoryLimit(airbyteWorkerConfig.kubeJobConfigs.find { it.name == "spec" }?.memoryLimit)
+      .withMemoryRequest(airbyteWorkerConfig.kubeJobConfigs.find { it.name == "spec" }?.memoryRequest)
 
   @Singleton
   @Named("sidecarReqs")
-  fun sidecarReqs(
-    @Value("\${airbyte.worker.connector-sidecar.resources.cpu-limit}") cpuLimit: String,
-    @Value("\${airbyte.worker.connector-sidecar.resources.cpu-request}") cpuRequest: String,
-    @Value("\${airbyte.worker.connector-sidecar.resources.memory-limit}") memoryLimit: String,
-    @Value("\${airbyte.worker.connector-sidecar.resources.memory-request}") memoryRequest: String,
-  ): ResourceRequirements =
+  fun sidecarReqs(airbyteWorkerConfig: AirbyteWorkerConfig): ResourceRequirements =
     ResourceRequirements()
-      .withCpuLimit(cpuLimit)
-      .withCpuRequest(cpuRequest)
-      .withMemoryLimit(memoryLimit)
-      .withMemoryRequest(memoryRequest)
+      .withCpuLimit(airbyteWorkerConfig.connectorSidecar.resources.cpuLimit)
+      .withCpuRequest(airbyteWorkerConfig.connectorSidecar.resources.cpuRequest)
+      .withMemoryLimit(airbyteWorkerConfig.connectorSidecar.resources.memoryLimit)
+      .withMemoryRequest(airbyteWorkerConfig.connectorSidecar.resources.memoryRequest)
 
   @Singleton
   @Named("fileTransferReqs")
-  fun fileTransferReqs(
-    @Value("\${airbyte.worker.file-transfer.resources.ephemeral-storage-limit}") ephemeralStorageLimit: String,
-    @Value("\${airbyte.worker.file-transfer.resources.ephemeral-storage-request}") ephemeralStorageRequest: String,
-  ): ResourceRequirements =
+  fun fileTransferReqs(airbyteWorkerConfig: AirbyteWorkerConfig): ResourceRequirements =
     ResourceRequirements()
-      .withEphemeralStorageLimit(ephemeralStorageLimit)
-      .withEphemeralStorageRequest(ephemeralStorageRequest)
+      .withEphemeralStorageLimit(airbyteWorkerConfig.fileTransfer.resources.ephemeralStorageLimit)
+      .withEphemeralStorageRequest(airbyteWorkerConfig.fileTransfer.resources.ephemeralStorageRequest)
 
   @Singleton
   @Named("replicationPodTolerations")
   fun replicationPodTolerations(
     @Named("replicationWorkerConfigs") workerConfigs: WorkerConfigs,
   ): List<Toleration> {
-    if (workerConfigs.workerKubeTolerations.isNullOrEmpty()) {
+    if (workerConfigs.workerKubeTolerations.isEmpty()) {
       return listOf()
     }
     return workerConfigs.workerKubeTolerations
@@ -261,7 +221,7 @@ class ContainerConfigBeanFactory {
   fun checkPodTolerations(
     @Named("checkWorkerConfigs") workerConfigs: WorkerConfigs,
   ): List<Toleration> {
-    if (workerConfigs.workerKubeTolerations.isNullOrEmpty()) {
+    if (workerConfigs.workerKubeTolerations.isEmpty()) {
       return listOf()
     }
     return workerConfigs.workerKubeTolerations

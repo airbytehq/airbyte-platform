@@ -20,6 +20,7 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.TotalCompleteFailureLimit
 import io.airbyte.featureflag.TotalPartialFailureLimit
 import io.airbyte.featureflag.Workspace
+import io.airbyte.workers.runtime.AirbyteWorkerRetryConfig
 import io.micronaut.http.HttpStatus
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -36,6 +37,7 @@ internal class RetryStateClientTest {
   private lateinit var mJobRetryStatesApi: JobRetryStatesApi
   private lateinit var mWorkspaceApi: WorkspaceApi
   private lateinit var mFeatureFlagClient: FeatureFlagClient
+  private lateinit var airbyteWorkerRetryConfig: AirbyteWorkerRetryConfig
 
   @BeforeEach
   fun setup() {
@@ -45,6 +47,27 @@ internal class RetryStateClientTest {
     mFeatureFlagClient = Mockito.mock(TestClient::class.java)
     Mockito.`when`(mAirbyteApiClient.jobRetryStatesApi).thenReturn(mJobRetryStatesApi)
     Mockito.`when`(mAirbyteApiClient.workspaceApi).thenReturn(mWorkspaceApi)
+    airbyteWorkerRetryConfig =
+      AirbyteWorkerRetryConfig(
+        completeFailures =
+          AirbyteWorkerRetryConfig.AirbyteWorkerCompleteFailuresRetryConfig(
+            maxSuccessive = Fixtures.successiveCompleteFailureLimit,
+            maxTotal = Fixtures.totalCompleteFailureLimit,
+            backoff =
+              AirbyteWorkerRetryConfig
+                .AirbyteWorkerCompleteFailuresRetryConfig
+                .AirbyteWorkerCompleteFailuresBackoffRetryConfig(
+                  minIntervalS = Fixtures.minInterval,
+                  maxIntervalS = Fixtures.maxInterval,
+                  base = Fixtures.base,
+                ),
+          ),
+        partialFailures =
+          AirbyteWorkerRetryConfig.AirbyteWorkerPartialFailuresRetryConfig(
+            maxSuccessive = Fixtures.successivePartialFailureLimit,
+            maxTotal = Fixtures.totalPartialFailureLimit,
+          ),
+      )
   }
 
   @Test
@@ -110,13 +133,7 @@ internal class RetryStateClientTest {
       RetryStateClient(
         mAirbyteApiClient,
         mFeatureFlagClient,
-        Fixtures.successiveCompleteFailureLimit,
-        Fixtures.totalCompleteFailureLimit,
-        Fixtures.successivePartialFailureLimit,
-        Fixtures.totalPartialFailureLimit,
-        Fixtures.minInterval,
-        Fixtures.maxInterval,
-        Fixtures.base,
+        airbyteWorkerRetryConfig,
       )
 
     val manager = client.hydrateRetryState(Fixtures.jobId, Fixtures.workspaceId)
@@ -138,13 +155,7 @@ internal class RetryStateClientTest {
       RetryStateClient(
         mAirbyteApiClient,
         mFeatureFlagClient,
-        Fixtures.successiveCompleteFailureLimit,
-        Fixtures.totalCompleteFailureLimit,
-        Fixtures.successivePartialFailureLimit,
-        Fixtures.totalPartialFailureLimit,
-        Fixtures.minInterval,
-        Fixtures.maxInterval,
-        Fixtures.base,
+        airbyteWorkerRetryConfig,
       )
 
     Mockito
@@ -242,13 +253,7 @@ internal class RetryStateClientTest {
       RetryStateClient(
         mAirbyteApiClient,
         mFeatureFlagClient,
-        Fixtures.successiveCompleteFailureLimit,
-        Fixtures.totalCompleteFailureLimit,
-        Fixtures.successivePartialFailureLimit,
-        Fixtures.totalPartialFailureLimit,
-        Fixtures.minInterval,
-        Fixtures.maxInterval,
-        Fixtures.base,
+        airbyteWorkerRetryConfig,
       )
 
     val manager = client.hydrateRetryState(Fixtures.jobId, Fixtures.workspaceId)
@@ -270,13 +275,7 @@ internal class RetryStateClientTest {
       RetryStateClient(
         mAirbyteApiClient,
         mFeatureFlagClient,
-        Fixtures.successiveCompleteFailureLimit,
-        Fixtures.totalCompleteFailureLimit,
-        Fixtures.successivePartialFailureLimit,
-        Fixtures.totalPartialFailureLimit,
-        Fixtures.minInterval,
-        Fixtures.maxInterval,
-        Fixtures.base,
+        airbyteWorkerRetryConfig,
       )
 
     val manager = client.hydrateRetryState(Fixtures.jobId, Fixtures.workspaceId)
@@ -293,13 +292,7 @@ internal class RetryStateClientTest {
       RetryStateClient(
         mAirbyteApiClient,
         mFeatureFlagClient,
-        Fixtures.successiveCompleteFailureLimit,
-        Fixtures.totalCompleteFailureLimit,
-        Fixtures.successivePartialFailureLimit,
-        Fixtures.totalPartialFailureLimit,
-        Fixtures.minInterval,
-        Fixtures.maxInterval,
-        Fixtures.base,
+        airbyteWorkerRetryConfig,
       )
 
     val manager = client.hydrateRetryState(null, Fixtures.workspaceId)

@@ -21,6 +21,8 @@ import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.data.services.CatalogService
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.protocol.models.Jsons
@@ -53,8 +55,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import org.junitpioneer.jupiter.ClearSystemProperty.ClearSystemProperties
-import java.nio.file.Path
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
@@ -96,10 +96,13 @@ class CommandServiceTest {
         workloadQueueService = workloadQueueService,
         workloadOutputReader = workloadOutputReader,
         workspaceService = mockk(relaxed = true),
+        airbyteConfig = AirbyteConfig(workspaceRoot = "/test-root"),
+        airbyteWorkerConfig =
+          AirbyteWorkerConfig(
+            discover = AirbyteWorkerConfig.AirbyteWorkerDiscoverConfig(autoRefreshWindow = 0),
+          ),
         featureFlagClient = featureFlagClient,
-        workspaceRoot = Path.of("/test-root"),
         workloadIdGenerator = WorkloadIdGenerator(),
-        discoverAutoRefreshWindowMinutes = 0,
       )
   }
 

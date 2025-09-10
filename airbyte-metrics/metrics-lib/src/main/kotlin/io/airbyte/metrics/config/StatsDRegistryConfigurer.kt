@@ -7,9 +7,9 @@ package io.airbyte.metrics.config
 import io.airbyte.commons.version.AirbyteVersion
 import io.micrometer.statsd.StatsdMeterRegistry
 import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
 import io.micronaut.core.annotation.Order
 import io.micronaut.core.order.Ordered
+import io.micronaut.runtime.ApplicationConfiguration
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 
@@ -28,12 +28,12 @@ const val DATA_DOG_VERSION_TAG = "DD_VERSION"
 @io.micronaut.configuration.metrics.annotation.RequiresMetrics
 @Requires(property = "micronaut.metrics.export.statsd.enabled", value = "true", defaultValue = "false")
 class StatsDRegistryConfigurer(
-  @Value("\${micronaut.application.name}") private val applicationName: String,
   private val airbyteVersion: AirbyteVersion,
+  private val applicationConfiguration: ApplicationConfiguration,
 ) : io.micronaut.configuration.metrics.aggregator.MeterRegistryConfigurer<StatsdMeterRegistry>,
   Ordered {
   override fun configure(meterRegistry: StatsdMeterRegistry?) {
-    val serviceName = System.getenv().getOrDefault(DATA_DOG_SERVICE_TAG, applicationName)
+    val serviceName = System.getenv().getOrDefault(DATA_DOG_SERVICE_TAG, applicationConfiguration.name.get())
     val version = System.getenv().getOrDefault(DATA_DOG_VERSION_TAG, airbyteVersion.serialize())
 
     meterRegistry?.config()?.commonTags(

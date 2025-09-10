@@ -6,13 +6,11 @@ package io.airbyte.data.services.impls.data
 
 import io.airbyte.commons.auth.RequiresAuthMode
 import io.airbyte.commons.auth.config.AuthMode
-import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.commons.auth.roles.AuthRole
 import io.airbyte.config.Application
 import io.airbyte.config.AuthenticatedUser
-import io.airbyte.data.config.InstanceAdminConfig
 import io.airbyte.data.services.ApplicationService
-import io.micronaut.context.annotation.Property
+import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
 import jakarta.inject.Singleton
 import jakarta.ws.rs.BadRequestException
@@ -24,19 +22,16 @@ import java.util.UUID
 @Singleton
 @RequiresAuthMode(AuthMode.SIMPLE)
 class ApplicationServiceMicronautImpl(
-  private val instanceAdminConfig: InstanceAdminConfig,
-  private val tokenExpirationConfig: TokenExpirationConfig,
+  private val airbyteAuthConfig: AirbyteAuthConfig,
   private val jwtTokenGenerator: JwtTokenGenerator,
-  @Property(name = "airbyte.auth.token-issuer")
-  private val tokenIssuer: String,
 ) : ApplicationService {
   override fun listApplicationsByUser(user: AuthenticatedUser): List<Application> =
     listOf(
       Application()
         .withName(user.name + " Application")
         .withId(UUID.randomUUID().toString())
-        .withClientId(instanceAdminConfig.clientId)
-        .withClientSecret(instanceAdminConfig.clientSecret)
+        .withClientId(airbyteAuthConfig.instanceAdmin.clientId)
+        .withClientSecret(airbyteAuthConfig.instanceAdmin.clientSecret)
         .withCreatedOn(OffsetDateTime.now().toString()),
     )
 
@@ -44,14 +39,14 @@ class ApplicationServiceMicronautImpl(
     clientId: String,
     clientSecret: String,
   ): String {
-    if (clientId != instanceAdminConfig.clientId || clientSecret != instanceAdminConfig.clientSecret) {
+    if (clientId != airbyteAuthConfig.instanceAdmin.clientId || clientSecret != airbyteAuthConfig.instanceAdmin.clientSecret) {
       throw BadRequestException("Invalid client id or token")
     }
 
     return jwtTokenGenerator
       .generateToken(
         mapOf(
-          "iss" to tokenIssuer,
+          "iss" to airbyteAuthConfig.tokenIssuer,
           "aud" to "airbyte-server",
           "sub" to DEFAULT_AUTH_USER_ID,
           "roles" to AuthRole.getInstanceAdminRoles(),
@@ -59,7 +54,7 @@ class ApplicationServiceMicronautImpl(
             Instant
               .now()
               .plus(
-                tokenExpirationConfig.applicationTokenExpirationInMinutes,
+                airbyteAuthConfig.tokenExpiration.applicationTokenExpirationInMinutes,
                 ChronoUnit.MINUTES,
               ).epochSecond,
         ),

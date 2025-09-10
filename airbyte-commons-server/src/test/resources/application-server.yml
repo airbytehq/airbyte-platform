@@ -1,0 +1,15 @@
+airbyte:
+  server:
+    limits:
+      connections: 1
+      sources: 2
+      destinations: 3
+      workspaces: 4
+      users: 5
+    connection:
+      limits:
+        max-days-warning: 6
+        max-days: 10
+        max-jobs-warning: 11
+        max-jobs: 12
+        max-fields-per-connection: 13

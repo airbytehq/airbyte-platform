@@ -14,11 +14,12 @@ import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.airbyte.config.Organization
 import io.airbyte.config.ScopeType
+import io.airbyte.micronaut.runtime.AirbyteAnalyticsConfig
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.cache.annotation.CacheConfig
 import io.micronaut.cache.annotation.Cacheable
 import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
 import io.micronaut.http.context.ServerRequestContext
 import jakarta.annotation.PreDestroy
 import jakarta.inject.Named
@@ -109,8 +110,7 @@ class SegmentTrackingClient(
   private val segmentAnalyticsClient: SegmentAnalyticsClient,
   private val trackingIdentityFetcher: TrackingIdentityFetcher,
   private val deploymentFetcher: DeploymentFetcher,
-  @Value("\${airbyte.role}") val airbyteRole: String,
-  @Value("\${airbyte.installation-id}") val installationId: UUID? = null,
+  private val airbyteConfig: AirbyteConfig,
 ) : TrackingClient {
   override fun identify(
     scopeId: UUID,
@@ -132,8 +132,8 @@ class SegmentTrackingClient(
         trackingIdentity.email?.let { put("email", it) }
 
         // other
-        airbyteRole.takeIf { it.isNotBlank() }?.let { put(AIRBYTE_ROLE, it) }
-        installationId?.let { put(INSTALLATION_ID, it) }
+        airbyteConfig.role.takeIf { it.isNotBlank() }?.let { put(AIRBYTE_ROLE, it) }
+        airbyteConfig.installationId?.let { put(INSTALLATION_ID, it) }
       }
 
     val joinKey: String = trackingIdentity.customerId.toString()
@@ -176,7 +176,7 @@ class SegmentTrackingClient(
         if (metadata.isNotEmpty() && trackingIdentity.email != null) {
           put("email", trackingIdentity.email)
         }
-        installationId?.let { put(INSTALLATION_ID, it) }
+        airbyteConfig.installationId?.let { put(INSTALLATION_ID, it) }
       }
 
     val joinKey: String = trackingIdentity.customerId.toString()
@@ -214,14 +214,13 @@ class SegmentTrackingClient(
 @Singleton
 @Requires(property = "airbyte.tracking.strategy", pattern = "(?i)^segment$")
 class SegmentAnalyticsClient(
-  @Value("\${airbyte.tracking.flush-interval-sec:10}") flushInterval: Long,
-  @Value("\${airbyte.tracking.write-key}") writeKey: String,
+  airbyteAnalyticsConfiguration: AirbyteAnalyticsConfig,
   private val blockingShutdownAnalyticsPlugin: BlockingShutdownAnalyticsPlugin,
 ) {
   val analyticsClient: Analytics =
     Analytics
-      .builder(writeKey)
-      .flushInterval(flushInterval, TimeUnit.SECONDS)
+      .builder(airbyteAnalyticsConfiguration.writeKey)
+      .flushInterval(airbyteAnalyticsConfiguration.flushIntervalSec, TimeUnit.SECONDS)
       .plugin(blockingShutdownAnalyticsPlugin)
       .build()
 
@@ -244,7 +243,7 @@ class SegmentAnalyticsClient(
 @Singleton
 @Requires(property = "airbyte.tracking.strategy", pattern = "(?i)^segment$")
 class BlockingShutdownAnalyticsPlugin(
-  @Value("\${airbyte.tracking.flush-interval-sec:10}") private val flushInterval: Long,
+  private val airbyteAnalyticsConfiguration: AirbyteAnalyticsConfig,
 ) : Plugin {
   private val inflightMessageCount = AtomicLong(0L)
 
@@ -278,7 +277,7 @@ class BlockingShutdownAnalyticsPlugin(
   fun waitForFlush() {
     // Wait 2 x the flush interval for the flush to occur before moving along to avoid
     // blocking indefinitely on shutdown if something goes wrong
-    val timeout = flushInterval * 2
+    val timeout = airbyteAnalyticsConfiguration.flushIntervalSec * 2
 
     try {
       logger.info { "Waiting for Segment analytic client to flush enqueued messages..." }
@@ -294,7 +293,7 @@ class BlockingShutdownAnalyticsPlugin(
         }
       future.get(timeout, TimeUnit.SECONDS)
       logger.info { "Segment analytic client flush complete." }
-    } catch (e: TimeoutException) {
+    } catch (_: TimeoutException) {
       logger.warn { "Timed out waiting for Segment analytic client to flush enqueued messages (timeout = $timeout seconds)" }
       logger.warn { "There are ${inflightMessageCount.get()} remaining enqueued analytic message(s) that were not sent." }
     }

@@ -4,8 +4,8 @@
 
 package io.airbyte.api.client
 
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -18,10 +18,10 @@ import java.util.UUID
 @Singleton
 @Requires(property = "airbyte.airbyte-url")
 class WebUrlHelper(
-  @Value("\${airbyte.airbyte-url}") airbyteUrl: String,
+  airbyteConfig: AirbyteConfig,
 ) {
   // Original Java-based class exposed the base url, so preserving that functionality here
-  val baseUrl: String = airbyteUrl.trimEnd('/')
+  val baseUrl: String = airbyteConfig.airbyteUrl.trimEnd('/')
 
   /**
    * Get the url for a workspace.

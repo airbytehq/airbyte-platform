@@ -4,7 +4,7 @@
 
 package io.airbyte.keycloak.setup
 
-import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.client.BlockingHttpClient
@@ -29,7 +29,7 @@ internal class KeycloakSetupTest {
   private lateinit var keycloakServer: KeycloakServer
 
   @Mock
-  private lateinit var keycloakConfiguration: AirbyteKeycloakConfiguration
+  private lateinit var keycloakConfiguration: AirbyteKeycloakConfig
 
   @Mock
   private lateinit var configDbResetHelper: ConfigDbResetHelper

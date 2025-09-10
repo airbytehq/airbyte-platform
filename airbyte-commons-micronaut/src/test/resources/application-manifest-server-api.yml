@@ -1,0 +1,6 @@
+airbyte:
+  manifest-server-api:
+    base-path: http://localhost:8003
+    connect-timeout-seconds: 90
+    read-timeout-seconds: 150
+    signature-secret: test-signature-secret

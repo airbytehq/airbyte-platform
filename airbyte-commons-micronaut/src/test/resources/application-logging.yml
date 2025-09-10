@@ -1,0 +1,6 @@
+airbyte:
+  logging:
+    client:
+      log-tail-size: 50
+    log-level: DEBUG
+    s3-path-style-access: "test"
