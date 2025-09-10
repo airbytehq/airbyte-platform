@@ -5,11 +5,13 @@
 package io.airbyte.container.orchestrator.config
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.container.orchestrator.bookkeeping.state.MissingStateInjector
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.worker.DestinationReader
 import io.airbyte.container.orchestrator.worker.DestinationWriter
 import io.airbyte.container.orchestrator.worker.MessageProcessor
 import io.airbyte.container.orchestrator.worker.RecordSchemaValidator
+import io.airbyte.container.orchestrator.worker.ReplicationContextProvider
 import io.airbyte.container.orchestrator.worker.ReplicationWorkerContext
 import io.airbyte.container.orchestrator.worker.ReplicationWorkerHelper
 import io.airbyte.container.orchestrator.worker.ReplicationWorkerState
@@ -92,6 +94,9 @@ class OrchestratorBeanFactory {
     ClosableChannelQueue<AirbyteMessage>(context.bufferConfiguration.destinationMaxBufferSize)
 
   @Singleton
+  fun missingStateInjector(context: ReplicationContextProvider.Context) = MissingStateInjector(context)
+
+  @Singleton
   @Named("syncReplicationJobs")
   fun syncReplicationJobs(
     destination: AirbyteDestination,
@@ -101,6 +106,7 @@ class OrchestratorBeanFactory {
     source: AirbyteSource,
     @Named("sourceMessageQueue") sourceMessageQueue: ClosableChannelQueue<AirbyteMessage>,
     streamStatusCompletionTracker: StreamStatusCompletionTracker,
+    missingStateInjector: MissingStateInjector,
   ) = listOf(
     SourceReader(
       messagesFromSourceQueue = sourceMessageQueue,
@@ -108,6 +114,7 @@ class OrchestratorBeanFactory {
       replicationWorkerHelper = replicationWorkerHelper,
       source = source,
       streamStatusCompletionTracker = streamStatusCompletionTracker,
+      missingStateInjector = missingStateInjector,
     ),
     MessageProcessor(
       destinationQueue = destinationMessageQueue,

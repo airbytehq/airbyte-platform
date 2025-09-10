@@ -657,6 +657,7 @@ class ReplicationWorkerPortedTests {
       replicationWorkerHelper = replicationWorkerHelper,
       source = source,
       streamStatusCompletionTracker = streamStatusCompletionTracker,
+      missingStateInjector = null,
     ),
     MessageProcessor(
       destinationQueue = destinationMessageQueue,

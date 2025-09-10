@@ -46,6 +46,7 @@ class BookkeeperBeanFactory {
       replicationWorkerHelper = replicationWorkerHelper,
       source = source,
       streamStatusCompletionTracker = streamStatusCompletionTracker,
+      missingStateInjector = null,
     ),
     MessageProcessor(
       replicationWorkerHelper = replicationWorkerHelper,

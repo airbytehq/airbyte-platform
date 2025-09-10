@@ -29,6 +29,7 @@ import io.airbyte.container.orchestrator.bookkeeping.StateCheckSumCountEventHand
 import io.airbyte.container.orchestrator.bookkeeping.SyncStatsTracker
 import io.airbyte.container.orchestrator.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper
 import io.airbyte.container.orchestrator.bookkeeping.state.DefaultStateAggregator
+import io.airbyte.container.orchestrator.bookkeeping.state.MissingStateInjector
 import io.airbyte.container.orchestrator.bookkeeping.state.SingleStateAggregator
 import io.airbyte.container.orchestrator.bookkeeping.state.StreamStateAggregator
 import io.airbyte.container.orchestrator.bookkeeping.streamstatus.StreamStatusTracker
@@ -312,6 +313,7 @@ object ReplicationWorkerIntegrationTestUtil {
         attemptNumber = attempt,
       )
     val replicationInputFeatureFlagReader = ReplicationInputFeatureFlagReader(replicationInput)
+    val context = ReplicationContextProvider(attempt = attempt, jobId = jobId).provideContext(replicationInput)
     val replicationWorkerHelper =
       ReplicationWorkerHelper(
         fieldSelector =
@@ -343,7 +345,7 @@ object ReplicationWorkerIntegrationTestUtil {
         },
         RecordMapper(mappers),
         replicationWorkerState,
-        ReplicationContextProvider(attempt = attempt, jobId = jobId).provideContext(replicationInput),
+        context,
         StateEnricher(syncStatsTracker),
         DestinationCatalogGenerator(mappers = mappers, MoreMappers.initMapper()),
         metricClient,
@@ -374,6 +376,7 @@ object ReplicationWorkerIntegrationTestUtil {
         source,
         ClosableChannelQueue(bufferConfiguration.sourceMaxBufferSize),
         streamStatusCompletionTracker,
+        missingStateInjector = MissingStateInjector(context),
       )
     val replicationWorker =
       ReplicationWorker(

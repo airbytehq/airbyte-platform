@@ -4,6 +4,7 @@
 
 package io.airbyte.container.orchestrator.worker
 
+import io.airbyte.container.orchestrator.bookkeeping.state.MissingStateInjector
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
@@ -177,6 +178,7 @@ class SourceReader(
   private val streamStatusCompletionTracker: StreamStatusCompletionTracker,
   private val replicationWorkerHelper: ReplicationWorkerHelper,
   private val messagesFromSourceQueue: ClosableChannelQueue<AirbyteMessage>,
+  private val missingStateInjector: MissingStateInjector?,
 ) : ReplicationTask {
   override suspend fun run() {
     logger.info { "SourceReader started." }
@@ -190,6 +192,7 @@ class SourceReader(
           ) {
             streamStatusCompletionTracker.track(message.trace.streamStatus)
           }
+          missingStateInjector?.trackMessage(message)
           messagesFromSourceQueue.send(message)
         } else {
           yield()
@@ -200,6 +203,7 @@ class SourceReader(
       }
       val exitValue = source.exitValue
       if (exitValue == 0) {
+        missingStateInjector?.getStatesToInject()?.forEach { messagesFromSourceQueue.send(it) }
         replicationWorkerHelper.endOfSource()
       } else {
         logger.error { "Source process exited with non-zero exit code $exitValue" }
