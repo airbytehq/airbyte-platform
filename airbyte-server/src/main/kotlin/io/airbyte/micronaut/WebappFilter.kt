@@ -86,6 +86,7 @@ class WebappFilter : HttpServerFilter {
   private fun MutableHttpResponse<*>.setLastModifiedHeader() =
     apply {
       header(HttpHeaders.LAST_MODIFIED, clock.instant().atZone(ZoneOffset.UTC).format(lastModifiedFormatter))
+      header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate, max-age=0")
     }
 }
 

@@ -76,6 +76,8 @@ class WebappFilterTest {
       assertEquals(headers.get("dummy-header"), requestSlot.captured.headers.get("dummy-header"), prefix)
       // no CSP header was added
       assertNull(requestSlot.captured.headers.get(CSP_HEADER), prefix)
+      // no cache-control header was added
+      assertNull(requestSlot.captured.headers.get("Cache-Control"), prefix)
       assertEquals(request.body.get(), requestSlot.captured.body.get(), prefix)
     }
   }
@@ -103,6 +105,7 @@ class WebappFilterTest {
     assertEquals(PATH_INDEX, requestSlot.captured.path)
     verify { response.header(CSP_HEADER, CSP_VALUE) }
     verify { response.header("Last-Modified", "Thu, 01 Jan 1970 00:00:10 GMT") }
+    verify { response.header("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0") }
   }
 
   @Test
@@ -126,6 +129,7 @@ class WebappFilterTest {
 
     assertEquals(existingFile, requestSlot.captured.path)
     verify { response.header(CSP_HEADER, CSP_VALUE) }
+    verify(exactly = 0) { response.header("Cache-Control", any()) }
   }
 
   @Test
@@ -148,6 +152,7 @@ class WebappFilterTest {
 
     assertEquals(PATH_AUTH_FLOW_REDIRECT, requestSlot.captured.path)
     verify { response.header(CSP_HEADER, CSP_VALUE) }
+    verify(exactly = 0) { response.header("Cache-Control", any()) }
   }
 
   @Test
@@ -172,6 +177,7 @@ class WebappFilterTest {
 
     verify { response.header(CSP_HEADER, CSP_VALUE) }
     verify { response.header("Last-Modified", "Thu, 01 Jan 1970 00:00:10 GMT") }
+    verify { response.header("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0") }
   }
 
   @Test
