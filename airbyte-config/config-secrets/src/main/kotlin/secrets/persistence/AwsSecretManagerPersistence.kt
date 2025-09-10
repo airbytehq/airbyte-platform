@@ -144,7 +144,7 @@ sealed class AwsSecretsManagerRuntimeConfiguration {
   data class AssumeRoleConfig(
     override val region: String,
     val roleArn: String,
-    val kmsKeyArn: String,
+    val kmsKeyArn: String?,
     val externalId: String,
     val tagKey: String?,
   ) : AwsSecretsManagerRuntimeConfiguration()
