@@ -46,10 +46,7 @@ class WorkloadHeartbeatSenderTest {
 
   @BeforeEach
   fun setup() {
-    mockWorkloadApiClient =
-      mockk {
-        every { workloadRunning(any()) } returns Unit
-      }
+    mockWorkloadApiClient = mockk()
     mockReplicationWorkerState = mockk(relaxed = true)
     mockDestinationTimeoutMonitor = mockk(relaxed = true)
     mockSourceTimeoutMonitor = mockk(relaxed = true)
@@ -91,43 +88,7 @@ class WorkloadHeartbeatSenderTest {
 
       // First call => success
       verify(exactly = 1) {
-        mockWorkloadApiClient.workloadRunning(match { it.workloadId == testWorkloadId })
         mockWorkloadApiClient.workloadHeartbeat(match { it.workloadId == testWorkloadId })
-      }
-      // Then we see a ClientException(410) => exit
-      verify(exactly = 1) { hardExitCallable() }
-
-      confirmVerified(mockReplicationWorkerState, mockWorkloadApiClient)
-    }
-
-  /**
-   * Demonstrates a normal single iteration: no timeouts, no errors, no abort.
-   * We force the loop to break by letting the second iteration trigger a "workload in terminal state" (HTTP 410).
-   * This ensures we only see one successful heartbeat call first.
-   */
-  @Test
-  fun `if workloadRunning fails, we exit without even heartbeating`() =
-    runTest {
-      // On the first call, workloadHeartbeat returns successfully
-      every { mockWorkloadApiClient.workloadRunning(any()) } throws ApiException(HttpStatus.GONE.code, "http://localhost.test", "")
-
-      val sender = getSender()
-
-      // Launch the heartbeat in a child job so we can let it run, then see how it breaks on 2nd iteration
-      val job = backgroundScope.launch { sender.sendHeartbeat() }
-
-      // Advance enough time for the first heartbeat call, then the second iteration that triggers GONE
-      advanceTimeBy(100) // ms
-
-      // The job should complete because we get a GONE on second iteration
-      assertTrue(job.isCompleted)
-
-      // First call => success
-      verify(exactly = 1) {
-        mockWorkloadApiClient.workloadRunning(match { it.workloadId == testWorkloadId })
-      }
-      verify(exactly = 0) {
-        mockWorkloadApiClient.workloadHeartbeat(any())
       }
       // Then we see a ClientException(410) => exit
       verify(exactly = 1) { hardExitCallable() }

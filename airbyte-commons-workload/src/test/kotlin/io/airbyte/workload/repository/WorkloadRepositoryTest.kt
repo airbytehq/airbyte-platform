@@ -320,7 +320,7 @@ class WorkloadRepositoryTest {
   }
 
   @ParameterizedTest
-  @EnumSource(WorkloadStatus::class, names = ["RUNNING"])
+  @EnumSource(WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING"])
   fun `heartbeat a workload updates the status if the workload was previously claimed, launched or running`(status: WorkloadStatus) {
     val workloadId = Fixtures.newWorkloadId()
     val workload =
@@ -349,8 +349,8 @@ class WorkloadRepositoryTest {
   }
 
   @ParameterizedTest
-  @EnumSource(WorkloadStatus::class, names = ["PENDING", "CANCELLED", "CLAIMED", "LAUNCHED", "FAILURE", "SUCCESS"])
-  fun `heartbeat a workload that isn't running doesn't update the workload and returns null`(status: WorkloadStatus) {
+  @EnumSource(WorkloadStatus::class, names = ["PENDING", "CANCELLED", "FAILURE", "SUCCESS"])
+  fun `heartbeat a workload that isn't claimed or launched doesn't update the workload and returns null`(status: WorkloadStatus) {
     val workloadId = Fixtures.newWorkloadId()
     val workload =
       Fixtures.workload(

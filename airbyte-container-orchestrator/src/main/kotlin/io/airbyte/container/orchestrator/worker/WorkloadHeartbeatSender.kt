@@ -11,7 +11,6 @@ import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatTimeoutException
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
-import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import io.micronaut.http.HttpStatus
@@ -49,14 +48,6 @@ class WorkloadHeartbeatSender(
    * @param workloadId the workload identifier.
    */
   suspend fun sendHeartbeat() {
-    try {
-      workloadApiClient.workloadRunning(WorkloadRunningRequest(workloadId))
-    } catch (e: Exception) {
-      logger.warn(e) { "Failed to set the workload to running; exiting." }
-      exitAsap()
-      return
-    }
-
     logger.info { "Starting workload heartbeat (interval=${heartbeatInterval.seconds}s; timeout=${heartbeatTimeoutDuration.seconds}s)" }
     var lastSuccessfulHeartbeat = Instant.now()
 

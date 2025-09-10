@@ -165,17 +165,18 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
   ): Workload?
 
   /**
-   * Heartbeat updates [deadline] and [last_heartbeat_at] for a workload that is running.
+   * Heartbeat transitions a workload into a running state if the workload was claimed, launched or running and updates last heartbeat.
    * Succeed returns the workload if the status is running.
    */
   @Query(
     """
       UPDATE workload
       SET
+       status = 'running',
        deadline = :deadline,
        last_heartbeat_at = now(),
        updated_at = now()
-      WHERE id = :id AND status = 'running'
+      WHERE id = :id AND status in ('claimed', 'launched', 'running')
       RETURNING *
     """,
   )
