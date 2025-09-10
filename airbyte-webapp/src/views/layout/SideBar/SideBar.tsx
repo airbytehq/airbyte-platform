@@ -52,7 +52,10 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({ bottomSlot,
   // This is the same query as inside the picker. We want to show the workspace picker if a) the MultiWorkspaceUI
   // feature flag is on or b) there is more than one workspace
   const { data: workspacePages } = useListWorkspacesInfinite(WORKSPACE_LIST_LENGTH, "", true);
-  const workspaces = useMemo(() => workspacePages?.pages.flatMap((page) => page.data) ?? [], [workspacePages]);
+  const workspaces = useMemo(
+    () => workspacePages?.pages.flatMap((page) => page.data.workspaces) ?? [],
+    [workspacePages]
+  );
   const showWorkspacesPicker = useFeature(FeatureItem.MultiWorkspaceUI) || workspaces.length > 1;
 
   return (
