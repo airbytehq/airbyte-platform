@@ -199,7 +199,7 @@
     "node-fetch": "^2.6.9",
     "optionator": "^0.9.3",
     "orval": "7.7.0",
-    "pg-promise": "^10.15.4",
+    "pg-promise": "^11.5.5",
     "prettier": "^3.0.3",
     "react-select-event": "^5.5.0",
     "sass": "^1.70.0",
