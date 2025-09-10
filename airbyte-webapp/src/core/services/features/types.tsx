@@ -4,10 +4,10 @@
  */
 
 export enum FeatureItem {
-  AllowAllRBACRoles = "ALLOW_ALL_RBAC_ROLES",
+  AllowAllRBACRoles = "ALLOW_ALL_RBAC_ROLES", // corresponds to the feature-rbac-roles entitlement
   AllowAutoDetectSchema = "ALLOW_AUTO_DETECT_SCHEMA",
   AllowUploadCustomImage = "ALLOW_UPLOAD_CUSTOM_IMAGE",
-  AllowUpdateSSOConfig = "ALLOW_UPDATE_SSO_CONFIG",
+  AllowUpdateSSOConfig = "ALLOW_UPDATE_SSO_CONFIG", // corresponds to the feature-sso entitlement
   AllowUpdateConnectors = "ALLOW_UPDATE_CONNECTORS",
   AllowChangeDataplanes = "ALLOW_CHANGE_DATAPLANES",
   AllowDBTCloudIntegration = "ALLOW_DBT_CLOUD_INTEGRATION",
@@ -17,16 +17,16 @@ export enum FeatureItem {
   ConnectorBreakingChangeDeadlines = "CONNECTOR_BREAKING_CHANGE_DEADLINES",
   ConnectorResourceAllocation = "CONNECTOR_RESOURCE_ALLOCATION",
   DiagnosticsExport = "DIAGNOSTICS_EXPORT",
-  DisplayOrganizationUsers = "DISPLAY_ORGANIZATION_USERS",
+  DisplayOrganizationUsers = "DISPLAY_ORGANIZATION_USERS", // corresponds to the feature-fe-display-organization-users entitlement
   EmailNotifications = "EMAIL_NOTIFICATIONS",
   EnterpriseBranding = "ENTERPRISE_BRANDING",
   EnterpriseUpsell = "ENTERPRISE_UPSELL",
   EnterpriseLicenseChecking = "ENTERPRISE_LICENSE_CHECKING",
   ExternalInvitations = "EXTERNAL_INVITATIONS",
-  FieldHashing = "FIELD_HASHING",
-  IndicateGuestUsers = "INDICATE_GUEST_USERS",
-  MappingsUI = "MAPPINGS_UI",
-  MultiWorkspaceUI = "MULTI_WORKSPACE_UI",
+  FieldHashing = "FIELD_HASHING", // corresponds to the feature-connection-hashing-ui-v0 entitlement? (should it also cover the connection.hashingUI FF?)
+  IndicateGuestUsers = "INDICATE_GUEST_USERS", // corresponds to the feature-fe-indicate-guest-users entitlement
+  MappingsUI = "MAPPINGS_UI", // corresponds to the feature-mappers entitlement, which also covers the connection.mappingsUI FF referenced here https://github.com/airbytehq/airbyte-platform-internal/blob/32a4284748a6881945a5a519c6cbc626e851399a/oss/airbyte-webapp/src/hooks/services/Experiment/experiments.ts#L16
+  MultiWorkspaceUI = "MULTI_WORKSPACE_UI", // corresponds to the feature-multiple-workspaces entitlement
   OrganizationUI = "ORGANIZATION_UI",
   OrganizationConnectorSettings = "ORGANIZATION_CONNECTOR_SETTINGS", // show sources and destinations in organization settings
   RBAC = "RBAC",

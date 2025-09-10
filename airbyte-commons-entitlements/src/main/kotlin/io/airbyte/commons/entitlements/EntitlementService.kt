@@ -70,7 +70,9 @@ internal class EntitlementServiceImpl(
     entitlement: Entitlement,
   ): EntitlementResult =
     when (entitlement) {
-      // TODO: Remove once we've migrated the entitlement to Stigg
+      // TODO: These entitlements need to check LD for  FF, in addition ot checking Stigg. We can
+      //  remove the special handling (and the EntitlementProvider) once we're ready to turn off LD
+      //  for these entitlements
       DestinationObjectStorageEntitlement -> hasDestinationObjectStorageEntitlement(organizationId)
       SsoEntitlement -> hasSsoConfigUpdateEntitlement(organizationId)
       SelfManagedRegionsEntitlement -> hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId)
@@ -145,23 +147,35 @@ internal class EntitlementServiceImpl(
   override fun hasConfigTemplateEntitlements(organizationId: OrganizationId): Boolean =
     entitlementProvider.hasConfigTemplateEntitlements(organizationId)
 
-  private fun hasDestinationObjectStorageEntitlement(organizationId: OrganizationId): EntitlementResult =
-    EntitlementResult(
-      isEntitled = entitlementProvider.hasDestinationObjectStorageEntitlement(organizationId),
+  private fun hasDestinationObjectStorageEntitlement(organizationId: OrganizationId): EntitlementResult {
+    val entitlementResult = entitlementClient.checkEntitlement(organizationId, DestinationObjectStorageEntitlement)
+    val ffResult = entitlementProvider.hasDestinationObjectStorageEntitlement(organizationId)
+    return EntitlementResult(
       featureId = DestinationObjectStorageEntitlement.featureId,
+      isEntitled = entitlementResult.isEntitled || ffResult,
+      reason = entitlementResult.reason,
     )
+  }
 
-  private fun hasSsoConfigUpdateEntitlement(organizationId: OrganizationId): EntitlementResult =
-    EntitlementResult(
-      isEntitled = entitlementProvider.hasSsoConfigUpdateEntitlement(organizationId),
+  private fun hasSsoConfigUpdateEntitlement(organizationId: OrganizationId): EntitlementResult {
+    val entitlementResult = entitlementClient.checkEntitlement(organizationId, SsoEntitlement)
+    val ffResult = entitlementProvider.hasSsoConfigUpdateEntitlement(organizationId)
+    return EntitlementResult(
       featureId = SsoEntitlement.featureId,
+      isEntitled = entitlementResult.isEntitled || ffResult,
+      reason = entitlementResult.reason,
     )
+  }
 
-  private fun hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId: OrganizationId): EntitlementResult =
-    EntitlementResult(
-      isEntitled = entitlementProvider.hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId),
+  private fun hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId: OrganizationId): EntitlementResult {
+    val entitlementResult = entitlementClient.checkEntitlement(organizationId, SelfManagedRegionsEntitlement)
+    val ffResult = entitlementProvider.hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId)
+    return EntitlementResult(
       featureId = SelfManagedRegionsEntitlement.featureId,
+      isEntitled = entitlementResult.isEntitled || ffResult,
+      reason = entitlementResult.reason,
     )
+  }
 
   private fun sendCountMetric(
     metric: OssMetricsRegistry,

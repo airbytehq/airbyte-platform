@@ -38,8 +38,6 @@ interface EntitlementProvider {
 
   fun hasSsoConfigUpdateEntitlement(organizationId: OrganizationId): Boolean
 
-  fun hasOrchestrationEntitlement(organizationId: OrganizationId): Boolean
-
   fun hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId: OrganizationId): Boolean
 }
 
@@ -59,8 +57,6 @@ class DefaultEntitlementProvider : EntitlementProvider {
   override fun hasDestinationObjectStorageEntitlement(organizationId: OrganizationId): Boolean = false
 
   override fun hasSsoConfigUpdateEntitlement(organizationId: OrganizationId): Boolean = false
-
-  override fun hasOrchestrationEntitlement(organizationId: OrganizationId): Boolean = false
 
   override fun hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId: OrganizationId): Boolean = false
 }
@@ -93,8 +89,6 @@ class EnterpriseEntitlementProvider(
   override fun hasDestinationObjectStorageEntitlement(organizationId: OrganizationId): Boolean = true
 
   override fun hasSsoConfigUpdateEntitlement(organizationId: OrganizationId): Boolean = false
-
-  override fun hasOrchestrationEntitlement(organizationId: OrganizationId): Boolean = false
 
   // Allow all Enterprise users to manage dataplanes and dataplane groups by default
   override fun hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId: OrganizationId): Boolean = true
@@ -140,9 +134,6 @@ class CloudEntitlementProvider(
 
   override fun hasSsoConfigUpdateEntitlement(organizationId: OrganizationId): Boolean =
     featureFlagClient.boolVariation(EnableSsoConfigUpdate, Organization(organizationId.value))
-
-  override fun hasOrchestrationEntitlement(organizationId: OrganizationId): Boolean =
-    featureFlagClient.boolVariation(EnableOrchestration, Organization(organizationId.value))
 
   override fun hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId: OrganizationId): Boolean =
     featureFlagClient.boolVariation(
