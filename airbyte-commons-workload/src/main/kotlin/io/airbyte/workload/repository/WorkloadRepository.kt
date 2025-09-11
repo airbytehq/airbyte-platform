@@ -93,6 +93,23 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
     createdBefore: OffsetDateTime?,
   ): List<Workload>
 
+  @Query(
+    """
+      SELECT * FROM workload
+      WHERE deadline IS NOT NULL
+      AND ((:dataplaneIds) IS NULL OR dataplane_id IN (:dataplaneIds))
+      AND ((:statuses) IS NULL OR status = ANY(CAST(ARRAY[:statuses] AS workload_status[])))
+      AND ((:types) IS NULL OR type = ANY(CAST(ARRAY[:types] AS workload_type[])))
+      AND (CAST(:createdBefore AS timestamptz) IS NULL OR created_at < CAST(:createdBefore AS timestamptz))
+      """,
+  )
+  fun searchByTypeStatusAndCreationDateWithDeadline(
+    @Expandable dataplaneIds: List<String>?,
+    @Expandable statuses: List<WorkloadStatus>?,
+    @Expandable types: List<WorkloadType>?,
+    createdBefore: OffsetDateTime?,
+  ): List<Workload>
+
   /**
    * Cancel transitions a workload into a cancelled state if the workload was non-terminal.
    * Cancel returns the workload if the status was just updated to cancelled.

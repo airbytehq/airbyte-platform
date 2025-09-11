@@ -6,6 +6,9 @@ package io.airbyte.workload.handler
 
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
+import io.airbyte.featureflag.Empty
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.UseDeadlineInWorkloadMonitorQueries
 import io.airbyte.micronaut.runtime.AirbyteWorkloadApiClientConfig
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadLabel
@@ -31,6 +34,7 @@ class WorkloadHandlerImpl(
   private val workloadRepository: WorkloadRepository,
   private val workloadQueueRepository: WorkloadQueueRepository,
   private val airbyteWorkloadApiClientConfig: AirbyteWorkloadApiClientConfig,
+  private val featureFlagClient: FeatureFlagClient,
 ) : WorkloadHandler {
   override fun getWorkload(workloadId: String): ApiWorkload = getDomainWorkload(workloadId).toApi()
 
@@ -156,13 +160,23 @@ class WorkloadHandlerImpl(
     workloadType: List<ApiWorkloadType>?,
     createdBefore: OffsetDateTime?,
   ): List<Workload> {
+    val useDeadline = featureFlagClient.boolVariation(UseDeadlineInWorkloadMonitorQueries, Empty)
     val domainWorkloads =
-      workloadRepository.searchByTypeStatusAndCreationDate(
-        dataplaneId,
-        listOf(WorkloadStatus.RUNNING),
-        workloadType?.map { it.toDomain() },
-        createdBefore,
-      )
+      if (useDeadline) {
+        workloadRepository.searchByTypeStatusAndCreationDateWithDeadline(
+          dataplaneId,
+          listOf(WorkloadStatus.RUNNING),
+          workloadType?.map { it.toDomain() },
+          createdBefore,
+        )
+      } else {
+        workloadRepository.searchByTypeStatusAndCreationDate(
+          dataplaneId,
+          listOf(WorkloadStatus.RUNNING),
+          workloadType?.map { it.toDomain() },
+          createdBefore,
+        )
+      }
 
     return domainWorkloads.map { it.toApi() }
   }

@@ -391,6 +391,7 @@ class WorkloadHandlerImplTest {
               .toSeconds()
               .toInt(),
         ),
+        featureFlagClient = mockk(relaxed = true),
       )
     val offsetDateTime = workloadHandlerImpl.offsetDateTime()
     Thread.sleep(10)
@@ -469,6 +470,7 @@ class WorkloadHandlerImplTest {
             heartbeat = mockk<AirbyteWorkloadApiClientConfig.WorkloadApiHeartbeatConfig>(relaxed = true),
             workloadRedeliveryWindowSeconds = redeliveryWindow.toJavaDuration().toSeconds().toInt(),
           ),
+          featureFlagClient = mockk(relaxed = true),
         ),
       )
 

@@ -211,6 +211,8 @@ object EnableSsoConfigUpdate : Permanent<Boolean>(key = "platform.can-change-sso
 
 object ReplicationDebugLogLevelEnabled : Permanent<Boolean>(key = "platform.replication-debug-log-level-enabled", default = false)
 
+object UseDeadlineInWorkloadMonitorQueries : Temporary<Boolean>(key = "platform.use-deadline-in-workload-monitor-queries", default = false)
+
 object UseManifestServer : Temporary<Boolean>(key = "platform.use-manifest-server", default = false)
 
 object EnableOrchestration : Permanent<Boolean>(key = "platform.enable-orchestration", default = false)
