@@ -45,22 +45,30 @@ airbyte:
           container:
             image: test-main-image
             image-pull-policy: test-main-image-pull-policy
-            image-pull-secret: test-main-image-pull-secret,test-main-image-pull-secret-2
+            image-pull-secret:
+              - test-main-image-pull-secret
+              - test-main-image-pull-secret-2
         init:
           container:
             image: test-init-image
             image-pull-policy: test-init-image-pull-policy
-            image-pull-secret: test-init-image-pull-secret,test-init-image-pull-secret-2
+            image-pull-secret:
+              - test-init-image-pull-secret
+              - test-init-image-pull-secret-2
         sidecar:
           container:
             image: test-sidecar-image
             image-pull-policy: test-sidecar-image-pull-policy
-            image-pull-secret: test-sidecar-image-pull-secret,test-sidecar-image-pull-secret-2
+            image-pull-secret:
+              - test-sidecar-image-pull-secret
+              - test-sidecar-image-pull-secret-2
         profiler:
           container:
             image: test-profiler-image
             image-pull-policy: test-profiler-image-pull-policy
-            image-pull-secret: test-profiler-image-pull-secret,test-profiler-image-pull-secret-2
+            image-pull-secret:
+              - test-profiler-image-pull-secret
+              - test-profiler-image-pull-secret-2
             cpu-limit: 2
             cpu-request: 3
             memory-limit: 4

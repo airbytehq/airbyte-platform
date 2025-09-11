@@ -1208,7 +1208,7 @@ data class AirbyteWorkerConfig(
         data class AirbyteWorkerJobKubernetesInitContainerConfig(
           val image: String = "",
           val imagePullPolicy: String = DEFAULT_WORKER_KUBE_IMAGE_PULL_POLICY,
-          val imagePullSecret: String = "",
+          val imagePullSecret: List<String> = emptyList(),
         )
       }
 
@@ -1232,7 +1232,7 @@ data class AirbyteWorkerConfig(
         data class AirbyteWorkerJobKubernetesProfilerContainerConfig(
           val image: String = "",
           val imagePullPolicy: String = DEFAULT_WORKER_KUBE_IMAGE_PULL_POLICY,
-          val imagePullSecret: String = "",
+          val imagePullSecret: List<String> = emptyList(),
           val cpuLimit: String = DEFAULT_WORKER_KUBE_PROFILER_CPU_LIMIT,
           val cpuRequest: String = DEFAULT_WORKER_KUBE_PROFILER_CPU_REQUEST,
           val memoryLimit: String = DEFAULT_WORKER_KUBE_PROFILER_MEMORY_LIMIT,
@@ -1248,7 +1248,7 @@ data class AirbyteWorkerConfig(
         data class AirbyteWorkerJobKubernetesSidecarContainerConfig(
           val image: String = "",
           val imagePullPolicy: String = DEFAULT_WORKER_KUBE_IMAGE_PULL_POLICY,
-          val imagePullSecret: String = "",
+          val imagePullSecret: List<String> = emptyList(),
         )
       }
 
