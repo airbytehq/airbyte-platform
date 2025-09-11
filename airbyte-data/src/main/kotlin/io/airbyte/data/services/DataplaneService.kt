@@ -42,7 +42,23 @@ interface DataplaneService {
   fun listDataplanes(withTombstone: Boolean): List<Dataplane>
 
   /**
+   * List all dataplanes matching the provided dataplane group IDs
+   */
+  fun listDataplanes(
+    dataplaneGroupIds: List<UUID>,
+    withTombstone: Boolean,
+  ): List<Dataplane>
+
+  /**
    * Get a dataplane by its service account.
    */
   fun getDataplaneByServiceAccountId(serviceAccountId: String): Dataplane?
+
+  /**
+   * List all dataplanes that belong to a list of organizations.
+   */
+  fun listDataplanesForOrganizations(
+    organizationIds: List<UUID>,
+    withTombstone: Boolean,
+  ): List<Dataplane>
 }

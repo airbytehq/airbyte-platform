@@ -98,25 +98,40 @@ open class DataplaneServiceDataImpl(
       repository
         .findAllByDataplaneGroupIdOrderByUpdatedAtDesc(
           dataplaneGroupId,
-        ).map { unit ->
-          unit.toConfigModel()
-        }
+        ).map { it.toConfigModel() }
     } else {
       repository
         .findAllByDataplaneGroupIdAndTombstoneFalseOrderByUpdatedAtDesc(
           dataplaneGroupId,
-        ).map { unit ->
-          unit.toConfigModel()
-        }
+        ).map { it.toConfigModel() }
     }
 
   override fun listDataplanes(withTombstone: Boolean): List<Dataplane> =
-    repository.findAllByTombstone(withTombstone).map { unit ->
-      unit.toConfigModel()
+    repository
+      .findAllByTombstone(withTombstone)
+      .map { it.toConfigModel() }
+
+  override fun listDataplanes(
+    dataplaneGroupIds: List<UUID>,
+    withTombstone: Boolean,
+  ): List<Dataplane> {
+    if (dataplaneGroupIds.isEmpty()) {
+      return emptyList()
     }
+    return repository
+      .findAllByDataplaneGroupIds(
+        dataplaneGroupIds,
+        withTombstone,
+      ).map { it.toConfigModel() }
+  }
 
   override fun getDataplaneByServiceAccountId(serviceAccountId: String): Dataplane? =
     repository.findByServiceAccountId(UUID.fromString(serviceAccountId))?.toConfigModel()
+
+  override fun listDataplanesForOrganizations(
+    organizationIds: List<UUID>,
+    withTombstone: Boolean,
+  ): List<Dataplane> = repository.findAllByOrganizationIds(organizationIds, withTombstone).map { it.toConfigModel() }
 }
 
 class DataplaneAlreadyExistsException(

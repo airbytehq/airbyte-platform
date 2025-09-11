@@ -133,6 +133,40 @@ class DataplaneServiceDataImplTest {
     assertEquals(retrievedDataplanes.size, 2)
   }
 
+  @Test
+  fun `test list dataplanes by multiple dataplane group ids with tombstone`() {
+    val mockDataplaneGroupIds = listOf(UUID.randomUUID(), UUID.randomUUID())
+    val mockDataplaneId1 = UUID.randomUUID()
+    val mockDataplaneId2 = UUID.randomUUID()
+    every { dataplaneRepository.findAllByDataplaneGroupIds(mockDataplaneGroupIds, true) } returns
+      listOf(
+        createDataplane(mockDataplaneId1),
+        createDataplane(mockDataplaneId2),
+      )
+
+    val retrievedDataplanes = dataplaneServiceDataImpl.listDataplanes(mockDataplaneGroupIds, true)
+
+    assertEquals(retrievedDataplanes.size, 2)
+    verify { dataplaneRepository.findAllByDataplaneGroupIds(mockDataplaneGroupIds, true) }
+  }
+
+  @Test
+  fun `test list dataplanes by multiple dataplane group ids without tombstone`() {
+    val mockDataplaneGroupIds = listOf(UUID.randomUUID(), UUID.randomUUID())
+    val mockDataplaneId1 = UUID.randomUUID()
+    val mockDataplaneId2 = UUID.randomUUID()
+    every { dataplaneRepository.findAllByDataplaneGroupIds(mockDataplaneGroupIds, false) } returns
+      listOf(
+        createDataplane(mockDataplaneId1),
+        createDataplane(mockDataplaneId2),
+      )
+
+    val retrievedDataplanes = dataplaneServiceDataImpl.listDataplanes(mockDataplaneGroupIds, false)
+
+    assertEquals(retrievedDataplanes.size, 2)
+    verify { dataplaneRepository.findAllByDataplaneGroupIds(mockDataplaneGroupIds, false) }
+  }
+
   private fun createDataplane(id: UUID): Dataplane =
     Dataplane(
       id = id,

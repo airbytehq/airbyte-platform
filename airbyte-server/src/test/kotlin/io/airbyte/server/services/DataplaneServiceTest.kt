@@ -159,7 +159,7 @@ class DataplaneServiceTest {
     val mockDataplane = createDataplane()
 
     every { dataplaneDataService.getDataplane(any()) } returns mockDataplane
-    every { dataplaneDataService.listDataplanes(any(), false) } returns listOf(mockDataplane)
+    every { dataplaneDataService.listDataplanes(any<UUID>(), false) } returns listOf(mockDataplane)
     every { serviceAccountsService.delete(mockDataplane.id) } just Runs
     every { dataplaneDataService.updateDataplane(mockDataplane.apply { tombstone = true }) } returns
       mockDataplane.apply { tombstone = true }

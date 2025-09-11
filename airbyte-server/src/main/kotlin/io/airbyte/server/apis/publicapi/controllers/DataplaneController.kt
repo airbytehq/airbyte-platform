@@ -34,12 +34,18 @@ open class DataplaneController(
   private val roleResolver: RoleResolver,
   private val entitlementService: EntitlementService,
 ) : PublicDataplanesApi {
-  // TODO (parker) - this endpoint should really take in an organization ID so that it can be scoped
-  // to org admins. For now we must restrict to instance admins, because this lists all dataplanes
-  // in the instance.
-  @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
-  override fun publicListDataplanes(): Response = dataplaneService.controllerListDataplanes()
+  override fun publicListDataplanes(regionIds: List<UUID>?): Response {
+    if (!regionIds.isNullOrEmpty()) {
+      roleResolver
+        .newRequest()
+        .withCurrentUser()
+        .apply {
+          regionIds.forEach { withOrg(regionService.getOrganizationIdFromRegion(it)) }
+        }.requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
+    }
+    return dataplaneService.controllerListDataplanes(regionIds)
+  }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateDataplane(dataplaneCreateRequest: DataplaneCreateRequest): Response {

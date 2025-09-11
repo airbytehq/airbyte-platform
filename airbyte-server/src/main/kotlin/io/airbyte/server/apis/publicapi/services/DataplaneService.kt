@@ -5,7 +5,9 @@
 package io.airbyte.server.apis.publicapi.services
 
 import io.airbyte.api.model.generated.DataplaneCreateResponse
+import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.Permission
 import io.airbyte.publicApi.server.generated.models.DataplaneCreateRequest
 import io.airbyte.publicApi.server.generated.models.DataplanePatchRequest
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
@@ -24,7 +26,7 @@ import jakarta.ws.rs.core.Response
 import java.util.UUID
 
 interface DataplaneService {
-  fun controllerListDataplanes(): Response
+  fun controllerListDataplanes(regionIds: List<UUID>?): Response
 
   fun controllerCreateDataplane(dataplaneCreateRequest: DataplaneCreateRequest): Response
 
@@ -48,17 +50,31 @@ class DataplaneServiceImpl(
   private val dataplaneService: io.airbyte.server.services.DataplaneService,
   private val trackingHelper: TrackingHelper,
   private val currentUserService: CurrentUserService,
+  private val permissionHandler: PermissionHandler,
 ) : DataplaneService {
-  override fun controllerListDataplanes(): Response {
+  override fun controllerListDataplanes(regionIds: List<UUID>?): Response {
     val userId = currentUserService.getCurrentUser().userId
     val result =
       trackingHelper.callWithTracker(
         {
-          runCatching { dataplaneDataService.listDataplanes(withTombstone = false) }
-            .onFailure {
-              log.error(it) { "Error listing dataplanes" }
-              ConfigClientErrorHandler.handleError(it)
-            }.getOrNull()
+          runCatching {
+            if (!regionIds.isNullOrEmpty()) {
+              dataplaneDataService.listDataplanes(regionIds, withTombstone = false)
+            } else if (permissionHandler.isUserInstanceAdmin(userId)) {
+              // If the user is an instance admin, get all dataplane
+              dataplaneDataService.listDataplanes(withTombstone = false)
+            } else {
+              // If no regionIds are provided, get dataplanes for all organizations in which the
+              // user has access
+              dataplaneDataService.listDataplanesForOrganizations(
+                organizationIds = getOrgIdsWithDataplaneAccessForUser(userId),
+                withTombstone = false,
+              )
+            }
+          }.onFailure {
+            log.error(it) { "Error listing dataplanes" }
+            ConfigClientErrorHandler.handleError(it)
+          }.getOrNull()
         },
         DATAPLANES_PATH,
         GET,
@@ -66,6 +82,14 @@ class DataplaneServiceImpl(
       )
 
     return Response.ok().entity(result?.map(DataplaneResponseMapper::from)).build()
+  }
+
+  private fun getOrgIdsWithDataplaneAccessForUser(userId: UUID): List<UUID> {
+    val userPermissions = permissionHandler.listPermissionsForUser(userId)
+    // Require that a user is an org admin to get dataplane access for that org
+    return userPermissions
+      .filter { it.permissionType == Permission.PermissionType.ORGANIZATION_ADMIN }
+      .map { it.organizationId }
   }
 
   override fun controllerCreateDataplane(dataplaneCreateRequest: DataplaneCreateRequest): Response {

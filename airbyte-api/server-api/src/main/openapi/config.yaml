@@ -7906,7 +7906,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DataplanesResponse"
-          description: List all dataplanes for the region
+          description: List dataplanes accessible to the current user
         "403":
           description: Not allowed
         "404":
@@ -7915,6 +7915,16 @@ paths:
       summary: List dataplanes
       x-sdk-alias: listDataplanes
       x-sdk-group: Dataplanes
+      parameters:
+        - name: regionIds
+          description: The UUIDs of the regions to filter by. If provided, only dataplanes belonging to these regions will be returned. Empty list will retrieve all dataplanes accessible to the current user.
+          schema:
+            type: array
+            items:
+              format: uuid
+              type: string
+          in: query
+          required: false
     post:
       requestBody:
         content:
