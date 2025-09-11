@@ -22,7 +22,7 @@ import {
 import { EmbeddedSourceCreatePage } from "pages/embedded/EmbeddedSourceCreatePage/EmbeddedSourcePage";
 import { OrganizationRoutes } from "pages/organization/OrganizationRoutes";
 import { RoutePaths } from "pages/routePaths";
-import { WorkspacesPage } from "pages/workspaces/WorkspacesPage";
+import WorkspacesPage from "pages/workspaces";
 
 import { AcceptInvitation } from "./AcceptInvitation";
 import { CloudRoutes } from "./cloudRoutePaths";

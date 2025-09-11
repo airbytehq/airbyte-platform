@@ -193,7 +193,7 @@ export const SideBar: React.FC<PropsWithChildren> = () => {
               <FormattedMessage id="settings.workspaceSettings" />
             </Text>
           </Box>
-          <IfFeatureEnabled feature={FeatureItem.MultiWorkspaceUI}>
+          <IfFeatureEnabled feature={FeatureItem.ShowWorkspacePicker}>
             <Box mt="md">
               <WorkspacesPickerNext currentWorkspace={workspace} />
             </Box>

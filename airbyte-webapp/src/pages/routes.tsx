@@ -62,8 +62,6 @@ const SourceSettingsPage = React.lazy(() => import("./source/SourceSettingsPage"
 const SourceConnectionsPage = React.lazy(() => import("./source/SourceConnectionsPage"));
 const AdvancedSettingsPage = React.lazy(() => import("./SettingsPage/pages/AdvancedSettingsPage"));
 
-const WorkspacesPage = React.lazy(() => import("./workspaces"));
-
 const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
   const analyticsContext = useMemo(
     () => ({
@@ -231,7 +229,6 @@ export const Routing: React.FC = () => {
 
 const AuthenticatedRoutes = () => {
   const { loginRedirect } = useQuery<{ loginRedirect: string }>();
-  const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const { initialSetupComplete } = useGetInstanceConfiguration();
   useEnterpriseLicenseCheck();
   const isOrgPickerEnabled = useExperiment("sidebar.showOrgPickerV2");
@@ -247,14 +244,12 @@ const AuthenticatedRoutes = () => {
         <Route path="*" element={<PreferencesRoutes />} />
       ) : isOrgPickerEnabled ? (
         <Route element={<MainLayout />}>
-          <Route path="account" element={<div>User Routes</div>} />
           <Route path={`${RoutePaths.Organization}/:organizationId/*`} element={<OrganizationRoutes />} />
           <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<WorkspacesRoutes />} />
           <Route path="*" element={<DefaultView />} />
         </Route>
       ) : (
         <>
-          {multiWorkspaceUI && <Route path={RoutePaths.Workspaces} element={<WorkspacesPage />} />}
           <Route path="/" element={<DefaultView />} />
           <Route element={<MainView />}>
             <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<WorkspacesRoutes />} />

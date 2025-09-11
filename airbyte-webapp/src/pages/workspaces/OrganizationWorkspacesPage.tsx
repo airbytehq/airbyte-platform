@@ -71,15 +71,11 @@ const OrganizationWorkspacesPage: React.FC = () => {
 
   const firstPageOfWorkspaces = moreThanOneWorkspaceData?.pages?.[0]?.workspaces ?? [];
   const hasCreateWorkspacePermission = useIntent("CreateOrganizationWorkspaces", { organizationId });
-  const hasMultiWorkspaceFeature = useFeature(FeatureItem.MultiWorkspaceUI);
+  const hasCreateMultipleWorkspacesFeature = useFeature(FeatureItem.CreateMultipleWorkspaces);
 
-  // Determine if the organization is "grandfathered" into multi-workspace mode. Some existing cloud self serve
-  // organizations created multiple workspaces before this limitation was introduced, so they should retain access.
-  const isGrandfatheredInToMultiWorkspaceUI = firstPageOfWorkspaces.length > 1;
   const hasNoWorkspaces = !isLoading && firstPageOfWorkspaces.length === 0;
   const isCreateWorkspaceEnabled =
-    hasCreateWorkspacePermission &&
-    (hasNoWorkspaces || hasMultiWorkspaceFeature || isGrandfatheredInToMultiWorkspaceUI);
+    hasCreateWorkspacePermission && (hasNoWorkspaces || hasCreateMultipleWorkspacesFeature);
 
   // Get status counts for all workspaces
   const statusCountsResults = useGetWorkspacesStatusesCounts(workspaceIds);

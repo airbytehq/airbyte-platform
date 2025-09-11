@@ -5,7 +5,6 @@ export const defaultOssFeatures = [
   FeatureItem.AllowUpdateConnectors,
   FeatureItem.AllowUploadCustomImage,
   FeatureItem.EnterpriseUpsell,
-  FeatureItem.ShowOSSWorkspaceName,
 ];
 
 export const defaultEnterpriseFeatures = [
@@ -21,10 +20,11 @@ export const defaultEnterpriseFeatures = [
   FeatureItem.FieldHashing,
   FeatureItem.IndicateGuestUsers,
   FeatureItem.MappingsUI, // Indicates configuration UI is present.  connection.mappingsUI experiment also required to be true.
-  FeatureItem.MultiWorkspaceUI,
+  FeatureItem.CreateMultipleWorkspaces,
   FeatureItem.OrganizationUI,
   FeatureItem.OrganizationConnectorSettings,
   FeatureItem.RBAC,
+  FeatureItem.ShowWorkspacePicker,
 ];
 
 export const defaultCloudFeatures = [
@@ -42,4 +42,5 @@ export const defaultCloudFeatures = [
   FeatureItem.ShowInviteUsersHint,
   FeatureItem.FieldHashing, // also governed by connection.hashingUI experiment
   FeatureItem.DisplayOrganizationUsers,
+  FeatureItem.ShowWorkspacePicker,
 ];

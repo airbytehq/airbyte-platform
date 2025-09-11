@@ -10,12 +10,10 @@ import { ThemeToggle } from "components/ui/ThemeToggle";
 import { WorkspacesPicker } from "components/workspace/WorkspacesPicker";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { useListWorkspacesInfinite } from "core/api";
 import { useAuthService } from "core/services/auth";
-import { FeatureItem, IfFeatureEnabled, useFeature } from "core/services/features";
+import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
 import { RoutePaths, SettingsRoutePaths } from "pages/routePaths";
-import { WORKSPACE_LIST_LENGTH } from "pages/workspaces/WorkspacesPage";
 
 import { AirbyteHomeLink } from "./AirbyteHomeLink";
 import { MenuContent } from "./components/MenuContent";
@@ -49,22 +47,15 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({ bottomSlot,
   const workspaceId = useCurrentWorkspaceId();
   const workspacesPath = `${RoutePaths.Workspaces}/${workspaceId}/`;
 
-  // This is the same query as inside the picker. We want to show the workspace picker if a) the MultiWorkspaceUI
-  // feature flag is on or b) there is more than one workspace
-  const { data: workspacePages } = useListWorkspacesInfinite(WORKSPACE_LIST_LENGTH, "", true);
-  const workspaces = useMemo(
-    () => workspacePages?.pages.flatMap((page) => page.data.workspaces) ?? [],
-    [workspacePages]
-  );
-  const showWorkspacesPicker = useFeature(FeatureItem.MultiWorkspaceUI) || workspaces.length > 1;
-
   return (
     <nav className={classNames(styles.sidebar, { [styles.hidden]: isHidden })}>
       <AirbyteHomeLink />
       <IfFeatureEnabled feature={FeatureItem.ShowAdminWarningInWorkspace}>
         <AdminWorkspaceWarning />
       </IfFeatureEnabled>
-      {showWorkspacesPicker && <WorkspacesPicker />}
+      <IfFeatureEnabled feature={FeatureItem.ShowWorkspacePicker}>
+        <WorkspacesPicker />
+      </IfFeatureEnabled>
       <FlexContainer className={styles.sidebar__menuItems} direction="column" justifyContent="space-between">
         <MenuContent data-testid="navMainItems">
           <NavItem

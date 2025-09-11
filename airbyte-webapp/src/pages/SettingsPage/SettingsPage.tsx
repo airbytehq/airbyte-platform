@@ -20,7 +20,9 @@ export const SettingsPage: React.FC = () => {
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const { trackingStrategy } = useGetInstanceConfiguration();
   const { countNewSourceVersion, countNewDestinationVersion } = useGetConnectorsOutOfDate();
-  const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
+  // FeatureItem.ShowWorkspacePicker is weirdly being used as a proxy for showing RBAC and source/destination settings
+  // pages here. We should clean this up so that we use more appropriate feature items for toggling these pages.
+  const showWorkspacePicker = useFeature(FeatureItem.ShowWorkspacePicker);
   const { applicationSupport } = useAuthService();
   const licenseUi = useFeature(FeatureItem.EnterpriseLicenseChecking);
   const canViewLicenseSettings = useIntent("ViewLicenseDetails", { workspaceId });
@@ -31,7 +33,7 @@ export const SettingsPage: React.FC = () => {
 
   const showLicenseUi = licenseUi && canViewLicenseSettings;
   const showOrganizationSection =
-    !showOrgPicker && multiWorkspaceUI && (canViewOrganizationSettings || canViewWorkspaceSettings);
+    !showOrgPicker && showWorkspacePicker && (canViewOrganizationSettings || canViewWorkspaceSettings);
 
   return (
     <SettingsLayout>
@@ -58,14 +60,14 @@ export const SettingsPage: React.FC = () => {
             })}
             to={SettingsRoutePaths.Workspace}
           />
-          {multiWorkspaceUI && canViewWorkspaceSettings && (
+          {showWorkspacePicker && canViewWorkspaceSettings && (
             <SettingsLink
               iconType="community"
               name={formatMessage({ id: "settings.members" })}
               to={SettingsRoutePaths.WorkspaceMembers}
             />
           )}
-          {canViewWorkspaceSettings && !multiWorkspaceUI && (
+          {canViewWorkspaceSettings && !showWorkspacePicker && (
             <>
               <SettingsLink
                 iconType="source"
@@ -113,7 +115,6 @@ export const SettingsPage: React.FC = () => {
                 )}
               </>
             )}
-            {/* NOTE: Keep these here or move to the side bar? */}
             {showLicenseUi && (
               <SettingsLink
                 iconType="license"
