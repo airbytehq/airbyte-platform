@@ -7,7 +7,6 @@ import { FeatureItem, FeatureSet } from "./types";
 interface FeatureServiceContext {
   features: FeatureItem[];
   setFeatureOverwrites: (features: FeatureItem[] | FeatureSet | undefined) => void;
-  setEntitlementOverwrites: (features: FeatureItem[] | FeatureSet | undefined) => void;
 }
 
 const featureServiceContext = React.createContext<FeatureServiceContext | null>(null);
@@ -44,10 +43,6 @@ export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProp
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     hasWindowOverwrites ? (window as any)._e2eFeatureOverwrites : {}
   );
-  const [overwrittenEntitlements, setOverwrittenEntitlementsState] = useState<FeatureSet>(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    hasWindowOverwrites ? (window as any)._e2eFeatureOverwrites : {}
-  );
 
   const envOverwrites = useMemo(() => {
     // Allow env feature overwrites only during development
@@ -72,7 +67,6 @@ export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProp
   const combinedFeatures = useMemo(() => {
     const combined: FeatureSet = {
       ...featureSetFromList(defaultFeatures),
-      ...overwrittenEntitlements,
       ...overwrittenFeatures,
       ...envOverwrites,
     };
@@ -81,23 +75,18 @@ export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProp
       .filter(([, enabled]) => enabled)
       .map(([id]) => id) as FeatureItem[];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [overwrittenFeatures, overwrittenEntitlements, instanceConfig, ...defaultFeatures]);
+  }, [overwrittenFeatures, instanceConfig, ...defaultFeatures]);
 
   const setFeatureOverwrites = useCallback((features: FeatureItem[] | FeatureSet | undefined = {}) => {
     setOverwrittenFeaturesState(Array.isArray(features) ? featureSetFromList(features) : features);
-  }, []);
-
-  const setEntitlementOverwrites = useCallback((features: FeatureItem[] | FeatureSet | undefined = {}) => {
-    setOverwrittenEntitlementsState(Array.isArray(features) ? featureSetFromList(features) : features);
   }, []);
 
   const serviceContext = useMemo(
     (): FeatureServiceContext => ({
       features: combinedFeatures,
       setFeatureOverwrites,
-      setEntitlementOverwrites,
     }),
-    [combinedFeatures, setFeatureOverwrites, setEntitlementOverwrites]
+    [combinedFeatures, setFeatureOverwrites]
   );
 
   return <featureServiceContext.Provider value={serviceContext}>{children}</featureServiceContext.Provider>;

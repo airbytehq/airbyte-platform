@@ -18,7 +18,6 @@ export * from "./destinations";
 export * from "./destinationDefinitions";
 export * from "./diagnostics";
 export * from "./enterpriseSources";
-export * from "./entitlements";
 export * from "./filters";
 export * from "./health";
 export * from "./instanceConfiguration";

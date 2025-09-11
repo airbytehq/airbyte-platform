@@ -26,7 +26,6 @@ import WorkspacesPage from "pages/workspaces";
 
 import { AcceptInvitation } from "./AcceptInvitation";
 import { CloudRoutes } from "./cloudRoutePaths";
-import { EntitlementsLoader } from "./components/EntitlementsLoader";
 import { LDExperimentServiceProvider } from "./services/thirdParty/launchdarkly";
 import { SSOBookmarkPage } from "./views/auth/SSOBookmarkPage";
 import { SSOIdentifierPage } from "./views/auth/SSOIdentifierPage";
@@ -58,7 +57,7 @@ const CloudMainViewRoutes = () => {
         <>
           {/* embedded onboarding occurs within an organization, hence the `/organizations` routing here.
               HOWEVER, we do not want it to show the org picker, org sidebar, etc., so it lives outside
-              of the `MainLayout`
+              of the `MainLayout` 
           */}
           <Route path={RoutePaths.EmbeddedOnboarding} element={<EmbeddedOnboardingRedirect />} />
           <Route
@@ -180,11 +179,7 @@ export const Routing: React.FC = () => {
                   </AuthLayout>
                 )}
                 {/* Allow all regular routes if the user is logged in */}
-                {user && (
-                  <EntitlementsLoader>
-                    <CloudMainViewRoutes />
-                  </EntitlementsLoader>
-                )}
+                {user && <CloudMainViewRoutes />}
               </>
             }
           />
