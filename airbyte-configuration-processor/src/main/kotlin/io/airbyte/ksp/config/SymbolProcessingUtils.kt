@@ -33,7 +33,7 @@ internal fun convertStringToType(
   "int",
   "integer",
   -> value.toInt()
-  "list" -> if (value == "emptyList()") "" else "listOf\\((.+)\\)".toRegex().find(value)?.groups[1]?.value
+  "list" -> if (value == "emptyList()") emptyArray<Any>() else "listOf\\((.+)\\)".toRegex().find(value)?.groups[1]?.value
   "long" -> value.replace(oldValue = "L", newValue = "", ignoreCase = true).toLong()
   "path" -> value
   "uuid" -> value

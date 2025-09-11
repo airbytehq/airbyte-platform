@@ -21,7 +21,7 @@ internal class AirbyteAuthConfigDefaultTest {
     assertEquals(DEFAULT_AUTH_DATAPLANE_CLIENT_SECRET_SECRET_KEY, airbyteAuthConfig.dataplaneCredentials.clientSecretSecretKey)
     assertEquals(DEFAULT_AUTH_REALM, airbyteAuthConfig.defaultRealm)
     assertEquals(listOf("airbyte-server"), airbyteAuthConfig.identityProvider.audiences)
-    assertEquals(listOf(""), airbyteAuthConfig.identityProvider.issuers)
+    assertEquals(emptyList<String>(), airbyteAuthConfig.identityProvider.issuers)
     assertEquals("", airbyteAuthConfig.identityProvider.oidc.appName)
     assertEquals("", airbyteAuthConfig.identityProvider.oidc.audience)
     assertEquals("", airbyteAuthConfig.identityProvider.oidc.clientId)

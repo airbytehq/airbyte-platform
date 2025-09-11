@@ -7,8 +7,11 @@ package io.airbyte.ksp.config
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.yaml.snakeyaml.Yaml
 
 internal class SymbolProcessingUtilsTest {
+  private val yaml = Yaml()
+
   @ParameterizedTest
   @CsvSource(
     value = [
@@ -19,7 +22,7 @@ internal class SymbolProcessingUtilsTest {
       "float,1.0f,1.0",
       "int,7,7",
       "integer,8,8",
-      "list,emptyList(),''",
+      "list,emptyList(),[]",
       "list,'listOf(1,2,3)','1,2,3'",
       "long,10L,10",
       "long,10l,10",
@@ -33,6 +36,6 @@ internal class SymbolProcessingUtilsTest {
     value: String,
     expectedValue: Any,
   ) {
-    assertEquals(expectedValue, convertStringToType(type = type, value = value).toString())
+    assertEquals(expectedValue, yaml.dump(convertStringToType(type = type, value = value)).trim())
   }
 }
