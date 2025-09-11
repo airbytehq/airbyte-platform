@@ -11,8 +11,6 @@ import io.airbyte.commons.temporal.factories.WorkflowServiceStubsTimeouts
 import io.airbyte.connector.rollout.shared.Constants
 import io.airbyte.micronaut.runtime.AirbyteTemporalConfig
 import io.micrometer.core.instrument.MeterRegistry
-import io.micronaut.context.annotation.Property
-import io.micronaut.context.annotation.Value
 import io.temporal.serviceclient.WorkflowServiceStubs
 import jakarta.inject.Singleton
 import java.time.Duration
@@ -35,7 +33,7 @@ class ConnectorRolloutTemporalWorkflowServiceFactory(
       temporalCloudConfig,
       TemporalSelfHostedConfig(
         airbyteTemporalConfig.host,
-        if (airbyteTemporalConfig.cloud.enabled) airbyteTemporalConfig.cloud.namespace else Constants.DEFAULT_NAMESPACE,
+        if (airbyteTemporalConfig.cloud.enabled) airbyteTemporalConfig.cloud.connectorRollout.namespace else Constants.DEFAULT_NAMESPACE,
       ),
       airbyteTemporalConfig.cloud.enabled,
       meterRegistry,
