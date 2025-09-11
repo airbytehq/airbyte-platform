@@ -31,7 +31,7 @@ class ConnectorRolloutWorkflowClient {
     return WorkflowClientWrapper(
       WorkflowClientFactory().createWorkflowClient(
         temporalWorkflowService,
-        if (airbyteTemporalConfig.cloud.enabled) airbyteTemporalConfig.cloud.namespace else Constants.DEFAULT_NAMESPACE,
+        if (airbyteTemporalConfig.cloud.enabled) airbyteTemporalConfig.cloud.connectorRollout.namespace else Constants.DEFAULT_NAMESPACE,
         dataConverter,
       ),
     )

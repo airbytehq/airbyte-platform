@@ -24,8 +24,8 @@ class ConnectorRolloutTemporalWorkflowServiceFactory(
     TemporalCloudConfig(
       airbyteTemporalConfig.cloud.client.cert,
       airbyteTemporalConfig.cloud.client.key,
-      airbyteTemporalConfig.cloud.host,
-      airbyteTemporalConfig.cloud.namespace,
+      airbyteTemporalConfig.cloud.connectorRollout.host,
+      airbyteTemporalConfig.cloud.connectorRollout.namespace,
     )
 
   private val workflowServiceStubsFactory: WorkflowServiceStubsFactory =
