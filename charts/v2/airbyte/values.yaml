@@ -2616,7 +2616,7 @@ manifestServer:
 
   image:
     repository: airbyte/manifest-server
-    tag: 7.0.1
+    tag: 7.0.4
     pullPolicy: IfNotPresent
 
   annotations: {}
