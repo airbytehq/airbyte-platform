@@ -53,7 +53,6 @@ import io.airbyte.domain.services.secrets.SecretReferenceService
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.Destination
-import io.airbyte.featureflag.DisableOAuthMaskingForCommands
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Source
@@ -454,16 +453,12 @@ class JobInputService(
     val dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceDefinitionVersion)
 
     val configWithOauthParams: JsonNode =
-      if (featureFlagClient.boolVariation(DisableOAuthMaskingForCommands, Workspace(workspaceId))) {
-        configuration
-      } else {
-        oAuthConfigSupplier.maskSourceOAuthParameters(
-          sourceDefinition.sourceDefinitionId,
-          workspaceId,
-          configuration,
-          sourceDefinitionVersion.spec,
-        )
-      }
+      oAuthConfigSupplier.injectSourceOAuthParameters(
+        sourceDefinition.sourceDefinitionId,
+        null,
+        workspaceId,
+        configuration,
+      )
 
     val jobId = UUID.randomUUID().toString()
     val attemptId = 0L
@@ -496,16 +491,12 @@ class JobInputService(
 
     val dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationInformation.destinationDefinitionVersion)
     val configWithOauthParams: JsonNode =
-      if (featureFlagClient.boolVariation(DisableOAuthMaskingForCommands, Workspace(workspaceId))) {
-        configuration
-      } else {
-        oAuthConfigSupplier.maskDestinationOAuthParameters(
-          destinationDefinition.destinationDefinitionId,
-          workspaceId,
-          configuration,
-          destinationInformation.destinationDefinitionVersion.spec,
-        )
-      }
+      oAuthConfigSupplier.injectDestinationOAuthParameters(
+        destinationDefinition.destinationDefinitionId,
+        null,
+        workspaceId,
+        configuration,
+      )
 
     val jobId = UUID.randomUUID().toString()
     val attemptId = 0L

@@ -317,7 +317,7 @@ class JobInputServiceTest {
     every { actorDefinitionRepository.findByActorDefinitionId(sourceDefinitionId) } returns mockActorDefinition
     every { sourceService.getStandardSourceDefinition(sourceDefinitionId) } returns mockSourceDefinition
     every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, null) } returns mockActorDefinitionVersion
-    every { oAuthConfigSupplier.maskSourceOAuthParameters(any(), any(), any(), any()) } returns configuration
+    every { oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
     every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns
       mockk { every { originalConfig } returns configuration }
@@ -388,7 +388,7 @@ class JobInputServiceTest {
     every { actorDefinitionRepository.findByActorDefinitionId(destinationDefinitionId) } returns mockActorDefinition
     every { destinationService.getStandardDestinationDefinition(destinationDefinitionId) } returns mockDestinationDefinition
     every { actorDefinitionVersionHelper.getDestinationVersion(mockDestinationDefinition, workspaceId, null) } returns mockActorDefinitionVersion
-    every { oAuthConfigSupplier.maskDestinationOAuthParameters(any(), any(), any(), any()) } returns configuration
+    every { oAuthConfigSupplier.injectDestinationOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
     every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns
       mockk { every { originalConfig } returns configuration }
