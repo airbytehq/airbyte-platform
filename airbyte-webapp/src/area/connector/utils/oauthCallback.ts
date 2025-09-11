@@ -17,15 +17,9 @@ const search = new URLSearchParams(window.location.search);
 const query = Object.fromEntries(search);
 
 // Try to send via postMessage first (for Embedded context)
-// Only send if opener exists and is from our domain or sonar's
-if (
-  window.opener &&
-  (window.opener.location.origin === window.location.origin ||
-    window.opener.location.origin === "https://app.airbyte.ai" ||
-    window.opener.location.origin === "https://staging-app.airbyte.ai" ||
-    window.opener.location.origin === "http://localhost:3000")
-) {
-  window.opener.postMessage({ type: "completed", query });
+// Only send if opener exists and is from our domain
+if (window.opener && window.opener.location.origin === window.location.origin) {
+  window.opener.postMessage({ type: "completed", query }, window.location.origin);
 }
 
 // Also send via broadcast channel (for non-embedded context)
