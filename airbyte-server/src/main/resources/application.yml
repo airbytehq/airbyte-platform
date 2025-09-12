@@ -138,7 +138,7 @@ airbyte:
     delay_ms: 20000
   notification:
     customerio:
-      apikey: ${CUSTOMERIO_API_KEY:}
+      api-key: ${CUSTOMERIO_API_KEY:}
   auth:
     token-expiration:
       application-token-expiration-in-minutes: ${AB_AIRBYTE_AUTH_TOKEN_EXPIRATION_APPLICATION:15}
