@@ -47,6 +47,9 @@ export const TeamsFeaturesWarnModal: React.FC<TeamsFeaturesWarnModalProps> = ({ 
               <li>
                 <FormattedMessage id="teamsFeatures.modal.features.mappers" />
               </li>
+              <li>
+                <FormattedMessage id="teamsFeatures.modal.features.connectors" />
+              </li>
             </ul>
           </Box>
           <Text size="lg" align="left">
