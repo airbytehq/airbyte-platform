@@ -1,4 +1,5 @@
 import { FormattedMessage, useIntl } from "react-intl";
+import { Navigate } from "react-router-dom";
 
 import { FormChangeTracker } from "components/forms/FormChangeTracker";
 import { PageContainer } from "components/PageContainer";
@@ -15,22 +16,23 @@ import { useFormMode } from "core/services/ui/FormModeContext";
 import { links } from "core/utils/links";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useNotificationService } from "hooks/services/Notification";
+import { ConnectionRoutePaths } from "pages/routePaths";
 
 import { ConnectionMappingsList } from "./ConnectionMappingsList";
 import styles from "./ConnectionMappingsPage.module.scss";
 import { MappingContextProvider, useMappingContext, MAPPING_VALIDATION_ERROR_KEY } from "./MappingContext";
 import { MappingsEmptyState } from "./MappingsEmptyState";
 import { MappingsUpsellEmptyState } from "./MappingsUpsellEmptyState";
-import { EditDataActivationMappingsPage } from "../EditDataActivationMappingsPage";
 
 export const ConnectionMappingsRoute = () => {
   const isDataActivationConnection = useIsDataActivationConnection();
 
-  return isDataActivationConnection ? (
-    <ScrollParent>
-      <EditDataActivationMappingsPage />
-    </ScrollParent>
-  ) : (
+  // Should only happen if someone tries to access the /mappings URL directly for a data activation connection
+  if (isDataActivationConnection) {
+    return <Navigate to={`../${ConnectionRoutePaths.DataActivationMappings}`} replace />;
+  }
+
+  return (
     <ScrollParent>
       <PageContainer centered>
         <MappingContextProvider>

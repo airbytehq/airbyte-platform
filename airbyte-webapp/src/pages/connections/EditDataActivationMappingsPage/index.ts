@@ -1,1 +1,1 @@
-export * from "./EditDataActivationMappingsPage";
+export { EditDataActivationMappingsPageWrapper as default } from "./EditDataActivationMappingsPage";

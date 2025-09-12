@@ -19,6 +19,7 @@ const ConnectionSettingsPage = React.lazy(() => import("./ConnectionSettingsPage
 const ConnectionTimelinePage = React.lazy(() => import("./ConnectionTimelinePage"));
 const ConnectionTransformationPage = React.lazy(() => import("./ConnectionTransformationPage"));
 const CreateConnectionPage = React.lazy(() => import("./CreateConnectionPage"));
+const EditDataActivationMappingsPage = React.lazy(() => import("./EditDataActivationMappingsPage"));
 
 const AllConnectionsPage = React.lazy(() => import("./AllConnectionsPage"));
 const StreamStatusPage = React.lazy(() => import("./StreamStatusPage"));
@@ -84,6 +85,7 @@ export const ConnectionsRoutes: React.FC = () => {
           <Route path={ConnectionRoutePaths.Timeline} element={<ConnectionTimelinePage />} />
           <Route path={ConnectionRoutePaths.Replication} element={<ConnectionReplicationPage />} />
           <Route path={ConnectionRoutePaths.Mappings} element={<ConnectionMappingsPage />} />
+          <Route path={ConnectionRoutePaths.DataActivationMappings} element={<EditDataActivationMappingsPage />} />
           <Route path={ConnectionRoutePaths.Transformation} element={<ConnectionTransformationPage />} />
           <Route path={ConnectionRoutePaths.Settings} element={<ConnectionSettingsPage />} />
           <Route index element={<Navigate to={ConnectionRoutePaths.Status} replace />} />

@@ -41,6 +41,7 @@ export const enum ConnectionRoutePaths {
   ConfigureContinued = "continued",
   Timeline = "timeline",
   Mappings = "mappings",
+  DataActivationMappings = "data-activation-mappings",
 }
 
 export enum SettingsRoutePaths {

@@ -11,7 +11,6 @@ import { Tabs, LinkTab } from "components/ui/Tabs";
 import { useIsDataActivationConnection } from "area/connection/utils/useIsDataActivationConnection";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useExperiment } from "hooks/services/Experiment";
 import { RoutePaths, ConnectionRoutePaths } from "pages/routePaths";
 
 import { ConnectionTitleBlock } from "./ConnectionTitleBlock";
@@ -22,9 +21,7 @@ export const ConnectionPageHeader = () => {
   const { formatMessage } = useIntl();
   const currentTab = params["*"] || ConnectionRoutePaths.Status;
   const supportsDbtCloud = useFeature(FeatureItem.AllowDBTCloudIntegration);
-  const mappingsUIEnabled = useExperiment("connection.mappingsUI");
   const isDataActivationConnection = useIsDataActivationConnection();
-  const isStandardConnection = !isDataActivationConnection;
 
   const { connection, schemaRefreshing } = useConnectionEditService();
   const breadcrumbsData = [
@@ -34,8 +31,6 @@ export const ConnectionPageHeader = () => {
     },
     { label: connection.name },
   ];
-
-  const showMappingsTab = mappingsUIEnabled || isDataActivationConnection;
 
   const tabsData = useMemo(() => {
     const tabs = [
@@ -52,7 +47,7 @@ export const ConnectionPageHeader = () => {
         to: `${basePath}/${ConnectionRoutePaths.Timeline}`,
         disabled: schemaRefreshing,
       },
-      ...(isStandardConnection
+      ...(!isDataActivationConnection
         ? [
             {
               id: ConnectionRoutePaths.Replication,
@@ -65,14 +60,20 @@ export const ConnectionPageHeader = () => {
               to: `${basePath}/${ConnectionRoutePaths.Replication}`,
               disabled: schemaRefreshing,
             },
-          ]
-        : []),
-      ...(showMappingsTab
-        ? [
             {
               id: ConnectionRoutePaths.Mappings,
               name: <FormattedMessage id="connections.mappings.title" />,
               to: `${basePath}/${ConnectionRoutePaths.Mappings}`,
+              disabled: schemaRefreshing,
+            },
+          ]
+        : []),
+      ...(isDataActivationConnection
+        ? [
+            {
+              id: ConnectionRoutePaths.DataActivationMappings,
+              name: <FormattedMessage id="connections.mappings.title" />,
+              to: `${basePath}/${ConnectionRoutePaths.DataActivationMappings}`,
               disabled: schemaRefreshing,
             },
           ]
@@ -96,7 +97,7 @@ export const ConnectionPageHeader = () => {
     ];
 
     return tabs;
-  }, [basePath, schemaRefreshing, isStandardConnection, connection.schemaChange, showMappingsTab, supportsDbtCloud]);
+  }, [basePath, schemaRefreshing, isDataActivationConnection, connection.schemaChange, supportsDbtCloud]);
 
   return (
     <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>
