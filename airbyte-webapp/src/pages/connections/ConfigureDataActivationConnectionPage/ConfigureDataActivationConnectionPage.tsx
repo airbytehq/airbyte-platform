@@ -70,6 +70,7 @@ export const ConfigureDataActivationConnectionPage: React.FC = () => {
       },
       sourceCatalogId: sourceSchema.catalogId,
       destinationCatalogId: discoveredDestination?.catalogId,
+      isDataActivationConnection: true,
     };
 
     try {

@@ -10,11 +10,12 @@ export const useTrackSelectConnector = (connectorType: "source" | "destination")
   const namespaceType = connectorType === "source" ? Namespace.SOURCE : Namespace.DESTINATION;
 
   return useCallback(
-    (connectorId: string, connectorName: string) => {
+    (connectorId: string, connectorName: string, supportsDataActivation: boolean = false) => {
       analytics.track(namespaceType, Action.SELECT, {
         actionDescription: `${capitalize(connectorType)} connector type selected`,
         [`connector_${connectorType}`]: connectorName,
         [`connector_${connectorType}_definition_id`]: connectorId,
+        supports_data_activation: supportsDataActivation,
       });
     },
     [analytics, connectorType, namespaceType]

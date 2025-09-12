@@ -134,6 +134,7 @@ export interface CreateConnectionProps {
   destinationDefinition?: { name: string; destinationDefinitionId: string };
   sourceCatalogId?: string;
   destinationCatalogId?: string;
+  isDataActivationConnection?: boolean;
 }
 
 export const useListConnectionEventsInfinite = (
@@ -338,37 +339,55 @@ export const useCreateConnection = () => {
       destinationDefinition,
       sourceCatalogId,
       destinationCatalogId,
+      isDataActivationConnection = false,
     }: CreateConnectionProps) => {
-      const response = await webBackendCreateConnection(
-        {
-          sourceId: source.sourceId,
-          destinationId: destination.destinationId,
-          ...values,
-          status: "active",
-          sourceCatalogId,
-          destinationCatalogId,
-        },
-        requestOptions
-      );
+      try {
+        const response = await webBackendCreateConnection(
+          {
+            sourceId: source.sourceId,
+            destinationId: destination.destinationId,
+            ...values,
+            status: "active",
+            sourceCatalogId,
+            destinationCatalogId,
+          },
+          requestOptions
+        );
 
-      const enabledStreams = values.syncCatalog.streams
-        .map((stream) => stream.config?.selected && stream.stream?.name)
-        .filter(Boolean);
+        const enabledStreams = values.syncCatalog.streams
+          .map((stream) => stream.config?.selected && stream.stream?.name)
+          .filter(Boolean);
 
-      analyticsService.track(Namespace.CONNECTION, Action.CREATE, {
-        actionDescription: "New connection created",
-        frequency: getFrequencyFromScheduleData(values.scheduleData),
-        connector_source_definition: source?.sourceName,
-        connector_source_definition_id: sourceDefinition?.sourceDefinitionId,
-        connector_destination_definition: destination?.destinationName,
-        connector_destination_definition_id: destinationDefinition?.destinationDefinitionId,
-        available_streams: values.syncCatalog.streams.length,
-        enabled_streams: enabledStreams.length,
-        enabled_streams_list: JSON.stringify(enabledStreams),
-        connection_id: response.connectionId,
-      });
+        analyticsService.track(Namespace.CONNECTION, Action.CREATE, {
+          actionDescription: "New connection created",
+          frequency: getFrequencyFromScheduleData(values.scheduleData),
+          connector_source_definition: source?.sourceName,
+          connector_source_definition_id: sourceDefinition?.sourceDefinitionId,
+          connector_destination_definition: destination?.destinationName,
+          connector_destination_definition_id: destinationDefinition?.destinationDefinitionId,
+          available_streams: values.syncCatalog.streams.length,
+          enabled_streams: enabledStreams.length,
+          enabled_streams_list: JSON.stringify(enabledStreams),
+          connection_id: response.connectionId,
+          is_data_activation_connection: isDataActivationConnection,
+        });
 
-      return response;
+        return response;
+      } catch (e) {
+        analyticsService.track(Namespace.CONNECTION, Action.CREATE_FAILURE, {
+          actionDescription: "Connection creation failure",
+          source_id: source.sourceId,
+          source_catalog_id: sourceCatalogId,
+          source_definition_id: sourceDefinition?.sourceDefinitionId,
+          destination_id: destination.destinationId,
+          destination_catalog_id: destinationCatalogId,
+          destination_definition_id: destinationDefinition?.destinationDefinitionId,
+          error_message: e instanceof Error ? e.message : "unknown",
+          error_status: e instanceof HttpError ? e.status : "unknown",
+          is_data_activation_connection: isDataActivationConnection,
+        });
+        throw e;
+      }
     },
     {
       onSuccess: () => {

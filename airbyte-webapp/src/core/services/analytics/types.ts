@@ -19,6 +19,7 @@ export const enum Namespace {
 
 export const enum Action {
   CREATE = "Create",
+  CREATE_FAILURE = "CreateFailure",
   TEST = "Test",
   SELECT = "Select",
   SUCCESS = "TestSuccess",

@@ -144,7 +144,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
         trackSelectConnector(definition.sourceDefinitionId, definition.name);
         onSelectConnectorDefinition(definition.sourceDefinitionId);
       } else {
-        trackSelectConnector(definition.destinationDefinitionId, definition.name);
+        trackSelectConnector(definition.destinationDefinitionId, definition.name, definition.supportsDataActivation);
         onSelectConnectorDefinition(definition.destinationDefinitionId);
       }
     };
