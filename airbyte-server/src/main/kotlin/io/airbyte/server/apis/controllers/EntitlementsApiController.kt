@@ -50,7 +50,7 @@ class EntitlementsApiController(
     }
 
   @Post("/get_entitlements")
-  @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getEntitlements(
     @Body getEntitlementsByOrganizationIdRequestBody: GetEntitlementsByOrganizationIdRequestBody,
