@@ -6,7 +6,6 @@ package io.airbyte.server.apis.controllers
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.generated.BillingApi
-import io.airbyte.api.model.generated.BillingBackfillUsageRequest
 import io.airbyte.api.model.generated.CancelSubscriptionRead
 import io.airbyte.api.model.generated.CustomerPortalRead
 import io.airbyte.api.model.generated.CustomerPortalRequestBody
@@ -68,10 +67,6 @@ open class BillingController : BillingApi {
   override fun getOrganizationTrialStatus(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
   ): OrganizationTrialStatusRead = throw ApiNotImplementedInOssProblem()
-
-  @Secured(AuthRoleConstants.ADMIN)
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun backfillUsage(billingBackfillUsageRequest: BillingBackfillUsageRequest): Unit = throw ApiNotImplementedInOssProblem()
 
   @RequiresIntent(Intent.ManageOrganizationBilling)
   @Post("/cancel_subscription")
