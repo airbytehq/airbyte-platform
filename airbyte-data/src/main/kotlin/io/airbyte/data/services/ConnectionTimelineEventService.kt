@@ -4,7 +4,7 @@
 
 package io.airbyte.data.services
 
-import io.airbyte.api.client.model.generated.JobRead
+import io.airbyte.api.model.generated.JobRead
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
 import io.airbyte.data.repositories.entities.ConnectionTimelineEventMinimal
 import io.airbyte.data.services.shared.ConnectionEvent

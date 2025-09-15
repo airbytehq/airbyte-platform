@@ -299,21 +299,7 @@ class JobHistoryHandler(
   }
 
   @Throws(IOException::class)
-  fun getJobInfoWithoutLogs(jobId: Long): JobInfoRead {
-    val job = jobPersistence.getJob(jobId)
-
-    val jobWithAttemptsRead = getJobWithAttemptsRead(job)
-    hydrateWithStats(java.util.List.of(jobWithAttemptsRead), java.util.List.of(job), true, jobPersistence)
-
-    return JobInfoRead()
-      .job(jobWithAttemptsRead.job)
-      .attempts(
-        job.attempts
-          .stream()
-          .map { obj: Attempt -> JobConverter.getAttemptInfoWithoutLogsRead(obj) }
-          .collect(Collectors.toList<@Valid AttemptInfoRead?>()),
-      )
-  }
+  fun getJobInfoWithoutLogs(jobId: Long): JobInfoRead = getJobInfoWithoutLogsStatic(jobPersistence, jobId)
 
   @Throws(IOException::class)
   fun getJobInfoLight(jobIdRequestBody: JobIdRequestBody): JobInfoLightRead {
@@ -590,6 +576,25 @@ class JobHistoryHandler(
     private fun extractStreams(job: Job): List<ConfiguredAirbyteStream> {
       val configuredCatalog = JobConfigProxy(job.config).configuredCatalog
       return configuredCatalog?.streams ?: listOf()
+    }
+
+    fun getJobInfoWithoutLogsStatic(
+      jobPersistence: JobPersistence,
+      jobId: Long,
+    ): JobInfoRead {
+      val job = jobPersistence.getJob(jobId)
+
+      val jobWithAttemptsRead = getJobWithAttemptsRead(job)
+      hydrateWithStats(listOf(jobWithAttemptsRead), listOf(job), true, jobPersistence)
+
+      return JobInfoRead()
+        .job(jobWithAttemptsRead.job)
+        .attempts(
+          job.attempts
+            .stream()
+            .map { obj: Attempt -> JobConverter.getAttemptInfoWithoutLogsRead(obj) }
+            .collect(Collectors.toList<@Valid AttemptInfoRead?>()),
+        )
     }
   }
 }
