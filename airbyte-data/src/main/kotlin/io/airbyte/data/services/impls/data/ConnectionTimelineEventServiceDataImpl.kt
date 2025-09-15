@@ -5,7 +5,7 @@
 package io.airbyte.data.services.impls.data
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.api.client.model.generated.JobRead
+import io.airbyte.api.model.generated.JobRead
 import io.airbyte.data.repositories.ConnectionTimelineEventRepository
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
 import io.airbyte.data.repositories.entities.ConnectionTimelineEventMinimal

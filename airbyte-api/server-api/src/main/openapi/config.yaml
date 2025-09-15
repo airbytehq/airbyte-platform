@@ -5156,6 +5156,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CustomerPortalRead"
+
+  /v1/billing/backfill_usage:
+    post:
+      summary: Backfill usage
+      tags:
+        - billing
+        - cloud-only
+      operationId: backfillUsage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BillingBackfillUsageRequest"
+      responses:
+        "200":
+          description: Successfully backfilled data
+
   /v1/billing/handle_webhook:
     post:
       summary: Handle an external billing event (ie a webhook from an external payment provider service)
@@ -14578,6 +14595,22 @@ components:
           type: string
 
     # Billing
+    BillingBackfillUsageRequest:
+      type: object
+      required:
+        - jobIds
+        - timeframeStart
+        - timeframeEnd
+      properties:
+        jobIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+        timeframeStart:
+          $ref: "#/components/schemas/ISO8601DateTime"
+        timeframeEnd:
+          $ref: "#/components/schemas/ISO8601DateTime"
     CustomerPortalRequestBody:
       type: object
       required:
