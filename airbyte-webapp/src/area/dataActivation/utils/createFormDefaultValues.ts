@@ -11,6 +11,7 @@ import {
   FieldRenamingMapperConfiguration,
   HashingMapperConfigurationMethod,
   StreamMapperType,
+  SyncMode,
 } from "core/api/types/AirbyteClient";
 import { isNonNullable } from "core/utils/isNonNullable";
 import { ToZodSchema } from "core/utils/zod";
@@ -42,7 +43,12 @@ export const createFormDefaultValues = (syncCatalog: AirbyteCatalog): DataActiva
           destinationSyncMode: stream.config.destinationSyncMode,
           fields: getFieldsFromConfig(stream.config),
           matchingKeys: getMatchingKeysFromConfig(stream.config),
-          cursorField: stream.config.cursorField ? stream.config.cursorField[0] || null : null,
+          cursorField:
+            stream.config.syncMode === SyncMode.incremental
+              ? stream.config.cursorField
+                ? stream.config.cursorField[0] || null
+                : null
+              : null,
         };
       }),
   };

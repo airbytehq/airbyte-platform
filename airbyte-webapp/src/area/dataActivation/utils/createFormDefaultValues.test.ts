@@ -53,12 +53,55 @@ describe(`${createFormDefaultValues.name}`, () => {
           destinationSyncMode: "append",
           fields: [{ sourceFieldName: "id", destinationFieldName: "destination_id", additionalMappers: [] }],
           matchingKeys: ["destination_id"],
-          cursorField: "lastUpdatedTime",
+          cursorField: null,
         },
       ],
     };
 
     expect(createFormDefaultValues(PARTIAL_HUBSPOT_SYNC_CATALOG)).toEqual(expectedDefaultValues);
+  });
+
+  // This test is necessary because the API will automatically populate the cursor_field even if the sync mode is
+  // full_refresh. Our frontend form validation enforces that cursor_mode is null for full_refresh, so we only want to
+  // populate cursor_field if the stream is incremental.
+  it("should set cursorField only when syncMode is incremental", () => {
+    const incrementalSyncCatalog: AirbyteCatalog = {
+      streams: [
+        {
+          stream: { name: "test_stream", namespace: "test_namespace" },
+          config: {
+            selected: true,
+            syncMode: "incremental",
+            destinationSyncMode: "append",
+            primaryKey: undefined,
+            cursorField: ["updated_at"],
+            mappers: [],
+          },
+        },
+      ],
+    };
+
+    const fullRefreshSyncCatalog: AirbyteCatalog = {
+      streams: [
+        {
+          stream: { name: "test_stream", namespace: "test_namespace" },
+          config: {
+            selected: true,
+            syncMode: "full_refresh",
+            destinationSyncMode: "append",
+            primaryKey: undefined,
+            cursorField: ["updated_at"],
+            mappers: [],
+          },
+        },
+      ],
+    };
+
+    const incrementalResult = createFormDefaultValues(incrementalSyncCatalog);
+    const fullRefreshResult = createFormDefaultValues(fullRefreshSyncCatalog);
+
+    expect(incrementalResult.streams[0].cursorField).toBe("updated_at");
+    expect(fullRefreshResult.streams[0].cursorField).toBeNull();
   });
 
   it("returns correct composite matching key", () => {
@@ -107,7 +150,7 @@ describe(`${createFormDefaultValues.name}`, () => {
             { sourceFieldName: "name", destinationFieldName: "destination_name", additionalMappers: [] },
           ],
           matchingKeys: ["destination_id", "destination_name"],
-          cursorField: "lastUpdatedTime",
+          cursorField: null,
         },
       ],
     };

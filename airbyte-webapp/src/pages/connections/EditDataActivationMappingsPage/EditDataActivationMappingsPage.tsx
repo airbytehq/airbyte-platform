@@ -3,6 +3,7 @@ import { FormProvider, useForm } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Navigate } from "react-router-dom";
 
+import { FormChangeTracker } from "components/forms/FormChangeTracker";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
@@ -76,6 +77,7 @@ export const EditDataActivationMappingsPage = () => {
   return (
     <ScrollParent>
       <FormProvider {...methods}>
+        <FormChangeTracker formId="edit-data-activation-mappings" changed={methods.formState.isDirty} />
         <form onSubmit={methods.handleSubmit(onSubmit)}>
           <FlexContainer direction="column" gap="lg">
             <FlexContainer justifyContent="space-between" alignItems="flex-start">

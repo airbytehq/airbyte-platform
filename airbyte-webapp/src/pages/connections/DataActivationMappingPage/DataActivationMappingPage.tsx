@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { SOURCE_ID_PARAM } from "components/connection/CreateConnection/DefineSource";
 import { CreateConnectionFlowLayout } from "components/connection/CreateConnectionFlowLayout";
+import { FormChangeTracker } from "components/forms/FormChangeTracker";
 import LoadingSchema from "components/LoadingSchema";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
@@ -63,6 +64,7 @@ export const DataActivationMappingPage: React.FC = () => {
 
   return (
     <FormProvider {...methods}>
+      <FormChangeTracker formId="create-data-activation-mappings" changed={methods.formState.isDirty} />
       <form
         onSubmit={(event) => {
           setShowGlobalValidationMessage(true);
