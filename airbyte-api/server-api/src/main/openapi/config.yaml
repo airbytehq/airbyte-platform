@@ -15156,6 +15156,8 @@ components:
             gracePeriodEndsAt:
               type: integer
               format: int64
+        organizationPlanId:
+          type: string
     OrganizationLimits:
       type: object
       properties:

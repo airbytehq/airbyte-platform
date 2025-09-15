@@ -53,6 +53,8 @@ interface EntitlementService {
     }
   }
 
+  fun getPlans(organizationId: OrganizationId): List<EntitlementPlan>
+
   fun addOrganization(
     organizationId: OrganizationId,
     plan: EntitlementPlan,
@@ -111,6 +113,12 @@ internal class EntitlementServiceImpl(
         reason = "Exception while checking entitlement: ${e.message}",
       )
     }
+
+  override fun getPlans(organizationId: OrganizationId): List<EntitlementPlan> {
+    val result = entitlementClient.getPlans(organizationId)
+    sendCountMetric(OssMetricsRegistry.ENTITLEMENT_PLAN_RETRIEVAL, organizationId, true)
+    return result
+  }
 
   override fun addOrganization(
     organizationId: OrganizationId,

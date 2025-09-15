@@ -23,6 +23,8 @@ internal class NoEntitlementClient : EntitlementClient {
 
   override fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult> = emptyList()
 
+  override fun getPlans(organizationId: OrganizationId): List<EntitlementPlan> = emptyList()
+
   override fun addOrganization(
     organizationId: OrganizationId,
     plan: EntitlementPlan,
