@@ -49,9 +49,11 @@ enum class EntitlementPlan(
   fun isLessThan(other: EntitlementPlan): Boolean = this.value < other.value
 
   companion object {
-    val supportedOrbPlanExternalIds: Map<SupportedOrbPlan, EntitlementPlan> =
+    val supportedOrbPlanNameOverrides: Map<SupportedOrbPlan, EntitlementPlan> =
       mapOf(
-        SupportedOrbPlan.CLOUD_SELF_SERVE to STANDARD,
+        SupportedOrbPlan.CLOUD_SELF_SERVE_ANNUAL to STANDARD,
+        SupportedOrbPlan.CLOUD_SELF_SERVE_MONTHLY to STANDARD,
+        SupportedOrbPlan.PRO to PRO,
       )
   }
 }
@@ -59,5 +61,7 @@ enum class EntitlementPlan(
 enum class SupportedOrbPlan(
   val plan: String,
 ) {
-  CLOUD_SELF_SERVE("cloud-self-serve"),
+  CLOUD_SELF_SERVE_ANNUAL("Airbyte Cloud (Annual Subscription)"),
+  CLOUD_SELF_SERVE_MONTHLY("Airbyte Cloud (Monthly Subscription)"),
+  PRO("Airbyte Teams"),
 }
