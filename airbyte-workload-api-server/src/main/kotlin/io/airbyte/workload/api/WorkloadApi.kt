@@ -13,7 +13,6 @@ import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.api.domain.ClaimResponse
 import io.airbyte.workload.api.domain.ExpiredDeadlineWorkloadListRequest
-import io.airbyte.workload.api.domain.KnownExceptionInfo
 import io.airbyte.workload.api.domain.LongRunningWorkloadRequest
 import io.airbyte.workload.api.domain.Workload
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
@@ -46,12 +45,6 @@ import io.micronaut.scheduling.TaskExecutors
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
-import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.media.Content
-import io.swagger.v3.oas.annotations.media.Schema
-import io.swagger.v3.oas.annotations.parameters.RequestBody
-import io.swagger.v3.oas.annotations.responses.ApiResponse
-import io.swagger.v3.oas.annotations.responses.ApiResponses
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
@@ -77,22 +70,18 @@ open class WorkloadApi(
   @Status(HttpStatus.NO_CONTENT)
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Create a workload", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "204",
-        description = "Successfully created workload",
-      ),
-      ApiResponse(
-        responseCode = "200",
-        description = "Workload with given workload id already exists.",
-      ),
-    ],
-  )
-  // Since create publishes to a queue, it is prudent to give it its own thread pool.
+  /**
+   * Create a workload
+   *
+   * @param workloadCreateRequest The workload creation request
+   * @return HttpResponse with status 204 if successfully created, 200 if workload already exists
+   *
+   * Since create publishes to a queue, it is prudent to give it its own thread pool.
+   */
   @ExecuteOn("workload")
-  fun workloadCreate(workloadCreateRequest: WorkloadCreateRequest): HttpResponse<Unit> {
+  fun workloadCreate(
+    workloadCreateRequest: WorkloadCreateRequest,
+  ): HttpResponse<Unit> {
     ApmTraceUtils.addTagsToTrace(
       mutableMapOf(
         MetricTags.MUTEX_KEY_TAG to workloadCreateRequest.mutexKey,
@@ -138,102 +127,60 @@ open class WorkloadApi(
     return HttpResponse.status(HttpStatus.NO_CONTENT)
   }
 
+  /**
+   * Sets workload status to 'failure'.
+   *
+   * @param workloadFailureRequest The workload failure request
+   * @throws 404 if workload with given id was not found
+   * @throws 410 if workload is not in an active state, it cannot be failed
+   */
   @PUT
   @Path("/failure")
   @Status(HttpStatus.NO_CONTENT)
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Sets workload status to 'failure'.", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "204",
-        description = "Success",
-      ),
-      ApiResponse(
-        responseCode = "404",
-        description = "Workload with given id was not found.",
-        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
-      ),
-      ApiResponse(
-        responseCode = "410",
-        description = "Workload is not in an active state, it cannot be failed.",
-        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
-      ),
-    ],
-  )
   fun workloadFailure(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = WorkloadFailureRequest::class))],
-    ) @Body workloadFailureRequest: WorkloadFailureRequest,
+    @Body workloadFailureRequest: WorkloadFailureRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadFailureRequest.workloadId))
     authorize(workloadId = workloadFailureRequest.workloadId)
     workloadHandler.failWorkload(workloadFailureRequest.workloadId, workloadFailureRequest.source, workloadFailureRequest.reason)
   }
 
+  /**
+   * Sets workload status to 'success'.
+   *
+   * @param workloadSuccessRequest The workload success request
+   * @throws 404 if workload with given id was not found
+   * @throws 410 if workload is not in an active state, it cannot be succeeded
+   */
   @PUT
   @Path("/success")
   @Status(HttpStatus.NO_CONTENT)
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Sets workload status to 'success'.", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "204",
-        description = "Success",
-      ),
-      ApiResponse(
-        responseCode = "404",
-        description = "Workload with given id was not found.",
-        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
-      ),
-      ApiResponse(
-        responseCode = "410",
-        description = "Workload is not in an active state, it cannot be succeeded.",
-        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
-      ),
-    ],
-  )
   fun workloadSuccess(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = WorkloadSuccessRequest::class))],
-    ) @Body workloadSuccessRequest: WorkloadSuccessRequest,
+    @Body workloadSuccessRequest: WorkloadSuccessRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadSuccessRequest.workloadId))
     authorize(workloadId = workloadSuccessRequest.workloadId)
     workloadHandler.succeedWorkload(workloadSuccessRequest.workloadId)
   }
 
+  /**
+   * Sets workload status to 'running'.
+   *
+   * @param workloadRunningRequest The workload running request
+   * @throws 404 if workload with given id was not found
+   * @throws 410 if workload is not in pending state, it cannot be set to running
+   */
   @PUT
   @Path("/running")
   @Status(HttpStatus.NO_CONTENT)
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Sets workload status to 'running'.", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "204",
-        description = "Success",
-      ),
-      ApiResponse(
-        responseCode = "404",
-        description = "Workload with given id was not found.",
-        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
-      ),
-      ApiResponse(
-        responseCode = "410",
-        description = "Workload is not in pending state, it cannot be set to running.",
-        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
-      ),
-    ],
-  )
   fun workloadRunning(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = WorkloadRunningRequest::class))],
-    ) @Body workloadRunningRequest: WorkloadRunningRequest,
+    @Body workloadRunningRequest: WorkloadRunningRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadRunningRequest.workloadId))
     authorize(workloadId = workloadRunningRequest.workloadId)
@@ -243,34 +190,20 @@ open class WorkloadApi(
     )
   }
 
+  /**
+   * Cancel the execution of a workload
+   *
+   * @param workloadCancelRequest The workload cancel request
+   * @throws 404 if workload with given id was not found
+   * @throws 410 if workload is in terminal state, it cannot be cancelled
+   */
   @PUT
   @Path("/cancel")
   @Status(HttpStatus.NO_CONTENT)
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Cancel the execution of a workload", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "204",
-        description = "Success",
-      ),
-      ApiResponse(
-        responseCode = "404",
-        description = "Workload with given id was not found.",
-        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
-      ),
-      ApiResponse(
-        responseCode = "410",
-        description = "Workload is in terminal state, it cannot be cancelled.",
-        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
-      ),
-    ],
-  )
   fun workloadCancel(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = WorkloadCancelRequest::class))],
-    ) @Body workloadCancelRequest: WorkloadCancelRequest,
+    @Body workloadCancelRequest: WorkloadCancelRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(
       mutableMapOf(
@@ -283,36 +216,20 @@ open class WorkloadApi(
     workloadHandler.cancelWorkload(workloadCancelRequest.workloadId, workloadCancelRequest.source, workloadCancelRequest.reason)
   }
 
+  /**
+   * Claim the execution of a workload
+   *
+   * @param workloadClaimRequest The workload claim request
+   * @return ClaimResponse with boolean denoting whether claim was successful. True if claim was successful, False if workload has already been claimed
+   * @throws 404 if workload with given id was not found
+   * @throws 410 if workload is in terminal state. It cannot be claimed
+   */
   @PUT
   @Path("/claim")
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Claim the execution of a workload", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "200",
-        description =
-          "Returns a boolean denoting whether claim was successful. True if claim was successful, " +
-            "False if workload has already been claimed.",
-        content = [Content(schema = Schema(implementation = ClaimResponse::class))],
-      ),
-      ApiResponse(
-        responseCode = "404",
-        description = "Workload with given id was not found.",
-        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
-      ),
-      ApiResponse(
-        responseCode = "410",
-        description = "Workload is in terminal state. It cannot be claimed.",
-        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
-      ),
-    ],
-  )
   fun workloadClaim(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = WorkloadClaimRequest::class))],
-    ) @Body workloadClaimRequest: WorkloadClaimRequest,
+    @Body workloadClaimRequest: WorkloadClaimRequest,
   ): ClaimResponse {
     ApmTraceUtils.addTagsToTrace(
       mutableMapOf(
@@ -330,34 +247,20 @@ open class WorkloadApi(
     return ClaimResponse(claimed)
   }
 
+  /**
+   * Sets workload status to 'launched'.
+   *
+   * @param workloadLaunchedRequest The workload launched request
+   * @throws 404 if workload with given id was not found
+   * @throws 410 if workload is not in claimed state. It cannot be set to launched
+   */
   @PUT
   @Path("/launched")
   @Status(HttpStatus.NO_CONTENT)
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Sets workload status to 'launched'.", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "204",
-        description = "Success",
-      ),
-      ApiResponse(
-        responseCode = "404",
-        description = "Workload with given id was not found.",
-        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
-      ),
-      ApiResponse(
-        responseCode = "410",
-        description = "Workload is not in claimed state. It cannot be set to launched.",
-        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
-      ),
-    ],
-  )
   fun workloadLaunched(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = WorkloadLaunchedRequest::class))],
-    ) @Body workloadLaunchedRequest: WorkloadLaunchedRequest,
+    @Body workloadLaunchedRequest: WorkloadLaunchedRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadLaunchedRequest.workloadId))
     authorize(workloadId = workloadLaunchedRequest.workloadId)
@@ -367,24 +270,16 @@ open class WorkloadApi(
     )
   }
 
+  /**
+   * Get a workload by id
+   *
+   * @param workloadId The workload ID
+   * @return Workload if successfully retrieved
+   * @throws 404 if workload with given id was not found
+   */
   @GET
   @Path("/{workloadId}")
   @Produces("application/json")
-  @Operation(summary = "Get a workload by id", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "200",
-        description = "Successfully retrieved workload by given workload id.",
-        content = [Content(schema = Schema(implementation = Workload::class))],
-      ),
-      ApiResponse(
-        responseCode = "404",
-        description = "Workload with given id was not found.",
-        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
-      ),
-    ],
-  )
   fun workloadGet(
     @PathParam("workloadId") workloadId: String,
   ): Workload {
@@ -393,58 +288,38 @@ open class WorkloadApi(
     return workloadHandler.getWorkload(workloadId)
   }
 
+  /**
+   * Heartbeat from a workload
+   *
+   * @param workloadHeartbeatRequest The workload heartbeat request
+   * @throws 404 if workload with given id was not found
+   * @throws 410 if workload should stop because it is no longer expected to be running
+   */
   @PUT
   @Path("/heartbeat")
   @Status(HttpStatus.NO_CONTENT)
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Heartbeat from a workload", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "204",
-        description = "Successfully heartbeated",
-      ),
-      ApiResponse(
-        responseCode = "404",
-        description = "Workload with given id was not found.",
-        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
-      ),
-      ApiResponse(
-        responseCode = "410",
-        description = "Workload should stop because it is no longer expected to be running.",
-        content = [Content(schema = Schema(implementation = KnownExceptionInfo::class))],
-      ),
-    ],
-  )
   fun workloadHeartbeat(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = WorkloadHeartbeatRequest::class))],
-    ) @Body workloadHeartbeatRequest: WorkloadHeartbeatRequest,
+    @Body workloadHeartbeatRequest: WorkloadHeartbeatRequest,
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadHeartbeatRequest.workloadId))
     authorize(workloadId = workloadHeartbeatRequest.workloadId)
     workloadHandler.heartbeat(workloadHeartbeatRequest.workloadId, workloadHeartbeatRequest.deadline ?: defaultDeadlineValues.heartbeatDeadline())
   }
 
+  /**
+   * Get workloads according to the filters.
+   *
+   * @param workloadListRequest The workload list request with filters
+   * @return WorkloadListResponse containing filtered workloads
+   */
   @POST
   @Path("/list")
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Get workloads according to the filters.", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "200",
-        description = "Success",
-        content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
-      ),
-    ],
-  )
   fun workloadList(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = WorkloadListRequest::class))],
-    ) @Body workloadListRequest: WorkloadListRequest,
+    @Body workloadListRequest: WorkloadListRequest,
   ): WorkloadListResponse {
     authorize(dataplanes = workloadListRequest.dataplane)
     return WorkloadListResponse(
@@ -456,24 +331,18 @@ open class WorkloadApi(
     )
   }
 
+  /**
+   * Get workloads with expired deadline according to the filters.
+   *
+   * @param expiredDeadlineWorkloadListRequest The expired deadline workload list request with filters
+   * @return WorkloadListResponse containing workloads with expired deadlines
+   */
   @POST
   @Path("/expired_deadline_list")
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Get workloads according to the filters.", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "200",
-        description = "Success",
-        content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
-      ),
-    ],
-  )
   fun workloadListWithExpiredDeadline(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = ExpiredDeadlineWorkloadListRequest::class))],
-    ) @Body expiredDeadlineWorkloadListRequest: ExpiredDeadlineWorkloadListRequest,
+    @Body expiredDeadlineWorkloadListRequest: ExpiredDeadlineWorkloadListRequest,
   ): WorkloadListResponse {
     authorize(dataplanes = expiredDeadlineWorkloadListRequest.dataplane)
     return WorkloadListResponse(
@@ -485,24 +354,18 @@ open class WorkloadApi(
     )
   }
 
+  /**
+   * Get active workloads according to the filters.
+   *
+   * @param listActiveRequest The workload list active request with filters
+   * @return WorkloadListActiveResponse containing active workloads
+   */
   @POST
   @Path("/list_active")
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Get active workloads according to the filters.", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "200",
-        description = "Success",
-        content = [Content(schema = Schema(implementation = WorkloadListActiveResponse::class))],
-      ),
-    ],
-  )
   fun workloadListActive(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = WorkloadListActiveRequest::class))],
-    ) @Body listActiveRequest: WorkloadListActiveRequest,
+    @Body listActiveRequest: WorkloadListActiveRequest,
   ): WorkloadListActiveResponse {
     authorize(dataplanes = listActiveRequest.dataplane)
     return WorkloadListActiveResponse(
@@ -514,24 +377,18 @@ open class WorkloadApi(
     )
   }
 
+  /**
+   * Get long running non-sync workloads according to the filters.
+   *
+   * @param longRunningWorkloadRequest The long running workload request with filters
+   * @return WorkloadListResponse containing long running non-sync workloads
+   */
   @POST
   @Path("/list_long_running_non_sync")
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Get workloads according to the filters.", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "200",
-        description = "Success",
-        content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
-      ),
-    ],
-  )
   fun workloadListOldNonSync(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = LongRunningWorkloadRequest::class))],
-    ) @Body longRunningWorkloadRequest: LongRunningWorkloadRequest,
+    @Body longRunningWorkloadRequest: LongRunningWorkloadRequest,
   ): WorkloadListResponse {
     authorize(dataplanes = longRunningWorkloadRequest.dataplane)
     return WorkloadListResponse(
@@ -543,24 +400,18 @@ open class WorkloadApi(
     )
   }
 
+  /**
+   * Get long running sync workloads according to the filters.
+   *
+   * @param longRunningWorkloadRequest The long running workload request with filters
+   * @return WorkloadListResponse containing long running sync workloads
+   */
   @POST
   @Path("/list_long_running_sync")
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Get workloads according to the filters.", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "200",
-        description = "Success",
-        content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
-      ),
-    ],
-  )
   fun workloadListOldSync(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = LongRunningWorkloadRequest::class))],
-    ) @Body longRunningWorkloadRequest: LongRunningWorkloadRequest,
+    @Body longRunningWorkloadRequest: LongRunningWorkloadRequest,
   ): WorkloadListResponse {
     authorize(dataplanes = longRunningWorkloadRequest.dataplane)
     return WorkloadListResponse(
@@ -572,24 +423,18 @@ open class WorkloadApi(
     )
   }
 
+  /**
+   * Poll for workloads to process
+   *
+   * @param req The workload queue poll request
+   * @return WorkloadListResponse containing workloads available for processing
+   */
   @POST
   @Path("/queue/poll")
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Poll for workloads to process", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "200",
-        description = "Success",
-        content = [Content(schema = Schema(implementation = WorkloadListResponse::class))],
-      ),
-    ],
-  )
   fun pollWorkloadQueue(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = WorkloadQueuePollRequest::class))],
-    ) @Body req: WorkloadQueuePollRequest,
+    @Body req: WorkloadQueuePollRequest,
   ): WorkloadListResponse {
     ApmTraceUtils.addTagsToTrace(
       mutableMapOf(
@@ -601,24 +446,18 @@ open class WorkloadApi(
     return WorkloadListResponse(workloads)
   }
 
+  /**
+   * Count enqueued workloads matching a search criteria
+   *
+   * @param req The workload queue query request
+   * @return WorkloadDepthResponse containing the count of matching workloads
+   */
   @POST
   @Path("/queue/depth")
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Count enqueued workloads matching a search criteria", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "200",
-        description = "Success",
-        content = [Content(schema = Schema(implementation = WorkloadDepthResponse::class))],
-      ),
-    ],
-  )
   fun countWorkloadQueueDepth(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = WorkloadQueueQueryRequest::class))],
-    ) @Body req: WorkloadQueueQueryRequest,
+    @Body req: WorkloadQueueQueryRequest,
   ): WorkloadDepthResponse {
     ApmTraceUtils.addTagsToTrace(
       mutableMapOf(
@@ -630,41 +469,30 @@ open class WorkloadApi(
     return WorkloadDepthResponse(count)
   }
 
+  /**
+   * Count enqueued workloads grouped by logical queue
+   *
+   * @return WorkloadQueueStatsResponse containing workload queue statistics
+   */
   @GET
   @Path("/queue/stats")
   @Consumes("application/json")
   @Produces("application/json")
-  @Operation(summary = "Count enqueued workloads grouped by logical queue", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "200",
-        description = "Success",
-        content = [Content(schema = Schema(implementation = WorkloadQueueStatsResponse::class))],
-      ),
-    ],
-  )
   fun getWorkloadQueueStats(): WorkloadQueueStatsResponse {
     val stats = workloadHandler.getWorkloadQueueStats()
     return WorkloadQueueStatsResponse(stats)
   }
 
+  /**
+   * Remove the queue entries which are older than a week up to a certain limit
+   *
+   * @param req The workload queue clean limit request
+   */
   @POST
   @Path("/queue/clean")
   @Consumes("application/json")
-  @Operation(summary = "Remove the queue entries which are older than a week up to a certain limit", tags = ["workload"])
-  @ApiResponses(
-    value = [
-      ApiResponse(
-        responseCode = "204",
-        description = "Cleaning workload queue successful",
-      ),
-    ],
-  )
   fun workloadQueueClean(
-    @RequestBody(
-      content = [Content(schema = Schema(implementation = WorkloadQueueCleanLimit::class))],
-    ) @Body req: WorkloadQueueCleanLimit,
+    @Body req: WorkloadQueueCleanLimit,
   ) {
     authorize()
     workloadHandler.cleanWorkloadQueue(req.limit)

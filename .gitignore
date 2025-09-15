@@ -17,9 +17,6 @@ data
 static_checker_reports/
 oss/
 
-# TODO(cole) remove when the generation of this file is removed
-airbyte-api/workload-api/src/main/openapi/
-
 # Logs
 acceptance_tests_logs/
 

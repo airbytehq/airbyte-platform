@@ -14,7 +14,6 @@ airbyte {
   spotless {
     excludes =
       listOf(
-        project(":oss:airbyte-api:workload-api").file("src/main/openapi/workload-openapi.yaml").path,
         project(":oss:airbyte-api:server-api").file("src/main/openapi/api.yaml").path,
         project(":oss:airbyte-api:server-api").file("src/main/openapi/api_sdk.yaml").path,
         project(":oss:airbyte-api:server-api").file("src/main/openapi/api_terraform.yaml").path,

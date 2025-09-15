@@ -5,7 +5,6 @@ plugins {
 }
 
 dependencies {
-  ksp(libs.v3.swagger.annotations)
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
   ksp(libs.micronaut.openapi)
@@ -27,7 +26,6 @@ dependencies {
   implementation(libs.micronaut.security)
   implementation(libs.micronaut.security.jwt)
   implementation(libs.okhttp)
-  implementation(libs.v3.swagger.annotations)
   implementation(libs.reactor.core)
   implementation(libs.kotlin.logging)
   implementation(libs.bundles.micronaut.metrics)
@@ -52,7 +50,6 @@ dependencies {
   implementation(project(":oss:airbyte-db:db-lib"))
   implementation(project(":oss:airbyte-data"))
 
-  compileOnly(libs.v3.swagger.annotations)
   compileOnly(libs.micronaut.openapi.annotations)
 
   runtimeOnly(libs.snakeyaml)
