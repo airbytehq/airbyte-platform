@@ -152,6 +152,7 @@ class DataplaneControllerTest {
     expected.dataplaneEnabled = dataplane.enabled
     expected.dataplaneGroupName = dataplaneGroup.name
     expected.dataplaneGroupId = dataplaneGroup.id
+    expected.organizationId = dataplaneGroup.organizationId
 
     Assertions.assertEquals(expected, result)
   }
@@ -177,6 +178,7 @@ class DataplaneControllerTest {
     expected.dataplaneEnabled = dataplane.enabled
     expected.dataplaneGroupName = dataplaneGroup.name
     expected.dataplaneGroupId = dataplaneGroup.id
+    expected.organizationId = dataplaneGroup.organizationId
 
     Assertions.assertEquals(expected, result)
   }

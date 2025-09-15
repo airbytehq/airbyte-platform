@@ -49,6 +49,7 @@ class DataplaneIdentityService(
           dataplaneEnabled = initResponse.dataplaneEnabled,
           dataplaneGroupId = initResponse.dataplaneGroupId,
           dataplaneGroupName = initResponse.dataplaneGroupName,
+          organizationId = initResponse.organizationId,
         )
 
       logger.info { "Running as ${config.dataplaneId} (${config.dataplaneName}) for ${config.dataplaneGroupName}" }
@@ -76,6 +77,7 @@ class DataplaneIdentityService(
           dataplaneEnabled = heartbeatResponse.dataplaneEnabled,
           dataplaneGroupId = heartbeatResponse.dataplaneGroupId,
           dataplaneGroupName = heartbeatResponse.dataplaneGroupName,
+          organizationId = heartbeatResponse.organizationId,
         ),
       )
     } catch (e: ClientException) {

@@ -61,6 +61,7 @@ internal class DataplaneIdentityServiceTest {
         dataplaneEnabled = true,
         dataplaneGroupId = UUID.randomUUID(),
         dataplaneGroupName = "group-name",
+        organizationId = UUID.randomUUID(),
       )
     every {
       apiClient.dataplaneApi
@@ -77,6 +78,7 @@ internal class DataplaneIdentityServiceTest {
         dataplaneEnabled = initResponse.dataplaneEnabled,
         dataplaneGroupId = initResponse.dataplaneGroupId,
         dataplaneGroupName = initResponse.dataplaneGroupName,
+        organizationId = initResponse.organizationId,
       )
     assertEquals(expectedConfig, service.authNDrivenDataplaneConfig)
 
@@ -118,6 +120,7 @@ internal class DataplaneIdentityServiceTest {
         dataplaneEnabled = heartbeatResponse.dataplaneEnabled,
         dataplaneGroupId = heartbeatResponse.dataplaneGroupId,
         dataplaneGroupName = heartbeatResponse.dataplaneGroupName,
+        organizationId = heartbeatResponse.organizationId,
       )
     verify { eventPublisher.publishEvent(expectedConfig) }
   }
@@ -195,6 +198,7 @@ internal class DataplaneIdentityServiceTest {
         dataplaneEnabled = true,
         dataplaneGroupId = UUID.randomUUID(),
         dataplaneGroupName = "data-driven-dataplane-group-name",
+        organizationId = UUID.randomUUID(),
       )
     every {
       apiClient.dataplaneApi
@@ -215,6 +219,7 @@ internal class DataplaneIdentityServiceTest {
       dataplaneEnabled = true,
       dataplaneGroupId = UUID.randomUUID(),
       dataplaneGroupName = "group-name",
+      organizationId = UUID.randomUUID(),
     )
 
   private fun DataplaneHeartbeatResponse.toConfig(): DataplaneConfig =
@@ -224,5 +229,6 @@ internal class DataplaneIdentityServiceTest {
       dataplaneEnabled = dataplaneEnabled,
       dataplaneGroupId = dataplaneGroupId,
       dataplaneGroupName = dataplaneGroupName,
+      organizationId = organizationId,
     )
 }

@@ -21,6 +21,7 @@ class QueueConsumerControllerTest {
         dataplaneEnabled = true,
         dataplaneGroupId = UUID.randomUUID(),
         dataplaneGroupName = "group-name",
+        organizationId = UUID.randomUUID(),
       )
     val DisabledConfig = EnabledConfig.copy(dataplaneEnabled = false)
   }

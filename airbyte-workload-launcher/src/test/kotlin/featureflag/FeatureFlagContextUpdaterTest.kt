@@ -37,6 +37,7 @@ class FeatureFlagContextUpdaterTest {
         dataplaneGroupId = UUID.randomUUID(),
         dataplaneGroupName = "my-dataplane-group",
         dataplaneEnabled = false,
+        organizationId = UUID.randomUUID(),
       )
     updater.onApplicationEvent(event)
 

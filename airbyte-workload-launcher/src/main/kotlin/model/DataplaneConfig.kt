@@ -12,4 +12,8 @@ data class DataplaneConfig(
   val dataplaneEnabled: Boolean,
   val dataplaneGroupId: UUID,
   val dataplaneGroupName: String,
+  // Nullable for backwards compatibility.
+  // This field was added later, so if we run against an older control-plane,
+  // the CP will not return org ID.
+  val organizationId: UUID?,
 )

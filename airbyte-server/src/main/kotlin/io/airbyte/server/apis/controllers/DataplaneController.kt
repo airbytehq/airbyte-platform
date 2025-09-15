@@ -186,6 +186,7 @@ open class DataplaneController(
     resp.dataplaneEnabled = dataplane.enabled && dataplaneGroup.enabled
     resp.dataplaneGroupName = dataplaneGroup.name
     resp.dataplaneGroupId = dataplaneGroup.id
+    resp.organizationId = dataplaneGroup.organizationId
 
     reportDataplaneMetric(OssMetricsRegistry.DATAPLANE_INITIALIZE, dataplane, dataplaneGroup)
 
@@ -218,6 +219,7 @@ open class DataplaneController(
       dataplaneEnabled = dataplane.enabled && dataplaneGroup.enabled
       dataplaneGroupName = dataplaneGroup.name
       dataplaneGroupId = dataplaneGroup.id
+      organizationId = dataplaneGroup.organizationId
     }
   }
 
