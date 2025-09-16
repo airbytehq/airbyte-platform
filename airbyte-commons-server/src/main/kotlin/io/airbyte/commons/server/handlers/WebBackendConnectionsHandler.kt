@@ -529,6 +529,24 @@ class WebBackendConnectionsHandler(
   }
 
   /**
+   *Creates a map from stream descriptors to StreamAndConfiguration objects.
+   */
+  private fun buildStreamDescriptionMap(original: AirbyteCatalog): MutableMap<Stream, AirbyteStreamAndConfiguration?> =
+    original.streams
+      .stream()
+      .collect(
+        Collectors.toMap<@Valid AirbyteStreamAndConfiguration?, Stream, AirbyteStreamAndConfiguration?>(
+          { s: AirbyteStreamAndConfiguration? ->
+            Stream(
+              s!!.stream.name,
+              s.stream.namespace,
+            )
+          },
+          { s: AirbyteStreamAndConfiguration? -> s },
+        ),
+      )
+
+  /**
    * Applies existing configurations to a newly discovered catalog. For example, if the users stream
    * is in the old and new catalog, any configuration that was previously set for users, we add to the
    * new catalog.
@@ -551,33 +569,9 @@ class WebBackendConnectionsHandler(
          * we just define a quick-and-dirty record class.
          */
     val streamDescriptorToOriginalStream =
-      originalConfigured.streams
-        .stream()
-        .collect(
-          Collectors.toMap<@Valid AirbyteStreamAndConfiguration?, Stream, AirbyteStreamAndConfiguration?>(
-            { s: AirbyteStreamAndConfiguration? ->
-              Stream(
-                s!!.stream.name,
-                s.stream.namespace,
-              )
-            },
-            { s: AirbyteStreamAndConfiguration? -> s },
-          ),
-        )
+      buildStreamDescriptionMap(originalConfigured)
     val streamDescriptorToOriginalDiscoveredStream =
-      originalDiscovered.streams
-        .stream()
-        .collect(
-          Collectors.toMap<@Valid AirbyteStreamAndConfiguration?, Stream, AirbyteStreamAndConfiguration?>(
-            { s: AirbyteStreamAndConfiguration? ->
-              Stream(
-                s!!.stream.name,
-                s.stream.namespace,
-              )
-            },
-            { s: AirbyteStreamAndConfiguration? -> s },
-          ),
-        )
+      buildStreamDescriptionMap(originalDiscovered)
 
     val streams: MutableList<AirbyteStreamAndConfiguration> = ArrayList()
 
