@@ -277,7 +277,7 @@ class ConnectionTimelineEventHelperTest {
 
     connectionTimelineEventHelper.logConnectionSettingsChangedEventInConnectionTimeline(connectionId, originalConnectionRead, patch, null, true)
     val eventCaptor = argumentCaptor<ConnectionSettingsChangedEvent>()
-    verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), anyOrNull())
+    verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), anyOrNull(), anyOrNull())
     val capturedEvent = eventCaptor.firstValue
     Assertions.assertNotNull(capturedEvent)
     Assertions.assertEquals(expectedPatches, capturedEvent.getPatches())
@@ -303,7 +303,7 @@ class ConnectionTimelineEventHelperTest {
 
     connectionTimelineEventHelper.logSchemaChangeAutoPropagationEventInConnectionTimeline(connectionId, diff)
     val eventCaptor = argumentCaptor<SchemaChangeAutoPropagationEvent>()
-    verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), anyOrNull())
+    verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), anyOrNull(), anyOrNull())
     val capturedEvent: SchemaChangeAutoPropagationEvent = eventCaptor.firstValue
 
     Assertions.assertNotNull(capturedEvent)

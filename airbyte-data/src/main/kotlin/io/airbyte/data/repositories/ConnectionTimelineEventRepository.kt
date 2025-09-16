@@ -72,4 +72,6 @@ interface ConnectionTimelineEventRepository : PageableRepository<ConnectionTimel
     eventType: ConnectionEvent.Type?,
     createdAtStart: OffsetDateTime?,
   ): List<UUID?>
+
+  fun findByJobId(jobId: Long): List<ConnectionTimelineEvent>
 }

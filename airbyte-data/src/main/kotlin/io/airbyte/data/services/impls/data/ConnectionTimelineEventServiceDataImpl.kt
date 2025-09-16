@@ -28,10 +28,11 @@ class ConnectionTimelineEventServiceDataImpl(
     connectionId: UUID,
     event: ConnectionEvent,
     userId: UUID?,
+    jobId: Long?,
   ): ConnectionTimelineEvent {
     val serializedEvent = mapper.writeValueAsString(event)
     val timelineEvent =
-      ConnectionTimelineEvent(null, connectionId, userId, event.getEventType().toString(), serializedEvent, OffsetDateTime.now())
+      ConnectionTimelineEvent(null, connectionId, userId, event.getEventType().toString(), serializedEvent, OffsetDateTime.now(), jobId)
     return repository.save(timelineEvent)
   }
 
@@ -40,10 +41,11 @@ class ConnectionTimelineEventServiceDataImpl(
     event: ConnectionEvent,
     userId: UUID?,
     createdAt: OffsetDateTime,
+    jobId: Long?,
   ): ConnectionTimelineEvent {
     val serializedEvent = mapper.writeValueAsString(event)
     val timelineEvent =
-      ConnectionTimelineEvent(null, connectionId, userId, event.getEventType().toString(), serializedEvent, createdAt)
+      ConnectionTimelineEvent(null, connectionId, userId, event.getEventType().toString(), serializedEvent, createdAt, jobId)
     return repository.save(timelineEvent)
   }
 
@@ -58,6 +60,8 @@ class ConnectionTimelineEventServiceDataImpl(
     rowOffset: Int,
   ): List<ConnectionTimelineEvent> =
     repository.findByConnectionIdWithFilters(connectionId, eventTypes, createdAtStart, createdAtEnd, pageSize, rowOffset)
+
+  override fun listEventsForJob(jobId: Long): List<ConnectionTimelineEvent> = repository.findByJobId(jobId)
 
   /**
    * The returned associated user could be null when:

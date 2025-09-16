@@ -17,6 +17,7 @@ interface ConnectionTimelineEventService {
     connectionId: UUID,
     event: ConnectionEvent,
     userId: UUID? = null,
+    jobId: Long? = null,
   ): ConnectionTimelineEvent
 
   // This function is used to write an event with a specific timestamp. This is ONLY useful for backfilling.
@@ -25,6 +26,7 @@ interface ConnectionTimelineEventService {
     event: ConnectionEvent,
     userId: UUID? = null,
     createdAt: OffsetDateTime,
+    jobId: Long? = null,
   ): ConnectionTimelineEvent
 
   fun getEvent(eventId: UUID): ConnectionTimelineEvent
@@ -37,6 +39,8 @@ interface ConnectionTimelineEventService {
     pageSize: Int,
     rowOffset: Int,
   ): List<ConnectionTimelineEvent>
+
+  fun listEventsForJob(jobId: Long): List<ConnectionTimelineEvent>
 
   fun findAssociatedUserForAJob(
     job: JobRead,

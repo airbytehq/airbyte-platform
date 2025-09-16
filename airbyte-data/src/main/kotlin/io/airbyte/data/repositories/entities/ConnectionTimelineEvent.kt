@@ -25,6 +25,7 @@ data class ConnectionTimelineEvent(
   @field:TypeDef(type = DataType.JSON)
   var summary: String? = null,
   var createdAt: OffsetDateTime? = null,
+  var jobId: Long? = null,
 )
 
 @Introspected

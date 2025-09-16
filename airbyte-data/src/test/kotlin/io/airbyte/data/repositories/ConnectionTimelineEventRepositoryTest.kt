@@ -40,6 +40,7 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
 
   @Test
   fun `test db insertion`() {
+    val initialCount = connectionTimelineEventRepository.count()
     val event =
       ConnectionTimelineEvent(
         connectionId = UUID.randomUUID(),
@@ -48,10 +49,34 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
       )
 
     val saved = connectionTimelineEventRepository.save(event)
-    assert(connectionTimelineEventRepository.count() == 1L)
+    assert(connectionTimelineEventRepository.count() == initialCount + 1)
 
     val persistedEvent = connectionTimelineEventRepository.findById(saved.id!!).get()
     assert(persistedEvent.connectionId == event.connectionId)
+
+    connectionTimelineEventRepository.deleteById(saved.id!!)
+  }
+
+  @Test
+  fun `test db insertion with jobId`() {
+    val initialCount = connectionTimelineEventRepository.count()
+    val jobId = 12345L
+    val event =
+      ConnectionTimelineEvent(
+        connectionId = UUID.randomUUID(),
+        eventType = "Test",
+        createdAt = OffsetDateTime.now(),
+        jobId = jobId,
+      )
+
+    val saved = connectionTimelineEventRepository.save(event)
+    assert(connectionTimelineEventRepository.count() == initialCount + 1)
+
+    val persistedEvent = connectionTimelineEventRepository.findById(saved.id!!).get()
+    assert(persistedEvent.connectionId == event.connectionId)
+    assert(persistedEvent.jobId == jobId)
+
+    connectionTimelineEventRepository.deleteById(saved.id!!)
   }
 
   @Nested
@@ -414,6 +439,74 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
         )
       assert(res.size == 1)
       assert(res[0] == null)
+    }
+  }
+
+  @Nested
+  inner class FindByJobIdTest {
+    private val connectionId: UUID = UUID.randomUUID()
+    private val jobId1 = 1234L
+    private val jobId2 = 5678L
+    private val event1 =
+      ConnectionTimelineEvent(
+        connectionId = connectionId,
+        eventType = ConnectionEvent.Type.SYNC_STARTED.name,
+        createdAt = OffsetDateTime.of(2024, 9, 1, 0, 0, 0, 0, ZoneOffset.UTC),
+        jobId = jobId1,
+      )
+    private val event2 =
+      ConnectionTimelineEvent(
+        connectionId = connectionId,
+        eventType = ConnectionEvent.Type.SYNC_SUCCEEDED.name,
+        createdAt = OffsetDateTime.of(2024, 9, 2, 0, 0, 0, 0, ZoneOffset.UTC),
+        jobId = jobId1,
+      )
+    private val event3 =
+      ConnectionTimelineEvent(
+        connectionId = connectionId,
+        eventType = ConnectionEvent.Type.REFRESH_STARTED.name,
+        createdAt = OffsetDateTime.of(2024, 9, 3, 0, 0, 0, 0, ZoneOffset.UTC),
+        jobId = jobId2,
+      )
+    private val event4 =
+      ConnectionTimelineEvent(
+        connectionId = connectionId,
+        eventType = ConnectionEvent.Type.REFRESH_SUCCEEDED.name,
+        createdAt = OffsetDateTime.of(2024, 9, 4, 0, 0, 0, 0, ZoneOffset.UTC),
+        jobId = null,
+      )
+
+    @BeforeEach
+    fun setup() {
+      val allEvents = listOf(event1, event2, event3, event4)
+      allEvents.forEach { event -> connectionTimelineEventRepository.save(event) }
+    }
+
+    @AfterEach
+    fun reset() {
+      connectionTimelineEventRepository.deleteAll()
+    }
+
+    @Test
+    fun `should find events by jobId`() {
+      val res = connectionTimelineEventRepository.findByJobId(jobId1)
+      assert(res.size == 2)
+      val eventIds = res.map { it.id }
+      assert(eventIds.contains(event1.id))
+      assert(eventIds.contains(event2.id))
+    }
+
+    @Test
+    fun `should find single event by jobId`() {
+      val res = connectionTimelineEventRepository.findByJobId(jobId2)
+      assert(res.size == 1)
+      assert(res[0].id == event3.id)
+    }
+
+    @Test
+    fun `should return empty list for non-existent jobId`() {
+      val res = connectionTimelineEventRepository.findByJobId(9999L)
+      assert(res.isEmpty())
     }
   }
 }
