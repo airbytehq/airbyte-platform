@@ -1793,6 +1793,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
             event,
             null,
             Instant.ofEpochSecond(job.updatedAtInSecond).atOffset(ZoneOffset.UTC),
+            job.id,
           )
         },
       )

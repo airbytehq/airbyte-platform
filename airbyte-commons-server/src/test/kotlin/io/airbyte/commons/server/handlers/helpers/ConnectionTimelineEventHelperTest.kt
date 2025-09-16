@@ -30,6 +30,9 @@ import io.airbyte.data.services.ConnectionTimelineEventService
 import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason
 import io.airbyte.data.services.shared.ConnectionEvent
 import io.airbyte.data.services.shared.ConnectionSettingsChangedEvent
+import io.airbyte.data.services.shared.FailedEvent
+import io.airbyte.data.services.shared.FinalStatusEvent
+import io.airbyte.data.services.shared.ManuallyStartedEvent
 import io.airbyte.data.services.shared.SchemaChangeAutoPropagationEvent
 import io.airbyte.domain.services.storage.ConnectorObjectStorageService
 import io.airbyte.persistence.job.JobPersistence
@@ -310,5 +313,124 @@ class ConnectionTimelineEventHelperTest {
     Assertions.assertEquals(diff, capturedEvent.getCatalogDiff())
     Assertions.assertEquals(ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name, capturedEvent.getUpdateReason())
     Assertions.assertEquals(ConnectionEvent.Type.SCHEMA_UPDATE, capturedEvent.getEventType())
+  }
+
+  @Nested
+  inner class JobEventTests {
+    private val jobId = 12345L
+    private val connectionId = UUID.randomUUID()
+
+    @Test
+    fun testLogJobSuccessEvent() {
+      connectionTimelineEventHelper =
+        ConnectionTimelineEventHelper(
+          setOf(),
+          currentUserService,
+          organizationPersistence,
+          permissionHandler,
+          userPersistence,
+          connectorObjectStorageService,
+          connectionTimelineEventService,
+        )
+
+      val job = Job(jobId, JobConfig.ConfigType.SYNC, connectionId.toString(), JobConfig(), emptyList(), JobStatus.SUCCEEDED, 0L, 0L, 0L, true)
+      val attemptStats = emptyList<JobPersistence.AttemptStats>()
+
+      connectionTimelineEventHelper.logJobSuccessEventInConnectionTimeline(job, connectionId, attemptStats)
+
+      val eventCaptor = argumentCaptor<FinalStatusEvent>()
+      verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), anyOrNull(), eq(jobId))
+
+      val capturedEvent = eventCaptor.firstValue
+      Assertions.assertEquals(jobId, capturedEvent.getJobId())
+      Assertions.assertEquals(ConnectionEvent.Type.SYNC_SUCCEEDED, capturedEvent.getEventType())
+    }
+
+    @Test
+    fun testLogJobFailureEvent() {
+      connectionTimelineEventHelper =
+        ConnectionTimelineEventHelper(
+          setOf(),
+          currentUserService,
+          organizationPersistence,
+          permissionHandler,
+          userPersistence,
+          connectorObjectStorageService,
+          connectionTimelineEventService,
+        )
+
+      val job = Job(jobId, JobConfig.ConfigType.SYNC, connectionId.toString(), JobConfig(), emptyList(), JobStatus.FAILED, 0L, 0L, 0L, true)
+      val attemptStats = emptyList<JobPersistence.AttemptStats>()
+
+      connectionTimelineEventHelper.logJobFailureEventInConnectionTimeline(job, connectionId, attemptStats)
+
+      val eventCaptor = argumentCaptor<FailedEvent>()
+      verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), anyOrNull(), eq(jobId))
+
+      val capturedEvent = eventCaptor.firstValue
+      Assertions.assertEquals(jobId, capturedEvent.getJobId())
+      Assertions.assertEquals(ConnectionEvent.Type.SYNC_FAILED, capturedEvent.getEventType())
+    }
+
+    @Test
+    fun testLogJobCancellationEvent() {
+      connectionTimelineEventHelper =
+        ConnectionTimelineEventHelper(
+          setOf(),
+          currentUserService,
+          organizationPersistence,
+          permissionHandler,
+          userPersistence,
+          connectorObjectStorageService,
+          connectionTimelineEventService,
+        )
+
+      val job = Job(jobId, JobConfig.ConfigType.SYNC, connectionId.toString(), JobConfig(), emptyList(), JobStatus.CANCELLED, 0L, 0L, 0L, true)
+      val attemptStats = emptyList<JobPersistence.AttemptStats>()
+
+      connectionTimelineEventHelper.logJobCancellationEventInConnectionTimeline(job, attemptStats)
+
+      val eventCaptor = argumentCaptor<FinalStatusEvent>()
+      verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), anyOrNull(), eq(jobId))
+
+      val capturedEvent = eventCaptor.firstValue
+      Assertions.assertEquals(jobId, capturedEvent.getJobId())
+      Assertions.assertEquals(ConnectionEvent.Type.SYNC_CANCELLED, capturedEvent.getEventType())
+    }
+
+    @Test
+    fun testLogManuallyStartedEvent() {
+      connectionTimelineEventHelper =
+        ConnectionTimelineEventHelper(
+          setOf(),
+          currentUserService,
+          organizationPersistence,
+          permissionHandler,
+          userPersistence,
+          connectorObjectStorageService,
+          connectionTimelineEventService,
+        )
+
+      val jobInfo =
+        io.airbyte.api.model.generated
+          .JobInfoRead()
+          .job(
+            io.airbyte.api.model.generated
+              .JobRead()
+              .id(jobId)
+              .configType(io.airbyte.api.model.generated.JobConfigType.SYNC)
+              .createdAt(System.currentTimeMillis() / 1000),
+          )
+      val streams = emptyList<io.airbyte.config.StreamDescriptor>()
+
+      connectionTimelineEventHelper.logManuallyStartedEventInConnectionTimeline(connectionId, jobInfo, streams)
+
+      val eventCaptor = argumentCaptor<ManuallyStartedEvent>()
+      verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), anyOrNull(), eq(jobId))
+
+      val capturedEvent = eventCaptor.firstValue
+      Assertions.assertEquals(jobId, capturedEvent.getJobId())
+      Assertions.assertEquals(ConnectionEvent.Type.SYNC_STARTED, capturedEvent.getEventType())
+    }
   }
 }

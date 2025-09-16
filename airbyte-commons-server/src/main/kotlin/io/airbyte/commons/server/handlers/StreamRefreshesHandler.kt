@@ -77,7 +77,7 @@ class StreamRefreshesHandler(
               refreshStream.streamDescriptor
             },
         )
-      connectionTimelineEventService.writeEvent(connectionId, refreshStartedEvent, userId)
+      connectionTimelineEventService.writeEvent(connectionId, refreshStartedEvent, userId, it.id)
     }
 
     return if (job == null) null else JobConverter.getJobRead(job)

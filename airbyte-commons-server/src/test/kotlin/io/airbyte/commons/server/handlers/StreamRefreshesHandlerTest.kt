@@ -93,7 +93,7 @@ internal class StreamRefreshesHandlerTest {
     every { streamRefreshesRepository.saveAll(any<List<StreamRefresh>>()) } returns listOf()
     every { eventRunner.startNewManualSync(connectionId) } returns ManualOperationResult(jobId = 0L)
     every { connectionTimelineEventHelper.currentUserIdIfExist } returns UUID.randomUUID()
-    every { connectionTimelineEventService.writeEvent(any(), any(), any()) } returns
+    every { connectionTimelineEventService.writeEvent(any(), any(), any(), any()) } returns
       ConnectionTimelineEvent(
         connectionId = UUID.randomUUID(),
         eventType = ConnectionEvent.Type.REFRESH_STARTED.toString(),
@@ -128,7 +128,7 @@ internal class StreamRefreshesHandlerTest {
     every { streamRefreshesRepository.saveAll(any<List<StreamRefresh>>()) } returns listOf()
     every { eventRunner.startNewManualSync(connectionId) } returns ManualOperationResult(jobId = 0L)
     every { connectionTimelineEventHelper.currentUserIdIfExist } returns UUID.randomUUID()
-    every { connectionTimelineEventService.writeEvent(any(), any(), any()) } returns
+    every { connectionTimelineEventService.writeEvent(any(), any(), any(), any()) } returns
       ConnectionTimelineEvent(
         connectionId = UUID.randomUUID(),
         eventType = ConnectionEvent.Type.REFRESH_STARTED.toString(),

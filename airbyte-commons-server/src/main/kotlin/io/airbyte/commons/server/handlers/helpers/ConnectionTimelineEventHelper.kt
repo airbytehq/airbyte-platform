@@ -185,7 +185,7 @@ class ConnectionTimelineEventHelper
             getStreamsAssociatedWithJob(job),
             connectorObjectStorageService.getRejectedRecordsForJob(ConnectionId(connectionId), job, stats.rejectedRecords),
           )
-        connectionTimelineEventService.writeEvent(connectionId, event, null)
+        connectionTimelineEventService.writeEvent(connectionId, event, null, job.id)
       } catch (e: Exception) {
         log.error(e) { "Failed to persist timeline event for job: $job.id" }
       }
@@ -220,7 +220,7 @@ class ConnectionTimelineEventHelper
             connectorObjectStorageService.getRejectedRecordsForJob(ConnectionId(connectionId), job, stats.rejectedRecords),
             firstFailureReasonOfLastAttempt,
           )
-        connectionTimelineEventService.writeEvent(connectionId, event, null)
+        connectionTimelineEventService.writeEvent(connectionId, event, null, job.id)
       } catch (e: Exception) {
         log.error(e) { "Failed to persist timeline event for job: $job.id" }
       }
@@ -247,7 +247,7 @@ class ConnectionTimelineEventHelper
             getStreamsAssociatedWithJob(job),
             connectorObjectStorageService.getRejectedRecordsForJob(ConnectionId(connectionId), job, stats.rejectedRecords),
           )
-        connectionTimelineEventService.writeEvent(connectionId, event, currentUserIdIfExist)
+        connectionTimelineEventService.writeEvent(connectionId, event, currentUserIdIfExist, job.id)
       } catch (e: Exception) {
         log.error(e) { "Failed to persist job cancelled event for job: $job.id" }
       }
@@ -267,7 +267,7 @@ class ConnectionTimelineEventHelper
               jobInfo.job.configType.name,
               streams,
             )
-          connectionTimelineEventService.writeEvent(connectionId, event, currentUserIdIfExist)
+          connectionTimelineEventService.writeEvent(connectionId, event, currentUserIdIfExist, jobInfo.job.id)
         }
       } catch (e: Exception) {
         log.error(e) { "Failed to persist job started event for job: $jobInfo!!.job.id" }
