@@ -14599,18 +14599,15 @@ components:
       type: object
       required:
         - jobIds
-        - timeframeStart
-        - timeframeEnd
+        - backfillId
       properties:
         jobIds:
           type: array
           items:
             type: integer
             format: int64
-        timeframeStart:
-          $ref: "#/components/schemas/ISO8601DateTime"
-        timeframeEnd:
-          $ref: "#/components/schemas/ISO8601DateTime"
+        backfillId:
+          type: string
     CustomerPortalRequestBody:
       type: object
       required:
