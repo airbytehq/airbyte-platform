@@ -63,15 +63,25 @@ class DatabaseBeanFactory {
     @Named("config") configFlywayConfigurationProperties: FlywayConfigurationProperties,
     @Named("config") configDataSource: DataSource,
     airbyteBootloaderConfig: AirbyteBootloaderConfig,
-  ): Flyway =
-    configFlywayConfigurationProperties.fluentConfiguration
-      .dataSource(DataSourceUnwrapper.unwrapDataSource(configDataSource))
-      .baselineVersion(airbyteBootloaderConfig.migrationBaselineVersion)
-      .baselineDescription(BASELINE_DESCRIPTION)
-      .baselineOnMigrate(BASELINE_ON_MIGRATION)
-      .installedBy(INSTALLED_BY)
-      .table(String.format("airbyte_%s_migrations", "configs"))
-      .load()
+  ): Flyway {
+    val flywayConfiguration =
+      configFlywayConfigurationProperties.fluentConfiguration
+        .dataSource(DataSourceUnwrapper.unwrapDataSource(configDataSource))
+        .baselineVersion(airbyteBootloaderConfig.migrationBaselineVersion)
+        .baselineDescription(BASELINE_DESCRIPTION)
+        .baselineOnMigrate(BASELINE_ON_MIGRATION)
+        .installedBy(INSTALLED_BY)
+        .table(String.format("airbyte_%s_migrations", "configs"))
+
+    // Setting the transactional lock to false allows us run queries outside transactions
+    // without hanging. This enables creating indexes concurrently (i.e. without locking tables)
+    flywayConfiguration.pluginRegister
+      .getPlugin(PostgreSQLConfigurationExtension::class.java)
+      .isTransactionalLock =
+      false
+
+    return flywayConfiguration.load()
+  }
 
   /**
    * Flyway jobs db singleton.

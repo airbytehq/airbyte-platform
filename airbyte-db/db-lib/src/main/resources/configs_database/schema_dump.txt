@@ -258,6 +258,7 @@ create table "public"."connection_timeline_event" (
   "event_type" varchar(2147483647) not null,
   "summary" jsonb,
   "created_at" timestamp(6) with time zone not null,
+  "job_id" bigint,
   constraint "connection_timeline_event_pkey" primary key ("id")
 );
 create table "public"."connector_builder_project" (
@@ -774,6 +775,8 @@ create index "connection_operation_connection_id_idx" on "public"."connection_op
 create index "connection_tag_connection_id_idx" on "public"."connection_tag"("connection_id" asc);
 create index "connection_template_organization_id_idx" on "public"."connection_template"("organization_id" asc);
 create index "idx_connection_timeline_connection_id" on "public"."connection_timeline_event"("connection_id" asc, "created_at" desc, "event_type" asc);
+create index "idx_connection_timeline_event_job_id" on "public"."connection_timeline_event"("job_id" asc)
+where ((job_id IS NOT NULL));
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
 create unique index "actor_definition_id_state_tag_unique_idx" on "public"."connector_rollout"("actor_definition_id" asc, "tag" asc)
 where (((state)::text = ANY ((ARRAY['initialized'::character varying, 'in_progress'::character varying, 'paused'::character varying, 'workflow_started'::character varying, 'finalizing'::character varying, 'errored'::character varying])::text[])));
