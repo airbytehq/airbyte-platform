@@ -25,6 +25,31 @@ import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
 
+/**
+ * EntitlementService provides the ability to check
+ * whether an organization has been granted an entitlement.
+ *
+ * Implementations should consider the following:
+ *
+ * - Entitlement checks should not throw exceptions.
+ *   If an error occurs, the check should return a default value.
+ *
+ * - The default value for a failed check is most likely false.
+ *   Entitlements should be designed to grant access when the entitlement is granted.
+ *
+ * - The dataplane cannot have access to entitlements backed by API calls to external services,
+ *   for example Stigg, because that would require the dataplane to have the Stigg API key.
+ *
+ * - Background jobs (sync jobs, etc.) should check entitlements at job creation time,
+ *   and avoid checking at job run time, so that changing entitlements doesn't affect
+ *   currently running jobs. Of course, this depends on the use case, but it should be
+ *   considered.
+ *
+ * - Avoid checking entitlements in the bootloader. It's important that the bootloader
+ *   succeed, so that customers have a smooth install/upgrade process. Diagnosing issues
+ *   in the bootloader causes much more friction than diagnosing issues via the UI.
+ *   A failed entitlement check should not fail the bootloader.
+ */
 interface EntitlementService {
   fun checkEntitlement(
     organizationId: OrganizationId,
