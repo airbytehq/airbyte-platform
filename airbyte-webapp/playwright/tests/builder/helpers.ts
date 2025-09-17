@@ -48,7 +48,7 @@ export const appendRandomString = (string: string) => {
 export const initializeBuilderConnector = async (page: Page) => {
   // Navigate to the connector builder
   const workspaceId = await getWorkspaceId(page);
-  await page.goto(`/workspaces/${workspaceId}/connector-builder/create`, { waitUntil: "networkidle" });
+  await page.goto(`/workspaces/${workspaceId}/connector-builder/create`, { timeout: 30000 });
 
   // Select the "Start from scratch" option
   await page.locator('button[data-testid="start-from-scratch"]').click({ timeout: 10000 });
