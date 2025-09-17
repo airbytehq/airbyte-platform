@@ -1,15 +1,20 @@
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
   id("io.airbyte.gradle.jvm.lib")
 }
+
 /**
  * Registers a test-suite with Gradle's JvmTestSuite
  * @param name name the name of the test suite, must be unique, will match the name of the created task
  * @param includeTags tags of the tests to be included in this test-suite
  */
 @Suppress("UnstableApiUsage")
-fun registerTestSuite(name: String, includeTags: Array<String> = emptyArray()) {
+fun registerTestSuite(
+  name: String,
+  includeTags: Array<String> = emptyArray(),
+) {
   testing {
     suites.register<JvmTestSuite>(name) {
       dependencies {
@@ -27,14 +32,15 @@ fun registerTestSuite(name: String, includeTags: Array<String> = emptyArray()) {
 
       targets.all {
         testTask.configure {
-
           val parallelExecutionEnabled = System.getenv()["TESTS_PARALLEL_EXECUTION_ENABLED"] ?: "true"
           val ciMode = System.getProperty("ciMode") ?: "false"
 
-          systemProperties = mapOf(
-            "junit.jupiter.execution.parallel.enabled" to parallelExecutionEnabled,
-            // we use this property for our logging configuration. Gradle creates a new JVM to run tests, so we need to explicitly pass this property
-            "ciMode" to ciMode)
+          systemProperties =
+            mapOf(
+              "junit.jupiter.execution.parallel.enabled" to parallelExecutionEnabled,
+              // we use this property for our logging configuration. Gradle creates a new JVM to run tests, so we need to explicitly pass this property
+              "ciMode" to ciMode,
+            )
 
           useJUnitPlatform {
             includeTags(*includeTags)
@@ -96,11 +102,20 @@ dependencies {
   testImplementation("com.airbyte:api:0.39.2")
 
   testImplementation(libs.bundles.junit)
+  testImplementation(libs.kotlin.coroutines)
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
+  testImplementation(libs.kotlin.coroutines.test)
 }
 
 tasks.withType<Copy>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+// TODO(cole): remove when we upgrade to the latest kotlin
+kotlin {
+  compilerOptions {
+    freeCompilerArgs.add("-Xmulti-dollar-interpolation")
+  }
 }
