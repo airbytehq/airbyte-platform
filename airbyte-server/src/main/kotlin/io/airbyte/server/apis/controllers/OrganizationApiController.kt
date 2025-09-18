@@ -17,33 +17,27 @@ import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
 import io.airbyte.api.model.generated.OrganizationUsageRead
 import io.airbyte.api.model.generated.OrganizationUsageRequestBody
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
-import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.server.apis.execute
+import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
-import java.util.Optional
 
 @Controller("/api/v1/organizations")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class OrganizationApiController(
   val organizationsHandler: OrganizationsHandler,
-  val roleResolver: RoleResolver,
-  val workspacePersistence: WorkspacePersistence,
-  val currentUserService: CurrentUserService,
+  val organizationAccessAuthorizationHelper: OrganizationAccessAuthorizationHelper,
 ) : OrganizationApi {
   @Post("/get")
   @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)
@@ -103,35 +97,10 @@ open class OrganizationApiController(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
   ): OrganizationInfoRead? =
     execute {
-      // Check if user has organization-level access OR workspace-level access to any workspace in this org
       val organizationId = organizationIdRequestBody.organizationId
 
-      // First try organization-level permissions
-      val orgAuth =
-        roleResolver
-          .newRequest()
-          .withCurrentAuthentication()
-          .withOrg(organizationId)
+      organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId)
 
-      try {
-        orgAuth.requireRole(AuthRoleConstants.ORGANIZATION_MEMBER)
-        // User has org-level access, proceed
-      } catch (e: ForbiddenProblem) {
-        // No org-level access, check workspace-level access
-        val accessibleWorkspaces =
-          workspacePersistence.listWorkspacesInOrganizationByUserId(
-            organizationId,
-            currentUserService.getCurrentUser().userId,
-            Optional.empty(),
-          )
-
-        if (accessibleWorkspaces.isEmpty()) {
-          // User has no workspace access in this org, re-throw the original org permission error
-          throw e
-        }
-        // If we reach here, user has access to at least one workspace in the organization
-      }
-
-      organizationsHandler.getOrganizationInfo(organizationIdRequestBody.organizationId)
+      organizationsHandler.getOrganizationInfo(organizationId)
     }
 }

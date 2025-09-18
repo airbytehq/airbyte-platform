@@ -9,12 +9,14 @@ import io.airbyte.api.model.generated.GetEntitlementsByOrganizationIdRequestBody
 import io.airbyte.api.model.generated.GetEntitlementsByOrganizationIdResponse
 import io.airbyte.api.model.generated.OrganizationIsEntitledRequestBody
 import io.airbyte.api.model.generated.OrganizationIsEntitledResponse
+import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.server.apis.execute
+import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -28,6 +30,7 @@ import io.micronaut.security.rules.SecurityRule
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class EntitlementsApiController(
   private val entitlementService: EntitlementService,
+  private val organizationAccessAuthorizationHelper: OrganizationAccessAuthorizationHelper,
 ) : EntitlementsApi {
   @Post("/is_entitled")
   @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)
@@ -50,23 +53,33 @@ class EntitlementsApiController(
     }
 
   @Post("/get_entitlements")
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(SecurityRule.IS_AUTHENTICATED)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getEntitlements(
     @Body getEntitlementsByOrganizationIdRequestBody: GetEntitlementsByOrganizationIdRequestBody,
   ): GetEntitlementsByOrganizationIdResponse? =
     execute {
       val orgId = OrganizationId(getEntitlementsByOrganizationIdRequestBody.organizationId)
-      val result = entitlementService.getEntitlements(orgId)
 
-      GetEntitlementsByOrganizationIdResponse()
-        .entitlements(
-          result.map {
-            OrganizationIsEntitledResponse()
-              .featureId(it.featureId)
-              .isEntitled(it.isEntitled)
-              .accessDeniedReason(it.reason)
-          },
-        )
+      try {
+        // Validate organization access (organization member OR workspace access)
+        organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(orgId.value)
+
+        val result = entitlementService.getEntitlements(orgId)
+
+        GetEntitlementsByOrganizationIdResponse()
+          .entitlements(
+            result.map {
+              OrganizationIsEntitledResponse()
+                .featureId(it.featureId)
+                .isEntitled(it.isEntitled)
+                .accessDeniedReason(it.reason)
+            },
+          )
+      } catch (e: ForbiddenProblem) {
+        // User doesn't have access to this organization, return empty entitlements list
+        GetEntitlementsByOrganizationIdResponse()
+          .entitlements(emptyList())
+      }
     }
 }
