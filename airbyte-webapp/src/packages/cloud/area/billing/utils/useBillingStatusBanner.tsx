@@ -17,7 +17,7 @@ interface BillingStatusBanner {
 
 export const useBillingStatusBanner = (context: "top_level" | "billing_page"): BillingStatusBanner | undefined => {
   const { formatMessage } = useIntl();
-  const showUpgradeTrialWarning = useExperiment("entitlements.showTeamsFeaturesWarnModal");
+  const showUpgradeTextInStatusBanner = useExperiment("entitlements.showUpgradeTextInStatusBanner");
   const {
     trialStatus,
     trialDaysLeft,
@@ -113,7 +113,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
   }
 
   // Trial upgrade warnings with experimental flag
-  if (trialStatus === "in_trial" && showUpgradeTrialWarning) {
+  if (trialStatus === "in_trial" && showUpgradeTextInStatusBanner) {
     return {
       level: isTrialEndingWithin24Hours ? "error" : "warning",
       content: formatMessage(

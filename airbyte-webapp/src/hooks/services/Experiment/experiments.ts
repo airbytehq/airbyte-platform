@@ -34,6 +34,8 @@ export interface Experiments {
   "embedded.useSonarServer": boolean;
   "onboarding.surveyEnabled": boolean;
   "entitlements.showTeamsFeaturesWarnModal": boolean;
+  "entitlements.showUpgradeTextInStatusBanner": boolean;
+  "entitlements.showTrialEndedModal": boolean;
   "platform.allow-config-template-endpoints": boolean;
   "platform.llm-sync-job-failure-explanation": boolean;
   "platform.use-runtime-secret-persistence": boolean;
@@ -87,6 +89,8 @@ export const defaultExperimentValues: Experiments = {
   "embedded.templateCreateButton": false,
   "embedded.useSonarServer": false,
   "entitlements.showTeamsFeaturesWarnModal": false,
+  "entitlements.showTrialEndedModal": false,
+  "entitlements.showUpgradeTextInStatusBanner": false,
   "onboarding.surveyEnabled": false,
   "platform.allow-config-template-endpoints": false,
   "platform.llm-sync-job-failure-explanation": false,

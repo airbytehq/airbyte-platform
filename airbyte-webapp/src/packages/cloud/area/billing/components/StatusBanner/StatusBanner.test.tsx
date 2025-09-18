@@ -342,9 +342,9 @@ describe("StatusBanner", () => {
     expect(wrapper.queryByRole("link")).toBeInTheDocument();
   });
 
-  describe("showUpgradeTrialWarning experimental flag", () => {
+  describe("showUpgradeTextInStatusBanner experimental flag", () => {
     beforeEach(() => {
-      mockExperiment("entitlements.showTeamsFeaturesWarnModal", true);
+      mockExperiment("entitlements.showUpgradeTextInStatusBanner", true);
     });
 
     it("should render 24-hour trial warning with error level and exact time (with link)", async () => {
@@ -468,7 +468,7 @@ describe("StatusBanner", () => {
     });
 
     it("should not render upgrade warning when experimental flag is disabled", async () => {
-      mockExperiment("entitlements.showTeamsFeaturesWarnModal", false);
+      mockExperiment("entitlements.showUpgradeTextInStatusBanner", false);
       mockSubscriptionStatus({
         trialStatus: "in_trial",
         paymentStatus: "uninitialized",

@@ -6,12 +6,12 @@ import { useModalService } from "hooks/services/Modal";
 
 export const useTrialEndedModal = (): void => {
   const { openModal } = useModalService();
-  const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
+  const showTrialEndedModal = useExperiment("entitlements.showTrialEndedModal");
 
   useOrganizationSubscriptionStatus({
     refetchWithInterval: true,
     onSuccessGetTrialStatusClb: (isTrialEndedAndLockedOrDisabled: boolean) => {
-      if (showTeamsFeaturesWarnModal && isTrialEndedAndLockedOrDisabled) {
+      if (showTrialEndedModal && isTrialEndedAndLockedOrDisabled) {
         openModal({
           content: TrialEndedModal,
         });
