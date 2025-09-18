@@ -4,10 +4,7 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.commons.AUTO_DATAPLANE_GROUP
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.US_DATAPLANE_GROUP
-import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.DataplaneGroupService
@@ -19,6 +16,7 @@ import java.util.UUID
 
 class DataplaneGroupServiceTestJooqImpl(
   private val database: Database,
+  private val defaultDataplaneGroupName: String = "AUTO", // can be overridden depending on the test case
 ) : DataplaneGroupService {
   override fun writeDataplaneGroup(dataplaneGroup: DataplaneGroup): DataplaneGroup {
     database.transaction<Any?> { ctx: DSLContext ->
@@ -94,12 +92,8 @@ class DataplaneGroupServiceTestJooqImpl(
         .fetchInto(DataplaneGroup::class.java)
     }
 
-  override fun getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition: AirbyteEdition): DataplaneGroup =
-    if (airbyteEdition == AirbyteEdition.CLOUD) {
-      getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP)
-    } else {
-      getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, AUTO_DATAPLANE_GROUP)
-    }
+  override fun getDefaultDataplaneGroup(): DataplaneGroup =
+    getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, defaultDataplaneGroupName)
 
   override fun getOrganizationIdFromDataplaneGroup(dataplaneGroupId: UUID): UUID =
     database.query { ctx: DSLContext ->

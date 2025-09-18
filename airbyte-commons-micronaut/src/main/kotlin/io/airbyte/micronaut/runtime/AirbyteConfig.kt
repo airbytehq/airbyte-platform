@@ -30,6 +30,7 @@ const val CONTAINER_PREFIX = "$AIRBYTE_PREFIX.container"
 const val CONTROL_PLANE_PREFIX = "$AIRBYTE_PREFIX.control-plane"
 const val DATA_DOG_PREFIX = "$AIRBYTE_PREFIX.datadog"
 const val DATA_PLANE_PREFIX = "$AIRBYTE_PREFIX.data-plane"
+const val DATAPLANE_GROUPS_PREFIX = "$AIRBYTE_PREFIX.dataplane-groups"
 const val ENTITLEMENTS_PREFIX = "$AIRBYTE_PREFIX.entitlements"
 const val FEATURE_FLAG_PREFIX = "$AIRBYTE_PREFIX.feature-flag"
 const val FLYWAY_PREFIX = "$AIRBYTE_PREFIX.flyway"
@@ -164,6 +165,7 @@ internal const val DEFAULT_WORKLOAD_LAUNCHER_NETWORK_POLICY_INTROSPECTION = fals
 internal const val DEFAULT_WORKLOAD_LAUNCHER_QUEUE_CONSUMER_POLL_INTERVAL_SECONDS = 1
 internal const val DEFAULT_WORKLOAD_LAUNCHER_QUEUE_CONSUMER_POLL_SIZE_ITEMS = 10
 internal const val DEFAULT_WORKLOAD_LAUNCHER_QUEUE_CONSUMER_QUEUE_TASK_CAP = 5
+internal const val DEFAULT_DATAPLANE_GROUPS_DEFAULT_DATAPLANE_GROUP_NAME = "AUTO"
 
 const val DEFAULT_AUTH_IDENTITY_PROVIDER_TYPE = "simple"
 const val STORAGE_TYPE = "$STORAGE_PREFIX.type"
@@ -521,6 +523,11 @@ data class AirbyteDataPlaneQueueConfig(
     val taskQueue: String = DEFAULT_DATA_PLANE_QUEUE_SYNC,
   )
 }
+
+@ConfigurationProperties(DATAPLANE_GROUPS_PREFIX)
+data class AirbyteDataplaneGroupsConfig(
+  val defaultDataplaneGroupName: String = DEFAULT_DATAPLANE_GROUPS_DEFAULT_DATAPLANE_GROUP_NAME,
+)
 
 @ConfigurationProperties(ENTITLEMENTS_PREFIX)
 data class AirbyteEntitlementConfig(

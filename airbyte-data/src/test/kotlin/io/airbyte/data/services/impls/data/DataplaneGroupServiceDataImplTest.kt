@@ -9,6 +9,7 @@ import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.repositories.entities.DataplaneGroup
 import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfigModel
+import io.airbyte.micronaut.runtime.AirbyteDataplaneGroupsConfig
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -27,7 +28,8 @@ private val MOCK_NAME = "test"
 
 class DataplaneGroupServiceDataImplTest {
   private val dataplaneGroupRepository = mockk<DataplaneGroupRepository>()
-  private var dataplaneGroupServiceDataImpl = DataplaneGroupServiceDataImpl(dataplaneGroupRepository)
+  private val airbyteDataplaneGroupsConfig = AirbyteDataplaneGroupsConfig()
+  private var dataplaneGroupServiceDataImpl = DataplaneGroupServiceDataImpl(dataplaneGroupRepository, airbyteDataplaneGroupsConfig)
 
   @BeforeEach
   fun reset() {

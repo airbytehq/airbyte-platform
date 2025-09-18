@@ -82,6 +82,7 @@ spec:
         {{- include "airbyte.customerio.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
+        {{- include "airbyte.dataplaneGroups.envs" . | nindent 8 }}
         {{- include "airbyte.jobs.envs" . | nindent 8 }}
         {{- include "airbyte.jobs.errors.envs" . | nindent 8 }}
         {{- include "airbyte.jobs.scheduling.envs" . | nindent 8 }}

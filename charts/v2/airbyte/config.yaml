@@ -497,6 +497,12 @@ datadog:
       key: integrations.urlConnection.enabled
       defaultValue: false
 
+dataplaneGroups:
+  keyBasePath: global.dataplaneGroups
+  config:
+    - env: DEFAULT_DATAPLANE_GROUP_NAME
+      key: defaultDataplaneGroupName
+
 enterprise:
   keyBasePath: global.enterprise
   config:

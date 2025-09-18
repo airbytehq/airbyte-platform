@@ -80,7 +80,6 @@ open class ResourceBootstrapHandler(
         organization,
         uuidSupplier,
         dataplaneGroupService,
-        airbyteEdition,
       )
 
     validateWorkspace(standardWorkspace, airbyteEdition)

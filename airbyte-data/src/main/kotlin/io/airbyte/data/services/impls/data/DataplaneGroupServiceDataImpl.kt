@@ -4,17 +4,15 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.commons.AUTO_DATAPLANE_GROUP
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.config.ConfigNotFoundType
-import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toEntity
+import io.airbyte.micronaut.runtime.AirbyteDataplaneGroupsConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
@@ -25,6 +23,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 open class DataplaneGroupServiceDataImpl(
   private val repository: DataplaneGroupRepository,
+  private val airbyteDataplaneGroupsConfig: AirbyteDataplaneGroupsConfig,
 ) : DataplaneGroupService {
   override fun getDataplaneGroup(id: UUID): DataplaneGroup =
     repository
@@ -83,12 +82,8 @@ open class DataplaneGroupServiceDataImpl(
         }
     }
 
-  override fun getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition: AirbyteEdition): DataplaneGroup =
-    if (airbyteEdition == AirbyteEdition.CLOUD) {
-      getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP)
-    } else {
-      getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, AUTO_DATAPLANE_GROUP)
-    }
+  override fun getDefaultDataplaneGroup(): DataplaneGroup =
+    getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, airbyteDataplaneGroupsConfig.defaultDataplaneGroupName)
 
   override fun getOrganizationIdFromDataplaneGroup(dataplaneGroupId: UUID): UUID = repository.getOrganizationIdFromDataplaneGroup(dataplaneGroupId)
 

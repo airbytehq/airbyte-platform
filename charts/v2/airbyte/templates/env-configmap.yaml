@@ -22,6 +22,7 @@ data:
   {{- include "airbyte.database.configVars" . | nindent 2 }}
   {{- include "airbyte.database.migrations.configVars" . | nindent 2 }}
   {{- include "airbyte.datadog.configVars" . | nindent 2 }}
+  {{- include "airbyte.dataplaneGroups.configVars" . | nindent 2 }}
   {{- include "airbyte.featureFlags.configVars" . | nindent 2 }}
   {{- include "airbyte.java.configVars" . | nindent 2 }}
   {{- include "airbyte.jobs.configVars" . | nindent 2 }}

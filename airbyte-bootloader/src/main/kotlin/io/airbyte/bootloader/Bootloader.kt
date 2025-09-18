@@ -5,15 +5,12 @@
 package io.airbyte.bootloader
 
 import io.airbyte.bootloader.runtime.AirbyteBootloaderConfig
-import io.airbyte.commons.AUTO_DATAPLANE_GROUP
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.resources.Resources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs.AirbyteEdition
-import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.SsoConfig
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.init.PostLoadExecutor
@@ -87,9 +84,6 @@ class Bootloader(
 
     log.info { "Running database migrations..." }
     runFlywayMigration(airbyteBootloaderConfig.runMigrationAtStartup, configsDatabaseMigrator, jobsDatabaseMigrator)
-
-    log.info { "Creating dataplane group (if none exists)..." }
-    createDataplaneGroupIfNoneExists(dataplaneGroupService, airbyteEdition)
 
     log.info { "Registering dataplane (if none exists)..." }
     dataplaneInitializer.createDataplaneIfNotExists()
@@ -214,50 +208,12 @@ class Bootloader(
         .withInitialSetupComplete(false)
         .withDisplaySetupWizard(true)
         .withTombstone(false)
-        .withDataplaneGroupId(dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition).id)
+        .withDataplaneGroupId(dataplaneGroupService.getDefaultDataplaneGroup().id)
         // attach this new workspace to the Default Organization which should always exist at this point.
         .withOrganizationId(DEFAULT_ORGANIZATION_ID)
     // NOTE: it's safe to use the NoSecrets version since we know that the user hasn't supplied any
     // secrets yet.
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
-  }
-
-  private fun createDataplaneGroupIfNoneExists(
-    dataplaneGroupService: DataplaneGroupService,
-    airbyteEdition: AirbyteEdition,
-  ) {
-    val dataplaneGroups = dataplaneGroupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false)
-
-    // Cloud currently depends on a "US" Dataplane group to exist. Once this is no longer the case,
-    // we can remove Cloud-specific code from the bootloader.
-    if (airbyteEdition == AirbyteEdition.CLOUD) {
-      if (!dataplaneGroups.any { it.name == "US" }) {
-        log.info { "Creating US dataplane group." }
-        val dataplaneGroupId = UUID.randomUUID()
-        val dataplaneGroup =
-          DataplaneGroup()
-            .withId(dataplaneGroupId)
-            .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-            .withName(US_DATAPLANE_GROUP)
-            .withEnabled(true)
-            .withTombstone(false)
-        dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
-      }
-      return
-    } else if (dataplaneGroups.isNotEmpty()) {
-      log.info { "Dataplane group already exists for the deployment." }
-      return
-    }
-
-    val dataplaneGroupId = UUID.randomUUID()
-    val dataplaneGroup =
-      DataplaneGroup()
-        .withId(dataplaneGroupId)
-        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-        .withName(AUTO_DATAPLANE_GROUP)
-        .withEnabled(true)
-        .withTombstone(false)
-    dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
   }
 
   private fun initializeDatabases() {

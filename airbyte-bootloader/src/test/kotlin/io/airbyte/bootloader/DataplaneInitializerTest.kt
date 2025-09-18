@@ -5,7 +5,6 @@
 package io.airbyte.bootloader
 
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.config.Configs
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
@@ -17,10 +16,9 @@ import io.airbyte.data.services.shared.DataplaneWithServiceAccount
 import io.airbyte.domain.models.ServiceAccount
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteDataplaneGroupsConfig
 import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.fabric8.kubernetes.client.KubernetesClient
-import io.kotest.assertions.throwables.shouldThrow
-import io.mockk.Called
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -35,19 +33,12 @@ import java.util.UUID
 
 private val DATAPLANE_ID = UUID.randomUUID()
 private const val DATAPLANE_SECRET = "secret"
+private const val DEFAULT_DATAPLANE_GROUP = "default"
 
 private val dpg =
   DataplaneGroup().apply {
     id = UUID.randomUUID()
-    name = "dpg"
-    organizationId = DEFAULT_ORGANIZATION_ID
-    enabled = true
-  }
-
-private val dpgUS =
-  DataplaneGroup().apply {
-    id = UUID.randomUUID()
-    name = US_DATAPLANE_GROUP
+    name = DEFAULT_DATAPLANE_GROUP
     organizationId = DEFAULT_ORGANIZATION_ID
     enabled = true
   }
@@ -86,6 +77,7 @@ class DataplaneInitializerTest {
   private lateinit var airbyteConfig: AirbyteConfig
   private lateinit var airbyteWorkerConfig: AirbyteWorkerConfig
   private lateinit var airbyteAuthConfig: AirbyteAuthConfig
+  private lateinit var airbyteDataplaneGroupsConfig: AirbyteDataplaneGroupsConfig
 
   @BeforeEach
   fun setup() {
@@ -115,6 +107,10 @@ class DataplaneInitializerTest {
               AirbyteWorkerConfig.AirbyteWorkerJobConfig.AirbyteWorkerJobKubernetesConfig(namespace = JOBS_NAMESPACE),
           ),
       )
+    airbyteDataplaneGroupsConfig =
+      AirbyteDataplaneGroupsConfig(
+        defaultDataplaneGroupName = DEFAULT_DATAPLANE_GROUP,
+      )
   }
 
   @AfterEach
@@ -139,6 +135,7 @@ class DataplaneInitializerTest {
         airbyteAuthConfig = airbyteAuthConfig,
         airbyteWorkerConfig = airbyteWorkerConfig,
         serviceAccountsService = serviceAccountsService,
+        airbyteDataplaneGroupsConfig = airbyteDataplaneGroupsConfig,
       )
 
     initializer.createDataplaneIfNotExists()
@@ -177,6 +174,7 @@ class DataplaneInitializerTest {
         airbyteAuthConfig = airbyteAuthConfig,
         airbyteWorkerConfig = airbyteWorkerConfig,
         serviceAccountsService = serviceAccountsService,
+        airbyteDataplaneGroupsConfig = airbyteDataplaneGroupsConfig,
       )
 
     initializer.createDataplaneIfNotExists()
@@ -216,6 +214,7 @@ class DataplaneInitializerTest {
         airbyteAuthConfig = airbyteAuthConfig,
         airbyteWorkerConfig = airbyteWorkerConfig,
         serviceAccountsService = serviceAccountsService,
+        airbyteDataplaneGroupsConfig = airbyteDataplaneGroupsConfig,
       )
 
     initializer.createDataplaneIfNotExists()
@@ -251,6 +250,7 @@ class DataplaneInitializerTest {
         airbyteAuthConfig = airbyteAuthConfig,
         airbyteWorkerConfig = airbyteWorkerConfig,
         serviceAccountsService = serviceAccountsService,
+        airbyteDataplaneGroupsConfig = airbyteDataplaneGroupsConfig,
       )
 
     initializer.createDataplaneIfNotExists()
@@ -259,9 +259,9 @@ class DataplaneInitializerTest {
   }
 
   @Test
-  fun `dataplane is created for US dataplane group on Cloud and secret copied to jobs namespace`() {
-    every { groupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP) } returns dpgUS
-    every { service.listDataplanes(dpgUS.id, false) } returns emptyList()
+  fun `dataplane is created for default dataplane group on Cloud and secret copied to jobs namespace`() {
+    every { groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false) } returns listOf(dpg)
+    every { service.listDataplanes(dpg.id, false) } returns emptyList()
     val dpSlot = slot<Dataplane>()
     every { service.createDataplaneAndServiceAccount(capture(dpSlot), true) } answers { dataplaneWithServiceAccount }
     every { k8sClient.namespace } returns "ab"
@@ -275,6 +275,7 @@ class DataplaneInitializerTest {
         airbyteAuthConfig = airbyteAuthConfig,
         airbyteWorkerConfig = airbyteWorkerConfig,
         serviceAccountsService = serviceAccountsService,
+        airbyteDataplaneGroupsConfig = airbyteDataplaneGroupsConfig,
       )
 
     initializer.createDataplaneIfNotExists()
@@ -299,8 +300,10 @@ class DataplaneInitializerTest {
   }
 
   @Test
-  fun `data plane is not created and exception is thrown if no group exists`() {
+  fun `data plane group is created if no group exists`() {
     every { groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false) } returns emptyList()
+    every { groupService.writeDataplaneGroup(any()) } returns dpg
+    every { service.createDataplaneAndServiceAccount(any(), any()) } returns dataplaneWithServiceAccount
 
     val initializer =
       DataplaneInitializer(
@@ -311,19 +314,25 @@ class DataplaneInitializerTest {
         airbyteAuthConfig = airbyteAuthConfig,
         airbyteWorkerConfig = airbyteWorkerConfig,
         serviceAccountsService = serviceAccountsService,
+        airbyteDataplaneGroupsConfig = airbyteDataplaneGroupsConfig,
       )
 
-    shouldThrow<IllegalStateException> { initializer.createDataplaneIfNotExists() }
-
+    initializer.createDataplaneIfNotExists()
     verify {
-      service wasNot Called
-      k8sClient wasNot Called
+      groupService.writeDataplaneGroup(
+        withArg {
+          assert(it.organizationId == DEFAULT_ORGANIZATION_ID)
+          assert(it.name == DEFAULT_DATAPLANE_GROUP)
+        },
+      )
     }
   }
 
   @Test
-  fun `data plane is not created if more than one group exists`() {
+  fun `default dataplane group is created if it does not yet exist`() {
     every { groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false) } returns listOf(dpg, dpg)
+    every { groupService.writeDataplaneGroup(any()) } returns dpg
+    every { service.createDataplaneAndServiceAccount(any(), any()) } returns dataplaneWithServiceAccount
 
     val initializer =
       DataplaneInitializer(
@@ -334,13 +343,18 @@ class DataplaneInitializerTest {
         airbyteAuthConfig = airbyteAuthConfig,
         airbyteWorkerConfig = airbyteWorkerConfig,
         serviceAccountsService = serviceAccountsService,
+        airbyteDataplaneGroupsConfig = AirbyteDataplaneGroupsConfig(defaultDataplaneGroupName = "other"),
       )
 
     initializer.createDataplaneIfNotExists()
 
     verify {
-      service wasNot Called
-      k8sClient wasNot Called
+      groupService.writeDataplaneGroup(
+        withArg {
+          assert(it.organizationId == DEFAULT_ORGANIZATION_ID)
+          assert(it.name == "other")
+        },
+      )
     }
   }
 }

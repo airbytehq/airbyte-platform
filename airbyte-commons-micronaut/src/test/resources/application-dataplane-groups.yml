@@ -1,0 +1,3 @@
+airbyte:
+  dataplane-groups:
+    default-dataplane-group-name: TEST_DEFAULT_GROUP

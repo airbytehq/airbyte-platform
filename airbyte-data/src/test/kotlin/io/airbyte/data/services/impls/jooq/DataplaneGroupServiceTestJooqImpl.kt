@@ -92,8 +92,7 @@ class DataplaneGroupServiceTestJooqImpl(
     }
 
   // Not needed for test implementation
-  override fun getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition: AirbyteEdition): DataplaneGroup =
-    throw UnsupportedOperationException("Not implemented for test service")
+  override fun getDefaultDataplaneGroup(): DataplaneGroup = throw UnsupportedOperationException("Not implemented for test service")
 
   override fun getOrganizationIdFromDataplaneGroup(dataplaneGroupId: UUID): UUID =
     database.query { ctx: DSLContext ->

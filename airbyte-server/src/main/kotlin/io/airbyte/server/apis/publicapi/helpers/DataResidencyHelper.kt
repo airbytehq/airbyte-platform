@@ -27,7 +27,7 @@ class DataResidencyHelper(
     return when (airbyteEdition) {
       AirbyteEdition.CLOUD -> {
         if (dataResidency.equals(AUTO_DATAPLANE_GROUP, ignoreCase = true)) {
-          val default = dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP)
+          val default = dataplaneGroupService.getDefaultDataplaneGroup()
           logger.warn { "Data Residency $dataResidency is no longer supported on Airbyte Cloud. Defaulting to $default." }
           default
         } else {
@@ -37,7 +37,7 @@ class DataResidencyHelper(
 
       AirbyteEdition.COMMUNITY -> {
         logger.warn { "Ignoring value for dataResidency=$dataResidency. dataResidency is not supported on $airbyteEdition." }
-        dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(AirbyteEdition.COMMUNITY)
+        dataplaneGroupService.getDefaultDataplaneGroup()
       }
 
       AirbyteEdition.ENTERPRISE -> {

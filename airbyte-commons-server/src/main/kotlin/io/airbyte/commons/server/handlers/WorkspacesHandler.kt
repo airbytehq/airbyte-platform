@@ -163,7 +163,7 @@ class WorkspacesHandler
       // if not set on the workspaceCreate, set the default dataplane group ID
       val dataplaneGroupId: UUID
       if (workspaceCreateWithId.dataplaneGroupId == null) {
-        val defaultDataplaneGroup = dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition)
+        val defaultDataplaneGroup = dataplaneGroupService.getDefaultDataplaneGroup()
         dataplaneGroupId = defaultDataplaneGroup.id
       } else {
         // If an explicit dataplane group ID is provided, ensure it is a valid assignment for the workspace.

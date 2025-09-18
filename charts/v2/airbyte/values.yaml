@@ -154,6 +154,8 @@ global:
     # -- The key within `secretName` where the password is stored
     #passwordSecretKey: "" # e.g."database-password"
 
+  dataplaneGroups: {}
+
   migrations:
     runAtStartup: true
 

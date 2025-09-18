@@ -296,7 +296,7 @@ internal class BootloaderTest {
 
     val workspaces = workspaceService.listStandardWorkspaces(false)
     Assertions.assertEquals(workspaces.size, 1)
-    Assertions.assertEquals(workspaces[0].dataplaneGroupId, dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition).id)
+    Assertions.assertEquals(workspaces[0].dataplaneGroupId, dataplaneGroupService.getDefaultDataplaneGroup().id)
 
     Assertions.assertEquals(VERSION_0330_ALPHA, jobsPersistence.getVersion().get())
     Assertions.assertEquals(Version(PROTOCOL_VERSION_001), jobsPersistence.getAirbyteProtocolVersionMin().get())

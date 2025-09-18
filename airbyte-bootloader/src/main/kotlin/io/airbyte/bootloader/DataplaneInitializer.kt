@@ -5,7 +5,6 @@
 package io.airbyte.bootloader
 
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneClientCredentials
@@ -16,6 +15,7 @@ import io.airbyte.data.services.ServiceAccountsService
 import io.airbyte.data.services.shared.DataplaneWithServiceAccount
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteDataplaneGroupsConfig
 import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -33,11 +33,13 @@ class DataplaneInitializer(
   private val airbyteConfig: AirbyteConfig,
   private val airbyteAuthConfig: AirbyteAuthConfig,
   private val airbyteWorkerConfig: AirbyteWorkerConfig,
+  private val airbyteDataplaneGroupsConfig: AirbyteDataplaneGroupsConfig,
 ) {
   /**
-   * Creates a dataplane if the following conditions are met
-   * - If running on cloud, a dataplane does not yet exist for the "US" dataplane group
-   * - If running on OSS, a single dataplane group exists that does not have any existing dataplanes
+   * Bootstraps a default dataplane for an instance of Airbyte that does not have a valid dataplane.
+   * This function will also create a default dataplane group if the configured default region does
+   * not already exist as a dataplane group.
+   * Note: if the instance already has valid dataplane credentials, this function does nothing.
    */
   fun createDataplaneIfNotExists() {
     // If the secret contains credentials that match an existing dataplane + service account,
@@ -46,16 +48,14 @@ class DataplaneInitializer(
       return
     }
 
-    // We don't have valid crendentials stored in the secret. This could be because:
+    // We don't have valid credentials stored in the secret. This could be because:
     // - this is the first install, and the secret and dataplane have never been created.
     // - the secret was deleted.
     // - the dataplane was deleted.
     // - the credentials just don't match.
 
-    // Get the dataplane group.
-    // If multiple groups exist, the function returns null, and we skip the rest of this init.
-    // If no groups exist, the function throws and we fail.
-    val group = getOneGroup() ?: return
+    // Get or create the default dataplane group.
+    val group = getOrCreateDefaultGroup()
 
     // Create the dataplane and store the secret.
     val dataplane = createDataplane(group)
@@ -77,25 +77,24 @@ class DataplaneInitializer(
     }
   }
 
-  private fun getOneGroup(): DataplaneGroup? =
-    when (airbyteConfig.edition) {
-      AirbyteEdition.CLOUD ->
-        groupService.getDataplaneGroupByOrganizationIdAndName(
-          DEFAULT_ORGANIZATION_ID,
-          US_DATAPLANE_GROUP,
-        )
-      else -> {
-        val groups = groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false)
-        when {
-          groups.size > 1 -> {
-            log.info { "Skipping dataplane creation because multiple dataplane groups exist." }
-            null
-          }
-          groups.isEmpty() -> throw IllegalStateException("No dataplane groups exist.")
-          else -> groups.first()
-        }
-      }
-    }
+  private fun getOrCreateDefaultGroup(): DataplaneGroup {
+    val defaultDataplaneGroupName = airbyteDataplaneGroupsConfig.defaultDataplaneGroupName
+    groupService
+      .listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false)
+      .find { it.name.equals(defaultDataplaneGroupName, ignoreCase = true) }
+      ?.let { return it }
+
+    log.info { "No default dataplane group found. Creating one with name $defaultDataplaneGroupName" }
+    return groupService.writeDataplaneGroup(
+      DataplaneGroup().apply {
+        id = UUID.randomUUID()
+        organizationId = DEFAULT_ORGANIZATION_ID
+        name = defaultDataplaneGroupName
+        enabled = true
+        tombstone = false
+      },
+    )
+  }
 
   private fun isValidServiceAccount(): Boolean {
     // Get the secret that stores the credentials.

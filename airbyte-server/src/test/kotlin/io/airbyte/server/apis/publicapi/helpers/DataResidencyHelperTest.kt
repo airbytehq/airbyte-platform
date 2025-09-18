@@ -33,9 +33,9 @@ class DataResidencyHelperTest {
   }
 
   @Test
-  fun `getDataplaneGroupFromResidencyAndAirbyteEdition cloud edition with AUTO returns US group`() {
+  fun `getDataplaneGroupFromResidencyAndAirbyteEdition cloud edition with AUTO returns default group`() {
     val cloudDataplaneGroup = DataplaneGroup().withId(UUID.randomUUID())
-    every { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP) } returns cloudDataplaneGroup
+    every { dataplaneGroupService.getDefaultDataplaneGroup() } returns cloudDataplaneGroup
 
     val helper = DataResidencyHelper(dataplaneGroupService, AirbyteEdition.CLOUD)
 
@@ -44,23 +44,7 @@ class DataResidencyHelperTest {
       Assertions.assertEquals(cloudDataplaneGroup.id, result?.id, "Expected default for input: $input")
     }
 
-    verify { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP) }
-  }
-
-  @Test
-  fun `getDataplaneGroupFromResidencyAndAirbyteEdition cloud edition with US returns US group`() {
-    val cloudDataplaneGroup = DataplaneGroup().withId(UUID.randomUUID())
-
-    val helper = DataResidencyHelper(dataplaneGroupService, AirbyteEdition.CLOUD)
-
-    listOf("us", "US", "Us").forEach { input ->
-      every { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, input) } returns cloudDataplaneGroup
-
-      val result = helper.getDataplaneGroupFromResidencyAndAirbyteEdition(input)
-      Assertions.assertEquals(cloudDataplaneGroup.id, result?.id, "Expected US for input: $input")
-    }
-
-    verify { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP) }
+    verify { dataplaneGroupService.getDefaultDataplaneGroup() }
   }
 
   @Test
@@ -81,7 +65,7 @@ class DataResidencyHelperTest {
   @Test
   fun `getDataplaneGroupFromResidencyAndAirbyteEdition OSS edition returns default dataplane group`() {
     val ossDataplaneGroup = DataplaneGroup().withId(UUID.randomUUID())
-    every { dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(AirbyteEdition.COMMUNITY) } returns ossDataplaneGroup
+    every { dataplaneGroupService.getDefaultDataplaneGroup() } returns ossDataplaneGroup
 
     val helper = DataResidencyHelper(dataplaneGroupService, AirbyteEdition.COMMUNITY)
     for (input in listOf("us", "US", "Us", "auto", "AUTO", "Auto", "eu-central", "Asia")) {
@@ -89,7 +73,7 @@ class DataResidencyHelperTest {
       Assertions.assertEquals(ossDataplaneGroup.id, result?.id, "Expected value for input: $input")
     }
 
-    verify { dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(AirbyteEdition.COMMUNITY) }
+    verify { dataplaneGroupService.getDefaultDataplaneGroup() }
   }
 
   @Test

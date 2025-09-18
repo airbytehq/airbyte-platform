@@ -31,6 +31,7 @@ To add or modify an environment variable:
 2. Add or modify the variable definition with the required fields.
 3. Run the generator to update the templates.
 4. Test your changes by deploying the chart locally.
+5. Add a new empty entry to the `charts/v2/airbyte/values.yaml` file.
 
 Example of adding a variable to an existing section:
 
@@ -81,6 +82,11 @@ After adding this section, you need to include it in the appropriate files:
    ```yaml
    {{- include "airbyte.newFeature.secrets" . | nindent 2 }}
    ```
+   
+3. Update `charts/v2/airbyte/values.yaml` to include an empty entry for the new section:
+   ```yaml
+   newFeature: {}
+   ```   
 
 ### Running the Generator
 

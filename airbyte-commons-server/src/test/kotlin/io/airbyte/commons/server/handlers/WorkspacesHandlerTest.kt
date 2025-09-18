@@ -440,7 +440,7 @@ internal class WorkspacesHandlerTest {
           eq(false),
         ),
       ).thenReturn(workspace)
-    Mockito.`when`(dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition)).thenReturn(
+    Mockito.`when`(dataplaneGroupService.getDefaultDataplaneGroup()).thenReturn(
       DataplaneGroup().withId(DATAPLANE_GROUP_ID_1),
     )
 
@@ -501,7 +501,7 @@ internal class WorkspacesHandlerTest {
       ).thenReturn(workspace)
 
     val dataplaneGroupId = UUID.randomUUID()
-    Mockito.`when`(dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition)).thenReturn(
+    Mockito.`when`(dataplaneGroupService.getDefaultDataplaneGroup()).thenReturn(
       DataplaneGroup().withId(dataplaneGroupId),
     )
 

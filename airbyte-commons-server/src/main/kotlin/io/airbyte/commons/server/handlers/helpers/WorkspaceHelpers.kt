@@ -30,11 +30,10 @@ fun buildStandardWorkspace(
   organization: Organization,
   uuidSupplier: Supplier<UUID>,
   dataplaneGroupService: DataplaneGroupService,
-  airbyteEdition: AirbyteEdition,
 ): StandardWorkspace {
   // if not set on the workspaceCreate, set the dataplaneGroupId to the default
   val resolvedDataplaneGroupId =
-    workspaceCreateWithId.dataplaneGroupId ?: dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition).id
+    workspaceCreateWithId.dataplaneGroupId ?: dataplaneGroupService.getDefaultDataplaneGroup().id
 
   return StandardWorkspace().apply {
     workspaceId = workspaceCreateWithId.id ?: uuidSupplier.get()

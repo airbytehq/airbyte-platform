@@ -5,7 +5,6 @@
 package io.airbyte.data.services
 
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
-import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DataplaneGroup
 import java.util.UUID
 
@@ -39,7 +38,7 @@ interface DataplaneGroupService {
   /**
    * Get the default dataplane group
    */
-  fun getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition: AirbyteEdition): DataplaneGroup
+  fun getDefaultDataplaneGroup(): DataplaneGroup
 
   fun getOrganizationIdFromDataplaneGroup(dataplaneGroupId: UUID): UUID
 
