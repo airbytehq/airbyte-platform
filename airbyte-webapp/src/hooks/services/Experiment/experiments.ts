@@ -33,6 +33,7 @@ export interface Experiments {
   "embedded.templateCreateButton": boolean;
   "embedded.useSonarServer": boolean;
   "onboarding.surveyEnabled": boolean;
+  "entitlements.showCloudSubscriptionSuccessModal": boolean;
   "entitlements.showTeamsFeaturesWarnModal": boolean;
   "entitlements.showUpgradeTextInStatusBanner": boolean;
   "entitlements.showTrialEndedModal": boolean;
@@ -88,6 +89,7 @@ export const defaultExperimentValues: Experiments = {
   "embedded.operatorOnboarding.destinations": "ConnectorIds.Destinations.S3",
   "embedded.templateCreateButton": false,
   "embedded.useSonarServer": false,
+  "entitlements.showCloudSubscriptionSuccessModal": false,
   "entitlements.showTeamsFeaturesWarnModal": false,
   "entitlements.showTrialEndedModal": false,
   "entitlements.showUpgradeTextInStatusBanner": false,

@@ -1,4 +1,6 @@
+import React, { useEffect } from "react";
 import { FormattedMessage } from "react-intl";
+import { useSearchParams } from "react-router-dom";
 
 import { PageContainer } from "components/PageContainer";
 import { BorderedTile, BorderedTiles } from "components/ui/BorderedTiles";
@@ -16,10 +18,13 @@ import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useFormatCredits } from "core/utils/numberHelper";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
+import { useExperiment } from "hooks/services/Experiment";
+import { useModalService } from "hooks/services/Modal";
 
 import { AccountBalance } from "./AccountBalance";
 import { BillingBanners } from "./BillingBanners";
 import { BillingInformation } from "./BillingInformation";
+import { CloudSubscriptionSuccessModal } from "./CloudSubscriptionSuccessModal";
 import { Invoices } from "./Invoices";
 import { PaymentMethod } from "./PaymentMethod";
 import { SubscribeCards } from "./SubscribeCards";
@@ -28,7 +33,10 @@ import { Subscription } from "./Subscription";
 export const OrganizationBillingPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_ORGANIZATION_BILLING);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { openModal } = useModalService();
   const { formatCredits } = useFormatCredits();
+  const isCloudSubscriptionSuccessModalEnabled = useExperiment("entitlements.showCloudSubscriptionSuccessModal");
 
   const organizationId = useCurrentOrganizationId();
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
@@ -44,6 +52,22 @@ export const OrganizationBillingPage: React.FC = () => {
   const showSubscribeCards =
     billing?.subscriptionStatus !== "subscribed" ||
     (billing?.subscriptionStatus === "subscribed" && billing.paymentStatus === "uninitialized");
+
+  // Handle subscription success modal
+  useEffect(() => {
+    const cloudSubscriptionSetup = searchParams.get("cloudSubscriptionSetup");
+    if (cloudSubscriptionSetup === "success" && isCloudSubscriptionSuccessModalEnabled) {
+      openModal({
+        title: <FormattedMessage id="settings.organization.billing.subscriptionSuccess.title" />,
+        content: CloudSubscriptionSuccessModal,
+        size: "sm",
+      });
+      // Clean up URL parameter
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete("cloudSubscriptionSetup");
+      setSearchParams(newSearchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, openModal, isCloudSubscriptionSuccessModalEnabled]);
 
   return (
     <PageContainer>
