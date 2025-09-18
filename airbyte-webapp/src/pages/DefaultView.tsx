@@ -34,11 +34,11 @@ export const DefaultView: React.FC = () => {
   return (
     <Navigate
       to={
-        workspaces.length !== 1 && false
-          ? isOrgPickerEnabled
-            ? `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Workspaces}`
-            : `/${RoutePaths.Workspaces}`
-          : `/${RoutePaths.Workspaces}/${workspaces[0]?.workspaceId}`
+        workspaces.length === 1
+          ? `/${RoutePaths.Workspaces}/${workspaces[0].workspaceId}`
+          : workspaces.length === 0 || isOrgPickerEnabled
+          ? `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Workspaces}`
+          : `/${RoutePaths.Workspaces}`
       }
       replace
     />
