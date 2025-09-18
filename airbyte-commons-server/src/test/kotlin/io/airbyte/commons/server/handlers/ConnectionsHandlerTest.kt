@@ -182,6 +182,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.helpers.WorkspaceHelper
+import io.airbyte.data.repositories.entities.ConnectionTimelineEvent
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.ConnectionTimelineEventService
@@ -579,6 +580,31 @@ internal class ConnectionsHandlerTest {
     whenever(mapperSecretHelper.maskMapperSecrets(anyOrNull())).thenAnswer { it.getArgument(0) }
     whenever(mapperSecretHelper.createAndReplaceMapperSecrets(anyOrNull(), anyOrNull())).thenAnswer { it.getArgument(1) }
     whenever(mapperSecretHelper.updateAndReplaceMapperSecrets(anyOrNull(), anyOrNull(), anyOrNull())).thenAnswer { it.getArgument(2) }
+  }
+
+  @Test
+  fun testListConnectionEventsForJob() {
+    val jobId = 123L
+    val mockEvents =
+      listOf(
+        ConnectionTimelineEvent(
+          id = UUID.randomUUID(),
+          connectionId = connectionId,
+          eventType = "SYNC_STARTED",
+          summary = "{}",
+          userId = null,
+          createdAt = java.time.OffsetDateTime.now(),
+        ),
+      )
+
+    whenever(connectionTimelineEventService.listEventsForJob(jobId)).thenReturn(mockEvents)
+
+    val result = connectionsHandler.listConnectionEventsForJob(jobId)
+
+    Assertions.assertNotNull(result)
+    Assertions.assertEquals(1, result.events.size)
+    Assertions.assertEquals(connectionId, result.events[0].connectionId)
+    verify(connectionTimelineEventService).listEventsForJob(jobId)
   }
 
   @Nested

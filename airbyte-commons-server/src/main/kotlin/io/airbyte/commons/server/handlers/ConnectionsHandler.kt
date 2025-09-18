@@ -1645,6 +1645,11 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       return ConnectionEventList().events(eventsRead)
     }
 
+    fun listConnectionEventsForJob(jobId: Long): ConnectionEventList {
+      val events = connectionTimelineEventService.listEventsForJob(jobId)
+      return convertConnectionEventList(events)
+    }
+
     fun listConnectionEvents(connectionEventsRequestBody: ConnectionEventsRequestBody): ConnectionEventList {
       // 1. set page size and offset
       val pageSize =

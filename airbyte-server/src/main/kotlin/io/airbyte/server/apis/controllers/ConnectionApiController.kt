@@ -36,6 +36,7 @@ import io.airbyte.api.model.generated.ConnectionUpdate
 import io.airbyte.api.model.generated.ConnectionUpdateWithReason
 import io.airbyte.api.model.generated.ConnectionUptimeHistoryRequestBody
 import io.airbyte.api.model.generated.InternalOperationResult
+import io.airbyte.api.model.generated.JobIdRequestBody
 import io.airbyte.api.model.generated.JobInfoRead
 import io.airbyte.api.model.generated.JobReadResponse
 import io.airbyte.api.model.generated.JobSyncResultRead
@@ -235,6 +236,18 @@ open class ConnectionApiController(
       @Valid @NotNull
       ConnectionEventsRequestBody,
   ): ConnectionEventList? = execute { connectionsHandler.listConnectionEvents(connectionEventsRequestBody) }
+
+  @Post(uri = "/events/list_for_job")
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun listConnectionEventsForJob(
+    @Body jobIdRequestBody: JobIdRequestBody,
+  ): ConnectionEventList? =
+    execute {
+      connectionsHandler.listConnectionEventsForJob(
+        jobIdRequestBody.id,
+      )
+    }
 
   override fun listConnectionEventsMinimal(
     connectionEventsListMinimalRequestBody: ConnectionEventsListMinimalRequestBody,
