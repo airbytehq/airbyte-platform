@@ -2323,7 +2323,7 @@
   "workspace.adminWorkspaceWarningTooltip": "You are not a member of this workspace. Be careful when making changes!",
 
   "cloud.inTrial": "Trial",
-  "cloud.cloudForTeams": "Teams",
+  "cloud.cloudForTeams": "Pro",
   "enterprise.enterprise": "Enterprise",
 
   "userInvitations.accept.success": "Invitation accepted successfully",
