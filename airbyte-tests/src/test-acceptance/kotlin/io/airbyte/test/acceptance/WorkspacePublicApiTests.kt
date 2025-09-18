@@ -4,6 +4,7 @@
 
 package io.airbyte.test.acceptance
 
+import io.airbyte.api.client.generated.PublicWorkspacesApi
 import io.airbyte.api.client.model.generated.EmailNotificationConfig
 import io.airbyte.api.client.model.generated.NotificationConfig
 import io.airbyte.api.client.model.generated.NotificationsConfig
@@ -13,41 +14,40 @@ import io.airbyte.api.client.model.generated.WorkspaceUpdateRequest
 import io.airbyte.api.problems.model.generated.NotificationMissingUrlProblemResponse
 import io.airbyte.api.problems.model.generated.NotificationRequiredProblemResponse
 import io.airbyte.commons.json.Jsons
-import org.junit.jupiter.api.AfterAll
+import io.airbyte.test.utils.AcceptanceTestUtils
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
 import org.openapitools.client.infrastructure.ClientError
-import org.openapitools.client.infrastructure.ClientException
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Tag("api")
-internal class WorkspacePublicApiTest {
-  private val atClient = AcceptanceTestClient()
+class WorkspacePublicApiTests {
+  val testResources = AcceptanceTestsResources()
+  val apiClient =
+    PublicWorkspacesApi(
+      basePath = AcceptanceTestUtils.getAirbyteApiUrl(),
+      client = AcceptanceTestUtils.createOkHttpClient(),
+    )
 
-  @BeforeAll
+  @BeforeEach
+  @Throws(Exception::class)
   fun setup() {
-    atClient.setup()
-  }
-
-  @AfterAll
-  fun tearDownAll() {
-    atClient.tearDownAll()
+    testResources.init()
+    testResources.setup()
   }
 
   @AfterEach
   fun tearDown() {
-    atClient.tearDown()
+    testResources.tearDown()
+    testResources.end()
   }
 
   @Test
   fun getWorkspaceDefaultNotificationsConfig() {
-    val workspaceId = atClient.public.createWorkspace(WorkspaceCreateRequest(name = "test"))
-    val resp = atClient.public.fetchWorkspace(workspaceId)
+    val resp = apiClient.publicGetWorkspace(testResources.workspaceId.toString())
     val expect =
       NotificationsConfig(
         failure =
@@ -86,98 +86,91 @@ internal class WorkspacePublicApiTest {
 
   @Test
   fun createWorkspace() {
-    val workspaceId = atClient.public.createWorkspace(WorkspaceCreateRequest(name = "test"))
-    val workspace = atClient.public.fetchWorkspace(workspaceId)
-    assertEquals("test", workspace.name)
+    val resp = apiClient.publicCreateWorkspace(WorkspaceCreateRequest("test"))
+    assertEquals("test", resp.name)
   }
 
   @Test
   fun updateWorkspace() {
-    val workspaceId = atClient.public.createWorkspace(WorkspaceCreateRequest(name = "test"))
-    val updatedWorkspaceId = atClient.public.updateWorkspace(workspaceId, WorkspaceUpdateRequest(name = "test2"))
-    assertEquals(workspaceId, updatedWorkspaceId)
-
-    val updatedWorkspace = atClient.public.fetchWorkspace(workspaceId)
-    assertEquals("test2", updatedWorkspace.name)
+    val workspaceId = testResources.workspaceId.toString()
+    val resp = apiClient.publicUpdateWorkspace(workspaceId, WorkspaceUpdateRequest("test2"))
+    assertEquals("test2", resp.name)
   }
 
   @Test
   fun updateWorkspaceNotifications() {
-    val workspaceId = atClient.public.createWorkspace(WorkspaceCreateRequest(name = "test"))
-
-    atClient.public.updateWorkspace(
-      workspaceId,
-      WorkspaceUpdateRequest(
-        notifications =
-          NotificationsConfig(
-            failure =
-              NotificationConfig(
-                webhook = WebhookNotificationConfig(enabled = true, url = "http://test.airbyte"),
-              ),
-          ),
-      ),
-    )
-
-    val updatedWorkspace1 = atClient.public.fetchWorkspace(workspaceId)
+    val workspaceId = testResources.workspaceId.toString()
+    val resp =
+      apiClient.publicUpdateWorkspace(
+        workspaceId,
+        WorkspaceUpdateRequest(
+          notifications =
+            NotificationsConfig(
+              failure =
+                NotificationConfig(
+                  webhook = WebhookNotificationConfig(enabled = true, url = "http://test.airbyte"),
+                ),
+            ),
+        ),
+      )
     assertEquals(
-      updatedWorkspace1.notifications.success
+      resp.notifications.success
         ?.webhook
         ?.enabled,
       false,
     )
     assertEquals(
-      updatedWorkspace1.notifications.success
+      resp.notifications.success
         ?.webhook
         ?.url,
       null,
     )
     assertEquals(
-      updatedWorkspace1.notifications.failure
+      resp.notifications.failure
         ?.webhook
         ?.enabled,
       true,
     )
     assertEquals(
-      updatedWorkspace1.notifications.failure
+      resp.notifications.failure
         ?.webhook
         ?.url,
       "http://test.airbyte",
     )
 
-    atClient.public.updateWorkspace(
-      workspaceId,
-      WorkspaceUpdateRequest(
-        notifications =
-          NotificationsConfig(
-            success =
-              NotificationConfig(
-                webhook = WebhookNotificationConfig(enabled = true, url = "http://success.airbyte"),
-              ),
-          ),
-      ),
-    )
-
-    val updatedWorkspace2 = atClient.public.fetchWorkspace(workspaceId)
+    val resp2 =
+      apiClient.publicUpdateWorkspace(
+        workspaceId,
+        WorkspaceUpdateRequest(
+          notifications =
+            NotificationsConfig(
+              success =
+                NotificationConfig(
+                  webhook = WebhookNotificationConfig(enabled = true, url = "http://success.airbyte"),
+                ),
+            ),
+        ),
+      )
     assertEquals(
-      updatedWorkspace2.notifications.failure
+      resp2.notifications.failure
         ?.webhook
         ?.enabled,
       true,
     )
     assertEquals(
-      updatedWorkspace2.notifications.failure
+      resp2.notifications.failure
         ?.webhook
         ?.url,
       "http://test.airbyte",
     )
     assertEquals(
-      updatedWorkspace2.notifications.success
+      resp2.notifications.success
         ?.webhook
         ?.enabled,
       true,
     )
     assertEquals(
-      updatedWorkspace2.notifications.success
+      resp2.notifications.success
         ?.webhook
         ?.url,
       "http://success.airbyte",
@@ -195,8 +188,8 @@ internal class WorkspacePublicApiTest {
       )
 
     val exception =
-      assertThrows<ClientException> {
-        atClient.public.createWorkspace(WorkspaceCreateRequest(name = "test", notifications = config))
+      assertThrows<org.openapitools.client.infrastructure.ClientException> {
+        apiClient.publicCreateWorkspace(WorkspaceCreateRequest("test", null, config))
       }
 
     val err = exception.response as ClientError<*>
@@ -208,14 +201,17 @@ internal class WorkspacePublicApiTest {
 
   @Test
   fun invalidWebhookUpdate() {
-    val workspaceId = atClient.public.createWorkspace(WorkspaceCreateRequest(name = "test"))
+    val workspaceId = testResources.workspaceId.toString()
     val config =
       NotificationsConfig(
-        failure = NotificationConfig(webhook = WebhookNotificationConfig(enabled = true)),
+        failure =
+          NotificationConfig(
+            webhook = WebhookNotificationConfig(enabled = true),
+          ),
       )
     val exception =
-      assertThrows<ClientException> {
-        atClient.public.updateWorkspace(workspaceId, WorkspaceUpdateRequest(notifications = config))
+      assertThrows<org.openapitools.client.infrastructure.ClientException> {
+        apiClient.publicUpdateWorkspace(workspaceId, WorkspaceUpdateRequest(notifications = config))
       }
 
     val err = exception.response as ClientError<*>

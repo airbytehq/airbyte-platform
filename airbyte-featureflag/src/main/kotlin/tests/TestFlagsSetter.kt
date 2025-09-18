@@ -17,7 +17,7 @@ class TestFlagsSetter(
 ) {
   private val basePath = "/api/v1/feature-flags"
   private val httpClient = OkHttpClient().newBuilder().build()
-  private val urlPrefix = "${baseUrl.removeSuffix("/")}$basePath/"
+  private val urlPrefix = if (baseUrl.endsWith("/")) "${baseUrl.trimEnd('/')}$basePath" else "$baseUrl$basePath"
 
   class FlagOverride<T>(
     private val flag: Flag<T>,
