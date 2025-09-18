@@ -46,6 +46,7 @@ import io.airbyte.workload.services.NotFoundException
 import io.airbyte.workload.services.WorkloadService
 import jakarta.inject.Singleton
 import java.nio.file.Path
+import java.time.Clock
 import java.time.OffsetDateTime
 import java.util.UUID
 import kotlin.time.Duration
@@ -90,9 +91,12 @@ class CommandService(
   private val workloadIdGenerator: WorkloadIdGenerator,
   private val workspaceService: WorkspaceService,
   private val airbyteConfig: AirbyteConfig,
-  private val airbyteWorkerConfig: AirbyteWorkerConfig,
+  airbyteWorkerConfig: AirbyteWorkerConfig,
   private val featureFlagClient: FeatureFlagClient,
+  clock: Clock?,
 ) {
+  private val clock: Clock = clock ?: Clock.systemUTC()
+
   private val discoverAutoRefreshWindow: Duration =
     if (airbyteWorkerConfig.discover.autoRefreshWindow >
       0
@@ -613,6 +617,7 @@ class CommandService(
           .withExternalMessage("Failed to read the output")
           .withInternalMessage("Failed to read the output of a successful workload $commandId")
           .withStacktrace(e?.stackTraceToString())
+          .withTimestamp(clock.millis())
 
       // do some classification from workload.terminationSource
       WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE ->
@@ -626,6 +631,7 @@ class CommandService(
           ).withExternalMessage(
             "Workload ${if (workload.status == WorkloadStatus.CANCELLED) "cancelled by" else "failed, source:"} ${workload.terminationSource}",
           ).withInternalMessage(workload.terminationReason)
+          .withTimestamp(clock.millis())
 
       // We should never be in this situation, workload is still running not having an output is expected,
       // we should not be trying to read the output of a non-terminal workload.
@@ -635,5 +641,6 @@ class CommandService(
           .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
           .withExternalMessage("$commandId is still running, try again later.")
           .withInternalMessage("$commandId isn't in a terminal state, no output available")
+          .withTimestamp(clock.millis())
     }
 }

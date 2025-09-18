@@ -78,6 +78,7 @@ class CheckCommandV2(
                 .withStacktrace(it.stacktrace)
                 .withInternalMessage(it.internalMessage)
                 .withFailureOrigin(failureConverter.getFailureOrigin(it.failureOrigin))
+                .withTimestamp(it.timestamp)
             },
           )
       }

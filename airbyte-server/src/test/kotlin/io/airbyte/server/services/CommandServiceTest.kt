@@ -103,6 +103,7 @@ class CommandServiceTest {
           ),
         featureFlagClient = featureFlagClient,
         workloadIdGenerator = WorkloadIdGenerator(),
+        clock = null,
       )
   }
 
@@ -440,6 +441,7 @@ class CommandServiceTest {
     every { workloadOutputReader.readSyncOutput(WORKLOAD_ID) } throws Exception("bang")
     val output = service.getReplicationOutput(COMMAND_ID)
     assertEquals(expectedStatus, output!!.replicationAttemptSummary.status)
+    assertNotNull(output.failures.first().timestamp)
   }
 
   @Test
@@ -463,6 +465,7 @@ class CommandServiceTest {
     every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } throws DocStoreAccessException("boom", Exception("boom"))
     val output = service.getCheckJobOutput(COMMAND_ID)
     assertNotNull(output?.failureReason)
+    assertNotNull(output?.failureReason?.timestamp)
   }
 
   @Test
@@ -470,6 +473,7 @@ class CommandServiceTest {
     every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } returns null
     val output = service.getCheckJobOutput(COMMAND_ID)
     assertNotNull(output?.failureReason)
+    assertNotNull(output?.failureReason?.timestamp)
   }
 
   companion object {

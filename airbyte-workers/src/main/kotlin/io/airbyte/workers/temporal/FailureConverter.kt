@@ -32,6 +32,7 @@ class FailureConverter {
       FailureReason()
         .withFailureOrigin(if (actorType == ActorType.SOURCE) FailureReason.FailureOrigin.SOURCE else FailureReason.FailureOrigin.DESTINATION)
         .withStacktrace(e.stackTraceToString())
+        .withTimestamp(System.currentTimeMillis())
     val classifiedExc = ActivityFailureClassifier.classifyException(e)
     log.error { "exception classified as $classifiedExc" }
     when (classifiedExc) {

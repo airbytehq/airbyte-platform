@@ -20,6 +20,7 @@ import io.micronaut.http.HttpStatus
 import io.temporal.activity.ActivityExecutionContext
 import jakarta.inject.Singleton
 import java.io.IOException
+import java.time.Clock
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.seconds
 
@@ -33,11 +34,14 @@ private val logger = KotlinLogging.logger { }
 class WorkloadClient(
   private val workloadApiClient: WorkloadApiClient,
   private val outputWriter: WorkloadOutputWriter,
+  clock: Clock?,
 ) {
   companion object {
     const val CANCELLATION_SOURCE_STR = "Cancellation callback."
     val TERMINAL_STATUSES = setOf(WorkloadStatus.SUCCESS, WorkloadStatus.FAILURE, WorkloadStatus.CANCELLED)
   }
+
+  private val clock: Clock = clock ?: Clock.systemUTC()
 
   fun createWorkload(workloadCreateRequest: WorkloadCreateRequest) {
     try {
@@ -146,6 +150,7 @@ class WorkloadClient(
               .withExternalMessage("Failed to read the output")
               .withInternalMessage("Failed to read the output of a successful workload $workloadId")
               .withStacktrace(t?.stackTraceToString())
+              .withTimestamp(System.currentTimeMillis())
 
           // do some classification from workload.terminationSource
           WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE ->
@@ -159,6 +164,7 @@ class WorkloadClient(
               ).withExternalMessage(
                 "Workload ${if (workload.status == WorkloadStatus.CANCELLED) "cancelled by" else "failed, source:"} ${workload.terminationSource}",
               ).withInternalMessage(workload.terminationReason)
+              .withTimestamp(clock.millis())
 
           // We should never be in this situation, workload is still running not having an output is expected,
           // we should not be trying to read the output of a non-terminal workload.
@@ -168,6 +174,7 @@ class WorkloadClient(
               .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
               .withExternalMessage("Expected error in the platform")
               .withInternalMessage("$workloadId isn't in a terminal state, no output available")
+              .withTimestamp(clock.millis())
         }
       }.getOrElse {
         FailureReason()
@@ -176,6 +183,7 @@ class WorkloadClient(
           .withExternalMessage("Platform failure")
           .withInternalMessage("Unable to reach the workload-api")
           .withStacktrace(it.stackTraceToString())
+          .withTimestamp(clock.millis())
       }
   }
 

@@ -23,6 +23,7 @@ import io.temporal.activity.ActivityExecutionContext
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
+import java.time.Clock
 import java.util.concurrent.Callable
 import java.util.concurrent.atomic.AtomicReference
 
@@ -34,7 +35,7 @@ class WorkloadClientTest {
 
   @BeforeEach
   fun setup() {
-    client = spyk(WorkloadClient(workloadApiClient, outputWriter))
+    client = spyk(WorkloadClient(workloadApiClient, outputWriter, Clock.systemUTC()))
   }
 
   @Test
