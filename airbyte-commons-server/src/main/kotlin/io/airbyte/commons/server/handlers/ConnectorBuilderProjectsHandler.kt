@@ -580,7 +580,7 @@ open class ConnectorBuilderProjectsHandler
     fun resolveManifest(
       manifest: JsonNode,
       workspaceId: UUID,
-      projectId: UUID,
+      projectId: UUID?,
     ): JsonNode {
       val processor = manifestProcessorProvider.getProcessor(workspaceId)
       return processor.resolveManifest(
