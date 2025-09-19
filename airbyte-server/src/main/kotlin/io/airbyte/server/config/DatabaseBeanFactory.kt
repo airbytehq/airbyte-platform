@@ -24,6 +24,7 @@ import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.MetadataPersistence
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Primary
 import io.micronaut.data.connection.jdbc.advice.DelegatingDataSource
 import io.micronaut.flyway.FlywayConfigurationProperties
 import jakarta.inject.Named
@@ -40,14 +41,17 @@ private val log = KotlinLogging.logger {}
  * Micronaut bean factory for database-related singletons.
  */
 @Factory
+@Primary
 class DatabaseBeanFactory {
   @Singleton
+  @Primary
   @Named("configDatabase")
   fun configDatabase(
     @Named("config") dslContext: DSLContext,
   ): Database = Database(unwrapContext(dslContext))
 
   @Singleton
+  @Primary
   @Named("configFlyway")
   fun configFlyway(
     @Named("config") configFlywayConfigurationProperties: FlywayConfigurationProperties,
@@ -64,6 +68,7 @@ class DatabaseBeanFactory {
       .load()
 
   @Singleton
+  @Primary
   @Named("jobsFlyway")
   fun jobsFlyway(
     @Named("jobs") jobsFlywayConfigurationProperties: FlywayConfigurationProperties,
@@ -80,42 +85,50 @@ class DatabaseBeanFactory {
       .load()
 
   @Singleton
+  @Primary
   fun jobPersistence(
     @Named("configDatabase") jobDatabase: Database?,
   ): JobPersistence = DefaultJobPersistence(jobDatabase)
 
   @Singleton
+  @Primary
   fun metadataPersistence(
     @Named("configDatabase") jobDatabase: Database?,
   ): MetadataPersistence = DefaultMetadataPersistence(jobDatabase)
 
   @Singleton
+  @Primary
   fun permissionPersistence(
     @Named("configDatabase") configDatabase: Database?,
   ): PermissionPersistence = PermissionPersistence(configDatabase)
 
   @Singleton
+  @Primary
   fun statePersistence(
     @Named("configDatabase") configDatabase: Database?,
     connectionServiceJooqImpl: ConnectionServiceJooqImpl,
   ): StatePersistence = StatePersistence(configDatabase, connectionServiceJooqImpl)
 
   @Singleton
+  @Primary
   fun userPersistence(
     @Named("configDatabase") configDatabase: Database?,
   ): UserPersistence = UserPersistence(configDatabase)
 
   @Singleton
+  @Primary
   fun organizationPersistence(
     @Named("configDatabase") configDatabase: Database?,
   ): OrganizationPersistence = OrganizationPersistence(configDatabase)
 
   @Singleton
+  @Primary
   fun workspacePersistence(
     @Named("configDatabase") configDatabase: Database?,
   ): WorkspacePersistence = WorkspacePersistence(configDatabase)
 
   @Singleton
+  @Primary
   @Named("configsDatabaseMigrationCheck")
   fun configsDatabaseMigrationCheck(
     @Named("config") dslContext: DSLContext,
@@ -135,6 +148,7 @@ class DatabaseBeanFactory {
   }
 
   @Singleton
+  @Primary
   @Named("jobsDatabaseMigrationCheck")
   fun jobsDatabaseMigrationCheck(
     @Named("jobs") dslContext: DSLContext,
@@ -150,17 +164,20 @@ class DatabaseBeanFactory {
       )
 
   @Singleton
+  @Primary
   @Named("jobsDatabaseAvailabilityCheck")
   fun jobsDatabaseAvailabilityCheck(
     @Named("config") dslContext: DSLContext,
   ): JobsDatabaseAvailabilityCheck = JobsDatabaseAvailabilityCheck(unwrapContext(dslContext), DatabaseConstants.DEFAULT_ASSERT_DATABASE_TIMEOUT_MS)
 
   @Singleton
+  @Primary
   fun streamResetPersistence(
     @Named("configDatabase") configDatabase: Database?,
   ): StreamResetPersistence = StreamResetPersistence(configDatabase)
 
   @Singleton
+  @Primary
   @Named("unwrappedConfig")
   fun unwrappedConfigDslContext(
     @Named("config") dslContext: DSLContext,

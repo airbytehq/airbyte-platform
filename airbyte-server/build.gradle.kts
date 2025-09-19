@@ -46,6 +46,8 @@ dependencies {
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-api:public-api"))
   implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-api:workload-api"))
+  implementation(project(":oss:airbyte-workload-api-server"))
   implementation(project(":oss:airbyte-audit-logging"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
@@ -70,8 +72,7 @@ dependencies {
   implementation(project(":oss:airbyte-statistics"))
   implementation(project(":oss:airbyte-worker-models"))
 
-  // TODO airybte-server should not depend directly on airbyte-data. All data access should go
-  // through airbyte-domain.
+  // TODO airybte-server should not depend directly on airbyte-data. All data access should go through airbyte-domain.
   implementation(project(":oss:airbyte-data"))
 
   implementation(project(":oss:airbyte-featureflag"))

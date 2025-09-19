@@ -12,11 +12,13 @@ import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.repository.domain.WorkloadType
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Primary
 import jakarta.inject.Singleton
 
 private val logger = KotlinLogging.logger {}
 
 @Singleton
+@Primary
 class InProcessSignalSender(
   private val signalHandler: SignalHandler,
   private val metricClient: MetricClient,

@@ -62,6 +62,7 @@ import io.airbyte.workers.models.ReplicationFeatureFlags
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.fabric8.kubernetes.client.KubernetesClientBuilder
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Primary
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.net.http.HttpClient
@@ -75,6 +76,7 @@ import java.util.function.Supplier
 @Factory
 class ApplicationBeanFactory {
   @Singleton
+  @Primary
   @Named("uuidGenerator")
   fun randomUUIDSupplier(): Supplier<UUID> = Supplier { UUID.randomUUID() }
 

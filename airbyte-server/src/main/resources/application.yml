@@ -33,6 +33,9 @@ micronaut:
     webhook:
       type: fixed
       n-threads: ${WEBHOOK_TASK_EXECUTOR_THREADS:3}
+    workload:
+      type: fixed
+      n-threads: ${WORKLOAD_TASK_EXECUTOR_THREADS:50}
   http:
     client:
       read-timeout: ${READ_TIMEOUT:10m}
