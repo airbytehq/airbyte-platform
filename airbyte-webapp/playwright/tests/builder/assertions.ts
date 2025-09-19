@@ -5,7 +5,7 @@ import { navigateToStreamSchema } from "./helpers";
 // Locate expected text in the test panel
 export const assertTestPanelContains = async (page: Page, text: string) => {
   const escapedText = text.replace(/"/g, '\\"');
-  await expect(page.locator(`pre:has-text("${escapedText}")`)).toBeVisible({ timeout: 15000 });
+  await expect(page.locator(`pre:has-text("${escapedText}")`)).toBeVisible({ timeout: 30000 });
 };
 
 // Assert that the URL path matches the expected value

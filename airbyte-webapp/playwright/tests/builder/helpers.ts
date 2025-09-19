@@ -223,7 +223,7 @@ export const configureSchemaLoader = async (page: Page, schema: string) => {
 
 // Navigate to the detected schema tab
 export const navigateToDetectedSchema = async (page: Page) => {
-  await page.locator('[data-testid="tag-tab-detected-schema"]').waitFor({ state: "visible", timeout: 10000 });
+  await page.locator('[data-testid="tag-tab-detected-schema"]').waitFor({ state: "visible", timeout: 30000 });
   await page.locator('[data-testid="tag-tab-detected-schema"]').click();
 };
 

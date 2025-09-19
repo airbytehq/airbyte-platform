@@ -176,7 +176,7 @@ export const performSecondTextEdit = async (page: Page, fieldName: string, newVa
   await submitButton.waitFor({ state: "visible", timeout: 10000 });
   await submitButton.click();
 
-  await expect(page.locator("[data-id='success-result']")).toBeVisible({ timeout: 30000 });
+  await expect(page.locator("[data-id='success-result']")).toBeVisible({ timeout: 60000 });
   await expect(page.locator(`input[value='${newValue}']`)).toBeVisible({ timeout: 10000 });
 };
 

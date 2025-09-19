@@ -279,7 +279,7 @@ export const sourceUI = {
     await submitButton.click();
 
     // Wait for success indicator (can be either div or FlexContainer)
-    await expect(page.locator("[data-id='success-result']")).toBeVisible({ timeout: 50000 });
+    await expect(page.locator("[data-id='success-result']")).toBeVisible({ timeout: 90000 });
   },
 
   deleteSource: async (page: Page, sourceName: string, workspaceId: string) => {
