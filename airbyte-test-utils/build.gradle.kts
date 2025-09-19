@@ -26,12 +26,14 @@ dependencies {
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-commons-worker"))
   implementation(project(":oss:airbyte-featureflag"))
+  implementation(libs.bundles.retrofit)
   implementation(libs.bundles.kubernetes.client)
   implementation(libs.bundles.flyway)
   implementation(libs.temporal.sdk)
   implementation(libs.google.cloud.api.client)
   implementation(libs.google.cloud.sqladmin)
   implementation(libs.micronaut.security.jwt)
+  implementation(libs.kotlin.coroutines)
 
   // Mark as compile only to avoid leaking transitively to connectors
   compileOnly(libs.platform.testcontainers.postgresql)
@@ -41,6 +43,7 @@ dependencies {
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
+  testImplementation(libs.kotlin.coroutines.test)
 
   testImplementation(libs.junit.pioneer)
 }
