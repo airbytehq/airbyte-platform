@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
-import { TeamsFeaturesWarnModal } from "components/TeamsFeaturesWarnModal";
+import { ProFeaturesWarnModal } from "components/ProFeaturesWarnModal";
 import { Button } from "components/ui/Button";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Tooltip } from "components/ui/Tooltip";
@@ -33,7 +33,7 @@ export const OrganizationWorkspacesCreateControl: React.FC<{
   onCreated?: () => void;
 }> = ({ disabled = false, secondary = false, onCreated }) => {
   const { isInTrial } = useOrganizationSubscriptionStatus();
-  const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
+  const showProFeaturesWarnModal = useExperiment("entitlements.showProFeaturesWarnModal");
   const dataplaneGroups = useListDataplaneGroups();
   const { openModal } = useModalService();
   const { formatMessage } = useIntl();
@@ -47,10 +47,10 @@ export const OrganizationWorkspacesCreateControl: React.FC<{
         ),
       });
 
-    if (isInTrial && showTeamsFeaturesWarnModal) {
+    if (isInTrial && showProFeaturesWarnModal) {
       openModal({
         title: null,
-        content: () => <TeamsFeaturesWarnModal onContinue={openCreateWorkspaceModal} />,
+        content: () => <ProFeaturesWarnModal onContinue={openCreateWorkspaceModal} />,
         size: "xl",
       });
     } else {

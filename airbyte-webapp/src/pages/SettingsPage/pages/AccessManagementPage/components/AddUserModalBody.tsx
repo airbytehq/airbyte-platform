@@ -2,7 +2,7 @@ import { useCallback, useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
-import { TeamsFeaturesWarnModal } from "components/TeamsFeaturesWarnModal";
+import { ProFeaturesWarnModal } from "components/ProFeaturesWarnModal";
 import { Box } from "components/ui/Box";
 import { ModalBody } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
@@ -36,19 +36,19 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
   canInviteExternalUsers,
   scope,
 }) => {
-  const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
+  const showProFeaturesWarnModal = useExperiment("entitlements.showProFeaturesWarnModal");
   const { isInTrial } = useOrganizationSubscriptionStatus();
   const { openModal, getCurrentModalTitle } = useModalService();
   const { getValues, setValue } = useFormContext<AddUserFormValues>();
 
-  const openTeamsFeaturesWarnModal = useCallback(
+  const openProFeaturesWarnModal = useCallback(
     async (permission: PermissionType) => {
       // Capture the AddUserModal title BEFORE opening the Teams warning modal
       const addUserModalTitle = getCurrentModalTitle();
 
-      // open Teams warning modal
+      // open Pro features warning modal
       await openModal({
-        content: ({ onComplete }) => <TeamsFeaturesWarnModal onContinue={() => onComplete("success")} />,
+        content: ({ onComplete }) => <ProFeaturesWarnModal onContinue={() => onComplete("success")} />,
         preventCancel: true,
         size: "xl",
       });
@@ -76,12 +76,12 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
 
   const handlePermissionSelect = useCallback(
     (permission: PermissionType) => {
-      // Show warning when user selects any teams feature permission
-      if (isInTrial && showTeamsFeaturesWarnModal && isTeamsFeaturePermissionType(permission)) {
-        openTeamsFeaturesWarnModal(permission);
+      // Show warning when user selects any pro feature permission
+      if (isInTrial && showProFeaturesWarnModal && isTeamsFeaturePermissionType(permission)) {
+        openProFeaturesWarnModal(permission);
       }
     },
-    [isInTrial, showTeamsFeaturesWarnModal, openTeamsFeaturesWarnModal]
+    [isInTrial, showProFeaturesWarnModal, openProFeaturesWarnModal]
   );
 
   // handle when the selected option is no longer visible

@@ -6,7 +6,7 @@ import { useDebounce } from "react-use";
 import { match } from "ts-pattern";
 
 import { ConnectorIcon } from "components/ConnectorIcon";
-import { TeamsFeaturesWarnModal } from "components/TeamsFeaturesWarnModal";
+import { ProFeaturesWarnModal } from "components/ProFeaturesWarnModal";
 import { Button } from "components/ui/Button";
 import { CheckBox } from "components/ui/CheckBox";
 import { FlexContainer } from "components/ui/Flex";
@@ -61,7 +61,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const trackSelectConnector = useTrackSelectConnector(connectorType);
   const trackSelectEnterpriseStub = useTrackSelectEnterpriseStub();
   const { isInTrial } = useOrganizationSubscriptionStatus();
-  const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
+  const showProFeaturesWarnModal = useExperiment("entitlements.showProFeaturesWarnModal");
 
   const [showAirbyteConnectors, setShowAirbyteConnectors] = useState(true);
   const [showEnterpriseConnectors, setShowEnterpriseConnectors] = useState(true);
@@ -149,10 +149,10 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
       }
     };
 
-    if ("isEnterprise" in definition && isInTrial && showTeamsFeaturesWarnModal) {
+    if ("isEnterprise" in definition && isInTrial && showProFeaturesWarnModal) {
       openModal({
         title: null,
-        content: () => <TeamsFeaturesWarnModal onContinue={proceedWithConnectorSelection} />,
+        content: () => <ProFeaturesWarnModal onContinue={proceedWithConnectorSelection} />,
         size: "xl",
       });
     } else {

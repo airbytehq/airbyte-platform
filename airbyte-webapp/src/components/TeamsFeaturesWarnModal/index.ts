@@ -1,1 +1,0 @@
-export { TeamsFeaturesWarnModal } from "./TeamsFeaturesWarnModal";

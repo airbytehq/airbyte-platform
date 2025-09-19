@@ -10,7 +10,7 @@ import { ConnectionSyncContextProvider } from "components/connection/ConnectionS
 import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionScheduleFormField";
 import { SimplifiedConnectionsSettingsCard } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionSettingsCard";
 import { Form } from "components/forms";
-import { TeamsFeaturesWarnModal } from "components/TeamsFeaturesWarnModal";
+import { ProFeaturesWarnModal } from "components/ProFeaturesWarnModal";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { ExternalLink } from "components/ui/Link";
@@ -48,7 +48,7 @@ export const ConnectionSettingsPage: React.FC = () => {
   const { mode } = useFormMode();
   const simplifiedInitialValues = useInitialFormValues(connection, mode);
   const { isInTrial } = useOrganizationSubscriptionStatus();
-  const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
+  const showProFeaturesWarnModal = useExperiment("entitlements.showProFeaturesWarnModal");
   const { openModal } = useModalService();
   const fetchCronDescription = useDescribeCronExpressionFetchQuery();
 
@@ -62,11 +62,11 @@ export const ConnectionSettingsPage: React.FC = () => {
         ...values,
       };
 
-      // Check if we need to show Teams features warning modal for sub-hourly cron
+      // Check if we need to show Pro features warning modal for sub-hourly cron
       const isCronSchedule = values.scheduleType === ConnectionScheduleType.cron;
       const cronExpression = values.scheduleData?.cron?.cronExpression;
 
-      if (isCronSchedule && cronExpression && isInTrial && showTeamsFeaturesWarnModal) {
+      if (isCronSchedule && cronExpression && isInTrial && showProFeaturesWarnModal) {
         const cronValidationResult = await fetchCronDescription(cronExpression);
 
         if (
@@ -75,7 +75,7 @@ export const ConnectionSettingsPage: React.FC = () => {
         ) {
           await openModal({
             title: null,
-            content: ({ onComplete }) => <TeamsFeaturesWarnModal onContinue={() => onComplete("success")} />,
+            content: ({ onComplete }) => <ProFeaturesWarnModal onContinue={() => onComplete("success")} />,
             preventCancel: true,
             size: "xl",
           });
@@ -85,7 +85,7 @@ export const ConnectionSettingsPage: React.FC = () => {
 
       return updateConnection(connectionUpdates);
     },
-    [connection.connectionId, isInTrial, showTeamsFeaturesWarnModal, updateConnection, fetchCronDescription, openModal]
+    [connection.connectionId, isInTrial, showProFeaturesWarnModal, updateConnection, fetchCronDescription, openModal]
   );
 
   const onSuccess = useCallback(() => {

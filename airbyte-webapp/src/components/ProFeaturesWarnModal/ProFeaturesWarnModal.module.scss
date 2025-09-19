@@ -1,7 +1,7 @@
 @use "scss/variables";
 @use "scss/colors";
 
-.teamsFeaturesModal {
+.proFeaturesModal {
   padding: 0;
 
   & > * {
@@ -9,28 +9,28 @@
   }
 }
 
-.teamsFeaturesModal__layout {
+.proFeaturesModal__layout {
   height: 100%;
 }
 
-.teamsFeaturesModal__content {
+.proFeaturesModal__content {
   width: 50%;
   padding: variables.$spacing-2xl;
 }
 
-.teamsFeaturesModal__featuresList {
+.proFeaturesModal__featuresList {
   margin-top: variables.$spacing-sm;
   padding-left: variables.$spacing-xl;
   font-size: variables.$font-size-lg;
   line-height: 1.5;
 }
 
-.teamsFeaturesModal__image {
+.proFeaturesModal__image {
   width: 50%;
   overflow: hidden;
 }
 
-.teamsFeaturesModal__imageImg {
+.proFeaturesModal__imageImg {
   width: 100%;
   height: 100%;
   object-fit: cover;

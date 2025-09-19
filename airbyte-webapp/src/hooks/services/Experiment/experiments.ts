@@ -34,7 +34,7 @@ export interface Experiments {
   "embedded.useSonarServer": boolean;
   "onboarding.surveyEnabled": boolean;
   "entitlements.showCloudSubscriptionSuccessModal": boolean;
-  "entitlements.showTeamsFeaturesWarnModal": boolean;
+  "entitlements.showProFeaturesWarnModal": boolean;
   "entitlements.showUpgradeTextInStatusBanner": boolean;
   "entitlements.showTrialEndedModal": boolean;
   "platform.allow-config-template-endpoints": boolean;
@@ -90,7 +90,7 @@ export const defaultExperimentValues: Experiments = {
   "embedded.templateCreateButton": false,
   "embedded.useSonarServer": false,
   "entitlements.showCloudSubscriptionSuccessModal": false,
-  "entitlements.showTeamsFeaturesWarnModal": false,
+  "entitlements.showProFeaturesWarnModal": false,
   "entitlements.showTrialEndedModal": false,
   "entitlements.showUpgradeTextInStatusBanner": false,
   "onboarding.surveyEnabled": false,

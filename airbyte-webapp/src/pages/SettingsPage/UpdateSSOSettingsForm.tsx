@@ -3,7 +3,7 @@ import { useIntl } from "react-intl";
 import { z } from "zod";
 
 import { Form } from "components/forms";
-import { TeamsFeaturesWarnModal } from "components/TeamsFeaturesWarnModal";
+import { ProFeaturesWarnModal } from "components/ProFeaturesWarnModal";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { HttpProblem, useSSOConfigManagement } from "core/api";
@@ -36,15 +36,15 @@ export const UpdateSSOSettingsForm = () => {
   const canUpdateOrganization = useIntent("UpdateOrganization", { organizationId });
   const { ssoConfig, createSsoConfig } = useSSOConfigManagement();
   const { isInTrial } = useOrganizationSubscriptionStatus();
-  const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
+  const showProFeaturesWarnModal = useExperiment("entitlements.showProFeaturesWarnModal");
   const { openModal } = useModalService();
 
   const onSubmit = async (values: SSOFormValues) => {
-    // Check if we need to show Teams features warning modal for trial users
-    if (isInTrial && showTeamsFeaturesWarnModal) {
+    // Check if we need to show Pro features warning modal for trial users
+    if (isInTrial && showProFeaturesWarnModal) {
       await openModal({
         title: null,
-        content: ({ onComplete }) => <TeamsFeaturesWarnModal onContinue={() => onComplete("success")} />,
+        content: ({ onComplete }) => <ProFeaturesWarnModal onContinue={() => onComplete("success")} />,
         preventCancel: true,
         size: "xl",
       });

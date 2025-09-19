@@ -3,7 +3,7 @@ import classNames from "classnames";
 import { Fragment, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { TeamsFeaturesWarnModal } from "components/TeamsFeaturesWarnModal";
+import { ProFeaturesWarnModal } from "components/ProFeaturesWarnModal";
 import { Button } from "components/ui/Button";
 import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
@@ -28,7 +28,7 @@ export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({
   const { addStreamToMappingsList } = useMappingContext();
   const { formatMessage } = useIntl();
   const { isInTrial } = useOrganizationSubscriptionStatus();
-  const showTeamsFeaturesWarnModal = useExperiment("entitlements.showTeamsFeaturesWarnModal");
+  const showProFeaturesWarnModal = useExperiment("entitlements.showProFeaturesWarnModal");
   const { openModal } = useModalService();
 
   const placeholder = secondary
@@ -46,10 +46,10 @@ export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({
   const disabled = !options || options.length === 0 || mode === "readonly";
 
   const handleInputClick = () => {
-    if (isInTrial && showTeamsFeaturesWarnModal) {
+    if (isInTrial && showProFeaturesWarnModal) {
       openModal({
         title: null,
-        content: ({ onComplete }) => <TeamsFeaturesWarnModal onContinue={() => onComplete("continue")} />,
+        content: ({ onComplete }) => <ProFeaturesWarnModal onContinue={() => onComplete("continue")} />,
         size: "xl",
       });
     }
