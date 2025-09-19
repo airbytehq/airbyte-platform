@@ -14,6 +14,7 @@ dependencies {
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.keycloak.client)
+  implementation(libs.micronaut.http.client)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
@@ -47,10 +48,11 @@ airbyte {
   }
 }
 
-val copyScripts = tasks.register<Copy>("copyScripts") {
-  from("scripts")
-  into("build/airbyte/docker/")
-}
+val copyScripts =
+  tasks.register<Copy>("copyScripts") {
+    from("scripts")
+    into("build/airbyte/docker/")
+  }
 
 tasks.named("dockerCopyDistribution") {
   dependsOn(copyScripts)

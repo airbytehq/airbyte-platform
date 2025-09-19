@@ -35,6 +35,7 @@ dependencies {
   runtimeOnly(libs.bundles.logback)
 
   testImplementation(libs.bundles.micronaut.test)
+  testImplementation(libs.micronaut.http.client)
   testImplementation(libs.mockk)
 }
 

@@ -63,6 +63,7 @@ dependencies {
 
   testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.bundles.micronaut.test)
+  testImplementation(libs.micronaut.http.client)
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.mockwebserver)

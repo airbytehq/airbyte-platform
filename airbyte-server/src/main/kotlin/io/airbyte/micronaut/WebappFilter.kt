@@ -15,6 +15,7 @@ import io.micronaut.http.annotation.Filter
 import io.micronaut.http.annotation.Filter.MATCH_ALL_PATTERN
 import io.micronaut.http.filter.HttpServerFilter
 import io.micronaut.http.filter.ServerFilterChain
+import io.micronaut.http.simple.SimpleHttpRequestFactory
 import org.reactivestreams.Publisher
 import java.time.Clock
 import java.time.ZoneOffset
@@ -147,7 +148,7 @@ private fun ServerFilterChain.modifyResponse(
  */
 @InternalForTesting
 internal fun HttpRequest<*>.copy(uri: String): HttpRequest<*> =
-  HttpRequest
+  SimpleHttpRequestFactory()
     .create<Any>(this.method, uri)
     .apply {
       // copy the headers
