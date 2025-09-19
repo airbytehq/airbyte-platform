@@ -17,7 +17,7 @@ internal class AirbyteConnectorRegistryConfigDefaultTest {
 
   @Test
   fun testLoadingValuesFromConfig() {
-    assertEquals("", airbyteConnectorRegistryConfig.enterprise.enterpriseSourceStubsUrl)
+    assertEquals("", airbyteConnectorRegistryConfig.enterprise.enterpriseStubsUrl)
     assertEquals("", airbyteConnectorRegistryConfig.remote.baseUrl)
     assertEquals(DEFAULT_CONNECTOR_REGISTRY_REMOTE_TIMEOUT_MS, airbyteConnectorRegistryConfig.remote.timeoutMs)
     assertEquals(DEFAULT_CONNECTOR_REGISTRY_SEED_PROVIDER, airbyteConnectorRegistryConfig.seedProvider)
@@ -31,7 +31,7 @@ internal class AirbyteConnectorRegistryConfigOverridesTest {
 
   @Test
   fun testLoadingValuesFromConfig() {
-    assertEquals("http://enterprise-source-stubs-test-url", airbyteConnectorRegistryConfig.enterprise.enterpriseSourceStubsUrl)
+    assertEquals("http://enterprise-stubs-test-url", airbyteConnectorRegistryConfig.enterprise.enterpriseStubsUrl)
     assertEquals("http://remote-test", airbyteConnectorRegistryConfig.remote.baseUrl)
     assertEquals(60L, airbyteConnectorRegistryConfig.remote.timeoutMs)
     assertEquals("test", airbyteConnectorRegistryConfig.seedProvider)

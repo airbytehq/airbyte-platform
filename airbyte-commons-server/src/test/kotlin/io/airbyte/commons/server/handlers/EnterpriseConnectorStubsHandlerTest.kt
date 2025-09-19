@@ -39,7 +39,7 @@ class EnterpriseConnectorStubsHandlerTest {
       AirbyteConnectorRegistryConfig(
         enterprise =
           AirbyteConnectorRegistryConfig.AirbyteConnectorRegistryEnterpriseConfig(
-            enterpriseSourceStubsUrl = baseUrl,
+            enterpriseStubsUrl = baseUrl,
           ),
         remote =
           AirbyteConnectorRegistryConfig.AirbyteConnectorRegistryRemoteConfig(

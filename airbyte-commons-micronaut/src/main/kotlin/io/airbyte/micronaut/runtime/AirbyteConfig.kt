@@ -427,7 +427,7 @@ data class AirbyteConnectorRegistryConfig(
 
   @ConfigurationProperties("enterprise")
   data class AirbyteConnectorRegistryEnterpriseConfig(
-    val enterpriseSourceStubsUrl: String = "",
+    val enterpriseStubsUrl: String = "",
   )
 }
 

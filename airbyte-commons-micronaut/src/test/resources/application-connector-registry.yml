@@ -1,7 +1,7 @@
 airbyte:
   connector-registry:
     enterprise:
-      enterprise-source-stubs-url: http://enterprise-source-stubs-test-url
+      enterprise-stubs-url: http://enterprise-stubs-test-url
     remote:
       base-url: http://remote-test
       timeout-ms: 60

@@ -54,7 +54,7 @@ open class EnterpriseConnectorStubsHandler(
       val request =
         Request
           .Builder()
-          .url(airbyteConnectorRegistryConfig.enterprise.enterpriseSourceStubsUrl)
+          .url(airbyteConnectorRegistryConfig.enterprise.enterpriseStubsUrl)
           .build()
 
       okHttpClient.newCall(request).execute().use { response ->
