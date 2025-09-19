@@ -27,7 +27,7 @@ const entitlementIdToFeatureItem: Record<string, FeatureItem> = {
   "feature-fe-cloud-for-teams-branding": FeatureItem.CloudForTeamsBranding,
   "feature-fe-display-organization-users": FeatureItem.DisplayOrganizationUsers,
   "feature-fe-indicate-guest-users": FeatureItem.IndicateGuestUsers,
-  "feature-connection-mappings-ui": FeatureItem.MappingsUI,
+  "feature-mappers": FeatureItem.MappingsUI,
   "feature-connection-hashing-ui-v0": FeatureItem.FieldHashing,
   "feature-sso": FeatureItem.AllowUpdateSSOConfig,
   "feature-multiple-workspaces": FeatureItem.CreateMultipleWorkspaces,
