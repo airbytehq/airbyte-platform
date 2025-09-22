@@ -6,9 +6,11 @@ package io.airbyte.workers.temporal.scheduling.activities
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.AttemptApi
+import io.airbyte.api.client.generated.ConnectionApi
 import io.airbyte.api.client.generated.JobsApi
 import io.airbyte.api.client.model.generated.AttemptInfoRead
 import io.airbyte.api.client.model.generated.BooleanRead
+import io.airbyte.api.client.model.generated.ConnectionContextRead
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.ConnectionJobRequestBody
 import io.airbyte.api.client.model.generated.CreateNewAttemptNumberRequest
@@ -31,7 +33,11 @@ import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.State
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.SkipCheckBeforeSync
 import io.airbyte.featureflag.TestClient
+import io.airbyte.featureflag.Workspace
 import io.airbyte.workers.storage.activities.OutputStorageClient
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptCreationInput
 import io.airbyte.workers.temporal.scheduling.activities.JobCreationAndStatusUpdateActivity.AttemptNumberFailureInput
@@ -71,6 +77,9 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
   @Mock
   private lateinit var attemptApi: AttemptApi
+
+  @Mock
+  private lateinit var connectionApi: ConnectionApi
 
   @Mock
   private lateinit var featureFlagClient: TestClient
@@ -294,6 +303,97 @@ internal class JobCreationAndStatusUpdateActivityTest {
       Assertions.assertTrue(result)
     }
 
+    @Test
+    @Throws(IOException::class)
+    fun shouldRunSourceCheckReturnsFalseWhenFeatureFlagEnabled() {
+      val input =
+        JobCheckFailureInput(
+          JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+        )
+      val workspaceId = UUID.randomUUID()
+
+      // Mock the connection API to return workspace ID
+      whenever(airbyteApiClient.connectionApi).thenReturn(connectionApi)
+      whenever(connectionApi.getConnectionContext(ConnectionIdRequestBody(CONNECTION_ID)))
+        .thenReturn(ConnectionContextRead(CONNECTION_ID, null, null, null, null, workspaceId, null))
+
+      // Enable the feature flag
+      whenever(
+        featureFlagClient.boolVariation(
+          SkipCheckBeforeSync,
+          Multi(listOf(Connection(CONNECTION_ID), Workspace(workspaceId))),
+        ),
+      ).thenReturn(true)
+
+      val result = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
+
+      Assertions.assertFalse(result)
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun shouldRunSourceCheckReturnsIsLastJobOrAttemptFailureResultWhenFeatureFlagDisabled() {
+      val input =
+        JobCheckFailureInput(
+          JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+        )
+      val workspaceId = UUID.randomUUID()
+
+      // Mock the connection API to return workspace ID
+      whenever(airbyteApiClient.connectionApi).thenReturn(connectionApi)
+      whenever(connectionApi.getConnectionContext(ConnectionIdRequestBody(CONNECTION_ID)))
+        .thenReturn(ConnectionContextRead(CONNECTION_ID, null, null, null, null, workspaceId, null))
+
+      // Disable the feature flag
+      whenever(
+        featureFlagClient.boolVariation(
+          SkipCheckBeforeSync,
+          Multi(listOf(Connection(CONNECTION_ID), Workspace(workspaceId))),
+        ),
+      ).thenReturn(false)
+
+      // Mock previous job failed (so normal logic would return true)
+      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
+        .thenReturn(BooleanRead(false))
+
+      val result = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
+
+      Assertions.assertTrue(result)
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun shouldRunSourceCheckHandlesWorkspaceIdFetchFailureGracefully() {
+      val input =
+        JobCheckFailureInput(
+          JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+        )
+
+      // Mock the connection API to fail
+      whenever(airbyteApiClient.connectionApi).thenReturn(connectionApi)
+      whenever(connectionApi.getConnectionContext(any<ConnectionIdRequestBody>()))
+        .thenThrow(IOException("Failed to fetch workspace"))
+
+      // Feature flag check should still work with just connection context
+      whenever(
+        featureFlagClient.boolVariation(
+          SkipCheckBeforeSync,
+          Multi(listOf(Connection(CONNECTION_ID))),
+        ),
+      ).thenReturn(true)
+
+      val result = jobCreationAndStatusUpdateActivity.shouldRunSourceCheck(input)
+
+      Assertions.assertFalse(result)
+    }
+
     // shouldRunDestinationCheck tests
     @Test
     @Throws(IOException::class)
@@ -346,6 +446,69 @@ internal class JobCreationAndStatusUpdateActivityTest {
       val result = jobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(input)
 
       Assertions.assertFalse(result)
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun shouldRunDestinationCheckReturnsFalseWhenFeatureFlagEnabled() {
+      val input =
+        JobCheckFailureInput(
+          JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+        )
+      val workspaceId = UUID.randomUUID()
+
+      // Mock the connection API to return workspace ID
+      whenever(airbyteApiClient.connectionApi).thenReturn(connectionApi)
+      whenever(connectionApi.getConnectionContext(ConnectionIdRequestBody(CONNECTION_ID)))
+        .thenReturn(ConnectionContextRead(CONNECTION_ID, null, null, null, null, workspaceId, null))
+
+      // Enable the feature flag
+      whenever(
+        featureFlagClient.boolVariation(
+          SkipCheckBeforeSync,
+          Multi(listOf(Connection(CONNECTION_ID), Workspace(workspaceId))),
+        ),
+      ).thenReturn(true)
+
+      val result = jobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(input)
+
+      Assertions.assertFalse(result)
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun shouldRunDestinationCheckReturnsIsLastJobOrAttemptFailureResultWhenFeatureFlagDisabled() {
+      val input =
+        JobCheckFailureInput(
+          JOB_ID,
+          ATTEMPT_NUMBER,
+          CONNECTION_ID,
+        )
+      val workspaceId = UUID.randomUUID()
+
+      // Mock the connection API to return workspace ID
+      whenever(airbyteApiClient.connectionApi).thenReturn(connectionApi)
+      whenever(connectionApi.getConnectionContext(ConnectionIdRequestBody(CONNECTION_ID)))
+        .thenReturn(ConnectionContextRead(CONNECTION_ID, null, null, null, null, workspaceId, null))
+
+      // Disable the feature flag
+      whenever(
+        featureFlagClient.boolVariation(
+          SkipCheckBeforeSync,
+          Multi(listOf(Connection(CONNECTION_ID), Workspace(workspaceId))),
+        ),
+      ).thenReturn(false)
+
+      // Mock previous job failed (so normal logic would return true)
+      whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
+      whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
+        .thenReturn(BooleanRead(false))
+
+      val result = jobCreationAndStatusUpdateActivity.shouldRunDestinationCheck(input)
+
+      Assertions.assertTrue(result)
     }
 
     @ParameterizedTest

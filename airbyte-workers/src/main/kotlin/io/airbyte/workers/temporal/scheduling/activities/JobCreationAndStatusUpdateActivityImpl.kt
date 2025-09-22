@@ -24,6 +24,9 @@ import io.airbyte.config.State
 import io.airbyte.featureflag.AlwaysRunCheckBeforeSync
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.SkipCheckBeforeSync
+import io.airbyte.featureflag.Workspace
 import io.airbyte.metrics.lib.ApmTraceConstants.ACTIVITY_TRACE_OPERATION_NAME
 import io.airbyte.metrics.lib.ApmTraceUtils.addExceptionToTrace
 import io.airbyte.workers.context.AttemptContext
@@ -310,18 +313,29 @@ class JobCreationAndStatusUpdateActivityImpl(
         log.info("Skipping source check for reset job")
         false
       }
+      shouldSkipSourceCheck(input.connectionId!!) -> {
+        log.info("Skipping source check due to feature flag for connection ${input.connectionId}")
+        false
+      }
       else -> isLastJobOrAttemptFailure(input)
     }
 
   /**
    * This method is used to determine if the destination check should be run.
-   * Always delegates to isLastJobOrAttemptFailure.
+   * Checks feature flags and delegates to isLastJobOrAttemptFailure if not skipped.
    *
    * @param input - JobCheckFailureInput.
    * @return - boolean.
    */
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  override fun shouldRunDestinationCheck(input: JobCheckFailureInput): Boolean = isLastJobOrAttemptFailure(input)
+  override fun shouldRunDestinationCheck(input: JobCheckFailureInput): Boolean =
+    when {
+      shouldSkipDestinationCheck(input.connectionId!!) -> {
+        log.info("Skipping destination check due to feature flag for connection ${input.connectionId}")
+        false
+      }
+      else -> isLastJobOrAttemptFailure(input)
+    }
 
   private fun isResetJob(jobId: Long): Boolean =
     try {
@@ -330,6 +344,48 @@ class JobCreationAndStatusUpdateActivityImpl(
     } catch (e: Exception) {
       log.error("Failed to fetch job info for job {}, assuming not a reset job", jobId, e)
       false
+    }
+
+  private fun shouldSkipSourceCheck(connectionId: UUID): Boolean =
+    try {
+      val workspaceId = getWorkspaceIdForConnection(connectionId)
+      val contexts =
+        if (workspaceId != null) {
+          listOf(Connection(connectionId), Workspace(workspaceId))
+        } else {
+          listOf(Connection(connectionId))
+        }
+
+      featureFlagClient.boolVariation(SkipCheckBeforeSync, Multi(contexts))
+    } catch (e: Exception) {
+      log.warn("Failed to fetch feature flag for skipping source check", e)
+      false
+    }
+
+  private fun shouldSkipDestinationCheck(connectionId: UUID): Boolean =
+    try {
+      val workspaceId = getWorkspaceIdForConnection(connectionId)
+      val contexts =
+        if (workspaceId != null) {
+          listOf(Connection(connectionId), Workspace(workspaceId))
+        } else {
+          listOf(Connection(connectionId))
+        }
+
+      featureFlagClient.boolVariation(SkipCheckBeforeSync, Multi(contexts))
+    } catch (e: Exception) {
+      log.warn("Failed to fetch feature flag for skipping destination check", e)
+      false
+    }
+
+  private fun getWorkspaceIdForConnection(connectionId: UUID): UUID? =
+    try {
+      // Use getConnectionContext which is lighter - doesn't include the full catalog
+      val connectionContext = airbyteApiClient.connectionApi.getConnectionContext(ConnectionIdRequestBody(connectionId))
+      connectionContext.workspaceId
+    } catch (e: Exception) {
+      log.warn("Failed to fetch workspace ID for connection $connectionId", e)
+      null
     }
 
   companion object {
