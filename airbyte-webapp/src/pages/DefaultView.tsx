@@ -3,6 +3,8 @@ import { Navigate } from "react-router-dom";
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useListWorkspacesInfinite } from "core/api";
 import { useCurrentUser } from "core/services/auth";
+import { useFeature } from "core/services/features/FeatureService";
+import { FeatureItem } from "core/services/features/types";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useRedirectFromChatConnectorBuilder } from "core/utils/useRedirectFromChatConnectorBuilder";
 import { useExperiment } from "hooks/services/Experiment";
@@ -14,6 +16,7 @@ export const DefaultView: React.FC = () => {
   const organizationId = useCurrentOrganizationId();
   const isOrgPickerEnabled = useExperiment("sidebar.showOrgPickerV2");
   const isSurveyEnabled = useExperiment("onboarding.surveyEnabled");
+  const showOrganizationUI = useFeature(FeatureItem.OrganizationUI);
   const user = useCurrentUser();
   const [isNewSignup] = useLocalStorage("airbyte_new-signup", false);
   const connectorNavigationUrl = useRedirectFromChatConnectorBuilder(workspaces[0]?.workspaceId);
@@ -31,18 +34,27 @@ export const DefaultView: React.FC = () => {
     return <Navigate to={`/${RoutePaths.Workspaces}/${workspaces[0].workspaceId}/onboarding`} replace />;
   }
 
-  return (
-    <Navigate
-      to={
-        workspaces.length !== 1 && false
-          ? isOrgPickerEnabled
-            ? `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Workspaces}`
-            : `/${RoutePaths.Workspaces}`
-          : `/${RoutePaths.Workspaces}/${workspaces[0]?.workspaceId}`
-      }
-      replace
-    />
-  );
+  const getNavigationPath = () => {
+    // if we have multiple workspaces and org UI is disabled, go to first workspace
+    if (workspaces.length > 0 && !showOrganizationUI) {
+      return `/${RoutePaths.Workspaces}/${workspaces[0].workspaceId}`;
+    }
+
+    // if one workspace, go directly to it
+    if (workspaces.length === 1) {
+      return `/${RoutePaths.Workspaces}/${workspaces[0].workspaceId}`;
+    }
+
+    // if multiple workspaces with org picker enabled
+    if (isOrgPickerEnabled) {
+      return `/${RoutePaths.Organization}/${organizationId}/${RoutePaths.Workspaces}`;
+    }
+
+    // default: workspaces list
+    return `/${RoutePaths.Workspaces}`;
+  };
+
+  return <Navigate to={getNavigationPath()} replace />;
 };
 
 export default DefaultView;
