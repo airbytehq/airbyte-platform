@@ -106,6 +106,7 @@ class PinterestOAuthFlow : BaseOAuth2Flow {
       .put("client_id", clientId)
       .put("client_secret", clientSecret)
       .put("redirect_uri", redirectUrl)
+      .put("continuous_refresh", "true")
       .put("scope", "read")
       .build()
 
