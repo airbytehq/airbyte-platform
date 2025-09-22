@@ -28,7 +28,6 @@ const entitlementIdToFeatureItem: Record<string, FeatureItem> = {
   "feature-fe-display-organization-users": FeatureItem.DisplayOrganizationUsers,
   "feature-fe-indicate-guest-users": FeatureItem.IndicateGuestUsers,
   "feature-mappers": FeatureItem.MappingsUI,
-  "feature-connection-hashing-ui-v0": FeatureItem.FieldHashing,
   "feature-sso": FeatureItem.AllowUpdateSSOConfig,
   "feature-multiple-workspaces": FeatureItem.CreateMultipleWorkspaces,
 };
