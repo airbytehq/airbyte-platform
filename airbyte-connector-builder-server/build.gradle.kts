@@ -75,7 +75,6 @@ dependencies {
   kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(libs.bundles.micronaut.test)
-  testImplementation(libs.micronaut.http.client)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.mockk)
