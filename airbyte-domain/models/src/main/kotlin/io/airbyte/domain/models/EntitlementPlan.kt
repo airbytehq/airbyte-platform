@@ -53,6 +53,10 @@ enum class EntitlementPlan(
       mapOf(
         SupportedOrbPlan.CLOUD_SELF_SERVE to STANDARD,
       )
+
+    fun fromId(id: String): EntitlementPlan =
+      entries.firstOrNull { it.id == id }
+        ?: throw IllegalArgumentException("No EntitlementPlan with id=$id")
   }
 }
 

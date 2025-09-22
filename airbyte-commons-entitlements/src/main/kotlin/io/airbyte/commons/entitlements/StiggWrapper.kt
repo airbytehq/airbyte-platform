@@ -53,7 +53,7 @@ internal class StiggWrapper(
                 .build(),
             ).build(),
         )
-      return resp.getActiveSubscriptions.map { EntitlementPlan.valueOf(it.slimSubscriptionFragmentV2.plan.planId) }.toList()
+      return resp.getActiveSubscriptions.map { EntitlementPlan.fromId(it.slimSubscriptionFragmentV2.plan.planId) }.toList()
     } catch (e: ApolloException) {
       if (e.localizedMessage != null && e.localizedMessage!!.contains("Customer not found")) {
         logger.info { "No active subscriptions; organization not present in Stigg. organizationId=$organizationId" }
