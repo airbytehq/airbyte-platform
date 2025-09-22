@@ -2,6 +2,7 @@ import isEqual from "lodash/isEqual";
 
 import { SyncStreamFieldWithId } from "components/connection/ConnectionForm/formConfig";
 
+import { isHashingMapper } from "area/connection/utils/mappers";
 import {
   AirbyteStreamAndConfiguration,
   AirbyteStreamConfiguration,
@@ -113,10 +114,9 @@ export const getFieldChangeStatus = (
  * Check is stream field is hashed for sync
  */
 export const checkIsFieldHashed = (field: SyncSchemaField, config: AirbyteStreamConfiguration): boolean => {
-  // If the stream is disabled, effectively each field is unselected
-  if (!config?.hashedFields || config.hashedFields.length === 0) {
-    return false;
-  }
-
-  return config.hashedFields.some((f) => isEqual(f.fieldPath, field.path));
+  return (
+    config.mappers?.some(
+      (mapper) => isHashingMapper(mapper) && isEqual(mapper.mapperConfiguration.targetField, field.path.join("."))
+    ) ?? false
+  );
 };

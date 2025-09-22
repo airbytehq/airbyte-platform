@@ -23,7 +23,6 @@ export enum FeatureItem {
   EnterpriseUpsell = "ENTERPRISE_UPSELL",
   EnterpriseLicenseChecking = "ENTERPRISE_LICENSE_CHECKING",
   ExternalInvitations = "EXTERNAL_INVITATIONS",
-  FieldHashing = "FIELD_HASHING", // corresponds to the feature-connection-hashing-ui-v0 entitlement? (should it also cover the connection.hashingUI FF?)
   IndicateGuestUsers = "INDICATE_GUEST_USERS", // corresponds to the feature-fe-indicate-guest-users entitlement
   MappingsUI = "MAPPINGS_UI", // corresponds to the feature-mappers entitlement, which also covers the connection.mappingsUI FF referenced here https://github.com/airbytehq/airbyte-platform-internal/blob/32a4284748a6881945a5a519c6cbc626e851399a/oss/airbyte-webapp/src/hooks/services/Experiment/experiments.ts#L16
   CreateMultipleWorkspaces = "CREATE_MULTIPLE_WORKSPACES_V2", // corresponds to the feature-multiple-workspaces entitlement

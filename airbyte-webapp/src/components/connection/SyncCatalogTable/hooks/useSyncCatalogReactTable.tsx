@@ -21,7 +21,6 @@ interface UseSyncCatalogReactTableProps {
   globalFilterMaxDepth?: number;
   columnFilters: ColumnFiltersState;
   setColumnFilters: React.Dispatch<React.SetStateAction<ColumnFiltersState>>;
-  showHashing: boolean;
 }
 
 export const useSyncCatalogReactTable = ({
@@ -33,7 +32,6 @@ export const useSyncCatalogReactTable = ({
   globalFilterMaxDepth,
   columnFilters,
   setColumnFilters,
-  showHashing,
 }: UseSyncCatalogReactTableProps) =>
   useReactTable<SyncCatalogUIModel>({
     columns,
@@ -45,7 +43,6 @@ export const useSyncCatalogReactTable = ({
       columnFilters,
       columnVisibility: {
         "stream.selected": false,
-        hashing: showHashing,
       },
     },
     initialState: {

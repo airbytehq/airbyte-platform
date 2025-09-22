@@ -1,6 +1,12 @@
 import { SyncStreamFieldWithId } from "components/connection/ConnectionForm/formConfig";
 
-import { AirbyteStreamAndConfiguration, DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
+import {
+  AirbyteStreamAndConfiguration,
+  DestinationSyncMode,
+  HashingMapperConfigurationMethod,
+  StreamMapperType,
+  SyncMode,
+} from "core/api/types/AirbyteClient";
 import { SyncSchemaField } from "core/domain/catalog";
 
 import { getFieldChangeStatus, checkIsFieldHashed, checkIsFieldSelected, flattenSyncSchemaFields } from "./fieldUtils";
@@ -290,26 +296,50 @@ describe(`${getFieldChangeStatus.name}`, () => {
  * checkIsFieldHashed function tests
  */
 describe(`${checkIsFieldHashed.name}`, () => {
-  it("returns false when no hashed fields are present", () => {
-    const config = { ...mockedStreamNode.config!, hashedFields: [] };
+  it("returns false when no mappers are present", () => {
+    const config = { ...mockedStreamNode.config!, mappers: [] };
     const result = checkIsFieldHashed(FIELD_ONE, config);
     expect(result).toBe(false);
   });
 
-  it("returns false when hashed fields are not defined", () => {
+  it("returns false when mappers are not defined", () => {
     const config = { ...mockedInitialStream.config! };
     const result = checkIsFieldHashed(FIELD_ONE, config);
     expect(result).toBe(false);
   });
 
-  it("returns true when the field is in the hashed fields", () => {
-    const config = { ...mockedInitialStream.config!, hashedFields: [{ fieldPath: FIELD_ONE.path }] };
+  it("returns true when the field is referenced in a hashing mapper", () => {
+    const config = {
+      ...mockedInitialStream.config!,
+      mappers: [
+        {
+          type: StreamMapperType.hashing,
+          mapperConfiguration: {
+            targetField: FIELD_ONE.path.join("."),
+            method: HashingMapperConfigurationMethod.MD5,
+            fieldNameSuffix: "_hashed",
+          },
+        },
+      ],
+    };
     const result = checkIsFieldHashed(FIELD_ONE, config);
     expect(result).toBe(true);
   });
 
-  it("returns false when the field is not in the hashed fields", () => {
-    const config = { ...mockedInitialStream.config!, hashedFields: [{ fieldPath: FIELD_TWO.path }] };
+  it("returns false when the field is not in the hashing mappers", () => {
+    const config = {
+      ...mockedInitialStream.config!,
+      mappers: [
+        {
+          type: StreamMapperType.hashing,
+          mapperConfiguration: {
+            targetField: FIELD_TWO.path.join("."),
+            method: HashingMapperConfigurationMethod.MD5,
+            fieldNameSuffix: "_hashed",
+          },
+        },
+      ],
+    };
     const result = checkIsFieldHashed(FIELD_ONE, config);
     expect(result).toBe(false);
   });

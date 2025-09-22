@@ -62,9 +62,8 @@ describe("Connection Mappings", { tags: "@connection-configuration" }, () => {
     cleanDBSource();
   });
 
-  describe("With experiment on but feature disabled", () => {
+  describe("With feature disabled", () => {
     before(() => {
-      setFeatureFlags({ "connection.mappingsUI": true });
       setFeatureServiceFlags({ MAPPINGS_UI: false });
     });
     it("Shows upsell page if Feature is false", () => {
@@ -76,9 +75,8 @@ describe("Connection Mappings", { tags: "@connection-configuration" }, () => {
   });
 
   // eslint-disable-next-line no-only-tests/no-only-tests
-  describe.only("With experiment and feature both enabled", () => {
+  describe.only("With feature enabled", () => {
     before(() => {
-      setFeatureFlags({ "connection.mappingsUI": true });
       setFeatureServiceFlags({ MAPPINGS_UI: true });
     });
 

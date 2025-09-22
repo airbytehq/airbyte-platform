@@ -17,9 +17,8 @@ export const defaultEnterpriseFeatures = [
   FeatureItem.DisplayOrganizationUsers,
   FeatureItem.EnterpriseBranding,
   FeatureItem.EnterpriseLicenseChecking,
-  FeatureItem.FieldHashing,
   FeatureItem.IndicateGuestUsers,
-  FeatureItem.MappingsUI, // Indicates configuration UI is present.  connection.mappingsUI experiment also required to be true.
+  FeatureItem.MappingsUI,
   FeatureItem.CreateMultipleWorkspaces,
   FeatureItem.OrganizationUI,
   FeatureItem.OrganizationConnectorSettings,
@@ -40,7 +39,6 @@ export const defaultCloudFeatures = [
   FeatureItem.RBAC,
   FeatureItem.RestrictAdminInForeignWorkspace,
   FeatureItem.ShowInviteUsersHint,
-  FeatureItem.FieldHashing, // also governed by connection.hashingUI experiment
   FeatureItem.DisplayOrganizationUsers,
   FeatureItem.ShowWorkspacePicker,
 ];

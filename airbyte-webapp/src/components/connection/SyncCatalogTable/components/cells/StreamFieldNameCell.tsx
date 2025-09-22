@@ -26,7 +26,6 @@ import {
   isPrimaryKey as checkIsPrimaryKey,
   getFieldPathDisplayName,
   checkIsFieldSelected,
-  checkIsFieldHashed,
   getSelectedMandatoryFields,
   updateFieldSelected,
 } from "../../utils";
@@ -44,7 +43,6 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   globalFilterValue = "",
   destinationSupportsFileTransfer,
 }) => {
-  const isMappingsUIEnabled = useExperiment("connection.mappingsUI");
   const isColumnSelectionEnabled = useExperiment("connection.columnSelection");
   const { formatMessage } = useIntl();
   const { mode } = useFormMode();
@@ -67,7 +65,6 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   const isChildFieldCursor = checkIsChildFieldCursor(config, field.path);
   const isPrimaryKey = checkIsPrimaryKey(config, field.path);
   const isChildFieldPrimaryKey = checkIsChildFieldPrimaryKey(config, field.path);
-  const isHashed = checkIsFieldHashed(field, config);
 
   const isDisabled =
     config?.selected &&
@@ -153,22 +150,10 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
         )}
       </FlexContainer>
       <TextWithOverflowTooltip size="sm">
-        {isHashed && !isMappingsUIEnabled ? (
-          <>
-            {getFieldPathDisplayName(field.path)}
-            <Text as="span" bold>
-              _hashed
-            </Text>
-          </>
-        ) : (
-          <TextHighlighter searchWords={[globalFilterValue]} textToHighlight={getFieldPathDisplayName(field.path)} />
-        )}
+        <TextHighlighter searchWords={[globalFilterValue]} textToHighlight={getFieldPathDisplayName(field.path)} />
       </TextWithOverflowTooltip>
-      <Text size="sm" color="grey300" bold={isHashed && !isMappingsUIEnabled}>
-        <FormattedMessage
-          id={isHashed && !isMappingsUIEnabled ? "airbyte.datatype.string" : `${getDataType(field)}`}
-          defaultMessage={formatMessage({ id: "airbyte.datatype.unknown" })}
-        />
+      <Text size="sm" color="grey300">
+        <FormattedMessage id={getDataType(field)} defaultMessage={formatMessage({ id: "airbyte.datatype.unknown" })} />
       </Text>
     </FlexContainer>
   );

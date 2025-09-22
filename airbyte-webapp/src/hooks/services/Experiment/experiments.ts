@@ -12,8 +12,6 @@ export interface Experiments {
   "billing.early-sync-enabled": boolean;
   "connection.allowToSupportAllSyncModes": boolean;
   "connection.columnSelection": boolean;
-  "connection.hashingUI": boolean;
-  "connection.mappingsUI": boolean;
   "connection.onboarding.destinations": string;
   "connection.onboarding.sources": string;
   "connection.rateLimitedUI": boolean;
@@ -54,8 +52,6 @@ export const defaultExperimentValues: Experiments = {
   "billing.early-sync-enabled": false,
   "connection.allowToSupportAllSyncModes": false,
   "connection.columnSelection": true,
-  "connection.hashingUI": true, // also requires FeatureItem.FieldHashing
-  "connection.mappingsUI": true, // requires FeatureItem.MappingsUI to enable configuration
   "connection.onboarding.destinations": "",
   "connection.onboarding.sources": "",
   "connection.rateLimitedUI": false,

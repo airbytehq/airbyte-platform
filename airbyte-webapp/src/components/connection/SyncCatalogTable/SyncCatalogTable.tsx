@@ -11,11 +11,9 @@ import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 import { useDestinationDefinitionVersion } from "core/api";
 import { AirbyteStreamAndConfiguration, AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaField } from "core/domain/catalog";
-import { FeatureItem, useFeature } from "core/services/features";
 import { useFormMode } from "core/services/ui/FormModeContext";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperiment } from "hooks/services/Experiment";
 
 import {
   FieldCursorCell,
@@ -27,7 +25,6 @@ import {
   NamespaceNameCell,
   StreamCursorCell,
 } from "./components/cells";
-import { FieldHashMapping } from "./components/FieldHashMapping";
 import { SearchAndFilterControls, STREAMS_AND_FIELDS } from "./components/SearchAndFilterControls";
 import { FilterTabId } from "./components/StreamsFilterTabs";
 import { SyncCatalogVirtuosoTable } from "./components/SyncCatalogVirtuosoTable";
@@ -101,11 +98,6 @@ export const SyncCatalogTable: FC = () => {
   const prefix = useWatch<FormConnectionFormValues>({ name: "prefix", control });
   const watchedNamespaceDefinition = useWatch<FormConnectionFormValues>({ name: "namespaceDefinition", control });
   const watchedNamespaceFormat = useWatch<FormConnectionFormValues>({ name: "namespaceFormat", control });
-
-  const isHashingSupported = useFeature(FeatureItem.FieldHashing);
-  const isHashingEnabled = useExperiment("connection.hashingUI");
-  const isMappingEnabled = useExperiment("connection.mappingsUI");
-  const showHashing = isHashingSupported && isHashingEnabled && !isMappingEnabled;
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [filtering, setFiltering] = useState("");
@@ -198,27 +190,6 @@ export const SyncCatalogTable: FC = () => {
       meta: {
         thClassName: styles.streamOrFieldNameCell,
         tdClassName: styles.streamOrFieldNameCell,
-      },
-    }),
-    columnHelper.display({
-      id: "hashing",
-      header: () => (
-        <FlexContainer alignItems="center" gap="none">
-          <Text size="sm" color="grey500">
-            <FormattedMessage id="connectionForm.hashing.title" />
-          </Text>
-          <InfoTooltip>
-            <FormattedMessage id="connectionForm.hashing.info" />
-          </InfoTooltip>
-        </FlexContainer>
-      ),
-      cell: ({ row }) =>
-        isNamespaceRow(row) || isStreamRow(row) ? null : (
-          <FieldHashMapping row={row} updateStreamField={onUpdateStreamConfigWithStreamNode} />
-        ),
-      meta: {
-        thClassName: styles.hashCell,
-        tdClassName: styles.hashCell,
       },
     }),
     columnHelper.accessor("syncMode", {
@@ -322,7 +293,6 @@ export const SyncCatalogTable: FC = () => {
     globalFilterMaxDepth: filteringDepth,
     columnFilters,
     setColumnFilters,
-    showHashing,
   });
 
   const rows = getRowModel().rows;
