@@ -116,7 +116,9 @@ export const useCreateSourceDefinition = () => {
 export const useUpdateSourceDefinition = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
-  const workspaceId = useCurrentWorkspaceId();
+  const currentWorkspaceId = useCurrentWorkspaceId();
+  const currentOrganizationId = useCurrentOrganizationId();
+  const defaultWorkspace = useDefaultWorkspaceInOrganization(currentOrganizationId);
 
   return useMutation<
     SourceDefinitionRead,
@@ -125,27 +127,37 @@ export const useUpdateSourceDefinition = () => {
       sourceDefinitionId: string;
       dockerImageTag: string;
     }
-  >((sourceDefinition) => updateSourceDefinition({ ...sourceDefinition, workspaceId }, requestOptions), {
-    onSuccess: (data) => {
-      queryClient.setQueryData(sourceDefinitionKeys.detail(data.sourceDefinitionId), data);
+  >(
+    (sourceDefinition) =>
+      updateSourceDefinition(
+        // Note: there is a possible edge case here where this method is called in an organization where all workspaces
+        // have been deleted. In that case, both currentWorkspaceId and defaultWorkspace would be unset, which would
+        // cause the API to fail. This is the best we can do unless the endpoint is changed to not require a workspaceId.
+        { ...sourceDefinition, workspaceId: currentWorkspaceId || defaultWorkspace?.workspaceId || "" },
+        requestOptions
+      ),
+    {
+      onSuccess: (data) => {
+        queryClient.setQueryData(sourceDefinitionKeys.detail(data.sourceDefinitionId), data);
 
-      queryClient.setQueryData(sourceDefinitionKeys.lists(), (oldData: SourceDefinitions | undefined) => {
-        const newMap = new Map(oldData?.sourceDefinitionMap);
-        newMap.set(data.sourceDefinitionId, data);
-        return {
-          sourceDefinitions:
-            oldData?.sourceDefinitions.map((sd) => (sd.sourceDefinitionId === data.sourceDefinitionId ? data : sd)) ??
-            [],
-          sourceDefinitionMap: newMap,
-        };
-      });
+        queryClient.setQueryData(sourceDefinitionKeys.lists(), (oldData: SourceDefinitions | undefined) => {
+          const newMap = new Map(oldData?.sourceDefinitionMap);
+          newMap.set(data.sourceDefinitionId, data);
+          return {
+            sourceDefinitions:
+              oldData?.sourceDefinitions.map((sd) => (sd.sourceDefinitionId === data.sourceDefinitionId ? data : sd)) ??
+              [],
+            sourceDefinitionMap: newMap,
+          };
+        });
 
-      queryClient.invalidateQueries(connectorDefinitionKeys.count());
-    },
-    onError: (error: Error) => {
-      trackError(error);
-    },
-  });
+        queryClient.invalidateQueries(connectorDefinitionKeys.count());
+      },
+      onError: (error: Error) => {
+        trackError(error);
+      },
+    }
+  );
 };
 
 export const useDeleteSourceDefinition = () => {

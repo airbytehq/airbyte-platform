@@ -127,7 +127,9 @@ export const useCreateDestinationDefinition = () => {
 export const useUpdateDestinationDefinition = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
-  const workspaceId = useCurrentWorkspaceId();
+  const currentWorkspaceId = useCurrentWorkspaceId();
+  const currentOrganizationId = useCurrentOrganizationId();
+  const defaultWorkspace = useDefaultWorkspaceInOrganization(currentOrganizationId);
 
   return useMutation<
     DestinationDefinitionRead,
@@ -136,28 +138,38 @@ export const useUpdateDestinationDefinition = () => {
       destinationDefinitionId: string;
       dockerImageTag: string;
     }
-  >((destinationDefinition) => updateDestinationDefinition({ ...destinationDefinition, workspaceId }, requestOptions), {
-    onSuccess: (data) => {
-      queryClient.setQueryData(destinationDefinitionKeys.detail(data.destinationDefinitionId), data);
+  >(
+    (destinationDefinition) =>
+      updateDestinationDefinition(
+        // Note: there is a possible edge case here where this method is called in an organization where all workspaces
+        // have been deleted. In that case, both currentWorkspaceId and defaultWorkspace would be unset, which would
+        // cause the API to fail. This is the best we can do unless the endpoint is changed to not require a workspaceId.
+        { ...destinationDefinition, workspaceId: currentWorkspaceId || defaultWorkspace?.workspaceId || "" },
+        requestOptions
+      ),
+    {
+      onSuccess: (data) => {
+        queryClient.setQueryData(destinationDefinitionKeys.detail(data.destinationDefinitionId), data);
 
-      queryClient.setQueryData(destinationDefinitionKeys.lists(), (oldData: DestinationDefinitions | undefined) => {
-        const newMap = new Map(oldData?.destinationDefinitionMap);
-        newMap.set(data.destinationDefinitionId, data);
-        return {
-          destinationDefinitions:
-            oldData?.destinationDefinitions.map((dd) =>
-              dd.destinationDefinitionId === data.destinationDefinitionId ? data : dd
-            ) ?? [],
-          destinationDefinitionMap: newMap,
-        };
-      });
+        queryClient.setQueryData(destinationDefinitionKeys.lists(), (oldData: DestinationDefinitions | undefined) => {
+          const newMap = new Map(oldData?.destinationDefinitionMap);
+          newMap.set(data.destinationDefinitionId, data);
+          return {
+            destinationDefinitions:
+              oldData?.destinationDefinitions.map((dd) =>
+                dd.destinationDefinitionId === data.destinationDefinitionId ? data : dd
+              ) ?? [],
+            destinationDefinitionMap: newMap,
+          };
+        });
 
-      queryClient.invalidateQueries(connectorDefinitionKeys.count());
-    },
-    onError: (error: Error) => {
-      trackError(error);
-    },
-  });
+        queryClient.invalidateQueries(connectorDefinitionKeys.count());
+      },
+      onError: (error: Error) => {
+        trackError(error);
+      },
+    }
+  );
 };
 
 export const useDeleteDestinationDefinition = () => {
