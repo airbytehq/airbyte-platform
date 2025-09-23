@@ -8,7 +8,6 @@ import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges
 import io.airbyte.api.model.generated.DeadlineAction
 import io.airbyte.commons.server.ServerConstants
 import io.airbyte.commons.server.converters.ApiPojoConverters
-import io.airbyte.commons.server.converters.SpecFetcher.getSpecFromJob
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient
 import io.airbyte.commons.version.AirbyteProtocolVersion
@@ -157,9 +156,16 @@ class ActorDefinitionHandlerHelper(
     workspaceId: UUID,
   ): ConnectorSpecification {
     val imageName = "$dockerRepository:$imageTag"
-    val getSpecResponse =
-      synchronousSchedulerClient.createGetSpecJob(imageName, isCustomConnector, workspaceId)
-    return getSpecFromJob(getSpecResponse)
+    val response = synchronousSchedulerClient.createGetSpecJob(imageName, isCustomConnector, workspaceId)
+    if (!response.isSuccess) {
+      throw IllegalStateException("Get Spec Job failed")
+    }
+
+    if (response.output == null) {
+      throw NullPointerException("Get Spec job return null spec")
+    }
+
+    return response.output
   }
 
   private fun getAndValidateProtocolVersionFromSpec(spec: ConnectorSpecification): String {
