@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.entitlements
 
+import com.apollographql.apollo3.exception.ApolloException
 import io.airbyte.api.problems.model.generated.ProblemEntitlementServiceData
 import io.airbyte.api.problems.throwable.generated.EntitlementServiceUnableToAddOrganizationProblem
 import io.airbyte.commons.entitlements.models.Entitlement
@@ -39,9 +40,19 @@ internal class StiggCloudEntitlementClient(
     plan: EntitlementPlan,
   ) {
     validatePlanChange(organizationId, plan)
-    stigg.provisionCustomer(organizationId, plan)
 
-    logger.info { "Added organization to plan. organizationId=$organizationId plan=$plan" }
+    try {
+      stigg.provisionCustomer(organizationId, plan)
+      logger.info { "Added organization to plan. organizationId=$organizationId plan=$plan" }
+    } catch (e: ApolloException) {
+      if (e.message?.contains("Duplicated entity not allowed") == true ||
+        e.message?.contains("DuplicatedEntityNotAllowed") == true
+      ) {
+        logger.info { "Organization already exists in Stigg, treating as successful. organizationId=$organizationId plan=$plan" }
+        return
+      }
+      throw e
+    }
   }
 
   private fun validatePlanChange(

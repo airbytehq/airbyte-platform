@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.entitlements
 
+import com.apollographql.apollo3.exception.ApolloException
 import io.airbyte.api.problems.model.generated.ProblemEntitlementServiceData
 import io.airbyte.api.problems.throwable.generated.EntitlementServiceUnableToAddOrganizationProblem
 import io.airbyte.commons.entitlements.models.EntitlementResult
@@ -215,6 +216,42 @@ internal class StiggCloudEntitlementClientTest {
 
     client.addOrganization(org1, EntitlementPlan.STANDARD)
 
+    verify { stigg.provisionCustomer(org1, EntitlementPlan.STANDARD) }
+  }
+
+  @Test
+  fun `addOrganization handles duplicate customer error gracefully`() {
+    val stigg = mockk<StiggWrapper>(relaxed = true)
+    val client = StiggCloudEntitlementClient(stigg, orgService)
+
+    every { stigg.getPlans(org1) } returns emptyList()
+    every { stigg.provisionCustomer(org1, EntitlementPlan.STANDARD) } throws
+      ApolloException(
+        "The response has errors: [Error(message = Duplicated entity not allowed, locations = null, path=null, extensions = {isValidationError=true, identifier=c00a3200-38fa-405e-9f5a-69afd6b96d27, entityName=Customer, code=DuplicatedEntityNotAllowed, traceId=b72176ae-d14d-452a-ae4b-8abdc4563a03}, nonStandardFields = null)]",
+      )
+
+    // Should not throw an exception, should handle gracefully
+    client.addOrganization(org1, EntitlementPlan.STANDARD)
+
+    verify { stigg.getPlans(org1) }
+    verify { stigg.provisionCustomer(org1, EntitlementPlan.STANDARD) }
+  }
+
+  @Test
+  fun `addOrganization re-throws non-duplicate ApolloException`() {
+    val stigg = mockk<StiggWrapper>(relaxed = true)
+    val client = StiggCloudEntitlementClient(stigg, orgService)
+
+    every { stigg.getPlans(org1) } returns emptyList()
+    every { stigg.provisionCustomer(org1, EntitlementPlan.STANDARD) } throws
+      ApolloException("Some other GraphQL error")
+
+    // Should re-throw the exception since it's not a duplicate error
+    assertThrows<ApolloException> {
+      client.addOrganization(org1, EntitlementPlan.STANDARD)
+    }
+
+    verify { stigg.getPlans(org1) }
     verify { stigg.provisionCustomer(org1, EntitlementPlan.STANDARD) }
   }
 }
