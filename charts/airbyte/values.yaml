@@ -210,6 +210,48 @@ serviceAccount:
 ## If changing the image tags below, you should probably also update this.
 version: ""
 
+## @section Ingress Parameters
+
+# -- Top-level ingress configuration for the entire Airbyte deployment.
+# This allows you to create a single ingress resource that routes to multiple services
+# based on paths, independent of individual component ingress settings.
+ingress:
+  # -- Set to true to enable top-level ingress record generation
+  enabled: false
+  # -- Specifies ingressClassName for clusters >= 1.18+
+  className: ""
+
+  annotations: {}
+    # nginx.ingress.kubernetes.io/ssl-redirect: "false"
+  # -- Custom ingress TLS configuration
+  tls: []
+    # - hosts:
+    #   - airbyte.example.com
+    #   secretName: airbyte-tls
+  # -- Ingress rules configuration
+  rules:
+    # -- Hostname for the ingress rule
+    - host: ""
+      # -- List of paths for this host
+      paths:
+        # note: the /auth path should only be set if you are using keycloak for auth
+        # - path: /auth
+        #   pathType: Prefix
+        #   service:
+        #     name: "{{ .Release.Name }}-airbyte-keycloak-svc"
+        #     port: 8180
+        # - path: /api/v1/connector_builder/
+        #   pathType: Prefix
+        #   service:
+        #     name: "{{ .Release.Name }}-connector-builder-server-svc"
+        #     port: 80
+        # - path: /
+        #   pathType: Prefix
+        #   service:
+        #     name: "{{ .Release.Name }}-airbyte-server-svc"
+        #     port: 8001
+
+
 ## @section Webapp Parameters
 
 webapp:
