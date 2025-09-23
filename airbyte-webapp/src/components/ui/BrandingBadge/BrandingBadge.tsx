@@ -12,7 +12,7 @@ import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 type ProductBranding = "enterprise" | "cloudForTeams" | "cloudInTrial" | null;
 
-const ORG_PLAN_IDS = {
+export const ORG_PLAN_IDS = {
   CORE: "plan-airbyte-core",
   STANDARD: "plan-airbyte-standard",
   SME: "plan-airbyte-sme",

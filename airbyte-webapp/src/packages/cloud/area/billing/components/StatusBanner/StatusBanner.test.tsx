@@ -10,7 +10,6 @@ import {
   OrganizationInfoReadBillingSubscriptionStatus,
 } from "core/api/types/AirbyteClient";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { StatusBanner } from "./StatusBanner";
 
@@ -21,10 +20,6 @@ jest.mock("area/workspace/utils", () => ({
 
 jest.mock("core/utils/useOrganizationSubscriptionStatus", () => ({
   useOrganizationSubscriptionStatus: jest.fn(),
-}));
-
-jest.mock("hooks/services/Experiment", () => ({
-  useExperiment: jest.fn(),
 }));
 
 jest.mock("area/organization/utils", () => ({
@@ -42,12 +37,16 @@ const mockSubscriptionStatus = (
     trialDaysLeft?: number;
     canManageOrganizationBilling?: boolean;
     isTrialEndingWithin24Hours?: boolean;
+    isUnifiedTrialPlan?: boolean;
+    isStandardPlan?: boolean;
   } = {}
 ) => {
   mocked(useOrganizationSubscriptionStatus).mockReturnValue({
     trialStatus: options.trialStatus || "post_trial",
     trialEndsAt: options.trialEndsAt,
     isInTrial: options.trialStatus === "in_trial",
+    isUnifiedTrialPlan: options.isUnifiedTrialPlan ?? true,
+    isStandardPlan: options.isStandardPlan ?? true,
     trialDaysLeft: options.trialDaysLeft || 0,
     isTrialEndingWithin24Hours: options.isTrialEndingWithin24Hours || false,
     paymentStatus: options.paymentStatus || "okay",
@@ -55,15 +54,6 @@ const mockSubscriptionStatus = (
     accountType: options.accountType,
     gracePeriodEndsAt: options.gracePeriodEndsAt,
     canManageOrganizationBilling: options.canManageOrganizationBilling ?? true,
-  });
-};
-
-const mockExperiment = (experimentName: string, enabled: boolean) => {
-  mocked(useExperiment).mockImplementation((name: string) => {
-    if (name === experimentName) {
-      return enabled;
-    }
-    return false;
   });
 };
 
@@ -342,11 +332,7 @@ describe("StatusBanner", () => {
     expect(wrapper.queryByRole("link")).toBeInTheDocument();
   });
 
-  describe("showUpgradeTextInStatusBanner experimental flag", () => {
-    beforeEach(() => {
-      mockExperiment("entitlements.showUpgradeTextInStatusBanner", true);
-    });
-
+  describe("unified trial plan behavior", () => {
     it("should render 24-hour trial warning with error level and exact time (with link)", async () => {
       const trialEndTime = dayjs("2024-01-01T21:28:00Z").toISOString();
       mockSubscriptionStatus({
@@ -467,8 +453,7 @@ describe("StatusBanner", () => {
       expect(wrapper.queryByRole("link")).not.toBeInTheDocument();
     });
 
-    it("should not render upgrade warning when experimental flag is disabled", async () => {
-      mockExperiment("entitlements.showUpgradeTextInStatusBanner", false);
+    it("should render subscribe text when not using unified trial plan", async () => {
       mockSubscriptionStatus({
         trialStatus: "in_trial",
         paymentStatus: "uninitialized",
@@ -476,6 +461,7 @@ describe("StatusBanner", () => {
         trialDaysLeft: 5,
         isTrialEndingWithin24Hours: false,
         canManageOrganizationBilling: true,
+        isUnifiedTrialPlan: false,
       });
       const wrapper = await render(<StatusBanner />);
       expect(wrapper.container.textContent).toBe(
@@ -484,7 +470,7 @@ describe("StatusBanner", () => {
       expect(wrapper.queryByRole("link")).toBeInTheDocument();
     });
 
-    it("should render upgrade warning for trials with more than 7 days left when experimental flag is enabled", async () => {
+    it("should render upgrade warning for trials with more than 7 days left with unified trial plan", async () => {
       mockSubscriptionStatus({
         trialStatus: "in_trial",
         paymentStatus: "uninitialized",

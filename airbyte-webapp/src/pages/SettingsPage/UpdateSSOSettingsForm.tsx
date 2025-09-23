@@ -10,7 +10,6 @@ import { HttpProblem, useSSOConfigManagement } from "core/api";
 import { useFormatError } from "core/errors";
 import { useIntent } from "core/utils/rbac";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -35,13 +34,12 @@ export const UpdateSSOSettingsForm = () => {
   const organizationId = useCurrentOrganizationId();
   const canUpdateOrganization = useIntent("UpdateOrganization", { organizationId });
   const { ssoConfig, createSsoConfig } = useSSOConfigManagement();
-  const { isInTrial } = useOrganizationSubscriptionStatus();
-  const showProFeaturesWarnModal = useExperiment("entitlements.showProFeaturesWarnModal");
+  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
   const { openModal } = useModalService();
 
   const onSubmit = async (values: SSOFormValues) => {
     // Check if we need to show Pro features warning modal for trial users
-    if (isInTrial && showProFeaturesWarnModal) {
+    if (isUnifiedTrialPlan) {
       await openModal({
         title: null,
         content: ({ onComplete }) => <ProFeaturesWarnModal onContinue={() => onComplete("success")} />,

@@ -24,7 +24,6 @@ const entitlementsKeys = {
 
 const entitlementIdToFeatureItem: Record<string, FeatureItem> = {
   "feature-rbac-roles": FeatureItem.AllowAllRBACRoles,
-  "feature-fe-cloud-for-teams-branding": FeatureItem.CloudForTeamsBranding,
   "feature-fe-display-organization-users": FeatureItem.DisplayOrganizationUsers,
   "feature-fe-indicate-guest-users": FeatureItem.IndicateGuestUsers,
   "feature-mappers": FeatureItem.MappingsUI,

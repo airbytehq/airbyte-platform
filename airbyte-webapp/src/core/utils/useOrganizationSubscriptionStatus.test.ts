@@ -1,8 +1,7 @@
 import { renderHook } from "@testing-library/react";
 import dayjs from "dayjs";
 
-import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
-import { useOrganizationTrialStatus, useOrgInfo } from "core/api";
+import { useOrganizationTrialStatus, useOrgInfo, useCurrentOrganizationInfo } from "core/api";
 import {
   OrganizationTrialStatusReadTrialStatus,
   OrganizationPaymentConfigReadPaymentStatus,
@@ -14,13 +13,20 @@ import { useGeneratedIntent } from "core/utils/rbac";
 import { useOrganizationSubscriptionStatus } from "./useOrganizationSubscriptionStatus";
 
 // Mock dependencies
-jest.mock("area/organization/utils/useCurrentOrganizationId");
 jest.mock("core/api");
 jest.mock("core/utils/rbac");
 jest.mock("dayjs");
+jest.mock("components/ui/BrandingBadge/BrandingBadge", () => ({
+  ORG_PLAN_IDS: {
+    STANDARD: "plan-airbyte-standard",
+    UNIFIED_TRIAL: "plan-airbyte-unified-trial",
+  },
+}));
 
-const mockUseCurrentOrganizationId = useCurrentOrganizationId as jest.MockedFunction<typeof useCurrentOrganizationId>;
 const mockUseOrgInfo = useOrgInfo as jest.MockedFunction<typeof useOrgInfo>;
+const mockUseCurrentOrganizationInfo = useCurrentOrganizationInfo as jest.MockedFunction<
+  typeof useCurrentOrganizationInfo
+>;
 const mockUseOrganizationTrialStatus = useOrganizationTrialStatus as jest.MockedFunction<
   typeof useOrganizationTrialStatus
 >;
@@ -60,8 +66,13 @@ describe("useOrganizationSubscriptionStatus", () => {
     jest.clearAllMocks();
 
     // Setup default mocks
-    mockUseCurrentOrganizationId.mockReturnValue(mockOrganizationId);
     mockUseOrgInfo.mockReturnValue(createMockOrgInfo("uninitialized"));
+    mockUseCurrentOrganizationInfo.mockReturnValue({
+      organizationId: mockOrganizationId,
+      organizationName: "Test Organization",
+      organizationPlanId: "plan-airbyte-standard",
+      sso: false,
+    });
     mockUseOrganizationTrialStatus.mockReturnValue(undefined);
     mockUseGeneratedIntent.mockReturnValue(true);
 
@@ -156,6 +167,12 @@ describe("useOrganizationSubscriptionStatus", () => {
     it("should fetch trial status when payment status is uninitialized and user has permission", () => {
       mockUseOrgInfo.mockReturnValue(createMockOrgInfo("uninitialized"));
       mockUseGeneratedIntent.mockReturnValue(true);
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: "plan-airbyte-unified-trial",
+        sso: false,
+      });
 
       renderHook(() => useOrganizationSubscriptionStatus());
 
@@ -167,6 +184,12 @@ describe("useOrganizationSubscriptionStatus", () => {
     it("should fetch trial status when payment status is okay and user has permission", () => {
       mockUseOrgInfo.mockReturnValue(createMockOrgInfo("okay"));
       mockUseGeneratedIntent.mockReturnValue(true);
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: "plan-airbyte-unified-trial",
+        sso: false,
+      });
 
       renderHook(() => useOrganizationSubscriptionStatus());
 
@@ -178,6 +201,12 @@ describe("useOrganizationSubscriptionStatus", () => {
     it("should fetch trial status when payment status is locked and user has permission", () => {
       mockUseOrgInfo.mockReturnValue(createMockOrgInfo("locked"));
       mockUseGeneratedIntent.mockReturnValue(true);
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: "plan-airbyte-unified-trial",
+        sso: false,
+      });
 
       renderHook(() => useOrganizationSubscriptionStatus());
 
@@ -206,6 +235,86 @@ describe("useOrganizationSubscriptionStatus", () => {
       expect(mockUseOrganizationTrialStatus).toHaveBeenCalledWith(mockOrganizationId, {
         enabled: false,
       });
+    });
+  });
+
+  describe("Organization plan detection", () => {
+    it("should return true for isUnifiedTrialPlan when organizationPlanId matches UNIFIED_TRIAL", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: "plan-airbyte-unified-trial",
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isUnifiedTrialPlan).toBe(true);
+    });
+
+    it("should return false for isUnifiedTrialPlan when organizationPlanId does not match UNIFIED_TRIAL", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: "plan-airbyte-standard",
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isUnifiedTrialPlan).toBe(false);
+    });
+
+    it("should return false for isUnifiedTrialPlan when organizationPlanId is undefined", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: undefined,
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isUnifiedTrialPlan).toBe(false);
+    });
+
+    it("should return true for isStandardPlan when organizationPlanId matches STANDARD", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: "plan-airbyte-standard",
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isStandardPlan).toBe(true);
+    });
+
+    it("should return false for isStandardPlan when organizationPlanId does not match STANDARD", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: "plan-airbyte-unified-trial",
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isStandardPlan).toBe(false);
+    });
+
+    it("should return false for isStandardPlan when organizationPlanId is undefined", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: undefined,
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isStandardPlan).toBe(false);
     });
   });
 

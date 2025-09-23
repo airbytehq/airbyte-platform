@@ -14,6 +14,7 @@ import { useIsDataActivationConnection } from "area/connection/utils/useIsDataAc
 import { FeatureItem, IfFeatureDisabled, IfFeatureEnabled } from "core/services/features";
 import { useFormMode } from "core/services/ui/FormModeContext";
 import { links } from "core/utils/links";
+import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useNotificationService } from "hooks/services/Notification";
 import { ConnectionRoutePaths } from "pages/routePaths";
@@ -44,12 +45,12 @@ export const ConnectionMappingsRoute = () => {
 };
 
 const ConnectionMappingsPage = () => {
+  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
   const { streamsWithMappings, clear, submitMappings, hasMappingsChanged } = useMappingContext();
   const { mode } = useFormMode();
   const { connectionUpdating } = useConnectionEditService();
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
-
   const handleValidations = async () => {
     const validations = await Promise.allSettled(
       Object.entries(streamsWithMappings).flatMap(([_streamName, mappers]) =>
@@ -96,9 +97,9 @@ const ConnectionMappingsPage = () => {
                 <Heading as="h3" size="sm">
                   <FormattedMessage id="connections.mappings.title" />
                 </Heading>
-                <IfFeatureEnabled feature={FeatureItem.CloudForTeamsBranding}>
+                {isUnifiedTrialPlan && (
                   <BrandingBadge product="cloudForTeams" testId="cloud-for-teams-badge-mappings" />
-                </IfFeatureEnabled>
+                )}
               </FlexContainer>
             </FlexItem>
             <ExternalLink href={links.connectionMappings}>

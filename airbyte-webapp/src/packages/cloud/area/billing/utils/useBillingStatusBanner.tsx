@@ -6,7 +6,6 @@ import { ExternalLink, Link } from "components/ui/Link";
 
 import { links } from "core/utils/links";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { useLinkToBillingPage } from "./useLinkToBillingPage";
 
@@ -17,7 +16,6 @@ interface BillingStatusBanner {
 
 export const useBillingStatusBanner = (context: "top_level" | "billing_page"): BillingStatusBanner | undefined => {
   const { formatMessage } = useIntl();
-  const showUpgradeTextInStatusBanner = useExperiment("entitlements.showUpgradeTextInStatusBanner");
   const {
     trialStatus,
     trialDaysLeft,
@@ -28,6 +26,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     gracePeriodEndsAt,
     isTrialEndingWithin24Hours,
     trialEndsAt,
+    isUnifiedTrialPlan,
   } = useOrganizationSubscriptionStatus();
   const linkToBilling = useLinkToBillingPage();
 
@@ -112,8 +111,8 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     };
   }
 
-  // Trial upgrade warnings with experimental flag
-  if (trialStatus === "in_trial" && showUpgradeTextInStatusBanner) {
+  // Trial upgrade warnings for unified trial plan
+  if (trialStatus === "in_trial" && isUnifiedTrialPlan) {
     return {
       level: isTrialEndingWithin24Hours ? "error" : "warning",
       content: formatMessage(

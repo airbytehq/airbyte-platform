@@ -7,7 +7,7 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { PermissionType } from "core/api/types/AirbyteClient";
-import { FeatureItem, IfFeatureEnabled } from "core/services/features";
+import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 
 import { permissionDescriptionDictionary, permissionStringDictionary, isTeamsFeaturePermissionType } from "./util";
 
@@ -22,6 +22,7 @@ export const ChangeRoleMenuItemContent: React.FC<ChangeRoleMenuItemContentProps>
   permissionType,
   roleIsInvalid,
 }) => {
+  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
   return (
     <Box px="md" py="lg">
       <FlexContainer alignItems="center" justifyContent="space-between">
@@ -30,10 +31,8 @@ export const ChangeRoleMenuItemContent: React.FC<ChangeRoleMenuItemContentProps>
             <Text color={roleIsInvalid ? "grey300" : undefined}>
               <FormattedMessage id={permissionStringDictionary[permissionType].role} />
             </Text>
-            {isTeamsFeaturePermissionType(permissionType) && (
-              <IfFeatureEnabled feature={FeatureItem.CloudForTeamsBranding}>
-                <BrandingBadge product="cloudForTeams" />
-              </IfFeatureEnabled>
+            {isTeamsFeaturePermissionType(permissionType) && isUnifiedTrialPlan && (
+              <BrandingBadge product="cloudForTeams" />
             )}
           </FlexContainer>
           <Text color={roleIsInvalid ? "grey300" : "grey"}>

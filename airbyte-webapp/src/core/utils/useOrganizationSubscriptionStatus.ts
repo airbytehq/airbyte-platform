@@ -1,8 +1,9 @@
 import dayjs from "dayjs";
 import { useMemo } from "react";
 
-import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
-import { useOrganizationTrialStatus, useOrgInfo } from "core/api";
+import { ORG_PLAN_IDS } from "components/ui/BrandingBadge/BrandingBadge";
+
+import { useOrganizationTrialStatus, useOrgInfo, useCurrentOrganizationInfo } from "core/api";
 import {
   OrganizationTrialStatusReadTrialStatus,
   OrganizationPaymentConfigReadPaymentStatus,
@@ -13,6 +14,10 @@ import {
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 export interface UseOrganizationSubscriptionStatusReturn {
+  // Organization plan information
+  isUnifiedTrialPlan: boolean;
+  isStandardPlan: boolean;
+
   // Trial Information
   trialStatus: OrganizationTrialStatusReadTrialStatus | undefined;
   trialEndsAt: ISO8601DateTime | undefined;
@@ -39,7 +44,8 @@ export const useOrganizationSubscriptionStatus = (options?: {
   refetchWithInterval?: boolean;
   onSuccessGetTrialStatusClb?: (isTrialEndedAndLockedOrDisabled: boolean) => void;
 }): UseOrganizationSubscriptionStatusReturn => {
-  const organizationId = useCurrentOrganizationId();
+  const organizationInfo = useCurrentOrganizationInfo();
+  const organizationId = organizationInfo?.organizationId;
 
   // Permission checks
   const canViewTrialStatus = useGeneratedIntent(Intent.ViewOrganizationTrialStatus, { organizationId });
@@ -47,13 +53,17 @@ export const useOrganizationSubscriptionStatus = (options?: {
 
   const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
 
-  // Conditional trial status fetching - only when payment status allows it and user has permissions
+  const isUnifiedTrialPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.UNIFIED_TRIAL;
+  const isStandardPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.STANDARD;
+
+  // Conditional trial status fetching - only when payment status allows it, user has permissions, and organization's plan is a unified trial plan
   const shouldFetchTrialStatus =
     (billing?.paymentStatus === "uninitialized" ||
       billing?.paymentStatus === "okay" ||
       billing?.paymentStatus === "disabled" ||
       billing?.paymentStatus === "locked") &&
-    canViewTrialStatus;
+    canViewTrialStatus &&
+    isUnifiedTrialPlan;
 
   const trialStatus = useOrganizationTrialStatus(organizationId, {
     enabled: shouldFetchTrialStatus,
@@ -98,6 +108,10 @@ export const useOrganizationSubscriptionStatus = (options?: {
   const isInTrial = trialStatus?.trialStatus === "in_trial";
 
   return {
+    // Organization plan information
+    isUnifiedTrialPlan,
+    isStandardPlan,
+
     // Trial Information
     trialStatus: trialStatus?.trialStatus,
     trialEndsAt: trialStatus?.trialEndsAt,

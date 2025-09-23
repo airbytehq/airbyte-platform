@@ -26,7 +26,6 @@ import { isMoreFrequentThanHourlyFromExecutions } from "core/utils/cron/cronFreq
 import { trackError } from "core/utils/datadog";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -47,8 +46,7 @@ export const ConnectionSettingsPage: React.FC = () => {
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const { mode } = useFormMode();
   const simplifiedInitialValues = useInitialFormValues(connection, mode);
-  const { isInTrial } = useOrganizationSubscriptionStatus();
-  const showProFeaturesWarnModal = useExperiment("entitlements.showProFeaturesWarnModal");
+  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
   const { openModal } = useModalService();
   const fetchCronDescription = useDescribeCronExpressionFetchQuery();
 
@@ -66,7 +64,7 @@ export const ConnectionSettingsPage: React.FC = () => {
       const isCronSchedule = values.scheduleType === ConnectionScheduleType.cron;
       const cronExpression = values.scheduleData?.cron?.cronExpression;
 
-      if (isCronSchedule && cronExpression && isInTrial && showProFeaturesWarnModal) {
+      if (isCronSchedule && cronExpression && isUnifiedTrialPlan) {
         const cronValidationResult = await fetchCronDescription(cronExpression);
 
         if (
@@ -85,7 +83,7 @@ export const ConnectionSettingsPage: React.FC = () => {
 
       return updateConnection(connectionUpdates);
     },
-    [connection.connectionId, isInTrial, showProFeaturesWarnModal, updateConnection, fetchCronDescription, openModal]
+    [connection.connectionId, isUnifiedTrialPlan, updateConnection, fetchCronDescription, openModal]
   );
 
   const onSuccess = useCallback(() => {

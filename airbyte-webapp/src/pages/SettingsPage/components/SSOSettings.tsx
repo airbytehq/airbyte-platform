@@ -15,13 +15,14 @@ import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { useSSOConfigManagement } from "core/api";
-import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { links } from "core/utils/links";
+import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 
 import styles from "./SSOSettings.module.scss";
 import { SSOFormValues } from "../UpdateSSOSettingsForm";
 
 export const SSOSettings = () => {
+  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
   const { formatMessage } = useIntl();
   const { isSSOConfigured, isLoading } = useSSOConfigManagement();
   const { isSubmitting } = useFormState();
@@ -47,9 +48,9 @@ export const SSOSettings = () => {
                       {formatMessage({ id: "settings.organizationSettings.sso.label.optional" })}
                     </Text>
                   )}
-                  <IfFeatureEnabled feature={FeatureItem.CloudForTeamsBranding}>
+                  {isUnifiedTrialPlan && (
                     <BrandingBadge product="cloudForTeams" testId="sso-label-cloud-for-teams-badge" />
-                  </IfFeatureEnabled>
+                  )}
                 </FlexContainer>
               </DisclosureButton>
               <ExternalLink href={links.ssoDocs} className={styles["card__header-link"]}>

@@ -22,7 +22,6 @@ import { ConnectorDefinition, ConnectorDefinitionOrEnterpriseStub } from "core/d
 import { isSourceDefinition } from "core/domain/connector/source";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 import { RoutePaths, SourcePaths } from "pages/routePaths";
@@ -60,8 +59,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const { openModal } = useModalService();
   const trackSelectConnector = useTrackSelectConnector(connectorType);
   const trackSelectEnterpriseStub = useTrackSelectEnterpriseStub();
-  const { isInTrial } = useOrganizationSubscriptionStatus();
-  const showProFeaturesWarnModal = useExperiment("entitlements.showProFeaturesWarnModal");
+  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
 
   const [showAirbyteConnectors, setShowAirbyteConnectors] = useState(true);
   const [showEnterpriseConnectors, setShowEnterpriseConnectors] = useState(true);
@@ -149,7 +147,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
       }
     };
 
-    if ("isEnterprise" in definition && isInTrial && showProFeaturesWarnModal) {
+    if ("isEnterprise" in definition && isUnifiedTrialPlan) {
       openModal({
         title: null,
         content: () => <ProFeaturesWarnModal onContinue={proceedWithConnectorSelection} />,

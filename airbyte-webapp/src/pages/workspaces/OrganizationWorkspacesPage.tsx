@@ -24,8 +24,9 @@ import {
 import { WorkspaceRead, WebBackendConnectionStatusCounts } from "core/api/types/AirbyteClient";
 import { useWebappConfig } from "core/config";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
-import { FeatureItem, IfFeatureEnabled, useFeature } from "core/services/features";
+import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
+import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 
 import OrganizationWorkspaceItem from "./components/OrganizationWorkspaceItem";
 import { OrganizationWorkspacesCreateControl } from "./components/OrganizationWorkspacesCreateControl";
@@ -40,6 +41,7 @@ const OrganizationWorkspacesPage: React.FC = () => {
 
   const organizationId = useCurrentOrganizationId();
   const organization = useOrgInfo(organizationId);
+  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
   const canViewOrganizationDetails = useGeneratedIntent(Intent.ViewOrganizationDetails);
   const memberCount = useListUsersInOrganization(canViewOrganizationDetails ? organizationId : undefined).users.length;
 
@@ -155,9 +157,7 @@ const OrganizationWorkspacesPage: React.FC = () => {
               )}
             </Box>
             <FlexContainer alignItems="center" gap="sm">
-              <IfFeatureEnabled feature={FeatureItem.CloudForTeamsBranding}>
-                <BrandingBadge product="cloudForTeams" />
-              </IfFeatureEnabled>
+              {isUnifiedTrialPlan && <BrandingBadge product="cloudForTeams" />}
               <OrganizationWorkspacesCreateControl disabled={!isCreateWorkspaceEnabled} onCreated={refetch} />
             </FlexContainer>
           </FlexContainer>

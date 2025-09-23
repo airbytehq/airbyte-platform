@@ -4,7 +4,8 @@ import { Box } from "components/ui/Box";
 import { BrandingBadge } from "components/ui/BrandingBadge";
 import { Text } from "components/ui/Text";
 
-import { FeatureItem, IfFeatureEnabled, useFeature } from "core/services/features";
+import { FeatureItem, useFeature } from "core/services/features";
+import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { CancelInvitationMenuItem } from "./CancelInvitationMenuItem";
@@ -24,6 +25,7 @@ interface RoleManagementMenuBodyProps {
   close: () => void;
 }
 export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ user, resourceType, close }) => {
+  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
   const areAllRbacRolesEnabled = useFeature(FeatureItem.AllowAllRBACRoles);
   const improvedOrganizationRbac = useExperiment("settings.organizationRbacImprovements");
   const rolesToAllow = !user.invitationStatus && areAllRbacRolesEnabled ? permissionsByResourceType[resourceType] : [];
@@ -57,10 +59,8 @@ export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ 
                 }}
               />
             </Text>
-            {isTeamsFeaturePermissionType(user?.organizationPermission?.permissionType) && (
-              <IfFeatureEnabled feature={FeatureItem.CloudForTeamsBranding}>
-                <BrandingBadge product="cloudForTeams" />
-              </IfFeatureEnabled>
+            {isTeamsFeaturePermissionType(user?.organizationPermission?.permissionType) && isUnifiedTrialPlan && (
+              <BrandingBadge product="cloudForTeams" />
             )}
           </Box>
         </li>

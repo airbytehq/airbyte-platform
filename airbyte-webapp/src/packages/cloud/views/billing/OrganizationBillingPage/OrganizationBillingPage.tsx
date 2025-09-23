@@ -18,7 +18,7 @@ import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useFormatCredits } from "core/utils/numberHelper";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useExperiment } from "hooks/services/Experiment";
+import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 import { useModalService } from "hooks/services/Modal";
 
 import { AccountBalance } from "./AccountBalance";
@@ -36,7 +36,7 @@ export const OrganizationBillingPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { openModal } = useModalService();
   const { formatCredits } = useFormatCredits();
-  const isCloudSubscriptionSuccessModalEnabled = useExperiment("entitlements.showCloudSubscriptionSuccessModal");
+  const { isStandardPlan } = useOrganizationSubscriptionStatus();
 
   const organizationId = useCurrentOrganizationId();
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
@@ -56,7 +56,7 @@ export const OrganizationBillingPage: React.FC = () => {
   // Handle subscription success modal
   useEffect(() => {
     const cloudSubscriptionSetup = searchParams.get("cloudSubscriptionSetup");
-    if (cloudSubscriptionSetup === "success" && isCloudSubscriptionSuccessModalEnabled) {
+    if (cloudSubscriptionSetup === "success" && isStandardPlan) {
       openModal({
         title: <FormattedMessage id="settings.organization.billing.subscriptionSuccess.title" />,
         content: CloudSubscriptionSuccessModal,
@@ -67,7 +67,7 @@ export const OrganizationBillingPage: React.FC = () => {
       newSearchParams.delete("cloudSubscriptionSetup");
       setSearchParams(newSearchParams, { replace: true });
     }
-  }, [searchParams, setSearchParams, openModal, isCloudSubscriptionSuccessModalEnabled]);
+  }, [searchParams, setSearchParams, openModal, isStandardPlan]);
 
   return (
     <PageContainer>

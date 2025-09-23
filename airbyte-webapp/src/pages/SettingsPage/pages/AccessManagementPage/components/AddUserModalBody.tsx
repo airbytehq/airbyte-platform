@@ -9,7 +9,6 @@ import { Text } from "components/ui/Text";
 
 import { PermissionType, ScopeType } from "core/api/types/AirbyteClient";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
 import { AddUserFormValues, AddUserModal } from "./AddUserModal";
@@ -36,8 +35,7 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
   canInviteExternalUsers,
   scope,
 }) => {
-  const showProFeaturesWarnModal = useExperiment("entitlements.showProFeaturesWarnModal");
-  const { isInTrial } = useOrganizationSubscriptionStatus();
+  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
   const { openModal, getCurrentModalTitle } = useModalService();
   const { getValues, setValue } = useFormContext<AddUserFormValues>();
 
@@ -77,11 +75,11 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
   const handlePermissionSelect = useCallback(
     (permission: PermissionType) => {
       // Show warning when user selects any pro feature permission
-      if (isInTrial && showProFeaturesWarnModal && isTeamsFeaturePermissionType(permission)) {
+      if (isUnifiedTrialPlan && isTeamsFeaturePermissionType(permission)) {
         openProFeaturesWarnModal(permission);
       }
     },
-    [isInTrial, showProFeaturesWarnModal, openProFeaturesWarnModal]
+    [isUnifiedTrialPlan, openProFeaturesWarnModal]
   );
 
   // handle when the selected option is no longer visible

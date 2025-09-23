@@ -13,7 +13,6 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { useFormMode } from "core/services/ui/FormModeContext";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./AddStreamForMappingComboBox.module.scss";
@@ -27,8 +26,7 @@ export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({
   const streamsToList = useGetStreamsForNewMapping();
   const { addStreamToMappingsList } = useMappingContext();
   const { formatMessage } = useIntl();
-  const { isInTrial } = useOrganizationSubscriptionStatus();
-  const showProFeaturesWarnModal = useExperiment("entitlements.showProFeaturesWarnModal");
+  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
   const { openModal } = useModalService();
 
   const placeholder = secondary
@@ -46,7 +44,7 @@ export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({
   const disabled = !options || options.length === 0 || mode === "readonly";
 
   const handleInputClick = () => {
-    if (isInTrial && showProFeaturesWarnModal) {
+    if (isUnifiedTrialPlan) {
       openModal({
         title: null,
         content: ({ onComplete }) => <ProFeaturesWarnModal onContinue={() => onComplete("continue")} />,

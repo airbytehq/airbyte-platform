@@ -31,10 +31,6 @@ export interface Experiments {
   "embedded.templateCreateButton": boolean;
   "embedded.useSonarServer": boolean;
   "onboarding.surveyEnabled": boolean;
-  "entitlements.showCloudSubscriptionSuccessModal": boolean;
-  "entitlements.showProFeaturesWarnModal": boolean;
-  "entitlements.showUpgradeTextInStatusBanner": boolean;
-  "entitlements.showTrialEndedModal": boolean;
   "platform.allow-config-template-endpoints": boolean;
   "platform.llm-sync-job-failure-explanation": boolean;
   "platform.use-runtime-secret-persistence": boolean;
@@ -85,10 +81,6 @@ export const defaultExperimentValues: Experiments = {
   "embedded.operatorOnboarding.destinations": "ConnectorIds.Destinations.S3",
   "embedded.templateCreateButton": false,
   "embedded.useSonarServer": false,
-  "entitlements.showCloudSubscriptionSuccessModal": false,
-  "entitlements.showProFeaturesWarnModal": false,
-  "entitlements.showTrialEndedModal": false,
-  "entitlements.showUpgradeTextInStatusBanner": false,
   "onboarding.surveyEnabled": false,
   "platform.allow-config-template-endpoints": false,
   "platform.llm-sync-job-failure-explanation": false,
