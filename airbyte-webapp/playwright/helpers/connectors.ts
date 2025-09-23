@@ -2,6 +2,7 @@ import { APIRequestContext, Page, expect } from "@playwright/test";
 import destinationIds from "@src/area/connector/utils/destinations.json";
 import sourceIds from "@src/area/connector/utils/sources.json";
 import { ActorListCursorPaginatedRequestBody } from "@src/core/api/generated/AirbyteClient.schemas";
+import { SourceRead, DestinationRead } from "@src/core/api/types/AirbyteClient";
 
 import { getApiBaseUrl } from "./api";
 import { mockHelpers } from "./mocks";
@@ -44,13 +45,17 @@ const CONNECTOR_CONFIGS = {
 
 // Create a connector API interface for the specified connector type
 // This factory function generates type-safe API methods for sources or destinations
-export const createConnectorAPI = (connectorType: keyof typeof CONNECTOR_CONFIGS) => {
+export const createConnectorAPI = <T extends keyof typeof CONNECTOR_CONFIGS>(connectorType: T) => {
   const config = CONNECTOR_CONFIGS[connectorType];
   const apiBaseUrl = getApiBaseUrl();
 
   return {
     // Create a new connector via API
-    create: async (request: APIRequestContext, name: string, workspaceId: string) => {
+    create: async (
+      request: APIRequestContext,
+      name: string,
+      workspaceId: string
+    ): Promise<T extends "source" ? SourceRead : DestinationRead> => {
       const createData = {
         name,
         [`${connectorType}DefinitionId`]: config.definitionId,
@@ -67,7 +72,7 @@ export const createConnectorAPI = (connectorType: keyof typeof CONNECTOR_CONFIGS
       }
 
       const result = await response.json();
-      return result;
+      return result as T extends "source" ? SourceRead : DestinationRead;
     },
 
     // Delete a connector via API
@@ -86,7 +91,10 @@ export const createConnectorAPI = (connectorType: keyof typeof CONNECTOR_CONFIGS
     },
 
     // List existing connectors for a workspace
-    list: async (request: APIRequestContext, workspaceId: string) => {
+    list: async (
+      request: APIRequestContext,
+      workspaceId: string
+    ): Promise<Array<T extends "source" ? SourceRead : DestinationRead>> => {
       try {
         const listRequest: ActorListCursorPaginatedRequestBody = {
           workspaceId,
@@ -98,7 +106,7 @@ export const createConnectorAPI = (connectorType: keyof typeof CONNECTOR_CONFIGS
 
         if (response.ok()) {
           const result = await response.json();
-          return result[config.responseKey];
+          return result[config.responseKey] as Array<T extends "source" ? SourceRead : DestinationRead>;
         }
       } catch (error) {
         // Warn on listing errors

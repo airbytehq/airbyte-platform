@@ -8,8 +8,15 @@ export const selectDropdownOption = async (
   initialOption: string,
   targetOption: string
 ) => {
+  // Click to open the dropdown
   await page.locator(`div[data-field-path="${fieldPath}"]`).locator(`span:text-is("${initialOption}")`).click();
-  await page.locator(`p:text-is("${targetOption}")`).click();
+
+  // Wait for the dropdown menu to appear and the target option to be visible
+  const targetOptionLocator = page.locator(`p:text-is("${targetOption}")`);
+  await targetOptionLocator.waitFor({ state: "visible", timeout: 10000 });
+
+  // Click the target option
+  await targetOptionLocator.click();
 };
 
 // Helper function to find and fill nested input fields by field path
@@ -55,25 +62,35 @@ export const initializeBuilderConnector = async (page: Page) => {
   await page.waitForSelector('button[data-testid="start-from-scratch"]', { state: "hidden" });
   await page.waitForSelector('button[data-testid="connector-name-label"]', { timeout: 45000 });
   await page.click('button[data-testid="connector-name-label"]');
-  await page.locator('input[data-testid="connector-name-input"]').fill(appendRandomString("dummy_api"));
+
+  // Wait for the input to be ready before filling
+  const connectorNameInput = page.locator('input[data-testid="connector-name-input"]');
+  await connectorNameInput.waitFor({ state: "visible", timeout: 10000 });
+  await connectorNameInput.fill(appendRandomString("dummy_api"));
 };
 
 // Configures the stream name and URL for the connector
 export const configureStream = async (page: Page) => {
   const streamNameField = page.locator('input[data-field-path="manifest.streams.0.name"]');
+  await streamNameField.waitFor({ state: "visible", timeout: 10000 });
   await streamNameField.click();
   await streamNameField.fill("Items");
 
   const dummyApiHost = getDummyApiHost();
 
-  await page
+  // Wait for URL field to be ready
+  const urlField = page
     .locator('div[data-field-path="manifest.streams.0.retriever.requester.url"]')
-    .locator("textarea")
-    .fill(`${dummyApiHost}/items/`, { timeout: 5000 });
+    .locator("textarea");
+  await urlField.waitFor({ state: "visible", timeout: 10000 });
+  await urlField.fill(`${dummyApiHost}/items/`);
 
-  await page
-    .locator('input[data-testid="tag-input-manifest.streams.0.retriever.record_selector.extractor.field_path"]')
-    .fill("items");
+  // Wait for field path input to be ready
+  const fieldPathInput = page.locator(
+    'input[data-testid="tag-input-manifest.streams.0.retriever.record_selector.extractor.field_path"]'
+  );
+  await fieldPathInput.waitFor({ state: "visible", timeout: 10000 });
+  await fieldPathInput.fill("items");
 };
 
 const getDummyApiHost = () => {
@@ -92,9 +109,22 @@ export const configureValidAuth = async (page: Page) => {
     "API Key Authenticator",
     "Bearer Token Authenticator"
   );
+
+  // Navigate to inputs tab and wait for it to be ready
   await page.click('button[data-testid="navbutton-inputs"]');
-  await page.locator('input[data-field-path="testingValues.api_key"]').fill("theauthkey");
-  await page.locator('input[data-field-path="testingValues.api_key"]').blur();
+
+  // Wait for the API key input to be visible and ready
+  const apiKeyInput = page.locator('input[data-field-path="testingValues.api_key"]');
+  await apiKeyInput.waitFor({ state: "visible", timeout: 10000 });
+
+  // Fill the API key and wait for the value to be set
+  await apiKeyInput.fill("theauthkey");
+  await apiKeyInput.blur();
+
+  // Wait a moment for the value to be persisted before navigating away
+  await page.waitForTimeout(500);
+
+  // Navigate back to the stream configuration
   await page.click('button[data-testid="navbutton-0"]');
 };
 
