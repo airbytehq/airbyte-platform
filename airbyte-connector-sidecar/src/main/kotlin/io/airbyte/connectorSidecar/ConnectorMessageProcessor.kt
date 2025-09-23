@@ -83,13 +83,7 @@ class ConnectorMessageProcessor(
           getMessagesByType(
             inputStream,
             streamFactory,
-            if (logContextFactory.inferLogSource() ==
-              LogSource.DESTINATION
-            ) {
-              MessageOrigin.DESTINATION
-            } else {
-              MessageOrigin.SOURCE
-            },
+            if (logContextFactory.inferLogSource() == LogSource.DESTINATION) MessageOrigin.DESTINATION else MessageOrigin.SOURCE,
           )
         }
 
@@ -118,15 +112,6 @@ class ConnectorMessageProcessor(
       throw WorkerException(errorMessage, e)
     } catch (e: Exception) {
       throw WorkerException("Unexpected error performing $operationType. The exit of the connector was: $exitCode", e)
-    }
-  }
-
-  private fun logConnectorLogMessages(messages: List<AirbyteMessage>) {
-    val logs = messages.filter { it.type == AirbyteMessage.Type.LOG }.map { it.log }
-    if (logs.isNotEmpty()) {
-      withLoggingContext(logContextFactory.createConnectorContext(sidecarInput.logPath)) {
-        logs.forEach { logger.info { it.message } }
-      }
     }
   }
 

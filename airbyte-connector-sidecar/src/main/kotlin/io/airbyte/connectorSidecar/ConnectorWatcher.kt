@@ -6,8 +6,9 @@ package io.airbyte.connectorSidecar
 
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.base.Stopwatch
+import io.airbyte.commons.io.IOs
 import io.airbyte.commons.io.LineGobbler
-import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
 import io.airbyte.commons.version.AirbyteProtocolVersion
@@ -21,6 +22,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.internal.AirbyteStreamFactory
+import io.airbyte.workers.internal.MessageOrigin
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration
 import io.airbyte.workers.models.SidecarInput
@@ -99,6 +101,8 @@ class ConnectorWatcher(
       }
       val isWithinSync = input.discoverCatalogInput?.manual?.not() ?: false
       if (hasFileTimeoutReached(stopwatch, isWithinSync)) {
+        readOutputForLogs()
+
         val message = "Failed to find output files from connector within timeout of $fileTimeoutMinutes minute(s). Is the connector still running?"
         logger.warn { message }
         val failureReason =
@@ -108,6 +112,25 @@ class ConnectorWatcher(
         failWorkload(input.workloadId, failureReason)
         exitFileNotFound()
       }
+    }
+  }
+
+  /**
+   * Reads the output file using the AirbyteStreamFactory.
+   * This has the side effect of processing the log messages from the connector.
+   */
+  private fun readOutputForLogs() {
+    val stream = getConnectorOutputStream()
+    val streamFactory = getStreamFactory(sidecarInput.integrationLauncherConfig)
+    withLoggingContext(logContextFactory.createConnectorContext(sidecarInput.logPath)) {
+      streamFactory
+        .create(
+          bufferedReader = IOs.newBufferedReader(stream),
+          origin = if (logContextFactory.inferLogSource() == LogSource.DESTINATION) MessageOrigin.DESTINATION else MessageOrigin.SOURCE,
+        ).forEach {
+          // We're just forcing the stream reader to read the messages.
+          // The expected side effect is that the stream reader will log AirbyteLog Messages
+        }
     }
   }
 

@@ -4,6 +4,7 @@
 
 package io.airbyte.connectorSidecar
 
+import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
 import io.airbyte.config.ActorType
@@ -42,6 +43,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import java.nio.file.Path
+import java.util.stream.Stream
 
 @ExtendWith(MockKExtension::class)
 class ConnectorWatchTest {
@@ -255,9 +257,14 @@ class ConnectorWatchTest {
 
     every { sidecarInput.operationType } returns operationType
 
+    every { logContextFactory.createConnectorContext(any()) } returns mapOf()
+    every { logContextFactory.inferLogSource() } returns LogSource.SOURCE
+    every { streamFactory.create(any(), any()) } returns Stream.empty()
+
     connectorWatcher.run()
 
     assertTrue(exitCauseFileWasNotFound)
+    verify { streamFactory.create(any(), any()) }
   }
 
   @ParameterizedTest
