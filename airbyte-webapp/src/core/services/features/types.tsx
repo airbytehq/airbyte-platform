@@ -4,6 +4,7 @@
  */
 
 export enum FeatureItem {
+  AICopilot = "AI_COPILOT",
   AllowAllRBACRoles = "ALLOW_ALL_RBAC_ROLES", // corresponds to the feature-rbac-roles entitlement
   AllowAutoDetectSchema = "ALLOW_AUTO_DETECT_SCHEMA",
   AllowUploadCustomImage = "ALLOW_UPLOAD_CUSTOM_IMAGE",

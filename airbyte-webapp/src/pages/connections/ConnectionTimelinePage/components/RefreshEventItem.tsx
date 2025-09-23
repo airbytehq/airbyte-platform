@@ -10,9 +10,9 @@ import { AISyncFailureExplanationButton } from "area/connection/components/AISyn
 import { JobFailureDetails } from "area/connection/components/JobHistoryItem/JobFailureDetails";
 import { ResetStreamsDetails } from "area/connection/components/JobHistoryItem/ResetStreamDetails";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useDrawerActions } from "core/services/ui/DrawerService";
 import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { JobStats } from "./JobStats";
 import { UserCancelledDescription } from "./TimelineEventUser";
@@ -34,12 +34,12 @@ export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ event }) => 
   const failureUiDetails = !!event.summary.failureReason
     ? failureUiDetailsFromReason(event.summary.failureReason, formatMessage)
     : undefined;
-  const llmSyncFailureExperimentEnabled = useExperiment("platform.llm-sync-job-failure-explanation");
+  const isAICopilotEnabled = useFeature(FeatureItem.AICopilot);
   const { openDrawer } = useDrawerActions();
   const analyticsService = useAnalyticsService();
 
   const showAIJobExplanation = () => {
-    if (!llmSyncFailureExperimentEnabled) {
+    if (!isAICopilotEnabled) {
       return;
     }
     analyticsService.track(Namespace.CONNECTIONS, Action.REFRESH_FAILURE_EXPLANATION_OPENED, {
@@ -80,7 +80,7 @@ export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ event }) => 
               <JobFailureDetails failureUiDetails={failureUiDetails} />
             </Box>
           )}
-          {llmSyncFailureExperimentEnabled && failureUiDetails && (
+          {isAICopilotEnabled && failureUiDetails && (
             <Box my="md">
               <AISyncFailureExplanationButton onClick={showAIJobExplanation}>
                 <FormattedMessage id="connection.llmSyncFailureExplanation.explain" />

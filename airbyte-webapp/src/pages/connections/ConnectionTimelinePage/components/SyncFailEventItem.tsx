@@ -8,10 +8,10 @@ import { AISyncFailureDrawerTitle, AISyncFailureExplanation } from "area/connect
 import { AISyncFailureExplanationButton } from "area/connection/components/AISyncFailureExplanationButton";
 import { JobFailureDetails } from "area/connection/components/JobHistoryItem/JobFailureDetails";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useDrawerActions } from "core/services/ui/DrawerService";
 import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
 import { useLocalStorage } from "core/utils/useLocalStorage";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { JobStats } from "./JobStats";
 import { ConnectionTimelineEventActions } from "../ConnectionTimelineEventActions";
@@ -30,13 +30,13 @@ export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ event }) =
   const [showExtendedStats] = useLocalStorage("airbyte_extended-attempts-stats", false);
   const { formatMessage } = useIntl();
   const titleId = titleIdMap[event.eventType];
-  const llmSyncFailureExperimentEnabled = useExperiment("platform.llm-sync-job-failure-explanation");
+  const isAICopilotEnabled = useFeature(FeatureItem.AICopilot);
   const analyticsService = useAnalyticsService();
   const failureUiDetails = failureUiDetailsFromReason(event.summary.failureReason, formatMessage);
   const jobStatus = getStatusByEventType(event.eventType);
 
   const showAIJobExplanation = () => {
-    if (!llmSyncFailureExperimentEnabled) {
+    if (!isAICopilotEnabled) {
       return;
     }
     analyticsService.track(Namespace.CONNECTIONS, Action.SYNC_FAILURE_EXPLANATION_OPENED, {
@@ -66,7 +66,7 @@ export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ event }) =
             <FormattedMessage id="jobs.jobId" values={{ id: event.summary.jobId }} />
           </Text>
         )}
-        {llmSyncFailureExperimentEnabled && (
+        {isAICopilotEnabled && (
           <Box mt="md">
             <AISyncFailureExplanationButton onClick={showAIJobExplanation}>
               <FormattedMessage id="connection.llmSyncFailureExplanation.explain" />

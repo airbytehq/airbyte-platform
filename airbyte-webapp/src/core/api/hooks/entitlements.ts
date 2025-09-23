@@ -29,6 +29,7 @@ const entitlementIdToFeatureItem: Record<string, FeatureItem> = {
   "feature-mappers": FeatureItem.MappingsUI,
   "feature-sso": FeatureItem.AllowUpdateSSOConfig,
   "feature-multiple-workspaces": FeatureItem.CreateMultipleWorkspaces,
+  "feature-ai-copilot": FeatureItem.AICopilot,
 };
 
 /**
