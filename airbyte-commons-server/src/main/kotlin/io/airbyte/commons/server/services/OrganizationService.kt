@@ -66,16 +66,6 @@ interface OrganizationService {
   )
 
   /**
-   * Handle the restart of a subscription for an organization
-   *
-   * @param organizationId the ID of the organization that restarted a subscription
-   */
-  fun handleSubscriptionRestarted(
-    organizationId: OrganizationId,
-    orbPlanId: String?,
-  )
-
-  /**
    * Handle the end of a subscription for an organization
    *
    * @param organizationId the ID of the organization that unsubscribed
@@ -147,7 +137,31 @@ open class OrganizationServiceImpl(
           ProblemResourceData().resourceId(organizationId.toString()).resourceType(ResourceType.ORGANIZATION_PAYMENT_CONFIG),
         )
 
-    addEntitlementSubscription(organizationId, orbPlanId)
+    // For now we only support automatically adding users from "cloud-self-serve" in Orb to the STANDARD plan in Stigg
+    // All other subscriptions must be added manually.
+    val supportedPlan = EntitlementPlan.supportedOrbPlanExternalIds.keys.find { it.plan == orbPlanId }
+    if (orbPlanId == null || supportedPlan == null) {
+      logger.warn {
+        "Skipping adding organization ${orgPaymentConfig.organizationId} to Stigg. Organizations with Orb Plan $orbPlanId must be added manually."
+      }
+    } else {
+      logger.info { "Adding organization ${orgPaymentConfig.organizationId} and Orb Plan $orbPlanId to Stigg plan ${EntitlementPlan.STANDARD}" }
+      try {
+        entitlementService.addOrganization(organizationId, EntitlementPlan.STANDARD)
+      } catch (exception: Exception) {
+        logger.error(exception) {
+          "Failed to add organization $organizationId to entitlement plan ${EntitlementPlan.STANDARD}. "
+        }
+        // TODO: once we've integrated fully with Stigg, throw instead of just logging
+        // throw EntitlementServiceUnableToAddOrganizationProblem(
+        //    "Failed to register organization with entitlement service",
+        //    ProblemEntitlementServiceData()
+        //        .organizationId(orgId)
+        //        .planId(EntitlementPlan.STANDARD_TRIAL)
+        //        .errorMessage(exception.message ?: "Unknown entitlement service error")
+        // )
+      }
+    }
 
     val currentSubscriptionStatus = orgPaymentConfig.subscriptionStatus
 
@@ -162,44 +176,6 @@ open class OrganizationServiceImpl(
     organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig)
     logger.info {
       "Organization ${orgPaymentConfig.organizationId} successfully updated from $currentSubscriptionStatus to ${orgPaymentConfig.subscriptionStatus}"
-    }
-  }
-
-  override fun handleSubscriptionRestarted(
-    organizationId: OrganizationId,
-    orbPlanId: String?,
-  ) {
-    addEntitlementSubscription(organizationId, orbPlanId)
-  }
-
-  fun addEntitlementSubscription(
-    organizationId: OrganizationId,
-    orbPlanId: String?,
-  ) {
-    val supportedOrbPlan = EntitlementPlan.supportedOrbPlanNameOverrides.keys.find { it.plan == orbPlanId }
-    val supportedStiggPlan = EntitlementPlan.supportedOrbPlanNameOverrides[supportedOrbPlan]
-    if (supportedOrbPlan == null || supportedStiggPlan == null) {
-      logger.warn {
-        "Skipping adding organization $organizationId to Stigg Plan $supportedStiggPlan. " +
-          "Organizations with Orb Plan $orbPlanId must be added manually."
-      }
-    } else {
-      logger.info { "Adding organization $organizationId and Orb Plan $orbPlanId to Stigg plan $supportedStiggPlan" }
-      try {
-        entitlementService.addOrganization(organizationId, supportedStiggPlan)
-      } catch (exception: Exception) {
-        logger.error(exception) {
-          "Failed to add organization $organizationId to entitlement plan $supportedStiggPlan. "
-        }
-        // TODO: once we've integrated fully with Stigg, throw instead of just logging
-        // throw EntitlementServiceUnableToAddOrganizationProblem(
-        //    "Failed to register organization with entitlement service",
-        //    ProblemEntitlementServiceData()
-        //        .organizationId(orgId)
-        //        .planId(EntitlementPlan.STANDARD_TRIAL)
-        //        .errorMessage(exception.message ?: "Unknown entitlement service error")
-        // )
-      }
     }
   }
 

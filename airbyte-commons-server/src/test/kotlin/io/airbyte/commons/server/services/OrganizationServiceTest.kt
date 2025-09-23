@@ -15,7 +15,6 @@ import io.airbyte.data.services.shared.ConnectionAutoDisabledReason
 import io.airbyte.domain.models.ConnectionId
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
-import io.airbyte.domain.models.SupportedOrbPlan
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.mockk.Runs
@@ -241,7 +240,7 @@ class OrganizationServiceTest {
       every { organizationPaymentConfigRepository.savePaymentConfig(any()) } just Runs
 
       // Use a supported Orb plan that maps to STANDARD
-      service.handleSubscriptionStarted(organizationId, SupportedOrbPlan.CLOUD_SELF_SERVE_MONTHLY.plan)
+      service.handleSubscriptionStarted(organizationId, "cloud-self-serve")
 
       verify { entitlementService.addOrganization(organizationId, EntitlementPlan.STANDARD) }
       verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
@@ -296,7 +295,7 @@ class OrganizationServiceTest {
       every { entitlementService.addOrganization(any(), any()) } throws RuntimeException("Entitlement service error")
 
       // Should not throw, just log and continue
-      service.handleSubscriptionStarted(organizationId, SupportedOrbPlan.CLOUD_SELF_SERVE_MONTHLY.plan)
+      service.handleSubscriptionStarted(organizationId, "cloud-self-serve")
 
       verify { entitlementService.addOrganization(organizationId, EntitlementPlan.STANDARD) }
       slotConfig.captured.subscriptionStatus shouldBe SubscriptionStatus.SUBSCRIBED
@@ -313,60 +312,12 @@ class OrganizationServiceTest {
 
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
 
-      service.handleSubscriptionStarted(organizationId, SupportedOrbPlan.CLOUD_SELF_SERVE_MONTHLY.plan)
+      service.handleSubscriptionStarted(organizationId, "cloud-self-serve")
 
       // EntitlementClient is called because it happens before the subscription status check
       verify { entitlementService.addOrganization(organizationId, EntitlementPlan.STANDARD) }
       // But payment config is not saved because the org is already subscribed
       verify(exactly = 0) { organizationPaymentConfigRepository.savePaymentConfig(any()) }
-    }
-  }
-
-  @Nested
-  inner class HandleSubscriptionRestarted {
-    @Test
-    fun `should call EntitlementClient addOrganization for supported Orb plan`() {
-      every { entitlementService.addOrganization(any(), any()) } just Runs
-
-      // Use a supported Orb plan that maps to STANDARD
-      service.handleSubscriptionRestarted(organizationId, SupportedOrbPlan.CLOUD_SELF_SERVE_MONTHLY.plan)
-
-      verify { entitlementService.addOrganization(organizationId, EntitlementPlan.STANDARD) }
-    }
-
-    @Test
-    fun `should not call EntitlementClient addOrganization for unsupported Orb plan`() {
-      // Use an unsupported Orb plan
-      service.handleSubscriptionRestarted(organizationId, "unsupported-plan")
-
-      verify(exactly = 0) { entitlementService.addOrganization(any(), any()) }
-    }
-
-    @Test
-    fun `should not call EntitlementClient addOrganization when Orb plan is null`() {
-      service.handleSubscriptionRestarted(organizationId, null)
-
-      verify(exactly = 0) { entitlementService.addOrganization(any(), any()) }
-    }
-
-    @Test
-    fun `should continue processing if EntitlementClient addOrganization fails`() {
-      every { entitlementService.addOrganization(any(), any()) } throws RuntimeException("Entitlement service error")
-
-      // Should not throw, just log and continue
-      service.handleSubscriptionRestarted(organizationId, SupportedOrbPlan.CLOUD_SELF_SERVE_MONTHLY.plan)
-
-      verify { entitlementService.addOrganization(organizationId, EntitlementPlan.STANDARD) }
-    }
-
-    @Test
-    fun `should call EntitlementClient addOrganization for PRO plan`() {
-      every { entitlementService.addOrganization(any(), any()) } just Runs
-
-      // Use a supported Orb plan that maps to PRO
-      service.handleSubscriptionRestarted(organizationId, SupportedOrbPlan.PRO.plan)
-
-      verify { entitlementService.addOrganization(organizationId, EntitlementPlan.PRO) }
     }
   }
 
