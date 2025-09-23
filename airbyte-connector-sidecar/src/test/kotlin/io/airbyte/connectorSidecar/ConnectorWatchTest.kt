@@ -30,6 +30,7 @@ import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
 import io.mockk.just
+import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
 import io.mockk.verifyOrder
@@ -79,6 +80,9 @@ class ConnectorWatchTest {
   @MockK
   private lateinit var metricClient: MetricClient
 
+  @MockK
+  private lateinit var sidecarInput: SidecarInput
+
   val workloadId = "workloadId"
 
   val checkInput = StandardCheckConnectionInput().withActorType(ActorType.SOURCE)
@@ -95,6 +99,7 @@ class ConnectorWatchTest {
           configDir,
           fileTimeoutMinutes = 42,
           fileTimeoutMinutesWithinSync = 43,
+          sidecarInput = sidecarInput,
           connectorMessageProcessor,
           serDeProvider,
           airbyteProtocolVersionedMigratorFactory,
@@ -128,6 +133,12 @@ class ConnectorWatchTest {
     every { heartbeatMonitor.stopHeartbeatThread() } just Runs
 
     every { heartbeatMonitor.shouldAbort() } returns false
+
+    every { sidecarInput.logPath } returns ""
+    every { sidecarInput.integrationLauncherConfig } returns IntegrationLauncherConfig().withDockerImage("")
+    every { sidecarInput.checkConnectionInput } returns checkInput
+    every { sidecarInput.discoverCatalogInput } returns discoveryInput
+    every { sidecarInput.workloadId } returns workloadId
   }
 
   @ParameterizedTest
@@ -144,7 +155,11 @@ class ConnectorWatchTest {
 
     every { workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Unit
 
+    every { sidecarInput.operationType } returns operationType
+
     connectorWatcher.run()
+
+    every { sidecarInput.operationType } returns operationType
 
     verifyOrder {
       connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType))
@@ -167,6 +182,8 @@ class ConnectorWatchTest {
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
 
     every { workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId)) } returns Unit
+
+    every { sidecarInput.operationType } returns operationType
 
     connectorWatcher.run()
 
@@ -204,6 +221,8 @@ class ConnectorWatchTest {
       )
     } returns Unit
 
+    every { sidecarInput.operationType } returns operationType
+
     connectorWatcher.run()
 
     verifyOrder {
@@ -234,6 +253,8 @@ class ConnectorWatchTest {
 
     every { workloadApiClient.workloadFailure(any()) } returns Unit
 
+    every { sidecarInput.operationType } returns operationType
+
     connectorWatcher.run()
 
     assertTrue(exitCauseFileWasNotFound)
@@ -248,6 +269,7 @@ class ConnectorWatchTest {
 
     every { connectorWatcher.readFile(FileConstants.SIDECAR_INPUT_FILE) } returns
       Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType, ""))
+    every { sidecarInput.operationType } returns operationType
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
 
@@ -284,6 +306,8 @@ class ConnectorWatchTest {
 
     every { connectorWatcher.exitInternalError() } throws MockKException("")
 
+    every { sidecarInput.operationType } returns operationType
+
     val exception =
       assertThrows<MockKException> {
         connectorWatcher.run()
@@ -309,6 +333,8 @@ class ConnectorWatchTest {
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
     every { outputWriter.write(any(), any()) } throws RuntimeException("Unable to Write")
     every { workloadApiClient.workloadFailure(any()) } returns Unit
+
+    every { sidecarInput.operationType } returns operationType
 
     connectorWatcher.run()
 

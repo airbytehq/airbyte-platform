@@ -32,10 +32,12 @@ import io.airbyte.protocol.models.v0.DestinationCatalog
 import io.airbyte.protocol.models.v0.DestinationOperation
 import io.airbyte.protocol.models.v0.DestinationSyncMode
 import io.airbyte.workers.internal.AirbyteStreamFactory
+import io.airbyte.workers.internal.MessageOrigin
 import io.airbyte.workers.models.SidecarInput
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -77,7 +79,8 @@ class ConnectorMessageProcessorTest {
   fun init() {
     every { airbyteApiClient.sourceApi } returns sourceApi
     every { airbyteApiClient.destinationApi } returns destinationApi
-    connectorMessageProcessor = ConnectorMessageProcessor(connectorConfigUpdater, airbyteApiClient, catalogClientConverters)
+    connectorMessageProcessor =
+      ConnectorMessageProcessor(connectorConfigUpdater, airbyteApiClient, catalogClientConverters, mockk(relaxed = true), mockk(relaxed = true))
   }
 
   @Test
@@ -89,7 +92,7 @@ class ConnectorMessageProcessorTest {
         AirbyteMessage().withType(AirbyteMessage.Type.RECORD).withAdditionalProperty("record", "three"),
       )
 
-    val messageByType = ConnectorMessageProcessor.getMessagesByType(InputStream.nullInputStream(), streamFactory)
+    val messageByType = ConnectorMessageProcessor.getMessagesByType(InputStream.nullInputStream(), streamFactory, MessageOrigin.SOURCE)
 
     assertEquals(2, messageByType.size)
     assertEquals(1, messageByType[AirbyteMessage.Type.CONTROL]!!.size)

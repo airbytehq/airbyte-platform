@@ -49,6 +49,7 @@ class ConnectorWatcher(
   @Named("configDir") val configDir: String,
   @Value("\${airbyte.sidecar.file-timeout-minutes}") val fileTimeoutMinutes: Int,
   @Value("\${airbyte.sidecar.file-timeout-minutes-within-sync}") val fileTimeoutMinutesWithinSync: Int,
+  private val sidecarInput: SidecarInput,
   private val connectorMessageProcessor: ConnectorMessageProcessor,
   private val serDeProvider: AirbyteMessageSerDeProvider,
   private val airbyteProtocolVersionedMigratorFactory: AirbyteProtocolVersionedMigratorFactory,
@@ -60,7 +61,6 @@ class ConnectorWatcher(
   private val metricClient: MetricClient,
 ) {
   fun run() {
-    val sidecarInput = readSidecarInput()
     withLoggingContext(logContextFactory.create(sidecarInput.logPath)) {
       LineGobbler.startSection(sidecarInput.operationType.toString())
       var heartbeatStarted = false
@@ -87,11 +87,6 @@ class ConnectorWatcher(
         exitProperly()
       }
     }
-  }
-
-  private fun readSidecarInput(): SidecarInput {
-    val inputContent = readFile(FileConstants.SIDECAR_INPUT_FILE)
-    return Jsons.deserialize(inputContent, SidecarInput::class.java)
   }
 
   private fun waitForConnectorOutput(input: SidecarInput) {

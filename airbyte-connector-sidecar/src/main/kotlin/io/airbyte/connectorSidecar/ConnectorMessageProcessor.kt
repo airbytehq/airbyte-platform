@@ -15,6 +15,7 @@ import io.airbyte.commons.converters.toClientApi
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.io.IOs
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.logging.LogSource
 import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
@@ -33,8 +34,11 @@ import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.helper.FailureHelper.ConnectorCommand
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.MessageOrigin
+import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SidecarInput.OperationType
+import io.airbyte.workers.pod.FileConstants
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.github.oshai.kotlinlogging.withLoggingContext
 import jakarta.inject.Singleton
 import java.io.IOException
 import java.io.InputStream
@@ -50,6 +54,8 @@ class ConnectorMessageProcessor(
   private val connectorConfigUpdater: ConnectorConfigUpdater,
   private val airbyteApiClient: AirbyteApiClient,
   private val catalogClientConverters: CatalogClientConverters,
+  private val logContextFactory: SidecarLogContextFactory,
+  private val sidecarInput: SidecarInput,
 ) {
   data class OperationResult(
     val connectionStatus: AirbyteConnectionStatus? = null,
@@ -72,7 +78,21 @@ class ConnectorMessageProcessor(
   ): ConnectorJobOutput {
     try {
       val jobOutput: ConnectorJobOutput = createBaseOutput(operationType)
-      val messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>> = getMessagesByType(inputStream, streamFactory)
+      val messagesByType: Map<AirbyteMessage.Type, List<AirbyteMessage>> =
+        withLoggingContext(logContextFactory.createConnectorContext(sidecarInput.logPath)) {
+          getMessagesByType(
+            inputStream,
+            streamFactory,
+            if (logContextFactory.inferLogSource() ==
+              LogSource.DESTINATION
+            ) {
+              MessageOrigin.DESTINATION
+            } else {
+              MessageOrigin.SOURCE
+            },
+          )
+        }
+
       val result =
         when (operationType) {
           OperationType.CHECK -> getConnectionStatus(messagesByType)
@@ -98,6 +118,15 @@ class ConnectorMessageProcessor(
       throw WorkerException(errorMessage, e)
     } catch (e: Exception) {
       throw WorkerException("Unexpected error performing $operationType. The exit of the connector was: $exitCode", e)
+    }
+  }
+
+  private fun logConnectorLogMessages(messages: List<AirbyteMessage>) {
+    val logs = messages.filter { it.type == AirbyteMessage.Type.LOG }.map { it.log }
+    if (logs.isNotEmpty()) {
+      withLoggingContext(logContextFactory.createConnectorContext(sidecarInput.logPath)) {
+        logs.forEach { logger.info { it.message } }
+      }
     }
   }
 
@@ -363,9 +392,10 @@ class ConnectorMessageProcessor(
     fun getMessagesByType(
       inputStream: InputStream,
       streamFactory: AirbyteStreamFactory,
+      origin: MessageOrigin,
     ): Map<AirbyteMessage.Type, List<AirbyteMessage>> =
       streamFactory
-        .create(IOs.newBufferedReader(inputStream), MessageOrigin.SOURCE)
+        .create(IOs.newBufferedReader(inputStream), origin)
         .collect(Collectors.groupingBy { it.type })
   }
 }
