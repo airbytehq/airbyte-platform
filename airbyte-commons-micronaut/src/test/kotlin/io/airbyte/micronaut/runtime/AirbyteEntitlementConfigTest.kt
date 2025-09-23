@@ -11,31 +11,29 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 @MicronautTest(environments = [Environment.TEST])
-internal class AirbyteEntitlementConfigDefaultTest {
+internal class AirbyteStiggClientConfigDefaultTest {
   @Inject
-  private lateinit var airbyteEntitlementConfig: AirbyteEntitlementConfig
+  private lateinit var airbyteStiggClientConfig: AirbyteStiggClientConfig
 
   @Test
   fun testLoadingValuesFromConfig() {
-    assertEquals(EntitlementClientType.DEFAULT, airbyteEntitlementConfig.client)
-    assertEquals("", airbyteEntitlementConfig.stigg.apiKey)
-    assertEquals(false, airbyteEntitlementConfig.stigg.enabled)
-    assertEquals("", airbyteEntitlementConfig.stigg.sidecarHost)
-    assertEquals(0, airbyteEntitlementConfig.stigg.sidecarPort)
+    assertEquals("", airbyteStiggClientConfig.apiKey)
+    assertEquals(false, airbyteStiggClientConfig.enabled)
+    assertEquals("", airbyteStiggClientConfig.sidecarHost)
+    assertEquals(8800, airbyteStiggClientConfig.sidecarPort)
   }
 }
 
-@MicronautTest(propertySources = ["classpath:application-entitlements-stigg.yml"])
+@MicronautTest(propertySources = ["classpath:application-stigg.yml"])
 internal class AirbyteEntitlementConfigStiggTest {
   @Inject
-  private lateinit var airbyteEntitlementConfig: AirbyteEntitlementConfig
+  private lateinit var airbyteStiggClientConfig: AirbyteStiggClientConfig
 
   @Test
   fun testLoadingValuesFromConfig() {
-    assertEquals(EntitlementClientType.STIGG, airbyteEntitlementConfig.client)
-    assertEquals("test-api-key", airbyteEntitlementConfig.stigg.apiKey)
-    assertEquals(true, airbyteEntitlementConfig.stigg.enabled)
-    assertEquals("test-stigg-sidecar-host", airbyteEntitlementConfig.stigg.sidecarHost)
-    assertEquals(8080, airbyteEntitlementConfig.stigg.sidecarPort)
+    assertEquals("test-api-key", airbyteStiggClientConfig.apiKey)
+    assertEquals(true, airbyteStiggClientConfig.enabled)
+    assertEquals("test-stigg-sidecar-host", airbyteStiggClientConfig.sidecarHost)
+    assertEquals(8080, airbyteStiggClientConfig.sidecarPort)
   }
 }

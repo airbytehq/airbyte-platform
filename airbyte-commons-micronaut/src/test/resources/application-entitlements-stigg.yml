@@ -1,8 +1,0 @@
-airbyte:
-  entitlements:
-    client: stigg
-    stigg:
-      api-key: test-api-key
-      enabled: true
-      sidecar-host: test-stigg-sidecar-host
-      sidecar-port: 8080

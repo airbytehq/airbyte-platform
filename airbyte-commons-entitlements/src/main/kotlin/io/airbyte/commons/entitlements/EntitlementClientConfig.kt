@@ -9,7 +9,7 @@ import io.airbyte.commons.license.ActiveAirbyteLicense
 import io.airbyte.config.Configs
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.micronaut.runtime.AirbyteConfig
-import io.airbyte.micronaut.runtime.AirbyteEntitlementConfig
+import io.airbyte.micronaut.runtime.AirbyteStiggClientConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
 import io.stigg.sidecar.proto.v1.ApiConfig
@@ -31,7 +31,7 @@ object MissingOrganizationService : Exception("Can't create an entitlements clie
 @Factory
 internal class EntitlementClientFactory(
   private val airbyteConfig: AirbyteConfig,
-  private val airbyteEntitlementConfig: AirbyteEntitlementConfig,
+  private val airbyteStiggClientConfig: AirbyteStiggClientConfig,
   private val activeLicense: ActiveAirbyteLicense? = null,
   private val organizationService: OrganizationService? = null,
 ) {
@@ -47,19 +47,19 @@ internal class EntitlementClientFactory(
     }
 
   private fun createStiggCloudClient(): EntitlementClient {
-    if (!airbyteEntitlementConfig.stigg.enabled) {
+    if (!airbyteStiggClientConfig.enabled) {
       logger.info { "Stigg cloud client is not enabled. Falling back to NoEntitlementClient" }
       return NoEntitlementClient()
     }
     logger.info { "Creating Stigg Cloud client" }
 
-    if (airbyteEntitlementConfig.stigg.apiKey.isBlank()) {
+    if (airbyteStiggClientConfig.apiKey.isBlank()) {
       throw MissingStiggApiKey
     }
-    if (airbyteEntitlementConfig.stigg.sidecarHost.isBlank()) {
+    if (airbyteStiggClientConfig.sidecarHost.isBlank()) {
       throw MissingStiggSidecarHost
     }
-    if (airbyteEntitlementConfig.stigg.sidecarPort <= 0) {
+    if (airbyteStiggClientConfig.sidecarPort <= 0) {
       throw MissingStiggSidecarPort
     }
     if (organizationService == null) {
@@ -71,9 +71,9 @@ internal class EntitlementClientFactory(
         Stigg.init(
           StiggConfig
             .builder()
-            .apiConfig(ApiConfig.newBuilder().setApiKey(airbyteEntitlementConfig.stigg.apiKey).build())
-            .remoteSidecarHost(airbyteEntitlementConfig.stigg.sidecarHost)
-            .remoteSidecarPort(airbyteEntitlementConfig.stigg.sidecarPort)
+            .apiConfig(ApiConfig.newBuilder().setApiKey(airbyteStiggClientConfig.apiKey).build())
+            .remoteSidecarHost(airbyteStiggClientConfig.sidecarHost)
+            .remoteSidecarPort(airbyteStiggClientConfig.sidecarPort)
             .build(),
         ),
       ),

@@ -17,6 +17,24 @@ Renders the stigg secret name
 {{- end }}
 
 {{/*
+Renders the global.stigg.enabled value
+*/}}
+{{- define "airbyte.stigg.enabled" }}
+    {{- .Values.stiggSidecar.enabled }}
+{{- end }}
+
+{{/*
+Renders the stigg.enabled environment variable
+*/}}
+{{- define "airbyte.stigg.enabled.env" }}
+- name: STIGG_ENABLED
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: STIGG_ENABLED
+{{- end }}
+
+{{/*
 Renders the global.stigg.apiKey value
 */}}
 {{- define "airbyte.stigg.apiKey" }}
@@ -81,6 +99,7 @@ Renders the stigg.port environment variable
 Renders the set of all stigg environment variables
 */}}
 {{- define "airbyte.stigg.envs" }}
+{{- include "airbyte.stigg.enabled.env" . }}
 {{- include "airbyte.stigg.apiKey.env" . }}
 {{- if .Values.stiggSidecar.enabled }}
 {{- include "airbyte.stigg.host.env" . }}
@@ -94,6 +113,7 @@ Renders the set of all stigg environment variables
 Renders the set of all stigg config map variables
 */}}
 {{- define "airbyte.stigg.configVars" }}
+STIGG_ENABLED: {{ include "airbyte.stigg.enabled" . | quote }}
 {{- if .Values.stiggSidecar.enabled }}
 STIGG_SIDECAR_HOST: {{ include "airbyte.stigg.host" . | quote }}
 {{- end }}

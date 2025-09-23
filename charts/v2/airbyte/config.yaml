@@ -1084,6 +1084,10 @@ shopify:
 stigg:
   keyBasePath: global.stigg
   config:
+    - env: STIGG_ENABLED
+      key: enabled
+      valueExp: .Values.stiggSidecar.enabled
+
     - env: STIGG_API_KEY
       key: apiKey
       sensitive: true

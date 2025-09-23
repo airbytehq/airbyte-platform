@@ -8,22 +8,6 @@ import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
-import io.airbyte.micronaut.runtime.AirbyteEntitlementConfig
-import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Replaces
-import io.micronaut.context.annotation.Requires
-import io.stigg.api.client.Stigg
-import io.stigg.api.operations.GetActiveSubscriptionsListQuery
-import io.stigg.api.operations.GetEntitlementQuery
-import io.stigg.api.operations.GetEntitlementsQuery
-import io.stigg.api.operations.ProvisionCustomerMutation
-import io.stigg.api.operations.type.FetchEntitlementQuery
-import io.stigg.api.operations.type.FetchEntitlementsQuery
-import io.stigg.api.operations.type.GetActiveSubscriptionsInput
-import io.stigg.api.operations.type.ProvisionCustomerInput
-import io.stigg.api.operations.type.ProvisionCustomerSubscriptionInput
-import jakarta.inject.Singleton
 
 /**
  * EntitlementClient is an internal interface that represents

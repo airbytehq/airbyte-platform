@@ -32,6 +32,7 @@ const val DATA_DOG_PREFIX = "$AIRBYTE_PREFIX.datadog"
 const val DATA_PLANE_PREFIX = "$AIRBYTE_PREFIX.data-plane"
 const val DATAPLANE_GROUPS_PREFIX = "$AIRBYTE_PREFIX.dataplane-groups"
 const val ENTITLEMENTS_PREFIX = "$AIRBYTE_PREFIX.entitlements"
+const val STIGG_PREFIX = "$AIRBYTE_PREFIX.stigg"
 const val FEATURE_FLAG_PREFIX = "$AIRBYTE_PREFIX.feature-flag"
 const val FLYWAY_PREFIX = "$AIRBYTE_PREFIX.flyway"
 const val INTERNAL_API_PREFIX = "$AIRBYTE_PREFIX.internal-api"
@@ -529,19 +530,13 @@ data class AirbyteDataplaneGroupsConfig(
   val defaultDataplaneGroupName: String = DEFAULT_DATAPLANE_GROUPS_DEFAULT_DATAPLANE_GROUP_NAME,
 )
 
-@ConfigurationProperties(ENTITLEMENTS_PREFIX)
-data class AirbyteEntitlementConfig(
-  val client: EntitlementClientType = EntitlementClientType.DEFAULT,
-  val stigg: StiggEntitlementClientConfig = StiggEntitlementClientConfig(),
-) {
-  @ConfigurationProperties("stigg")
-  data class StiggEntitlementClientConfig(
-    val apiKey: String = "",
-    val enabled: Boolean = false,
-    val sidecarHost: String = "",
-    val sidecarPort: Int = 0,
-  )
-}
+@ConfigurationProperties(STIGG_PREFIX)
+data class AirbyteStiggClientConfig(
+  val apiKey: String = "",
+  val enabled: Boolean = false,
+  val sidecarHost: String = "",
+  val sidecarPort: Int = 8800,
+)
 
 @ConfigurationProperties(FEATURE_FLAG_PREFIX)
 data class AirbyteFeatureFlagConfig(

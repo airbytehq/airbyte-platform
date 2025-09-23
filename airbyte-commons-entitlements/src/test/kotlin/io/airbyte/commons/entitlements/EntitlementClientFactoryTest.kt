@@ -13,7 +13,7 @@ import io.airbyte.config.Configs
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.micronaut.runtime.AirbyteConfig
-import io.airbyte.micronaut.runtime.AirbyteEntitlementConfig
+import io.airbyte.micronaut.runtime.AirbyteStiggClientConfig
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -27,7 +27,7 @@ class EntitlementClientFactoryTest {
     val factory =
       EntitlementClientFactory(
         airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.COMMUNITY),
-        airbyteEntitlementConfig = AirbyteEntitlementConfig(),
+        airbyteStiggClientConfig = AirbyteStiggClientConfig(),
         activeLicense = null,
       )
     assertInstanceOf<NoEntitlementClient>(factory.entitlementClient())
@@ -43,7 +43,7 @@ class EntitlementClientFactoryTest {
     val factory =
       EntitlementClientFactory(
         airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.ENTERPRISE),
-        airbyteEntitlementConfig = AirbyteEntitlementConfig(),
+        airbyteStiggClientConfig = AirbyteStiggClientConfig(),
         activeLicense = ActiveAirbyteLicense("").also { it.license = license },
       )
 
@@ -70,7 +70,7 @@ class EntitlementClientFactoryTest {
     val factory =
       EntitlementClientFactory(
         airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.ENTERPRISE),
-        airbyteEntitlementConfig = AirbyteEntitlementConfig(),
+        airbyteStiggClientConfig = AirbyteStiggClientConfig(),
         activeLicense = ActiveAirbyteLicense("").also { it.license = license },
       )
 
@@ -83,7 +83,7 @@ class EntitlementClientFactoryTest {
     val factory =
       EntitlementClientFactory(
         airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.ENTERPRISE),
-        airbyteEntitlementConfig = AirbyteEntitlementConfig(),
+        airbyteStiggClientConfig = AirbyteStiggClientConfig(),
         activeLicense = null,
       )
 
@@ -96,52 +96,31 @@ class EntitlementClientFactoryTest {
     assertThrows<MissingStiggApiKey> {
       EntitlementClientFactory(
         airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.CLOUD),
-        airbyteEntitlementConfig = AirbyteEntitlementConfig(stigg = AirbyteEntitlementConfig.StiggEntitlementClientConfig(enabled = true)),
+        airbyteStiggClientConfig = AirbyteStiggClientConfig(enabled = true),
       ).entitlementClient()
     }
     assertThrows<MissingStiggSidecarHost> {
       EntitlementClientFactory(
         airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.CLOUD),
-        airbyteEntitlementConfig =
-          AirbyteEntitlementConfig(
-            stigg = AirbyteEntitlementConfig.StiggEntitlementClientConfig(enabled = true, apiKey = "foo"),
-          ),
+        airbyteStiggClientConfig = AirbyteStiggClientConfig(enabled = true, apiKey = "foo"),
       ).entitlementClient()
     }
     assertThrows<MissingStiggSidecarPort> {
       EntitlementClientFactory(
         airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.CLOUD),
-        airbyteEntitlementConfig =
-          AirbyteEntitlementConfig(
-            stigg = AirbyteEntitlementConfig.StiggEntitlementClientConfig(enabled = true, apiKey = "foo", sidecarHost = "foo"),
-          ),
+        airbyteStiggClientConfig = AirbyteStiggClientConfig(enabled = true, apiKey = "foo", sidecarHost = "foo", sidecarPort = 0),
       ).entitlementClient()
     }
     assertThrows<MissingStiggSidecarPort> {
       EntitlementClientFactory(
         airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.CLOUD),
-        airbyteEntitlementConfig =
-          AirbyteEntitlementConfig(
-            stigg = AirbyteEntitlementConfig.StiggEntitlementClientConfig(enabled = true, apiKey = "foo", sidecarHost = "foo", sidecarPort = 0),
-          ),
-      ).entitlementClient()
-    }
-    assertThrows<MissingStiggSidecarPort> {
-      EntitlementClientFactory(
-        airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.CLOUD),
-        airbyteEntitlementConfig =
-          AirbyteEntitlementConfig(
-            stigg = AirbyteEntitlementConfig.StiggEntitlementClientConfig(enabled = true, apiKey = "foo", sidecarHost = "foo", sidecarPort = -1),
-          ),
+        airbyteStiggClientConfig = AirbyteStiggClientConfig(enabled = true, apiKey = "foo", sidecarHost = "foo", sidecarPort = -1),
       ).entitlementClient()
     }
     assertThrows<MissingOrganizationService> {
       EntitlementClientFactory(
         airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.CLOUD),
-        airbyteEntitlementConfig =
-          AirbyteEntitlementConfig(
-            stigg = AirbyteEntitlementConfig.StiggEntitlementClientConfig(enabled = true, apiKey = "foo", sidecarHost = "foo", sidecarPort = 10000),
-          ),
+        airbyteStiggClientConfig = AirbyteStiggClientConfig(enabled = true, apiKey = "foo", sidecarHost = "foo", sidecarPort = 10000),
       ).entitlementClient()
     }
     val orgService = mockk<OrganizationService>()
@@ -150,10 +129,7 @@ class EntitlementClientFactoryTest {
     assertInstanceOf<StiggCloudEntitlementClient>(
       EntitlementClientFactory(
         airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.CLOUD),
-        airbyteEntitlementConfig =
-          AirbyteEntitlementConfig(
-            stigg = AirbyteEntitlementConfig.StiggEntitlementClientConfig(enabled = true, apiKey = "foo", sidecarHost = "foo", sidecarPort = 10000),
-          ),
+        airbyteStiggClientConfig = AirbyteStiggClientConfig(enabled = true, apiKey = "foo", sidecarHost = "foo", sidecarPort = 10000),
         organizationService = orgService,
       ).entitlementClient(),
     )
@@ -162,7 +138,7 @@ class EntitlementClientFactoryTest {
     assertInstanceOf<NoEntitlementClient>(
       EntitlementClientFactory(
         airbyteConfig = AirbyteConfig(edition = Configs.AirbyteEdition.CLOUD),
-        airbyteEntitlementConfig = AirbyteEntitlementConfig(stigg = AirbyteEntitlementConfig.StiggEntitlementClientConfig(enabled = false)),
+        airbyteStiggClientConfig = AirbyteStiggClientConfig(enabled = false),
         organizationService = orgService,
       ).entitlementClient(),
     )
