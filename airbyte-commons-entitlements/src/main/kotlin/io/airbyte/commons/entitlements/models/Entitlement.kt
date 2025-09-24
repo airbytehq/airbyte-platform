@@ -15,6 +15,7 @@ import java.util.UUID
 interface Entitlement {
   /** The unique identifier for this entitlement feature */
   val featureId: String
+  val name: String
 }
 
 /**
@@ -24,7 +25,14 @@ interface Entitlement {
  */
 open class FeatureEntitlement(
   override val featureId: String,
-) : Entitlement
+) : Entitlement {
+  override val name: String =
+    if (featureId.startsWith("feature-")) {
+      featureId.removePrefix("feature-")
+    } else {
+      featureId
+    }
+}
 
 /**
  * Entitlement for enterprise/premium connectors that require special licensing.
@@ -35,9 +43,13 @@ open class FeatureEntitlement(
  *
  * @param actorDefinitionId The UUID of the connector definition this entitlement applies to
  */
-open class ConnectorEntitlement(
+abstract class ConnectorEntitlement(
   val actorDefinitionId: UUID,
 ) : Entitlement {
+  abstract override val name: String
+
+  override val featureId: String = "$PREFIX$actorDefinitionId"
+
   companion object {
     /** Prefix used for all enterprise connector feature IDs */
     const val PREFIX = "feature-enterprise-connector-"
@@ -50,20 +62,14 @@ open class ConnectorEntitlement(
      */
     fun isConnectorFeatureId(featureId: String): Boolean = featureId.startsWith(PREFIX)
 
-    /**
-     * Creates a ConnectorEntitlement from a feature ID string.
-     *
-     * @param featureId The feature ID to parse (must start with the connector prefix)
-     * @return ConnectorEntitlement instance or null if the feature ID is invalid
-     */
-    fun fromFeatureId(featureId: String): ConnectorEntitlement? =
-      try {
-        val uuid = UUID.fromString(featureId.removePrefix(PREFIX))
-        ConnectorEntitlement(uuid)
-      } catch (e: IllegalArgumentException) {
+    internal fun parseActorDefinitionIdOrNull(featureId: String): UUID? {
+      if (!isConnectorFeatureId(featureId)) return null
+      val idPart = featureId.removePrefix(PREFIX)
+      return try {
+        UUID.fromString(idPart)
+      } catch (_: IllegalArgumentException) {
         null
       }
+    }
   }
-
-  override val featureId: String = "$PREFIX$actorDefinitionId"
 }

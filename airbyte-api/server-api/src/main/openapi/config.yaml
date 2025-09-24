@@ -10884,6 +10884,8 @@ components:
           type: boolean
         access_denied_reason:
           type: string
+        feature_name:
+          type: string
 
     GetEntitlementsByOrganizationIdRequestBody:
       type: object

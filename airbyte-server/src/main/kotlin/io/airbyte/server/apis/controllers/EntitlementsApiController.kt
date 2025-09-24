@@ -72,6 +72,7 @@ class EntitlementsApiController(
             result.map {
               OrganizationIsEntitledResponse()
                 .featureId(it.featureId)
+                .featureName(it.featureName)
                 .isEntitled(it.isEntitled)
                 .accessDeniedReason(it.reason)
             },

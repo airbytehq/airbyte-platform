@@ -7,6 +7,7 @@ package io.airbyte.commons.entitlements
 import com.apollographql.apollo3.exception.ApolloException
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
+import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.metrics.MetricAttribute
@@ -21,6 +22,8 @@ import io.stigg.api.operations.type.ProvisionCustomerInput
 import io.stigg.api.operations.type.ProvisionCustomerSubscriptionInput
 import io.stigg.sidecar.proto.v1.GetBooleanEntitlementRequest
 import io.stigg.sidecar.proto.v1.GetEntitlementsRequest
+import io.stigg.sidecar.proto.v1.ReloadEntitlementsRequest
+import io.stigg.sidecar.proto.v1.ReloadEntitlementsResponse
 import io.stigg.sidecar.sdk.Stigg
 
 private val logger = KotlinLogging.logger {}
@@ -149,12 +152,19 @@ internal class StiggWrapper(
           }
         }
 
+      val entitlement = Entitlements.fromId(featureId)
+
+      if (entitlement == null) {
+        logger.warn { "Encountered unknown entitlement. featureId=$featureId organizationId=$organizationId" }
+      }
+
       // We query for only the entitlements the customer is granted,
       // so we'd never have any results where isEntitled = false.
       EntitlementResult(
         featureId = featureId,
         isEntitled = true,
         reason = null,
+        featureName = entitlement?.name,
       )
     }
   }

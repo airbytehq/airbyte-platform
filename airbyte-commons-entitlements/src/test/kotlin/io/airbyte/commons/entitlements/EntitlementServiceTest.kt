@@ -49,21 +49,21 @@ class EntitlementServiceTest {
         orgId,
         match { it is ConnectorEntitlement && it.actorDefinitionId == defA },
       )
-    } returns EntitlementResult(ConnectorEntitlement(defA).featureId, true, null)
+    } returns EntitlementResult("${ConnectorEntitlement.PREFIX}$defA", true, null)
 
     every {
       entitlementClient.checkEntitlement(
         orgId,
         match { it is ConnectorEntitlement && it.actorDefinitionId == defB },
       )
-    } returns EntitlementResult(ConnectorEntitlement(defB).featureId, true, null)
+    } returns EntitlementResult("${ConnectorEntitlement.PREFIX}$defB", true, null)
 
     every {
       entitlementClient.checkEntitlement(
         orgId,
         match { it is ConnectorEntitlement && it.actorDefinitionId == defC },
       )
-    } returns EntitlementResult(ConnectorEntitlement(defC).featureId, false, null)
+    } returns EntitlementResult("${ConnectorEntitlement.PREFIX}$defC", false, null)
 
     // A & C are enabled by the provider, B is disabled
     every {

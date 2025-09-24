@@ -10,6 +10,7 @@ import io.airbyte.commons.entitlements.models.ConnectorEntitlement
 import io.airbyte.commons.entitlements.models.DestinationObjectStorageEntitlement
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
+import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.commons.entitlements.models.SsoEntitlement
 import io.airbyte.config.ActorType
@@ -179,9 +180,15 @@ internal class EntitlementServiceImpl(
     try {
       val clientResults: Map<UUID, Boolean> =
         actorDefinitionIds.associateWith { actorDefinitionId ->
-          entitlementClient
-            .checkEntitlement(organizationId, ConnectorEntitlement(actorDefinitionId))
-            .isEntitled
+          val connectorEntitlement = Entitlements.connectorFromActorDefinitionId(actorDefinitionId)
+          if (connectorEntitlement == null) {
+            logger.warn { "Connector entitlement not available. actorDefinitionId=$actorDefinitionId organizationId=$organizationId" }
+            false
+          } else {
+            entitlementClient
+              .checkEntitlement(organizationId, connectorEntitlement)
+              .isEntitled
+          }
         }
 
       val providerResults: Map<UUID, Boolean> =
