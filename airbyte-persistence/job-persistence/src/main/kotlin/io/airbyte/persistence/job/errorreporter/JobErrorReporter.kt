@@ -371,6 +371,10 @@ class JobErrorReporter(
       )
 
     if (workspace != null) {
+      val maybeOrganizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspace.workspaceId)
+      if (maybeOrganizationId.isPresent) {
+        commonMetadata[ORGANIZATION_ID_META_KEY] = maybeOrganizationId.get().toString()
+      }
       commonMetadata.putAll(getWorkspaceMetadata(workspace.workspaceId))
     }
 
@@ -417,6 +421,7 @@ class JobErrorReporter(
     private const val CONNECTOR_COMMAND_META_KEY = "connector_command"
     const val JOB_ID_KEY: String = "job_id"
     const val SOURCE_TYPE_META_KEY: String = "source_type"
+    const val ORGANIZATION_ID_META_KEY = "organization_id"
 
     private val UNSUPPORTED_FAILURETYPES: Set<FailureReason.FailureType> =
       ImmutableSet.of(

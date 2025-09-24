@@ -40,6 +40,7 @@ import org.mockito.kotlin.whenever
 import java.io.IOException
 import java.util.List
 import java.util.Map
+import java.util.Optional
 import java.util.UUID
 
 internal class JobErrorReporterTest {
@@ -158,6 +159,7 @@ internal class JobErrorReporterTest {
     val mWorkspace = mock<StandardWorkspace>()
     whenever(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID)
     whenever(workspaceService!!.getStandardWorkspaceFromConnection(CONNECTION_ID, true)).thenReturn(mWorkspace)
+    whenever(workspaceService!!.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)).thenReturn(Optional.of(ORGANIZATION_ID))
 
     jobErrorReporter!!.reportSyncJobFailure(CONNECTION_ID, mFailureSummary, jobReportingContext, attemptConfig)
 
@@ -178,6 +180,7 @@ internal class JobErrorReporterTest {
         Map.entry<String?, String?>(CONNECTOR_NAME_KEY, SOURCE_DEFINITION_NAME),
         Map.entry<String?, String?>(CONNECTOR_RELEASE_STAGE_KEY, SOURCE_RELEASE_STAGE.toString()),
         Map.entry<String?, String?>(CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY, SOURCE_INTERNAL_SUPPORT_LEVEL.toString()),
+        Map.entry<String?, String?>(ORGANIZATION_ID_META_KEY, ORGANIZATION_ID.toString()),
       )
 
     val expectedDestinationMetadata =
@@ -197,6 +200,7 @@ internal class JobErrorReporterTest {
         Map.entry<String?, String?>(CONNECTOR_NAME_KEY, DESTINATION_DEFINITION_NAME),
         Map.entry<String?, String?>(CONNECTOR_RELEASE_STAGE_KEY, DESTINATION_RELEASE_STAGE.toString()),
         Map.entry<String?, String?>(CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY, DESTINATION_INTERNAL_SUPPORT_LEVEL.toString()),
+        Map.entry<String?, String?>(ORGANIZATION_ID_META_KEY, ORGANIZATION_ID.toString()),
       )
 
     verify(jobErrorReportingClient).reportJobFailureReason(
@@ -373,6 +377,7 @@ internal class JobErrorReporterTest {
     val mWorkspace = mock<StandardWorkspace>()
     whenever(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID)
     whenever(workspaceService!!.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(mWorkspace)
+    whenever(workspaceService!!.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)).thenReturn(Optional.of(ORGANIZATION_ID))
 
     jobErrorReporter!!.reportDestinationCheckJobFailure(DESTINATION_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext)
 
@@ -391,6 +396,7 @@ internal class JobErrorReporterTest {
         Map.entry<String?, String?>(CONNECTOR_RELEASE_STAGE_KEY, DESTINATION_RELEASE_STAGE.toString()),
         Map.entry<String?, String?>(CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY, DESTINATION_INTERNAL_SUPPORT_LEVEL.toString()),
         Map.entry<String?, String?>(CONNECTOR_COMMAND_KEY, CHECK_COMMAND),
+        Map.entry<String?, String?>(ORGANIZATION_ID_META_KEY, ORGANIZATION_ID.toString()),
       )
 
     verify(jobErrorReportingClient)
@@ -487,6 +493,7 @@ internal class JobErrorReporterTest {
     val mWorkspace = mock<StandardWorkspace>()
     whenever(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID)
     whenever(workspaceService!!.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(mWorkspace)
+    whenever(workspaceService!!.getOrganizationIdFromWorkspaceId(WORKSPACE_ID)).thenReturn(Optional.of(ORGANIZATION_ID))
 
     jobErrorReporter!!.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, ActorType.SOURCE, WORKSPACE_ID, failureReason, jobContext)
 
@@ -505,6 +512,7 @@ internal class JobErrorReporterTest {
         Map.entry<String?, String?>(CONNECTOR_RELEASE_STAGE_KEY, SOURCE_RELEASE_STAGE.toString()),
         Map.entry<String?, String?>(CONNECTOR_INTERNAL_SUPPORT_LEVEL_KEY, SOURCE_INTERNAL_SUPPORT_LEVEL.toString()),
         Map.entry<String?, String?>(CONNECTOR_COMMAND_KEY, DISCOVER_COMMAND),
+        Map.entry<String?, String?>(ORGANIZATION_ID_META_KEY, ORGANIZATION_ID.toString()),
       )
 
     verify(jobErrorReportingClient)
@@ -668,6 +676,7 @@ internal class JobErrorReporterTest {
   companion object {
     private val JOB_ID: UUID = UUID.randomUUID()
     private val WORKSPACE_ID: UUID = UUID.randomUUID()
+    private val ORGANIZATION_ID: UUID = UUID.randomUUID()
     private val CONNECTION_ID: UUID = UUID.randomUUID()
     private const val CONNECTION_URL = "http://localhost:8000/connection/my_connection"
     private const val WORKSPACE_URL = "http://localhost:8000/workspace/my_workspace"
@@ -712,5 +721,6 @@ internal class JobErrorReporterTest {
     private const val SPEC_COMMAND = "spec"
     private const val READ_COMMAND = "read"
     private const val WRITE_COMMAND = "write"
+    private const val ORGANIZATION_ID_META_KEY = "organization_id"
   }
 }
