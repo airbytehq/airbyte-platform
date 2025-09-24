@@ -205,7 +205,7 @@ class SsoConfigDomainServiceTest {
     val org = buildTestOrganization(orgId, orgEmail)
     val config = buildTestSsoConfig(orgId, emailDomain)
 
-    every { ssoConfigService.getSsoConfig(any()) } returns mockk()
+    every { ssoConfigService.getSsoConfig(any()) } returns null
     every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
     every { organizationService.getOrganization(any()) } returns Optional.of(org)
 
@@ -218,6 +218,32 @@ class SsoConfigDomainServiceTest {
         .getData()
         .toString()
         .contains("Domain must match the organization"),
+    )
+  }
+
+  @Test
+  fun `createAndStoreSsoConfig throws when the discoveryUrl is invalid`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.com"
+    val invalidDiscoveryUrl = "not-a-url-at-all"
+
+    val org = buildTestOrganization(orgId, orgEmail)
+    val config = buildTestSsoConfig(orgId, emailDomain, invalidDiscoveryUrl)
+
+    every { ssoConfigService.getSsoConfig(any()) } returns null
+    every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
+    every { organizationService.getOrganization(any()) } returns Optional.of(org)
+
+    val exception =
+      assertThrows<SSOSetupProblem> {
+        ssoConfigDomainService.createAndStoreSsoConfig(config)
+      }
+    assert(
+      exception.problem
+        .getData()
+        .toString()
+        .contains("Provided discoveryUrl is not valid"),
     )
   }
 
@@ -255,13 +281,14 @@ class SsoConfigDomainServiceTest {
   private fun buildTestSsoConfig(
     orgId: UUID,
     emailDomain: String,
+    discoveryUrl: String = "https://auth.airbyte.com/.well-known/openid-configuration",
   ): SsoConfig =
     SsoConfig(
       organizationId = orgId,
       companyIdentifier = "airbyte",
       clientId = "client-id",
       clientSecret = "client-secret",
-      discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
+      discoveryUrl = discoveryUrl,
       emailDomain = emailDomain,
     )
 }

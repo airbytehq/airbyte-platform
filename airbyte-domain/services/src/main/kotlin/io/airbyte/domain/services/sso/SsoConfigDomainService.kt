@@ -28,6 +28,7 @@ import io.airbyte.domain.models.SsoConfigRetrieval
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
+import java.net.URL
 import java.util.UUID
 
 @Singleton
@@ -67,9 +68,10 @@ open class SsoConfigDomainService internal constructor(
 
   @Transactional("config")
   open fun createAndStoreSsoConfig(config: SsoConfig) {
+    validateDiscoveryUrl(config)
+    validateExistingSsoConfig(config)
     validateEmailDomain(config)
     validateExistingEmailDomainEntries(config)
-    validateExistingSsoConfig(config)
 
     try {
       airbyteKeycloakClient.createOidcSsoConfig(config)
@@ -187,6 +189,18 @@ open class SsoConfigDomainService internal constructor(
         ProblemSSOSetupData()
           .companyIdentifier(config.companyIdentifier)
           .errorMessage("SSO Config already exists for organization ${config.organizationId}"),
+      )
+    }
+  }
+
+  private fun validateDiscoveryUrl(config: SsoConfig) {
+    try {
+      URL(config.discoveryUrl)
+    } catch (e: Exception) {
+      throw SSOSetupProblem(
+        ProblemSSOSetupData()
+          .companyIdentifier(config.companyIdentifier)
+          .errorMessage("Provided discoveryUrl is not valid: ${e.message}"),
       )
     }
   }
