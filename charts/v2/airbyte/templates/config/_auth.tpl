@@ -31,10 +31,62 @@ Renders the auth.instanceAdmin.password environment variable
 {{- end }}
 
 {{/*
+Renders the global.auth.instanceAdmin.clientId value
+*/}}
+{{- define "airbyte.auth.instanceAdmin.clientId" }}
+    {{- .Values.global.auth.instanceAdmin.clientId }}
+{{- end }}
+
+{{/*
+Renders the auth.instanceAdmin.clientId secret key
+*/}}
+{{- define "airbyte.auth.instanceAdmin.clientId.secretKey" }}
+	{{- .Values.global.auth.instanceAdmin.clientIdSecretKey | default "instance-admin-client-id" }}
+{{- end }}
+
+{{/*
+Renders the auth.instanceAdmin.clientId environment variable
+*/}}
+{{- define "airbyte.auth.instanceAdmin.clientId.env" }}
+- name: AB_INSTANCE_ADMIN_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "airbyte.auth.bootstrap.managedSecretName" . }}
+      key: {{ include "airbyte.auth.instanceAdmin.clientId.secretKey" . }}
+{{- end }}
+
+{{/*
+Renders the global.auth.instanceAdmin.clientSecret value
+*/}}
+{{- define "airbyte.auth.instanceAdmin.clientSecret" }}
+    {{- .Values.global.auth.instanceAdmin.clientSecret }}
+{{- end }}
+
+{{/*
+Renders the auth.instanceAdmin.clientSecret secret key
+*/}}
+{{- define "airbyte.auth.instanceAdmin.clientSecret.secretKey" }}
+	{{- .Values.global.auth.instanceAdmin.clientSecretSecretKey | default "instance-admin-client-secret" }}
+{{- end }}
+
+{{/*
+Renders the auth.instanceAdmin.clientSecret environment variable
+*/}}
+{{- define "airbyte.auth.instanceAdmin.clientSecret.env" }}
+- name: AB_INSTANCE_ADMIN_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "airbyte.auth.bootstrap.managedSecretName" . }}
+      key: {{ include "airbyte.auth.instanceAdmin.clientSecret.secretKey" . }}
+{{- end }}
+
+{{/*
 Renders the set of all auth environment variables
 */}}
 {{- define "airbyte.auth.envs" }}
 {{- include "airbyte.auth.instanceAdmin.password.env" . }}
+{{- include "airbyte.auth.instanceAdmin.clientId.env" . }}
+{{- include "airbyte.auth.instanceAdmin.clientSecret.env" . }}
 {{- end }}
 
 {{/*

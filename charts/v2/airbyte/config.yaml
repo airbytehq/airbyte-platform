@@ -70,6 +70,16 @@ auth:
       refKey: instance-admin-password
       sensitive: true
       secretRef: airbyte.auth.bootstrap.managedSecretName
+    - env: AB_INSTANCE_ADMIN_CLIENT_ID
+      key: instanceAdmin.clientId
+      refKey: instance-admin-client-id
+      sensitive: true
+      secretRef: airbyte.auth.bootstrap.managedSecretName
+    - env: AB_INSTANCE_ADMIN_CLIENT_SECRET
+      key: instanceAdmin.clientSecret
+      refKey: instance-admin-client-secret
+      sensitive: true
+      secretRef: airbyte.auth.bootstrap.managedSecretName
 
 # Configuration for the initial auth bootstrapping, used by the bootloader
 auth.bootstrap:
