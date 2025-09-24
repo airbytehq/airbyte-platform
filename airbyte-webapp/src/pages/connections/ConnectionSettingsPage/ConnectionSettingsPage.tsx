@@ -10,7 +10,6 @@ import { ConnectionSyncContextProvider } from "components/connection/ConnectionS
 import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionScheduleFormField";
 import { SimplifiedConnectionsSettingsCard } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionSettingsCard";
 import { Form } from "components/forms";
-import { ProFeaturesWarnModal } from "components/ProFeaturesWarnModal";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { ExternalLink } from "components/ui/Link";
@@ -24,9 +23,8 @@ import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useFormMode } from "core/services/ui/FormModeContext";
 import { isMoreFrequentThanHourlyFromExecutions } from "core/utils/cron/cronFrequency";
 import { trackError } from "core/utils/datadog";
-import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
+import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./ConnectionSettingsPage.module.scss";
@@ -46,9 +44,8 @@ export const ConnectionSettingsPage: React.FC = () => {
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const { mode } = useFormMode();
   const simplifiedInitialValues = useInitialFormValues(connection, mode);
-  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
-  const { openModal } = useModalService();
   const fetchCronDescription = useDescribeCronExpressionFetchQuery();
+  const { showProFeatureModalIfNeeded } = useProFeaturesModal("sub-hourly-sync");
 
   const zodValidationSchema = useConnectionValidationZodSchema();
 
@@ -64,26 +61,21 @@ export const ConnectionSettingsPage: React.FC = () => {
       const isCronSchedule = values.scheduleType === ConnectionScheduleType.cron;
       const cronExpression = values.scheduleData?.cron?.cronExpression;
 
-      if (isCronSchedule && cronExpression && isUnifiedTrialPlan) {
+      if (isCronSchedule && cronExpression) {
         const cronValidationResult = await fetchCronDescription(cronExpression);
 
         if (
           cronValidationResult.isValid &&
           isMoreFrequentThanHourlyFromExecutions(cronValidationResult.nextExecutions)
         ) {
-          await openModal({
-            title: null,
-            content: ({ onComplete }) => <ProFeaturesWarnModal onContinue={() => onComplete("success")} />,
-            preventCancel: true,
-            size: "xl",
-          });
+          await showProFeatureModalIfNeeded();
           return updateConnection(connectionUpdates);
         }
       }
 
       return updateConnection(connectionUpdates);
     },
-    [connection.connectionId, isUnifiedTrialPlan, updateConnection, fetchCronDescription, openModal]
+    [connection.connectionId, updateConnection, fetchCronDescription, showProFeatureModalIfNeeded]
   );
 
   const onSuccess = useCallback(() => {

@@ -5,7 +5,6 @@ import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
-import { ProFeaturesWarnModal } from "components/ProFeaturesWarnModal";
 import { Button } from "components/ui/Button";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Tooltip } from "components/ui/Tooltip";
@@ -15,6 +14,7 @@ import { useCreateWorkspace, useListDataplaneGroups } from "core/api";
 import { DataplaneGroupRead } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
+import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -35,8 +35,9 @@ export const OrganizationWorkspacesCreateControl: React.FC<{
   const dataplaneGroups = useListDataplaneGroups();
   const { openModal } = useModalService();
   const { formatMessage } = useIntl();
+  const { showProFeatureModalIfNeeded } = useProFeaturesModal("workspaces");
 
-  const handleButtonClick = () => {
+  const handleButtonClick = async () => {
     const openCreateWorkspaceModal = () =>
       openModal({
         title: formatMessage({ id: "workspaces.create.title" }),
@@ -45,15 +46,8 @@ export const OrganizationWorkspacesCreateControl: React.FC<{
         ),
       });
 
-    if (isUnifiedTrialPlan) {
-      openModal({
-        title: null,
-        content: () => <ProFeaturesWarnModal onContinue={openCreateWorkspaceModal} />,
-        size: "xl",
-      });
-    } else {
-      openCreateWorkspaceModal();
-    }
+    await showProFeatureModalIfNeeded();
+    openCreateWorkspaceModal();
   };
 
   if (disabled) {

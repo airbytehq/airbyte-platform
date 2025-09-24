@@ -3,14 +3,12 @@ import { useIntl } from "react-intl";
 import { z } from "zod";
 
 import { Form } from "components/forms";
-import { ProFeaturesWarnModal } from "components/ProFeaturesWarnModal";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { HttpProblem, useSSOConfigManagement } from "core/api";
 import { useFormatError } from "core/errors";
 import { useIntent } from "core/utils/rbac";
-import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
-import { useModalService } from "hooks/services/Modal";
+import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { SSOSettings } from "./components/SSOSettings";
@@ -34,19 +32,10 @@ export const UpdateSSOSettingsForm = () => {
   const organizationId = useCurrentOrganizationId();
   const canUpdateOrganization = useIntent("UpdateOrganization", { organizationId });
   const { ssoConfig, createSsoConfig } = useSSOConfigManagement();
-  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
-  const { openModal } = useModalService();
+  const { showProFeatureModalIfNeeded } = useProFeaturesModal("sso");
 
   const onSubmit = async (values: SSOFormValues) => {
-    // Check if we need to show Pro features warning modal for trial users
-    if (isUnifiedTrialPlan) {
-      await openModal({
-        title: null,
-        content: ({ onComplete }) => <ProFeaturesWarnModal onContinue={() => onComplete("success")} />,
-        preventCancel: true,
-        size: "xl",
-      });
-    }
+    await showProFeatureModalIfNeeded();
 
     await createSsoConfig(values);
   };

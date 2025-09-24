@@ -6,7 +6,6 @@ import { useDebounce } from "react-use";
 import { match } from "ts-pattern";
 
 import { ConnectorIcon } from "components/ConnectorIcon";
-import { ProFeaturesWarnModal } from "components/ProFeaturesWarnModal";
 import { Button } from "components/ui/Button";
 import { CheckBox } from "components/ui/CheckBox";
 import { FlexContainer } from "components/ui/Flex";
@@ -21,7 +20,7 @@ import { EnterpriseConnectorStub } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionOrEnterpriseStub } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
+import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
 import { useModalService } from "hooks/services/Modal";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 import { RoutePaths, SourcePaths } from "pages/routePaths";
@@ -59,7 +58,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const { openModal } = useModalService();
   const trackSelectConnector = useTrackSelectConnector(connectorType);
   const trackSelectEnterpriseStub = useTrackSelectEnterpriseStub();
-  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
+  const { showProFeatureModalIfNeeded } = useProFeaturesModal("enterprise-connectors");
 
   const [showAirbyteConnectors, setShowAirbyteConnectors] = useState(true);
   const [showEnterpriseConnectors, setShowEnterpriseConnectors] = useState(true);
@@ -132,7 +131,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const isSortAscending = asc === "true";
   const navigate = useNavigate();
 
-  const handleConnectorButtonClick = (definition: ConnectorDefinitionOrEnterpriseStub) => {
+  const handleConnectorButtonClick = async (definition: ConnectorDefinitionOrEnterpriseStub) => {
     const proceedWithConnectorSelection = () => {
       if ("isEnterprise" in definition) {
         // Handle EnterpriseConnectorStubs first
@@ -147,15 +146,11 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
       }
     };
 
-    if ("isEnterprise" in definition && isUnifiedTrialPlan) {
-      openModal({
-        title: null,
-        content: () => <ProFeaturesWarnModal onContinue={proceedWithConnectorSelection} />,
-        size: "xl",
-      });
-    } else {
-      proceedWithConnectorSelection();
+    if ("isEnterprise" in definition) {
+      await showProFeatureModalIfNeeded();
     }
+
+    proceedWithConnectorSelection();
   };
 
   const onOpenRequestConnectorModal = () =>

@@ -2,13 +2,12 @@ import { useCallback, useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
-import { ProFeaturesWarnModal } from "components/ProFeaturesWarnModal";
 import { Box } from "components/ui/Box";
 import { ModalBody } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
 import { PermissionType, ScopeType } from "core/api/types/AirbyteClient";
-import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
+import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
 import { useModalService } from "hooks/services/Modal";
 
 import { AddUserFormValues, AddUserModal } from "./AddUserModal";
@@ -35,51 +34,45 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
   canInviteExternalUsers,
   scope,
 }) => {
-  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
   const { openModal, getCurrentModalTitle } = useModalService();
   const { getValues, setValue } = useFormContext<AddUserFormValues>();
+  const { showProFeatureModalIfNeeded } = useProFeaturesModal("rbac");
 
   const openProFeaturesWarnModal = useCallback(
     async (permission: PermissionType) => {
-      // Capture the AddUserModal title BEFORE opening the Teams warning modal
+      // Show warning only when user selects any pro feature permission
+      if (!isTeamsFeaturePermissionType(permission)) {
+        return;
+      }
+
+      // Capture the AddUserModal title BEFORE opening the Pro features warning modal
       const addUserModalTitle = getCurrentModalTitle();
 
-      // open Pro features warning modal
-      await openModal({
-        content: ({ onComplete }) => <ProFeaturesWarnModal onContinue={() => onComplete("success")} />,
-        preventCancel: true,
-        size: "xl",
-      });
+      // Show Pro features warning modal if needed
+      const proFeatureModalWasShown = await showProFeatureModalIfNeeded();
 
-      // reopen the AddUserModal with preserved state
-      openModal({
-        title: addUserModalTitle,
-        content: ({ onComplete }) => (
-          <AddUserModal
-            scope={scope}
-            onSubmit={() => onComplete("success")}
-            initialValues={{
-              searchValue: deferredSearchValue,
-              email: getValues("email"),
-              permission,
-              selectedRow,
-            }}
-          />
-        ),
-        size: "md",
-      });
-    },
-    [deferredSearchValue, getCurrentModalTitle, getValues, openModal, scope, selectedRow]
-  );
-
-  const handlePermissionSelect = useCallback(
-    (permission: PermissionType) => {
-      // Show warning when user selects any pro feature permission
-      if (isUnifiedTrialPlan && isTeamsFeaturePermissionType(permission)) {
-        openProFeaturesWarnModal(permission);
+      // Only reopen the AddUserModal if the warning modal was actually shown
+      if (proFeatureModalWasShown) {
+        // reopen the AddUserModal with preserved state
+        openModal({
+          title: addUserModalTitle,
+          content: ({ onComplete }) => (
+            <AddUserModal
+              scope={scope}
+              onSubmit={() => onComplete("success")}
+              initialValues={{
+                searchValue: deferredSearchValue,
+                email: getValues("email"),
+                permission,
+                selectedRow,
+              }}
+            />
+          ),
+          size: "md",
+        });
       }
     },
-    [isUnifiedTrialPlan, openProFeaturesWarnModal]
+    [deferredSearchValue, getCurrentModalTitle, getValues, openModal, scope, selectedRow, showProFeatureModalIfNeeded]
   );
 
   // handle when the selected option is no longer visible
@@ -132,7 +125,7 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
                   setSelectedRow={setSelectedRow}
                   user={user}
                   scope={scope}
-                  onSelectPermission={handlePermissionSelect}
+                  onPermissionChangeCb={openProFeaturesWarnModal}
                 />
               </li>
             );
@@ -145,7 +138,7 @@ export const AddUserModalBody: React.FC<AddUserModalBodyProps> = ({
                 selectedRow={selectedRow}
                 setSelectedRow={setSelectedRow}
                 scope={scope}
-                onSelectPermission={handlePermissionSelect}
+                onPermissionChangeCb={openProFeaturesWarnModal}
               />
             </li>
           )}

@@ -3,7 +3,6 @@ import classNames from "classnames";
 import { Fragment, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { ProFeaturesWarnModal } from "components/ProFeaturesWarnModal";
 import { Button } from "components/ui/Button";
 import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
@@ -12,8 +11,7 @@ import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { useFormMode } from "core/services/ui/FormModeContext";
-import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
-import { useModalService } from "hooks/services/Modal";
+import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
 
 import styles from "./AddStreamForMappingComboBox.module.scss";
 import { getKeyForStream, getStreamDescriptorForKey, useMappingContext } from "./MappingContext";
@@ -26,8 +24,7 @@ export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({
   const streamsToList = useGetStreamsForNewMapping();
   const { addStreamToMappingsList } = useMappingContext();
   const { formatMessage } = useIntl();
-  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
-  const { openModal } = useModalService();
+  const { showProFeatureModalIfNeeded } = useProFeaturesModal("mappers");
 
   const placeholder = secondary
     ? formatMessage({ id: "connections.mappings.addStream" })
@@ -43,14 +40,8 @@ export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({
 
   const disabled = !options || options.length === 0 || mode === "readonly";
 
-  const handleInputClick = () => {
-    if (isUnifiedTrialPlan) {
-      openModal({
-        title: null,
-        content: ({ onComplete }) => <ProFeaturesWarnModal onContinue={() => onComplete("continue")} />,
-        size: "xl",
-      });
-    }
+  const handleInputClick = async () => {
+    await showProFeatureModalIfNeeded();
   };
 
   const handleStreamSelect = (value: string) => {

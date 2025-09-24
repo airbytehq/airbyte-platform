@@ -38,7 +38,7 @@ interface InviteUserRowProps {
   setSelectedRow: (value: string | null) => void;
   user?: UnifiedUserModel;
   scope: ScopeType;
-  onSelectPermission?: (permission: PermissionType) => void;
+  onPermissionChangeCb?: (permission: PermissionType) => void;
 }
 
 export const InviteUserRow: React.FC<InviteUserRowProps> = ({
@@ -49,7 +49,7 @@ export const InviteUserRow: React.FC<InviteUserRowProps> = ({
   setSelectedRow,
   user,
   scope,
-  onSelectPermission,
+  onPermissionChangeCb,
 }) => {
   const allowAllRBACRoles = useFeature(FeatureItem.AllowAllRBACRoles);
 
@@ -69,7 +69,7 @@ export const InviteUserRow: React.FC<InviteUserRowProps> = ({
 
   const handlePermissionChange = (selectedValue: PermissionType) => {
     setValue("permission", selectedValue, { shouldValidate: true });
-    onSelectPermission?.(selectedValue);
+    onPermissionChangeCb?.(selectedValue);
   };
 
   const shouldDisableRow = useMemo(() => {

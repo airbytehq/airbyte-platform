@@ -29,6 +29,7 @@ interface AirbyteLocalStorage {
   "airbyte_license-check-dismissed-at": string | null;
   "airbyte_organization-workspace-map": Record<string, string>;
   "airbyte_new-signup": boolean;
+  "airbyte_pro-features-shown": Record<string, boolean>;
 }
 
 /*
