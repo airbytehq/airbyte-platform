@@ -2295,6 +2295,7 @@
   "billing.banners.postTrialWithLink": "<lnk>Subscribe to Airbyte</lnk> today to keep your syncs running.",
   "billing.banners.entitlements.trialEnding": "Your trial {isTrialEndingWithin24Hours, select, true {will end at {exactTime}} other {ends {days, plural, =0 {today} =1 {tomorrow} other {in # days}}}}. Upgrade now to keep your syncs going.",
   "billing.banners.entitlements.trialEndingWithLink": "Your trial {isTrialEndingWithin24Hours, select, true {will end at {exactTime}} other {ends {days, plural, =0 {today} =1 {tomorrow} other {in # days}}}}. <lnk>Upgrade now</lnk> to keep your syncs going.",
+  "billing.banners.entitlements.preTrial": "Your 30-day trial of Airbyte will start once your first sync has succeeded.",
 
   "trialEnded.modal.title": "Your 30 day trial period has ended",
   "trialEnded.modal.description": "For now, we've paused all of your syncs. Don't worry, none of your work has been lost. You can continue using Airbyte and restart your syncs simply by upgrading to one of our plans.",

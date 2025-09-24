@@ -104,6 +104,13 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     };
   }
 
+  if (trialStatus === "pre_trial" && isUnifiedTrialPlan) {
+    return {
+      level: "info",
+      content: formatMessage({ id: "billing.banners.entitlements.preTrial" }),
+    };
+  }
+
   if (trialStatus === "pre_trial") {
     return {
       level: "info",
