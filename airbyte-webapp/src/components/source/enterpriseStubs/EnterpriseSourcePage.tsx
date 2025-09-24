@@ -12,18 +12,16 @@ import { Text } from "components/ui/Text";
 
 import { useListEnterpriseStubsForWorkspace } from "core/api";
 import { EnterpriseConnectorStubType } from "core/domain/connector";
+import { links } from "core/utils/links";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 import { RoutePaths } from "pages/routePaths";
 
 import blurred_source_form from "./blurred_source_form.webp";
 import styles from "./EnterpriseSourcePage.module.scss";
 
-// Set up URL with basic tracking parameters
-const TALK_TO_SALES_URL: string = "https://airbyte.com/company/talk-to-sales?utm_source=airbyte&utm_medium=product";
-
 const appendConnectorTracking = (name: string) => {
   const lowerCaseName: string = name.toLowerCase();
-  return `${TALK_TO_SALES_URL}&utm_content=enterprise_connector_${lowerCaseName}`;
+  return `${links.contactSales}?utm_source=airbyte&utm_medium=product&utm_content=enterprise_connector_${lowerCaseName}`;
 };
 
 export const EnterpriseSourcePage: React.FC = () => {

@@ -5,6 +5,7 @@ import { Message } from "components/ui/Message";
 
 import { FormBuildError, isFormBuildError } from "core/form/FormBuildError";
 import { trackError } from "core/utils/datadog";
+import { links } from "core/utils/links";
 
 import { BuilderState } from "../types";
 
@@ -58,11 +59,7 @@ export class TestingValuesMenuErrorBoundaryComponent extends React.Component<
               id="connectorBuilder.inputsError"
               values={{ error: typeof error === "string" ? error : <FormattedMessage id={error.message} /> }}
             />{" "}
-            <a
-              target="_blank"
-              href="https://docs.airbyte.com/connector-development/connector-specification-reference"
-              rel="noreferrer"
-            >
+            <a target="_blank" href={links.connectorSpecificationReference} rel="noreferrer">
               <FormattedMessage id="connectorBuilder.inputsErrorDocumentation" />
             </a>
           </>

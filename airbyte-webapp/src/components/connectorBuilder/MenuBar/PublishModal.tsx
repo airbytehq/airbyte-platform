@@ -35,6 +35,7 @@ import { DynamicDeclarativeStream } from "core/api/types/ConnectorManifest";
 import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { NON_I18N_ERROR_TYPE } from "core/utils/form";
+import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import { ToZodSchema } from "core/utils/zod";
 import { useNotificationService } from "hooks/services/Notification";
@@ -422,7 +423,7 @@ const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ image
               <FormattedMessage id="connectorBuilder.contribution.modal.githubToken.subText" />
             </Text>
             <ExternalLink
-              href="https://docs.airbyte.com/contributing-to-airbyte/submit-new-connector#obtaining-your-github-access-token"
+              href={links.contributeNewConnectorGitHubToken}
               className={styles.githubTokenLink}
               variant="primary"
             >
