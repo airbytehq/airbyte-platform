@@ -40,6 +40,9 @@ const mockSubscriptionStatus = (
     isUnifiedTrialPlan?: boolean;
     isStandardTrialPlan?: boolean;
     isStandardPlan?: boolean;
+    isSmePlan?: boolean;
+    isFlexPlan?: boolean;
+    isProPlan?: boolean;
   } = {}
 ) => {
   mocked(useOrganizationSubscriptionStatus).mockReturnValue({
@@ -49,6 +52,9 @@ const mockSubscriptionStatus = (
     isUnifiedTrialPlan: options.isUnifiedTrialPlan ?? false,
     isStandardTrialPlan: options.isStandardTrialPlan ?? false,
     isStandardPlan: options.isStandardPlan ?? false,
+    isSmePlan: options.isSmePlan ?? false,
+    isFlexPlan: options.isFlexPlan ?? false,
+    isProPlan: options.isProPlan ?? false,
     trialDaysLeft: options.trialDaysLeft || 0,
     isTrialEndingWithin24Hours: options.isTrialEndingWithin24Hours || false,
     paymentStatus: options.paymentStatus || "okay",

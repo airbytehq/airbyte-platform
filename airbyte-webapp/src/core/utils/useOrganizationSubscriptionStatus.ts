@@ -18,6 +18,9 @@ export interface UseOrganizationSubscriptionStatusReturn {
   isUnifiedTrialPlan: boolean;
   isStandardTrialPlan: boolean;
   isStandardPlan: boolean;
+  isSmePlan: boolean;
+  isFlexPlan: boolean;
+  isProPlan: boolean;
 
   // Trial Information
   trialStatus: OrganizationTrialStatusReadTrialStatus | undefined;
@@ -57,6 +60,9 @@ export const useOrganizationSubscriptionStatus = (options?: {
   const isUnifiedTrialPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.UNIFIED_TRIAL;
   const isStandardTrialPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.STANDARD_TRIAL;
   const isStandardPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.STANDARD;
+  const isSmePlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.SME;
+  const isFlexPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.FLEX;
+  const isProPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.PRO;
 
   // Conditional trial status fetching - only when payment status allows it, user has permissions, and organization's plan is a unified trial plan
   const shouldFetchTrialStatus =
@@ -114,6 +120,9 @@ export const useOrganizationSubscriptionStatus = (options?: {
     isUnifiedTrialPlan,
     isStandardTrialPlan,
     isStandardPlan,
+    isSmePlan,
+    isFlexPlan,
+    isProPlan,
 
     // Trial Information
     trialStatus: trialStatus?.trialStatus,

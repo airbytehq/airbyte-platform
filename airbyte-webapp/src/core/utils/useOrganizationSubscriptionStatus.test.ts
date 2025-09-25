@@ -19,8 +19,11 @@ jest.mock("dayjs");
 jest.mock("components/ui/BrandingBadge/BrandingBadge", () => ({
   ORG_PLAN_IDS: {
     STANDARD: "plan-airbyte-standard",
-    UNIFIED_TRIAL: "plan-airbyte-unified-trial",
+    SME: "plan-airbyte-sme",
+    FLEX: "plan-airbyte-flex",
     STANDARD_TRIAL: "plan-airbyte-standard-trial",
+    UNIFIED_TRIAL: "plan-airbyte-unified-trial",
+    PRO: "plan-airbyte-pro",
   },
 }));
 
@@ -355,6 +358,126 @@ describe("useOrganizationSubscriptionStatus", () => {
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
 
       expect(result.current.isStandardTrialPlan).toBe(false);
+    });
+
+    // Tests for SME plan
+    it("should return true for isSmePlan when organizationPlanId matches SME", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: "plan-airbyte-sme",
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isSmePlan).toBe(true);
+    });
+
+    it("should return false for isSmePlan when organizationPlanId does not match SME", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: "plan-airbyte-standard",
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isSmePlan).toBe(false);
+    });
+
+    it("should return false for isSmePlan when organizationPlanId is undefined", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: undefined,
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isSmePlan).toBe(false);
+    });
+
+    // Tests for Flex plan
+    it("should return true for isFlexPlan when organizationPlanId matches FLEX", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: "plan-airbyte-flex",
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isFlexPlan).toBe(true);
+    });
+
+    it("should return false for isFlexPlan when organizationPlanId does not match FLEX", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: "plan-airbyte-pro",
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isFlexPlan).toBe(false);
+    });
+
+    it("should return false for isFlexPlan when organizationPlanId is undefined", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: undefined,
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isFlexPlan).toBe(false);
+    });
+
+    // Tests for Pro plan
+    it("should return true for isProPlan when organizationPlanId matches PRO", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: "plan-airbyte-pro",
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isProPlan).toBe(true);
+    });
+
+    it("should return false for isProPlan when organizationPlanId does not match PRO", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: "plan-airbyte-sme",
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isProPlan).toBe(false);
+    });
+
+    it("should return false for isProPlan when organizationPlanId is undefined", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: undefined,
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isProPlan).toBe(false);
     });
   });
 

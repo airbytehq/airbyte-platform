@@ -28,6 +28,10 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     trialEndsAt,
     isUnifiedTrialPlan,
     isStandardTrialPlan,
+    isSmePlan,
+    isFlexPlan,
+    isProPlan,
+    isStandardPlan,
   } = useOrganizationSubscriptionStatus();
   const linkToBilling = useLinkToBillingPage();
 
@@ -105,6 +109,11 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     };
   }
 
+  // Do not show pre-trial banner for SME, Flex, Pro, and Standard plans
+  if (trialStatus === "pre_trial" && (isSmePlan || isFlexPlan || isProPlan || isStandardPlan)) {
+    return undefined;
+  }
+
   if (trialStatus === "pre_trial" && (isUnifiedTrialPlan || isStandardTrialPlan)) {
     return {
       level: "info",
@@ -117,6 +126,11 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
       level: "info",
       content: formatMessage({ id: "billing.banners.preTrial" }),
     };
+  }
+
+  // Do not show in-trial banner for SME, Flex, Pro, and Standard plans
+  if (trialStatus === "in_trial" && (isSmePlan || isFlexPlan || isStandardPlan || isProPlan)) {
+    return undefined;
   }
 
   // Trial upgrade warnings for unified trial plan
