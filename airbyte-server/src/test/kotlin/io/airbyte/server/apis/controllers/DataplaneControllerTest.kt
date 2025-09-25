@@ -47,6 +47,8 @@ class DataplaneControllerTest {
         mockk(relaxed = true),
       )
     private val MOCK_DATAPLANE_GROUP_ID = UUID.randomUUID()
+
+    private const val TEST_AIRBYTE_VERSION = "test-123"
   }
 
   @Test
@@ -144,7 +146,7 @@ class DataplaneControllerTest {
     val req = DataplaneHeartbeatRequestBody()
     req.clientId = clientId
 
-    val result = dataplaneController.heartbeatDataplane(req)
+    val result = dataplaneController.heartbeatDataplane(req, TEST_AIRBYTE_VERSION)
 
     val expected = DataplaneHeartbeatResponse()
     expected.dataplaneName = dataplane.name
@@ -170,7 +172,7 @@ class DataplaneControllerTest {
     val req = DataplaneInitRequestBody()
     req.clientId = clientId
 
-    val result = dataplaneController.initializeDataplane(req)
+    val result = dataplaneController.initializeDataplane(req, TEST_AIRBYTE_VERSION)
 
     val expected = DataplaneInitResponse()
     expected.dataplaneName = dataplane.name
@@ -208,7 +210,7 @@ class DataplaneControllerTest {
     val req = DataplaneInitRequestBody()
     req.clientId = clientId
 
-    val result = dataplaneController.initializeDataplane(req)
+    val result = dataplaneController.initializeDataplane(req, TEST_AIRBYTE_VERSION)
 
     Assertions.assertEquals(result.dataplaneEnabled, expected)
   }
@@ -238,7 +240,7 @@ class DataplaneControllerTest {
     val req = DataplaneHeartbeatRequestBody()
     req.clientId = clientId
 
-    val result = dataplaneController.heartbeatDataplane(req)
+    val result = dataplaneController.heartbeatDataplane(req, TEST_AIRBYTE_VERSION)
 
     Assertions.assertEquals(result.dataplaneEnabled, expected)
   }

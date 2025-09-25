@@ -8,9 +8,11 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.auth.AccessTokenInterceptor
 import io.airbyte.api.client.auth.InternalClientTokenInterceptor
 import io.airbyte.api.client.config.ClientConfigurationSupport.generateDefaultRetryPolicy
+import io.airbyte.api.client.interceptor.AirbyteVersionInterceptor
 import io.airbyte.api.client.interceptor.ThrowOn5xxInterceptor
 import io.airbyte.api.client.interceptor.UserAgentInterceptor
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteInternalApiClientConfig
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
@@ -45,7 +47,7 @@ class ApiClientSupportFactory(
 
   @Singleton
   @Requires(property = "airbyte.internal-api.base-path", pattern = ".+")
-  fun airbyteInternalApiClient(): AirbyteApiClient {
+  fun airbyteInternalApiClient(airbyteConfig: AirbyteConfig): AirbyteApiClient {
     val httpClient =
       OkHttpClient
         .Builder()
@@ -69,6 +71,7 @@ class ApiClientSupportFactory(
           }
 
           addInterceptor(UserAgentInterceptor(micronautApplicationConfiguration.name.get()))
+          addInterceptor(AirbyteVersionInterceptor(airbyteConfig.version))
           readTimeout(config.readTimeoutSeconds, TimeUnit.SECONDS)
           connectTimeout(config.connectTimeoutSeconds, TimeUnit.SECONDS)
         }.build()

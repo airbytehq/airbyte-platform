@@ -6986,6 +6986,8 @@ paths:
       tags:
         - dataplane
       operationId: heartbeatDataplane
+      parameters:
+        - $ref: "#/components/parameters/AirbyteVersionHeader"
       requestBody:
         content:
           application/json:
@@ -7008,6 +7010,8 @@ paths:
       tags:
         - dataplane
       operationId: initializeDataplane
+      parameters:
+        - $ref: "#/components/parameters/AirbyteVersionHeader"
       requestBody:
         content:
           application/json:
@@ -21231,6 +21235,15 @@ components:
         the `redirect_url`. If a user is redirected to this URL, they'll be prompted by the identity
         provider to authenticate.
       x-sdk-component: true
+
+  parameters:
+    AirbyteVersionHeader:
+      name: X-Airbyte-Version
+      in: header
+      required: false
+      description: Airbyte application version
+      schema:
+        type: string
 
 security:
   - {}

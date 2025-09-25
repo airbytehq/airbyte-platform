@@ -21,6 +21,7 @@ import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants.DATAPLANE
+import io.airbyte.commons.constants.ApiConstants.AIRBYTE_VERSION_HEADER
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
@@ -45,6 +46,7 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
+import jakarta.ws.rs.HeaderParam
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -164,6 +166,7 @@ open class DataplaneController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun initializeDataplane(
     @Body req: DataplaneInitRequestBody,
+    @HeaderParam(AIRBYTE_VERSION_HEADER) xAirbyteVersion: String?,
   ): DataplaneInitResponse {
     // Note: after the service account migration, the service account id is the same as the
     // old client id from the dataplane_client_credentials table. If the service account is not
@@ -180,6 +183,8 @@ open class DataplaneController(
       .withOrg(dataplaneGroup.organizationId)
       .requireRole(DATAPLANE)
 
+    // TODO implement version based gating of dataplane based on airbyte version here
+
     val resp = DataplaneInitResponse()
     resp.dataplaneName = dataplane.name
     resp.dataplaneId = dataplane.id
@@ -188,7 +193,7 @@ open class DataplaneController(
     resp.dataplaneGroupId = dataplaneGroup.id
     resp.organizationId = dataplaneGroup.organizationId
 
-    reportDataplaneMetric(OssMetricsRegistry.DATAPLANE_INITIALIZE, dataplane, dataplaneGroup)
+    reportDataplaneMetric(OssMetricsRegistry.DATAPLANE_INITIALIZE, dataplane, dataplaneGroup, dataplaneVersion = xAirbyteVersion)
 
     return resp
   }
@@ -197,6 +202,7 @@ open class DataplaneController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun heartbeatDataplane(
     @Body req: DataplaneHeartbeatRequestBody,
+    @HeaderParam(AIRBYTE_VERSION_HEADER) xAirbyteVersion: String?,
   ): DataplaneHeartbeatResponse {
     val dataplane = dataplaneService.getDataplaneByServiceAccountId(req.clientId)
     if (dataplane == null) {
@@ -211,7 +217,9 @@ open class DataplaneController(
       .withOrg(dataplaneGroup.organizationId)
       .requireRole(DATAPLANE)
 
-    reportDataplaneMetric(OssMetricsRegistry.DATAPLANE_HEARTBEAT, dataplane, dataplaneGroup)
+    // TODO implement version based gating of dataplane based on airbyte version here
+
+    reportDataplaneMetric(OssMetricsRegistry.DATAPLANE_HEARTBEAT, dataplane, dataplaneGroup, dataplaneVersion = xAirbyteVersion)
 
     return DataplaneHeartbeatResponse().apply {
       dataplaneName = dataplane.name
@@ -227,6 +235,7 @@ open class DataplaneController(
     metric: OssMetricsRegistry,
     dataplane: Dataplane,
     dataplaneGroup: DataplaneGroup,
+    dataplaneVersion: String?,
   ) {
     metricClient.count(
       metric,
@@ -235,6 +244,7 @@ open class DataplaneController(
       MetricAttribute(MetricTags.DATA_PLANE_NAME_TAG, dataplane.name),
       MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, dataplaneGroup.id.toString()),
       MetricAttribute(MetricTags.DATA_PLANE_GROUP_NAME_TAG, dataplaneGroup.name),
+      MetricAttribute(MetricTags.DATA_PLANE_VERSION, dataplaneVersion ?: MetricTags.UNKNOWN),
       MetricAttribute(
         MetricTags.DATA_PLANE_VISIBILITY,
         if (dataplaneGroup.organizationId == PUBLIC_ORG_ID) MetricTags.PUBLIC else MetricTags.PRIVATE,
