@@ -16,6 +16,7 @@ import { Intent, useGeneratedIntent } from "core/utils/rbac";
 export interface UseOrganizationSubscriptionStatusReturn {
   // Organization plan information
   isUnifiedTrialPlan: boolean;
+  isStandardTrialPlan: boolean;
   isStandardPlan: boolean;
 
   // Trial Information
@@ -54,6 +55,7 @@ export const useOrganizationSubscriptionStatus = (options?: {
   const { billing } = useOrgInfo(organizationId, canManageOrganizationBilling) || {};
 
   const isUnifiedTrialPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.UNIFIED_TRIAL;
+  const isStandardTrialPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.STANDARD_TRIAL;
   const isStandardPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.STANDARD;
 
   // Conditional trial status fetching - only when payment status allows it, user has permissions, and organization's plan is a unified trial plan
@@ -110,6 +112,7 @@ export const useOrganizationSubscriptionStatus = (options?: {
   return {
     // Organization plan information
     isUnifiedTrialPlan,
+    isStandardTrialPlan,
     isStandardPlan,
 
     // Trial Information

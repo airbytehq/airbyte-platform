@@ -38,6 +38,7 @@ const mockSubscriptionStatus = (
     canManageOrganizationBilling?: boolean;
     isTrialEndingWithin24Hours?: boolean;
     isUnifiedTrialPlan?: boolean;
+    isStandardTrialPlan?: boolean;
     isStandardPlan?: boolean;
   } = {}
 ) => {
@@ -45,8 +46,9 @@ const mockSubscriptionStatus = (
     trialStatus: options.trialStatus || "post_trial",
     trialEndsAt: options.trialEndsAt,
     isInTrial: options.trialStatus === "in_trial",
-    isUnifiedTrialPlan: options.isUnifiedTrialPlan ?? true,
-    isStandardPlan: options.isStandardPlan ?? true,
+    isUnifiedTrialPlan: options.isUnifiedTrialPlan ?? false,
+    isStandardTrialPlan: options.isStandardTrialPlan ?? false,
+    isStandardPlan: options.isStandardPlan ?? false,
     trialDaysLeft: options.trialDaysLeft || 0,
     isTrialEndingWithin24Hours: options.isTrialEndingWithin24Hours || false,
     paymentStatus: options.paymentStatus || "okay",
@@ -332,7 +334,7 @@ describe("StatusBanner", () => {
     expect(wrapper.queryByRole("link")).toBeInTheDocument();
   });
 
-  describe("unified trial plan behavior", () => {
+  describe("entitlements trial plans behavior", () => {
     it("should render 24-hour trial warning with error level and exact time (with link)", async () => {
       const trialEndTime = dayjs("2024-01-01T21:28:00Z").toISOString();
       mockSubscriptionStatus({
@@ -342,6 +344,7 @@ describe("StatusBanner", () => {
         trialEndsAt: trialEndTime,
         trialDaysLeft: 0,
         isTrialEndingWithin24Hours: true,
+        isStandardTrialPlan: true,
         canManageOrganizationBilling: true,
       });
       const wrapper = await render(<StatusBanner />);
@@ -360,6 +363,7 @@ describe("StatusBanner", () => {
         trialEndsAt: trialEndTime,
         trialDaysLeft: 0,
         isTrialEndingWithin24Hours: true,
+        isStandardTrialPlan: true,
         canManageOrganizationBilling: false,
       });
       const wrapper = await render(<StatusBanner />);
@@ -376,6 +380,7 @@ describe("StatusBanner", () => {
         subscriptionStatus: "subscribed",
         trialDaysLeft: 0,
         isTrialEndingWithin24Hours: false,
+        isStandardTrialPlan: true,
         canManageOrganizationBilling: true,
       });
       const wrapper = await render(<StatusBanner />);
@@ -390,6 +395,7 @@ describe("StatusBanner", () => {
         subscriptionStatus: "subscribed",
         trialDaysLeft: 0,
         isTrialEndingWithin24Hours: false,
+        isStandardTrialPlan: true,
         canManageOrganizationBilling: false,
       });
       const wrapper = await render(<StatusBanner />);
@@ -404,6 +410,7 @@ describe("StatusBanner", () => {
         subscriptionStatus: "subscribed",
         trialDaysLeft: 1,
         isTrialEndingWithin24Hours: false,
+        isStandardTrialPlan: true,
         canManageOrganizationBilling: true,
       });
       const wrapper = await render(<StatusBanner />);
@@ -418,6 +425,7 @@ describe("StatusBanner", () => {
         subscriptionStatus: "subscribed",
         trialDaysLeft: 1,
         isTrialEndingWithin24Hours: false,
+        isStandardTrialPlan: true,
         canManageOrganizationBilling: false,
       });
       const wrapper = await render(<StatusBanner />);
@@ -432,6 +440,7 @@ describe("StatusBanner", () => {
         subscriptionStatus: "subscribed",
         trialDaysLeft: 5,
         isTrialEndingWithin24Hours: false,
+        isStandardTrialPlan: true,
         canManageOrganizationBilling: true,
       });
       const wrapper = await render(<StatusBanner />);
@@ -446,6 +455,7 @@ describe("StatusBanner", () => {
         subscriptionStatus: "subscribed",
         trialDaysLeft: 5,
         isTrialEndingWithin24Hours: false,
+        isStandardTrialPlan: true,
         canManageOrganizationBilling: false,
       });
       const wrapper = await render(<StatusBanner />);
@@ -453,7 +463,7 @@ describe("StatusBanner", () => {
       expect(wrapper.queryByRole("link")).not.toBeInTheDocument();
     });
 
-    it("should render subscribe text when not using unified trial plan", async () => {
+    it("should render subscribe text when not using entitlements trial plan", async () => {
       mockSubscriptionStatus({
         trialStatus: "in_trial",
         paymentStatus: "uninitialized",
@@ -470,13 +480,14 @@ describe("StatusBanner", () => {
       expect(wrapper.queryByRole("link")).toBeInTheDocument();
     });
 
-    it("should render upgrade warning for trials with more than 7 days left with unified trial plan", async () => {
+    it("should render upgrade warning for trials with more than 7 days left with entitlements trial plan", async () => {
       mockSubscriptionStatus({
         trialStatus: "in_trial",
         paymentStatus: "uninitialized",
         subscriptionStatus: "subscribed",
         trialDaysLeft: 10,
         isTrialEndingWithin24Hours: false,
+        isStandardTrialPlan: true,
         canManageOrganizationBilling: true,
       });
       const wrapper = await render(<StatusBanner />);

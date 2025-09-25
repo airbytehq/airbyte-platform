@@ -27,6 +27,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     isTrialEndingWithin24Hours,
     trialEndsAt,
     isUnifiedTrialPlan,
+    isStandardTrialPlan,
   } = useOrganizationSubscriptionStatus();
   const linkToBilling = useLinkToBillingPage();
 
@@ -104,7 +105,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     };
   }
 
-  if (trialStatus === "pre_trial" && isUnifiedTrialPlan) {
+  if (trialStatus === "pre_trial" && (isUnifiedTrialPlan || isStandardTrialPlan)) {
     return {
       level: "info",
       content: formatMessage({ id: "billing.banners.entitlements.preTrial" }),
@@ -119,7 +120,7 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
   }
 
   // Trial upgrade warnings for unified trial plan
-  if (trialStatus === "in_trial" && isUnifiedTrialPlan) {
+  if (trialStatus === "in_trial" && (isUnifiedTrialPlan || isStandardTrialPlan)) {
     return {
       level: isTrialEndingWithin24Hours ? "error" : "warning",
       content: formatMessage(

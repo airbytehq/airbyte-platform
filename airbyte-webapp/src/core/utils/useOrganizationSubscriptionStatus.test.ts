@@ -20,6 +20,7 @@ jest.mock("components/ui/BrandingBadge/BrandingBadge", () => ({
   ORG_PLAN_IDS: {
     STANDARD: "plan-airbyte-standard",
     UNIFIED_TRIAL: "plan-airbyte-unified-trial",
+    STANDARD_TRIAL: "plan-airbyte-standard-trial",
   },
 }));
 
@@ -315,6 +316,45 @@ describe("useOrganizationSubscriptionStatus", () => {
       const { result } = renderHook(() => useOrganizationSubscriptionStatus());
 
       expect(result.current.isStandardPlan).toBe(false);
+    });
+
+    it("should return true for isStandardTrialPlan when organizationPlanId matches STANDARD_TRIAL", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: "plan-airbyte-standard-trial",
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isStandardTrialPlan).toBe(true);
+    });
+
+    it("should return false for isStandardTrialPlan when organizationPlanId does not match STANDARD_TRIAL", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: "plan-airbyte-standard",
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isStandardTrialPlan).toBe(false);
+    });
+
+    it("should return false for isStandardTrialPlan when organizationPlanId is undefined", () => {
+      mockUseCurrentOrganizationInfo.mockReturnValue({
+        organizationId: mockOrganizationId,
+        organizationName: "Test Organization",
+        organizationPlanId: undefined,
+        sso: false,
+      });
+
+      const { result } = renderHook(() => useOrganizationSubscriptionStatus());
+
+      expect(result.current.isStandardTrialPlan).toBe(false);
     });
   });
 
