@@ -23,10 +23,13 @@ import { DataActivationConnectionFormSchema, EMPTY_STREAM } from "area/dataActiv
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useDestinationDefinitionList, useDiscoverDestination, useDiscoverSchemaQuery } from "core/api";
 import { links } from "core/utils/links";
+import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./DataActivationMappingPage.module.scss";
 import { useStreamMappings } from "../CreateDataActivationConnectionRoutes";
+
+const FORM_ID = "create-data-activation-mappings";
 
 export const DataActivationMappingPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -38,6 +41,7 @@ export const DataActivationMappingPage: React.FC = () => {
   const { data: discoveredDestination } = useDiscoverDestination(destination.destinationId);
   const [showGlobalValidationMessage, setShowGlobalValidationMessage] = useState(false);
   const navigate = useNavigate();
+  const { clearFormChange } = useFormChangeTrackerService();
 
   if (!source || !destination) {
     throw new Error("Source ID and Destination ID are required");
@@ -57,6 +61,8 @@ export const DataActivationMappingPage: React.FC = () => {
 
   const handleSubmit = (formValues: DataActivationConnectionFormValues) => {
     setStreamMappings(formValues);
+    // Manually clear the form change, because we're navigating before the form submission is fully complete
+    clearFormChange(FORM_ID);
     navigate(`${ConnectionRoutePaths.ConfigureContinued}?${searchParams.toString()}`);
   };
 
@@ -64,7 +70,7 @@ export const DataActivationMappingPage: React.FC = () => {
 
   return (
     <FormProvider {...methods}>
-      <FormChangeTracker formId="create-data-activation-mappings" changed={methods.formState.isDirty} />
+      <FormChangeTracker formId={FORM_ID} changed={methods.formState.isDirty} />
       <form
         onSubmit={(event) => {
           setShowGlobalValidationMessage(true);
