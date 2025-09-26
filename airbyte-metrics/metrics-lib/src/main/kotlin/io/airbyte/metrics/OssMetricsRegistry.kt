@@ -177,10 +177,6 @@ enum class OssMetricsRegistry(
     metricName = "job_succeeded_by_release_stage",
     metricDescription = "increments when a job succeeds. jobs are double counted as this is tagged by release stage.",
   ),
-  KUBE_POD_PROCESS_CREATE_TIME_MILLISECS(
-    metricName = "kube_pod_process_create_time_millisecs",
-    metricDescription = "time taken to create a new kube pod process",
-  ),
   LOG_CLIENT_FILE_LINE_BYTES_RETRIEVED(
     metricName = "log_client_file_byte_count",
     metricDescription = "the number of bytes retrieved from the job log file(s)",
@@ -204,14 +200,6 @@ enum class OssMetricsRegistry(
   MISSING_APPLY_SCHEMA_CHANGE_INPUT(
     metricName = "missing_apply_schema_change_input",
     metricDescription = "one expected value for applying the schema change is missing",
-  ),
-  NORMALIZATION_IN_DESTINATION_CONTAINER(
-    metricName = "normalization_in_destination_container",
-    metricDescription = "increments when normalization is run in the destination container",
-  ),
-  NORMALIZATION_IN_NORMALIZATION_CONTAINER(
-    metricName = "normalization_in_normalization_container",
-    metricDescription = "increments when normalization is run in the normalization container",
   ),
   NUM_ABNORMAL_SCHEDULED_SYNCS_IN_LAST_DAY(
     metricName = "num_abnormal_scheduled_syncs_last_day",
@@ -261,55 +249,15 @@ enum class OssMetricsRegistry(
     metricName = "oldest_running_job_age_secs",
     metricDescription = "oldest running job in seconds",
   ),
-  ORCHESTRATOR_OUT_OF_MEMORY(
-    metricName = "orchestrator_out_of_memory",
-    metricDescription = "orchestrator out of memory error",
-  ),
-  ORCHESTRATOR_INIT_COPY_FAILURE(
-    metricName = "orchestrator_init_copy_failure",
-    metricDescription = "init files failed to copy over to orchestrator",
-  ),
   OVERALL_JOB_RUNTIME_IN_LAST_HOUR_BY_TERMINAL_STATE_SECS(
     metricName = "overall_job_runtime_in_last_hour_by_terminal_state_secs",
     metricDescription =
       "overall job runtime - scheduling and execution for all attempts - for jobs that reach terminal states in the last hour. " +
         "tagged by terminal states.",
   ),
-  RUNNING_PODS_FOUND_FOR_CONNECTION_ID(
-    metricName = "running_pods_found_for_connection_id",
-    metricDescription = "whether we found pods running for a given connection id when attempting to start a sync for that connection id",
-  ),
-  REPLICATION_THROUGHPUT_BPS(
-    metricName = "replication_throughput_bps",
-    metricDescription = "throughput of replication in bytes per second",
-  ),
-  REPLICATION_BYTES_SYNCED(
-    metricName = "replication_bytes_synced",
-    metricDescription = "number of bytes synced during replication",
-  ),
-  REPLICATION_RECORDS_SYNCED(
-    metricName = "replication_records_synced",
-    metricDescription = "number of records synced during replication",
-  ),
-  REPLICATION_WORKER_CREATED(
-    metricName = "replication_worker_created",
-    metricDescription = "number of replication worker created",
-  ),
-  REPLICATION_WORKER_EXECUTOR_SHUTDOWN_ERROR(
-    metricName = "replication_worker_executor_shutdown_error",
-    metricDescription = "number of failure to shutdown executors",
-  ),
   REPLICATION_MADE_PROGRESS(
     metricName = "replication_made_progress",
     metricDescription = "Count of replication runs that made progress. To be faceted by attributes.",
-  ),
-  RESET_REQUEST(
-    metricName = "reset_request",
-    metricDescription = "number of requested resets",
-  ),
-  SOURCE_HEARTBEAT_FAILURE(
-    metricName = "source_hearbeat_failure",
-    metricDescription = "Fail a replication because the source missed an heartbeat",
   ),
   STATE_BUFFERING(
     metricName = "state_buffering",
@@ -366,12 +314,6 @@ enum class OssMetricsRegistry(
   STATE_ERROR_UNKNOWN_FROM_DESTINATION(
     metricName = "state_error_unknown_from_destination",
     metricDescription = "number of unknown states from destination",
-  ),
-  STATE_METRIC_TRACKER_ERROR(
-    metricName = "state_timestamp_metric_tracker_error",
-    metricDescription =
-      "number of syncs where the state timestamp metric tracker ran out of memory or " +
-        "was unable to match destination state message to source state message",
   ),
   STATE_PROCESSED_FROM_DESTINATION(
     metricName = "state_processed_from_destination",
@@ -485,10 +427,6 @@ enum class OssMetricsRegistry(
     metricName = "workload_pods_cleaned",
     metricDescription = "Number of pods cleaned up by the pod sweeper",
   ),
-  WORKLOAD_LAUNCHER_KUBE_COPY_SUCCESS_OOM(
-    metricName = "workload_launcher_kube_copy_success_oom",
-    metricDescription = "Number of kube cp errors when trying to write the success file in the launcher",
-  ),
   JOB_OUTPUT_WRITE(
     metricName = "job_output_write",
     metricDescription = "Write a job output in the output folder",
@@ -500,14 +438,6 @@ enum class OssMetricsRegistry(
   DESTINATION_DESERIALIZATION_ERROR(
     metricName = "destination_deserialization_error",
     metricDescription = "When a sync failed with a deserialization error from the destination",
-  ),
-  HEARTBEAT_TERMINAL_SHUTDOWN(
-    metricName = "heartbeat_terminal_shutdown",
-    metricDescription = "When the heartbeat receives a terminal response from the server, and we shut down the orchestrator",
-  ),
-  HEARTBEAT_CONNECTIVITY_FAILURE_SHUTDOWN(
-    metricName = "heartbeat_connectivity_failure_shutdown",
-    metricDescription = "When the heartbeat cannot communicate with the server, and we shut down the orchestrator",
   ),
   SIDECAR_CHECK(
     metricName = "sidecar_check",
@@ -581,10 +511,6 @@ enum class OssMetricsRegistry(
     metricName = "sync_with_empty_catalog",
     metricDescription = "Sync was started with an empty configured catalog.",
   ),
-  CONNECTOR_FAILURE_EXIT_VALUE(
-    metricName = "connector_failure_exit_value",
-    metricDescription = "Count of failure exit codes produced by a connector.",
-  ),
   CONNECTOR_STORAGE_USAGE_MB(
     metricName = "connector_storage_usage_mb",
     metricDescription = "Storage in mb used by a connector.",
@@ -644,10 +570,6 @@ enum class OssMetricsRegistry(
   WORKLOAD_LAUNCHER_KUBE_API_CLIENT_SUCCESS(
     metricName = "kube_api_client.success",
     metricDescription = "Count of Kubernetes API client successful requests.",
-  ),
-  WORKLOAD_LAUNCHER_POLLER_STATUS(
-    metricName = "workload_launcher_poller_status",
-    metricDescription = "tracks the status of the workload task poller",
   ),
   WORKLOAD_LAUNCHER_REHYDRATE_FAILURE(
     metricName = "workload_launcher_rehydrate_failure",
