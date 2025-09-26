@@ -98,7 +98,8 @@ class WorkloadHandlerImpl(
     workloadId: String,
     dataplaneId: String,
     deadline: OffsetDateTime,
-  ): Boolean = workloadService.claimWorkload(workloadId, dataplaneId, deadline) != null
+    dataplaneVersion: String?,
+  ): Boolean = workloadService.claimWorkload(workloadId, dataplaneId, deadline, dataplaneVersion) != null
 
   override fun cancelWorkload(
     workloadId: String,
@@ -114,33 +115,39 @@ class WorkloadHandlerImpl(
     workloadId: String,
     source: String?,
     reason: String?,
+    dataplaneVersion: String?,
   ) {
     withWorkloadServiceExceptionConverter {
-      workloadService.failWorkload(workloadId, source, reason)
+      workloadService.failWorkload(workloadId, source, reason, dataplaneVersion)
     }
   }
 
-  override fun succeedWorkload(workloadId: String) {
+  override fun succeedWorkload(
+    workloadId: String,
+    dataplaneVersion: String?,
+  ) {
     withWorkloadServiceExceptionConverter {
-      workloadService.succeedWorkload(workloadId)
+      workloadService.succeedWorkload(workloadId, dataplaneVersion)
     }
   }
 
   override fun setWorkloadStatusToRunning(
     workloadId: String,
     deadline: OffsetDateTime,
+    dataplaneVersion: String?,
   ) {
     withWorkloadServiceExceptionConverter {
-      workloadService.runningWorkload(workloadId, deadline)
+      workloadService.runningWorkload(workloadId, deadline, dataplaneVersion)
     }
   }
 
   override fun setWorkloadStatusToLaunched(
     workloadId: String,
     deadline: OffsetDateTime,
+    dataplaneVersion: String?,
   ) {
     withWorkloadServiceExceptionConverter {
-      workloadService.launchWorkload(workloadId, deadline)
+      workloadService.launchWorkload(workloadId, deadline, dataplaneVersion)
     }
   }
 

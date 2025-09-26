@@ -7,9 +7,11 @@ package io.airbyte.workload.api.client
 import io.airbyte.api.client.ApiException
 import io.airbyte.api.client.auth.InternalClientTokenInterceptor
 import io.airbyte.api.client.config.ApiClientSupportFactory
+import io.airbyte.api.client.interceptor.AirbyteVersionInterceptor
 import io.airbyte.api.client.interceptor.UserAgentInterceptor
 import io.airbyte.commons.jackson.MoreMappers
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteInternalApiClientConfig
 import io.airbyte.micronaut.runtime.AirbyteWorkloadApiClientConfig
 import io.micronaut.context.annotation.Factory
@@ -33,7 +35,7 @@ class WorkloadApiClientFactory(
   private val airbyteInternalApiClientConfig: AirbyteInternalApiClientConfig,
 ) {
   @Singleton
-  fun workloadApiClient(): WorkloadApiClient {
+  fun workloadApiClient(airbyteConfig: AirbyteConfig): WorkloadApiClient {
     val retryConfig =
       RetryPolicyConfig(
         delay = airbyteWorkloadApiClientConfig.retries.delaySeconds.seconds,
@@ -70,6 +72,7 @@ class WorkloadApiClientFactory(
           }
 
           addInterceptor(UserAgentInterceptor(micronautApplicationConfiguration.name.get()))
+          addInterceptor(AirbyteVersionInterceptor(airbyteConfig.version))
           readTimeout(Duration.ofSeconds(airbyteWorkloadApiClientConfig.readTimeoutSeconds))
           connectTimeout(Duration.ofSeconds(airbyteWorkloadApiClientConfig.connectTimeoutSeconds))
         }.build()

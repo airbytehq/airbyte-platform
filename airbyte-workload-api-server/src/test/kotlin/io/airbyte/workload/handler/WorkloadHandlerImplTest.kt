@@ -185,10 +185,10 @@ class WorkloadHandlerImplTest {
     val newWorkload = Fixtures.workload(WORKLOAD_ID)
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(false)
     every {
-      workloadService.failWorkload(workloadIdWithSuccessfulFail, any(), any())
+      workloadService.failWorkload(workloadIdWithSuccessfulFail, any(), any(), any())
     }.answers {}
     every {
-      workloadService.failWorkload(workloadIdWithFailedFail, any(), any())
+      workloadService.failWorkload(workloadIdWithFailedFail, any(), any(), any())
     }.throws(
       io.airbyte.workload.services
         .InvalidStatusTransitionException(workloadIdWithFailedFail),
@@ -217,8 +217,8 @@ class WorkloadHandlerImplTest {
       WorkloadPriority.DEFAULT,
     )
     verify {
-      workloadService.failWorkload(workloadIdWithFailedFail, any(), any())
-      workloadService.failWorkload(workloadIdWithSuccessfulFail, any(), any())
+      workloadService.failWorkload(workloadIdWithFailedFail, any(), any(), any())
+      workloadService.failWorkload(workloadIdWithSuccessfulFail, any(), any(), any())
       workloadRepository.save(
         match {
           it.id == WORKLOAD_ID && it.mutexKey == "mutex-this"
@@ -274,7 +274,7 @@ class WorkloadHandlerImplTest {
   @Test
   fun `claiming a workload unsuccesfully returns false`() {
     every { workloadRepository.claim(WORKLOAD_ID, any(), any()) }.returns(null)
-    assertFalse { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
+    assertFalse { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now, null) }
   }
 
   @Test
@@ -287,7 +287,7 @@ class WorkloadHandlerImplTest {
         status = WorkloadStatus.CLAIMED,
       ),
     )
-    val result = workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now)
+    val result = workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now, null)
     assertTrue(result)
     verify(exactly = 1) { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) }
   }
@@ -302,7 +302,7 @@ class WorkloadHandlerImplTest {
         dataplaneId = DATAPLANE_ID,
       ),
     )
-    val result = workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now)
+    val result = workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now, null)
     assertTrue(result)
     verify(exactly = 1) { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) }
   }
@@ -310,7 +310,7 @@ class WorkloadHandlerImplTest {
   @Test
   fun `test claiming a workload unsuccessfully`() {
     every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(null)
-    val result = workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now)
+    val result = workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now, null)
     assertFalse(result)
     verify(exactly = 0) { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) }
   }
@@ -328,7 +328,7 @@ class WorkloadHandlerImplTest {
     every { workloadRepository.succeed(WORKLOAD_ID) } throws
       io.airbyte.workload.services
         .NotFoundException("where are you")
-    assertThrows<NotFoundException> { workloadHandler.succeedWorkload(WORKLOAD_ID) }
+    assertThrows<NotFoundException> { workloadHandler.succeedWorkload(WORKLOAD_ID, null) }
   }
 
   @Test
@@ -336,7 +336,7 @@ class WorkloadHandlerImplTest {
     every { workloadRepository.running(WORKLOAD_ID, any()) } throws
       io.airbyte.workload.services
         .InvalidStatusTransitionException("bad timing")
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now, null) }
   }
 
   @Test
@@ -344,7 +344,7 @@ class WorkloadHandlerImplTest {
     every { workloadRepository.launch(WORKLOAD_ID, any()) } throws
       io.airbyte.workload.services
         .InvalidStatusTransitionException("boom")
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now, null) }
   }
 
   @Test
@@ -352,7 +352,7 @@ class WorkloadHandlerImplTest {
     every { workloadRepository.fail(WORKLOAD_ID, any(), any()) } throws
       io.airbyte.workload.services
         .InvalidStatusTransitionException("boom")
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.failWorkload(WORKLOAD_ID, "testing", "errors") }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.failWorkload(WORKLOAD_ID, "testing", "errors", null) }
   }
 
   @Test

@@ -60,6 +60,7 @@ interface WorkloadHandler {
     workloadId: String,
     dataplaneId: String,
     deadline: OffsetDateTime,
+    dataplaneVersion: String?,
   ): Boolean
 
   fun cancelWorkload(
@@ -72,18 +73,24 @@ interface WorkloadHandler {
     workloadId: String,
     source: String?,
     reason: String?,
+    dataplaneVersion: String?,
   )
 
-  fun succeedWorkload(workloadId: String)
+  fun succeedWorkload(
+    workloadId: String,
+    dataplaneVersion: String?,
+  )
 
   fun setWorkloadStatusToRunning(
     workloadId: String,
     deadline: OffsetDateTime,
+    dataplaneVersion: String?,
   )
 
   fun setWorkloadStatusToLaunched(
     workloadId: String,
     deadline: OffsetDateTime,
+    dataplaneVersion: String?,
   )
 
   fun heartbeat(

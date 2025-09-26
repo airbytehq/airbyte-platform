@@ -104,7 +104,8 @@ class WorkloadService(
         .forEach {
           try {
             logger.info { "${it.id} violates the $mutexKey uniqueness constraint, failing in favor of $workloadId before continuing." }
-            failWorkload(it.id, source = "workload-api", reason = "Superseded by $workloadId")
+            // dataplaneVersion is null in this context because a createWorkload call doesn't come from a dataplane.
+            failWorkload(it.id, source = "workload-api", reason = "Superseded by $workloadId", dataplaneVersion = null)
           } catch (_: InvalidStatusTransitionException) {
             // This edge case happens if the workload reached a terminal state through another path.
             // This would be unusual but not actionable, so we're logging a message rather than failing the call.
@@ -152,12 +153,13 @@ class WorkloadService(
     workloadId: String,
     dataplaneId: String,
     deadline: OffsetDateTime,
+    dataplaneVersion: String?,
   ): Workload? {
     val workload = workloadRepository.claim(workloadId, dataplaneId, deadline)
     if (workload != null) {
       val claimed = workload.status == WorkloadStatus.CLAIMED && workload.dataplaneId == dataplaneId
       if (claimed) {
-        emitTimeToTransitionMetric(workload, WorkloadStatus.CLAIMED)
+        emitTimeToTransitionMetric(workload, WorkloadStatus.CLAIMED, dataplaneVersion)
         workloadQueueRepository.ackWorkloadQueueItem(workloadId)
         return workload
       }
@@ -169,13 +171,14 @@ class WorkloadService(
     workloadId: String,
     source: String?,
     reason: String?,
+    dataplaneVersion: String?,
   ) {
     val workload = workloadRepository.fail(workloadId, reason = reason, source = source)
     if (workload != null) {
       workloadQueueRepository.ackWorkloadQueueItem(workloadId)
-      emitTimeToTransitionMetric(workload, WorkloadStatus.FAILURE)
+      emitTimeToTransitionMetric(workload, WorkloadStatus.FAILURE, dataplaneVersion)
       if (source == LAUNCH_ERROR_SOURCE) {
-        emitWorkloadLaunchMetric(workload, MetricTags.FAILURE)
+        emitWorkloadLaunchMetric(workload, MetricTags.FAILURE, dataplaneVersion)
       }
       signalSender.sendSignal(workload.type, workload.signalInput)
     } else {
@@ -199,6 +202,7 @@ class WorkloadService(
   fun launchWorkload(
     workloadId: String,
     deadline: OffsetDateTime,
+    dataplaneVersion: String?,
   ) {
     val workload =
       workloadRepository.launch(workloadId, deadline)
@@ -206,8 +210,8 @@ class WorkloadService(
 
     // Always emit this metric. Even though the workload state transition may have failed because the workload was already in a further state,
     // this reflects when the launcher finished launching.
-    emitTimeToTransitionMetric(workload, WorkloadStatus.LAUNCHED)
-    emitWorkloadLaunchMetric(workload, MetricTags.SUCCESS)
+    emitTimeToTransitionMetric(workload, WorkloadStatus.LAUNCHED, dataplaneVersion)
+    emitWorkloadLaunchMetric(workload, MetricTags.SUCCESS, dataplaneVersion)
 
     when (workload.status) {
       WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
@@ -243,6 +247,7 @@ class WorkloadService(
   fun runningWorkload(
     workloadId: String,
     deadline: OffsetDateTime,
+    dataplaneVersion: String?,
   ) {
     val workload =
       workloadRepository.running(workloadId, deadline)
@@ -250,7 +255,7 @@ class WorkloadService(
 
     // Always emit this metric. Even though the workload state transition may have failed because the workload was already in a further state,
     // this reflects when the workload reported it was up and running.
-    emitTimeToTransitionMetric(workload, WorkloadStatus.RUNNING)
+    emitTimeToTransitionMetric(workload, WorkloadStatus.RUNNING, dataplaneVersion)
 
     when (workload.status) {
       WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
@@ -263,11 +268,14 @@ class WorkloadService(
     }
   }
 
-  fun succeedWorkload(workloadId: String) {
+  fun succeedWorkload(
+    workloadId: String,
+    dataplaneVersion: String?,
+  ) {
     val workload = workloadRepository.succeed(workloadId)
     if (workload != null) {
       workloadQueueRepository.ackWorkloadQueueItem(workloadId)
-      emitTimeToTransitionMetric(workload, WorkloadStatus.SUCCESS)
+      emitTimeToTransitionMetric(workload, WorkloadStatus.SUCCESS, dataplaneVersion)
       signalSender.sendSignal(workload.type, workload.signalInput)
     } else {
       workloadRepository
@@ -297,14 +305,16 @@ class WorkloadService(
   private fun emitTimeToTransitionMetric(
     workload: Workload,
     status: WorkloadStatus,
+    dataplaneVersion: String?,
   ) {
     workload.timeSinceCreateInMillis()?.let {
       metricClient.distribution(
         OssMetricsRegistry.WORKLOAD_TIME_TO_TRANSITION_FROM_CREATE,
         it.toDouble(),
         MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, workload.type.name),
-        MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, workload.dataplaneGroup ?: "undefined"),
-        MetricAttribute(MetricTags.DATA_PLANE_ID_TAG, workload.dataplaneId ?: "undefined"),
+        MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, workload.dataplaneGroup ?: MetricTags.UNKNOWN),
+        MetricAttribute(MetricTags.DATA_PLANE_ID_TAG, workload.dataplaneId ?: MetricTags.UNKNOWN),
+        MetricAttribute(MetricTags.DATA_PLANE_VERSION, dataplaneVersion ?: MetricTags.UNKNOWN),
         MetricAttribute(MetricTags.STATUS_TAG, status.name),
       )
     }
@@ -316,13 +326,15 @@ class WorkloadService(
   private fun emitWorkloadLaunchMetric(
     workload: Workload,
     status: String,
+    dataplaneVersion: String?,
   ) {
     metricClient.count(
       OssMetricsRegistry.WORKLOAD_LAUNCH_STATUS,
       1L,
       MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, workload.type.name),
-      MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, workload.dataplaneGroup ?: "undefined"),
-      MetricAttribute(MetricTags.DATA_PLANE_ID_TAG, workload.dataplaneId ?: "undefined"),
+      MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, workload.dataplaneGroup ?: MetricTags.UNKNOWN),
+      MetricAttribute(MetricTags.DATA_PLANE_ID_TAG, workload.dataplaneId ?: MetricTags.UNKNOWN),
+      MetricAttribute(MetricTags.DATA_PLANE_VERSION, dataplaneVersion ?: MetricTags.UNKNOWN),
       MetricAttribute(MetricTags.STATUS_TAG, status),
     )
   }

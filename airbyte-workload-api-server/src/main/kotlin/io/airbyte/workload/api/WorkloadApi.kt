@@ -5,6 +5,7 @@
 package io.airbyte.workload.api
 
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.constants.ApiConstants.AIRBYTE_VERSION_HEADER
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.config.WorkloadType
 import io.airbyte.data.services.DataplaneGroupService
@@ -36,11 +37,13 @@ import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.airbyte.workload.common.DefaultDeadlineValues
 import io.airbyte.workload.common.WorkloadQueueService
 import io.airbyte.workload.handler.WorkloadHandler
+import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Status
+import io.micronaut.http.context.ServerRequestContext
 import io.micronaut.scheduling.TaskExecutors
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
@@ -144,7 +147,12 @@ open class WorkloadApi(
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadFailureRequest.workloadId))
     authorize(workloadId = workloadFailureRequest.workloadId)
-    workloadHandler.failWorkload(workloadFailureRequest.workloadId, workloadFailureRequest.source, workloadFailureRequest.reason)
+    workloadHandler.failWorkload(
+      workloadId = workloadFailureRequest.workloadId,
+      source = workloadFailureRequest.source,
+      reason = workloadFailureRequest.reason,
+      dataplaneVersion = readAirbyteVersionHeader(),
+    )
   }
 
   /**
@@ -164,7 +172,10 @@ open class WorkloadApi(
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadSuccessRequest.workloadId))
     authorize(workloadId = workloadSuccessRequest.workloadId)
-    workloadHandler.succeedWorkload(workloadSuccessRequest.workloadId)
+    workloadHandler.succeedWorkload(
+      workloadId = workloadSuccessRequest.workloadId,
+      dataplaneVersion = readAirbyteVersionHeader(),
+    )
   }
 
   /**
@@ -185,8 +196,9 @@ open class WorkloadApi(
     ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadRunningRequest.workloadId))
     authorize(workloadId = workloadRunningRequest.workloadId)
     workloadHandler.setWorkloadStatusToRunning(
-      workloadRunningRequest.workloadId,
-      workloadRunningRequest.deadline ?: defaultDeadlineValues.runningStepDeadline(),
+      workloadId = workloadRunningRequest.workloadId,
+      deadline = workloadRunningRequest.deadline ?: defaultDeadlineValues.runningStepDeadline(),
+      dataplaneVersion = readAirbyteVersionHeader(),
     )
   }
 
@@ -240,9 +252,10 @@ open class WorkloadApi(
     authorize(workloadId = workloadClaimRequest.workloadId)
     val claimed =
       workloadHandler.claimWorkload(
-        workloadClaimRequest.workloadId,
-        workloadClaimRequest.dataplaneId,
-        workloadClaimRequest.deadline ?: defaultDeadlineValues.claimStepDeadline(),
+        workloadId = workloadClaimRequest.workloadId,
+        dataplaneId = workloadClaimRequest.dataplaneId,
+        deadline = workloadClaimRequest.deadline ?: defaultDeadlineValues.claimStepDeadline(),
+        dataplaneVersion = readAirbyteVersionHeader(),
       )
     return ClaimResponse(claimed)
   }
@@ -265,8 +278,9 @@ open class WorkloadApi(
     ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadLaunchedRequest.workloadId))
     authorize(workloadId = workloadLaunchedRequest.workloadId)
     workloadHandler.setWorkloadStatusToLaunched(
-      workloadLaunchedRequest.workloadId,
-      workloadLaunchedRequest.deadline ?: defaultDeadlineValues.launchStepDeadline(),
+      workloadId = workloadLaunchedRequest.workloadId,
+      deadline = workloadLaunchedRequest.deadline ?: defaultDeadlineValues.launchStepDeadline(),
+      dataplaneVersion = readAirbyteVersionHeader(),
     )
   }
 
@@ -532,4 +546,13 @@ open class WorkloadApi(
 
     req.requireRole(AuthRoleConstants.DATAPLANE)
   }
+
+  /**
+   * Reads the X-Airbyte-Version if present.
+   *
+   * This is provided as a helper that leverages the static request context to avoid declaring an
+   * optional header parameter that we use mostly for tracking on each API payload.
+   */
+  private fun readAirbyteVersionHeader(): String? =
+    ServerRequestContext.currentRequest<HttpRequest<*>>().map { it.headers[AIRBYTE_VERSION_HEADER] }.orElse(null)
 }

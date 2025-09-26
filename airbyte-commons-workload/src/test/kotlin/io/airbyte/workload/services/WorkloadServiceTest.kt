@@ -89,7 +89,7 @@ class WorkloadServiceTest {
     every { workloadRepository.fail(defaultWorkloadId, any(), any()) } returns null
     every { workloadRepository.findById(defaultWorkloadId) } returns Optional.empty()
     assertThrows<NotFoundException> {
-      workloadService.failWorkload(defaultWorkloadId, "oops", "not found")
+      workloadService.failWorkload(defaultWorkloadId, "oops", "not found", null)
     }
   }
 
@@ -101,7 +101,7 @@ class WorkloadServiceTest {
     every { workloadRepository.fail(defaultWorkloadId, reason, source) } returns failedWorkload
     every { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) } returns Unit
 
-    workloadService.failWorkload(workloadId = defaultWorkloadId, reason = reason, source = source)
+    workloadService.failWorkload(workloadId = defaultWorkloadId, reason = reason, source = source, dataplaneVersion = null)
 
     verify { signalSender.sendSignal(failedWorkload.type, signalInput) }
     verify { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) }
@@ -116,7 +116,7 @@ class WorkloadServiceTest {
     every { workloadRepository.findById(defaultWorkloadId) } returns Optional.of(successfulWorkload)
 
     assertThrows<InvalidStatusTransitionException> {
-      workloadService.failWorkload(workloadId = defaultWorkloadId, reason = reason, source = source)
+      workloadService.failWorkload(workloadId = defaultWorkloadId, reason = reason, source = source, dataplaneVersion = null)
     }
 
     verify(exactly = 0) { signalSender.sendSignal(any(), any()) }
@@ -163,7 +163,7 @@ class WorkloadServiceTest {
     every { workloadRepository.launch(defaultWorkloadId, any()) } returns null
     every { workloadRepository.findById(defaultWorkloadId) } returns Optional.empty()
     assertThrows<NotFoundException> {
-      workloadService.launchWorkload(defaultWorkloadId, OffsetDateTime.now())
+      workloadService.launchWorkload(defaultWorkloadId, OffsetDateTime.now(), null)
     }
   }
 
@@ -173,7 +173,7 @@ class WorkloadServiceTest {
     every { workloadRepository.launch(defaultWorkloadId, any()) } returns launchedWorkload
     every { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) } returns Unit
 
-    workloadService.launchWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5))
+    workloadService.launchWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5), null)
 
     verify(exactly = 0) { signalSender.sendSignal(any(), any()) }
     verify(exactly = 0) { workloadQueueRepository.ackWorkloadQueueItem(any()) }
@@ -186,7 +186,7 @@ class WorkloadServiceTest {
     every { workloadRepository.findById(defaultWorkloadId) } returns Optional.of(failedWorkload)
 
     assertThrows<InvalidStatusTransitionException> {
-      workloadService.launchWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5))
+      workloadService.launchWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5), null)
     }
 
     verify(exactly = 0) { signalSender.sendSignal(any(), any()) }
@@ -198,7 +198,7 @@ class WorkloadServiceTest {
     every { workloadRepository.running(defaultWorkloadId, any()) } returns null
     every { workloadRepository.findById(defaultWorkloadId) } returns Optional.empty()
     assertThrows<NotFoundException> {
-      workloadService.runningWorkload(defaultWorkloadId, OffsetDateTime.now())
+      workloadService.runningWorkload(defaultWorkloadId, OffsetDateTime.now(), null)
     }
   }
 
@@ -208,7 +208,7 @@ class WorkloadServiceTest {
     every { workloadRepository.running(defaultWorkloadId, any()) } returns launchedWorkload
     every { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) } returns Unit
 
-    workloadService.runningWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5))
+    workloadService.runningWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5), null)
 
     verify(exactly = 0) { signalSender.sendSignal(any(), any()) }
     verify(exactly = 0) { workloadQueueRepository.ackWorkloadQueueItem(any()) }
@@ -221,7 +221,7 @@ class WorkloadServiceTest {
     every { workloadRepository.findById(defaultWorkloadId) } returns Optional.of(failedWorkload)
 
     assertThrows<InvalidStatusTransitionException> {
-      workloadService.runningWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5))
+      workloadService.runningWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5), null)
     }
 
     verify(exactly = 0) { signalSender.sendSignal(any(), any()) }
@@ -233,7 +233,7 @@ class WorkloadServiceTest {
     every { workloadRepository.succeed(defaultWorkloadId) } returns null
     every { workloadRepository.findById(defaultWorkloadId) } returns Optional.empty()
     assertThrows<NotFoundException> {
-      workloadService.succeedWorkload(defaultWorkloadId)
+      workloadService.succeedWorkload(defaultWorkloadId, null)
     }
   }
 
@@ -243,7 +243,7 @@ class WorkloadServiceTest {
     every { workloadRepository.succeed(defaultWorkloadId) } returns failedWorkload
     every { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) } returns Unit
 
-    workloadService.succeedWorkload(defaultWorkloadId)
+    workloadService.succeedWorkload(defaultWorkloadId, null)
 
     verify { signalSender.sendSignal(failedWorkload.type, signalInput) }
     verify { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) }
@@ -256,7 +256,7 @@ class WorkloadServiceTest {
     every { workloadRepository.findById(defaultWorkloadId) } returns Optional.of(failedWorkload)
 
     assertThrows<InvalidStatusTransitionException> {
-      workloadService.succeedWorkload(workloadId = defaultWorkloadId)
+      workloadService.succeedWorkload(workloadId = defaultWorkloadId, null)
     }
 
     verify(exactly = 0) { signalSender.sendSignal(any(), any()) }
