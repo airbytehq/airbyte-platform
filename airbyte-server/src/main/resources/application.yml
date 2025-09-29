@@ -10,10 +10,6 @@ micronaut:
     analytics-tracking-identity:
       charset: "UTF-8"
       expire-after-access: 10m
-    dataplane-name:
-      expire-after-write: 10m
-    dataplane-group:
-      expire-after-write: 10m
     platform-compatibility-provider:
       expire-after-write: 15s
     organization-customer-attributes:
