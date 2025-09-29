@@ -32,7 +32,7 @@ import io.airbyte.workers.models.SpecInput
  */
 fun ActorContext.toFeatureFlagContext(): Context {
   val childContexts =
-    buildList<Context> {
+    buildList {
       workspaceId?.let { add(Workspace(it)) }
       organizationId?.let { add(Organization(it)) }
 
@@ -56,7 +56,7 @@ fun ActorContext.toFeatureFlagContext(): Context {
 
 fun IntegrationLauncherConfig.toFeatureFlagContext(): Context {
   val childContexts =
-    buildList<Context> {
+    buildList {
       connectionId?.let { add(Connection(it)) }
       workspaceId?.let { add(Workspace(it)) }
     }
@@ -66,7 +66,7 @@ fun IntegrationLauncherConfig.toFeatureFlagContext(): Context {
 
 fun ConnectionContext.toFeatureFlagContext(): Context {
   val childContexts =
-    buildList<Context> {
+    buildList {
       connectionId?.let { add(Connection(it)) }
       workspaceId?.let { add(Workspace(it)) }
       organizationId?.let { add(Organization(it)) }
