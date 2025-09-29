@@ -16,6 +16,7 @@ import io.airbyte.commons.storage.S3StorageClient
 import io.airbyte.commons.storage.StorageClient
 import io.airbyte.micronaut.runtime.AirbyteStorageConfig
 import io.airbyte.micronaut.runtime.StorageType
+import kotlinx.coroutines.runBlocking
 import java.util.concurrent.TimeUnit
 
 /**
@@ -55,7 +56,9 @@ class AirbyteCloudStorageAppender(
   }
 
   override fun append(eventObject: ILoggingEvent) {
-    uploader.append(eventObject)
+    runBlocking {
+      uploader.append(eventObject)
+    }
   }
 }
 

@@ -5,9 +5,14 @@
 package io.airbyte.commons.storage
 
 import io.airbyte.commons.json.Jsons
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+
+internal const val BUFFERED_LOG_EVENT_LIMIT = 10000
 
 /**
  * A generic storage uploader class that is intended to upload items to a
@@ -29,9 +34,10 @@ open class AirbyteCloudStorageBulkUploader<T>(
   val storageClient: StorageClient,
   val period: Long = 60L,
   val unit: TimeUnit = TimeUnit.SECONDS,
+  val flushSize: Int = BUFFERED_LOG_EVENT_LIMIT,
 ) {
   /** @property buffer A threadsafe queue to store items of T */
-  val buffer = LinkedBlockingQueue<T>()
+  val buffer = LinkedBlockingQueue<T & Any>()
 
   /** @property currentStorageId represents the id of the storage file */
   var currentStorageId: String = createFileId(baseStorageId)
@@ -58,8 +64,16 @@ open class AirbyteCloudStorageBulkUploader<T>(
   /**
    * Add a message to the buffer.
    */
-  open fun append(t: T) {
+  open suspend fun append(t: T & Any) {
     buffer.add(t)
+    // If more than the limit of log lines have been buffered, flush immediately to avoid OOM situations
+    if (buffer.size >= flushSize) {
+      coroutineScope {
+        async(Dispatchers.IO) {
+          upload()
+        }
+      }
+    }
   }
 
   /**
@@ -68,19 +82,19 @@ open class AirbyteCloudStorageBulkUploader<T>(
    * The fileID is then updated to reflect a new timestamp of logs.
    */
   open fun upload() {
+    val events = mutableListOf<T>()
     synchronized(uploadLock) {
-      val events = mutableListOf<T>()
       buffer.drainTo(events)
+    }
 
-      if (events.isNotEmpty()) {
-        try {
-          val logs = Jsons.serialize(events)
-          storageClient.write(currentStorageId, logs)
-          this.currentStorageId = createFileId(baseStorageId)
-        } catch (e: Exception) {
-          // Log any failures to serialize or upload to cloud storage for debugging purposes
-          e.printStackTrace()
-        }
+    if (events.isNotEmpty()) {
+      try {
+        val logs = Jsons.serialize(events)
+        storageClient.write(currentStorageId, logs)
+        this.currentStorageId = createFileId(baseStorageId)
+      } catch (e: Exception) {
+        // Log any failures to serialize or upload to cloud storage for debugging purposes
+        e.printStackTrace()
       }
     }
   }

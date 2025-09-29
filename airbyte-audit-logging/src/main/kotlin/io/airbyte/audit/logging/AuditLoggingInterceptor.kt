@@ -32,6 +32,7 @@ import io.micronaut.http.server.netty.NettyHttpRequest
 import io.micronaut.inject.qualifiers.Qualifiers
 import io.micronaut.runtime.event.annotation.EventListener
 import jakarta.inject.Singleton
+import kotlinx.coroutines.runBlocking
 import java.util.UUID
 
 /**
@@ -171,6 +172,8 @@ class AuditLoggingInterceptor(
       return
     }
 
-    appender.append(auditLogEntry)
+    runBlocking {
+      appender.append(auditLogEntry)
+    }
   }
 }

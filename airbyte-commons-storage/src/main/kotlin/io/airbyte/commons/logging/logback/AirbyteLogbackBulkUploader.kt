@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
 /**
  * A subclass of [AirbyteCloudStorageBulkUploader] so that we can override the upload() method
  * and use the bulkEncode method to handle converting the log events to strings (in the default
- * implementation we use [Jsons]).
+ * implementation we use [io.airbyte.commons.json.Jsons]).
  */
 class AirbyteLogbackBulkUploader(
   baseStorageId: String,
