@@ -45,7 +45,7 @@ global:
   # -- Auth configuration
   auth:
     # -- Whether auth is enabled
-    enabled: false
+    enabled: true
 
     # -- Admin user configuration
     instanceAdmin:

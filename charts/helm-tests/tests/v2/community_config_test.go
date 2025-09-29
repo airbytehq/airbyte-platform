@@ -16,5 +16,5 @@ func TestDefaultCommunityConfig(t *testing.T) {
 	cm := helmtests.GetConfigMap(chartYaml, "airbyte-airbyte-env")
 	assert.NotNil(t, cm)
 
-	assert.Equal(t, "false", cm.Data["API_AUTHORIZATION_ENABLED"])
+	assert.Equal(t, "true", cm.Data["API_AUTHORIZATION_ENABLED"])
 }
