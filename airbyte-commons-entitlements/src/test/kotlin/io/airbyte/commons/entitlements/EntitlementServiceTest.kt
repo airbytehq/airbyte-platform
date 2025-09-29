@@ -4,15 +4,22 @@
 
 package io.airbyte.commons.entitlements
 
+import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.commons.entitlements.models.ConnectorEntitlement
+import io.airbyte.commons.entitlements.models.DestinationSalesforceEnterpriseConnector
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
+import io.airbyte.commons.entitlements.models.SourceOracleEnterpriseConnector
+import io.airbyte.commons.entitlements.models.SourceServicenowEnterpriseConnector
+import io.airbyte.commons.entitlements.models.SourceWorkdayEnterpriseConnector
 import io.airbyte.config.ActorType
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.metrics.MetricClient
+import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
@@ -36,14 +43,15 @@ class EntitlementServiceTest {
   }
 
   @Test
-  fun `hasEnterpriseConnectorEntitlements merges results with fallback to provider`() {
+  fun `hasEnterpriseConnectorEntitlements merges results correctly`() {
     val orgId = OrganizationId(UUID.randomUUID())
     val actorType = ActorType.SOURCE
-    val defA = UUID.randomUUID()
-    val defB = UUID.randomUUID()
-    val defC = UUID.randomUUID()
+    val defA = SourceServicenowEnterpriseConnector.actorDefinitionId
+    val defB = SourceWorkdayEnterpriseConnector.actorDefinitionId
+    val defC = SourceOracleEnterpriseConnector.actorDefinitionId
+    val defD = DestinationSalesforceEnterpriseConnector.actorDefinitionId
 
-    // A & B are entitled by entitlementClient, C is not
+    // A & B are entitled by entitlementClient, C & D are not
     every {
       entitlementClient.checkEntitlement(
         orgId,
@@ -65,21 +73,30 @@ class EntitlementServiceTest {
       )
     } returns EntitlementResult("${ConnectorEntitlement.PREFIX}$defC", false, null)
 
+    every {
+      entitlementClient.checkEntitlement(
+        orgId,
+        match { it is ConnectorEntitlement && it.actorDefinitionId == defD },
+      )
+    } returns EntitlementResult("${ConnectorEntitlement.PREFIX}$defD", false, null)
+
     // A & C are enabled by the provider, B is disabled
     every {
-      entitlementProvider.hasEnterpriseConnectorEntitlements(orgId, actorType, listOf(defA, defB, defC))
-    } returns mapOf(defA to true, defB to false, defC to true)
+      entitlementProvider.hasEnterpriseConnectorEntitlements(orgId, actorType, listOf(defA, defB, defC, defD))
+    } returns mapOf(defA to true, defB to false, defC to true, defD to false)
 
-    val result = entitlementService.hasEnterpriseConnectorEntitlements(orgId, actorType, listOf(defA, defB, defC))
+    val result = entitlementService.hasEnterpriseConnectorEntitlements(orgId, actorType, listOf(defA, defB, defC, defD))
 
     assertEquals(
       mapOf(
-        // enabled by the entitlementClient and the provider
+        // client=true, provider=true
         defA to true,
-        // enabled by the entitlementClient but disabled by the provider
-        defB to false,
-        // disabled by the entitlementClient but enabled by the provider
+        // client=true, provider=false
+        defB to true,
+        // client=false, provider=true
         defC to true,
+        // client=false, provider=false
+        defD to false,
       ),
       result,
     )

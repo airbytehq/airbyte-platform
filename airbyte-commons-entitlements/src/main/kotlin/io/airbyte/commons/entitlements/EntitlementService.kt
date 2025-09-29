@@ -194,8 +194,15 @@ internal class EntitlementServiceImpl(
       val providerResults: Map<UUID, Boolean> =
         entitlementProvider.hasEnterpriseConnectorEntitlements(organizationId, actorType, actorDefinitionIds)
 
-      // Until we're 100% on Stigg, provider results (from LD) overwrite any overlapping client results
-      return clientResults.toMutableMap().apply { putAll(providerResults) }
+      // Until we've migrated off of LD, give access to enterprise connectors if the customer has the entitlement in either LD or Stigg
+      val mergedResults: Map<UUID, Boolean> =
+        actorDefinitionIds.associateWith { actorDefinitionId ->
+          val clientValue = clientResults[actorDefinitionId] ?: false
+          val providerValue = providerResults[actorDefinitionId] ?: false
+          clientValue || providerValue
+        }
+
+      return mergedResults
     } catch (e: Exception) {
       logger.error(e) { "Exception while getting connector entitlements" }
       sendCountMetric(OssMetricsRegistry.ENTITLEMENT_RETRIEVAL, organizationId, false)
