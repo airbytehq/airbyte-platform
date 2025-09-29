@@ -10,7 +10,7 @@ import {
 } from "@src/core/api/types/AirbyteClient";
 
 import { getApiBaseUrl } from "./api";
-import { sourceAPI, destinationAPI } from "./connectors";
+import { pokeSourceAPI, e2eDestinationAPI, postgresSourceAPI, postgresDestinationAPI } from "./connectors";
 import { appendRandomString } from "./ui";
 
 // This file contains helper methods for connection CRUD operations
@@ -226,8 +226,29 @@ export const connectionTestHelpers = {
     const sourceName = appendRandomString(sourcePrefix);
     const destinationName = appendRandomString(destinationPrefix);
 
-    const source = await sourceAPI.create(request, sourceName, workspaceId);
-    const destination = await destinationAPI.create(request, destinationName, workspaceId);
+    const source = (await pokeSourceAPI.create(request, sourceName, workspaceId)) as SourceRead;
+    const destination = (await e2eDestinationAPI.create(request, destinationName, workspaceId)) as DestinationRead;
+
+    return {
+      source,
+      destination,
+      sourceId: source.sourceId,
+      destinationId: destination.destinationId,
+    };
+  },
+
+  // Setup connection test with Postgres connectors for reliable sync testing
+  setupPostgresConnectionTest: async (
+    request: APIRequestContext,
+    workspaceId: string,
+    sourcePrefix: string = "Postgres source",
+    destinationPrefix: string = "Postgres destination"
+  ) => {
+    const sourceName = appendRandomString(sourcePrefix);
+    const destinationName = appendRandomString(destinationPrefix);
+
+    const source = (await postgresSourceAPI.create(request, sourceName, workspaceId)) as SourceRead;
+    const destination = (await postgresDestinationAPI.create(request, destinationName, workspaceId)) as DestinationRead;
 
     return {
       source,
@@ -258,7 +279,7 @@ export const connectionTestHelpers = {
 
     if (sourceId) {
       try {
-        await sourceAPI.delete(request, sourceId);
+        await pokeSourceAPI.delete(request, sourceId);
       } catch (error) {
         console.warn(`⚠️ Failed to clean up source ${sourceId}:`, error);
       }
@@ -266,7 +287,7 @@ export const connectionTestHelpers = {
 
     if (destinationId) {
       try {
-        await destinationAPI.delete(request, destinationId);
+        await e2eDestinationAPI.delete(request, destinationId);
       } catch (error) {
         console.warn(`⚠️ Failed to clean up destination ${destinationId}:`, error);
       }

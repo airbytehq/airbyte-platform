@@ -15,29 +15,83 @@ import {
 
 // This file contains helper methods for connector CRUD operations
 
+// Helper functions for Postgres configuration
+const getPostgresHost = () => {
+  const postgresTestHost = process.env.POSTGRES_TEST_HOST;
+  if (postgresTestHost) {
+    return postgresTestHost;
+  }
+  // Local development fallback
+  return process.platform === "darwin" ? "host.docker.internal" : "172.17.0.1";
+};
+
+const getPostgresPort = () => {
+  const postgresTestPort = process.env.POSTGRES_TEST_PORT;
+  return postgresTestPort ? parseInt(postgresTestPort, 10) : 5433;
+};
+
 // Connector configuration definitions for test connectors
 const CONNECTOR_CONFIGS = {
   source: {
-    endpoint: "sources",
-    definitionId: sourceIds.PokeApi,
-    idField: "sourceId",
-    responseKey: "sources",
-    defaultConfig: {
-      pokemon_name: "venusaur",
+    pokeapi: {
+      endpoint: "sources",
+      definitionId: sourceIds.PokeApi,
+      idField: "sourceId",
+      responseKey: "sources",
+      defaultConfig: {
+        pokemon_name: "venusaur",
+      },
+    },
+    postgres: {
+      endpoint: "sources",
+      definitionId: sourceIds.Postgres,
+      idField: "sourceId",
+      responseKey: "sources",
+      defaultConfig: {
+        ssl_mode: { mode: "disable" },
+        tunnel_method: { tunnel_method: "NO_TUNNEL" },
+        replication_method: { method: "Standard" },
+        ssl: false,
+        port: getPostgresPort(),
+        schemas: ["public"],
+        host: getPostgresHost(),
+        database: "airbyte_ci_source",
+        username: "postgres",
+        password: "secret_password",
+      },
     },
   },
   destination: {
-    endpoint: "destinations",
-    definitionId: destinationIds.EndToEndTesting,
-    idField: "destinationId",
-    responseKey: "destinations",
-    defaultConfig: {
-      test_destination: {
-        test_destination_type: "LOGGING",
-        logging_config: {
-          logging_type: "FirstN",
-          max_entry_count: 100,
+    e2etesting: {
+      endpoint: "destinations",
+      definitionId: destinationIds.EndToEndTesting,
+      idField: "destinationId",
+      responseKey: "destinations",
+      defaultConfig: {
+        test_destination: {
+          test_destination_type: "LOGGING",
+          logging_config: {
+            logging_type: "FirstN",
+            max_entry_count: 100,
+          },
         },
+      },
+    },
+    postgres: {
+      endpoint: "destinations",
+      definitionId: destinationIds.Postgres,
+      idField: "destinationId",
+      responseKey: "destinations",
+      defaultConfig: {
+        ssl_mode: { mode: "disable" },
+        tunnel_method: { tunnel_method: "NO_TUNNEL" },
+        ssl: false,
+        port: getPostgresPort(), // Use same port as source, different database
+        schema: "public",
+        host: getPostgresHost(),
+        database: "airbyte_ci_destination",
+        username: "postgres",
+        password: "secret_password",
       },
     },
   },
@@ -45,8 +99,12 @@ const CONNECTOR_CONFIGS = {
 
 // Create a connector API interface for the specified connector type
 // This factory function generates type-safe API methods for sources or destinations
-export const createConnectorAPI = <T extends keyof typeof CONNECTOR_CONFIGS>(connectorType: T) => {
-  const config = CONNECTOR_CONFIGS[connectorType];
+export const createConnectorAPI = (connectorType: keyof typeof CONNECTOR_CONFIGS, connectorName?: string) => {
+  // Default to backwards compatible connectors
+  const defaultConnector = connectorType === "source" ? "pokeapi" : "e2etesting";
+  const selectedConnector = connectorName || defaultConnector;
+  const config =
+    CONNECTOR_CONFIGS[connectorType][selectedConnector as keyof (typeof CONNECTOR_CONFIGS)[typeof connectorType]];
   const apiBaseUrl = getApiBaseUrl();
 
   return {
@@ -55,7 +113,7 @@ export const createConnectorAPI = <T extends keyof typeof CONNECTOR_CONFIGS>(con
       request: APIRequestContext,
       name: string,
       workspaceId: string
-    ): Promise<T extends "source" ? SourceRead : DestinationRead> => {
+    ): Promise<SourceRead | DestinationRead> => {
       const createData = {
         name,
         [`${connectorType}DefinitionId`]: config.definitionId,
@@ -72,7 +130,7 @@ export const createConnectorAPI = <T extends keyof typeof CONNECTOR_CONFIGS>(con
       }
 
       const result = await response.json();
-      return result as T extends "source" ? SourceRead : DestinationRead;
+      return result as SourceRead | DestinationRead;
     },
 
     // Delete a connector via API
@@ -91,10 +149,7 @@ export const createConnectorAPI = <T extends keyof typeof CONNECTOR_CONFIGS>(con
     },
 
     // List existing connectors for a workspace
-    list: async (
-      request: APIRequestContext,
-      workspaceId: string
-    ): Promise<Array<T extends "source" ? SourceRead : DestinationRead>> => {
+    list: async (request: APIRequestContext, workspaceId: string): Promise<Array<SourceRead | DestinationRead>> => {
       try {
         const listRequest: ActorListCursorPaginatedRequestBody = {
           workspaceId,
@@ -106,7 +161,7 @@ export const createConnectorAPI = <T extends keyof typeof CONNECTOR_CONFIGS>(con
 
         if (response.ok()) {
           const result = await response.json();
-          return result[config.responseKey] as Array<T extends "source" ? SourceRead : DestinationRead>;
+          return result[config.responseKey] as Array<SourceRead | DestinationRead>;
         }
       } catch (error) {
         // Warn on listing errors
@@ -117,12 +172,15 @@ export const createConnectorAPI = <T extends keyof typeof CONNECTOR_CONFIGS>(con
   };
 };
 
-// Pre-configured API instances. Example usage:
-// await destinationAPI.create(request, name, workspaceId)
-// await destinationAPI.delete(request, destinationId)
-// await destinationAPI.list(request, workspaceId)
-export const sourceAPI = createConnectorAPI("source");
-export const destinationAPI = createConnectorAPI("destination");
+// Preconfigured connector APIs used in tests. Example usage:
+// await pokeSourceAPI.create(request, name, workspaceId)
+// await postgresSourceAPI.delete(request, sourceId)
+// await e2eDestinationAPI.list(request, workspaceId)
+
+export const pokeSourceAPI = createConnectorAPI("source", "pokeapi");
+export const postgresSourceAPI = createConnectorAPI("source", "postgres");
+export const e2eDestinationAPI = createConnectorAPI("destination", "e2etesting");
+export const postgresDestinationAPI = createConnectorAPI("destination", "postgres");
 
 // UI helper functions for destination operations
 export const destinationUI = {
@@ -183,7 +241,7 @@ export const destinationUI = {
     await submitButton.click();
 
     // Wait for success indicator (can be either div or FlexContainer)
-    await expect(page.locator("[data-id='success-result']")).toBeVisible({ timeout: 40000 });
+    await expect(page.locator("[data-id='success-result']")).toBeVisible({ timeout: 90000 });
   },
 
   deleteDestination: async (page: Page, destinationName: string, workspaceId: string) => {

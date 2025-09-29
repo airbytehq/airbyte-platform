@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-import { destinationUI, destinationAPI } from "../../helpers/connectors";
+import { destinationUI, e2eDestinationAPI } from "../../helpers/connectors";
 import { mockHelpers } from "../../helpers/mocks";
 import { appendRandomString, verifyUpdateSuccess, performSecondTextEdit } from "../../helpers/ui";
 import { setupWorkspaceForTests } from "../../helpers/workspace";
@@ -21,7 +21,7 @@ test.describe("Destination CRUD operations", () => {
 
       for (const destinationId of createdDestinationIds) {
         try {
-          await destinationAPI.delete(request, destinationId);
+          await e2eDestinationAPI.delete(request, destinationId);
         } catch (error) {
           // Just warn on cleanup errors to avoid test failures
           console.warn(`⚠️ Failed to clean up destination ${destinationId}:`, error);
@@ -49,7 +49,7 @@ test.describe("Destination CRUD operations", () => {
 
   test("Can update configured destination", async ({ page, request }) => {
     const destinationName = appendRandomString("End-to-End Testing (/dev/null) Destination");
-    const destination = await destinationAPI.create(request, destinationName, workspaceId);
+    const destination = await e2eDestinationAPI.create(request, destinationName, workspaceId);
     createdDestinationIds.push(destination.destinationId); // Track for cleanup
 
     await destinationUI.updateDestination(
@@ -65,7 +65,7 @@ test.describe("Destination CRUD operations", () => {
 
   test("Can edit destination again without leaving the page", async ({ page, request }) => {
     const destinationName = appendRandomString("End-to-End Testing (/dev/null) Destination");
-    const destination = await destinationAPI.create(request, destinationName, workspaceId);
+    const destination = await e2eDestinationAPI.create(request, destinationName, workspaceId);
     createdDestinationIds.push(destination.destinationId); // Track for cleanup
 
     await destinationUI.updateDestination(
@@ -84,7 +84,7 @@ test.describe("Destination CRUD operations", () => {
 
   test("Can delete configured destination", async ({ page, request }) => {
     const destinationName = appendRandomString("End-to-End Testing (/dev/null) Destination");
-    const destination = await destinationAPI.create(request, destinationName, workspaceId);
+    const destination = await e2eDestinationAPI.create(request, destinationName, workspaceId);
     createdDestinationIds.push(destination.destinationId); // Track for cleanup initially
 
     // Delete via UI
@@ -100,7 +100,7 @@ test.describe("Destination CRUD operations", () => {
     await expect(page).toHaveURL(/.*\/destination(\/new-destination)?$/, { timeout: 15000 });
 
     // Verify deletion was successful via API (works regardless of UI state)
-    const remainingDestinations = await destinationAPI.list(request, workspaceId);
+    const remainingDestinations = await e2eDestinationAPI.list(request, workspaceId);
     const stillExists = remainingDestinations.some(
       (d: { name: string; destinationId: string }) => d.destinationId === destination.destinationId
     );

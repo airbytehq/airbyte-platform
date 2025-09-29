@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { SourceRead, DestinationRead } from "@src/core/api/types/AirbyteClient";
 
 import { connectionAPI, connectionUI, jobUI, connectionTestHelpers } from "../../helpers/connection";
-import { sourceAPI, destinationAPI } from "../../helpers/connectors";
+import { pokeSourceAPI, e2eDestinationAPI } from "../../helpers/connectors";
 import { setupWorkspaceForTests } from "../../helpers/workspace";
 
 test.describe("Connection Timeline", () => {
@@ -48,8 +48,8 @@ test.describe("Connection Timeline", () => {
     await page.goto("/", { timeout: 10000 });
 
     // Get the source and destination objects that were created in test setup
-    const sources: SourceRead[] = await sourceAPI.list(request, workspaceId);
-    const destinations: DestinationRead[] = await destinationAPI.list(request, workspaceId);
+    const sources = (await pokeSourceAPI.list(request, workspaceId)) as SourceRead[];
+    const destinations = (await e2eDestinationAPI.list(request, workspaceId)) as DestinationRead[];
 
     const source = sources.find((s) => s.sourceId === sourceId);
     const destination = destinations.find((d) => d.destinationId === destinationId);

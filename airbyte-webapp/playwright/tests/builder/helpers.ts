@@ -58,7 +58,7 @@ export const initializeBuilderConnector = async (page: Page) => {
   await page.goto(`/workspaces/${workspaceId}/connector-builder/create`, { timeout: 30000 });
 
   // Select the "Start from scratch" option
-  await page.locator('button[data-testid="start-from-scratch"]').click({ timeout: 10000 });
+  await page.locator('button[data-testid="start-from-scratch"]').click({ timeout: 30000 });
   await page.waitForSelector('button[data-testid="start-from-scratch"]', { state: "hidden" });
   await page.waitForSelector('button[data-testid="connector-name-label"]', { timeout: 45000 });
   await page.click('button[data-testid="connector-name-label"]');

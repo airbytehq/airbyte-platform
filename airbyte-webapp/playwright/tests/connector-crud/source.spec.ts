@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-import { sourceAPI, sourceUI } from "../../helpers/connectors";
+import { pokeSourceAPI, sourceUI } from "../../helpers/connectors";
 import { mockHelpers } from "../../helpers/mocks";
 import {
   appendRandomString,
@@ -27,7 +27,7 @@ test.describe("Source CRUD operations", () => {
 
       for (const sourceId of createdSourceIds) {
         try {
-          await sourceAPI.delete(request, sourceId);
+          await pokeSourceAPI.delete(request, sourceId);
         } catch (error) {
           // Just warn on cleanup errors to avoid test failures
           console.warn(`⚠️ Failed to clean up source ${sourceId}:`, error);
@@ -58,7 +58,7 @@ test.describe("Source CRUD operations", () => {
 
   test("Can update configured source", async ({ page, request }) => {
     const sourceName = appendRandomString("PokeAPI Source");
-    const source = await sourceAPI.create(request, sourceName, workspaceId);
+    const source = await pokeSourceAPI.create(request, sourceName, workspaceId);
     createdSourceIds.push(source.sourceId); // Track for cleanup
 
     await sourceUI.updateSource(page, sourceName, "connectionConfiguration.pokemon_name", "ivysaur", workspaceId);
@@ -72,7 +72,7 @@ test.describe("Source CRUD operations", () => {
 
   test("Can edit source again without leaving the page", async ({ page, request }) => {
     const sourceName = appendRandomString("PokeAPI Source");
-    const source = await sourceAPI.create(request, sourceName, workspaceId);
+    const source = await pokeSourceAPI.create(request, sourceName, workspaceId);
     createdSourceIds.push(source.sourceId); // Track for cleanup
 
     await sourceUI.updateSource(page, sourceName, "connectionConfiguration.pokemon_name", "ivysaur", workspaceId);
@@ -90,7 +90,7 @@ test.describe("Source CRUD operations", () => {
 
   test("Can delete configured source", async ({ page, request }) => {
     const sourceName = appendRandomString("PokeAPI Source");
-    const source = await sourceAPI.create(request, sourceName, workspaceId);
+    const source = await pokeSourceAPI.create(request, sourceName, workspaceId);
     createdSourceIds.push(source.sourceId); // Track for cleanup initially
 
     // Delete via UI
@@ -106,7 +106,7 @@ test.describe("Source CRUD operations", () => {
     await expect(page).toHaveURL(/.*\/workspaces\/[^/]+\/source(\/new-source)?$/, { timeout: 15000 });
 
     // Verify deletion was successful via API (works regardless of UI state)
-    const remainingSources = await sourceAPI.list(request, workspaceId);
+    const remainingSources = await pokeSourceAPI.list(request, workspaceId);
     const stillExists = remainingSources.some(
       (s: { name: string; sourceId: string }) => s.sourceId === source.sourceId
     );
