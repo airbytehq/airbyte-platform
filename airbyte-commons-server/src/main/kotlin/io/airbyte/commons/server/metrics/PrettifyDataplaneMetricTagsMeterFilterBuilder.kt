@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workload.metrics
+package io.airbyte.commons.server.metrics
 
 import io.airbyte.config.WorkloadConstants.Companion.PUBLIC_ORG_ID
 import io.airbyte.metrics.lib.MetricTags
