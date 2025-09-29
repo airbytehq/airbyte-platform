@@ -601,6 +601,7 @@ create table "public"."sso_config" (
   "keycloak_realm" varchar(256) not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "status" "public"."sso_config_status" not null default cast('active' as sso_config_status),
   constraint "sso_config_pkey" primary key ("id"),
   constraint "sso_config_keycloak_realm_key" unique ("keycloak_realm"),
   constraint "sso_config_organization_id_key" unique ("organization_id")
