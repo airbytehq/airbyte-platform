@@ -81,6 +81,8 @@ interface EntitlementService {
 
   fun getPlans(organizationId: OrganizationId): List<EntitlementPlan>
 
+  fun getCurrentPlanId(organizationId: OrganizationId): String?
+
   fun addOrganization(
     organizationId: OrganizationId,
     plan: EntitlementPlan,
@@ -145,6 +147,9 @@ internal class EntitlementServiceImpl(
     sendCountMetric(OssMetricsRegistry.ENTITLEMENT_PLAN_RETRIEVAL, organizationId, true)
     return result
   }
+
+  // An org can never have more than one active plan at a time, so just get the first element
+  override fun getCurrentPlanId(organizationId: OrganizationId): String? = getPlans(organizationId).firstOrNull()?.id
 
   override fun addOrganization(
     organizationId: OrganizationId,

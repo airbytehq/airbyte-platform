@@ -13,6 +13,7 @@ import io.airbyte.commons.entitlements.models.SourceOracleEnterpriseConnector
 import io.airbyte.commons.entitlements.models.SourceServicenowEnterpriseConnector
 import io.airbyte.commons.entitlements.models.SourceWorkdayEnterpriseConnector
 import io.airbyte.config.ActorType
+import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.metrics.MetricClient
 import io.mockk.clearMocks
@@ -21,6 +22,7 @@ import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNull
 import java.util.UUID
 
 class EntitlementServiceTest {
@@ -110,5 +112,31 @@ class EntitlementServiceTest {
     val result = entitlementService.hasConfigTemplateEntitlements(orgId)
 
     assertEquals(true, result)
+  }
+
+  @Test
+  fun `getCurrentPlanId returns string id of current plan`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    every {
+      entitlementClient.getPlans(orgId)
+    } returns listOf(EntitlementPlan.PRO)
+
+    val result = entitlementService.getCurrentPlanId(orgId)
+
+    assertEquals("plan-airbyte-pro", result)
+  }
+
+  @Test
+  fun `getCurrentPlanId returns null with no plan`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    every {
+      entitlementClient.getPlans(orgId)
+    } returns emptyList()
+
+    val result = entitlementService.getCurrentPlanId(orgId)
+
+    assertNull(result)
   }
 }
