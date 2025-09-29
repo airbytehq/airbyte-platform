@@ -24,5 +24,6 @@ interface AirbyteTaskExecutors : TaskExecutors {
     const val SCHEDULER = "scheduler"
     const val PUBLIC_API = "public-api"
     const val WEBHOOK = "webhook"
+    const val WORKLOAD = "workload"
   }
 }

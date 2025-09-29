@@ -7,6 +7,7 @@ package io.airbyte.workload.api
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.constants.ApiConstants.AIRBYTE_VERSION_HEADER
 import io.airbyte.commons.server.authorization.RoleResolver
+import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.WorkloadType
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService
@@ -59,7 +60,7 @@ import java.util.UUID
 
 @Controller("/api/v1/workload")
 @Secured(SecurityRule.IS_AUTHENTICATED)
-@ExecuteOn(TaskExecutors.IO)
+@ExecuteOn(AirbyteTaskExecutors.WORKLOAD)
 open class WorkloadApi(
   private val workloadHandler: WorkloadHandler,
   private val workloadQueueService: WorkloadQueueService,
@@ -68,11 +69,6 @@ open class WorkloadApi(
   private val dataplaneService: DataplaneService,
   private val dataplaneGroupService: DataplaneGroupService,
 ) {
-  @POST
-  @Path("/create")
-  @Status(HttpStatus.NO_CONTENT)
-  @Consumes("application/json")
-  @Produces("application/json")
   /**
    * Create a workload
    *
@@ -81,10 +77,12 @@ open class WorkloadApi(
    *
    * Since create publishes to a queue, it is prudent to give it its own thread pool.
    */
-  @ExecuteOn("workload")
-  fun workloadCreate(
-    workloadCreateRequest: WorkloadCreateRequest,
-  ): HttpResponse<Unit> {
+  @POST
+  @Path("/create")
+  @Status(HttpStatus.NO_CONTENT)
+  @Consumes("application/json")
+  @Produces("application/json")
+  fun workloadCreate(workloadCreateRequest: WorkloadCreateRequest): HttpResponse<Unit> {
     ApmTraceUtils.addTagsToTrace(
       mutableMapOf(
         MetricTags.MUTEX_KEY_TAG to workloadCreateRequest.mutexKey,
