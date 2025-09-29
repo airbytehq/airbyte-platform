@@ -2007,7 +2007,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       catalog: AirbyteCatalog,
       autoApply: Boolean,
     ): ConnectionAutoPropagateResult {
-      log.info { "Applying schema change for connection '$connectionId' only" }
       val connection = buildConnectionRead(connectionId)
       val catalogUsedToMakeConfiguredCatalog =
         getConnectionAirbyteCatalog(connectionId)

@@ -44,7 +44,6 @@ class NotificationHelper(
         return null
       }
       if (diff.transforms.isEmpty()) {
-        log.info { "No diff to report for connection: '$connection.connectionId'; skipping notification." }
         return null
       }
       if (java.lang.Boolean.TRUE !== connection.notifySchemaChanges) {
