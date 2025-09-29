@@ -6,6 +6,7 @@ import { formatLogEvent } from "area/connection/components/JobHistoryItem/useCle
 import { trackError } from "core/utils/datadog";
 import { FILE_TYPE_DOWNLOAD, downloadFile, fileizeString } from "core/utils/file";
 import { useNotificationService } from "hooks/services/Notification";
+import { jobSummarySchema } from "pages/connections/ConnectionTimelinePage/types";
 
 import { useCurrentWorkspace } from "./workspaces";
 import {
@@ -15,15 +16,17 @@ import {
   getJobDebugInfo,
   getJobInfoWithoutLogs,
   explainJob,
+  listConnectionEventsForJob,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
-import { AttemptInfoRead, AttemptRead, LogEvents, LogRead } from "../types/AirbyteClient";
+import { AttemptInfoRead, AttemptRead, ConnectionEventType, LogEvents, LogRead } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const jobsKeys = {
   all: (connectionId: string | undefined) => [SCOPE_WORKSPACE, connectionId] as const,
   explain: (jobId: number) => [SCOPE_WORKSPACE, "jobs", "explain", jobId] as const,
+  rejectedRecords: (jobId: number) => [SCOPE_WORKSPACE, "jobs", "rejectedRecords", jobId] as const,
 };
 
 export const useCancelJob = () => {
@@ -97,6 +100,36 @@ export const useAttemptCombinedStatsForJob = (jobId: number, attempt: AttemptRea
       },
     }
   );
+};
+
+export const useRejectedRecordsForJob = (jobId: number) => {
+  const requestOptions = useRequestOptions();
+
+  return useSuspenseQuery(jobsKeys.rejectedRecords(jobId), async () => {
+    const { events } = await listConnectionEventsForJob({ id: jobId }, requestOptions);
+
+    const terminalEvent = events.find((event) => {
+      const terminalEventTypes = new Set<ConnectionEventType>([
+        ConnectionEventType.SYNC_SUCCEEDED,
+        ConnectionEventType.SYNC_CANCELLED,
+        ConnectionEventType.SYNC_FAILED,
+        ConnectionEventType.SYNC_INCOMPLETE,
+      ]);
+      return terminalEventTypes.has(event.eventType);
+    });
+
+    if (terminalEvent) {
+      const { data, success } = jobSummarySchema.safeParse(terminalEvent.summary);
+      if (success) {
+        return {
+          recordsRejected: data.recordsRejected,
+          rejectedRecordsMeta: data.rejectedRecordsMeta,
+        };
+      }
+    }
+
+    return { recordsRejected: 0, rejectedRecordsMeta: undefined };
+  });
 };
 
 export const useDonwnloadJobLogsFetchQuery = () => {

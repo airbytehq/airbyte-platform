@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
-import { FlexContainer } from "components/ui/Flex";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
 import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 import { Message } from "components/ui/Message";
@@ -83,7 +83,15 @@ const JobLogsModalInner: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptI
             />
           </div>
           {jobAttempt ? (
-            <AttemptDetails attempt={jobAttempt.attempt} jobId={jobId} showEndedAt showFailureMessage={false} />
+            <Suspense
+              fallback={
+                <FlexItem grow>
+                  <LoadingSkeleton />
+                </FlexItem>
+              }
+            >
+              <AttemptDetails attempt={jobAttempt.attempt} jobId={jobId} showEndedAt showFailureMessage={false} />
+            </Suspense>
           ) : (
             <FlexContainer direction="column">
               <LoadingSkeleton />

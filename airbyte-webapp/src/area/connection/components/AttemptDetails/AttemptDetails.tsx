@@ -3,11 +3,13 @@ import { FormattedDate, FormattedMessage, useIntl } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
-import { useAttemptCombinedStatsForJob } from "core/api";
+import { useAttemptCombinedStatsForJob, useRejectedRecordsForJob } from "core/api";
 import { AttemptRead, AttemptStatus, FailureReason, FailureType } from "core/api/types/AirbyteClient";
 import { formatBytes } from "core/utils/numberHelper";
 import { useFormatLengthOfTime } from "core/utils/time";
+import { RejectedRecordsLink } from "pages/connections/ConnectionTimelinePage/components/RejectedRecordsLink";
 
 import styles from "./AttemptDetails.module.scss";
 
@@ -37,6 +39,7 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
   const { data: aggregatedAttemptStats } = useAttemptCombinedStatsForJob(jobId, attempt);
   const { formatMessage } = useIntl();
   const attemptRunTime = useFormatLengthOfTime((attempt.updatedAt - attempt.createdAt) * 1000);
+  const { recordsRejected, rejectedRecordsMeta } = useRejectedRecordsForJob(jobId);
 
   if (attempt.status !== AttemptStatus.succeeded && attempt.status !== AttemptStatus.failed) {
     return null;
@@ -105,6 +108,23 @@ export const AttemptDetails: React.FC<AttemptDetailsProps> = ({
         <Text as="span" color="grey" size="sm">
           |
         </Text>
+        {!!recordsRejected && (
+          <>
+            <Tooltip
+              control={
+                <RejectedRecordsLink
+                  recordsRejected={recordsRejected}
+                  cloudConsoleUrl={rejectedRecordsMeta?.cloudConsoleUrl}
+                />
+              }
+            >
+              <FormattedMessage id="jobs.rejectedRecordsForAllAttempts" />
+            </Tooltip>
+            <Text as="span" color="grey" size="sm">
+              |
+            </Text>
+          </>
+        )}
         <Text as="span" color="grey" size="sm">
           <FormattedMessage id="jobs.jobId" values={{ id: jobId }} />
         </Text>
