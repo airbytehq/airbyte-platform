@@ -42,6 +42,9 @@ enum class EntitlementPlan(
   // fka TEAMS
   PRO("plan-airbyte-pro", 2),
   PRO_TRIAL("plan-airbyte-unified-trial", 2),
+
+  // Partners who get Airbyte free, forever
+  PARTNER("plan-airbyte-partner", 2),
   ;
 
   fun isGreaterOrEqualTo(other: EntitlementPlan): Boolean = this.value >= other.value
