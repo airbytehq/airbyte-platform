@@ -15,6 +15,7 @@ import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 export interface UseOrganizationSubscriptionStatusReturn {
   // Organization plan information
+  isStiggPlanEnabled: boolean;
   isUnifiedTrialPlan: boolean;
   isStandardTrialPlan: boolean;
   isStandardPlan: boolean;
@@ -117,6 +118,7 @@ export const useOrganizationSubscriptionStatus = (options?: {
 
   return {
     // Organization plan information
+    isStiggPlanEnabled: !!organizationInfo?.organizationPlanId,
     isUnifiedTrialPlan,
     isStandardTrialPlan,
     isStandardPlan,

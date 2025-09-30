@@ -37,6 +37,7 @@ const mockSubscriptionStatus = (
     trialDaysLeft?: number;
     canManageOrganizationBilling?: boolean;
     isTrialEndingWithin24Hours?: boolean;
+    isStiggPlanEnabled?: boolean;
     isUnifiedTrialPlan?: boolean;
     isStandardTrialPlan?: boolean;
     isStandardPlan?: boolean;
@@ -46,6 +47,7 @@ const mockSubscriptionStatus = (
   } = {}
 ) => {
   mocked(useOrganizationSubscriptionStatus).mockReturnValue({
+    isStiggPlanEnabled: options.isStiggPlanEnabled ?? false,
     trialStatus: options.trialStatus || "post_trial",
     trialEndsAt: options.trialEndsAt,
     isInTrial: options.trialStatus === "in_trial",
@@ -350,6 +352,7 @@ describe("StatusBanner", () => {
         trialEndsAt: trialEndTime,
         trialDaysLeft: 0,
         isTrialEndingWithin24Hours: true,
+        isStiggPlanEnabled: true,
         isStandardTrialPlan: true,
         canManageOrganizationBilling: true,
       });
@@ -369,6 +372,7 @@ describe("StatusBanner", () => {
         trialEndsAt: trialEndTime,
         trialDaysLeft: 0,
         isTrialEndingWithin24Hours: true,
+        isStiggPlanEnabled: true,
         isStandardTrialPlan: true,
         canManageOrganizationBilling: false,
       });
@@ -386,6 +390,7 @@ describe("StatusBanner", () => {
         subscriptionStatus: "subscribed",
         trialDaysLeft: 0,
         isTrialEndingWithin24Hours: false,
+        isStiggPlanEnabled: true,
         isStandardTrialPlan: true,
         canManageOrganizationBilling: true,
       });
@@ -401,6 +406,7 @@ describe("StatusBanner", () => {
         subscriptionStatus: "subscribed",
         trialDaysLeft: 0,
         isTrialEndingWithin24Hours: false,
+        isStiggPlanEnabled: true,
         isStandardTrialPlan: true,
         canManageOrganizationBilling: false,
       });
@@ -416,6 +422,7 @@ describe("StatusBanner", () => {
         subscriptionStatus: "subscribed",
         trialDaysLeft: 1,
         isTrialEndingWithin24Hours: false,
+        isStiggPlanEnabled: true,
         isStandardTrialPlan: true,
         canManageOrganizationBilling: true,
       });
@@ -431,6 +438,7 @@ describe("StatusBanner", () => {
         subscriptionStatus: "subscribed",
         trialDaysLeft: 1,
         isTrialEndingWithin24Hours: false,
+        isStiggPlanEnabled: true,
         isStandardTrialPlan: true,
         canManageOrganizationBilling: false,
       });
@@ -446,6 +454,7 @@ describe("StatusBanner", () => {
         subscriptionStatus: "subscribed",
         trialDaysLeft: 5,
         isTrialEndingWithin24Hours: false,
+        isStiggPlanEnabled: true,
         isStandardTrialPlan: true,
         canManageOrganizationBilling: true,
       });
@@ -461,6 +470,7 @@ describe("StatusBanner", () => {
         subscriptionStatus: "subscribed",
         trialDaysLeft: 5,
         isTrialEndingWithin24Hours: false,
+        isStiggPlanEnabled: true,
         isStandardTrialPlan: true,
         canManageOrganizationBilling: false,
       });
@@ -493,6 +503,7 @@ describe("StatusBanner", () => {
         subscriptionStatus: "subscribed",
         trialDaysLeft: 10,
         isTrialEndingWithin24Hours: false,
+        isStiggPlanEnabled: true,
         isStandardTrialPlan: true,
         canManageOrganizationBilling: true,
       });

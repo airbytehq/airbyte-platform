@@ -17,6 +17,7 @@ interface BillingStatusBanner {
 export const useBillingStatusBanner = (context: "top_level" | "billing_page"): BillingStatusBanner | undefined => {
   const { formatMessage } = useIntl();
   const {
+    isStiggPlanEnabled,
     trialStatus,
     trialDaysLeft,
     canManageOrganizationBilling,
@@ -28,10 +29,6 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     trialEndsAt,
     isUnifiedTrialPlan,
     isStandardTrialPlan,
-    isSmePlan,
-    isFlexPlan,
-    isProPlan,
-    isStandardPlan,
   } = useOrganizationSubscriptionStatus();
   const linkToBilling = useLinkToBillingPage();
 
@@ -109,48 +106,42 @@ export const useBillingStatusBanner = (context: "top_level" | "billing_page"): B
     };
   }
 
-  // Do not show pre-trial banner for SME, Flex, Pro, and Standard plans
-  if (trialStatus === "pre_trial" && (isSmePlan || isFlexPlan || isProPlan || isStandardPlan)) {
+  // Stigg plan-dependent logic
+  if (isStiggPlanEnabled) {
+    if (trialStatus === "pre_trial" && (isUnifiedTrialPlan || isStandardTrialPlan)) {
+      return {
+        level: "info",
+        content: formatMessage({ id: "billing.banners.entitlements.preTrial" }),
+      };
+    }
+
+    if (trialStatus === "in_trial" && (isUnifiedTrialPlan || isStandardTrialPlan)) {
+      return {
+        level: isTrialEndingWithin24Hours ? "error" : "warning",
+        content: formatMessage(
+          {
+            id:
+              context === "top_level" && canManageOrganizationBilling
+                ? "billing.banners.entitlements.trialEndingWithLink"
+                : "billing.banners.entitlements.trialEnding",
+          },
+          {
+            isTrialEndingWithin24Hours,
+            exactTime: trialEndsAt ? <FormattedTime value={trialEndsAt} /> : undefined,
+            days: trialDaysLeft,
+            lnk: (node: React.ReactNode) => <Link to={linkToBilling}>{node}</Link>,
+          }
+        ),
+      };
+    }
     return undefined;
   }
 
-  if (trialStatus === "pre_trial" && (isUnifiedTrialPlan || isStandardTrialPlan)) {
-    return {
-      level: "info",
-      content: formatMessage({ id: "billing.banners.entitlements.preTrial" }),
-    };
-  }
-
+  // Default implementation (used when Stigg plan is not provided)
   if (trialStatus === "pre_trial") {
     return {
       level: "info",
       content: formatMessage({ id: "billing.banners.preTrial" }),
-    };
-  }
-
-  // Do not show in-trial banner for SME, Flex, Pro, and Standard plans
-  if (trialStatus === "in_trial" && (isSmePlan || isFlexPlan || isStandardPlan || isProPlan)) {
-    return undefined;
-  }
-
-  // Trial upgrade warnings for unified trial plan
-  if (trialStatus === "in_trial" && (isUnifiedTrialPlan || isStandardTrialPlan)) {
-    return {
-      level: isTrialEndingWithin24Hours ? "error" : "warning",
-      content: formatMessage(
-        {
-          id:
-            context === "top_level" && canManageOrganizationBilling
-              ? "billing.banners.entitlements.trialEndingWithLink"
-              : "billing.banners.entitlements.trialEnding",
-        },
-        {
-          isTrialEndingWithin24Hours,
-          exactTime: trialEndsAt ? <FormattedTime value={trialEndsAt} /> : undefined,
-          days: trialDaysLeft,
-          lnk: (node: React.ReactNode) => <Link to={linkToBilling}>{node}</Link>,
-        }
-      ),
     };
   }
 

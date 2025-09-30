@@ -83,8 +83,9 @@ export const useGetProductBranding = (): ProductBranding => {
       enabled: !!currentOrganizationId && isCloudApp && canViewTrialStatus,
     })?.trialStatus === "in_trial";
 
-  if (planId && planId in planIdToBrandingMap) {
-    return planIdToBrandingMap[planId as PlanId];
+  // If the planId is provided, it means we still need to use Stigg — even if the plan is out of scope.
+  if (planId !== undefined) {
+    return planIdToBrandingMap[planId as PlanId] || null;
   }
 
   // fallback to feature flag logic
