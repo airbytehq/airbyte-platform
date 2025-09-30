@@ -161,6 +161,10 @@ enum class OssMetricsRegistry(
     metricName = "inconsistent_activity_input",
     metricDescription = "whenever we detect a mismatch between the input and the actual config",
   ),
+  JOB_COMPLETED(
+    metricName = "job_completed",
+    metricDescription = "increments when a job is completed",
+  ),
   JOB_CANCELLED_BY_RELEASE_STAGE(
     metricName = "job_cancelled_by_release_stage",
     metricDescription = "increments when a job is cancelled. jobs are double counted as this is tagged by release stage.",
