@@ -4,7 +4,7 @@
 #
 #    pip-compile --cert=None --client-cert=None --index-url=None --pip-args=None
 #
-airbyte-cdk==7.2.0
+airbyte-cdk==7.3.0
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.17.1
     # via airbyte-cdk
@@ -28,7 +28,7 @@ boltons==25.0.0
     # via airbyte-cdk
 bracex==2.6
     # via wcmatch
-cachetools==5.5.2
+cachetools==6.2.0
     # via
     #   airbyte-cdk
     #   google-auth
@@ -65,7 +65,7 @@ genson==1.3.0
     # via airbyte-cdk
 google-api-core[grpc]==2.25.1
     # via google-cloud-secret-manager
-google-auth==2.40.3
+google-auth==2.41.0
     # via
     #   google-api-core
     #   google-cloud-secret-manager
@@ -78,13 +78,13 @@ googleapis-common-protos[grpc]==1.70.0
     #   grpcio-status
 grpc-google-iam-v1==0.14.2
     # via google-cloud-secret-manager
-grpcio==1.75.0
+grpcio==1.75.1
     # via
     #   google-api-core
     #   googleapis-common-protos
     #   grpc-google-iam-v1
     #   grpcio-status
-grpcio-status==1.75.0
+grpcio-status==1.75.1
     # via google-api-core
 h11==0.16.0
     # via httpcore
@@ -120,7 +120,7 @@ langsmith==0.1.147
     # via langchain-core
 markdown-it-py==4.0.0
     # via rich
-markupsafe==3.0.2
+markupsafe==3.0.3
     # via jinja2
 mdurl==0.1.2
     # via markdown-it-py
