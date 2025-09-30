@@ -31,6 +31,7 @@ import io.airbyte.commons.server.handlers.ConnectorRolloutHandlerManual
 import io.airbyte.commons.server.handlers.helpers.ConnectorRolloutHelper
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -39,6 +40,8 @@ import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import java.util.concurrent.Callable
+
+private val logger = KotlinLogging.logger {}
 
 @Controller("/api/v1/connector_rollout")
 @Context
@@ -57,6 +60,8 @@ class ConnectorRolloutApiController(
     @Body connectorRolloutStartRequestBody: ConnectorRolloutStartRequestBody,
   ): ConnectorRolloutStartResponse? =
     execute {
+      logger.info { "Starting connector rollout for ID: ${connectorRolloutStartRequestBody.id}" }
+
       val startedConnectorRollout =
         connectorRolloutHandler.startConnectorRollout(connectorRolloutStartRequestBody)
       val response =

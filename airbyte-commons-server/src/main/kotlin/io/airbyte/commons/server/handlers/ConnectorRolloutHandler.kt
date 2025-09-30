@@ -283,15 +283,17 @@ open class ConnectorRolloutHandler
 
       // If actors are still pinned to a previous rollout's release candidate, we migrate them to the new release candidate
       if (connectorRolloutStart.migratePins) {
+        logger.info { "Migrating pins for connector rollout ID: ${connectorRollout.id}" }
         actorDefinitionVersionUpdater.migrateReleaseCandidatePins(
           connectorRollout.actorDefinitionId,
           connectorRolloutService.listConnectorRollouts(connectorRollout.actorDefinitionId).map { it.id.toString() },
           connectorRollout.id.toString(),
           connectorRollout.releaseCandidateVersionId,
         )
+        logger.info { "Migrated pins for connector rollout ID: ${connectorRollout.id}" }
         connectorRollout.currentTargetRolloutPct = getPercentagePinned(connectorRollout)
       }
-
+      logger.info { "Updating connector rollout ID: ${connectorRollout.id}" }
       val updatedConnectorRollout = connectorRolloutService.writeConnectorRollout(connectorRollout)
       return connectorRolloutHelper.buildConnectorRolloutRead(updatedConnectorRollout, true)
     }
