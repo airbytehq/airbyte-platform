@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.metrics
+package io.airbyte.workload.metrics
 
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
@@ -17,6 +17,7 @@ val logger = KotlinLogging.logger {}
 /**
  * Caching Dataplane and Dataplane Group names for use in metrics.
  */
+@Singleton
 open class MetricTagsPrettifierCache(
   private val dataplaneService: DataplaneService,
   private val dataplaneGroupService: DataplaneGroupService,

@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.metrics
+package io.airbyte.workload.metrics
 
 import io.airbyte.config.WorkloadConstants.Companion.PUBLIC_ORG_ID
 import io.airbyte.metrics.lib.MetricTags
@@ -20,6 +20,8 @@ import javax.annotation.PostConstruct
 /**
  * This singleton automatically builds the [PrettifyDataplaneMetricTagsMeterFilter] and registers it with the [MeterRegistry].
  */
+@Singleton
+@RequiresMetrics
 class PrettifyDataplaneMetricTagsMeterFilterBuilder(
   private val cache: MetricTagsPrettifierCache,
   private val meterRegistry: MeterRegistry? = null,
@@ -45,7 +47,7 @@ class PrettifyDataplaneMetricTagsMeterFilterBuilder(
           newTags.add(Tag.of(MetricTags.DATA_PLANE_VISIBILITY, getDataplaneVisibility(orgId)))
         }
       }
-      return if (newTags.isNotEmpty()) id.withTags(newTags) else id
+      return id.withTags(newTags)
     }
 
     fun getDataplaneVisibility(dataplaneGroupId: UUID): String = if (dataplaneGroupId == PUBLIC_ORG_ID) MetricTags.PUBLIC else MetricTags.PRIVATE

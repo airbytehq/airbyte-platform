@@ -37,10 +37,6 @@ import io.airbyte.data.services.JobService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.metrics.MetricAttribute
-import io.airbyte.metrics.MetricClient
-import io.airbyte.metrics.OssMetricsRegistry
-import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
@@ -71,7 +67,6 @@ class JobTracker
     private val operationService: OperationService,
     private val workspaceService: WorkspaceService,
     private val jobService: JobService,
-    private val metricClient: MetricClient,
   ) {
     /**
      * Job state.
@@ -222,19 +217,6 @@ class JobTracker
         val destinationVersion =
           actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, standardSync.destinationId)
 
-        if (jobState != JobState.STARTED) {
-          // This would be better suited elsewhere, but this happens to be the one place where we already look up all related entities
-          // before emitting the event. Rather than duplicating the looks up, we're emitting from here until further refactoring happens.
-          emitJobCompletedMetric(
-            configType = configType,
-            jobState = jobState,
-            connectionId = connectionId,
-            workspaceId = workspaceId,
-            sourceVersion = sourceVersion,
-            destinationVersion = destinationVersion,
-          )
-        }
-
         val jobsHistory =
           jobPersistence.listJobsIncludingId(
             Set.of(ConfigType.SYNC, ConfigType.RESET_CONNECTION, ConfigType.REFRESH),
@@ -272,35 +254,6 @@ class JobTracker
             refreshMetadata,
         )
       }
-    }
-
-    /**
-     * Emits a job completion metric.
-     */
-    private fun emitJobCompletedMetric(
-      configType: ConfigType,
-      jobState: JobState,
-      connectionId: UUID,
-      workspaceId: UUID,
-      sourceVersion: ActorDefinitionVersion,
-      destinationVersion: ActorDefinitionVersion,
-    ) {
-      val dataplaneGroupId = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).dataplaneGroupId
-      metricClient.count(
-        OssMetricsRegistry.JOB_COMPLETED,
-        1,
-        MetricAttribute(MetricTags.CONFIG_TYPES, configType.toString()),
-        MetricAttribute(MetricTags.STATUS, jobState.toString()),
-        MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
-        MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId.toString()),
-        MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, sourceVersion.actorDefinitionId.toString()),
-        MetricAttribute(MetricTags.SOURCE_IMAGE, sourceVersion.dockerRepository),
-        MetricAttribute(MetricTags.SOURCE_IMAGE_TAG, sourceVersion.dockerImageTag),
-        MetricAttribute(MetricTags.DESTINATION_DEFINITION_ID, destinationVersion.actorDefinitionId.toString()),
-        MetricAttribute(MetricTags.DESTINATION_IMAGE, destinationVersion.dockerRepository),
-        MetricAttribute(MetricTags.DESTINATION_IMAGE_TAG, destinationVersion.dockerImageTag),
-        MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, dataplaneGroupId.toString()),
-      )
     }
 
     /**
