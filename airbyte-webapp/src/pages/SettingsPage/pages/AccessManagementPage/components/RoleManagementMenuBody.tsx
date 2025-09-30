@@ -6,7 +6,6 @@ import { Text } from "components/ui/Text";
 
 import { FeatureItem, useFeature } from "core/services/features";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
-import { useExperiment } from "hooks/services/Experiment";
 
 import { CancelInvitationMenuItem } from "./CancelInvitationMenuItem";
 import { ChangeRoleMenuItem } from "./ChangeRoleMenuItem";
@@ -27,7 +26,6 @@ interface RoleManagementMenuBodyProps {
 export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ user, resourceType, close }) => {
   const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
   const areAllRbacRolesEnabled = useFeature(FeatureItem.AllowAllRBACRoles);
-  const improvedOrganizationRbac = useExperiment("settings.organizationRbacImprovements");
   const rolesToAllow = !user.invitationStatus && areAllRbacRolesEnabled ? permissionsByResourceType[resourceType] : [];
 
   const showOrgRoleInWorkspaceMenu =
@@ -39,7 +37,7 @@ export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ 
   const showCancelInvite = !!user.invitationStatus;
   // user is not invited (so has a relevant permission) and we're in a workspace OR the new UI is enabled
   // whether or not the button is disabled (due to, for instance, the user being the current user or having an org permission in the workspace table) is handled in the component
-  const showRemoveUser = !user.invitationStatus && (resourceType === "workspace" || improvedOrganizationRbac);
+  const showRemoveUser = !user.invitationStatus && resourceType === "workspace";
 
   return (
     <ul className={styles.roleManagementMenu__rolesList}>

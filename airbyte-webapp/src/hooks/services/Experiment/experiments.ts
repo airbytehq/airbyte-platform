@@ -37,7 +37,6 @@ export interface Experiments {
   productLimitsUI: boolean;
   "settings.breakingChangeNotifications": boolean;
   "settings.downloadDiagnostics": boolean;
-  "settings.organizationRbacImprovements": boolean;
   "settings.showAdvancedSettings": boolean;
   "sidebar.showOrgPickerV2": boolean;
 }
@@ -88,7 +87,6 @@ export const defaultExperimentValues: Experiments = {
   productLimitsUI: false,
   "settings.breakingChangeNotifications": false,
   "settings.downloadDiagnostics": false,
-  "settings.organizationRbacImprovements": true,
   "settings.showAdvancedSettings": false,
   "sidebar.showOrgPickerV2": true,
 };

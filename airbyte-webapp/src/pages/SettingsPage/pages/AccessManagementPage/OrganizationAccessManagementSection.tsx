@@ -18,7 +18,6 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
 
 import { AddUserModal } from "./components/AddUserModal";
@@ -50,8 +49,7 @@ export const OrganizationAccessManagementSection: React.FC = () => {
   const [userFilter, setUserFilter] = React.useState(filterParam ?? "");
   const debouncedUserFilter = useDeferredValue(userFilter);
   const { formatMessage } = useIntl();
-  const allowOrganizationInvites = useExperiment("settings.organizationRbacImprovements");
-  const showInviteUsers = !organization?.ssoRealm && allowExternalInvitations && allowOrganizationInvites;
+  const showInviteUsers = !organization?.ssoRealm && allowExternalInvitations;
   const isCloud = useIsCloudApp();
 
   const onOpenInviteUsersModal = () =>
