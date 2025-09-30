@@ -221,7 +221,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
     () =>
       allSearchResults.reduce(
         (acc, definition) => {
-          const isEnterpriseConnector = "isEnterprise" in definition;
+          const isEnterpriseConnector = "isEnterprise" in definition || definition.enterprise;
           const supportLevel = isEnterpriseConnector ? "certified" : definition.supportLevel;
 
           switch (supportLevel) {
