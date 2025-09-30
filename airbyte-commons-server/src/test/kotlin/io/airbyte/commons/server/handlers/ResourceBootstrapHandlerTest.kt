@@ -105,7 +105,7 @@ class ResourceBootstrapHandlerTest {
 //      every { spy.findExistingOrganization(any()) } returns null
 //      every { organizationService.writeOrganization(any()) } returns mockk()
 //
-//      every { entitlementClient.addOrganization(any(), any()) } throws RuntimeException("Entitlement service down")
+//      every { entitlementClient.addOrUpdateOrganization(any(), any()) } throws RuntimeException("Entitlement service down")
 //
 //      val exception =
 //        assertThrows(EntitlementServiceUnableToAddOrganizationProblem::class.java) {
@@ -125,7 +125,7 @@ class ResourceBootstrapHandlerTest {
 //      every { spy.findExistingOrganization(any()) } returns null
 //      every { organizationService.writeOrganization(any()) } returns mockk()
 //
-//      every { entitlementClient.addOrganization(any(), any()) } throws
+//      every { entitlementClient.addOrUpdateOrganization(any(), any()) } throws
 //        EntitlementServiceUnableToAddOrganizationProblem(
 //          ProblemEntitlementServiceData()
 //            .organizationId(orgId)

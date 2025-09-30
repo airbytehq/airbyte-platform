@@ -324,7 +324,7 @@ class OrganizationsHandlerTest {
 //
 //    every { uuidSupplier.get() } returns orgId
 //    every { organizationPersistence.createOrganization(any()) } returns newOrganization
-//    every { entitlementClient.addOrganization(any(), any()) } throws RuntimeException("Entitlement service unavailable")
+//    every { entitlementClient.addOrUpdateOrganization(any(), any()) } throws RuntimeException("Entitlement service unavailable")
 //
 //    val request =
 //      OrganizationCreateRequestBody()
@@ -356,7 +356,7 @@ class OrganizationsHandlerTest {
 //
 //    every { uuidSupplier.get() } returns orgId
 //    every { organizationPersistence.createOrganization(any()) } returns newOrganization
-//    every { entitlementClient.addOrganization(any(), any()) } throws
+//    every { entitlementClient.addOrUpdateOrganization(any(), any()) } throws
 //      EntitlementServiceUnableToAddOrganizationProblem(
 //        ProblemEntitlementServiceData()
 //          .organizationId(orgId)

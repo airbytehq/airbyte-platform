@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.entitlements
 
+import com.apollographql.apollo3.exception.ApolloException
 import io.airbyte.api.problems.model.generated.ProblemEntitlementServiceData
 import io.airbyte.api.problems.throwable.generated.EntitlementServiceUnableToAddOrganizationProblem
 import io.airbyte.commons.entitlements.models.Entitlement
@@ -18,7 +19,7 @@ private val logger = KotlinLogging.logger {}
 /**
  * StiggCloudEntitlementClient is the entitlement client, backed by Stigg, used in Airbyte Cloud.
  *
- * The main difference is that it contains an implementation of [addOrganization],
+ * The main difference is that it contains an implementation of [addOrUpdateOrganization],
  * while other clients are a no-op.
  */
 internal class StiggCloudEntitlementClient(
@@ -34,23 +35,53 @@ internal class StiggCloudEntitlementClient(
 
   override fun getPlans(organizationId: OrganizationId): List<EntitlementPlan> = stigg.getPlans(organizationId)
 
-  override fun addOrganization(
+  override fun addOrUpdateOrganization(
     organizationId: OrganizationId,
     plan: EntitlementPlan,
   ) {
-    validatePlanChange(organizationId, plan)
-    stigg.provisionCustomer(organizationId, plan)
+    val currentPlans = stigg.getPlans(organizationId)
 
-    logger.info { "Added organization to plan. organizationId=$organizationId plan=$plan" }
+    if (currentPlans.size > 1) {
+      logger.error { "More than one entitlement plan was found; this is unexpected. organizationId=$organizationId currentPlans=$currentPlans" }
+      return
+    }
+
+    if (currentPlans.isNotEmpty()) {
+      if (plan in currentPlans) {
+        logger.info { "Organization already on plan. organizationId=$organizationId, plan=$plan, currentPlans=$currentPlans" }
+        return
+      }
+      validatePlanChange(organizationId, currentPlans, plan)
+      stigg.updateCustomerPlan(organizationId, plan)
+    } else {
+      addEntitlementPlan(organizationId, plan)
+    }
+  }
+
+  private fun addEntitlementPlan(
+    organizationId: OrganizationId,
+    plan: EntitlementPlan,
+  ) {
+    try {
+      stigg.provisionCustomer(organizationId, plan)
+      logger.info { "Added organization to plan. organizationId=$organizationId plan=$plan" }
+    } catch (e: ApolloException) {
+      if (e.message?.contains("Duplicated entity not allowed") == true ||
+        e.message?.contains("DuplicatedEntityNotAllowed") == true
+      ) {
+        logger.info { "Organization already exists in Stigg, treating as successful. organizationId=$organizationId plan=$plan" }
+        return
+      }
+      throw e
+    }
   }
 
   private fun validatePlanChange(
     organizationId: OrganizationId,
+    currentPlans: List<EntitlementPlan>,
     plan: EntitlementPlan,
   ) {
     logger.debug { "Validating plan change organizationId=$organizationId plan=$plan" }
-
-    val currentPlans = stigg.getPlans(organizationId)
 
     if (currentPlans.contains(plan)) {
       logger.info { "Organization is already in plan. organizationId=$organizationId plan=$plan" }

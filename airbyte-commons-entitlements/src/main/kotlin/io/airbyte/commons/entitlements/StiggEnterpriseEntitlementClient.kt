@@ -55,7 +55,7 @@ class StiggEnterpriseEntitlementClient(
 
   override fun getPlans(organizationId: OrganizationId): List<EntitlementPlan> = stigg.getPlans(organizationId)
 
-  override fun addOrganization(
+  override fun addOrUpdateOrganization(
     organizationId: OrganizationId,
     plan: EntitlementPlan,
   ) {

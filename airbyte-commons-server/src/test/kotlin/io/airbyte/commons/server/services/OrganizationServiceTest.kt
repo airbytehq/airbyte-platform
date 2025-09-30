@@ -15,6 +15,7 @@ import io.airbyte.data.services.shared.ConnectionAutoDisabledReason
 import io.airbyte.domain.models.ConnectionId
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.models.SupportedOrbPlan
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.mockk.Runs
@@ -192,7 +193,7 @@ class OrganizationServiceTest {
     @Test
     fun `should throw if orgPaymentConfig is not found`() {
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns null
-      shouldThrow<ResourceNotFoundProblem> { service.handleSubscriptionStarted(organizationId, "test-plan") }
+      shouldThrow<ResourceNotFoundProblem> { service.handleSubscriptionStarted(organizationId, "test-plan", false) }
     }
 
     @Test
@@ -204,7 +205,7 @@ class OrganizationServiceTest {
 
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
 
-      service.handleSubscriptionStarted(organizationId, "test-plan")
+      service.handleSubscriptionStarted(organizationId, "test-plan", false)
 
       verify(exactly = 0) { organizationPaymentConfigRepository.savePaymentConfig(any()) }
       verify(exactly = 0) { connectionService.disableConnections(any(), any()) }
@@ -221,7 +222,7 @@ class OrganizationServiceTest {
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
       every { organizationPaymentConfigRepository.savePaymentConfig(capture(slotConfig)) } just Runs
 
-      service.handleSubscriptionStarted(organizationId, "test-plan")
+      service.handleSubscriptionStarted(organizationId, "test-plan", false)
 
       slotConfig.captured.subscriptionStatus shouldBe SubscriptionStatus.SUBSCRIBED
       verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
@@ -240,7 +241,7 @@ class OrganizationServiceTest {
       every { organizationPaymentConfigRepository.savePaymentConfig(any()) } just Runs
 
       // Use a supported Orb plan that maps to STANDARD
-      service.handleSubscriptionStarted(organizationId, "cloud-self-serve")
+      service.handleSubscriptionStarted(organizationId, SupportedOrbPlan.CLOUD_SELF_SERVE_MONTHLY.plan, false)
 
       verify { entitlementService.addOrganization(organizationId, EntitlementPlan.STANDARD) }
       verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
@@ -258,7 +259,7 @@ class OrganizationServiceTest {
       every { organizationPaymentConfigRepository.savePaymentConfig(any()) } just Runs
 
       // Use an unsupported Orb plan
-      service.handleSubscriptionStarted(organizationId, "unsupported-plan")
+      service.handleSubscriptionStarted(organizationId, "unsupported-plan", false)
 
       verify(exactly = 0) { entitlementService.addOrganization(any(), any()) }
       verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
@@ -275,7 +276,7 @@ class OrganizationServiceTest {
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
       every { organizationPaymentConfigRepository.savePaymentConfig(any()) } just Runs
 
-      service.handleSubscriptionStarted(organizationId, null)
+      service.handleSubscriptionStarted(organizationId, null, false)
 
       verify(exactly = 0) { entitlementService.addOrganization(any(), any()) }
       verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
@@ -295,7 +296,7 @@ class OrganizationServiceTest {
       every { entitlementService.addOrganization(any(), any()) } throws RuntimeException("Entitlement service error")
 
       // Should not throw, just log and continue
-      service.handleSubscriptionStarted(organizationId, "cloud-self-serve")
+      service.handleSubscriptionStarted(organizationId, SupportedOrbPlan.CLOUD_SELF_SERVE_MONTHLY.plan, false)
 
       verify { entitlementService.addOrganization(organizationId, EntitlementPlan.STANDARD) }
       slotConfig.captured.subscriptionStatus shouldBe SubscriptionStatus.SUBSCRIBED
@@ -312,7 +313,7 @@ class OrganizationServiceTest {
 
       every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
 
-      service.handleSubscriptionStarted(organizationId, "cloud-self-serve")
+      service.handleSubscriptionStarted(organizationId, SupportedOrbPlan.CLOUD_SELF_SERVE_MONTHLY.plan, false)
 
       // EntitlementClient is called because it happens before the subscription status check
       verify { entitlementService.addOrganization(organizationId, EntitlementPlan.STANDARD) }

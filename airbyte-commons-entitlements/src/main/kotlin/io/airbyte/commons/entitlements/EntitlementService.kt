@@ -6,7 +6,6 @@ package io.airbyte.commons.entitlements
 
 import io.airbyte.api.problems.model.generated.ProblemLicenseEntitlementData
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
-import io.airbyte.commons.entitlements.models.ConnectorEntitlement
 import io.airbyte.commons.entitlements.models.DestinationObjectStorageEntitlement
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
@@ -155,7 +154,7 @@ internal class EntitlementServiceImpl(
     organizationId: OrganizationId,
     plan: EntitlementPlan,
   ) {
-    entitlementClient.addOrganization(organizationId, plan)
+    entitlementClient.addOrUpdateOrganization(organizationId, plan)
     sendCountMetric(OssMetricsRegistry.ENTITLEMENTS_ORGANIZATION_ENROLMENT, organizationId, true)
   }
 
@@ -207,6 +206,7 @@ internal class EntitlementServiceImpl(
           clientValue || providerValue
         }
 
+      logger.info { "Enterprise connector entitlements for organizationId=$organizationId: LDResults=$providerResults StiggResults=$clientResults" }
       return mergedResults
     } catch (e: Exception) {
       logger.error(e) { "Exception while getting connector entitlements" }

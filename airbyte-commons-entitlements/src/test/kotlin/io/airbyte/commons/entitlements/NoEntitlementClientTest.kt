@@ -25,6 +25,6 @@ class NoEntitlementClientTest {
   fun `addOrganization does nothing`() {
     // should not throw
     val organizationId = OrganizationId(UUID.randomUUID())
-    client.addOrganization(organizationId, EntitlementPlan.STANDARD)
+    client.addOrUpdateOrganization(organizationId, EntitlementPlan.STANDARD)
   }
 }

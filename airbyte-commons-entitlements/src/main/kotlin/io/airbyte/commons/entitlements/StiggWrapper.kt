@@ -17,9 +17,12 @@ import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.stigg.api.operations.GetActiveSubscriptionsListQuery
 import io.stigg.api.operations.ProvisionCustomerMutation
+import io.stigg.api.operations.ProvisionSubscriptionMutation
+import io.stigg.api.operations.UpdateSubscriptionMutation
 import io.stigg.api.operations.type.GetActiveSubscriptionsInput
 import io.stigg.api.operations.type.ProvisionCustomerInput
 import io.stigg.api.operations.type.ProvisionCustomerSubscriptionInput
+import io.stigg.api.operations.type.ProvisionSubscriptionInput
 import io.stigg.sidecar.proto.v1.GetBooleanEntitlementRequest
 import io.stigg.sidecar.proto.v1.GetEntitlementsRequest
 import io.stigg.sidecar.proto.v1.ReloadEntitlementsRequest
@@ -81,6 +84,21 @@ internal class StiggWrapper(
               .planId(plan.id)
               .build(),
           ).build(),
+      ),
+    )
+  }
+
+  fun updateCustomerPlan(
+    orgId: OrganizationId,
+    plan: EntitlementPlan,
+  ) {
+    stigg.api().mutation(
+      ProvisionSubscriptionMutation(
+        ProvisionSubscriptionInput
+          .builder()
+          .customerId(orgId.value.toString())
+          .planId(plan.id)
+          .build(),
       ),
     )
   }
