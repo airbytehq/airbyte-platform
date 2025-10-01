@@ -12,7 +12,6 @@ import io.micrometer.core.instrument.Tag
 import io.micrometer.core.instrument.config.MeterFilter
 import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.runtime.event.ApplicationStartupEvent
-import jakarta.annotation.PostConstruct
 import java.util.UUID
 
 /**
@@ -22,6 +21,11 @@ class PrettifyDataplaneMetricTagsMeterFilterBuilder(
   private val cache: MetricTagsPrettifierCache,
   private val meterRegistry: MeterRegistry? = null,
 ) : ApplicationEventListener<ApplicationStartupEvent> {
+  // Register the filter ASAP
+  init {
+    registerFilter()
+  }
+
   /**
    * This Filter will automatically add the names of dataplane and dataplane group if their ids are present in the tags.
    */
@@ -49,9 +53,7 @@ class PrettifyDataplaneMetricTagsMeterFilterBuilder(
     fun getDataplaneVisibility(dataplaneGroupId: UUID): String = if (dataplaneGroupId == PUBLIC_ORG_ID) MetricTags.PUBLIC else MetricTags.PRIVATE
   }
 
-  // Register the filter ASAP
-  @PostConstruct
-  fun registerFilter() {
+  private fun registerFilter() {
     meterRegistry?.let { m ->
       logger.info { "Registering the dataplane metrics tags meter filter." }
       m.config().meterFilter(PrettifyDataplaneMetricTagsMeterFilter(cache))

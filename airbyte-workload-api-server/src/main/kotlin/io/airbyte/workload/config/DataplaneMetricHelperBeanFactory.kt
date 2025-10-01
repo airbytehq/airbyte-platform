@@ -28,10 +28,5 @@ class DataplaneMetricHelperBeanFactory {
   fun prettifyDataplaneMetricTagsMeterFilterBuilder(
     cache: MetricTagsPrettifierCache,
     meterRegistry: MeterRegistry?,
-  ): ApplicationEventListener<ApplicationStartupEvent> {
-    val bean = PrettifyDataplaneMetricTagsMeterFilterBuilder(cache, meterRegistry)
-    // Manually calling the PostConstruct because @PostConstruct does not work for beans created using @Factory
-    bean.registerFilter()
-    return bean
-  }
+  ): ApplicationEventListener<ApplicationStartupEvent> = PrettifyDataplaneMetricTagsMeterFilterBuilder(cache, meterRegistry)
 }
