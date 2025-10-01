@@ -1526,7 +1526,7 @@ workloadApiServer:
 
     - env: WORKLOAD_API_HOST
       key: host
-      valueExp: ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-workload-api-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.workloadApiServer.service.port)) (eq (include "airbyte.cluster.type" .) "data-plane")
+      defaultValueExp: (ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-workload-api-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.workloadApiServer.service.port)) (eq (include "airbyte.cluster.type" .) "data-plane"))
 
 workloadLauncher:
   config:

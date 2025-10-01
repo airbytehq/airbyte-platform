@@ -31,7 +31,7 @@ Renders the workloadApiServer.enabled environment variable
 Renders the workloadApiServer.host value
 */}}
 {{- define "airbyte.workloadApiServer.host" }}
-    {{- ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-workload-api-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.workloadApiServer.service.port)) (eq (include "airbyte.cluster.type" .) "data-plane") }}
+    {{- .Values.workloadApiServer.host | default (ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-workload-api-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.workloadApiServer.service.port)) (eq (include "airbyte.cluster.type" .) "data-plane")) }}
 {{- end }}
 
 {{/*
