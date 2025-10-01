@@ -242,11 +242,9 @@ class CommandService(
       return false
     }
 
-    val actualJobId = jobId ?: UUID.randomUUID().toString()
-    val actualAttemptNumber = attemptNumber ?: 0L
     val actor = actorRepository.findByActorId(actorId) ?: throw NotFoundException("Unable to find actorId $actorId")
     val workspaceId = actor.workspaceId
-    val discoverInput = jobInputService.getDiscoverInput(actorId, actualJobId, actualAttemptNumber)
+    val discoverInput = jobInputService.getDiscoverInput(actorId, jobId, attemptNumber)
     // Adding the priority to the launcherConfig because it impacts node-pool selection.
     discoverInput.integrationLauncherConfig.priority = workloadPriority
 

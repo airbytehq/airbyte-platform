@@ -476,6 +476,64 @@ class CommandServiceTest {
     assertNotNull(output?.failureReason?.timestamp)
   }
 
+  @Test
+  fun `createCheckCommand passes null jobId and attemptNumber to JobInputService when not provided`() {
+    val actorId = UUID.randomUUID()
+
+    every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { jobInputService.getCheckInput(actorId, null, null) } returns
+      CheckConnectionInput(
+        jobRunConfig = JobRunConfig().withJobId(UUID.randomUUID().toString()).withAttemptId(0L),
+        launcherConfig = IntegrationLauncherConfig(),
+        checkConnectionInput = StandardCheckConnectionInput().withActorType(ActorType.SOURCE),
+      )
+    every { workloadService.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+      mockk()
+    every { commandsRepository.save(any()) } returns mockk()
+    every { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Unit
+
+    service.createCheckCommand(
+      commandId = COMMAND_ID,
+      actorId = actorId,
+      jobId = null,
+      attemptNumber = null,
+      workloadPriority = WorkloadPriority.DEFAULT,
+      signalInput = null,
+      commandInput = Jsons.emptyObject(),
+    )
+
+    verify { jobInputService.getCheckInput(actorId, null, null) }
+  }
+
+  @Test
+  fun `createDiscoverCommand passes null jobId and attemptNumber to JobInputService when not provided`() {
+    val actorId = UUID.randomUUID()
+
+    every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { jobInputService.getDiscoverInput(actorId, null, null) } returns
+      DiscoverCommandInput.DiscoverCatalogInput(
+        jobRunConfig = JobRunConfig().withJobId(UUID.randomUUID().toString()).withAttemptId(0L),
+        integrationLauncherConfig = IntegrationLauncherConfig(),
+        discoverCatalogInput = StandardDiscoverCatalogInput(),
+      )
+    every { workloadService.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+      mockk()
+    every { commandsRepository.save(any()) } returns mockk()
+    every { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Unit
+
+    service.createDiscoverCommand(
+      commandId = COMMAND_ID,
+      actorId = actorId,
+      jobId = null,
+      attemptNumber = null,
+      workloadPriority = WorkloadPriority.DEFAULT,
+      signalInput = null,
+      commandInput = Jsons.emptyObject(),
+    )
+
+    verify { jobInputService.getDiscoverInput(actorId, null, null) }
+  }
+
   companion object {
     val ORGANIZATION = Organization().withOrganizationId(UUID.randomUUID())
     val WORKSPACE_ID = UUID.randomUUID()
