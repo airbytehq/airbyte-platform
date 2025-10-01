@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { PageContainer } from "components/PageContainer";
 import { BorderedTile, BorderedTiles } from "components/ui/BorderedTiles";
 import { Box } from "components/ui/Box";
+import { ORG_PLAN_IDS } from "components/ui/BrandingBadge/BrandingBadge";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
@@ -56,7 +57,8 @@ export const OrganizationBillingPage: React.FC = () => {
   // Handle subscription success modal
   useEffect(() => {
     const cloudSubscriptionSetup = searchParams.get("cloudSubscriptionSetup");
-    if (cloudSubscriptionSetup === "success" && isStandardPlan) {
+    const previousPlan = searchParams.get("previousPlan");
+    if (cloudSubscriptionSetup === "success" && isStandardPlan && previousPlan === ORG_PLAN_IDS.UNIFIED_TRIAL) {
       openModal({
         title: <FormattedMessage id="settings.organization.billing.subscriptionSuccess.title" />,
         content: CloudSubscriptionSuccessModal,
