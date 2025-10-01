@@ -88,6 +88,12 @@ object SourceWorkdayEnterpriseConnector : ConnectorEntitlement(
   override val name: String = "source-workday"
 }
 
+object SourceDb2EnterpriseConnector : ConnectorEntitlement(
+  actorDefinitionId = UUID.fromString("d2542966-8cc8-4899-9b74-413a7d9bb28e"),
+) {
+  override val name: String = "source-db2"
+}
+
 object Entitlements {
   private val ALL: List<Entitlement> =
     listOf(
@@ -108,6 +114,7 @@ object Entitlements {
       SourceServicenowEnterpriseConnector,
       SourceSharepointEnterpriseConnector,
       SourceWorkdayEnterpriseConnector,
+      SourceDb2EnterpriseConnector,
     )
 
   private val BY_FEATURE_ID: Map<String, Entitlement> =
