@@ -5,6 +5,7 @@
 package io.airbyte.data.services.impls.keycloak
 
 import io.airbyte.domain.models.SsoConfig
+import io.airbyte.domain.models.SsoConfigStatus
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.mockk.clearMocks
@@ -56,6 +57,7 @@ class AirbyteKeycloakClientTest {
         clientId = "client-id",
         clientSecret = "client-secret",
         discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
+        status = SsoConfigStatus.ACTIVE,
       )
 
     val mockResponse = mockk<Response>(relaxed = true)
@@ -95,6 +97,7 @@ class AirbyteKeycloakClientTest {
         clientId = "client-id",
         clientSecret = "client-secret",
         discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
+        status = SsoConfigStatus.ACTIVE,
       )
 
     every { keycloakClientMock.realms().create(any()) } throws RuntimeException("Internal Server Error")

@@ -7,6 +7,7 @@ package io.airbyte.data.repositories
 import io.airbyte.data.repositories.entities.SsoConfig
 import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables
+import io.airbyte.db.instance.configs.jooq.generated.enums.SsoConfigStatus
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
@@ -41,6 +42,7 @@ class SsoConfigRepositoryTest : AbstractConfigRepositoryTest() {
         id = UUID.randomUUID(),
         organizationId = UUID.randomUUID(),
         keycloakRealm = "realm-name",
+        status = SsoConfigStatus.active,
       )
 
     val saved = ssoConfigRepository.save(ssoConfig)

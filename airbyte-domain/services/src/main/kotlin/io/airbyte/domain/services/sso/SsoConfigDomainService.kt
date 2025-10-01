@@ -21,6 +21,7 @@ import io.airbyte.config.OrganizationEmailDomain
 import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
+import io.airbyte.data.services.impls.data.mappers.toDomain
 import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
 import io.airbyte.data.services.impls.keycloak.RealmValuesExistException
 import io.airbyte.domain.models.SsoConfig
@@ -56,6 +57,7 @@ open class SsoConfigDomainService internal constructor(
         clientId = keycloakData.clientId,
         clientSecret = keycloakData.clientSecret,
         emailDomains = domainData,
+        status = currentConfig.status.toDomain(),
       )
     } catch (e: Exception) {
       throw SSOConfigRetrievalProblem(

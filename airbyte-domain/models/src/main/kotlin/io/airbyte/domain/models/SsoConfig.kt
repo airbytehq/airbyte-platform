@@ -6,6 +6,11 @@ package io.airbyte.domain.models
 
 import java.util.UUID
 
+enum class SsoConfigStatus {
+  DRAFT,
+  ACTIVE,
+}
+
 data class SsoConfig(
   val organizationId: UUID,
   val companyIdentifier: String,
@@ -13,4 +18,5 @@ data class SsoConfig(
   val clientSecret: String,
   val discoveryUrl: String,
   val emailDomain: String,
+  val status: SsoConfigStatus,
 )

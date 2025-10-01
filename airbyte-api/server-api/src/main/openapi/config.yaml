@@ -21131,6 +21131,13 @@ components:
           type: string
           format: uuid
 
+    SSOConfigStatus:
+      type: string
+      enum:
+        - draft
+        - active
+      x-sdk-component: true
+
     SSOConfigRead:
       type: object
       properties:
@@ -21147,6 +21154,8 @@ components:
           type: array
           items:
             type: string
+        status:
+          $ref: "#/components/schemas/SSOConfigStatus"
 
     CreateSSOConfigRequestBody:
       type: object
@@ -21157,6 +21166,7 @@ components:
         - clientSecret
         - discoveryUrl
         - emailDomain
+        - status
       properties:
         organizationId:
           type: string
@@ -21173,6 +21183,8 @@ components:
           format: url
         emailDomain:
           type: string
+        status:
+          $ref: "#/components/schemas/SSOConfigStatus"
 
     DeleteSSOConfigRequestBody:
       type: object

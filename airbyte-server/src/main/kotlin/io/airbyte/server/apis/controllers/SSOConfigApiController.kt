@@ -16,6 +16,8 @@ import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SsoEntitlement
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.data.services.impls.data.mappers.toApi
+import io.airbyte.data.services.impls.data.mappers.toDomain
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
@@ -42,6 +44,7 @@ open class SSOConfigApiController(
       clientId = ssoConfig.clientId,
       clientSecret = ssoConfig.clientSecret,
       emailDomains = ssoConfig.emailDomains,
+      status = ssoConfig.status.toApi(),
     )
   }
 
@@ -60,6 +63,7 @@ open class SSOConfigApiController(
           createSSOConfigRequestBody.clientSecret,
           createSSOConfigRequestBody.discoveryUrl,
           createSSOConfigRequestBody.emailDomain,
+          createSSOConfigRequestBody.status.toDomain(),
         ),
       )
       null

@@ -9,4 +9,5 @@ data class SsoConfigRetrieval(
   val clientId: String,
   val clientSecret: String,
   val emailDomains: List<String>,
+  val status: SsoConfigStatus,
 )

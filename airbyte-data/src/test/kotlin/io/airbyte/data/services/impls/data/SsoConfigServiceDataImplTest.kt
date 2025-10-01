@@ -6,6 +6,7 @@ package io.airbyte.data.services.impls.data
 
 import io.airbyte.data.repositories.SsoConfigRepository
 import io.airbyte.domain.models.SsoConfig
+import io.airbyte.domain.models.SsoConfigStatus
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -37,6 +38,7 @@ class SsoConfigServiceDataImplTest {
         clientSecret = "client-secret",
         discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
         emailDomain = "airbyte.com",
+        status = SsoConfigStatus.ACTIVE,
       )
 
     every { ssoConfigRepository.save(any()) } returns mockk()

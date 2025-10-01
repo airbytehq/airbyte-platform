@@ -7,6 +7,7 @@ package io.airbyte.data.services.impls.data
 import io.airbyte.data.repositories.SsoConfigRepository
 import io.airbyte.data.services.SsoConfigService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
+import io.airbyte.data.services.impls.data.mappers.toEntity
 import io.airbyte.domain.models.SsoConfig
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -22,6 +23,7 @@ open class SsoConfigServiceDataImpl internal constructor(
           id = UUID.randomUUID(),
           organizationId = config.organizationId,
           keycloakRealm = config.companyIdentifier,
+          status = config.status.toEntity(),
         ),
       )
   }

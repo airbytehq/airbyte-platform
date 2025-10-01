@@ -56,7 +56,8 @@ export const useSSOConfigManagement = () => {
 
   // Create mutation with optimistic update
   const createSsoConfigMutation = useMutation({
-    mutationFn: (ssoConfigData: SSOFormValues) => createSsoConfig({ ...ssoConfigData, organizationId }, requestOptions),
+    mutationFn: (ssoConfigData: SSOFormValues) =>
+      createSsoConfig({ ...ssoConfigData, organizationId, status: "active" }, requestOptions),
     onSuccess: (data) => {
       // Optimistically update cache to immediately show configured state
       queryClient.setQueryData(ssoConfigKeys.detail(organizationId), data);

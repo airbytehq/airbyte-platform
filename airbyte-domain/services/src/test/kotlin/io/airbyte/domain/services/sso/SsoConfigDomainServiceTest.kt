@@ -12,6 +12,7 @@ import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
 import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
 import io.airbyte.domain.models.SsoConfig
+import io.airbyte.domain.models.SsoConfigStatus
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -290,5 +291,6 @@ class SsoConfigDomainServiceTest {
       clientSecret = "client-secret",
       discoveryUrl = discoveryUrl,
       emailDomain = emailDomain,
+      status = SsoConfigStatus.ACTIVE,
     )
 }
