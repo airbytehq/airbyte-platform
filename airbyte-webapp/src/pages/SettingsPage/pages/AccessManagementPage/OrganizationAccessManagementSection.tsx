@@ -12,8 +12,7 @@ import { ExternalLink } from "components/ui/Link";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
-import { useListUserInvitations, useListUsersInOrganization, useOrganization } from "core/api";
+import { useCurrentOrganizationInfo, useListUserInvitations, useListUsersInOrganization } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
@@ -28,10 +27,10 @@ import { OrganizationUsersTable } from "./OrganizationUsersTable";
 const SEARCH_PARAM = "search";
 
 export const OrganizationAccessManagementSection: React.FC = () => {
-  const organizationId = useCurrentOrganizationId();
-  const organization = useOrganization(organizationId);
+  const { organizationId, organizationName, sso } = useCurrentOrganizationInfo();
   const canUpdateOrganizationPermissions = useGeneratedIntent(Intent.UpdateOrganizationPermissions);
   const allowExternalInvitations = useFeature(FeatureItem.ExternalInvitations);
+  const allowUpdateSsoConfig = useFeature(FeatureItem.AllowUpdateSSOConfig);
 
   const { openModal } = useModalService();
 
@@ -49,12 +48,12 @@ export const OrganizationAccessManagementSection: React.FC = () => {
   const [userFilter, setUserFilter] = React.useState(filterParam ?? "");
   const debouncedUserFilter = useDeferredValue(userFilter);
   const { formatMessage } = useIntl();
-  const showInviteUsers = !organization?.ssoRealm && allowExternalInvitations;
+  const showInviteUsers = !sso && allowExternalInvitations;
   const isCloud = useIsCloudApp();
 
   const onOpenInviteUsersModal = () =>
     openModal<void>({
-      title: formatMessage({ id: "userInvitations.create.modal.title" }, { scopeName: organization.organizationName }),
+      title: formatMessage({ id: "userInvitations.create.modal.title" }, { scopeName: organizationName }),
       content: ({ onComplete }) => <AddUserModal onSubmit={onComplete} scope="organization" />,
       size: "md",
     });
@@ -87,7 +86,7 @@ export const OrganizationAccessManagementSection: React.FC = () => {
           <SearchInput value={userFilter} onChange={setUserFilter} />
         </FlexItem>
         <FlexContainer alignItems="baseline">
-          {organization?.ssoRealm && (
+          {sso && (
             <Badge variant="blue">
               <FlexContainer gap="xs" alignItems="center">
                 <Icon type="check" size="xs" />
@@ -97,7 +96,7 @@ export const OrganizationAccessManagementSection: React.FC = () => {
               </FlexContainer>
             </Badge>
           )}
-          {!organization?.ssoRealm && isCloud && (
+          {!sso && isCloud && !allowUpdateSsoConfig && (
             <ExternalLink href={links.contactSales}>
               <Text size="sm" color="blue">
                 <FormattedMessage id="settings.accessManagement.enableSso" />
