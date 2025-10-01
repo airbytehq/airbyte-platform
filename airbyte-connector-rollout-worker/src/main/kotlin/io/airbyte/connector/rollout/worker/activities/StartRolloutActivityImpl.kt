@@ -44,16 +44,27 @@ class StartRolloutActivityImpl(
       )
 
     return try {
-      logger.info { "Activity startRollout starting for ${input.dockerRepository}:${input.dockerImageTag}; baseUrl=${client.baseUrl}" }
+      logger.info { "Doing health check for airbyteApiClient. rolloutId=${input.rolloutId}" }
+      val check = airbyteApiClient.healthApi.getHealthCheck()
+      logger.info { "Health check for airbyteApiClient. available=${check.available} rolloutId=${input.rolloutId}" }
+
+      logger.info {
+        "Activity startRollout starting for rolloutId=${input.rolloutId} ${input.dockerRepository}:${input.dockerImageTag}; baseUrl=${client.baseUrl}"
+      }
       val response: ConnectorRolloutStartResponse = client.startConnectorRollout(body)
 
       logger.info { "Activity startRollout ConnectorRolloutStartResponse=${response.data}" }
 
       ConnectorRolloutActivityHelpers.mapToConnectorRollout(response.data)
     } catch (e: IOException) {
+      logger.error(e) { "Caught IOException rolloutId=${input.rolloutId}" }
       throw Activity.wrap(e)
     } catch (e: ClientException) {
+      logger.error(e) { "Caught ClientException rolloutId=${input.rolloutId}" }
       handleAirbyteApiClientException(e)
+    } catch (e: Exception) {
+      logger.error(e) { "Caught Exception rolloutId=${input.rolloutId}" }
+      throw e
     }
   }
 }

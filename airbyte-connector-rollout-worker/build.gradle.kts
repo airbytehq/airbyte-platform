@@ -46,7 +46,8 @@ airbyte {
         "AIRBYTE_VERSION" to "dev",
         "DATA_PLANE_ID" to "local",
         "MICRONAUT_ENVIRONMENTS" to "test",
-      ),
+        "SERVICE_NAME" to project.name,
+        ),
     )
   }
   docker {

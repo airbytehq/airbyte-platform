@@ -4,9 +4,11 @@
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.ConnectorRolloutApi
+import io.airbyte.api.client.generated.HealthApi
 import io.airbyte.api.client.model.generated.ConnectorRolloutRead
 import io.airbyte.api.client.model.generated.ConnectorRolloutStartResponse
 import io.airbyte.api.client.model.generated.ConnectorRolloutState
+import io.airbyte.api.client.model.generated.HealthCheckRead
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputStart
 import io.airbyte.connector.rollout.worker.activities.StartRolloutActivityImpl
@@ -20,6 +22,7 @@ import java.util.UUID
 class StartRolloutActivityImplTest {
   private lateinit var airbyteApiClient: AirbyteApiClient
   private lateinit var connectorRolloutApi: ConnectorRolloutApi
+  private lateinit var healthApi: HealthApi
   private lateinit var startRolloutActivity: StartRolloutActivityImpl
 
   companion object {
@@ -35,12 +38,15 @@ class StartRolloutActivityImplTest {
   fun setUp() {
     airbyteApiClient = mockk<AirbyteApiClient>()
     connectorRolloutApi = mockk<ConnectorRolloutApi>()
+    healthApi = mockk<HealthApi>()
     every { airbyteApiClient.connectorRolloutApi } returns connectorRolloutApi
+    every { airbyteApiClient.healthApi } returns healthApi
     startRolloutActivity = StartRolloutActivityImpl(airbyteApiClient)
   }
 
   @Test
   fun `test startRollout calls connectorRolloutApi`() {
+    every { healthApi.getHealthCheck() } returns HealthCheckRead(available = true)
     every { connectorRolloutApi.startConnectorRollout(any()) } returns getMockConnectorRolloutResponse()
 
     val input =
@@ -60,6 +66,7 @@ class StartRolloutActivityImplTest {
 
   @Test
   fun `test startRollout calls connectorRolloutApi with null values`() {
+    every { healthApi.getHealthCheck() } returns HealthCheckRead(available = true)
     every { connectorRolloutApi.startConnectorRollout(any()) } returns getMockConnectorRolloutResponse()
 
     val input =
