@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workload.metrics
+package io.airbyte.commons.server.metrics
 
 import io.airbyte.config.WorkloadConstants.Companion.PUBLIC_ORG_ID
 import io.airbyte.metrics.lib.MetricTags
@@ -10,18 +10,14 @@ import io.micrometer.core.instrument.Meter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Tag
 import io.micrometer.core.instrument.config.MeterFilter
-import io.micronaut.configuration.metrics.annotation.RequiresMetrics
 import io.micronaut.context.event.ApplicationEventListener
 import io.micronaut.runtime.event.ApplicationStartupEvent
-import jakarta.inject.Singleton
+import jakarta.annotation.PostConstruct
 import java.util.UUID
-import javax.annotation.PostConstruct
 
 /**
  * This singleton automatically builds the [PrettifyDataplaneMetricTagsMeterFilter] and registers it with the [MeterRegistry].
  */
-@Singleton
-@RequiresMetrics
 class PrettifyDataplaneMetricTagsMeterFilterBuilder(
   private val cache: MetricTagsPrettifierCache,
   private val meterRegistry: MeterRegistry? = null,
@@ -47,7 +43,7 @@ class PrettifyDataplaneMetricTagsMeterFilterBuilder(
           newTags.add(Tag.of(MetricTags.DATA_PLANE_VISIBILITY, getDataplaneVisibility(orgId)))
         }
       }
-      return id.withTags(newTags)
+      return if (newTags.isNotEmpty()) id.withTags(newTags) else id
     }
 
     fun getDataplaneVisibility(dataplaneGroupId: UUID): String = if (dataplaneGroupId == PUBLIC_ORG_ID) MetricTags.PUBLIC else MetricTags.PRIVATE
@@ -56,7 +52,10 @@ class PrettifyDataplaneMetricTagsMeterFilterBuilder(
   // Register the filter ASAP
   @PostConstruct
   fun registerFilter() {
-    meterRegistry?.config()?.meterFilter(PrettifyDataplaneMetricTagsMeterFilter(cache))
+    meterRegistry?.let { m ->
+      logger.info { "Registering the dataplane metrics tags meter filter." }
+      m.config().meterFilter(PrettifyDataplaneMetricTagsMeterFilter(cache))
+    }
   }
 
   // Using an ApplicationEventListener to ensure the Filter is automatically built.
