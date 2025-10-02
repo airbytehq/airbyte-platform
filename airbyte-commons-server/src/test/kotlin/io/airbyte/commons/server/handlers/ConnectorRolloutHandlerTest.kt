@@ -37,6 +37,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
 import java.time.OffsetDateTime
 import java.util.Optional
@@ -120,10 +121,11 @@ internal class ConnectorRolloutHandlerTest {
     clearAllMocks()
   }
 
-  @Test
-  fun `test getConnectorRollout by id`() {
+  @ParameterizedTest
+  @EnumSource(ConnectorRolloutStrategy::class)
+  fun `test getConnectorRollout by id`(rolloutStrategy: ConnectorRolloutStrategy) {
     val rolloutId = UUID.randomUUID()
-    val expectedRollout = createMockConnectorRollout(rolloutId)
+    val expectedRollout = createMockConnectorRollout(rolloutId, rolloutStrategy = ConnectorEnumRolloutStrategy.fromValue(rolloutStrategy.toString()))
 
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns expectedRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
@@ -132,13 +134,18 @@ internal class ConnectorRolloutHandlerTest {
 
     val rolloutRead = connectorRolloutHandler.getConnectorRollout(rolloutId)
 
-    assertEquals(connectorRolloutHelper.buildConnectorRolloutRead(expectedRollout, true), rolloutRead)
+    assertEquals(
+      connectorRolloutHelper.buildConnectorRolloutRead(expectedRollout, rolloutStrategy == ConnectorRolloutStrategy.AUTOMATED),
+      rolloutRead,
+    )
 
     verify {
       connectorRolloutService.getConnectorRollout(rolloutId)
       actorDefinitionService.getActorDefinitionVersion(any())
-      rolloutActorFinder.getActorSelectionInfo(any(), any(), any())
-      rolloutActorFinder.getSyncInfoForPinnedActors(any())
+      if (rolloutStrategy == ConnectorRolloutStrategy.AUTOMATED) {
+        rolloutActorFinder.getActorSelectionInfo(any(), any(), any())
+        rolloutActorFinder.getSyncInfoForPinnedActors(any())
+      }
     }
   }
 
@@ -409,8 +416,9 @@ internal class ConnectorRolloutHandlerTest {
     verify { actorDefinitionService.getActorDefinitionVersion(actorDefinitionId, DOCKER_IMAGE_TAG) }
   }
 
-  @Test
-  fun `test startConnectorRollout with pin migration`() {
+  @ParameterizedTest
+  @EnumSource(ConnectorRolloutStrategy::class)
+  fun `test startConnectorRollout with pin migration`(rolloutStrategy: ConnectorRolloutStrategy) {
     val rolloutId = UUID.randomUUID()
     val connectorRollout = createMockConnectorRollout(rolloutId).apply { this.state = state }
 
@@ -426,25 +434,32 @@ internal class ConnectorRolloutHandlerTest {
       ConnectorRolloutStartRequestBody()
         .id(rolloutId)
         .workflowRunId(UUID.randomUUID().toString())
-        .rolloutStrategy(ConnectorRolloutStrategy.MANUAL)
+        .rolloutStrategy(rolloutStrategy)
         .migratePins(true),
     )
 
     verify {
       connectorRolloutService.getConnectorRollout(rolloutId)
       actorDefinitionVersionUpdater.migrateReleaseCandidatePins(any(), any(), any(), any())
-      rolloutActorFinder.getActorSelectionInfo(any(), any(), any())
-      rolloutActorFinder.getSyncInfoForPinnedActors(any())
+      if (rolloutStrategy == ConnectorRolloutStrategy.AUTOMATED) {
+        rolloutActorFinder.getActorSelectionInfo(any(), any(), any())
+        rolloutActorFinder.getSyncInfoForPinnedActors(any())
+      }
       actorDefinitionService.getActorDefinitionVersion(any())
       connectorRolloutService.listConnectorRollouts(any())
       connectorRolloutService.writeConnectorRollout(any())
     }
   }
 
-  @Test
-  fun `test startConnectorRollout without pin migration`() {
+  @ParameterizedTest
+  @EnumSource(ConnectorRolloutStrategy::class)
+  fun `test startConnectorRollout without pin migration`(rolloutStrategy: ConnectorRolloutStrategy) {
     val rolloutId = UUID.randomUUID()
-    val connectorRollout = createMockConnectorRollout(rolloutId).apply { this.state = state }
+    val connectorRollout =
+      createMockConnectorRollout(rolloutId, rolloutStrategy = ConnectorEnumRolloutStrategy.fromValue(rolloutStrategy.toString())).apply {
+        this.state =
+          state
+      }
 
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { connectorRolloutService.listConnectorRollouts(any()) } returns emptyList()
@@ -457,7 +472,7 @@ internal class ConnectorRolloutHandlerTest {
       ConnectorRolloutStartRequestBody()
         .id(rolloutId)
         .workflowRunId(UUID.randomUUID().toString())
-        .rolloutStrategy(ConnectorRolloutStrategy.MANUAL)
+        .rolloutStrategy(rolloutStrategy)
         .migratePins(false),
     )
 
@@ -467,8 +482,10 @@ internal class ConnectorRolloutHandlerTest {
     }
     verify {
       connectorRolloutService.getConnectorRollout(rolloutId)
-      rolloutActorFinder.getActorSelectionInfo(any(), any(), any())
-      rolloutActorFinder.getSyncInfoForPinnedActors(any())
+      if (rolloutStrategy == ConnectorRolloutStrategy.AUTOMATED) {
+        rolloutActorFinder.getActorSelectionInfo(any(), any(), any())
+        rolloutActorFinder.getSyncInfoForPinnedActors(any())
+      }
       actorDefinitionService.getActorDefinitionVersion(any())
       connectorRolloutService.writeConnectorRollout(any())
     }

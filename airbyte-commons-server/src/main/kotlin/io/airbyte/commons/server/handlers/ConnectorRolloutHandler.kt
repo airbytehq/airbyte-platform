@@ -295,26 +295,38 @@ open class ConnectorRolloutHandler
       }
       logger.info { "Updating connector rollout ID: ${connectorRollout.id}" }
       val updatedConnectorRollout = connectorRolloutService.writeConnectorRollout(connectorRollout)
-      return connectorRolloutHelper.buildConnectorRolloutRead(updatedConnectorRollout, true)
+      return connectorRolloutHelper.buildConnectorRolloutRead(
+        updatedConnectorRollout,
+        connectorRolloutStart.rolloutStrategy == ConnectorRolloutStrategy.AUTOMATED,
+      )
     }
 
     @Transactional("config")
     open fun doConnectorRollout(connectorRolloutUpdate: ConnectorRolloutRequestBody): ConnectorRolloutRead {
       val connectorRollout = getAndRollOutConnectorRollout(connectorRolloutUpdate)
       val updatedConnectorRollout = connectorRolloutService.writeConnectorRollout(connectorRollout)
-      return connectorRolloutHelper.buildConnectorRolloutRead(updatedConnectorRollout, true)
+      return connectorRolloutHelper.buildConnectorRolloutRead(
+        updatedConnectorRollout,
+        connectorRolloutUpdate.rolloutStrategy == ConnectorRolloutStrategy.AUTOMATED,
+      )
     }
 
     @Transactional("config")
     open fun finalizeConnectorRollout(connectorRolloutFinalize: ConnectorRolloutFinalizeRequestBody): ConnectorRolloutRead {
       val connectorRollout = getAndValidateFinalizeRequest(connectorRolloutFinalize)
       val updatedConnectorRollout = connectorRolloutService.writeConnectorRollout(connectorRollout)
-      return connectorRolloutHelper.buildConnectorRolloutRead(updatedConnectorRollout, true)
+      return connectorRolloutHelper.buildConnectorRolloutRead(
+        updatedConnectorRollout,
+        connectorRolloutFinalize.rolloutStrategy == ConnectorRolloutStrategy.AUTOMATED,
+      )
     }
 
     open fun getConnectorRollout(id: UUID): ConnectorRolloutRead {
       val connectorRollout = connectorRolloutService.getConnectorRollout(id)
-      return connectorRolloutHelper.buildConnectorRolloutRead(connectorRollout, true)
+      return connectorRolloutHelper.buildConnectorRolloutRead(
+        connectorRollout,
+        connectorRollout.rolloutStrategy == ConnectorEnumRolloutStrategy.AUTOMATED,
+      )
     }
 
     open fun updateState(connectorRolloutUpdateStateRequestBody: ConnectorRolloutUpdateStateRequestBody): ConnectorRolloutRead {
@@ -336,7 +348,10 @@ open class ConnectorRolloutHandler
           connectorRolloutUpdateStateRequestBody.pausedReason,
         )
       val updatedConnectorRollout = connectorRolloutService.writeConnectorRollout(connectorRollout)
-      return connectorRolloutHelper.buildConnectorRolloutRead(updatedConnectorRollout, true)
+      return connectorRolloutHelper.buildConnectorRolloutRead(
+        updatedConnectorRollout,
+        rollout.rolloutStrategy == ConnectorEnumRolloutStrategy.AUTOMATED,
+      )
     }
 
     @Transactional("config")
