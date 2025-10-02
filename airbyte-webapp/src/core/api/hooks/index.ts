@@ -17,6 +17,7 @@ export * from "./dataplaneGroups";
 export * from "./destinations";
 export * from "./destinationDefinitions";
 export * from "./diagnostics";
+export * from "./enterpriseDestinations";
 export * from "./enterpriseSources";
 export * from "./entitlements";
 export * from "./filters";

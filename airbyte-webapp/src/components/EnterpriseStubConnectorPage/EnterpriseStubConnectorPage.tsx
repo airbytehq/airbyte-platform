@@ -2,7 +2,6 @@ import classNames from "classnames";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useParams } from "react-router-dom";
 
-import { EnterpriseDocumentationPanel } from "components/source/enterpriseStubs/EnterpriseDocumentationPanel";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex/FlexContainer";
 import { Icon } from "components/ui/Icon";
@@ -10,29 +9,46 @@ import { ExternalLink } from "components/ui/Link";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader/PageHeaderWithNavigation";
 import { Text } from "components/ui/Text";
 
-import { useListEnterpriseStubsForWorkspace } from "core/api";
+import { useListEnterpriseSourceStubs, useListEnterpriseDestinationStubs } from "core/api";
 import { EnterpriseConnectorStubType } from "core/domain/connector";
 import { links } from "core/utils/links";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 import { RoutePaths } from "pages/routePaths";
 
 import blurred_source_form from "./blurred_source_form.webp";
-import styles from "./EnterpriseSourcePage.module.scss";
+import { EnterpriseDocumentationPanel } from "./EnterpriseDocumentationPanel";
+import styles from "./EnterpriseStubConnectorPage.module.scss";
 
 const appendConnectorTracking = (name: string) => {
   const lowerCaseName: string = name.toLowerCase();
   return `${links.contactSales}?utm_source=airbyte&utm_medium=product&utm_content=enterprise_connector_${lowerCaseName}`;
 };
 
-export const EnterpriseSourcePage: React.FC = () => {
+interface EnterpriseStubConnectorPageProps {
+  connectorType: "source" | "destination";
+}
+
+export const EnterpriseStubConnectorPage: React.FC<EnterpriseStubConnectorPageProps> = ({ connectorType }) => {
   const { theme } = useAirbyteTheme();
   const params = useParams<{ workspaceId: string; id: string }>();
-  const { enterpriseSourceDefinitionsMap } = useListEnterpriseStubsForWorkspace();
+  const { enterpriseSourceDefinitionsMap = new Map() } =
+    useListEnterpriseSourceStubs({
+      enabled: connectorType === "source",
+    }) || {};
+  const { enterpriseDestinationDefinitionsMap = new Map() } =
+    useListEnterpriseDestinationStubs({
+      enabled: connectorType === "destination",
+    }) || {};
 
-  const enterpriseSource = params.id
-    ? (enterpriseSourceDefinitionsMap.get(params.id) as EnterpriseConnectorStubType)
+  const enterpriseConnector = params.id
+    ? connectorType === "source"
+      ? (enterpriseSourceDefinitionsMap.get(params.id) as EnterpriseConnectorStubType)
+      : (enterpriseDestinationDefinitionsMap.get(params.id) as EnterpriseConnectorStubType)
     : undefined;
-  const breadcrumbBasePath = `/${RoutePaths.Workspaces}/${params.workspaceId}/${RoutePaths.Source}`;
+
+  const breadcrumbBasePath = `/${RoutePaths.Workspaces}/${params.workspaceId}/${
+    connectorType === "source" ? RoutePaths.Source : RoutePaths.Destination
+  }`;
 
   const { formatMessage } = useIntl();
 
@@ -42,13 +58,13 @@ export const EnterpriseSourcePage: React.FC = () => {
 
   const breadcrumbsData = [
     {
-      label: formatMessage({ id: "sidebar.sources" }),
+      label: formatMessage({ id: connectorType === "source" ? "sidebar.sources" : "sidebar.destinations" }),
       to: `${breadcrumbBasePath}/`,
     },
-    { label: formatMessage({ id: "sources.newSource" }) },
+    { label: formatMessage({ id: connectorType === "source" ? "sources.newSource" : "destinations.newDestination" }) },
   ];
 
-  if (!enterpriseSource) {
+  if (!enterpriseConnector) {
     return null;
   }
 
@@ -76,7 +92,7 @@ export const EnterpriseSourcePage: React.FC = () => {
             <ExternalLink
               variant="button"
               opensInNewTab
-              href={appendConnectorTracking(enterpriseSource.name)}
+              href={appendConnectorTracking(enterpriseConnector.name)}
               className={styles.button}
             >
               <FormattedMessage id="credits.talkToSales" />
@@ -87,11 +103,11 @@ export const EnterpriseSourcePage: React.FC = () => {
       </div>
 
       <div className={styles.rightSection}>
-        {enterpriseSource && (
+        {enterpriseConnector && (
           <EnterpriseDocumentationPanel
-            id={enterpriseSource.id}
-            name={enterpriseSource.name}
-            documentationUrl={enterpriseSource.url}
+            id={enterpriseConnector.id}
+            name={enterpriseConnector.name}
+            documentationUrl={enterpriseConnector.url}
           />
         )}
       </div>

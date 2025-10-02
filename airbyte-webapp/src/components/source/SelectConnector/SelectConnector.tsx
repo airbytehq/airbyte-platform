@@ -15,7 +15,12 @@ import { ButtonTab, Tabs } from "components/ui/Tabs";
 import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { useCurrentWorkspace, useFilters, useListEnterpriseStubsForWorkspace } from "core/api";
+import {
+  useCurrentWorkspace,
+  useFilters,
+  useListEnterpriseSourceStubs,
+  useListEnterpriseDestinationStubs,
+} from "core/api";
 import { EnterpriseConnectorStub } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionOrEnterpriseStub } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
@@ -23,7 +28,7 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
 import { useModalService } from "hooks/services/Modal";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
-import { RoutePaths, SourcePaths } from "pages/routePaths";
+import { RoutePaths, SourcePaths, DestinationPaths } from "pages/routePaths";
 
 import { ConnectorList } from "./ConnectorList";
 import { RequestConnectorModal } from "./RequestConnectorModal";
@@ -75,15 +80,28 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
     }
   };
 
-  // Fetch enterprise source stubs
-  const { enterpriseSourceDefinitions } = useListEnterpriseStubsForWorkspace();
+  // Fetch enterprise stubs
+  const { enterpriseSourceDefinitions = [] } =
+    useListEnterpriseSourceStubs({
+      enabled: connectorType === "source",
+    }) || {};
+  const { enterpriseDestinationDefinitions = [] } =
+    useListEnterpriseDestinationStubs({
+      enabled: connectorType === "destination",
+    }) || {};
 
   const createLink = useCurrentWorkspaceLink();
 
   const onSelectEnterpriseSourceStub = (definition: EnterpriseConnectorStub) => {
     // This is a temporary routing solution to navigate to the enterprise stub sales funnel.
     // If/when we implement enterprise connectors in the catalog, we should use onSelectConnectorDefinition.
-    navigate(createLink(`/${RoutePaths.Source}/${SourcePaths.EnterpriseSource.replace(":id", definition.id)}`));
+    navigate(createLink(`/${RoutePaths.Source}/${SourcePaths.EnterpriseSource}/${definition.id}`));
+  };
+
+  const onSelectEnterpriseDestinationStub = (definition: EnterpriseConnectorStub) => {
+    // This is a temporary routing solution to navigate to the enterprise stub sales funnel.
+    // If/when we implement enterprise connectors in the catalog, we should use onSelectConnectorDefinition.
+    navigate(createLink(`/${RoutePaths.Destination}/${DestinationPaths.EnterpriseDestination}/${definition.id}`));
   };
 
   interface BaseFilters {
@@ -136,7 +154,11 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
       if ("isEnterprise" in definition) {
         // Handle EnterpriseConnectorStubs first
         trackSelectEnterpriseStub(definition);
-        onSelectEnterpriseSourceStub(definition);
+        if (connectorType === "source") {
+          onSelectEnterpriseSourceStub(definition);
+        } else {
+          onSelectEnterpriseDestinationStub(definition);
+        }
       } else if (isSourceDefinition(definition)) {
         trackSelectConnector(definition.sourceDefinitionId, definition.name);
         onSelectConnectorDefinition(definition.sourceDefinitionId);
@@ -201,9 +223,11 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   const connectorListWithEnterpriseStubs = useMemo<ConnectorDefinitionOrEnterpriseStub[]>(() => {
     if (connectorType === "source") {
       return [...connectorDefinitions, ...enterpriseSourceDefinitions];
+    } else if (connectorType === "destination") {
+      return [...connectorDefinitions, ...enterpriseDestinationDefinitions];
     }
     return connectorDefinitions;
-  }, [connectorType, connectorDefinitions, enterpriseSourceDefinitions]);
+  }, [connectorType, connectorDefinitions, enterpriseSourceDefinitions, enterpriseDestinationDefinitions]);
 
   function keywordMatch(definition: ConnectorDefinitionOrEnterpriseStub, searchTerm: string) {
     const keywords = searchTerm.toLowerCase().split(" ").filter(Boolean);

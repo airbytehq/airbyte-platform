@@ -25,7 +25,8 @@ jest.mock("core/api", () => ({
   useFilters: (defaultFilters: unknown) => {
     return [defaultFilters, () => null];
   },
-  useListEnterpriseStubsForWorkspace: () => ({ enterpriseSourceDefinitions: [] }),
+  useListEnterpriseSourceStubs: () => ({ enterpriseSourceDefinitions: [] }),
+  useListEnterpriseDestinationStubs: () => ({ enterpriseDestinationDefinitions: [] }),
   useGetWebappConfig: () => mockWebappConfig,
 }));
 
