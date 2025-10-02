@@ -16,22 +16,22 @@ import { useRedirectToCustomerPortal } from "packages/cloud/area/billing/utils/u
 import styles from "./TrialEndedModal.module.scss";
 
 interface TrialEndedModalResult {
-  action: "cloud" | "teams";
+  action: "standard" | "pro";
 }
 
 export const TrialEndedModal: React.FC<ModalContentProps<TrialEndedModalResult>> = ({ onComplete }) => {
   const { goToCustomerPortal, redirecting } = useRedirectToCustomerPortal("setup");
-  const [isTeamsRedirecting, setIsTeamsRedirecting] = useState(false);
+  const [isProRedirecting, setIsProRedirecting] = useState(false);
 
-  const handleCloudPlanClick = async () => {
+  const handleStandardPlanClick = async () => {
     await goToCustomerPortal();
-    onComplete({ action: "cloud" });
+    onComplete({ action: "standard" });
   };
 
-  const handleTeamsPlanClick = () => {
-    setIsTeamsRedirecting(true);
+  const handleProPlanClick = () => {
+    setIsProRedirecting(true);
     window.open(links.contactSales, "_blank");
-    onComplete({ action: "teams" });
+    onComplete({ action: "pro" });
   };
 
   return (
@@ -47,7 +47,7 @@ export const TrialEndedModal: React.FC<ModalContentProps<TrialEndedModalResult>>
         </FlexContainer>
 
         <FlexContainer direction="row" gap="lg">
-          {/* Cloud Plan */}
+          {/* Standard Plan */}
           <Box className={styles.trialEndedModal__planCard}>
             <FlexContainer direction="column" gap="lg" justifyContent="space-between">
               <FlexContainer direction="column" gap="lg">
@@ -58,10 +58,10 @@ export const TrialEndedModal: React.FC<ModalContentProps<TrialEndedModalResult>>
                   className={styles.trialEndedModal__planTitle}
                 >
                   <Heading as="h2" size="lg" color="blue">
-                    <FormattedMessage id="trialEnded.modal.cloud.title" />
+                    <FormattedMessage id="trialEnded.modal.standard.title" />
                   </Heading>
                   <Text size="sm" align="center">
-                    <FormattedMessage id="trialEnded.modal.cloud.subtitle" />
+                    <FormattedMessage id="trialEnded.modal.standard.subtitle" />
                   </Text>
                 </FlexContainer>
 
@@ -69,37 +69,37 @@ export const TrialEndedModal: React.FC<ModalContentProps<TrialEndedModalResult>>
                   <FlexContainer direction="row" gap="sm" alignItems="center">
                     <Icon type="check" size="sm" color="action" />
                     <Text size="sm">
-                      <FormattedMessage id="trialEnded.modal.cloud.feature.connectors" />
+                      <FormattedMessage id="trialEnded.modal.standard.feature.connectors" />
                     </Text>
                   </FlexContainer>
                   <FlexContainer direction="row" gap="sm" alignItems="center">
                     <Icon type="check" size="sm" color="action" />
                     <Text size="sm">
-                      <FormattedMessage id="trialEnded.modal.cloud.feature.workspace" />
+                      <FormattedMessage id="trialEnded.modal.standard.feature.workspace" />
                     </Text>
                   </FlexContainer>
                   <FlexContainer direction="row" gap="sm" alignItems="center">
                     <Icon type="check" size="sm" color="action" />
                     <Text size="sm">
-                      <FormattedMessage id="trialEnded.modal.cloud.feature.syncFreq" />
+                      <FormattedMessage id="trialEnded.modal.standard.feature.syncFreq" />
                     </Text>
                   </FlexContainer>
                   <FlexContainer direction="row" gap="sm" alignItems="center">
                     <Icon type="check" size="sm" color="action" />
                     <Text size="sm">
-                      <FormattedMessage id="trialEnded.modal.cloud.feature.users" />
+                      <FormattedMessage id="trialEnded.modal.standard.feature.users" />
                     </Text>
                   </FlexContainer>
                   <FlexContainer direction="row" gap="sm" alignItems="center">
                     <Icon type="check" size="sm" color="action" />
                     <Text size="sm">
-                      <FormattedMessage id="trialEnded.modal.cloud.feature.builder" />
+                      <FormattedMessage id="trialEnded.modal.standard.feature.builder" />
                     </Text>
                   </FlexContainer>
                   <FlexContainer direction="row" gap="sm" alignItems="center">
                     <Icon type="check" size="sm" color="action" />
                     <Text size="sm">
-                      <FormattedMessage id="trialEnded.modal.cloud.feature.support" />
+                      <FormattedMessage id="trialEnded.modal.standard.feature.support" />
                     </Text>
                   </FlexContainer>
                 </FlexContainer>
@@ -107,22 +107,22 @@ export const TrialEndedModal: React.FC<ModalContentProps<TrialEndedModalResult>>
 
               <FlexContainer direction="column" alignItems="center" gap="lg">
                 <Text size="md" bold>
-                  <FormattedMessage id="trialEnded.modal.cloud.price" />
+                  <FormattedMessage id="trialEnded.modal.standard.price" />
                 </Text>
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={handleCloudPlanClick}
+                  onClick={handleStandardPlanClick}
                   isLoading={redirecting}
                   className={styles.trialEndedModal__button}
                 >
-                  <FormattedMessage id="trialEnded.modal.cloud.button" />
+                  <FormattedMessage id="trialEnded.modal.standard.button" />
                 </Button>
               </FlexContainer>
             </FlexContainer>
           </Box>
 
-          {/* Teams Plan */}
+          {/* Pro Plan */}
           <Box className={styles.trialEndedModal__planCard}>
             <FlexContainer direction="column" gap="lg" justifyContent="space-between">
               <FlexContainer direction="column" gap="lg">
@@ -133,10 +133,10 @@ export const TrialEndedModal: React.FC<ModalContentProps<TrialEndedModalResult>>
                   className={styles.trialEndedModal__planTitle}
                 >
                   <Heading as="h2" size="lg">
-                    <FormattedMessage id="trialEnded.modal.teams.title" />
+                    <FormattedMessage id="trialEnded.modal.pro.title" />
                   </Heading>
                   <Text size="sm" align="center">
-                    <FormattedMessage id="trialEnded.modal.teams.subtitle" />
+                    <FormattedMessage id="trialEnded.modal.pro.subtitle" />
                   </Text>
                 </FlexContainer>
 
@@ -144,49 +144,49 @@ export const TrialEndedModal: React.FC<ModalContentProps<TrialEndedModalResult>>
                   <FlexContainer direction="row" gap="sm" alignItems="center">
                     <Icon type="check" size="sm" color="action" />
                     <Text size="sm" color="blue">
-                      <FormattedMessage id="trialEnded.modal.teams.feature.everything" />
+                      <FormattedMessage id="trialEnded.modal.pro.feature.everything" />
                     </Text>
                   </FlexContainer>
                   <FlexContainer direction="row" gap="sm" alignItems="center">
                     <Icon type="check" size="sm" color="action" />
                     <Text size="sm">
-                      <FormattedMessage id="trialEnded.modal.teams.feature.workspaces" />
+                      <FormattedMessage id="trialEnded.modal.pro.feature.workspaces" />
                     </Text>
                   </FlexContainer>
                   <FlexContainer direction="row" gap="sm" alignItems="center">
                     <Icon type="check" size="sm" color="action" />
                     <Text size="sm">
-                      <FormattedMessage id="trialEnded.modal.teams.feature.syncFreq" />
+                      <FormattedMessage id="trialEnded.modal.pro.feature.syncFreq" />
                     </Text>
                   </FlexContainer>
                   <FlexContainer direction="row" gap="sm" alignItems="center">
                     <Icon type="check" size="sm" color="action" />
                     <Text size="sm">
-                      <FormattedMessage id="trialEnded.modal.teams.feature.rbac" />
+                      <FormattedMessage id="trialEnded.modal.pro.feature.rbac" />
                     </Text>
                   </FlexContainer>
                   <FlexContainer direction="row" gap="sm" alignItems="center">
                     <Icon type="check" size="sm" color="action" />
                     <Text size="sm">
-                      <FormattedMessage id="trialEnded.modal.teams.feature.sso" />
+                      <FormattedMessage id="trialEnded.modal.pro.feature.sso" />
                     </Text>
                   </FlexContainer>
                   <FlexContainer direction="row" gap="sm" alignItems="center">
                     <Icon type="check" size="sm" color="action" />
                     <Text size="sm">
-                      <FormattedMessage id="trialEnded.modal.teams.feature.audit" />
+                      <FormattedMessage id="trialEnded.modal.pro.feature.audit" />
                     </Text>
                   </FlexContainer>
                   <FlexContainer direction="row" gap="sm" alignItems="center">
                     <Icon type="check" size="sm" color="action" />
                     <Text size="sm">
-                      <FormattedMessage id="trialEnded.modal.teams.feature.encryption" />
+                      <FormattedMessage id="trialEnded.modal.pro.feature.encryption" />
                     </Text>
                   </FlexContainer>
                   <FlexContainer direction="row" gap="sm" alignItems="center">
                     <Icon type="check" size="sm" color="action" />
                     <Text size="sm">
-                      <FormattedMessage id="trialEnded.modal.teams.feature.support" />
+                      <FormattedMessage id="trialEnded.modal.pro.feature.support" />
                     </Text>
                   </FlexContainer>
                 </FlexContainer>
@@ -196,11 +196,11 @@ export const TrialEndedModal: React.FC<ModalContentProps<TrialEndedModalResult>>
                 <Button
                   variant="primaryDark"
                   size="sm"
-                  onClick={handleTeamsPlanClick}
-                  isLoading={isTeamsRedirecting}
+                  onClick={handleProPlanClick}
+                  isLoading={isProRedirecting}
                   className={styles.trialEndedModal__button}
                 >
-                  <FormattedMessage id="trialEnded.modal.teams.button" />
+                  <FormattedMessage id="trialEnded.modal.pro.button" />
                 </Button>
               </FlexContainer>
             </FlexContainer>

@@ -35,18 +35,18 @@ const Card: React.FC<React.PropsWithChildren<CardProps>> = ({ variant, children 
   );
 };
 
-const CloudCard: React.FC<{ disabled: boolean }> = ({ disabled }) => {
+const StandardCard: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   const { goToCustomerPortal } = useRedirectToCustomerPortal("setup");
   const [isLoading, setIsLoading] = useState(false);
   return (
     <Card variant="primary">
       <FlexContainer justifyContent="space-between" alignItems="center">
         <Heading as="h3" size="md">
-          <FormattedMessage id="plans.cloud.title" />
+          <FormattedMessage id="plans.standard.title" />
         </Heading>
         <FlexContainer alignItems="center">
           <Text size="lg">
-            <FormattedMessage id="plans.cloud.price" />
+            <FormattedMessage id="plans.standard.price" />
           </Text>
           <Button
             isLoading={isLoading}
@@ -58,17 +58,17 @@ const CloudCard: React.FC<{ disabled: boolean }> = ({ disabled }) => {
               setIsLoading(false);
             }}
           >
-            <FormattedMessage id="plans.cloud.subscribe" />
+            <FormattedMessage id="plans.standard.subscribe" />
           </Button>
         </FlexContainer>
       </FlexContainer>
       <Text size="lg" className={styles.subscribe__cardText}>
         <p>
-          <FormattedMessage id="plans.cloud.description" />
+          <FormattedMessage id="plans.standard.description" />
         </p>
         <ul>
           <FormattedMessage
-            id="plans.cloud.features"
+            id="plans.standard.features"
             values={{
               li: (node: React.ReactNode) => <li>{node}</li>,
               creditsLink: (node: React.ReactNode) => (
@@ -84,24 +84,24 @@ const CloudCard: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   );
 };
 
-const TeamsCard: React.FC = () => {
+const ProCard: React.FC = () => {
   return (
     <Card variant="clear">
       <FlexContainer justifyContent="space-between" alignItems="center">
         <Heading as="h3" size="md">
-          <FormattedMessage id="plans.teams.title" />
+          <FormattedMessage id="plans.pro.title" />
         </Heading>
         <ExternalLink variant="button" href={links.contactSales}>
-          <FormattedMessage id="plans.teams.contact" />
+          <FormattedMessage id="plans.pro.contact" />
         </ExternalLink>
       </FlexContainer>
       <Text size="lg" className={styles.subscribe__cardText}>
         <p>
-          <FormattedMessage id="plans.teams.description" />
+          <FormattedMessage id="plans.pro.description" />
         </p>
         <ul>
           <FormattedMessage
-            id="plans.teams.features"
+            id="plans.pro.features"
             values={{
               li: (node: React.ReactNode) => <li>{node}</li>,
             }}
@@ -123,8 +123,8 @@ export const SubscribeCards: React.FC = () => {
           <FormattedMessage id="settings.organization.billing.subscribeTitle" />
         </Heading>
         <FlexContainer wrap="wrap" className={styles.subscribe__cards}>
-          <CloudCard disabled={billing?.paymentStatus === "locked"} />
-          <TeamsCard />
+          <StandardCard disabled={billing?.paymentStatus === "locked"} />
+          <ProCard />
         </FlexContainer>
         <FlexItem>
           <ExternalLink href={links.pricingPage} opensInNewTab>
