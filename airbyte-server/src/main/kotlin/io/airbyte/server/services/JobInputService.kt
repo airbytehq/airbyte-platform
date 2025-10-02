@@ -405,7 +405,12 @@ class JobInputService(
         } else {
           getDiscoverInputBySourceId(actorId, jobId!!, attemptId!!, false)
         }
-      ActorType.destination -> throw IllegalArgumentException("Discovery is not supported for destination, actorId: $actorId")
+      ActorType.destination ->
+        if (jobId == null && attemptId == null) {
+          getDiscoverInputByDestinationId(destinationId = actorId, jobId = UUID.randomUUID().toString(), attemptId = 0L, true)
+        } else {
+          getDiscoverInputByDestinationId(actorId, jobId!!, attemptId!!, false)
+        }
       else -> throw IllegalStateException("Actor type ${actor.actorType} not supported")
     }
   }
@@ -524,15 +529,15 @@ class JobInputService(
     jobId: String?,
     attemptId: Long?,
   ): CheckConnectionInput {
+    val destination = destinationService.getDestinationConnection(destinationId) ?: throw NotFoundException()
     val destinationInformation = getDestinationInformation(destinationId)
-    val destination = destinationInformation.destination
     val destinationDefinition = destinationInformation.destinationDefinition
 
     val dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationInformation.destinationDefinitionVersion)
     val configWithOauthParams: JsonNode =
       oAuthConfigSupplier.injectDestinationOAuthParameters(
         destinationDefinition.destinationDefinitionId,
-        destination!!.destinationId,
+        destination.destinationId,
         destination.workspaceId,
         destination.configuration,
       )
@@ -732,6 +737,47 @@ class JobInputService(
     )
   }
 
+  private fun getDiscoverInputByDestinationId(
+    destinationId: UUID,
+    jobId: String,
+    attemptId: Long,
+    isManual: Boolean,
+  ): DiscoverCommandInput.DiscoverCatalogInput {
+    val destination = destinationService.getDestinationConnection(destinationId)
+    val destinationInformation = getDestinationInformation(destinationId)
+    val destinationDefinition = destinationInformation.destinationDefinition
+    val destinationDefinitionVersion = destinationInformation.destinationDefinitionVersion
+
+    val dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationDefinitionVersion)
+    val configWithOauthParams: JsonNode =
+      oAuthConfigSupplier.injectDestinationOAuthParameters(
+        destinationDefinition.destinationDefinitionId,
+        destination.destinationId,
+        destination.workspaceId,
+        destination.configuration,
+      )
+    val hashedConfiguration = HASH_FUNCTION.hashBytes(Jsons.serialize(destination.configuration).toByteArray(Charsets.UTF_8)).toString()
+
+    return buildJobDiscoverConfig(
+      actorType = io.airbyte.config.ActorType.DESTINATION,
+      definitionId = destination.destinationDefinitionId,
+      actorId = destination.destinationId,
+      workspaceId = destination.workspaceId,
+      configuration = configWithOauthParams,
+      hashedConfiguration = hashedConfiguration,
+      dockerImage = dockerImage,
+      dockerTag = destinationDefinitionVersion.dockerImageTag,
+      protocolVersion = Version(destinationDefinitionVersion.protocolVersion),
+      isCustomConnector = destinationDefinition.custom,
+      resourceRequirements = destinationInformation.resourceRequirements,
+      allowedHosts = destinationDefinitionVersion.allowedHosts,
+      actorContext = contextBuilder.fromDestination(destination),
+      jobId = jobId,
+      attemptId = attemptId,
+      isManual = isManual,
+    )
+  }
+
   private fun getNetworkSecurityTokens(workspaceId: UUID): List<String> =
     try {
       scopedConfigurationService
@@ -794,7 +840,6 @@ class JobInputService(
   }
 
   private data class DestinationInformation(
-    val destination: DestinationConnection?,
     val destinationDefinition: StandardDestinationDefinition,
     val destinationDefinitionVersion: ActorDefinitionVersion,
     val resourceRequirements: ResourceRequirements?,
@@ -816,7 +861,6 @@ class JobInputService(
       )
 
     return DestinationInformation(
-      destination,
       destinationDefinition,
       destinationDefinitionVersion,
       resourceRequirements,
@@ -836,7 +880,6 @@ class JobInputService(
       )
 
     return DestinationInformation(
-      null,
       destinationDefinition,
       destinationDefinitionVersion,
       resourceRequirements,
