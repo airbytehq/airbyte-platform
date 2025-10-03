@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Label PR based on changed files"
-        uses: actions/labeler@v3
+        uses: actions/labeler@3d612d72e6784a1a65365cc6d33b5a001c12bf10 # v3.1.0
         with:
           repo-token: "${{ secrets.GH_PAT_MAINTENANCE_OCTAVIA }}"
           sync-labels: true

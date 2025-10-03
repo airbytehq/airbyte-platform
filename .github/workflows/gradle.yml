@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Airbyte
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
 
       - name: Check images exist
         run: ./tools/bin/check_images_exist.sh all
@@ -55,8 +55,8 @@ jobs:
       frontendServers: ${{ steps.changes.outputs.frontendServers }}
     steps:
       - name: Checkout Airbyte
-        uses: actions/checkout@v3
-      - uses: dorny/paths-filter@v2
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+      - uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50 # v2.11.1
         id: filter
         with:
           # Note, the following glob expression within a filters are ORs.
@@ -107,26 +107,26 @@ jobs:
       || (always() && needs.changes.outputs.frontendServers == 'true')
     steps:
       - name: Checkout Airbyte
-        uses: actions/checkout@v4
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
 
       - name: Cache Build Artifacts
         uses: ./.github/actions/cache-build-artifacts
         with:
           cache-key: ${{ secrets.CACHE_VERSION }}
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
           distribution: corretto
           java-version: 21
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # v3.9.1
         with:
           node-version: "lts/*"
 
       - name: Format
-        uses: Wandalen/wretry.action@v1.0.36
+        uses: Wandalen/wretry.action@e6cf3db7de3777ba5f999f903c2f4efdd9ac7288 # v1.0.36
         with:
           command: ./gradlew format --scan --info --stacktrace
           attempt_limit: 3
@@ -136,7 +136,7 @@ jobs:
         run: git --no-pager diff && test -z "$(git --no-pager diff)"
 
       - name: Build
-        uses: Wandalen/wretry.action@v1.0.36
+        uses: Wandalen/wretry.action@e6cf3db7de3777ba5f999f903c2f4efdd9ac7288 # v1.0.36
         with:
           # todo (cgardens): temporarily skipping airbyte-commons-worker because one of the tests uses too much memory. we are
           # adjusting the test to use a more reasonable amount of memory. https://github.com/airbytehq/oncall/issues/4415
@@ -161,7 +161,7 @@ jobs:
     if: ${{ failure() && github.ref == 'refs/heads/main' }}
     steps:
       - name: Checkout Airbyte
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
       - name: Match GitHub User to Slack User
         id: match-github-to-slack-user
         uses: ./.github/actions/match-github-to-slack-user
@@ -169,7 +169,7 @@ jobs:
           AIRBYTE_TEAM_BOT_SLACK_TOKEN: ${{ secrets.SLACK_AIRBYTE_TEAM_READ_USERS }}
           GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish to OSS Build Failure Slack Channel
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_BOT_TOKEN_AIRBYTE_TEAM }}
@@ -204,14 +204,14 @@ jobs:
     if: ${{ success() && github.ref == 'refs/heads/main' }}
     steps:
       - name: Get Previous Workflow Status
-        uses: Mercymeilya/last-workflow-status@v0.3
+        uses: Mercymeilya/last-workflow-status@040f64adf6b3514a99a3ce92c48cef9c5aea6caf # v0.3
         id: last_status
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       # To avoid clogging up the channel, only publish build success if the previous build was a failure since this means the build was fixed.
       - name: Publish Build Fixed Message to OSS Build Failure Slack Channel
         if: ${{ steps.last_status.outputs.last_status == 'failure' }}
-        uses: slackapi/slack-github-action@v2.1.1
+        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
         with:
           method: chat.postMessage
           token: ${{ secrets.SLACK_BOT_TOKEN_AIRBYTE_TEAM }}

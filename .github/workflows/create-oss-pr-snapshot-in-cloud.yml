@@ -16,14 +16,14 @@ jobs:
         - id: get-branch-and-repo
           run: |
             echo "repo_full_name=$(curl ${{ github.event.issue.pull_request.url }} | jq --raw-output .head.repo.full_name)" >> $GITHUB_OUTPUT
-        - uses: xt0rted/pull-request-comment-branch@v1
+        - uses: xt0rted/pull-request-comment-branch@653a7d5ca8bd91d3c5cb83286063314d0b063b8e # v1.4.0
           id: comment-branch
-        - uses: actions/checkout@v3
+        - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
           with:
             repository: ${{ steps.get-branch-and-repo.outputs.repo_full_name }}
             ref: ${{ steps.comment-branch.outputs.head_ref }}
             fetch-depth: 0 # needed to have the base branch available for the action below
-        - uses: stefanluptak/check-branch-up-to-date@v1
+        - uses: stefanluptak/check-branch-up-to-date@8b8b07b76e80b6f5f51b98d360844a9ca9c60b5b # v1
           id: branch-up-to-date
           with:
             base_branch: 'main'
@@ -35,7 +35,7 @@ jobs:
     steps:
       - name: Create a snapshot of an OSS PR to Cloud
         if: needs.check.outputs.branch_up_to_date == 'true'
-        uses: peter-evans/slash-command-dispatch@v3
+        uses: peter-evans/slash-command-dispatch@f996d7b7aae9059759ac55e978cff76d91853301 # v3.0.2
         id: slash-command-dispatch
         with:
           token: ${{ secrets.GH_PAT_MAINTENANCE_OCTAVIA }}
@@ -52,7 +52,7 @@ jobs:
 
       - name: Publish comment with requirements to update branch
         if: needs.check.outputs.branch_up_to_date == 'false'
-        uses: peter-evans/create-or-update-comment@v2
+        uses: peter-evans/create-or-update-comment@67dcc547d311b736a8e6c5c236542148a47adc3d # v2.1.1
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
@@ -60,7 +60,7 @@ jobs:
 
       - name: Publish comment with error message
         if: steps.slash-command-dispatch.outputs.error-message
-        uses: peter-evans/create-or-update-comment@v2
+        uses: peter-evans/create-or-update-comment@67dcc547d311b736a8e6c5c236542148a47adc3d # v2.1.1
         with:
           comment-id: ${{ github.event.comment.id }}
           body: |
