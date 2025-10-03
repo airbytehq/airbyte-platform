@@ -261,7 +261,8 @@ public class SecretPersistenceConfig implements Serializable {
     TESTING("testing"),
     GOOGLE("google"),
     VAULT("vault"),
-    AWS("aws");
+    AWS("aws"),
+    AZURE("azure");
 
     private final String value;
     private final static Map<String, SecretPersistenceType> CONSTANTS = new HashMap<String, SecretPersistenceType>();

@@ -18704,6 +18704,7 @@ components:
         - google
         - vault
         - aws
+        - azure
     SecretPersistenceConfigGetRequestBody:
       description: Request body for getting secret persistence config
       required:

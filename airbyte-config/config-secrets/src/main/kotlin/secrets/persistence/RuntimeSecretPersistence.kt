@@ -9,6 +9,9 @@ import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.metrics.MetricClient
 import io.github.oshai.kotlinlogging.KotlinLogging
+import secrets.persistence.AzureKeyVaultClient
+import secrets.persistence.AzureKeyVaultPersistence
+import secrets.persistence.AzureKeyVaultRuntimeConfiguration
 
 private const val AWS_ASSUME_ROLE_ACCESS_KEY_ID = "AWS_ASSUME_ROLE_ACCESS_KEY_ID"
 private const val AWS_ASSUME_ROLE_SECRET_ACCESS_KEY = "AWS_ASSUME_ROLE_SECRET_ACCESS_KEY"
@@ -26,7 +29,6 @@ class RuntimeSecretPersistence(
   private val awsAssumeRoleSecretKey: String? = System.getenv(AWS_ASSUME_ROLE_SECRET_ACCESS_KEY)
 
   private fun buildSecretPersistence(secretPersistenceConfig: SecretPersistenceConfig): SecretPersistence =
-    // TODO: Add Azure support
     when (secretPersistenceConfig.secretPersistenceType) {
       SecretPersistenceConfig.SecretPersistenceType.AWS -> {
         AwsSecretManagerPersistence(
@@ -34,6 +36,14 @@ class RuntimeSecretPersistence(
             AwsSecretsManagerRuntimeConfiguration.fromSecretPersistenceConfig(secretPersistenceConfig),
             awsAssumeRoleAccessKey,
             awsAssumeRoleSecretKey,
+          ),
+        )
+      }
+
+      SecretPersistenceConfig.SecretPersistenceType.AZURE -> {
+        AzureKeyVaultPersistence(
+          AzureKeyVaultClient.fromRuntimeConfig(
+            AzureKeyVaultRuntimeConfiguration.fromSecretPersistenceConfig(secretPersistenceConfig),
           ),
         )
       }

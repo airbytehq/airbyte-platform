@@ -80,7 +80,7 @@ class SecretPersistenceService(
             SecretStorageType.GOOGLE_SECRET_MANAGER -> SecretPersistenceConfig.SecretPersistenceType.GOOGLE
             SecretStorageType.VAULT -> SecretPersistenceConfig.SecretPersistenceType.VAULT
             SecretStorageType.LOCAL_TESTING -> SecretPersistenceConfig.SecretPersistenceType.TESTING
-            SecretStorageType.AZURE_KEY_VAULT -> throw IllegalStateException("Azure Key Vault is not supported")
+            SecretStorageType.AZURE_KEY_VAULT -> SecretPersistenceConfig.SecretPersistenceType.AZURE
           },
         ).withConfiguration(secretStorageConfig?.let { Jsons.deserializeToStringMap(it) })
 
