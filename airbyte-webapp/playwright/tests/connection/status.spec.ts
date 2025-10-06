@@ -98,12 +98,12 @@ test.describe("Connection Status", () => {
 
     // Wait for the job to start (data-loading="true")
     await expect(page.locator("[data-testid='connection-status-indicator'][data-loading='true']")).toBeVisible({
-      timeout: 10000,
+      timeout: 30000, // Increased timeout - sync might take time to start
     });
 
     // Wait for the job to complete (data-loading="false")
     await expect(page.locator("[data-testid='connection-status-indicator'][data-loading='false']")).toBeVisible({
-      timeout: 90000, // Longer timeout for reliable Postgres sync
+      timeout: 120000, // Longer timeout for reliable Postgres sync
     });
 
     // Verify manual sync button is enabled again

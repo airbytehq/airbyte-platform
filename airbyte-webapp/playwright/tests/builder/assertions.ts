@@ -49,6 +49,10 @@ export const assertMaxNumberOfPages = async (page: Page) => {
   const MAX_NUMBER_OF_PAGES = 5;
   const GO_BACK_AND_GO_NEXT_BUTTONS = 2;
 
+  // First, wait for the pagination container to be visible
+  const testPages = page.locator('[data-testid="test-pages"]');
+  await expect(testPages).toBeVisible({ timeout: 10000 });
+
   // Check that all expected page numbers exist
   for (let i = 1; i <= MAX_NUMBER_OF_PAGES; i++) {
     await expect(page.locator(`[data-testid="test-pages"] li:has-text("${i}")`)).toBeVisible();

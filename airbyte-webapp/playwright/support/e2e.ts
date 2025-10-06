@@ -2,8 +2,6 @@ import { Page } from "@playwright/test";
 import { FeatureItem, FeatureSet } from "@src/core/services/features/types";
 import { Experiments } from "@src/hooks/services/Experiment/experiments";
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-
 export const featureFlags: Partial<Experiments> = {};
 export const featureServiceOverrides: FeatureSet = {};
 
@@ -81,6 +79,16 @@ export async function injectFeatureFlagsAndStyle(page: Page) {
         featureFlags,
         featureServiceOverrides,
       });
+
+      // Only set window._e2ePlaywrightEnvironment if we're actually overriding features
+      // This prevents cross-test contamination where tests without overrides
+      // would still be detected as "E2E environment" and get default flags
+      const hasFeatureOverrides =
+        (featureFlags && Object.keys(featureFlags).length > 0) ||
+        (featureServiceOverrides && Object.keys(featureServiceOverrides).length > 0);
+      if (hasFeatureOverrides) {
+        window._e2ePlaywrightEnvironment = true; // Mark as Playwright E2E environment only when needed
+      }
 
       window._e2eOverwrites = featureFlags;
       window._e2eFeatureOverwrites = featureServiceOverrides;

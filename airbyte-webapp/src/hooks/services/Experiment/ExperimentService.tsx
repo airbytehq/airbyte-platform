@@ -92,9 +92,10 @@ function useExperimentWithOverwrites<K extends keyof Experiments>(key: K): Exper
 }
 
 // Allow overwriting values via the .experiments.dev file (and thus the REACT_APP_EXPERIMENT_OVERWRITES env variable) only during development
-const isCypress = window.hasOwnProperty("Cypress");
+// Skip dev-mode overwrites in E2E environments (Cypress/Playwright) to avoid conflicts with test-specific overrides
+const isE2EEnvironment = window.hasOwnProperty("Cypress") || window.hasOwnProperty("_e2ePlaywrightEnvironment");
 export const useExperiment =
-  !isCypress && process.env.NODE_ENV === "development" ? useExperimentWithOverwrites : useExperimentHook;
+  !isE2EEnvironment && process.env.NODE_ENV === "development" ? useExperimentWithOverwrites : useExperimentHook;
 
 export const useGetAllExperiments = () => {
   const experimentService = useContext(experimentContext);

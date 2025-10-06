@@ -32,7 +32,7 @@ test.describe("Destination CRUD operations", () => {
 
   test("Redirects from destination list to create page if no destinations are configured", async ({ page }) => {
     await mockHelpers.mockEmptyConnectorLists(page, "destination");
-    await page.goto(`/workspaces/${workspaceId}/destination`, { waitUntil: "networkidle" });
+    await page.goto(`/workspaces/${workspaceId}/destination`, { timeout: 10000 });
     await expect(page).toHaveURL(/.*\/destination\/new-destination/, { timeout: 15000 });
   });
 

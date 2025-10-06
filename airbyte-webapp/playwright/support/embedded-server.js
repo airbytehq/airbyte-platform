@@ -1,5 +1,4 @@
-// Add at the very top of your server.js file:
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+// Express server for embedded/cloud testing scenarios
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const path = require("path");

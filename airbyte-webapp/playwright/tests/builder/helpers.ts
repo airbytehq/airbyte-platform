@@ -118,7 +118,7 @@ export const configureValidAuth = async (page: Page) => {
   await apiKeyInput.waitFor({ state: "visible", timeout: 10000 });
 
   // Fill the API key and wait for the value to be set
-  await apiKeyInput.fill("theauthkey");
+  await apiKeyInput.fill("theauthkey", { timeout: 5000 });
   await apiKeyInput.blur();
 
   // Wait a moment for the value to be persisted before navigating away

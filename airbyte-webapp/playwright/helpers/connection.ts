@@ -35,15 +35,25 @@ export const connectionAPI = {
     });
 
     if (!discoverResponse.ok()) {
-      throw new Error(`Failed to discover schema: ${discoverResponse.status()}`);
+      const errorText = await discoverResponse.text().catch(() => "Unknown error");
+      throw new Error(`Failed to discover schema: ${discoverResponse.status()} - ${errorText}`);
     }
 
-    const { catalog }: { catalog: AirbyteCatalog } = await discoverResponse.json();
+    const discoverResult = await discoverResponse.json();
+    const catalog = discoverResult.catalog || discoverResult; // Handle both response formats
+
+    if (!catalog || !catalog.streams) {
+      console.error("Schema discovery failed - invalid catalog:", discoverResult);
+      throw new Error(`Schema discovery returned invalid catalog: ${JSON.stringify(discoverResult)}`);
+    }
+
+    // Type assert after validation
+    const typedCatalog = catalog as AirbyteCatalog;
 
     // Prepare streams based on options
     let streams: AirbyteStreamAndConfiguration[];
     if (options.enableAllStreams) {
-      streams = catalog.streams.map((stream) => ({
+      streams = typedCatalog.streams.map((stream) => ({
         ...stream,
         config: {
           syncMode: SyncMode.full_refresh,
@@ -53,7 +63,7 @@ export const connectionAPI = {
       }));
     } else {
       // Default to no streams selected
-      streams = catalog.streams.map((stream) => ({
+      streams = typedCatalog.streams.map((stream) => ({
         ...stream,
         config: {
           syncMode: SyncMode.full_refresh,
