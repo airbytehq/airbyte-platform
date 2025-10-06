@@ -23,7 +23,7 @@ export const links = {
   sourceDefinedPKLink: `${BASE_DOCS_LINK}/understanding-airbyte/connections/incremental-append-deduped/#source-defined-primary-key`,
   contactSales: "https://airbyte.com/talk-to-sales",
   cronReferenceLink: "http://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html",
-  cloudAllowlistIPsLink: `${BASE_DOCS_LINK}/operating-airbyte/security#network-security-1`,
+  cloudAllowlistIPsLink: `${BASE_DOCS_LINK}/platform/operating-airbyte/ip-allowlist`,
   lowCodeYamlDescription: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/yaml-overview`,
   ossSecurityDocs: `${BASE_DOCS_LINK}/operator-guides/security/#securing-airbyte-open-source`,
   connectorBuilderAuthentication: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/authentication`,
