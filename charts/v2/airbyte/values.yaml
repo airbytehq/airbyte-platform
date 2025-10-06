@@ -522,6 +522,36 @@ serviceAccount:
 ## If changing the image tags below, you should probably also update this.
 version: ""
 
+## @section Ingress Parameters
+
+# Configure the main ingress resource that allows you to access Airbyte installation.
+# This ingress can route to multiple services including airbyte-server and connector-builder-server
+ingress:
+  # -- Set to true to enable ingress record generation
+  enabled: false
+  # -- Specifies ingressClassName for clusters >= 1.18+
+  className: ""
+  # -- Ingress annotations done as key:value pairs
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  # -- The list of hostnames to be covered with this ingress record.
+  # Each host can have multiple paths routing to different services
+  hosts: []
+    # - host: chart-example.local
+    #   paths:
+    #     - path: /api
+    #       pathType: ImplementationSpecific
+    #       backend: server  # Routes to airbyte-server
+    #     - path: /connector-builder
+    #       pathType: ImplementationSpecific
+    #       backend: connector-builder-server  # Routes to connector-builder-server
+  # -- Custom ingress TLS configuration
+  tls: []
+    # - secretName: chart-example-tls
+    #   hosts:
+    #     - chart-example.local
+
 ## @section Webapp Parameters
 
 webapp:
