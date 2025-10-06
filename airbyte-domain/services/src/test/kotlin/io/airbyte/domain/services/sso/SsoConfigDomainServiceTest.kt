@@ -4,6 +4,7 @@
 
 package io.airbyte.domain.services.sso
 
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.SSOSetupProblem
 import io.airbyte.config.Organization
@@ -11,6 +12,7 @@ import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
 import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
+import io.airbyte.data.services.impls.keycloak.RealmDeletionException
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigStatus
 import io.mockk.Runs
@@ -21,9 +23,12 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import java.util.Optional
 import java.util.UUID
+import io.airbyte.config.SsoConfig as ConfigSsoConfig
+import io.airbyte.config.SsoConfigStatus as ConfigSsoConfigStatus
 
 class SsoConfigDomainServiceTest {
   private lateinit var ssoConfigService: SsoConfigService
@@ -149,6 +154,22 @@ class SsoConfigDomainServiceTest {
   }
 
   @Test
+  fun `deleteSsoConfig should still remove the config and domain email in the db even if keycloak realm deletion fails`() {
+    val orgId = UUID.randomUUID()
+    val companyIdentifier = "test-company-identifier"
+
+    every { airbyteKeycloakClient.deleteRealm(companyIdentifier) } throws RealmDeletionException("Realm deletion failed")
+    every { ssoConfigService.deleteSsoConfig(orgId) } just Runs
+    every { organizationEmailDomainService.deleteAllEmailDomains(orgId) } just Runs
+
+    assertDoesNotThrow { ssoConfigDomainService.deleteSsoConfig(orgId, companyIdentifier) }
+
+    verify(exactly = 1) { ssoConfigService.deleteSsoConfig(orgId) }
+    verify(exactly = 1) { organizationEmailDomainService.deleteAllEmailDomains(orgId) }
+    verify(exactly = 1) { airbyteKeycloakClient.deleteRealm(companyIdentifier) }
+  }
+
+  @Test
   fun `createAndStoreSsoConfig throws when email domain already exists`() {
     val orgId = UUID.randomUUID()
     val emailDomain = "airbyte.com"
@@ -174,14 +195,20 @@ class SsoConfigDomainServiceTest {
   }
 
   @Test
-  fun `createAndStoreSsoConfig throws when sso config already exists`() {
+  fun `createAndStoreSsoConfig throws when active sso config already exists`() {
     val orgId = UUID.randomUUID()
     val emailDomain = "airbyte.com"
     val orgEmail = "test@airbyte.com"
     val org = buildTestOrganization(orgId, orgEmail)
     val config = buildTestSsoConfig(orgId, emailDomain)
 
-    every { ssoConfigService.getSsoConfig(any()) } returns mockk()
+    val existingActiveConfig =
+      ConfigSsoConfig()
+        .withOrganizationId(orgId)
+        .withKeycloakRealm("existing-realm")
+        .withStatus(ConfigSsoConfigStatus.ACTIVE)
+
+    every { ssoConfigService.getSsoConfig(any()) } returns existingActiveConfig
     every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
     every { organizationService.getOrganization(any()) } returns Optional.of(org)
 
@@ -195,6 +222,72 @@ class SsoConfigDomainServiceTest {
         .toString()
         .contains("SSO Config already exists for organization ${config.organizationId}"),
     )
+  }
+
+  @Test
+  fun `createAndStoreSsoConfig should replace existing draft config`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.com"
+    val org = buildTestOrganization(orgId, orgEmail)
+    val newConfig = buildTestSsoConfig(orgId, emailDomain)
+
+    val existingDraftConfig =
+      ConfigSsoConfig()
+        .withOrganizationId(orgId)
+        .withKeycloakRealm("old-draft-realm")
+        .withStatus(ConfigSsoConfigStatus.DRAFT)
+
+    every { ssoConfigService.getSsoConfig(orgId) } returns existingDraftConfig andThen null
+    every { ssoConfigService.deleteSsoConfig(orgId) } just Runs
+    every { organizationEmailDomainService.deleteAllEmailDomains(orgId) } just Runs
+    every { airbyteKeycloakClient.deleteRealm("old-draft-realm") } just Runs
+    every { organizationEmailDomainService.findByEmailDomain(emailDomain) } returns emptyList()
+    every { organizationService.getOrganization(orgId) } returns Optional.of(org)
+    every { airbyteKeycloakClient.createOidcSsoConfig(newConfig) } just Runs
+    every { ssoConfigService.createSsoConfig(newConfig) } returns mockk()
+    every { organizationEmailDomainService.createEmailDomain(any()) } returns mockk()
+
+    ssoConfigDomainService.createAndStoreSsoConfig(newConfig)
+
+    verify(exactly = 1) { ssoConfigService.deleteSsoConfig(orgId) }
+    verify(exactly = 1) { organizationEmailDomainService.deleteAllEmailDomains(orgId) }
+    verify(exactly = 1) { airbyteKeycloakClient.deleteRealm("old-draft-realm") }
+    verify(exactly = 1) { airbyteKeycloakClient.createOidcSsoConfig(newConfig) }
+    verify(exactly = 1) { ssoConfigService.createSsoConfig(newConfig) }
+  }
+
+  @Test
+  fun `createAndStoreSsoConfig should replace existing draft config even when realm does not exist`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.com"
+    val org = buildTestOrganization(orgId, orgEmail)
+    val newConfig = buildTestSsoConfig(orgId, emailDomain)
+
+    val existingDraftConfig =
+      ConfigSsoConfig()
+        .withOrganizationId(orgId)
+        .withKeycloakRealm("old-draft-realm")
+        .withStatus(ConfigSsoConfigStatus.DRAFT)
+
+    every { ssoConfigService.getSsoConfig(orgId) } returns existingDraftConfig andThen null
+    every { ssoConfigService.deleteSsoConfig(orgId) } just Runs
+    every { organizationEmailDomainService.deleteAllEmailDomains(orgId) } just Runs
+    every { airbyteKeycloakClient.deleteRealm("old-draft-realm") } throws RealmDeletionException("Realm not found")
+    every { organizationEmailDomainService.findByEmailDomain(emailDomain) } returns emptyList()
+    every { organizationService.getOrganization(orgId) } returns Optional.of(org)
+    every { airbyteKeycloakClient.createOidcSsoConfig(newConfig) } just Runs
+    every { ssoConfigService.createSsoConfig(newConfig) } returns mockk()
+    every { organizationEmailDomainService.createEmailDomain(any()) } returns mockk()
+
+    ssoConfigDomainService.createAndStoreSsoConfig(newConfig)
+
+    verify(exactly = 1) { ssoConfigService.deleteSsoConfig(orgId) }
+    verify(exactly = 1) { organizationEmailDomainService.deleteAllEmailDomains(orgId) }
+    verify(exactly = 1) { airbyteKeycloakClient.deleteRealm("old-draft-realm") }
+    verify(exactly = 1) { airbyteKeycloakClient.createOidcSsoConfig(newConfig) }
+    verify(exactly = 1) { ssoConfigService.createSsoConfig(newConfig) }
   }
 
   @Test
@@ -259,6 +352,7 @@ class SsoConfigDomainServiceTest {
     val config = buildTestSsoConfig(orgId, emailDomain)
 
     every { organizationService.getOrganization(any()) } returns Optional.of(org)
+    every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
     val exception =
       assertThrows<SSOSetupProblem> {
         ssoConfigDomainService.validateEmailDomain(config)
@@ -281,8 +375,9 @@ class SsoConfigDomainServiceTest {
 
   private fun buildTestSsoConfig(
     orgId: UUID,
-    emailDomain: String,
+    emailDomain: String? = "airbyte.com",
     discoveryUrl: String = "https://auth.airbyte.com/.well-known/openid-configuration",
+    status: SsoConfigStatus = SsoConfigStatus.ACTIVE,
   ): SsoConfig =
     SsoConfig(
       organizationId = orgId,
@@ -291,6 +386,186 @@ class SsoConfigDomainServiceTest {
       clientSecret = "client-secret",
       discoveryUrl = discoveryUrl,
       emailDomain = emailDomain,
-      status = SsoConfigStatus.ACTIVE,
+      status = status,
     )
+
+  @Test
+  fun `createAndStoreSsoConfig should create draft SSO config without email domain`() {
+    val orgId = UUID.randomUUID()
+    val config = buildTestSsoConfig(orgId, emailDomain = null, status = SsoConfigStatus.DRAFT)
+
+    every { airbyteKeycloakClient.createOidcSsoConfig(config) } just Runs
+    every { ssoConfigService.createSsoConfig(any()) } returns mockk()
+    every { ssoConfigService.getSsoConfig(any()) } returns null
+
+    ssoConfigDomainService.createAndStoreSsoConfig(config)
+
+    verify(exactly = 1) { airbyteKeycloakClient.createOidcSsoConfig(config) }
+    verify(exactly = 1) { ssoConfigService.createSsoConfig(config) }
+    verify(exactly = 0) { organizationEmailDomainService.createEmailDomain(any()) }
+  }
+
+  @Test
+  fun `createAndStoreSsoConfig throws when creating draft with email domain`() {
+    val orgId = UUID.randomUUID()
+    val config = buildTestSsoConfig(orgId, emailDomain = "airbyte.com", status = SsoConfigStatus.DRAFT)
+
+    every { ssoConfigService.getSsoConfig(any()) } returns null
+
+    val exception =
+      assertThrows<BadRequestProblem> {
+        ssoConfigDomainService.createAndStoreSsoConfig(config)
+      }
+    assert(
+      exception.problem
+        .getData()
+        .toString()
+        .contains("Email domain should not be provided when creating a draft SSO config"),
+    )
+  }
+
+  @Test
+  fun `createAndStoreSsoConfig throws when creating active without email domain`() {
+    val orgId = UUID.randomUUID()
+    val config = buildTestSsoConfig(orgId, emailDomain = null, status = SsoConfigStatus.ACTIVE)
+
+    every { ssoConfigService.getSsoConfig(any()) } returns null
+
+    val exception =
+      assertThrows<BadRequestProblem> {
+        ssoConfigDomainService.createAndStoreSsoConfig(config)
+      }
+    assert(
+      exception.problem
+        .getData()
+        .toString()
+        .contains("Email domain is required when creating an active SSO config"),
+    )
+  }
+
+  @Test
+  fun `activateSsoConfig should activate draft and create email domain successfully`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.com"
+
+    val org = buildTestOrganization(orgId, orgEmail)
+    val existingConfig =
+      ConfigSsoConfig()
+        .withOrganizationId(orgId)
+        .withKeycloakRealm("airbyte")
+        .withStatus(ConfigSsoConfigStatus.DRAFT)
+
+    every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
+    every { organizationService.getOrganization(orgId) } returns Optional.of(org)
+    every { organizationEmailDomainService.findByEmailDomain(emailDomain) } returns emptyList()
+    every { ssoConfigService.updateSsoConfigStatus(orgId, SsoConfigStatus.ACTIVE) } just Runs
+    every { organizationEmailDomainService.createEmailDomain(any()) } returns mockk()
+
+    ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
+
+    verify(exactly = 1) { ssoConfigService.updateSsoConfigStatus(orgId, SsoConfigStatus.ACTIVE) }
+    verify(exactly = 1) {
+      organizationEmailDomainService.createEmailDomain(
+        withArg {
+          assertEquals(orgId, it.organizationId)
+          assertEquals(emailDomain, it.emailDomain)
+        },
+      )
+    }
+  }
+
+  @Test
+  fun `activateSsoConfig throws when SSO config does not exist`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+
+    every { ssoConfigService.getSsoConfig(orgId) } returns null
+
+    assertThrows<ResourceNotFoundProblem> {
+      ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
+    }
+  }
+
+  @Test
+  fun `activateSsoConfig throws when SSO config is already active`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+
+    val existingConfig =
+      ConfigSsoConfig()
+        .withOrganizationId(orgId)
+        .withKeycloakRealm("airbyte")
+        .withStatus(ConfigSsoConfigStatus.ACTIVE)
+
+    every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
+
+    val exception =
+      assertThrows<BadRequestProblem> {
+        ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
+      }
+    assert(
+      exception.problem
+        .getData()
+        .toString()
+        .contains("SSO config is already active"),
+    )
+  }
+
+  @Test
+  fun `activateSsoConfig throws when email domain does not match organization`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@differentdomain.com"
+
+    val org = buildTestOrganization(orgId, orgEmail)
+    val existingConfig =
+      ConfigSsoConfig()
+        .withOrganizationId(orgId)
+        .withKeycloakRealm("airbyte")
+        .withStatus(ConfigSsoConfigStatus.DRAFT)
+
+    every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
+    every { organizationService.getOrganization(orgId) } returns Optional.of(org)
+
+    val exception =
+      assertThrows<SSOSetupProblem> {
+        ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
+      }
+    assert(
+      exception.problem
+        .getData()
+        .toString()
+        .contains("Domain must match the organization"),
+    )
+  }
+
+  @Test
+  fun `activateSsoConfig throws when email domain already exists`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.com"
+
+    val org = buildTestOrganization(orgId, orgEmail)
+    val existingConfig =
+      ConfigSsoConfig()
+        .withOrganizationId(orgId)
+        .withKeycloakRealm("airbyte")
+        .withStatus(ConfigSsoConfigStatus.DRAFT)
+
+    every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
+    every { organizationService.getOrganization(orgId) } returns Optional.of(org)
+    every { organizationEmailDomainService.findByEmailDomain(emailDomain) } returns listOf(mockk())
+
+    val exception =
+      assertThrows<SSOSetupProblem> {
+        ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
+      }
+    assert(
+      exception.problem
+        .getData()
+        .toString()
+        .contains("Email domain already exists"),
+    )
+  }
 }

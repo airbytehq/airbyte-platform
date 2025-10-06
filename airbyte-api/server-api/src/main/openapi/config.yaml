@@ -7262,6 +7262,23 @@ paths:
           description: "SSO credentials successfully updates"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sso_config/activate:
+    post:
+      summary: Activate a draft SSO config
+      tags:
+        - sso_config
+      operationId: activateSsoConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivateSSOConfigRequestBody"
+        required: true
+      responses:
+        "204":
+          description: "SSO config successfully activated"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
 
   # Airbyte API
   /public:
@@ -21188,7 +21205,6 @@ components:
         - clientId
         - clientSecret
         - discoveryUrl
-        - emailDomain
         - status
       properties:
         organizationId:
@@ -21235,6 +21251,18 @@ components:
         clientId:
           type: string
         clientSecret:
+          type: string
+
+    ActivateSSOConfigRequestBody:
+      type: object
+      required:
+        - organizationId
+        - emailDomain
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        emailDomain:
           type: string
 
   responses:

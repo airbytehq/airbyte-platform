@@ -17,6 +17,6 @@ data class SsoConfig(
   val clientId: String,
   val clientSecret: String,
   val discoveryUrl: String,
-  val emailDomain: String,
+  val emailDomain: String?, // not required when status is DRAFT
   val status: SsoConfigStatus,
 )

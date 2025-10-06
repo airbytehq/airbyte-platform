@@ -5,6 +5,7 @@
 package io.airbyte.data.services
 
 import io.airbyte.domain.models.SsoConfig
+import io.airbyte.domain.models.SsoConfigStatus
 import java.util.UUID
 
 interface SsoConfigService {
@@ -13,4 +14,9 @@ interface SsoConfigService {
   fun deleteSsoConfig(organizationId: UUID)
 
   fun getSsoConfig(organizationId: UUID): io.airbyte.config.SsoConfig?
+
+  fun updateSsoConfigStatus(
+    organizationId: UUID,
+    status: SsoConfigStatus,
+  )
 }

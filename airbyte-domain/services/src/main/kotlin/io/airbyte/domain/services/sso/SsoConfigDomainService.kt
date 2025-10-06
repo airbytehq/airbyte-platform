@@ -23,14 +23,19 @@ import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
 import io.airbyte.data.services.impls.data.mappers.toDomain
 import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
+import io.airbyte.data.services.impls.keycloak.RealmDeletionException
 import io.airbyte.data.services.impls.keycloak.RealmValuesExistException
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigRetrieval
+import io.airbyte.domain.models.SsoConfigStatus
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
 import java.net.URL
 import java.util.UUID
+
+private val logger = KotlinLogging.logger {}
 
 @Singleton
 open class SsoConfigDomainService internal constructor(
@@ -40,15 +45,12 @@ open class SsoConfigDomainService internal constructor(
   private val organizationService: OrganizationService,
 ) {
   fun retrieveSsoConfig(organizationId: UUID): SsoConfigRetrieval {
-    val currentConfig = ssoConfigService.getSsoConfig(organizationId)
-    if (currentConfig == null) {
-      throw ResourceNotFoundProblem(
+    val currentConfig =
+      ssoConfigService.getSsoConfig(organizationId) ?: throw ResourceNotFoundProblem(
         ProblemResourceData()
           .resourceId(organizationId.toString())
           .resourceType("sso_config"),
       )
-    }
-
     try {
       val keycloakData = airbyteKeycloakClient.getSsoConfigData(organizationId, currentConfig.keycloakRealm)
       val domainData = organizationEmailDomainService.findByOrganizationId(organizationId).map { it.emailDomain }
@@ -68,12 +70,29 @@ open class SsoConfigDomainService internal constructor(
     }
   }
 
+  /**
+   * An SSO Config can be created in DRAFT or ACTIVE status. If the config is created in DRAFT status,
+   * the email domain should not be provided up front. It will be provided later when the draft
+   * config is activated. If the config is created in ACTIVE status, the email domain is required
+   * and will be used to enforce SSO logins for the organization immediately.
+   */
   @Transactional("config")
   open fun createAndStoreSsoConfig(config: SsoConfig) {
     validateDiscoveryUrl(config)
-    validateExistingSsoConfig(config)
     validateEmailDomain(config)
-    validateExistingEmailDomainEntries(config)
+
+    val existingConfig = ssoConfigService.getSsoConfig(config.organizationId)
+    if (existingConfig != null) {
+      if (existingConfig.status.toDomain() == SsoConfigStatus.DRAFT) {
+        deleteSsoConfig(config.organizationId, existingConfig.keycloakRealm)
+      } else {
+        throw SSOSetupProblem(
+          ProblemSSOSetupData()
+            .companyIdentifier(config.companyIdentifier)
+            .errorMessage("An active SSO Config already exists for organization ${config.organizationId}"),
+        )
+      }
+    }
 
     try {
       airbyteKeycloakClient.createOidcSsoConfig(config)
@@ -89,16 +108,11 @@ open class SsoConfigDomainService internal constructor(
           .errorMessage(ex.message),
       )
     }
-
     ssoConfigService.createSsoConfig(config)
 
-    organizationEmailDomainService.createEmailDomain(
-      OrganizationEmailDomain().apply {
-        id = UUID.randomUUID()
-        organizationId = config.organizationId
-        emailDomain = config.emailDomain
-      },
-    )
+    if (config.status == SsoConfigStatus.ACTIVE) {
+      createEmailDomainRecord(config.organizationId, config.emailDomain!!)
+    }
   }
 
   fun deleteSsoConfig(
@@ -109,6 +123,8 @@ open class SsoConfigDomainService internal constructor(
       ssoConfigService.deleteSsoConfig(organizationId)
       organizationEmailDomainService.deleteAllEmailDomains(organizationId)
       airbyteKeycloakClient.deleteRealm(companyIdentifier)
+    } catch (ex: RealmDeletionException) {
+      logger.warn(ex) { "Ignoring realm deletion exception because the realm might not exist " }
     } catch (ex: Exception) {
       throw SSODeletionProblem(
         ProblemSSODeletionData()
@@ -120,14 +136,11 @@ open class SsoConfigDomainService internal constructor(
   }
 
   fun updateClientCredentials(clientConfig: SsoKeycloakIdpCredentials) {
-    val currentSsoConfig = ssoConfigService.getSsoConfig(clientConfig.organizationId)
-    if (currentSsoConfig == null) {
-      throw SSOCredentialUpdateProblem(
+    val currentSsoConfig =
+      ssoConfigService.getSsoConfig(clientConfig.organizationId) ?: throw SSOCredentialUpdateProblem(
         ProblemSSOCredentialUpdateData()
           .errorMessage("SSO Config does not exist for organization ${clientConfig.organizationId}"),
       )
-    }
-
     try {
       airbyteKeycloakClient.updateIdpClientCredentials(clientConfig, currentSsoConfig.keycloakRealm)
     } catch (e: Exception) {
@@ -140,59 +153,103 @@ open class SsoConfigDomainService internal constructor(
   }
 
   /**
-   * This function checks if the email that is associated with the organization
-   * in the SsoConfig matches the domain passed in to the sso config creation request.
-   * At this time, we don't have officially validated emails, so we attempt to prevent
-   * users from creating random sso email domains by trying to match their desired
-   * domain with the domain from their org.
+   * Validates email domain requirements based on SSO config status.
+   *
+   * For ACTIVE configs:
+   * - Email domain is required
+   * - Email domain must match the organization's email domain
+   * - Email domain must not already exist in another organization
+   *
+   * For DRAFT configs:
+   * - Email domain must not be provided (will be required later during config activation)
    */
   @InternalForTesting
   internal fun validateEmailDomain(config: SsoConfig) {
-    val org = organizationService.getOrganization(config.organizationId)
+    val configEmailDomain = config.emailDomain
+    when (config.status) {
+      SsoConfigStatus.ACTIVE -> {
+        if (configEmailDomain == null) {
+          throw BadRequestProblem(
+            ProblemMessageData()
+              .message("Email domain is required when creating an active SSO config"),
+          )
+        }
+        validateEmailDomainMatchesOrganization(config.organizationId, configEmailDomain, config.companyIdentifier)
+        validateExistingEmailDomainEntries(config)
+      }
+      SsoConfigStatus.DRAFT -> {
+        if (config.emailDomain != null) {
+          throw BadRequestProblem(
+            ProblemMessageData()
+              .message("Email domain should not be provided when creating a draft SSO config"),
+          )
+        }
+      }
+    }
+  }
+
+  private fun validateEmailDomainMatchesOrganization(
+    organizationId: UUID,
+    emailDomain: String,
+    companyIdentifier: String,
+  ) {
+    val org = organizationService.getOrganization(organizationId)
     if (org.isEmpty) {
       throw SSOSetupProblem(
         ProblemSSOSetupData()
-          .companyIdentifier(config.companyIdentifier)
-          .errorMessage("Organization with id ${config.organizationId} not found"),
+          .companyIdentifier(companyIdentifier)
+          .errorMessage("Organization with id $organizationId not found"),
       )
     }
-
     val orgEmailDomain =
       org
         .get()
         .email
         .split("@")
         .getOrNull(1)
-
-    if (orgEmailDomain == null || orgEmailDomain != config.emailDomain) {
+    if (orgEmailDomain == null || orgEmailDomain != emailDomain) {
       throw SSOSetupProblem(
         ProblemSSOSetupData()
-          .companyIdentifier(config.companyIdentifier)
+          .companyIdentifier(companyIdentifier)
           .errorMessage("Invalid email domain: $orgEmailDomain. Domain must match the organization"),
       )
     }
   }
 
   private fun validateExistingEmailDomainEntries(config: SsoConfig) {
-    val existingEmailDomains = organizationEmailDomainService.findByEmailDomain(config.emailDomain)
+    val emailDomain =
+      config.emailDomain ?: throw BadRequestProblem(
+        ProblemMessageData()
+          .message("Email domain is required when validating existing email domain entries"),
+      )
+    validateEmailDomainNotExists(emailDomain, config.companyIdentifier)
+  }
+
+  private fun validateEmailDomainNotExists(
+    emailDomain: String,
+    companyIdentifier: String,
+  ) {
+    val existingEmailDomains = organizationEmailDomainService.findByEmailDomain(emailDomain)
     if (existingEmailDomains.isNotEmpty()) {
       throw SSOSetupProblem(
         ProblemSSOSetupData()
-          .companyIdentifier(config.companyIdentifier)
-          .errorMessage("Email domain already exists: ${config.emailDomain}"),
+          .companyIdentifier(companyIdentifier)
+          .errorMessage("Email domain already exists: $emailDomain"),
       )
     }
   }
 
-  private fun validateExistingSsoConfig(config: SsoConfig) {
-    val existingConfig = ssoConfigService.getSsoConfig(config.organizationId)
-    if (existingConfig != null) {
-      throw SSOSetupProblem(
-        ProblemSSOSetupData()
-          .companyIdentifier(config.companyIdentifier)
-          .errorMessage("SSO Config already exists for organization ${config.organizationId}"),
-      )
-    }
+  private fun createEmailDomainRecord(
+    organizationId: UUID,
+    emailDomain: String,
+  ) {
+    organizationEmailDomainService.createEmailDomain(
+      OrganizationEmailDomain().apply {
+        id = UUID.randomUUID()
+        this.organizationId = organizationId
+        this.emailDomain = emailDomain
+      },
+    )
   }
 
   private fun validateDiscoveryUrl(config: SsoConfig) {
@@ -203,6 +260,38 @@ open class SsoConfigDomainService internal constructor(
         ProblemSSOSetupData()
           .companyIdentifier(config.companyIdentifier)
           .errorMessage("Provided discoveryUrl is not valid: ${e.message}"),
+      )
+    }
+  }
+
+  @Transactional("config")
+  open fun activateSsoConfig(
+    organizationId: UUID,
+    emailDomain: String,
+  ) {
+    val currentSsoConfig =
+      ssoConfigService.getSsoConfig(organizationId) ?: throw ResourceNotFoundProblem(
+        ProblemResourceData()
+          .resourceId(organizationId.toString())
+          .resourceType("sso_config"),
+      )
+    if (currentSsoConfig.status.toDomain() == SsoConfigStatus.ACTIVE) {
+      throw BadRequestProblem(
+        ProblemMessageData()
+          .message("SSO config is already active for organization $organizationId"),
+      )
+    }
+    validateEmailDomainMatchesOrganization(organizationId, emailDomain, currentSsoConfig.keycloakRealm)
+    validateEmailDomainNotExists(emailDomain, currentSsoConfig.keycloakRealm)
+
+    try {
+      ssoConfigService.updateSsoConfigStatus(organizationId, SsoConfigStatus.ACTIVE)
+      createEmailDomainRecord(organizationId, emailDomain)
+    } catch (e: Exception) {
+      throw SSOSetupProblem(
+        ProblemSSOSetupData()
+          .companyIdentifier(currentSsoConfig.keycloakRealm)
+          .errorMessage("Error activating SSO config: ${e.message}"),
       )
     }
   }

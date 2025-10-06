@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
+import io.airbyte.api.server.generated.models.ActivateSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.CreateSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.DeleteSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.GetSSOConfigRequestBody
@@ -116,5 +117,23 @@ class SsoConfigApiControllerTest {
 
     verify(exactly = 1) { entitlementService.ensureEntitled(orgId, SsoEntitlement) }
     verify(exactly = 1) { ssoConfigDomainService.updateClientCredentials(any()) }
+  }
+
+  @Test
+  fun `activateSsoConfig activates a draft config`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val emailDomain = "airbyte.com"
+    every { entitlementService.ensureEntitled(orgId, SsoEntitlement) } just Runs
+    every { ssoConfigDomainService.activateSsoConfig(orgId.value, emailDomain) } just Runs
+
+    ssoConfigController.activateSsoConfig(
+      ActivateSSOConfigRequestBody(
+        organizationId = orgId.value,
+        emailDomain = emailDomain,
+      ),
+    )
+
+    verify(exactly = 1) { entitlementService.ensureEntitled(orgId, SsoEntitlement) }
+    verify(exactly = 1) { ssoConfigDomainService.activateSsoConfig(orgId.value, emailDomain) }
   }
 }

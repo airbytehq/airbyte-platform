@@ -5,6 +5,7 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.server.generated.apis.SsoConfigApi
+import io.airbyte.api.server.generated.models.ActivateSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.CreateSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.DeleteSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.GetSSOConfigRequestBody
@@ -97,6 +98,20 @@ open class SSOConfigApiController(
           clientId = updateSSOCredentialsRequestBody.clientId,
           clientSecret = updateSSOCredentialsRequestBody.clientSecret,
         ),
+      )
+    }
+  }
+
+  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  override fun activateSsoConfig(activateSSOConfigRequestBody: ActivateSSOConfigRequestBody) {
+    entitlementService.ensureEntitled(OrganizationId(activateSSOConfigRequestBody.organizationId), SsoEntitlement)
+
+    execute<Any?> {
+      ssoConfigDomainService.activateSsoConfig(
+        activateSSOConfigRequestBody.organizationId,
+        activateSSOConfigRequestBody.emailDomain,
       )
     }
   }

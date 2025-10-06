@@ -220,13 +220,18 @@ class AirbyteKeycloakClient(
   /**
    * Deletes a Keycloak realm by name.
    * Removes all associated configurations, clients, and identity providers.
-   * This method does not throw custom exceptions but may throw Keycloak client exceptions.
+   * @throws RealmDeletionException if deletion fails.
    */
   fun deleteRealm(realmName: String) {
-    keycloakAdminClient
-      .realms()
-      .realm(realmName)
-      .remove()
+    try {
+      keycloakAdminClient
+        .realms()
+        .realm(realmName)
+        .remove()
+    } catch (e: Exception) {
+      logger.error(e) { "Delete realm request failed" }
+      throw RealmDeletionException("Delete realm request failed! Server error: $e")
+    }
   }
 
   /**
@@ -270,6 +275,10 @@ class AirbyteKeycloakClient(
 }
 
 class RealmCreationException(
+  message: String,
+) : Exception(message)
+
+class RealmDeletionException(
   message: String,
 ) : Exception(message)
 
