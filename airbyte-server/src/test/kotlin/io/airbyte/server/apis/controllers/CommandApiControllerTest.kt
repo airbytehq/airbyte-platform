@@ -103,6 +103,7 @@ class CommandApiControllerTest {
         commandService = commandService,
         secretSanitizer = secretSanitizer,
         workspaceService = workspaceService,
+        logUtils = mockk(relaxed = true),
       )
   }
 
@@ -125,30 +126,31 @@ class CommandApiControllerTest {
 
   @Test
   fun `getCheckCommandOutput can return a successful response`() {
-    every { commandService.getCheckJobOutput(TEST_COMMAND_ID) } returns
-      ConnectorJobOutput()
-        .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
-        .withCheckConnection(
-          StandardCheckConnectionOutput()
-            .withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED),
-        )
+    every { commandService.getCheckJobOutput(TEST_COMMAND_ID, any()) } returns
+      CommandService.CheckJobOutput(
+        status = StandardCheckConnectionOutput.Status.SUCCEEDED,
+        message = "",
+        failureReason = null,
+        logs = null,
+      )
 
     val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID))
-    assertEquals(CheckCommandOutputResponse().id(TEST_COMMAND_ID).status(CheckCommandOutputResponse.StatusEnum.SUCCEEDED), output)
-    verify { commandService.getCheckJobOutput(TEST_COMMAND_ID) }
+    assertEquals(TEST_COMMAND_ID, output.id)
+    assertEquals(CheckCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(null, output.logs)
+    verify { commandService.getCheckJobOutput(TEST_COMMAND_ID, any()) }
   }
 
   @Test
   fun `getCheckCommandOutput can return a failure message`() {
     val message = "why things failed"
-    every { commandService.getCheckJobOutput(TEST_COMMAND_ID) } returns
-      ConnectorJobOutput()
-        .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
-        .withCheckConnection(
-          StandardCheckConnectionOutput()
-            .withStatus(StandardCheckConnectionOutput.Status.FAILED)
-            .withMessage(message),
-        )
+    every { commandService.getCheckJobOutput(TEST_COMMAND_ID, any()) } returns
+      CommandService.CheckJobOutput(
+        status = StandardCheckConnectionOutput.Status.FAILED,
+        message = message,
+        failureReason = null,
+        logs = null,
+      )
 
     val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID))
     assertEquals(
@@ -158,18 +160,16 @@ class CommandApiControllerTest {
         .message(message),
       output,
     )
-    verify { commandService.getCheckJobOutput(TEST_COMMAND_ID) }
+    verify { commandService.getCheckJobOutput(TEST_COMMAND_ID, any()) }
   }
 
   @Test
   fun `getCheckCommandOutput can return a failure response`() {
-    every { commandService.getCheckJobOutput(TEST_COMMAND_ID) } returns
-      ConnectorJobOutput()
-        .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
-        .withCheckConnection(
-          StandardCheckConnectionOutput()
-            .withStatus(StandardCheckConnectionOutput.Status.FAILED),
-        ).withFailureReason(
+    every { commandService.getCheckJobOutput(TEST_COMMAND_ID, any()) } returns
+      CommandService.CheckJobOutput(
+        status = StandardCheckConnectionOutput.Status.FAILED,
+        message = "",
+        failureReason =
           FailureReason()
             .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
             .withFailureType(FailureReason.FailureType.CONFIG_ERROR)
@@ -178,26 +178,25 @@ class CommandApiControllerTest {
             .withStacktrace("my stacktrace")
             .withTimestamp(2)
             .withRetryable(false),
-        )
+        logs = null,
+      )
 
     val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID))
+    assertEquals(TEST_COMMAND_ID, output.id)
+    assertEquals(CheckCommandOutputResponse.StatusEnum.FAILED, output.status)
     assertEquals(
-      CheckCommandOutputResponse()
-        .id(TEST_COMMAND_ID)
-        .status(CheckCommandOutputResponse.StatusEnum.FAILED)
-        .failureReason(
-          ApiFailureReason()
-            .failureOrigin(FailureOrigin.SOURCE)
-            .failureType(FailureType.CONFIG_ERROR)
-            .externalMessage("external facing message")
-            .internalMessage("internal facing message")
-            .stacktrace("my stacktrace")
-            .timestamp(2)
-            .retryable(false),
-        ),
-      output,
+      ApiFailureReason()
+        .failureOrigin(FailureOrigin.SOURCE)
+        .failureType(FailureType.CONFIG_ERROR)
+        .externalMessage("external facing message")
+        .internalMessage("internal facing message")
+        .stacktrace("my stacktrace")
+        .timestamp(2)
+        .retryable(false),
+      output.failureReason,
     )
-    verify { commandService.getCheckJobOutput(TEST_COMMAND_ID) }
+    assertEquals(null, output.logs)
+    verify { commandService.getCheckJobOutput(TEST_COMMAND_ID, any()) }
   }
 
   @Test
@@ -205,11 +204,12 @@ class CommandApiControllerTest {
     val catalogId = UUID.randomUUID()
     val protocolCatalog = AirbyteCatalog().withStreams(listOf(AirbyteStream().withName("streamname")))
     val domainCatalog = ActorCatalog().withCatalog(Jsons.jsonNode(protocolCatalog))
-    every { commandService.getDiscoverJobOutput(TEST_COMMAND_ID) } returns
+    every { commandService.getDiscoverJobOutput(TEST_COMMAND_ID, any()) } returns
       CommandService.DiscoverJobOutput(
         catalogId = catalogId,
         catalog = domainCatalog,
         failureReason = null,
+        logs = null,
       )
 
     val apiCatalog =
@@ -235,12 +235,12 @@ class CommandApiControllerTest {
         .status(DiscoverCommandOutputResponse.StatusEnum.SUCCEEDED),
       output,
     )
-    verify { commandService.getDiscoverJobOutput(TEST_COMMAND_ID) }
+    verify { commandService.getDiscoverJobOutput(TEST_COMMAND_ID, any()) }
   }
 
   @Test
   fun `getDiscoverCommandOutput can return a failure response`() {
-    every { commandService.getDiscoverJobOutput(TEST_COMMAND_ID) } returns
+    every { commandService.getDiscoverJobOutput(TEST_COMMAND_ID, any()) } returns
       CommandService.DiscoverJobOutput(
         catalogId = null,
         catalog = null,
@@ -253,6 +253,7 @@ class CommandApiControllerTest {
             .withStacktrace("my discover stacktrace")
             .withTimestamp(2)
             .withRetryable(false),
+        logs = null,
       )
 
     val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest().id(TEST_COMMAND_ID))
@@ -272,7 +273,7 @@ class CommandApiControllerTest {
         ),
       output,
     )
-    verify { commandService.getDiscoverJobOutput(TEST_COMMAND_ID) }
+    verify { commandService.getDiscoverJobOutput(TEST_COMMAND_ID, any()) }
   }
 
   @Test
@@ -536,5 +537,206 @@ class CommandApiControllerTest {
         TODO("I should not be executed")
       }
     }
+  }
+
+  @Test
+  fun `getCheckCommandOutput returns structured logs when withLogs is true`() {
+    val logEvents =
+      io.airbyte.commons.logging.LogEvents(
+        events =
+          listOf(
+            io.airbyte.commons.logging.LogEvent(
+              timestamp = 1234567890L,
+              message = "Test log message",
+              level = "INFO",
+              logSource = io.airbyte.commons.logging.LogSource.PLATFORM,
+            ),
+          ),
+        version = "1",
+      )
+    every { commandService.getCheckJobOutput(TEST_COMMAND_ID, withLogs = true) } returns
+      CommandService.CheckJobOutput(
+        status = StandardCheckConnectionOutput.Status.SUCCEEDED,
+        message = "",
+        failureReason = null,
+        logs = CommandService.JobLogs.createStructuredLogs(logEvents),
+      )
+
+    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(true))
+
+    assertEquals(CheckCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(io.airbyte.api.model.generated.LogFormatType.STRUCTURED, output.logs?.logType)
+    assertEquals(
+      1,
+      output.logs
+        ?.logEvents
+        ?.events
+        ?.size,
+    )
+    assertEquals("1", output.logs?.logEvents?.version)
+    verify { commandService.getCheckJobOutput(TEST_COMMAND_ID, withLogs = true) }
+  }
+
+  @Test
+  fun `getCheckCommandOutput returns formatted logs when withLogs is true and logs are formatted`() {
+    val logLines = listOf("line 1", "line 2", "line 3")
+    every { commandService.getCheckJobOutput(TEST_COMMAND_ID, withLogs = true) } returns
+      CommandService.CheckJobOutput(
+        status = StandardCheckConnectionOutput.Status.SUCCEEDED,
+        message = "",
+        failureReason = null,
+        logs = CommandService.JobLogs.createFormattedLogs(logLines),
+      )
+
+    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(true))
+
+    assertEquals(CheckCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(io.airbyte.api.model.generated.LogFormatType.FORMATTED, output.logs?.logType)
+    assertEquals(3, output.logs?.logLines?.size)
+    assertEquals("line 1", output.logs?.logLines?.get(0))
+    verify { commandService.getCheckJobOutput(TEST_COMMAND_ID, withLogs = true) }
+  }
+
+  @Test
+  fun `getCheckCommandOutput returns no logs when withLogs is false`() {
+    every { commandService.getCheckJobOutput(TEST_COMMAND_ID, withLogs = false) } returns
+      CommandService.CheckJobOutput(
+        status = StandardCheckConnectionOutput.Status.SUCCEEDED,
+        message = "",
+        failureReason = null,
+        logs = null,
+      )
+
+    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(false))
+
+    assertEquals(CheckCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(null, output.logs)
+    verify { commandService.getCheckJobOutput(TEST_COMMAND_ID, withLogs = false) }
+  }
+
+  @Test
+  fun `getDiscoverCommandOutput returns structured logs when withLogs is true`() {
+    val catalogId = UUID.randomUUID()
+    val protocolCatalog = AirbyteCatalog().withStreams(listOf(AirbyteStream().withName("streamname")))
+    val domainCatalog = ActorCatalog().withCatalog(Jsons.jsonNode(protocolCatalog))
+    val logEvents =
+      io.airbyte.commons.logging.LogEvents(
+        events =
+          listOf(
+            io.airbyte.commons.logging.LogEvent(
+              timestamp = 1234567890L,
+              message = "Discover log message",
+              level = "INFO",
+              logSource = io.airbyte.commons.logging.LogSource.PLATFORM,
+            ),
+          ),
+        version = "1",
+      )
+    every { commandService.getDiscoverJobOutput(TEST_COMMAND_ID, withLogs = true) } returns
+      CommandService.DiscoverJobOutput(
+        catalogId = catalogId,
+        catalog = domainCatalog,
+        failureReason = null,
+        logs = CommandService.JobLogs.createStructuredLogs(logEvents),
+      )
+
+    val apiCatalog =
+      io.airbyte.api.model.generated.AirbyteCatalog().streams(
+        listOf(
+          io.airbyte.api.model.generated
+            .AirbyteStreamAndConfiguration()
+            .stream(
+              io.airbyte.api.model.generated
+                .AirbyteStream()
+                .name("streamname"),
+            ),
+        ),
+      )
+    every { catalogConverter.toApi(protocolCatalog, any()) } returns apiCatalog
+
+    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(true))
+
+    assertEquals(DiscoverCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(io.airbyte.api.model.generated.LogFormatType.STRUCTURED, output.logs?.logType)
+    assertEquals(
+      1,
+      output.logs
+        ?.logEvents
+        ?.events
+        ?.size,
+    )
+    assertEquals("1", output.logs?.logEvents?.version)
+    verify { commandService.getDiscoverJobOutput(TEST_COMMAND_ID, withLogs = true) }
+  }
+
+  @Test
+  fun `getDiscoverCommandOutput returns formatted logs when withLogs is true and logs are formatted`() {
+    val catalogId = UUID.randomUUID()
+    val protocolCatalog = AirbyteCatalog().withStreams(listOf(AirbyteStream().withName("streamname")))
+    val domainCatalog = ActorCatalog().withCatalog(Jsons.jsonNode(protocolCatalog))
+    val logLines = listOf("discover line 1", "discover line 2")
+    every { commandService.getDiscoverJobOutput(TEST_COMMAND_ID, withLogs = true) } returns
+      CommandService.DiscoverJobOutput(
+        catalogId = catalogId,
+        catalog = domainCatalog,
+        failureReason = null,
+        logs = CommandService.JobLogs.createFormattedLogs(logLines),
+      )
+
+    val apiCatalog =
+      io.airbyte.api.model.generated.AirbyteCatalog().streams(
+        listOf(
+          io.airbyte.api.model.generated
+            .AirbyteStreamAndConfiguration()
+            .stream(
+              io.airbyte.api.model.generated
+                .AirbyteStream()
+                .name("streamname"),
+            ),
+        ),
+      )
+    every { catalogConverter.toApi(protocolCatalog, any()) } returns apiCatalog
+
+    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(true))
+
+    assertEquals(DiscoverCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(io.airbyte.api.model.generated.LogFormatType.FORMATTED, output.logs?.logType)
+    assertEquals(2, output.logs?.logLines?.size)
+    assertEquals("discover line 1", output.logs?.logLines?.get(0))
+    verify { commandService.getDiscoverJobOutput(TEST_COMMAND_ID, withLogs = true) }
+  }
+
+  @Test
+  fun `getDiscoverCommandOutput returns no logs when withLogs is false`() {
+    val catalogId = UUID.randomUUID()
+    val protocolCatalog = AirbyteCatalog().withStreams(listOf(AirbyteStream().withName("streamname")))
+    val domainCatalog = ActorCatalog().withCatalog(Jsons.jsonNode(protocolCatalog))
+    every { commandService.getDiscoverJobOutput(TEST_COMMAND_ID, withLogs = false) } returns
+      CommandService.DiscoverJobOutput(
+        catalogId = catalogId,
+        catalog = domainCatalog,
+        failureReason = null,
+        logs = null,
+      )
+
+    val apiCatalog =
+      io.airbyte.api.model.generated.AirbyteCatalog().streams(
+        listOf(
+          io.airbyte.api.model.generated
+            .AirbyteStreamAndConfiguration()
+            .stream(
+              io.airbyte.api.model.generated
+                .AirbyteStream()
+                .name("streamname"),
+            ),
+        ),
+      )
+    every { catalogConverter.toApi(protocolCatalog, any()) } returns apiCatalog
+
+    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(false))
+
+    assertEquals(DiscoverCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(null, output.logs)
+    verify { commandService.getDiscoverJobOutput(TEST_COMMAND_ID, withLogs = false) }
   }
 }

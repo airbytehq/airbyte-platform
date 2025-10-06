@@ -4,6 +4,8 @@
 
 package io.airbyte.server.services
 
+import io.airbyte.commons.logging.LogClientManager
+import io.airbyte.commons.logging.LogEvents
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ActorType
@@ -15,6 +17,7 @@ import io.airbyte.config.Organization
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardCheckConnectionInput
+import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.WorkloadPriority
@@ -55,6 +58,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import java.nio.file.Path
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
@@ -63,6 +67,7 @@ class CommandServiceTest {
   private lateinit var catalogService: CatalogService
   private lateinit var commandsRepository: CommandsRepository
   private lateinit var jobInputService: JobInputService
+  private lateinit var logClientManager: LogClientManager
   private lateinit var workloadService: WorkloadService
   private lateinit var workloadQueueService: WorkloadQueueService
   private lateinit var workloadOutputReader: WorkloadOutputDocStoreReader
@@ -80,6 +85,7 @@ class CommandServiceTest {
 
     catalogService = mockk()
     jobInputService = mockk()
+    logClientManager = mockk(relaxed = true)
     workloadService = mockk(relaxed = true)
     workloadQueueService = mockk(relaxed = true)
     workloadOutputReader = mockk(relaxed = true)
@@ -90,7 +96,7 @@ class CommandServiceTest {
         catalogService = catalogService,
         commandsRepository = commandsRepository,
         jobInputService = jobInputService,
-        logClientManager = mockk(relaxed = true),
+        logClientManager = logClientManager,
         organizationService = mockk(relaxed = true) { every { getOrganizationForWorkspaceId(any()) } returns Optional.of(ORGANIZATION) },
         workloadService = workloadService,
         workloadQueueService = workloadQueueService,
@@ -356,16 +362,30 @@ class CommandServiceTest {
 
   @Test
   fun `getConnectorJobOutput returns the output`() {
-    val expectedOutput = ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
-    every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } returns expectedOutput
+    val connectorOutput =
+      ConnectorJobOutput()
+        .withOutputType(OutputType.CHECK_CONNECTION)
+        .withCheckConnection(
+          StandardCheckConnectionOutput()
+            .withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED)
+            .withMessage("Success"),
+        )
+    every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } returns connectorOutput
 
-    val output = service.getCheckJobOutput(COMMAND_ID)
+    val output = service.getCheckJobOutput(COMMAND_ID, withLogs = false)
+    val expectedOutput =
+      CommandService.CheckJobOutput(
+        status = StandardCheckConnectionOutput.Status.SUCCEEDED,
+        message = "Success",
+        failureReason = null,
+        logs = null,
+      )
     assertEquals(expectedOutput, output)
   }
 
   @Test
   fun `getConnectorJobOutput does nothing for unknown command ids`() {
-    val output = service.getCheckJobOutput(UNKNOWN_COMMAND_ID)
+    val output = service.getCheckJobOutput(UNKNOWN_COMMAND_ID, withLogs = false)
     verify(exactly = 0) { workloadOutputReader.readConnectorOutput(any()) }
     assertNull(output)
   }
@@ -384,12 +404,13 @@ class CommandServiceTest {
         ),
       )
     every { catalogService.getActorCatalogById(discoverCatalogId) } returns discoverCatalog
-    val output = service.getDiscoverJobOutput(DISCOVER_COMMAND_ID)
+    val output = service.getDiscoverJobOutput(DISCOVER_COMMAND_ID, withLogs = false)
     val expectedOutput =
       CommandService.DiscoverJobOutput(
         catalogId = discoverCatalogId,
         catalog = discoverCatalog,
         failureReason = null,
+        logs = null,
       )
     assertEquals(expectedOutput, output)
   }
@@ -399,12 +420,13 @@ class CommandServiceTest {
     val failure = FailureReason().withFailureOrigin(FailureReason.FailureOrigin.SOURCE).withFailureType(FailureReason.FailureType.CONFIG_ERROR)
     val workloadOutput = ConnectorJobOutput().withOutputType(OutputType.DISCOVER_CATALOG_ID).withFailureReason(failure)
     every { workloadOutputReader.readConnectorOutput(DISCOVER_WORKLOAD_ID) } returns workloadOutput
-    val output = service.getDiscoverJobOutput(DISCOVER_COMMAND_ID)
+    val output = service.getDiscoverJobOutput(DISCOVER_COMMAND_ID, withLogs = false)
     val expectedOutput =
       CommandService.DiscoverJobOutput(
         catalogId = null,
         catalog = null,
         failureReason = failure,
+        logs = null,
       )
     assertEquals(expectedOutput, output)
   }
@@ -463,7 +485,7 @@ class CommandServiceTest {
   @Test
   fun `verify we return failure reason when we fail to read from the doc store`() {
     every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } throws DocStoreAccessException("boom", Exception("boom"))
-    val output = service.getCheckJobOutput(COMMAND_ID)
+    val output = service.getCheckJobOutput(COMMAND_ID, withLogs = false)
     assertNotNull(output?.failureReason)
     assertNotNull(output?.failureReason?.timestamp)
   }
@@ -471,7 +493,7 @@ class CommandServiceTest {
   @Test
   fun `verify we return failure reason when we read an empty response from the doc store`() {
     every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } returns null
-    val output = service.getCheckJobOutput(COMMAND_ID)
+    val output = service.getCheckJobOutput(COMMAND_ID, withLogs = false)
     assertNotNull(output?.failureReason)
     assertNotNull(output?.failureReason?.timestamp)
   }
@@ -532,6 +554,88 @@ class CommandServiceTest {
     )
 
     verify { jobInputService.getDiscoverInput(actorId, null, null) }
+  }
+
+  @Test
+  fun `getJobLogs returns empty logs when command not found`() {
+    val logs = service.getJobLogs(UNKNOWN_COMMAND_ID)
+    assertTrue(logs.isStructured())
+    assertNull(logs.logEvents)
+    assertNull(logs.logLines)
+  }
+
+  @Test
+  fun `getJobLogs returns empty logs when workload not found`() {
+    every { workloadService.getWorkload(WORKLOAD_ID) } throws Exception("Workload not found")
+    val logs = service.getJobLogs(COMMAND_ID)
+    assertTrue(logs.isStructured())
+    assertNull(logs.logEvents)
+    assertNull(logs.logLines)
+  }
+
+  @Test
+  fun `getJobLogs returns structured logs when log events are available`() {
+    val logPath = "/test/log/path"
+    val workload: Workload = mockk { every { this@mockk.logPath } returns logPath }
+    every { workloadService.getWorkload(WORKLOAD_ID) } returns workload
+
+    val logEvents =
+      LogEvents(
+        events =
+          listOf(
+            io.airbyte.commons.logging.LogEvent(
+              timestamp = 1234567890L,
+              message = "Test log message",
+              level = "INFO",
+              logSource = io.airbyte.commons.logging.LogSource.PLATFORM,
+            ),
+          ),
+      )
+    every { logClientManager.getLogs(Path.of(logPath)) } returns logEvents
+
+    val logs = service.getJobLogs(COMMAND_ID)
+    assertTrue(logs.isStructured())
+    assertNotNull(logs.logEvents)
+    assertEquals(1, logs.logEvents?.events?.size)
+    assertEquals(
+      "Test log message",
+      logs.logEvents
+        ?.events
+        ?.first()
+        ?.message,
+    )
+  }
+
+  @Test
+  fun `getJobLogs returns formatted logs when structured logs are empty`() {
+    val logPath = "/test/log/path"
+    val workload: Workload = mockk { every { this@mockk.logPath } returns logPath }
+    every { workloadService.getWorkload(WORKLOAD_ID) } returns workload
+
+    val emptyLogEvents = LogEvents(events = emptyList())
+    val logLines = listOf("line 1", "line 2", "line 3")
+    every { logClientManager.getLogs(Path.of(logPath)) } returns emptyLogEvents
+    every { logClientManager.getJobLogFile(Path.of(logPath)) } returns logLines
+
+    val logs = service.getJobLogs(COMMAND_ID)
+    assertFalse(logs.isStructured())
+    assertNotNull(logs.logLines)
+    assertEquals(3, logs.logLines?.size)
+    assertEquals("line 1", logs.logLines?.first())
+  }
+
+  @Test
+  fun `getJobLogs returns empty logs when log retrieval throws exception`() {
+    val logPath = "/test/log/path"
+    val workload: Workload = mockk { every { this@mockk.logPath } returns logPath }
+    every { workloadService.getWorkload(WORKLOAD_ID) } returns workload
+
+    every { logClientManager.getLogs(Path.of(logPath)) } throws Exception("Log retrieval failed")
+
+    val logs = service.getJobLogs(COMMAND_ID)
+    assertTrue(logs.isStructured())
+    assertNull(logs.logEvents)
+    assertNull(logs.logLines)
   }
 
   companion object {

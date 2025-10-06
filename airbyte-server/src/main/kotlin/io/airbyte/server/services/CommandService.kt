@@ -7,6 +7,7 @@ package io.airbyte.server.services
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.LogClientManager
+import io.airbyte.commons.logging.LogEvents
 import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.config.ActorCatalog
@@ -517,7 +518,35 @@ class CommandService(
         }
       }.orElse(null)
 
-  fun getCheckJobOutput(commandId: String): ConnectorJobOutput? =
+  fun getJobLogs(commandId: String): JobLogs {
+    val command = commandsRepository.findById(commandId).orElse(null) ?: return JobLogs()
+    val workload =
+      try {
+        workloadService.getWorkload(command.workloadId)
+      } catch (e: Exception) {
+        log.warn(e) { "Unable to find workload:${command.workloadId} for command:$commandId" }
+        return JobLogs.empty()
+      }
+
+    val logPath = Path.of(workload.logPath)
+    try {
+      val logEvents = logClientManager.getLogs(logPath)
+      if (logEvents.events.isNotEmpty()) {
+        return JobLogs.createStructuredLogs(logEvents = logEvents)
+      } else {
+        val logLines = logClientManager.getJobLogFile(logPath)
+        return JobLogs.createFormattedLogs(rawLogs = logLines)
+      }
+    } catch (e: Exception) {
+      log.warn(e) { "Unable to find logs for command:$commandId workloadId:${command.workloadId}" }
+      return JobLogs.empty()
+    }
+  }
+
+  fun getCheckJobOutput(
+    commandId: String,
+    withLogs: Boolean,
+  ): CheckJobOutput? =
     getConnectorJobOutput(commandId) { failureReason ->
       ConnectorJobOutput()
         .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
@@ -526,15 +555,48 @@ class CommandService(
             .withStatus(StandardCheckConnectionOutput.Status.FAILED)
             .withMessage(failureReason.externalMessage),
         ).withFailureReason(failureReason)
+    }?.let { jobOutput ->
+      return CheckJobOutput(
+        status = jobOutput.checkConnection.status,
+        message = jobOutput.checkConnection?.message,
+        failureReason = jobOutput.failureReason,
+        logs = if (withLogs) getJobLogs(commandId) else null,
+      )
     }
+
+  data class JobLogs(
+    val logEvents: LogEvents? = null,
+    val logLines: List<String>? = null,
+  ) {
+    fun isStructured(): Boolean = logEvents != null || logLines == null
+
+    companion object {
+      fun createStructuredLogs(logEvents: LogEvents): JobLogs = JobLogs(logEvents = logEvents)
+
+      fun createFormattedLogs(rawLogs: List<String>): JobLogs = JobLogs(logLines = rawLogs)
+
+      fun empty(): JobLogs = JobLogs(logEvents = null)
+    }
+  }
+
+  data class CheckJobOutput(
+    val status: StandardCheckConnectionOutput.Status,
+    val message: String?,
+    val failureReason: FailureReason?,
+    val logs: JobLogs?,
+  )
 
   data class DiscoverJobOutput(
     val catalogId: UUID?,
     val catalog: ActorCatalog?,
     val failureReason: FailureReason?,
+    val logs: JobLogs?,
   )
 
-  fun getDiscoverJobOutput(commandId: String): DiscoverJobOutput? =
+  fun getDiscoverJobOutput(
+    commandId: String,
+    withLogs: Boolean,
+  ): DiscoverJobOutput? =
     getConnectorJobOutput(commandId) { failureReason ->
       ConnectorJobOutput()
         .withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
@@ -546,6 +608,7 @@ class CommandService(
         catalogId = jobOutput.discoverCatalogId,
         catalog = catalog,
         failureReason = jobOutput.failureReason,
+        logs = if (withLogs) getJobLogs(commandId) else null,
       )
     }
 

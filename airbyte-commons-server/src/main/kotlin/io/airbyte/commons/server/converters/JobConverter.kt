@@ -404,7 +404,7 @@ class JobConverter(
       }
     }
 
-    private fun toModelLogEvents(
+    fun toModelLogEvents(
       logEvents: List<LogEvent>,
       logUtils: LogUtils,
     ): List<io.airbyte.api.model.generated.LogEvent> =

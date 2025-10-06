@@ -6546,6 +6546,9 @@ paths:
               properties:
                 id:
                   type: string
+                with_logs:
+                  type: boolean
+                  default: false
       responses:
         "200":
           description: Success
@@ -6565,6 +6568,8 @@ paths:
                     type: string
                   failureReason:
                     $ref: "#/components/schemas/FailureReason"
+                  logs:
+                    $ref: "#/components/schemas/JobLogs"
 
   /v1/commands/output/discover:
     post:
@@ -6581,6 +6586,9 @@ paths:
               properties:
                 id:
                   type: string
+                with_logs:
+                  type: boolean
+                  default: false
       responses:
         "200":
           description: Success
@@ -6605,6 +6613,8 @@ paths:
                     $ref: "#/components/schemas/CatalogDiff"
                   failureReason:
                     $ref: "#/components/schemas/FailureReason"
+                  logs:
+                    $ref: "#/components/schemas/JobLogs"
 
   /v1/commands/output/replicate:
     post:
@@ -16544,6 +16554,18 @@ components:
           oneOf:
             - $ref: "#/components/schemas/LogEvents"
             - $ref: "#/components/schemas/LogRead"
+    JobLogs:
+      type: object
+      required: [logType]
+      properties:
+        logType:
+          $ref: "#/components/schemas/LogFormatType"
+        logEvents:
+          $ref: "#/components/schemas/LogEvents"
+        logLines:
+          type: array
+          items:
+            type: string
     LogFormatType:
       type: string
       enum:

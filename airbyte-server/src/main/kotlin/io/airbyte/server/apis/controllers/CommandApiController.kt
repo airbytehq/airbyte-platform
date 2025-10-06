@@ -15,6 +15,8 @@ import io.airbyte.api.model.generated.CommandStatusRequest
 import io.airbyte.api.model.generated.CommandStatusResponse
 import io.airbyte.api.model.generated.DiscoverCommandOutputRequest
 import io.airbyte.api.model.generated.DiscoverCommandOutputResponse
+import io.airbyte.api.model.generated.LogEvents
+import io.airbyte.api.model.generated.LogFormatType
 import io.airbyte.api.model.generated.ReplicateCommandOutputRequest
 import io.airbyte.api.model.generated.ReplicateCommandOutputResponse
 import io.airbyte.api.model.generated.RunCheckCommandRequest
@@ -30,7 +32,9 @@ import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.converters.ApiConverters.Companion.toApi
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.enums.toEnum
+import io.airbyte.commons.logging.LogUtils
 import io.airbyte.commons.server.authorization.RoleResolver
+import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.helpers.SecretSanitizer
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -58,6 +62,7 @@ import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import io.airbyte.api.model.generated.FailureReason as ApiFailureReason
+import io.airbyte.api.model.generated.JobLogs as ApiJobLogs
 
 @Controller("/api/v1/commands")
 @Context
@@ -69,6 +74,7 @@ class CommandApiController(
   private val commandService: CommandService,
   private val secretSanitizer: SecretSanitizer,
   private val workspaceService: WorkspaceService,
+  private val logUtils: LogUtils,
 ) : CommandApi {
   @Post("/cancel")
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -92,13 +98,18 @@ class CommandApiController(
       id = CommandId(checkCommandOutputRequest.id),
       role = AuthRoleConstants.WORKSPACE_READER,
     ) {
-      val output = commandService.getCheckJobOutput(checkCommandOutputRequest.id)
+      val output =
+        commandService.getCheckJobOutput(
+          commandId = checkCommandOutputRequest.id,
+          withLogs = checkCommandOutputRequest.withLogs,
+        )
       return CheckCommandOutputResponse().apply {
         id(checkCommandOutputRequest.id)
         output?.let {
-          status(it.checkConnection?.status?.toApi())
-          message(it.checkConnection?.message)
+          status(it.status.toApi())
+          message(it.message)
           failureReason(toApi(it.failureReason))
+          logs(output.logs?.toApi())
         }
       }
     }
@@ -136,7 +147,7 @@ class CommandApiController(
       id = CommandId(discoverCommandOutputRequest.id),
       role = AuthRoleConstants.WORKSPACE_READER,
     ) {
-      val output = commandService.getDiscoverJobOutput(discoverCommandOutputRequest.id)
+      val output = commandService.getDiscoverJobOutput(discoverCommandOutputRequest.id, withLogs = discoverCommandOutputRequest.withLogs)
       // TODO the domain catalog to api catalog should be simpler however, the existing converter does all this...
       val apiCatalog =
         output?.catalog?.let {
@@ -158,6 +169,7 @@ class CommandApiController(
           catalogId(output.catalogId)
           catalog(apiCatalog)
           failureReason(toApi(it.failureReason))
+          logs(it.logs?.toApi())
         }
       }
     }
@@ -206,6 +218,21 @@ class CommandApiController(
     when (this) {
       StandardCheckConnectionOutput.Status.SUCCEEDED -> CheckCommandOutputResponse.StatusEnum.SUCCEEDED
       StandardCheckConnectionOutput.Status.FAILED -> CheckCommandOutputResponse.StatusEnum.FAILED
+    }
+
+  private fun CommandService.JobLogs.toApi(): ApiJobLogs =
+    if (isStructured()) {
+      ApiJobLogs()
+        .logType(LogFormatType.STRUCTURED)
+        .logEvents(
+          LogEvents()
+            .events(logEvents?.events?.let { JobConverter.toModelLogEvents(it, logUtils) })
+            .version(logEvents?.version),
+        )
+    } else {
+      ApiJobLogs()
+        .logType(LogFormatType.FORMATTED)
+        .logLines(logLines)
     }
 
   @Post("/status")
