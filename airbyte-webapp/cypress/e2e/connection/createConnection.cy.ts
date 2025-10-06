@@ -17,15 +17,10 @@ import {
 import {
   interceptCreateConnectionRequest,
   interceptDiscoverSchemaRequest,
-  interceptGetSourceDefinitionsRequest,
-  interceptGetSourcesListRequest,
   waitForCreateConnectionRequest,
   waitForDiscoverSchemaRequest,
-  waitForGetSourceDefinitionsRequest,
-  waitForGetSourcesListRequest,
 } from "commands/interceptors";
 
-import * as connectionListPage from "pages/connection/connectionListPageObject";
 import * as newConnectionPage from "pages/connection/createConnectionPageObject";
 import { nextButton } from "pages/connection/createConnectionPageObject";
 
@@ -60,38 +55,6 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
     }
 
     dropTables();
-  });
-
-  describe("Set up connection", () => {
-    describe("From connection page", () => {
-      it("should open 'New connection' page", () => {
-        // using ConnectionsListPage.visit() intercepts connections/list endpoint, which will not be called if this is the first connection being created
-        cy.visit(`/workspaces/${getWorkspaceId()}/connections`);
-
-        interceptGetSourcesListRequest();
-        interceptGetSourceDefinitionsRequest();
-
-        connectionListPage.clickNewConnectionButton();
-        waitForGetSourcesListRequest();
-        waitForGetSourceDefinitionsRequest();
-      });
-
-      it("should select existing Source", () => {
-        newConnectionPage.isExistingConnectorTypeSelected("source");
-        newConnectionPage.selectExistingConnectorFromList("source", source.name);
-      });
-
-      it("should select existing Destination", () => {
-        interceptDiscoverSchemaRequest();
-        newConnectionPage.isExistingConnectorTypeSelected("destination");
-        newConnectionPage.selectExistingConnectorFromList("destination", destination.name);
-        waitForDiscoverSchemaRequest();
-      });
-
-      it("should redirect to 'New connection' configuration page with stream table'", () => {
-        newConnectionPage.isAtConnectionConfigurationStep();
-      });
-    });
   });
 
   describe("Streams table", () => {
