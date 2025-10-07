@@ -220,7 +220,7 @@ class TemporalClient(
    * @return sync result
    */
   fun startNewManualSync(connectionId: UUID): ManualOperationResult {
-    logger.info { "Manual sync request" }
+    logger.info { "Manual sync request for connection $connectionId" }
 
     if (connectionManagerUtils.isWorkflowStateRunning(connectionId)) {
       // TODO Bmoric: Error is running

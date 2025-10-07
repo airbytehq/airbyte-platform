@@ -27,7 +27,7 @@ micronaut:
       n-threads: ${HEALTH_TASK_EXECUTOR_THREADS:3}
     io:
       type: fixed
-      n-threads: ${IO_TASK_EXECUTOR_THREADS:10}
+      n-threads: ${IO_TASK_EXECUTOR_THREADS:100}
     public-api:
       type: fixed
       n-threads: ${PUBLIC_API_EXECUTOR_THREADS:5}

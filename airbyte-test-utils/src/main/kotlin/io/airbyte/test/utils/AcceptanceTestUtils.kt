@@ -210,8 +210,8 @@ object AcceptanceTestUtils {
       val response: Response = chain.proceed(request)
 
       if (!isJobStatus) {
-        // we don't log the response body because it can be very large which can heavily increase
-        // the test duration + it doesn't add a lot of information
+        // we don't log the response body because it can be very large which can heavily increase the test duration + it doesn't add a lot of
+        // information
         logger.info { "Response: ${response.code} ${request.url} " }
       }
 
