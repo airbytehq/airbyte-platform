@@ -7279,6 +7279,25 @@ paths:
           description: "SSO config successfully activated"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sso_config/validate_token:
+    post:
+      summary: Validate an access token against an organization's SSO realm
+      tags:
+        - sso_config
+      operationId: validateSsoToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidateSSOTokenRequestBody"
+        required: true
+      responses:
+        "204":
+          description: Token is valid
+        "401":
+          description: Token is invalid or validation failed
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
 
   # Airbyte API
   /public:
@@ -21251,6 +21270,17 @@ components:
         clientId:
           type: string
         clientSecret:
+          type: string
+    ValidateSSOTokenRequestBody:
+      type: object
+      required:
+        - organizationId
+        - accessToken
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        accessToken:
           type: string
 
     ActivateSSOConfigRequestBody:

@@ -4,24 +4,20 @@
 
 package io.airbyte.commons.server.authorization
 
-import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.nimbusds.jwt.JWT
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.PlainJWT
 import io.airbyte.commons.auth.RequiresAuthMode
 import io.airbyte.commons.auth.config.AuthMode
-import io.airbyte.commons.auth.support.JwtTokenParser.JWT_SSO_REALM
 import io.airbyte.commons.auth.support.JwtTokenParser.convertJwtPayloadToUserAttributes
 import io.airbyte.commons.auth.support.JwtTokenParser.getJwtPayloadToken
-import io.airbyte.commons.auth.support.JwtTokenParser.tokenToAttributes
 import io.airbyte.commons.json.Jsons
+import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.metrics.lib.MetricTags.AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY
-import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.common.util.StringUtils
 import io.micronaut.context.annotation.Primary
@@ -32,11 +28,7 @@ import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.authentication.AuthenticationException
 import io.micronaut.security.token.jwt.validator.JwtAuthenticationFactory
 import io.micronaut.security.token.validator.TokenValidator
-import jakarta.inject.Named
 import jakarta.inject.Singleton
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.apache.http.HttpHeaders
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Mono
 import java.nio.charset.StandardCharsets
@@ -58,8 +50,7 @@ import java.util.Optional
 @Requires(property = "airbyte.auth.identity-provider.type", notEquals = "generic-oidc")
 @Requires(property = "airbyte.auth.identity-provider.type", notEquals = "simple")
 class KeycloakTokenValidator(
-  @param:Named("keycloakTokenValidatorHttpClient") private val client: OkHttpClient,
-  private val keycloakConfiguration: AirbyteKeycloakConfig,
+  private val airbyteKeycloakClient: AirbyteKeycloakClient,
   private val authenticationFactory: JwtAuthenticationFactory,
   private val metricClient: Optional<MetricClient>,
 ) : TokenValidator<HttpRequest<*>> {
@@ -72,32 +63,24 @@ class KeycloakTokenValidator(
   override fun validateToken(
     token: String,
     request: HttpRequest<*>,
-  ): Publisher<Authentication> {
-    return validateTokenWithKeycloak(token)
-      .flatMap<Authentication> { valid: Boolean ->
-        if (valid) {
-          log.debug { "Token is valid, will now getAuthentication for token: $token" }
-          return@flatMap Mono.just<Authentication>(
-            getAuthentication(
-              token,
-              request,
-            ),
-          )
-        } else {
-          // pass to the next validator, if one exists
-          log.debug { "Token was not a valid Keycloak token: $token" }
-          metricClient.ifPresent { m: MetricClient ->
-            m.count(
-              OssMetricsRegistry.KEYCLOAK_TOKEN_VALIDATION,
-              1L,
-              AUTHENTICATION_FAILURE_METRIC_ATTRIBUTE,
-              MetricAttribute(AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY, request.uri.path),
-            )
-          }
-          return@flatMap Mono.empty<Authentication>()
-        }
+  ): Publisher<Authentication> =
+    try {
+      airbyteKeycloakClient.validateToken(token)
+      log.debug { "Token is valid, will now getAuthentication for token" }
+      Mono.just(getAuthentication(token, request))
+    } catch (e: Exception) {
+      // Pass to the next validator, if one exists
+      log.debug(e) { "Token validation failed, passing to next validator" }
+      metricClient.ifPresent { m: MetricClient ->
+        m.count(
+          OssMetricsRegistry.KEYCLOAK_TOKEN_VALIDATION,
+          1L,
+          AUTHENTICATION_FAILURE_METRIC_ATTRIBUTE,
+          MetricAttribute(AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY, request.uri.path),
+        )
       }
-  }
+      Mono.empty()
+    }
 
   private fun getAuthentication(
     token: String,
@@ -108,12 +91,10 @@ class KeycloakTokenValidator(
     try {
       val jwtPayloadString = String(Base64.getUrlDecoder().decode(payload), StandardCharsets.UTF_8)
       val jwtPayload = Jsons.deserialize(jwtPayloadString)
-      log.debug { "jwtPayload: $jwtPayload" }
 
       val userAttributeMap = convertJwtPayloadToUserAttributes(jwtPayload).toMutableMap()
 
       val authUserId = jwtPayload["sub"].asText()
-      log.debug { "Performing authentication for auth user '$authUserId'..." }
 
       if (StringUtils.isNotBlank(authUserId)) {
         metricClient.ifPresent { m: MetricClient ->
@@ -138,65 +119,6 @@ class KeycloakTokenValidator(
     } catch (e: Exception) {
       log.error(e) { "Encountered an exception while validating the token." }
       throw AuthenticationException("Failed to authenticate the user.")
-    }
-  }
-
-  private fun validateTokenWithKeycloak(token: String): Mono<Boolean> {
-    val realm: String?
-    try {
-      val jwtAttributes = tokenToAttributes(token)
-      realm = jwtAttributes[JWT_SSO_REALM] as String?
-      log.debug { "Extracted realm $realm" }
-    } catch (e: Exception) {
-      log.debug { "Failed to parse realm from JWT token: $token" }
-      return Mono.just(false)
-    }
-
-    if (realm == null) {
-      log.debug { "Unable to extract realm from token $token" }
-      return Mono.just(false)
-    }
-
-    val userInfoEndpoint = keycloakConfiguration.getKeycloakUserInfoEndpointForRealm(realm)
-    log.debug { "Validating token with Keycloak userinfo endpoint: $userInfoEndpoint" }
-
-    val request =
-      Request
-        .Builder()
-        .addHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-        .addHeader(HttpHeaders.AUTHORIZATION, "Bearer $token")
-        .url(userInfoEndpoint)
-        .get()
-        .build()
-
-    try {
-      client.newCall(request).execute().use { response ->
-        if (response.isSuccessful) {
-          checkNotNull(response.body)
-          val responseBody = response.body!!.string()
-          log.debug { "Response from userinfo endpoint: $responseBody" }
-          return validateUserInfo(responseBody)
-        } else {
-          log.debug { "Non-200 response from userinfo endpoint: ${response.code}" }
-          return Mono.just(false)
-        }
-      }
-    } catch (e: Exception) {
-      log.error(e) { "Failed to validate access token." }
-      return Mono.error(e)
-    }
-  }
-
-  private fun validateUserInfo(responseBody: String): Mono<Boolean> {
-    val objectMapper = ObjectMapper()
-    try {
-      val userInfo = objectMapper.readTree(responseBody)
-      val sub = userInfo.path("sub").asText()
-      log.debug { "validated Keycloak sub: $sub" }
-      return Mono.just(StringUtils.isNotBlank(sub))
-    } catch (e: JsonProcessingException) {
-      log.error(e) { "Failed to process JSON." }
-      return Mono.error(e)
     }
   }
 

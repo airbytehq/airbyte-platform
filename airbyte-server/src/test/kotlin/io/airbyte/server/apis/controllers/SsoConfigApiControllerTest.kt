@@ -4,12 +4,14 @@
 
 package io.airbyte.server.apis.controllers
 
+import io.airbyte.api.problems.throwable.generated.SSOTokenValidationProblem
 import io.airbyte.api.server.generated.models.ActivateSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.CreateSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.DeleteSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.GetSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.SSOConfigStatus
 import io.airbyte.api.server.generated.models.UpdateSSOCredentialsRequestBody
+import io.airbyte.api.server.generated.models.ValidateSSOTokenRequestBody
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SsoEntitlement
 import io.airbyte.domain.models.OrganizationId
@@ -21,7 +23,9 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.util.UUID
 
 class SsoConfigApiControllerTest {
@@ -135,5 +139,86 @@ class SsoConfigApiControllerTest {
 
     verify(exactly = 1) { entitlementService.ensureEntitled(orgId, SsoEntitlement) }
     verify(exactly = 1) { ssoConfigDomainService.activateSsoConfig(orgId.value, emailDomain) }
+  }
+
+  @Test
+  fun `validateSsoToken succeeds with 204 when token is valid`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val accessToken = "valid-token"
+    every { entitlementService.ensureEntitled(orgId, SsoEntitlement) } just Runs
+    every { ssoConfigDomainService.validateToken(orgId.value, accessToken) } just Runs
+
+    // Should not throw an exception
+    ssoConfigController.validateSsoToken(
+      ValidateSSOTokenRequestBody(
+        organizationId = orgId.value,
+        accessToken = accessToken,
+      ),
+    )
+
+    verify(exactly = 1) { entitlementService.ensureEntitled(orgId, SsoEntitlement) }
+    verify(exactly = 1) { ssoConfigDomainService.validateToken(orgId.value, accessToken) }
+  }
+
+  @Test
+  fun `validateSsoToken throws SSOTokenValidationProblem when token is invalid`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val accessToken = "invalid-token"
+    every { entitlementService.ensureEntitled(orgId, SsoEntitlement) } just Runs
+    every { ssoConfigDomainService.validateToken(orgId.value, accessToken) } throws
+      SSOTokenValidationProblem(
+        io.airbyte.api.problems.model.generated
+          .ProblemSSOTokenValidationData()
+          .organizationId(orgId.value)
+          .errorMessage("Token is invalid or expired"),
+      )
+
+    val exception =
+      assertThrows<SSOTokenValidationProblem> {
+        ssoConfigController.validateSsoToken(
+          ValidateSSOTokenRequestBody(
+            organizationId = orgId.value,
+            accessToken = accessToken,
+          ),
+        )
+      }
+
+    verify(exactly = 1) { entitlementService.ensureEntitled(orgId, SsoEntitlement) }
+    verify(exactly = 1) { ssoConfigDomainService.validateToken(orgId.value, accessToken) }
+    assertEquals(401, exception.problem.getStatus())
+    assertEquals(
+      "Token is invalid or expired",
+      (exception.problem.getData() as io.airbyte.api.problems.model.generated.ProblemSSOTokenValidationData).errorMessage,
+    )
+  }
+
+  @Test
+  fun `validateSsoToken throws SSOTokenValidationProblem when validation fails with exception`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val accessToken = "error-token"
+    val errorMessage = "Token validation failed: Connection refused"
+    every { entitlementService.ensureEntitled(orgId, SsoEntitlement) } just Runs
+    every { ssoConfigDomainService.validateToken(orgId.value, accessToken) } throws
+      SSOTokenValidationProblem(
+        io.airbyte.api.problems.model.generated
+          .ProblemSSOTokenValidationData()
+          .organizationId(orgId.value)
+          .errorMessage(errorMessage),
+      )
+
+    val exception =
+      assertThrows<SSOTokenValidationProblem> {
+        ssoConfigController.validateSsoToken(
+          ValidateSSOTokenRequestBody(
+            organizationId = orgId.value,
+            accessToken = accessToken,
+          ),
+        )
+      }
+
+    verify(exactly = 1) { entitlementService.ensureEntitled(orgId, SsoEntitlement) }
+    verify(exactly = 1) { ssoConfigDomainService.validateToken(orgId.value, accessToken) }
+    assertEquals(401, exception.problem.getStatus())
+    assertEquals(errorMessage, (exception.problem.getData() as io.airbyte.api.problems.model.generated.ProblemSSOTokenValidationData).errorMessage)
   }
 }

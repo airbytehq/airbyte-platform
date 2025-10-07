@@ -1860,6 +1860,37 @@ components:
           type: string
         errorMessage:
           type: string
+    SSOTokenValidationProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 401
+            type:
+              type: string
+              default: error:sso-token-validation
+            title:
+              type: string
+              default: SSO token validation failed
+            detail:
+              type: string
+              default: The provided SSO access token is invalid or expired
+            data:
+              $ref: "#/components/schemas/ProblemSSOTokenValidationData"
+    ProblemSSOTokenValidationData:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        errorMessage:
+          type: string
     EntitlementServiceUnableToAddOrganizationProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object

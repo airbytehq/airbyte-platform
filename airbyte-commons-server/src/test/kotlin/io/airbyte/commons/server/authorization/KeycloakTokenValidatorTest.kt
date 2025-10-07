@@ -5,17 +5,14 @@
 package io.airbyte.commons.server.authorization
 
 import com.auth0.jwt.algorithms.Algorithm
+import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
+import io.airbyte.data.services.impls.keycloak.InvalidTokenException
 import io.airbyte.metrics.MetricClient
-import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.netty.NettyHttpHeaders
 import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.token.jwt.validator.JwtAuthenticationFactory
-import okhttp3.Call
-import okhttp3.OkHttpClient
-import okhttp3.Response
-import okhttp3.ResponseBody
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -23,7 +20,6 @@ import org.mockito.Mockito.mock
 import org.mockito.kotlin.anyOrNull
 import org.reactivestreams.Publisher
 import reactor.test.StepVerifier
-import java.io.IOException
 import java.net.URI
 import java.net.URISyntaxException
 import java.util.Optional
@@ -31,8 +27,7 @@ import java.util.function.Predicate
 
 internal class KeycloakTokenValidatorTest {
   private lateinit var keycloakTokenValidator: KeycloakTokenValidator
-  private lateinit var httpClient: OkHttpClient
-  private lateinit var keycloakConfiguration: AirbyteKeycloakConfig
+  private lateinit var airbyteKeycloakClient: AirbyteKeycloakClient
   private lateinit var authenticationFactory: JwtAuthenticationFactory
 
   @BeforeEach
@@ -41,27 +36,21 @@ internal class KeycloakTokenValidatorTest {
     // break in production.
     assert(VALID_ACCESS_TOKEN.contains("_"))
 
-    httpClient = mock()
-
-    keycloakConfiguration = mock()
-    Mockito
-      .`when`(keycloakConfiguration.getKeycloakUserInfoEndpointForRealm(anyOrNull()))
-      .thenReturn(LOCALHOST + URI_PATH)
-    Mockito.`when`(keycloakConfiguration.internalRealm).thenReturn(INTERNAL_REALM_NAME)
+    airbyteKeycloakClient = mock()
     authenticationFactory = mock()
 
     keycloakTokenValidator =
-      KeycloakTokenValidator(httpClient, keycloakConfiguration, authenticationFactory, Optional.empty<MetricClient>())
+      KeycloakTokenValidator(airbyteKeycloakClient, authenticationFactory, Optional.empty<MetricClient>())
   }
 
   @Test
   @Throws(Exception::class)
-  fun testValidateToken() {
+  fun testValidTokenCreatesAuthentication() {
     val expectedUserId = "0f0cbf9a-24c2-46cc-b582-d1ff2c0d5ef5"
-    val responseBody = "{\"sub\":\"0f0cbf9a-24c2-46cc-b582-d1ff2c0d5ef5\",\"preferred_username\":\"airbyte\"}"
-    val httpRequest = mockRequests(VALID_ACCESS_TOKEN, responseBody)
+    val httpRequest = mockHttpRequest(VALID_ACCESS_TOKEN)
 
-    val responsePublisher: Publisher<Authentication> = keycloakTokenValidator.validateToken(VALID_ACCESS_TOKEN, httpRequest)
+    // Mock the AirbyteKeycloakClient to not throw (valid token)
+    Mockito.doNothing().`when`(airbyteKeycloakClient).validateToken(VALID_ACCESS_TOKEN)
 
     val mockedRoles =
       mutableSetOf<String?>(
@@ -78,6 +67,8 @@ internal class KeycloakTokenValidatorTest {
       .`when`(authenticationFactory.createAuthentication(anyOrNull()))
       .thenReturn(Optional.of(Authentication.build(expectedUserId, mockedRoles)))
 
+    val responsePublisher: Publisher<Authentication> = keycloakTokenValidator.validateToken(VALID_ACCESS_TOKEN, httpRequest)
+
     StepVerifier
       .create(responsePublisher)
       .expectNextMatches(Predicate { r: Authentication? -> matchSuccessfulResponse(r!!, expectedUserId, mockedRoles) })
@@ -86,12 +77,15 @@ internal class KeycloakTokenValidatorTest {
 
   @Test
   @Throws(Exception::class)
-  fun testKeycloakValidationFailureNoSubClaim() {
-    val httpRequest = mockRequests(VALID_ACCESS_TOKEN, "{\"preferred_username\":\"airbyte\"}")
+  fun testInvalidTokenPassesToNextValidator() {
+    val httpRequest = mockHttpRequest(VALID_ACCESS_TOKEN)
+
+    // Mock the AirbyteKeycloakClient to throw an exception (invalid token)
+    Mockito.`when`(airbyteKeycloakClient.validateToken(VALID_ACCESS_TOKEN)).thenThrow(InvalidTokenException("Invalid token"))
 
     val responsePublisher: Publisher<Authentication> = keycloakTokenValidator.validateToken(VALID_ACCESS_TOKEN, httpRequest)
 
-    // Verify the stream remains empty.
+    // Verify the stream remains empty (passed to next validator).
     StepVerifier
       .create(responsePublisher)
       .expectComplete()
@@ -99,53 +93,31 @@ internal class KeycloakTokenValidatorTest {
   }
 
   @Test
-  @Throws(URISyntaxException::class)
-  fun testTokenWithNoRealmIsPassedToNextValidator() {
-    val uri = URI(LOCALHOST + URI_PATH)
+  @Throws(Exception::class)
+  fun testExceptionDuringValidationReturnsEmpty() {
+    val httpRequest = mockHttpRequest(VALID_ACCESS_TOKEN)
 
-    val blankJWT =
-      com.auth0.jwt.JWT
-        .create()
-        .sign(Algorithm.none())
+    // Mock the AirbyteKeycloakClient to throw an exception
+    Mockito.`when`(airbyteKeycloakClient.validateToken(VALID_ACCESS_TOKEN)).thenThrow(RuntimeException("Keycloak unavailable"))
 
-    // set up mocked incoming request
-    val httpRequest = mock<HttpRequest<*>>()
-    val headers = NettyHttpHeaders()
-    headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + blankJWT)
-    Mockito.`when`(httpRequest.getUri()).thenReturn(uri)
-    Mockito.`when`(httpRequest.getHeaders()).thenReturn(headers)
+    val responsePublisher: Publisher<Authentication> = keycloakTokenValidator.validateToken(VALID_ACCESS_TOKEN, httpRequest)
 
-    val responsePublisher: Publisher<Authentication> = keycloakTokenValidator.validateToken(blankJWT, httpRequest)
+    // Verify the stream remains empty (error handled gracefully).
     StepVerifier
       .create(responsePublisher)
-      .verifyComplete()
+      .expectComplete()
+      .verify()
   }
 
-  @Throws(IOException::class)
-  private fun mockRequests(
-    jwtToken: String?,
-    userInfoPayload: String?,
-  ): HttpRequest<*> {
+  private fun mockHttpRequest(jwtToken: String): HttpRequest<*> {
     val uri = URI.create(LOCALHOST + URI_PATH)
 
     // set up mocked incoming request
     val httpRequest = mock<HttpRequest<*>>()
     val headers = NettyHttpHeaders()
-    headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + jwtToken)
+    headers.add(HttpHeaders.AUTHORIZATION, "Bearer $jwtToken")
     Mockito.`when`(httpRequest.getUri()).thenReturn(uri)
     Mockito.`when`(httpRequest.getHeaders()).thenReturn(headers)
-
-    // set up mock http response from Keycloak
-    val userInfoResponse = mock<Response>()
-    val userInfoResponseBody = mock<ResponseBody>()
-    Mockito.`when`(userInfoResponseBody.string()).thenReturn(userInfoPayload)
-    Mockito.`when`(userInfoResponse.body).thenReturn(userInfoResponseBody)
-    Mockito.`when`(userInfoResponse.code).thenReturn(200)
-    Mockito.`when`(userInfoResponse.isSuccessful).thenReturn(true)
-
-    val call = mock<Call>()
-    Mockito.`when`(call.execute()).thenReturn(userInfoResponse)
-    Mockito.`when`(httpClient.newCall(anyOrNull())).thenReturn(call)
 
     return httpRequest
   }

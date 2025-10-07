@@ -10,12 +10,14 @@ import io.airbyte.api.problems.model.generated.ProblemSSOConfigRetrievalData
 import io.airbyte.api.problems.model.generated.ProblemSSOCredentialUpdateData
 import io.airbyte.api.problems.model.generated.ProblemSSODeletionData
 import io.airbyte.api.problems.model.generated.ProblemSSOSetupData
+import io.airbyte.api.problems.model.generated.ProblemSSOTokenValidationData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.SSOConfigRetrievalProblem
 import io.airbyte.api.problems.throwable.generated.SSOCredentialUpdateProblem
 import io.airbyte.api.problems.throwable.generated.SSODeletionProblem
 import io.airbyte.api.problems.throwable.generated.SSOSetupProblem
+import io.airbyte.api.problems.throwable.generated.SSOTokenValidationProblem
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.OrganizationEmailDomain
 import io.airbyte.data.services.OrganizationEmailDomainService
@@ -23,8 +25,12 @@ import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
 import io.airbyte.data.services.impls.data.mappers.toDomain
 import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
+import io.airbyte.data.services.impls.keycloak.InvalidTokenException
+import io.airbyte.data.services.impls.keycloak.KeycloakServiceException
+import io.airbyte.data.services.impls.keycloak.MalformedTokenResponseException
 import io.airbyte.data.services.impls.keycloak.RealmDeletionException
 import io.airbyte.data.services.impls.keycloak.RealmValuesExistException
+import io.airbyte.data.services.impls.keycloak.TokenExpiredException
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoConfigRetrieval
 import io.airbyte.domain.models.SsoConfigStatus
@@ -148,6 +154,60 @@ open class SsoConfigDomainService internal constructor(
         ProblemSSOCredentialUpdateData()
           .companyIdentifier(currentSsoConfig.keycloakRealm)
           .errorMessage(e.message),
+      )
+    }
+  }
+
+  fun validateToken(
+    organizationId: UUID,
+    accessToken: String,
+  ) {
+    // First, retrieve the organization's SSO configuration
+    val ssoConfig =
+      ssoConfigService.getSsoConfig(organizationId) ?: throw SSOTokenValidationProblem(
+        ProblemSSOTokenValidationData()
+          .organizationId(organizationId)
+          .errorMessage("SSO configuration does not exist for organization $organizationId"),
+      )
+
+    // Extract the realm from the token
+    val tokenRealm = airbyteKeycloakClient.extractRealmFromToken(accessToken)
+
+    // Verify the token's realm matches the organization's configured realm
+    if (tokenRealm == null || tokenRealm != ssoConfig.keycloakRealm) {
+      throw SSOTokenValidationProblem(
+        ProblemSSOTokenValidationData()
+          .organizationId(organizationId)
+          .errorMessage("Token does not belong to organization realm ${ssoConfig.keycloakRealm}"),
+      )
+    }
+
+    // Now validate the token against the organization's specific realm
+    try {
+      airbyteKeycloakClient.validateTokenWithRealm(accessToken, ssoConfig.keycloakRealm)
+    } catch (e: TokenExpiredException) {
+      throw SSOTokenValidationProblem(
+        ProblemSSOTokenValidationData()
+          .organizationId(organizationId)
+          .errorMessage("Token is expired or invalid"),
+      )
+    } catch (e: InvalidTokenException) {
+      throw SSOTokenValidationProblem(
+        ProblemSSOTokenValidationData()
+          .organizationId(organizationId)
+          .errorMessage("Token is invalid: ${e.message}"),
+      )
+    } catch (e: MalformedTokenResponseException) {
+      throw SSOTokenValidationProblem(
+        ProblemSSOTokenValidationData()
+          .organizationId(organizationId)
+          .errorMessage("Token validation failed: ${e.message}"),
+      )
+    } catch (e: KeycloakServiceException) {
+      throw SSOTokenValidationProblem(
+        ProblemSSOTokenValidationData()
+          .organizationId(organizationId)
+          .errorMessage("Unable to validate token: Keycloak service unavailable"),
       )
     }
   }

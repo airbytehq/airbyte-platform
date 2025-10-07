@@ -11,6 +11,7 @@ import io.airbyte.api.server.generated.models.DeleteSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.GetSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.SSOConfigRead
 import io.airbyte.api.server.generated.models.UpdateSSOCredentialsRequestBody
+import io.airbyte.api.server.generated.models.ValidateSSOTokenRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
@@ -24,7 +25,9 @@ import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
 import io.airbyte.domain.services.sso.SsoConfigDomainService
 import io.airbyte.server.apis.execute
+import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Controller
+import io.micronaut.http.annotation.Status
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 
@@ -112,6 +115,20 @@ open class SSOConfigApiController(
       ssoConfigDomainService.activateSsoConfig(
         activateSSOConfigRequestBody.organizationId,
         activateSSOConfigRequestBody.emailDomain,
+      )
+    }
+  }
+
+  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  override fun validateSsoToken(validateSSOTokenRequestBody: ValidateSSOTokenRequestBody) {
+    entitlementService.ensureEntitled(OrganizationId(validateSSOTokenRequestBody.organizationId), SsoEntitlement)
+
+    execute<Any?> {
+      ssoConfigDomainService.validateToken(
+        validateSSOTokenRequestBody.organizationId,
+        validateSSOTokenRequestBody.accessToken,
       )
     }
   }

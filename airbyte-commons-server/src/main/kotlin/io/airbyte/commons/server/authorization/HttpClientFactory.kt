@@ -12,11 +12,11 @@ import okhttp3.OkHttpClient
 @Factory
 class HttpClientFactory {
   /**
-   * Create a new instance of {@link OkHttpClient} for use with the Keycloak token validator.
+   * Create a new instance of {@link OkHttpClient} for use with Keycloak clients.
    * For now, this is a simple instance with no additional configuration, but this can be
-   * tuned if needed for calls made within the {@link KeycloakTokenValidator}.
+   * tuned if needed for calls made to Keycloak.
    */
   @Singleton
-  @Named("keycloakTokenValidatorHttpClient")
+  @Named("keycloakHttpClient")
   fun okHttpClient(): OkHttpClient = OkHttpClient()
 }

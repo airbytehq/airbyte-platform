@@ -4,12 +4,22 @@
 
 package io.airbyte.data.services.impls.keycloak
 
+import com.fasterxml.jackson.core.JsonProcessingException
+import com.fasterxml.jackson.databind.ObjectMapper
+import io.airbyte.commons.auth.support.JwtTokenParser.JWT_SSO_REALM
+import io.airbyte.commons.auth.support.JwtTokenParser.tokenToAttributes
 import io.airbyte.domain.models.SsoConfig
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
 import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteKeycloakConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micrometer.common.util.StringUtils
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import jakarta.ws.rs.core.Response
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.apache.http.HttpHeaders
 import org.keycloak.admin.client.Keycloak
 import org.keycloak.representations.idm.ClientRepresentation
 import org.keycloak.representations.idm.IdentityProviderRepresentation
@@ -22,6 +32,8 @@ private val logger = KotlinLogging.logger { "airbyte-keycloak" }
 class AirbyteKeycloakClient(
   keycloakAdminClientProvider: AirbyteKeycloakAdminClientProvider,
   private val airbyteConfig: AirbyteConfig,
+  private val keycloakConfiguration: AirbyteKeycloakConfig,
+  @Named("keycloakHttpClient") private val httpClient: OkHttpClient,
 ) {
   private val keycloakAdminClient: Keycloak = keycloakAdminClientProvider.createKeycloakAdminClient()
 
@@ -264,6 +276,111 @@ class AirbyteKeycloakClient(
       .update(currentIdpRepresentation)
   }
 
+  /**
+   * Validates a token by extracting its realm and calling the userinfo endpoint.
+   * @param token The JWT token to validate
+   * @throws InvalidTokenException if the token has no realm claim
+   * @throws TokenExpiredException if the token is expired or invalid
+   * @throws MalformedTokenResponseException if the response is malformed
+   * @throws KeycloakServiceException if there's an error communicating with Keycloak
+   */
+  fun validateToken(token: String) {
+    val realm =
+      extractRealmFromToken(token)
+        ?: throw InvalidTokenException("Token does not contain a realm claim")
+    validateTokenWithRealm(token, realm)
+  }
+
+  /**
+   * Validates a token against a specific Keycloak realm.
+   * @param token The JWT token to validate
+   * @param realm The Keycloak realm to validate against
+   * @throws TokenExpiredException if the token is expired or invalid (401 response)
+   * @throws InvalidTokenException if the token validation failed (non-200 response)
+   * @throws MalformedTokenResponseException if the response is malformed or missing required claims
+   * @throws KeycloakServiceException if there's an error communicating with Keycloak
+   */
+  fun validateTokenWithRealm(
+    token: String,
+    realm: String,
+  ) {
+    val userInfoEndpoint = keycloakConfiguration.getKeycloakUserInfoEndpointForRealm(realm)
+    logger.debug { "Validating token with Keycloak userinfo endpoint: $userInfoEndpoint" }
+
+    val request =
+      Request
+        .Builder()
+        .addHeader(HttpHeaders.CONTENT_TYPE, "application/json")
+        .addHeader(HttpHeaders.AUTHORIZATION, "Bearer $token")
+        .url(userInfoEndpoint)
+        .get()
+        .build()
+
+    try {
+      httpClient.newCall(request).execute().use { response ->
+        when {
+          response.code == 401 -> {
+            logger.debug { "Token is invalid or expired (401 response)" }
+            throw TokenExpiredException("Token is invalid or expired")
+          }
+          !response.isSuccessful -> {
+            logger.debug { "Non-200 response from userinfo endpoint: ${response.code}" }
+            throw InvalidTokenException("Token validation failed with status ${response.code}")
+          }
+          else -> {
+            val responseBody = response.body?.string()
+            if (responseBody.isNullOrEmpty()) {
+              logger.debug { "Received null or empty userinfo response" }
+              throw MalformedTokenResponseException("Empty response from Keycloak userinfo endpoint")
+            }
+            logger.debug { "Received userinfo response (${responseBody.length} bytes)" }
+            if (!isValidUserInfoResponse(responseBody)) {
+              throw MalformedTokenResponseException("Token response missing required 'sub' claim")
+            }
+          }
+        }
+      }
+    } catch (e: TokenValidationException) {
+      // Re-throw our specific exceptions
+      throw e
+    } catch (e: Exception) {
+      logger.error(e) { "Failed to validate access token" }
+      throw KeycloakServiceException("Failed to communicate with Keycloak", e)
+    }
+  }
+
+  /**
+   * Extracts the Keycloak realm from a JWT token.
+   * @param token The JWT token
+   * @return The realm string, or null if extraction fails
+   */
+  fun extractRealmFromToken(token: String): String? =
+    try {
+      val jwtAttributes = tokenToAttributes(token)
+      val realm = jwtAttributes[JWT_SSO_REALM] as String?
+      logger.debug { "Extracted realm $realm" }
+      realm
+    } catch (e: Exception) {
+      logger.debug(e) { "Failed to parse realm from JWT token" }
+      null
+    }
+
+  /**
+   * Validates the userinfo response from Keycloak.
+   * @param responseBody The JSON response from the userinfo endpoint
+   * @return true if the response contains a valid subject, false otherwise
+   */
+  private fun isValidUserInfoResponse(responseBody: String): Boolean =
+    try {
+      val userInfo = objectMapper.readTree(responseBody)
+      val sub = userInfo.path("sub").asText()
+      logger.debug { "Validated Keycloak user subject claim" }
+      StringUtils.isNotBlank(sub)
+    } catch (e: JsonProcessingException) {
+      logger.error(e) { "Failed to process JSON." }
+      false
+    }
+
   companion object {
     private const val AIRBYTE_LOGIN_THEME = "airbyte-keycloak-theme"
     private const val DEFAULT_SCOPE = "openid profile email"
@@ -271,6 +388,8 @@ class AirbyteKeycloakClient(
     private const val CLIENT_AUTH_METHOD = "client_secret_post"
     private const val AIRBYTE_WEBAPP_CLIENT_ID = "airbyte-webapp"
     private const val AIRBYTE_WEBAPP_CLIENT_NAME = "Airbyte Webapp"
+
+    private val objectMapper = ObjectMapper()
   }
 }
 
@@ -301,3 +420,25 @@ class CreateClientException(
 class IdpNotFoundException(
   message: String,
 ) : Exception(message)
+
+open class TokenValidationException(
+  message: String,
+  cause: Throwable? = null,
+) : RuntimeException(message, cause)
+
+class InvalidTokenException(
+  message: String,
+) : TokenValidationException(message)
+
+class TokenExpiredException(
+  message: String,
+) : TokenValidationException(message)
+
+class KeycloakServiceException(
+  message: String,
+  cause: Throwable,
+) : TokenValidationException(message, cause)
+
+class MalformedTokenResponseException(
+  message: String,
+) : TokenValidationException(message)
