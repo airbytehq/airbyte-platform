@@ -47,7 +47,7 @@ object RejectedRecordsStorage : FeatureEntitlement(
 )
 
 object DestinationSalesforceEnterpriseConnector : ConnectorEntitlement(
-  actorDefinitionId = UUID.fromString("227f7285-74af-44cf-9055-66d24695aee6"),
+  actorDefinitionId = UUID.fromString("c0b24000-d34d-b33f-fea7-6b96dc0e5f0d"),
 ) {
   override val name: String = "destination-salesforce"
 }
