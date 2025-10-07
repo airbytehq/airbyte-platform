@@ -16,6 +16,10 @@ import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
@@ -32,6 +36,7 @@ class ContextBuilder(
   private val destinationService: DestinationService,
   private val connectionService: ConnectionService,
   private val sourceService: SourceService,
+  private val metricClient: MetricClient,
 ) {
   /**
    * Returns a ConnectionContext using best-effort at fetching IDs. When data can't be fetched, we
@@ -86,6 +91,7 @@ class ContextBuilder(
   /**
    * Returns an ActorContext using best-effort at fetching IDs. When data can't be fetched, we
    * shouldn't fail here. The worker should determine if it's missing crucial data and fail itself.
+   * Emits a metric when organization ID cannot be fetched.
    *
    * @param source Full source model
    * @return ActorContext
@@ -93,13 +99,21 @@ class ContextBuilder(
   fun fromSource(source: SourceConnection): ActorContext {
     var organizationId: UUID? = null
     try {
-      organizationId = workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, false).organizationId
-    } catch (e: ConfigNotFoundException) {
-      log.error(e) { "Failed to get organization id for source id: ${source.sourceId}" }
-    } catch (e: IOException) {
-      log.error(e) { "Failed to get organization id for source id: ${source.sourceId}" }
-    } catch (e: JsonValidationException) {
-      log.error(e) { "Failed to get organization id for source id: ${source.sourceId}" }
+      val workspace = workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, false)
+      organizationId = workspace.organizationId
+
+      if (organizationId == null) {
+        log.warn { "Organization ID is null for workspace ${source.workspaceId}, source ${source.sourceId}" }
+        metricClient.count(
+          OssMetricsRegistry.MISSING_ORGANIZATION_ID,
+          1L,
+          MetricAttribute(MetricTags.CONNECTOR_TYPE, "source"),
+          MetricAttribute(MetricTags.WORKSPACE_ID, source.workspaceId.toString()),
+          MetricAttribute(MetricTags.SOURCE_ID, source.sourceId.toString()),
+        )
+      }
+    } catch (e: Exception) {
+      handleOrgIdException(e, "source", source.workspaceId, source.sourceId, "source id: ${source.sourceId}")
     }
     return ActorContext()
       .withActorId(source.sourceId)
@@ -112,6 +126,7 @@ class ContextBuilder(
   /**
    * Returns an ActorContext using best-effort at fetching IDs. When data can't be fetched, we
    * shouldn't fail here. The worker should determine if it's missing crucial data and fail itself.
+   * Emits a metric when organization ID cannot be fetched.
    *
    * @param destination Full destination model
    * @return ActorContext
@@ -119,13 +134,21 @@ class ContextBuilder(
   fun fromDestination(destination: DestinationConnection): ActorContext {
     var organizationId: UUID? = null
     try {
-      organizationId = workspaceService.getStandardWorkspaceNoSecrets(destination.workspaceId, false).organizationId
-    } catch (e: ConfigNotFoundException) {
-      log.error(e) { "Failed to get organization id for destination id: ${destination.destinationId}" }
-    } catch (e: IOException) {
-      log.error(e) { "Failed to get organization id for destination id: ${destination.destinationId}" }
-    } catch (e: JsonValidationException) {
-      log.error(e) { "Failed to get organization id for destination id: ${destination.destinationId}" }
+      val workspace = workspaceService.getStandardWorkspaceNoSecrets(destination.workspaceId, false)
+      organizationId = workspace.organizationId
+
+      if (organizationId == null) {
+        log.warn { "Organization ID is null for workspace ${destination.workspaceId}, destination ${destination.destinationId}" }
+        metricClient.count(
+          OssMetricsRegistry.MISSING_ORGANIZATION_ID,
+          1L,
+          MetricAttribute(MetricTags.CONNECTOR_TYPE, "destination"),
+          MetricAttribute(MetricTags.WORKSPACE_ID, destination.workspaceId.toString()),
+          MetricAttribute(MetricTags.DESTINATION_ID, destination.destinationId.toString()),
+        )
+      }
+    } catch (e: Exception) {
+      handleOrgIdException(e, "destination", destination.workspaceId, destination.destinationId, "destination id: ${destination.destinationId}")
     }
     return ActorContext()
       .withActorId(destination.destinationId)
@@ -142,19 +165,53 @@ class ContextBuilder(
   ): ActorContext {
     var organizationId: UUID? = null
     try {
-      organizationId = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).organizationId
-    } catch (e: ConfigNotFoundException) {
-      log.error(e) { "Failed to get organization id for workspace id: $workspaceId" }
-    } catch (e: IOException) {
-      log.error(e) { "Failed to get organization id for workspace id: $workspaceId" }
-    } catch (e: JsonValidationException) {
-      log.error(e) { "Failed to get organization id for workspace id: $workspaceId" }
+      val workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)
+      organizationId = workspace.organizationId
+
+      if (organizationId == null) {
+        log.warn { "Organization ID is null for workspace $workspaceId" }
+        val connectorType = actorType?.toString()?.lowercase() ?: MetricTags.UNKNOWN
+        metricClient.count(
+          OssMetricsRegistry.MISSING_ORGANIZATION_ID,
+          1L,
+          MetricAttribute(MetricTags.CONNECTOR_TYPE, connectorType),
+          MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId.toString()),
+        )
+      }
+    } catch (e: Exception) {
+      val connectorType = actorType?.toString()?.lowercase() ?: MetricTags.UNKNOWN
+      handleOrgIdException(e, connectorType, workspaceId, null, "workspace id: $workspaceId")
     }
     return ActorContext()
       .withActorDefinitionId(actorDefinitionId)
       .withWorkspaceId(workspaceId)
       .withOrganizationId(organizationId)
       .withActorType(actorType)
+  }
+
+  private fun handleOrgIdException(
+    e: Exception,
+    actorType: String,
+    workspaceId: UUID,
+    actorId: UUID?,
+    logContext: String,
+  ) {
+    when (e) {
+      is ConfigNotFoundException, is IOException, is JsonValidationException -> {
+        log.error(e) { "Failed to get organization id for $logContext" }
+        val attributes =
+          mutableListOf(
+            MetricAttribute(MetricTags.CONNECTOR_TYPE, actorType),
+            MetricAttribute(MetricTags.WORKSPACE_ID, workspaceId.toString()),
+          )
+        if (actorId != null) {
+          val actorIdTag = if (actorType == "source") MetricTags.SOURCE_ID else MetricTags.DESTINATION_ID
+          attributes.add(MetricAttribute(actorIdTag, actorId.toString()))
+        }
+        metricClient.count(OssMetricsRegistry.MISSING_ORGANIZATION_ID, 1L, *attributes.toTypedArray())
+      }
+      else -> throw e
+    }
   }
 
   companion object {

@@ -205,6 +205,10 @@ enum class OssMetricsRegistry(
     metricName = "missing_apply_schema_change_input",
     metricDescription = "one expected value for applying the schema change is missing",
   ),
+  MISSING_ORGANIZATION_ID(
+    metricName = "missing_organization_id",
+    metricDescription = "increments when organization ID cannot be fetched for an actor context",
+  ),
   NUM_ABNORMAL_SCHEDULED_SYNCS_IN_LAST_DAY(
     metricName = "num_abnormal_scheduled_syncs_last_day",
     metricDescription = "number of abnormal syncs that have skipped at least 1 scheduled run in last day.",

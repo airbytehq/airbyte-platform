@@ -13,6 +13,7 @@ import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.metrics.MetricClient
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -24,7 +25,8 @@ class ContextBuilderTest {
   private val destinationService = mockk<DestinationService>()
   private val connectionService = mockk<ConnectionService>()
   private val sourceService = mockk<SourceService>()
-  private val contextBuilder = ContextBuilder(workspaceService, destinationService, connectionService, sourceService)
+  private val metricClient = mockk<MetricClient>(relaxed = true)
+  private val contextBuilder = ContextBuilder(workspaceService, destinationService, connectionService, sourceService, metricClient)
 
   private val connectionId = UUID.randomUUID()
   private val sourceId = UUID.randomUUID()
