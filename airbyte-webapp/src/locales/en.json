@@ -2208,7 +2208,7 @@
 
   "signup.details.noCreditCard": "No credit card required",
   "signup.details.instantSetup": "Instant setup",
-  "signup.details.freeTrial": "14-day free trial",
+  "signup.details.freeTrial": "30-day free trial",
   "signup.title": "Create your Airbyte account",
   "signup.method.email": "Sign up using email",
   "signup.email.redirectError": "There was an error signing up with email. Please try again.",
@@ -2298,7 +2298,7 @@
   "billing.banners.disabledPaymentStatusWithLink": "Your syncs are disabled due to unpaid invoices. Please <lnk>update your payment method</lnk> to enable syncing again.",
   "billing.banners.gracePeriodPaymentStatus": "Please update your payment method to keep using Airbyte. Otherwise your syncs will be disabled {days, plural, =0 {very soon} one {in # day} other {in # days}}.",
   "billing.banners.gracePeriodPaymentStatusWithLink": "Please <lnk>update your payment method</lnk> to keep using Airbyte. Otherwise your syncs will be disabled {days, plural, =0 {very soon} one {in # day} other {in # days}}.",
-  "billing.banners.preTrial": "Your 14-day trial of Airbyte will start once your first sync has succeeded.",
+  "billing.banners.preTrial": "Your 30-day trial of Airbyte will start once your first sync has succeeded.",
   "billing.banners.inTrial": "Your trial ends {days, plural, =0 {today} one {in # day} other {in # days}}. Subscribe today to keep using Airbyte after your trial ends.",
   "billing.banners.inTrialWithLink": "Your trial ends {days, plural, =0 {today} one {in # day} other {in # days}}. <lnk>Subscribe today</lnk> to keep using Airbyte after your trial ends.",
   "billing.banners.inTrialWithPaymentMethod": "Your trial ends {days, plural, =0 {today} one {in # day} other {in # days}}.",
