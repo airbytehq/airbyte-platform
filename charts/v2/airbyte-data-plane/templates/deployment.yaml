@@ -70,6 +70,15 @@ spec:
           ports:
             - name: heartbeat
               containerPort: {{ .Values.workloadLauncher.heartbeatPort }}
+              protocol: TCP
+            - name: management
+              containerPort: {{ .Values.workloadLauncher.management.port }}
+              protocol: TCP
+            {{- if .Values.workloadLauncher.debug.enabled }}
+            - name: debug
+              containerPort: {{ .Values.workloadLauncher.debug.remoteDebugPort }}
+              protocol: TCP
+            {{- end }}
           livenessProbe:
             {{- toYaml .Values.workloadLauncher.livenessProbe | nindent 12 }}
           readinessProbe:

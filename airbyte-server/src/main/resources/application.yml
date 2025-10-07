@@ -520,6 +520,8 @@ datasources:
     pool-name: config-pool
 
 endpoints:
+  all:
+    port: 8085
   beans:
     enabled: true
     sensitive: false

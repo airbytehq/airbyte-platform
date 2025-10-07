@@ -23,6 +23,8 @@ airbyte:
     path: ${FEATURE_FLAG_PATH:/flags}
 
 endpoints:
+  all:
+    port: 8085
   beans:
     enabled: true
     sensitive: false

@@ -42,6 +42,11 @@ airbyte:
         access-key: ${AWS_ACCESS_KEY_ID:}
         region: ${AWS_DEFAULT_REGION:}
         secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+
+endpoints:
+  all:
+    enabled: false
+    port: 8085
 #logger:
 #  levels:
 #    com.zaxxer.hikari: ERROR

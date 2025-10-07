@@ -1,3 +1,7 @@
+micronaut:
+  server:
+    port: -1 # Random port for tests
+
 airbyte:
   internal-api:
     base-path: http://localhost:8080/api
@@ -15,3 +19,7 @@ airbyte:
       error-reporting:
         sentry:
           dsn: test-dsn
+
+endpoints:
+  all:
+    port: -1 # Random port for tests

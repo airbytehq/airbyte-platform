@@ -153,11 +153,14 @@ spec:
           failureThreshold: {{ .Values.worker.readinessProbe.failureThreshold }}
         {{- end }}
         ports:
+        - name: management
+          containerPort: {{ .Values.worker.management.port }}
+          protocol: TCP
         {{- if .Values.worker.debug.enabled }}
         - name: debug
           containerPort: {{ .Values.worker.debug.remoteDebugPort }}
           protocol: TCP
-        {{- end}}
+        {{- end }}
         - name: heartbeat
           containerPort: 9000 # for heartbeat server
         - containerPort: 9001 # start temporal worker port pool

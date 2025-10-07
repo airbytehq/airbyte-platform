@@ -38,3 +38,7 @@ jooq:
     local-secrets:
       jackson-converter-enabled: true
       sql-dialect: H2
+
+endpoints:
+  all:
+    port: -1 # Random port for tests

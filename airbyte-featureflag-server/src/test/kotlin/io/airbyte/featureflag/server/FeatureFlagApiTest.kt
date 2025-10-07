@@ -8,13 +8,16 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.featureflag.server.model.Context
 import io.airbyte.featureflag.server.model.FeatureFlag
 import io.airbyte.featureflag.server.model.Rule
+import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.env.Environment
+import io.micronaut.core.util.SupplierUtil
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.client.exceptions.HttpClientResponseException
+import io.micronaut.runtime.server.EmbeddedServer
 import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
@@ -25,9 +28,10 @@ import org.junit.jupiter.api.assertThrows
 
 @MicronautTest(environments = [Environment.TEST])
 class FeatureFlagApiTest(
-  @Client("/") val client: HttpClient,
+  val embeddedServer: EmbeddedServer,
 ) {
   private val ffs = mockk<FeatureFlagService>()
+  private val client = SupplierUtil.memoizedNonEmpty { embeddedServer.applicationContext.createBean(HttpClient::class.java, embeddedServer.url) }
 
   @MockBean(FeatureFlagService::class)
   @Replaces(FeatureFlagService::class)
@@ -125,7 +129,7 @@ class FeatureFlagApiTest(
     assertEquals(flag, response.body.get())
   }
 
-  private inline fun <reified T> call(request: HttpRequest<Any>): HttpResponse<T> = client.toBlocking().exchange(request, T::class.java)
+  private inline fun <reified T> call(request: HttpRequest<Any>): HttpResponse<T> = client.get().toBlocking().exchange(request, T::class.java)
 
   private fun callError(request: HttpRequest<Any>): HttpResponse<*> {
     val exception = assertThrows<HttpClientResponseException> { call<String>(request) }

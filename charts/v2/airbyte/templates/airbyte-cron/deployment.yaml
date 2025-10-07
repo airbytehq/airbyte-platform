@@ -58,6 +58,16 @@ spec:
         - name: airbyte-cron
           image: {{ include "imageUrl" (list .Values.cron.image $) }}
           imagePullPolicy: "{{ .Values.cron.image.pullPolicy }}"
+          ports:
+            - name: management
+              containerPort: {{ .Values.cron.management.port }}
+              protocol: TCP
+            {{- if .Values.cron.debug.enabled }}
+            - name: debug
+              containerPort: {{ .Values.cron.debug.remoteDebugPort }}
+              protocol: TCP
+            {{- end}}
+
           env:
             {{- include "airbyte.auth.jwt.envs" . | nindent 12 }}
             {{- include "airbyte.common.envs" . | nindent 12 }}

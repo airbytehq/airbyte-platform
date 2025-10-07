@@ -9,3 +9,7 @@ datasources:
     driverClassName: org.h2.Driver
     username: sa
     password: ""
+
+endpoints:
+  all:
+    port: -1 # Random port for tests

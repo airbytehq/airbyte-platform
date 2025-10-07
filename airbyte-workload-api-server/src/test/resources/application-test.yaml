@@ -11,6 +11,8 @@ micronaut:
   http:
     client:
       event-loop-group: other
+  server:
+    port: -1 # Random port for tests
 
 airbyte:
   flyway:
@@ -36,6 +38,10 @@ jooq:
     workload:
       jackson-converter-enabled: true
       sql-dialect: POSTGRES
+
+endpoints:
+  all:
+    port: -1 # Random port for tests
 
 logger:
   levels:

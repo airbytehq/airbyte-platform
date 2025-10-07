@@ -59,6 +59,7 @@ jooq:
 endpoints:
   all:
     enabled: true
+    port: 8085
 
 logger:
   levels:

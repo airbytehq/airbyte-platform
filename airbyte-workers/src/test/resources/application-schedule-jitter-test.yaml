@@ -1,3 +1,7 @@
+micronaut:
+  server:
+    port: -1 # Random port for tests
+
 sanity-check: jitter test
 airbyte:
   worker:
@@ -26,3 +30,7 @@ airbyte:
         audit-logging: ${STORAGE_BUCKET_AUDIT_LOGGING}
       gcs:
         application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:not-blank}
+
+endpoints:
+  all:
+    port: -1 # Random port for tests

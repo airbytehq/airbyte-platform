@@ -44,6 +44,15 @@ spec:
     - name: airbyte-bootloader-container
       image: {{ include "imageUrl" (list .Values.airbyteBootloader.image $) }}
       imagePullPolicy: "{{ .Values.airbyteBootloader.image.pullPolicy }}"
+      ports:
+        - name: management
+          containerPort: {{ .Values.airbyteBootloader.management.port }}
+          protocol: TCP
+        {{- if .Values.airbyteBootloader.debug.enabled }}
+        - name: debug
+          containerPort: {{ .Values.airbyteBootloader.debug.remoteDebugPort }}
+          protocol: TCP
+        {{- end}}
       env:
         {{- if (or (eq .Values.global.edition "community") (eq .Values.global.edition "enterprise")) }}
         {{- include "airbyte.auth.identityProvider.envs" . | nindent 8 }}

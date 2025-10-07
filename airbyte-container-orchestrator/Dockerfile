@@ -6,6 +6,10 @@ ADD airbyte-app.tar /app
 
 FROM airbyte/airbyte-base-java-image:${JAVA_BASE_IMAGE_VERSION}
 
+# 5005 is the remote debug port
+# 8085 is the Micronaut management endpoint port
+EXPOSE 5005 8085
+
 # Don't change this manually.  Bump version expects to make moves based on this string
 ARG VERSION=dev
 

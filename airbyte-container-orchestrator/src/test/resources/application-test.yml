@@ -1,6 +1,6 @@
 micronaut:
   server:
-    port: -1
+    port: -1 # Random port for tests
 
 airbyte:
   edition: COMMUNITY
@@ -40,3 +40,7 @@ airbyte:
         access-key: ${AWS_ACCESS_KEY_ID:}
         region: ${AWS_DEFAULT_REGION:}
         secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+
+endpoints:
+  all:
+    port: -1 # Random port for tests

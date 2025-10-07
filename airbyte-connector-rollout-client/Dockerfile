@@ -8,8 +8,10 @@ FROM airbyte/airbyte-base-java-image:${JAVA_BASE_IMAGE_VERSION}
 
 ENV APPLICATION airbyte-connector-rollout-client
 ENV VERSION ${VERSION}
+
 # 5005 is the remote debug port
-EXPOSE 5005
+# 8085 is the Micronaut management endpoint port
+EXPOSE 5005 8085
 
 WORKDIR /app
 COPY --chown=airbyte:airbyte --from=builder /app /app

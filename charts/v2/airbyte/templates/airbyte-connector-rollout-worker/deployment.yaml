@@ -116,7 +116,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /health/liveness
-            port: heartbeat
+            port: management
           initialDelaySeconds: {{ .Values.connectorRolloutWorker.livenessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.connectorRolloutWorker.livenessProbe.periodSeconds }}
           timeoutSeconds: {{ .Values.connectorRolloutWorker.livenessProbe.timeoutSeconds }}
@@ -127,7 +127,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /health/readiness
-            port: heartbeat
+            port: management
           initialDelaySeconds: {{ .Values.connectorRolloutWorker.readinessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.connectorRolloutWorker.readinessProbe.periodSeconds }}
           timeoutSeconds: {{ .Values.connectorRolloutWorker.readinessProbe.timeoutSeconds }}
@@ -135,13 +135,17 @@ spec:
           failureThreshold: {{ .Values.connectorRolloutWorker.readinessProbe.failureThreshold }}
         {{- end }}
         ports:
-        {{- if .Values.connectorRolloutWorker.debug.enabled }}
-        - name: debug
-          containerPort: {{ .Values.connectorRolloutWorker.debug.remoteDebugPort }}
-          protocol: TCP
-        {{- end}}
-        - name: heartbeat
-          containerPort: 8016 # for heartbeat server
+          - name: http
+            containerPort: 8016
+            protocol: TCP
+          - name: management
+            containerPort: {{ .Values.connectorRolloutWorker.management.port }}
+            protocol: TCP
+          {{- if .Values.connectorRolloutWorker.debug.enabled }}
+          - name: debug
+            containerPort: {{ .Values.connectorRolloutWorker.debug.remoteDebugPort }}
+            protocol: TCP
+          {{- end}}
 
         {{- if .Values.connectorRolloutWorker.resources }}
         resources: {{- toYaml .Values.connectorRolloutWorker.resources | nindent 10 }}

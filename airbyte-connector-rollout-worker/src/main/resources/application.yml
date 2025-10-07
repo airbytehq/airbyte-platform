@@ -79,6 +79,8 @@ jackson:
     ACCEPT_CASE_INSENSITIVE_ENUMS: true
 
 endpoints:
+  all:
+    port: 8085
   beans:
     enabled: true
     sensitive: false

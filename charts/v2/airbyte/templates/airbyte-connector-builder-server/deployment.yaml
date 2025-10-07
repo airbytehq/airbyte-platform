@@ -145,6 +145,9 @@ spec:
         - name: http
           containerPort: 8080
           protocol: TCP
+        - name: management
+          containerPort: {{ .Values.connectorBuilderServer.management.port }}
+          protocol: TCP
         {{- if .Values.connectorBuilderServer.debug.enabled }}
         - name: debug
           containerPort: {{ .Values.connectorBuilderServer.debug.remoteDebugPort }}

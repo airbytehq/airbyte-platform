@@ -1005,6 +1005,9 @@ server:
     enabled: false
     remoteDebugPort: 5005
 
+  management:
+    port: 8085
+
   webapp:
     datadogApplicationId: ""
     datadogClientToken: ""
@@ -1154,6 +1157,9 @@ worker:
   debug:
     enabled: false
     remoteDebugPort: 5005
+
+  management:
+    port: 8085
 
   ## current no exist documentations
   activityMaxAttempt: ""
@@ -1316,6 +1322,9 @@ workloadLauncher:
   debug:
     enabled: false
     remoteDebugPort: 5005
+
+  management:
+    port: 8085
 
   containerOrchestrator:
     # -- Enable or disable Orchestrator
@@ -1486,6 +1495,9 @@ connectorRolloutWorker:
     enabled: false
     remoteDebugPort: 5005
 
+  management:
+    port: 8085
+
   containerOrchestrator:
     # -- Enable or disable Orchestrator
     enabled: true
@@ -1600,6 +1612,13 @@ metrics:
   secrets: {}
 
   env_vars: {}
+
+  debug:
+    enabled: false
+    remoteDebugPort: 5005
+
+  management:
+    port: 8085
 
 ## @section Bootloader Parameters
 
@@ -1754,6 +1773,13 @@ airbyteBootloader:
   ##     emptyDir: {}
   # -- Additional volumes for server pods
   extraVolumes: []
+
+  debug:
+    enabled: false
+    remoteDebugPort: 5005
+
+  management:
+    port: 8085
 
 ## @section Temporal parameters
 
@@ -2047,6 +2073,9 @@ temporalUi:
     enabled: false
     remoteDebugPort: 5005
 
+  management:
+    port: 8085
+
 
 
 ## @section Airbyte Database parameters
@@ -2330,6 +2359,13 @@ cron:
   # -- Supply extra env variables to main container using simplified notation
   env_vars: {}
 
+  debug:
+    enabled: false
+    remoteDebugPort: 5005
+
+  management:
+    port: 8085
+
 connectorBuilderServer:
   enabled: true
   # -- Number of connector-builder-server replicas
@@ -2438,6 +2474,9 @@ connectorBuilderServer:
   debug:
     enabled: false
     remoteDebugPort: 5005
+
+  management:
+    port: 8085
 
   aiAssistUrlBase: ""
 
@@ -2889,6 +2928,9 @@ workloadApiServer:
     enabled: false
     remoteDebugPort: 5005
 
+  management:
+    port: 8085
+
   extraInitContainers: []
   extraContainers: []
 
@@ -3023,6 +3065,9 @@ featureflagServer:
     enabled: false
     remoteDebugPort: 5005
 
+  management:
+    port: 8085
+
 testWebapp:
   image:
     repository: airbyte/utils
@@ -3119,3 +3164,6 @@ stiggSidecar:
   debug:
     enabled: false
     remoteDebugPort: 5005
+
+  management:
+    port: 8085

@@ -5,7 +5,10 @@ WORKDIR /app
 ADD airbyte-app.tar /app
 
 FROM ${JDK_IMAGE} AS server
-EXPOSE 8000 5005
+# 8000 is the port micronaut listens on
+# 5005 is the remote debug port
+# 8085 is the Micronaut management endpoint port
+EXPOSE 8000 5005 8085
 ARG VERSION=dev
 ENV APPLICATION airbyte-server
 ENV VERSION ${VERSION}

@@ -52,6 +52,16 @@ spec:
       - name: airbyte-metrics-container
         image: {{ include "imageUrl" (list .Values.metrics.image $) }}
         imagePullPolicy: "{{ .Values.metrics.image.pullPolicy }}"
+        ports:
+          - name: management
+            containerPort: {{ .Values.metrics.management.port }}
+            protocol: TCP
+          {{- if .Values.metrics.debug.enabled }}
+          - name: debug
+            containerPort: {{ .Values.metrics.debug.remoteDebugPort }}
+            protocol: TCP
+          {{- end }}
+
         env:
         {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}

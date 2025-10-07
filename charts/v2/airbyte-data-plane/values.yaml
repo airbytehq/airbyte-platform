@@ -259,6 +259,9 @@ workloadLauncher:
     enabled: false
     remoteDebugPort: 5005
 
+  management:
+    port: 8085
+
   image:
     repository: airbyte/workload-launcher
     pullPolicy: IfNotPresent

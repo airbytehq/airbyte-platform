@@ -180,6 +180,9 @@ spec:
         - name: http
           containerPort: 8001
           protocol: TCP
+        - name: management
+          containerPort: {{ .Values.server.management.port }}
+          protocol: TCP
         {{- if .Values.server.debug.enabled }}
         - name: debug
           containerPort: {{ .Values.server.debug.remoteDebugPort }}

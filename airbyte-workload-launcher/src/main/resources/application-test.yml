@@ -1,6 +1,8 @@
-micrometer:
+micronaut:
   metrics:
     enabled: false
+  server:
+    port: -1 # Random port for tests
 
 airbyte:
   secret:
@@ -12,6 +14,10 @@ datasources:
     driverClassName: org.h2.Driver
     username: sa
     password: ""
+
+endpoints:
+  all:
+    port: -1 # Random port for tests
 
 jooq:
   datasources:

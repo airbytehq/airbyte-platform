@@ -31,11 +31,13 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.env.Environment
+import io.micronaut.core.util.SupplierUtil
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
 import io.micronaut.http.client.annotation.Client
 import io.micronaut.http.client.exceptions.HttpClientResponseException
+import io.micronaut.runtime.server.EmbeddedServer
 import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.Runs
@@ -52,8 +54,10 @@ import java.util.UUID
 @Property(name = "airbyte.workload-api.workload-redelivery-window", value = "PT30M")
 @MicronautTest(environments = [Environment.TEST])
 class WorkloadApiTest(
-  @Client("/") val client: HttpClient,
+  val embeddedServer: EmbeddedServer,
 ) {
+  private val client = SupplierUtil.memoizedNonEmpty { embeddedServer.applicationContext.createBean(HttpClient::class.java, embeddedServer.url) }
+
   @Singleton
   fun mockMeterRegistry(): MeterRegistry = SimpleMeterRegistry()
 
@@ -352,7 +356,14 @@ class WorkloadApiTest(
     request: HttpRequest<Any>,
     expectedStatus: HttpStatus,
   ) {
-    assertEquals(expectedStatus, client.toBlocking().exchange(request, String::class.java).status)
+    assertEquals(
+      expectedStatus,
+      client
+        .get()
+        .toBlocking()
+        .exchange(request, String::class.java)
+        .status,
+    )
   }
 
   private fun testErrorEndpointResponse(
@@ -362,7 +373,7 @@ class WorkloadApiTest(
   ) {
     val exception =
       assertThrows<HttpClientResponseException> {
-        client.toBlocking().exchange(request, String::class.java)
+        client.get().toBlocking().exchange(request, String::class.java)
       }
 
     val deserializedBody = Jsons.deserialize(exception.response.getBody(String::class.java).get(), KnownExceptionInfo::class.java)

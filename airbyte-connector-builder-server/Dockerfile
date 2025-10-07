@@ -23,6 +23,11 @@ ADD airbyte-app.tar /app
 RUN chown -R airbyte:airbyte /app
 USER airbyte:airbyte
 
+# 8080 is the port micronaut listens on
+# 5005 is the remote debug port
+# 8085 is the Micronaut management endpoint port
+EXPOSE 8080 5005 8085
+
 # wait for upstream dependencies to become available before starting server
 CMD ["/bin/bash", "-c", "airbyte-app/bin/${APPLICATION}"]
 

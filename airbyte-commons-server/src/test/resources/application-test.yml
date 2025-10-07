@@ -4,8 +4,13 @@ micronaut:
       aggregator:
         max-content-length: 52428800 # 50MB
     max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
+    port: -1 # Random port for tests
 
 airbyte:
   connector-registry:
     enterprise:
       enterprise-stubs-url: "http://test-url.com"
+
+endpoints:
+  all:
+    port: -1 # Random port for tests

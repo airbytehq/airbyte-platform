@@ -229,6 +229,8 @@ airbyte:
   workspace-root: ${WORKSPACE_ROOT}
 
 endpoints:
+  all:
+    port: 8085
   beans:
     enabled: true
     sensitive: false

@@ -5,6 +5,11 @@ WORKDIR /app
 ADD airbyte-app.tar /app
 
 FROM ${JDK_IMAGE}
+
+# 5005 is the remote debug port
+# 8085 is the Micronaut management endpoint port
+EXPOSE 5005 8085
+
 WORKDIR /app
 COPY --chown=airbyte:airbyte --from=builder /app /app
 USER airbyte:airbyte

@@ -90,6 +90,8 @@ airbyte:
     workload-redelivery-window: ${WORKLOAD_REDELIVERY_WINDOW:PT5M}
 
 endpoints:
+  all:
+    port: 8085
   beans:
     enabled: true
     sensitive: false

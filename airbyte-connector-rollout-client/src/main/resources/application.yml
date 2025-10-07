@@ -51,6 +51,11 @@ airbyte:
         rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
         rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
 
+endpoints:
+  all:
+    enabled: false
+    port: 8085
+
 jackson:
   mapper:
     ACCEPT_CASE_INSENSITIVE_ENUMS: true

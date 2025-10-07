@@ -97,6 +97,8 @@ airbyte:
     internal-realm: ${KEYCLOAK_INTERNAL_REALM:_airbyte-internal}
 
 endpoints:
+  all:
+    port: 8085
   beans:
     enabled: true
     sensitive: false

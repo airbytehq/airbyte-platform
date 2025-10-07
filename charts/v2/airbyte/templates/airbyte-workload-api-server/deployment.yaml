@@ -122,7 +122,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /health/liveness
-            port: http
+            port: management
           initialDelaySeconds: {{ .Values.workloadApiServer.livenessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.workloadApiServer.livenessProbe.periodSeconds }}
           timeoutSeconds: {{ .Values.workloadApiServer.livenessProbe.timeoutSeconds }}
@@ -133,7 +133,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /health/liveness
-            port: http
+            port: management
           initialDelaySeconds: {{ .Values.workloadApiServer.readinessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.workloadApiServer.readinessProbe.periodSeconds }}
           timeoutSeconds: {{ .Values.workloadApiServer.readinessProbe.timeoutSeconds }}
@@ -144,6 +144,9 @@ spec:
         ports:
         - name: http
           containerPort: 8007
+          protocol: TCP
+        - name: management
+          containerPort: {{ .Values.workloadApiServer.management.port }}
           protocol: TCP
         {{- if .Values.workloadApiServer.debug.enabled }}
         - name: debug

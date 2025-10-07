@@ -86,7 +86,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /health/liveness
-            port: http
+            port: management
           initialDelaySeconds: {{ .Values.featureflagServer.livenessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.featureflagServer.livenessProbe.periodSeconds }}
           timeoutSeconds: {{ .Values.featureflagServer.livenessProbe.timeoutSeconds }}
@@ -97,7 +97,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /health/liveness
-            port: http
+            port: management
           initialDelaySeconds: {{ .Values.featureflagServer.readinessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.featureflagServer.readinessProbe.periodSeconds }}
           timeoutSeconds: {{ .Values.featureflagServer.readinessProbe.timeoutSeconds }}
@@ -108,6 +108,9 @@ spec:
         ports:
         - name: http
           containerPort: 8007
+          protocol: TCP
+        - name: management
+          containerPort: {{ .Values.featureflagServer.management.port }}
           protocol: TCP
         {{- if .Values.featureflagServer.debug.enabled }}
         - name: debug 
