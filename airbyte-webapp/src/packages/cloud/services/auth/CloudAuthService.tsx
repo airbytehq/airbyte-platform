@@ -87,7 +87,10 @@ export function initializeUserManager() {
   // First, check if there's an active redirect in progress. If so, we can pull the realm & clientId from the query params
   const searchParams = new URLSearchParams(window.location.search);
   const realm = searchParams.get("realm");
-  if (realm) {
+  const isSsoTest = searchParams.get("sso_test") === "true";
+
+  // Ignore SSO test callbacks - they should be handled by the settings page component
+  if (realm && !isSsoTest) {
     return createUserManager(realm);
   }
 
@@ -142,6 +145,12 @@ function clearSsoSearchParams() {
 
 const hasAuthParams = (location = window.location): boolean => {
   const searchParams = new URLSearchParams(location.search);
+
+  // Ignore SSO test callbacks - they should be handled by the settings page component
+  if (searchParams.get("sso_test") === "true") {
+    return false;
+  }
+
   if ((searchParams.get("code") || searchParams.get("error")) && searchParams.get("state")) {
     return true;
   }

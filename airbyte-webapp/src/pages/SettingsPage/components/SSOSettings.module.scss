@@ -20,3 +20,26 @@
     color: colors.$blue-400;
   }
 }
+
+.step {
+  border: variables.$border-thin solid colors.$border-color;
+  border-radius: variables.$border-radius-sm;
+  padding: variables.$spacing-lg;
+  transition:
+    border-color 0.2s ease,
+    opacity 0.2s ease;
+
+  &--active {
+    border-color: colors.$blue-200;
+  }
+
+  &--inactive {
+    opacity: 0.5;
+  }
+}
+
+.stepContent {
+  &--disabled {
+    opacity: 0.5;
+  }
+}

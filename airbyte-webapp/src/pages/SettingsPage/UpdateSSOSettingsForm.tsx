@@ -9,9 +9,12 @@ import { HttpProblem, useSSOConfigManagement } from "core/api";
 import { useFormatError } from "core/errors";
 import { useIntent } from "core/utils/rbac";
 import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
+import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { SSOSettings } from "./components/SSOSettings";
+import { SSOSettingsValidation } from "./components/SSOSettingsValidation";
+import { createSSOTestManager } from "./components/useSSOTestManager";
 
 export const ssoValidationSchema = z.object({
   companyIdentifier: z.string().trim(),
@@ -21,7 +24,15 @@ export const ssoValidationSchema = z.object({
   emailDomain: z.string().trim(),
 });
 
+export const ssoValidationSchemaV2 = z.object({
+  companyIdentifier: z.string().trim().nonempty("form.empty.error"),
+  clientId: z.string().trim().nonempty("form.empty.error"),
+  clientSecret: z.string().trim().nonempty("form.empty.error"),
+  discoveryUrl: z.string().trim().nonempty("form.empty.error"),
+});
+
 export type SSOFormValues = z.infer<typeof ssoValidationSchema>;
+export type SSOFormValuesValidation = z.infer<typeof ssoValidationSchemaV2>;
 
 const SSO_UPDATE_NOTIFICATION_ID = "sso-update-notification";
 
@@ -33,11 +44,24 @@ export const UpdateSSOSettingsForm = () => {
   const canUpdateOrganization = useIntent("UpdateOrganization", { organizationId });
   const { ssoConfig, createSsoConfig } = useSSOConfigManagement();
   const { showProFeatureModalIfNeeded } = useProFeaturesModal("sso");
+  const isSSOConfigValidationEnabled = useExperiment("settings.ssoConfigValidation");
 
-  const onSubmit = async (values: SSOFormValues) => {
+  const onSubmit = async (values: SSOFormValues | SSOFormValuesValidation) => {
     await showProFeatureModalIfNeeded();
-
     await createSsoConfig(values);
+
+    // For validation flow, redirect to OAuth test after saving draft config
+    if (isSSOConfigValidationEnabled && "companyIdentifier" in values) {
+      const userManager = createSSOTestManager(values.companyIdentifier);
+
+      // Use UserManager to initiate the signin flow with IDP hint
+      await userManager.signinRedirect({
+        extraQueryParams: {
+          kc_idp_hint: "default",
+          prompt: "login",
+        },
+      });
+    }
   };
 
   useEffect(
@@ -56,12 +80,38 @@ export const UpdateSSOSettingsForm = () => {
   };
 
   const onSuccess = () => {
+    // For validation flow, we redirect to OAuth so no notification needed
+    if (isSSOConfigValidationEnabled) {
+      return;
+    }
+
     registerNotification({
       id: SSO_UPDATE_NOTIFICATION_ID,
       text: formatMessage({ id: "form.changesSaved" }),
       type: "success",
     });
   };
+
+  if (isSSOConfigValidationEnabled) {
+    return (
+      <Form<SSOFormValuesValidation>
+        onSubmit={onSubmit}
+        onSuccess={onSuccess}
+        onError={onError}
+        zodSchema={ssoValidationSchemaV2}
+        defaultValues={{
+          companyIdentifier: ssoConfig?.companyIdentifier || "",
+          clientId: ssoConfig?.clientId || "",
+          clientSecret: "", // always empty - user must re-enter
+          discoveryUrl: "", // we don't get this from the API
+        }}
+        disabled={!canUpdateOrganization}
+        reinitializeDefaultValues
+      >
+        <SSOSettingsValidation />
+      </Form>
+    );
+  }
 
   return (
     <Form<SSOFormValues>

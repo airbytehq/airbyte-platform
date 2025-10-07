@@ -38,6 +38,7 @@ export interface Experiments {
   "settings.breakingChangeNotifications": boolean;
   "settings.downloadDiagnostics": boolean;
   "settings.showAdvancedSettings": boolean;
+  "settings.ssoConfigValidation": boolean;
   "sidebar.showOrgPickerV2": boolean;
 }
 
@@ -88,5 +89,6 @@ export const defaultExperimentValues: Experiments = {
   "settings.breakingChangeNotifications": false,
   "settings.downloadDiagnostics": false,
   "settings.showAdvancedSettings": false,
+  "settings.ssoConfigValidation": false,
   "sidebar.showOrgPickerV2": true,
 };

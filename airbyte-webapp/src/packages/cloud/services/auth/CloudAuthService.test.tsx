@@ -52,6 +52,15 @@ describe(`${initializeUserManager.name}()`, () => {
     expect(userManager.settings.authority).toMatch(/auth\/realms\/local-storage-realm/);
     window.localStorage.removeItem(mockKey);
   });
+
+  it("should ignore realm from query params when sso_test=true (SSO test callback)", () => {
+    windowSearchSpy.mockImplementation(() => ({
+      search: "?realm=test-realm&sso_test=true",
+    }));
+    const userManager = initializeUserManager();
+    // Should use default realm, not test-realm
+    expect(userManager.settings.authority).toMatch(/auth\/realms\/_airbyte-cloud-users/);
+  });
 });
 
 describe(`${CloudAuthService.name}`, () => {
@@ -121,5 +130,21 @@ describe(`${CloudAuthService.name}`, () => {
     await waitFor(() => {
       expect(mockUserManager.settings.authority).toMatch(/auth\/realms\/local-storage-realm/);
     });
+  });
+
+  it("should ignore realm from query params when sso_test=true (SSO test callback)", async () => {
+    windowSearchSpy = jest.spyOn(window, "location", "get");
+    windowSearchSpy.mockImplementation(() => ({
+      search: "?realm=test-realm&sso_test=true",
+    }));
+
+    renderHook(() => useAuthService(), { wrapper });
+
+    await waitFor(() => {
+      // Should use default realm, not test-realm
+      expect(mockUserManager.settings.authority).toMatch(/auth\/realms\/_airbyte-cloud-users/);
+    });
+
+    windowSearchSpy.mockRestore();
   });
 });
