@@ -99,6 +99,7 @@ object MetricTags {
   // workload tags
   const val DATA_PLANE_VERSION: String = "data_plane_version"
   const val DATA_PLANE_VISIBILITY: String = "data_plane_visibility"
+  const val DATA_PLANE_ORG_ID: String = "data_plane_org_id"
   const val DATA_PLANE_ID_TAG: String = "data_plane_id"
   const val DATA_PLANE_NAME_TAG: String = "data_plane_name"
   const val DATA_PLANE_GROUP_TAG: String = "data_plane_group"

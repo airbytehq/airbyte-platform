@@ -26,6 +26,7 @@ class DataplaneMeterTagsUpdater(
       .meterFilter(MeterFilter.replaceTagValues(MetricTags.DATA_PLANE_GROUP_TAG, { event.dataplaneGroupId.toString() }))
       .meterFilter(MeterFilter.replaceTagValues(MetricTags.DATA_PLANE_GROUP_NAME_TAG, { event.dataplaneGroupName }))
       .meterFilter(MeterFilter.replaceTagValues(MetricTags.DATA_PLANE_VISIBILITY, { getDataplaneVisibility(event.organizationId) }))
+      .meterFilter(MeterFilter.replaceTagValues(MetricTags.DATA_PLANE_ORG_ID, { event.organizationId?.toString() ?: MetricTags.UNKNOWN }))
   }
 
   private fun getDataplaneVisibility(dataplaneGroupId: UUID?): String =

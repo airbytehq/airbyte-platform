@@ -45,6 +45,7 @@ class PrettifyDataplaneMetricTagsMeterFilterBuilder(
         }
         cache.orgIdForDataplaneGroupId(dataplaneGroupId)?.let { orgId ->
           newTags.add(Tag.of(MetricTags.DATA_PLANE_VISIBILITY, getDataplaneVisibility(orgId)))
+          newTags.add(Tag.of(MetricTags.DATA_PLANE_ORG_ID, orgId.toString()))
         }
       }
       return if (newTags.isNotEmpty()) id.withTags(newTags) else id

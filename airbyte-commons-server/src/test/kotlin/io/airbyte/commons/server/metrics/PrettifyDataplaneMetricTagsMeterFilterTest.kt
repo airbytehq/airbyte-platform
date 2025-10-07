@@ -111,6 +111,9 @@ class PrettifyDataplaneMetricTagsMeterFilterTest {
     // Verify visibility tag was added
     assertEquals(MetricTags.PRIVATE, result.getTag(MetricTags.DATA_PLANE_VISIBILITY))
 
+    // Verify org ID tag was added
+    assertEquals(orgId.toString(), result.getTag(MetricTags.DATA_PLANE_ORG_ID))
+
     verify(exactly = 1) { cache.dataplaneGroupNameById(groupId) }
     verify(exactly = 1) { cache.orgIdForDataplaneGroupId(groupId) }
   }
@@ -147,6 +150,9 @@ class PrettifyDataplaneMetricTagsMeterFilterTest {
     // Verify visibility tag was still added
     assertEquals(MetricTags.PRIVATE, result.getTag(MetricTags.DATA_PLANE_VISIBILITY))
 
+    // Verify org ID tag was added
+    assertEquals(orgId.toString(), result.getTag(MetricTags.DATA_PLANE_ORG_ID))
+
     // Verify cache was not called for group name
     verify(exactly = 0) { cache.dataplaneGroupNameById(any()) }
   }
@@ -177,6 +183,9 @@ class PrettifyDataplaneMetricTagsMeterFilterTest {
 
     // Verify visibility is public
     assertEquals(MetricTags.PUBLIC, result.getTag(MetricTags.DATA_PLANE_VISIBILITY))
+
+    // Verify org ID tag was added
+    assertEquals(PUBLIC_ORG_ID.toString(), result.getTag(MetricTags.DATA_PLANE_ORG_ID))
   }
 
   @Test
@@ -206,6 +215,9 @@ class PrettifyDataplaneMetricTagsMeterFilterTest {
 
     // Verify visibility is private
     assertEquals(MetricTags.PRIVATE, result.getTag(MetricTags.DATA_PLANE_VISIBILITY))
+
+    // Verify org ID tag was added
+    assertEquals(privateOrgId.toString(), result.getTag(MetricTags.DATA_PLANE_ORG_ID))
   }
 
   @Test
@@ -235,6 +247,10 @@ class PrettifyDataplaneMetricTagsMeterFilterTest {
     // Verify visibility tag was not added
     val visibilityTag = result.getTag(MetricTags.DATA_PLANE_VISIBILITY)
     assertEquals(null, visibilityTag)
+
+    // Verify org ID tag was not added
+    val orgIdTag = result.getTag(MetricTags.DATA_PLANE_ORG_ID)
+    assertEquals(null, orgIdTag)
   }
 
   @Test
@@ -347,6 +363,7 @@ class PrettifyDataplaneMetricTagsMeterFilterTest {
     assertEquals(dataplaneName, result.getTag(MetricTags.DATA_PLANE_NAME_TAG))
     assertEquals(groupName, result.getTag(MetricTags.DATA_PLANE_GROUP_NAME_TAG))
     assertEquals(MetricTags.PRIVATE, result.getTag(MetricTags.DATA_PLANE_VISIBILITY))
+    assertEquals(orgId.toString(), result.getTag(MetricTags.DATA_PLANE_ORG_ID))
 
     verify(exactly = 1) { cache.dataplaneNameById(dataplaneId) }
     verify(exactly = 1) { cache.dataplaneGroupNameById(groupId) }

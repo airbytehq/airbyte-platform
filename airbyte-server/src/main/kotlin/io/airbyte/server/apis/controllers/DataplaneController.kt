@@ -249,6 +249,7 @@ open class DataplaneController(
         MetricTags.DATA_PLANE_VISIBILITY,
         if (dataplaneGroup.organizationId == PUBLIC_ORG_ID) MetricTags.PUBLIC else MetricTags.PRIVATE,
       ),
+      MetricAttribute(MetricTags.DATA_PLANE_ORG_ID, dataplaneGroup.organizationId.toString()),
     )
   }
 
