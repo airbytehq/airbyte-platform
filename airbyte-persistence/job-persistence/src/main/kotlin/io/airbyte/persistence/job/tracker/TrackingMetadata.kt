@@ -22,6 +22,7 @@ import io.airbyte.config.helpers.ScheduleHelpers.getIntervalInSecond
 import io.micronaut.core.util.StringUtils
 import java.util.Optional
 import java.util.concurrent.TimeUnit
+import kotlin.math.roundToInt
 
 /**
  * Helpers to fetch stats / metadata about Airbyte domain models and turn them into flat maps that
@@ -162,7 +163,7 @@ object TrackingMetadata {
       metadata.put("sync_start_time", syncSummary.startTime)
     }
     if (syncSummary.endTime != null && syncSummary.startTime != null) {
-      metadata.put("duration", Math.round((syncSummary.endTime - syncSummary.startTime) / 1000.0))
+      metadata.put("duration", ((syncSummary.endTime - syncSummary.startTime) / 1000.0).roundToInt())
     }
     if (syncSummary.bytesSynced != null) {
       metadata.put("volume_mb", syncSummary.bytesSynced)
@@ -170,54 +171,56 @@ object TrackingMetadata {
     if (syncSummary.recordsSynced != null) {
       metadata.put("volume_rows", syncSummary.recordsSynced)
     }
-    if (totalStats.sourceStateMessagesEmitted != null) {
-      metadata.put("count_state_messages_from_source", syncSummary.totalStats.sourceStateMessagesEmitted)
-    }
-    if (totalStats.destinationStateMessagesEmitted != null) {
-      metadata.put("count_state_messages_from_destination", syncSummary.totalStats.destinationStateMessagesEmitted)
-    }
-    if (totalStats.maxSecondsBeforeSourceStateMessageEmitted != null) {
-      metadata.put(
-        "max_seconds_before_source_state_message_emitted",
-        totalStats.maxSecondsBeforeSourceStateMessageEmitted,
-      )
-    }
-    if (totalStats.meanSecondsBeforeSourceStateMessageEmitted != null) {
-      metadata.put(
-        "mean_seconds_before_source_state_message_emitted",
-        totalStats.meanSecondsBeforeSourceStateMessageEmitted,
-      )
-    }
-    if (totalStats.maxSecondsBetweenStateMessageEmittedandCommitted != null) {
-      metadata.put(
-        "max_seconds_between_state_message_emit_and_commit",
-        totalStats.maxSecondsBetweenStateMessageEmittedandCommitted,
-      )
-    }
-    if (totalStats.meanSecondsBetweenStateMessageEmittedandCommitted != null) {
-      metadata.put(
-        "mean_seconds_between_state_message_emit_and_commit",
-        totalStats.meanSecondsBetweenStateMessageEmittedandCommitted,
-      )
-    }
+    totalStats?.let {
+      if (totalStats.sourceStateMessagesEmitted != null) {
+        metadata.put("count_state_messages_from_source", totalStats.sourceStateMessagesEmitted)
+      }
+      if (totalStats.destinationStateMessagesEmitted != null) {
+        metadata.put("count_state_messages_from_destination", totalStats.destinationStateMessagesEmitted)
+      }
+      if (totalStats.maxSecondsBeforeSourceStateMessageEmitted != null) {
+        metadata.put(
+          "max_seconds_before_source_state_message_emitted",
+          totalStats.maxSecondsBeforeSourceStateMessageEmitted,
+        )
+      }
+      if (totalStats.meanSecondsBeforeSourceStateMessageEmitted != null) {
+        metadata.put(
+          "mean_seconds_before_source_state_message_emitted",
+          totalStats.meanSecondsBeforeSourceStateMessageEmitted,
+        )
+      }
+      if (totalStats.maxSecondsBetweenStateMessageEmittedandCommitted != null) {
+        metadata.put(
+          "max_seconds_between_state_message_emit_and_commit",
+          totalStats.maxSecondsBetweenStateMessageEmittedandCommitted,
+        )
+      }
+      if (totalStats.meanSecondsBetweenStateMessageEmittedandCommitted != null) {
+        metadata.put(
+          "mean_seconds_between_state_message_emit_and_commit",
+          totalStats.meanSecondsBetweenStateMessageEmittedandCommitted,
+        )
+      }
 
-    if (totalStats.replicationStartTime != null) {
-      metadata.put("replication_start_time", totalStats.replicationStartTime)
-    }
-    if (totalStats.replicationEndTime != null) {
-      metadata.put("replication_end_time", totalStats.replicationEndTime)
-    }
-    if (totalStats.sourceReadStartTime != null) {
-      metadata.put("source_read_start_time", totalStats.sourceReadStartTime)
-    }
-    if (totalStats.sourceReadEndTime != null) {
-      metadata.put("source_read_end_time", totalStats.sourceReadEndTime)
-    }
-    if (totalStats.destinationWriteStartTime != null) {
-      metadata.put("destination_write_start_time", totalStats.destinationWriteStartTime)
-    }
-    if (totalStats.destinationWriteEndTime != null) {
-      metadata.put("destination_write_end_time", totalStats.destinationWriteEndTime)
+      if (totalStats.replicationStartTime != null) {
+        metadata.put("replication_start_time", totalStats.replicationStartTime)
+      }
+      if (totalStats.replicationEndTime != null) {
+        metadata.put("replication_end_time", totalStats.replicationEndTime)
+      }
+      if (totalStats.sourceReadStartTime != null) {
+        metadata.put("source_read_start_time", totalStats.sourceReadStartTime)
+      }
+      if (totalStats.sourceReadEndTime != null) {
+        metadata.put("source_read_end_time", totalStats.sourceReadEndTime)
+      }
+      if (totalStats.destinationWriteStartTime != null) {
+        metadata.put("destination_write_start_time", totalStats.destinationWriteStartTime)
+      }
+      if (totalStats.destinationWriteEndTime != null) {
+        metadata.put("destination_write_end_time", totalStats.destinationWriteEndTime)
+      }
     }
 
     val failureReasons = failureReasonsList(attempts)
