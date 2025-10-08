@@ -68,6 +68,7 @@ class AirbyteKeycloakClient(
   /**
    * Creates a complete OIDC SSO configuration including realm, identity provider, and client.
    * Sets up the full authentication flow for an organization's SSO integration.
+   * If any step fails after the realm is created, the realm is deleted before throwing the exception.
    * @throws RealmCreationException, IdpCreationException, CreateClientException, or ImportConfigException on failures.
    */
   fun createOidcSsoConfig(request: SsoConfig) {
@@ -83,46 +84,55 @@ class AirbyteKeycloakClient(
       },
     )
 
-    val idpDiscoveryResult = importIdpConfig(request.companyIdentifier, request.discoveryUrl)
+    try {
+      val idpDiscoveryResult = importIdpConfig(request.companyIdentifier, request.discoveryUrl)
 
-    // see https://www.keycloak.org/docs/latest/server_admin/index.html#_identity_broker_oidc
-    // and https://www.keycloak.org/docs-api/latest/rest-api/index.html#IdentityProviderRepresentation
-    // The idpDiscovery result contains more fields than we pass in the following config, however we only require
-    // the auth url and the token url to enable sso.
-    val idp =
-      IdentityProviderRepresentation().apply {
-        alias = DEFAULT_IDP_ALIAS
-        providerId = "oidc"
-        config =
-          mapOf(
-            "clientId" to request.clientId,
-            "clientSecret" to request.clientSecret,
-            "authorizationUrl" to idpDiscoveryResult["authorizationUrl"],
-            "tokenUrl" to idpDiscoveryResult["tokenUrl"],
-            "clientAuthMethod" to CLIENT_AUTH_METHOD,
-            "defaultScope" to DEFAULT_SCOPE,
-          )
-      }
-    createIdpForRealm(request.companyIdentifier, idp)
+      // see https://www.keycloak.org/docs/latest/server_admin/index.html#_identity_broker_oidc
+      // and https://www.keycloak.org/docs-api/latest/rest-api/index.html#IdentityProviderRepresentation
+      // The idpDiscovery result contains more fields than we pass in the following config, however we only require
+      // the auth url and the token url to enable sso.
+      val idp =
+        IdentityProviderRepresentation().apply {
+          alias = DEFAULT_IDP_ALIAS
+          providerId = "oidc"
+          config =
+            mapOf(
+              "clientId" to request.clientId,
+              "clientSecret" to request.clientSecret,
+              "authorizationUrl" to idpDiscoveryResult["authorizationUrl"],
+              "tokenUrl" to idpDiscoveryResult["tokenUrl"],
+              "clientAuthMethod" to CLIENT_AUTH_METHOD,
+              "defaultScope" to DEFAULT_SCOPE,
+            )
+        }
+      createIdpForRealm(request.companyIdentifier, idp)
 
-    val airbyteWebappClient =
-      ClientRepresentation().apply {
-        clientId = AIRBYTE_WEBAPP_CLIENT_ID
-        name = AIRBYTE_WEBAPP_CLIENT_NAME
-        protocol = "openid-connect"
-        redirectUris = listOf("${airbyteConfig.airbyteUrl}/*")
-        webOrigins = listOf(airbyteConfig.airbyteUrl)
-        baseUrl = airbyteConfig.airbyteUrl
-        isEnabled = true
-        isDirectAccessGrantsEnabled = false
-        isStandardFlowEnabled = true
-        isServiceAccountsEnabled = false
-        authorizationServicesEnabled = false
-        isFrontchannelLogout = false
-        isImplicitFlowEnabled = false
-        isPublicClient = true
+      val airbyteWebappClient =
+        ClientRepresentation().apply {
+          clientId = AIRBYTE_WEBAPP_CLIENT_ID
+          name = AIRBYTE_WEBAPP_CLIENT_NAME
+          protocol = "openid-connect"
+          redirectUris = listOf("${airbyteConfig.airbyteUrl}/*")
+          webOrigins = listOf(airbyteConfig.airbyteUrl)
+          baseUrl = airbyteConfig.airbyteUrl
+          isEnabled = true
+          isDirectAccessGrantsEnabled = false
+          isStandardFlowEnabled = true
+          isServiceAccountsEnabled = false
+          authorizationServicesEnabled = false
+          isFrontchannelLogout = false
+          isImplicitFlowEnabled = false
+          isPublicClient = true
+        }
+      createClientForRealm(request.companyIdentifier, airbyteWebappClient)
+    } catch (e: Exception) {
+      try {
+        deleteRealm(request.companyIdentifier)
+      } catch (cleanupEx: Exception) {
+        logger.error(cleanupEx) { "Failed to cleanup Keycloak realm ${request.companyIdentifier} after configuration failure" }
       }
-    createClientForRealm(request.companyIdentifier, airbyteWebappClient)
+      throw e
+    }
   }
 
   /**
@@ -230,6 +240,19 @@ class AirbyteKeycloakClient(
   }
 
   /**
+   * Checks if a Keycloak realm exists with the given name.
+   * @return true if the realm exists, false otherwise.
+   */
+  fun realmExists(realmName: String): Boolean =
+    try {
+      keycloakAdminClient.realms().realm(realmName).toRepresentation()
+      true
+    } catch (e: Exception) {
+      logger.debug(e) { "Realm $realmName does not exist or is not accessible" }
+      false
+    }
+
+  /**
    * Deletes a Keycloak realm by name.
    * Removes all associated configurations, clients, and identity providers.
    * @throws RealmDeletionException if deletion fails.
@@ -274,6 +297,75 @@ class AirbyteKeycloakClient(
       .identityProviders()
       .get(DEFAULT_IDP_ALIAS)
       .update(currentIdpRepresentation)
+  }
+
+  /**
+   * Deletes the default identity provider from a realm.
+   * This removes the IDP configuration but preserves the realm and any existing users.
+   * Idempotent - if the IDP doesn't exist, this is considered a success.
+   * @throws IdpDeletionException if deletion fails.
+   */
+  fun deleteIdpFromRealm(realmName: String) {
+    try {
+      val realm = keycloakAdminClient.realms().realm(realmName)
+      val idpExists = realm.identityProviders().findAll().any { it.alias == DEFAULT_IDP_ALIAS }
+
+      if (!idpExists) {
+        logger.info { "IDP $DEFAULT_IDP_ALIAS does not exist in realm $realmName, nothing to delete" }
+        return
+      }
+
+      realm.identityProviders().get(DEFAULT_IDP_ALIAS).remove()
+      logger.info { "Successfully deleted IDP $DEFAULT_IDP_ALIAS from realm $realmName" }
+    } catch (e: Exception) {
+      logger.error(e) { "Delete IDP request failed" }
+      throw IdpDeletionException("Delete IDP request failed! Server error: $e")
+    }
+  }
+
+  /**
+   * Updates the complete IDP configuration for an existing realm.
+   * If an IDP exists, updates it with new configuration to preserve user links.
+   * If no IDP exists, creates a new one.
+   * This preserves the realm and any existing users while updating the SSO settings.
+   * @throws IdpDeletionException, ImportConfigException, or IdpCreationException on failures.
+   */
+  fun replaceOidcIdpConfig(ssoConfig: SsoConfig) {
+    val realm = keycloakAdminClient.realms().realm(ssoConfig.companyIdentifier)
+    val existingIdp =
+      realm
+        .identityProviders()
+        .findAll()
+        .filter { it.alias == DEFAULT_IDP_ALIAS }
+        .getOrNull(0)
+
+    val idpDiscoveryResult = importIdpConfig(ssoConfig.companyIdentifier, ssoConfig.discoveryUrl)
+    val idpConfig =
+      mapOf(
+        "clientId" to ssoConfig.clientId,
+        "clientSecret" to ssoConfig.clientSecret,
+        "authorizationUrl" to idpDiscoveryResult["authorizationUrl"],
+        "tokenUrl" to idpDiscoveryResult["tokenUrl"],
+        "clientAuthMethod" to CLIENT_AUTH_METHOD,
+        "defaultScope" to DEFAULT_SCOPE,
+      )
+
+    if (existingIdp != null) {
+      // Update existing IDP to preserve user links
+      existingIdp.config = idpConfig
+      realm.identityProviders().get(DEFAULT_IDP_ALIAS).update(existingIdp)
+      logger.info { "Updated existing IDP $DEFAULT_IDP_ALIAS in realm ${ssoConfig.companyIdentifier}" }
+    } else {
+      // Create new IDP
+      val idp =
+        IdentityProviderRepresentation().apply {
+          alias = DEFAULT_IDP_ALIAS
+          providerId = "oidc"
+          config = idpConfig
+        }
+      createIdpForRealm(ssoConfig.companyIdentifier, idp)
+      logger.info { "Created new IDP $DEFAULT_IDP_ALIAS in realm ${ssoConfig.companyIdentifier}" }
+    }
   }
 
   /**
@@ -418,6 +510,10 @@ class CreateClientException(
 ) : Exception(message)
 
 class IdpNotFoundException(
+  message: String,
+) : Exception(message)
+
+class IdpDeletionException(
   message: String,
 ) : Exception(message)
 
