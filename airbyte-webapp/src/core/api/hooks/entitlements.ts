@@ -30,6 +30,7 @@ const entitlementIdToFeatureItem: Record<string, FeatureItem> = {
   "feature-sso": FeatureItem.AllowUpdateSSOConfig,
   "feature-multiple-workspaces": FeatureItem.CreateMultipleWorkspaces,
   "feature-ai-copilot": FeatureItem.AICopilot,
+  "feature-faster-sync-frequency": FeatureItem.AllowSyncFrequencyUnderOneHour,
 };
 
 /**

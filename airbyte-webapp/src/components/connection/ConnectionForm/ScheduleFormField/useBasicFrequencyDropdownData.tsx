@@ -5,6 +5,7 @@ import { Option } from "components/ui/ListBox";
 
 import { ConnectorIds } from "area/connector/utils";
 import { ConnectionScheduleDataBasicSchedule, WebBackendConnectionRead } from "core/api/types/AirbyteClient";
+import { FeatureItem, useFeature } from "core/services/features";
 
 export const BASIC_FREQUENCY_DEFAULT_VALUE: ConnectionScheduleDataBasicSchedule = { units: 24, timeUnit: "hours" };
 export const frequencyConfig: ConnectionScheduleDataBasicSchedule[] = [
@@ -43,9 +44,13 @@ export const useBasicFrequencyDropdownData = (
   additionalFrequency: WebBackendConnectionRead["scheduleData"]
 ): Array<Option<ConnectionScheduleDataBasicSchedule>> => {
   const { formatMessage } = useIntl();
+  const isSyncFrequencyUnderOneHourAllowed = useFeature(FeatureItem.AllowSyncFrequencyUnderOneHour);
 
   return useMemo(() => {
-    const frequencies = [...frequencyConfig];
+    // Conditionally add 15 and 30 minute options when feature flag is enabled
+    const frequencies = isSyncFrequencyUnderOneHourAllowed
+      ? [{ units: 15, timeUnit: "minutes" as const }, { units: 30, timeUnit: "minutes" as const }, ...frequencyConfig]
+      : [...frequencyConfig];
 
     /**
      * There's a possibility that users have created custom frequencies via the API,
@@ -72,5 +77,5 @@ export const useBasicFrequencyDropdownData = (
       value: frequency,
       "data-testid": `frequency-${frequency.units}-${frequency.timeUnit}`,
     }));
-  }, [additionalFrequency, formatMessage]);
+  }, [additionalFrequency, formatMessage, isSyncFrequencyUnderOneHourAllowed]);
 };

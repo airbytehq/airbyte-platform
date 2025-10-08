@@ -1,3 +1,5 @@
+import { Listbox } from "@headlessui/react";
+import isEqual from "lodash/isEqual";
 import uniqueId from "lodash/uniqueId";
 import { ChangeEvent, useState } from "react";
 import { Controller, useFormContext, useFormState, useWatch } from "react-hook-form";
@@ -12,16 +14,23 @@ import {
 import { useTrackConnectionFrequency } from "components/connection/ConnectionForm/ScheduleFormField/useTrackConnectionFrequency";
 import { FormControlFooter, FormControlFooterInfo, FormControlErrorMessage } from "components/forms/FormControl";
 import { ControlLabels } from "components/LabeledControl";
+import { Box } from "components/ui/Box";
+import { BrandingBadge } from "components/ui/BrandingBadge";
 import { FlexContainer } from "components/ui/Flex";
 import { Input } from "components/ui/Input";
 import { ExternalLink } from "components/ui/Link";
 import { ListBox, Option } from "components/ui/ListBox";
+import { FloatLayout } from "components/ui/ListBox/FloatLayout";
+import { ListboxButton } from "components/ui/ListBox/ListboxButton";
+import { ListboxOption } from "components/ui/ListBox/ListboxOption";
+import { ListboxOptions } from "components/ui/ListBox/ListboxOptions";
 import { Text } from "components/ui/Text";
 
 import { useDescribeCronExpression } from "core/api";
 import { ConnectionScheduleDataBasicSchedule, ConnectionScheduleType } from "core/api/types/AirbyteClient";
 import { cronTimeZones, CRON_DEFAULT_VALUE } from "core/utils/cron";
 import { links } from "core/utils/links";
+import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { InputContainer } from "./InputContainer";
@@ -146,6 +155,7 @@ const SimplifiedBasicScheduleFormControl: React.FC<{ disabled: boolean }> = ({ d
   const { setValue, control } = useFormContext<FormConnectionFormValues>();
   const [controlId] = useState(`input-control-${uniqueId()}`);
   const { trackDropdownSelect } = useTrackConnectionFrequency(connection);
+  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
   const frequencies: Array<Option<ConnectionScheduleDataBasicSchedule>> = useBasicFrequencyDropdownData(
     connection.scheduleData
   );
@@ -159,33 +169,73 @@ const SimplifiedBasicScheduleFormControl: React.FC<{ disabled: boolean }> = ({ d
     <Controller
       name="scheduleData.basicSchedule"
       control={control}
-      render={({ field }) => (
-        <FormFieldLayout alignItems="flex-start" nextSizing>
-          <ControlLabels
-            htmlFor={controlId}
-            label={
-              <FlexContainer direction="column" gap="sm">
-                <Text bold>
-                  <FormattedMessage id="form.frequency" />
-                </Text>
-                <Text size="sm" color="grey">
-                  <FormattedMessage id="form.frequency.subtitle" />
-                </Text>
-              </FlexContainer>
-            }
-          />
-          <InputContainer>
-            <ListBox<ConnectionScheduleDataBasicSchedule>
-              isDisabled={disabled}
-              id={controlId}
-              options={frequencies}
-              onSelect={onBasicScheduleSelect}
-              selectedValue={field.value}
-              data-testid="basic-schedule"
+      render={({ field }) => {
+        const selectedOption = frequencies.find((option) => isEqual(option.value, field.value));
+
+        return (
+          <FormFieldLayout alignItems="flex-start" nextSizing>
+            <ControlLabels
+              htmlFor={controlId}
+              label={
+                <FlexContainer direction="column" gap="sm">
+                  <Text bold>
+                    <FormattedMessage id="form.frequency" />
+                  </Text>
+                  <Text size="sm" color="grey">
+                    <FormattedMessage id="form.frequency.subtitle" />
+                  </Text>
+                </FlexContainer>
+              }
             />
-          </InputContainer>
-        </FormFieldLayout>
-      )}
+            <InputContainer>
+              <Listbox value={field.value} onChange={onBasicScheduleSelect} disabled={disabled} by={isEqual}>
+                <FloatLayout>
+                  <ListboxButton
+                    id={controlId}
+                    data-testid="basic-schedule-listbox-button"
+                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
+                  >
+                    {selectedOption ? (
+                      <FlexContainer alignItems="center" gap="sm">
+                        <Text as="span" size="lg" {...(disabled && { color: "grey300" })}>
+                          {selectedOption.label}
+                        </Text>
+                      </FlexContainer>
+                    ) : (
+                      <Text as="span" size="lg" color="grey">
+                        <FormattedMessage id="form.selectValue" />
+                      </Text>
+                    )}
+                  </ListboxButton>
+                  <ListboxOptions adaptiveWidth data-testid="basic-schedule-listbox-options">
+                    {frequencies.map((option, index) => (
+                      <ListboxOption
+                        key={typeof option.label === "string" ? option.label : index}
+                        value={option.value}
+                        disabled={option.disabled}
+                        {...(option["data-testid"] && {
+                          "data-testid": `${option["data-testid"]}-option`,
+                        })}
+                      >
+                        <Box p="md">
+                          <FlexContainer alignItems="center" justifyContent="space-between">
+                            <Text as="span" size="md">
+                              {option.label}
+                            </Text>
+                            {option.value.timeUnit === "minutes" && isUnifiedTrialPlan && (
+                              <BrandingBadge product="cloudForTeams" />
+                            )}
+                          </FlexContainer>
+                        </Box>
+                      </ListboxOption>
+                    ))}
+                  </ListboxOptions>
+                </FloatLayout>
+              </Listbox>
+            </InputContainer>
+          </FormFieldLayout>
+        );
+      }}
     />
   );
 };

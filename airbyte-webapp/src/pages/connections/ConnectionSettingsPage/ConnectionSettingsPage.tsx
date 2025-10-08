@@ -57,6 +57,15 @@ export const ConnectionSettingsPage: React.FC = () => {
         ...values,
       };
 
+      // Check if we need to show Pro features warning modal for sub-hourly basic schedule
+      const isBasicSchedule = values.scheduleType === ConnectionScheduleType.basic;
+      const basicSchedule = values.scheduleData?.basicSchedule;
+
+      if (isBasicSchedule && basicSchedule?.timeUnit === "minutes") {
+        await showProFeatureModalIfNeeded();
+        return updateConnection(connectionUpdates);
+      }
+
       // Check if we need to show Pro features warning modal for sub-hourly cron
       const isCronSchedule = values.scheduleType === ConnectionScheduleType.cron;
       const cronExpression = values.scheduleData?.cron?.cronExpression;

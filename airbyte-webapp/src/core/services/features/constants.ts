@@ -2,6 +2,7 @@ import { FeatureItem } from "./types";
 
 export const defaultOssFeatures = [
   FeatureItem.AllowAutoDetectSchema,
+  FeatureItem.AllowSyncFrequencyUnderOneHour,
   FeatureItem.AllowUpdateConnectors,
   FeatureItem.AllowUploadCustomImage,
   FeatureItem.EnterpriseUpsell,
