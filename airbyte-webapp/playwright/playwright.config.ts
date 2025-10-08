@@ -18,9 +18,8 @@ export default defineConfig({
   use: {
     baseURL: "https://localhost:3000",
     ignoreHTTPSErrors: true,
-    trace: process.env.CI ? "on-first-retry" : "on",
+    trace: process.env.CI ? "retain-on-failure" : "on",
     screenshot: process.env.CI ? "only-on-failure" : "on",
-    video: process.env.CI ? "on-first-retry" : "off",
   },
   webServer: {
     command: "cd .. && (test -d node_modules || pnpm install) && pnpm start local",
