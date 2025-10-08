@@ -135,6 +135,7 @@ function formInputToInputInEditing({ key, definition, required, isLocked }: Buil
     isNew: false,
     showDefaultValueField: definition.default !== undefined,
     type: getType(definition),
+    multiline: definition.multiline || false,
   };
 }
 
@@ -312,6 +313,7 @@ export const DefinitionFormControl = ({
           <SecretDefinitionFormControl
             {...defaultProps}
             value={value as string}
+            multiline={definition.multiline}
             onUpdate={(val) => {
               // Remove the value instead of setting it to the empty string, as secret persistence
               // gets mad at empty secrets
@@ -319,6 +321,10 @@ export const DefinitionFormControl = ({
             }}
           />
         );
+      }
+
+      if (definition.multiline) {
+        return <FormControl {...defaultProps} fieldType="textarea" />;
       }
 
       return <FormControl {...defaultProps} fieldType="input" />;
@@ -342,6 +348,7 @@ const SecretDefinitionFormControl = ({
   "data-field-path": dataFieldPath,
   value,
   onUpdate,
+  multiline,
 }: {
   name: string;
   label?: string;
@@ -349,6 +356,7 @@ const SecretDefinitionFormControl = ({
   "data-field-path": string;
   value: string;
   onUpdate: (val: string) => void;
+  multiline?: boolean;
 }) => {
   const { errors } = useFormState({ name });
   const error = get(errors, name);
@@ -362,6 +370,7 @@ const SecretDefinitionFormControl = ({
         value={value}
         onUpdate={onUpdate}
         error={!!error}
+        multiline={multiline}
       />
       <FormControlFooter>
         <FormControlErrorMessage name={name} />

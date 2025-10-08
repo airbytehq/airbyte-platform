@@ -5,6 +5,7 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { Input } from "components/ui/Input";
 import { SecretTextArea } from "components/ui/SecretTextArea";
+import { TextArea } from "components/ui/TextArea";
 
 import styles from "./SecretConfirmationControl.module.scss";
 
@@ -38,36 +39,58 @@ const SecretConfirmationControl: React.FC<SecretConfirmationControlProps> = ({
   const isEditInProgress = Boolean(previousValue);
   const controlRef = useRef<HTMLInputElement>(null);
 
-  const component =
-    multiline && (isEditInProgress || !showButtons) ? (
-      <SecretTextArea
+  const renderMultilineField = () => {
+    const isEditing = isEditInProgress || !field.value;
+
+    if (isEditing) {
+      return (
+        <SecretTextArea
+          {...field}
+          onChange={onChange}
+          autoComplete="off"
+          value={field.value ?? ""}
+          rows={3}
+          error={error}
+          // eslint-disable-next-line jsx-a11y/no-autofocus
+          autoFocus={showButtons && isEditInProgress}
+          disabled={disabled}
+          onUpload={(val) => field.onChange(val)}
+          onFocus={onFocus}
+          onBlur={() => onBlur?.(field.value)}
+        />
+      );
+    }
+
+    return (
+      <TextArea
         {...field}
-        onChange={onChange}
         autoComplete="off"
-        value={field.value ?? ""}
+        value="***"
         rows={3}
         error={error}
-        // eslint-disable-next-line jsx-a11y/no-autofocus
-        autoFocus={showButtons && isEditInProgress}
-        disabled={(showButtons && !isEditInProgress) || disabled}
-        onUpload={(val) => field.onChange(val)}
+        disabled={disabled || showButtons}
+        readOnly
         onFocus={onFocus}
-        onBlur={() => onBlur?.(field.value)}
-      />
-    ) : (
-      <Input
-        {...field}
-        onChange={onChange}
-        autoComplete="off"
-        value={field.value ?? ""}
-        type="password"
-        error={error}
-        ref={controlRef}
-        disabled={(showButtons && !isEditInProgress) || disabled}
-        onFocus={onFocus}
-        onBlur={() => onBlur?.(field.value)}
       />
     );
+  };
+
+  const renderSingleLineField = () => (
+    <Input
+      {...field}
+      onChange={onChange}
+      autoComplete="off"
+      value={field.value ?? ""}
+      type="password"
+      error={error}
+      ref={controlRef}
+      disabled={(showButtons && !isEditInProgress) || disabled}
+      onFocus={onFocus}
+      onBlur={() => onBlur?.(field.value)}
+    />
+  );
+
+  const component = multiline ? renderMultilineField() : renderSingleLineField();
 
   useEffect(() => {
     if (!dirty && !touched && previousValue) {
@@ -80,7 +103,9 @@ const SecretConfirmationControl: React.FC<SecretConfirmationControlProps> = ({
   }
 
   const handleStartEdit = () => {
-    if (controlRef && controlRef.current) {
+    // For single-line password inputs, manually enable and focus the field
+    // For multiline SecretTextArea, the autoFocus prop handles this automatically
+    if (!multiline && controlRef.current) {
       controlRef.current?.removeAttribute?.("disabled");
       controlRef.current?.focus?.();
     }

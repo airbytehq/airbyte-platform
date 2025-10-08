@@ -1928,6 +1928,8 @@
   "connectorBuilder.inputModal.lockedInput": "Some configuration options are not shown, since this input is auto-generated and linked to the current configuration of your connector.",
   "connectorBuilder.inputModal.pattern": "Pattern",
   "connectorBuilder.inputModal.patternTooltip": "The regex pattern to use for validating the input value.",
+  "connectorBuilder.inputModal.multiline": "Multiline field",
+  "connectorBuilder.inputModal.multilineTooltip": "Enabling this option will turn the input into a multiline text area. Used for inputs that need to be entered as a multi-line string, such as private keys.",
   "connectorBuilder.inputsView.hiddenBadge": "Hidden",
   "connectorBuilder.inputsView.hiddenBadgeTooltip": "This input will be hidden from the end-user of the connector",
   "connectorBuilder.saveInputsForm": "Save",

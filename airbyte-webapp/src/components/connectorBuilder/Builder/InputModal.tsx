@@ -31,6 +31,7 @@ export interface InputInEditing {
   isNew?: boolean;
   showDefaultValueField: boolean;
   type?: (typeof supportedTypes)[number];
+  multiline?: boolean;
 }
 
 function sluggify(str: string) {
@@ -47,6 +48,7 @@ export function newInputInEditing(): InputInEditing {
     isNew: true,
     showDefaultValueField: false,
     type: "string",
+    multiline: false,
   };
 }
 
@@ -57,6 +59,7 @@ function inputInEditingToFormInput({
   type,
   showDefaultValueField,
   isNew,
+  multiline,
   ...values
 }: InputInEditing): BuilderFormInput {
   return {
@@ -71,6 +74,7 @@ function inputInEditingToFormInput({
       pattern: values.definition.pattern,
       airbyte_secret: values.definition.airbyte_secret ? true : undefined,
       airbyte_hidden: values.definition.airbyte_hidden ? true : undefined,
+      multiline: multiline ? true : undefined,
     },
   };
 }
@@ -126,6 +130,7 @@ export const InputModal = ({
       default: z.any().optional(),
     }),
     showDefaultValueField: z.boolean(),
+    multiline: z.boolean().optional(),
     isNew: z.boolean().optional(),
     previousKey: z.string().optional(),
   });
@@ -150,6 +155,7 @@ export const InputModal = ({
           allowed_enum_values: submittedInput.definition.enum,
           secret_field: submittedInput.definition.airbyte_secret,
           hidden_field: submittedInput.definition.airbyte_hidden,
+          multiline_field: submittedInput.multiline,
           pattern: submittedInput.definition.pattern,
           required_field: submittedInput.definition.required,
           enable_default_value: submittedInput.showDefaultValueField,
@@ -453,6 +459,13 @@ const InputModalContents = ({ onDelete, onClose }: { onDelete: () => void; onClo
           optional
           label={formatMessage({ id: "connectorBuilder.inputModal.secret" })}
           labelTooltip={formatMessage({ id: "connectorBuilder.inputModal.secretTooltip" })}
+        />
+        <FormControl<InputInEditing>
+          name="multiline"
+          fieldType="switch"
+          optional
+          label={formatMessage({ id: "connectorBuilder.inputModal.multiline" })}
+          labelTooltip={formatMessage({ id: "connectorBuilder.inputModal.multilineTooltip" })}
         />
         <FormControl<InputInEditing>
           name="definition.airbyte_hidden"
