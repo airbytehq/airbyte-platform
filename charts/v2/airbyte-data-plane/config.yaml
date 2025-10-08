@@ -340,6 +340,10 @@ storage:
       key: bucket.activityPayload
       defaultValue: airbyte-storage
 
+    - env: STORAGE_BUCKET_AUDIT_LOGGING
+      key: bucket.auditLogging
+      defaultValue: airbyte-storage
+
     - env: STORAGE_BUCKET_LOG
       key: bucket.log
       defaultValue: airbyte-storage

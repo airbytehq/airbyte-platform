@@ -107,11 +107,12 @@ storage:
     accessKeyId: minio 
     secretAccessKey: "minio123"
 
-  bucket: 
+  bucket:
     log: airbyte-bucket
     state: airbyte-bucket
     workloadOutput: airbyte-bucket
     activityPayload: airbyte-bucket
+    auditLogging: airbyte-bucket
 
   # S3
   #s3:

@@ -53,6 +53,24 @@ Renders the storage.bucket.activityPayload environment variable
 {{- end }}
 
 {{/*
+Renders the storage.bucket.auditLogging value
+*/}}
+{{- define "airbyte-data-plane.storage.bucket.auditLogging" }}
+    {{- .Values.storage.bucket.auditLogging | default "airbyte-storage" }}
+{{- end }}
+
+{{/*
+Renders the storage.bucket.auditLogging environment variable
+*/}}
+{{- define "airbyte-data-plane.storage.bucket.auditLogging.env" }}
+- name: STORAGE_BUCKET_AUDIT_LOGGING
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-data-plane-env
+      key: STORAGE_BUCKET_AUDIT_LOGGING
+{{- end }}
+
+{{/*
 Renders the storage.bucket.log value
 */}}
 {{- define "airbyte-data-plane.storage.bucket.log" }}
@@ -356,6 +374,7 @@ Renders the set of all storage environment variables
 {{- define "airbyte-data-plane.storage.envs" }}
 {{- include "airbyte-data-plane.storage.type.env" . }}
 {{- include "airbyte-data-plane.storage.bucket.activityPayload.env" . }}
+{{- include "airbyte-data-plane.storage.bucket.auditLogging.env" . }}
 {{- include "airbyte-data-plane.storage.bucket.log.env" . }}
 {{- include "airbyte-data-plane.storage.bucket.state.env" . }}
 {{- include "airbyte-data-plane.storage.bucket.workloadOutput.env" . }}
@@ -392,6 +411,7 @@ Renders the set of all storage config map variables
 {{- define "airbyte-data-plane.storage.configVars" }}
 STORAGE_TYPE: {{ include "airbyte-data-plane.storage.type" . | quote }}
 STORAGE_BUCKET_ACTIVITY_PAYLOAD: {{ include "airbyte-data-plane.storage.bucket.activityPayload" . | quote }}
+STORAGE_BUCKET_AUDIT_LOGGING: {{ include "airbyte-data-plane.storage.bucket.auditLogging" . | quote }}
 STORAGE_BUCKET_LOG: {{ include "airbyte-data-plane.storage.bucket.log" . | quote }}
 STORAGE_BUCKET_STATE: {{ include "airbyte-data-plane.storage.bucket.state" . | quote }}
 STORAGE_BUCKET_WORKLOAD_OUTPUT: {{ include "airbyte-data-plane.storage.bucket.workloadOutput" . | quote }}
