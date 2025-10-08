@@ -126,11 +126,6 @@ class SyncPersistenceImpl(
     try {
       val terminated = stateFlushExecutorService.awaitTermination(FLUSH_TERMINATION_TIMEOUT_IN_SECONDS, TimeUnit.SECONDS)
       if (!terminated) {
-        if (stateToFlush != null && !stateToFlush!!.isEmpty()) {
-          metricClient.emitFailedStateCloseMetrics(connectionId)
-          metricClient.emitFailedStatsCloseMetrics(connectionId)
-        }
-
         // Ongoing flush failed to terminate within the allocated time
         logger.info { "Pending persist operation took too long to complete, most recent states may have been lost" }
 
@@ -139,11 +134,6 @@ class SyncPersistenceImpl(
         return
       }
     } catch (e: InterruptedException) {
-      if (stateToFlush != null && !stateToFlush!!.isEmpty()) {
-        metricClient.emitFailedStateCloseMetrics(connectionId)
-        metricClient.emitFailedStatsCloseMetrics(connectionId)
-      }
-
       // The current thread is getting interrupted
       logger.info(e) { "SyncPersistence has been interrupted while terminating, most recent states may have been lost" }
 
@@ -157,30 +147,16 @@ class SyncPersistenceImpl(
       try {
         doFlushState()
       } catch (e: Exception) {
-        if (stateToFlush?.isEmpty() == false) {
-          metricClient.emitFailedStateCloseMetrics(connectionId)
-          metricClient.emitFailedStatsCloseMetrics(connectionId)
-        }
         throw e
       }
     }
-
-    // At this point, the final state flush is either successful or there was no state left to flush.
-    // From a connection point of view, it should be considered a success since no state are lost.
-    metricClient.count(metric = OssMetricsRegistry.STATE_COMMIT_CLOSE_SUCCESSFUL)
 
     // On close, this check is independent of hasDataToFlush. We could be in a state where state flush
     // was successful but stats flush failed, so we should check for stats to flush regardless of the
     // states.
     if (hasStatsToFlush()) {
-      try {
-        doFlushStats()
-      } catch (e: Exception) {
-        metricClient.emitFailedStatsCloseMetrics(connectionId)
-        throw e
-      }
+      doFlushStats()
     }
-    metricClient.count(metric = OssMetricsRegistry.STATS_COMMIT_CLOSE_SUCCESSFUL)
   }
 
   /**
@@ -235,22 +211,14 @@ class SyncPersistenceImpl(
     val state = stateToFlush?.getAggregated() ?: return
     val maybeStateWrapper = StateMessageHelper.getTypedState(state.state).getOrNull() ?: return
 
-    metricClient.count(metric = OssMetricsRegistry.STATE_COMMIT_ATTEMPT)
-
     val stateApiRequest =
       ConnectionStateCreateOrUpdate(connectionId = connectionId, connectionState = StateConverter.toClient(connectionId, maybeStateWrapper))
 
-    try {
-      airbyteApiClient.stateApi.createOrUpdateState(stateApiRequest)
-    } catch (e: Exception) {
-      metricClient.count(metric = OssMetricsRegistry.STATE_COMMIT_ATTEMPT_FAILED)
-      throw e
-    }
+    airbyteApiClient.stateApi.createOrUpdateState(stateApiRequest)
 
     // Only clear and reset stateToFlush if the API call was successful
     stateToFlush?.clear()
     stateToFlush = null
-    metricClient.count(metric = OssMetricsRegistry.STATE_COMMIT_ATTEMPT_SUCCESSFUL)
   }
 
   private fun doFlushStats() {
@@ -258,17 +226,10 @@ class SyncPersistenceImpl(
       return
     }
 
-    metricClient.count(metric = OssMetricsRegistry.STATS_COMMIT_ATTEMPT)
-    try {
-      airbyteApiClient.attemptApi.saveStats(statsToPersist!!)
-    } catch (e: Exception) {
-      metricClient.count(metric = OssMetricsRegistry.STATS_COMMIT_ATTEMPT_FAILED)
-      throw e
-    }
+    airbyteApiClient.attemptApi.saveStats(statsToPersist!!)
 
     persistedStats = statsToPersist
     statsToPersist = null
-    metricClient.count(metric = OssMetricsRegistry.STATS_COMMIT_ATTEMPT_SUCCESSFUL)
   }
 
   private fun hasStatesToFlush(): Boolean = !stateBuffer.isEmpty() || stateToFlush != null
@@ -337,13 +298,3 @@ private fun SyncStats.toAttemptStats(): AttemptStats =
     recordsCommitted = recordsCommitted,
     recordsRejected = recordsRejected,
   )
-
-private fun MetricClient.emitFailedStateCloseMetrics(connectionId: UUID?) {
-  val attribute: MetricAttribute? = connectionId?.let { MetricAttribute(MetricTags.CONNECTION_ID, it.toString()) }
-  count(metric = OssMetricsRegistry.STATE_COMMIT_NOT_ATTEMPTED, attributes = arrayOf(attribute))
-}
-
-private fun MetricClient.emitFailedStatsCloseMetrics(connectionId: UUID?) {
-  val attribute: MetricAttribute? = connectionId?.let { MetricAttribute(MetricTags.CONNECTION_ID, it.toString()) }
-  count(metric = OssMetricsRegistry.STATS_COMMIT_NOT_ATTEMPTED, attributes = arrayOf(attribute))
-}

@@ -275,46 +275,6 @@ enum class OssMetricsRegistry(
     metricName = "state_checksum_error",
     metricDescription = "number of state checksum errors for a given connection",
   ),
-  STATE_COMMIT_ATTEMPT(
-    metricName = "state_commit_attempt",
-    metricDescription = "number of attempts to commit states from the orchestrator/workers",
-  ),
-  STATE_COMMIT_ATTEMPT_FAILED(
-    metricName = "state_commit_attempt_failed",
-    metricDescription = "number of failed attempts to commit states from the orchestrator/workers",
-  ),
-  STATE_COMMIT_ATTEMPT_SUCCESSFUL(
-    metricName = "state_commit_attempt_successful",
-    metricDescription = "number of successful attempts to commit states from the orchestrator/workers",
-  ),
-  STATE_COMMIT_NOT_ATTEMPTED(
-    metricName = "state_commit_not_attempted",
-    metricDescription = "number of attempts to commit states dropped due to an early termination",
-  ),
-  STATE_COMMIT_CLOSE_SUCCESSFUL(
-    metricName = "state_commit_close_successful",
-    metricDescription = "number of final to connection exiting with the a successful final state flush",
-  ),
-  STATS_COMMIT_ATTEMPT(
-    metricName = "stats_commit_attempt",
-    metricDescription = "number of attempts to commit stats from the orchestrator/workers",
-  ),
-  STATS_COMMIT_ATTEMPT_FAILED(
-    metricName = "stats_commit_attempt_failed",
-    metricDescription = "number of failed attempts to commit stats from the orchestrator/workers",
-  ),
-  STATS_COMMIT_ATTEMPT_SUCCESSFUL(
-    metricName = "stats_commit_attempt_successful",
-    metricDescription = "number of successful attempts to commit stats from the orchestrator/workers",
-  ),
-  STATS_COMMIT_NOT_ATTEMPTED(
-    metricName = "stats_commit_not_attempted",
-    metricDescription = "number of attempts to commit stats dropped due to an early termination",
-  ),
-  STATS_COMMIT_CLOSE_SUCCESSFUL(
-    metricName = "stats_commit_close_successful",
-    metricDescription = "number of final to connection exiting with the a successful final stats flush",
-  ),
   STATE_ERROR_COLLISION_FROM_SOURCE(
     metricName = "state_error_collision_from_source",
     metricDescription = "number of state collision from source",
