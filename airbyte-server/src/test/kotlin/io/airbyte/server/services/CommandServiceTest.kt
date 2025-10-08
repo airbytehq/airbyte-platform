@@ -31,6 +31,9 @@ import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.AirbyteStream
+import io.airbyte.protocol.models.v0.DestinationCatalog
+import io.airbyte.protocol.models.v0.DestinationOperation
+import io.airbyte.protocol.models.v0.DestinationSyncMode
 import io.airbyte.server.helpers.WorkloadIdGenerator
 import io.airbyte.server.repositories.CommandsRepository
 import io.airbyte.server.repositories.domain.Command
@@ -409,10 +412,90 @@ class CommandServiceTest {
       CommandService.DiscoverJobOutput(
         catalogId = discoverCatalogId,
         catalog = discoverCatalog,
+        destinationCatalog = null,
         failureReason = null,
         logs = null,
       )
     assertEquals(expectedOutput, output)
+  }
+
+  @Test
+  fun `getDiscoverJobOutput populates catalog field for SOURCE catalog type`() {
+    val discoverCatalogId = UUID.randomUUID()
+    val workloadOutput = ConnectorJobOutput().withOutputType(OutputType.DISCOVER_CATALOG_ID).withDiscoverCatalogId(discoverCatalogId)
+    every { workloadOutputReader.readConnectorOutput(DISCOVER_WORKLOAD_ID) } returns workloadOutput
+    val sourceCatalog =
+      ActorCatalog()
+        .withCatalogType(ActorCatalog.CatalogType.SOURCE_CATALOG)
+        .withCatalog(
+          Jsons.jsonNode(
+            AirbyteCatalog().withStreams(
+              listOf(AirbyteStream().withName("source_stream")),
+            ),
+          ),
+        )
+    every { catalogService.getActorCatalogById(discoverCatalogId) } returns sourceCatalog
+
+    val output = service.getDiscoverJobOutput(DISCOVER_COMMAND_ID, withLogs = false)
+
+    assertEquals(discoverCatalogId, output?.catalogId)
+    assertEquals(sourceCatalog, output?.catalog)
+    assertNull(output?.destinationCatalog)
+    assertNull(output?.failureReason)
+  }
+
+  @Test
+  fun `getDiscoverJobOutput populates destinationCatalog field for DESTINATION catalog type`() {
+    val discoverCatalogId = UUID.randomUUID()
+    val workloadOutput = ConnectorJobOutput().withOutputType(OutputType.DISCOVER_CATALOG_ID).withDiscoverCatalogId(discoverCatalogId)
+    every { workloadOutputReader.readConnectorOutput(DISCOVER_WORKLOAD_ID) } returns workloadOutput
+    val destinationCatalog =
+      ActorCatalog()
+        .withCatalogType(ActorCatalog.CatalogType.DESTINATION_CATALOG)
+        .withCatalog(
+          Jsons.jsonNode(
+            DestinationCatalog().withOperations(
+              listOf(
+                DestinationOperation()
+                  .withObjectName("destination_table")
+                  .withSyncMode(DestinationSyncMode.APPEND),
+              ),
+            ),
+          ),
+        )
+    every { catalogService.getActorCatalogById(discoverCatalogId) } returns destinationCatalog
+
+    val output = service.getDiscoverJobOutput(DISCOVER_COMMAND_ID, withLogs = false)
+
+    assertEquals(discoverCatalogId, output?.catalogId)
+    assertNull(output?.catalog)
+    assertEquals(destinationCatalog, output?.destinationCatalog)
+    assertNull(output?.failureReason)
+  }
+
+  @Test
+  fun `getDiscoverJobOutput defaults to catalog field when catalogType is null`() {
+    val discoverCatalogId = UUID.randomUUID()
+    val workloadOutput = ConnectorJobOutput().withOutputType(OutputType.DISCOVER_CATALOG_ID).withDiscoverCatalogId(discoverCatalogId)
+    every { workloadOutputReader.readConnectorOutput(DISCOVER_WORKLOAD_ID) } returns workloadOutput
+    val catalogWithoutType =
+      ActorCatalog()
+        .withCatalogType(null)
+        .withCatalog(
+          Jsons.jsonNode(
+            AirbyteCatalog().withStreams(
+              listOf(AirbyteStream().withName("default_stream")),
+            ),
+          ),
+        )
+    every { catalogService.getActorCatalogById(discoverCatalogId) } returns catalogWithoutType
+
+    val output = service.getDiscoverJobOutput(DISCOVER_COMMAND_ID, withLogs = false)
+
+    assertEquals(discoverCatalogId, output?.catalogId)
+    assertEquals(catalogWithoutType, output?.catalog)
+    assertNull(output?.destinationCatalog)
+    assertNull(output?.failureReason)
   }
 
   @Test
@@ -425,6 +508,7 @@ class CommandServiceTest {
       CommandService.DiscoverJobOutput(
         catalogId = null,
         catalog = null,
+        destinationCatalog = null,
         failureReason = failure,
         logs = null,
       )

@@ -6609,6 +6609,8 @@ paths:
                   catalogId:
                     type: string
                     format: uuid
+                  destinationCatalog:
+                    $ref: "#/components/schemas/DestinationCatalog"
                   catalogDiff:
                     $ref: "#/components/schemas/CatalogDiff"
                   failureReason:

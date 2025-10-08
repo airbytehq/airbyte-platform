@@ -589,6 +589,7 @@ class CommandService(
   data class DiscoverJobOutput(
     val catalogId: UUID?,
     val catalog: ActorCatalog?,
+    val destinationCatalog: ActorCatalog?,
     val failureReason: FailureReason?,
     val logs: JobLogs?,
   )
@@ -603,10 +604,13 @@ class CommandService(
         .withDiscoverCatalogId(null)
         .withFailureReason(failureReason)
     }?.let { jobOutput ->
-      val catalog = jobOutput.discoverCatalogId?.let { catalogService.getActorCatalogById(it) }
+      val actorCatalog = jobOutput.discoverCatalogId?.let { catalogService.getActorCatalogById(it) }
+      val isDestinationCatalog = actorCatalog?.catalogType == ActorCatalog.CatalogType.DESTINATION_CATALOG
+
       return DiscoverJobOutput(
         catalogId = jobOutput.discoverCatalogId,
-        catalog = catalog,
+        catalog = if (isDestinationCatalog) null else actorCatalog,
+        destinationCatalog = if (isDestinationCatalog) actorCatalog else null,
         failureReason = jobOutput.failureReason,
         logs = if (withLogs) getJobLogs(commandId) else null,
       )

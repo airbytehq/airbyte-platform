@@ -35,6 +35,7 @@ import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.logging.LogUtils
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.converters.JobConverter
+import io.airbyte.commons.server.converters.toApi
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.helpers.SecretSanitizer
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -44,6 +45,7 @@ import io.airbyte.config.FailureReason
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.WorkloadPriority
+import io.airbyte.config.toModel
 import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.domain.models.ActorId
@@ -154,6 +156,11 @@ class CommandApiController(
           val protocolCatalog = Jsons.`object`(it.catalog, io.airbyte.protocol.models.v0.AirbyteCatalog::class.java)
           catalogConverter.toApi(protocolCatalog, null)
         }
+      val apiDestinationCatalog =
+        output?.destinationCatalog?.let {
+          val protocolDestinationCatalog = Jsons.`object`(it.catalog, io.airbyte.protocol.models.v0.DestinationCatalog::class.java)
+          protocolDestinationCatalog.toModel().toApi()
+        }
       return DiscoverCommandOutputResponse().apply {
         id(discoverCommandOutputRequest.id)
         output?.let {
@@ -168,6 +175,7 @@ class CommandApiController(
           )
           catalogId(output.catalogId)
           catalog(apiCatalog)
+          destinationCatalog(apiDestinationCatalog)
           failureReason(toApi(it.failureReason))
           logs(it.logs?.toApi())
         }
