@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.temporal.scheduling.activities
 
-import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
@@ -16,7 +15,6 @@ import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule
 import io.airbyte.api.client.model.generated.ConnectionScheduleType
 import io.airbyte.api.client.model.generated.ConnectionStatus
 import io.airbyte.api.client.model.generated.GetWebhookConfigRequest
-import io.airbyte.api.client.model.generated.SourceIdRequestBody
 import io.airbyte.commons.converters.toInternal
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.temporal.exception.RetryableException
@@ -295,31 +293,6 @@ class ConfigFetchActivityImpl
         return GetWebhookConfigOutput(jobWebhookConfig.getOperationSequence(), jobWebhookConfig.getWebhookOperationConfigs())
       } catch (e: Exception) {
         log.warn("Fail to get the webhook config.", e)
-        throw RuntimeException(e)
-      }
-    }
-
-    override fun getSourceId(connectionId: UUID): Optional<UUID> {
-      try {
-        val requestBody =
-          ConnectionIdRequestBody(connectionId)
-        val connectionRead = airbyteApiClient.connectionApi.getConnection(requestBody)
-        return Optional.ofNullable<UUID?>(connectionRead.sourceId)
-      } catch (e: ClientException) {
-        if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
-          throw e
-        }
-        throw RetryableException(e)
-      } catch (e: IOException) {
-        log.info("Encountered an error fetching the connection's Source ID: ", e)
-        return Optional.empty<UUID?>()
-      }
-    }
-
-    override fun getSourceConfig(sourceId: UUID): JsonNode {
-      try {
-        return airbyteApiClient.sourceApi.getSource(SourceIdRequestBody(sourceId)).connectionConfiguration
-      } catch (e: IOException) {
         throw RuntimeException(e)
       }
     }
