@@ -149,13 +149,13 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   @Throws(RetryableException::class)
   override fun run(connectionUpdaterInput: ConnectionUpdaterInput) {
     try {
-      if (isTombstone(connectionUpdaterInput.connectionId)) {
+      if (connectionUpdaterInput.connectionId == null || isTombstone(connectionUpdaterInput.connectionId)) {
         return
       }
 
-            /*
-             * Hydrate the connection context (workspace, org, source, dest, etc. ids) as soon as possible.
-             */
+      /*
+       * Hydrate the connection context (workspace, org, source, dest, etc. ids) as soon as possible.
+       */
       val hydratedContext =
         runMandatoryActivityWithOutput(
           Function { input: GetConnectionContextInput? -> configFetchActivity?.getConnectionContext(input!!) },
@@ -163,17 +163,17 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
         )!!
       setConnectionContext(hydratedContext.connectionContext)
 
-            /*
-             * Sleep and periodically check in a loop until we're no longer load shed.
-             */
+      /*
+       * Sleep and periodically check in a loop until we're no longer load shed.
+       */
       backoffIfLoadShedEnabled(hydratedContext.connectionContext)
 
-            /*
-             * Always ensure that the connection ID is set from the input before performing any additional work.
-             * Failure to set the connection ID before performing any work in this workflow could result in
-             * additional failures when attempting to handle a failed workflow AND/OR the inability to identify
-             * impacted connections when errors do occur.
-             */
+      /*
+       * Always ensure that the connection ID is set from the input before performing any additional work.
+       * Failure to set the connection ID before performing any work in this workflow could result in
+       * additional failures when attempting to handle a failed workflow AND/OR the inability to identify
+       * impacted connections when errors do occur.
+       */
       setConnectionId(connectionUpdaterInput)
 
       // Copy over data from the input to workflowState early to minimize gaps with signals
