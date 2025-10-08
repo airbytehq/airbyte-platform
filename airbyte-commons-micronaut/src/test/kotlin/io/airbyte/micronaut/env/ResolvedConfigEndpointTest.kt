@@ -37,7 +37,32 @@ internal class ResolvedConfigEndpointTest {
     assertEquals(1, resolvedConfiguration.keys.size)
     assertEquals(key, resolvedConfiguration.keys.first())
     assertEquals(origin.location(), resolvedConfiguration.values.first().location)
-    assertEquals(endpoint.maskValue(value), resolvedConfiguration.values.first().value)
+    assertEquals(endpoint.maskValue(value, false), resolvedConfiguration.values.first().value)
+  }
+
+  @Test
+  fun testResolvedConfigAlwaysMask() {
+    val name = "default"
+    val key = "airbyte.password"
+    val value = "a really long string"
+    val config = mapOf(key to value)
+    val origin = PropertySource.Origin.of("someFile")
+    val propertySource = PropertySource.of(name, config, origin)
+    val propertyPlaceholderResolver =
+      mockk<PropertyPlaceholderResolver> {
+        every { resolvePlaceholders(any()) } returns Optional.empty()
+      }
+    val environment =
+      mockk<Environment> {
+        every { placeholderResolver } returns propertyPlaceholderResolver
+        every { propertySources } returns setOf(propertySource)
+      }
+    val endpoint = ResolvedConfigEndpoint(environment)
+    val resolvedConfiguration = endpoint.getResolvedConfiguration()
+    assertEquals(1, resolvedConfiguration.keys.size)
+    assertEquals(key, resolvedConfiguration.keys.first())
+    assertEquals(origin.location(), resolvedConfiguration.values.first().location)
+    assertEquals(endpoint.maskValue(value, true), resolvedConfiguration.values.first().value)
   }
 
   @Test
@@ -62,7 +87,7 @@ internal class ResolvedConfigEndpointTest {
     assertEquals(1, resolvedConfiguration.keys.size)
     assertEquals(key, resolvedConfiguration.keys.first())
     assertEquals(origin.location(), resolvedConfiguration.values.first().location)
-    assertEquals(endpoint.maskValue(value), resolvedConfiguration.values.first().value)
+    assertEquals(endpoint.maskValue(value, false), resolvedConfiguration.values.first().value)
   }
 
   @Test
@@ -116,7 +141,7 @@ internal class ResolvedConfigEndpointTest {
     assertEquals(1, resolvedConfiguration.keys.size)
     assertEquals(key, resolvedConfiguration.keys.first())
     assertEquals(origin.location(), resolvedConfiguration.values.first().location)
-    assertEquals(endpoint.maskValue(value2), resolvedConfiguration.values.first().value)
+    assertEquals(endpoint.maskValue(value2, false), resolvedConfiguration.values.first().value)
   }
 
   @Test
@@ -141,7 +166,7 @@ internal class ResolvedConfigEndpointTest {
     assertEquals(1, resolvedConfiguration.keys.size)
     assertEquals(key, resolvedConfiguration.keys.first())
     assertEquals(origin.location(), resolvedConfiguration.values.first().location)
-    assertEquals(endpoint.maskValue(value), resolvedConfiguration.values.first().value)
+    assertEquals(endpoint.maskValue(value, false), resolvedConfiguration.values.first().value)
     assertTrue(
       resolvedConfiguration.values
         .first()
@@ -177,8 +202,8 @@ internal class ResolvedConfigEndpointTest {
       }
     val endpoint = ResolvedConfigEndpoint(environment)
     val resolvedConfiguration = endpoint.getResolvedConfigurationProperty(property = propertyName)
-    assertEquals(endpoint.maskValue(highValue), resolvedConfiguration.first().details.value)
-    assertEquals(endpoint.maskValue(lowValue), resolvedConfiguration.last().details.value)
+    assertEquals(endpoint.maskValue(highValue, false), resolvedConfiguration.first().details.value)
+    assertEquals(endpoint.maskValue(lowValue, false), resolvedConfiguration.last().details.value)
   }
 
   @Test
@@ -192,7 +217,7 @@ internal class ResolvedConfigEndpointTest {
         every { placeholderResolver } returns propertyPlaceholderResolver
       }
     val endpoint = ResolvedConfigEndpoint(environment)
-    val result = endpoint.maskValue(null)
+    val result = endpoint.maskValue(null, false)
     assertEquals("null", result)
   }
 
@@ -207,7 +232,7 @@ internal class ResolvedConfigEndpointTest {
         every { placeholderResolver } returns propertyPlaceholderResolver
       }
     val endpoint = ResolvedConfigEndpoint(environment)
-    val result = endpoint.maskValue("")
+    val result = endpoint.maskValue("", false)
     assertEquals("", result)
   }
 
@@ -223,7 +248,7 @@ internal class ResolvedConfigEndpointTest {
         every { placeholderResolver } returns propertyPlaceholderResolver
       }
     val endpoint = ResolvedConfigEndpoint(environment)
-    val result = endpoint.maskValue(value)
+    val result = endpoint.maskValue(value, false)
     assertEquals(value.toString(), result)
   }
 
@@ -239,7 +264,7 @@ internal class ResolvedConfigEndpointTest {
         every { placeholderResolver } returns propertyPlaceholderResolver
       }
     val endpoint = ResolvedConfigEndpoint(environment)
-    val result = endpoint.maskValue(value)
+    val result = endpoint.maskValue(value, false)
     assertEquals(value.toString(), result)
   }
 
@@ -255,7 +280,7 @@ internal class ResolvedConfigEndpointTest {
         every { placeholderResolver } returns propertyPlaceholderResolver
       }
     val endpoint = ResolvedConfigEndpoint(environment)
-    val result = endpoint.maskValue(value)
+    val result = endpoint.maskValue(value, false)
     assertTrue(result.startsWith(MASK_VALUE))
     assertEquals(value.takeLast(UNMASKED_LENGTH), result.replace(MASK_VALUE, ""))
   }
@@ -272,7 +297,7 @@ internal class ResolvedConfigEndpointTest {
         every { placeholderResolver } returns propertyPlaceholderResolver
       }
     val endpoint = ResolvedConfigEndpoint(environment)
-    val result = endpoint.maskValue(value)
+    val result = endpoint.maskValue(value, false)
     assertEquals("$MASK_VALUE one,$MASK_VALUE two,${MASK_VALUE}hree", result)
   }
 
@@ -288,7 +313,7 @@ internal class ResolvedConfigEndpointTest {
         every { placeholderResolver } returns propertyPlaceholderResolver
       }
     val endpoint = ResolvedConfigEndpoint(environment)
-    val result = endpoint.maskValue(value)
+    val result = endpoint.maskValue(value, false)
     assertEquals("$MASK_VALUE one", result)
   }
 
@@ -304,7 +329,7 @@ internal class ResolvedConfigEndpointTest {
         every { placeholderResolver } returns propertyPlaceholderResolver
       }
     val endpoint = ResolvedConfigEndpoint(environment)
-    val result = endpoint.maskValue(value)
+    val result = endpoint.maskValue(value, false)
     assertEquals("$MASK_VALUE one,${MASK_VALUE}hree", result)
   }
 
@@ -320,7 +345,7 @@ internal class ResolvedConfigEndpointTest {
         every { placeholderResolver } returns propertyPlaceholderResolver
       }
     val endpoint = ResolvedConfigEndpoint(environment)
-    val result = endpoint.maskValue(value)
+    val result = endpoint.maskValue(value, false)
     assertEquals("", result)
   }
 
@@ -336,7 +361,7 @@ internal class ResolvedConfigEndpointTest {
         every { placeholderResolver } returns propertyPlaceholderResolver
       }
     val endpoint = ResolvedConfigEndpoint(environment)
-    val result = endpoint.maskValue(value)
+    val result = endpoint.maskValue(value, false)
     assertEquals("$MASK_VALUE one,$MASK_VALUE two,${MASK_VALUE}hree", result)
   }
 
@@ -352,7 +377,7 @@ internal class ResolvedConfigEndpointTest {
         every { placeholderResolver } returns propertyPlaceholderResolver
       }
     val endpoint = ResolvedConfigEndpoint(environment)
-    val result = endpoint.maskValue(value)
+    val result = endpoint.maskValue(value, false)
     assertEquals("$MASK_VALUE one", result)
   }
 
@@ -368,7 +393,7 @@ internal class ResolvedConfigEndpointTest {
         every { placeholderResolver } returns propertyPlaceholderResolver
       }
     val endpoint = ResolvedConfigEndpoint(environment)
-    val result = endpoint.maskValue(value)
+    val result = endpoint.maskValue(value, false)
     assertEquals("$MASK_VALUE one,${MASK_VALUE}hree", result)
   }
 
@@ -384,7 +409,7 @@ internal class ResolvedConfigEndpointTest {
         every { placeholderResolver } returns propertyPlaceholderResolver
       }
     val endpoint = ResolvedConfigEndpoint(environment)
-    val result = endpoint.maskValue(value)
+    val result = endpoint.maskValue(value, false)
     assertEquals("", result)
   }
 }

@@ -9,21 +9,30 @@ import io.micronaut.context.env.PropertySource
 import io.micronaut.management.endpoint.annotation.Endpoint
 import io.micronaut.management.endpoint.annotation.Read
 import io.micronaut.management.endpoint.annotation.Selector
-import kotlin.collections.flatten
 
 internal const val MASK_VALUE = "*****"
 internal const val MISSING_DEFAULT_VALUE = "PLACEHOLDER_MISSING_DEFAULT_VALUE"
 internal const val UNMASKED_LENGTH = 4
 
+private val ALWAYS_MASK_PATTERNS =
+  setOf("password", "credential", "certificate", "key", "secret", "token", "auth", "pwd", "pass", "cert", "pem", "session", "pat", "account")
+    .map { ".*$it.*".toRegex(RegexOption.IGNORE_CASE).toPattern() }
+    .toSet()
+
 /**
  * Custom Micronaut management endpoint that exposes the resolved configuration pieced together from
  * all the property sources loaded by the application.  The result is a JSON document that shows
  * each configuration property with its final value (masked) and the property source for debugging purposes.
+ *
+ * To enable this endpoint for debugging purposes, set the `endpoints.resolved-config.enabled` property to `true`
+ * in the `application.yml` file OR set the `ENDPOINTS_RESOLVED_CONFIG_ENABLED` environment variable to `true`.
  */
-@Endpoint(id = "resolved-config", defaultEnabled = true, defaultSensitive = true)
+@Endpoint(id = "resolved-config", defaultEnabled = false, defaultSensitive = true)
 class ResolvedConfigEndpoint(
   private val environment: Environment,
 ) {
+  private val exclusions = { name: String -> ALWAYS_MASK_PATTERNS.any { p -> p.matcher(name).matches() } }
+
   /**
    * Returns the resolved configuration by gathering all configuration property keys and values from the configured
    * property sources in order of priority (lowest/the least priority first).
@@ -57,7 +66,10 @@ class ResolvedConfigEndpoint(
       .map { propertySource -> toResolvedConfiguration(propertySource, property) }
       .flatten()
 
-  internal fun maskValue(value: Any?): String =
+  internal fun maskValue(
+    value: Any?,
+    fullMask: Boolean,
+  ): String =
     if (value == null) {
       "null"
     } else if (value.toString().isEmpty()) {
@@ -78,6 +90,8 @@ class ResolvedConfigEndpoint(
           val resolvedPropertyValue = resolvePropertyValue(v.toString())
           if (resolvedPropertyValue == MISSING_DEFAULT_VALUE) {
             resolvedPropertyValue
+          } else if (fullMask) {
+            MASK_VALUE
           } else {
             val length = resolvedPropertyValue.length
             when {
@@ -112,9 +126,11 @@ class ResolvedConfigEndpoint(
         return@mapNotNull null
       }
 
+      val fullMask = exclusions.invoke(it)
+
       ResolvedConfiguration(
         key = it,
-        details = ResolvedConfigurationDetails(value = maskValue(propertySource.get(it)), location = propertySource.origin.location()),
+        details = ResolvedConfigurationDetails(value = maskValue(propertySource.get(it), fullMask), location = propertySource.origin.location()),
       )
     }
 }
