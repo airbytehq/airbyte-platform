@@ -35,19 +35,20 @@ class AutoDisableConnectionActivityImpl(
   // The api call will also send notifications if a connection is disabled or warned if it has reached
   // halfway to disable limits
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  override fun autoDisableFailingConnection(input: AutoDisableConnectionActivityInput): AutoDisableConnectionOutput {
-    ApmTraceUtils.addTagsToTrace(Map.of<String?, UUID?>(CONNECTION_ID_KEY, input.connectionId))
-    try {
-      val autoDisableConnection =
-        airbyteApiClient.connectionApi.autoDisableConnection(ConnectionIdRequestBody(input.connectionId!!))
-      return AutoDisableConnectionOutput(autoDisableConnection.succeeded)
-    } catch (e: ClientException) {
-      if (e.statusCode == HttpStatus.NOT_FOUND.getCode()) {
-        throw e
+  override fun autoDisableFailingConnection(input: AutoDisableConnectionActivityInput): AutoDisableConnectionOutput =
+    input.connectionId?.let {
+      ApmTraceUtils.addTagsToTrace(mapOf(CONNECTION_ID_KEY to it))
+      try {
+        val autoDisableConnection =
+          airbyteApiClient.connectionApi.autoDisableConnection(ConnectionIdRequestBody(it))
+        AutoDisableConnectionOutput(autoDisableConnection.succeeded)
+      } catch (e: ClientException) {
+        if (e.statusCode == HttpStatus.NOT_FOUND.code) {
+          throw e
+        }
+        throw RetryableException(e)
+      } catch (e: IOException) {
+        throw RetryableException(e)
       }
-      throw RetryableException(e)
-    } catch (e: IOException) {
-      throw RetryableException(e)
-    }
-  }
+    } ?: AutoDisableConnectionOutput(false)
 }

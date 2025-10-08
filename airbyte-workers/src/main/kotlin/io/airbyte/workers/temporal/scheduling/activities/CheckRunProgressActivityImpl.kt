@@ -18,7 +18,7 @@ class CheckRunProgressActivityImpl(
 ) : CheckRunProgressActivity {
   override fun checkProgress(input: CheckRunProgressActivity.Input): CheckRunProgressActivity.Output {
     try {
-      val result = checker.check(input.jobId!!, input.attemptNo!!)
+      val result = if (input.jobId != null && input.attemptNo != null) checker.check(input.jobId!!, input.attemptNo!!) else false
 
       return CheckRunProgressActivity.Output(result)
     } catch (e: IOException) {

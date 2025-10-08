@@ -60,6 +60,12 @@ internal class AutoDisableConnectionActivityTest {
     Assertions.assertFalse(output.isDisabled)
   }
 
+  @Test
+  fun testConnectionNotAutoDisabledNullConnectionId() {
+    val output = autoDisableActivity.autoDisableFailingConnection(AutoDisableConnectionActivityInput())
+    Assertions.assertFalse(output.isDisabled)
+  }
+
   companion object {
     private val CONNECTION_ID: UUID = UUID.randomUUID()
   }

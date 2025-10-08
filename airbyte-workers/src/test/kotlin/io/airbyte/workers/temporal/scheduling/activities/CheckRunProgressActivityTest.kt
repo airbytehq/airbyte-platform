@@ -5,10 +5,11 @@
 package io.airbyte.workers.temporal.scheduling.activities
 
 import io.airbyte.workers.helpers.ProgressChecker
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.Mock
 import org.mockito.Mockito
@@ -41,7 +42,17 @@ internal class CheckRunProgressActivityTest {
 
     Mockito.verify<ProgressChecker?>(mProgressChecker, Mockito.times(1)).check(jobId, attemptNo)
 
-    Assertions.assertEquals(madeProgress, result.madeProgress())
+    assertEquals(madeProgress, result.madeProgress())
+  }
+
+  @ParameterizedTest
+  @CsvSource("1,", ",1", ",")
+  fun testNullJobOrAttemptNumber(
+    jobId: Long?,
+    attemptNumber: Int?,
+  ) {
+    val activity: CheckRunProgressActivity = CheckRunProgressActivityImpl(mProgressChecker!!)
+    assertEquals(false, activity.checkProgress(CheckRunProgressActivity.Input(jobId, attemptNumber, UUID.randomUUID())).madeProgress())
   }
 
   companion object {
