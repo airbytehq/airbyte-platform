@@ -425,7 +425,7 @@ class DefaultJobPersistence
           .set(
             Tables.ATTEMPTS.FAILURE_SUMMARY,
             JSONB.valueOf(
-              removeUnsupportedUnicode(
+              removeUnsupportedUnicodeFromSerializedJson(
                 Jsons.serialize(failureSummary),
               ),
             ),
@@ -1614,18 +1614,30 @@ class DefaultJobPersistence
 
     /**
      * Removes unsupported unicode characters (as defined by Postgresql) from the provided input string.
+     * Assumes the input string is serialized JSON.
      *
      * @param value A string that may contain unsupported unicode values.
      * @return The modified string with any unsupported unicode values removed.
      */
-    private fun removeUnsupportedUnicode(value: String?): String? {
-        /*
-         * Currently, this replaces both the literal unicode null character (\0 or \u0000) and a string
-         * representation of the unicode value ("\u0000"). This is necessary because the literal unicode
-         * value gets converted into a 6 character value during JSON serialization.
-         */
-      return value?.replace("\\u0000|\\\\u0000".toRegex(), "")
-    }
+    @VisibleForTesting
+    internal fun removeUnsupportedUnicodeFromSerializedJson(value: String?): String? =
+      value
+        // Strip literal nulls. Frankly, this should never happen in a JSON-serialized string,
+        // but I'm keeping this logic in case there's historical reasons for needing this.
+        ?.replace("""\u0000""".toRegex(), "")
+        // Strip the `\u0000` sequence, but only if it's not escaped.
+        // For example, `"\\u0000"` is perfectly valid, but `"\\\u0000"` needs to be stripped.
+        // In general: an even number of backslashes is fine; an odd number is not.
+        // This monstrosity matches:
+        // 1. Any non-backslash character
+        // 2. Any even number of backslashes (including 0) - these represent escaped backslashes.
+        // 3. A single backslash
+        // 4. u0000
+        // And captures 1+2 into $1.
+        // We then emit just $1 - which is equivalent to stripping 3+4 (i.e. the \u0000 sequence).
+        // (NB: triple-quoted string doesn't respect backslashes, but we still need to double up
+        // because regex itself needs us to escape those backslashes.)
+        ?.replace("""([^\\](\\\\)*)\\u0000""".toRegex(), "$1")
 
     /**
      * Needed to get the jooq sort field for the subquery job order by clause.

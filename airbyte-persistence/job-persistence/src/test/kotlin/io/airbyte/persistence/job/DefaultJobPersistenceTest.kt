@@ -150,6 +150,38 @@ internal class DefaultJobPersistenceTest {
     )
 
   @Test
+  @DisplayName("Should write an attempt failure even if the failure reason contains null bytes")
+  fun testWriteAttemptFailureWithNullChars() {
+    val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
+    val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
+
+    jobPersistence.writeAttemptFailureSummary(
+      jobId,
+      attemptNumber,
+      AttemptFailureSummary().withFailures(
+        listOf(
+          FailureReason().withInternalMessage(
+            // kotlin's raw (triple-quoted) strings don't respect backslash escapes.
+            // After json-serialization, this will turn into
+            // {"internalMessage": "Here are some weird characters: \u0000, \\\u0000, \\\\\u0000, u0000, \\u0000, \\\\u0000, \\\\\\u0000."}
+            """Here are some weird characters: ${'\u0000'}, \${'\u0000'}, \\${'\u0000'}, u0000, \u0000, \\u0000, \\\u0000.""",
+          ),
+        ),
+      ),
+    )
+
+    val persistedAttempt = jobPersistence.getAttemptForJob(jobId, attemptNumber).get()
+    Assertions.assertEquals(
+      // Note that we stripped the literal null characters, but preserved the literal `u0000`s.
+      """Here are some weird characters: , \, \\, u0000, \u0000, \\u0000, \\\u0000.""",
+      persistedAttempt.failureSummary!!
+        .failures
+        .first()
+        .internalMessage,
+    )
+  }
+
+  @Test
   @DisplayName("Should set a job to incomplete if an attempt fails")
   @Throws(IOException::class)
   fun testCompleteAttemptFailed() {
