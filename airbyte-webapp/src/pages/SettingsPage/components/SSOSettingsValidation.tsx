@@ -21,8 +21,11 @@ import { Text } from "components/ui/Text";
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { useActivateSsoConfig, useSSOConfigManagement } from "core/api";
 import { useFormatError } from "core/errors";
+import { useAuthService } from "core/services/auth";
 import { links } from "core/utils/links";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
+import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./SSOSettings.module.scss";
@@ -38,12 +41,16 @@ export const SSOSettingsValidation = () => {
   const { ssoConfig, isLoading } = useSSOConfigManagement();
   const { mutateAsync: activateSsoConfigMutation } = useActivateSsoConfig();
   const { registerNotification } = useNotificationService();
+  const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
+  const authService = useAuthService();
   const { isSubmitting } = useFormState();
   const { testResult, setTestResult } = useSSOTestCallback();
   const { setValue } = useFormContext<SSOFormValuesValidation>();
   const [emailDomainInput, setEmailDomainInput] = useState("");
   const [isActivating, setIsActivating] = useState(false);
   const [activationResult, setActivationResult] = useState<{ success: boolean; message: ReactNode } | null>(null);
+  const [, setLastSsoCompanyIdentifier] = useLocalStorage("airbyte_last-sso-company-identifier", "");
+  const [, setRedirectToSsoAfterLogout] = useLocalStorage("airbyte_redirect-to-sso-after-logout", "");
 
   // Step 1 is complete when we have a draft config that was successfully tested
   const isStep1Complete = testResult?.success === true && ssoConfig?.status === "draft";
@@ -85,35 +92,51 @@ export const SSOSettingsValidation = () => {
     return formatMessage({ id: "settings.organizationSettings.sso.test.button" });
   };
 
-  const handleActivate = async () => {
+  const handleActivate = () => {
     if (!emailDomainInput) {
       return;
     }
 
-    setIsActivating(true);
-    try {
-      await activateSsoConfigMutation({ organizationId, emailDomain: emailDomainInput });
-      const successMessage = formatMessage({ id: "settings.organizationSettings.sso.activate.success" });
+    openConfirmationModal({
+      title: formatMessage({ id: "settings.organizationSettings.sso.activate.confirm.title" }),
+      text: formatMessage({ id: "settings.organizationSettings.sso.activate.confirm.text" }),
+      submitButtonText: formatMessage({ id: "settings.organizationSettings.sso.activate.confirm.button" }),
+      submitButtonVariant: "primary",
+      onSubmit: async () => {
+        setIsActivating(true);
+        try {
+          await activateSsoConfigMutation({ organizationId, emailDomain: emailDomainInput });
+          const successMessage = formatMessage({ id: "settings.organizationSettings.sso.activate.success" });
 
-      setActivationResult({
-        success: true,
-        message: successMessage,
-      });
+          registerNotification({
+            id: "sso-activation-success",
+            text: successMessage,
+            type: "success",
+          });
 
-      // Show notification
-      registerNotification({
-        id: "sso-activation-success",
-        text: successMessage,
-        type: "success",
-      });
-    } catch (error) {
-      setActivationResult({
-        success: false,
-        message: formatError(error),
-      });
-    } finally {
-      setIsActivating(false);
-    }
+          // Wait 2 seconds to let user see the success message, then logout and redirect to SSO sign-in
+          await new Promise<void>((resolve) =>
+            setTimeout(() => {
+              if (ssoConfig?.companyIdentifier) {
+                setLastSsoCompanyIdentifier(ssoConfig.companyIdentifier);
+                setRedirectToSsoAfterLogout("true");
+              }
+              // Logout (clears session) - this will redirect to root, but we'll intercept it
+              authService.logout?.();
+              resolve();
+            }, 2000)
+          );
+        } catch (error) {
+          closeConfirmationModal();
+          setActivationResult({
+            success: false,
+            message: formatError(error),
+          });
+        } finally {
+          setIsActivating(false);
+        }
+      },
+    });
   };
 
   return (

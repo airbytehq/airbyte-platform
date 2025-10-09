@@ -25,6 +25,7 @@ interface AirbyteLocalStorage {
   "airbyte_connection-additional-details": boolean;
   "airbyte_ai-assist-projects": Record<string, AssistLocalStorageProject>;
   "airbyte_last-sso-company-identifier": string;
+  "airbyte_redirect-to-sso-after-logout": string;
   "airbyte_connector-builder-modes": Record<string, BuilderState["mode"]>;
   "airbyte_license-check-dismissed-at": string | null;
   "airbyte_organization-workspace-map": Record<string, string>;

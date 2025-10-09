@@ -1,5 +1,5 @@
-import React, { Suspense, useMemo } from "react";
-import { createSearchParams, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import React, { Suspense, useMemo, useEffect } from "react";
+import { createSearchParams, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useEffectOnce } from "react-use";
 
 import LoadingPage from "components/LoadingPage";
@@ -11,6 +11,7 @@ import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/servi
 import { useAuthService } from "core/services/auth";
 import { storeConnectorChatBuilderFromQuery } from "core/utils/connectorChatBuilderStorage";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
+import { useLocalStorage } from "core/utils/useLocalStorage";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { useExperiment } from "hooks/services/Experiment";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
@@ -90,10 +91,25 @@ export const Routing: React.FC = () => {
   const { user, inited, provider, loggedOut } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
   const { pathname: originalPathname, search, hash } = useLocation();
+  const navigate = useNavigate();
+  const [redirectToSsoAfterLogout, setRedirectToSsoAfterLogout] = useLocalStorage(
+    "airbyte_redirect-to-sso-after-logout",
+    ""
+  );
 
   useEffectOnce(() => {
     storeConnectorChatBuilderFromQuery(search);
   });
+
+  // Check if user should be redirected to SSO page after logout
+  useEffect(() => {
+    if (inited && !user) {
+      if (redirectToSsoAfterLogout === "true") {
+        setRedirectToSsoAfterLogout("");
+        navigate(CloudRoutes.Sso, { replace: true });
+      }
+    }
+  }, [inited, user, navigate, redirectToSsoAfterLogout, setRedirectToSsoAfterLogout]);
 
   const loginRedirectSearchParam = `${createSearchParams({
     loginRedirect: `${originalPathname}${search}${hash}`,
