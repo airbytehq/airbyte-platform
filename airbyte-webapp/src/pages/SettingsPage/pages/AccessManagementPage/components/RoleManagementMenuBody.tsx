@@ -35,9 +35,8 @@ export const RoleManagementMenuBody: React.FC<RoleManagementMenuBodyProps> = ({ 
 
   // user is invited but not yet accepted
   const showCancelInvite = !!user.invitationStatus;
-  // user is not invited (so has a relevant permission) and we're in a workspace OR the new UI is enabled
-  // whether or not the button is disabled (due to, for instance, the user being the current user or having an org permission in the workspace table) is handled in the component
-  const showRemoveUser = !user.invitationStatus && resourceType === "workspace";
+  // user is not invited (so has a relevant permission) and we're in a workspace OR organization
+  const showRemoveUser = !user.invitationStatus;
 
   return (
     <ul className={styles.roleManagementMenu__rolesList}>
