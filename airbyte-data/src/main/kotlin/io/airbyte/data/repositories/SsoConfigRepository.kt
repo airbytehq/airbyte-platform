@@ -15,4 +15,6 @@ interface SsoConfigRepository : PageableRepository<SsoConfig, UUID> {
   fun deleteByOrganizationId(organizationId: UUID)
 
   fun findByOrganizationId(organizationId: UUID): SsoConfig?
+
+  fun findByKeycloakRealm(keycloakRealm: String): SsoConfig?
 }

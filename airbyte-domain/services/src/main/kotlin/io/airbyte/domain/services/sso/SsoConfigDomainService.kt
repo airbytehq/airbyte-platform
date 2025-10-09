@@ -6,6 +6,7 @@ package io.airbyte.domain.services.sso
 
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemResourceData
+import io.airbyte.api.problems.model.generated.ProblemSSOActivationData
 import io.airbyte.api.problems.model.generated.ProblemSSOConfigRetrievalData
 import io.airbyte.api.problems.model.generated.ProblemSSOCredentialUpdateData
 import io.airbyte.api.problems.model.generated.ProblemSSODeletionData
@@ -13,6 +14,7 @@ import io.airbyte.api.problems.model.generated.ProblemSSOSetupData
 import io.airbyte.api.problems.model.generated.ProblemSSOTokenValidationData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
+import io.airbyte.api.problems.throwable.generated.SSOActivationProblem
 import io.airbyte.api.problems.throwable.generated.SSOConfigRetrievalProblem
 import io.airbyte.api.problems.throwable.generated.SSOCredentialUpdateProblem
 import io.airbyte.api.problems.throwable.generated.SSODeletionProblem
@@ -25,10 +27,15 @@ import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
 import io.airbyte.data.services.impls.data.mappers.toDomain
 import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
+import io.airbyte.data.services.impls.keycloak.CreateClientException
+import io.airbyte.data.services.impls.keycloak.IdpCreationException
 import io.airbyte.data.services.impls.keycloak.IdpNotFoundException
+import io.airbyte.data.services.impls.keycloak.ImportConfigException
+import io.airbyte.data.services.impls.keycloak.InvalidOidcDiscoveryDocumentException
 import io.airbyte.data.services.impls.keycloak.InvalidTokenException
 import io.airbyte.data.services.impls.keycloak.KeycloakServiceException
 import io.airbyte.data.services.impls.keycloak.MalformedTokenResponseException
+import io.airbyte.data.services.impls.keycloak.RealmCreationException
 import io.airbyte.data.services.impls.keycloak.RealmDeletionException
 import io.airbyte.data.services.impls.keycloak.RealmValuesExistException
 import io.airbyte.data.services.impls.keycloak.TokenExpiredException
@@ -93,10 +100,11 @@ open class SsoConfigDomainService internal constructor(
         status = currentConfig.status.toDomain(),
       )
     } catch (e: Exception) {
+      logger.error(e) { "Failed to retrieve SSO config data for organization $organizationId from Keycloak realm ${currentConfig.keycloakRealm}" }
       throw SSOConfigRetrievalProblem(
         ProblemSSOConfigRetrievalData()
           .organizationId(organizationId.toString())
-          .errorMessage("Error retrieving SSO config: $e"),
+          .errorMessage("Failed to retrieve your SSO configuration. Please try again or contact support if the problem persists."),
       )
     }
   }
@@ -136,9 +144,10 @@ open class SsoConfigDomainService internal constructor(
     validateDiscoveryUrl(config)
 
     if (config.emailDomain != null) {
-      throw BadRequestProblem(
-        ProblemMessageData()
-          .message("Email domain should not be provided when creating a draft SSO config"),
+      throw SSOSetupProblem(
+        ProblemSSOSetupData()
+          .companyIdentifier(config.companyIdentifier)
+          .errorMessage("Email domain should not be provided when creating a draft SSO configuration. It will be required during activation."),
       )
     }
 
@@ -175,7 +184,7 @@ open class SsoConfigDomainService internal constructor(
   private fun createNewDraftSsoConfig(config: SsoConfig) {
     createKeycloakRealmWithErrorHandling(config)
     try {
-      ssoConfigService.createSsoConfig(config)
+      createSsoConfigIfIdentifierUnused(config)
     } catch (ex: Exception) {
       try {
         airbyteKeycloakClient.deleteRealm(config.companyIdentifier)
@@ -190,15 +199,57 @@ open class SsoConfigDomainService internal constructor(
     try {
       airbyteKeycloakClient.createOidcSsoConfig(config)
     } catch (ex: RealmValuesExistException) {
-      throw BadRequestProblem(
-        ProblemMessageData()
-          .message("The provided company identifier is already associated with an SSO configuration: $ex"),
-      )
-    } catch (ex: Exception) {
+      logger.error(ex) { "Realm values already exist for company identifier ${config.companyIdentifier}" }
       throw SSOSetupProblem(
         ProblemSSOSetupData()
           .companyIdentifier(config.companyIdentifier)
-          .errorMessage(ex.message),
+          .errorMessage("This company identifier is already in use. Please choose a different identifier."),
+      )
+    } catch (ex: RealmCreationException) {
+      logger.error(ex) { "Failed to create Keycloak realm for company identifier ${config.companyIdentifier}" }
+      throw SSOSetupProblem(
+        ProblemSSOSetupData()
+          .companyIdentifier(config.companyIdentifier)
+          .errorMessage("Failed to create the authentication realm. Please try again or contact support if the problem persists."),
+      )
+    } catch (ex: InvalidOidcDiscoveryDocumentException) {
+      logger.error(ex) {
+        "Imported OIDC discovery document is missing required fields ${ex.missingFields} for company identifier ${config.companyIdentifier}"
+      }
+      throw SSOSetupProblem(
+        ProblemSSOSetupData()
+          .companyIdentifier(config.companyIdentifier)
+          .errorMessage("The discovery URL did not return valid SSO configuration. Please verify your identity provider's discovery URL"),
+      )
+    } catch (ex: ImportConfigException) {
+      logger.error(ex) { "Failed to import OIDC configuration from discovery URL for company identifier ${config.companyIdentifier}" }
+      throw SSOSetupProblem(
+        ProblemSSOSetupData()
+          .companyIdentifier(config.companyIdentifier)
+          .errorMessage(
+            "Unable to access or validate the OIDC discovery URL. Please verify the URL is correct and accessible from your identity provider's documentation.",
+          ),
+      )
+    } catch (ex: IdpCreationException) {
+      logger.error(ex) { "Failed to create IDP for company identifier ${config.companyIdentifier}" }
+      throw SSOSetupProblem(
+        ProblemSSOSetupData()
+          .companyIdentifier(config.companyIdentifier)
+          .errorMessage("Failed to configure your identity provider. Please verify your Client ID and Client Secret are correct."),
+      )
+    } catch (ex: CreateClientException) {
+      logger.error(ex) { "Failed to create Keycloak client for company identifier ${config.companyIdentifier}" }
+      throw SSOSetupProblem(
+        ProblemSSOSetupData()
+          .companyIdentifier(config.companyIdentifier)
+          .errorMessage("Failed to complete the SSO configuration. Please try again."),
+      )
+    } catch (ex: Exception) {
+      logger.error(ex) { "Unexpected error during SSO setup for company identifier ${config.companyIdentifier}" }
+      throw SSOSetupProblem(
+        ProblemSSOSetupData()
+          .companyIdentifier(config.companyIdentifier)
+          .errorMessage("An unexpected error occurred during SSO setup. Please try again or contact support if the problem persists."),
       )
     }
   }
@@ -211,9 +262,10 @@ open class SsoConfigDomainService internal constructor(
     validateDiscoveryUrl(config)
 
     val configEmailDomain =
-      config.emailDomain ?: throw BadRequestProblem(
-        ProblemMessageData()
-          .message("Email domain is required when creating an active SSO config"),
+      config.emailDomain ?: throw SSOSetupProblem(
+        ProblemSSOSetupData()
+          .companyIdentifier(config.companyIdentifier)
+          .errorMessage("An email domain is required when creating an active SSO configuration."),
       )
     validateEmailDomainMatchesOrganization(config.organizationId, configEmailDomain, config.companyIdentifier)
     validateExistingEmailDomainEntries(config)
@@ -260,7 +312,7 @@ open class SsoConfigDomainService internal constructor(
             "Failed to create an active SSO Config because emailDomain is null",
           ),
       )
-    ssoConfigService.createSsoConfig(config)
+    createSsoConfigIfIdentifierUnused(config)
     organizationEmailDomainService.createEmailDomain(
       OrganizationEmailDomain().apply {
         id = UUID.randomUUID()
@@ -270,6 +322,32 @@ open class SsoConfigDomainService internal constructor(
     )
   }
 
+  private fun createSsoConfigIfIdentifierUnused(config: SsoConfig) {
+    val existingConfig = ssoConfigService.getSsoConfigByCompanyIdentifier(config.companyIdentifier)
+    if (existingConfig != null) {
+      logger.error { "An SsoConfig already exists for ${config.companyIdentifier}" }
+      throw SSOSetupProblem(
+        ProblemSSOSetupData()
+          .companyIdentifier(config.companyIdentifier)
+          .errorMessage(
+            "This company identifier is already in use. Please choose a different identifier",
+          ),
+      )
+    }
+    try {
+      ssoConfigService.createSsoConfig(config)
+    } catch (ex: Exception) {
+      logger.error(ex) { "Failed to create SsoConfig for company identifier ${config.companyIdentifier}" }
+      throw SSOSetupProblem(
+        ProblemSSOSetupData()
+          .companyIdentifier(config.companyIdentifier)
+          .errorMessage(
+            "Failed to save your SSO configuration. Please try again or contact support if the problem persists.",
+          ),
+      )
+    }
+  }
+
   /**
    * Updates an existing draft SSO config when the company identifier hasn't changed.
    * This preserves the Keycloak realm and any existing users, only updating the IDP configuration.
@@ -277,11 +355,30 @@ open class SsoConfigDomainService internal constructor(
   private fun updateExistingKeycloakRealmConfig(config: SsoConfig) {
     try {
       airbyteKeycloakClient.replaceOidcIdpConfig(config)
-    } catch (ex: Exception) {
+    } catch (ex: ImportConfigException) {
+      logger.error(ex) { "Failed to import OIDC configuration from discovery URL for company identifier ${config.companyIdentifier}" }
       throw SSOSetupProblem(
         ProblemSSOSetupData()
           .companyIdentifier(config.companyIdentifier)
-          .errorMessage("Failed to replace IDP configuration: ${ex.message}"),
+          .errorMessage(
+            "Unable to access or validate the OIDC discovery URL. Please verify the URL is correct and accessible from your identity provider's documentation.",
+          ),
+      )
+    } catch (ex: IdpCreationException) {
+      logger.error(ex) { "Failed to update IDP for company identifier ${config.companyIdentifier}" }
+      throw SSOSetupProblem(
+        ProblemSSOSetupData()
+          .companyIdentifier(config.companyIdentifier)
+          .errorMessage("Failed to update your identity provider configuration. Please verify your Client ID and Client Secret are correct."),
+      )
+    } catch (ex: Exception) {
+      logger.error(ex) { "Unexpected error updating IDP configuration for company identifier ${config.companyIdentifier}" }
+      throw SSOSetupProblem(
+        ProblemSSOSetupData()
+          .companyIdentifier(config.companyIdentifier)
+          .errorMessage(
+            "An unexpected error occurred while updating your identity provider. Please try again or contact support if the problem persists.",
+          ),
       )
     }
   }
@@ -319,11 +416,12 @@ open class SsoConfigDomainService internal constructor(
     } catch (ex: RealmDeletionException) {
       logger.warn(ex) { "Ignoring realm deletion exception because the realm might not exist " }
     } catch (ex: Exception) {
+      logger.error(ex) { "Failed to delete SSO configuration for organization $organizationId with realm $companyIdentifier" }
       throw SSODeletionProblem(
         ProblemSSODeletionData()
           .organizationId(organizationId)
           .companyIdentifier(companyIdentifier)
-          .errorMessage(ex.message),
+          .errorMessage("Failed to delete your SSO configuration. Please try again or contact support if the problem persists."),
       )
     }
   }
@@ -332,6 +430,7 @@ open class SsoConfigDomainService internal constructor(
     val currentSsoConfig =
       ssoConfigService.getSsoConfig(clientConfig.organizationId) ?: throw SSOCredentialUpdateProblem(
         ProblemSSOCredentialUpdateData()
+          .companyIdentifier("")
           .errorMessage("SSO Config does not exist for organization ${clientConfig.organizationId}"),
       )
 
@@ -346,10 +445,13 @@ open class SsoConfigDomainService internal constructor(
     try {
       airbyteKeycloakClient.updateIdpClientCredentials(clientConfig, currentSsoConfig.keycloakRealm)
     } catch (e: Exception) {
+      logger.error(e) {
+        "Failed to update IDP client credentials for organization ${clientConfig.organizationId} in realm ${currentSsoConfig.keycloakRealm}"
+      }
       throw SSOCredentialUpdateProblem(
         ProblemSSOCredentialUpdateData()
           .companyIdentifier(currentSsoConfig.keycloakRealm)
-          .errorMessage(e.message),
+          .errorMessage("Failed to update your identity provider credentials. Please verify your Client ID and Client Secret are correct."),
       )
     }
   }
@@ -374,7 +476,9 @@ open class SsoConfigDomainService internal constructor(
       throw SSOTokenValidationProblem(
         ProblemSSOTokenValidationData()
           .organizationId(organizationId)
-          .errorMessage("Token does not belong to organization realm ${ssoConfig.keycloakRealm}"),
+          .errorMessage(
+            "The access token was issued by a different realm than expected. Expected: ${ssoConfig.keycloakRealm}, Actual: ${tokenRealm ?: "unknown"}",
+          ),
       )
     }
 
@@ -385,25 +489,25 @@ open class SsoConfigDomainService internal constructor(
       throw SSOTokenValidationProblem(
         ProblemSSOTokenValidationData()
           .organizationId(organizationId)
-          .errorMessage("Token is expired or invalid"),
+          .errorMessage("The access token has expired. Please try testing your SSO configuration again."),
       )
     } catch (e: InvalidTokenException) {
       throw SSOTokenValidationProblem(
         ProblemSSOTokenValidationData()
           .organizationId(organizationId)
-          .errorMessage("Token is invalid: ${e.message}"),
+          .errorMessage("The access token format is invalid or malformed."),
       )
     } catch (e: MalformedTokenResponseException) {
       throw SSOTokenValidationProblem(
         ProblemSSOTokenValidationData()
           .organizationId(organizationId)
-          .errorMessage("Token validation failed: ${e.message}"),
+          .errorMessage("Failed to validate the token with the identity provider. This may indicate incorrect client credentials."),
       )
     } catch (e: KeycloakServiceException) {
       throw SSOTokenValidationProblem(
         ProblemSSOTokenValidationData()
           .organizationId(organizationId)
-          .errorMessage("Unable to validate token: Keycloak service unavailable"),
+          .errorMessage("Failed to communicate with the identity provider (service unavailable)."),
       )
     }
   }
@@ -416,8 +520,9 @@ open class SsoConfigDomainService internal constructor(
   ) {
     val org = organizationService.getOrganization(organizationId)
     if (org.isEmpty) {
-      throw SSOSetupProblem(
-        ProblemSSOSetupData()
+      throw SSOActivationProblem(
+        ProblemSSOActivationData()
+          .organizationId(organizationId)
           .companyIdentifier(companyIdentifier)
           .errorMessage("Organization with id $organizationId not found"),
       )
@@ -429,10 +534,11 @@ open class SsoConfigDomainService internal constructor(
         .split("@")
         .getOrNull(1)
     if (orgEmailDomain == null || orgEmailDomain != emailDomain) {
-      throw SSOSetupProblem(
-        ProblemSSOSetupData()
+      throw SSOActivationProblem(
+        ProblemSSOActivationData()
+          .organizationId(organizationId)
           .companyIdentifier(companyIdentifier)
-          .errorMessage("Invalid email domain: $orgEmailDomain. Domain must match the organization"),
+          .errorMessage("The provided email domain '$emailDomain' does not match your organization's email domain '${orgEmailDomain ?: "unknown"}'."),
       )
     }
   }
@@ -443,19 +549,21 @@ open class SsoConfigDomainService internal constructor(
         ProblemMessageData()
           .message("Email domain is required when validating existing email domain entries"),
       )
-    validateEmailDomainNotExists(emailDomain, config.companyIdentifier)
+    validateEmailDomainNotExists(emailDomain, config.organizationId, config.companyIdentifier)
   }
 
   private fun validateEmailDomainNotExists(
     emailDomain: String,
+    organizationId: UUID,
     companyIdentifier: String,
   ) {
     val existingEmailDomains = organizationEmailDomainService.findByEmailDomain(emailDomain)
     if (existingEmailDomains.isNotEmpty()) {
-      throw SSOSetupProblem(
-        ProblemSSOSetupData()
+      throw SSOActivationProblem(
+        ProblemSSOActivationData()
+          .organizationId(organizationId)
           .companyIdentifier(companyIdentifier)
-          .errorMessage("Email domain already exists: $emailDomain"),
+          .errorMessage("This email domain '$emailDomain' is already associated with another organization's SSO configuration."),
       )
     }
   }
@@ -464,10 +572,11 @@ open class SsoConfigDomainService internal constructor(
     try {
       URL(config.discoveryUrl)
     } catch (e: Exception) {
+      logger.error(e) { "Invalid discovery URL format for config with company identifier ${config.companyIdentifier}: ${config.discoveryUrl}" }
       throw SSOSetupProblem(
         ProblemSSOSetupData()
           .companyIdentifier(config.companyIdentifier)
-          .errorMessage("Provided discoveryUrl is not valid: ${e.message}"),
+          .errorMessage("The discovery URL format is invalid. Please verify your identity provider's discovery URL and try again."),
       )
     }
   }
@@ -478,19 +587,21 @@ open class SsoConfigDomainService internal constructor(
     emailDomain: String,
   ) {
     val currentSsoConfig =
-      ssoConfigService.getSsoConfig(organizationId) ?: throw ResourceNotFoundProblem(
-        ProblemResourceData()
-          .resourceId(organizationId.toString())
-          .resourceType("sso_config"),
+      ssoConfigService.getSsoConfig(organizationId) ?: throw SSOActivationProblem(
+        ProblemSSOActivationData()
+          .organizationId(organizationId)
+          .errorMessage("No SSO configuration exists for this organization. Please create one first."),
       )
     if (currentSsoConfig.status.toDomain() == SsoConfigStatus.ACTIVE) {
-      throw BadRequestProblem(
-        ProblemMessageData()
-          .message("SSO config is already active for organization $organizationId"),
+      throw SSOActivationProblem(
+        ProblemSSOActivationData()
+          .organizationId(organizationId)
+          .companyIdentifier(currentSsoConfig.keycloakRealm)
+          .errorMessage("This SSO configuration is already active."),
       )
     }
     validateEmailDomainMatchesOrganization(organizationId, emailDomain, currentSsoConfig.keycloakRealm)
-    validateEmailDomainNotExists(emailDomain, currentSsoConfig.keycloakRealm)
+    validateEmailDomainNotExists(emailDomain, organizationId, currentSsoConfig.keycloakRealm)
 
     try {
       ssoConfigService.updateSsoConfigStatus(organizationId, SsoConfigStatus.ACTIVE)
@@ -502,10 +613,12 @@ open class SsoConfigDomainService internal constructor(
         },
       )
     } catch (e: Exception) {
-      throw SSOSetupProblem(
-        ProblemSSOSetupData()
+      logger.error(e) { "Failed to activate SSO config for organization $organizationId with email domain $emailDomain" }
+      throw SSOActivationProblem(
+        ProblemSSOActivationData()
+          .organizationId(organizationId)
           .companyIdentifier(currentSsoConfig.keycloakRealm)
-          .errorMessage("Error activating SSO config: ${e.message}"),
+          .errorMessage("Failed to activate your SSO configuration. Please try again or contact support if the problem persists."),
       )
     }
   }

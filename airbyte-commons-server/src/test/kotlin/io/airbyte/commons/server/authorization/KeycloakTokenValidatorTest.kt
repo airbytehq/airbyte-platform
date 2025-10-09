@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.authorization
 
-import com.auth0.jwt.algorithms.Algorithm
 import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
 import io.airbyte.data.services.impls.keycloak.InvalidTokenException
 import io.airbyte.metrics.MetricClient
@@ -21,7 +20,6 @@ import org.mockito.kotlin.anyOrNull
 import org.reactivestreams.Publisher
 import reactor.test.StepVerifier
 import java.net.URI
-import java.net.URISyntaxException
 import java.util.Optional
 import java.util.function.Predicate
 
@@ -81,7 +79,7 @@ internal class KeycloakTokenValidatorTest {
     val httpRequest = mockHttpRequest(VALID_ACCESS_TOKEN)
 
     // Mock the AirbyteKeycloakClient to throw an exception (invalid token)
-    Mockito.`when`(airbyteKeycloakClient.validateToken(VALID_ACCESS_TOKEN)).thenThrow(InvalidTokenException("Invalid token"))
+    Mockito.doThrow(InvalidTokenException("Invalid token")).`when`(airbyteKeycloakClient).validateToken(VALID_ACCESS_TOKEN)
 
     val responsePublisher: Publisher<Authentication> = keycloakTokenValidator.validateToken(VALID_ACCESS_TOKEN, httpRequest)
 
@@ -98,7 +96,7 @@ internal class KeycloakTokenValidatorTest {
     val httpRequest = mockHttpRequest(VALID_ACCESS_TOKEN)
 
     // Mock the AirbyteKeycloakClient to throw an exception
-    Mockito.`when`(airbyteKeycloakClient.validateToken(VALID_ACCESS_TOKEN)).thenThrow(RuntimeException("Keycloak unavailable"))
+    Mockito.doThrow(RuntimeException("Keycloak unavailable")).`when`(airbyteKeycloakClient).validateToken(VALID_ACCESS_TOKEN)
 
     val responsePublisher: Publisher<Authentication> = keycloakTokenValidator.validateToken(VALID_ACCESS_TOKEN, httpRequest)
 

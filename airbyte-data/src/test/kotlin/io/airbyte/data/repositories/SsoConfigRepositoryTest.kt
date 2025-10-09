@@ -54,4 +54,28 @@ class SsoConfigRepositoryTest : AbstractConfigRepositoryTest() {
       .ignoringFields("createdAt", "updatedAt")
       .isEqualTo(ssoConfig)
   }
+
+  @Test
+  fun `findByKeycloakRealm should return sso config when realm exists`() {
+    val ssoConfig =
+      SsoConfig(
+        id = UUID.randomUUID(),
+        organizationId = UUID.randomUUID(),
+        keycloakRealm = "test-realm",
+        status = SsoConfigStatus.active,
+      )
+
+    ssoConfigRepository.save(ssoConfig)
+
+    val retrieved = ssoConfigRepository.findByKeycloakRealm("test-realm")
+    assertThat(retrieved).isNotNull
+    assertThat(retrieved!!.keycloakRealm).isEqualTo("test-realm")
+    assertThat(retrieved.organizationId).isEqualTo(ssoConfig.organizationId)
+  }
+
+  @Test
+  fun `findByKeycloakRealm should return null when realm does not exist`() {
+    val retrieved = ssoConfigRepository.findByKeycloakRealm("non-existent-realm")
+    assertThat(retrieved).isNull()
+  }
 }

@@ -1860,6 +1860,37 @@ components:
           type: string
         errorMessage:
           type: string
+    SSOActivationProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 500
+            type:
+              type: string
+              default: error:sso-activation
+            title:
+              type: string
+              default: SSO Activation Error
+            detail:
+              type: string
+              default: An error occurred during SSO activation operation
+            data:
+              $ref: "#/components/schemas/ProblemSSOActivationData"
+    ProblemSSOActivationData:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        companyIdentifier:
+          type: string
+        errorMessage:
+          type: string
     SSOTokenValidationProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -1875,7 +1906,7 @@ components:
               default: error:sso-token-validation
             title:
               type: string
-              default: SSO token validation failed
+              default: SSO Token Validation Failed
             detail:
               type: string
               default: The provided SSO access token is invalid or expired
@@ -1883,8 +1914,6 @@ components:
               $ref: "#/components/schemas/ProblemSSOTokenValidationData"
     ProblemSSOTokenValidationData:
       type: object
-      required:
-        - organizationId
       properties:
         organizationId:
           type: string

@@ -140,7 +140,7 @@ class AirbyteKeycloakClient(
    * Handles creation errors and provides meaningful exception messages.
    * @throws RealmValuesExistException if realm values already exist, RealmCreationException for other failures.
    */
-  fun createRealm(realm: RealmRepresentation) {
+  private fun createRealm(realm: RealmRepresentation) {
     try {
       keycloakAdminClient.realms().create(realm)
     } catch (e: Exception) {
@@ -161,7 +161,7 @@ class AirbyteKeycloakClient(
    * Returns the imported configuration map containing auth and token URLs.
    * @throws ImportConfigException if the discovery URL is invalid or import fails.
    */
-  fun importIdpConfig(
+  private fun importIdpConfig(
     realmName: String,
     discoveryUrl: String,
   ): Map<String, String> {
@@ -178,7 +178,21 @@ class AirbyteKeycloakClient(
             ),
           )
       logger.info { "Imported IDP config: $importedIdpConfig" }
+
+      // Validate that required OIDC fields are present
+      val requiredFields = listOf("authorizationUrl", "tokenUrl")
+      val missingFields = requiredFields.filter { importedIdpConfig[it] == null }
+
+      if (missingFields.isNotEmpty()) {
+        throw InvalidOidcDiscoveryDocumentException(
+          "OIDC discovery document missing required fields: $missingFields",
+          missingFields,
+        )
+      }
+
       return importedIdpConfig
+    } catch (e: InvalidOidcDiscoveryDocumentException) {
+      throw e
     } catch (e: Exception) {
       logger.error(e) { "Import SSO config request failed" }
       throw ImportConfigException("Import SSO config request failed! Server error: $e")
@@ -190,7 +204,7 @@ class AirbyteKeycloakClient(
    * Validates the response status and throws exceptions on failure.
    * @throws IdpCreationException if creation fails or returns non-successful status.
    */
-  fun createIdpForRealm(
+  private fun createIdpForRealm(
     realmName: String,
     idp: IdentityProviderRepresentation,
   ) {
@@ -217,7 +231,7 @@ class AirbyteKeycloakClient(
    * Handles response validation and provides error handling for failed requests.
    * @throws CreateClientException if creation fails or returns non-successful status.
    */
-  fun createClientForRealm(
+  private fun createClientForRealm(
     realmName: String,
     client: ClientRepresentation,
   ) {
@@ -300,35 +314,11 @@ class AirbyteKeycloakClient(
   }
 
   /**
-   * Deletes the default identity provider from a realm.
-   * This removes the IDP configuration but preserves the realm and any existing users.
-   * Idempotent - if the IDP doesn't exist, this is considered a success.
-   * @throws IdpDeletionException if deletion fails.
-   */
-  fun deleteIdpFromRealm(realmName: String) {
-    try {
-      val realm = keycloakAdminClient.realms().realm(realmName)
-      val idpExists = realm.identityProviders().findAll().any { it.alias == DEFAULT_IDP_ALIAS }
-
-      if (!idpExists) {
-        logger.info { "IDP $DEFAULT_IDP_ALIAS does not exist in realm $realmName, nothing to delete" }
-        return
-      }
-
-      realm.identityProviders().get(DEFAULT_IDP_ALIAS).remove()
-      logger.info { "Successfully deleted IDP $DEFAULT_IDP_ALIAS from realm $realmName" }
-    } catch (e: Exception) {
-      logger.error(e) { "Delete IDP request failed" }
-      throw IdpDeletionException("Delete IDP request failed! Server error: $e")
-    }
-  }
-
-  /**
    * Updates the complete IDP configuration for an existing realm.
    * If an IDP exists, updates it with new configuration to preserve user links.
    * If no IDP exists, creates a new one.
    * This preserves the realm and any existing users while updating the SSO settings.
-   * @throws IdpDeletionException, ImportConfigException, or IdpCreationException on failures.
+   * @throws ImportConfigException, or IdpCreationException on failures.
    */
   fun replaceOidcIdpConfig(ssoConfig: SsoConfig) {
     val realm = keycloakAdminClient.realms().realm(ssoConfig.companyIdentifier)
@@ -376,6 +366,7 @@ class AirbyteKeycloakClient(
    * @throws MalformedTokenResponseException if the response is malformed
    * @throws KeycloakServiceException if there's an error communicating with Keycloak
    */
+  @Throws(InvalidTokenException::class, TokenExpiredException::class, MalformedTokenResponseException::class, KeycloakServiceException::class)
   fun validateToken(token: String) {
     val realm =
       extractRealmFromToken(token)
@@ -392,6 +383,7 @@ class AirbyteKeycloakClient(
    * @throws MalformedTokenResponseException if the response is malformed or missing required claims
    * @throws KeycloakServiceException if there's an error communicating with Keycloak
    */
+  @Throws(InvalidTokenException::class, TokenExpiredException::class, MalformedTokenResponseException::class, KeycloakServiceException::class)
   fun validateTokenWithRealm(
     token: String,
     realm: String,
@@ -513,14 +505,15 @@ class IdpNotFoundException(
   message: String,
 ) : Exception(message)
 
-class IdpDeletionException(
+class InvalidOidcDiscoveryDocumentException(
   message: String,
+  val missingFields: List<String>,
 ) : Exception(message)
 
 open class TokenValidationException(
   message: String,
   cause: Throwable? = null,
-) : RuntimeException(message, cause)
+) : Exception(message, cause)
 
 class InvalidTokenException(
   message: String,

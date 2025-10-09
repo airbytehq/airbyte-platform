@@ -10,5 +10,11 @@
   "generate-contribution/invalid-github-token": "The GitHub token provided is invalid. Please verify the token and try again.",
   "generate-contribution/insufficient-github-token-permissions": "We could not generate your contribution on GitHub. Please provide an access token with the \"public_repo\" scope enabled.",
   "generate-contribution/connector-image-name-in-use": "The Connector Identifier you provided is already in use. Please use a different identifier.",
-  "tag-name-too-long": "The tag name can be at most 30 characters."
+  "tag-name-too-long": "The tag name can be at most 30 characters.",
+  "sso-config-retrieval": "{errorMessage}",
+  "sso-setup": "{errorMessage}",
+  "sso-deletion": "{errorMessage}",
+  "sso-credential-update": "{errorMessage}",
+  "sso-activation": "{errorMessage}",
+  "sso-token-validation": "{errorMessage}"
 }

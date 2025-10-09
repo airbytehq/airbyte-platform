@@ -86,6 +86,12 @@ class AirbyteKeycloakClientTest {
     val idpMock = mockk<IdentityProvidersResource>(relaxed = true)
     every { realmMock.identityProviders() } returns idpMock
     every { idpMock.create(any()) } returns mockResponse
+    // Mock the importFrom call to return a valid OIDC discovery document
+    every { idpMock.importFrom(any()) } returns
+      mapOf(
+        "authorizationUrl" to "https://auth.airbyte.com/authorize",
+        "tokenUrl" to "https://auth.airbyte.com/token",
+      )
 
     airbyteKeycloakClient.createOidcSsoConfig(config)
 
@@ -115,6 +121,65 @@ class AirbyteKeycloakClientTest {
     val exception = assertThrows<RealmCreationException> { airbyteKeycloakClient.createOidcSsoConfig(config) }
 
     assertTrue(exception.message!!.contains("Create SSO config request failed"))
+  }
+
+  @Test
+  fun `createOidcSsoConfig should throw InvalidOidcDiscoveryDocumentException when required fields are missing`() {
+    val config =
+      SsoConfig(
+        organizationId = UUID.randomUUID(),
+        emailDomain = "testdomain",
+        companyIdentifier = "airbyte",
+        clientId = "client-id",
+        clientSecret = "client-secret",
+        discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
+        status = SsoConfigStatus.ACTIVE,
+      )
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm(any()) } returns realmMock
+
+    val idpMock = mockk<IdentityProvidersResource>(relaxed = true)
+    every { realmMock.identityProviders() } returns idpMock
+    // Mock importFrom to return an empty discovery document
+    every { idpMock.importFrom(any()) } returns emptyMap()
+
+    val exception = assertThrows<InvalidOidcDiscoveryDocumentException> { airbyteKeycloakClient.createOidcSsoConfig(config) }
+
+    assertTrue(exception.message!!.contains("OIDC discovery document missing required fields"))
+    assertTrue(exception.missingFields.containsAll(listOf("authorizationUrl", "tokenUrl")))
+  }
+
+  @Test
+  fun `createOidcSsoConfig should throw ImportConfigException when importFrom fails`() {
+    val config =
+      SsoConfig(
+        organizationId = UUID.randomUUID(),
+        emailDomain = "testdomain",
+        companyIdentifier = "airbyte",
+        clientId = "client-id",
+        clientSecret = "client-secret",
+        discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
+        status = SsoConfigStatus.ACTIVE,
+      )
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakClientMock.realms() } returns realmsMock
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm(any()) } returns realmMock
+
+    val idpMock = mockk<IdentityProvidersResource>(relaxed = true)
+    every { realmMock.identityProviders() } returns idpMock
+    // Mock importFrom to throw an exception
+    every { idpMock.importFrom(any()) } throws RuntimeException("Discovery endpoint unreachable")
+
+    val exception = assertThrows<ImportConfigException> { airbyteKeycloakClient.createOidcSsoConfig(config) }
+
+    assertTrue(exception.message!!.contains("Import SSO config request failed"))
   }
 
   @Test

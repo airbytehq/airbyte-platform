@@ -109,4 +109,34 @@ class SsoConfigServiceDataImplTest {
     verify(exactly = 1) { ssoConfigRepository.findByOrganizationId(orgId) }
     verify(exactly = 0) { ssoConfigRepository.update(any()) }
   }
+
+  @Test
+  fun `getSsoConfigByCompanyIdentifier should return config when it exists`() {
+    val orgId = UUID.randomUUID()
+    val entity =
+      SsoConfigEntity(
+        id = UUID.randomUUID(),
+        organizationId = orgId,
+        keycloakRealm = "airbyte",
+        status = JooqSsoConfigStatus.active,
+      )
+
+    every { ssoConfigRepository.findByKeycloakRealm("airbyte") } returns entity
+
+    val result = ssoConfigService.getSsoConfigByCompanyIdentifier("airbyte")
+
+    assertEquals("airbyte", result?.keycloakRealm)
+    assertEquals(orgId, result?.organizationId)
+    verify(exactly = 1) { ssoConfigRepository.findByKeycloakRealm("airbyte") }
+  }
+
+  @Test
+  fun `getSsoConfigByCompanyIdentifier should return null when not found`() {
+    every { ssoConfigRepository.findByKeycloakRealm("non-existent") } returns null
+
+    val result = ssoConfigService.getSsoConfigByCompanyIdentifier("non-existent")
+
+    assertEquals(null, result)
+    verify(exactly = 1) { ssoConfigRepository.findByKeycloakRealm("non-existent") }
+  }
 }
