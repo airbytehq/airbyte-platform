@@ -114,13 +114,6 @@ afterEvaluate {
   }
 }
 
-// Even though Kotlin is excluded on Spotbugs, this project
-// still runs into spotbug issues. Working theory is that
-// generated code is being picked up. Disable as a short-term fix.
-tasks.named("spotbugsMain") {
-  enabled = false
-}
-
 private fun generateProblemThrowables(problemsOutputDir: String) {
   val dir = file(problemsOutputDir)
 
@@ -128,6 +121,8 @@ private fun generateProblemThrowables(problemsOutputDir: String) {
   if (!throwableDir.exists()) {
     throwableDir.mkdirs()
   }
+
+  val template = File("$projectDir/src/main/resources/templates/ThrowableProblem.kt.txt").readText()
 
   dir.walk().forEach { errorFile ->
     if (errorFile.name.endsWith("ProblemResponse.java")) {
@@ -144,10 +139,8 @@ private fun generateProblemThrowables(problemsOutputDir: String) {
       val responseClassName = "${problemName}ProblemResponse"
       val throwableClassName = "${problemName}Problem"
 
-      val template = File("$projectDir/src/main/resources/templates/ThrowableProblem.kt.txt")
       val throwableText =
         template
-          .readText()
           .replace("<problem-class-name>", responseClassName)
           .replace("<problem-throwable-class-name>", throwableClassName)
           .replace("<problem-data-class-import>", dataFieldImport)

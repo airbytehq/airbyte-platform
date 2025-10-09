@@ -22,9 +22,9 @@ buildscript {
     }
 
     ext {
-        airbyteGradleVersion = "0.72.0"
+        airbyteGradleVersion = "0.73.0"
         // uncomment for testing plugin locally
-//        airbyteGradleVersion = "local-test"
+        // airbyteGradleVersion = "local-test"
     }
 }
 
@@ -142,12 +142,9 @@ tasks.register('archiveReports', Tar) {
     dependsOn subprojects.collect { it.getTasksByName('jacocoTestReport', true) }
     dependsOn subprojects.collect { it.getTasksByName('pmdMain', true) }
     dependsOn subprojects.collect { it.getTasksByName('pmdTest', true) }
-    dependsOn subprojects.collect { it.getTasksByName('spotbugsMain', true) }
-    dependsOn subprojects.collect { it.getTasksByName('spotbugsTest', true) }
     dependsOn subprojects.collect { it.getTasksByName('test', true) }
     dependsOn subprojects.collect { it.getTasksByName('checkstyleAcceptanceTests', true) }
     dependsOn subprojects.collect { it.getTasksByName('pmdAcceptanceTests', true) }
-    dependsOn subprojects.collect { it.getTasksByName('spotbugsAcceptanceTests', true) }
 
     archiveFileName = "${project.name}-reports.tar"
     destinationDirectory = layout.buildDirectory.dir('dist')

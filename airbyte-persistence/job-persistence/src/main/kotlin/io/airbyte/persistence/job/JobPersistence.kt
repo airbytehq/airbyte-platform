@@ -450,8 +450,8 @@ interface JobPersistence {
    */
   @JvmRecord
   data class AttemptStats(
-    @JvmField val combinedStats: SyncStats?,
-    @JvmField val perStreamStats: List<StreamSyncStats>,
+    val combinedStats: SyncStats?,
+    val perStreamStats: List<StreamSyncStats>,
   )
 
   /**

@@ -11,7 +11,6 @@ dependencies {
 
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
-  implementation(libs.spotbugs.annotations)
   implementation(libs.guava)
 
   implementation(project(":oss:airbyte-api:server-api"))

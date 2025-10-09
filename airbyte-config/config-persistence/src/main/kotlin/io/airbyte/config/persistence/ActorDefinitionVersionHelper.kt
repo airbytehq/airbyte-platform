@@ -39,8 +39,8 @@ class ActorDefinitionVersionHelper(
    */
   @JvmRecord
   data class ActorDefinitionVersionWithOverrideStatus(
-    @JvmField val actorDefinitionVersion: ActorDefinitionVersion,
-    @JvmField val isOverrideApplied: Boolean,
+    val actorDefinitionVersion: ActorDefinitionVersion,
+    val isOverrideApplied: Boolean,
   )
 
   init {
@@ -307,7 +307,6 @@ class ActorDefinitionVersionHelper(
      * @param actorDefinitionVersion actor definition version
      * @return docker image name
      */
-    @JvmStatic
     fun getDockerImageName(actorDefinitionVersion: ActorDefinitionVersion): String =
       String.format("%s:%s", actorDefinitionVersion.dockerRepository, actorDefinitionVersion.dockerImageTag)
 
@@ -317,7 +316,6 @@ class ActorDefinitionVersionHelper(
      * @param actorDefinitionVersions List of versions that should be checked for alpha/beta status
      * @return true if any of the provided versions is in alpha or beta
      */
-    @JvmStatic
     fun hasAlphaOrBetaVersion(actorDefinitionVersions: List<ActorDefinitionVersion>): Boolean =
       actorDefinitionVersions
         .stream()

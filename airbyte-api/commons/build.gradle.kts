@@ -56,10 +56,3 @@ dependencies {
 tasks.withType<JavaCompile>().configureEach {
   options.compilerArgs = listOf("-parameters")
 }
-
-// Even though Kotlin is excluded on Spotbugs, this project
-// still runs into spotbug issues. Working theory is that
-// generated code is being picked up. Disable as a short-term fix.
-tasks.named("spotbugsMain") {
-  enabled = false
-}

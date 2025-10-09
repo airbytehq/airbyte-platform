@@ -12,10 +12,10 @@ class <problem-throwable-class-name>(detail: String?, data: <problem-data-class-
     private fun getProblem(detail: String?, data: <problem-data-class-name>?): ProblemResponse {
       val problemResponse = <problem-class-name>()
       if (detail != null) {
-        problemResponse.detail = detail
+        problemResponse.detail(detail)
       }
       if (data != null) {
-        problemResponse.data = data
+        problemResponse.data(data)
       }
       return problemResponse
     }

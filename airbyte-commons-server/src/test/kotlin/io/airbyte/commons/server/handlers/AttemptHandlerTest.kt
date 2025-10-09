@@ -671,7 +671,7 @@ internal class AttemptHandlerTest {
 
     Mockito
       .`when`(jobPersistence.getJob(JOB_ID))
-      .thenThrow(RuntimeException("unknown jobId " + JOB_ID))
+      .thenThrow(RuntimeException("unknown jobId $JOB_ID"))
 
     org.assertj.core.api.Assertions
       .assertThatThrownBy { handler.createNewAttemptNumber(JOB_ID) }

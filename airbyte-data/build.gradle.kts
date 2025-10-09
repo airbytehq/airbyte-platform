@@ -54,13 +54,6 @@ dependencies {
   testImplementation(testFixtures(project(":oss:airbyte-config:config-persistence")))
 }
 
-// Even though Kotlin is excluded on Spotbugs, this project
-// still runs into SpotBugs issues. Working theory is that
-// generated code is being picked up. Disable as a short-term fix.
-tasks.named("spotbugsMain") {
-  enabled = false
-}
-
 // The DuplicatesStrategy will be required while this module is mixture of kotlin and java dependencies.
 // Once the code has been migrated to kotlin, this can also be removed.
 tasks.withType<Jar>().configureEach {

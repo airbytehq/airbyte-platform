@@ -41,7 +41,6 @@ dependencies {
   ksp(libs.bundles.micronaut.annotation.processor)
   ksp(project(":oss:airbyte-configuration-processor"))
 
-  implementation(libs.spotbugs.annotations)
   implementation(platform(libs.micronaut.platform))
   implementation(libs.google.cloud.storage)
   implementation(libs.bundles.micronaut)

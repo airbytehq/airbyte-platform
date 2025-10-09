@@ -23,7 +23,7 @@ dependencies {
   implementation(libs.kotlin.logging)
   implementation(libs.bundles.micronaut.metrics)
   implementation(libs.bundles.datadog)
-  
+
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-storage"))
@@ -35,7 +35,7 @@ dependencies {
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.bundles.logback)
-  
+
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.test.annotation.processor)
   testAnnotationProcessor(platform(libs.micronaut.platform))
@@ -63,11 +63,4 @@ tasks.named<Test>("test") {
 
 tasks.withType(JavaCompile::class).configureEach {
   options.compilerArgs = listOf("-parameters")
-}
-
-// Even though Kotlin is excluded on Spotbugs, this projects
-// still runs into SpotBugs issues. Working theory is that
-// generated code is being picked up. Disable as a short-term fix.
-tasks.named("spotbugsMain") {
-  enabled = false
 }

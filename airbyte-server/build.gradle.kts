@@ -207,17 +207,6 @@ airbyte {
     deployment = "ab-server"
     container = "airbyte-server-container"
   }
-
-  spotbugs {
-    excludes =
-      listOf(
-        "  <Match>\n" +
-          "    <Package name=\"io.airbyte.server.repositories.domain.*\" />\n" +
-          "    <!-- All args constructor used by builders trigger this error -->\n" +
-          "    <Bug pattern=\"NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE\" />\n" +
-          "  </Match>",
-      )
-  }
 }
 
 tasks.named<Test>("test") {

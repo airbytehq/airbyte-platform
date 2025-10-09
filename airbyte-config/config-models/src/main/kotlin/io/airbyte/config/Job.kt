@@ -16,20 +16,18 @@ import java.util.stream.Collectors
  */
 @JvmRecord
 data class Job(
-  @JvmField val id: Long,
-  @JvmField val configType: ConfigType,
-  @JvmField val scope: String,
-  @JvmField val config: JobConfig,
-  @JvmField val attempts: List<Attempt>,
-  @JvmField val status: JobStatus,
-  @JvmField @field:Nullable @param:Nullable val startedAtInSecond: Long?,
-  @JvmField val createdAtInSecond: Long,
-  @JvmField val updatedAtInSecond: Long,
+  val id: Long,
+  val configType: ConfigType,
+  val scope: String,
+  val config: JobConfig,
+  val attempts: List<Attempt>,
+  val status: JobStatus,
+  @field:Nullable @param:Nullable val startedAtInSecond: Long?,
+  val createdAtInSecond: Long,
+  val updatedAtInSecond: Long,
   val isScheduled: Boolean,
 ) {
   fun getAttemptsCount(): Int = attempts.size
-
-  fun startedAtInSecond(): Long? = startedAtInSecond
 
   fun getSuccessfulAttempt(): Optional<Attempt> {
     val successfulAttempts =
@@ -82,10 +80,7 @@ data class Job(
   }
 
   companion object {
-    @JvmField
     val REPLICATION_TYPES: Set<ConfigType> = EnumSet.of(ConfigType.SYNC, ConfigType.RESET_CONNECTION, ConfigType.REFRESH)
-
-    @JvmField
     val SYNC_REPLICATION_TYPES: Set<ConfigType> = EnumSet.of(ConfigType.SYNC, ConfigType.REFRESH)
   }
 }
