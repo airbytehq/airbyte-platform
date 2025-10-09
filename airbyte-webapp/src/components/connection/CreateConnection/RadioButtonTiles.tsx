@@ -1,10 +1,9 @@
+import { RadioGroup } from "@headlessui/react";
 import { ComponentProps } from "react";
 
-import { FlexContainer, FlexItem } from "components/ui/Flex";
-import { Tooltip } from "components/ui/Tooltip";
+import { FlexContainer } from "components/ui/Flex";
 
 import { RadioButtonTile, RadioButtonTileOption } from "./RadioButtonTile";
-import styles from "./RadioButtonTiles.module.scss";
 
 interface RadioButtonTilesProps<T> {
   options: Array<RadioButtonTileOption<T>>;
@@ -12,38 +11,25 @@ interface RadioButtonTilesProps<T> {
   onSelectRadioButton: (value: T) => void;
   name: string;
   direction?: ComponentProps<typeof FlexContainer>["direction"];
+  /** When true, applies light styling variant with no border and reduced padding */
   light?: boolean;
 }
 
 export const RadioButtonTiles = <T extends string>({
   options,
-  onSelectRadioButton,
   selectedValue,
+  onSelectRadioButton,
   name,
   direction,
   light,
 }: RadioButtonTilesProps<T>) => {
-  const radioButtonTile = (option: RadioButtonTileOption<T>) => (
-    <RadioButtonTile
-      key={option.value}
-      option={option}
-      selectedValue={selectedValue}
-      onSelectRadioButton={onSelectRadioButton}
-      name={name}
-      light={light}
-    />
-  );
   return (
-    <FlexContainer direction={direction}>
-      {options.map((option) =>
-        option.tooltipContent != null ? (
-          <FlexItem className={styles.radioButtonTiles__tile} key={option.value}>
-            <Tooltip control={radioButtonTile(option)}>{option.tooltipContent}</Tooltip>
-          </FlexItem>
-        ) : (
-          radioButtonTile(option)
-        )
-      )}
-    </FlexContainer>
+    <RadioGroup value={selectedValue} onChange={onSelectRadioButton}>
+      <FlexContainer direction={direction}>
+        {options.map((option) => (
+          <RadioButtonTile key={option.value} option={option} name={name} light={light} />
+        ))}
+      </FlexContainer>
+    </RadioGroup>
   );
 };

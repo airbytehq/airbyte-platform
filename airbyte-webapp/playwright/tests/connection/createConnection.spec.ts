@@ -81,10 +81,10 @@ test.describe("Connection - Create new connection", () => {
         await page.goto(`/workspaces/${workspaceId}/connections/new-connection`, { timeout: 20000 });
 
         // Verify that "existing connector" type is selected for source by default
-        await expect(page.locator('input[data-testid="radio-button-tile-sourceType-existing"]')).toBeChecked({
+        await expect(page.locator('[data-testid="radio-button-tile-sourceType-existing"]')).toBeChecked({
           timeout: 10000,
         });
-        await expect(page.locator('input[data-testid="radio-button-tile-sourceType-new"]')).not.toBeChecked({
+        await expect(page.locator('[data-testid="radio-button-tile-sourceType-new"]')).not.toBeChecked({
           timeout: 10000,
         });
 
@@ -94,7 +94,7 @@ test.describe("Connection - Create new connection", () => {
 
         // Verify that selecting the source progressed us to destination selection
         // (The source section should now show as completed/selected)
-        await expect(page.locator('input[data-testid="radio-button-tile-destinationType-existing"]')).toBeVisible({
+        await expect(page.locator('[data-testid="radio-button-tile-destinationType-existing"]')).toBeVisible({
           timeout: 10000,
         });
       });
@@ -108,7 +108,7 @@ test.describe("Connection - Create new connection", () => {
         await page.locator(sourceSelector).click({ timeout: 20000 });
 
         // Wait for destination selection to be visible
-        await expect(page.locator('input[data-testid="radio-button-tile-destinationType-existing"]')).toBeVisible({
+        await expect(page.locator('[data-testid="radio-button-tile-destinationType-existing"]')).toBeVisible({
           timeout: 10000,
         });
 
@@ -120,8 +120,8 @@ test.describe("Connection - Create new connection", () => {
         });
 
         // Verify that "existing connector" type is selected for destination by default
-        await expect(page.locator('input[data-testid="radio-button-tile-destinationType-existing"]')).toBeChecked();
-        await expect(page.locator('input[data-testid="radio-button-tile-destinationType-new"]')).not.toBeChecked();
+        await expect(page.locator('[data-testid="radio-button-tile-destinationType-existing"]')).toBeChecked();
+        await expect(page.locator('[data-testid="radio-button-tile-destinationType-new"]')).not.toBeChecked();
 
         // Select the destination we created from the list
         const destinationSelector = `button[data-testid="select-existing-destination-${destination.name}"]`;
@@ -140,7 +140,7 @@ test.describe("Connection - Create new connection", () => {
         await page.locator(sourceSelector).click({ timeout: 10000 });
 
         // Wait for destination selection
-        await expect(page.locator('input[data-testid="radio-button-tile-destinationType-existing"]')).toBeVisible({
+        await expect(page.locator('[data-testid="radio-button-tile-destinationType-existing"]')).toBeVisible({
           timeout: 10000,
         });
 

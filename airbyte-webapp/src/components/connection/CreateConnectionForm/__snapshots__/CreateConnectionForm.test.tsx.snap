@@ -86,121 +86,115 @@ exports[`CreateConnectionForm should render 1`] = `
                           </div>
                         </div>
                         <div
-                          class="<removed-for-snapshot-test>"
+                          id="headlessui-radiogroup-:r0:"
+                          role="radiogroup"
                         >
                           <div
                             class="<removed-for-snapshot-test>"
                           >
-                            <input
-                              checked=""
+                            <span
+                              aria-checked="true"
                               class="<removed-for-snapshot-test>"
+                              data-checked=""
+                              data-headlessui-state="checked"
                               data-testid="radio-button-tile-delivery-replicateSource"
-                              id="delivery-replicateSource"
-                              name="delivery"
-                              type="radio"
-                              value="replicateSource"
-                            />
-                            <label
-                              class="<removed-for-snapshot-test>"
-                              for="delivery-replicateSource"
+                              id="headlessui-radio-:r1:"
+                              role="radio"
+                              tabindex="0"
                             >
                               <div
                                 class="<removed-for-snapshot-test>"
                               >
-                                <svg
-                                  height="16"
-                                  role="img"
-                                  width="16"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0Zm0 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"
-                                    fill="#615EFF"
-                                    fill-rule="evenodd"
-                                  />
-                                </svg>
-                              </div>
-                              <div>
                                 <div
                                   class="<removed-for-snapshot-test>"
                                 >
-                                  <p
+                                  <label
                                     class="<removed-for-snapshot-test>"
-                                    data-type="text"
+                                    for="delivery-replicateSource"
                                   >
-                                    Replicate Source 
-                                    <span
+                                    <input
+                                      checked=""
                                       class="<removed-for-snapshot-test>"
-                                    >
-                                      Recommended
-                                    </span>
-                                  </p>
+                                      id="delivery-replicateSource"
+                                      name="delivery"
+                                      type="radio"
+                                      value="replicateSource"
+                                    />
+                                  </label>
                                 </div>
-                                <p
-                                  class="<removed-for-snapshot-test>"
-                                  data-type="text"
-                                >
-                                  Maintain an up-to-date copy of your source data in the destination.
-                                </p>
-                              </div>
-                            </label>
-                          </div>
-                          <div
-                            class="<removed-for-snapshot-test>"
-                          >
-                            <input
-                              class="<removed-for-snapshot-test>"
-                              data-testid="radio-button-tile-delivery-appendChanges"
-                              id="delivery-appendChanges"
-                              name="delivery"
-                              type="radio"
-                              value="appendChanges"
-                            />
-                            <label
-                              class="<removed-for-snapshot-test>"
-                              for="delivery-appendChanges"
-                            >
-                              <div
-                                class="<removed-for-snapshot-test>"
-                              >
-                                <svg
-                                  height="16"
-                                  role="img"
-                                  width="16"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <g
-                                    fill="#E8E8ED"
+                                <div>
+                                  <div
+                                    class="<removed-for-snapshot-test>"
                                   >
-                                    <path
-                                      d="M12 8a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z"
-                                    />
-                                    <path
-                                      d="M8 2.222a5.778 5.778 0 1 0 0 11.556A5.778 5.778 0 0 0 8 2.222ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Z"
-                                      fill-rule="evenodd"
-                                    />
-                                  </g>
-                                </svg>
-                              </div>
-                              <div>
-                                <div
-                                  class="<removed-for-snapshot-test>"
-                                >
+                                    <p
+                                      class="<removed-for-snapshot-test>"
+                                      data-type="text"
+                                    >
+                                      Replicate Source 
+                                      <span
+                                        class="<removed-for-snapshot-test>"
+                                      >
+                                        Recommended
+                                      </span>
+                                    </p>
+                                  </div>
                                   <p
                                     class="<removed-for-snapshot-test>"
                                     data-type="text"
                                   >
-                                    Append Historical Changes
+                                    Maintain an up-to-date copy of your source data in the destination.
                                   </p>
                                 </div>
-                                <p
-                                  class="<removed-for-snapshot-test>"
-                                  data-type="text"
-                                >
-                                  Track changes to your data over time. Changes are appended to the destination.
-                                </p>
                               </div>
-                            </label>
+                            </span>
+                            <span
+                              aria-checked="false"
+                              class="<removed-for-snapshot-test>"
+                              data-headlessui-state=""
+                              data-testid="radio-button-tile-delivery-appendChanges"
+                              id="headlessui-radio-:r2:"
+                              role="radio"
+                              tabindex="-1"
+                            >
+                              <div
+                                class="<removed-for-snapshot-test>"
+                              >
+                                <div
+                                  class="<removed-for-snapshot-test>"
+                                >
+                                  <label
+                                    class="<removed-for-snapshot-test>"
+                                    for="delivery-appendChanges"
+                                  >
+                                    <input
+                                      class="<removed-for-snapshot-test>"
+                                      id="delivery-appendChanges"
+                                      name="delivery"
+                                      type="radio"
+                                      value="appendChanges"
+                                    />
+                                  </label>
+                                </div>
+                                <div>
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    <p
+                                      class="<removed-for-snapshot-test>"
+                                      data-type="text"
+                                    >
+                                      Append Historical Changes
+                                    </p>
+                                  </div>
+                                  <p
+                                    class="<removed-for-snapshot-test>"
+                                    data-type="text"
+                                  >
+                                    Track changes to your data over time. Changes are appended to the destination.
+                                  </p>
+                                </div>
+                              </div>
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -247,135 +241,129 @@ exports[`CreateConnectionForm should render 1`] = `
                               </div>
                             </div>
                             <div
-                              class="<removed-for-snapshot-test>"
+                              id="headlessui-radiogroup-:r3:"
+                              role="radiogroup"
                             >
                               <div
                                 class="<removed-for-snapshot-test>"
                               >
-                                <input
+                                <span
+                                  aria-checked="false"
                                   class="<removed-for-snapshot-test>"
+                                  data-headlessui-state=""
                                   data-testid="radio-button-tile-delectedRecords-incremental"
-                                  id="delectedRecords-incremental"
-                                  name="delectedRecords"
-                                  type="radio"
-                                  value="incremental"
-                                />
-                                <label
-                                  class="<removed-for-snapshot-test>"
-                                  for="delectedRecords-incremental"
+                                  id="headlessui-radio-:r4:"
+                                  role="radio"
+                                  tabindex="-1"
                                 >
                                   <div
                                     class="<removed-for-snapshot-test>"
                                   >
-                                    <svg
-                                      height="16"
-                                      role="img"
-                                      width="16"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                    >
-                                      <g
-                                        fill="#E8E8ED"
-                                      >
-                                        <path
-                                          d="M12 8a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z"
-                                        />
-                                        <path
-                                          d="M8 2.222a5.778 5.778 0 1 0 0 11.556A5.778 5.778 0 0 0 8 2.222ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Z"
-                                          fill-rule="evenodd"
-                                        />
-                                      </g>
-                                    </svg>
-                                  </div>
-                                  <div>
                                     <div
                                       class="<removed-for-snapshot-test>"
                                     >
-                                      <p
+                                      <label
                                         class="<removed-for-snapshot-test>"
-                                        data-type="text"
+                                        for="delectedRecords-incremental"
                                       >
-                                        Append New Rows and Updates Only
-                                      </p>
-                                    </div>
-                                    <p
-                                      class="<removed-for-snapshot-test>"
-                                      data-type="text"
-                                    >
-                                      Add a new entry each time a record is created or modified.
-                                    </p>
-                                  </div>
-                                </label>
-                              </div>
-                              <div
-                                class="<removed-for-snapshot-test>"
-                              >
-                                <input
-                                  checked=""
-                                  class="<removed-for-snapshot-test>"
-                                  data-testid="radio-button-tile-delectedRecords-full_refresh"
-                                  id="delectedRecords-full_refresh"
-                                  name="delectedRecords"
-                                  type="radio"
-                                  value="full_refresh"
-                                />
-                                <label
-                                  class="<removed-for-snapshot-test>"
-                                  for="delectedRecords-full_refresh"
-                                >
-                                  <div
-                                    class="<removed-for-snapshot-test>"
-                                  >
-                                    <svg
-                                      height="16"
-                                      role="img"
-                                      width="16"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                    >
-                                      <path
-                                        d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0Zm0 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"
-                                        fill="#615EFF"
-                                        fill-rule="evenodd"
-                                      />
-                                    </svg>
-                                  </div>
-                                  <div>
-                                    <div
-                                      class="<removed-for-snapshot-test>"
-                                    >
-                                      <p
-                                        class="<removed-for-snapshot-test>"
-                                        data-type="text"
-                                      >
-                                        Append Full Snapshots
-                                      </p>
-                                    </div>
-                                    <p
-                                      class="<removed-for-snapshot-test>"
-                                      data-type="text"
-                                    >
-                                      Append a full copy of your source data every sync.
-                                    </p>
-                                    <div
-                                      class="<removed-for-snapshot-test>"
-                                    >
-                                      <p
-                                        class="<removed-for-snapshot-test>"
-                                        data-type="text"
-                                      >
-                                        <div
+                                        <input
                                           class="<removed-for-snapshot-test>"
+                                          id="delectedRecords-incremental"
+                                          name="delectedRecords"
+                                          type="radio"
+                                          value="incremental"
+                                        />
+                                      </label>
+                                    </div>
+                                    <div>
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                      >
+                                        <p
+                                          class="<removed-for-snapshot-test>"
+                                          data-type="text"
+                                        >
+                                          Append New Rows and Updates Only
+                                        </p>
+                                      </div>
+                                      <p
+                                        class="<removed-for-snapshot-test>"
+                                        data-type="text"
+                                      >
+                                        Add a new entry each time a record is created or modified.
+                                      </p>
+                                    </div>
+                                  </div>
+                                </span>
+                                <span
+                                  aria-checked="true"
+                                  class="<removed-for-snapshot-test>"
+                                  data-checked=""
+                                  data-headlessui-state="checked"
+                                  data-testid="radio-button-tile-delectedRecords-full_refresh"
+                                  id="headlessui-radio-:r5:"
+                                  role="radio"
+                                  tabindex="0"
+                                >
+                                  <div
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    <div
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      <label
+                                        class="<removed-for-snapshot-test>"
+                                        for="delectedRecords-full_refresh"
+                                      >
+                                        <input
+                                          checked=""
+                                          class="<removed-for-snapshot-test>"
+                                          id="delectedRecords-full_refresh"
+                                          name="delectedRecords"
+                                          type="radio"
+                                          value="full_refresh"
+                                        />
+                                      </label>
+                                    </div>
+                                    <div>
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                      >
+                                        <p
+                                          class="<removed-for-snapshot-test>"
+                                          data-type="text"
+                                        >
+                                          Append Full Snapshots
+                                        </p>
+                                      </div>
+                                      <p
+                                        class="<removed-for-snapshot-test>"
+                                        data-type="text"
+                                      >
+                                        Append a full copy of your source data every sync.
+                                      </p>
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                      >
+                                        <p
+                                          class="<removed-for-snapshot-test>"
+                                          data-type="text"
                                         >
                                           <div
                                             class="<removed-for-snapshot-test>"
-                                            data-icon="warning-outline"
-                                            data-testid="mocksvg"
-                                          />
-                                          This option potentially increases costs and sync times
-                                        </div>
-                                      </p>
+                                          >
+                                            <div
+                                              class="<removed-for-snapshot-test>"
+                                              data-icon="warning-outline"
+                                              data-testid="mocksvg"
+                                            />
+                                            This option potentially increases costs and sync times
+                                          </div>
+                                        </p>
+                                      </div>
                                     </div>
                                   </div>
-                                </label>
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -447,7 +435,7 @@ exports[`CreateConnectionForm should render 1`] = `
                               class="<removed-for-snapshot-test>"
                               data-headlessui-state=""
                               data-testid="sync-catalog-filter-depth-listbox-button"
-                              id="headlessui-listbox-button-:r2:"
+                              id="headlessui-listbox-button-:r8:"
                               type="button"
                             >
                               <span
@@ -883,7 +871,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                     class="<removed-for-snapshot-test>"
                                     data-headlessui-state=""
                                     data-testid="sync-mode-select-listbox-button"
-                                    id="headlessui-listbox-button-:r1u:"
+                                    id="headlessui-listbox-button-:r24:"
                                     type="button"
                                   >
                                     <span
@@ -923,7 +911,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                         aria-haspopup="listbox"
                                         class="<removed-for-snapshot-test>"
                                         data-headlessui-state=""
-                                        id="headlessui-combobox-button-:r24:"
+                                        id="headlessui-combobox-button-:r2a:"
                                         tabindex="-1"
                                         type="button"
                                       >
@@ -1041,7 +1029,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                     class="<removed-for-snapshot-test>"
                                     data-headlessui-state=""
                                     data-testid="sync-mode-select-listbox-button"
-                                    id="headlessui-listbox-button-:r27:"
+                                    id="headlessui-listbox-button-:r2d:"
                                     type="button"
                                   >
                                     <span
@@ -1081,7 +1069,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                         aria-haspopup="listbox"
                                         class="<removed-for-snapshot-test>"
                                         data-headlessui-state=""
-                                        id="headlessui-combobox-button-:r2d:"
+                                        id="headlessui-combobox-button-:r2j:"
                                         tabindex="-1"
                                         type="button"
                                       >

@@ -3,19 +3,10 @@
 @use "scss/mixins";
 
 .radioButtonTiles {
-  &__tile {
-    flex: 1 1 0;
-    display: flex;
-    align-items: stretch;
-    justify-items: stretch;
-  }
-
   &__toggle {
+    flex-grow: 1;
     position: relative;
     z-index: 0;
-    display: flex;
-    gap: variables.$spacing-md;
-    flex-grow: 1;
     padding: variables.$spacing-lg;
     border: variables.$border-thin solid colors.$grey-100;
     border-radius: variables.$border-radius-sm;
@@ -25,7 +16,7 @@
       cursor: not-allowed;
     }
 
-    &--light.radioButtonTiles__toggle--light {
+    &--light {
       border: none;
       outline: none;
       padding-top: 0;
@@ -33,22 +24,18 @@
     }
   }
 
-  &__dot {
-    flex: 0 0 auto;
-  }
+  &__tile {
+    flex: 1 1 auto;
 
-  &__hiddenInput {
-    @include mixins.visually-hidden;
-
-    &:checked {
-      + .radioButtonTiles__toggle {
+    &[data-checked] {
+      .radioButtonTiles__toggle {
         border-color: colors.$blue;
       }
     }
 
     &:focus-visible {
-      + .radioButtonTiles__toggle {
-        outline: 2px solid colors.$blue-900;
+      .radioButtonTiles__toggle {
+        outline: variables.$border-thick solid colors.$blue-900;
       }
     }
   }

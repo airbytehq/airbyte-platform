@@ -1,4 +1,4 @@
-// Once we refactor the RadioButton, we should replace this component with it https://github.com/airbytehq/airbyte/issues/25202
+// TODO: Once we refactor the RadioButton, we should replace this component with it https://github.com/airbytehq/airbyte/issues/25202
 export const SelectedIndicatorDot = ({ selected = false }: { selected: boolean }) => {
   if (selected) {
     return (

@@ -6,9 +6,9 @@ const getExistingConnectorItemButton = (connectorType: ConnectorType, connectorN
   `button[data-testid='select-existing-${connectorType}-${connectorName}']`;
 
 const getExistingConnectorTypeOption = (connectorType: ConnectorType) =>
-  `input[data-testid='radio-button-tile-${connectorType}Type-existing']`;
+  `[data-testid='radio-button-tile-${connectorType}Type-existing']`;
 const getNewConnectorTypeOption = (connectorType: ConnectorType) =>
-  `input[data-testid='radio-button-tile-${connectorType}Type-new']`;
+  `[data-testid='radio-button-tile-${connectorType}Type-new']`;
 
 export const nextButton = getTestId("next-creation-page");
 export const selectExistingConnectorFromList = (connectorType: ConnectorType, connectorName: string) => {
@@ -16,8 +16,8 @@ export const selectExistingConnectorFromList = (connectorType: ConnectorType, co
 };
 
 export const isExistingConnectorTypeSelected = (connectorType: ConnectorType) => {
-  cy.get(getExistingConnectorTypeOption(connectorType)).should("be.checked");
-  cy.get(getNewConnectorTypeOption(connectorType)).should("not.be.checked");
+  cy.get(getExistingConnectorTypeOption(connectorType)).should("have.attr", "aria-checked", "true");
+  cy.get(getNewConnectorTypeOption(connectorType)).should("have.attr", "aria-checked", "false");
 };
 
 export const isNextPageButtonEnabled = (expectedResult: boolean) => {
