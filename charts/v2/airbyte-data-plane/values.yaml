@@ -351,7 +351,7 @@ workloadLauncher:
   livenessProbe:
     httpGet:
       path: /health/liveness
-      port: heartbeat
+      port: management
     initialDelaySeconds: 30
     periodSeconds: 10
     timeoutSeconds: 1
@@ -361,7 +361,7 @@ workloadLauncher:
   readinessProbe:
     httpGet:
       path: /health/readiness
-      port: heartbeat
+      port: management
     initialDelaySeconds: 10
     periodSeconds: 10
     timeoutSeconds: 1
