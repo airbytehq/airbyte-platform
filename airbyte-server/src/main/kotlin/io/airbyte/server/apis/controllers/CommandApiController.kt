@@ -25,6 +25,10 @@ import io.airbyte.api.model.generated.RunDiscoverCommandRequest
 import io.airbyte.api.model.generated.RunDiscoverCommandResponse
 import io.airbyte.api.model.generated.RunReplicateCommandRequest
 import io.airbyte.api.model.generated.RunReplicateCommandResponse
+import io.airbyte.api.model.generated.RunSpecCommandRequest
+import io.airbyte.api.model.generated.RunSpecCommandResponse
+import io.airbyte.api.model.generated.SpecCommandOutputRequest
+import io.airbyte.api.model.generated.SpecCommandOutputResponse
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.annotation.InternalForTesting
@@ -176,6 +180,27 @@ class CommandApiController(
           catalogId(output.catalogId)
           catalog(apiCatalog)
           destinationCatalog(apiDestinationCatalog)
+          failureReason(toApi(it.failureReason))
+          logs(it.logs?.toApi())
+        }
+      }
+    }
+
+  @Post("/output/spec")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getSpecCommandOutput(
+    @Body specCommandOutputRequest: SpecCommandOutputRequest,
+  ): SpecCommandOutputResponse =
+    withRoleValidation(
+      id = CommandId(specCommandOutputRequest.id),
+      role = AuthRoleConstants.WORKSPACE_READER,
+    ) {
+      val output = commandService.getSpecJobOutput(specCommandOutputRequest.id, withLogs = specCommandOutputRequest.withLogs)
+      return SpecCommandOutputResponse().apply {
+        id(specCommandOutputRequest.id)
+        output?.let {
+          status(if (it.failureReason == null) SpecCommandOutputResponse.StatusEnum.SUCCEEDED else SpecCommandOutputResponse.StatusEnum.FAILED)
+          spec(it.spec?.let { spec -> Jsons.jsonNode(spec) })
           failureReason(toApi(it.failureReason))
           logs(it.logs?.toApi())
         }
@@ -353,6 +378,38 @@ class CommandApiController(
           ),
       )
       return RunReplicateCommandResponse().id(runReplicateCommandRequest.id)
+    }
+
+  @Post("/run/spec")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun runSpecCommand(
+    @Body runSpecCommandRequest: RunSpecCommandRequest,
+  ): RunSpecCommandResponse =
+    withRoleValidation(
+      id = WorkspaceId(runSpecCommandRequest.workspaceId),
+      role = AuthRoleConstants.WORKSPACE_RUNNER,
+    ) {
+      if (runSpecCommandRequest.actorDefinitionId != null) {
+        commandService.createSpecCommand(
+          commandId = runSpecCommandRequest.id,
+          actorDefinitionId = runSpecCommandRequest.actorDefinitionId,
+          dockerImageTag = runSpecCommandRequest.dockerImageTag,
+          workspaceId = runSpecCommandRequest.workspaceId,
+          signalInput = runSpecCommandRequest.signalInput,
+          commandInput = Jsons.jsonNode(runSpecCommandRequest),
+        )
+      } else {
+        commandService.createSpecCommand(
+          commandId = runSpecCommandRequest.id,
+          dockerImage =
+            runSpecCommandRequest.dockerImage ?: throw IllegalArgumentException("docker_image is required when actor_definition_id is not provided"),
+          dockerImageTag = runSpecCommandRequest.dockerImageTag,
+          workspaceId = runSpecCommandRequest.workspaceId,
+          signalInput = runSpecCommandRequest.signalInput,
+          commandInput = Jsons.jsonNode(runSpecCommandRequest),
+        )
+      }
+      return RunSpecCommandResponse().id(runSpecCommandRequest.id)
     }
 
   @InternalForTesting

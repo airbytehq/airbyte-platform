@@ -868,4 +868,132 @@ class JobInputServiceTest {
     val actual = jobInputService.getReplicationInput(connectionId, appliedCatalogDiff, signalInput, jobId, attemptNumber.toLong())
     assertEquals(expected, actual)
   }
+
+  @Test
+  fun `getSpecInput with dockerImage returns SpecInput`() {
+    val dockerImage = "airbyte/source-test"
+    val dockerImageTag = "1.2.3"
+    val jobId = "test-job-id"
+    val attemptId = 5L
+
+    val result =
+      jobInputService.getSpecInput(
+        dockerImage = dockerImage,
+        dockerImageTag = dockerImageTag,
+        workspaceId = workspaceId,
+        jobId = jobId,
+        attemptId = attemptId,
+        isCustomConnector = false,
+      )
+
+    assertEquals(jobId, result.jobRunConfig.jobId)
+    assertEquals(attemptId, result.jobRunConfig.attemptId)
+    assertEquals(jobId, result.launcherConfig.jobId)
+    assertEquals(workspaceId, result.launcherConfig.workspaceId)
+    assertEquals("$dockerImage:$dockerImageTag", result.launcherConfig.dockerImage)
+    assertEquals(false, result.launcherConfig.isCustomConnector)
+    assertEquals(attemptId, result.launcherConfig.attemptId)
+  }
+
+  @Test
+  fun `getSpecInput with dockerImage generates jobId and attemptId when null`() {
+    val dockerImage = "airbyte/source-test"
+    val dockerImageTag = "1.2.3"
+
+    val result =
+      jobInputService.getSpecInput(
+        dockerImage = dockerImage,
+        dockerImageTag = dockerImageTag,
+        workspaceId = workspaceId,
+        jobId = null,
+        attemptId = null,
+        isCustomConnector = true,
+      )
+
+    // Should generate a UUID for jobId
+    assertEquals(36, result.jobRunConfig.jobId.length) // UUID string length
+    assertEquals(0L, result.jobRunConfig.attemptId)
+    assertEquals(result.jobRunConfig.jobId, result.launcherConfig.jobId)
+    assertEquals(workspaceId, result.launcherConfig.workspaceId)
+    assertEquals("$dockerImage:$dockerImageTag", result.launcherConfig.dockerImage)
+    assertEquals(true, result.launcherConfig.isCustomConnector)
+    assertEquals(0L, result.launcherConfig.attemptId)
+  }
+
+  @Test
+  fun `getSpecInput with actorDefinitionId for Source returns SpecInput`() {
+    val newDockerImageTag = "2.3.4"
+    val mockActorDefinition =
+      mockk<ActorDefinition> {
+        every { actorType } returns ActorType.source
+      }
+
+    val mockSourceDefinition = mockk<StandardSourceDefinition>()
+    every { mockSourceDefinition.sourceDefinitionId } returns sourceDefinitionId
+    every { mockSourceDefinition.custom } returns false
+
+    val mockActorDefinitionVersion = mockk<ActorDefinitionVersion>()
+    every { mockActorDefinitionVersion.dockerRepository } returns dockerRepository
+    every { mockActorDefinitionVersion.dockerImageTag } returns dockerImageTag
+
+    every { actorDefinitionRepository.findByActorDefinitionId(sourceDefinitionId) } returns mockActorDefinition
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionId) } returns mockSourceDefinition
+    every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, null) } returns mockActorDefinitionVersion
+
+    val jobId = "test-job-id"
+    val attemptId = 3L
+
+    val result =
+      jobInputService.getSpecInput(
+        actorDefinitionId = sourceDefinitionId,
+        dockerImageTag = newDockerImageTag,
+        workspaceId = workspaceId,
+        jobId = jobId,
+        attemptId = attemptId,
+      )
+
+    assertEquals(jobId, result.jobRunConfig.jobId)
+    assertEquals(attemptId, result.jobRunConfig.attemptId)
+    assertEquals("$dockerRepository:$newDockerImageTag", result.launcherConfig.dockerImage)
+    assertEquals(false, result.launcherConfig.isCustomConnector)
+    assertEquals(workspaceId, result.launcherConfig.workspaceId)
+  }
+
+  @Test
+  fun `getSpecInput with actorDefinitionId for Destination returns SpecInput`() {
+    val newDockerImageTag = "2.3.4"
+    val mockActorDefinition =
+      mockk<ActorDefinition> {
+        every { actorType } returns ActorType.destination
+      }
+
+    val mockDestinationDefinition = mockk<StandardDestinationDefinition>()
+    every { mockDestinationDefinition.destinationDefinitionId } returns destinationDefinitionId
+    every { mockDestinationDefinition.custom } returns true
+
+    val mockActorDefinitionVersion = mockk<ActorDefinitionVersion>()
+    every { mockActorDefinitionVersion.dockerRepository } returns destinationImage
+    every { mockActorDefinitionVersion.dockerImageTag } returns destinationImageTag
+
+    every { actorDefinitionRepository.findByActorDefinitionId(destinationDefinitionId) } returns mockActorDefinition
+    every { destinationService.getStandardDestinationDefinition(destinationDefinitionId) } returns mockDestinationDefinition
+    every { actorDefinitionVersionHelper.getDestinationVersion(mockDestinationDefinition, workspaceId, null) } returns
+      mockActorDefinitionVersion
+
+    val result =
+      jobInputService.getSpecInput(
+        actorDefinitionId = destinationDefinitionId,
+        dockerImageTag = newDockerImageTag,
+        workspaceId = workspaceId,
+        jobId = null,
+        attemptId = null,
+      )
+
+    // Should generate jobId and use default attemptId
+    assertEquals(36, result.jobRunConfig.jobId.length) // UUID string length
+    assertEquals(0L, result.jobRunConfig.attemptId)
+    assertEquals("$destinationImage:$newDockerImageTag", result.launcherConfig.dockerImage)
+    assertEquals(true, result.launcherConfig.isCustomConnector)
+    assertEquals(workspaceId, result.launcherConfig.workspaceId)
+  }
 }

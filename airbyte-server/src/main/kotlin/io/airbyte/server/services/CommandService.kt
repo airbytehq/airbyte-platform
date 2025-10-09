@@ -30,11 +30,13 @@ import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.ReplicationCommandFallsBackToWorkloadStatus
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.server.helpers.WorkloadIdGenerator
 import io.airbyte.server.repositories.CommandsRepository
 import io.airbyte.server.repositories.domain.Command
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.ReplicationActivityInput
+import io.airbyte.workers.models.SpecInput
 import io.airbyte.workload.common.WorkloadLabels
 import io.airbyte.workload.common.WorkloadQueueService
 import io.airbyte.workload.output.WorkloadOutputDocStoreReader
@@ -64,6 +66,7 @@ enum class CommandType {
   CHECK,
   DISCOVER,
   REPLICATE,
+  SPEC,
 }
 
 private data class WorkloadCreatePayload(
@@ -106,6 +109,124 @@ class CommandService(
     } else {
       Duration.INFINITE
     }
+
+  fun createSpecCommand(
+    commandId: String,
+    dockerImage: String,
+    dockerImageTag: String,
+    workspaceId: UUID,
+    signalInput: String?,
+    commandInput: JsonNode,
+  ): Boolean {
+    if (commandsRepository.existsById(commandId)) {
+      return false
+    }
+
+    val specInput =
+      jobInputService.getSpecInput(
+        dockerImage = dockerImage,
+        dockerImageTag = dockerImageTag,
+        workspaceId = workspaceId,
+        jobId = null,
+        attemptId = null,
+        isCustomConnector = true,
+      )
+    // Spec commands always use HIGH priority
+    val priority = WorkloadPriority.HIGH
+    specInput.launcherConfig.priority = priority
+
+    val workloadPayload =
+      createSpecWorkloadRequest(
+        workspaceId = workspaceId,
+        specInput = specInput,
+        workloadPriority = priority,
+        signalInput = signalInput,
+      )
+
+    createCommand(
+      commandId = commandId,
+      commandType = CommandType.SPEC.name,
+      commandInput = commandInput,
+      workspaceId = workspaceId,
+      workloadPayload = workloadPayload,
+    )
+    return true
+  }
+
+  fun createSpecCommand(
+    commandId: String,
+    actorDefinitionId: UUID,
+    dockerImageTag: String,
+    workspaceId: UUID,
+    signalInput: String?,
+    commandInput: JsonNode,
+  ): Boolean {
+    if (commandsRepository.existsById(commandId)) {
+      return false
+    }
+
+    val specInput =
+      jobInputService.getSpecInput(
+        actorDefinitionId = actorDefinitionId,
+        dockerImageTag = dockerImageTag,
+        workspaceId = workspaceId,
+        jobId = null,
+        attemptId = null,
+      )
+    // Spec commands always use HIGH priority
+    val priority = WorkloadPriority.HIGH
+    specInput.launcherConfig.priority = priority
+
+    val workloadPayload =
+      createSpecWorkloadRequest(
+        workspaceId = workspaceId,
+        specInput = specInput,
+        workloadPriority = priority,
+        signalInput = signalInput,
+      )
+
+    createCommand(
+      commandId = commandId,
+      commandType = CommandType.SPEC.name,
+      commandInput = commandInput,
+      workspaceId = workspaceId,
+      workloadPayload = workloadPayload,
+    )
+    return true
+  }
+
+  private fun createSpecWorkloadRequest(
+    workspaceId: UUID,
+    specInput: SpecInput,
+    workloadPriority: WorkloadPriority,
+    signalInput: String?,
+  ): WorkloadCreatePayload {
+    val jobId = specInput.jobRunConfig.jobId
+    val attemptNumber = specInput.jobRunConfig.attemptId
+
+    val workloadId = workloadIdGenerator.generateSpecWorkloadId(jobId = jobId)
+
+    val labels =
+      listOf(
+        WorkloadLabel(key = WorkloadLabels.JOB_LABEL_KEY, value = jobId),
+        WorkloadLabel(key = WorkloadLabels.ATTEMPT_LABEL_KEY, value = attemptNumber.toString()),
+        WorkloadLabel(key = WorkloadLabels.WORKSPACE_LABEL_KEY, value = workspaceId.toString()),
+      )
+
+    val dataplaneGroupId = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).dataplaneGroupId
+
+    return WorkloadCreatePayload(
+      workloadId = workloadId,
+      labels = labels,
+      workloadInput = Jsons.serialize(specInput),
+      logPath = logClientManager.fullLogPath(Path.of(workloadId)),
+      type = WorkloadType.SPEC,
+      priority = workloadPriority,
+      dataplaneGroupId = dataplaneGroupId,
+      signalInput = signalInput,
+      mutexKey = null,
+    )
+  }
 
   /** Create a Check command for an actorDefinitionId and a configuration
    *
@@ -585,6 +706,29 @@ class CommandService(
     val failureReason: FailureReason?,
     val logs: JobLogs?,
   )
+
+  data class SpecJobOutput(
+    val spec: ConnectorSpecification?,
+    val failureReason: FailureReason?,
+    val logs: JobLogs?,
+  )
+
+  fun getSpecJobOutput(
+    commandId: String,
+    withLogs: Boolean,
+  ): SpecJobOutput? =
+    getConnectorJobOutput(commandId) { failureReason ->
+      ConnectorJobOutput()
+        .withOutputType(ConnectorJobOutput.OutputType.SPEC)
+        .withSpec(null)
+        .withFailureReason(failureReason)
+    }?.let { jobOutput ->
+      return SpecJobOutput(
+        spec = jobOutput.spec,
+        failureReason = jobOutput.failureReason,
+        logs = if (withLogs) getJobLogs(commandId) else null,
+      )
+    }
 
   data class DiscoverJobOutput(
     val catalogId: UUID?,

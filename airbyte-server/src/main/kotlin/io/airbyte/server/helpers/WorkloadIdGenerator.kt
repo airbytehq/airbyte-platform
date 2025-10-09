@@ -50,4 +50,6 @@ class WorkloadIdGenerator {
     jobId: Long,
     attemptNumber: Long,
   ): String = "${connectionId}_${jobId}_${attemptNumber}_sync"
+
+  fun generateSpecWorkloadId(jobId: String): String = "${jobId}_spec"
 }

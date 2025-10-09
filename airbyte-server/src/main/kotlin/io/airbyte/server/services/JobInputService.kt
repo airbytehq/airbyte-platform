@@ -65,6 +65,7 @@ import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.RefreshSchemaActivityOutput
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.models.ReplicationFeatureFlags
+import io.airbyte.workers.models.SpecInput
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.server.exceptions.NotFoundException
 import jakarta.inject.Singleton
@@ -92,6 +93,72 @@ class JobInputService(
 ) {
   companion object {
     private val HASH_FUNCTION = Hashing.md5()
+  }
+
+  fun getSpecInput(
+    dockerImage: String,
+    dockerImageTag: String,
+    workspaceId: UUID,
+    jobId: String?,
+    attemptId: Long?,
+    isCustomConnector: Boolean = true,
+  ): SpecInput {
+    val finalJobId = jobId ?: UUID.randomUUID().toString()
+    val finalAttemptId = attemptId ?: 0L
+    // Because the launcher config input concatenates image and tag
+    val finalDockerImage = "$dockerImage:$dockerImageTag"
+
+    return SpecInput(
+      jobRunConfig =
+        JobRunConfig()
+          .withJobId(finalJobId)
+          .withAttemptId(finalAttemptId),
+      launcherConfig =
+        IntegrationLauncherConfig()
+          .withJobId(finalJobId)
+          .withWorkspaceId(workspaceId)
+          .withDockerImage(finalDockerImage)
+          .withIsCustomConnector(isCustomConnector)
+          .withAttemptId(finalAttemptId),
+    )
+  }
+
+  fun getSpecInput(
+    actorDefinitionId: UUID,
+    dockerImageTag: String,
+    workspaceId: UUID,
+    jobId: String?,
+    attemptId: Long?,
+  ): SpecInput {
+    val actorDefinition =
+      actorDefinitionRepository.findByActorDefinitionId(actorDefinitionId)
+        ?: throw NotFoundException()
+
+    val (actorDefinitionVersion, isCustomConnector) =
+      when (actorDefinition.actorType) {
+        ActorType.source -> {
+          val sourceDefinition = sourceService.getStandardSourceDefinition(actorDefinitionId)
+          val version = actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, null)
+          Pair(version, sourceDefinition.custom)
+        }
+        ActorType.destination -> {
+          val destinationDefinition = destinationService.getStandardDestinationDefinition(actorDefinitionId)
+          val version = actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, null)
+          Pair(version, destinationDefinition.custom)
+        }
+        else -> throw IllegalStateException("Actor type ${actorDefinition.actorType} not supported")
+      }
+
+    val dockerImage = actorDefinitionVersion.dockerRepository
+
+    return getSpecInput(
+      dockerImage = dockerImage,
+      dockerImageTag = dockerImageTag,
+      workspaceId = workspaceId,
+      jobId = jobId,
+      attemptId = attemptId,
+      isCustomConnector = isCustomConnector,
+    )
   }
 
   fun getCheckInput(

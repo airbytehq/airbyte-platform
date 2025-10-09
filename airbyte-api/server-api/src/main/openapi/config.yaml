@@ -6531,6 +6531,54 @@ paths:
                   id:
                     type: string
 
+  /v1/commands/run/spec:
+    post:
+      summary: Run a Spec command for a Connector
+      description: >
+        Expected input is an id and either a docker_image and docker_image_tag to run spec for a custom connector
+        or an actor_definition_id and docker_image_tag to run spec for a registered actor definition.
+      tags: [command, internal]
+      operationId: runSpecCommand
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RunSpecCommandRequest
+              required: [id, workspace_id, docker_image_tag]
+              properties:
+                id:
+                  type: string
+                  description: a command id which acts as an idempotency key.
+                workspace_id:
+                  type: string
+                  format: uuid
+                docker_image:
+                  type: string
+                  description: the docker image (without tag) for a custom connector
+                docker_image_tag:
+                  type: string
+                  description: the docker image tag
+                actor_definition_id:
+                  type: string
+                  format: uuid
+                  description: the actor definition id for a registered connector
+                signal_input:
+                  type: string
+                  description: internal usage
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: RunSpecCommandResponse
+                required: [id]
+                properties:
+                  id:
+                    type: string
+
   /v1/commands/output/check:
     post:
       summary: Get the status of a check command
@@ -6653,6 +6701,46 @@ paths:
                       $ref: "#/components/schemas/FailureReason"
                   catalog:
                     $ref: "#/components/schemas/AirbyteCatalog"
+
+  /v1/commands/output/spec:
+    post:
+      summary: Get the output of a spec command
+      tags: [command]
+      operationId: getSpecCommandOutput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: SpecCommandOutputRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+                with_logs:
+                  type: boolean
+                  default: false
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: SpecCommandOutputResponse
+                required: [id, status]
+                properties:
+                  id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [succeeded, failed]
+                  spec:
+                    type: object
+                  failureReason:
+                    $ref: "#/components/schemas/FailureReason"
+                  logs:
+                    $ref: "#/components/schemas/JobLogs"
 
   /v1/commands/status:
     post:

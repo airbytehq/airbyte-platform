@@ -31,6 +31,7 @@ import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.AirbyteStream
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.protocol.models.v0.DestinationCatalog
 import io.airbyte.protocol.models.v0.DestinationOperation
 import io.airbyte.protocol.models.v0.DestinationSyncMode
@@ -39,6 +40,7 @@ import io.airbyte.server.repositories.CommandsRepository
 import io.airbyte.server.repositories.domain.Command
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.ReplicationActivityInput
+import io.airbyte.workers.models.SpecInput
 import io.airbyte.workload.common.WorkloadQueueService
 import io.airbyte.workload.output.DocStoreAccessException
 import io.airbyte.workload.output.WorkloadOutputDocStoreReader
@@ -516,6 +518,46 @@ class CommandServiceTest {
   }
 
   @Test
+  fun `getSpecJobOutput returns spec when successful`() {
+    val spec =
+      ConnectorSpecification()
+        .withProtocolVersion("0.2.0")
+        .withConnectionSpecification(Jsons.jsonNode(mapOf("type" to "object")))
+    val workloadOutput = ConnectorJobOutput().withOutputType(OutputType.SPEC).withSpec(spec)
+    every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } returns workloadOutput
+    val output = service.getSpecJobOutput(COMMAND_ID, withLogs = false)
+    val expectedOutput =
+      CommandService.SpecJobOutput(
+        spec = spec,
+        failureReason = null,
+        logs = null,
+      )
+    assertEquals(expectedOutput, output)
+  }
+
+  @Test
+  fun `getSpecJobOutput returns failure without crashing`() {
+    val failure = FailureReason().withFailureOrigin(FailureReason.FailureOrigin.SOURCE).withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
+    val workloadOutput = ConnectorJobOutput().withOutputType(OutputType.SPEC).withFailureReason(failure)
+    every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } returns workloadOutput
+    val output = service.getSpecJobOutput(COMMAND_ID, withLogs = false)
+    val expectedOutput =
+      CommandService.SpecJobOutput(
+        spec = null,
+        failureReason = failure,
+        logs = null,
+      )
+    assertEquals(expectedOutput, output)
+  }
+
+  @Test
+  fun `getSpecJobOutput returns null for unknown command ids`() {
+    val output = service.getSpecJobOutput(UNKNOWN_COMMAND_ID, withLogs = false)
+    verify(exactly = 0) { workloadOutputReader.readConnectorOutput(any()) }
+    assertNull(output)
+  }
+
+  @Test
   fun `getReplicationOutput returns an output (happy path)`() {
     val expectedOutput =
       ReplicationOutput()
@@ -754,5 +796,142 @@ class CommandServiceTest {
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
       )
+  }
+
+  @Test
+  fun `createSpec with dockerImage returns false if command exists`() {
+    every { commandsRepository.existsById(COMMAND_ID) } returns true
+    val output =
+      service.createSpecCommand(
+        commandId = COMMAND_ID,
+        dockerImage = "airbyte/source-test",
+        dockerImageTag = "1.0.0",
+        workspaceId = WORKSPACE_ID,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+    assertFalse(output)
+  }
+
+  @Test
+  fun `createSpec with actorDefinitionId returns false if command exists`() {
+    every { commandsRepository.existsById(COMMAND_ID) } returns true
+    val output =
+      service.createSpecCommand(
+        commandId = COMMAND_ID,
+        actorDefinitionId = UUID.randomUUID(),
+        dockerImageTag = "1.0.0",
+        workspaceId = WORKSPACE_ID,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+    assertFalse(output)
+  }
+
+  @Test
+  fun `creating a spec command with dockerImage successfully saves the command and enqueues the workload`() {
+    val jobId = UUID.randomUUID().toString()
+    val attemptNumber = 0L
+    val workloadInput = slot<String>()
+    every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { jobInputService.getSpecInput(any<String>(), any<String>(), any(), any(), any(), any()) } returns
+      io.airbyte.workers.models.SpecInput(
+        jobRunConfig = JobRunConfig().withJobId(jobId).withAttemptId(attemptNumber),
+        launcherConfig = IntegrationLauncherConfig(),
+      )
+    every {
+      workloadService.createWorkload(any(), any(), capture(workloadInput), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+    } returns
+      mockk()
+    every { commandsRepository.save(any()) } returns mockk()
+    every { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Unit
+
+    val output =
+      service.createSpecCommand(
+        commandId = COMMAND_ID,
+        dockerImage = "airbyte/source-test",
+        dockerImageTag = "1.0.0",
+        workspaceId = WORKSPACE_ID,
+        signalInput = "test-signal",
+        commandInput = Jsons.emptyObject(),
+      )
+    assertTrue(output)
+
+    verify { commandsRepository.save(any()) }
+    verify { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+
+    // Ensuring this is added because it impacts nodepool selection in the launcher
+    val actualInput = Jsons.deserialize(workloadInput.captured)
+    assertEquals(WorkloadPriority.HIGH.toString(), actualInput["launcherConfig"]["priority"].asText())
+  }
+
+  @Test
+  fun `creating a spec command with actorDefinitionId successfully saves the command and enqueues the workload`() {
+    val jobId = UUID.randomUUID().toString()
+    val attemptNumber = 0L
+    val actorDefinitionId = UUID.randomUUID()
+    val workloadInput = slot<String>()
+    every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { jobInputService.getSpecInput(any<UUID>(), any<String>(), any(), any(), any()) } returns
+      SpecInput(
+        jobRunConfig = JobRunConfig().withJobId(jobId).withAttemptId(attemptNumber),
+        launcherConfig = IntegrationLauncherConfig(),
+      )
+    every {
+      workloadService.createWorkload(any(), any(), capture(workloadInput), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+    } returns
+      mockk()
+    every { commandsRepository.save(any()) } returns mockk()
+    every { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Unit
+
+    val output =
+      service.createSpecCommand(
+        commandId = COMMAND_ID,
+        actorDefinitionId = actorDefinitionId,
+        dockerImageTag = "2.0.0",
+        workspaceId = WORKSPACE_ID,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+    assertTrue(output)
+
+    verify { commandsRepository.save(any()) }
+    verify { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+
+    // Ensuring HIGH priority is set
+    val actualInput = Jsons.deserialize(workloadInput.captured)
+    assertEquals(WorkloadPriority.HIGH.toString(), actualInput["launcherConfig"]["priority"].asText())
+  }
+
+  @Test
+  fun `creating a spec command handles ConflictException when workload already exists`() {
+    val jobId = UUID.randomUUID().toString()
+    val attemptNumber = 0L
+    every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { jobInputService.getSpecInput(any<String>(), any<String>(), any(), any(), any(), any()) } returns
+      SpecInput(
+        jobRunConfig = JobRunConfig().withJobId(jobId).withAttemptId(attemptNumber),
+        launcherConfig = IntegrationLauncherConfig(),
+      )
+    every {
+      workloadService.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+    } throws ConflictException("Workload already exists")
+    every { commandsRepository.save(any()) } returns mockk()
+
+    val output =
+      service.createSpecCommand(
+        commandId = COMMAND_ID,
+        dockerImage = "airbyte/source-test",
+        dockerImageTag = "1.0.0",
+        workspaceId = WORKSPACE_ID,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+    assertTrue(output)
+
+    // Command should still be saved
+    verify { commandsRepository.save(any()) }
+    // But workload queue should not be called
+    verify(exactly = 0) { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
   }
 }

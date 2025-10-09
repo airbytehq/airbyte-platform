@@ -19,6 +19,10 @@ import io.airbyte.api.model.generated.ReplicateCommandOutputRequest
 import io.airbyte.api.model.generated.ReplicateCommandOutputResponse
 import io.airbyte.api.model.generated.RunCheckCommandRequest
 import io.airbyte.api.model.generated.RunCheckCommandResponse
+import io.airbyte.api.model.generated.RunSpecCommandRequest
+import io.airbyte.api.model.generated.RunSpecCommandResponse
+import io.airbyte.api.model.generated.SpecCommandOutputRequest
+import io.airbyte.api.model.generated.SpecCommandOutputResponse
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.json.Jsons
@@ -43,6 +47,7 @@ import io.airbyte.domain.models.ConnectionId
 import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.AirbyteStream
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.protocol.models.v0.DestinationCatalog
 import io.airbyte.protocol.models.v0.DestinationOperation
 import io.airbyte.protocol.models.v0.DestinationSyncMode
@@ -748,6 +753,299 @@ class CommandApiControllerTest {
   }
 
   @Test
+  fun `run spec with docker image and tag`() {
+    val dockerImage = "airbyte/source-test"
+    val dockerImageTag = "1.0.0"
+    val request =
+      RunSpecCommandRequest()
+        .id(TEST_COMMAND_ID)
+        .workspaceId(TEST_WORKSPACE_ID)
+        .dockerImage(dockerImage)
+        .dockerImageTag(dockerImageTag)
+
+    val output = controller.runSpecCommand(request)
+
+    assertEquals(RunSpecCommandResponse().id(TEST_COMMAND_ID), output)
+    verify {
+      commandService.createSpecCommand(
+        commandId = TEST_COMMAND_ID,
+        dockerImage = dockerImage,
+        dockerImageTag = dockerImageTag,
+        workspaceId = TEST_WORKSPACE_ID,
+        signalInput = null,
+        commandInput = Jsons.jsonNode(request),
+      )
+    }
+  }
+
+  @Test
+  fun `run spec with docker image, tag and signal input`() {
+    val dockerImage = "airbyte/source-postgres"
+    val dockerImageTag = "2.0.0"
+    val request =
+      RunSpecCommandRequest()
+        .id(TEST_COMMAND_ID)
+        .workspaceId(TEST_WORKSPACE_ID)
+        .dockerImage(dockerImage)
+        .dockerImageTag(dockerImageTag)
+        .signalInput(TEST_SIGNAL_INPUT)
+
+    val output = controller.runSpecCommand(request)
+
+    assertEquals(RunSpecCommandResponse().id(TEST_COMMAND_ID), output)
+    verify {
+      commandService.createSpecCommand(
+        commandId = TEST_COMMAND_ID,
+        dockerImage = dockerImage,
+        dockerImageTag = dockerImageTag,
+        workspaceId = TEST_WORKSPACE_ID,
+        signalInput = TEST_SIGNAL_INPUT,
+        commandInput = Jsons.jsonNode(request),
+      )
+    }
+  }
+
+  @Test
+  fun `run spec with actor definition id`() {
+    val dockerImageTag = "1.5.0"
+    val request =
+      RunSpecCommandRequest()
+        .id(TEST_COMMAND_ID)
+        .workspaceId(TEST_WORKSPACE_ID)
+        .actorDefinitionId(TEST_ACTOR_DEFINITION_ID)
+        .dockerImageTag(dockerImageTag)
+
+    val output = controller.runSpecCommand(request)
+
+    assertEquals(RunSpecCommandResponse().id(TEST_COMMAND_ID), output)
+    verify {
+      commandService.createSpecCommand(
+        commandId = TEST_COMMAND_ID,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+        dockerImageTag = dockerImageTag,
+        workspaceId = TEST_WORKSPACE_ID,
+        signalInput = null,
+        commandInput = Jsons.jsonNode(request),
+      )
+    }
+  }
+
+  @Test
+  fun `run spec with actor definition id and signal input`() {
+    val dockerImageTag = "3.0.0"
+    val request =
+      RunSpecCommandRequest()
+        .id(TEST_COMMAND_ID)
+        .workspaceId(TEST_WORKSPACE_ID)
+        .actorDefinitionId(TEST_ACTOR_DEFINITION_ID)
+        .dockerImageTag(dockerImageTag)
+        .signalInput(TEST_SIGNAL_INPUT)
+
+    val output = controller.runSpecCommand(request)
+
+    assertEquals(RunSpecCommandResponse().id(TEST_COMMAND_ID), output)
+    verify {
+      commandService.createSpecCommand(
+        commandId = TEST_COMMAND_ID,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+        dockerImageTag = dockerImageTag,
+        workspaceId = TEST_WORKSPACE_ID,
+        signalInput = TEST_SIGNAL_INPUT,
+        commandInput = Jsons.jsonNode(request),
+      )
+    }
+  }
+
+  @Test
+  fun `run spec throws exception when neither docker image nor actor definition id provided`() {
+    val request =
+      RunSpecCommandRequest()
+        .id(TEST_COMMAND_ID)
+        .workspaceId(TEST_WORKSPACE_ID)
+        .dockerImageTag("1.0.0")
+
+    val exception =
+      assertThrows<IllegalArgumentException> {
+        controller.runSpecCommand(request)
+      }
+
+    assertEquals("docker_image is required when actor_definition_id is not provided", exception.message)
+    verify { commandService wasNot Called }
+  }
+
+  @Test
+  fun `run spec prioritizes actor definition id when both are provided`() {
+    val dockerImage = "airbyte/source-test"
+    val dockerImageTag = "1.0.0"
+    val request =
+      RunSpecCommandRequest()
+        .id(TEST_COMMAND_ID)
+        .workspaceId(TEST_WORKSPACE_ID)
+        .dockerImage(dockerImage)
+        .dockerImageTag(dockerImageTag)
+        .actorDefinitionId(TEST_ACTOR_DEFINITION_ID)
+
+    val output = controller.runSpecCommand(request)
+
+    assertEquals(RunSpecCommandResponse().id(TEST_COMMAND_ID), output)
+    // Should use actor definition id path, not docker image path
+    verify {
+      commandService.createSpecCommand(
+        commandId = TEST_COMMAND_ID,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+        dockerImageTag = dockerImageTag,
+        workspaceId = TEST_WORKSPACE_ID,
+        signalInput = null,
+        commandInput = Jsons.jsonNode(request),
+      )
+    }
+  }
+
+  @Test
+  fun `getSpecCommandOutput can return a successful response`() {
+    val spec =
+      ConnectorSpecification()
+        .withConnectionSpecification(Jsons.deserialize("""{"type":"object","properties":{}}"""))
+    every { commandService.getSpecJobOutput(commandId = TEST_COMMAND_ID, withLogs = false) } returns
+      CommandService.SpecJobOutput(
+        spec = spec,
+        failureReason = null,
+        logs = null,
+      )
+
+    val output = controller.getSpecCommandOutput(SpecCommandOutputRequest().id(TEST_COMMAND_ID))
+
+    assertEquals(TEST_COMMAND_ID, output.id)
+    assertEquals(SpecCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(Jsons.jsonNode(spec), output.spec)
+    assertEquals(null, output.failureReason)
+    assertEquals(null, output.logs)
+    verify { commandService.getSpecJobOutput(commandId = TEST_COMMAND_ID, withLogs = false) }
+  }
+
+  @Test
+  fun `getSpecCommandOutput can return a failure response`() {
+    every { commandService.getSpecJobOutput(commandId = TEST_COMMAND_ID, withLogs = false) } returns
+      CommandService.SpecJobOutput(
+        spec = null,
+        failureReason =
+          FailureReason()
+            .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
+            .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
+            .withExternalMessage("external spec facing message")
+            .withInternalMessage("internal spec facing message")
+            .withStacktrace("my spec stacktrace")
+            .withTimestamp(3)
+            .withRetryable(false),
+        logs = null,
+      )
+
+    val output = controller.getSpecCommandOutput(SpecCommandOutputRequest().id(TEST_COMMAND_ID))
+
+    assertEquals(TEST_COMMAND_ID, output.id)
+    assertEquals(SpecCommandOutputResponse.StatusEnum.FAILED, output.status)
+    assertEquals(null, output.spec)
+    assertEquals(
+      ApiFailureReason()
+        .failureOrigin(FailureOrigin.SOURCE)
+        .failureType(FailureType.SYSTEM_ERROR)
+        .externalMessage("external spec facing message")
+        .internalMessage("internal spec facing message")
+        .stacktrace("my spec stacktrace")
+        .timestamp(3)
+        .retryable(false),
+      output.failureReason,
+    )
+    verify { commandService.getSpecJobOutput(commandId = TEST_COMMAND_ID, withLogs = false) }
+  }
+
+  @Test
+  fun `getSpecCommandOutput returns structured logs when withLogs is true`() {
+    val spec =
+      ConnectorSpecification()
+        .withConnectionSpecification(Jsons.deserialize("""{"type":"object"}"""))
+    val logEvents =
+      io.airbyte.commons.logging.LogEvents(
+        events =
+          listOf(
+            io.airbyte.commons.logging.LogEvent(
+              timestamp = 1234567890L,
+              message = "Spec log message",
+              level = "INFO",
+              logSource = io.airbyte.commons.logging.LogSource.PLATFORM,
+            ),
+          ),
+        version = "1",
+      )
+    every { commandService.getSpecJobOutput(commandId = TEST_COMMAND_ID, withLogs = true) } returns
+      CommandService.SpecJobOutput(
+        spec = spec,
+        failureReason = null,
+        logs = CommandService.JobLogs.createStructuredLogs(logEvents),
+      )
+
+    val output = controller.getSpecCommandOutput(SpecCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(true))
+
+    assertEquals(TEST_COMMAND_ID, output.id)
+    assertEquals(SpecCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(Jsons.jsonNode(spec), output.spec)
+    assertEquals(io.airbyte.api.model.generated.LogFormatType.STRUCTURED, output.logs?.logType)
+    assertEquals(
+      1,
+      output.logs
+        ?.logEvents
+        ?.events
+        ?.size,
+    )
+    assertEquals("1", output.logs?.logEvents?.version)
+    verify { commandService.getSpecJobOutput(commandId = TEST_COMMAND_ID, withLogs = true) }
+  }
+
+  @Test
+  fun `getSpecCommandOutput returns formatted logs when withLogs is true and logs are formatted`() {
+    val spec =
+      ConnectorSpecification()
+        .withConnectionSpecification(Jsons.deserialize("""{"type":"object"}"""))
+    val logLines = listOf("spec line 1", "spec line 2")
+    every { commandService.getSpecJobOutput(commandId = TEST_COMMAND_ID, withLogs = true) } returns
+      CommandService.SpecJobOutput(
+        spec = spec,
+        failureReason = null,
+        logs = CommandService.JobLogs.createFormattedLogs(logLines),
+      )
+
+    val output = controller.getSpecCommandOutput(SpecCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(true))
+
+    assertEquals(TEST_COMMAND_ID, output.id)
+    assertEquals(SpecCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(Jsons.jsonNode(spec), output.spec)
+    assertEquals(io.airbyte.api.model.generated.LogFormatType.FORMATTED, output.logs?.logType)
+    assertEquals(2, output.logs?.logLines?.size)
+    assertEquals("spec line 1", output.logs?.logLines?.get(0))
+    verify { commandService.getSpecJobOutput(commandId = TEST_COMMAND_ID, withLogs = true) }
+  }
+
+  @Test
+  fun `getSpecCommandOutput returns no logs when withLogs is false`() {
+    val spec =
+      ConnectorSpecification()
+        .withConnectionSpecification(Jsons.deserialize("""{"type":"object"}"""))
+    every { commandService.getSpecJobOutput(commandId = TEST_COMMAND_ID, withLogs = false) } returns
+      CommandService.SpecJobOutput(
+        spec = spec,
+        failureReason = null,
+        logs = null,
+      )
+
+    val output = controller.getSpecCommandOutput(SpecCommandOutputRequest().id(TEST_COMMAND_ID).withLogs(false))
+
+    assertEquals(TEST_COMMAND_ID, output.id)
+    assertEquals(SpecCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(Jsons.jsonNode(spec), output.spec)
+    assertEquals(null, output.logs)
+    verify { commandService.getSpecJobOutput(commandId = TEST_COMMAND_ID, withLogs = false) }
+  }
+
   fun `getDiscoverCommandOutput converts source catalog to API format`() {
     val catalogId = UUID.randomUUID()
     val protocolCatalog = AirbyteCatalog().withStreams(listOf(AirbyteStream().withName("source_stream")))
@@ -763,7 +1061,6 @@ class CommandApiControllerTest {
         failureReason = null,
         logs = null,
       )
-
     val apiCatalog =
       ApiAirbyteCatalog().streams(
         listOf(
