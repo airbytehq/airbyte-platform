@@ -150,7 +150,7 @@ airbyte:
     token-expiration:
       application-token-expiration-in-minutes: ${AB_AIRBYTE_AUTH_TOKEN_EXPIRATION_APPLICATION:15}
       dataplane-token-expiration-in-minutes: ${AB_AIRBYTE_AUTH_TOKEN_EXPIRATION_DATAPLANE:5}
-    token-issuer: ${WEBAPP_URL}
+    token-issuer: ${AIRBYTE_URL}
     initial-user:
       email: ${INITIAL_USER_EMAIL:}
       first-name: ${INITIAL_USER_FIRST_NAME:}
@@ -160,7 +160,7 @@ airbyte:
       verify-issuer: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_ISSUER:false}
       verify-audience: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_AUDIENCE:false}
       issuers:
-        - ${WEBAPP_URL}
+        - ${AIRBYTE_URL}
         - ${DEFAULT_REALM:airbyte}
         - ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ISSUER:}
       audiences:
@@ -421,7 +421,7 @@ airbyte:
         rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
         rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
   web-app:
-    url: ${WEBAPP_URL:}
+    url: ${AIRBYTE_URL:}
     datadog_application_id: ${WEBAPP_DATADOG_APPLICATION_ID:}
     datadog_client_token: ${WEBAPP_DATADOG_CLIENT_TOKEN:}
     datadog_env: ${WEBAPP_DATADOG_ENV:}

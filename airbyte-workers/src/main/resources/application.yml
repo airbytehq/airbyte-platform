@@ -215,7 +215,7 @@ airbyte:
     write-key: ${SEGMENT_WRITE_KEY:}
   version: ${AIRBYTE_VERSION:dev}
   web-app:
-    url: ${WEBAPP_URL:}
+    url: ${AIRBYTE_URL:}
   workflow:
     failure:
       restart-delay: ${WORKFLOW_FAILURE_RESTART_DELAY_SECONDS:600}
