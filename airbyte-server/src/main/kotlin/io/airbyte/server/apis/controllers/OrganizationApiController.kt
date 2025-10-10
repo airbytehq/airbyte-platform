@@ -5,10 +5,13 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.OrganizationApi
+import io.airbyte.api.model.generated.DataWorkerUsage
 import io.airbyte.api.model.generated.ListOrganizationSummariesRequestBody
 import io.airbyte.api.model.generated.ListOrganizationSummariesResponse
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody
+import io.airbyte.api.model.generated.OrganizationDataWorkerUsageRead
+import io.airbyte.api.model.generated.OrganizationDataWorkerUsageRequestBody
 import io.airbyte.api.model.generated.OrganizationIdRequestBody
 import io.airbyte.api.model.generated.OrganizationInfoRead
 import io.airbyte.api.model.generated.OrganizationRead
@@ -16,6 +19,8 @@ import io.airbyte.api.model.generated.OrganizationReadList
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
 import io.airbyte.api.model.generated.OrganizationUsageRead
 import io.airbyte.api.model.generated.OrganizationUsageRequestBody
+import io.airbyte.api.model.generated.RegionDataWorkerUsage
+import io.airbyte.api.model.generated.WorkspaceDataWorkerUsage
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
@@ -32,6 +37,9 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
+import java.time.LocalDate
+import java.util.UUID
+import kotlin.random.Random
 
 @Controller("/api/v1/organizations")
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -102,5 +110,45 @@ open class OrganizationApiController(
       organizationAccessAuthorizationHelper.validateOrganizationOrWorkspaceAccess(organizationId)
 
       organizationsHandler.getOrganizationInfo(organizationId)
+    }
+
+  @Post("/get_data_worker_usage")
+  @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getOrganizationDataWorkerUsage(
+    @Body organizationDataWorkerUsageRequestBody: OrganizationDataWorkerUsageRequestBody,
+  ): OrganizationDataWorkerUsageRead? =
+    execute {
+      val regionNames = listOf("US-WEST-1", "US-WEST-2", "US-EAST-1")
+      val workspacesPerRegion = 3
+
+      fun dataWorkers(
+        start: LocalDate,
+        end: LocalDate,
+      ) = buildList {
+        var d = start
+        while (!d.isAfter(end)) {
+          add(DataWorkerUsage().date(d).used(Random.nextDouble(0.0, 3.0)))
+          d = d.plusDays(1)
+        }
+      }
+
+      OrganizationDataWorkerUsageRead()
+        .organizationId(organizationDataWorkerUsageRequestBody.organizationId)
+        .regions(
+          regionNames.map { regionName ->
+            RegionDataWorkerUsage()
+              .id(UUID.randomUUID())
+              .name(regionName)
+              .workspaces(
+                (1..workspacesPerRegion).map { idx ->
+                  WorkspaceDataWorkerUsage()
+                    .id(UUID.randomUUID())
+                    .name("$regionName workspace $idx")
+                    .dataWorkers(dataWorkers(organizationDataWorkerUsageRequestBody.startDate, organizationDataWorkerUsageRequestBody.endDate))
+                },
+              )
+          },
+        )
     }
 }

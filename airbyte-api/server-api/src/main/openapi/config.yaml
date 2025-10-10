@@ -5522,6 +5522,26 @@ paths:
                 $ref: "#/components/schemas/OrganizationUsageRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/organizations/get_data_worker_usage:
+    post:
+      summary: Get data worker usage for an organization
+      tags:
+        - organization
+      operationId: getOrganizationDataWorkerUsage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationDataWorkerUsageRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationDataWorkerUsageRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/organizations/list_summaries:
     post:
       tags:
@@ -15412,6 +15432,75 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/IndividualWorkspaceUsageRead"
+    OrganizationDataWorkerUsageRequestBody:
+      type: object
+      required:
+        - organizationId
+        - startDate
+        - endDate
+      properties:
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+    OrganizationDataWorkerUsageRead:
+      type: object
+      required:
+        - organizationId
+        - regions
+      properties:
+        organizationId:
+          $ref: "#/components/schemas/OrganizationId"
+        regions:
+          type: array
+          items:
+            $ref: "#/components/schemas/RegionDataWorkerUsage"
+    RegionDataWorkerUsage:
+      type: object
+      required:
+        - id
+        - name
+        - workspaces
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        workspaces:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceDataWorkerUsage"
+    WorkspaceDataWorkerUsage:
+      type: object
+      required:
+        - id
+        - name
+        - dataWorkers
+      properties:
+        id:
+          $ref: "#/components/schemas/WorkspaceId"
+        name:
+          type: string
+        dataWorkers:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataWorkerUsage"
+    DataWorkerUsage:
+      type: object
+      required:
+        - date
+        - used
+      properties:
+        date:
+          type: string
+          format: date
+        used:
+          type: double
     ListOrganizationSummariesRequestBody:
       type: object
       required:
