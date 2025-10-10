@@ -1,3 +1,5 @@
+@use "scss/colors";
+
 .switch {
   width: 100px;
 }
@@ -6,4 +8,28 @@
   // Max width on the schedule button to prevent it from becoming too wide in case the
   // schedule is a complex cron expression.
   max-width: 250px;
+}
+
+.clearPrimaryButton {
+  color: colors.$blue;
+
+  &:hover:not(:disabled) {
+    color: colors.$blue-500;
+  }
+
+  &:active:not(:disabled) {
+    color: colors.$blue-600;
+  }
+}
+
+.clearErrorButton {
+  color: colors.$red;
+
+  &:hover:not(:disabled) {
+    color: colors.$red-400;
+  }
+
+  &:active:not(:disabled) {
+    color: colors.$red-600;
+  }
 }

@@ -6,7 +6,6 @@ import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { SwitchNext } from "components/ui/SwitchNext";
-import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { useCurrentConnection } from "core/api";
@@ -106,11 +105,9 @@ export const ConnectionHeaderControls: React.FC = () => {
           disabled={isSyncActionsDisabled}
           icon={syncStarting || clearStarting || refreshStarting ? "loading" : "sync"}
           iconSize="sm"
-          iconColor="primary"
+          className={styles.clearPrimaryButton}
         >
-          <Text size="md" color="blue" bold>
-            <FormattedMessage id="connection.startSync" />
-          </Text>
+          <FormattedMessage id="connection.startSync" />
         </Button>
       )}
       {connectionStatus.status === ConnectionSyncStatus.running && cancelJob && (
@@ -120,19 +117,17 @@ export const ConnectionHeaderControls: React.FC = () => {
           data-testid="cancel-sync-button"
           variant="clear"
           icon={cancelStarting ? "loading" : "cross"}
-          iconColor="error"
+          className={styles.clearErrorButton}
         >
-          <Text size="md" color="red" bold>
-            <FormattedMessage
-              id={
-                clearStarting || jobClearRunning
-                  ? "connection.cancelDataClear"
-                  : jobRefreshRunning || refreshStarting
-                  ? "connection.cancelRefresh"
-                  : "connection.cancelSync"
-              }
-            />
-          </Text>
+          <FormattedMessage
+            id={
+              clearStarting || jobClearRunning
+                ? "connection.cancelDataClear"
+                : jobRefreshRunning || refreshStarting
+                ? "connection.cancelRefresh"
+                : "connection.cancelSync"
+            }
+          />
         </Button>
       )}
       <Box p="md">
