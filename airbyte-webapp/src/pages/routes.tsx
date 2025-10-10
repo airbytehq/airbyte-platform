@@ -5,6 +5,7 @@ import { useEffectOnce } from "react-use";
 import { EnterpriseStubConnectorPage } from "components/EnterpriseStubConnectorPage/EnterpriseStubConnectorPage";
 
 import MainLayout from "area/layout/MainLayout";
+import { UserSettingsRoutes } from "area/settings/UserSettingsRoutes";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import {
   useGetInstanceConfiguration,
@@ -16,7 +17,6 @@ import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/servi
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useIntent } from "core/utils/rbac/intent";
 import { useEnterpriseLicenseCheck } from "core/utils/useEnterpriseLicenseCheck";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { useExperiment } from "hooks/services/Experiment";
@@ -24,7 +24,6 @@ import { useApiHealthPoll } from "hooks/services/Health";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useCurrentWorkspace } from "hooks/services/useWorkspace";
 import { useQuery } from "hooks/useQuery";
-import { ApplicationSettingsView } from "packages/cloud/views/users/ApplicationSettingsView/ApplicationSettingsView";
 import { LoginPage } from "pages/login/LoginPage";
 import MainView from "views/layout/MainView";
 
@@ -37,8 +36,6 @@ import { DestinationsPage, SourcesPage } from "./SettingsPage/pages/ConnectorsPa
 import { LicenseSettingsPage } from "./SettingsPage/pages/LicenseDetailsPage/LicenseSettingsPage";
 import { MetricsPage } from "./SettingsPage/pages/MetricsPage";
 import { NotificationPage } from "./SettingsPage/pages/NotificationPage";
-import { GeneralOrganizationSettingsPage } from "./SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
-import { OrganizationMembersPage } from "./SettingsPage/pages/Organization/OrganizationMembersPage";
 import { GeneralWorkspaceSettingsPage } from "./SettingsPage/Workspace/GeneralWorkspaceSettingsPage";
 import { WorkspaceMembersPage } from "./SettingsPage/Workspace/WorkspaceMembersPage";
 import { WorkspaceRead } from "../core/api/types/AirbyteClient";
@@ -85,13 +82,9 @@ const WorkspacesRoutes: React.FC = () => {
   const workspace = useCurrentWorkspace();
   useAddAnalyticsContextForWorkspace(workspace);
 
-  const { organizationId } = workspace;
-  const { applicationSupport } = useAuthService();
+  const { authType } = useAuthService();
   const licenseSettings = useFeature(FeatureItem.EnterpriseLicenseChecking);
-  const isAccessManagementEnabled = useFeature(FeatureItem.RBAC);
-  const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canViewWorkspaceSettings = useGeneratedIntent(Intent.ViewWorkspaceSettings);
-  const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
 
   return (
     <DefaultErrorBoundary>
@@ -125,10 +118,8 @@ const WorkspacesRoutes: React.FC = () => {
         <Route path={`${RoutePaths.Connections}/*`} element={<ConnectionsRoutes />} />
         <Route path="onboarding" element={<OnboardingPage />} />
         <Route path={`${RoutePaths.Settings}/*`} element={<SettingsPage />}>
-          <Route path={SettingsRoutePaths.Account} element={<AccountPage />} />
-          {applicationSupport !== "none" && (
-            <Route path={SettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
-          )}
+          {/* If auth is disabled, there will be no `/user` routes, but we want the account page to still be accessible within the workspace settings */}
+          {authType === "none" && <Route path={SettingsRoutePaths.Account} element={<AccountPage />} />}
           <Route path={SettingsRoutePaths.Workspace} element={<GeneralWorkspaceSettingsPage />} />
           {canViewWorkspaceSettings ? (
             <Route path={SettingsRoutePaths.WorkspaceMembers} element={<WorkspaceMembersPage />} />
@@ -141,19 +132,13 @@ const WorkspacesRoutes: React.FC = () => {
           )}
           <Route path={SettingsRoutePaths.Notifications} element={<NotificationPage />} />
           <Route path={SettingsRoutePaths.Metrics} element={<MetricsPage />} />
-          {canViewOrganizationSettings && (
-            <>
-              <Route path={SettingsRoutePaths.Organization} element={<GeneralOrganizationSettingsPage />} />
-              {isAccessManagementEnabled && displayOrganizationUsers && (
-                <Route path={SettingsRoutePaths.OrganizationMembers} element={<OrganizationMembersPage />} />
-              )}
-            </>
-          )}
+
           {licenseSettings && <Route path={SettingsRoutePaths.License} element={<LicenseSettingsPage />} />}
           <Route path={SettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
-          <Route path="*" element={<Navigate to={SettingsRoutePaths.Account} replace />} />
+          <Route path="*" element={<Navigate to={SettingsRoutePaths.Workspace} replace />} />
         </Route>
         <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
+        {authType !== "none" && <Route path={`${SettingsRoutePaths.User}/*`} element={<UserSettingsRoutes />} />}
         <Route path="*" element={<Navigate to={RoutePaths.Connections} />} />
       </Routes>
     </DefaultErrorBoundary>
@@ -239,6 +224,7 @@ const AuthenticatedRoutes = () => {
   const { initialSetupComplete } = useGetInstanceConfiguration();
   useEnterpriseLicenseCheck();
   const isOrgPickerEnabled = useExperiment("sidebar.showOrgPickerV2");
+  const showOrganizationUI = useFeature(FeatureItem.OrganizationUI);
 
   if (loginRedirect) {
     return <Navigate to={loginRedirect} replace />;
@@ -251,7 +237,9 @@ const AuthenticatedRoutes = () => {
         <Route path="*" element={<PreferencesRoutes />} />
       ) : isOrgPickerEnabled ? (
         <Route element={<MainLayout />}>
-          <Route path={`${RoutePaths.Organization}/:organizationId/*`} element={<OrganizationRoutes />} />
+          {showOrganizationUI && (
+            <Route path={`${RoutePaths.Organization}/:organizationId/*`} element={<OrganizationRoutes />} />
+          )}
           <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<WorkspacesRoutes />} />
           <Route path="*" element={<DefaultView />} />
         </Route>

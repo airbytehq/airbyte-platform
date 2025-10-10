@@ -23,13 +23,13 @@ export const SettingsPage: React.FC = () => {
   // FeatureItem.ShowWorkspacePicker is weirdly being used as a proxy for showing RBAC and source/destination settings
   // pages here. We should clean this up so that we use more appropriate feature items for toggling these pages.
   const showWorkspacePicker = useFeature(FeatureItem.ShowWorkspacePicker);
-  const { applicationSupport } = useAuthService();
   const licenseUi = useFeature(FeatureItem.EnterpriseLicenseChecking);
   const canViewLicenseSettings = useIntent("ViewLicenseDetails", { workspaceId });
   const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canViewWorkspaceSettings = useGeneratedIntent(Intent.ViewWorkspaceSettings);
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
   const showOrgPicker = useExperiment("sidebar.showOrgPickerV2");
+  const { authType } = useAuthService();
 
   const showLicenseUi = licenseUi && canViewLicenseSettings;
   const showOrganizationSection =
@@ -38,20 +38,17 @@ export const SettingsPage: React.FC = () => {
   return (
     <SettingsLayout>
       <SettingsNavigation>
-        <SettingsNavigationBlock title={formatMessage({ id: "settings.userSettings" })}>
-          <SettingsLink
-            iconType="user"
-            name={formatMessage({ id: "settings.account" })}
-            to={SettingsRoutePaths.Account}
-          />
-          {applicationSupport !== "none" && (
+        {/* When auth is not enabled in OSS, the user settings link in the sidebar is not visible. We still want the user to
+        be able to change their email, so this section shows up in the workspace settings instead. */}
+        {authType === "none" && (
+          <SettingsNavigationBlock title={formatMessage({ id: "settings.userSettings" })}>
             <SettingsLink
-              iconType="grid"
-              name={formatMessage({ id: "settings.applications" })}
-              to={SettingsRoutePaths.Applications}
+              iconType="user"
+              name={formatMessage({ id: "settings.account" })}
+              to={SettingsRoutePaths.Account}
             />
-          )}
-        </SettingsNavigationBlock>
+          </SettingsNavigationBlock>
+        )}
         <SettingsNavigationBlock title={formatMessage({ id: "settings.workspaceSettings" })}>
           <SettingsLink
             iconType="gear"

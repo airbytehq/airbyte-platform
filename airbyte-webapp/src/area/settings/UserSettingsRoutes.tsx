@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import { useAuthService } from "core/services/auth";
 import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
 import { SettingsRoutePaths } from "pages/routePaths";
 
@@ -23,11 +24,15 @@ const AdvancedSettingsPage = React.lazy(() =>
 );
 
 export const UserSettingsRoutes: React.FC = () => {
+  const { applicationSupport } = useAuthService();
+
   return (
     <Routes>
       <Route element={<UserSettingsLayout />}>
         <Route path={SettingsRoutePaths.Account} element={<AccountSettingsView />} />
-        <Route path={CloudSettingsRoutePaths.Applications} element={<ApplicationsView />} />
+        {applicationSupport !== "none" && (
+          <Route path={CloudSettingsRoutePaths.Applications} element={<ApplicationsView />} />
+        )}
         <Route path={CloudSettingsRoutePaths.Advanced} element={<AdvancedSettingsPage />} />
         <Route path="*" element={<Navigate to={SettingsRoutePaths.Account} replace />} />
       </Route>

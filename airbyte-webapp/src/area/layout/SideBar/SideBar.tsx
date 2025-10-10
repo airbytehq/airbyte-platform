@@ -218,7 +218,7 @@ export const SideBar: React.FC<PropsWithChildren> = () => {
               options={[
                 {
                   as: "a",
-                  href: `${basePath}/${SettingsRoutePaths.User}`,
+                  href: `${basePath}/${SettingsRoutePaths.User}/${SettingsRoutePaths.Account}`,
                   displayName: formatMessage({ id: "sidebar.userSettings" }),
                   internal: true,
                   icon: <Icon type="gear" />,
