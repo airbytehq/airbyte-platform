@@ -39,7 +39,7 @@ export const ConfigureDataActivationConnectionPage: React.FC = () => {
   const { mutateAsync: webBackendCreateConnection, isLoading } = useCreateConnection();
   const { registerNotification } = useNotificationService();
   const source = useGetSourceFromSearchParams();
-  const { data: sourceSchema } = useDiscoverSchemaQuery(source.sourceId);
+  const { data: sourceSchema } = useDiscoverSchemaQuery(source);
   const destination = useGetDestinationFromSearchParams();
   const { data: discoveredDestination } = useDiscoverDestination(destination.destinationId);
 

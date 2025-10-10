@@ -1665,8 +1665,6 @@
   "connector.breakingChange.upgradeToast.failure": "Failed to upgrade {type}. Please reach out to support for assistance.",
   "connector.check.failed": "Connection test were not successful.",
   "connector.check.jobFailed": "Failed to run connection tests.",
-  "connector.discoverSchema.jobFailed": "Failed to run schema discovery.",
-  "connector.discoverSchema.catalogMissing": "Source did not return a schema.",
   "connector.tab.certified": "Airbyte Connectors",
   "connector.tab.marketplace": "Marketplace",
   "connector.tab.custom": "Custom",

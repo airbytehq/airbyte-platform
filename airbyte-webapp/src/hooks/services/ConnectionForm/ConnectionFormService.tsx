@@ -20,13 +20,13 @@ export type ConnectionOrPartialConnection =
 interface ConnectionServiceProps {
   connection: ConnectionOrPartialConnection;
   schemaError?: Error | null;
-  refreshSchema: () => Promise<void>;
+  refreshSchema: () => Promise<unknown>;
 }
 
 interface ConnectionFormHook {
   connection: ConnectionOrPartialConnection;
   schemaError?: Error | null;
-  refreshSchema: () => Promise<void>;
+  refreshSchema: () => Promise<unknown>;
   setSubmitError: (submitError: FormError | null) => void;
   getErrorMessage: (formValid: boolean, errors?: FieldErrors<FormConnectionFormValues>) => React.ReactNode;
 }

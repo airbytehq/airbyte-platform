@@ -37,7 +37,7 @@ export const DataActivationMappingPage: React.FC = () => {
   const source = useGetSourceFromSearchParams();
   const destination = useGetDestinationFromSearchParams();
   const createLink = useCurrentWorkspaceLink();
-  const { data: discoveredSource } = useDiscoverSchemaQuery(source.sourceId);
+  const { data: discoveredSource } = useDiscoverSchemaQuery(source);
   const { data: discoveredDestination } = useDiscoverDestination(destination.destinationId);
   const [showGlobalValidationMessage, setShowGlobalValidationMessage] = useState(false);
   const navigate = useNavigate();

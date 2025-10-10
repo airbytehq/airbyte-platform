@@ -271,7 +271,11 @@ export const ComboBox = ({
           icon={icon}
           adornment={
             adornment ?? (
-              <ComboboxButton className={styles.caretButton} data-testid={testId ? `${testId}--button` : undefined}>
+              <ComboboxButton
+                className={styles.caretButton}
+                data-testid={testId ? `${testId}--button` : undefined}
+                disabled={disabled}
+              >
                 <Icon type="caretDown" />
               </ComboboxButton>
             )

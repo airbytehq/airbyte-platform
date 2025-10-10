@@ -1,7 +1,5 @@
 import { InfiniteData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
-import { flushSync } from "react-dom";
-import { useIntl } from "react-intl";
+import { useCallback } from "react";
 
 import { ConnectionConfiguration } from "area/connector/types";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
@@ -23,7 +21,6 @@ import { SCOPE_WORKSPACE } from "../scopes";
 import {
   ActorListFilters,
   ActorListSortKey,
-  AirbyteCatalog,
   ScopedResourceRequirements,
   SourceRead,
   SourceReadList,
@@ -210,71 +207,32 @@ export const useUpdateSource = () => {
   );
 };
 
-export const useDiscoverSchemaQuery = (sourceId: string) => {
+export const useDiscoverSchemaQuery = (source: SourceRead, { useErrorBoundary = true } = {}) => {
   const requestOptions = useRequestOptions();
+  const analyticsService = useAnalyticsService();
 
   return useQuery(
-    sourcesKeys.discoverSchema(sourceId),
+    sourcesKeys.discoverSchema(source.sourceId),
     async () => {
-      return discoverSchemaForSource({ sourceId, disable_cache: true }, requestOptions);
+      try {
+        return discoverSchemaForSource({ sourceId: source.sourceId, disable_cache: true }, requestOptions);
+      } catch (e) {
+        const jobInfo = e instanceof ErrorWithJobInfo ? ErrorWithJobInfo.getJobInfo(e) : null;
+        analyticsService.track(Namespace.CONNECTION, Action.DISCOVER_SCHEMA, {
+          actionDescription: "Discover schema failure",
+          connector_source_definition: source.sourceName,
+          connector_source_definition_id: source.sourceDefinitionId,
+          failure_type: jobInfo?.failureReason?.failureType,
+          failure_external_message: jobInfo?.failureReason?.externalMessage,
+          failure_internal_message: jobInfo?.failureReason?.internalMessage,
+        });
+        throw e;
+      }
     },
     {
-      useErrorBoundary: true,
+      useErrorBoundary,
       cacheTime: 0, // As soon as the query is not used, it should be removed from the cache
       staleTime: 1000 * 60 * 20, // A discovered schema should be valid for max 20 minutes on the client before refetching
     }
   );
-};
-
-export const useDiscoverSchema = (
-  sourceId: string,
-  disableCache?: boolean
-): {
-  isLoading: boolean;
-  schema: AirbyteCatalog | undefined;
-  schemaErrorStatus: Error | null;
-  catalogId: string | undefined;
-  onDiscoverSchema: () => Promise<void>;
-} => {
-  const { formatMessage } = useIntl();
-  const requestOptions = useRequestOptions();
-  const [schema, setSchema] = useState<AirbyteCatalog | undefined>(undefined);
-  const [catalogId, setCatalogId] = useState<string | undefined>("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [schemaErrorStatus, setSchemaErrorStatus] = useState<Error | null>(null);
-
-  const onDiscoverSchema = useCallback(async () => {
-    setIsLoading(true);
-    setSchemaErrorStatus(null);
-    try {
-      const result = await discoverSchemaForSource(
-        { sourceId: sourceId || "", disable_cache: disableCache },
-        requestOptions
-      );
-
-      if (!result.jobInfo?.succeeded) {
-        throw new ErrorWithJobInfo(formatMessage({ id: "connector.discoverSchema.jobFailed" }), result.jobInfo);
-      }
-      if (!result.catalog) {
-        throw new ErrorWithJobInfo(formatMessage({ id: "connector.discoverSchema.catalogMissing" }), result.jobInfo);
-      }
-
-      flushSync(() => {
-        setSchema(result.catalog);
-        setCatalogId(result.catalogId);
-      });
-    } catch (e) {
-      setSchemaErrorStatus(e);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [disableCache, formatMessage, requestOptions, sourceId]);
-
-  useEffect(() => {
-    if (sourceId) {
-      onDiscoverSchema();
-    }
-  }, [onDiscoverSchema, sourceId]);
-
-  return { schemaErrorStatus, isLoading, schema, catalogId, onDiscoverSchema };
 };

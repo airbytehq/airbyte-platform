@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import React, { Suspense, useCallback, useEffect } from "react";
+import React, { Suspense, useCallback } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -16,7 +16,7 @@ import {
   HttpProblem,
   useCreateConnection,
   useDestinationDefinitionVersion,
-  useDiscoverSchema,
+  useDiscoverSchemaQuery,
 } from "core/api";
 import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
 import { FormModeProvider, useFormMode } from "core/services/ui/FormModeContext";
@@ -32,7 +32,6 @@ import styles from "./CreateConnectionForm.module.scss";
 import { SchemaError } from "./SchemaError";
 import { SimplifiedConnectionConfiguration } from "./SimplifiedConnectionCreation/SimplifiedConnectionConfiguration";
 import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "./SimplifiedConnectionCreation/SimplifiedConnectionScheduleFormField";
-import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
 import { FormConnectionFormValues, useInitialFormValues } from "../ConnectionForm/formConfig";
 import { useConnectionValidationZodSchema } from "../ConnectionForm/schemas/connectionSchema";
 
@@ -176,25 +175,15 @@ const CreateConnectionFormInner: React.FC = () => {
 export const CreateConnectionForm: React.FC = () => {
   const source = useGetSourceFromSearchParams();
   const destination = useGetDestinationFromSearchParams();
-  const { trackFailure } = useAnalyticsTrackFunctions();
 
-  const { schema, isLoading, schemaErrorStatus, catalogId, onDiscoverSchema } = useDiscoverSchema(
-    source.sourceId,
-    true
-  );
+  const { data, error, isFetching, refetch } = useDiscoverSchemaQuery(source, { useErrorBoundary: false });
+  const schema = data?.catalog;
+  const catalogId = data?.catalogId;
 
-  useEffect(() => {
-    if (schemaErrorStatus) {
-      trackFailure(source, destination, schemaErrorStatus);
-    }
-    // we need to track the schemaErrorStatus changes only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [schemaErrorStatus]);
-
-  if (schemaErrorStatus) {
+  if (error && error instanceof Error) {
     return (
       <ScrollParent>
-        <SchemaError schemaError={schemaErrorStatus} refreshSchema={onDiscoverSchema} />
+        <SchemaError schemaError={error} refreshSchema={refetch} />
       </ScrollParent>
     );
   }
@@ -213,10 +202,10 @@ export const CreateConnectionForm: React.FC = () => {
     <FormModeProvider mode="create">
       <ConnectionFormServiceProvider
         connection={partialConnection}
-        refreshSchema={onDiscoverSchema}
-        schemaError={schemaErrorStatus}
+        refreshSchema={refetch}
+        schemaError={error instanceof Error ? error : null}
       >
-        {isLoading ? <LoadingSchema /> : <CreateConnectionFormInner />}
+        {isFetching ? <LoadingSchema /> : <CreateConnectionFormInner />}
       </ConnectionFormServiceProvider>
     </FormModeProvider>
   );

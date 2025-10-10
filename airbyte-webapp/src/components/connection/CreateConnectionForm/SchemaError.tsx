@@ -15,7 +15,7 @@ export const SchemaError = ({
   refreshSchema,
 }: {
   schemaError: Error;
-  refreshSchema: () => Promise<void>;
+  refreshSchema: () => Promise<unknown>;
 }) => {
   const job = ErrorWithJobInfo.getJobInfo(schemaError);
   const formatError = useFormatError();

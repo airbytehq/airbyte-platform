@@ -17,16 +17,18 @@ import {
 import { mockTheme } from "test-utils/mock-data/mockTheme";
 import { mocked, TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
 
-import { useDiscoverSchema } from "core/api";
+import { useDiscoverSchemaQuery } from "core/api";
 
 import { CreateConnectionForm } from "./CreateConnectionForm";
 
-const mockBaseUseDiscoverSchema = {
-  schemaErrorStatus: null,
-  isLoading: false,
-  schema: mockConnection.syncCatalog,
-  catalogId: "",
-  onDiscoverSchema: () => Promise.resolve(),
+const mockBaseUseDiscoverSchemaQuery = {
+  error: null,
+  isFetching: false,
+  data: {
+    catalog: mockConnection.syncCatalog,
+    catalogId: "",
+  },
+  refetch: () => Promise.resolve(),
 };
 
 jest.mock("area/workspace/utils", () => ({
@@ -44,7 +46,7 @@ jest.mock("core/api", () => ({
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
   useSourceDefinition: () => mockSourceDefinition,
   useDestinationDefinition: () => mockDestinationDefinition,
-  useDiscoverSchema: jest.fn(() => mockBaseUseDiscoverSchema),
+  useDiscoverSchemaQuery: jest.fn(() => mockBaseUseDiscoverSchemaQuery),
   ErrorWithJobInfo: jest.requireActual("core/api/errors").ErrorWithJobInfo,
   useDescribeCronExpressionFetchQuery: () => async () => ({
     isValid: true,
@@ -102,16 +104,25 @@ describe("CreateConnectionForm", () => {
   });
 
   it("should render when loading", async () => {
-    mocked(useDiscoverSchema).mockImplementationOnce(() => ({ ...mockBaseUseDiscoverSchema, isLoading: true }));
+    mocked(useDiscoverSchemaQuery).mockImplementationOnce(
+      () =>
+        ({
+          ...mockBaseUseDiscoverSchemaQuery,
+          isFetching: true,
+        }) as unknown as ReturnType<typeof useDiscoverSchemaQuery>
+    );
     const renderResult = await render();
     expect(renderResult).toMatchSnapshot();
   });
 
   it("should render with an error", async () => {
-    mocked(useDiscoverSchema).mockImplementationOnce(() => ({
-      ...mockBaseUseDiscoverSchema,
-      schemaErrorStatus: new Error("Test Error"),
-    }));
+    mocked(useDiscoverSchemaQuery).mockImplementationOnce(
+      () =>
+        ({
+          ...mockBaseUseDiscoverSchemaQuery,
+          error: new Error("Test Error"),
+        }) as unknown as ReturnType<typeof useDiscoverSchemaQuery>
+    );
 
     const renderResult = await render();
     expect(renderResult).toMatchSnapshot();
