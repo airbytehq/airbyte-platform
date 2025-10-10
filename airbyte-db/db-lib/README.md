@@ -23,6 +23,7 @@ Check `io.airbyte.db.instance.configs` for example.
 - Run the `newMigration` command to create a new migration file in `io.airbyte.db.instance.<db-name>.migrations`.
   - Configs database: `./gradlew :oss:airbyte-db:db-lib:newConfigsMigration`.
   - Jobs database: `./gradlew :oss:airbyte-db:db-lib:newJobsMigration`.
+  - ⚠️ Remember to check the filename! See the [next section](#migration-filename) for details.
 - Write the migration using [`jOOQ`](https://www.jooq.org/).
 - Use the `runMigration` command to apply your newly written migration if you want to test it.
   - Configs database: `./gradlew :oss:airbyte-db:db-lib:runConfigsMigration`.
@@ -33,15 +34,15 @@ Check `io.airbyte.db.instance.configs` for example.
 - Update the appropriate `BootloaderTest.kt` constant (`CURRENT_CONFIGS_MIGRATION`, `CURRENT_JOBS_MIGRATION`) to reference the new migration class.
 
 ## Migration Filename
-- The name of the file should follow this pattern: `V(version)__(migration_description_in_snake_case).kt`.
+- The name of the file should follow this pattern: `V(version)__(MigrationDescriptionInPascalCase).kt`.
 - This pattern is mandatory for Flyway to correctly locate and sort the migrations.
 - The first part is `V`, which denotes for *versioned* migration.
 - The second part is a version string with this pattern: `<major>_<minor>_<patch>_<id>`.
-  - The `major`, `minor`, and `patch` should match that of the Airbyte version.
+  - The `major`, `minor`, and `patch` should match that of the _upcoming_ Airbyte version.
   - The `id` should start from `001` for each `<major>_<minor>_<patch>` combination.
   - Example version: `0_29_9_001`
 - The third part is a double underscore separator `__`.
-- The fourth part is a brief description in snake case. Only the first letter should be capitalized for consistency. 
+- The fourth part is a brief description in snake case. Only the first letter should be capitalized for consistency.
 - See original Flyway [documentation](https://flywaydb.org/documentation/concepts/migrations#naming-1) for more details.
 
 ## Sample Migration File

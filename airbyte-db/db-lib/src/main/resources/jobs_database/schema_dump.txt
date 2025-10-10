@@ -95,6 +95,7 @@ create table "public"."stream_stats" (
   "records_committed" bigint,
   "connection_id" uuid,
   "records_rejected" bigint,
+  "additional_stats" jsonb,
   constraint "stream_stats_pkey" primary key ("id"),
   constraint "uniq_stream_attempt" unique ("attempt_id", "stream_name", "stream_namespace")
 );

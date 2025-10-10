@@ -395,6 +395,7 @@ create table "public"."observability_stream_stats" (
   "records_rejected" bigint not null,
   "was_backfilled" boolean not null,
   "was_resumed" boolean not null,
+  "additional_stats" jsonb,
   constraint "observability_stream_stats__job_id__stream_namespace__stream_na" unique ("job_id", "stream_namespace", "stream_name")
 );
 create table "public"."operation" (
