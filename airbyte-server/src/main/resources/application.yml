@@ -324,6 +324,40 @@ airbyte:
         memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
         memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
 
+      # API syncs
+      exp1--source-api:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.8}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
+      exp1--orchestrator-api:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0.6}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.3}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
+      exp1--destination-api:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0.6}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.3}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
+
+      # API syncs
+      exp2--source-api:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:1}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.6}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
+      exp2--orchestrator-api:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0.5}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.2}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:2Gi}
+      exp2--destination-api:
+        cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0.5}
+        cpu-request: ${JOB_MAIN_CONTAINER_CPU_REQUEST:0.2}
+        memory-limit: ${JOB_MAIN_CONTAINER_MEMORY_LIMIT:2Gi}
+        memory-request: ${JOB_MAIN_CONTAINER_MEMORY_REQUEST:1Gi}
+
       # Default base sync values
       lowresource--destination:
         cpu-limit: ${JOB_MAIN_CONTAINER_CPU_LIMIT:0}
