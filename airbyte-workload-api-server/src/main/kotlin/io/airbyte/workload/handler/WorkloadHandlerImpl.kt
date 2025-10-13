@@ -154,9 +154,10 @@ class WorkloadHandlerImpl(
   override fun heartbeat(
     workloadId: String,
     deadline: OffsetDateTime,
+    dataplaneVersion: String?,
   ) {
     withWorkloadServiceExceptionConverter {
-      workloadService.heartbeatWorkload(workloadId, deadline)
+      workloadService.heartbeatWorkload(workloadId, deadline, dataplaneVersion)
     }
   }
 

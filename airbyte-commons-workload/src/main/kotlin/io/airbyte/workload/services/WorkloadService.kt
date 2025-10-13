@@ -227,9 +227,16 @@ class WorkloadService(
   fun heartbeatWorkload(
     workloadId: String,
     deadline: OffsetDateTime,
+    dataplaneVersion: String?,
   ) {
     val workload = workloadRepository.heartbeat(workloadId, deadline)
     if (workload == null) {
+      metricClient.count(
+        OssMetricsRegistry.WORKLOAD_HEARTBEAT,
+        1L,
+        MetricAttribute(MetricTags.DATA_PLANE_VERSION, dataplaneVersion ?: MetricTags.UNKNOWN),
+        MetricAttribute(MetricTags.STATUS_TAG, MetricTags.FAILURE),
+      )
       workloadRepository
         .findById(workloadId)
         .map { w ->
@@ -241,6 +248,16 @@ class WorkloadService(
             else -> logger.error { "Failed to heartbeat workload ($workloadId). Current status is ${w.status}." }
           }
         }.orElseThrow { NotFoundException("Workload $workloadId not found") }
+    } else {
+      metricClient.count(
+        OssMetricsRegistry.WORKLOAD_HEARTBEAT,
+        1L,
+        MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, workload.type.name),
+        MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, workload.dataplaneGroup ?: MetricTags.UNKNOWN),
+        MetricAttribute(MetricTags.DATA_PLANE_ID_TAG, workload.dataplaneId ?: MetricTags.UNKNOWN),
+        MetricAttribute(MetricTags.DATA_PLANE_VERSION, dataplaneVersion ?: MetricTags.UNKNOWN),
+        MetricAttribute(MetricTags.STATUS_TAG, MetricTags.SUCCESS),
+      )
     }
   }
 

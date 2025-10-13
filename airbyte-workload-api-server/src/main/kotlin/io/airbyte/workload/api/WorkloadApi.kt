@@ -317,7 +317,11 @@ open class WorkloadApi(
   ) {
     ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadHeartbeatRequest.workloadId))
     authorize(workloadId = workloadHeartbeatRequest.workloadId)
-    workloadHandler.heartbeat(workloadHeartbeatRequest.workloadId, workloadHeartbeatRequest.deadline ?: defaultDeadlineValues.heartbeatDeadline())
+    workloadHandler.heartbeat(
+      workloadId = workloadHeartbeatRequest.workloadId,
+      deadline = workloadHeartbeatRequest.deadline ?: defaultDeadlineValues.heartbeatDeadline(),
+      dataplaneVersion = readAirbyteVersionHeader(),
+    )
   }
 
   /**

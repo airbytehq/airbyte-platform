@@ -128,7 +128,7 @@ class WorkloadServiceTest {
     every { workloadRepository.heartbeat(defaultWorkloadId, any()) } returns null
     every { workloadRepository.findById(defaultWorkloadId) } returns Optional.empty()
     assertThrows<NotFoundException> {
-      workloadService.heartbeatWorkload(defaultWorkloadId, OffsetDateTime.now())
+      workloadService.heartbeatWorkload(defaultWorkloadId, OffsetDateTime.now(), null)
     }
   }
 
@@ -138,7 +138,7 @@ class WorkloadServiceTest {
     every { workloadRepository.heartbeat(defaultWorkloadId, any()) } returns launchedWorkload
     every { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) } returns Unit
 
-    workloadService.heartbeatWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5))
+    workloadService.heartbeatWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5), null)
 
     verify(exactly = 0) { signalSender.sendSignal(any(), any()) }
     verify(exactly = 0) { workloadQueueRepository.ackWorkloadQueueItem(any()) }
@@ -151,7 +151,7 @@ class WorkloadServiceTest {
     every { workloadRepository.findById(defaultWorkloadId) } returns Optional.of(failedWorkload)
 
     assertThrows<InvalidStatusTransitionException> {
-      workloadService.heartbeatWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5))
+      workloadService.heartbeatWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5), null)
     }
 
     verify(exactly = 0) { signalSender.sendSignal(any(), any()) }

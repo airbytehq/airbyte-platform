@@ -257,22 +257,22 @@ class WorkloadHandlerImplTest {
   @ParameterizedTest
   @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING"])
   fun `verify successful heartbeat`(workloadStatus: WorkloadStatus) {
-    every { workloadService.heartbeatWorkload(WORKLOAD_ID, any()) } returns Unit
-    workloadHandler.heartbeat(WORKLOAD_ID, now.plusMinutes(10))
-    verify { workloadService.heartbeatWorkload(WORKLOAD_ID, now.plusMinutes(10)) }
+    every { workloadService.heartbeatWorkload(WORKLOAD_ID, any(), any()) } returns Unit
+    workloadHandler.heartbeat(WORKLOAD_ID, now.plusMinutes(10), "version")
+    verify { workloadService.heartbeatWorkload(WORKLOAD_ID, now.plusMinutes(10), "version") }
   }
 
   @ParameterizedTest
   @EnumSource(value = WorkloadStatus::class, names = ["CANCELLED", "FAILURE", "SUCCESS", "PENDING"])
   fun `verify heartbeat failure exceptions are converted`(workloadStatus: WorkloadStatus) {
-    every { workloadService.heartbeatWorkload(WORKLOAD_ID, any()) } throws
+    every { workloadService.heartbeatWorkload(WORKLOAD_ID, any(), any()) } throws
       io.airbyte.workload.services
         .InvalidStatusTransitionException("oops")
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.heartbeat(WORKLOAD_ID, now) }
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.heartbeat(WORKLOAD_ID, now, null) }
   }
 
   @Test
-  fun `claiming a workload unsuccesfully returns false`() {
+  fun `claiming a workload unsuccessfully returns false`() {
     every { workloadRepository.claim(WORKLOAD_ID, any(), any()) }.returns(null)
     assertFalse { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now, null) }
   }

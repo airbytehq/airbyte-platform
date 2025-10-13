@@ -339,6 +339,10 @@ enum class OssMetricsRegistry(
     metricName = "workflows_healed",
     metricDescription = "number of workflow the self healing cron healed",
   ),
+  WORKLOAD_HEARTBEAT(
+    metricName = "workload_heartbeat",
+    metricDescription = "number of workload heartbeat",
+  ),
   WORKLOAD_LAUNCHER_CRON(
     metricName = "workload_launcher_cron",
     metricDescription = "number of cron run for the workload_launcher",

@@ -160,7 +160,7 @@ class WorkloadApiTest(
 
   @Test
   fun `test heartbeat success`() {
-    every { workloadHandler.heartbeat(any(), any()) }.returns(Unit)
+    every { workloadHandler.heartbeat(any(), any(), any()) }.returns(Unit)
     every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testEndpointStatus(HttpRequest.PUT("/api/v1/workload/heartbeat", Jsons.serialize(WorkloadHeartbeatRequest())), HttpStatus.NO_CONTENT)
   }
@@ -168,7 +168,7 @@ class WorkloadApiTest(
   @Test
   fun `test heartbeat workload id not found`() {
     val exceptionMessage = "workload id not found"
-    every { workloadHandler.heartbeat(any(), any()) } throws NotFoundException(exceptionMessage)
+    every { workloadHandler.heartbeat(any(), any(), any()) } throws NotFoundException(exceptionMessage)
     every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testErrorEndpointResponse(
       HttpRequest.PUT("/api/v1/workload/heartbeat", WorkloadHeartbeatRequest()),
@@ -180,7 +180,7 @@ class WorkloadApiTest(
   @Test
   fun `test heartbeat workload in invalid status`() {
     val exceptionMessage = "workload in invalid status"
-    every { workloadHandler.heartbeat(any(), any()) } throws InvalidStatusTransitionException(exceptionMessage)
+    every { workloadHandler.heartbeat(any(), any(), any()) } throws InvalidStatusTransitionException(exceptionMessage)
     every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testErrorEndpointResponse(
       HttpRequest.PUT("/api/v1/workload/heartbeat", WorkloadHeartbeatRequest()),

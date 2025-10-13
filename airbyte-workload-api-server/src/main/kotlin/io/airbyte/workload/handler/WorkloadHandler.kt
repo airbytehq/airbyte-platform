@@ -96,6 +96,7 @@ interface WorkloadHandler {
   fun heartbeat(
     workloadId: String,
     deadline: OffsetDateTime,
+    dataplaneVersion: String?,
   )
 
   fun getWorkloadsRunningCreatedBefore(
