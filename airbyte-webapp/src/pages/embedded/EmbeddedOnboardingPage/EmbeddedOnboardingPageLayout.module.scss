@@ -1,0 +1,46 @@
+@use "scss/variables";
+@use "scss/colors";
+@use "scss/mixins";
+
+.logo {
+  height: 28px;
+}
+
+.header {
+  background-color: colors.$foreground;
+  border-bottom: variables.$border-thin solid colors.$dark-blue-40;
+  padding: variables.$spacing-md;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  container-type: inline-size;
+  position: relative;
+}
+
+.headerSection {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.steps {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 1;
+  transition:
+    opacity 0.3s ease-in-out,
+    transform 0.3s ease-in-out;
+
+  // Hide steps when container is too narrow to prevent overlap with logo and logout button
+  @container (width <= 650px) {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.9);
+    pointer-events: none;
+  }
+}
+
+.content {
+  overflow: hidden;
+}
