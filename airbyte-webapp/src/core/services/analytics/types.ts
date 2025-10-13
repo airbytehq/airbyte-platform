@@ -116,8 +116,6 @@ export const enum Action {
 
   // Embedded Onboarding Actions
   DESTINATION_SELECTED = "DestinationSelected",
-  CONNECTION_TEMPLATE_CREATED = "ConnectionTemplateCreated",
-  CONNECTION_TEMPLATE_CREATE_FAILED = "ConnectionTemplateCreateFailed",
   BACK_TO_SELECT_DESTINATION = "BackToSelectDestination",
 }
 

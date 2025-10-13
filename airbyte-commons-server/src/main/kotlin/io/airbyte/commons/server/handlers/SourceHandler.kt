@@ -56,7 +56,6 @@ import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.CatalogService
-import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.shared.DEFAULT_PAGE_SIZE
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
@@ -117,7 +116,6 @@ class SourceHandler
     private val secretStorageService: SecretStorageService,
     private val secretReferenceService: SecretReferenceService,
     private val currentUserService: CurrentUserService,
-    private val partialUserConfigService: PartialUserConfigService,
   ) {
     @Throws(
       JsonValidationException::class,
@@ -503,9 +501,6 @@ class SourceHandler
 
       // Delete secret references for this source
       secretReferenceService.deleteActorSecretReferences(ActorId(source.sourceId))
-
-      // Delete partial user config(s) for this source, if any
-      partialUserConfigService.deletePartialUserConfigForSource(source.sourceId)
 
       // Mark source as tombstoned and clear config
       try {

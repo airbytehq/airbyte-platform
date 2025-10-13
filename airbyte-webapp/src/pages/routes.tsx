@@ -27,7 +27,6 @@ import { useQuery } from "hooks/useQuery";
 import { LoginPage } from "pages/login/LoginPage";
 import MainView from "views/layout/MainView";
 
-import { EmbeddedSourceCreatePage } from "./embedded/EmbeddedSourceCreatePage/EmbeddedSourcePage";
 import { OnboardingPage } from "./OnboardingPage/OnboardingPage";
 import { OrganizationRoutes } from "./organization/OrganizationRoutes";
 import { RoutePaths, DestinationPaths, SourcePaths, SettingsRoutePaths } from "./routePaths";
@@ -232,7 +231,6 @@ const AuthenticatedRoutes = () => {
 
   return (
     <Routes>
-      <Route path={`/${RoutePaths.EmbeddedWidget}`} element={<EmbeddedSourceCreatePage />} />
       {!initialSetupComplete ? (
         <Route path="*" element={<PreferencesRoutes />} />
       ) : isOrgPickerEnabled ? (

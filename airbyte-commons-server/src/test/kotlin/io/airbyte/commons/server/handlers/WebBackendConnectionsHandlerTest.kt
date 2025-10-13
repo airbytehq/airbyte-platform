@@ -106,7 +106,6 @@ import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
-import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.DestinationAndDefinition
@@ -187,7 +186,6 @@ internal class WebBackendConnectionsHandlerTest {
   private val apiPojoConverters = ApiPojoConverters(catalogConverter)
   private lateinit var connectionTimelineEventHelper: ConnectionTimelineEventHelper
   private lateinit var catalogConfigDiffHelper: CatalogConfigDiffHelper
-  private lateinit var partialUserConfigService: PartialUserConfigService
 
   @BeforeEach
   @Throws(
@@ -215,7 +213,6 @@ internal class WebBackendConnectionsHandlerTest {
     catalogConfigDiffHelper = mockk(relaxed = true)
     licenseEntitlementChecker = mockk(relaxed = true)
     connectorConfigEntitlementService = mockk(relaxed = true)
-    partialUserConfigService = mockk(relaxed = true)
 
     val validator: JsonSchemaValidator = mockk(relaxed = true)
     val secretsProcessor: JsonSecretsProcessor = mockk(relaxed = true)
@@ -287,7 +284,6 @@ internal class WebBackendConnectionsHandlerTest {
         secretStorageService,
         secretReferenceService,
         currentUserService,
-        partialUserConfigService,
       )
 
     wbHandler =
