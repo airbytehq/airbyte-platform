@@ -92,7 +92,7 @@ Renders the common.cluster.name environment variable
 Renders the global.airbyteUrl value
 */}}
 {{- define "airbyte.common.airbyteUrl" }}
-    {{- .Values.global.airbyteUrl }}
+    {{- .Values.global.airbyteUrl | default "http://localhost:8080" }}
 {{- end }}
 
 {{/*
@@ -255,24 +255,6 @@ Renders the common.local environment variable
 {{- end }}
 
 {{/*
-Renders the global.webapp.url value
-*/}}
-{{- define "airbyte.common.webapp.url" }}
-    {{- (include "airbyte.common.airbyteUrl" .) }}
-{{- end }}
-
-{{/*
-Renders the common.webapp.url environment variable
-*/}}
-{{- define "airbyte.common.webapp.url.env" }}
-- name: WEBAPP_URL
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: WEBAPP_URL
-{{- end }}
-
-{{/*
 Renders the global.dummySecret value
 */}}
 {{- define "airbyte.common.dummySecret" }}
@@ -314,7 +296,6 @@ Renders the set of all common environment variables
 {{- include "airbyte.common.deploymentEnv.env" . }}
 {{- include "airbyte.common.api.internalHost.env" . }}
 {{- include "airbyte.common.local.env" . }}
-{{- include "airbyte.common.webapp.url.env" . }}
 {{- include "airbyte.common.dummySecret.env" . }}
 {{- end }}
 
@@ -335,7 +316,6 @@ MANIFEST_SERVER_API_HOST: {{ include "airbyte.common.manifestServer.apiHost" . |
 DEPLOYMENT_ENV: {{ include "airbyte.common.deploymentEnv" . | quote }}
 INTERNAL_API_HOST: {{ include "airbyte.common.api.internalHost" . | quote }}
 LOCAL: {{ include "airbyte.common.local" . | quote }}
-WEBAPP_URL: {{ include "airbyte.common.webapp.url" . | quote }}
 {{- end }}
 
 {{/*

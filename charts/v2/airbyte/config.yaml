@@ -17,6 +17,7 @@ common:
 
     - env: AIRBYTE_URL
       key: airbyteUrl
+      defaultValue: http://localhost:8080
 
     - env: AIRBYTE_API_HOST
       key: api.host
@@ -49,10 +50,6 @@ common:
     - env: LOCAL
       key: local
       defaultValue: false
-
-    - env: WEBAPP_URL
-      key: webapp.url
-      valueExp: (include "airbyte.common.airbyteUrl" .)
 
     # This is a dummy entry that keeps the airbyte.common.secrets template alive.
     # Without this, the airbyte.common.secrets template is removed and lots of unrelated

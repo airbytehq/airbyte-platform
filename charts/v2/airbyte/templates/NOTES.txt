@@ -23,5 +23,5 @@ You can watch the status of by running 'kubectl get -n {{ .Release.Namespace }} 
 Get the application URL by running these commands:
 
   echo "Visit http://127.0.0.1:8080 to use your application"
-  kubectl -n {{ .Release.Namespace }} port-forward deployment/{{ .Release.Name }}-webapp 8080:8080
+  kubectl -n {{ .Release.Namespace }} port-forward deployment/{{ .Release.Name }}-server 8080:8001
 {{- end }}
