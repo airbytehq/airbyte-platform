@@ -4,8 +4,8 @@
 
 package io.airbyte.commons.server.errors.handlers
 
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
-import io.airbyte.commons.server.errors.KnownException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpRequest
@@ -16,6 +16,7 @@ import io.micronaut.http.annotation.Produces
 import io.micronaut.http.server.exceptions.ExceptionHandler
 import jakarta.inject.Singleton
 import jakarta.ws.rs.NotFoundException
+import java.util.UUID
 
 private val log = KotlinLogging.logger {}
 
@@ -30,12 +31,15 @@ class NotFoundExceptionHandler : ExceptionHandler<NotFoundException, HttpRespons
     request: HttpRequest<*>,
     exception: NotFoundException,
   ): HttpResponse<*>? {
+    val errorId = UUID.randomUUID()
     val idnf = IdNotFoundKnownException("Object not found. ${exception.message}", exception)
-    log.error { "Not found exception ${idnf.getNotFoundKnownExceptionInfo()}" }
+    // Log full error details
+    log.error { "Not found exception [errorId: $errorId]: ${idnf.getKnownExceptionInfoWithStackTrace()}" }
 
+    // Return only errorId in response
     return HttpResponse
       .status<Any>(HttpStatus.NOT_FOUND)
-      .body(KnownException.infoFromThrowableWithMessage(exception, "Internal Server Error: " + exception.message))
+      .body(Jsons.serialize(mapOf("errorId" to errorId)))
       .contentType(MediaType.APPLICATION_JSON)
   }
 }

@@ -25,7 +25,7 @@ class IdNotFoundKnownException : KnownException {
   override fun getHttpCode(): Int = 404
 
   /**
-   * Get additional info about the not found resource.
+   * Get additional info about the not found resource (without stack trace).
    *
    * @return info
    */
@@ -34,14 +34,30 @@ class IdNotFoundKnownException : KnownException {
       NotFoundKnownExceptionInfo()
         .exceptionClassName(javaClass.name)
         .message(this.message)
+        .id(this.id)
+        .errorId(this.errorId)
+    return exceptionInfo
+  }
+
+  /**
+   * Get additional info about the not found resource with stack trace (for logging).
+   *
+   * @return info
+   */
+  fun getNotFoundKnownExceptionInfoWithStackTrace(): NotFoundKnownExceptionInfo {
+    val exceptionInfo =
+      NotFoundKnownExceptionInfo()
+        .exceptionClassName(javaClass.name)
+        .message(this.message)
         .exceptionStack(getStackTraceAsList(this))
+        .id(this.id)
+        .errorId(this.errorId)
     if (this.cause != null) {
-      exceptionInfo.rootCauseExceptionClassName(javaClass.javaClass.name)
+      exceptionInfo.rootCauseExceptionClassName(this.cause!!.javaClass.name)
       exceptionInfo.rootCauseExceptionStack(
         getStackTraceAsList(cause!!),
       )
     }
-    exceptionInfo.id(this.id)
     return exceptionInfo
   }
 }

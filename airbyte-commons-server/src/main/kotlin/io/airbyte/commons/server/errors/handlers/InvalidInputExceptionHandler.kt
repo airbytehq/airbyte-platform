@@ -8,6 +8,7 @@ import io.airbyte.api.model.generated.InvalidInputExceptionInfo
 import io.airbyte.api.model.generated.InvalidInputProperty
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.errors.KnownException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpRequest
@@ -19,6 +20,9 @@ import io.micronaut.http.server.exceptions.ExceptionHandler
 import io.micronaut.validation.exceptions.ConstraintExceptionHandler
 import jakarta.inject.Singleton
 import jakarta.validation.ConstraintViolationException
+import java.util.UUID
+
+private val log = KotlinLogging.logger {}
 
 /**
  * https://www.baeldung.com/jersey-bean-validation#custom-exception-handler. handles exceptions
@@ -35,20 +39,26 @@ class InvalidInputExceptionHandler : ExceptionHandler<ConstraintViolationExcepti
   override fun handle(
     request: HttpRequest<*>,
     exception: ConstraintViolationException,
-  ): HttpResponse<*> =
-    HttpResponse
+  ): HttpResponse<*> {
+    val errorId = UUID.randomUUID()
+    // Log full error details
+    log.error { "Invalid input exception [errorId: $errorId]: ${infoFromConstraintsWithStackTrace(exception)}" }
+
+    // Return only errorId in response
+    return HttpResponse
       .status<Any>(HttpStatus.BAD_REQUEST)
-      .body(Jsons.serialize(infoFromConstraints(exception)))
+      .body(Jsons.serialize(mapOf("errorId" to errorId)))
       .contentType(MediaType.APPLICATION_JSON_TYPE)
+  }
 
   companion object {
     /**
-     * Static factory for invalid input.
+     * Static factory for invalid input with stack trace (for logging).
      *
      * @param cve exception with invalidity info
      * @return exception
      */
-    fun infoFromConstraints(cve: ConstraintViolationException): InvalidInputExceptionInfo {
+    fun infoFromConstraintsWithStackTrace(cve: ConstraintViolationException): InvalidInputExceptionInfo {
       val exceptionInfo =
         InvalidInputExceptionInfo()
           .exceptionClassName(cve.javaClass.getName())

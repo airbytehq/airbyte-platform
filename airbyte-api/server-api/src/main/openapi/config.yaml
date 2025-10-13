@@ -18449,6 +18449,9 @@ components:
           type: array
           items:
             type: string
+        errorId:
+          type: string
+          format: uuid
     KnownExceptionInfo:
       type: object
       required:
@@ -18470,6 +18473,9 @@ components:
             type: string
         details:
           type: object
+        errorId:
+          type: string
+          format: uuid
     InvalidInputExceptionInfo:
       type: object
       required:
