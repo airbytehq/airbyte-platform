@@ -4,6 +4,8 @@
 
 package io.airbyte.cron.jobs
 
+import io.airbyte.featureflag.DisableDbPrune
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -20,13 +22,32 @@ import org.junit.jupiter.api.assertThrows
 class DbPruneWorkflowTest {
   private lateinit var dbPrune: DbPrune
   private lateinit var metricClient: MetricClient
+  private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var workflow: DbPruneWorkflow
 
   @BeforeEach
   fun setup() {
     dbPrune = mockk()
     metricClient = mockk(relaxed = true)
-    workflow = DbPruneWorkflow(dbPrune, metricClient)
+    featureFlagClient = mockk()
+    every { featureFlagClient.boolVariation(DisableDbPrune, any()) } returns false
+    workflow = DbPruneWorkflow(dbPrune, metricClient, featureFlagClient)
+  }
+
+  @Test
+  fun `should skip pruning when DisableDbPrune feature flag is enabled`() {
+    // Given: feature flag is enabled
+    every { featureFlagClient.boolVariation(DisableDbPrune, any()) } returns true
+
+    // When: pruning is executed
+    workflow.pruneRecords()
+
+    // Then: should not call prune methods
+    verify(exactly = 0) { dbPrune.pruneJobs(any()) }
+    verify(exactly = 0) { dbPrune.pruneEvents(any()) }
+
+    // Verify feature flag was checked
+    verify(exactly = 1) { featureFlagClient.boolVariation(DisableDbPrune, any()) }
   }
 
   @Test

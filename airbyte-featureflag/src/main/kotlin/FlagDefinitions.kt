@@ -199,6 +199,8 @@ object CleanupDanglingSecretConfigs : Temporary<Boolean>(key = "platform.cleanup
 
 object CanCleanWorkloadQueue : Temporary<Boolean>(key = "platform.can-clean-workload-queue", default = false)
 
+object DisableDbPrune : Temporary<Boolean>(key = "platform.disable-db-prune", default = false)
+
 object StoreAuditLogs : Temporary<Boolean>(key = "platform.store-audit-logs", default = false)
 
 object EnableDestinationCatalogValidation : Temporary<Boolean>(key = "platform.enable-destination-catalog-validation", default = false)

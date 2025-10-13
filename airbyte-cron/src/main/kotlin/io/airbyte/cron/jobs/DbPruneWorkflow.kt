@@ -6,6 +6,9 @@ package io.airbyte.cron.jobs
 
 import datadog.trace.api.Trace
 import io.airbyte.cron.SCHEDULED_TRACE_OPERATION_NAME
+import io.airbyte.featureflag.DisableDbPrune
+import io.airbyte.featureflag.Empty
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -32,6 +35,7 @@ private val log = KotlinLogging.logger {}
 class DbPruneWorkflow(
   @Named("dbPrune") private val dbPrune: DbPrune,
   private val metricClient: MetricClient,
+  private val featureFlagClient: FeatureFlagClient,
 ) {
   init {
     log.info { "Creating database pruning workflow" }
@@ -45,6 +49,12 @@ class DbPruneWorkflow(
   @Scheduled(cron = "0 0 22 * * *", zoneId = "America/Los_Angeles")
   @Synchronized
   fun pruneRecords() {
+    // Check if database pruning is disabled via feature flag
+    if (featureFlagClient.boolVariation(DisableDbPrune, Empty)) {
+      log.info { "Database pruning is disabled via feature flag. Skipping pruning workflow." }
+      return
+    }
+
     val startTime = OffsetDateTime.now(ZoneOffset.UTC)
     log.info { "Starting database pruning workflow at $startTime" }
 
