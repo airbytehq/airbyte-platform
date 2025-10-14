@@ -37,7 +37,7 @@ import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.json.Jsons.serialize
 import io.airbyte.commons.server.builder.manifest.processor.ManifestProcessor
-import io.airbyte.commons.server.builder.manifest.processor.ManifestProcessorProvider
+import io.airbyte.commons.server.builder.manifest.processor.ManifestServerManifestProcessor
 import io.airbyte.commons.server.errors.NotFoundException
 import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector
@@ -106,8 +106,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
   private lateinit var secretPersistenceConfigService: SecretPersistenceConfigService
   private lateinit var sourceService: SourceService
   private lateinit var secretsProcessor: JsonSecretsProcessor
-  private lateinit var manifestProcessorProvider: ManifestProcessorProvider
-  private lateinit var manifestProcessor: ManifestProcessor
+  private lateinit var manifestServerProcessor: ManifestServerManifestProcessor
   private lateinit var actorDefinitionService: ActorDefinitionService
   private lateinit var remoteDefinitionsProvider: RemoteDefinitionsProvider
   private lateinit var adaptedConnectorSpecification: ConnectorSpecification
@@ -176,7 +175,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
     secretPersistenceConfigService = Mockito.mock(SecretPersistenceConfigService::class.java)
     sourceService = Mockito.mock(SourceService::class.java)
     secretsProcessor = Mockito.mock(JsonSecretsProcessor::class.java)
-    manifestProcessorProvider = Mockito.mock(ManifestProcessorProvider::class.java)
+    manifestServerProcessor = mockk<ManifestServerManifestProcessor>(relaxed = true)
     actorDefinitionService = Mockito.mock(ActorDefinitionService::class.java)
     remoteDefinitionsProvider = Mockito.mock(RemoteDefinitionsProvider::class.java)
     adaptedConnectorSpecification = Mockito.mock(ConnectorSpecification::class.java)
@@ -199,7 +198,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
         secretPersistenceConfigService,
         sourceService,
         secretsProcessor,
-        manifestProcessorProvider,
+        manifestServerProcessor,
         actorDefinitionService,
         remoteDefinitionsProvider,
         oauthImplementationFactory,
@@ -214,8 +213,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
         ),
       ).thenReturn(A_DECLARATIVE_MANIFEST_IMAGE_VERSION)
 
-    manifestProcessor = mockk<ManifestProcessor>(relaxed = true)
-    Mockito.`when`(manifestProcessorProvider.getProcessor(anyOrNull())).thenReturn(manifestProcessor)
+    // manifestServerProcessor is mocked and used directly
   }
 
   private fun generateBuilderProject(): ConnectorBuilderProject {
@@ -1251,7 +1249,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
       .`when`(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false))
       .thenReturn(project)
     io.mockk.every {
-      manifestProcessor.streamTestRead(
+      manifestServerProcessor.streamTestRead(
         testingValues,
         project.getManifestDraft(),
         streamName,
@@ -1334,7 +1332,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
       .`when`(connectorBuilderService.getConnectorBuilderProject(project.builderProjectId, false))
       .thenReturn(project)
     io.mockk.every {
-      manifestProcessor.streamTestRead(
+      manifestServerProcessor.streamTestRead(
         testingValues,
         project.getManifestDraft(),
         streamName,
