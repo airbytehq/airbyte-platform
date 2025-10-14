@@ -82,6 +82,15 @@ class DbPrune(
 
       log.debug { "Found ${jobsToDelete.size} jobs to delete" }
 
+      // Pre-fetch attempt IDs to avoid nested selects
+      val attemptIds =
+        ctx
+          .select(Tables.ATTEMPTS.ID)
+          .from(Tables.ATTEMPTS)
+          .where(Tables.ATTEMPTS.JOB_ID.`in`(jobsToDelete))
+          .fetch()
+          .map { it.value1() }
+
       // Delete in the correct order to respect foreign key constraints
       // Order is important: delete child tables first, then parent tables
 
@@ -89,53 +98,29 @@ class DbPrune(
       val syncStatsDeleted =
         ctx
           .deleteFrom(Tables.SYNC_STATS)
-          .where(
-            Tables.SYNC_STATS.ATTEMPT_ID.`in`(
-              ctx
-                .select(Tables.ATTEMPTS.ID)
-                .from(Tables.ATTEMPTS)
-                .where(Tables.ATTEMPTS.JOB_ID.`in`(jobsToDelete)),
-            ),
-          ).execute()
+          .where(Tables.SYNC_STATS.ATTEMPT_ID.`in`(attemptIds))
+          .execute()
 
       // 2. Delete stream_stats (references attempts)
       val streamStatsDeleted =
         ctx
           .deleteFrom(Tables.STREAM_STATS)
-          .where(
-            Tables.STREAM_STATS.ATTEMPT_ID.`in`(
-              ctx
-                .select(Tables.ATTEMPTS.ID)
-                .from(Tables.ATTEMPTS)
-                .where(Tables.ATTEMPTS.JOB_ID.`in`(jobsToDelete)),
-            ),
-          ).execute()
+          .where(Tables.STREAM_STATS.ATTEMPT_ID.`in`(attemptIds))
+          .execute()
 
       // 3. Delete stream_attempt_metadata (references attempts)
       val streamAttemptMetadataDeleted =
         ctx
           .deleteFrom(Tables.STREAM_ATTEMPT_METADATA)
-          .where(
-            Tables.STREAM_ATTEMPT_METADATA.ATTEMPT_ID.`in`(
-              ctx
-                .select(Tables.ATTEMPTS.ID)
-                .from(Tables.ATTEMPTS)
-                .where(Tables.ATTEMPTS.JOB_ID.`in`(jobsToDelete)),
-            ),
-          ).execute()
+          .where(Tables.STREAM_ATTEMPT_METADATA.ATTEMPT_ID.`in`(attemptIds))
+          .execute()
 
       // 4. Delete normalization_summaries (references attempts)
       val normalizationSummariesDeleted =
         ctx
           .deleteFrom(Tables.NORMALIZATION_SUMMARIES)
-          .where(
-            Tables.NORMALIZATION_SUMMARIES.ATTEMPT_ID.`in`(
-              ctx
-                .select(Tables.ATTEMPTS.ID)
-                .from(Tables.ATTEMPTS)
-                .where(Tables.ATTEMPTS.JOB_ID.`in`(jobsToDelete)),
-            ),
-          ).execute()
+          .where(Tables.NORMALIZATION_SUMMARIES.ATTEMPT_ID.`in`(attemptIds))
+          .execute()
 
       // 5. Delete attempts (references jobs)
       val attemptsDeleted =
