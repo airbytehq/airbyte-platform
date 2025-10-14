@@ -52,7 +52,8 @@ export const Subscription: React.FC = () => {
         {isLoading && <LoadingSkeleton />}
         {subscription && (
           <FlexContainer justifyContent="space-between" gap="lg" direction="column">
-            <Text size="lg">{subscription.name}</Text>
+            {/* If the Stigg entitlement plan is set, use it instead of the Orb plan name */}
+            <Text size="lg">{subscription?.entitlementPlan?.planName ?? subscription.name}</Text>
             {subscription.cancellationDate && (
               <FlexItem>
                 <FlexContainer alignItems="center" gap="xs">

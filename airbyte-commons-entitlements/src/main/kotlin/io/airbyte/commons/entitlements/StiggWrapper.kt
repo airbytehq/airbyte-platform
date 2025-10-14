@@ -31,6 +31,12 @@ import io.stigg.sidecar.sdk.Stigg
 
 private val logger = KotlinLogging.logger {}
 
+data class EntitlementPlanResponse(
+  val planEnum: EntitlementPlan,
+  val planId: String,
+  val planName: String,
+)
+
 /**
  * [StiggWrapper] a wrapper around the raw Stigg client.
  * This is useful for mocking Stigg in tests, because Stigg has a complex,
@@ -46,7 +52,7 @@ internal class StiggWrapper(
   private val stigg: Stigg,
   private val metricClient: MetricClient? = null,
 ) {
-  fun getPlans(organizationId: OrganizationId): List<EntitlementPlan> {
+  fun getPlans(organizationId: OrganizationId): List<EntitlementPlanResponse> {
     try {
       val resp =
         stigg.api().query(
@@ -59,7 +65,14 @@ internal class StiggWrapper(
                 .build(),
             ).build(),
         )
-      return resp.getActiveSubscriptions.map { EntitlementPlan.fromId(it.slimSubscriptionFragmentV2.plan.planId) }.toList()
+      return resp.getActiveSubscriptions
+        .map {
+          EntitlementPlanResponse(
+            planEnum = EntitlementPlan.fromId(it.slimSubscriptionFragmentV2.plan.planId),
+            planId = it.slimSubscriptionFragmentV2.plan.planId,
+            planName = it.slimSubscriptionFragmentV2.plan.displayName,
+          )
+        }.toList()
     } catch (e: ApolloException) {
       if (e.localizedMessage != null && e.localizedMessage!!.contains("Customer not found")) {
         logger.info { "No active subscriptions; organization not present in Stigg. organizationId=$organizationId" }

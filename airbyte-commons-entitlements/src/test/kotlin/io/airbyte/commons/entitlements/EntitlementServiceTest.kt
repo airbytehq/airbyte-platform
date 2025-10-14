@@ -121,7 +121,7 @@ class EntitlementServiceTest {
 
     every {
       entitlementClient.getPlans(orgId)
-    } returns listOf(EntitlementPlan.PRO)
+    } returns listOf(EntitlementPlanResponse(EntitlementPlan.PRO, "plan-airbyte-pro", "Pro"))
 
     val result = entitlementService.getCurrentPlanId(orgId)
 

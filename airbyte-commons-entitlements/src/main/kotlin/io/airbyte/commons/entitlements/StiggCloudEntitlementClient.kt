@@ -33,7 +33,7 @@ internal class StiggCloudEntitlementClient(
 
   override fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult> = stigg.getEntitlements(organizationId)
 
-  override fun getPlans(organizationId: OrganizationId): List<EntitlementPlan> = stigg.getPlans(organizationId)
+  override fun getPlans(organizationId: OrganizationId): List<EntitlementPlanResponse> = stigg.getPlans(organizationId)
 
   override fun addOrUpdateOrganization(
     organizationId: OrganizationId,
@@ -47,7 +47,7 @@ internal class StiggCloudEntitlementClient(
     }
 
     if (currentPlans.isNotEmpty()) {
-      if (plan in currentPlans) {
+      if (currentPlans.any { it.planEnum == plan }) {
         logger.info { "Organization already on plan. organizationId=$organizationId, plan=$plan, currentPlans=$currentPlans" }
         return
       }
@@ -78,28 +78,28 @@ internal class StiggCloudEntitlementClient(
 
   private fun validatePlanChange(
     organizationId: OrganizationId,
-    currentPlans: List<EntitlementPlan>,
+    currentPlans: List<EntitlementPlanResponse>,
     plan: EntitlementPlan,
   ) {
     logger.debug { "Validating plan change organizationId=$organizationId plan=$plan" }
 
-    if (currentPlans.contains(plan)) {
+    if (currentPlans.any { it.planEnum == plan }) {
       logger.info { "Organization is already in plan. organizationId=$organizationId plan=$plan" }
       return
     }
 
     // Check if any current plan has a higher value than the target plan
     // (same value plans are allowed to move between each other)
-    val hasHigherPlan = currentPlans.any { it.value > plan.value }
+    val hasHigherPlan = currentPlans.any { it.planEnum.value > plan.value }
 
     if (hasHigherPlan) {
-      val highestCurrentPlan = currentPlans.maxByOrNull { it.value }
+      val highestCurrentPlan = currentPlans.maxByOrNull { it.planEnum.value }
       throw EntitlementServiceUnableToAddOrganizationProblem(
         ProblemEntitlementServiceData()
           .organizationId(organizationId.value)
           .planId(plan.toString())
           .errorMessage(
-            "Cannot automatically downgrade from ${highestCurrentPlan?.name} (value: ${highestCurrentPlan?.value}) to ${plan.name} (value: ${plan.value})",
+            "Cannot automatically downgrade from ${highestCurrentPlan?.planEnum?.name} (value: ${highestCurrentPlan?.planEnum?.value}) to ${plan.name} (value: ${plan.value})",
           ),
       )
     }

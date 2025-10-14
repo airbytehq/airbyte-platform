@@ -14959,6 +14959,21 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/CreditBlockRead"
+        entitlementPlan:
+          $ref: "#/components/schemas/EntitlementPlanResponse"
+    EntitlementPlanResponse:
+      type: object
+      required:
+        - planEnum
+        - planId
+        - planName
+      properties:
+        planEnum:
+          type: string
+        planId:
+          type: string
+        planName:
+          type: string
     CreditBlockRead:
       type: object
       required:

@@ -109,7 +109,7 @@ internal class StiggCloudEntitlementClientTest {
     val stigg = mockk<StiggWrapper>(relaxed = true)
     val client = StiggCloudEntitlementClient(stigg, orgService)
 
-    every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.STANDARD)
+    every { stigg.getPlans(org1) } returns listOf(EntitlementPlanResponse(EntitlementPlan.STANDARD, "plan-airbyte-standard", "Standard"))
 
     client.addOrUpdateOrganization(org1, EntitlementPlan.PRO)
 
@@ -122,7 +122,7 @@ internal class StiggCloudEntitlementClientTest {
     val stigg = mockk<StiggWrapper>(relaxed = true)
     val client = StiggCloudEntitlementClient(stigg, orgService)
 
-    every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.STANDARD)
+    every { stigg.getPlans(org1) } returns listOf(EntitlementPlanResponse(EntitlementPlan.STANDARD, "plan-airbyte-standard", "Standard"))
 
     client.addOrUpdateOrganization(org1, EntitlementPlan.STANDARD)
 
@@ -136,7 +136,7 @@ internal class StiggCloudEntitlementClientTest {
     val stigg = mockk<StiggWrapper>(relaxed = true)
     val client = StiggCloudEntitlementClient(stigg, orgService)
 
-    every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.PRO)
+    every { stigg.getPlans(org1) } returns listOf(EntitlementPlanResponse(EntitlementPlan.PRO, "plan-airbyte-pro", "Pro"))
 
     val exception =
       assertThrows<EntitlementServiceUnableToAddOrganizationProblem> {
@@ -157,7 +157,7 @@ internal class StiggCloudEntitlementClientTest {
     val stigg = mockk<StiggWrapper>(relaxed = true)
     val client = StiggCloudEntitlementClient(stigg, orgService)
 
-    every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.PRO_TRIAL)
+    every { stigg.getPlans(org1) } returns listOf(EntitlementPlanResponse(EntitlementPlan.PRO_TRIAL, "plan-airbyte-unified-trial", "Pro Trial"))
 
     val exception =
       assertThrows<EntitlementServiceUnableToAddOrganizationProblem> {
@@ -178,7 +178,7 @@ internal class StiggCloudEntitlementClientTest {
     val stigg = mockk<StiggWrapper>(relaxed = true)
     val client = StiggCloudEntitlementClient(stigg, orgService)
 
-    every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.PRO)
+    every { stigg.getPlans(org1) } returns listOf(EntitlementPlanResponse(EntitlementPlan.PRO, "plan-airbyte-pro", "Pro"))
 
     val exception =
       assertThrows<EntitlementServiceUnableToAddOrganizationProblem> {
@@ -261,7 +261,7 @@ internal class StiggCloudEntitlementClientTest {
     val stigg = mockk<StiggWrapper>(relaxed = true)
     val client = StiggCloudEntitlementClient(stigg, orgService)
 
-    every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.CORE)
+    every { stigg.getPlans(org1) } returns listOf(EntitlementPlanResponse(EntitlementPlan.CORE, "plan-airbyte-core", "Core"))
 
     client.addOrUpdateOrganization(org1, EntitlementPlan.STANDARD)
 
@@ -275,7 +275,7 @@ internal class StiggCloudEntitlementClientTest {
     val stigg = mockk<StiggWrapper>(relaxed = true)
     val client = StiggCloudEntitlementClient(stigg, orgService)
 
-    every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.STANDARD)
+    every { stigg.getPlans(org1) } returns listOf(EntitlementPlanResponse(EntitlementPlan.STANDARD, "plan-airbyte-standard", "Standard"))
 
     client.addOrUpdateOrganization(org1, EntitlementPlan.PRO)
 
@@ -289,7 +289,7 @@ internal class StiggCloudEntitlementClientTest {
     val stigg = mockk<StiggWrapper>(relaxed = true)
     val client = StiggCloudEntitlementClient(stigg, orgService)
 
-    every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.STANDARD)
+    every { stigg.getPlans(org1) } returns listOf(EntitlementPlanResponse(EntitlementPlan.STANDARD, "plan-airbyte-standard", "Standard"))
 
     client.addOrUpdateOrganization(org1, EntitlementPlan.STANDARD)
 
@@ -304,7 +304,7 @@ internal class StiggCloudEntitlementClientTest {
     val stigg = mockk<StiggWrapper>(relaxed = true)
     val client = StiggCloudEntitlementClient(stigg, orgService)
 
-    every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.CORE)
+    every { stigg.getPlans(org1) } returns listOf(EntitlementPlanResponse(EntitlementPlan.CORE, "plan-airbyte-core", "Core"))
     every { stigg.updateCustomerPlan(org1, EntitlementPlan.STANDARD) } throws
       ApolloException("Some GraphQL error from updateCustomerPlan")
 
@@ -323,7 +323,11 @@ internal class StiggCloudEntitlementClientTest {
     val client = StiggCloudEntitlementClient(stigg, orgService)
 
     // Test with multiple plans - this should now return early with error log
-    every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.PRO, EntitlementPlan.PRO_TRIAL)
+    every { stigg.getPlans(org1) } returns
+      listOf(
+        EntitlementPlanResponse(EntitlementPlan.PRO, "plan-airbyte-pro", "Pro"),
+        EntitlementPlanResponse(EntitlementPlan.PRO_TRIAL, "plan-airbyte-unified-trial", "Pro Trial"),
+      )
 
     // Should return early without throwing an exception or calling any other methods
     client.addOrUpdateOrganization(org1, EntitlementPlan.CORE)
@@ -340,7 +344,7 @@ internal class StiggCloudEntitlementClientTest {
     val client = StiggCloudEntitlementClient(stigg, orgService)
 
     // PRO and PRO_TRIAL both have value 2, so moving between them should be allowed
-    every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.PRO)
+    every { stigg.getPlans(org1) } returns listOf(EntitlementPlanResponse(EntitlementPlan.PRO, "plan-airbyte-pro", "Pro"))
 
     client.addOrUpdateOrganization(org1, EntitlementPlan.PRO_TRIAL)
 
@@ -355,7 +359,7 @@ internal class StiggCloudEntitlementClientTest {
     val client = StiggCloudEntitlementClient(stigg, orgService)
 
     // Single high-value plan - should prevent downgrade
-    every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.PRO)
+    every { stigg.getPlans(org1) } returns listOf(EntitlementPlanResponse(EntitlementPlan.PRO, "plan-airbyte-pro", "Pro"))
 
     val exception =
       assertThrows<EntitlementServiceUnableToAddOrganizationProblem> {
@@ -375,7 +379,7 @@ internal class StiggCloudEntitlementClientTest {
     val client = StiggCloudEntitlementClient(stigg, orgService)
 
     // Single low-value plan - should allow upgrade to higher value
-    every { stigg.getPlans(org1) } returns listOf(EntitlementPlan.STANDARD)
+    every { stigg.getPlans(org1) } returns listOf(EntitlementPlanResponse(EntitlementPlan.STANDARD, "plan-airbyte-standard", "Standard"))
 
     client.addOrUpdateOrganization(org1, EntitlementPlan.PRO)
 
