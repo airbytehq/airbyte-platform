@@ -5,6 +5,7 @@
 package io.airbyte.api.client
 
 import dev.failsafe.RetryPolicy
+import io.airbyte.api.client.generated.ActorDefinitionApi
 import io.airbyte.api.client.generated.ActorDefinitionVersionApi
 import io.airbyte.api.client.generated.AttemptApi
 import io.airbyte.api.client.generated.BillingApi
@@ -67,6 +68,7 @@ open class AirbyteApiClient(
   policy: RetryPolicy<Response>,
   httpClient: OkHttpClient,
 ) {
+  val actorDefinitionApi = ActorDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
   val actorDefinitionVersionApi = ActorDefinitionVersionApi(basePath = basePath, client = httpClient, policy = policy)
   val attemptApi = AttemptApi(basePath = basePath, client = httpClient, policy = policy)
   val billingApi = BillingApi(basePath = basePath, client = httpClient, policy = policy)

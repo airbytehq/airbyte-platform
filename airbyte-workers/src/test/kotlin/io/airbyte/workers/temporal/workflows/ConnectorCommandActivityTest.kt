@@ -25,6 +25,7 @@ import io.airbyte.workers.commands.DiscoverCommand
 import io.airbyte.workers.commands.DiscoverCommandV2
 import io.airbyte.workers.commands.ReplicationCommand
 import io.airbyte.workers.commands.SpecCommand
+import io.airbyte.workers.commands.SpecCommandV2
 import io.airbyte.workers.models.CheckConnectionApiInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
@@ -47,6 +48,7 @@ class ConnectorCommandActivityTest {
   lateinit var discoverCommand: DiscoverCommand
   lateinit var discoverCommandV2: DiscoverCommandV2
   lateinit var specCommand: SpecCommand
+  lateinit var specCommandV2: SpecCommandV2
   lateinit var replicationCommand: ReplicationCommand
   lateinit var activityExecutionContextProvider: ActivityExecutionContextProvider
   lateinit var metricClient: MetricClient
@@ -56,6 +58,7 @@ class ConnectorCommandActivityTest {
     checkCommand = mockk(relaxed = true)
     discoverCommand = mockk(relaxed = true)
     specCommand = mockk(relaxed = true)
+    specCommandV2 = mockk(relaxed = true)
     checkCommandThroughApi = mockk(relaxed = true)
     replicationCommand = mockk(relaxed = true)
     discoverCommandV2 = mockk(relaxed = true)
@@ -68,6 +71,7 @@ class ConnectorCommandActivityTest {
         discoverCommand,
         discoverCommandV2,
         specCommand,
+        specCommandV2,
         replicationCommand,
         activityExecutionContextProvider,
         metricClient,

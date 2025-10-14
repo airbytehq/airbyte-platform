@@ -9,6 +9,7 @@ import io.airbyte.api.model.generated.ActorDefinitionIdWithScope
 import io.airbyte.api.model.generated.CustomSourceDefinitionCreate
 import io.airbyte.api.model.generated.PrivateSourceDefinitionRead
 import io.airbyte.api.model.generated.PrivateSourceDefinitionReadList
+import io.airbyte.api.model.generated.ScopedResourceRequirements
 import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId
 import io.airbyte.api.model.generated.SourceDefinitionRead
 import io.airbyte.api.model.generated.SourceDefinitionRead.SourceTypeEnum
@@ -332,34 +333,55 @@ open class SourceDefinitionsHandler
             workspaceId,
           ).withActorDefinitionId(id)
 
+      val scopeId = customSourceDefinitionCreate.workspaceId ?: customSourceDefinitionCreate.scopeId
+      val scopeType =
+        if (customSourceDefinitionCreate.workspaceId !=
+          null
+        ) {
+          ScopeType.WORKSPACE
+        } else {
+          ScopeType.fromValue(customSourceDefinitionCreate.scopeType.toString())
+        }
+
+      val sourceDefinition =
+        saveCustomSourceDefinition(
+          name = sourceDefinitionCreate.name,
+          icon = sourceDefinitionCreate.icon,
+          actorDefinitionVersion = actorDefinitionVersion,
+          resourceRequirements = sourceDefinitionCreate.resourceRequirements,
+          scopeId = scopeId,
+          scopeType = scopeType,
+        )
+
+      return buildSourceDefinitionRead(sourceDefinition, actorDefinitionVersion)
+    }
+
+    fun saveCustomSourceDefinition(
+      name: String,
+      icon: String?,
+      actorDefinitionVersion: ActorDefinitionVersion,
+      resourceRequirements: ScopedResourceRequirements?,
+      scopeId: UUID,
+      scopeType: ScopeType,
+    ): StandardSourceDefinition {
       val sourceDefinition =
         StandardSourceDefinition()
-          .withSourceDefinitionId(id)
-          .withName(sourceDefinitionCreate.name)
-          .withIcon(sourceDefinitionCreate.icon)
+          .withSourceDefinitionId(actorDefinitionVersion.actorDefinitionId)
+          .withName(name)
+          .withIcon(icon)
           .withTombstone(false)
           .withPublic(false)
           .withCustom(true)
-          .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(sourceDefinitionCreate.resourceRequirements))
+          .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements))
 
-      // legacy call; todo: remove once we drop workspace_id column
-      if (customSourceDefinitionCreate.workspaceId != null) {
-        sourceService.writeCustomConnectorMetadata(
-          sourceDefinition,
-          actorDefinitionVersion,
-          customSourceDefinitionCreate.workspaceId,
-          ScopeType.WORKSPACE,
-        )
-      } else {
-        sourceService.writeCustomConnectorMetadata(
-          sourceDefinition,
-          actorDefinitionVersion,
-          customSourceDefinitionCreate.scopeId,
-          ScopeType.fromValue(customSourceDefinitionCreate.scopeType.toString()),
-        )
-      }
+      sourceService.writeCustomConnectorMetadata(
+        sourceDefinition = sourceDefinition,
+        defaultVersion = actorDefinitionVersion,
+        scopeId = scopeId,
+        scopeType = scopeType,
+      )
 
-      return buildSourceDefinitionRead(sourceDefinition, actorDefinitionVersion)
+      return sourceDefinition
     }
 
     private fun resolveWorkspaceId(customSourceDefinitionCreate: CustomSourceDefinitionCreate): UUID {
@@ -377,57 +399,53 @@ open class SourceDefinitionsHandler
 
     @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun updateSourceDefinition(sourceDefinitionUpdate: SourceDefinitionUpdate): SourceDefinitionRead {
-      val isNewConnectorVersionSupported =
-        airbyteCompatibleConnectorsValidator.validate(
-          sourceDefinitionUpdate.sourceDefinitionId.toString(),
-          sourceDefinitionUpdate.dockerImageTag,
-        )
-      if (!isNewConnectorVersionSupported.isValid) {
-        val message =
-          if (isNewConnectorVersionSupported.message != null) {
-            isNewConnectorVersionSupported.message
-          } else {
-            String.format(
-              "Destination %s can't be updated to version %s cause the version " +
-                "is not supported by current platform version",
-              sourceDefinitionUpdate.sourceDefinitionId.toString(),
-              sourceDefinitionUpdate.dockerImageTag,
-            )
-          }
-        throw BadRequestProblem(message, ProblemMessageData().message(message))
-      }
-      val currentSourceDefinition =
-        sourceService.getStandardSourceDefinition(sourceDefinitionUpdate.sourceDefinitionId)
-      val currentVersion = actorDefinitionService.getActorDefinitionVersion(currentSourceDefinition.defaultVersionId)
+      actorDefinitionHandlerHelper.validateVersionSupport(
+        actorDefinitionId = sourceDefinitionUpdate.sourceDefinitionId,
+        connectorVersion = sourceDefinitionUpdate.dockerImageTag,
+        actorType = ActorType.SOURCE,
+      )
 
-      val newSource = buildSourceDefinitionUpdate(currentSourceDefinition, sourceDefinitionUpdate)
+      val currentSource = sourceService.getStandardSourceDefinition(sourceDefinitionUpdate.sourceDefinitionId)
+      val currentVersion = actorDefinitionService.getActorDefinitionVersion(currentSource.defaultVersionId)
 
       val newVersion =
         actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
           currentVersion,
           ActorType.SOURCE,
           sourceDefinitionUpdate.dockerImageTag,
-          currentSourceDefinition.custom,
+          currentSource.custom,
           sourceDefinitionUpdate.workspaceId,
         )
+      val newSource = updateSourceDefinition(newVersion, sourceDefinitionUpdate.name, sourceDefinitionUpdate.resourceRequirements)
 
+      return buildSourceDefinitionRead(newSource, newVersion)
+    }
+
+    fun updateSourceDefinition(
+      newVersion: ActorDefinitionVersion,
+      name: String?,
+      resourceRequirements: ScopedResourceRequirements?,
+    ): StandardSourceDefinition {
+      val currentSource = sourceService.getStandardSourceDefinition(newVersion.actorDefinitionId)
+      val newSource = buildSourceDefinitionUpdate(currentSource, name, resourceRequirements)
       val breakingChangesForDef = actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.SOURCE)
       sourceService.writeConnectorMetadata(newSource, newVersion, breakingChangesForDef)
 
       val updatedSourceDefinition = sourceService.getStandardSourceDefinition(newSource.sourceDefinitionId)
       supportStateUpdater.updateSupportStatesForSourceDefinition(updatedSourceDefinition)
 
-      return buildSourceDefinitionRead(newSource, newVersion)
+      return updatedSourceDefinition
     }
 
     @VisibleForTesting
     fun buildSourceDefinitionUpdate(
       currentSourceDefinition: StandardSourceDefinition,
-      sourceDefinitionUpdate: SourceDefinitionUpdate,
+      name: String?,
+      resourceRequirements: ScopedResourceRequirements?,
     ): StandardSourceDefinition {
       val updatedResourceReqs =
-        if (sourceDefinitionUpdate.resourceRequirements != null) {
-          apiPojoConverters.scopedResourceReqsToInternal(sourceDefinitionUpdate.resourceRequirements)
+        if (resourceRequirements != null) {
+          apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements)
         } else {
           currentSourceDefinition.resourceRequirements
         }
@@ -445,8 +463,8 @@ open class SourceDefinitionsHandler
           .withMaxSecondsBetweenMessages(currentSourceDefinition.maxSecondsBetweenMessages)
           .withResourceRequirements(updatedResourceReqs)
 
-      if (sourceDefinitionUpdate.name != null && currentSourceDefinition.custom) {
-        newSource.withName(sourceDefinitionUpdate.name)
+      if (name != null && currentSourceDefinition.custom) {
+        newSource.withName(name)
       }
 
       return newSource

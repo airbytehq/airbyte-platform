@@ -904,6 +904,177 @@ paths:
                 $ref: "#/components/schemas/ActorDefinitionVersionRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/actor_definitions/create:
+    post:
+      tags:
+        - actor_definition
+        - internal
+      summary: Creates an actor definition (source or destination) for the given workspace or organization
+      operationId: createActorDefinition
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: ActorDefinitionCreateRequest
+              required:
+                - actorDefinition
+                - actorType
+              properties:
+                workspaceId:
+                  $ref: "#/components/schemas/WorkspaceId"
+                scopeId:
+                  $ref: "#/components/schemas/ScopeId"
+                scopeType:
+                  $ref: "#/components/schemas/ScopeType"
+                actorType:
+                  $ref: "#/components/schemas/ActorType"
+                actorDefinition:
+                  $ref: "#/components/schemas/ActorDefinitionSpec"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                title: ActorDefinitionCreateResponse
+                required:
+                  - requestId
+                properties:
+                  requestId:
+                    type: string
+                    description: Unique identifier for the async actor definition creation request
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_definitions/update:
+    post:
+      tags:
+        - actor_definition
+        - internal
+      summary: Updates an actor definition (source or destination)
+      operationId: updateActorDefinition
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: ActorDefinitionUpdateRequest
+              required:
+                - actorDefinitionId
+                - actorType
+                - dockerImageTag
+                - workspaceId
+              properties:
+                actorDefinitionId:
+                  format: uuid
+                  type: string
+                  description: The ID of the actor definition to update
+                actorType:
+                  $ref: "#/components/schemas/ActorType"
+                name:
+                  type: string
+                  description: Optional name update (mainly for custom connectors)
+                dockerImageTag:
+                  type: string
+                  description: The new docker image tag to update to
+                resourceRequirements:
+                  $ref: "#/components/schemas/ScopedResourceRequirements"
+                workspaceId:
+                  $ref: "#/components/schemas/WorkspaceId"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                title: ActorDefinitionUpdateResponse
+                required:
+                  - requestId
+                properties:
+                  requestId:
+                    type: string
+                    description: Unique identifier for the async actor definition update request
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_definitions/finish:
+    post:
+      tags:
+        - actor_definition
+        - internal
+      summary: Finishes processing an actor definition create or update operation
+      operationId: finishActorDefinitionUpdate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActorDefinitionFinishRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                title: ActorDefinitionFinishResponse
+                properties:
+                  actorDefinitionId:
+                    type: string
+                    format: uuid
+                    description: The ID of the actor definition (returned for create operations, null for updates)
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/actor_definitions/result:
+    post:
+      tags:
+        - actor_definition
+        - internal
+      summary: Get the result of an actor definition create or update operation
+      operationId: getActorDefinitionResult
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: ActorDefinitionResultRequest
+              required:
+                - requestId
+              properties:
+                requestId:
+                  type: string
+                  description: The request ID returned from the create or update operation
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                title: ActorDefinitionResultResponse
+                required:
+                  - status
+                properties:
+                  status:
+                    type: string
+                    enum: [pending, running, succeeded, failed]
+                    description: The status of the operation
+                  actorDefinitionId:
+                    type: string
+                    format: uuid
+                    description: The ID of the actor definition (only present when status is succeeded and operation was create)
+                  failureReason:
+                    $ref: "#/components/schemas/FailureReason"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
   /v1/declarative_source_definitions/create_manifest:
     post:
       tags:
@@ -12481,6 +12652,78 @@ components:
           $ref: "#/components/schemas/ScopeId"
         scopeType:
           $ref: "#/components/schemas/ScopeType"
+    ActorDefinitionSpec:
+      type: object
+      required:
+        - name
+        - dockerRepository
+        - dockerImageTag
+        - documentationUrl
+      properties:
+        name:
+          type: string
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
+        documentationUrl:
+          type: string
+          format: uri
+        icon:
+          type: string
+        resourceRequirements:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
+    ActorUpdateRequest:
+      type: object
+      required:
+        - actorType
+        - imageName
+        - imageTag
+      properties:
+        actorType:
+          $ref: "#/components/schemas/ActorType"
+        actorDefinitionId:
+          type: string
+          format: uuid
+          description: The actor definition ID (null for create operations, required for updates)
+        imageName:
+          type: string
+          description: The Docker image name/repository
+        imageTag:
+          type: string
+          description: The Docker image tag
+    ActorDefinitionMetadata:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of the actor definition
+        icon:
+          type: string
+          description: URL or path to the icon
+        documentationUrl:
+          type: string
+          description: URL to the connector documentation
+        resourceRequirements:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
+    ActorDefinitionFinishRequest:
+      type: object
+      required:
+        - actorUpdateRequest
+        - metadata
+        - workspaceId
+      properties:
+        actorUpdateRequest:
+          $ref: "#/components/schemas/ActorUpdateRequest"
+        metadata:
+          $ref: "#/components/schemas/ActorDefinitionMetadata"
+        commandId:
+          type: string
+          description: The command ID from the spec command that was executed
+        workspaceId:
+          type: string
+          format: uuid
+          description: The workspace ID
     ResolveActorDefinitionVersionRequestBody:
       type: object
       required:

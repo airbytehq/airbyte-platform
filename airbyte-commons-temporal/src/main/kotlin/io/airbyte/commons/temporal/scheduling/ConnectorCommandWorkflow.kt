@@ -29,6 +29,7 @@ import java.util.UUID
   JsonSubTypes.Type(value = DiscoverCommandInput::class, name = ConnectorCommandInput.DISCOVER),
   JsonSubTypes.Type(value = DiscoverCommandApiInput::class, name = ConnectorCommandInput.DISCOVER_COMMAND),
   JsonSubTypes.Type(value = SpecCommandInput::class, name = ConnectorCommandInput.SPEC),
+  JsonSubTypes.Type(value = SpecCommandApiInput::class, name = ConnectorCommandInput.SPEC_COMMAND),
   JsonSubTypes.Type(value = ReplicationCommandApiInput::class, name = ConnectorCommandInput.REPLICATION_COMMAND),
 )
 sealed interface ConnectorCommandInput {
@@ -38,6 +39,7 @@ sealed interface ConnectorCommandInput {
     const val DISCOVER = "discover"
     const val DISCOVER_COMMAND = "discover_command"
     const val SPEC = "spec"
+    const val SPEC_COMMAND = "spec_command"
     const val REPLICATION_COMMAND = "replication_command"
   }
 
@@ -136,6 +138,67 @@ data class CheckCommandApiInput(
       fun input(input: CheckConnectionApiInput) = apply { this.input = input }
 
       fun build() = CheckCommandApiInput(input = input ?: throw IllegalArgumentException("input must be specified"))
+    }
+}
+
+@JsonDeserialize(builder = SpecCommandApiInput.Builder::class)
+data class SpecCommandApiInput(
+  val input: SpecApiInput,
+) : ConnectorCommandInput {
+  override val type: String = ConnectorCommandInput.SPEC_COMMAND
+
+  // This is duplicated of io.airbyte.workers.model.SpecApiInput to avoid dependency hell
+  @JsonDeserialize(builder = SpecApiInput.Builder::class)
+  data class SpecApiInput(
+    val requestId: String,
+    val commandId: String?,
+    val actorDefinitionId: UUID?,
+    val dockerImage: String?,
+    val dockerImageTag: String,
+    val workspaceId: UUID,
+  ) {
+    class Builder
+      @JvmOverloads
+      constructor(
+        var requestId: String? = null,
+        var commandId: String? = null,
+        var actorDefinitionId: UUID? = null,
+        var dockerImage: String? = null,
+        var dockerImageTag: String? = null,
+        var workspaceId: UUID? = null,
+      ) {
+        fun requestId(requestId: String) = apply { this.requestId = requestId }
+
+        fun commandId(commandId: String?) = apply { this.commandId = commandId }
+
+        fun actorDefinitionId(actorDefinitionId: UUID?) = apply { this.actorDefinitionId = actorDefinitionId }
+
+        fun dockerImage(dockerImage: String?) = apply { this.dockerImage = dockerImage }
+
+        fun dockerImageTag(dockerImageTag: String) = apply { this.dockerImageTag = dockerImageTag }
+
+        fun workspaceId(workspaceId: UUID) = apply { this.workspaceId = workspaceId }
+
+        fun build() =
+          SpecApiInput(
+            requestId = requestId ?: throw IllegalArgumentException("requestId must be specified"),
+            commandId = commandId,
+            actorDefinitionId = actorDefinitionId,
+            dockerImage = dockerImage,
+            dockerImageTag = dockerImageTag ?: throw IllegalArgumentException("dockerImageTag must be specified"),
+            workspaceId = workspaceId ?: throw IllegalArgumentException("workspaceId must be specified"),
+          )
+      }
+  }
+
+  class Builder
+    @JvmOverloads
+    constructor(
+      var input: SpecApiInput? = null,
+    ) {
+      fun input(input: SpecApiInput) = apply { this.input = input }
+
+      fun build() = SpecCommandApiInput(input = input ?: throw IllegalArgumentException("input must be specified"))
     }
 }
 

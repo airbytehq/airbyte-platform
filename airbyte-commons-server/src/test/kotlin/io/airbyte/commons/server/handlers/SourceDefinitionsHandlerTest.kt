@@ -70,6 +70,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -1275,6 +1276,7 @@ internal class SourceDefinitionsHandlerTest {
     verify(actorDefinitionHandlerHelper).getBreakingChanges(updatedSourceDefVersion, ActorType.SOURCE)
     verify(sourceService).writeConnectorMetadata(updatedSource, updatedSourceDefVersion, breakingChanges)
     verify(supportStateUpdater).updateSupportStatesForSourceDefinition(persistedUpdatedSource)
+    verify(actorDefinitionHandlerHelper).validateVersionSupport(any(), any(), any())
     verifyNoMoreInteractions(actorDefinitionHandlerHelper, supportStateUpdater)
   }
 
@@ -1283,13 +1285,12 @@ internal class SourceDefinitionsHandlerTest {
   fun testBuildSourceDefinitionUpdateNameNonCustom() {
     val existingSourceDefinition = sourceDefinition
 
-    val sourceDefinitionUpdate =
-      SourceDefinitionUpdate()
-        .sourceDefinitionId(existingSourceDefinition.sourceDefinitionId)
-        .name("Some name that gets ignored")
-
     val newSourceDefinition =
-      sourceDefinitionsHandler.buildSourceDefinitionUpdate(existingSourceDefinition, sourceDefinitionUpdate)
+      sourceDefinitionsHandler.buildSourceDefinitionUpdate(
+        currentSourceDefinition = existingSourceDefinition,
+        name = "Some name that gets ignored",
+        resourceRequirements = null,
+      )
 
     Assertions.assertEquals(newSourceDefinition.name, existingSourceDefinition.name)
   }
@@ -1300,13 +1301,12 @@ internal class SourceDefinitionsHandlerTest {
     val newName = "My new connector name"
     val existingCustomSourceDefinition = generateSourceDefinition().withCustom(true)
 
-    val sourceDefinitionUpdate =
-      SourceDefinitionUpdate()
-        .sourceDefinitionId(existingCustomSourceDefinition.sourceDefinitionId)
-        .name(newName)
-
     val newSourceDefinition =
-      sourceDefinitionsHandler.buildSourceDefinitionUpdate(existingCustomSourceDefinition, sourceDefinitionUpdate)
+      sourceDefinitionsHandler.buildSourceDefinitionUpdate(
+        currentSourceDefinition = existingCustomSourceDefinition,
+        name = newName,
+        resourceRequirements = null,
+      )
 
     Assertions.assertEquals(newSourceDefinition.name, newName)
   }
@@ -1374,6 +1374,7 @@ internal class SourceDefinitionsHandlerTest {
       any(),
     )
 
+    verify(actorDefinitionHandlerHelper).validateVersionSupport(any(), any(), any())
     verifyNoMoreInteractions(actorDefinitionHandlerHelper)
   }
 
@@ -1387,11 +1388,12 @@ internal class SourceDefinitionsHandlerTest {
   @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun testUnsupportedAirbyteVersionUpdateSource() {
     whenever(
-      airbyteCompatibleConnectorsValidator.validate(
+      actorDefinitionHandlerHelper.validateVersionSupport(
         any(),
         eq("12.4.0"),
+        eq(ActorType.SOURCE),
       ),
-    ).thenReturn(ConnectorPlatformCompatibilityValidationResult(false, ""))
+    ).thenThrow(BadRequestProblem())
     whenever(
       sourceService.getStandardSourceDefinition(
         sourceDefinition.sourceDefinitionId,
@@ -1418,6 +1420,7 @@ internal class SourceDefinitionsHandlerTest {
       any(),
     )
 
+    verify(actorDefinitionHandlerHelper).validateVersionSupport(any(), any(), any())
     verifyNoMoreInteractions(actorDefinitionHandlerHelper)
   }
 

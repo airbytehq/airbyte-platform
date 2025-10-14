@@ -9,6 +9,7 @@ import io.airbyte.commons.temporal.TemporalInitializationUtils
 import io.airbyte.commons.temporal.TemporalJobType
 import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.commons.temporal.config.TemporalQueueConfiguration
+import io.airbyte.commons.temporal.scheduling.ActorDefinitionUpdateWorkflow
 import io.airbyte.config.MaxWorkersConfig
 import io.airbyte.micronaut.runtime.AirbyteDataPlaneQueueConfig
 import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
@@ -21,6 +22,7 @@ import io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowImpl
 import io.airbyte.workers.temporal.spec.SpecWorkflowImpl
 import io.airbyte.workers.temporal.sync.SyncWorkflowImpl
 import io.airbyte.workers.temporal.sync.SyncWorkflowV2Impl
+import io.airbyte.workers.temporal.workflows.ActorDefinitionUpdateWorkflowImpl
 import io.airbyte.workers.temporal.workflows.ConnectorCommandWorkflowImpl
 import io.airbyte.workers.temporal.workflows.DiscoverCatalogAndAutoPropagateWorkflowImpl
 import io.airbyte.workers.tracing.StorageObjectGetInterceptor
@@ -156,6 +158,7 @@ class ApplicationInitializer(
     uiCommandsWorker.registerWorkflowImplementationTypes(
       workflowOptions,
       temporalProxyHelper.proxyWorkflowClass(ConnectorCommandWorkflowImpl::class.java),
+      temporalProxyHelper.proxyWorkflowClass(ActorDefinitionUpdateWorkflowImpl::class.java),
     )
     uiCommandsWorker.registerActivitiesImplementations(*uiCommandsActivities.orElseThrow().toTypedArray())
     log.info("UI Commands Worker registered.")

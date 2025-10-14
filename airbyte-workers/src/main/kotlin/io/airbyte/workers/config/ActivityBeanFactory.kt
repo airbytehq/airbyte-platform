@@ -9,6 +9,7 @@ import io.airbyte.commons.temporal.TemporalConstants
 import io.airbyte.commons.temporal.utils.PayloadChecker
 import io.airbyte.metrics.MetricClient
 import io.airbyte.workers.runtime.AirbyteWorkerActivityConfig
+import io.airbyte.workers.temporal.activities.ActorDefinitionUpdateActivity
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogHelperActivity
 import io.airbyte.workers.temporal.scheduling.activities.AppendToAttemptLogActivity
 import io.airbyte.workers.temporal.scheduling.activities.AutoDisableConnectionActivity
@@ -39,7 +40,10 @@ import java.time.Duration
 class ActivityBeanFactory {
   @Singleton
   @Named("uiCommandsActivities")
-  fun uiCommandsActivities(connectorCommandActivity: ConnectorCommandActivity): List<Any> = listOf<Any>(connectorCommandActivity)
+  fun uiCommandsActivities(
+    actorDefinitionUpdateActivity: ActorDefinitionUpdateActivity,
+    connectorCommandActivity: ConnectorCommandActivity,
+  ): List<Any> = listOf<Any>(actorDefinitionUpdateActivity, connectorCommandActivity)
 
   @Singleton
   @Requires(env = [EnvConstants.CONTROL_PLANE])

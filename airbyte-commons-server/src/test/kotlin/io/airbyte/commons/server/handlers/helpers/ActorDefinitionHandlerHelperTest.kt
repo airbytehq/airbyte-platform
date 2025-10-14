@@ -26,6 +26,8 @@ import io.airbyte.config.SupportLevel
 import io.airbyte.config.VersionBreakingChange
 import io.airbyte.config.helpers.ConnectorRegistryConverters.toActorDefinitionBreakingChanges
 import io.airbyte.config.helpers.FieldGenerator
+import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator
+import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver
 import io.airbyte.config.specs.RemoteDefinitionsProvider
 import io.airbyte.data.services.ActorDefinitionService
@@ -39,6 +41,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito
+import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import java.io.IOException
@@ -57,6 +60,8 @@ internal class ActorDefinitionHandlerHelperTest {
 
   @BeforeEach
   fun setUp() {
+    val compatibleConnectorsValidator = Mockito.mock(AirbyteCompatibleConnectorsValidator::class.java)
+    Mockito.`when`(compatibleConnectorsValidator.validate(any(), any())).thenReturn(ConnectorPlatformCompatibilityValidationResult(true, null))
     synchronousSchedulerClient = Mockito.mock(SynchronousSchedulerClient::class.java)
     val protocolVersionRange = AirbyteProtocolVersionRange(Version("0.0.0"), Version("0.3.0"))
     actorDefinitionVersionResolver = Mockito.mock(ActorDefinitionVersionResolver::class.java)
@@ -70,6 +75,7 @@ internal class ActorDefinitionHandlerHelperTest {
         remoteDefinitionsProvider,
         actorDefinitionService,
         apiPojoConverters,
+        compatibleConnectorsValidator,
       )
   }
 

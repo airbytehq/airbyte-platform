@@ -13,6 +13,7 @@ import io.airbyte.api.model.generated.DestinationDefinitionReadList
 import io.airbyte.api.model.generated.DestinationDefinitionUpdate
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList
+import io.airbyte.api.model.generated.ScopedResourceRequirements
 import io.airbyte.api.model.generated.WorkspaceIdActorDefinitionRequestBody
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
@@ -342,34 +343,55 @@ open class DestinationDefinitionsHandler
             workspaceId,
           ).withActorDefinitionId(id)
 
+      val scopeId = customDestinationDefinitionCreate.workspaceId ?: customDestinationDefinitionCreate.scopeId
+      val scopeType =
+        if (customDestinationDefinitionCreate.workspaceId !=
+          null
+        ) {
+          ScopeType.WORKSPACE
+        } else {
+          ScopeType.fromValue(customDestinationDefinitionCreate.scopeType.toString())
+        }
+
+      val destinationDefinition =
+        saveCustomDestinationDefinition(
+          name = destinationDefCreate.name,
+          icon = destinationDefCreate.icon,
+          actorDefinitionVersion = actorDefinitionVersion,
+          resourceRequirements = destinationDefCreate.resourceRequirements,
+          scopeId = scopeId,
+          scopeType = scopeType,
+        )
+
+      return buildDestinationDefinitionRead(destinationDefinition, actorDefinitionVersion)
+    }
+
+    fun saveCustomDestinationDefinition(
+      name: String,
+      icon: String?,
+      actorDefinitionVersion: ActorDefinitionVersion,
+      resourceRequirements: ScopedResourceRequirements?,
+      scopeId: UUID,
+      scopeType: ScopeType,
+    ): StandardDestinationDefinition {
       val destinationDefinition =
         StandardDestinationDefinition()
-          .withDestinationDefinitionId(id)
-          .withName(destinationDefCreate.name)
-          .withIcon(destinationDefCreate.icon)
+          .withDestinationDefinitionId(actorDefinitionVersion.actorDefinitionId)
+          .withName(name)
+          .withIcon(icon)
           .withTombstone(false)
           .withPublic(false)
           .withCustom(true)
-          .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(destinationDefCreate.resourceRequirements))
+          .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements))
 
-      // legacy call; todo: remove once we drop workspace_id column
-      if (customDestinationDefinitionCreate.workspaceId != null) {
-        destinationService.writeCustomConnectorMetadata(
-          destinationDefinition,
-          actorDefinitionVersion,
-          customDestinationDefinitionCreate.workspaceId,
-          ScopeType.WORKSPACE,
-        )
-      } else {
-        destinationService.writeCustomConnectorMetadata(
-          destinationDefinition,
-          actorDefinitionVersion,
-          customDestinationDefinitionCreate.scopeId,
-          ScopeType.fromValue(customDestinationDefinitionCreate.scopeType.toString()),
-        )
-      }
+      destinationService.writeCustomConnectorMetadata(
+        destinationDefinition = destinationDefinition,
+        defaultVersion = actorDefinitionVersion,
+        scopeId = scopeId,
+        scopeType = scopeType,
+      )
 
-      return buildDestinationDefinitionRead(destinationDefinition, actorDefinitionVersion)
+      return destinationDefinition
     }
 
     private fun resolveWorkspaceId(customDestinationDefinitionCreate: CustomDestinationDefinitionCreate): UUID {
@@ -392,32 +414,16 @@ open class DestinationDefinitionsHandler
 
     @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun updateDestinationDefinition(destinationDefinitionUpdate: DestinationDefinitionUpdate): DestinationDefinitionRead {
-      val isNewConnectorVersionSupported =
-        airbyteCompatibleConnectorsValidator.validate(
-          destinationDefinitionUpdate.destinationDefinitionId.toString(),
-          destinationDefinitionUpdate.dockerImageTag,
-        )
-      if (!isNewConnectorVersionSupported.isValid) {
-        val message =
-          if (isNewConnectorVersionSupported.message != null) {
-            isNewConnectorVersionSupported.message
-          } else {
-            String.format(
-              "Destination %s can't be updated to version %s cause the version " +
-                "is not supported by current platform version",
-              destinationDefinitionUpdate.destinationDefinitionId.toString(),
-              destinationDefinitionUpdate.dockerImageTag,
-            )
-          }
-        throw BadRequestProblem(message, ProblemMessageData().message(message))
-      }
+      actorDefinitionHandlerHelper.validateVersionSupport(
+        actorDefinitionId = destinationDefinitionUpdate.destinationDefinitionId,
+        connectorVersion = destinationDefinitionUpdate.dockerImageTag,
+        actorType = ActorType.DESTINATION,
+      )
 
       val currentDestination =
         destinationService
           .getStandardDestinationDefinition(destinationDefinitionUpdate.destinationDefinitionId)
       val currentVersion = actorDefinitionService.getActorDefinitionVersion(currentDestination.defaultVersionId)
-
-      val newDestination = buildDestinationDefinitionUpdate(currentDestination, destinationDefinitionUpdate)
 
       val newVersion =
         actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
@@ -427,26 +433,41 @@ open class DestinationDefinitionsHandler
           currentDestination.custom,
           destinationDefinitionUpdate.workspaceId,
         )
+      val newDestination =
+        updateDestinationDefinition(
+          newVersion = newVersion,
+          name = destinationDefinitionUpdate.name,
+          resourceRequirements = destinationDefinitionUpdate.resourceRequirements,
+        )
 
-      val breakingChangesForDef =
-        actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.DESTINATION)
+      return buildDestinationDefinitionRead(newDestination, newVersion)
+    }
+
+    fun updateDestinationDefinition(
+      newVersion: ActorDefinitionVersion,
+      name: String?,
+      resourceRequirements: ScopedResourceRequirements?,
+    ): StandardDestinationDefinition {
+      val currentDestination = destinationService.getStandardDestinationDefinition(newVersion.actorDefinitionId)
+      val newDestination = buildDestinationDefinitionUpdate(currentDestination, name, resourceRequirements)
+      val breakingChangesForDef = actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.DESTINATION)
       destinationService.writeConnectorMetadata(newDestination, newVersion, breakingChangesForDef)
 
-      val updatedDestinationDefinition =
-        destinationService
-          .getStandardDestinationDefinition(destinationDefinitionUpdate.destinationDefinitionId)
+      val updatedDestinationDefinition = destinationService.getStandardDestinationDefinition(newVersion.actorDefinitionId)
       supportStateUpdater.updateSupportStatesForDestinationDefinition(updatedDestinationDefinition)
-      return buildDestinationDefinitionRead(newDestination, newVersion)
+
+      return updatedDestinationDefinition
     }
 
     @VisibleForTesting
     fun buildDestinationDefinitionUpdate(
       currentDestination: StandardDestinationDefinition,
-      destinationDefinitionUpdate: DestinationDefinitionUpdate,
+      name: String?,
+      resourceRequirements: ScopedResourceRequirements?,
     ): StandardDestinationDefinition {
       val updatedResourceReqs =
-        if (destinationDefinitionUpdate.resourceRequirements != null) {
-          apiPojoConverters.scopedResourceReqsToInternal(destinationDefinitionUpdate.resourceRequirements)
+        if (resourceRequirements != null) {
+          apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements)
         } else {
           currentDestination.resourceRequirements
         }
@@ -463,8 +484,8 @@ open class DestinationDefinitionsHandler
           .withMetrics(currentDestination.metrics)
           .withResourceRequirements(updatedResourceReqs)
 
-      if (destinationDefinitionUpdate.name != null && currentDestination.custom) {
-        newDestination.withName(destinationDefinitionUpdate.name)
+      if (name != null && currentDestination.custom) {
+        newDestination.withName(name)
       }
 
       return newDestination

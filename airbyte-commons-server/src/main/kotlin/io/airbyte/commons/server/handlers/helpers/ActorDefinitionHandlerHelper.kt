@@ -6,6 +6,8 @@ package io.airbyte.commons.server.handlers.helpers
 
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges
 import io.airbyte.api.model.generated.DeadlineAction
+import io.airbyte.api.problems.model.generated.ProblemMessageData
+import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.commons.server.ServerConstants
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.errors.UnsupportedProtocolVersionException
@@ -20,6 +22,7 @@ import io.airbyte.config.ConnectorRegistrySourceDefinition
 import io.airbyte.config.ReleaseStage
 import io.airbyte.config.SupportLevel
 import io.airbyte.config.helpers.ConnectorRegistryConverters.toActorDefinitionBreakingChanges
+import io.airbyte.config.init.AirbyteCompatibleConnectorsValidator
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver
 import io.airbyte.config.specs.RemoteDefinitionsProvider
 import io.airbyte.data.services.ActorDefinitionService
@@ -43,7 +46,37 @@ class ActorDefinitionHandlerHelper(
   private val remoteDefinitionsProvider: RemoteDefinitionsProvider,
   private val actorDefinitionService: ActorDefinitionService,
   private val apiPojoConverters: ApiPojoConverters,
+  private val airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator,
 ) {
+  /**
+   * Validates that a connector version is supported by the current platform version.
+   *
+   * @param actorDefinitionId - the actor definition id
+   * @param connectorVersion - the connector version (docker image tag) to validate
+   * @param actorType - the actor type (SOURCE or DESTINATION)
+   * @throws BadRequestProblem if the connector version is not supported by the platform
+   */
+  fun validateVersionSupport(
+    actorDefinitionId: UUID,
+    connectorVersion: String,
+    actorType: ActorType,
+  ) {
+    val isNewConnectorVersionSupported =
+      airbyteCompatibleConnectorsValidator.validate(
+        connectorId = actorDefinitionId.toString(),
+        connectorVersion = connectorVersion,
+      )
+    if (!isNewConnectorVersionSupported.isValid) {
+      val message =
+        if (isNewConnectorVersionSupported.message != null) {
+          isNewConnectorVersionSupported.message
+        } else {
+          "$actorType $actorDefinitionId can't be updated to version $connectorVersion because the version is not supported by current platform version"
+        }
+      throw BadRequestProblem(message, ProblemMessageData().message(message))
+    }
+  }
+
   /**
    * Create a new actor definition version to set as default for a new connector from a create
    * request.
@@ -69,13 +102,23 @@ class ActorDefinitionHandlerHelper(
         true,
         workspaceId,
       )
+
+    return defaultDefinitionVersionFromCreate(spec, dockerRepository, dockerImageTag, documentationUrl.toString())
+  }
+
+  fun defaultDefinitionVersionFromCreate(
+    spec: ConnectorSpecification,
+    dockerRepository: String,
+    dockerImageTag: String,
+    documentationUrl: String,
+  ): ActorDefinitionVersion {
     val protocolVersion = getAndValidateProtocolVersionFromSpec(spec)
 
     return ActorDefinitionVersion()
       .withDockerImageTag(dockerImageTag)
       .withDockerRepository(dockerRepository)
       .withSpec(spec)
-      .withDocumentationUrl(documentationUrl.toString())
+      .withDocumentationUrl(documentationUrl)
       .withProtocolVersion(protocolVersion)
       .withSupportLevel(SupportLevel.NONE)
       .withInternalSupportLevel(100L)
@@ -149,6 +192,74 @@ class ActorDefinitionHandlerHelper(
   }
 
   @Throws(IOException::class)
+  fun defaultDefinitionVersionFromUpdate(
+    currentVersionId: UUID,
+    spec: ConnectorSpecification?,
+    actorType: ActorType,
+    newDockerImageTag: String,
+  ): ActorDefinitionVersion {
+    val currentVersion = actorDefinitionService.getActorDefinitionVersion(currentVersionId)
+
+    val newVersionFromCache =
+      actorDefinitionVersionResolver.resolveVersionForTag(
+        actorDefinitionId = currentVersion.actorDefinitionId,
+        actorType = actorType,
+        dockerRepository = currentVersion.dockerRepository,
+        dockerImageTag = newDockerImageTag,
+      )
+
+    // The version already exists in the database or in our registry
+    if (newVersionFromCache.isPresent) {
+      val newVersion = newVersionFromCache.get()
+      if (spec != null) {
+        newVersion.spec = spec
+        newVersion.protocolVersion = getAndValidateProtocolVersionFromSpec(spec)
+      }
+      return newVersion
+    }
+
+    if (spec == null) {
+      throw IllegalStateException("Failed to retrieve spec for image: ${currentVersion.dockerRepository}:$newDockerImageTag")
+    }
+
+    // We've never seen this version
+    return ActorDefinitionVersion()
+      .withActorDefinitionId(currentVersion.actorDefinitionId)
+      .withDockerRepository(currentVersion.dockerRepository)
+      .withDockerImageTag(newDockerImageTag)
+      .withSpec(spec)
+      .withDocumentationUrl(currentVersion.documentationUrl)
+      .withProtocolVersion(getAndValidateProtocolVersionFromSpec(spec))
+      .withReleaseStage(currentVersion.releaseStage)
+      .withReleaseDate(currentVersion.releaseDate)
+      .withSupportLevel(currentVersion.supportLevel)
+      .withInternalSupportLevel(currentVersion.internalSupportLevel)
+      .withCdkVersion(currentVersion.cdkVersion)
+      .withLastPublished(currentVersion.lastPublished)
+      .withAllowedHosts(currentVersion.allowedHosts)
+      .withSupportsFileTransfer(currentVersion.supportsFileTransfer)
+      .withSupportsRefreshes(currentVersion.supportsRefreshes)
+  }
+
+  fun shouldFetchSpec(
+    currentVersion: ActorDefinitionVersion?,
+    connectorVersion: String,
+    actorType: ActorType,
+  ): Boolean {
+    if (currentVersion == null || ServerConstants.DEV_IMAGE_TAG == connectorVersion) {
+      return true
+    }
+    val newVersionFromCache =
+      actorDefinitionVersionResolver.resolveVersionForTag(
+        actorDefinitionId = currentVersion.actorDefinitionId,
+        actorType = actorType,
+        dockerRepository = currentVersion.dockerRepository,
+        dockerImageTag = connectorVersion,
+      )
+    return !newVersionFromCache.isPresent
+  }
+
+  @Throws(IOException::class)
   private fun getSpecForImage(
     dockerRepository: String,
     imageTag: String,
@@ -170,7 +281,7 @@ class ActorDefinitionHandlerHelper(
     return response.output
   }
 
-  private fun getAndValidateProtocolVersionFromSpec(spec: ConnectorSpecification): String {
+  fun getAndValidateProtocolVersionFromSpec(spec: ConnectorSpecification): String {
     val airbyteProtocolVersion = AirbyteProtocolVersion.getWithDefault(spec.protocolVersion)
     if (!protocolVersionRange.isSupported(airbyteProtocolVersion)) {
       throw UnsupportedProtocolVersionException(airbyteProtocolVersion, protocolVersionRange.min, protocolVersionRange.max)

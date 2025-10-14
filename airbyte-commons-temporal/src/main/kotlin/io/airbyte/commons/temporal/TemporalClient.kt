@@ -10,6 +10,9 @@ import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.temporal.config.TemporalQueueConfiguration
 import io.airbyte.commons.temporal.exception.DeletedWorkflowException
 import io.airbyte.commons.temporal.exception.UnreachableWorkflowException
+import io.airbyte.commons.temporal.scheduling.ActorDefinitionUpdateInput
+import io.airbyte.commons.temporal.scheduling.ActorDefinitionUpdateOutput
+import io.airbyte.commons.temporal.scheduling.ActorDefinitionUpdateWorkflow
 import io.airbyte.commons.temporal.scheduling.CheckCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandInput
@@ -20,6 +23,7 @@ import io.airbyte.commons.temporal.scheduling.state.WorkflowState
 import io.airbyte.config.ActorContext
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ConnectorJobOutput
+import io.airbyte.config.FailureReason
 import io.airbyte.config.JobCheckConnectionConfig
 import io.airbyte.config.JobDiscoverCatalogConfig
 import io.airbyte.config.JobGetSpecConfig
@@ -42,13 +46,16 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.temporal.api.common.v1.WorkflowExecution
 import io.temporal.api.common.v1.WorkflowType
 import io.temporal.api.enums.v1.WorkflowExecutionStatus
 import io.temporal.api.filter.v1.StatusFilter
 import io.temporal.api.filter.v1.WorkflowTypeFilter
 import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsRequest
 import io.temporal.api.workflowservice.v1.ListOpenWorkflowExecutionsRequest
+import io.temporal.client.WorkflowClient
 import io.temporal.client.WorkflowOptions
+import io.temporal.client.WorkflowStub
 import io.temporal.common.RetryOptions
 import io.temporal.workflow.Functions
 import jakarta.inject.Named
@@ -57,6 +64,7 @@ import java.io.IOException
 import java.nio.file.Path
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionException
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -708,4 +716,65 @@ class TemporalClient(
       logger.error { e.message }
       emptyList()
     }
+
+  /**
+   * Start an actor definition update workflow asynchronously.
+   *
+   * @param input workflow input containing actor definition update details
+   */
+  fun submitActorDefinitionUpdateAsync(input: ActorDefinitionUpdateInput) {
+    logger.info { "Starting actor definition update workflow for requestId: ${input.requestId}" }
+
+    val workflowOptions =
+      WorkflowOptions
+        .newBuilder()
+        .setTaskQueue(queueConfiguration.uiCommandsQueue)
+        .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(1).build())
+        .setWorkflowId(input.requestId)
+        .build()
+
+    val workflow =
+      workflowClientWrapped.newWorkflowStub(
+        ActorDefinitionUpdateWorkflow::class.java,
+        workflowOptions,
+      )
+
+    // Start workflow asynchronously
+    WorkflowClient.start(workflow::run, input)
+  }
+
+  /**
+   * Get the result of a completed workflow.
+   *
+   * @param workflowId the workflow ID
+   * @param workflowClass the workflow interface class
+   * @return the workflow result
+   */
+  fun tryGetActorDefinitionWorkflowResult(requestId: String): ActorDefinitionUpdateOutput? {
+    val workflow = workflowClientWrapped.newWorkflowStub(ActorDefinitionUpdateWorkflow::class.java, requestId)
+    // Use WorkflowStub to get the result
+    val untypedWorkflowStub = WorkflowStub.fromTyped(workflow)
+    val resultFuture = untypedWorkflowStub.getResultAsync(ActorDefinitionUpdateOutput::class.java)
+    return try {
+      // Using get with a timeout because getNow tend to always return incomplete.
+      resultFuture.get(500, TimeUnit.MILLISECONDS)
+    } catch (_: TimeoutException) {
+      // we hit the timeout from the get so we assume the workflow is still running.
+      return null
+    } catch (e: CompletionException) {
+      logger.warn(e) { "Failed to retrieve the actor definition workflow for request $requestId." }
+      ActorDefinitionUpdateOutput(
+        actorDefinitionId = null,
+        commandId = null,
+        failureReason =
+          FailureReason()
+            // This isn't the most accurate; on a bad config where the image doesn't exist, we fail hard from a timeout.
+            // A further improvement is to catch those and report them as config errors.
+            .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
+            .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
+            .withStacktrace(e.stackTraceToString())
+            .withTimestamp(System.currentTimeMillis()),
+      )
+    }
+  }
 }

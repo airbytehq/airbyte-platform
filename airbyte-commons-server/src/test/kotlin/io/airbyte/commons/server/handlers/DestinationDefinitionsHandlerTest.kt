@@ -70,6 +70,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import java.io.IOException
@@ -1369,6 +1370,7 @@ internal class DestinationDefinitionsHandlerTest {
       .verify(destinationService)
       .writeConnectorMetadata(updatedDestination, updatedDestinationDefVersion, breakingChanges)
     Mockito.verify(supportStateUpdater).updateSupportStatesForDestinationDefinition(persistedUpdatedDestination)
+    Mockito.verify(actorDefinitionHandlerHelper).validateVersionSupport(any(), any(), any())
     Mockito.verifyNoMoreInteractions(actorDefinitionHandlerHelper, supportStateUpdater)
   }
 
@@ -1377,13 +1379,12 @@ internal class DestinationDefinitionsHandlerTest {
   fun testBuildDestinationDefinitionUpdateNameNonCustom() {
     val existingDestinationDefinition = destinationDefinition
 
-    val destinationDefinitionUpdate =
-      DestinationDefinitionUpdate()
-        .destinationDefinitionId(existingDestinationDefinition.getDestinationDefinitionId())
-        .name("Some name that gets ignored")
-
     val newDestinationDefinition =
-      destinationDefinitionsHandler.buildDestinationDefinitionUpdate(existingDestinationDefinition, destinationDefinitionUpdate)
+      destinationDefinitionsHandler.buildDestinationDefinitionUpdate(
+        existingDestinationDefinition,
+        name = "Some name that gets ignored",
+        resourceRequirements = null,
+      )
 
     Assertions.assertEquals(newDestinationDefinition.getName(), existingDestinationDefinition.getName())
   }
@@ -1394,15 +1395,11 @@ internal class DestinationDefinitionsHandlerTest {
     val newName = "My new connector name"
     val existingCustomDestinationDefinition = generateDestinationDefinition().withCustom(true)
 
-    val destinationDefinitionUpdate =
-      DestinationDefinitionUpdate()
-        .destinationDefinitionId(existingCustomDestinationDefinition.getDestinationDefinitionId())
-        .name(newName)
-
     val newDestinationDefinition =
       destinationDefinitionsHandler.buildDestinationDefinitionUpdate(
         existingCustomDestinationDefinition,
-        destinationDefinitionUpdate,
+        name = newName,
+        resourceRequirements = null,
       )
 
     Assertions.assertEquals(newDestinationDefinition.getName(), newName)
@@ -1477,6 +1474,7 @@ internal class DestinationDefinitionsHandlerTest {
       anyOrNull(),
     )
 
+    Mockito.verify(actorDefinitionHandlerHelper).validateVersionSupport(any(), any(), any())
     Mockito.verifyNoMoreInteractions(actorDefinitionHandlerHelper)
   }
 
@@ -1491,11 +1489,12 @@ internal class DestinationDefinitionsHandlerTest {
   fun testUnsupportedAirbyteVersionUpdateDestination() {
     Mockito
       .`when`(
-        airbyteCompatibleConnectorsValidator.validate(
+        actorDefinitionHandlerHelper.validateVersionSupport(
           anyOrNull(),
           eq("12.4.0"),
+          eq(ActorType.DESTINATION),
         ),
-      ).thenReturn(ConnectorPlatformCompatibilityValidationResult(false, ""))
+      ).thenThrow(BadRequestProblem())
     Mockito
       .`when`(
         destinationService.getStandardDestinationDefinition(
@@ -1525,6 +1524,7 @@ internal class DestinationDefinitionsHandlerTest {
       anyOrNull(),
       anyOrNull(),
     )
+    Mockito.verify(actorDefinitionHandlerHelper).validateVersionSupport(any(), any(), any())
     Mockito.verifyNoMoreInteractions(actorDefinitionHandlerHelper)
   }
 

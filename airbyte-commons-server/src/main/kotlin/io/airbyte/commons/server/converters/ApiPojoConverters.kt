@@ -23,6 +23,7 @@ import io.airbyte.api.model.generated.ResourceRequirements
 import io.airbyte.api.model.generated.SchemaChangeBackfillPreference
 import io.airbyte.api.model.generated.ScopedResourceRequirements
 import io.airbyte.api.model.generated.SupportState
+import io.airbyte.commons.converters.ApiConverters.Companion.toApi
 import io.airbyte.commons.converters.StateConverter.toApi
 import io.airbyte.commons.converters.StateConverter.toInternal
 import io.airbyte.commons.enums.convertTo
@@ -47,6 +48,7 @@ import java.util.Date
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Collectors
+import io.airbyte.api.model.generated.FailureReason as ApiFailureReason
 
 /**
  * Convert between API and internal versions of airbyte models.
@@ -414,4 +416,27 @@ class ApiPojoConverters(
     // ready.
     connectionRead.schedule(this.toLegacyConnectionSchedule(standardSync))
   }
+
+  fun failureReasonToApi(failureReason: io.airbyte.config.FailureReason?): ApiFailureReason? =
+    when (failureReason) {
+      null -> null
+      else ->
+        ApiFailureReason()
+          .failureOrigin(failureReason.failureOrigin?.convertTo())
+          .failureType(failureReason.failureType?.convertTo())
+          .externalMessage(failureReason.externalMessage)
+          .internalMessage(failureReason.internalMessage)
+          .stacktrace(failureReason.stacktrace)
+          .timestamp(failureReason.timestamp)
+          .retryable(failureReason.retryable)
+          .apply {
+            failureReason.metadata?.let {
+              fromTraceMessage =
+                failureReason.metadata.additionalProperties[io.airbyte.persistence.job.errorreporter.JobErrorReporter.FROM_TRACE_MESSAGE] as Boolean?
+            }
+            failureReason.streamDescriptor?.let { internalStreamDescriptor ->
+              streamDescriptor = internalStreamDescriptor.toApi()
+            }
+          }
+    }
 }

@@ -27,6 +27,7 @@ import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.authorization.RoleResolver
+import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.helpers.SecretSanitizer
 import io.airbyte.config.ActorCatalog
@@ -82,6 +83,7 @@ class CommandApiControllerTest {
   private lateinit var roleResolver: RoleResolver
   private lateinit var secretSanitizer: SecretSanitizer
   private lateinit var workspaceService: WorkspaceService
+  private lateinit var apiToPojoConverters: ApiPojoConverters
 
   companion object {
     const val TEST_COMMAND_ID = "my-command"
@@ -109,6 +111,7 @@ class CommandApiControllerTest {
     commandService = mockk(relaxed = true)
     secretSanitizer = mockk(relaxed = true)
     workspaceService = mockk(relaxed = true)
+    apiToPojoConverters = ApiPojoConverters(mockk(relaxed = true))
 
     controller =
       CommandApiController(
@@ -119,6 +122,7 @@ class CommandApiControllerTest {
         secretSanitizer = secretSanitizer,
         workspaceService = workspaceService,
         logUtils = mockk(relaxed = true),
+        apiPojoConverters = apiToPojoConverters,
       )
   }
 
@@ -336,7 +340,7 @@ class CommandApiControllerTest {
         .withTimestamp(42)
         .withStreamDescriptor(StreamDescriptor().withName("example name").withNamespace("example namespace"))
 
-    val output = controller.toApi(input)
+    val output = apiToPojoConverters.failureReasonToApi(input)
 
     assertEquals(
       ApiFailureReason()
@@ -355,7 +359,7 @@ class CommandApiControllerTest {
 
   @Test
   fun `FailureReason toApi handles null fields`() {
-    assertEquals(ApiFailureReason(), controller.toApi(FailureReason()))
+    assertEquals(ApiFailureReason(), apiToPojoConverters.failureReasonToApi(FailureReason()))
   }
 
   @Test

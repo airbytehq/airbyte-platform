@@ -15,6 +15,7 @@ import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandApiInput
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.commons.temporal.scheduling.ReplicationCommandApiInput
+import io.airbyte.commons.temporal.scheduling.SpecCommandApiInput
 import io.airbyte.commons.temporal.scheduling.SpecCommandInput
 import io.airbyte.commons.timer.Stopwatch
 import io.airbyte.config.ConnectorJobOutput
@@ -33,11 +34,13 @@ import io.airbyte.workers.commands.DiscoverCommand
 import io.airbyte.workers.commands.DiscoverCommandV2
 import io.airbyte.workers.commands.ReplicationCommand
 import io.airbyte.workers.commands.SpecCommand
+import io.airbyte.workers.commands.SpecCommandV2
 import io.airbyte.workers.models.CheckConnectionApiInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.DiscoverSourceApiInput
 import io.airbyte.workers.models.ReplicationApiInput
+import io.airbyte.workers.models.SpecApiInput
 import io.airbyte.workers.models.SpecInput
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.activity.Activity
@@ -116,6 +119,7 @@ class ConnectorCommandActivityImpl(
   private val discoverCommand: DiscoverCommand,
   private val discoverCommandApi: DiscoverCommandV2,
   private val specCommand: SpecCommand,
+  private val specCommandApi: SpecCommandV2,
   private val replicationCommandApi: ReplicationCommand,
   private val activityExecutionContextProvider: ActivityExecutionContextProvider,
   private val metricClient: MetricClient,
@@ -133,6 +137,9 @@ class ConnectorCommandActivityImpl(
 
     fun SpecCommandInput.SpecInput.toWorkerModels(): SpecInput = SpecInput(jobRunConfig, integrationLauncherConfig)
 
+    fun SpecCommandApiInput.SpecApiInput.toWorkerModels(): SpecApiInput =
+      SpecApiInput(requestId, commandId, actorDefinitionId, dockerImage, dockerImageTag, workspaceId)
+
     fun ReplicationCommandApiInput.ReplicationApiInput.toWorkerModels(): ReplicationApiInput =
       ReplicationApiInput(connectionId, jobId, attemptId, appliedCatalogDiff)
 
@@ -146,6 +153,7 @@ class ConnectorCommandActivityImpl(
         is CheckCommandInput -> checkCommand.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
         is DiscoverCommandInput -> discoverCommand.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
         is SpecCommandInput -> specCommand.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
+        is SpecCommandApiInput -> specCommandApi.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
         is CheckCommandApiInput -> checkCommandApi.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
         is DiscoverCommandApiInput -> discoverCommandApi.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
         is ReplicationCommandApiInput -> replicationCommandApi.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
@@ -234,6 +242,7 @@ class ConnectorCommandActivityImpl(
       is CheckCommandInput -> checkCommand
       is DiscoverCommandInput -> discoverCommand
       is SpecCommandInput -> specCommand
+      is SpecCommandApiInput -> specCommandApi
       is CheckCommandApiInput -> checkCommandApi
       is DiscoverCommandApiInput -> discoverCommandApi
       is ReplicationCommandApiInput -> replicationCommandApi
