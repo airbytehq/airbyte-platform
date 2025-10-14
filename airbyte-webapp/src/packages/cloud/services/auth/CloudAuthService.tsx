@@ -269,43 +269,36 @@ const CloudKeycloakAuthService: React.FC<PropsWithChildren> = ({ children }) => 
     };
   }, [queryClient]);
 
-  // Initialization of the current user
+  // This effect initializes the authentication state. There are three possible outcomes:
+  // 1. The user is returning from an IdP login, and we have auth params in the URL. In this case, we call
+  //    signinCallback to process the auth params and get the user.
+  // 2. The user has an active session, and we can call signinSilent to get the user without any interaction.
+  // 3. Neither of the above is true, and we end up with no user and an unauthenticated state.
   useEffect(() => {
     if (userSigninInitialized.current) {
       return;
     }
-    // We strictly need to initialize once, because authorization codes are only valid for a single use
+    // We strictly want to initialize once. All other authentication state changes should be driven by userManager
+    // events below (e.g. userLoaded, userUnloaded, etc.)
     userSigninInitialized.current = true;
 
     (async (): Promise<void> => {
-      let keycloakUser: User | void | null = null;
       try {
         // Check if user is returning back from IdP login
         if (hasAuthParams()) {
-          keycloakUser = await userManager.signinCallback();
+          await userManager.signinCallback();
           clearSsoSearchParams();
           // Otherwise, check if there is a session currently
-        } else if ((keycloakUser ??= await userManager.signinSilent())) {
-          try {
-            const airbyteUser = await getAirbyteUser({
-              authUserId: keycloakUser.profile.sub,
-              getAccessToken: () => Promise.resolve(keycloakUser?.access_token ?? ""),
-            });
-            // Initialize the access token ref with a value
-            keycloakAccessTokenRef.current = keycloakUser.access_token;
-            dispatch({ type: "userLoaded", airbyteUser, keycloakUser });
-          } catch (error) {
-            handleAirbyteUserError(error);
-          }
-          // Finally, we can assume there is no active session
         } else {
-          dispatch({ type: "userUnloaded" });
+          await userManager.signinSilent();
         }
+        // If both of these checks fail, dispatch an error to the reducer. This is not necessarily a "real" error - it
+        // just means there's either no session or we could not validate it silently.
       } catch (error) {
         dispatch({ type: "error", error });
       }
     })();
-  }, [userManager, getAirbyteUser, handleAirbyteUserError]);
+  }, [userManager]);
 
   // Hook in to userManager events
   useEffect(() => {
