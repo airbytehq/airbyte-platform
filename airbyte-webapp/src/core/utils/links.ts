@@ -56,7 +56,7 @@ export const links = {
   connectionMappings: `${BASE_DOCS_LINK}/using-airbyte/mappings`,
   dataActivationDocs: `${BASE_DOCS_LINK}/platform/next/move-data/elt-data-activation`,
   ssoDocs: `${BASE_DOCS_LINK}/platform/access-management/sso`,
-  embeddedOnboardingDocs: `${BASE_DOCS_LINK}/ai-agents/embedded/widget/develop-your-app`,
+  embeddedOnboardingDocs: `${BASE_DOCS_LINK}/ai-agents/embedded/widget/tutorials/develop-your-app`,
   fixIngress1_7: `${BASE_DOCS_LINK}/platform/next/deploying-airbyte/integrations/ingress-1-7`,
 } as const;
 
