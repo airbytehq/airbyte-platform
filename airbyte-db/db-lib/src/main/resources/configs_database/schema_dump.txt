@@ -804,6 +804,7 @@ where (((state)::text = ANY ((ARRAY['initialized'::character varying, 'in_progre
 create index "group_organization_id_name_idx" on "public"."group"("organization_id" asc, "name" asc);
 create index "group_member_group_id_user_id_idx" on "public"."group_member"("group_id" asc, "user_id" asc);
 create index "group_member_user_id_idx" on "public"."group_member"("user_id" asc);
+create index "notification_configuration_connection_id_idx" on "public"."notification_configuration"("connection_id" asc);
 create index "observability_jobs_stats__connection_id_created_at__idx" on "public"."observability_jobs_stats"("connection_id" asc, "created_at" asc);
 create index "observability_jobs_stats__job_id__idx" on "public"."observability_jobs_stats"("job_id" asc);
 create index "observability_stream_stats__job_id__idx" on "public"."observability_stream_stats"("job_id" asc);
