@@ -63,6 +63,10 @@ object DatabaseConstants {
 
   const val PERMISSION_TABLE: String = "permission"
 
+  const val GROUP_TABLE: String = "group"
+
+  const val GROUP_MEMBER_TABLE: String = "group_member"
+
   const val WORKSPACE_TABLE: String = "workspace"
 
   const val ORGANIZATION_TABLE: String = "organization"

@@ -149,6 +149,8 @@ open class BaseConfigDatabaseTest {
               dataplane_client_credentials,
               dataplane_group,
               declarative_manifest,
+              "group",
+              group_member,
               notification_configuration,
               operation,
               orchestration,

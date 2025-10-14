@@ -352,6 +352,24 @@ create table "public"."declarative_manifest_image_version" (
   "image_sha" varchar(256) not null,
   constraint "declarative_manifest_image_version_pkey" primary key ("major_version")
 );
+create table "public"."group" (
+  "id" uuid not null,
+  "name" varchar(256) not null,
+  "description" varchar(1024),
+  "organization_id" uuid not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "group_pkey" primary key ("id"),
+  constraint "group_organization_id_name_key" unique ("organization_id", "name")
+);
+create table "public"."group_member" (
+  "id" uuid not null,
+  "group_id" uuid not null,
+  "user_id" uuid not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "group_member_pkey" primary key ("id"),
+  constraint "group_member_group_id_user_id_key" unique ("group_id", "user_id")
+);
 create table "public"."notification_configuration" (
   "id" uuid not null,
   "enabled" boolean not null,
@@ -499,6 +517,7 @@ create table "public"."permission" (
   "organization_id" uuid,
   "permission_type" "public"."permission_type" not null,
   "service_account_id" uuid,
+  "group_id" uuid,
   constraint "permission_pkey" primary key ("id"),
   constraint "permission_unique_user_organization" unique ("user_id", "organization_id"),
   constraint "permission_unique_user_workspace" unique ("user_id", "workspace_id")
@@ -782,6 +801,9 @@ where ((job_id IS NOT NULL));
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
 create unique index "actor_definition_id_state_tag_unique_idx" on "public"."connector_rollout"("actor_definition_id" asc, "tag" asc)
 where (((state)::text = ANY ((ARRAY['initialized'::character varying, 'in_progress'::character varying, 'paused'::character varying, 'workflow_started'::character varying, 'finalizing'::character varying, 'errored'::character varying])::text[])));
+create index "group_organization_id_name_idx" on "public"."group"("organization_id" asc, "name" asc);
+create index "group_member_group_id_user_id_idx" on "public"."group_member"("group_id" asc, "user_id" asc);
+create index "group_member_user_id_idx" on "public"."group_member"("user_id" asc);
 create index "observability_jobs_stats__connection_id_created_at__idx" on "public"."observability_jobs_stats"("connection_id" asc, "created_at" asc);
 create index "observability_jobs_stats__job_id__idx" on "public"."observability_jobs_stats"("job_id" asc);
 create index "observability_stream_stats__job_id__idx" on "public"."observability_stream_stats"("job_id" asc);
@@ -800,6 +822,7 @@ create index "organization_email_domain_organization_id_idx" on "public"."organi
 create index "organization_payment_config_grace_period_end_at_idx" on "public"."organization_payment_config"("grace_period_end_at" asc);
 create index "organization_payment_config_payment_provider_id_idx" on "public"."organization_payment_config"("payment_provider_id" asc);
 create index "organization_payment_config_payment_status_idx" on "public"."organization_payment_config"("payment_status" asc);
+create index "permission_group_id_idx" on "public"."permission"("group_id" asc);
 create index "permission_organization_id_idx" on "public"."permission"("organization_id" asc);
 create index "permission_service_account_id_index" on "public"."permission"("service_account_id" asc);
 create index "permission_user_id_idx" on "public"."permission"("user_id" asc);
@@ -877,6 +900,9 @@ alter table "public"."dataplane" add constraint "dataplane_dataplane_group_id_fk
 alter table "public"."dataplane" add constraint "dataplane_service_account_id_fkey" foreign key ("service_account_id") references "public"."service_accounts" ("id");
 alter table "public"."dataplane_client_credentials" add constraint "dataplane_client_credentials_dataplane_id_fkey" foreign key ("dataplane_id") references "public"."dataplane" ("id");
 alter table "public"."dataplane_group" add constraint "dataplane_group_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
+alter table "public"."group" add constraint "group_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
+alter table "public"."group_member" add constraint "group_member_group_id_fkey" foreign key ("group_id") references "public"."group" ("id");
+alter table "public"."group_member" add constraint "group_member_user_id_fkey" foreign key ("user_id") references "public"."user" ("id");
 alter table "public"."notification_configuration" add constraint "notification_configuration_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."operation" add constraint "operation_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."orchestration" add constraint "orchestration_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
@@ -888,6 +914,7 @@ alter table "public"."organization_payment_config" add constraint "organization_
 alter table "public"."partial_user_config" add constraint "partial_user_config_actor_id_fkey" foreign key ("actor_id") references "public"."actor" ("id");
 alter table "public"."partial_user_config" add constraint "partial_user_config_template_id_fkey" foreign key ("config_template_id") references "public"."config_template" ("id");
 alter table "public"."partial_user_config" add constraint "partial_user_config_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
+alter table "public"."permission" add constraint "permission_group_id_fkey" foreign key ("group_id") references "public"."group" ("id");
 alter table "public"."permission" add constraint "permission_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."permission" add constraint "permission_service_account_id_fkey" foreign key ("service_account_id") references "public"."service_accounts" ("id");
 alter table "public"."permission" add constraint "permission_user_id_fkey" foreign key ("user_id") references "public"."user" ("id");
