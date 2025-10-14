@@ -15514,8 +15514,10 @@ components:
         date:
           type: string
           format: date
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonFormat(pattern="yyyy-MM-dd")'
         used:
-          type: double
+          type: number
+          format: double
     ListOrganizationSummariesRequestBody:
       type: object
       required:

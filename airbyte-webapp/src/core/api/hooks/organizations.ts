@@ -17,6 +17,7 @@ import {
   listWorkspacesInOrganization,
   listOrganizationsByUser,
   listOrganizationSummaries,
+  getOrganizationDataWorkerUsage,
 } from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
 import {
@@ -37,6 +38,7 @@ import {
   WorkspaceReadList,
   ListWorkspacesInOrganizationRequestBody,
   WorkspaceRead,
+  OrganizationDataWorkerUsageRequestBody,
 } from "../types/AirbyteClient";
 import { OnboardingStatusEnum, Organization } from "../types/SonarClient";
 import { useRequestOptions } from "../useRequestOptions";
@@ -53,6 +55,9 @@ export const organizationKeys = {
   trialStatus: (organizationId: string) => [SCOPE_ORGANIZATION, "trial", organizationId] as const,
   usage: (organizationId: string, timeWindow: string) =>
     [SCOPE_ORGANIZATION, "usage", organizationId, timeWindow] as const,
+  workerUsage: (organizationId: string, startDate: string, endDate: string) =>
+    [SCOPE_ORGANIZATION, "workerUsage", organizationId, startDate, endDate] as const,
+  billingDetails: (organizationId: string) => [SCOPE_ORGANIZATION, "billingDetails", organizationId] as const,
   workspacesList: (organizationId: string) => [SCOPE_ORGANIZATION, "workspaces", "list", organizationId] as const,
   workspaces: (organizationId: string, pageSize: number, nameContains?: string) =>
     [...organizationKeys.workspacesList(organizationId), pageSize, nameContains] as const,
@@ -174,6 +179,17 @@ export const useOrganizationUsage = ({ timeWindow }: { timeWindow: ConsumptionTi
 
   return useSuspenseQuery(organizationKeys.usage(organizationId, timeWindow), () =>
     getOrganizationUsage({ organizationId, timeWindow }, requestOptions)
+  );
+};
+
+export const useOrganizationWorkerUsage = (
+  params: Pick<OrganizationDataWorkerUsageRequestBody, "startDate" | "endDate">
+) => {
+  const requestOptions = useRequestOptions();
+  const organizationId = useCurrentOrganizationId();
+
+  return useSuspenseQuery(organizationKeys.workerUsage(organizationId, params.startDate, params.endDate), () =>
+    getOrganizationDataWorkerUsage({ organizationId, ...params }, requestOptions)
   );
 };
 

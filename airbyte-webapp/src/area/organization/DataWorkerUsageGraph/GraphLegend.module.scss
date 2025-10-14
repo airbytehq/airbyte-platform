@@ -1,0 +1,25 @@
+@use "scss/variables";
+
+.graphLegend {
+  padding: 0 variables.$spacing-lg;
+  margin: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-sm;
+
+  &__dot {
+    display: "inline-block";
+    width: 10px;
+    height: 10px;
+    margin-right: variables.$spacing-md;
+  }
+
+  &__item {
+    height: 20px;
+    display: flex;
+    align-items: center;
+    gap: variables.$spacing-sm;
+    font-size: variables.$font-size-sm;
+  }
+}

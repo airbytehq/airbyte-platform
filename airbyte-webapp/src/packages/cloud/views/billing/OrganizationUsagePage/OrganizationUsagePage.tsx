@@ -1,14 +1,17 @@
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
+import { DataWorkerUsageGraph } from "area/organization/DataWorkerUsageGraph";
 import { ConsumptionTimeWindow } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { links } from "core/utils/links";
+import { useExperiment } from "hooks/services/Experiment";
 import { UsagePerDayGraph } from "packages/cloud/area/billing/components/UsagePerDayGraph";
 
 import { OrganizationCreditUsageContextProvider, useOrganizationCreditsContext } from "./OrganizationCreditContext";
@@ -17,6 +20,7 @@ import { UsageByWorkspaceTable } from "./UsageByWorkspaceTable";
 
 export const OrganizationUsagePage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_ORGANIZATION_USAGE);
+  const showDataWorkerUsage = useExperiment("organization.workerUsagePage");
 
   return (
     <FlexContainer direction="column" gap="xl">
@@ -26,19 +30,27 @@ export const OrganizationUsagePage: React.FC = () => {
         </Heading>
       </FlexContainer>
 
-      <Text>
-        <FormattedMessage
-          id="settings.organization.usage.description"
-          values={{
-            lnk: (node: React.ReactNode) => <ExternalLink href={links.creditDescription}>{node}</ExternalLink>,
-          }}
-        />
-      </Text>
-      <OrganizationCreditUsageContextProvider>
-        <TimeWindowSelector />
-        <OrganizationUsageGraph />
-        <UsageByWorkspaceTable />
-      </OrganizationCreditUsageContextProvider>
+      {showDataWorkerUsage ? (
+        <Box mt="xl">
+          <DataWorkerUsageGraph />
+        </Box>
+      ) : (
+        <>
+          <Text>
+            <FormattedMessage
+              id="settings.organization.usage.description"
+              values={{
+                lnk: (node: React.ReactNode) => <ExternalLink href={links.creditDescription}>{node}</ExternalLink>,
+              }}
+            />
+          </Text>
+          <OrganizationCreditUsageContextProvider>
+            <TimeWindowSelector />
+            <OrganizationUsageGraph />
+            <UsageByWorkspaceTable />
+          </OrganizationCreditUsageContextProvider>
+        </>
+      )}
     </FlexContainer>
   );
 };

@@ -31,6 +31,7 @@ export interface Experiments {
   "embedded.templateCreateButton": boolean;
   "embedded.useSonarServer": boolean;
   "onboarding.surveyEnabled": boolean;
+  "organization.workerUsagePage": boolean;
   "platform.allow-config-template-endpoints": boolean;
   "platform.llm-sync-job-failure-explanation": boolean;
   "platform.use-runtime-secret-persistence": boolean;
@@ -82,6 +83,7 @@ export const defaultExperimentValues: Experiments = {
   "embedded.templateCreateButton": false,
   "embedded.useSonarServer": false,
   "onboarding.surveyEnabled": false,
+  "organization.workerUsagePage": false,
   "platform.allow-config-template-endpoints": false,
   "platform.llm-sync-job-failure-explanation": false,
   "platform.use-runtime-secret-persistence": false,

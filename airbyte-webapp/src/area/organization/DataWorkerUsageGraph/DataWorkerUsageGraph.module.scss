@@ -1,0 +1,20 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/z-indices";
+
+:export {
+  tooltipZindex: z-indices.$tooltip;
+  gridLine: colors.$grey-100;
+  workspaceColor1: colors.$blue-400;
+  workspaceColor2: colors.$blue-200;
+  workspaceColor3: colors.$grey-200;
+  barHover: colors.$blue-40;
+}
+
+.dataWorkerUsageGraph {
+  &__wrapper {
+    border: variables.$border-thin solid colors.$grey-100;
+    border-radius: variables.$border-radius-md;
+    padding: variables.$spacing-xl variables.$spacing-md variables.$spacing-md;
+  }
+}
