@@ -29,4 +29,5 @@ data class Permission(
   @DateUpdated
   var updatedAt: java.time.OffsetDateTime? = null,
   var serviceAccountId: UUID? = null,
+  var groupId: UUID? = null,
 )

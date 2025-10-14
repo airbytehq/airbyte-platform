@@ -47,7 +47,6 @@ import io.airbyte.db.factory.FlywayFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider
-import io.airbyte.db.instance.configs.migrations.V2_1_0_001__AddDataObservabilityStreamStatsAdditionalStats
 import io.airbyte.db.instance.configs.migrations.V2_1_0_004__AddIndexToNotificationConfigurationConnectionId
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider
