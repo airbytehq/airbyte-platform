@@ -7,8 +7,8 @@ import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrga
 import { useValidateSsoToken } from "core/api";
 import { useFormatError } from "core/errors";
 
-import { isSsoTestCallback } from "./ssoTestUtils";
-import { useSSOTestManager } from "./useSSOTestManager";
+import { createSSOTestManager } from "./ssoTestManager";
+import { getSsoTestRealm, isSsoTestCallback } from "./ssoTestUtils";
 
 interface TestResult {
   success: boolean;
@@ -18,10 +18,13 @@ interface TestResult {
 export const useSSOTestCallback = () => {
   const { formatMessage } = useIntl();
   const [testResult, setTestResult] = useState<TestResult | null>(null);
-  const userManager = useSSOTestManager();
   const organizationId = useCurrentOrganizationId();
   const { mutateAsync: validateToken } = useValidateSsoToken();
   const formatError = useFormatError();
+
+  // Get the UserManager for handling the OAuth callback
+  const realm = getSsoTestRealm();
+  const userManager = isSsoTestCallback() && realm ? createSSOTestManager(realm) : null;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

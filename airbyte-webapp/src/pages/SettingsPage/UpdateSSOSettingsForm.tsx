@@ -14,7 +14,7 @@ import { useNotificationService } from "hooks/services/Notification";
 
 import { SSOSettings } from "./components/SSOSettings";
 import { SSOSettingsValidation } from "./components/SSOSettingsValidation";
-import { createSSOTestManager } from "./components/useSSOTestManager";
+import { createSSOTestManager } from "./components/ssoTestManager";
 
 export const ssoValidationSchema = z.object({
   companyIdentifier: z.string().trim(),
