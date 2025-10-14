@@ -38,7 +38,7 @@ import io.airbyte.api.problems.model.generated.FailedPreconditionData
 import io.airbyte.api.problems.throwable.generated.FailedPreconditionProblem
 import io.airbyte.commons.constants.AirbyteCatalogConstants
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.server.builder.manifest.processor.ManifestServerManifestProcessor
+import io.airbyte.commons.server.builder.manifest.processor.ManifestProcessorProvider
 import io.airbyte.commons.server.errors.NotFoundException
 import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater
 import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjector
@@ -113,7 +113,7 @@ open class ConnectorBuilderProjectsHandler
     private val secretPersistenceConfigService: SecretPersistenceConfigService,
     private val sourceService: SourceService,
     @param:Named("jsonSecretsProcessorWithCopy") private val secretsProcessor: JsonSecretsProcessor,
-    private val manifestServerProcessor: ManifestServerManifestProcessor,
+    private val manifestProcessorProvider: ManifestProcessorProvider,
     private val actorDefinitionService: ActorDefinitionService,
     private val remoteDefinitionsProvider: RemoteDefinitionsProvider,
     @param:Named("oauthImplementationFactory") private val oAuthImplementationFactory: OAuthImplementationFactory,
@@ -516,8 +516,9 @@ open class ConnectorBuilderProjectsHandler
         val existingHydratedTestingValues =
           getHydratedTestingValues(project, secretPersistenceConfig.orElse(null)).orElse(Jsons.emptyObject())
 
+        val processor = manifestProcessorProvider.getProcessor(project.workspaceId)
         val builderProjectStreamRead =
-          manifestServerProcessor.streamTestRead(
+          processor.streamTestRead(
             existingHydratedTestingValues,
             requestBody.manifest,
             requestBody.streamName,
@@ -561,7 +562,8 @@ open class ConnectorBuilderProjectsHandler
       val existingHydratedTestingValues =
         getHydratedTestingValues(project, secretPersistenceConfig.orElse(null)).orElse(Jsons.emptyObject())
 
-      return manifestServerProcessor.fullResolveManifest(
+      val processor = manifestProcessorProvider.getProcessor(project.workspaceId)
+      return processor.fullResolveManifest(
         existingHydratedTestingValues,
         requestBody.manifest,
         requestBody.streamLimit,
@@ -570,18 +572,23 @@ open class ConnectorBuilderProjectsHandler
       )
     }
 
-    fun getCapabilities(): ConnectorBuilderCapabilities = manifestServerProcessor.getCapabilities()
+    fun getCapabilities(workspaceId: UUID): ConnectorBuilderCapabilities {
+      val processor = manifestProcessorProvider.getProcessor(workspaceId)
+      return processor.getCapabilities()
+    }
 
     fun resolveManifest(
       manifest: JsonNode,
       workspaceId: UUID,
       projectId: UUID?,
-    ): JsonNode =
-      manifestServerProcessor.resolveManifest(
+    ): JsonNode {
+      val processor = manifestProcessorProvider.getProcessor(workspaceId)
+      return processor.resolveManifest(
         manifest = manifest,
         builderProjectId = projectId,
         workspaceId = workspaceId,
       )
+    }
 
     @Throws(IOException::class, ConfigNotFoundException::class)
     fun getConnectorBuilderProjectForDefinitionId(requestBody: BuilderProjectForDefinitionRequestBody): BuilderProjectForDefinitionResponse {

@@ -198,7 +198,7 @@ class ConnectorBuilderProjectApiController(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
   ): ConnectorBuilderCapabilities? =
     execute {
-      connectorBuilderProjectsHandler.getCapabilities()
+      connectorBuilderProjectsHandler.getCapabilities(workspaceIdRequestBody.workspaceId)
     }
 
   @Post(uri = "/contribute/generate", produces = [MediaType.APPLICATION_JSON])
