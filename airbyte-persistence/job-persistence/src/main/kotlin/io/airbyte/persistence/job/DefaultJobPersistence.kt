@@ -4,6 +4,7 @@
 
 package io.airbyte.persistence.job
 
+import com.fasterxml.jackson.core.type.TypeReference
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.collect.Lists
 import datadog.trace.api.Trace
@@ -50,6 +51,7 @@ import org.jooq.SortField
 import org.jooq.conf.ParamType
 import org.jooq.impl.DSL
 import java.io.IOException
+import java.math.BigDecimal
 import java.nio.file.Path
 import java.time.Instant
 import java.time.LocalDateTime
@@ -1854,7 +1856,10 @@ class DefaultJobPersistence
                   .set(Tables.STREAM_STATS.BYTES_COMMITTED, stats.bytesCommitted)
                   .set(Tables.STREAM_STATS.RECORDS_COMMITTED, stats.recordsCommitted)
                   .set(Tables.STREAM_STATS.RECORDS_REJECTED, stats.recordsRejected)
-                  .where(
+                  .set(
+                    Tables.STREAM_STATS.ADDITIONAL_STATS,
+                    JSONB.jsonb(Jsons.serialize(streamStats.additionalStats)),
+                  ).where(
                     Tables.STREAM_STATS.ATTEMPT_ID.eq(attemptId),
                     PersistenceHelpers.isNullOrEquals(Tables.STREAM_STATS.STREAM_NAME, streamStats.streamName),
                     PersistenceHelpers.isNullOrEquals(Tables.STREAM_STATS.STREAM_NAMESPACE, streamStats.streamNamespace),
@@ -1877,7 +1882,8 @@ class DefaultJobPersistence
                   .set(Tables.STREAM_STATS.ESTIMATED_BYTES, stats.estimatedBytes)
                   .set(Tables.STREAM_STATS.BYTES_COMMITTED, stats.bytesCommitted)
                   .set(Tables.STREAM_STATS.RECORDS_COMMITTED, stats.recordsCommitted)
-                  .set(Tables.STREAM_STATS.RECORDS_REJECTED, stats.recordsRejected),
+                  .set(Tables.STREAM_STATS.RECORDS_REJECTED, stats.recordsRejected)
+                  .set(Tables.STREAM_STATS.ADDITIONAL_STATS, JSONB.jsonb(Jsons.serialize(streamStats.additionalStats))),
               )
             }
           },
@@ -2134,6 +2140,12 @@ class DefaultJobPersistence
               .withStreamName(record.get(Tables.STREAM_STATS.STREAM_NAME))
               .withStreamNamespace(record.get(Tables.STREAM_STATS.STREAM_NAMESPACE))
               .withStats(stats)
+              .withAdditionalStats(
+                Jsons.deserialize(
+                  record.get(Tables.STREAM_STATS.ADDITIONAL_STATS).data(),
+                  object : TypeReference<Map<String, Double>>() {},
+                ),
+              )
           }
 
       // Retrieves only Job information from the record, without any attempt info
