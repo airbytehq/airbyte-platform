@@ -15,7 +15,6 @@ import jakarta.annotation.Generated;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * StreamSyncStats
@@ -66,16 +65,8 @@ public class StreamSyncStats implements Serializable {
   @JsonProperty("wasResumed")
   @JsonPropertyDescription("Indicates whether the stream was resumed from a previous state")
   private Boolean wasResumed;
-  /**
-   * Additional data observability metrics. Intentionally not on the {@link SyncStats} object, because
-   * that object is reused in a few structs, and we only support this field specifically on
-   * StreamSyncStats.
-   */
-  @JsonProperty("additionalStats")
-  @JsonPropertyDescription("Additional data observability metrics")
-  private Map<String, Double> additionalStats = new HashMap<>();
   @JsonIgnore
-  private Map<String, Object> additionalProperties = new HashMap<>();
+  private Map<String, Object> additionalProperties = new HashMap<String, Object>();
   private final static long serialVersionUID = -2488712104695543581L;
 
   /**
@@ -191,21 +182,6 @@ public class StreamSyncStats implements Serializable {
     return this;
   }
 
-  @JsonProperty("additionalStats")
-  public Map<String, Double> getAdditionalStats() {
-    return additionalStats;
-  }
-
-  @JsonProperty("additionalStats")
-  public void setAdditionalStats(Map<String, Double> additionalStats) {
-    this.additionalStats = additionalStats;
-  }
-
-  public StreamSyncStats withAdditionalStats(Map<String, Double> additionalStats) {
-    this.additionalStats = additionalStats;
-    return this;
-  }
-
   @JsonAnyGetter
   public Map<String, Object> getAdditionalProperties() {
     return this.additionalProperties;
@@ -245,10 +221,6 @@ public class StreamSyncStats implements Serializable {
     sb.append('=');
     sb.append(((this.wasResumed == null) ? "<null>" : this.wasResumed));
     sb.append(',');
-    sb.append("additionalStats");
-    sb.append('=');
-    sb.append(((this.additionalStats == null) ? "<null>" : this.additionalStats));
-    sb.append(',');
     sb.append("additionalProperties");
     sb.append('=');
     sb.append(((this.additionalProperties == null) ? "<null>" : this.additionalProperties));
@@ -266,7 +238,6 @@ public class StreamSyncStats implements Serializable {
     int result = 1;
     result = ((result * 31) + ((this.streamNamespace == null) ? 0 : this.streamNamespace.hashCode()));
     result = ((result * 31) + ((this.wasResumed == null) ? 0 : this.wasResumed.hashCode()));
-    result = ((result * 31) + ((this.additionalStats == null) ? 0 : this.additionalStats.hashCode()));
     result = ((result * 31) + ((this.wasBackfilled == null) ? 0 : this.wasBackfilled.hashCode()));
     result = ((result * 31) + ((this.additionalProperties == null) ? 0 : this.additionalProperties.hashCode()));
     result = ((result * 31) + ((this.streamName == null) ? 0 : this.streamName.hashCode()));
@@ -279,16 +250,18 @@ public class StreamSyncStats implements Serializable {
     if (other == this) {
       return true;
     }
-    if (!(other instanceof StreamSyncStats otherAsStreamSyncStats)) {
+    if ((other instanceof StreamSyncStats) == false) {
       return false;
     }
-    return Objects.equals(this.streamNamespace, otherAsStreamSyncStats.streamNamespace)
-        && Objects.equals(this.wasResumed, otherAsStreamSyncStats.wasResumed)
-        && Objects.equals(this.additionalStats, otherAsStreamSyncStats.additionalStats)
-        && Objects.equals(this.wasBackfilled, otherAsStreamSyncStats.wasBackfilled)
-        && Objects.equals(this.additionalProperties, otherAsStreamSyncStats.additionalProperties)
-        && Objects.equals(this.streamName, otherAsStreamSyncStats.streamName)
-        && Objects.equals(this.stats, otherAsStreamSyncStats.stats);
+    StreamSyncStats rhs = ((StreamSyncStats) other);
+    return (((((((this.streamNamespace == rhs.streamNamespace)
+        || ((this.streamNamespace != null) && this.streamNamespace.equals(rhs.streamNamespace)))
+        && ((this.wasResumed == rhs.wasResumed) || ((this.wasResumed != null) && this.wasResumed.equals(rhs.wasResumed))))
+        && ((this.wasBackfilled == rhs.wasBackfilled) || ((this.wasBackfilled != null) && this.wasBackfilled.equals(rhs.wasBackfilled))))
+        && ((this.additionalProperties == rhs.additionalProperties)
+            || ((this.additionalProperties != null) && this.additionalProperties.equals(rhs.additionalProperties))))
+        && ((this.streamName == rhs.streamName) || ((this.streamName != null) && this.streamName.equals(rhs.streamName))))
+        && ((this.stats == rhs.stats) || ((this.stats != null) && this.stats.equals(rhs.stats))));
   }
 
 }

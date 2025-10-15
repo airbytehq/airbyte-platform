@@ -282,7 +282,7 @@ open class AttemptHandler(
                   .withRecordsRejected(s.stats.recordsRejected)
                   .withEstimatedBytes(s.stats.estimatedBytes)
                   .withEstimatedRecords(s.stats.estimatedRecords),
-              ).withAdditionalStats(s.additionalStats)
+              )
           }.collect(Collectors.toList())
 
       jobPersistence.writeStats(

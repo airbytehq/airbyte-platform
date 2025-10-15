@@ -16890,13 +16890,6 @@ components:
           type: string
         stats:
           $ref: "#/components/schemas/AttemptStats"
-        # Intentionally not on AttemptStats. That struct is reused in a few other structs.
-        additionalStats:
-          description: A blob containing all additional stats to save for the attempt. Will overwrite any stats from previous calls to `/save_stats`.
-          type: object
-          additionalProperties:
-            type: number
-            format: double
     AttemptFailureSummary:
       type: object
       required:

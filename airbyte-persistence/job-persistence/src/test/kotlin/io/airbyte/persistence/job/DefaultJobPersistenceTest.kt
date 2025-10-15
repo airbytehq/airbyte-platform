@@ -238,7 +238,6 @@ internal class DefaultJobPersistenceTest {
             .withEstimatedRecords(10L),
         ).withStreamNamespace(streamNamespace)
         .withStreamName(streamName)
-        .withAdditionalStats(mapOf("foo" to 1.23))
 
     val standardSyncOutput =
       StandardSyncOutput().withStandardSyncSummary(
@@ -277,7 +276,6 @@ internal class DefaultJobPersistenceTest {
     Assertions.assertEquals(streamSyncStats.stats.recordsEmitted, storedStreamSyncStats[0].stats.recordsEmitted)
     Assertions.assertEquals(streamSyncStats.stats.estimatedRecords, storedStreamSyncStats[0].stats.estimatedRecords)
     Assertions.assertEquals(streamSyncStats.stats.estimatedBytes, storedStreamSyncStats[0].stats.estimatedBytes)
-    Assertions.assertEquals(streamSyncStats.additionalStats, storedStreamSyncStats[0].additionalStats)
   }
 
   @Test
@@ -857,7 +855,7 @@ internal class DefaultJobPersistenceTest {
                 .withRecordsEmitted(500L)
                 .withEstimatedBytes(10000L)
                 .withEstimatedRecords(2000L),
-            ).withAdditionalStats(mapOf("foo" to 1.23, "bar" to 2.34)),
+            ),
         )
       jobPersistence.writeStats(jobId, attemptNumber, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, CONNECTION_ID, streamStats)
 
@@ -874,9 +872,6 @@ internal class DefaultJobPersistenceTest {
                 .withRecordsEmitted(1000L)
                 .withEstimatedBytes(10000L)
                 .withEstimatedRecords(2000L),
-            ).withAdditionalStats(
-              // Update bar to 3.45, and add a new entry baz.
-              mapOf("bar" to 3.45, "baz" to 4.56),
             ),
         )
       jobPersistence.writeStats(jobId, attemptNumber, 2000L, 2000L, 2000L, 2000L, 2000L, 2000L, 2000L, CONNECTION_ID, streamStats)
@@ -891,24 +886,7 @@ internal class DefaultJobPersistenceTest {
 
       val actStreamStats = stats.perStreamStats
       Assertions.assertEquals(1, actStreamStats.size)
-      Assertions.assertEquals(
-        listOf<StreamSyncStats>(
-          StreamSyncStats()
-            .withStreamName("name1")
-            .withStreamNamespace("ns")
-            .withStats(
-              SyncStats()
-                .withBytesEmitted(1000L)
-                .withRecordsEmitted(1000L)
-                .withEstimatedBytes(10000L)
-                .withEstimatedRecords(2000L),
-            ).withAdditionalStats(
-              // Note that we drop the original foo value, take the updated bar value, and add the new baz value.
-              mapOf("bar" to 3.45, "baz" to 4.56),
-            ),
-        ),
-        actStreamStats,
-      )
+      Assertions.assertEquals(streamStats, actStreamStats)
     }
 
     @Test
