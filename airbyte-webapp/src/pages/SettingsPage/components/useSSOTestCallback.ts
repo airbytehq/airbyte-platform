@@ -4,10 +4,9 @@ import { useEffect, useState } from "react";
 import { useIntl } from "react-intl";
 
 import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
-import { useValidateSsoToken } from "core/api";
+import { useExchangeSsoAuthCode } from "core/api";
 import { useFormatError } from "core/errors";
 
-import { createSSOTestManager } from "./ssoTestManager";
 import { getSsoTestRealm, isSsoTestCallback } from "./ssoTestUtils";
 
 interface TestResult {
@@ -19,16 +18,14 @@ export const useSSOTestCallback = () => {
   const { formatMessage } = useIntl();
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const organizationId = useCurrentOrganizationId();
-  const { mutateAsync: validateToken } = useValidateSsoToken();
+  const { mutateAsync: exchangeAuthCode } = useExchangeSsoAuthCode();
   const formatError = useFormatError();
-
-  // Get the UserManager for handling the OAuth callback
-  const realm = getSsoTestRealm();
-  const userManager = isSsoTestCallback() && realm ? createSSOTestManager(realm) : null;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const error = params.get("error");
+    const authorizationCode = params.get("code");
+    const realm = getSsoTestRealm();
 
     if (!isSsoTestCallback()) {
       return;
@@ -39,41 +36,78 @@ export const useSSOTestCallback = () => {
         success: false,
         message: `SSO test failed: ${error}`,
       });
-    } else if (userManager) {
-      // Use UserManager to handle the OAuth callback
+    } else if (realm && authorizationCode) {
+      // Use server-side token exchange to avoid session cookie issues
       (async () => {
         try {
-          // Let UserManager handle the OAuth callback (validates state, exchanges code for token, etc.)
-          const user = await userManager.signinCallback();
-
-          if (!user) {
-            throw new Error("No user returned from OAuth callback");
+          // Get the OAuth state parameter from the URL - this is the key for the stored state
+          const state = params.get("state");
+          if (!state) {
+            throw new Error("Missing state parameter from OAuth callback");
           }
 
-          // Validate the token with the backend
-          await validateToken({
+          // Retrieve the code_verifier from localStorage (stored by oidc-client-ts during authorization)
+          // The storage key format is "sso_test.{state}" where state is the OAuth state parameter
+          const storageKey = `sso_test.${state}`;
+          // eslint-disable-next-line @airbyte/no-local-storage -- OAuth state managed by external oidc-client-ts library
+          const storageData = localStorage.getItem(storageKey);
+
+          if (!storageData) {
+            throw new Error("Missing OAuth state from storage");
+          }
+
+          const oidcState = JSON.parse(storageData);
+          const codeVerifier = oidcState.code_verifier;
+          const redirectUri = oidcState.redirect_uri;
+
+          if (!codeVerifier) {
+            throw new Error("Missing code_verifier from OAuth state");
+          }
+
+          if (!redirectUri) {
+            throw new Error("Missing redirect_uri from OAuth state");
+          }
+
+          // Exchange the authorization code on the server side
+          await exchangeAuthCode({
             organizationId,
-            accessToken: user.access_token,
+            authorizationCode,
+            codeVerifier,
+            redirectUri,
           });
 
-          // Clean up the test user from storage - we don't need to persist it
-          await userManager.removeUser();
+          // Clean up the OAuth state from storage
+          // eslint-disable-next-line @airbyte/no-local-storage -- OAuth state managed by external oidc-client-ts library
+          localStorage.removeItem(storageKey);
 
           setTestResult({
             success: true,
             message: formatMessage({ id: "settings.organizationSettings.sso.test.success" }),
           });
         } catch (err) {
+          // Clean up storage on error too
+          const state = params.get("state");
+          if (state) {
+            const storageKey = `sso_test.${state}`;
+            // eslint-disable-next-line @airbyte/no-local-storage -- OAuth state managed by external oidc-client-ts library
+            localStorage.removeItem(storageKey);
+          }
+
           setTestResult({
             success: false,
             message: formatError(err),
           });
         }
       })();
-    } else {
+    } else if (!realm) {
       setTestResult({
         success: false,
         message: "SSO test failed: Missing realm parameter.",
+      });
+    } else {
+      setTestResult({
+        success: false,
+        message: "SSO test failed: Missing authorization code.",
       });
     }
 
@@ -87,7 +121,7 @@ export const useSSOTestCallback = () => {
 
     const newUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
     window.history.replaceState({}, "", newUrl);
-  }, [userManager, organizationId, validateToken, formatError, formatMessage]);
+  }, [organizationId, exchangeAuthCode, formatError, formatMessage]);
 
   return { testResult, setTestResult };
 };

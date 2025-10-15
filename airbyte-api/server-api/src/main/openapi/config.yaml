@@ -7562,23 +7562,28 @@ paths:
           description: "SSO config successfully activated"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/sso_config/validate_token:
+
+  /v1/sso_config/exchange_code:
     post:
-      summary: Validate an access token against an organization's SSO realm
+      summary: Exchange an OAuth authorization code for tokens and validate the SSO configuration
       tags:
         - sso_config
-      operationId: validateSsoToken
+      operationId: exchangeSsoAuthCode
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ValidateSSOTokenRequestBody"
+              $ref: "#/components/schemas/ExchangeSSOAuthCodeRequestBody"
         required: true
       responses:
-        "204":
-          description: Token is valid
-        "401":
-          description: Token is invalid or validation failed
+        "200":
+          description: Authorization code successfully exchanged and validated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeSSOAuthCodeResponse"
+        "400":
+          description: Invalid authorization code or exchange failed
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
@@ -21718,17 +21723,36 @@ components:
           type: string
         clientSecret:
           type: string
-    ValidateSSOTokenRequestBody:
+
+    ExchangeSSOAuthCodeRequestBody:
       type: object
       required:
         - organizationId
-        - accessToken
+        - authorizationCode
+        - codeVerifier
+        - redirectUri
       properties:
         organizationId:
           type: string
           format: uuid
+        authorizationCode:
+          type: string
+          description: The OAuth authorization code returned from the SSO provider
+        codeVerifier:
+          type: string
+          description: The PKCE code verifier used during the authorization request
+        redirectUri:
+          type: string
+          description: The redirect URI used during the authorization request
+
+    ExchangeSSOAuthCodeResponse:
+      type: object
+      required:
+        - accessToken
+      properties:
         accessToken:
           type: string
+          description: The OAuth access token obtained from the authorization code exchange
 
     ActivateSSOConfigRequestBody:
       type: object

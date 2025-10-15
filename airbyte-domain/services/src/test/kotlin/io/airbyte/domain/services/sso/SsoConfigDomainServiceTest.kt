@@ -9,6 +9,7 @@ import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.SSOActivationProblem
 import io.airbyte.api.problems.throwable.generated.SSODeletionProblem
 import io.airbyte.api.problems.throwable.generated.SSOSetupProblem
+import io.airbyte.api.problems.throwable.generated.SSOTokenValidationProblem
 import io.airbyte.config.Organization
 import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
@@ -712,5 +713,96 @@ class SsoConfigDomainServiceTest {
     verify(exactly = 1) { airbyteKeycloakClient.createOidcSsoConfig(newConfig) }
     verify(exactly = 1) { ssoConfigService.createSsoConfig(newConfig) }
     verify(exactly = 0) { airbyteKeycloakClient.replaceOidcIdpConfig(any()) }
+  }
+
+  @Test
+  fun `exchangeAuthCodeAndValidate successfully exchanges code and returns access token`() {
+    val orgId = UUID.randomUUID()
+    val authCode = "auth-code-123"
+    val codeVerifier = "verifier-xyz"
+    val redirectUri = "https://cloud.airbyte.com/callback"
+    val accessToken = "access-token-abc"
+    val realm = "test-realm"
+
+    val ssoConfig =
+      ConfigSsoConfig()
+        .withOrganizationId(orgId)
+        .withKeycloakRealm(realm)
+        .withStatus(ConfigSsoConfigStatus.ACTIVE)
+
+    val userInfo = mapOf("email" to "test@airbyte.com", "sub" to "user-123")
+
+    every { ssoConfigService.getSsoConfig(orgId) } returns ssoConfig
+    every { airbyteKeycloakClient.exchangeAuthorizationCode(realm, authCode, codeVerifier, redirectUri) } returns accessToken
+    every { airbyteKeycloakClient.getUserInfo(accessToken, realm) } returns userInfo
+
+    val result = ssoConfigDomainService.exchangeAuthCodeAndValidate(orgId, authCode, codeVerifier, redirectUri)
+
+    assert(result == accessToken)
+    verify(exactly = 1) { airbyteKeycloakClient.exchangeAuthorizationCode(realm, authCode, codeVerifier, redirectUri) }
+    verify(exactly = 1) { airbyteKeycloakClient.getUserInfo(accessToken, realm) }
+  }
+
+  @Test
+  fun `exchangeAuthCodeAndValidate throws when SSO config does not exist`() {
+    val orgId = UUID.randomUUID()
+    val authCode = "auth-code-123"
+    val codeVerifier = "verifier-xyz"
+    val redirectUri = "https://cloud.airbyte.com/callback"
+
+    every { ssoConfigService.getSsoConfig(orgId) } returns null
+
+    assertThrows<SSOTokenValidationProblem> {
+      ssoConfigDomainService.exchangeAuthCodeAndValidate(orgId, authCode, codeVerifier, redirectUri)
+    }
+  }
+
+  @Test
+  fun `exchangeAuthCodeAndValidate throws when email is missing from user info`() {
+    val orgId = UUID.randomUUID()
+    val authCode = "auth-code-123"
+    val codeVerifier = "verifier-xyz"
+    val redirectUri = "https://cloud.airbyte.com/callback"
+    val accessToken = "access-token-abc"
+    val realm = "test-realm"
+
+    val ssoConfig =
+      ConfigSsoConfig()
+        .withOrganizationId(orgId)
+        .withKeycloakRealm(realm)
+        .withStatus(ConfigSsoConfigStatus.ACTIVE)
+
+    val userInfoWithoutEmail = mapOf("sub" to "user-123")
+
+    every { ssoConfigService.getSsoConfig(orgId) } returns ssoConfig
+    every { airbyteKeycloakClient.exchangeAuthorizationCode(realm, authCode, codeVerifier, redirectUri) } returns accessToken
+    every { airbyteKeycloakClient.getUserInfo(accessToken, realm) } returns userInfoWithoutEmail
+
+    assertThrows<SSOTokenValidationProblem> {
+      ssoConfigDomainService.exchangeAuthCodeAndValidate(orgId, authCode, codeVerifier, redirectUri)
+    }
+  }
+
+  @Test
+  fun `exchangeAuthCodeAndValidate throws when token exchange fails`() {
+    val orgId = UUID.randomUUID()
+    val authCode = "invalid-code"
+    val codeVerifier = "verifier-xyz"
+    val redirectUri = "https://cloud.airbyte.com/callback"
+    val realm = "test-realm"
+
+    val ssoConfig =
+      ConfigSsoConfig()
+        .withOrganizationId(orgId)
+        .withKeycloakRealm(realm)
+        .withStatus(ConfigSsoConfigStatus.ACTIVE)
+
+    every { ssoConfigService.getSsoConfig(orgId) } returns ssoConfig
+    every { airbyteKeycloakClient.exchangeAuthorizationCode(realm, authCode, codeVerifier, redirectUri) } throws
+      RuntimeException("Code not valid")
+
+    assertThrows<SSOTokenValidationProblem> {
+      ssoConfigDomainService.exchangeAuthCodeAndValidate(orgId, authCode, codeVerifier, redirectUri)
+    }
   }
 }

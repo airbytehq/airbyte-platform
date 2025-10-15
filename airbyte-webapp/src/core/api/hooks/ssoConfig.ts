@@ -9,13 +9,13 @@ import {
   createSsoConfig,
   deleteSsoConfig,
   activateSsoConfig,
-  validateSsoToken,
+  exchangeSsoAuthCode,
 } from "../generated/AirbyteClient";
 import {
   CreateSSOConfigRequestBody,
   DeleteSSOConfigRequestBody,
   ActivateSSOConfigRequestBody,
-  ValidateSSOTokenRequestBody,
+  ExchangeSSOAuthCodeRequestBody,
 } from "../generated/AirbyteClient.schemas";
 import { SCOPE_ORGANIZATION } from "../scopes";
 import { useRequestOptions } from "../useRequestOptions";
@@ -71,12 +71,12 @@ export const useActivateSsoConfig = () => {
   });
 };
 
-export const useValidateSsoToken = () => {
+export const useExchangeSsoAuthCode = () => {
   const requestOptions = useRequestOptions();
 
   return useMutation({
-    mutationFn: (validateSsoTokenRequest: ValidateSSOTokenRequestBody) =>
-      validateSsoToken(validateSsoTokenRequest, requestOptions),
+    mutationFn: (exchangeSsoAuthCodeRequest: ExchangeSSOAuthCodeRequestBody) =>
+      exchangeSsoAuthCode(exchangeSsoAuthCodeRequest, requestOptions),
   });
 };
 

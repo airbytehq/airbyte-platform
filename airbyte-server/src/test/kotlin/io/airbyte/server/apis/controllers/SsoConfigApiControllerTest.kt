@@ -4,14 +4,15 @@
 
 package io.airbyte.server.apis.controllers
 
+import io.airbyte.api.problems.model.generated.ProblemSSOTokenValidationData
 import io.airbyte.api.problems.throwable.generated.SSOTokenValidationProblem
 import io.airbyte.api.server.generated.models.ActivateSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.CreateSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.DeleteSSOConfigRequestBody
+import io.airbyte.api.server.generated.models.ExchangeSSOAuthCodeRequestBody
 import io.airbyte.api.server.generated.models.GetSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.SSOConfigStatus
 import io.airbyte.api.server.generated.models.UpdateSSOCredentialsRequestBody
-import io.airbyte.api.server.generated.models.ValidateSSOTokenRequestBody
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.SsoEntitlement
 import io.airbyte.domain.models.OrganizationId
@@ -142,83 +143,64 @@ class SsoConfigApiControllerTest {
   }
 
   @Test
-  fun `validateSsoToken succeeds with 204 when token is valid`() {
+  fun `exchangeSsoAuthCode successfully returns access token`() {
     val orgId = OrganizationId(UUID.randomUUID())
-    val accessToken = "valid-token"
-    every { entitlementService.ensureEntitled(orgId, SsoEntitlement) } just Runs
-    every { ssoConfigDomainService.validateToken(orgId.value, accessToken) } just Runs
+    val authCode = "auth-code-123"
+    val codeVerifier = "verifier-xyz"
+    val redirectUri = "https://cloud.airbyte.com/callback"
+    val accessToken = "access-token-abc"
 
-    // Should not throw an exception
-    ssoConfigController.validateSsoToken(
-      ValidateSSOTokenRequestBody(
-        organizationId = orgId.value,
-        accessToken = accessToken,
-      ),
-    )
+    every { entitlementService.ensureEntitled(orgId, SsoEntitlement) } just Runs
+    every { ssoConfigDomainService.exchangeAuthCodeAndValidate(orgId.value, authCode, codeVerifier, redirectUri) } returns accessToken
+
+    val result =
+      ssoConfigController.exchangeSsoAuthCode(
+        ExchangeSSOAuthCodeRequestBody(
+          organizationId = orgId.value,
+          authorizationCode = authCode,
+          codeVerifier = codeVerifier,
+          redirectUri = redirectUri,
+        ),
+      )
 
     verify(exactly = 1) { entitlementService.ensureEntitled(orgId, SsoEntitlement) }
-    verify(exactly = 1) { ssoConfigDomainService.validateToken(orgId.value, accessToken) }
+    verify(exactly = 1) { ssoConfigDomainService.exchangeAuthCodeAndValidate(orgId.value, authCode, codeVerifier, redirectUri) }
+    assertEquals(accessToken, result.accessToken)
   }
 
   @Test
-  fun `validateSsoToken throws SSOTokenValidationProblem when token is invalid`() {
+  fun `exchangeSsoAuthCode throws SSOTokenValidationProblem when exchange fails`() {
     val orgId = OrganizationId(UUID.randomUUID())
-    val accessToken = "invalid-token"
+    val authCode = "invalid-code"
+    val codeVerifier = "verifier-xyz"
+    val redirectUri = "https://cloud.airbyte.com/callback"
+
     every { entitlementService.ensureEntitled(orgId, SsoEntitlement) } just Runs
-    every { ssoConfigDomainService.validateToken(orgId.value, accessToken) } throws
+    every { ssoConfigDomainService.exchangeAuthCodeAndValidate(orgId.value, authCode, codeVerifier, redirectUri) } throws
       SSOTokenValidationProblem(
-        io.airbyte.api.problems.model.generated
-          .ProblemSSOTokenValidationData()
+        ProblemSSOTokenValidationData()
           .organizationId(orgId.value)
-          .errorMessage("Token is invalid or expired"),
+          .errorMessage("Failed to exchange authorization code: Code not valid"),
       )
 
     val exception =
       assertThrows<SSOTokenValidationProblem> {
-        ssoConfigController.validateSsoToken(
-          ValidateSSOTokenRequestBody(
+        ssoConfigController.exchangeSsoAuthCode(
+          ExchangeSSOAuthCodeRequestBody(
             organizationId = orgId.value,
-            accessToken = accessToken,
+            authorizationCode = authCode,
+            codeVerifier = codeVerifier,
+            redirectUri = redirectUri,
           ),
         )
       }
 
     verify(exactly = 1) { entitlementService.ensureEntitled(orgId, SsoEntitlement) }
-    verify(exactly = 1) { ssoConfigDomainService.validateToken(orgId.value, accessToken) }
+    verify(exactly = 1) { ssoConfigDomainService.exchangeAuthCodeAndValidate(orgId.value, authCode, codeVerifier, redirectUri) }
     assertEquals(401, exception.problem.getStatus())
     assertEquals(
-      "Token is invalid or expired",
-      (exception.problem.getData() as io.airbyte.api.problems.model.generated.ProblemSSOTokenValidationData).errorMessage,
+      "Failed to exchange authorization code: Code not valid",
+      (exception.problem.getData() as ProblemSSOTokenValidationData).errorMessage,
     )
-  }
-
-  @Test
-  fun `validateSsoToken throws SSOTokenValidationProblem when validation fails with exception`() {
-    val orgId = OrganizationId(UUID.randomUUID())
-    val accessToken = "error-token"
-    val errorMessage = "Token validation failed: Connection refused"
-    every { entitlementService.ensureEntitled(orgId, SsoEntitlement) } just Runs
-    every { ssoConfigDomainService.validateToken(orgId.value, accessToken) } throws
-      SSOTokenValidationProblem(
-        io.airbyte.api.problems.model.generated
-          .ProblemSSOTokenValidationData()
-          .organizationId(orgId.value)
-          .errorMessage(errorMessage),
-      )
-
-    val exception =
-      assertThrows<SSOTokenValidationProblem> {
-        ssoConfigController.validateSsoToken(
-          ValidateSSOTokenRequestBody(
-            organizationId = orgId.value,
-            accessToken = accessToken,
-          ),
-        )
-      }
-
-    verify(exactly = 1) { entitlementService.ensureEntitled(orgId, SsoEntitlement) }
-    verify(exactly = 1) { ssoConfigDomainService.validateToken(orgId.value, accessToken) }
-    assertEquals(401, exception.problem.getStatus())
-    assertEquals(errorMessage, (exception.problem.getData() as io.airbyte.api.problems.model.generated.ProblemSSOTokenValidationData).errorMessage)
   }
 }
