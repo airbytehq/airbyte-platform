@@ -148,12 +148,14 @@ class CommandApiControllerTest {
     every { commandService.getCheckJobOutput(TEST_COMMAND_ID, any()) } returns
       CommandService.CheckJobOutput(
         status = StandardCheckConnectionOutput.Status.SUCCEEDED,
+        connectorConfigUpdated = false,
         message = "",
         failureReason = null,
         logs = null,
       )
 
     val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID))
+    assertEquals(false, output.connectorConfigurationUpdated)
     assertEquals(TEST_COMMAND_ID, output.id)
     assertEquals(CheckCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
     assertEquals(null, output.logs)
@@ -166,6 +168,7 @@ class CommandApiControllerTest {
     every { commandService.getCheckJobOutput(TEST_COMMAND_ID, any()) } returns
       CommandService.CheckJobOutput(
         status = StandardCheckConnectionOutput.Status.FAILED,
+        connectorConfigUpdated = false,
         message = message,
         failureReason = null,
         logs = null,
@@ -175,6 +178,7 @@ class CommandApiControllerTest {
     assertEquals(
       CheckCommandOutputResponse()
         .id(TEST_COMMAND_ID)
+        .connectorConfigurationUpdated(false)
         .status(CheckCommandOutputResponse.StatusEnum.FAILED)
         .message(message),
       output,
@@ -187,6 +191,7 @@ class CommandApiControllerTest {
     every { commandService.getCheckJobOutput(TEST_COMMAND_ID, any()) } returns
       CommandService.CheckJobOutput(
         status = StandardCheckConnectionOutput.Status.FAILED,
+        connectorConfigUpdated = true,
         message = "",
         failureReason =
           FailureReason()
@@ -202,6 +207,7 @@ class CommandApiControllerTest {
 
     val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID))
     assertEquals(TEST_COMMAND_ID, output.id)
+    assertEquals(true, output.connectorConfigurationUpdated)
     assertEquals(CheckCommandOutputResponse.StatusEnum.FAILED, output.status)
     assertEquals(
       ApiFailureReason()
@@ -576,6 +582,7 @@ class CommandApiControllerTest {
     every { commandService.getCheckJobOutput(TEST_COMMAND_ID, withLogs = true) } returns
       CommandService.CheckJobOutput(
         status = StandardCheckConnectionOutput.Status.SUCCEEDED,
+        connectorConfigUpdated = false,
         message = "",
         failureReason = null,
         logs = CommandService.JobLogs.createStructuredLogs(logEvents),
@@ -602,6 +609,7 @@ class CommandApiControllerTest {
     every { commandService.getCheckJobOutput(TEST_COMMAND_ID, withLogs = true) } returns
       CommandService.CheckJobOutput(
         status = StandardCheckConnectionOutput.Status.SUCCEEDED,
+        connectorConfigUpdated = false,
         message = "",
         failureReason = null,
         logs = CommandService.JobLogs.createFormattedLogs(logLines),
@@ -621,6 +629,7 @@ class CommandApiControllerTest {
     every { commandService.getCheckJobOutput(TEST_COMMAND_ID, withLogs = false) } returns
       CommandService.CheckJobOutput(
         status = StandardCheckConnectionOutput.Status.SUCCEEDED,
+        connectorConfigUpdated = false,
         message = "",
         failureReason = null,
         logs = null,

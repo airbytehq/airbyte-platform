@@ -370,6 +370,7 @@ class CommandServiceTest {
     val connectorOutput =
       ConnectorJobOutput()
         .withOutputType(OutputType.CHECK_CONNECTION)
+        .withConnectorConfigurationUpdated(true)
         .withCheckConnection(
           StandardCheckConnectionOutput()
             .withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED)
@@ -381,6 +382,7 @@ class CommandServiceTest {
     val expectedOutput =
       CommandService.CheckJobOutput(
         status = StandardCheckConnectionOutput.Status.SUCCEEDED,
+        connectorConfigUpdated = true,
         message = "Success",
         failureReason = null,
         logs = null,

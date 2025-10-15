@@ -679,6 +679,7 @@ class CommandService(
     }?.let { jobOutput ->
       return CheckJobOutput(
         status = jobOutput.checkConnection.status,
+        connectorConfigUpdated = jobOutput.connectorConfigurationUpdated ?: false,
         message = jobOutput.checkConnection?.message,
         failureReason = jobOutput.failureReason,
         logs = if (withLogs) getJobLogs(commandId) else null,
@@ -702,6 +703,7 @@ class CommandService(
 
   data class CheckJobOutput(
     val status: StandardCheckConnectionOutput.Status,
+    val connectorConfigUpdated: Boolean,
     val message: String?,
     val failureReason: FailureReason?,
     val logs: JobLogs?,

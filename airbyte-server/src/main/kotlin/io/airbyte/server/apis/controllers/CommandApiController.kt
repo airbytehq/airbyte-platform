@@ -111,6 +111,7 @@ class CommandApiController(
         id(checkCommandOutputRequest.id)
         output?.let {
           status(it.status.toApi())
+          connectorConfigurationUpdated(it.connectorConfigUpdated)
           message(it.message)
           failureReason(apiPojoConverters.failureReasonToApi(it.failureReason))
           logs(output.logs?.toApi())

@@ -6803,6 +6803,8 @@ paths:
                   status:
                     type: string
                     enum: [succeeded, failed]
+                  connectorConfigurationUpdated:
+                    type: boolean
                   message:
                     type: string
                   failureReason:
