@@ -149,8 +149,6 @@ open class OrganizationServiceImpl(
           ProblemResourceData().resourceId(organizationId.toString()).resourceType(ResourceType.ORGANIZATION_PAYMENT_CONFIG),
         )
 
-    addEntitlementSubscription(organizationId, orbPlanId, isTrial)
-
     val currentSubscriptionStatus = orgPaymentConfig.subscriptionStatus
 
     if (currentSubscriptionStatus == OrganizationPaymentConfig.SubscriptionStatus.SUBSCRIBED) {
@@ -172,38 +170,6 @@ open class OrganizationServiceImpl(
     entitlementPlan: EntitlementPlan,
   ) {
     entitlementService.addOrganization(organizationId, entitlementPlan)
-  }
-
-  fun addEntitlementSubscription(
-    organizationId: OrganizationId,
-    orbPlanId: String?,
-    isTrial: Boolean,
-  ) {
-    val supportedOrbPlan = EntitlementPlan.supportedOrbPlanNameOverrides.keys.find { it.plan == orbPlanId }
-    if (supportedOrbPlan == null) {
-      logger.warn {
-        "Skipping adding organization $organizationId to Stigg Plan. " +
-          "Organizations with Orb Plan $orbPlanId must be added manually."
-      }
-    } else {
-      val supportedStiggPlan = EntitlementPlan.getStiggPlanFromOrbPlan(supportedOrbPlan, isTrial)
-      logger.info { "Adding organization $organizationId and Orb Plan $orbPlanId to Stigg plan $supportedStiggPlan" }
-      try {
-        entitlementService.addOrganization(organizationId, supportedStiggPlan)
-      } catch (exception: Exception) {
-        logger.error(exception) {
-          "Failed to add organization $organizationId to entitlement plan $supportedStiggPlan. "
-        }
-        // TODO: once we've integrated fully with Stigg, throw instead of just logging
-        // throw EntitlementServiceUnableToAddOrganizationProblem(
-        //    "Failed to register organization with entitlement service",
-        //    ProblemEntitlementServiceData()
-        //        .organizationId(orgId)
-        //        .planId(EntitlementPlan.STANDARD_TRIAL)
-        //        .errorMessage(exception.message ?: "Unknown entitlement service error")
-        // )
-      }
-    }
   }
 
   @Transactional("config")

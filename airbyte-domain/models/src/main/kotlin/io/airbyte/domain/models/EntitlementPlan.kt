@@ -54,27 +54,6 @@ enum class EntitlementPlan(
   fun isLessThan(other: EntitlementPlan): Boolean = this.value < other.value
 
   companion object {
-    val supportedOrbPlanNameOverrides: Map<SupportedOrbPlan, EntitlementPlan> =
-      mapOf(
-        SupportedOrbPlan.CLOUD_LEGACY to STANDARD,
-        SupportedOrbPlan.CLOUD_SELF_SERVE_ANNUAL to STANDARD,
-        SupportedOrbPlan.CLOUD_SELF_SERVE_MONTHLY to STANDARD,
-        SupportedOrbPlan.PRO to PRO,
-        SupportedOrbPlan.PRO_LEGACY to PRO,
-        SupportedOrbPlan.PARTNER to PARTNER,
-      )
-
-    fun getStiggPlanFromOrbPlan(
-      orbPlan: SupportedOrbPlan?,
-      isTrial: Boolean,
-    ): EntitlementPlan =
-      when (supportedOrbPlanNameOverrides[orbPlan]) {
-        STANDARD -> if (isTrial) STANDARD_TRIAL else STANDARD
-        PRO -> if (isTrial) PRO_TRIAL else PRO
-        PARTNER -> PARTNER
-        else -> throw IllegalArgumentException("Unsupported orbPlan=$orbPlan")
-      }
-
     fun fromId(id: String): EntitlementPlan =
       entries.firstOrNull { it.id == id }
         ?: throw IllegalArgumentException("No EntitlementPlan with id=$id")

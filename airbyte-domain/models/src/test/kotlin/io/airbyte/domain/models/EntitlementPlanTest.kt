@@ -150,20 +150,6 @@ internal class EntitlementPlanTest {
   }
 
   @Test
-  fun `supportedOrbPlanExternalIds mapping is correct`() {
-    val expectedMapping =
-      mapOf(
-        SupportedOrbPlan.CLOUD_LEGACY to EntitlementPlan.STANDARD,
-        SupportedOrbPlan.CLOUD_SELF_SERVE_ANNUAL to EntitlementPlan.STANDARD,
-        SupportedOrbPlan.CLOUD_SELF_SERVE_MONTHLY to EntitlementPlan.STANDARD,
-        SupportedOrbPlan.PRO to EntitlementPlan.PRO,
-        SupportedOrbPlan.PRO_LEGACY to EntitlementPlan.PRO,
-        SupportedOrbPlan.PARTNER to EntitlementPlan.PARTNER,
-      )
-    assertEquals(expectedMapping, EntitlementPlan.supportedOrbPlanNameOverrides)
-  }
-
-  @Test
   fun `comparison methods are consistent with each other`() {
     val plans = EntitlementPlan.entries
 

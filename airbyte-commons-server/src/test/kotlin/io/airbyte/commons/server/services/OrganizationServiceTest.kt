@@ -13,9 +13,7 @@ import io.airbyte.config.OrganizationPaymentConfig.PaymentStatus
 import io.airbyte.config.OrganizationPaymentConfig.SubscriptionStatus
 import io.airbyte.data.services.shared.ConnectionAutoDisabledReason
 import io.airbyte.domain.models.ConnectionId
-import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
-import io.airbyte.domain.models.SupportedOrbPlan
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.mockk.Runs
@@ -227,98 +225,6 @@ class OrganizationServiceTest {
       slotConfig.captured.subscriptionStatus shouldBe SubscriptionStatus.SUBSCRIBED
       verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
       verify(exactly = 0) { connectionService.disableConnections(any(), any()) }
-    }
-
-    @Test
-    fun `should call EntitlementClient addOrganization for supported Orb plan`() {
-      val orgPaymentConfig =
-        OrganizationPaymentConfig().apply {
-          subscriptionStatus = SubscriptionStatus.PRE_SUBSCRIPTION
-          organizationId = this@OrganizationServiceTest.organizationId.value
-        }
-
-      every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
-      every { organizationPaymentConfigRepository.savePaymentConfig(any()) } just Runs
-
-      // Use a supported Orb plan that maps to STANDARD
-      service.handleSubscriptionStarted(organizationId, SupportedOrbPlan.CLOUD_SELF_SERVE_MONTHLY.plan, false)
-
-      verify { entitlementService.addOrganization(organizationId, EntitlementPlan.STANDARD) }
-      verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
-    }
-
-    @Test
-    fun `should not call EntitlementClient addOrganization for unsupported Orb plan`() {
-      val orgPaymentConfig =
-        OrganizationPaymentConfig().apply {
-          subscriptionStatus = SubscriptionStatus.PRE_SUBSCRIPTION
-          organizationId = this@OrganizationServiceTest.organizationId.value
-        }
-
-      every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
-      every { organizationPaymentConfigRepository.savePaymentConfig(any()) } just Runs
-
-      // Use an unsupported Orb plan
-      service.handleSubscriptionStarted(organizationId, "unsupported-plan", false)
-
-      verify(exactly = 0) { entitlementService.addOrganization(any(), any()) }
-      verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
-    }
-
-    @Test
-    fun `should not call EntitlementClient addOrganization when Orb plan is null`() {
-      val orgPaymentConfig =
-        OrganizationPaymentConfig().apply {
-          subscriptionStatus = SubscriptionStatus.PRE_SUBSCRIPTION
-          organizationId = this@OrganizationServiceTest.organizationId.value
-        }
-
-      every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
-      every { organizationPaymentConfigRepository.savePaymentConfig(any()) } just Runs
-
-      service.handleSubscriptionStarted(organizationId, null, false)
-
-      verify(exactly = 0) { entitlementService.addOrganization(any(), any()) }
-      verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
-    }
-
-    @Test
-    fun `should continue processing if EntitlementClient addOrganization fails`() {
-      val orgPaymentConfig =
-        OrganizationPaymentConfig().apply {
-          subscriptionStatus = SubscriptionStatus.PRE_SUBSCRIPTION
-          organizationId = this@OrganizationServiceTest.organizationId.value
-        }
-      val slotConfig = slot<OrganizationPaymentConfig>()
-
-      every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
-      every { organizationPaymentConfigRepository.savePaymentConfig(capture(slotConfig)) } just Runs
-      every { entitlementService.addOrganization(any(), any()) } throws RuntimeException("Entitlement service error")
-
-      // Should not throw, just log and continue
-      service.handleSubscriptionStarted(organizationId, SupportedOrbPlan.CLOUD_SELF_SERVE_MONTHLY.plan, false)
-
-      verify { entitlementService.addOrganization(organizationId, EntitlementPlan.STANDARD) }
-      slotConfig.captured.subscriptionStatus shouldBe SubscriptionStatus.SUBSCRIBED
-      verify { organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig) }
-    }
-
-    @Test
-    fun `should call EntitlementClient addOrganization even if already subscribed but not save payment config`() {
-      val orgPaymentConfig =
-        OrganizationPaymentConfig().apply {
-          subscriptionStatus = SubscriptionStatus.SUBSCRIBED
-          organizationId = this@OrganizationServiceTest.organizationId.value
-        }
-
-      every { organizationPaymentConfigRepository.findByOrganizationId(organizationId.value) } returns orgPaymentConfig
-
-      service.handleSubscriptionStarted(organizationId, SupportedOrbPlan.CLOUD_SELF_SERVE_MONTHLY.plan, false)
-
-      // EntitlementClient is called because it happens before the subscription status check
-      verify { entitlementService.addOrganization(organizationId, EntitlementPlan.STANDARD) }
-      // But payment config is not saved because the org is already subscribed
-      verify(exactly = 0) { organizationPaymentConfigRepository.savePaymentConfig(any()) }
     }
   }
 
