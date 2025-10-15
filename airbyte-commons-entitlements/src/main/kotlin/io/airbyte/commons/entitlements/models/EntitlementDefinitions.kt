@@ -46,6 +46,10 @@ object RejectedRecordsStorage : FeatureEntitlement(
   featureId = "feature-rejected-records-storage",
 )
 
+object ConfigTemplateEntitlement : FeatureEntitlement(
+  featureId = "feature-embedded",
+)
+
 object DestinationSalesforceEnterpriseConnector : ConnectorEntitlement(
   actorDefinitionId = UUID.fromString("c0b24000-d34d-b33f-fea7-6b96dc0e5f0d"),
 ) {
@@ -107,6 +111,7 @@ object Entitlements {
       MappersEntitlement,
       RbacRolesEntitlement,
       RejectedRecordsStorage,
+      ConfigTemplateEntitlement,
       DestinationSalesforceEnterpriseConnector,
       SourceNetsuiteEnterpriseConnector,
       SourceOracleEnterpriseConnector,

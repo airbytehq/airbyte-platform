@@ -5,6 +5,7 @@
 package io.airbyte.commons.entitlements
 
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
+import io.airbyte.commons.entitlements.models.ConfigTemplateEntitlement
 import io.airbyte.commons.entitlements.models.ConnectorEntitlement
 import io.airbyte.commons.entitlements.models.DestinationSalesforceEnterpriseConnector
 import io.airbyte.commons.entitlements.models.Entitlement
@@ -106,13 +107,69 @@ class EntitlementServiceTest {
   }
 
   @Test
-  fun `hasConfigTemplateEntitlements delegates to provider`() {
+  fun `checkEntitlement for ConfigTemplateEntitlement uses dual-check pattern`() {
     val orgId = OrganizationId(UUID.randomUUID())
+
+    // Test OR logic: false from Stigg, true from provider = true overall
+    every { entitlementClient.checkEntitlement(orgId, ConfigTemplateEntitlement) } returns
+      EntitlementResult(featureId = "feature-embedded", isEntitled = false, reason = null)
     every { entitlementProvider.hasConfigTemplateEntitlements(orgId) } returns true
 
-    val result = entitlementService.hasConfigTemplateEntitlements(orgId)
+    val result = entitlementService.checkEntitlement(orgId, ConfigTemplateEntitlement)
 
-    assertEquals(true, result)
+    assertEquals(true, result.isEntitled)
+    assertEquals("feature-embedded", result.featureId)
+    verify { entitlementClient.checkEntitlement(orgId, ConfigTemplateEntitlement) }
+    verify { entitlementProvider.hasConfigTemplateEntitlements(orgId) }
+  }
+
+  @Test
+  fun `checkEntitlement for ConfigTemplateEntitlement returns true when Stigg is true`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    // Test OR logic: true from Stigg, false from provider = true overall
+    every { entitlementClient.checkEntitlement(orgId, ConfigTemplateEntitlement) } returns
+      EntitlementResult(featureId = "feature-embedded", isEntitled = true, reason = null)
+    every { entitlementProvider.hasConfigTemplateEntitlements(orgId) } returns false
+
+    val result = entitlementService.checkEntitlement(orgId, ConfigTemplateEntitlement)
+
+    assertEquals(true, result.isEntitled)
+    verify { entitlementClient.checkEntitlement(orgId, ConfigTemplateEntitlement) }
+    verify { entitlementProvider.hasConfigTemplateEntitlements(orgId) }
+  }
+
+  @Test
+  fun `checkEntitlement for ConfigTemplateEntitlement returns false when both are false`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    // Test OR logic: false from Stigg, false from provider = false overall
+    every { entitlementClient.checkEntitlement(orgId, ConfigTemplateEntitlement) } returns
+      EntitlementResult(featureId = "feature-embedded", isEntitled = false, reason = "Not entitled")
+    every { entitlementProvider.hasConfigTemplateEntitlements(orgId) } returns false
+
+    val result = entitlementService.checkEntitlement(orgId, ConfigTemplateEntitlement)
+
+    assertEquals(false, result.isEntitled)
+    assertEquals("Not entitled", result.reason)
+    verify { entitlementClient.checkEntitlement(orgId, ConfigTemplateEntitlement) }
+    verify { entitlementProvider.hasConfigTemplateEntitlements(orgId) }
+  }
+
+  @Test
+  fun `checkEntitlement for ConfigTemplateEntitlement returns true when both are true`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    // Test OR logic: true from Stigg, true from provider = true overall
+    every { entitlementClient.checkEntitlement(orgId, ConfigTemplateEntitlement) } returns
+      EntitlementResult(featureId = "feature-embedded", isEntitled = true, reason = null)
+    every { entitlementProvider.hasConfigTemplateEntitlements(orgId) } returns true
+
+    val result = entitlementService.checkEntitlement(orgId, ConfigTemplateEntitlement)
+
+    assertEquals(true, result.isEntitled)
+    verify { entitlementClient.checkEntitlement(orgId, ConfigTemplateEntitlement) }
+    verify { entitlementProvider.hasConfigTemplateEntitlements(orgId) }
   }
 
   @Test

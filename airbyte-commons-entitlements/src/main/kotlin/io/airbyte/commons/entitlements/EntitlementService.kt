@@ -6,6 +6,7 @@ package io.airbyte.commons.entitlements
 
 import io.airbyte.api.problems.model.generated.ProblemLicenseEntitlementData
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
+import io.airbyte.commons.entitlements.models.ConfigTemplateEntitlement
 import io.airbyte.commons.entitlements.models.DestinationObjectStorageEntitlement
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
@@ -94,8 +95,6 @@ interface EntitlementService {
     actorType: ActorType,
     actorDefinitionIds: List<UUID>,
   ): Map<UUID, Boolean>
-
-  fun hasConfigTemplateEntitlements(organizationId: OrganizationId): Boolean
 }
 
 @Singleton
@@ -126,6 +125,7 @@ internal class EntitlementServiceImpl(
         DestinationObjectStorageEntitlement -> hasDestinationObjectStorageEntitlement(organizationId)
         SsoEntitlement -> hasSsoConfigUpdateEntitlement(organizationId)
         SelfManagedRegionsEntitlement -> hasManageDataplanesAndDataplaneGroupsEntitlement(organizationId)
+        ConfigTemplateEntitlement -> hasConfigTemplateEntitlement(organizationId)
         else -> {
           val result = entitlementClient.checkEntitlement(organizationId, entitlement)
           sendCountMetric(OssMetricsRegistry.ENTITLEMENT_CHECK, organizationId, true)
@@ -215,8 +215,15 @@ internal class EntitlementServiceImpl(
     }
   }
 
-  override fun hasConfigTemplateEntitlements(organizationId: OrganizationId): Boolean =
-    entitlementProvider.hasConfigTemplateEntitlements(organizationId)
+  private fun hasConfigTemplateEntitlement(organizationId: OrganizationId): EntitlementResult {
+    val entitlementResult = entitlementClient.checkEntitlement(organizationId, ConfigTemplateEntitlement)
+    val ffResult = entitlementProvider.hasConfigTemplateEntitlements(organizationId)
+    return EntitlementResult(
+      featureId = ConfigTemplateEntitlement.featureId,
+      isEntitled = entitlementResult.isEntitled || ffResult,
+      reason = entitlementResult.reason,
+    )
+  }
 
   private fun hasDestinationObjectStorageEntitlement(organizationId: OrganizationId): EntitlementResult {
     val entitlementResult = entitlementClient.checkEntitlement(organizationId, DestinationObjectStorageEntitlement)

@@ -6,6 +6,7 @@ package io.airbyte.commons.entitlements
 
 import io.airbyte.api.problems.model.generated.ProblemLicenseEntitlementData
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
+import io.airbyte.commons.entitlements.models.ConfigTemplateEntitlement
 import io.airbyte.config.ActorType
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
@@ -107,7 +108,7 @@ open class LicenseEntitlementChecker(
     }
 
   private fun checkConfigTemplateEntitlement(organizationId: UUID): Boolean =
-    entitlementService.hasConfigTemplateEntitlements(OrganizationId(organizationId))
+    entitlementService.checkEntitlement(OrganizationId(organizationId), ConfigTemplateEntitlement).isEntitled
 
   private fun checkConnectorEntitlements(
     organizationId: UUID,
