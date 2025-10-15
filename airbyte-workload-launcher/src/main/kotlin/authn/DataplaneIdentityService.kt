@@ -52,7 +52,7 @@ class DataplaneIdentityService(
           organizationId = initResponse.organizationId,
         )
 
-      logger.info { "Running as ${config.dataplaneId} (${config.dataplaneName}) for ${config.dataplaneGroupName}" }
+      logger.info { "Running as ${config.dataplaneId} (${config.dataplaneName}) for ${config.dataplaneGroupId} (${config.dataplaneGroupName})" }
       publishConfigChange(config)
     } catch (e: Exception) {
       throw RuntimeException("Failed to initialize data-plane", e)
