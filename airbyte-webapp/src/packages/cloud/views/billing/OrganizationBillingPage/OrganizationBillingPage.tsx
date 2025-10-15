@@ -37,7 +37,7 @@ export const OrganizationBillingPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { openModal } = useModalService();
   const { formatCredits } = useFormatCredits();
-  const { isStandardPlan } = useOrganizationSubscriptionStatus();
+  const { isStandardPlan, isProPlan, isFlexPlan } = useOrganizationSubscriptionStatus();
 
   const organizationId = useCurrentOrganizationId();
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
@@ -126,9 +126,11 @@ export const OrganizationBillingPage: React.FC = () => {
               <BillingInformation />
             </BorderedTile>
 
-            <BorderedTile>
-              <PaymentMethod />
-            </BorderedTile>
+            {!isProPlan && !isFlexPlan && (
+              <BorderedTile>
+                <PaymentMethod />
+              </BorderedTile>
+            )}
           </BorderedTiles>
         )}
 
