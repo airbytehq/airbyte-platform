@@ -33,7 +33,12 @@ export const ConnectorTitleBlock = <T extends Connector>({
   ) : (
     <FormattedMessage
       id="connector.connectorNameAndVersion"
-      values={{ connectorName: connectorDefinition.name, version: actorDefinitionVersion.dockerImageTag }}
+      values={{
+        connectorName: connectorDefinition.name,
+        version: actorDefinitionVersion.isVersionOverrideApplied
+          ? `pinned-v${actorDefinitionVersion.dockerImageTag}`
+          : `v${actorDefinitionVersion.dockerImageTag}`,
+      }}
     />
   );
   return (

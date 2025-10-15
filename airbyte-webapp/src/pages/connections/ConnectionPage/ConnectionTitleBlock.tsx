@@ -34,9 +34,19 @@ interface ConnectorBlockProps {
   custom?: boolean;
   type: "source" | "destination";
   version: string;
+  isVersionOverrideApplied?: boolean;
 }
 
-const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, supportLevel, custom, type, version }) => {
+const ConnectorBlock: React.FC<ConnectorBlockProps> = ({
+  name,
+  icon,
+  id,
+  supportLevel,
+  custom,
+  type,
+  version,
+  isVersionOverrideApplied,
+}) => {
   const params = useParams<{ workspaceId: string; connectionId: string; "*": ConnectionRoutePaths }>();
   const basePath = `/${RoutePaths.Workspaces}/${params.workspaceId}`;
   const connectorTypePath = type === "source" ? RoutePaths.Source : RoutePaths.Destination;
@@ -48,7 +58,7 @@ const ConnectorBlock: React.FC<ConnectorBlockProps> = ({ name, icon, id, support
         <ConnectorIcon icon={icon} className={styles.connectorIcon} />
         <Text color="grey" size="sm" title={name} className={styles.connectorName}>
           {name}
-          {connectionDetails && <> (v{version})</>}
+          {isVersionOverrideApplied ? <> (pinned-v{version})</> : connectionDetails ? <> (v{version})</> : null}
         </Text>
         <SupportLevelBadge supportLevel={supportLevel} custom={custom} />
       </FlexContainer>
@@ -87,6 +97,7 @@ export const ConnectionTitleBlock = () => {
                 custom={sourceDefinition.custom}
                 version={sourceDefinitionVersion.dockerImageTag}
                 type="source"
+                isVersionOverrideApplied={sourceDefinitionVersion.isVersionOverrideApplied}
               />
               <Icon type="arrowRight" color="disabled" />
               <ConnectorBlock
@@ -97,6 +108,7 @@ export const ConnectionTitleBlock = () => {
                 custom={destinationDefinition.custom}
                 version={destinationDefinitionVersion.dockerImageTag}
                 type="destination"
+                isVersionOverrideApplied={destinationDefinitionVersion.isVersionOverrideApplied}
               />
             </FlexContainer>
           </FlexContainer>

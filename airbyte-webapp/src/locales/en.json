@@ -1629,7 +1629,7 @@
   "connector.supportLevel.archived": "Archived",
   "connector.supportLevel.custom": "Custom",
   "connector.supportLevel.enterprise": "Enterprise",
-  "connector.connectorNameAndVersion": "{connectorName} v{version}",
+  "connector.connectorNameAndVersion": "{connectorName} {version}",
   "connector.supportLevel.certified.description": "<b>Airbyte Connectors</b> are actively maintained and supported by the Airbyte team and maintain a high quality bar. They are production ready.",
   "connector.supportLevel.community.description": "<b>Marketplace</b> connectors are maintained by the Airbyte community. Airbyte does not offer support SLAs around them, and encourages caution when using them in production.",
   "connector.supportLevel.archived.description": "<b>Archived</b> connectors have been removed from the Airbyte Registry due to low quality or low usage.",
