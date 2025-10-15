@@ -22,6 +22,7 @@ import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.impls.data.OrganizationPaymentConfigServiceDataImpl
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.featureflag.FeatureFlagClient
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -52,6 +53,7 @@ class OrganizationsHandlerTest {
   private lateinit var workspacesHandler: WorkspacesHandler
   private lateinit var permissionService: PermissionService
   private lateinit var entitlementService: EntitlementService
+  private lateinit var featureFlagClient: FeatureFlagClient
 
   @BeforeEach
   fun setup() {
@@ -62,6 +64,7 @@ class OrganizationsHandlerTest {
     workspacesHandler = mockk()
     permissionService = mockk()
     entitlementService = mockk(relaxed = true)
+    featureFlagClient = mockk(relaxed = true)
 
     organizationsHandler =
       spyk(
@@ -73,6 +76,7 @@ class OrganizationsHandlerTest {
           workspacesHandler,
           permissionService,
           entitlementService,
+          featureFlagClient,
         ),
         recordPrivateCalls = true,
       )
@@ -285,7 +289,7 @@ class OrganizationsHandlerTest {
   }
 
   @Test
-  fun `createOrganization calls EntitlementClient addOrganization`() {
+  fun `createOrganization calls EntitlementService with UNIFIED_TRIAL when feature flag is enabled`() {
     val userId = UUID.randomUUID()
     val orgId = UUID.randomUUID()
     val newOrganization =
@@ -297,6 +301,7 @@ class OrganizationsHandlerTest {
 
     every { uuidSupplier.get() } returns orgId
     every { organizationPersistence.createOrganization(any()) } returns newOrganization
+    every { featureFlagClient.boolVariation(any(), any()) } returns true
 
     val request =
       OrganizationCreateRequestBody()
@@ -306,7 +311,33 @@ class OrganizationsHandlerTest {
 
     organizationsHandler.createOrganization(request)
 
-    verify { entitlementService.addOrganization(OrganizationId(orgId), EntitlementPlan.STANDARD_TRIAL) }
+    verify { entitlementService.addOrUpdateOrganization(OrganizationId(orgId), EntitlementPlan.UNIFIED_TRIAL) }
+  }
+
+  @Test
+  fun `createOrganization calls EntitlementService with STANDARD_TRIAL when feature flag is disabled`() {
+    val userId = UUID.randomUUID()
+    val orgId = UUID.randomUUID()
+    val newOrganization =
+      Organization()
+        .withOrganizationId(orgId)
+        .withEmail(organizationEmail)
+        .withName(organizationName)
+        .withUserId(userId)
+
+    every { uuidSupplier.get() } returns orgId
+    every { organizationPersistence.createOrganization(any()) } returns newOrganization
+    every { featureFlagClient.boolVariation(any(), any()) } returns false
+
+    val request =
+      OrganizationCreateRequestBody()
+        .organizationName(organizationName)
+        .email(organizationEmail)
+        .userId(userId)
+
+    organizationsHandler.createOrganization(request)
+
+    verify { entitlementService.addOrUpdateOrganization(OrganizationId(orgId), EntitlementPlan.STANDARD_TRIAL) }
   }
 
 // TODO: enable these tests once we're ready to enable Stigg

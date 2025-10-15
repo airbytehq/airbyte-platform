@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.entitlements
 
+import io.airbyte.api.problems.model.generated.ProblemEntitlementServiceData
+import io.airbyte.api.problems.throwable.generated.EntitlementServiceInvalidOrganizationStateProblem
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.commons.entitlements.models.ConfigTemplateEntitlement
 import io.airbyte.commons.entitlements.models.ConnectorEntitlement
@@ -19,7 +21,10 @@ import io.airbyte.domain.models.OrganizationId
 import io.airbyte.metrics.MetricClient
 import io.mockk.clearMocks
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.spyk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -196,5 +201,132 @@ class EntitlementServiceTest {
     val result = entitlementService.getCurrentPlanId(orgId)
 
     assertNull(result)
+  }
+
+  @Test
+  fun `addOrUpdateOrganization adds organization when no current plan exists`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    every { entitlementClient.getPlans(orgId) } returns emptyList()
+    every { entitlementClient.addOrganization(orgId, EntitlementPlan.STANDARD) } just runs
+
+    entitlementService.addOrUpdateOrganization(orgId, EntitlementPlan.STANDARD)
+
+    verify { entitlementClient.getPlans(orgId) }
+    verify { entitlementClient.addOrganization(orgId, EntitlementPlan.STANDARD) }
+    verify(exactly = 0) { entitlementClient.updateOrganization(any(), any()) }
+  }
+
+  @Test
+  fun `addOrUpdateOrganization upgrades from standard to pro`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    every { entitlementClient.getPlans(orgId) } returns
+      listOf(EntitlementPlanResponse(EntitlementPlan.STANDARD, EntitlementPlan.STANDARD.id, EntitlementPlan.STANDARD.name))
+    every { entitlementClient.getEntitlements(orgId) } returns emptyList()
+    every { entitlementClient.updateOrganization(orgId, EntitlementPlan.PRO) } just runs
+
+    entitlementService.addOrUpdateOrganization(orgId, EntitlementPlan.PRO)
+
+    verify { entitlementClient.getPlans(orgId) }
+    verify { entitlementClient.updateOrganization(orgId, EntitlementPlan.PRO) }
+    verify(exactly = 0) { entitlementClient.addOrganization(any(), any()) }
+  }
+
+  @Test
+  fun `addOrUpdateOrganization returns early when already on same plan`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    every { entitlementClient.getPlans(orgId) } returns
+      listOf(EntitlementPlanResponse(EntitlementPlan.STANDARD, EntitlementPlan.STANDARD.id, EntitlementPlan.STANDARD.name))
+
+    entitlementService.addOrUpdateOrganization(orgId, EntitlementPlan.STANDARD)
+
+    verify { entitlementClient.getPlans(orgId) }
+    verify(exactly = 0) { entitlementClient.updateOrganization(any(), any()) }
+    verify(exactly = 0) { entitlementClient.addOrganization(any(), any()) }
+  }
+
+  @Test
+  fun `addOrUpdateOrganization throws when multiple plans found`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    every { entitlementClient.getPlans(orgId) } returns
+      listOf(
+        EntitlementPlanResponse(EntitlementPlan.PRO, EntitlementPlan.PRO.id, EntitlementPlan.PRO.name),
+        EntitlementPlanResponse(EntitlementPlan.UNIFIED_TRIAL, EntitlementPlan.UNIFIED_TRIAL.id, EntitlementPlan.UNIFIED_TRIAL.name),
+      )
+
+    val exception =
+      assertThrows(EntitlementServiceInvalidOrganizationStateProblem::class.java) {
+        entitlementService.addOrUpdateOrganization(orgId, EntitlementPlan.CORE)
+      }
+
+    val data = exception.problem.getData() as ProblemEntitlementServiceData
+    assertEquals(orgId.value, data.organizationId)
+    assertEquals("More than one entitlement plan found", data.errorMessage)
+
+    verify { entitlementClient.getPlans(orgId) }
+    verify(exactly = 0) { entitlementClient.updateOrganization(any(), any()) }
+    verify(exactly = 0) { entitlementClient.addOrganization(any(), any()) }
+  }
+
+  @Test
+  fun `downgradeFeaturesIfRequired is called for all plan changes`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val serviceSpy = spyk(entitlementService, recordPrivateCalls = true)
+
+    // Even for upgrades, the function is called (it just checks if it needs to do anything)
+    every { entitlementClient.getPlans(orgId) } returns
+      listOf(EntitlementPlanResponse(EntitlementPlan.STANDARD, EntitlementPlan.STANDARD.id, EntitlementPlan.STANDARD.name))
+    every { entitlementClient.getEntitlements(orgId) } returns emptyList()
+    every { entitlementClient.updateOrganization(orgId, EntitlementPlan.PRO) } just runs
+
+    serviceSpy.addOrUpdateOrganization(orgId, EntitlementPlan.PRO)
+
+    // Verify downgrade function is called even for upgrades
+    verify { serviceSpy["downgradeFeaturesIfRequired"](orgId, EntitlementPlan.STANDARD, EntitlementPlan.PRO) }
+  }
+
+  @Test
+  fun `downgradeFeaturesIfRequired is not called when adding a new organization`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val serviceSpy = spyk(entitlementService, recordPrivateCalls = true)
+
+    // When there's no current plan, we're adding not updating
+    every { entitlementClient.getPlans(orgId) } returns emptyList()
+    every { entitlementClient.addOrganization(orgId, EntitlementPlan.STANDARD) } just runs
+
+    serviceSpy.addOrUpdateOrganization(orgId, EntitlementPlan.STANDARD)
+
+    // Verify downgrade function is NOT called when adding new org
+    verify(exactly = 0) {
+      serviceSpy["downgradeFeaturesIfRequired"](
+        any<OrganizationId>(),
+        any<EntitlementPlan>(),
+        any<EntitlementPlan>(),
+      )
+    }
+  }
+
+  @Test
+  fun `downgradeFeaturesIfRequired is not called when already on same plan`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+    val serviceSpy = spyk(entitlementService, recordPrivateCalls = true)
+
+    // When already on the same plan, we return early
+    every { entitlementClient.getPlans(orgId) } returns
+      listOf(EntitlementPlanResponse(EntitlementPlan.STANDARD, EntitlementPlan.STANDARD.id, EntitlementPlan.STANDARD.name))
+
+    serviceSpy.addOrUpdateOrganization(orgId, EntitlementPlan.STANDARD)
+
+    // Verify downgrade function is NOT called when already on same plan
+    verify(exactly = 0) {
+      serviceSpy["downgradeFeaturesIfRequired"](
+        any<OrganizationId>(),
+        any<EntitlementPlan>(),
+        any<EntitlementPlan>(),
+      )
+    }
   }
 }

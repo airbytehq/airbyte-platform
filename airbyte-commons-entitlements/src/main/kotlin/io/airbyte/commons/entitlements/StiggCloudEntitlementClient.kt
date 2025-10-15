@@ -33,29 +33,22 @@ internal class StiggCloudEntitlementClient(
 
   override fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult> = stigg.getEntitlements(organizationId)
 
+  override fun getEntitlementsForPlan(plan: EntitlementPlan): List<Entitlement> = stigg.getEntitlementsForPlan(plan)
+
   override fun getPlans(organizationId: OrganizationId): List<EntitlementPlanResponse> = stigg.getPlans(organizationId)
 
-  override fun addOrUpdateOrganization(
+  override fun addOrganization(
     organizationId: OrganizationId,
     plan: EntitlementPlan,
   ) {
-    val currentPlans = stigg.getPlans(organizationId)
+    addEntitlementPlan(organizationId, plan)
+  }
 
-    if (currentPlans.size > 1) {
-      logger.error { "More than one entitlement plan was found; this is unexpected. organizationId=$organizationId currentPlans=$currentPlans" }
-      return
-    }
-
-    if (currentPlans.isNotEmpty()) {
-      if (currentPlans.any { it.planEnum == plan }) {
-        logger.info { "Organization already on plan. organizationId=$organizationId, plan=$plan, currentPlans=$currentPlans" }
-        return
-      }
-      validatePlanChange(organizationId, currentPlans, plan)
-      stigg.updateCustomerPlan(organizationId, plan)
-    } else {
-      addEntitlementPlan(organizationId, plan)
-    }
+  override fun updateOrganization(
+    organizationId: OrganizationId,
+    plan: EntitlementPlan,
+  ) {
+    stigg.updateCustomerPlan(organizationId, plan)
   }
 
   private fun addEntitlementPlan(
@@ -74,36 +67,5 @@ internal class StiggCloudEntitlementClient(
       }
       throw e
     }
-  }
-
-  private fun validatePlanChange(
-    organizationId: OrganizationId,
-    currentPlans: List<EntitlementPlanResponse>,
-    plan: EntitlementPlan,
-  ) {
-    logger.debug { "Validating plan change organizationId=$organizationId plan=$plan" }
-
-    if (currentPlans.any { it.planEnum == plan }) {
-      logger.info { "Organization is already in plan. organizationId=$organizationId plan=$plan" }
-      return
-    }
-
-    // Check if any current plan has a higher value than the target plan
-    // (same value plans are allowed to move between each other)
-    val hasHigherPlan = currentPlans.any { it.planEnum.value > plan.value }
-
-    if (hasHigherPlan) {
-      val highestCurrentPlan = currentPlans.maxByOrNull { it.planEnum.value }
-      throw EntitlementServiceUnableToAddOrganizationProblem(
-        ProblemEntitlementServiceData()
-          .organizationId(organizationId.value)
-          .planId(plan.toString())
-          .errorMessage(
-            "Cannot automatically downgrade from ${highestCurrentPlan?.planEnum?.name} (value: ${highestCurrentPlan?.planEnum?.value}) to ${plan.name} (value: ${plan.value})",
-          ),
-      )
-    }
-
-    logger.debug { "Plan change validation passed organizationId=$organizationId plan=$plan currentPlans=$currentPlans" }
   }
 }

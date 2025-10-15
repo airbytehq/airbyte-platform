@@ -1941,6 +1941,27 @@ components:
               default: There was a problem adding the organization ot the entitlement service. Organization functionality may be limited.
             data:
               $ref: "#/components/schemas/ProblemEntitlementServiceData"
+    EntitlementServiceInvalidOrganizationStateProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 500
+            type:
+              type: string
+              default: error:entitlement-service/invalid-organization-state
+            title:
+              type: string
+              default: entitlement-service-invalid-organization-state
+            detail:
+              type: string
+              default: The organization is in an invalid state in the entitlement service.
+            data:
+              $ref: "#/components/schemas/ProblemEntitlementServiceData"
     ProblemEntitlementServiceData:
       type: object
       required:

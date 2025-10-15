@@ -659,9 +659,13 @@ enum class OssMetricsRegistry(
     metricName = "entitlement_check",
     metricDescription = "a request was made to check a single entitlement",
   ),
-  ENTITLEMENTS_ORGANIZATION_ENROLMENT(
+  ENTITLEMENT_ORGANIZATION_ENROLMENT(
     metricName = "entitlements_organization_enrolment",
     metricDescription = "an airbyte organization was added to entitlements platform",
+  ),
+  ENTITLEMENT_PLAN_ORGANIZATION_UPDATE(
+    metricName = "entitlements_organization_update",
+    metricDescription = "an airbyte organization's entitlements were updated",
   ),
   ENTITLEMENT_RETRIEVAL(
     metricName = "entitlement_retrieval",

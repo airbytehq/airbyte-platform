@@ -169,7 +169,13 @@ open class OrganizationServiceImpl(
     organizationId: OrganizationId,
     entitlementPlan: EntitlementPlan,
   ) {
-    entitlementService.addOrganization(organizationId, entitlementPlan)
+    try {
+      entitlementService.addOrUpdateOrganization(organizationId, entitlementPlan)
+    } catch (e: Exception) {
+      logger.error(e) {
+        "There was a problem adding the organization to the entitlement plan. organizationId=$organizationId entitlementPlan=$entitlementPlan"
+      }
+    }
   }
 
   @Transactional("config")

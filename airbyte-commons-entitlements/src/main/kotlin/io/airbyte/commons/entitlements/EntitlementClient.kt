@@ -25,9 +25,16 @@ internal interface EntitlementClient {
 
   fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult>
 
+  fun getEntitlementsForPlan(plan: EntitlementPlan): List<Entitlement>
+
   fun getPlans(organizationId: OrganizationId): List<EntitlementPlanResponse>
 
-  fun addOrUpdateOrganization(
+  fun addOrganization(
+    organizationId: OrganizationId,
+    plan: EntitlementPlan,
+  )
+
+  fun updateOrganization(
     organizationId: OrganizationId,
     plan: EntitlementPlan,
   )

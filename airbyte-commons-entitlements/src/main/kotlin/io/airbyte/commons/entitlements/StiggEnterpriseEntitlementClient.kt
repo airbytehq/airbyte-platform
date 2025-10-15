@@ -53,9 +53,18 @@ class StiggEnterpriseEntitlementClient(
 
   override fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult> = stigg.getEntitlements(smeOrgId)
 
+  override fun getEntitlementsForPlan(plan: EntitlementPlan): List<Entitlement> = stigg.getEntitlementsForPlan(plan)
+
   override fun getPlans(organizationId: OrganizationId): List<EntitlementPlanResponse> = stigg.getPlans(organizationId)
 
-  override fun addOrUpdateOrganization(
+  override fun addOrganization(
+    organizationId: OrganizationId,
+    plan: EntitlementPlan,
+  ) {
+    // No-op in enterprise edition.
+  }
+
+  override fun updateOrganization(
     organizationId: OrganizationId,
     plan: EntitlementPlan,
   ) {

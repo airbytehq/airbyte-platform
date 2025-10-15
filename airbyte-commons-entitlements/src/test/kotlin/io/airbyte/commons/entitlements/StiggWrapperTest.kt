@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.entitlements
 
-import com.apollographql.apollo3.exception.ApolloException
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.FeatureEntitlement
 import io.airbyte.domain.models.EntitlementPlan
@@ -12,7 +11,7 @@ import io.airbyte.domain.models.OrganizationId
 import io.airbyte.metrics.MetricClient
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
+import io.stigg.api.operations.GetPaywallQuery
 import io.stigg.sidecar.sdk.Stigg
 import io.stigg.sidecar.sdk.offline.CustomerEntitlements
 import io.stigg.sidecar.sdk.offline.Entitlement
@@ -20,7 +19,6 @@ import io.stigg.sidecar.sdk.offline.EntitlementType
 import io.stigg.sidecar.sdk.offline.OfflineEntitlements
 import io.stigg.sidecar.sdk.offline.OfflineStiggConfig
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
@@ -83,6 +81,35 @@ internal class StiggWrapperTest {
     val result = stiggWrapper.getEntitlements(organizationId)
 
     assertEquals(emptyList<EntitlementResult>(), result)
+  }
+
+  @Test
+  fun `getEntitlementsForPlan returns empty list on GraphQL API exception`() {
+    val stigg = mockk<Stigg>(relaxed = true)
+
+    every { stigg.api().query(any<GetPaywallQuery>()) } throws RuntimeException("GraphQL API Error")
+
+    val stiggWrapper = StiggWrapper(stigg, metricClient)
+    val result = stiggWrapper.getEntitlementsForPlan(EntitlementPlan.UNIFIED_TRIAL)
+
+    // Should gracefully return empty list instead of propagating the exception
+    assertEquals(emptyList<io.airbyte.commons.entitlements.models.Entitlement>(), result)
+  }
+
+  @Test
+  fun `getEntitlementsForPlan returns empty list for different plan types`() {
+    val stigg = mockk<Stigg>(relaxed = true)
+
+    every { stigg.api().query(any<GetPaywallQuery>()) } throws RuntimeException("API unavailable")
+
+    val stiggWrapper = StiggWrapper(stigg, metricClient)
+
+    // Test for each plan type to ensure consistent error handling
+    val unifiedTrialResult = stiggWrapper.getEntitlementsForPlan(EntitlementPlan.UNIFIED_TRIAL)
+    val standardTrialResult = stiggWrapper.getEntitlementsForPlan(EntitlementPlan.STANDARD_TRIAL)
+
+    assertEquals(emptyList<io.airbyte.commons.entitlements.models.Entitlement>(), unifiedTrialResult)
+    assertEquals(emptyList<io.airbyte.commons.entitlements.models.Entitlement>(), standardTrialResult)
   }
 
   private fun createOfflineStigg(vararg entitlements: Pair<String, String>): Stigg {

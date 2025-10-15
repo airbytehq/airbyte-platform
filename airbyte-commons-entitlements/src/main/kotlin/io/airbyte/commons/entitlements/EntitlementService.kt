@@ -4,7 +4,9 @@
 
 package io.airbyte.commons.entitlements
 
+import io.airbyte.api.problems.model.generated.ProblemEntitlementServiceData
 import io.airbyte.api.problems.model.generated.ProblemLicenseEntitlementData
+import io.airbyte.api.problems.throwable.generated.EntitlementServiceInvalidOrganizationStateProblem
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.commons.entitlements.models.ConfigTemplateEntitlement
 import io.airbyte.commons.entitlements.models.DestinationObjectStorageEntitlement
@@ -83,7 +85,7 @@ interface EntitlementService {
 
   fun getCurrentPlanId(organizationId: OrganizationId): String?
 
-  fun addOrganization(
+  fun addOrUpdateOrganization(
     organizationId: OrganizationId,
     plan: EntitlementPlan,
   )
@@ -150,12 +152,81 @@ internal class EntitlementServiceImpl(
   // An org can never have more than one active plan at a time, so just get the first element
   override fun getCurrentPlanId(organizationId: OrganizationId): String? = getPlans(organizationId).firstOrNull()?.planId
 
-  override fun addOrganization(
+  override fun addOrUpdateOrganization(
     organizationId: OrganizationId,
     plan: EntitlementPlan,
   ) {
-    entitlementClient.addOrUpdateOrganization(organizationId, plan)
-    sendCountMetric(OssMetricsRegistry.ENTITLEMENTS_ORGANIZATION_ENROLMENT, organizationId, true)
+    val currentPlans = entitlementClient.getPlans(organizationId)
+
+    if (currentPlans.size > 1) {
+      logger.error {
+        "Unable to update the organization entitlements. " +
+          "More than one entitlement plan was found; this is unexpected. organizationId=$organizationId currentPlans=$currentPlans"
+      }
+      sendCountMetric(OssMetricsRegistry.ENTITLEMENT_PLAN_ORGANIZATION_UPDATE, organizationId, false)
+      throw EntitlementServiceInvalidOrganizationStateProblem(
+        ProblemEntitlementServiceData()
+          .organizationId(organizationId.value)
+          .errorMessage("More than one entitlement plan found"),
+      )
+    }
+    val currentPlanId = currentPlans.firstOrNull()?.planId
+
+    if (currentPlanId != null) {
+      val currentPlan = EntitlementPlan.fromId(currentPlanId)
+      if (plan == currentPlan) {
+        logger.info { "Organization already on plan. organizationId=$organizationId, plan=$plan, currentPlans=$currentPlans" }
+        return
+      } else {
+        sendCountMetric(OssMetricsRegistry.ENTITLEMENT_PLAN_ORGANIZATION_UPDATE, organizationId, true)
+
+        logger.info {
+          "Updating organization plan. organizationId=$organizationId, fromPlan=$currentPlan, toPlan=$plan}"
+        }
+
+        // Handle feature downgrades if needed
+        downgradeFeaturesIfRequired(organizationId, currentPlan, plan)
+
+        // Update with preserved add-ons
+        entitlementClient.updateOrganization(organizationId, plan)
+      }
+    } else {
+      sendCountMetric(OssMetricsRegistry.ENTITLEMENT_ORGANIZATION_ENROLMENT, organizationId, true)
+      entitlementClient.addOrganization(organizationId, plan)
+    }
+  }
+
+  internal fun downgradeFeaturesIfRequired(
+    organizationId: OrganizationId,
+    fromPlan: EntitlementPlan,
+    toPlan: EntitlementPlan,
+  ) {
+    logger.debug { "Checking for feature downgrades. organizationId=$organizationId fromPlan=$fromPlan toPlan=$toPlan" }
+
+    try {
+      // Get current entitlements to identify features the customer currently has
+      val currentEntitlements = entitlementClient.getEntitlements(organizationId)
+      val currentFeatureIds = currentEntitlements.filter { it.isEntitled }.map { it.featureId }.toSet()
+
+      val newEntitlements = entitlementClient.getEntitlementsForPlan(toPlan).map { it.featureId }.toSet()
+      logger.info {
+        "Customer currently has ${currentFeatureIds.size} entitled features. " +
+          "organizationId=$organizationId features=$currentFeatureIds"
+      }
+
+      val entitlementsToDowngrade = currentEntitlements.toSet() - newEntitlements
+      for (entitlementToDowngrade in entitlementsToDowngrade) {
+        logger.info {
+          "Downgrading access to entitlementId=$entitlementToDowngrade organizationId=$organizationId"
+        }
+        // TODO: Implement specific downgrade flows for features
+      }
+
+      logger.info { "Feature downgrade check completed. organizationId=$organizationId fromPlan=$fromPlan toPlan=$toPlan" }
+    } catch (e: Exception) {
+      logger.error(e) { "Error checking for feature downgrades. organizationId=$organizationId fromPlan=$fromPlan toPlan=$toPlan" }
+      // Don't fail the plan update if we can't check for downgrades
+    }
   }
 
   /**

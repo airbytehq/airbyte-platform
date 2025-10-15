@@ -236,3 +236,5 @@ object DisableOAuthMaskingForCommands : Temporary<Boolean>(
 
 // Skip check connections during sync jobs
 object SkipCheckBeforeSync : Temporary<Boolean>(key = "skip-check-before-sync", default = false)
+
+object UnifiedTrial : Temporary<Boolean>(key = "platform.unified-trial", default = false)
