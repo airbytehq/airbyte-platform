@@ -1635,29 +1635,17 @@ class ConnectionServiceJooqImpl
 
       val connectionIds = result.map { record: Record -> record.get(Tables.CONNECTION.ID) }
       val tagsByConnection = getTagsByConnectionIds(connectionIds)
+      val notificationConfigurationRecords = getNotificationConfigurations(configId)
 
       val standardSyncs: MutableList<StandardSync> = ArrayList()
       for (record in result) {
-        val notificationConfigurationRecords: List<NotificationConfigurationRecord> =
-          database.query { ctx: DSLContext ->
-            if (configId.isPresent) {
-              return@query ctx
-                .selectFrom<NotificationConfigurationRecord>(Tables.NOTIFICATION_CONFIGURATION)
-                .where(Tables.NOTIFICATION_CONFIGURATION.CONNECTION_ID.eq(configId.get()))
-                .fetch()
-            } else {
-              return@query ctx
-                .selectFrom<NotificationConfigurationRecord>(Tables.NOTIFICATION_CONFIGURATION)
-                .fetch()
-            }
-          }
-
+        val connectionId = record.get(Tables.CONNECTION.ID)
         val standardSync =
           DbConverter.buildStandardSync(
             record,
-            connectionOperationIds(record.get(Tables.CONNECTION.ID)),
+            connectionOperationIds(connectionId),
             notificationConfigurationRecords,
-            tagsByConnection[record.get(Tables.CONNECTION.ID)]!!,
+            tagsByConnection[connectionId]!!,
           )
         if (ScheduleHelpers.isScheduleTypeMismatch(standardSync)) {
           throw RuntimeException("unexpected schedule type mismatch")
@@ -1665,6 +1653,21 @@ class ConnectionServiceJooqImpl
         standardSyncs.add(standardSync)
       }
       return standardSyncs
+    }
+
+    private fun getNotificationConfigurations(configId: Optional<UUID>): List<NotificationConfigurationRecord> {
+      return database.query { ctx: DSLContext ->
+        if (configId.isPresent) {
+          return@query ctx
+            .selectFrom<NotificationConfigurationRecord>(Tables.NOTIFICATION_CONFIGURATION)
+            .where(Tables.NOTIFICATION_CONFIGURATION.CONNECTION_ID.eq(configId.get()))
+            .fetch()
+        } else {
+          return@query ctx
+            .selectFrom<NotificationConfigurationRecord>(Tables.NOTIFICATION_CONFIGURATION)
+            .fetch()
+        }
+      }
     }
 
     @Throws(IOException::class)
