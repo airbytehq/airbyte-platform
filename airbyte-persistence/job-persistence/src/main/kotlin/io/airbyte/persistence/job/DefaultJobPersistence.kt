@@ -1975,8 +1975,7 @@ class DefaultJobPersistence
           ctx.fetch(
             (
               STREAM_STAT_SELECT_STATEMENT +
-                "WHERE stats.attempt_id IN " +
-                "( SELECT id FROM attempts WHERE job_id IN ( " + jobIdsStr + "));"
+                "WHERE atmpt.job_id IN ( " + jobIdsStr + ");"
             ),
           )
 
