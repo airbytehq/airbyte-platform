@@ -8,11 +8,10 @@ import io.airbyte.api.server.generated.apis.SsoConfigApi
 import io.airbyte.api.server.generated.models.ActivateSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.CreateSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.DeleteSSOConfigRequestBody
-import io.airbyte.api.server.generated.models.ExchangeSSOAuthCodeRequestBody
-import io.airbyte.api.server.generated.models.ExchangeSSOAuthCodeResponse
 import io.airbyte.api.server.generated.models.GetSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.SSOConfigRead
 import io.airbyte.api.server.generated.models.UpdateSSOCredentialsRequestBody
+import io.airbyte.api.server.generated.models.ValidateSSOTokenRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.roles.AuthRoleConstants
@@ -123,19 +122,14 @@ open class SSOConfigApiController(
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)
-  override fun exchangeSsoAuthCode(exchangeSSOAuthCodeRequestBody: ExchangeSSOAuthCodeRequestBody): ExchangeSSOAuthCodeResponse {
-    entitlementService.ensureEntitled(OrganizationId(exchangeSSOAuthCodeRequestBody.organizationId), SsoEntitlement)
+  override fun validateSsoToken(validateSSOTokenRequestBody: ValidateSSOTokenRequestBody) {
+    entitlementService.ensureEntitled(OrganizationId(validateSSOTokenRequestBody.organizationId), SsoEntitlement)
 
-    val accessToken =
-      ssoConfigDomainService.exchangeAuthCodeAndValidate(
-        exchangeSSOAuthCodeRequestBody.organizationId,
-        exchangeSSOAuthCodeRequestBody.authorizationCode,
-        exchangeSSOAuthCodeRequestBody.codeVerifier,
-        exchangeSSOAuthCodeRequestBody.redirectUri,
+    execute<Any?> {
+      ssoConfigDomainService.validateToken(
+        validateSSOTokenRequestBody.organizationId,
+        validateSSOTokenRequestBody.accessToken,
       )
-
-    return ExchangeSSOAuthCodeResponse(
-      accessToken = accessToken,
-    )
+    }
   }
 }

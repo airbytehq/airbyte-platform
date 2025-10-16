@@ -636,13 +636,6 @@ data class AirbyteKeycloakConfig(
     return "$protocol://$hostWithoutTrailingSlash$basePathWithLeadingSlash/realms/$realm$keycloakUserInfoURI"
   }
 
-  fun getKeycloakTokenEndpointForRealm(realm: String): String {
-    val hostWithoutTrailingSlash = if (host.endsWith("/")) host.substring(0, host.length - 1) else host
-    val basePathWithLeadingSlash = if (basePath.startsWith("/")) basePath else "/$basePath"
-    val keycloakTokenURI = "/protocol/openid-connect/token"
-    return "$protocol://$hostWithoutTrailingSlash$basePathWithLeadingSlash/realms/$realm$keycloakTokenURI"
-  }
-
   fun getServerUrl(): String = "$protocol://$host$basePath"
 }
 

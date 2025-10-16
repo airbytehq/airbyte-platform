@@ -79,7 +79,7 @@ class AirbyteKeycloakClient(
         displayName = request.companyIdentifier
         displayNameHtml = "<b>${request.companyIdentifier}</b>"
         isEnabled = true
-        accessCodeLifespan = 3
+        accessCodeLifespan = 180 // 3 minutes
         loginTheme = AIRBYTE_LOGIN_THEME
       },
     )
@@ -359,12 +359,11 @@ class AirbyteKeycloakClient(
   }
 
   /**
-   * Validates an access token by extracting its realm and calling the userinfo endpoint.
-   * Used by KeycloakTokenValidator for general application authentication.
+   * Validates a token by extracting its realm and calling the userinfo endpoint.
    * @param token The JWT token to validate
-   * @throws InvalidTokenException if the token does not contain a realm claim
+   * @throws InvalidTokenException if the token has no realm claim
    * @throws TokenExpiredException if the token is expired or invalid
-   * @throws MalformedTokenResponseException if the response is malformed or missing required claims
+   * @throws MalformedTokenResponseException if the response is malformed
    * @throws KeycloakServiceException if there's an error communicating with Keycloak
    */
   @Throws(InvalidTokenException::class, TokenExpiredException::class, MalformedTokenResponseException::class, KeycloakServiceException::class)
@@ -376,7 +375,7 @@ class AirbyteKeycloakClient(
   }
 
   /**
-   * Validates a token against a specific Keycloak realm by calling the userinfo endpoint.
+   * Validates a token against a specific Keycloak realm.
    * @param token The JWT token to validate
    * @param realm The Keycloak realm to validate against
    * @throws TokenExpiredException if the token is expired or invalid (401 response)
@@ -449,143 +448,6 @@ class AirbyteKeycloakClient(
       logger.debug(e) { "Failed to parse realm from JWT token" }
       null
     }
-
-  /**
-   * Exchanges an OAuth authorization code for an access token by making a server-side request to
-   * Keycloak's token endpoint for the provided realm.
-   * @param realm The Keycloak realm
-   * @param authorizationCode The authorization code from the OAuth callback
-   * @param codeVerifier The PKCE code verifier
-   * @param redirectUri The redirect URI used during authorization
-   * @return The validated access token
-   */
-  fun exchangeAuthorizationCode(
-    realm: String,
-    authorizationCode: String,
-    codeVerifier: String,
-    redirectUri: String,
-  ): String {
-    val tokenEndpoint = keycloakConfiguration.getKeycloakTokenEndpointForRealm(realm)
-    logger.debug { "Exchanging authorization code with token endpoint: $tokenEndpoint" }
-
-    val formBody =
-      okhttp3.FormBody
-        .Builder()
-        .add("grant_type", "authorization_code")
-        .add("code", authorizationCode)
-        .add("redirect_uri", redirectUri)
-        .add("client_id", AIRBYTE_WEBAPP_CLIENT_ID)
-        .add("code_verifier", codeVerifier)
-        .build()
-
-    val request =
-      Request
-        .Builder()
-        .addHeader(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded")
-        .url(tokenEndpoint)
-        .post(formBody)
-        .build()
-
-    try {
-      httpClient.newCall(request).execute().use { response ->
-        val responseBody = response.body?.string()
-
-        if (!response.isSuccessful) {
-          logger.error { "Token exchange failed with status ${response.code}: $responseBody" }
-          throw InvalidTokenException("Token exchange failed with status ${response.code}: $responseBody")
-        }
-
-        if (responseBody.isNullOrEmpty()) {
-          throw MalformedTokenResponseException("Empty response from token endpoint")
-        }
-
-        val tokenResponse = objectMapper.readTree(responseBody)
-        val accessToken = tokenResponse.path("access_token").asText()
-
-        if (accessToken.isNullOrEmpty()) {
-          throw MalformedTokenResponseException("No access_token in token response")
-        }
-
-        logger.debug { "Successfully exchanged authorization code for access token" }
-        return accessToken
-      }
-    } catch (e: TokenValidationException) {
-      throw e
-    } catch (e: Exception) {
-      logger.error(e) { "Failed to exchange authorization code" }
-      throw KeycloakServiceException("Failed to exchange authorization code", e)
-    }
-  }
-
-  /**
-   * Retrieves user info from the userinfo endpoint using an access token.
-   * @param token The access token
-   * @param realm The Keycloak realm
-   * @return Map of user info claims (including email, sub, etc.)
-   * @throws TokenExpiredException if the token is expired or invalid
-   * @throws InvalidTokenException if the token validation failed
-   * @throws KeycloakServiceException if there's an error communicating with Keycloak
-   */
-  fun getUserInfo(
-    token: String,
-    realm: String,
-  ): Map<String, Any> {
-    val userInfoEndpoint = keycloakConfiguration.getKeycloakUserInfoEndpointForRealm(realm)
-    logger.debug { "Fetching user info from Keycloak userinfo endpoint: $userInfoEndpoint" }
-
-    val request =
-      Request
-        .Builder()
-        .addHeader(HttpHeaders.CONTENT_TYPE, "application/json")
-        .addHeader(HttpHeaders.AUTHORIZATION, "Bearer $token")
-        .url(userInfoEndpoint)
-        .get()
-        .build()
-
-    try {
-      httpClient.newCall(request).execute().use { response ->
-        when {
-          response.code == 401 -> {
-            logger.debug { "Token is invalid or expired (401 response)" }
-            throw TokenExpiredException("Token is invalid or expired")
-          }
-          !response.isSuccessful -> {
-            logger.debug { "Non-200 response from userinfo endpoint: ${response.code}" }
-            throw InvalidTokenException("Failed to get user info with status ${response.code}")
-          }
-          else -> {
-            val responseBody = response.body?.string()
-            if (responseBody.isNullOrEmpty()) {
-              logger.debug { "Received null or empty userinfo response" }
-              throw MalformedTokenResponseException("Empty response from Keycloak userinfo endpoint")
-            }
-            logger.debug { "Received userinfo response (${responseBody.length} bytes)" }
-
-            val userInfo = objectMapper.readTree(responseBody)
-            val result = mutableMapOf<String, Any>()
-
-            userInfo.fields().forEach { (key, value) ->
-              result[key] =
-                when {
-                  value.isTextual -> value.asText()
-                  value.isNumber -> value.asLong()
-                  value.isBoolean -> value.asBoolean()
-                  else -> value.toString()
-                }
-            }
-
-            logger.debug { "Parsed user info with claims: ${result.keys}" }
-            return result
-          }
-        }
-      }
-    } catch (e: TokenValidationException) {
-      throw e
-    } catch (e: Exception) {
-      logger.error(e) { "Failed to get user info" }
-      throw KeycloakServiceException("Failed to communicate with Keycloak", e)
-    }
-  }
 
   /**
    * Validates the userinfo response from Keycloak.

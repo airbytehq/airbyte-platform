@@ -456,23 +456,11 @@ open class SsoConfigDomainService internal constructor(
     }
   }
 
-  /**
-   * Exchanges an OAuth authorization code for tokens server-side and validates the token.
-   * This avoids the session cookie mismatch issues that occur when the frontend tries to
-   * exchange the code with browser cookies.
-   *
-   * The token is validated by calling the userinfo endpoint, which is more reliable than
-   * parsing JWT claims directly, especially in identity broker flows where the token may
-   * not contain all expected claims.
-   *
-   * @return The access token
-   */
-  fun exchangeAuthCodeAndValidate(
+  fun validateToken(
     organizationId: UUID,
-    authorizationCode: String,
-    codeVerifier: String,
-    redirectUri: String,
-  ): String {
+    accessToken: String,
+  ) {
+    // First, retrieve the organization's SSO configuration
     val ssoConfig =
       ssoConfigService.getSsoConfig(organizationId) ?: throw SSOTokenValidationProblem(
         ProblemSSOTokenValidationData()
@@ -480,45 +468,46 @@ open class SsoConfigDomainService internal constructor(
           .errorMessage("SSO configuration does not exist for organization $organizationId"),
       )
 
-    try {
-      val accessToken =
-        airbyteKeycloakClient.exchangeAuthorizationCode(
-          realm = ssoConfig.keycloakRealm,
-          authorizationCode = authorizationCode,
-          codeVerifier = codeVerifier,
-          redirectUri = redirectUri,
-        )
+    // Extract the realm from the token
+    val tokenRealm = airbyteKeycloakClient.extractRealmFromToken(accessToken)
 
-      val userInfo = airbyteKeycloakClient.getUserInfo(accessToken, ssoConfig.keycloakRealm)
-
-      // Validate that sub claim exists in user info (required by OIDC spec)
-      if (userInfo["sub"] == null || (userInfo["sub"] as? String).isNullOrBlank()) {
-        throw SSOTokenValidationProblem(
-          ProblemSSOTokenValidationData()
-            .organizationId(organizationId)
-            .errorMessage("Token response missing required 'sub' claim"),
-        )
-      }
-
-      // Validate that email exists in user info
-      if (userInfo["email"] == null) {
-        throw SSOTokenValidationProblem(
-          ProblemSSOTokenValidationData()
-            .organizationId(organizationId)
-            .errorMessage("Could not extract email from user info"),
-        )
-      }
-
-      // Return the access token
-      return accessToken
-    } catch (e: SSOTokenValidationProblem) {
-      throw e
-    } catch (e: Exception) {
-      logger.error(e) { "Failed to exchange authorization code for organization $organizationId" }
+    // Verify the token's realm matches the organization's configured realm
+    if (tokenRealm == null || tokenRealm != ssoConfig.keycloakRealm) {
       throw SSOTokenValidationProblem(
         ProblemSSOTokenValidationData()
           .organizationId(organizationId)
-          .errorMessage("Failed to exchange authorization code: ${e.message}"),
+          .errorMessage(
+            "The access token was issued by a different realm than expected. Expected: ${ssoConfig.keycloakRealm}, Actual: ${tokenRealm ?: "unknown"}",
+          ),
+      )
+    }
+
+    // Now validate the token against the organization's specific realm
+    try {
+      airbyteKeycloakClient.validateTokenWithRealm(accessToken, ssoConfig.keycloakRealm)
+    } catch (e: TokenExpiredException) {
+      throw SSOTokenValidationProblem(
+        ProblemSSOTokenValidationData()
+          .organizationId(organizationId)
+          .errorMessage("The access token has expired. Please try testing your SSO configuration again."),
+      )
+    } catch (e: InvalidTokenException) {
+      throw SSOTokenValidationProblem(
+        ProblemSSOTokenValidationData()
+          .organizationId(organizationId)
+          .errorMessage("The access token format is invalid or malformed."),
+      )
+    } catch (e: MalformedTokenResponseException) {
+      throw SSOTokenValidationProblem(
+        ProblemSSOTokenValidationData()
+          .organizationId(organizationId)
+          .errorMessage("Failed to validate the token with the identity provider. This may indicate incorrect client credentials."),
+      )
+    } catch (e: KeycloakServiceException) {
+      throw SSOTokenValidationProblem(
+        ProblemSSOTokenValidationData()
+          .organizationId(organizationId)
+          .errorMessage("Failed to communicate with the identity provider (service unavailable)."),
       )
     }
   }
