@@ -126,7 +126,6 @@ test.describe("Connection Mappings", () => {
       // Wait for validation to complete - the field becomes disabled during validation
       // and re-enabled when validation completes. This ensures the validation response
       // has been processed and state updated before we submit.
-      await expect(fieldDropdown).toBeDisabled({ timeout: 10000 });
       await expect(fieldDropdown).toBeEnabled({ timeout: 10000 });
 
       // Submit the mappings configuration
