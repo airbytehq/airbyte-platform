@@ -4,13 +4,14 @@ import { Disclosure, DisclosureButton, DisclosurePanel } from "@headlessui/react
 import classNames from "classnames";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { useFormContext, useFormState } from "react-hook-form";
+import { useFormContext, useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { FormControl } from "components/forms/FormControl";
 import { Box } from "components/ui/Box";
 import { BrandingBadge } from "components/ui/BrandingBadge";
 import { Button } from "components/ui/Button";
+import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
@@ -51,6 +52,21 @@ export const SSOSettingsValidation = () => {
   const [activationResult, setActivationResult] = useState<{ success: boolean; message: ReactNode } | null>(null);
   const [, setLastSsoCompanyIdentifier] = useLocalStorage("airbyte_last-sso-company-identifier", "");
   const [, setRedirectToSsoAfterLogout] = useLocalStorage("airbyte_redirect-to-sso-after-logout", "");
+
+  // Watch the companyIdentifier field to dynamically generate URIs
+  const companyIdentifier = useWatch<SSOFormValuesValidation>({ name: "companyIdentifier" });
+
+  // Memoize the constructed URIs to avoid duplicate string interpolations
+  const { signInRedirectUri, signOutRedirectUri } = useMemo(() => {
+    if (!companyIdentifier) {
+      return { signInRedirectUri: null, signOutRedirectUri: null };
+    }
+    const baseUri = `https://cloud.airbyte.com/auth/realms/${companyIdentifier}/broker/default/endpoint`;
+    return {
+      signInRedirectUri: baseUri,
+      signOutRedirectUri: `${baseUri}/logout_response`,
+    };
+  }, [companyIdentifier]);
 
   // Step 1 is complete when we have a draft config that was successfully tested
   const isStep1Complete = testResult?.success === true && ssoConfig?.status === "draft";
@@ -213,13 +229,73 @@ export const SSOSettingsValidation = () => {
                                 <Text bold size="lg">
                                   {formatMessage({ id: "settings.organizationSettings.sso.step1.title" })}
                                 </Text>
-                                <FormControl<SSOFormValuesValidation>
-                                  label={formatMessage({ id: "settings.organizationSettings.sso.companyIdentifier" })}
-                                  fieldType="input"
-                                  name="companyIdentifier"
-                                  required
-                                  disabled={isActive}
-                                />
+                                <div>
+                                  <FormControl<SSOFormValuesValidation>
+                                    label={formatMessage({ id: "settings.organizationSettings.sso.companyIdentifier" })}
+                                    fieldType="input"
+                                    name="companyIdentifier"
+                                    required
+                                    disabled={isActive}
+                                    reserveSpaceForError={false}
+                                  />
+                                  <Box mt="sm">
+                                    <Message
+                                      type="info"
+                                      text={formatMessage({ id: "settings.organizationSettings.sso.redirectUri.info" })}
+                                    >
+                                      <Box p="md">
+                                        <FlexContainer direction="column" gap="md">
+                                          <FlexContainer direction="column" gap="xs">
+                                            <FlexContainer justifyContent="space-between" alignItems="center">
+                                              <Text size="sm" bold>
+                                                <FormattedMessage id="settings.organizationSettings.sso.redirectUri.signIn" />
+                                              </Text>
+                                              {signInRedirectUri && (
+                                                <CopyButton variant="clear" content={signInRedirectUri} />
+                                              )}
+                                            </FlexContainer>
+                                            {signInRedirectUri ? (
+                                              <Text size="sm" as="span" className={styles.uriText}>
+                                                {signInRedirectUri}
+                                              </Text>
+                                            ) : (
+                                              <Text size="sm" as="span" className={styles.uriText}>
+                                                https://cloud.airbyte.com/auth/realms/
+                                                <Text as="span" italicized color="grey400">
+                                                  <FormattedMessage id="settings.organizationSettings.sso.redirectUri.placeholder" />
+                                                </Text>
+                                                /broker/default/endpoint
+                                              </Text>
+                                            )}
+                                          </FlexContainer>
+                                          <FlexContainer direction="column" gap="xs">
+                                            <FlexContainer justifyContent="space-between" alignItems="center">
+                                              <Text size="sm" bold>
+                                                <FormattedMessage id="settings.organizationSettings.sso.redirectUri.signOut" />
+                                              </Text>
+                                              {signOutRedirectUri && (
+                                                <CopyButton variant="clear" content={signOutRedirectUri} />
+                                              )}
+                                            </FlexContainer>
+                                            {signOutRedirectUri ? (
+                                              <Text size="sm" as="span" className={styles.uriText}>
+                                                {signOutRedirectUri}
+                                              </Text>
+                                            ) : (
+                                              <Text size="sm" as="span" className={styles.uriText}>
+                                                https://cloud.airbyte.com/auth/realms/
+                                                <Text as="span" italicized color="grey400">
+                                                  <FormattedMessage id="settings.organizationSettings.sso.redirectUri.placeholder" />
+                                                </Text>
+                                                /broker/default/endpoint/logout_response
+                                              </Text>
+                                            )}
+                                          </FlexContainer>
+                                        </FlexContainer>
+                                      </Box>
+                                    </Message>
+                                  </Box>
+                                </div>
                                 <FormControl<SSOFormValuesValidation>
                                   label={formatMessage({ id: "settings.organizationSettings.sso.clientId" })}
                                   fieldType="input"
