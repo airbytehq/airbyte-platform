@@ -246,6 +246,8 @@ object ConnectionHelpers {
       connectionRead.setStatus(ConnectionStatus.ACTIVE)
     } else if (standardSync.getStatus() == StandardSync.Status.DEPRECATED) {
       connectionRead.setStatus(ConnectionStatus.DEPRECATED)
+    } else if (standardSync.getStatus() == StandardSync.Status.LOCKED) {
+      connectionRead.setStatus(ConnectionStatus.LOCKED)
     }
 
     return connectionRead

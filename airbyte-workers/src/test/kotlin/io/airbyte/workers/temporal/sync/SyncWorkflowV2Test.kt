@@ -71,6 +71,15 @@ class SyncWorkflowV2Test {
   }
 
   @Test
+  fun testSyncWorkflowV2StopIfLocked() {
+    every { configFetchActivity.getStatus(connectionId) } returns java.util.Optional.of(ConnectionStatus.LOCKED)
+
+    val output = syncWorkflowV2.run(input)
+
+    assertEquals(StandardSyncSummary.ReplicationStatus.CANCELLED, output.standardSyncSummary.status)
+  }
+
+  @Test
   fun testSyncWorkflowV2() {
     val catalogDiff =
       CatalogDiff()

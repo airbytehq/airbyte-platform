@@ -233,6 +233,28 @@ class ConnectionServiceJooqImpl
       )
     }
 
+    @Throws(IOException::class)
+    override fun updateConnectionStatus(
+      connectionId: UUID,
+      status: StandardSync.Status,
+      statusReason: String?,
+    ) {
+      database.transaction { ctx: DSLContext ->
+        val statusType = StatusType.valueOf(status.value())
+        val rowsUpdated =
+          ctx.execute(
+            "UPDATE connection SET status = CAST(? AS status_type), status_reason = ? WHERE id = ?",
+            status.value(),
+            statusReason,
+            connectionId,
+          )
+
+        if (rowsUpdated == 0) {
+          throw ConfigNotFoundException(ConfigNotFoundType.STANDARD_SYNC, connectionId.toString())
+        }
+      }
+    }
+
     /**
      * List connections for workspace.
      *
@@ -1728,6 +1750,7 @@ class ConnectionServiceJooqImpl
               standardSync.status.value().toEnum<StatusType>()!!
             },
           ).set(Tables.CONNECTION.SCHEDULE, JSONB.valueOf(Jsons.serialize(standardSync.schedule)))
+          .set(Tables.CONNECTION.STATUS_REASON, standardSync.statusReason)
           .set(Tables.CONNECTION.MANUAL, standardSync.manual)
           .set(
             Tables.CONNECTION.SCHEDULE_TYPE,
@@ -1794,6 +1817,7 @@ class ConnectionServiceJooqImpl
               standardSync.status.value().toEnum<StatusType>()!!
             },
           ).set(Tables.CONNECTION.SCHEDULE, JSONB.valueOf(Jsons.serialize(standardSync.schedule)))
+          .set(Tables.CONNECTION.STATUS_REASON, standardSync.statusReason)
           .set(Tables.CONNECTION.MANUAL, standardSync.manual)
           .set(
             Tables.CONNECTION.SCHEDULE_TYPE,

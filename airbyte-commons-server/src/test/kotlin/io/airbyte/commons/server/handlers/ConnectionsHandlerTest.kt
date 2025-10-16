@@ -62,6 +62,7 @@ import io.airbyte.api.problems.model.generated.ProblemMapperErrorData
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper
 import io.airbyte.api.problems.throwable.generated.ConnectionConflictingStreamProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionDoesNotSupportFileTransfersProblem
+import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogInvalidAdditionalFieldProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogInvalidOperationProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogInvalidPrimaryKeyProblem
@@ -162,6 +163,7 @@ import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardSyncOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.StandardWorkspace
+import io.airbyte.config.StatusReason
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.StreamDescriptorForDestination
 import io.airbyte.config.StreamSyncStats
@@ -224,6 +226,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.mock
@@ -268,6 +271,7 @@ internal class ConnectionsHandlerTest {
   private lateinit var standardSync: StandardSync
   private lateinit var standardSync2: StandardSync
   private lateinit var standardSyncDeleted: StandardSync
+  private lateinit var standardSyncLocked: StandardSync
   private lateinit var connectionId: UUID
   private lateinit var connection2Id: UUID
   private lateinit var operationId: UUID
@@ -409,6 +413,22 @@ internal class ConnectionsHandlerTest {
         .withNamespaceFormat(null)
         .withPrefix("presto_to_hudi2")
         .withStatus(StandardSync.Status.DEPRECATED)
+        .withCatalog(generateBasicConfiguredAirbyteCatalog())
+        .withSourceId(sourceId)
+        .withDestinationId(destinationId)
+        .withOperationIds(listOf(operationId))
+        .withManual(false)
+        .withSchedule(generateBasicSchedule())
+        .withResourceRequirements(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS)
+
+    standardSyncLocked =
+      StandardSync()
+        .withConnectionId(connectionId)
+        .withName("presto to hudi2")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withNamespaceFormat(null)
+        .withPrefix("presto_to_hudi2")
+        .withStatus(StandardSync.Status.LOCKED)
         .withCatalog(generateBasicConfiguredAirbyteCatalog())
         .withSourceId(sourceId)
         .withDestinationId(destinationId)
@@ -789,15 +809,15 @@ internal class ConnectionsHandlerTest {
     @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun testListConnectionsForWorkspace() {
       whenever(connectionService.listWorkspaceStandardSyncs(source.getWorkspaceId(), false))
-        .thenReturn(Lists.newArrayList(standardSync))
+        .thenReturn(Lists.newArrayList(standardSync, standardSyncLocked))
       whenever(connectionService.listWorkspaceStandardSyncs(source.getWorkspaceId(), true))
-        .thenReturn(Lists.newArrayList(standardSync, standardSyncDeleted))
+        .thenReturn(Lists.newArrayList(standardSync, standardSyncDeleted, standardSyncLocked))
       whenever(connectionService.getStandardSync(standardSync.getConnectionId()))
         .thenReturn(standardSync)
 
       val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(source.getWorkspaceId())
       val actualConnectionReadList = connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody)
-      Assertions.assertEquals(1, actualConnectionReadList.getConnections().size)
+      Assertions.assertEquals(2, actualConnectionReadList.getConnections().size)
       Assertions.assertEquals(
         generateExpectedConnectionRead(standardSync),
         actualConnectionReadList.getConnections().get(0),
@@ -805,9 +825,10 @@ internal class ConnectionsHandlerTest {
 
       val actualConnectionReadListWithDeleted = connectionsHandler.listConnectionsForWorkspace(workspaceIdRequestBody, true)
       val connections = actualConnectionReadListWithDeleted.getConnections()
-      Assertions.assertEquals(2, connections.size)
+      Assertions.assertEquals(3, connections.size)
       Assertions.assertEquals(apiPojoConverters.internalToConnectionRead(standardSync), connections.get(0))
       Assertions.assertEquals(apiPojoConverters.internalToConnectionRead(standardSyncDeleted), connections.get(1))
+      Assertions.assertEquals(apiPojoConverters.internalToConnectionRead(standardSyncLocked), connections.get(2))
     }
 
     @Test
@@ -2163,6 +2184,22 @@ internal class ConnectionsHandlerTest {
                 DestinationSyncMode.APPEND,
               ).selected(true),
           )
+
+      @Test
+      @Throws(Exception::class)
+      fun testUpdateConnectionLockedThrowsProblem() {
+        val lockedSync =
+          clone(
+            standardSync,
+          ).withStatus(io.airbyte.config.StandardSync.Status.LOCKED).withStatusReason(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value)
+        whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(lockedSync)
+
+        val connectionUpdate = ConnectionUpdate().connectionId(standardSync.getConnectionId()).name("newName")
+
+        Assertions.assertThrows(
+          ConnectionLockedProblem::class.java,
+        ) { connectionsHandler.updateConnection(connectionUpdate, null, false) }
+      }
 
       @Test
       @Throws(Exception::class)
@@ -4541,49 +4578,11 @@ internal class ConnectionsHandlerTest {
       )
     }
 
-    @Test
+    @ParameterizedTest
+    @EnumSource(StandardSync.Status::class, names = ["INACTIVE", "DEPRECATED", "LOCKED"])
     @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
-    fun testConnectionStatus_paused_inactive() {
-      val standardSyncPaused = clone(standardSync).withStatus(StandardSync.Status.INACTIVE)
-      whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSyncPaused)
-
-      val connectionId = standardSync.getConnectionId()
-      val attempt = Attempt(0, 0, null, null, null, AttemptStatus.SUCCEEDED, null, null, 0, 0, 0L)
-      val jobs =
-        listOf(
-          Job(
-            1L,
-            ConfigType.SYNC,
-            connectionId.toString(),
-            JobConfig(),
-            listOf(attempt),
-            JobStatus.SUCCEEDED,
-            801L,
-            800L,
-            802L,
-            true,
-          ),
-        )
-      whenever(
-        jobPersistence.listJobsLight(
-          Job.Companion.REPLICATION_TYPES,
-          connectionId.toString(),
-          10,
-        ),
-      ).thenReturn(jobs)
-      val req = ConnectionStatusesRequestBody().connectionIds(listOf(connectionId))
-      val status: List<ConnectionStatusRead> = connectionsHandler.getConnectionStatuses(req)
-      val connectionStatus = status.get(0)
-      Assertions.assertEquals(
-        ConnectionSyncStatus.PAUSED.convertTo<ConnectionSyncStatus>(),
-        connectionStatus.getConnectionSyncStatus(),
-      )
-    }
-
-    @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
-    fun testConnectionStatus_paused_deprecated() {
-      val standardSyncPaused = clone(standardSync).withStatus(StandardSync.Status.DEPRECATED)
+    fun testConnectionStatus_paused_if_not_active(status: StandardSync.Status) {
+      val standardSyncPaused = clone(standardSync).withStatus(status)
       whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSyncPaused)
 
       val connectionId = standardSync.getConnectionId()

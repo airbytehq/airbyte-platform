@@ -8,18 +8,20 @@ import io.airbyte.api.model.generated.AirbyteCatalog
 import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
+import io.airbyte.api.problems.model.generated.ProblemConnectionLockedData
+import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.services.DestinationDiscoverService
 import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.config.DestinationCatalog
 import io.airbyte.domain.models.ActorId
 import io.airbyte.publicApi.server.generated.apis.PublicConnectionsApi
 import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionPatchRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionResponse
+import io.airbyte.publicApi.server.generated.models.ConnectionStatusEnum
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
 import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.constants.CONNECTIONS_PATH
@@ -314,6 +316,14 @@ open class ConnectionsController(
         PUT,
         userId,
       ) as ConnectionResponse
+
+    if (currentConnection.status == ConnectionStatusEnum.LOCKED) {
+      throw ConnectionLockedProblem(
+        ProblemConnectionLockedData()
+          .connectionId(UUID.fromString(connectionId))
+          .statusReason(currentConnection.statusReason),
+      )
+    }
 
     // get destination response to retrieve workspace id as well as input for destination sync modes
     val destinationRead: DestinationRead =

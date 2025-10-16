@@ -151,6 +151,7 @@ object DbConverter {
           Schedule::class.java,
         ),
       ).withManual(record.get(Tables.CONNECTION.MANUAL))
+      .withStatusReason(record.get(Tables.CONNECTION.STATUS_REASON))
       .withScheduleType(
         if (record.get(Tables.CONNECTION.SCHEDULE_TYPE) == null) {
           null

@@ -8,10 +8,12 @@ import io.airbyte.api.model.generated.AirbyteCatalog
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
+import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.services.DestinationDiscoverService
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
+import io.airbyte.config.StatusReason
 import io.airbyte.publicApi.server.generated.models.ConnectionPatchRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionStatusEnum
 import io.airbyte.publicApi.server.generated.models.StreamConfigurations
@@ -63,6 +65,32 @@ class ConnectionsControllerTest {
   }
 
   @Test
+  fun `patchConnection throws ConnectionLockedProblem when connection is locked`() {
+    val connectionId = UUID.randomUUID()
+    val destinationId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+
+    every { connectionService.getConnection(connectionId) } returns
+      mockk {
+        every { this@mockk.destinationId } returns destinationId.toString()
+        every { this@mockk.status } returns ConnectionStatusEnum.LOCKED
+        every { this@mockk.statusReason } returns StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value
+      }
+
+    every { destinationService.getDestinationRead(destinationId) } returns
+      mockk {
+        every { this@mockk.workspaceId } returns workspaceId
+      }
+
+    org.junit.jupiter.api.Assertions.assertThrows(ConnectionLockedProblem::class.java) {
+      controller.patchConnection(
+        connectionId.toString(),
+        ConnectionPatchRequest(status = ConnectionStatusEnum.ACTIVE),
+      )
+    }
+  }
+
+  @Test
   fun `patchConnection does not set configurations if not being patched`() {
     val connectionId = UUID.randomUUID()
     val destinationId = UUID.randomUUID()
@@ -73,6 +101,7 @@ class ConnectionsControllerTest {
     } returns
       mockk {
         every { this@mockk.destinationId } returns destinationId.toString()
+        every { this@mockk.status } returns ConnectionStatusEnum.ACTIVE
       }
 
     every { destinationService.getDestinationRead(destinationId) } returns
@@ -127,6 +156,7 @@ class ConnectionsControllerTest {
       mockk {
         every { this@mockk.destinationId } returns destinationId.toString()
         every { this@mockk.sourceId } returns sourceId.toString()
+        every { this@mockk.status } returns ConnectionStatusEnum.ACTIVE
       }
 
     every { destinationService.getDestinationRead(destinationId) } returns

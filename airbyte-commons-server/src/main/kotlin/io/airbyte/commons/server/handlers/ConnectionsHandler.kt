@@ -62,6 +62,7 @@ import io.airbyte.api.model.generated.Tag
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.model.generated.ProblemConnectionConflictingStreamsData
 import io.airbyte.api.problems.model.generated.ProblemConnectionConflictingStreamsDataItem
+import io.airbyte.api.problems.model.generated.ProblemConnectionLockedData
 import io.airbyte.api.problems.model.generated.ProblemConnectionUnsupportedFileTransfersData
 import io.airbyte.api.problems.model.generated.ProblemDestinationCatalogAdditionalFieldData
 import io.airbyte.api.problems.model.generated.ProblemDestinationCatalogMatchingKeyData
@@ -76,6 +77,7 @@ import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemStreamDataItem
 import io.airbyte.api.problems.throwable.generated.ConnectionConflictingStreamProblem
 import io.airbyte.api.problems.throwable.generated.ConnectionDoesNotSupportFileTransfersProblem
+import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogInvalidAdditionalFieldProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogInvalidOperationProblem
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogInvalidPrimaryKeyProblem
@@ -766,6 +768,14 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
 
       val sync = connectionService.getStandardSync(connectionId)
       log.debug { "initial StandardSync: $sync" }
+
+      if (sync.status == io.airbyte.config.StandardSync.Status.LOCKED) {
+        throw ConnectionLockedProblem(
+          ProblemConnectionLockedData()
+            .connectionId(sync.connectionId)
+            .statusReason(sync.statusReason),
+        )
+      }
 
       // Ensure org is entitled to use source and destination
       val sourceDefinition = sourceService.getSourceDefinitionFromConnection(sync.connectionId)

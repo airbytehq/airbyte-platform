@@ -110,6 +110,7 @@ object MockData {
   private val CONNECTION_ID_4: UUID = UUID.randomUUID()
   private val CONNECTION_ID_5: UUID = UUID.randomUUID()
   private val CONNECTION_ID_6: UUID = UUID.randomUUID()
+  private val CONNECTION_ID_7: UUID = UUID.randomUUID()
   private val SOURCE_OAUTH_PARAMETER_ID_1: UUID = UUID.randomUUID()
   private val SOURCE_OAUTH_PARAMETER_ID_2: UUID = UUID.randomUUID()
   private val SOURCE_OAUTH_PARAMETER_ID_3: UUID = UUID.randomUUID()
@@ -883,7 +884,28 @@ object MockData {
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(false)
 
-    return Arrays.asList<StandardSync?>(standardSync1, standardSync2, standardSync3, standardSync4, standardSync5, standardSync6)
+    val standardSync7 =
+      StandardSync()
+        .withOperationIds(mutableListOf<UUID?>())
+        .withConnectionId(CONNECTION_ID_7)
+        .withSourceId(SOURCE_ID_3)
+        .withDestinationId(DESTINATION_ID_3)
+        .withCatalog(configuredCatalog)
+        .withName("standard-sync-7")
+        .withManual(true)
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT)
+        .withNamespaceFormat("")
+        .withPrefix("")
+        .withResourceRequirements(resourceRequirements)
+        .withStatus(StandardSync.Status.LOCKED)
+        .withSchedule(schedule)
+        .withBreakingChange(false)
+        .withNonBreakingChangesPreference(StandardSync.NonBreakingChangesPreference.IGNORE)
+        .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
+        .withNotifySchemaChanges(false)
+        .withNotifySchemaChangesByEmail(false)
+
+    return Arrays.asList<StandardSync?>(standardSync1, standardSync2, standardSync3, standardSync4, standardSync5, standardSync6, standardSync7)
   }
 
   private val configuredCatalog: ConfiguredAirbyteCatalog?

@@ -67,8 +67,8 @@ open class SyncWorkflowV2Impl : SyncWorkflowV2 {
         .postprocess(PostprocessCatalogInput(discoverOutput.discoverCatalogId, input.connectionId))
 
     val status = configFetchActivity.getStatus(input.connectionId)
-    if (status.isPresent && ConnectionStatus.INACTIVE == status.get()) {
-      log.info { "Connection ${input.connectionId} is disabled. Cancelling run." }
+    if (status.isPresent && (ConnectionStatus.INACTIVE == status.get() || ConnectionStatus.LOCKED == status.get())) {
+      log.info { "Connection ${input.connectionId} is disabled or locked. Cancelling run." }
       return StandardSyncOutput()
         .withStandardSyncSummary(StandardSyncSummary().withStatus(StandardSyncSummary.ReplicationStatus.CANCELLED).withTotalStats(SyncStats()))
     }

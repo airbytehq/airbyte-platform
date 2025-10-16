@@ -40,6 +40,7 @@ import java.util.UUID;
   "catalog",
   "fieldSelectionData",
   "status",
+  "statusReason",
   "schedule",
   "manual",
   "scheduleType",
@@ -117,6 +118,13 @@ public class StandardSync implements Serializable {
   private FieldSelectionData fieldSelectionData;
   @JsonProperty("status")
   private Status status;
+  /**
+   * Optional reason explaining the current state of the connection
+   *
+   */
+  @JsonProperty("statusReason")
+  @JsonPropertyDescription("Optional reason explaining the current state of the connection")
+  private String statusReason;
   @JsonProperty("schedule")
   private Schedule schedule;
   /**
@@ -401,6 +409,21 @@ public class StandardSync implements Serializable {
 
   public StandardSync withStatus(Status status) {
     this.status = status;
+    return this;
+  }
+
+  @JsonProperty("statusReason")
+  public String getStatusReason() {
+    return statusReason;
+  }
+
+  @JsonProperty("statusReason")
+  public void setStatusReason(String statusReason) {
+    this.statusReason = statusReason;
+  }
+
+  public StandardSync withStatusReason(String statusReason) {
+    this.statusReason = statusReason;
     return this;
   }
 
@@ -994,7 +1017,8 @@ public class StandardSync implements Serializable {
 
     ACTIVE("active"),
     INACTIVE("inactive"),
-    DEPRECATED("deprecated");
+    DEPRECATED("deprecated"),
+    LOCKED("locked");
 
     private final String value;
     private final static Map<String, Status> CONSTANTS = new HashMap<String, Status>();

@@ -296,6 +296,27 @@ components:
               default: State conflict
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    ConnectionLockedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:connection/locked
+            title:
+              type: string
+              default: Connection is locked
+            detail:
+              type: string
+              default: The connection is locked and cannot be modified.
+            data:
+              $ref: "#/components/schemas/ProblemConnectionLockedData"
     TryAgainLaterConflictProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -1265,6 +1286,16 @@ components:
         - value
       properties:
         value:
+          type: string
+    ProblemConnectionLockedData:
+      type: object
+      required:
+        - connectionId
+      properties:
+        connectionId:
+          type: string
+          format: uuid
+        statusReason:
           type: string
     ProblemLicenseEntitlementData:
       type: object

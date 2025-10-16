@@ -1481,6 +1481,21 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
+  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
+  fun lockedSyncThrows() {
+    val connectionId = UUID.randomUUID()
+    whenever<StandardSync?>(connectionService.getStandardSync(connectionId))
+      .thenReturn(StandardSync().withStatus(StandardSync.Status.LOCKED))
+    org.junit.jupiter.api.Assertions.assertThrows(
+      IllegalStateException::class.java,
+    ) {
+      schedulerHandler.syncConnection(
+        ConnectionIdRequestBody().connectionId(connectionId),
+      )
+    }
+  }
+
+  @Test
   @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testResetConnection() {
     val connectionId = UUID.randomUUID()

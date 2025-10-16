@@ -14180,6 +14180,10 @@ components:
           $ref: "#/components/schemas/ConnectionScheduleData"
         status:
           $ref: "#/components/schemas/ConnectionStatus"
+        statusReason:
+          type: string
+          description: Optional reason explaining the current status of the connection
+          nullable: true
         resourceRequirements:
           $ref: "#/components/schemas/ResourceRequirements"
         sourceCatalogId:
@@ -14745,11 +14749,12 @@ components:
             $ref: "#/components/schemas/ConnectionRead"
     ConnectionStatus:
       type: string
-      description: Active means that data is flowing through the connection. Inactive means it is not. Deprecated means the connection is off and cannot be re-activated. the schema field describes the elements of the schema that will be synced.
+      description: Active means that data is flowing through the connection. Inactive means it is not. Deprecated means the connection is off and cannot be re-activated. Locked means the connection is temporarily disabled due to external factors (e.g., payment issues). The schema field describes the elements of the schema that will be synced.
       enum:
         - active
         - inactive
         - deprecated
+        - locked
     # TODO(https://github.com/airbytehq/airbyte/issues/11432): remove.
     # Prefer the ConnectionScheduleType and ConnectionScheduleData properties.
     ConnectionSchedule:
@@ -18209,6 +18214,10 @@ components:
           $ref: "#/components/schemas/ConnectionScheduleData"
         status:
           $ref: "#/components/schemas/ConnectionStatus"
+        statusReason:
+          type: string
+          description: Optional reason explaining the current state of the connection
+          nullable: true
         operationIds:
           type: array
           items:
@@ -19884,6 +19893,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Tag"
+        statusReason:
+          type: string
       x-sdk-entity: Connection
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
@@ -19930,6 +19941,7 @@ components:
         - active
         - inactive
         - deprecated
+        - locked
       x-sdk-component: true
     NamespaceDefinitionEnum:
       type: string

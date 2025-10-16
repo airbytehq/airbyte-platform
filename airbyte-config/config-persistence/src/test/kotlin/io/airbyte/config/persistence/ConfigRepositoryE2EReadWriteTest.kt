@@ -289,7 +289,8 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   @Throws(IOException::class)
   fun testWorkspaceCountConnectionsDeprecated() {
     val workspaceId = standardWorkspaces().get(1)!!.getWorkspaceId()
-    Assertions.assertEquals(1, workspaceService.countConnectionsForWorkspace(workspaceId))
+    // One connection is active and one is locked
+    Assertions.assertEquals(2, workspaceService.countConnectionsForWorkspace(workspaceId))
   }
 
   @Test

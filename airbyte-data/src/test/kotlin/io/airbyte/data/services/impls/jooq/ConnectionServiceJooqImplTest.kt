@@ -11,6 +11,7 @@ import io.airbyte.config.DestinationConnection
 import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSync
+import io.airbyte.config.StatusReason
 import io.airbyte.config.StreamDescriptorForDestination
 import io.airbyte.config.Tag
 import io.airbyte.config.helpers.CatalogHelpers
@@ -47,6 +48,7 @@ import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.SQLDialect
 import org.jooq.SortField
+import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeAll
@@ -224,6 +226,56 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
     Assertions.assertNotEquals(tagsFromMultipleWorkspaces, standardSyncPersisted.tags)
     Assertions.assertEquals(tags, standardSyncPersisted.tags)
+  }
+
+  @Test
+  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
+  fun testWriteAndReadConnectionWithStatusReason() {
+    val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
+    jooqTestDbSetupHelper.setUpDependencies()
+
+    val destination = jooqTestDbSetupHelper.destination
+    val source = jooqTestDbSetupHelper.source
+    val streams =
+      mutableListOf<ConfiguredAirbyteStream?>(
+        catalogHelpers.createConfiguredAirbyteStream(
+          "stream_a",
+          "namespace",
+          Field.of("field_name", JsonSchemaType.STRING),
+        ),
+      )
+
+    // Create a connection with LOCKED status and a status reason
+    val standardSyncToCreate =
+      createStandardSync(source!!, destination!!, streams)
+        .withStatus(StandardSync.Status.LOCKED)
+        .withStatusReason(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value)
+
+    connectionServiceJooqImpl.writeStandardSync(standardSyncToCreate)
+
+    val standardSyncPersisted = connectionServiceJooqImpl.getStandardSync(standardSyncToCreate.connectionId)
+
+    Assertions.assertEquals(StandardSync.Status.LOCKED, standardSyncPersisted.status)
+    Assertions.assertEquals(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value, standardSyncPersisted.statusReason)
+
+    // Verify we can convert the stored value back to enum
+    val retrievedEnum = StatusReason.fromValueOrNull(standardSyncPersisted.statusReason)
+    Assertions.assertEquals(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED, retrievedEnum)
+
+    // Update the connection to remove status reason
+    standardSyncPersisted.statusReason = null
+    standardSyncPersisted.status = StandardSync.Status.ACTIVE
+
+    connectionServiceJooqImpl.writeStandardSync(standardSyncPersisted)
+
+    val updatedStandardSync = connectionServiceJooqImpl.getStandardSync(standardSyncToCreate.connectionId)
+
+    Assertions.assertEquals(StandardSync.Status.ACTIVE, updatedStandardSync.status)
+    Assertions.assertNull(updatedStandardSync.statusReason)
+
+    // Verify null converts to null enum
+    val nullEnum = StatusReason.fromValueOrNull(updatedStandardSync.statusReason)
+    Assertions.assertNull(nullEnum)
   }
 
   @Test
@@ -2258,5 +2310,56 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
         ),
       )
     }
+  }
+
+  @Test
+  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
+  fun testUpdateConnectionStatus() {
+    val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
+    jooqTestDbSetupHelper.setupForVersionUpgradeTest()
+
+    val destination = jooqTestDbSetupHelper.destination
+    val source = jooqTestDbSetupHelper.source
+
+    val connectionId = UUID.randomUUID()
+    val standardSync =
+      StandardSync()
+        .withConnectionId(connectionId)
+        .withName("test connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source!!.sourceId)
+        .withDestinationId(destination!!.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.MANUAL)
+        .withManual(true)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(standardSync)
+
+    connectionServiceJooqImpl.updateConnectionStatus(
+      connectionId,
+      StandardSync.Status.LOCKED,
+      StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value,
+    )
+
+    val updatedConnection = connectionServiceJooqImpl.getStandardSync(connectionId)
+    Assertions.assertEquals(StandardSync.Status.LOCKED, updatedConnection.status)
+    Assertions.assertEquals(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value, updatedConnection.statusReason)
+
+    // Verify enum conversion
+    val statusReasonEnum = StatusReason.fromValue(updatedConnection.statusReason!!)
+    Assertions.assertEquals(StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED, statusReasonEnum)
+
+    connectionServiceJooqImpl.updateConnectionStatus(
+      connectionId,
+      StandardSync.Status.ACTIVE,
+      null,
+    )
+
+    val reactivatedConnection = connectionServiceJooqImpl.getStandardSync(connectionId)
+    Assertions.assertEquals(StandardSync.Status.ACTIVE, reactivatedConnection.status)
+    Assertions.assertNull(reactivatedConnection.statusReason)
   }
 }

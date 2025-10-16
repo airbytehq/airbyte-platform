@@ -95,6 +95,13 @@ interface ConnectionService {
   ): List<StandardSync>
 
   @Throws(IOException::class)
+  fun updateConnectionStatus(
+    connectionId: UUID,
+    status: StandardSync.Status,
+    statusReason: String? = null,
+  )
+
+  @Throws(IOException::class)
   fun listConnectionsBySources(
     sourceIds: List<UUID>,
     includeDeleted: Boolean,
