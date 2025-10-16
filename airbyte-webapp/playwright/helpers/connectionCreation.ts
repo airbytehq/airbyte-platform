@@ -52,7 +52,7 @@ export const navigateToConnectionConfig = async (
     setupDiscoverSchemaIntercept?: boolean;
     timeout?: number;
   } = {}
-) => {
+): Promise<void> => {
   const { setupDiscoverSchemaIntercept = true, timeout = 20000 } = options;
 
   if (setupDiscoverSchemaIntercept) {
@@ -156,13 +156,14 @@ export const clickButtonBypassingOverlay = async (
 
 /**
  * Set up API interceptor for connection creation requests
+ * Returns the requests array for assertions
  */
 export const setupConnectionCreationIntercept = async (page: Page): Promise<Request[]> => {
   const createConnectionRequests: Request[] = [];
 
-  await page.route("**/api/v1/web_backend/connections/create", async (route) => {
+  await page.route("**/api/v1/web_backend/connections/create", (route) => {
     createConnectionRequests.push(route.request());
-    await route.continue();
+    return route.continue();
   });
 
   return createConnectionRequests;
@@ -265,9 +266,10 @@ export const completeConnectionCreation = async (
     nextButtonTimeout?: number;
     submitButtonTimeout?: number;
     useOverlayWorkaround?: boolean;
+    scheduleType?: "Scheduled" | "Manual" | "Cron";
   } = {}
 ) => {
-  const { nextButtonTimeout = 15000, submitButtonTimeout = 10000, useOverlayWorkaround = true } = options;
+  const { nextButtonTimeout = 15000, submitButtonTimeout = 10000, useOverlayWorkaround = true, scheduleType } = options;
 
   // Wait for and click Next button
   const nextButton = page.locator('[data-testid="next-creation-page"]');
@@ -278,6 +280,23 @@ export const completeConnectionCreation = async (
     await clickButtonBypassingOverlay(page, '[data-testid="next-creation-page"]', "Next button not found in DOM");
   } else {
     await nextButton.click({ timeout: 10000 });
+  }
+
+  // Set schedule type if specified (defaults to "Scheduled" in UI)
+  if (scheduleType) {
+    const scheduleButton = page.locator('[data-testid="schedule-type-listbox-button"]');
+    await scheduleButton.waitFor({ state: "visible", timeout: 10000 });
+
+    // Click to open the dropdown
+    await scheduleButton.click({ timeout: 10000 });
+
+    // Click the desired option
+    const option = page.locator(`[data-testid="${scheduleType.toLowerCase()}-option"]`);
+    await option.waitFor({ state: "visible", timeout: 5000 });
+    await option.click({ timeout: 5000 });
+
+    // Verify selection
+    await expect(scheduleButton).toContainText(scheduleType, { timeout: 5000 });
   }
 
   // Wait for and click Submit button
