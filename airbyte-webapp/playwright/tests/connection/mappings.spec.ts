@@ -113,22 +113,21 @@ test.describe("Connection Mappings", () => {
       await newPage.locator('[data-testid="add-stream-for-mapping-combobox"]').click();
       await newPage.getByRole("option", { name: "users" }).click();
 
-      // Wait for initial validation call to fetch available fields
-      await expect.poll(() => validateMappersRequests.length).toBeGreaterThanOrEqual(1);
-
-      // Allow for extra render cycle
-      await newPage.waitForTimeout(1000);
-
-      // Click on field selection dropdown (should be empty initially)
+      // Wait for the field dropdown to become visible and enabled after stream selection
       const fieldDropdown = newPage.locator('input[placeholder="Select a field"]').first();
+      await expect(fieldDropdown).toBeVisible({ timeout: 10000 });
+      await expect(fieldDropdown).toBeEnabled({ timeout: 10000 });
       await expect(fieldDropdown).toHaveValue("");
       await fieldDropdown.click();
 
       // Select "name" field
       await newPage.getByRole("option", { name: "name" }).click();
 
-      // Wait for second validation call after field selection
-      await expect.poll(() => validateMappersRequests.length).toBeGreaterThanOrEqual(2);
+      // Wait for validation to complete - the field becomes disabled during validation
+      // and re-enabled when validation completes. This ensures the validation response
+      // has been processed and state updated before we submit.
+      await expect(fieldDropdown).toBeDisabled({ timeout: 10000 });
+      await expect(fieldDropdown).toBeEnabled({ timeout: 10000 });
 
       // Submit the mappings configuration
       await newPage.locator('[data-testid="submit-mappings"]').click();
