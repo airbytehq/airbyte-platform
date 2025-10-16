@@ -2367,7 +2367,7 @@ cron:
     port: 8085
 
 connectorBuilderServer:
-  enabled: true
+  enabled: false
   # -- Number of connector-builder-server replicas
   replicaCount: 1
 
@@ -2678,7 +2678,7 @@ keycloakSetup:
   extraContainers: []
 
 manifestServer:
-  enabled: false
+  enabled: true
 
   # -- Number of manifest-server replicas
   replicaCount: 1
