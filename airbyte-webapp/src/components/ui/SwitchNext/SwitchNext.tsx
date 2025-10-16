@@ -5,12 +5,14 @@ import React from "react";
 import { useIntl } from "react-intl";
 
 import styles from "./SwitchNext.module.scss";
+import { Icon } from "../Icon";
 import { Text } from "../Text";
 
 export interface SwitchNextProps {
   checked: boolean;
   disabled?: boolean;
   loading?: boolean;
+  showLock?: boolean;
   onChange: (checked: boolean) => void;
   name?: string;
   checkedText?: string;
@@ -27,6 +29,7 @@ export const SwitchNext: React.FC<SwitchNextProps> = (props) => {
     checked,
     disabled,
     loading,
+    showLock,
     onChange,
     checkedText = formatMessage({ id: "ui.switch.enabled" }),
     uncheckedText = formatMessage({ id: "ui.switch.disabled" }),
@@ -50,7 +53,9 @@ export const SwitchNext: React.FC<SwitchNextProps> = (props) => {
       disabled={loading || disabled}
       data-testid={testId}
     >
-      <motion.span layout className={styles.knob} />
+      <motion.span layout className={styles.knob}>
+        {showLock && <Icon type="lock" size="xs" className={styles.lockIcon} />}
+      </motion.span>
       <span
         className={classNames(styles.stripe, {
           [styles.loading]: loading,

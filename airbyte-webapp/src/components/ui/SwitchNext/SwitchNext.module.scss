@@ -87,5 +87,12 @@ $knob-width: calc($button-height - variables.$border-thin * 2);
     background: colors.$white;
     flex: 1;
     z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .lockIcon {
+    color: colors.$grey-400;
   }
 }
