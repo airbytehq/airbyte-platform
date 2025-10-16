@@ -8,6 +8,7 @@ import io.airbyte.api.client.ApiException
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
+import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.oshai.kotlinlogging.withLoggingContext
 import io.micronaut.context.annotation.Parameter
@@ -37,6 +38,7 @@ class HeartbeatMonitor(
     if (heartbeatStarted.getAndSet(true)) {
       return
     }
+
     val heartbeatTimeoutDuration = Duration.ofMinutes(5)
     val heartbeatInterval = Duration.ofSeconds(30)
 
@@ -76,23 +78,35 @@ class HeartbeatMonitor(
     @Volatile
     private var lastSuccessfulHeartbeat: Instant = clock.instant()
 
+    @Volatile
+    private var isRunning = false
+
     override fun run() {
       if (abort.get()) {
         return
       }
       withLoggingContext(logContextFactory.create(sidecarInput.logPath)) {
         try {
-          logger.debug { "Sending workload heartbeat" }
-          workloadApiClient.workloadHeartbeat(WorkloadHeartbeatRequest(sidecarInput.workloadId))
+          if (!isRunning) {
+            // First call: transition to running state
+            logger.info { "Transitioning workload to running state" }
+            workloadApiClient.workloadRunning(WorkloadRunningRequest(sidecarInput.workloadId))
+            logger.info { "Workload successfully transitioned to running state" }
+            isRunning = true
+          } else {
+            // Subsequent calls: send heartbeat
+            logger.debug { "Sending workload heartbeat" }
+            workloadApiClient.workloadHeartbeat(WorkloadHeartbeatRequest(sidecarInput.workloadId))
+          }
 
           lastSuccessfulHeartbeat = clock.instant()
         } catch (e: Exception) {
-          handleHeartbeatException(e)
+          handleException(e)
         }
       }
     }
 
-    private fun handleHeartbeatException(e: Exception) {
+    private fun handleException(e: Exception) {
       when {
         e is ApiException && e.statusCode == HttpStatus.GONE.code -> {
           logger.warn(e) { "Cancelling job, workload is in a terminal state" }
@@ -105,7 +119,7 @@ class HeartbeatMonitor(
           abort.set(true)
         }
         else -> {
-          logger.warn(e) { "Error while trying to heartbeat, re-trying" }
+          logger.warn(e) { "Error while trying to ${if (isRunning) "heartbeat" else "transition to running"}, re-trying" }
         }
       }
     }

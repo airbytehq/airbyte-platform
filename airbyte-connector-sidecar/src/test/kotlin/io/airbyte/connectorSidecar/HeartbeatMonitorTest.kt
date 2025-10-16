@@ -20,11 +20,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class HeartbeatMonitorTest {
   @Test
-  fun `should set abort when ClientException with status code 410 is thrown`() {
+  fun `should set abort when ClientException with status code 410 is thrown on running call`() {
     val sidecarInput = mockk<SidecarInput>()
     val workloadApiClient =
       mockk<WorkloadApiClient> {
-        every { workloadHeartbeat(any()) } throws ApiException(HttpStatus.GONE.code, "http://localhost.test", "")
+        every { workloadRunning(any()) } throws ApiException(HttpStatus.GONE.code, "http://localhost.test", "")
       }
     val sidecarLogContextFactory = mockk<SidecarLogContextFactory>()
     val clock = Clock.systemUTC()
@@ -51,6 +51,39 @@ class HeartbeatMonitorTest {
   }
 
   @Test
+  fun `should set abort when ClientException with status code 410 is thrown on heartbeat call`() {
+    val sidecarInput = mockk<SidecarInput>()
+    val workloadApiClient =
+      mockk<WorkloadApiClient> {
+        every { workloadRunning(any()) } returns Unit
+        every { workloadHeartbeat(any()) } throws ApiException(HttpStatus.GONE.code, "http://localhost.test", "")
+      }
+    val sidecarLogContextFactory = mockk<SidecarLogContextFactory>()
+    val clock = Clock.systemUTC()
+    val abort = AtomicBoolean(false)
+    val heartbeatTimeoutDuration = Duration.ofMinutes(5)
+
+    every { sidecarInput.logPath } returns ""
+    every { sidecarInput.workloadId } returns ""
+    every { sidecarLogContextFactory.create(any()) } returns mapOf()
+
+    val heartbeatTask =
+      HeartbeatMonitor.HeartbeatTask(
+        sidecarInput,
+        sidecarLogContextFactory,
+        workloadApiClient,
+        clock,
+        heartbeatTimeoutDuration,
+        abort,
+      )
+
+    heartbeatTask.run() // First call: workloadRunning()
+    heartbeatTask.run() // Second call: workloadHeartbeat()
+
+    assertTrue(abort.get())
+  }
+
+  @Test
   fun `should set abort when heartbeat timeout duration is exceeded`() {
     val sidecarInput = mockk<SidecarInput>()
     val workloadApiClient = mockk<WorkloadApiClient>()
@@ -64,7 +97,7 @@ class HeartbeatMonitorTest {
     every { sidecarInput.logPath } returns ""
     every { sidecarInput.workloadId } returns ""
     every { sidecarLogContextFactory.create(any()) } returns mapOf()
-    every { workloadApiClient.workloadHeartbeat(any()) } throws RuntimeException("Network error")
+    every { workloadApiClient.workloadRunning(any()) } throws RuntimeException("Network error")
 
     every { clock.instant() } returns initialInstant andThen initialInstant.plus(Duration.ofMinutes(6))
 
@@ -89,7 +122,8 @@ class HeartbeatMonitorTest {
     val sidecarInput = mockk<SidecarInput>()
     val workloadApiClient =
       mockk<WorkloadApiClient> {
-        every { workloadHeartbeat(any()) } throws RuntimeException("Network error") andThen Unit
+        every { workloadRunning(any()) } throws RuntimeException("Network error") andThen Unit
+        every { workloadHeartbeat(any()) } returns Unit
       }
     val sidecarLogContextFactory = mockk<SidecarLogContextFactory>()
     val abort = AtomicBoolean(false)
@@ -119,9 +153,44 @@ class HeartbeatMonitorTest {
         abort,
       )
 
-    heartbeatTask.run()
-    heartbeatTask.run()
+    heartbeatTask.run() // First call fails with network error
+    heartbeatTask.run() // Second call succeeds
 
     assertFalse(abort.get())
+  }
+
+  @Test
+  fun `should call workloadRunning on first run and workloadHeartbeat on subsequent runs`() {
+    val sidecarInput = mockk<SidecarInput>()
+    val workloadApiClient =
+      mockk<WorkloadApiClient> {
+        every { workloadRunning(any()) } returns Unit
+        every { workloadHeartbeat(any()) } returns Unit
+      }
+    val sidecarLogContextFactory = mockk<SidecarLogContextFactory>()
+    val abort = AtomicBoolean(false)
+    val heartbeatTimeoutDuration = Duration.ofMinutes(5)
+    val clock = Clock.systemUTC()
+
+    every { sidecarInput.logPath } returns ""
+    every { sidecarInput.workloadId } returns ""
+    every { sidecarLogContextFactory.create(any()) } returns mapOf()
+
+    val heartbeatTask =
+      HeartbeatMonitor.HeartbeatTask(
+        sidecarInput,
+        sidecarLogContextFactory,
+        workloadApiClient,
+        clock,
+        heartbeatTimeoutDuration,
+        abort,
+      )
+
+    heartbeatTask.run() // First call: should call workloadRunning()
+    heartbeatTask.run() // Second call: should call workloadHeartbeat()
+    heartbeatTask.run() // Third call: should call workloadHeartbeat()
+
+    io.mockk.verify(exactly = 1) { workloadApiClient.workloadRunning(any()) }
+    io.mockk.verify(exactly = 2) { workloadApiClient.workloadHeartbeat(any()) }
   }
 }

@@ -159,6 +159,34 @@ class WorkloadServiceTest {
   }
 
   @Test
+  fun `heartbeat a workload throws when workload is in CLAIMED state`() {
+    val claimedWorkload = defaultWorkload.copy(status = WorkloadStatus.CLAIMED)
+    every { workloadRepository.heartbeat(defaultWorkloadId, any()) } returns null
+    every { workloadRepository.findById(defaultWorkloadId) } returns Optional.of(claimedWorkload)
+
+    assertThrows<InvalidStatusTransitionException> {
+      workloadService.heartbeatWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5), null)
+    }
+
+    verify(exactly = 0) { signalSender.sendSignal(any(), any()) }
+    verify(exactly = 0) { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) }
+  }
+
+  @Test
+  fun `heartbeat a workload throws when workload is in LAUNCHED state`() {
+    val launchedWorkload = defaultWorkload.copy(status = WorkloadStatus.LAUNCHED)
+    every { workloadRepository.heartbeat(defaultWorkloadId, any()) } returns null
+    every { workloadRepository.findById(defaultWorkloadId) } returns Optional.of(launchedWorkload)
+
+    assertThrows<InvalidStatusTransitionException> {
+      workloadService.heartbeatWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5), null)
+    }
+
+    verify(exactly = 0) { signalSender.sendSignal(any(), any()) }
+    verify(exactly = 0) { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) }
+  }
+
+  @Test
   fun `setting an unknown workload to launch throws a NotFoundException`() {
     every { workloadRepository.launch(defaultWorkloadId, any()) } returns null
     every { workloadRepository.findById(defaultWorkloadId) } returns Optional.empty()

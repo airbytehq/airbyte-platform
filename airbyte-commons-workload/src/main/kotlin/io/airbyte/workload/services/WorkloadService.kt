@@ -229,6 +229,8 @@ class WorkloadService(
     deadline: OffsetDateTime,
     dataplaneVersion: String?,
   ) {
+    // Heartbeat only updates timestamps, does NOT change status
+    // Callers must call runningWorkload() first to transition to running state
     val workload = workloadRepository.heartbeat(workloadId, deadline)
     if (workload == null) {
       metricClient.count(
@@ -244,7 +246,12 @@ class WorkloadService(
             WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
               "Heartbeat a workload in a terminal state (${w.status})",
             )
-            WorkloadStatus.PENDING -> throw InvalidStatusTransitionException("Heartbeat a non claimed workload")
+            WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
+              "Heartbeat a workload that is not claimed.",
+            )
+            WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED -> throw InvalidStatusTransitionException(
+              "Heartbeat a workload that is not running (${w.status}). /running must be called before heartbeat.",
+            )
             else -> logger.error { "Failed to heartbeat workload ($workloadId). Current status is ${w.status}." }
           }
         }.orElseThrow { NotFoundException("Workload $workloadId not found") }

@@ -65,29 +65,35 @@ class WorkloadHeartbeatSenderTest {
   /**
    * Demonstrates a normal single iteration: no timeouts, no errors, no abort.
    * We force the loop to break by letting the second iteration trigger a "workload in terminal state" (HTTP 410).
-   * This ensures we only see one successful heartbeat call first.
+   * This ensures we only see one successful workloadRunning call and one successful heartbeat call first.
    */
   @Test
   fun `test normal flow - single successful heartbeat then GONE`() =
     runTest {
-      // On the first call, workloadHeartbeat returns successfully
-      every { mockWorkloadApiClient.workloadHeartbeat(any()) } returns Unit
-      // On the second call, it throws a ClientException with 410 => we markCancelled() and break
-      every { mockWorkloadApiClient.workloadHeartbeat(any()) } throws ApiException(HttpStatus.GONE.code, "http://localhost.test", "")
+      // First call transitions to running, subsequent calls are heartbeats
+      every { mockWorkloadApiClient.workloadRunning(any()) } returns Unit
+      every { mockWorkloadApiClient.workloadHeartbeat(any()) } returns Unit andThen
+        { throw ApiException(HttpStatus.GONE.code, "http://localhost.test", "") }
 
       val sender = getSender()
 
       // Launch the heartbeat in a child job so we can let it run, then see how it breaks on 2nd iteration
       val job = backgroundScope.launch { sender.sendHeartbeat() }
 
-      // Advance enough time for the first heartbeat call, then the second iteration that triggers GONE
-      advanceTimeBy(100) // ms
+      // Iteration 0 (0ms): workloadRunning() succeeds
+      // Iteration 1 (10ms): workloadHeartbeat() succeeds
+      // Iteration 2 (20ms): workloadHeartbeat() throws GONE → exit
+      advanceTimeBy(30) // ms - enough for 3 iterations
 
-      // The job should complete because we get a GONE on second iteration
+      // The job should complete because we get a GONE on second heartbeat
       assertTrue(job.isCompleted)
 
-      // First call => success
+      // First call => workloadRunning
       verify(exactly = 1) {
+        mockWorkloadApiClient.workloadRunning(match { it.workloadId == testWorkloadId })
+      }
+      // Heartbeat called once successfully, second call throws GONE
+      verify(exactly = 2) {
         mockWorkloadApiClient.workloadHeartbeat(match { it.workloadId == testWorkloadId })
       }
       // Then we see a ClientException(410) => exit
@@ -103,12 +109,14 @@ class WorkloadHeartbeatSenderTest {
   @Test
   fun `fail the Workload if destinationTimeoutMonitor hasTimedOut`() =
     runTest {
-      // We want the first iteration to see "hasTimedOut = true" => skip heartbeat, but not break out yet
-      every { mockDestinationTimeoutMonitor.hasTimedOut() } returnsMany listOf(false, true)
-      every { mockDestinationTimeoutMonitor.timeSinceLastAction } returnsMany listOf(AtomicLong(0), AtomicLong(0))
+      // Running transition happens (hasTimedOut not checked during transition)
+      // First iteration of main loop: timeout detected (hasTimedOut=true) → fail and break
+      every { mockDestinationTimeoutMonitor.hasTimedOut() } returns true
+      every { mockDestinationTimeoutMonitor.timeSinceLastAction } returns AtomicLong(0)
 
       // We'll ensure that only a small time elapses so that we do NOT exceed the heartbeatTimeout
       // In this scenario, heartbeat as usual
+      every { mockWorkloadApiClient.workloadRunning(any()) } returns Unit
       every { mockWorkloadApiClient.workloadHeartbeat(any()) } returns Unit
 
       val sender = getSender(heartbeatTimeoutDuration = Duration.ofMinutes(1))
@@ -118,14 +126,17 @@ class WorkloadHeartbeatSenderTest {
           sender.sendHeartbeat()
         }
 
-      // Let the test time move enough for 2 iterations
-      advanceTimeBy(200)
+      // Let the test time move enough for running transition + first loop iteration that detects timeout
+      advanceTimeBy(20)
 
       // The job completes due to the destination heartbeat timeout
       assertTrue(job.isCompleted)
 
-      // There should be one successful heartbeat before the destination timeout kicked in
+      // There should be one running call and no heartbeat before the destination timeout kicked in
       verify(exactly = 1) {
+        mockWorkloadApiClient.workloadRunning(any())
+      }
+      verify(exactly = 0) {
         mockWorkloadApiClient.workloadHeartbeat(any())
       }
 
@@ -139,16 +150,14 @@ class WorkloadHeartbeatSenderTest {
   @Test
   fun `fail the Workload if sourceTimeoutMonitor hasTimedOut`() =
     runTest {
-      // We want the first iteration to see "hasTimedOut = true" => skip heartbeat, but not break out yet
-      every { mockSourceTimeoutMonitor.hasTimedOut() } returnsMany listOf(false, true)
-      every { mockSourceTimeoutMonitor.timeSinceLastBeat } returnsMany
-        listOf(
-          Optional.of(Duration.ZERO),
-          Optional.of(Duration.ZERO),
-        )
+      // Running transition happens (hasTimedOut not checked during transition)
+      // First iteration of main loop: timeout detected (hasTimedOut=true) → fail and break
+      every { mockSourceTimeoutMonitor.hasTimedOut() } returns true
+      every { mockSourceTimeoutMonitor.timeSinceLastBeat } returns Optional.of(Duration.ZERO)
 
       // We'll ensure that only a small time elapses so that we do NOT exceed the heartbeatTimeout
       // In this scenario, heartbeat as usual
+      every { mockWorkloadApiClient.workloadRunning(any()) } returns Unit
       every { mockWorkloadApiClient.workloadHeartbeat(any()) } returns Unit
 
       val sender = getSender(heartbeatTimeoutDuration = Duration.ofMinutes(1))
@@ -158,14 +167,17 @@ class WorkloadHeartbeatSenderTest {
           sender.sendHeartbeat()
         }
 
-      // Let the test time move enough for 2 iterations
-      advanceTimeBy(200)
+      // Let the test time move enough for running transition + first loop iteration that detects timeout
+      advanceTimeBy(20)
 
-      // The job completes due to the destination heartbeat timeout
+      // The job completes due to the source heartbeat timeout
       assertTrue(job.isCompleted)
 
-      // There should be one successful heartbeat before the source timeout kicked in
+      // There should be one running call and no heartbeat before the source timeout kicked in
       verify(exactly = 1) {
+        mockWorkloadApiClient.workloadRunning(any())
+      }
+      verify(exactly = 0) {
         mockWorkloadApiClient.workloadHeartbeat(any())
       }
 
@@ -176,17 +188,15 @@ class WorkloadHeartbeatSenderTest {
   @Test
   fun `do not fail the Workload if sourceTimeoutMonitor hasTimedOut, but the source finished first`() =
     runTest {
-      // We want the first iteration to see "hasTimedOut = true" => skip heartbeat, but not break out yet
-      every { mockSourceTimeoutMonitor.hasTimedOut() } returnsMany listOf(false, true)
-      every { mockSourceTimeoutMonitor.timeSinceLastBeat } returnsMany
-        listOf(
-          Optional.of(Duration.ZERO),
-          Optional.of(Duration.ZERO),
-        )
+      // Running transition happens
+      // First iteration of main loop: source timeout detected but source.isFinished=true → continue running, send heartbeat
+      every { mockSourceTimeoutMonitor.hasTimedOut() } returns true
+      every { mockSourceTimeoutMonitor.timeSinceLastBeat } returns Optional.of(Duration.ZERO)
       every { source.isFinished } returns true
 
       // We'll ensure that only a small time elapses so that we do NOT exceed the heartbeatTimeout
       // In this scenario, heartbeat as usual
+      every { mockWorkloadApiClient.workloadRunning(any()) } returns Unit
       every { mockWorkloadApiClient.workloadHeartbeat(any()) } returns Unit
 
       val sender = getSender(heartbeatTimeoutDuration = Duration.ofMinutes(1))
@@ -196,46 +206,44 @@ class WorkloadHeartbeatSenderTest {
           sender.sendHeartbeat()
         }
 
-      // Let the test time move enough for 2 iterations
-      advanceTimeBy(200)
+      // Let the test time move enough for running transition + first loop iteration that sends heartbeat
+      advanceTimeBy(20)
 
-      // The job is allowed to continue to run
+      // The job is allowed to continue to run because source finished
       assertFalse(job.isCompleted)
 
-      // We should have failed the workload because of the source timeout failure
+      // We should NOT have failed the workload because source finished
       verify(exactly = 0) { mockReplicationWorkerState.markFailed() }
     }
 
   /**
    * If the server returns some other error (not GONE), we log and retry unless we exceed the total heartbeat timeout.
-   * We'll force the second iteration to exceed the heartbeat timeout. That triggers markFailed, abort, trackFailure.
+   * We'll force the iteration to exceed the heartbeat timeout. That triggers exit.
    */
   @Test
   fun `test general exception triggers retry, but eventually we exceed heartbeatTimeout and fail`() =
     runTest {
-      // Let the first iteration throw a generic error from the client.
-      every { mockWorkloadApiClient.workloadHeartbeat(any()) } throws
+      // Let the workloadRunning call throw a generic error from the client repeatedly
+      every { mockWorkloadApiClient.workloadRunning(any()) } throws
         ApiException(HttpStatus.INTERNAL_SERVER_ERROR.code, "http://localhost.test", "")
 
-      // We want the code to skip a heartbeat, log "retrying", but not break out on the first iteration
-      // Then for the second iteration, we want the time since lastSuccessfulHeartbeat to exceed heartbeatTimeout
-      // That triggers checkIfExpiredAndMarkSyncStateAsFailed => break out
-      // To do that, we can let the test time advance artificially by more than shortHeartbeatTimeout
-      // so that the second iteration sees "lastSuccessfulHeartbeat" too old.
+      // We want the code to retry, log "retrying", but not break out on the first iteration
+      // Then after enough time, we want the time since lastSuccessfulHeartbeat to exceed heartbeatTimeout
+      // That triggers exit
 
       val sender = getSender()
 
       val job =
         backgroundScope.launch {
-          sender.sendHeartbeat() // infinite while loop
+          sender.sendHeartbeat() // infinite while loop trying to transition to running
         }
 
-      // The first iteration tries to do heartbeat immediately, it fails with "Transient server error", logs it, won't break
+      // The first iteration tries to transition to running, it fails with "Transient server error", logs it, won't break
       // We now move time forward beyond shortHeartbeatTimeout to ensure the next iteration sees a time gap > heartbeatTimeout
       delay(1000) // well beyond 50ms
 
-      // The second iteration sees that lastSuccessfulHeartbeat is from the moment we started the loop => more than 50ms
-      // => it triggers checkIfExpiredAndMarkSyncStateAsFailed => markFailed, abort, trackFailure => break the loop
+      // The iteration sees that lastSuccessfulHeartbeat is from the moment we started the loop => more than 50ms
+      // => it triggers exit
       assertTrue(job.isCompleted)
 
       // We confirm we hardExit

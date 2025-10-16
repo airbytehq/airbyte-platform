@@ -11,6 +11,7 @@ import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatTimeoutException
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
+import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import io.micronaut.http.HttpStatus
@@ -50,6 +51,38 @@ class WorkloadHeartbeatSender(
   suspend fun sendHeartbeat() {
     logger.info { "Starting workload heartbeat (interval=${heartbeatInterval.seconds}s; timeout=${heartbeatTimeoutDuration.seconds}s)" }
     var lastSuccessfulHeartbeat = Instant.now()
+
+    // Transition workload to running state before sending heartbeats
+    // This must be called once before the heartbeat loop starts
+    var runningTransitionSucceeded = false
+    while (!runningTransitionSucceeded) {
+      try {
+        logger.info { "Transitioning workload to running state" }
+        workloadApiClient.workloadRunning(WorkloadRunningRequest(workloadId))
+        logger.info { "Workload successfully transitioned to running state" }
+        runningTransitionSucceeded = true
+        lastSuccessfulHeartbeat = Instant.now()
+      } catch (e: Exception) {
+        when {
+          // If GONE, workload is in terminal state - exit immediately
+          e is ApiException && e.statusCode == HttpStatus.GONE.code -> {
+            logger.warn(e) { "Workload in terminal state; exiting." }
+            exitAsap()
+            return
+          }
+          // Give same grace period as heartbeats for non-GONE errors
+          hasExpired(lastSuccessfulHeartbeat, heartbeatTimeoutDuration) -> {
+            logger.error(e) { "Failed to transition workload to running state within ${heartbeatTimeoutDuration.seconds}s; exiting." }
+            exitAsap()
+            return
+          }
+          else -> {
+            logger.warn(e) { "Error transitioning to running state, retrying in ${heartbeatInterval.seconds}s" }
+            delay(heartbeatInterval.toMillis())
+          }
+        }
+      }
+    }
 
     while (true) {
       // Capture current time at start of loop iteration.
