@@ -23,7 +23,6 @@ import javax.print.attribute.standard.ColorSupported.SUPPORTED
 enum class EntitlementPlan(
   val id: String,
 ) {
-  // OSS (lowest tier)
   CORE("plan-airbyte-core"),
   SME("plan-airbyte-sme"),
 
@@ -38,6 +37,7 @@ enum class EntitlementPlan(
 
   // Partners who get Airbyte free, forever
   PARTNER("plan-airbyte-partner"),
+  POV("plan-airbyte-pov"),
 
   // fka Cloud Enterprise
   FLEX("plan-airbyte-flex"),
