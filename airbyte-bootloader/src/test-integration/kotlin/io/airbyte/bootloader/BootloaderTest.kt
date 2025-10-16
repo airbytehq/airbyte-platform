@@ -47,7 +47,7 @@ import io.airbyte.db.factory.FlywayFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider
-import io.airbyte.db.instance.configs.migrations.V2_1_0_004__AddIndexToNotificationConfigurationConnectionId
+import io.airbyte.db.instance.configs.migrations.V2_1_0_005__AddLockedStatusAndStatusReason
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider
 import io.airbyte.db.instance.jobs.migrations.V2_1_0_001__AddStreamStatsAdditionalStats
@@ -799,7 +799,7 @@ internal class BootloaderTest {
 
     // ⚠️ This line should change with every new migration to show that you meant to make a new
     // migration to the prod database
-    private val CURRENT_CONFIGS_MIGRATION = V2_1_0_004__AddIndexToNotificationConfigurationConnectionId::class.java
+    private val CURRENT_CONFIGS_MIGRATION = V2_1_0_005__AddLockedStatusAndStatusReason::class.java
     private val CURRENT_JOBS_MIGRATION = V2_1_0_001__AddStreamStatsAdditionalStats::class.java
 
     private fun getMigrationVersion(cls: Class<*>): String =

@@ -213,6 +213,7 @@ create table "public"."connection" (
   "breaking_change" boolean not null default false,
   "field_selection_data" jsonb,
   "destination_catalog_id" uuid,
+  "status_reason" varchar(128),
   constraint "connection_pkey" primary key ("id")
 );
 create table "public"."connection_operation" (
