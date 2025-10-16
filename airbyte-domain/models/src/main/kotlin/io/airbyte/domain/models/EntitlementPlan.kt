@@ -4,8 +4,6 @@
 
 package io.airbyte.domain.models
 
-import javax.print.attribute.standard.ColorSupported.SUPPORTED
-
 // Entitlement plans defined in our entitlement service (Stigg).
 // Plan IDs map to a plan ID in Stigg.
 //

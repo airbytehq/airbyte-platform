@@ -19,6 +19,7 @@ import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
 import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType
+import io.airbyte.domain.models.WorkspaceId
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -145,6 +146,20 @@ open class PermissionServiceDataImpl(
   }
 
   override fun getMemberCountsForOrganizationList(orgIds: List<UUID>): List<OrgMemberCount> = permissionRepository.getMemberCountByOrgIdList(orgIds)
+
+  override fun getPermissionsByOrganizationId(organizationId: UUID): List<Permission> =
+    permissionRepository.findByOrganizationId(organizationId).map {
+      it.toConfigModel()
+    }
+
+  override fun getPermissionsByWorkspaceId(workspaceId: UUID): List<Permission> =
+    permissionRepository.findByWorkspaceId(workspaceId).map {
+      it.toConfigModel()
+    }
+
+  override fun updatePermissions(permissions: List<Permission>) {
+    permissionRepository.updateAll(permissions.map { it.toEntity() })
+  }
 
   private fun deletePermissionsMadeRedundantByPermission(
     permission: Permission,

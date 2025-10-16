@@ -5,6 +5,8 @@
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.Permission
+import io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType
+import io.airbyte.domain.models.WorkspaceId
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
@@ -27,6 +29,8 @@ interface PermissionRepository : PageableRepository<Permission, UUID> {
   fun findByServiceAccountId(serviceAccountId: UUID): List<Permission>
 
   fun findByOrganizationId(organizationId: UUID): List<Permission>
+
+  fun findByWorkspaceId(workspaceId: UUID): List<Permission>
 
   fun deleteByIdIn(permissionIds: List<UUID>)
 

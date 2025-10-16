@@ -36,7 +36,8 @@ class EntitlementServiceTest {
   private val entitlementClient = mockk<EntitlementClient>()
   private val entitlementProvider = mockk<EntitlementProvider>()
   private val metricClient = mockk<MetricClient>(relaxed = true)
-  private val entitlementService = EntitlementServiceImpl(entitlementClient, entitlementProvider, metricClient)
+  private val featureDegradationService = mockk<FeatureDegradationService>()
+  private val entitlementService = EntitlementServiceImpl(entitlementClient, entitlementProvider, metricClient, featureDegradationService)
 
   @Test
   fun `checkEntitlement delegates to entitlementClient`() {
@@ -286,6 +287,42 @@ class EntitlementServiceTest {
 
     // Verify downgrade function is called even for upgrades
     verify { serviceSpy["downgradeFeaturesIfRequired"](orgId, EntitlementPlan.STANDARD, EntitlementPlan.PRO) }
+  }
+
+  @Test
+  fun `downgradeFeaturesIfRequired downgrades RBAC only when going from UNIFIED_TRIAL to STANDARD`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    // Even for upgrades, the function is called (it just checks if it needs to do anything)
+    every { entitlementClient.getPlans(orgId) } returns
+      listOf(EntitlementPlanResponse(EntitlementPlan.UNIFIED_TRIAL, EntitlementPlan.UNIFIED_TRIAL.id, EntitlementPlan.UNIFIED_TRIAL.name))
+    every { entitlementClient.getEntitlements(orgId) } returns listOf(EntitlementResult("feature-rbac-roles", true))
+    every { entitlementClient.getEntitlementsForPlan(EntitlementPlan.STANDARD) } returns emptyList()
+    every { entitlementClient.updateOrganization(orgId, EntitlementPlan.STANDARD) } just runs
+    every { featureDegradationService.downgradeRBACRoles(orgId) } just runs
+
+    entitlementService.addOrUpdateOrganization(orgId, EntitlementPlan.STANDARD)
+
+    // Verify downgrade RBAC function is called only when going from UNIFIED_TRIAL to STANDARD
+    verify { featureDegradationService.downgradeRBACRoles(orgId) }
+  }
+
+  @Test
+  fun `downgradeFeaturesIfRequired does not downgrade RBAC when going from PRO to STANDARD`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    // Even for upgrades, the function is called (it just checks if it needs to do anything)
+    every { entitlementClient.getPlans(orgId) } returns
+      listOf(EntitlementPlanResponse(EntitlementPlan.PRO, EntitlementPlan.PRO.id, EntitlementPlan.PRO.name))
+    every { entitlementClient.getEntitlements(orgId) } returns listOf(EntitlementResult("feature-rbac-roles", true))
+    every { entitlementClient.getEntitlementsForPlan(EntitlementPlan.STANDARD) } returns emptyList()
+    every { entitlementClient.updateOrganization(orgId, EntitlementPlan.STANDARD) } just runs
+    every { featureDegradationService.downgradeRBACRoles(orgId) } just runs
+
+    entitlementService.addOrUpdateOrganization(orgId, EntitlementPlan.STANDARD)
+
+    // Verify downgrade RBAC function is not called if not going from UNIFIED_TRIAL to STANDARD
+    verify(exactly = 0) { featureDegradationService.downgradeRBACRoles(orgId) }
   }
 
   @Test

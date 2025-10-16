@@ -6,6 +6,7 @@ package io.airbyte.data.services
 
 import io.airbyte.config.Permission
 import io.airbyte.data.repositories.OrgMemberCount
+import io.airbyte.domain.models.WorkspaceId
 import java.util.UUID
 
 /**
@@ -67,6 +68,15 @@ interface PermissionService {
   fun updatePermission(permission: Permission)
 
   fun getMemberCountsForOrganizationList(orgIds: List<UUID>): List<OrgMemberCount>
+
+  /**
+   * Get all permissions for a given organizationId.
+   */
+  fun getPermissionsByOrganizationId(organizationId: UUID): List<Permission>
+
+  fun getPermissionsByWorkspaceId(workspaceId: UUID): List<Permission>
+
+  fun updatePermissions(permissions: List<Permission>)
 }
 
 /**

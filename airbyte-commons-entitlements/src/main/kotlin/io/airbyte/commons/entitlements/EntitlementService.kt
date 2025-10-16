@@ -16,6 +16,7 @@ import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
 import io.airbyte.commons.entitlements.models.SsoEntitlement
 import io.airbyte.config.ActorType
+import io.airbyte.domain.models.EntitlementFeature
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.metrics.MetricAttribute
@@ -104,6 +105,7 @@ internal class EntitlementServiceImpl(
   private val entitlementClient: EntitlementClient,
   private val entitlementProvider: EntitlementProvider,
   private val metricClient: MetricClient,
+  private val featureDegradationService: FeatureDegradationService,
 ) : EntitlementService {
   /**
    * Checks if an organization is entitled to a specific feature or capability.
@@ -201,25 +203,39 @@ internal class EntitlementServiceImpl(
     fromPlan: EntitlementPlan,
     toPlan: EntitlementPlan,
   ) {
-    logger.debug { "Checking for feature downgrades. organizationId=$organizationId fromPlan=$fromPlan toPlan=$toPlan" }
+    logger.info { "Checking for feature downgrades. organizationId=$organizationId fromPlan=$fromPlan toPlan=$toPlan" }
+
+    if (!(fromPlan == EntitlementPlan.UNIFIED_TRIAL && toPlan == EntitlementPlan.STANDARD)) {
+      logger.info { "Downgrade not supported from plan $fromPlan to $toPlan. Skipping downgrade." }
+      return
+    }
 
     try {
       // Get current entitlements to identify features the customer currently has
       val currentEntitlements = entitlementClient.getEntitlements(organizationId)
       val currentFeatureIds = currentEntitlements.filter { it.isEntitled }.map { it.featureId }.toSet()
 
-      val newEntitlements = entitlementClient.getEntitlementsForPlan(toPlan).map { it.featureId }.toSet()
+      val newFeatureIds = entitlementClient.getEntitlementsForPlan(toPlan).map { it.featureId }.toSet()
       logger.info {
         "Customer currently has ${currentFeatureIds.size} entitled features. " +
           "organizationId=$organizationId features=$currentFeatureIds"
       }
 
-      val entitlementsToDowngrade = currentEntitlements.toSet() - newEntitlements
+      val entitlementsToDowngrade = currentFeatureIds - newFeatureIds
+
+      logger.info {
+        "Updating entitlement plan from $fromPlan to $toPlan. Revoking access to featureIds=$entitlementsToDowngrade for organizationId=$organizationId"
+      }
+
       for (entitlementToDowngrade in entitlementsToDowngrade) {
-        logger.info {
-          "Downgrading access to entitlementId=$entitlementToDowngrade organizationId=$organizationId"
+        logger.debug {
+          "Downgrading access to featureId=$entitlementToDowngrade organizationId=$organizationId"
         }
         // TODO: Implement specific downgrade flows for features
+        when (entitlementToDowngrade) {
+          EntitlementFeature.RBAC.id -> featureDegradationService.downgradeRBACRoles(organizationId)
+          else -> logger.debug { "No downgrade flow defined for $entitlementToDowngrade" }
+        }
       }
 
       logger.info { "Feature downgrade check completed. organizationId=$organizationId fromPlan=$fromPlan toPlan=$toPlan" }
