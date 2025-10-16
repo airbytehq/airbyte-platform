@@ -125,7 +125,7 @@ class WorkloadServiceTest {
 
   @Test
   fun `heartbeat an unknown workload throws a NotFoundException`() {
-    every { workloadRepository.heartbeat(defaultWorkloadId, any()) } returns null
+    every { workloadRepository.heartbeat(defaultWorkloadId, any()) } returns 0
     every { workloadRepository.findById(defaultWorkloadId) } returns Optional.empty()
     assertThrows<NotFoundException> {
       workloadService.heartbeatWorkload(defaultWorkloadId, OffsetDateTime.now(), null)
@@ -134,9 +134,7 @@ class WorkloadServiceTest {
 
   @Test
   fun `heartbeat a workload to running does nothing else`() {
-    val launchedWorkload = defaultWorkload.copy(status = WorkloadStatus.RUNNING)
-    every { workloadRepository.heartbeat(defaultWorkloadId, any()) } returns launchedWorkload
-    every { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) } returns Unit
+    every { workloadRepository.heartbeat(defaultWorkloadId, any()) } returns 1
 
     workloadService.heartbeatWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5), null)
 
@@ -147,7 +145,7 @@ class WorkloadServiceTest {
   @Test
   fun `heartbeat a workload to running only throws when it fails`() {
     val failedWorkload = defaultWorkload.copy(status = WorkloadStatus.FAILURE)
-    every { workloadRepository.heartbeat(defaultWorkloadId, any()) } returns null
+    every { workloadRepository.heartbeat(defaultWorkloadId, any()) } returns 0
     every { workloadRepository.findById(defaultWorkloadId) } returns Optional.of(failedWorkload)
 
     assertThrows<InvalidStatusTransitionException> {
@@ -161,7 +159,7 @@ class WorkloadServiceTest {
   @Test
   fun `heartbeat a workload throws when workload is in CLAIMED state`() {
     val claimedWorkload = defaultWorkload.copy(status = WorkloadStatus.CLAIMED)
-    every { workloadRepository.heartbeat(defaultWorkloadId, any()) } returns null
+    every { workloadRepository.heartbeat(defaultWorkloadId, any()) } returns 0
     every { workloadRepository.findById(defaultWorkloadId) } returns Optional.of(claimedWorkload)
 
     assertThrows<InvalidStatusTransitionException> {
@@ -175,7 +173,7 @@ class WorkloadServiceTest {
   @Test
   fun `heartbeat a workload throws when workload is in LAUNCHED state`() {
     val launchedWorkload = defaultWorkload.copy(status = WorkloadStatus.LAUNCHED)
-    every { workloadRepository.heartbeat(defaultWorkloadId, any()) } returns null
+    every { workloadRepository.heartbeat(defaultWorkloadId, any()) } returns 0
     every { workloadRepository.findById(defaultWorkloadId) } returns Optional.of(launchedWorkload)
 
     assertThrows<InvalidStatusTransitionException> {

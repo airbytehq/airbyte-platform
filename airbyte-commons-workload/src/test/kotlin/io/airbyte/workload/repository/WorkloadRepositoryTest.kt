@@ -336,12 +336,15 @@ class WorkloadRepositoryTest {
     workloadRepo.save(safeguardWorkload)
 
     val newDeadline = OffsetDateTime.now().plusMinutes(10)
-    val actualWorkload = workloadRepo.heartbeat(workloadId, deadline = newDeadline)
+    val rowsAffected = workloadRepo.heartbeat(workloadId, deadline = newDeadline)
 
-    assertEquals(workloadId, actualWorkload?.id)
-    assertEquals(WorkloadStatus.RUNNING, actualWorkload?.status)
-    assertEquals(newDeadline.truncateToTestPrecision(), actualWorkload?.deadline?.truncateToTestPrecision())
-    assertNotEquals(workload.lastHeartbeatAt?.truncateToTestPrecision(), actualWorkload?.lastHeartbeatAt?.truncateToTestPrecision())
+    assertEquals(1, rowsAffected)
+
+    val actualWorkload = workloadRepo.findById(workloadId).get()
+    assertEquals(workloadId, actualWorkload.id)
+    assertEquals(WorkloadStatus.RUNNING, actualWorkload.status)
+    assertEquals(newDeadline.truncateToTestPrecision(), actualWorkload.deadline?.truncateToTestPrecision())
+    assertNotEquals(workload.lastHeartbeatAt?.truncateToTestPrecision(), actualWorkload.lastHeartbeatAt?.truncateToTestPrecision())
 
     val safeguardCheck = workloadRepo.findById(safeguardWorkloadId)
     assertEquals(safeguardWorkload.status, safeguardCheck.get().status)
@@ -349,7 +352,7 @@ class WorkloadRepositoryTest {
 
   @ParameterizedTest
   @EnumSource(WorkloadStatus::class, names = ["PENDING", "CLAIMED", "LAUNCHED", "CANCELLED", "FAILURE", "SUCCESS"])
-  fun `heartbeat a workload that isn't running doesn't update the workload and returns null`(status: WorkloadStatus) {
+  fun `heartbeat a workload that isn't running doesn't update the workload and returns 0`(status: WorkloadStatus) {
     val workloadId = Fixtures.newWorkloadId()
     val workload =
       Fixtures.workload(
@@ -365,8 +368,8 @@ class WorkloadRepositoryTest {
     val safeguardWorkload = workload.copy(id = safeguardWorkloadId)
     workloadRepo.save(safeguardWorkload)
 
-    val response = workloadRepo.heartbeat(workloadId, OffsetDateTime.now().plusMinutes(5))
-    assertNull(response)
+    val rowsAffected = workloadRepo.heartbeat(workloadId, OffsetDateTime.now().plusMinutes(5))
+    assertEquals(0, rowsAffected)
 
     val actualWorkload = workloadRepo.findById(workloadId).get()
     assertEquals(expected, actualWorkload)

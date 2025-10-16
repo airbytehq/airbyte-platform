@@ -231,8 +231,8 @@ class WorkloadService(
   ) {
     // Heartbeat only updates timestamps, does NOT change status
     // Callers must call runningWorkload() first to transition to running state
-    val workload = workloadRepository.heartbeat(workloadId, deadline)
-    if (workload == null) {
+    val rowsAffected = workloadRepository.heartbeat(workloadId, deadline)
+    if (rowsAffected == 0) {
       metricClient.count(
         OssMetricsRegistry.WORKLOAD_HEARTBEAT,
         1L,
@@ -259,9 +259,6 @@ class WorkloadService(
       metricClient.count(
         OssMetricsRegistry.WORKLOAD_HEARTBEAT,
         1L,
-        MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, workload.type.name),
-        MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, workload.dataplaneGroup ?: MetricTags.UNKNOWN),
-        MetricAttribute(MetricTags.DATA_PLANE_ID_TAG, workload.dataplaneId ?: MetricTags.UNKNOWN),
         MetricAttribute(MetricTags.DATA_PLANE_VERSION, dataplaneVersion ?: MetricTags.UNKNOWN),
         MetricAttribute(MetricTags.STATUS_TAG, MetricTags.SUCCESS),
       )

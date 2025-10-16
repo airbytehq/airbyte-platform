@@ -184,7 +184,7 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
   /**
    * Heartbeat updates last heartbeat for a workload already in running state.
    * Does NOT change status - callers must call running() first to transition to running state.
-   * Returns the workload if the status is running.
+   * Returns the number of rows updated (1 if successful, 0 if workload not found or not in running state).
    */
   @Query(
     """
@@ -194,13 +194,12 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
        last_heartbeat_at = now(),
        updated_at = now()
       WHERE id = :id AND status = 'running'
-      RETURNING *
     """,
   )
   fun heartbeat(
     @Id id: String,
     deadline: OffsetDateTime,
-  ): Workload?
+  ): Int
 
   /**
    * Launch transitions a workload into a launched state if the workload was claimed or launched.
