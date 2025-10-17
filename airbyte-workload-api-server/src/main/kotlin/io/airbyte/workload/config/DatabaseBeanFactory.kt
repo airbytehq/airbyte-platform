@@ -4,7 +4,6 @@
 
 package io.airbyte.workload.config
 
-import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.PermissionPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
@@ -66,11 +65,6 @@ class DatabaseBeanFactory {
   fun workspacePersistence(
     @Named("configDatabase") configDatabase: Database?,
   ): WorkspacePersistence = WorkspacePersistence(configDatabase)
-
-  @Singleton
-  fun organizationPersistence(
-    @Named("configDatabase") configDatabase: Database?,
-  ): OrganizationPersistence = OrganizationPersistence(configDatabase)
 
   @Singleton
   fun permissionPersistence(

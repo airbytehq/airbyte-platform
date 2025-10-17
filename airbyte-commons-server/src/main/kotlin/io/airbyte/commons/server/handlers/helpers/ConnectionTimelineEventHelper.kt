@@ -23,9 +23,9 @@ import io.airbyte.config.JobConfigProxy
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.User
-import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.ConnectionTimelineEventService
+import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.shared.ConnectionDisabledEvent
 import io.airbyte.data.services.shared.ConnectionEnabledEvent
 import io.airbyte.data.services.shared.ConnectionSettingsChangedEvent
@@ -56,7 +56,7 @@ class ConnectionTimelineEventHelper
   constructor(
     @param:Named("airbyteSupportEmailDomains") private val airbyteSupportEmailDomains: Set<String>,
     private val currentUserService: CurrentUserService,
-    private val organizationPersistence: OrganizationPersistence,
+    private val organizationService: OrganizationService,
     private val permissionHandler: PermissionHandler,
     private val userPersistence: UserPersistence,
     private val connectorObjectStorageService: ConnectorObjectStorageService,
@@ -101,13 +101,15 @@ class ConnectionTimelineEventHelper
         if (isAirbyteUser(user)) {
           // Check if this connection is in external customers workspaces.
           // 1. get the associated organization
-          val organization = organizationPersistence.getOrganizationByConnectionId(connectionId).orElseThrow()
-          // 2. check the email of the organization owner
-          if (!isUserEmailFromAirbyteSupport(organization.email)) {
-            // Airbyters took an action in customer's workspaces. Obfuscate Airbyter's real name.
-            return UserReadInConnectionEvent()
-              .id(user.userId)
-              .name(AIRBYTE_SUPPORT_USER_NAME)
+          if (connectionId != null) {
+            val organization = organizationService.getOrganizationForConnectionId(connectionId)
+            // 2. check the email of the organization owner
+            if (organization.isPresent && !isUserEmailFromAirbyteSupport(organization.get().email)) {
+              // Airbyters took an action in customer's workspaces. Obfuscate Airbyter's real name.
+              return UserReadInConnectionEvent()
+                .id(user.userId)
+                .name(AIRBYTE_SUPPORT_USER_NAME)
+            }
           }
         }
         return UserReadInConnectionEvent()

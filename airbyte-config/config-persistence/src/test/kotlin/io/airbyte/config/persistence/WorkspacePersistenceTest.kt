@@ -27,6 +27,7 @@ import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.ConnectionTimelineEventService
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.SourceService
@@ -35,6 +36,7 @@ import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl
 import io.airbyte.data.services.shared.ActorServicePaginationHelper
@@ -69,6 +71,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   private lateinit var destinationService: DestinationService
   private lateinit var connectionService: ConnectionService
   private lateinit var workspaceService: WorkspaceService
+  private lateinit var organizationService: OrganizationService
   private lateinit var dataplaneGroupService: DataplaneGroupService
 
   @BeforeEach
@@ -79,6 +82,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     secretsRepositoryWriter = Mockito.mock<SecretsRepositoryWriter>(SecretsRepositoryWriter::class.java)
     secretPersistenceConfigService = Mockito.mock<SecretPersistenceConfigService>(SecretPersistenceConfigService::class.java)
     dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(database!!)
+    organizationService = OrganizationServiceJooqImpl(database!!)
     connectionService = Mockito.spy<ConnectionServiceJooqImpl>(ConnectionServiceJooqImpl(database!!))
 
     val scopedConfigurationService = Mockito.mock<ScopedConfigurationService>(ScopedConfigurationService::class.java)
@@ -120,7 +124,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
       )
     workspacePersistence = WorkspacePersistence(database!!)
     userPersistence = UserPersistence(database!!)
-    val organizationPersistence = OrganizationPersistence(database!!)
 
     truncateAllTables()
     // Create all organizations, but avoid duplicates based on organization ID
@@ -129,13 +132,13 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     // Add default organization if not already created
     val defaultOrg = MockData.defaultOrganization()
     if (createdOrgIds.add(defaultOrg.organizationId)) {
-      organizationPersistence.createOrganization(defaultOrg)
+      organizationService.writeOrganization(defaultOrg)
     }
 
     // Add other organizations if not already created
     MockData.organizations().filterNotNull().forEach { org ->
       if (createdOrgIds.add(org.organizationId)) {
-        organizationPersistence.createOrganization(org)
+        organizationService.writeOrganization(org)
       }
     }
 
