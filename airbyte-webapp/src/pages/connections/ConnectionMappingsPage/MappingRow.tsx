@@ -21,9 +21,10 @@ export const MappingRow: React.FC<{
   streamDescriptorKey: string;
   id: string;
 }> = ({ streamDescriptorKey, id }) => {
-  const { removeMapping, streamsWithMappings, validatingStreams } = useMappingContext();
+  const { removeMapping, streamsWithMappings, validatingStreams, isMappingsFeatureEnabled } = useMappingContext();
   const mapping = streamsWithMappings[streamDescriptorKey].find((m) => m.id === id);
   const isStreamValidating = validatingStreams.has(streamDescriptorKey);
+  const isDisabled = isStreamValidating || !isMappingsFeatureEnabled;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
@@ -62,7 +63,7 @@ export const MappingRow: React.FC<{
     <div ref={setNodeRef} style={style} data-testid={`${streamDescriptorKey}-mapper-${mapping.id}`}>
       <FlexContainer direction="row" alignItems="center" justifyContent="space-between" className={styles.row}>
         <FlexContainer direction="row" alignItems="center">
-          <Button type="button" variant="clear" {...listeners} {...attributes} disabled={isStreamValidating}>
+          <Button type="button" variant="clear" {...listeners} {...attributes} disabled={isDisabled}>
             <Icon color="disabled" type="drag" />
           </Button>
           {RowContent}
@@ -72,7 +73,7 @@ export const MappingRow: React.FC<{
           variant="clear"
           type="button"
           onClick={() => removeMapping(streamDescriptorKey, mapping.id)}
-          disabled={isStreamValidating}
+          disabled={isDisabled}
         >
           <Icon color="disabled" type="trash" />
         </Button>

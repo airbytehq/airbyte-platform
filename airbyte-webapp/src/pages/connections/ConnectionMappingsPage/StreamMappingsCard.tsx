@@ -23,7 +23,8 @@ import { getStreamDescriptorForKey, useMappingContext } from "./MappingContext";
 import { MappingRow } from "./MappingRow";
 
 export const StreamMappingsCard: React.FC<{ streamDescriptorKey: string }> = ({ streamDescriptorKey }) => {
-  const { streamsWithMappings, reorderMappings, addMappingForStream, validatingStreams } = useMappingContext();
+  const { streamsWithMappings, reorderMappings, addMappingForStream, validatingStreams, isMappingsFeatureEnabled } =
+    useMappingContext();
   const isStreamValidating = validatingStreams.has(streamDescriptorKey);
 
   const mappingsForStream = streamsWithMappings[streamDescriptorKey];
@@ -63,7 +64,7 @@ export const StreamMappingsCard: React.FC<{ streamDescriptorKey: string }> = ({ 
               variant="secondary"
               size="sm"
               width={125}
-              disabled={isStreamValidating}
+              disabled={isStreamValidating || !isMappingsFeatureEnabled}
             >
               <FormattedMessage id="connections.mappings.addMapping" />
             </Button>

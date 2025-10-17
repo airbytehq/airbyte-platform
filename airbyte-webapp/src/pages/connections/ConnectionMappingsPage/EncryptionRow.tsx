@@ -33,8 +33,9 @@ interface EncryptionFormProps {
 }
 
 export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamDescriptorKey, mapping }) => {
-  const { updateLocalMapping, validatingStreams } = useMappingContext();
+  const { updateLocalMapping, validatingStreams, isMappingsFeatureEnabled } = useMappingContext();
   const isStreamValidating = validatingStreams.has(streamDescriptorKey);
+  const isDisabled = isStreamValidating || !isMappingsFeatureEnabled;
   const { formatMessage } = useIntl();
   const [algorithm] = useState<EncryptionMapperAlgorithm>(
     mapping.mapperConfiguration.algorithm || EncryptionMapperAlgorithm.RSA
@@ -81,7 +82,7 @@ export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamDescriptor
         <MappingRowContent>
           <MappingRowItem>
             <MappingTypeListBox
-              disabled={isStreamValidating}
+              disabled={isDisabled}
               selectedValue={StreamMapperType.encryption}
               streamDescriptorKey={streamDescriptorKey}
               mappingId={mapping.id}
@@ -92,7 +93,7 @@ export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamDescriptor
               mappingId={mapping.id}
               streamDescriptorKey={streamDescriptorKey}
               name="targetField"
-              disabled={isStreamValidating}
+              disabled={isDisabled}
             />
           </MappingRowItem>
           <MappingRowItem>
@@ -105,7 +106,7 @@ export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamDescriptor
               <MappingFormTextInput
                 placeholder={formatMessage({ id: "connections.mappings.encryption.publicKey" })}
                 name="publicKey"
-                disabled={isStreamValidating}
+                disabled={isDisabled}
               />
               <FormControlErrorMessage<EncryptionMapperConfiguration> name="publicKey" />
             </MappingRowItem>

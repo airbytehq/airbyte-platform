@@ -22,7 +22,7 @@ export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({
   const [selectedStream, setSelectedStream] = useState<string | undefined>(undefined);
   const [query, setQuery] = useState<string>("");
   const streamsToList = useGetStreamsForNewMapping();
-  const { addStreamToMappingsList } = useMappingContext();
+  const { addStreamToMappingsList, isMappingsFeatureEnabled } = useMappingContext();
   const { formatMessage } = useIntl();
   const { showProFeatureModalIfNeeded } = useProFeaturesModal("mappers");
 
@@ -38,7 +38,7 @@ export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({
   const filteredOptions =
     query === "" ? options : options.filter((option) => getStreamDescriptorForKey(option.value).name.includes(query));
 
-  const disabled = !options || options.length === 0 || mode === "readonly";
+  const disabled = !options || options.length === 0 || mode === "readonly" || !isMappingsFeatureEnabled;
 
   const handleInputClick = async () => {
     await showProFeatureModalIfNeeded();

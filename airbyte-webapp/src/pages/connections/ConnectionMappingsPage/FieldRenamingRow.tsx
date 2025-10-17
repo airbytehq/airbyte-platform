@@ -26,8 +26,9 @@ interface FieldRenamingRowProps {
 }
 
 export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, streamDescriptorKey }) => {
-  const { updateLocalMapping, validatingStreams } = useMappingContext();
+  const { updateLocalMapping, validatingStreams, isMappingsFeatureEnabled } = useMappingContext();
   const isStreamValidating = validatingStreams.has(streamDescriptorKey);
+  const isDisabled = isStreamValidating || !isMappingsFeatureEnabled;
 
   const { formatMessage } = useIntl();
 
@@ -70,7 +71,7 @@ export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, str
         <MappingRowContent>
           <MappingRowItem>
             <MappingTypeListBox
-              disabled={isStreamValidating}
+              disabled={isDisabled}
               selectedValue={StreamMapperType["field-renaming"]}
               streamDescriptorKey={streamDescriptorKey}
               mappingId={mapping.id}
@@ -78,7 +79,7 @@ export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, str
           </MappingRowItem>
           <MappingRowItem>
             <SelectTargetField<FieldRenamingMapperConfiguration>
-              disabled={isStreamValidating}
+              disabled={isDisabled}
               mappingId={mapping.id}
               streamDescriptorKey={streamDescriptorKey}
               name="originalFieldName"
@@ -92,7 +93,7 @@ export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, str
           <MappingRowItem>
             <MappingFormTextInput<FieldRenamingMapperConfiguration>
               placeholder={formatMessage({ id: "connections.mappings.value" })}
-              disabled={isStreamValidating}
+              disabled={isDisabled}
               name="newFieldName"
             />
             <FormControlErrorMessage<FieldRenamingMapperConfiguration> name="newFieldName" />

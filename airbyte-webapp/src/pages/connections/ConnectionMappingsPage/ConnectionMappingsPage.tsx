@@ -11,7 +11,6 @@ import { ExternalLink } from "components/ui/Link";
 import { ScrollParent } from "components/ui/ScrollParent";
 
 import { useIsDataActivationConnection } from "area/connection/utils/useIsDataActivationConnection";
-import { FeatureItem, IfFeatureDisabled, IfFeatureEnabled } from "core/services/features";
 import { useFormMode } from "core/services/ui/FormModeContext";
 import { links } from "core/utils/links";
 import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
@@ -46,7 +45,8 @@ export const ConnectionMappingsRoute = () => {
 
 const ConnectionMappingsPage = () => {
   const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
-  const { streamsWithMappings, clear, submitMappings, hasMappingsChanged } = useMappingContext();
+  const { streamsWithMappings, clear, submitMappings, hasMappingsChanged, isMappingsFeatureEnabled } =
+    useMappingContext();
   const { mode } = useFormMode();
   const { connectionUpdating } = useConnectionEditService();
   const { registerNotification } = useNotificationService();
@@ -82,58 +82,58 @@ const ConnectionMappingsPage = () => {
   );
   const showSubmissionButtons = anyMappersConfigured || streamsWithEmptyMappersExist;
 
+  // show upsell + read-only mappings when feature is disabled but mappings exist
+  const showDegradedState = !isMappingsFeatureEnabled && anyMappersConfigured;
+
+  if (!isMappingsFeatureEnabled && !anyMappersConfigured) {
+    // no feature access, no existing mappings - show only upsell
+    return <MappingsUpsellEmptyState />;
+  }
+
   return (
-    <>
-      <IfFeatureEnabled feature={FeatureItem.MappingsUI}>
-        <FlexContainer direction="column">
-          <FlexContainer
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-            className={styles.pageTitleContainer}
-          >
-            <FlexItem grow>
-              <FlexContainer direction="row" alignItems="center" gap="md">
-                <Heading as="h3" size="sm">
-                  <FormattedMessage id="connections.mappings.title" />
-                </Heading>
-                {isUnifiedTrialPlan && (
-                  <BrandingBadge product="cloudForTeams" testId="cloud-for-teams-badge-mappings" />
-                )}
-              </FlexContainer>
-            </FlexItem>
-            <ExternalLink href={links.connectionMappings}>
-              <Button variant="clear" icon="share" iconPosition="right" iconSize="sm">
-                <FormattedMessage id="connections.mappings.docsLink" />
-              </Button>
-            </ExternalLink>
-            <FormChangeTracker formId="mapping-form" changed={hasMappingsChanged} />
-            {showSubmissionButtons && (
-              <>
-                <Button
-                  variant="secondary"
-                  onClick={clear}
-                  disabled={mode === "readonly" || !hasMappingsChanged || connectionUpdating}
-                >
-                  <FormattedMessage id="form.cancel" />
-                </Button>
-                <Button
-                  isLoading={connectionUpdating}
-                  onClick={handleValidations}
-                  disabled={mode === "readonly" || !hasMappingsChanged}
-                  data-testid="submit-mappings"
-                >
-                  <FormattedMessage id="form.submit" />
-                </Button>
-              </>
-            )}
+    <FlexContainer direction="column">
+      <FlexContainer
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        className={styles.pageTitleContainer}
+      >
+        <FlexItem grow>
+          <FlexContainer direction="row" alignItems="center" gap="md">
+            <Heading as="h3" size="sm">
+              <FormattedMessage id="connections.mappings.title" />
+            </Heading>
+            {isUnifiedTrialPlan && <BrandingBadge product="cloudForTeams" testId="cloud-for-teams-badge-mappings" />}
           </FlexContainer>
-          {anyMappersConfigured ? <ConnectionMappingsList /> : <MappingsEmptyState />}
-        </FlexContainer>
-      </IfFeatureEnabled>
-      <IfFeatureDisabled feature={FeatureItem.MappingsUI}>
-        <MappingsUpsellEmptyState />
-      </IfFeatureDisabled>
-    </>
+        </FlexItem>
+        <ExternalLink href={links.connectionMappings}>
+          <Button variant="clear" icon="share" iconPosition="right" iconSize="sm">
+            <FormattedMessage id="connections.mappings.docsLink" />
+          </Button>
+        </ExternalLink>
+        <FormChangeTracker formId="mapping-form" changed={hasMappingsChanged} />
+        {showSubmissionButtons && isMappingsFeatureEnabled && (
+          <>
+            <Button
+              variant="secondary"
+              onClick={clear}
+              disabled={mode === "readonly" || !hasMappingsChanged || connectionUpdating}
+            >
+              <FormattedMessage id="form.cancel" />
+            </Button>
+            <Button
+              isLoading={connectionUpdating}
+              onClick={handleValidations}
+              disabled={mode === "readonly" || !hasMappingsChanged}
+              data-testid="submit-mappings"
+            >
+              <FormattedMessage id="form.submit" />
+            </Button>
+          </>
+        )}
+      </FlexContainer>
+      {showDegradedState && <MappingsUpsellEmptyState />}
+      {anyMappersConfigured ? <ConnectionMappingsList /> : <MappingsEmptyState />}
+    </FlexContainer>
   );
 };

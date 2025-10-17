@@ -48,8 +48,9 @@ const createEmptyDefaultValues = (): RowFilteringMapperFormValues => ({
 
 export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ mapping, streamDescriptorKey }) => {
   const { formatMessage } = useIntl();
-  const { updateLocalMapping, validatingStreams } = useMappingContext();
+  const { updateLocalMapping, validatingStreams, isMappingsFeatureEnabled } = useMappingContext();
   const isStreamValidating = validatingStreams.has(streamDescriptorKey);
+  const isDisabled = isStreamValidating || !isMappingsFeatureEnabled;
 
   const methods = useForm<RowFilteringMapperFormValues>({
     defaultValues: mapping ? mapperConfigurationToFormValues(mapping.mapperConfiguration) : createEmptyDefaultValues(),
@@ -86,14 +87,14 @@ export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ 
         <MappingRowContent>
           <MappingRowItem>
             <MappingTypeListBox
-              disabled={isStreamValidating}
+              disabled={isDisabled}
               selectedValue={StreamMapperType["row-filtering"]}
               streamDescriptorKey={streamDescriptorKey}
               mappingId={mapping.id}
             />
           </MappingRowItem>
           <MappingRowItem>
-            <SelectFilterType disabled={isStreamValidating} />
+            <SelectFilterType disabled={isDisabled} />
           </MappingRowItem>
           <MappingRowItem>
             <Text>
@@ -105,7 +106,7 @@ export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ 
             mappingId={mapping.id}
             streamDescriptorKey={streamDescriptorKey}
             shouldLimitTypes
-            disabled={isStreamValidating}
+            disabled={isDisabled}
           />
           <MappingRowItem>
             <Text>
@@ -114,7 +115,7 @@ export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ 
           </MappingRowItem>
           <MappingRowItem>
             <MappingFormTextInput
-              disabled={isStreamValidating}
+              disabled={isDisabled}
               placeholder={formatMessage({ id: "connections.mappings.value" })}
               name="comparisonValue"
               testId="comparisonValue"

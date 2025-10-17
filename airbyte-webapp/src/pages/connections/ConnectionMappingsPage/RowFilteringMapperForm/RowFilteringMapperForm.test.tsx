@@ -66,6 +66,7 @@ jest.mock("../MappingContext", () => {
       updateLocalMapping: mockUpdateLocalMapping,
       validateMappings: jest.fn(),
       validatingStreams: new Set(),
+      isMappingsFeatureEnabled: true,
     }),
   };
 });

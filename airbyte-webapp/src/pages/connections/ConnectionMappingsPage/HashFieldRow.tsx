@@ -27,9 +27,10 @@ export const HashFieldRow: React.FC<{
   mapping: StreamMapperWithId<HashingMapperConfiguration>;
   streamDescriptorKey: string;
 }> = ({ mapping, streamDescriptorKey }) => {
-  const { updateLocalMapping, validatingStreams } = useMappingContext();
+  const { updateLocalMapping, validatingStreams, isMappingsFeatureEnabled } = useMappingContext();
 
   const isStreamValidating = validatingStreams.has(streamDescriptorKey);
+  const isDisabled = isStreamValidating || !isMappingsFeatureEnabled;
 
   const defaultValues = useMemo(() => {
     return {
@@ -73,7 +74,7 @@ export const HashFieldRow: React.FC<{
       <form>
         <MappingRowContent>
           <MappingTypeListBox
-            disabled={isStreamValidating}
+            disabled={isDisabled}
             selectedValue={StreamMapperType.hashing}
             mappingId={mapping.id}
             streamDescriptorKey={streamDescriptorKey}
@@ -83,7 +84,7 @@ export const HashFieldRow: React.FC<{
               name="targetField"
               mappingId={mapping.id}
               streamDescriptorKey={streamDescriptorKey}
-              disabled={isStreamValidating}
+              disabled={isDisabled}
             />
           </MappingRowItem>
           <MappingRowItem>
@@ -92,7 +93,7 @@ export const HashFieldRow: React.FC<{
             </Text>
           </MappingRowItem>
           <MappingRowItem>
-            <SelectHashingMethod disabled={isStreamValidating} />
+            <SelectHashingMethod disabled={isDisabled} />
           </MappingRowItem>
         </MappingRowContent>
         <MappingValidationErrorMessage<HashingMapperConfiguration>

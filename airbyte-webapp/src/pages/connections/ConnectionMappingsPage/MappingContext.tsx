@@ -8,6 +8,7 @@ import {
   StreamDescriptor,
   StreamMapperType,
 } from "core/api/types/AirbyteClient";
+import { FeatureItem, useFeature } from "core/services/features";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { StreamMapperWithId } from "./types";
@@ -32,6 +33,7 @@ interface MappingContextType {
   validatingStreams: Set<string>;
   key: number;
   hasMappingsChanged: boolean;
+  isMappingsFeatureEnabled: boolean;
 }
 
 export const MAPPING_VALIDATION_ERROR_KEY = "mapping-validation-error";
@@ -57,6 +59,7 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
   const [streamsWithMappings, setStreamsWithMappings] = useState(savedStreamsWithMappings);
   const [validatingStreams, setValidatingStreams] = useState<Set<string>>(new Set());
   const [hasMappingsChanged, setHasMappingsChanged] = useState(false);
+  const isMappingsFeatureEnabled = useFeature(FeatureItem.MappingsUI);
 
   // Key is used to force mapping forms to re-render if a user chooses to reset the form state
   const [key, setKey] = useState(1);
@@ -222,6 +225,7 @@ export const MappingContextProvider: React.FC<PropsWithChildren> = ({ children }
         validatingStreams,
         key,
         hasMappingsChanged,
+        isMappingsFeatureEnabled,
       }}
     >
       {children}
