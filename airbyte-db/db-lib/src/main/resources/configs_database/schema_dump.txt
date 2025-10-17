@@ -728,6 +728,7 @@ create table "public"."workload" (
   "priority" int,
   "workspace_id" uuid,
   "organization_id" uuid,
+  "labels" jsonb,
   constraint "workload_pkey" primary key ("id")
 );
 create table "public"."workload_label" (
