@@ -2,7 +2,7 @@ import { CellContext, ColumnDefTemplate } from "@tanstack/react-table";
 import React from "react";
 
 import { FlexContainer } from "components/ui/Flex";
-import { Switch } from "components/ui/Switch";
+import { SwitchWithLock } from "components/ui/Switch/SwitchWithLock";
 
 import { useUpdateConnection } from "core/api";
 import { ConnectionStatus, SchemaChange } from "core/api/types/AirbyteClient";
@@ -32,7 +32,7 @@ export const StateSwitchCell: ColumnDefTemplate<CellContext<ConnectionTableDataI
 
   return (
     <FlexContainer justifyContent="center">
-      <Switch
+      <SwitchWithLock
         size="sm"
         checked={enabled}
         onChange={onChange}

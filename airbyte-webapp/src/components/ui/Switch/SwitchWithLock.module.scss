@@ -1,0 +1,19 @@
+@use "scss/colors";
+
+$lock-icon-size: 10px;
+
+.container {
+  position: relative;
+  display: inline-block;
+}
+
+.lockIcon {
+  pointer-events: none;
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: colors.$grey-400;
+  width: $lock-icon-size;
+  height: $lock-icon-size;
+}
