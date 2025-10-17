@@ -11,12 +11,12 @@ import io.airbyte.commons.resources.Resources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs.AirbyteEdition
+import io.airbyte.config.SsoConfig
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.init.PostLoadExecutor
+import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.services.DataplaneGroupService
-import io.airbyte.data.services.OrganizationService
-import io.airbyte.data.services.SsoConfigService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.db.init.DatabaseInitializer
 import io.airbyte.db.instance.DatabaseMigrator
@@ -44,8 +44,7 @@ class Bootloader(
   @param:Named("jobsDatabaseInitializer") private val jobsDatabaseInitializer: DatabaseInitializer,
   @param:Named("jobsDatabaseMigrator") private val jobsDatabaseMigrator: DatabaseMigrator,
   private val jobPersistence: JobPersistence,
-  private val organizationService: OrganizationService,
-  private val ssoConfigService: SsoConfigService,
+  private val organizationPersistence: OrganizationPersistence,
   private val protocolVersionChecker: ProtocolVersionChecker,
   private val postLoadExecution: PostLoadExecutor?,
   private val dataplaneGroupService: DataplaneGroupService,
@@ -97,7 +96,7 @@ class Bootloader(
 
     log.info { "assign default organization to sso realm config..." }
     if (airbyteEdition != AirbyteEdition.CLOUD) {
-      createSsoConfigForDefaultOrgIfNoneExists()
+      createSsoConfigForDefaultOrgIfNoneExists(organizationPersistence)
     }
 
     log.info { "Initializing default secret storage..." }
@@ -162,36 +161,30 @@ class Bootloader(
     }
   }
 
-  private fun createSsoConfigForDefaultOrgIfNoneExists() {
-    val existingConfig = ssoConfigService.getSsoConfig(DEFAULT_ORGANIZATION_ID)
-    if (existingConfig != null) {
-      if (existingConfig.keycloakRealm != airbyteAuthConfig.defaultRealm) {
-        log.info { "SsoConfig already exists for the default organization with a different realm. Deleting and recreating." }
-        ssoConfigService.deleteSsoConfig(DEFAULT_ORGANIZATION_ID)
-      } else {
-        // Config exists with correct realm, nothing to do
+  private fun createSsoConfigForDefaultOrgIfNoneExists(organizationPersistence: OrganizationPersistence) {
+    organizationPersistence
+      .getSsoConfigForOrganization(DEFAULT_ORGANIZATION_ID)
+      .getOrNull()
+      ?.let {
+        if (it.keycloakRealm != airbyteAuthConfig.defaultRealm) {
+          log.info { "SsoConfig already exists for the default organization, updating the config." }
+          organizationPersistence.updateSsoConfig(it.apply { it.keycloakRealm = airbyteAuthConfig.defaultRealm })
+        }
         return
       }
-    }
-
-    if (ssoConfigService.getSsoConfigByRealmName(airbyteAuthConfig.defaultRealm) != null) {
+    if (organizationPersistence.getSsoConfigByRealmName(airbyteAuthConfig.defaultRealm).isPresent) {
       log.info {
         "An SsoConfig with realm ${airbyteAuthConfig.defaultRealm} already exists, so one cannot be created for the default organization."
       }
       return
     }
 
-    val ssoConfig =
-      io.airbyte.domain.models.SsoConfig(
-        organizationId = DEFAULT_ORGANIZATION_ID,
-        companyIdentifier = airbyteAuthConfig.defaultRealm,
-        clientId = "",
-        clientSecret = "",
-        discoveryUrl = "",
-        emailDomain = null,
-        status = io.airbyte.domain.models.SsoConfigStatus.ACTIVE,
-      )
-    ssoConfigService.createSsoConfig(ssoConfig)
+    organizationPersistence.createSsoConfig(
+      SsoConfig()
+        .withSsoConfigId(UUID.randomUUID())
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+        .withKeycloakRealm(airbyteAuthConfig.defaultRealm),
+    )
   }
 
   private fun createWorkspaceIfNoneExists(workspaceService: WorkspaceService) {

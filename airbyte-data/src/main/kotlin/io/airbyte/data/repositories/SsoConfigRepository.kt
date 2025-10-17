@@ -17,6 +17,4 @@ interface SsoConfigRepository : PageableRepository<SsoConfig, UUID> {
   fun findByOrganizationId(organizationId: UUID): SsoConfig?
 
   fun findByKeycloakRealm(keycloakRealm: String): SsoConfig?
-
-  fun findByOrganizationIdIn(organizationIds: List<UUID>): List<SsoConfig>
 }

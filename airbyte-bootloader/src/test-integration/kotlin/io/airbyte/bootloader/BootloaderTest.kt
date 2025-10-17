@@ -23,6 +23,7 @@ import io.airbyte.config.init.PostLoadExecutor
 import io.airbyte.config.init.SupportStateUpdater
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver
 import io.airbyte.config.persistence.BreakingChangesHelper
+import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.config.specs.DefinitionsProvider
@@ -30,10 +31,8 @@ import io.airbyte.config.specs.LocalDefinitionsProvider
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionTimelineEventService
 import io.airbyte.data.services.ConnectorRolloutService
-import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SecretPersistenceConfigService
-import io.airbyte.data.services.SsoConfigService
 import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl
@@ -202,14 +201,7 @@ internal class BootloaderTest {
       )
     val jobsDatabaseMigrator = JobsDatabaseMigrator(jobDatabase, jobsFlyway)
     val jobsPersistence = DefaultJobPersistence(jobDatabase)
-    val organizationService: OrganizationService = mockk()
-    val ssoConfigService: SsoConfigService =
-      mockk {
-        every { getSsoConfig(DEFAULT_ORGANIZATION_ID) } returns
-          mockk {
-            every { keycloakRealm } returns DEFAULT_REALM
-          }
-      }
+    val organizationPersistence = OrganizationPersistence(jobDatabase)
     val protocolVersionChecker =
       ProtocolVersionChecker(
         jobsPersistence,
@@ -285,8 +277,7 @@ internal class BootloaderTest {
         jobsDatabaseInitializer = jobsDatabaseInitializer,
         jobsDatabaseMigrator = jobsDatabaseMigrator,
         jobPersistence = jobsPersistence,
-        organizationService = organizationService,
-        ssoConfigService = ssoConfigService,
+        organizationPersistence = organizationPersistence,
         protocolVersionChecker = protocolVersionChecker,
         postLoadExecution = postLoadExecutor,
         dataplaneGroupService = dataplaneGroupService,
@@ -316,7 +307,7 @@ internal class BootloaderTest {
     if (airbyteEdition != AirbyteEdition.CLOUD) {
       Assertions.assertEquals(
         DEFAULT_REALM,
-        ssoConfigService.getSsoConfig(DEFAULT_ORGANIZATION_ID)!!.keycloakRealm,
+        organizationPersistence.getSsoConfigForOrganization(DEFAULT_ORGANIZATION_ID).get().keycloakRealm,
       )
     }
   }
@@ -402,14 +393,7 @@ internal class BootloaderTest {
       )
     val jobsDatabaseMigrator = JobsDatabaseMigrator(jobDatabase, jobsFlyway)
     val jobsPersistence = DefaultJobPersistence(jobDatabase)
-    val organizationService: OrganizationService = mockk()
-    val ssoConfigService: SsoConfigService =
-      mockk {
-        every { getSsoConfig(DEFAULT_ORGANIZATION_ID) } returns
-          mockk {
-            every { keycloakRealm } returns DEFAULT_REALM
-          }
-      }
+    val organizationPersistence = OrganizationPersistence(jobDatabase)
     val breakingChangeNotificationHelper =
       BreakingChangeNotificationHelper(
         workspaceService,
@@ -481,8 +465,7 @@ internal class BootloaderTest {
         jobsDatabaseInitializer = jobsDatabaseInitializer,
         jobsDatabaseMigrator = jobsDatabaseMigrator,
         jobPersistence = jobsPersistence,
-        organizationService = organizationService,
-        ssoConfigService = ssoConfigService,
+        organizationPersistence = organizationPersistence,
         protocolVersionChecker = protocolVersionChecker,
         postLoadExecution = postLoadExecutor,
         dataplaneGroupService = dataplaneGroupService,
@@ -727,14 +710,7 @@ internal class BootloaderTest {
       )
     val jobsDatabaseMigrator = JobsDatabaseMigrator(jobDatabase, jobsFlyway)
     val jobsPersistence = DefaultJobPersistence(jobDatabase)
-    val organizationService: OrganizationService = mockk()
-    val ssoConfigService: SsoConfigService =
-      mockk {
-        every { getSsoConfig(DEFAULT_ORGANIZATION_ID) } returns
-          mockk {
-            every { keycloakRealm } returns DEFAULT_REALM
-          }
-      }
+    val organizationPersistence = OrganizationPersistence(jobDatabase)
     val protocolVersionChecker =
       ProtocolVersionChecker(
         jobsPersistence,
@@ -768,8 +744,7 @@ internal class BootloaderTest {
         jobsDatabaseInitializer = jobsDatabaseInitializer,
         jobsDatabaseMigrator = jobsDatabaseMigrator,
         jobPersistence = jobsPersistence,
-        organizationService = organizationService,
-        ssoConfigService = ssoConfigService,
+        organizationPersistence = organizationPersistence,
         protocolVersionChecker = protocolVersionChecker,
         postLoadExecution = postLoadExecutor,
         dataplaneGroupService = dataplaneGroupService,
@@ -783,7 +758,7 @@ internal class BootloaderTest {
     if (airbyteEdition != AirbyteEdition.CLOUD) {
       Assertions.assertEquals(
         DEFAULT_REALM,
-        ssoConfigService.getSsoConfig(DEFAULT_ORGANIZATION_ID)!!.keycloakRealm,
+        organizationPersistence.getSsoConfigForOrganization(DEFAULT_ORGANIZATION_ID).get().keycloakRealm,
       )
     }
   }

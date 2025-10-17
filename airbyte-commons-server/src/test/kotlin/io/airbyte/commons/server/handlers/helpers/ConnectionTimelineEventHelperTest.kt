@@ -24,9 +24,9 @@ import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncMode
 import io.airbyte.config.SyncStats
 import io.airbyte.config.User
+import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.ConnectionTimelineEventService
-import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason
 import io.airbyte.data.services.shared.ConnectionEvent
 import io.airbyte.data.services.shared.ConnectionSettingsChangedEvent
@@ -53,7 +53,7 @@ import java.util.UUID
 class ConnectionTimelineEventHelperTest {
   private lateinit var connectionTimelineEventHelper: ConnectionTimelineEventHelper
   private lateinit var currentUserService: CurrentUserService
-  private lateinit var organizationService: OrganizationService
+  private lateinit var organizationPersistence: OrganizationPersistence
   private lateinit var permissionHandler: PermissionHandler
   private lateinit var userPersistence: UserPersistence
   private lateinit var connectionTimelineEventService: ConnectionTimelineEventService
@@ -66,7 +66,7 @@ class ConnectionTimelineEventHelperTest {
   @BeforeEach
   fun setup() {
     currentUserService = mock()
-    organizationService = mock()
+    organizationPersistence = mock()
     permissionHandler = mock()
     userPersistence = mock()
     connectionTimelineEventService = mock()
@@ -79,7 +79,7 @@ class ConnectionTimelineEventHelperTest {
       ConnectionTimelineEventHelper(
         setOf(),
         currentUserService,
-        organizationService,
+        organizationPersistence,
         permissionHandler,
         userPersistence,
         connectorObjectStorageService,
@@ -167,7 +167,7 @@ class ConnectionTimelineEventHelperTest {
         ConnectionTimelineEventHelper(
           ossAirbyteSupportEmailDomain,
           currentUserService,
-          organizationService,
+          organizationPersistence,
           permissionHandler,
           userPersistence,
           connectorObjectStorageService,
@@ -175,7 +175,7 @@ class ConnectionTimelineEventHelperTest {
         )
       whenever(userPersistence.getUser(anyOrNull())).thenReturn(Optional.of(externalUser))
       whenever(permissionHandler.isUserInstanceAdmin(anyOrNull())).thenReturn(false)
-      whenever(organizationService.getOrganizationForConnectionId(anyOrNull())).thenReturn(Optional.of(Organization().withEmail(userEmail)))
+      whenever(organizationPersistence.getOrganizationByConnectionId(anyOrNull())).thenReturn(Optional.of(Organization().withEmail(userEmail)))
       val userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(userId, anyOrNull())
       Assertions.assertEquals(false, userRead!!.isDeleted)
       Assertions.assertEquals(userName, userRead!!.name)
@@ -187,7 +187,7 @@ class ConnectionTimelineEventHelperTest {
         ConnectionTimelineEventHelper(
           cloudAirbyteSupportEmailDomain,
           currentUserService,
-          organizationService,
+          organizationPersistence,
           permissionHandler,
           userPersistence,
           connectorObjectStorageService,
@@ -195,7 +195,7 @@ class ConnectionTimelineEventHelperTest {
         )
       whenever(userPersistence.getUser(anyOrNull())).thenReturn(Optional.of(airbyteUser))
       whenever(permissionHandler.isUserInstanceAdmin(anyOrNull())).thenReturn(true)
-      whenever(organizationService.getOrganizationForConnectionId(anyOrNull())).thenReturn(Optional.of(Organization().withEmail(airbyteUserEmail)))
+      whenever(organizationPersistence.getOrganizationByConnectionId(anyOrNull())).thenReturn(Optional.of(Organization().withEmail(airbyteUserEmail)))
       val userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(airbyteUserId, anyOrNull())
       Assertions.assertEquals(airbyteUserName, userRead!!.name)
     }
@@ -206,7 +206,7 @@ class ConnectionTimelineEventHelperTest {
         ConnectionTimelineEventHelper(
           cloudAirbyteSupportEmailDomain,
           currentUserService,
-          organizationService,
+          organizationPersistence,
           permissionHandler,
           userPersistence,
           connectorObjectStorageService,
@@ -214,8 +214,8 @@ class ConnectionTimelineEventHelperTest {
         )
       whenever(userPersistence.getUser(anyOrNull())).thenReturn(Optional.of(airbyteUser))
       whenever(permissionHandler.isUserInstanceAdmin(anyOrNull())).thenReturn(true)
-      whenever(organizationService.getOrganizationForConnectionId(anyOrNull())).thenReturn(Optional.of(Organization().withEmail(userEmail)))
-      val userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(airbyteUserId, CONNECTION_ID)
+      whenever(organizationPersistence.getOrganizationByConnectionId(anyOrNull())).thenReturn(Optional.of(Organization().withEmail(userEmail)))
+      val userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(airbyteUserId, anyOrNull())
       Assertions.assertEquals(ConnectionTimelineEventHelper.AIRBYTE_SUPPORT_USER_NAME, userRead!!.name)
     }
 
@@ -225,7 +225,7 @@ class ConnectionTimelineEventHelperTest {
         ConnectionTimelineEventHelper(
           cloudAirbyteSupportEmailDomain,
           currentUserService,
-          organizationService,
+          organizationPersistence,
           permissionHandler,
           userPersistence,
           connectorObjectStorageService,
@@ -233,7 +233,7 @@ class ConnectionTimelineEventHelperTest {
         )
       whenever(userPersistence.getUser(anyOrNull())).thenReturn(Optional.of(externalUser))
       whenever(permissionHandler.isUserInstanceAdmin(anyOrNull())).thenReturn(true)
-      whenever(organizationService.getOrganizationForConnectionId(anyOrNull())).thenReturn(Optional.of(Organization().withEmail(userEmail)))
+      whenever(organizationPersistence.getOrganizationByConnectionId(anyOrNull())).thenReturn(Optional.of(Organization().withEmail(userEmail)))
       val userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(userId, anyOrNull())
       Assertions.assertEquals(false, userRead!!.isDeleted)
       Assertions.assertEquals(userName, userRead!!.name)
@@ -246,7 +246,7 @@ class ConnectionTimelineEventHelperTest {
       ConnectionTimelineEventHelper(
         setOf(),
         currentUserService,
-        organizationService,
+        organizationPersistence,
         permissionHandler,
         userPersistence,
         connectorObjectStorageService,
@@ -294,7 +294,7 @@ class ConnectionTimelineEventHelperTest {
       ConnectionTimelineEventHelper(
         setOf(),
         currentUserService,
-        organizationService,
+        organizationPersistence,
         permissionHandler,
         userPersistence,
         connectorObjectStorageService,
@@ -326,7 +326,7 @@ class ConnectionTimelineEventHelperTest {
         ConnectionTimelineEventHelper(
           setOf(),
           currentUserService,
-          organizationService,
+          organizationPersistence,
           permissionHandler,
           userPersistence,
           connectorObjectStorageService,
@@ -352,7 +352,7 @@ class ConnectionTimelineEventHelperTest {
         ConnectionTimelineEventHelper(
           setOf(),
           currentUserService,
-          organizationService,
+          organizationPersistence,
           permissionHandler,
           userPersistence,
           connectorObjectStorageService,
@@ -378,7 +378,7 @@ class ConnectionTimelineEventHelperTest {
         ConnectionTimelineEventHelper(
           setOf(),
           currentUserService,
-          organizationService,
+          organizationPersistence,
           permissionHandler,
           userPersistence,
           connectorObjectStorageService,
@@ -404,7 +404,7 @@ class ConnectionTimelineEventHelperTest {
         ConnectionTimelineEventHelper(
           setOf(),
           currentUserService,
-          organizationService,
+          organizationPersistence,
           permissionHandler,
           userPersistence,
           connectorObjectStorageService,

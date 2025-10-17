@@ -51,10 +51,10 @@ import io.airbyte.config.ScopeType
 import io.airbyte.config.SlackNotificationConfiguration
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.helpers.patchNotificationSettingsWithDefaultValue
+import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.DataplaneGroupService
-import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated
 import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated
@@ -84,7 +84,7 @@ class WorkspacesHandler
   @VisibleForTesting
   constructor(
     private val workspacePersistence: WorkspacePersistence,
-    private val organizationService: OrganizationService,
+    private val organizationPersistence: OrganizationPersistence,
     private val permissionHandler: PermissionHandler,
     private val connectionsHandler: ConnectionsHandler,
     private val destinationHandler: DestinationHandler,
@@ -289,7 +289,7 @@ class WorkspacesHandler
     @Throws(IOException::class, ConfigNotFoundException::class)
     fun getWorkspaceOrganizationInfo(workspaceIdRequestBody: WorkspaceIdRequestBody): OrganizationInfoRead {
       val workspaceId = workspaceIdRequestBody.workspaceId
-      val organization = organizationService.getOrganizationForWorkspaceId(workspaceId)
+      val organization = organizationPersistence.getOrganizationByWorkspaceId(workspaceId)
       if (organization.isEmpty) {
         throw ConfigNotFoundException(io.airbyte.config.persistence.ConfigNotFoundException.NO_ORGANIZATION_FOR_WORKSPACE, workspaceId.toString())
       }

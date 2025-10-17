@@ -4,6 +4,7 @@
 
 package io.airbyte.server.config
 
+import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.PermissionPersistence
 import io.airbyte.config.persistence.StatePersistence
 import io.airbyte.config.persistence.StreamResetPersistence
@@ -113,6 +114,12 @@ class DatabaseBeanFactory {
   fun userPersistence(
     @Named("configDatabase") configDatabase: Database?,
   ): UserPersistence = UserPersistence(configDatabase)
+
+  @Singleton
+  @Primary
+  fun organizationPersistence(
+    @Named("configDatabase") configDatabase: Database?,
+  ): OrganizationPersistence = OrganizationPersistence(configDatabase)
 
   @Singleton
   @Primary

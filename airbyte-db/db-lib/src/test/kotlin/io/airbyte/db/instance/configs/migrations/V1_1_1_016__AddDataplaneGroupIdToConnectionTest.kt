@@ -318,7 +318,7 @@ internal class V1_1_1_016__AddDataplaneGroupIdToConnectionTest : AbstractConfigs
   }
 
   companion object {
-    // DEFAULT_ORGANIZATION_ID constant
+    // DEFAULT_ORGANIZATION_ID is from io.airbyte.config.persistence.OrganizationPersistence
     val DEFAULT_ORGANIZATION_ID: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000")
     private val CONNECTION = DSL.table("connection")
     private val DATAPLANE_GROUP = DSL.table("dataplane_group")

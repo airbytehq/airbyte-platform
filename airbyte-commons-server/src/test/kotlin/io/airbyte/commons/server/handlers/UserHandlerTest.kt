@@ -44,13 +44,12 @@ import io.airbyte.config.WorkspaceUserAccessInfo
 import io.airbyte.config.helpers.AuthenticatedUserConverter
 import io.airbyte.config.helpers.AuthenticatedUserConverter.toUser
 import io.airbyte.config.persistence.ConfigNotFoundException
+import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.ApplicationService
 import io.airbyte.data.services.ExternalUserService
 import io.airbyte.data.services.OrganizationEmailDomainService
-import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
-import io.airbyte.data.services.SsoConfigService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.RestrictLoginsForSSODomains
 import io.airbyte.featureflag.TestClient
@@ -91,8 +90,7 @@ class UserHandlerTest {
 
   lateinit var permissionHandler: PermissionHandler
   lateinit var workspacesHandler: WorkspacesHandler
-  lateinit var organizationService: OrganizationService
-  lateinit var ssoConfigService: SsoConfigService
+  lateinit var organizationPersistence: OrganizationPersistence
   lateinit var organizationEmailDomainService: OrganizationEmailDomainService
   lateinit var organizationsHandler: OrganizationsHandler
   lateinit var jwtUserAuthenticationResolver: JwtUserAuthenticationResolver
@@ -116,8 +114,7 @@ class UserHandlerTest {
     userPersistence = mock()
     permissionHandler = mock()
     workspacesHandler = mock()
-    organizationService = mock()
-    ssoConfigService = mock()
+    organizationPersistence = mock()
     organizationEmailDomainService = mock()
     organizationsHandler = mock()
     uuidSupplier = mock()
@@ -135,8 +132,7 @@ class UserHandlerTest {
       UserHandler(
         userPersistence,
         externalUserService,
-        organizationService,
-        ssoConfigService,
+        organizationPersistence,
         organizationEmailDomainService,
         Optional.of(applicationService),
         permissionHandler,
@@ -311,8 +307,10 @@ class UserHandlerTest {
         whenever(externalUserService.getRealmByAuthUserId(existingAuthUserId)).thenReturn(realm)
 
         if (isExistingUserSSO) {
-          whenever(ssoConfigService.getSsoConfigByRealmName(realm)).thenReturn(
-            SsoConfig(),
+          whenever(organizationPersistence.getSsoConfigByRealmName(realm)).thenReturn(
+            Optional.of<SsoConfig>(
+              SsoConfig(),
+            ),
           )
         }
 
@@ -391,7 +389,7 @@ class UserHandlerTest {
         isExistingUserSSO: Boolean,
         doesExistingUserHaveOrgPermission: Boolean,
       ) {
-        whenever(organizationService.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
+        whenever(organizationPersistence.getOrganizationBySsoConfigRealm(ssoRealm)).thenReturn(
           Optional.of<Organization>(
             organization,
           ),
@@ -407,8 +405,10 @@ class UserHandlerTest {
 
         if (isExistingUserSSO) {
           whenever(externalUserService.getRealmByAuthUserId(existingAuthUserId)).thenReturn(ssoRealm)
-          whenever(ssoConfigService.getSsoConfigByRealmName(ssoRealm)).thenReturn(
-            SsoConfig(),
+          whenever(organizationPersistence.getSsoConfigByRealmName(ssoRealm)).thenReturn(
+            Optional.of<SsoConfig>(
+              SsoConfig(),
+            ),
           )
 
           Assertions.assertThrows(
@@ -418,7 +418,7 @@ class UserHandlerTest {
         }
 
         whenever(externalUserService.getRealmByAuthUserId(existingAuthUserId)).thenReturn(realm)
-        whenever(ssoConfigService.getSsoConfigByRealmName(realm)).thenReturn(null)
+        whenever(organizationPersistence.getSsoConfigByRealmName(realm)).thenReturn(Optional.empty<SsoConfig>())
 
         whenever(userPersistence.listAuthUsersForUser(existingUserId))
           .thenReturn(listOf<AuthUser>(AuthUser().withAuthUserId(existingAuthUserId).withAuthProvider(AuthProvider.KEYCLOAK)))
@@ -548,7 +548,7 @@ class UserHandlerTest {
 
         whenever(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(authRealm)
         if (authRealm != null) {
-          whenever(organizationService.getOrganizationBySsoConfigRealm(authRealm)).thenReturn(
+          whenever(organizationPersistence.getOrganizationBySsoConfigRealm(authRealm)).thenReturn(
             Optional.of<Organization>(
               organization,
             ),
@@ -566,8 +566,7 @@ class UserHandlerTest {
             UserHandler(
               userPersistence,
               externalUserService,
-              organizationService,
-              ssoConfigService,
+              organizationPersistence,
               organizationEmailDomainService,
               Optional.of<ApplicationService>(applicationService),
               permissionHandler,

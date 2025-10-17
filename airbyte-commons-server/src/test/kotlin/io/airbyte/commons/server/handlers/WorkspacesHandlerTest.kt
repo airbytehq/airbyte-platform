@@ -52,11 +52,11 @@ import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.WebhookConfig
 import io.airbyte.config.WebhookOperationConfigs
 import io.airbyte.config.helpers.patchNotificationSettingsWithDefaultValue
+import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.DataplaneGroupService
-import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated
 import io.airbyte.featureflag.FeatureFlagClient
@@ -93,7 +93,7 @@ internal class WorkspacesHandlerTest {
   lateinit var workspacePersistence: WorkspacePersistence
   lateinit var workspaceService: WorkspaceService
   lateinit var dataplaneGroupService: DataplaneGroupService
-  lateinit var organizationService: OrganizationService
+  lateinit var organizationPersistence: OrganizationPersistence
   lateinit var trackingClient: TrackingClient
   lateinit var limitsProvider: ProductLimitsProvider
   lateinit var consumptionService: ConsumptionService
@@ -104,7 +104,7 @@ internal class WorkspacesHandlerTest {
   @BeforeEach
   fun setUp() {
     workspacePersistence = Mockito.mock(WorkspacePersistence::class.java)
-    organizationService = Mockito.mock(OrganizationService::class.java)
+    organizationPersistence = Mockito.mock(OrganizationPersistence::class.java)
     secretPersistence = Mockito.mock(SecretPersistence::class.java)
     permissionHandler = Mockito.mock(PermissionHandler::class.java)
     connectionsHandler = Mockito.mock(ConnectionsHandler::class.java)
@@ -132,7 +132,7 @@ internal class WorkspacesHandlerTest {
   private fun getWorkspacesHandler(airbyteEdition: AirbyteEdition): WorkspacesHandler =
     WorkspacesHandler(
       workspacePersistence,
-      organizationService,
+      organizationPersistence,
       permissionHandler,
       connectionsHandler,
       destinationHandler,
@@ -752,7 +752,7 @@ internal class WorkspacesHandlerTest {
     val organization = generateOrganization(if (isSso) "test-realm" else null)
     val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.getWorkspaceId())
 
-    Mockito.`when`(organizationService.getOrganizationForWorkspaceId(workspace.getWorkspaceId())).thenReturn(
+    Mockito.`when`(organizationPersistence.getOrganizationByWorkspaceId(workspace.getWorkspaceId())).thenReturn(
       Optional.of<Organization>(organization),
     )
 
@@ -769,7 +769,7 @@ internal class WorkspacesHandlerTest {
   fun testGerWorkspaceOrganizationInfoConfigNotFound() {
     val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.getWorkspaceId())
 
-    Mockito.`when`(organizationService.getOrganizationForWorkspaceId(workspace.getWorkspaceId())).thenReturn(
+    Mockito.`when`(organizationPersistence.getOrganizationByWorkspaceId(workspace.getWorkspaceId())).thenReturn(
       Optional.empty<Organization>(),
     )
 
@@ -1189,7 +1189,7 @@ internal class WorkspacesHandlerTest {
     val workspacesHandler =
       WorkspacesHandler(
         workspacePersistence,
-        organizationService,
+        organizationPersistence,
         permissionHandler,
         connectionsHandler,
         destinationHandler,

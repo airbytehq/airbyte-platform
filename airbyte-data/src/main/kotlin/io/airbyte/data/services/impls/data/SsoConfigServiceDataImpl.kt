@@ -39,9 +39,6 @@ open class SsoConfigServiceDataImpl internal constructor(
   override fun getSsoConfigByCompanyIdentifier(companyIdentifier: String): io.airbyte.config.SsoConfig? =
     ssoConfigRepository.findByKeycloakRealm(companyIdentifier)?.toConfigModel()
 
-  override fun getSsoConfigByRealmName(realmName: String): io.airbyte.config.SsoConfig? =
-    ssoConfigRepository.findByKeycloakRealm(realmName)?.toConfigModel()
-
   override fun updateSsoConfigStatus(
     organizationId: UUID,
     status: SsoConfigStatus,

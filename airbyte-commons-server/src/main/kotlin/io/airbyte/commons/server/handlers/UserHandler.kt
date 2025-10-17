@@ -50,14 +50,13 @@ import io.airbyte.config.WorkspaceUserAccessInfo
 import io.airbyte.config.helpers.AuthenticatedUserConverter.toAuthenticatedUser
 import io.airbyte.config.helpers.AuthenticatedUserConverter.toUser
 import io.airbyte.config.persistence.ConfigNotFoundException
+import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.SQLOperationNotAllowedException
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.ApplicationService
 import io.airbyte.data.services.ExternalUserService
 import io.airbyte.data.services.OrganizationEmailDomainService
-import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
-import io.airbyte.data.services.SsoConfigService
 import io.airbyte.featureflag.EmailAttribute
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.RestrictLoginsForSSODomains
@@ -85,8 +84,7 @@ open class UserHandler
   constructor(
     private val userPersistence: UserPersistence,
     private val externalUserService: ExternalUserService,
-    private val organizationService: OrganizationService,
-    private val ssoConfigService: SsoConfigService,
+    private val organizationPersistence: OrganizationPersistence,
     private val organizationEmailDomainService: OrganizationEmailDomainService,
     private val applicationService: Optional<ApplicationService>,
     private val permissionHandler: PermissionHandler,
@@ -332,11 +330,9 @@ open class UserHandler
     @Throws(IOException::class)
     private fun isAnyRealmSSO(realms: List<String?>): Boolean {
       for (realm in realms) {
-        if (realm != null) {
-          val ssoConfig = ssoConfigService.getSsoConfigByRealmName(realm)
-          if (ssoConfig != null) {
-            return true
-          }
+        val ssoConfig = organizationPersistence.getSsoConfigByRealmName(realm)
+        if (ssoConfig.isPresent) {
+          return true
         }
       }
 
@@ -678,7 +674,7 @@ open class UserHandler
       get() {
         val authRealm = userAuthenticationResolver.resolveRealm() ?: return Optional.empty()
 
-        return organizationService.getOrganizationBySsoConfigRealm(authRealm)
+        return organizationPersistence.getOrganizationBySsoConfigRealm(authRealm)
       }
 
     @Throws(IOException::class, JsonValidationException::class, PermissionRedundantException::class)

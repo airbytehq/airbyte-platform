@@ -8,7 +8,7 @@ import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.auth.roles.AuthRole
 import io.airbyte.config.Organization
-import io.airbyte.data.services.OrganizationService
+import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.UsernamePasswordCredentials
@@ -25,15 +25,15 @@ private const val EMAIL = "foo@airbyte.io"
 private const val PASSWORD = "hunter2"
 
 class CommunityAuthProviderTest {
-  private val organizationService = mockk<OrganizationService>()
+  private val organizationPersistence = mockk<OrganizationPersistence>()
   private val instanceAdminConfig = mockk<AirbyteAuthConfig.AirbyteAuthInstanceAdminConfig>()
-  private val authProvider = CommunityAuthProvider<Any>(AirbyteAuthConfig(instanceAdmin = instanceAdminConfig), organizationService)
+  private val authProvider = CommunityAuthProvider<Any>(AirbyteAuthConfig(instanceAdmin = instanceAdminConfig), organizationPersistence)
 
   @Test
   fun `should authenticate successfully with valid credentials`() {
     val defaultOrg = Organization().withEmail(EMAIL)
     every { instanceAdminConfig.password } returns PASSWORD
-    every { organizationService.getDefaultOrganization() } returns Optional.of(defaultOrg)
+    every { organizationPersistence.defaultOrganization } returns Optional.of(defaultOrg)
 
     val authRequest = UsernamePasswordCredentials(EMAIL, PASSWORD)
     val response = authProvider.authenticate(HttpRequest.GET("/"), authRequest)!!
@@ -52,7 +52,7 @@ class CommunityAuthProviderTest {
   fun `should fail authentication with invalid email`() {
     val defaultOrg = Organization().withEmail(EMAIL)
     every { instanceAdminConfig.password } returns PASSWORD
-    every { organizationService.getDefaultOrganization() } returns Optional.of(defaultOrg)
+    every { organizationPersistence.defaultOrganization } returns Optional.of(defaultOrg)
 
     val authRequest = UsernamePasswordCredentials("wrong@airbyte.io", PASSWORD)
     val response = authProvider.authenticate(HttpRequest.GET("/"), authRequest)!!
@@ -64,7 +64,7 @@ class CommunityAuthProviderTest {
   fun `should fail authentication with invalid password`() {
     val defaultOrg = Organization().withEmail(EMAIL)
     every { instanceAdminConfig.password } returns PASSWORD
-    every { organizationService.getDefaultOrganization() } returns Optional.of(defaultOrg)
+    every { organizationPersistence.defaultOrganization } returns Optional.of(defaultOrg)
 
     val authRequest = UsernamePasswordCredentials(EMAIL, "wrong")
     val response = authProvider.authenticate(HttpRequest.GET("/"), authRequest)!!
@@ -74,7 +74,7 @@ class CommunityAuthProviderTest {
 
   @Test
   fun `should throw exception when default organization is not found`() {
-    every { organizationService.getDefaultOrganization() } returns Optional.empty()
+    every { organizationPersistence.defaultOrganization } returns Optional.empty()
 
     val authRequest = UsernamePasswordCredentials(EMAIL, PASSWORD)
 

@@ -16,17 +16,15 @@ import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.api.model.generated.WorkspaceReadList
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.config.Organization
+import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.data.repositories.OrgMemberCount
-import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.impls.data.OrganizationPaymentConfigServiceDataImpl
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.featureflag.FeatureFlagClient
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
-import io.mockk.runs
 import io.mockk.spyk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -48,7 +46,7 @@ class OrganizationsHandlerTest {
       .withName(organizationName)
 
   private lateinit var permissionHandler: PermissionHandler
-  private lateinit var organizationService: OrganizationService
+  private lateinit var organizationPersistence: OrganizationPersistence
   private lateinit var uuidSupplier: Supplier<UUID>
   private lateinit var organizationsHandler: OrganizationsHandler
   private lateinit var organizationPaymentConfigService: OrganizationPaymentConfigServiceDataImpl
@@ -61,7 +59,7 @@ class OrganizationsHandlerTest {
   fun setup() {
     permissionHandler = mockk(relaxed = true)
     uuidSupplier = mockk()
-    organizationService = mockk()
+    organizationPersistence = mockk()
     organizationPaymentConfigService = mockk(relaxed = true)
     workspacesHandler = mockk()
     permissionService = mockk()
@@ -71,7 +69,7 @@ class OrganizationsHandlerTest {
     organizationsHandler =
       spyk(
         OrganizationsHandler(
-          organizationService,
+          organizationPersistence,
           permissionHandler,
           uuidSupplier,
           organizationPaymentConfigService,
@@ -93,7 +91,7 @@ class OrganizationsHandlerTest {
         .withName(organizationName)
 
     every { uuidSupplier.get() } returns organizationId1
-    every { organizationService.writeOrganization(any()) } just runs
+    every { organizationPersistence.createOrganization(any()) } returns newOrganization
 
     val result =
       organizationsHandler.createOrganization(
@@ -112,7 +110,7 @@ class OrganizationsHandlerTest {
   @Test
   fun testGetOrganization() {
     every {
-      organizationService.getOrganization(organizationId1)
+      organizationPersistence.getOrganization(organizationId1)
     } returns
       Optional.of(
         Organization()
@@ -146,12 +144,12 @@ class OrganizationsHandlerTest {
         .withEmail(newEmail)
 
     every {
-      organizationService.getOrganization(organizationId1)
+      organizationPersistence.getOrganization(organizationId1)
     } returns Optional.of(organization.withEmail(organizationEmail).withName(organizationName))
 
     every {
-      organizationService.writeOrganization(any())
-    } just runs
+      organizationPersistence.updateOrganization(any())
+    } returns updatedOrg
 
     val result =
       organizationsHandler.updateOrganization(
@@ -176,7 +174,7 @@ class OrganizationsHandlerTest {
         .nameContains("keyword")
 
     every {
-      organizationService.listOrganizationsByUserId(userId, any())
+      organizationPersistence.listOrganizationsByUserId(userId, any())
     } returns
       listOf(
         Organization()
@@ -217,7 +215,7 @@ class OrganizationsHandlerTest {
         .pagination(Pagination().pageSize(10).rowOffset(1))
 
     every {
-      organizationService.listOrganizationsByUserIdPaginated(any(), any())
+      organizationPersistence.listOrganizationsByUserIdPaginated(any(), any())
     } returns
       listOf(
         Organization()
@@ -302,7 +300,7 @@ class OrganizationsHandlerTest {
         .withUserId(userId)
 
     every { uuidSupplier.get() } returns orgId
-    every { organizationService.writeOrganization(any()) } just runs
+    every { organizationPersistence.createOrganization(any()) } returns newOrganization
     every { featureFlagClient.boolVariation(any(), any()) } returns true
 
     val request =
@@ -328,7 +326,7 @@ class OrganizationsHandlerTest {
         .withUserId(userId)
 
     every { uuidSupplier.get() } returns orgId
-    every { organizationService.writeOrganization(any()) } just runs
+    every { organizationPersistence.createOrganization(any()) } returns newOrganization
     every { featureFlagClient.boolVariation(any(), any()) } returns false
 
     val request =
@@ -356,8 +354,8 @@ class OrganizationsHandlerTest {
 //        .withUserId(userId)
 //
 //    every { uuidSupplier.get() } returns orgId
-//    every { organizationService.writeOrganization(any()) } just runs
-//    every { entitlementClient.addOrganization(any(), any()) } throws RuntimeException("Entitlement service unavailable")
+//    every { organizationPersistence.createOrganization(any()) } returns newOrganization
+//    every { entitlementClient.addOrUpdateOrganization(any(), any()) } throws RuntimeException("Entitlement service unavailable")
 //
 //    val request =
 //      OrganizationCreateRequestBody()
@@ -388,8 +386,8 @@ class OrganizationsHandlerTest {
 //        .withUserId(userId)
 //
 //    every { uuidSupplier.get() } returns orgId
-//    every { organizationService.writeOrganization(any()) } just runs
-//    every { entitlementClient.addOrganization(any(), any()) } throws
+//    every { organizationPersistence.createOrganization(any()) } returns newOrganization
+//    every { entitlementClient.addOrUpdateOrganization(any(), any()) } throws
 //      EntitlementServiceUnableToAddOrganizationProblem(
 //        ProblemEntitlementServiceData()
 //          .organizationId(orgId)
