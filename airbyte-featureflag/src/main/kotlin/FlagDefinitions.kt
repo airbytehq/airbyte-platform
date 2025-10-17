@@ -215,6 +215,10 @@ object ReplicationDebugLogLevelEnabled : Permanent<Boolean>(key = "platform.repl
 
 object UseDeadlineInWorkloadMonitorQueries : Temporary<Boolean>(key = "platform.use-deadline-in-workload-monitor-queries", default = false)
 
+object UseWorkloadLabelsJsonbOnly : Temporary<Boolean>(key = "platform.use-workload-labels-jsonb-only", default = false)
+
+object DisableWorkloadLabelTableWrite : Temporary<Boolean>(key = "platform.disable-workload-label-table-write", default = false)
+
 object EnableOrchestration : Permanent<Boolean>(key = "platform.enable-orchestration", default = false)
 
 object ReplicationCommandFallsBackToWorkloadStatus : Temporary<Boolean>(

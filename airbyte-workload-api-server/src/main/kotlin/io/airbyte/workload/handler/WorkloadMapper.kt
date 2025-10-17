@@ -66,7 +66,7 @@ fun DomainWorkload.toApi(): ApiWorkload =
     id = this.id,
     dataplaneId = this.dataplaneId,
     status = this.status.toApi(),
-    labels = this.workloadLabels?.map { it.toApi() }?.toMutableList() ?: mutableListOf(),
+    labels = this.getLabels(),
     inputPayload = this.inputPayload,
     workspaceId = this.workspaceId,
     organizationId = this.organizationId,
@@ -80,6 +80,28 @@ fun DomainWorkload.toApi(): ApiWorkload =
     dataplaneGroup = this.dataplaneGroup,
     priority = this.priority?.let { WorkloadPriority.fromInt(it) },
   )
+
+/**
+ * Get labels with fallback logic: prefer labels JSONB column, fallback to workloadLabels table.
+ * This supports the dual-write migration strategy where new workloads have labels in JSONB,
+ * but old workloads still use the workload_label table.
+ */
+private fun DomainWorkload.getLabels(): MutableList<ApiWorkloadLabel> {
+  // If labels JSONB field is present, use it (new approach)
+  this.labels?.let { labelsMap ->
+    if (labelsMap.isNotEmpty()) {
+      return labelsMap
+        .map { (key, value) -> ApiWorkloadLabel(key = key, value = value) }
+        .toMutableList()
+    }
+  }
+
+  // Otherwise, fallback to workloadLabels table (legacy approach)
+  return this.workloadLabels
+    ?.map { it.toApi() }
+    ?.toMutableList()
+    ?: mutableListOf()
+}
 
 fun DomainWorkloadDTO.toApi(): ApiWorkloadSummary =
   ApiWorkloadSummary(

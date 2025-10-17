@@ -55,7 +55,7 @@ interface WorkloadQueueRepository : PageableRepository<WorkloadQueueItem, UUID> 
          SELECT id FROM workload_queue
             WHERE
               (:dataplaneGroup IS NULL OR dataplane_group = :dataplaneGroup)
-            AND 
+            AND
               (:priority IS NULL OR priority = :priority)
             AND
               acked_at IS NULL
@@ -87,6 +87,48 @@ interface WorkloadQueueRepository : PageableRepository<WorkloadQueueItem, UUID> 
     """,
   )
   fun pollWorkloadQueue(
+    dataplaneGroup: String?,
+    priority: Int?,
+    quantity: Int = 1,
+    redeliveryWindowSecs: Int = 300,
+  ): List<Workload>
+
+  /**
+   * Polls workload queue without joining on workload_label table.
+   * Uses only the labels JSONB column from the workload table for better performance.
+   * This is the optimized version that skips the expensive LEFT JOIN.
+   */
+  @Query(
+    """
+      WITH polled_q_ids AS MATERIALIZED (
+         SELECT id FROM workload_queue
+            WHERE
+              (:dataplaneGroup IS NULL OR dataplane_group = :dataplaneGroup)
+            AND
+              (:priority IS NULL OR priority = :priority)
+            AND
+              acked_at IS NULL
+            AND
+              now() > poll_deadline
+         ORDER BY created_at ASC
+         LIMIT :quantity
+         FOR UPDATE SKIP LOCKED
+      ),
+      workloads AS (
+        UPDATE workload_queue AS q
+           SET
+              poll_deadline = now() + (:redeliveryWindowSecs * interval '1 second'),
+              updated_at = now()
+        FROM workload w
+              WHERE q.id = ANY(SELECT id FROM polled_q_ids)
+              AND w.id = q.workload_id
+        RETURNING
+           w.*
+	    )
+    SELECT workloads.* FROM workloads;
+    """,
+  )
+  fun pollWorkloadQueueWithoutLegacyLabels(
     dataplaneGroup: String?,
     priority: Int?,
     quantity: Int = 1,

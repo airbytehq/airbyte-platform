@@ -9,6 +9,7 @@ import io.airbyte.workload.common.DefaultDeadlineValues
 import io.airbyte.workload.repository.WorkloadQueueRepository
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.Workload
+import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
 import io.airbyte.workload.signal.SignalSender
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.assertThrows
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
+import io.airbyte.config.WorkloadType as ConfigWorkloadType
 
 class WorkloadServiceTest {
   private lateinit var workloadRepository: WorkloadRepository
@@ -287,6 +289,58 @@ class WorkloadServiceTest {
 
     verify(exactly = 0) { signalSender.sendSignal(any(), any()) }
     verify(exactly = 0) { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) }
+  }
+
+  @Test
+  fun `createWorkload populates both workloadLabels and labels fields for dual-write`() {
+    val workloadId = "test-workload-${UUID.randomUUID()}"
+    val labels =
+      listOf(
+        WorkloadLabel(key = "job_id", value = "123", workload = null),
+        WorkloadLabel(key = "attempt_id", value = "1", workload = null),
+        WorkloadLabel(key = "connection_id", value = "conn-456", workload = null),
+      )
+    val input = "test-input"
+    val logPath = "/test/log"
+    val mutexKey = "test-mutex"
+    val autoId = UUID.randomUUID()
+
+    every { workloadRepository.existsById(workloadId) } returns false
+    every { workloadRepository.save(any()) } answers { firstArg() }
+    every { workloadRepository.searchByMutexKeyAndStatusInList(any(), any()) } returns emptyList()
+
+    workloadService.createWorkload(
+      workloadId = workloadId,
+      labels = labels,
+      input = input,
+      workspaceId = workspaceId,
+      organizationId = organizationId,
+      logPath = logPath,
+      mutexKey = mutexKey,
+      type = ConfigWorkloadType.SYNC,
+      autoId = autoId,
+      deadline = null,
+      signalInput = null,
+      dataplaneGroup = null,
+      priority = null,
+    )
+
+    // Verify that workloadRepository.save was called with BOTH fields populated
+    verify {
+      workloadRepository.save(
+        match { workload ->
+          // Verify workloadLabels field (legacy) is populated
+          workload.workloadLabels == labels &&
+            // Verify labels field (new JSONB) is populated with the converted map
+            workload.labels ==
+            mapOf(
+              "job_id" to "123",
+              "attempt_id" to "1",
+              "connection_id" to "conn-456",
+            )
+        },
+      )
+    }
   }
 
   companion object Fixtures {

@@ -25,6 +25,19 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
     @Id id: String,
   ): Optional<Workload>
 
+  /**
+   * Find workload by ID without joining on workload_label table.
+   * Uses only the labels JSONB column from the workload table for better performance.
+   */
+  @Query(
+    """
+      SELECT * FROM workload WHERE id = :id
+    """,
+  )
+  fun findByIdWithoutLegacyLabels(
+    @Id id: String,
+  ): Optional<Workload>
+
   @Query(
     """
       SELECT * FROM workload

@@ -42,6 +42,9 @@ data class Workload(
   )
   @Nullable
   var workloadLabels: List<WorkloadLabel>?,
+  @field:TypeDef(type = DataType.JSON)
+  @Nullable
+  var labels: Map<String, String>? = null,
   var inputPayload: String,
   @Nullable
   var workspaceId: UUID?,
@@ -85,6 +88,7 @@ data class Workload(
     dataplaneId = dataplaneId,
     status = status,
     workloadLabels = workloadLabels,
+    labels = null, // Let the service layer handle dual-write
     inputPayload = inputPayload,
     workspaceId = workspaceId,
     organizationId = organizationId,

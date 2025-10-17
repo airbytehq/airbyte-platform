@@ -8,7 +8,10 @@ import io.airbyte.commons.enums.convertTo
 import io.airbyte.config.WorkloadConstants.Companion.LAUNCH_ERROR_SOURCE
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
+import io.airbyte.featureflag.DisableWorkloadLabelTableWrite
+import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.UseWorkloadLabelsJsonbOnly
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -72,6 +75,12 @@ class WorkloadService(
       throw ConflictException("Workload with id: $workloadId already exists")
     }
 
+    // Convert List<WorkloadLabel> to Map<String, String> for JSONB column
+    val labelsMap = labels?.associate { it.key to it.value }
+
+    // Check feature flag to determine if we should write to legacy table
+    val disableLegacyWrite = featureFlagClient.boolVariation(DisableWorkloadLabelTableWrite, Empty)
+
     // Create the workload and then check for mutexKey uniqueness.
     // This will lead to a more deterministic concurrency resolution in the event of concurrent create calls.
     val savedWorkload =
@@ -80,7 +89,8 @@ class WorkloadService(
           id = workloadId,
           dataplaneId = null,
           status = WorkloadStatus.PENDING,
-          workloadLabels = labels,
+          workloadLabels = if (disableLegacyWrite) null else labels, // Conditionally write to legacy table
+          labels = labelsMap, // Write to labels JSONB column (new)
           inputPayload = input,
           workspaceId = workspaceId,
           organizationId = organizationId,
@@ -318,10 +328,18 @@ class WorkloadService(
     }
   }
 
-  fun getWorkload(workloadId: String): Workload =
-    workloadRepository.findById(workloadId).orElseThrow {
-      NotFoundException("Could not find workload with id: $workloadId")
+  fun getWorkload(workloadId: String): Workload {
+    val useJsonbLabelsOnly = featureFlagClient.boolVariation(UseWorkloadLabelsJsonbOnly, Empty)
+    return if (useJsonbLabelsOnly) {
+      workloadRepository.findByIdWithoutLegacyLabels(workloadId).orElseThrow {
+        NotFoundException("Could not find workload with id: $workloadId")
+      }
+    } else {
+      workloadRepository.findById(workloadId).orElseThrow {
+        NotFoundException("Could not find workload with id: $workloadId")
+      }
     }
+  }
 
   private fun emitTimeToTransitionMetric(
     workload: Workload,
