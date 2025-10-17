@@ -148,6 +148,7 @@ open class BaseConfigDatabaseTest {
               dataplane,
               dataplane_client_credentials,
               dataplane_group,
+              data_worker_usage,
               declarative_manifest,
               "group",
               group_member,
