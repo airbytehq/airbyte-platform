@@ -876,8 +876,6 @@ create index "active_workload_by_mutex_idx" on "public"."workload"("mutex_key" a
 where ((status = ANY (ARRAY['pending'::workload_status, 'claimed'::workload_status, 'launched'::workload_status, 'running'::workload_status])));
 create index "workload_deadline_idx" on "public"."workload"("deadline" asc)
 where ((deadline IS NOT NULL));
-create index "workload_pending_status_by_dataplane_group_idx" on "public"."workload"("status" asc, "dataplane_group" asc)
-where ((status = 'pending'::workload_status));
 create index "workload_status_idx" on "public"."workload"("status" asc);
 create index "workload_label_workload_id_idx" on "public"."workload_label"("workload_id" asc);
 create index "dataplane_group_priority_poll_deadline_idx" on "public"."workload_queue"("dataplane_group" asc, "priority" asc, "poll_deadline" asc)
