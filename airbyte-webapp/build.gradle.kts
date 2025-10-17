@@ -219,7 +219,3 @@ tasks.named("check") {
 tasks.named("build") {
     dependsOn("buildStorybook")
 }
-
-tasks.named("assemble").configure {
-    dependsOn("pnpmBuild")
-}

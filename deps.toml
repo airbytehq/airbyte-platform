@@ -298,7 +298,7 @@ temporal = ["temporal-sdk", "temporal-serviceclient"]
 temporal-telemetry = ["temporal-opentracing"]
 
 [plugins]
-node-gradle = { id = "com.github.node-gradle.node", version = "7.0.2" }
+node-gradle = { id = "com.github.node-gradle.node", version = "7.1.0" }
 nu-studer-jooq = { id = "nu.studer.jooq", version = "9.0" }
 use-python = { id = "ru.vyarus.use-python", version = "4.1.0" }
 

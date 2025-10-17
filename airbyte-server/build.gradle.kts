@@ -136,10 +136,68 @@ val cleanWebapp =
     delete("${project.layout.projectDirectory}/src/main/resources/webapp")
   }
 
-val copyWebapp =
-  tasks.register<Copy>("copyWebapp") {
+// Will be true if the webapp should be built, false otherwise.
+// This is determined by caching the last known `oss/airbyte-webapp` git-ref into `build/webapp.hash`.
+// If the current git-ref of `oss/airbyte-webapp` is different from the cached git-ref,
+// or if `oss/airbyte-webapp` has uncommitted changes, then the webapp will be built.
+val shouldBuildWebapp: Boolean by lazy {
+  val webappHashPrevious = buildFileContents("webapp.hash")
+  val webappHashCurrent = dirGitRef("oss/airbyte-webapp")
+
+  val openApiHashPrevious = buildFileContents("openapi.hash")
+  val openApiHashCurrent = dirGitRef("oss/airbyte-api/server-api/src/main/openapi")
+
+  // The directory where the webapp code is copied into
+  val webappDir = File("${project.layout.projectDirectory}/src/main/resources/webapp")
+
+  var reason = "not-applicable"
+
+  val shouldBuild =
+    when {
+      // if the webap directory doesn't exist, build the webapp
+      !webappDir.exists() || webappDir.listFiles()?.isEmpty() == true -> {
+        reason = "webapp directory doesn't exist or is empty"
+        true
+      }
+      // if `buildWebapp` is explicitly called, build the webapp
+      gradle.startParameter.taskNames.any { it.contains("buildWebapp") } -> {
+        reason = "buildWebapp task is explicitly called"
+        true
+      }
+      // if the webapp.hash file doesn't exist, build the webapp (and create the file)
+      !webappHashPrevious.exists() || !openApiHashPrevious.exists() -> {
+        webappHashPrevious.writeText(webappHashCurrent)
+        openApiHashPrevious.writeText(openApiHashCurrent)
+        reason = "webapp.hash or openapi.hash file doesn't exist"
+        true
+      }
+      // if the current hash is "dirty" (uncommitted changes), built the webapp
+      webappHashCurrent == "dirty" || openApiHashCurrent == "dirty" -> {
+        reason = "webapp or openapi directory has uncommitted changes"
+        true
+      }
+      // if the current hash is different from the previous hash, build the webapp and write the new hash
+      webappHashPrevious.readText() != webappHashCurrent || openApiHashPrevious.readText() != openApiHashCurrent -> {
+        webappHashPrevious.writeText(webappHashCurrent)
+        openApiHashPrevious.writeText(openApiHashCurrent)
+        reason = "webapp or openapi directory has committed changes"
+        true
+      }
+      // if we're here, don't build the webapp
+      else -> false
+    }
+
+  shouldBuild.also { println("shouldBuildWebapp: $it ($reason)") }
+}
+
+val buildWebapp =
+  tasks.register<Copy>("buildWebapp") {
     from("${project(":oss:airbyte-webapp").layout.buildDirectory.get()}/app")
     into("${project.layout.projectDirectory}/src/main/resources/webapp")
+
+    onlyIf {
+      shouldBuildWebapp
+    }
 
     doFirst {
       val src = "${project(":oss:airbyte-webapp").layout.buildDirectory.get()}/app"
@@ -148,18 +206,22 @@ val copyWebapp =
       }
     }
 
-    dependsOn(
-      // Always clean out the webapp assets before writing new ones,
-      // because the file names contain a hash, so assets will pile up
-      // over time.
-      cleanWebapp,
-      project(":oss:airbyte-webapp").tasks.named("pnpmBuild"),
-      "spotlessStyling",
-    )
+    if (shouldBuildWebapp) {
+      dependsOn(
+        // Always clean out the webapp assets before writing new ones,
+        // because the file names contain a hash, so assets will pile up
+        // over time.
+        cleanWebapp,
+        project(":oss:airbyte-webapp").tasks.named("pnpmBuild"),
+        "spotlessStyling",
+      )
+    }
   }
 
 tasks.named("assemble") {
-  dependsOn(copyWebapp)
+  if (shouldBuildWebapp) {
+    dependsOn(buildWebapp)
+  }
 }
 
 // need to make sure that the files are in the resource directory before copying.)
@@ -168,7 +230,9 @@ tasks.named("test") {
   dependsOn(copySeed)
 }
 tasks.named("processResources") {
-  dependsOn(copyWebapp)
+  if (shouldBuildWebapp) {
+    dependsOn(buildWebapp)
+  }
 }
 tasks.named("assemble") {
   dependsOn(copySeed)
@@ -224,3 +288,44 @@ tasks.named<Test>("test") {
 tasks.withType<Jar>().configureEach {
   duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
+
+/**
+ * Returns the git-ref of the [dir] directory, or `dirty` if there are uncommitted changes.
+ * The uncommitted changes only apply to tracked files.
+ */
+fun dirGitRef(dir: String): String {
+  val statusOutput =
+    project.providers
+      .exec {
+        commandLine("git", "status", "--porcelain", "--untracked-files=no", dir)
+        isIgnoreExitValue = true
+      }.standardOutput.asText
+      .get()
+      .trim()
+
+  return if (statusOutput.isNotEmpty()) {
+    "dirty"
+  } else {
+    project.providers
+      .exec {
+        commandLine("git", "log", "-1", "--format=%H", "--", dir)
+        isIgnoreExitValue = true
+      }.standardOutput.asText
+      .get()
+      .trim()
+      .ifEmpty { "dirty" }
+  }
+}
+
+/**
+ * Returns a [File] of the [file] from the project's build directory.
+ *
+ * Creates the pathway to the file if it does not exist. This is to ensure that gradle is happy when looking for this file.
+ */
+fun buildFileContents(file: String): File =
+  File(
+    project.layout.buildDirectory
+      .get()
+      .asFile,
+    file,
+  ).also { it.parentFile.mkdirs() }
