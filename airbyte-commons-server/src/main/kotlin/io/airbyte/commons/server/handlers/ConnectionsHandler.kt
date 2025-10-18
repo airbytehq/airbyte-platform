@@ -2061,7 +2061,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         connectionTimelineEventHelper.logSchemaChangeAutoPropagationEventInConnectionTimeline(connectionId, appliedDiff)
         if (workspace.notificationSettings != null && workspace.email != null) {
           try {
-            log.info { "Sending notification of schema auto propagation for connectionId: '$connection.connectionId'" }
+            log.info { "Sending notification of schema auto propagation for connectionId: '${connection.connectionId}'" }
             notificationHelper.notifySchemaPropagated(
               workspace.notificationSettings,
               appliedDiff,
