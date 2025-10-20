@@ -443,12 +443,59 @@ class EmbeddedControllerTest {
     assertEquals(0, orgs.organizations.size)
   }
 
+  @Test
+  fun listEmbeddedOrganizations_instanceAdminReturnsAllOrgsWithoutEntitlementChecks() {
+    val userId = UUID.randomUUID()
+    val orgId1 = UUID.randomUUID()
+    val orgId2 = UUID.randomUUID()
+    val orgId3 = UUID.randomUUID()
+
+    val licenseChecker =
+      mockk<LicenseEntitlementChecker> {
+        // Should not be called for Instance Admins (N+1 optimization)
+      }
+
+    val controller =
+      buildController(
+        userId,
+        listOf(
+          OrganizationRead().organizationId(orgId1).organizationName("Org 1"),
+          OrganizationRead().organizationId(orgId2).organizationName("Org 2"),
+          OrganizationRead().organizationId(orgId3).organizationName("Org 3"),
+        ),
+        mockk {
+          every { listPermissionsForUser(userId) } returns
+            listOf(
+              Permission()
+                .withPermissionType(PermissionType.INSTANCE_ADMIN),
+            )
+        },
+        licenseChecker,
+        isInstanceAdmin = true,
+      )
+
+    val response = controller.listEmbeddedOrganizationsByUser()
+    val orgs = response.entity as EmbeddedOrganizationsList
+
+    // Instance Admins should get all organizations without entitlement filtering
+    assertEquals(3, orgs.organizations.size)
+
+    val orgIds = orgs.organizations.map { it.organizationId }.toSet()
+    assertEquals(setOf(orgId1, orgId2, orgId3), orgIds)
+
+    // All organizations should have INSTANCE_ADMIN permission type
+    orgs.organizations.forEach { org ->
+      assertEquals(io.airbyte.publicApi.server.generated.models.PermissionType.INSTANCE_ADMIN, org.permission)
+    }
+  }
+
   // Helper method to build controller with mocks for testing
   private fun buildController(
     userId: UUID,
     organizations: List<OrganizationRead>,
     permissionHandler: PermissionHandler,
     licenseEntitlementChecker: LicenseEntitlementChecker,
+    isInstanceAdmin: Boolean = false,
   ): EmbeddedController =
     EmbeddedController(
       mockk(),
@@ -467,7 +514,9 @@ class EmbeddedControllerTest {
           )
         } returns OrganizationReadList().organizations(organizations)
       },
-      permissionHandler,
+      permissionHandler.also {
+        every { it.isUserInstanceAdmin(userId) } returns isInstanceAdmin
+      },
       mockk(),
       licenseEntitlementChecker,
     )

@@ -67,6 +67,25 @@ class EmbeddedController(
 
     val permissions = permissionHandler.listPermissionsForUser(currentUserId)
 
+    // Early return optimization for Instance Admins: they have access to all organizations,
+    // so skip expensive per-organization entitlement checks to avoid N+1 performance issues.
+    // Instance Admins have unrestricted access by definition, so we return all organizations
+    // without filtering by entitlements.
+    if (permissionHandler.isUserInstanceAdmin(currentUserId)) {
+      val organizationItems =
+        organizations.organizations.map { organization ->
+          EmbeddedOrganizationListItem(
+            organizationId = organization.organizationId,
+            organizationName = organization.organizationName,
+            permission = PermissionType.INSTANCE_ADMIN,
+          )
+        }
+
+      return EmbeddedOrganizationsList(
+        organizations = organizationItems,
+      ).ok()
+    }
+
     // First filter organizations by entitlement
     val entitledOrganizations =
       organizations.organizations.filter { organization ->
