@@ -17,7 +17,7 @@ test.describe("Connection Configuration", () => {
     workspaceId = await setupWorkspaceForTests();
   });
 
-  test.describe.serial("Sync frequency - PokeAPI → Postgres", () => {
+  test.describe.serial("Sync frequency - PokeAPI → E2E", () => {
     let testData: Awaited<ReturnType<typeof connectionTestScaffold.setupConnection>>;
     let page: Page;
     let context: BrowserContext;
@@ -227,11 +227,11 @@ test.describe("Connection Configuration", () => {
     let context: BrowserContext;
 
     test.beforeAll(async ({ browser, request }) => {
-      const testResources = await connectionTestHelpers.setupPokeApiPostgresConnectionTest(
+      const testResources = await connectionTestHelpers.setupConnectionTest(
         request,
         workspaceId,
         "PokeAPI source",
-        "Postgres destination"
+        "E2E Testing destination"
       );
 
       sourceId = testResources.sourceId;
@@ -283,7 +283,6 @@ test.describe("Connection Configuration", () => {
 
       await connectionSettings.verifyElementDisabled(page, "connectionName");
       await connectionSettings.verifyElementDisabled(page, "schedule-type-listbox-button");
-      await connectionSettings.verifyElementDisabled(page, "namespace-definition-listbox-button");
       await connectionSettings.verifyElementDisabled(page, "stream-prefix-input");
       await connectionSettings.verifyElementDisabled(page, "nonBreakingChangesPreference-listbox-button");
     });
@@ -301,7 +300,7 @@ test.describe("Connection Configuration", () => {
     let context: BrowserContext;
 
     test.beforeAll(async ({ browser, request }) => {
-      testData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres", {
+      testData = await connectionTestScaffold.setupConnection(request, workspaceId, "faker-e2e", {
         status: "inactive",
       });
       context = await browser.newContext();

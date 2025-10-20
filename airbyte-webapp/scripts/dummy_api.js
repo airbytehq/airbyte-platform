@@ -20,6 +20,13 @@ const generateResults = function (item_id, count) {
 };
 
 const requestListener = function (req, res) {
+  // Health check endpoint - no auth required
+  if (req.url === "/health") {
+    res.writeHead(200);
+    res.end("OK");
+    return;
+  }
+
   if (req.headers.authorization !== "Bearer theauthkey") {
     res.writeHead(403);
     res.end(JSON.stringify({ error: "Bad credentials" }));
@@ -46,8 +53,24 @@ const requestListener = function (req, res) {
 };
 
 const server = http.createServer(requestListener);
-server.listen(6767);
+server.listen(6767, () => {
+  console.log("✅ Dummy API server listening on port 6767");
+  console.log("   Health endpoint: http://localhost:6767/health");
+  console.log("   Items endpoint: http://localhost:6767/items/");
+});
 
 process.on("SIGINT", () => {
-  process.exit();
+  console.log("Received SIGINT, shutting down gracefully...");
+  server.close(() => {
+    console.log("Server closed");
+    process.exit(0);
+  });
+});
+
+process.on("SIGTERM", () => {
+  console.log("Received SIGTERM, shutting down gracefully...");
+  server.close(() => {
+    console.log("Server closed");
+    process.exit(0);
+  });
 });

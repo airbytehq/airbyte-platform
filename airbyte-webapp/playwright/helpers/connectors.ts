@@ -42,6 +42,18 @@ const CONNECTOR_CONFIGS = {
         pokemon_name: "venusaur",
       },
     },
+    faker: {
+      endpoint: "sources",
+      definitionId: sourceIds.Faker,
+      idField: "sourceId",
+      responseKey: "sources",
+      defaultConfig: {
+        count: 10,
+        seed: 12345,
+        records_per_sync: 10,
+        records_per_slice: 10,
+      },
+    },
     postgres: {
       endpoint: "sources",
       definitionId: sourceIds.Postgres,
@@ -178,6 +190,7 @@ export const createConnectorAPI = (connectorType: keyof typeof CONNECTOR_CONFIGS
 // await e2eDestinationAPI.list(request, workspaceId)
 
 export const pokeSourceAPI = createConnectorAPI("source", "pokeapi");
+export const fakerSourceAPI = createConnectorAPI("source", "faker");
 export const postgresSourceAPI = createConnectorAPI("source", "postgres");
 export const e2eDestinationAPI = createConnectorAPI("destination", "e2etesting");
 export const postgresDestinationAPI = createConnectorAPI("destination", "postgres");

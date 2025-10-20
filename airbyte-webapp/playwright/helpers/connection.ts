@@ -10,12 +10,33 @@ import {
 } from "@src/core/api/types/AirbyteClient";
 
 import { getApiBaseUrl } from "./api";
-import { pokeSourceAPI, e2eDestinationAPI, postgresSourceAPI, postgresDestinationAPI } from "./connectors";
+import {
+  pokeSourceAPI,
+  fakerSourceAPI,
+  e2eDestinationAPI,
+  postgresSourceAPI,
+  postgresDestinationAPI,
+} from "./connectors";
 import { appendRandomString } from "./ui";
 
-type ConnectorPair = "poke-e2e" | "postgres-postgres" | "poke-postgres";
+/**
+ * Connection Test Helpers
+ *
+ * This file contains a set of helpers for wiring up connections in our Playwright tests:
+ *
+ * - connectionAPI: CRUD operations for connections (create, delete, get, update)
+ * - connectionUI: UI navigation and interaction helpers (visit pages, start/cancel syncs, verify status)
+ * - jobUI: Job event and modal helpers for timeline/status tests
+ * - connectionTestHelpers: Test setup helpers for creating connector pairs and cleanup
+ * - connectionForm: Form interaction helpers for connection settings page
+ * - connectionTestScaffold: Reusable test scaffolding patterns for connection test suites
+ *
+ * Currently supported connector pairs: "poke-e2e", "faker-e2e", "postgres-postgres", "poke-postgres"
+ */
 
-// This file contains helper methods for connection CRUD operations
+// Type for connector API helpers - all have same structure
+type ConnectorAPI = typeof pokeSourceAPI;
+type ConnectorPair = "poke-e2e" | "faker-e2e" | "postgres-postgres" | "poke-postgres";
 
 // Create connection API interface following the established connector pattern
 export const connectionAPI = {
@@ -265,8 +286,8 @@ export const connectionTestHelpers = {
     const configs: Record<
       ConnectorPair,
       {
-        sourceAPI: typeof pokeSourceAPI;
-        destinationAPI: typeof e2eDestinationAPI | typeof postgresDestinationAPI;
+        sourceAPI: ConnectorAPI;
+        destinationAPI: ConnectorAPI;
         defaultSourcePrefix: string;
         defaultDestinationPrefix: string;
       }
@@ -275,6 +296,12 @@ export const connectionTestHelpers = {
         sourceAPI: pokeSourceAPI,
         destinationAPI: e2eDestinationAPI,
         defaultSourcePrefix: "PokeAPI source",
+        defaultDestinationPrefix: "E2E Testing destination",
+      },
+      "faker-e2e": {
+        sourceAPI: fakerSourceAPI,
+        destinationAPI: e2eDestinationAPI,
+        defaultSourcePrefix: "Faker source",
         defaultDestinationPrefix: "E2E Testing destination",
       },
       "postgres-postgres": {
@@ -322,6 +349,13 @@ export const connectionTestHelpers = {
   ) =>
     connectionTestHelpers.setupConnectors(request, workspaceId, "postgres-postgres", sourcePrefix, destinationPrefix),
 
+  setupFakerConnectionTest: async (
+    request: APIRequestContext,
+    workspaceId: string,
+    sourcePrefix?: string,
+    destinationPrefix?: string
+  ) => connectionTestHelpers.setupConnectors(request, workspaceId, "faker-e2e", sourcePrefix, destinationPrefix),
+
   setupPokeApiPostgresConnectionTest: async (
     request: APIRequestContext,
     workspaceId: string,
@@ -358,10 +392,11 @@ export const connectionTestHelpers = {
     const cleanupPromises: Array<Promise<void>> = [];
 
     if (sourceId) {
-      // Try both source APIs since we don't know which was used
+      // Delete whichever source API was used in a given test
       cleanupPromises.push(
         tryDelete(() => pokeSourceAPI.delete(request, sourceId), "source", sourceId),
-        tryDelete(() => postgresSourceAPI.delete(request, sourceId), "source", sourceId)
+        tryDelete(() => postgresSourceAPI.delete(request, sourceId), "source", sourceId),
+        tryDelete(() => fakerSourceAPI.delete(request, sourceId), "source", sourceId)
       );
     }
 

@@ -6,9 +6,10 @@ This directory contains end-to-end (E2E) tests for the Airbyte webapp, using [Pl
 ## Structure
 
 - `tests/` - Contains all Playwright test files.
+- `helpers/` - Contains re-usable helper methods for tests.
 - `playwright.config.ts` - Default Playwright configuration (for running against OSS).
 - `playwright.cloud-config.ts` - Configuration for running tests against the Airbyte Cloud environment.
-- `scripts/run-playwright.js` - Helper script to run Playwright tests with various options.
+- `scripts/` - Contains helper script to run Playwright tests with various options, as well as setup/cleanup scripts for external test dependencies
 
 ## Running Tests using the Helper Script
 
@@ -69,16 +70,24 @@ The full Playwright E2E test suite relies on two external Docker containers to b
 1. Postgres container for connection tests
 2. Dummy API for builder tests
 
-The simplest way to boot these up locally is to run the following command from oss/airbyte-webapp:
+The simplest way to boot these up locally is to run the following command from `oss/airbyte-webapp/playwright`:
 
 ```bash
-pnpm playwright:setup-all
+pnpm run setup
 ```
 
 After you are done running the tests, you can clean up both of these containers with
 
 ```bash
-pnpm playwright:cleanup-all
+pnpm run cleanup
 ```
 
-The pnpm commands are listed in the webapp's package.json configuration. The setup and teardown scripts for the Postgres container are located in `oss/airbyte-webapp/playwright/scripts`
+The setup and cleanup scripts for both Postgres and Dummy API are located in `scripts/`. These scripts automatically detect whether you're running locally (Docker) or in CI (Kubernetes) and use the appropriate deployment method.
+
+## Test Reports
+
+Test reports from CI runs are stored in a GCS bucket, and are viewable in the Playwright job from the `Generate Playwright report and trace links` step. For local runs, to access and view a report from the latest local run, use:
+
+```bash
+pnpm exec playwright show-report
+```
