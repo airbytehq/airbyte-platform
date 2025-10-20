@@ -240,3 +240,5 @@ object DisableOAuthMaskingForCommands : Temporary<Boolean>(
 object SkipCheckBeforeSync : Temporary<Boolean>(key = "skip-check-before-sync", default = false)
 
 object UnifiedTrial : Temporary<Boolean>(key = "platform.unified-trial", default = false)
+
+object SkipStiggPlanLookup : Temporary<Boolean>(key = "platform.skip-stigg-plan-lookup", default = false)
