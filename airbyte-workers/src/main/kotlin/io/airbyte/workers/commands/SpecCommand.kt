@@ -47,7 +47,6 @@ class SpecCommand(
 
     val dataplaneGroup =
       dataplaneGroupResolver.resolveForSpec(
-        organizationId = null,
         workspaceId = workspaceId,
       )
 

@@ -106,7 +106,6 @@ class DiscoverCommand(
     val organizationId = input.discoverCatalogInput.actorContext.organizationId
     val dataplaneGroup =
       dataplaneGroupResolver.resolveForDiscover(
-        organizationId = organizationId,
         workspaceId = workspaceId,
         actorId = input.discoverCatalogInput.actorContext.actorId,
       )

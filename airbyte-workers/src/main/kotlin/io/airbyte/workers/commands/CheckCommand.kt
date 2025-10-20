@@ -61,7 +61,6 @@ class CheckCommand(
     val organizationId = input.checkConnectionInput.actorContext.organizationId
     val dataplaneGroup =
       dataplaneGroupResolver.resolveForCheck(
-        organizationId = organizationId,
         workspaceId = workspaceId,
         actorId = input.checkConnectionInput.actorContext.actorId,
       )
