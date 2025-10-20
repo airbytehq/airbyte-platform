@@ -56,12 +56,16 @@ import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.models.ReplicationFeatureFlags
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import java.util.UUID
+import io.airbyte.config.ActorType as ConfigActorType
 
 class JobInputServiceTest {
   private lateinit var sourceService: SourceService
@@ -144,6 +148,8 @@ class JobInputServiceTest {
     val mockActor =
       mockk<io.airbyte.data.repositories.entities.Actor> {
         every { actorType } returns ActorType.source
+        every { actorDefinitionId } returns sourceDefinitionId
+        every { workspaceId } returns this@JobInputServiceTest.workspaceId
       }
 
     val mockSource = mockk<SourceConnection>()
@@ -167,11 +173,13 @@ class JobInputServiceTest {
     every { sourceService.getSourceConnection(sourceId) } returns mockSource
     every { sourceService.getStandardSourceDefinition(sourceDefinitionId) } returns mockSourceDefinition
     every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, sourceId) } returns mockActorDefinitionVersion
+    every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, null) } returns mockActorDefinitionVersion
     every { oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
     every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns
       ConfigWithSecretReferences(configuration, mapOf())
     every { contextBuilder.fromSource(any()) } returns mockk()
+    every { contextBuilder.fromActorDefinitionId(any(), any(), any()) } returns mockk()
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
 
     val jobId = "jobid"
@@ -191,7 +199,7 @@ class JobInputServiceTest {
             .withAllowedHosts(emptyAllowedHosts),
         checkConnectionInput =
           StandardCheckConnectionInput()
-            .withActorType(io.airbyte.config.ActorType.SOURCE)
+            .withActorType(ConfigActorType.SOURCE)
             .withActorId(sourceId)
             .withConnectionConfiguration(configuration)
             .withResourceRequirements(ResourceRequirements())
@@ -199,7 +207,7 @@ class JobInputServiceTest {
             .withNetworkSecurityTokens(emptyList()),
       )
 
-    val actual = jobInputService.getCheckInput(sourceId, jobId, attemptId)
+    val actual = jobInputService.getCheckInput(actorId = sourceId, jobId = jobId, attemptId = attemptId)
 
     assertEquals(expected.launcherConfig.jobId, actual.launcherConfig.jobId)
     assertEquals(expected.jobRunConfig.jobId, actual.jobRunConfig.jobId)
@@ -220,6 +228,8 @@ class JobInputServiceTest {
     val mockActor =
       mockk<io.airbyte.data.repositories.entities.Actor> {
         every { actorType } returns ActorType.destination
+        every { actorDefinitionId } returns destinationDefinitionId
+        every { workspaceId } returns this@JobInputServiceTest.workspaceId
       }
 
     val mockDestination = mockk<DestinationConnection>()
@@ -244,11 +254,14 @@ class JobInputServiceTest {
     every { destinationService.getStandardDestinationDefinition(destinationDefinitionId) } returns mockDestinationDefinition
     every { actorDefinitionVersionHelper.getDestinationVersion(mockDestinationDefinition, workspaceId, destinationId) } returns
       mockActorDefinitionVersion
+    every { actorDefinitionVersionHelper.getDestinationVersion(mockDestinationDefinition, workspaceId, null) } returns
+      mockActorDefinitionVersion
     every { oAuthConfigSupplier.injectDestinationOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
     every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns
       ConfigWithSecretReferences(configuration, mapOf())
     every { contextBuilder.fromDestination(any()) } returns mockk()
+    every { contextBuilder.fromActorDefinitionId(any(), any(), any()) } returns mockk()
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
 
     val jobId = "jobid"
@@ -268,7 +281,7 @@ class JobInputServiceTest {
             .withAllowedHosts(emptyAllowedHosts),
         checkConnectionInput =
           StandardCheckConnectionInput()
-            .withActorType(io.airbyte.config.ActorType.DESTINATION)
+            .withActorType(ConfigActorType.DESTINATION)
             .withActorId(destinationId)
             .withConnectionConfiguration(configuration)
             .withResourceRequirements(ResourceRequirements())
@@ -276,7 +289,7 @@ class JobInputServiceTest {
             .withNetworkSecurityTokens(emptyList()),
       )
 
-    val actual = jobInputService.getCheckInput(destinationId, jobId, attemptId)
+    val actual = jobInputService.getCheckInput(actorId = destinationId, jobId = jobId, attemptId = attemptId)
 
     assertEquals(expected.launcherConfig.jobId, actual.launcherConfig.jobId)
     assertEquals(expected.jobRunConfig.jobId, actual.jobRunConfig.jobId)
@@ -342,7 +355,7 @@ class JobInputServiceTest {
             .withAllowedHosts(emptyAllowedHosts),
         checkConnectionInput =
           StandardCheckConnectionInput()
-            .withActorType(io.airbyte.config.ActorType.SOURCE)
+            .withActorType(ConfigActorType.SOURCE)
             .withActorId(null)
             .withConnectionConfiguration(configuration)
             .withResourceRequirements(null)
@@ -350,7 +363,7 @@ class JobInputServiceTest {
             .withNetworkSecurityTokens(emptyList()),
       )
 
-    val actual = jobInputService.getCheckInput(sourceDefinitionId, workspaceId, configuration)
+    val actual = jobInputService.getCheckInput(actorDefinitionId = sourceDefinitionId, workspaceId = workspaceId, configuration = configuration)
 
     assertEquals(expected.checkConnectionInput.actorType, actual.checkConnectionInput.actorType)
     assertEquals(expected.checkConnectionInput.actorId, actual.checkConnectionInput.actorId)
@@ -411,7 +424,7 @@ class JobInputServiceTest {
             .withAllowedHosts(emptyAllowedHosts),
         checkConnectionInput =
           StandardCheckConnectionInput()
-            .withActorType(io.airbyte.config.ActorType.DESTINATION)
+            .withActorType(ConfigActorType.DESTINATION)
             .withActorId(null)
             .withConnectionConfiguration(configuration)
             .withResourceRequirements(ResourceRequirements())
@@ -419,7 +432,7 @@ class JobInputServiceTest {
             .withNetworkSecurityTokens(emptyList()),
       )
 
-    val actual = jobInputService.getCheckInput(destinationDefinitionId, workspaceId, configuration)
+    val actual = jobInputService.getCheckInput(actorDefinitionId = destinationDefinitionId, workspaceId = workspaceId, configuration = configuration)
 
     assertEquals(expected.checkConnectionInput.actorType, actual.checkConnectionInput.actorType)
     assertEquals(expected.checkConnectionInput.actorId, actual.checkConnectionInput.actorId)
@@ -437,6 +450,8 @@ class JobInputServiceTest {
     val mockActor =
       mockk<io.airbyte.data.repositories.entities.Actor> {
         every { actorType } returns ActorType.source
+        every { actorDefinitionId } returns sourceDefinitionId
+        every { workspaceId } returns this@JobInputServiceTest.workspaceId
       }
 
     val mockSource = mockk<SourceConnection>()
@@ -493,6 +508,8 @@ class JobInputServiceTest {
     val mockActor =
       mockk<io.airbyte.data.repositories.entities.Actor> {
         every { actorType } returns ActorType.source
+        every { actorDefinitionId } returns sourceDefinitionId
+        every { workspaceId } returns this@JobInputServiceTest.workspaceId
       }
 
     val mockSource = mockk<SourceConnection>()
@@ -517,11 +534,13 @@ class JobInputServiceTest {
     every { sourceService.getSourceConnection(sourceId) } returns mockSource
     every { sourceService.getStandardSourceDefinition(sourceDefinitionId) } returns mockSourceDefinition
     every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, sourceId) } returns mockActorDefinitionVersion
+    every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, null) } returns mockActorDefinitionVersion
     every { oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
     every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns
       ConfigWithSecretReferences(configuration, mapOf())
     every { contextBuilder.fromSource(any()) } returns mockk()
+    every { contextBuilder.fromActorDefinitionId(any(), any(), any()) } returns mockk()
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
 
     val jobId = "job-id"
@@ -552,6 +571,8 @@ class JobInputServiceTest {
     val mockActor =
       mockk<io.airbyte.data.repositories.entities.Actor> {
         every { actorType } returns ActorType.destination
+        every { actorDefinitionId } returns destinationDefinitionId
+        every { workspaceId } returns this@JobInputServiceTest.workspaceId
       }
 
     val mockDestination = mockk<DestinationConnection>()
@@ -609,6 +630,8 @@ class JobInputServiceTest {
     val mockActor =
       mockk<io.airbyte.data.repositories.entities.Actor> {
         every { actorType } returns ActorType.destination
+        every { actorDefinitionId } returns destinationDefinitionId
+        every { workspaceId } returns this@JobInputServiceTest.workspaceId
       }
 
     val mockDestination = mockk<DestinationConnection>()
@@ -634,11 +657,14 @@ class JobInputServiceTest {
     every { destinationService.getStandardDestinationDefinition(destinationDefinitionId) } returns mockDestinationDefinition
     every { actorDefinitionVersionHelper.getDestinationVersion(mockDestinationDefinition, workspaceId, destinationId) } returns
       mockActorDefinitionVersion
+    every { actorDefinitionVersionHelper.getDestinationVersion(mockDestinationDefinition, workspaceId, null) } returns
+      mockActorDefinitionVersion
     every { oAuthConfigSupplier.injectDestinationOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
     every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns
       ConfigWithSecretReferences(configuration, mapOf())
     every { contextBuilder.fromDestination(any()) } returns mockk()
+    every { contextBuilder.fromActorDefinitionId(any(), any(), any()) } returns mockk()
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
 
     val jobId = "job-id"
@@ -995,5 +1021,93 @@ class JobInputServiceTest {
     assertEquals("$destinationImage:$newDockerImageTag", result.launcherConfig.dockerImage)
     assertEquals(true, result.launcherConfig.isCustomConnector)
     assertEquals(workspaceId, result.launcherConfig.workspaceId)
+  }
+
+  @Test
+  fun `getCheckInput with actorId and custom config merges configurations (hybrid mode)`() {
+    val storedConfig = Jsons.deserialize("""{"host":"old-host","port":5432,"password":{"_secret":"secret-ref-123"},"database":"mydb"}""")
+    val providedConfig = Jsons.deserialize("""{"host":"new-host","database":"newdb"}""")
+
+    val mockActor =
+      mockk<io.airbyte.data.repositories.entities.Actor> {
+        every { actorType } returns ActorType.source
+        every { actorDefinitionId } returns sourceDefinitionId
+        every { workspaceId } returns this@JobInputServiceTest.workspaceId
+      }
+
+    val mockSource = mockk<SourceConnection>()
+    every { mockSource.sourceId } returns sourceId
+    every { mockSource.sourceDefinitionId } returns sourceDefinitionId
+    every { mockSource.workspaceId } returns workspaceId
+    every { mockSource.configuration } returns storedConfig
+
+    val mockSourceDefinition = mockk<StandardSourceDefinition>()
+    every { mockSourceDefinition.sourceDefinitionId } returns sourceDefinitionId
+    every { mockSourceDefinition.custom } returns false
+    every { mockSourceDefinition.resourceRequirements } returns null
+
+    val mockActorDefinitionVersion = mockk<ActorDefinitionVersion>()
+    every { mockActorDefinitionVersion.dockerImageTag } returns dockerImageTag
+    every { mockActorDefinitionVersion.dockerRepository } returns dockerRepository
+    every { mockActorDefinitionVersion.protocolVersion } returns "0.1.0"
+    every { mockActorDefinitionVersion.allowedHosts } returns emptyAllowedHosts
+
+    every { actorRepository.findByActorId(sourceId) } returns mockActor
+    every { sourceService.getSourceConnection(sourceId) } returns mockSource
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionId) } returns mockSourceDefinition
+    every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, sourceId) } returns mockActorDefinitionVersion
+    every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, null) } returns mockActorDefinitionVersion
+
+    // Capture the merged config passed to OAuth supplier
+    val capturedConfig = slot<JsonNode>()
+    every { oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), capture(capturedConfig)) } answers {
+      // Return the captured config so it passes through
+      capturedConfig.captured
+    }
+    every { configInjector.injectConfig(any(), any()) } answers { firstArg() }
+    every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } answers {
+      // Use secondArg() which is the config passed in (ActorId, config, WorkspaceId)
+      ConfigWithSecretReferences(secondArg(), mapOf())
+    }
+    every { contextBuilder.fromSource(any()) } returns mockk()
+    every { contextBuilder.fromActorDefinitionId(any(), any(), any()) } returns mockk()
+    every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
+
+    val actual = jobInputService.getCheckInput(actorId = sourceId, configuration = providedConfig, jobId = "test-job", attemptId = 1L)
+
+    // Verify the merged config has: new host, new database, but preserved password secret
+    assertTrue(capturedConfig.isCaptured)
+    assertEquals("new-host", capturedConfig.captured.get("host").asText())
+    assertEquals("newdb", capturedConfig.captured.get("database").asText())
+    assertEquals(
+      "secret-ref-123",
+      capturedConfig.captured
+        .get("password")
+        .get("_secret")
+        .asText(),
+    )
+    assertEquals(5432, capturedConfig.captured.get("port").asInt()) // Preserved from stored config
+  }
+
+  @Test
+  fun `mergeConfigurations preserves secrets and overrides non-secret fields`() {
+    val storedConfig =
+      Jsons.deserialize(
+        """{"username":"user","password":{"_secret":"secret-123"},"apiKey":{"_secret":"secret-456"},"host":"old-host","nested":{"value":"old"}}""",
+      )
+    // User provides new host, nested, and a sanitized apiKey (but not password)
+    val providedConfig = Jsons.deserialize("""{"host":"new-host","nested":{"value":"new"},"apiKey":{"_secret":"secret-789"}}""")
+
+    val merged = jobInputService.mergeConfigurations(storedConfig, providedConfig)
+
+    // Verify: password secret is preserved (not provided by user)
+    assertEquals("secret-123", merged.get("password").get("_secret").asText())
+    // Verify: apiKey is updated with user-provided value (even though it's a secret)
+    assertEquals("secret-789", merged.get("apiKey").get("_secret").asText())
+    // Verify: non-secret fields are overridden
+    assertEquals("new-host", merged.get("host").asText())
+    assertEquals("new", merged.get("nested").get("value").asText())
+    // Verify: fields not in providedConfig are preserved
+    assertEquals("user", merged.get("username").asText())
   }
 }

@@ -106,14 +106,19 @@ class CommandServiceTest {
         workloadService = workloadService,
         workloadQueueService = workloadQueueService,
         workloadOutputReader = workloadOutputReader,
+        workloadIdGenerator = WorkloadIdGenerator(),
         workspaceService = mockk(relaxed = true),
+        secretSanitizer = mockk(relaxed = true),
+        configurationUpdate = mockk(relaxed = true),
+        sourceService = mockk(relaxed = true),
+        destinationService = mockk(relaxed = true),
+        actorDefinitionVersionHelper = mockk(relaxed = true),
         airbyteConfig = AirbyteConfig(workspaceRoot = "/test-root"),
         airbyteWorkerConfig =
           AirbyteWorkerConfig(
             discover = AirbyteWorkerConfig.AirbyteWorkerDiscoverConfig(autoRefreshWindow = 0),
           ),
         featureFlagClient = featureFlagClient,
-        workloadIdGenerator = WorkloadIdGenerator(),
         clock = null,
       )
   }
@@ -207,7 +212,7 @@ class CommandServiceTest {
     val attemptNumber = 0L
     val workloadInput = slot<String>()
     every { commandsRepository.existsById(COMMAND_ID) } returns false
-    every { jobInputService.getCheckInput(any<UUID>(), any<String>(), any()) } returns
+    every { jobInputService.getCheckInput(actorId = any(), jobId = any(), attemptId = any()) } returns
       CheckConnectionInput(
         jobRunConfig = JobRunConfig().withJobId(jobId).withAttemptId(attemptNumber),
         launcherConfig = IntegrationLauncherConfig(),

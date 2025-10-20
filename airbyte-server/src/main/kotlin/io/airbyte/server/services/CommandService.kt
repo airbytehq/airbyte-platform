@@ -5,9 +5,12 @@
 package io.airbyte.server.services
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.logging.LogEvents
+import io.airbyte.commons.server.converters.ConfigurationUpdate
+import io.airbyte.commons.server.helpers.SecretSanitizer
 import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.config.ActorCatalog
@@ -21,9 +24,13 @@ import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
+import io.airbyte.config.persistence.ActorDefinitionVersionHelper
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.services.CatalogService
+import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OrganizationService
+import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
@@ -54,6 +61,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
+import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType as JooqActorType
 
 enum class CommandStatus {
   PENDING,
@@ -94,6 +102,11 @@ class CommandService(
   private val workloadOutputReader: WorkloadOutputDocStoreReader,
   private val workloadIdGenerator: WorkloadIdGenerator,
   private val workspaceService: WorkspaceService,
+  private val secretSanitizer: SecretSanitizer,
+  private val configurationUpdate: ConfigurationUpdate,
+  private val sourceService: SourceService,
+  private val destinationService: DestinationService,
+  private val actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
   private val airbyteConfig: AirbyteConfig,
   airbyteWorkerConfig: AirbyteWorkerConfig,
   private val featureFlagClient: FeatureFlagClient,
@@ -228,55 +241,161 @@ class CommandService(
     )
   }
 
-  /** Create a Check command for an actorDefinitionId and a configuration
-   *
-   * returns true if a command has been created, false if it already existed.
+  /**
+   * Helper data class to hold actor context information for check commands.
    */
-  fun createCheckCommand(
-    commandId: String,
-    actorDefinitionId: UUID,
-    workspaceId: UUID,
-    configuration: JsonNode,
-    workloadPriority: WorkloadPriority,
-    signalInput: String?,
-    commandInput: JsonNode,
-  ): Boolean {
-    if (commandsRepository.existsById(commandId)) {
-      return false
+  data class CheckCommandContext(
+    val actorDefinitionId: UUID,
+    val workspaceId: UUID,
+  )
+
+  /**
+   * Gets the actor definition ID and workspace ID for a check command request.
+   * This is used by the controller layer for config sanitization before calling createCheckCommand.
+   *
+   * @param actorId Optional actor ID
+   * @param actorDefinitionId Optional actor definition ID (required if actorId is null)
+   * @param workspaceId Optional workspace ID (required if actorId is null)
+   * @return CheckCommandContext containing the definitionId and workspaceId
+   */
+  fun getCheckCommandContext(
+    actorId: UUID? = null,
+    actorDefinitionId: UUID? = null,
+    workspaceId: UUID? = null,
+  ): CheckCommandContext {
+    // If actorId is provided, fetch both values in a single query
+    if (actorId != null) {
+      val actor =
+        actorRepository.findByActorId(actorId)
+          ?: throw NotFoundException("Unable to find actorId $actorId")
+      return CheckCommandContext(
+        actorDefinitionId = actor.actorDefinitionId,
+        workspaceId = actor.workspaceId,
+      )
     }
 
-    val checkInput = jobInputService.getCheckInput(actorDefinitionId, workspaceId, configuration)
-    // Adding the priority to the launcherConfig because it impacts node-pool selection.
-    checkInput.launcherConfig.priority = workloadPriority
-
-    val workloadPayload =
-      createCheckCreateWorkloadRequest(
-        actorId = null,
+    // Otherwise, use provided values
+    if (actorDefinitionId != null && workspaceId != null) {
+      return CheckCommandContext(
         actorDefinitionId = actorDefinitionId,
         workspaceId = workspaceId,
-        checkInput = checkInput,
-        workloadPriority = workloadPriority,
-        signalInput = signalInput,
       )
-    createCommand(
-      commandId = commandId,
-      commandType = CommandType.CHECK.name,
-      commandInput = commandInput,
-      workspaceId = workspaceId,
-      workloadPayload = workloadPayload,
-    )
-    return true
+    }
+
+    throw IllegalArgumentException("Must provide either actorId OR (actorDefinitionId + workspaceId)")
   }
 
-  /** Create a Check command for an actorId
+  /**
+   * Processes and sanitizes configuration for check commands.
+   *
+   * In hybrid mode (actorId + config provided):
+   * 1. Fetches stored config
+   * 2. Copies secrets from stored config to handle masked values like "**********"
+   * 3. Sanitizes the merged config
+   *
+   * In non-hybrid mode (just config):
+   * 1. Sanitizes the provided config directly
+   *
+   * @param actorId Optional actor ID (for hybrid mode)
+   * @param actorDefinitionId Actor definition ID
+   * @param workspaceId Workspace ID
+   * @param providedConfig The configuration from the request
+   * @return Sanitized configuration with secret references
+   */
+  fun processCheckConfig(
+    actorId: UUID?,
+    actorDefinitionId: UUID,
+    workspaceId: UUID,
+    providedConfig: JsonNode,
+  ): JsonNode {
+    // In hybrid mode, copy secrets from stored config first
+    // This handles masked values like "**********" properly
+    val configWithCopiedSecrets =
+      if (actorId != null) {
+        val actor =
+          actorRepository.findByActorId(actorId)
+            ?: throw NotFoundException("Unable to find actorId $actorId")
+
+        // Get stored config based on actor type
+        val storedConfig =
+          when (actor.actorType) {
+            JooqActorType.source ->
+              sourceService.getSourceConnection(actorId).configuration
+            JooqActorType.destination ->
+              destinationService.getDestinationConnection(actorId).configuration
+          }
+
+        // Get connector spec for secret identification
+        val spec = getConnectionSpec(actorDefinitionId, workspaceId)
+
+        // Copy secrets from stored config (handles "**********" mask)
+        configurationUpdate.secretsProcessor.copySecrets(
+          storedConfig,
+          providedConfig,
+          spec.connectionSpecification,
+        )
+      } else {
+        providedConfig
+      }
+
+    // Sanitize config (with copied secrets if hybrid mode)
+    return secretSanitizer.sanitizePartialConfig(
+      actorDefinitionId = actorDefinitionId,
+      workspaceId = workspaceId,
+      connectionConfiguration = configWithCopiedSecrets,
+    )
+  }
+
+  /**
+   * Helper to get connector specification for an actor definition.
+   * Tries source first, then destination.
+   */
+  @InternalForTesting
+  internal fun getConnectionSpec(
+    actorDefinitionId: UUID,
+    workspaceId: UUID,
+  ): ConnectorSpecification {
+    try {
+      return getSourceConnectionSpec(actorDefinitionId, workspaceId)
+    } catch (e: ConfigNotFoundException) {
+      return getDestinationConnectionSpec(actorDefinitionId, workspaceId)
+    }
+  }
+
+  private fun getSourceConnectionSpec(
+    actorDefinitionId: UUID,
+    workspaceId: UUID,
+  ): ConnectorSpecification {
+    val sourceDef = sourceService.getStandardSourceDefinition(actorDefinitionId)
+    val sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, workspaceId)
+    return sourceVersion.spec
+  }
+
+  private fun getDestinationConnectionSpec(
+    actorDefinitionId: UUID,
+    workspaceId: UUID,
+  ): ConnectorSpecification {
+    val destDef = destinationService.getStandardDestinationDefinition(actorDefinitionId)
+    val destVersion = actorDefinitionVersionHelper.getDestinationVersion(destDef, workspaceId)
+    return destVersion.spec
+  }
+
+  /**
+   * Unified method to create a Check command supporting all modes:
+   * 1. Actor ID only (uses stored config)
+   * 2. Definition ID + config (no stored actor)
+   * 3. Actor ID + config override (hybrid: stored credentials + provided config)
    *
    * returns true if a command has been created, false if it already existed.
    */
   fun createCheckCommand(
     commandId: String,
-    actorId: UUID,
-    jobId: String?,
-    attemptNumber: Long?,
+    actorId: UUID? = null,
+    actorDefinitionId: UUID? = null,
+    workspaceId: UUID? = null,
+    configuration: JsonNode? = null,
+    jobId: String? = null,
+    attemptNumber: Long? = null,
     workloadPriority: WorkloadPriority,
     signalInput: String?,
     commandInput: JsonNode,
@@ -285,28 +404,59 @@ class CommandService(
       return false
     }
 
-    val checkInput = jobInputService.getCheckInput(actorId, jobId, attemptNumber)
-    // Adding the priority to the launcherConfig because it impacts node-pool selection.
+    val checkInput =
+      jobInputService.getCheckInput(
+        actorId = actorId,
+        actorDefinitionId = actorDefinitionId,
+        workspaceId = workspaceId,
+        configuration = configuration,
+        jobId = jobId,
+        attemptId = attemptNumber,
+      )
+
+    // Adding the priority to the launcherConfig because it impacts node-pool selection
     checkInput.launcherConfig.priority = workloadPriority
 
-    val actor = actorRepository.findByActorId(actorId) ?: throw NotFoundException("Unable to find actorId $actorId")
-    val workspaceId = actor.workspaceId
+    // Determine workspace and actor details
+    val effectiveActorId = actorId
+    val effectiveWorkspaceId =
+      if (workspaceId != null) {
+        workspaceId
+      } else if (actorId != null) {
+        actorRepository.findByActorId(actorId)?.workspaceId
+          ?: throw NotFoundException("Unable to find actorId $actorId")
+      } else {
+        throw IllegalArgumentException("Must provide either actorId or workspaceId")
+      }
+
+    val effectiveActorDefinitionId =
+      if (actorDefinitionId != null) {
+        actorDefinitionId
+      } else if (actorId != null) {
+        actorRepository.findByActorId(actorId)?.actorDefinitionId
+          ?: throw NotFoundException("Unable to find actorId $actorId")
+      } else {
+        throw IllegalArgumentException("Must provide either actorId or actorDefinitionId")
+      }
+
     val workloadPayload =
       createCheckCreateWorkloadRequest(
-        actorId = actorId,
-        actorDefinitionId = actor.actorDefinitionId,
-        workspaceId = workspaceId,
+        actorId = effectiveActorId,
+        actorDefinitionId = effectiveActorDefinitionId,
+        workspaceId = effectiveWorkspaceId,
         checkInput = checkInput,
         workloadPriority = workloadPriority,
         signalInput = signalInput,
       )
+
     createCommand(
       commandId = commandId,
       commandType = CommandType.CHECK.name,
       commandInput = commandInput,
-      workspaceId = workspaceId,
+      workspaceId = effectiveWorkspaceId,
       workloadPayload = workloadPayload,
     )
+
     return true
   }
 

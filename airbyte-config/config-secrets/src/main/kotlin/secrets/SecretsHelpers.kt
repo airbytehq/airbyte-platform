@@ -785,6 +785,15 @@ object SecretsHelpers {
   }
 
   /**
+   * Checks if the given JsonNode represents a secret reference.
+   * Secret references have the structure {"_secret": "coordinate"} or {"_secret_reference_id": "id"}.
+   *
+   * @param node the JsonNode to check
+   * @return true if the node is a secret reference, false otherwise
+   */
+  fun isSecretReference(node: JsonNode): Boolean = node.isObject && (node.has(COORDINATE_FIELD) || node.has(SECRET_REF_ID_FIELD))
+
+  /**
    * Checks if the given JsonNode is a regular object. If it's a secret node, returns false.
    */
   private fun isStandardObjectNode(node: JsonNode?): Boolean =

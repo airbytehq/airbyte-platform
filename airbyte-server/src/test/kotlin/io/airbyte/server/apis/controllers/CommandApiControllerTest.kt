@@ -29,7 +29,6 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
-import io.airbyte.commons.server.helpers.SecretSanitizer
 import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
@@ -81,7 +80,6 @@ class CommandApiControllerTest {
   private lateinit var catalogConverter: CatalogConverter
   private lateinit var commandService: CommandService
   private lateinit var roleResolver: RoleResolver
-  private lateinit var secretSanitizer: SecretSanitizer
   private lateinit var workspaceService: WorkspaceService
   private lateinit var apiToPojoConverters: ApiPojoConverters
 
@@ -109,7 +107,6 @@ class CommandApiControllerTest {
     actorRepository = mockk(relaxed = true)
     catalogConverter = mockk(relaxed = true)
     commandService = mockk(relaxed = true)
-    secretSanitizer = mockk(relaxed = true)
     workspaceService = mockk(relaxed = true)
     apiToPojoConverters = ApiPojoConverters(mockk(relaxed = true))
 
@@ -119,7 +116,6 @@ class CommandApiControllerTest {
         actorRepository = actorRepository,
         catalogConverter = catalogConverter,
         commandService = commandService,
-        secretSanitizer = secretSanitizer,
         workspaceService = workspaceService,
         logUtils = mockk(relaxed = true),
         apiPojoConverters = apiToPojoConverters,
@@ -378,13 +374,13 @@ class CommandApiControllerTest {
     assertEquals(RunCheckCommandResponse().id(TEST_COMMAND_ID), output)
     verify {
       commandService.createCheckCommand(
-        TEST_COMMAND_ID,
-        TEST_ACTOR_ID,
-        null,
-        null,
-        WorkloadPriority.DEFAULT,
-        null,
-        any(),
+        commandId = TEST_COMMAND_ID,
+        actorId = TEST_ACTOR_ID,
+        jobId = null,
+        attemptNumber = null,
+        workloadPriority = WorkloadPriority.DEFAULT,
+        signalInput = null,
+        commandInput = any(),
       )
     }
   }
@@ -399,13 +395,13 @@ class CommandApiControllerTest {
     assertEquals(RunCheckCommandResponse().id(TEST_COMMAND_ID), output)
     verify {
       commandService.createCheckCommand(
-        TEST_COMMAND_ID,
-        TEST_ACTOR_ID,
-        null,
-        null,
-        WorkloadPriority.DEFAULT,
-        null,
-        any(),
+        commandId = TEST_COMMAND_ID,
+        actorId = TEST_ACTOR_ID,
+        jobId = null,
+        attemptNumber = null,
+        workloadPriority = WorkloadPriority.DEFAULT,
+        signalInput = null,
+        commandInput = any(),
       )
     }
   }
@@ -424,13 +420,13 @@ class CommandApiControllerTest {
     assertEquals(RunCheckCommandResponse().id(TEST_COMMAND_ID), output)
     verify {
       commandService.createCheckCommand(
-        TEST_COMMAND_ID,
-        TEST_ACTOR_ID,
-        TEST_JOB_ID,
-        TEST_ATTEMPT_NUMBER,
-        WorkloadPriority.HIGH,
-        TEST_SIGNAL_INPUT,
-        Jsons.jsonNode(request),
+        commandId = TEST_COMMAND_ID,
+        actorId = TEST_ACTOR_ID,
+        jobId = TEST_JOB_ID,
+        attemptNumber = TEST_ATTEMPT_NUMBER,
+        workloadPriority = WorkloadPriority.HIGH,
+        signalInput = TEST_SIGNAL_INPUT,
+        commandInput = Jsons.jsonNode(request),
       )
     }
   }
@@ -438,7 +434,24 @@ class CommandApiControllerTest {
   @Test
   fun `run check with an actor definition id and a config`() {
     val sanitizedConfig = Jsons.deserialize("""{"sanitized":"config"}""")
-    every { secretSanitizer.sanitizePartialConfig(TEST_ACTOR_DEFINITION_ID, TEST_WORKSPACE_ID, TEST_CONFIG) } returns sanitizedConfig
+    val context = CommandService.CheckCommandContext(TEST_ACTOR_DEFINITION_ID, TEST_WORKSPACE_ID)
+
+    every {
+      commandService.getCheckCommandContext(
+        actorId = null,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+      )
+    } returns context
+    every {
+      commandService.processCheckConfig(
+        actorId = null,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+        providedConfig = TEST_CONFIG,
+      )
+    } returns sanitizedConfig
+
     val request =
       RunCheckCommandRequest()
         .id(TEST_COMMAND_ID)
@@ -456,13 +469,13 @@ class CommandApiControllerTest {
         .config(sanitizedConfig)
     verify {
       commandService.createCheckCommand(
-        TEST_COMMAND_ID,
-        TEST_ACTOR_DEFINITION_ID,
-        TEST_WORKSPACE_ID,
-        sanitizedConfig,
-        WorkloadPriority.DEFAULT,
-        null,
-        Jsons.jsonNode(expectedCommandInput),
+        commandId = TEST_COMMAND_ID,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+        configuration = sanitizedConfig,
+        workloadPriority = WorkloadPriority.DEFAULT,
+        signalInput = null,
+        commandInput = Jsons.jsonNode(expectedCommandInput),
       )
     }
   }
@@ -470,7 +483,24 @@ class CommandApiControllerTest {
   @Test
   fun `run check with an actor definition id and a config and relevant optional fields`() {
     val sanitizedConfig = Jsons.deserialize("""{"sanitized":"config"}""")
-    every { secretSanitizer.sanitizePartialConfig(TEST_ACTOR_DEFINITION_ID, TEST_WORKSPACE_ID, TEST_CONFIG) } returns sanitizedConfig
+    val context = CommandService.CheckCommandContext(TEST_ACTOR_DEFINITION_ID, TEST_WORKSPACE_ID)
+
+    every {
+      commandService.getCheckCommandContext(
+        actorId = null,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+      )
+    } returns context
+    every {
+      commandService.processCheckConfig(
+        actorId = null,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+        providedConfig = TEST_CONFIG,
+      )
+    } returns sanitizedConfig
+
     val request =
       RunCheckCommandRequest()
         .id(TEST_COMMAND_ID)
@@ -492,13 +522,59 @@ class CommandApiControllerTest {
         .signalInput(TEST_SIGNAL_INPUT)
     verify {
       commandService.createCheckCommand(
-        TEST_COMMAND_ID,
-        TEST_ACTOR_DEFINITION_ID,
-        TEST_WORKSPACE_ID,
-        sanitizedConfig,
-        WorkloadPriority.HIGH,
-        TEST_SIGNAL_INPUT,
-        Jsons.jsonNode(expectedCommandInput),
+        commandId = TEST_COMMAND_ID,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+        configuration = sanitizedConfig,
+        workloadPriority = WorkloadPriority.HIGH,
+        signalInput = TEST_SIGNAL_INPUT,
+        commandInput = Jsons.jsonNode(expectedCommandInput),
+      )
+    }
+  }
+
+  @Test
+  fun `run check with actor id and custom config (hybrid mode)`() {
+    val sanitizedConfig = Jsons.deserialize("""{"sanitized":"config"}""")
+    val context = CommandService.CheckCommandContext(TEST_ACTOR_DEFINITION_ID, TEST_WORKSPACE_ID)
+
+    every {
+      commandService.getCheckCommandContext(
+        actorId = TEST_ACTOR_ID,
+        actorDefinitionId = null,
+        workspaceId = null,
+      )
+    } returns context
+    every {
+      commandService.processCheckConfig(
+        actorId = TEST_ACTOR_ID,
+        actorDefinitionId = TEST_ACTOR_DEFINITION_ID,
+        workspaceId = TEST_WORKSPACE_ID,
+        providedConfig = TEST_CONFIG,
+      )
+    } returns sanitizedConfig
+
+    val request =
+      RunCheckCommandRequest()
+        .id(TEST_COMMAND_ID)
+        .actorId(TEST_ACTOR_ID)
+        .config(TEST_CONFIG)
+    val output = controller.runCheckCommand(request)
+    assertEquals(RunCheckCommandResponse().id(TEST_COMMAND_ID), output)
+
+    val expectedCommandInput =
+      RunCheckCommandRequest()
+        .id(TEST_COMMAND_ID)
+        .actorId(TEST_ACTOR_ID)
+        .config(sanitizedConfig)
+    verify {
+      commandService.createCheckCommand(
+        commandId = TEST_COMMAND_ID,
+        actorId = TEST_ACTOR_ID,
+        configuration = sanitizedConfig,
+        workloadPriority = WorkloadPriority.DEFAULT,
+        signalInput = null,
+        commandInput = Jsons.jsonNode(expectedCommandInput),
       )
     }
   }

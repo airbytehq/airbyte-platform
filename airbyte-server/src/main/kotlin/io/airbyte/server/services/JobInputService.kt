@@ -6,6 +6,7 @@ package io.airbyte.server.services
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.hash.Hashing
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.converters.ConfigReplacer
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder
@@ -36,6 +37,7 @@ import io.airbyte.config.helpers.ResourceRequirementsUtils
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.ConfigInjector
 import io.airbyte.config.secrets.InlinedConfigWithSecretRefs
+import io.airbyte.config.secrets.SecretsHelpers
 import io.airbyte.config.secrets.toInlined
 import io.airbyte.data.repositories.ActorDefinitionRepository
 import io.airbyte.data.repositories.ActorRepository
@@ -70,6 +72,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.server.exceptions.NotFoundException
 import jakarta.inject.Singleton
 import java.util.UUID
+import io.airbyte.config.ActorType as ConfigActorType
 
 val log = KotlinLogging.logger { }
 
@@ -161,36 +164,172 @@ class JobInputService(
     )
   }
 
+  /**
+   * Unified method to create CheckConnectionInput that supports:
+   * 1. Actor ID only (uses stored config)
+   * 2. Definition ID + config (no stored actor)
+   * 3. Actor ID + config override (hybrid: stored credentials + provided config)
+   *
+   * @param actorId Optional actor ID - if provided, will use stored credentials
+   * @param actorDefinitionId Optional definition ID - required if actorId is null
+   * @param workspaceId Optional workspace ID - required if actorId is null
+   * @param configuration Optional config - if null and actorId provided, uses stored config
+   * @param jobId Optional job ID for tracking
+   * @param attemptId Optional attempt ID for tracking
+   * @return CheckConnectionInput ready for execution
+   */
   fun getCheckInput(
-    actorId: UUID,
-    jobId: String?,
-    attemptId: Long?,
+    actorId: UUID? = null,
+    actorDefinitionId: UUID? = null,
+    workspaceId: UUID? = null,
+    configuration: JsonNode? = null,
+    jobId: String? = null,
+    attemptId: Long? = null,
   ): CheckConnectionInput {
-    val actor =
-      actorRepository.findByActorId(actorId)
-        ?: throw NotFoundException() // Better exception?
-    return when (actor.actorType) {
-      ActorType.source -> getCheckInputBySourceId(actorId, jobId, attemptId)
-      ActorType.destination -> getCheckInputByDestinationId(actorId, jobId, attemptId)
-      else -> throw IllegalStateException("Actor type ${actor.actorType} not supported")
+    // Validation
+    require(actorId != null || (actorDefinitionId != null && workspaceId != null)) {
+      "Must provide either actorId OR (actorDefinitionId + workspaceId)"
     }
+
+    // Gather actor information
+    val actorInfo =
+      if (actorId != null) {
+        val actor =
+          actorRepository.findByActorId(actorId)
+            ?: throw NotFoundException()
+
+        ActorInfo(
+          actorType = actor.actorType,
+          actorId = actorId,
+          actorDefinitionId = actor.actorDefinitionId,
+          workspaceId = actor.workspaceId,
+          storedConfiguration =
+            when (actor.actorType) {
+              ActorType.source -> sourceService.getSourceConnection(actorId).configuration
+              ActorType.destination -> destinationService.getDestinationConnection(actorId).configuration
+              else -> throw IllegalStateException("Unsupported actor type: ${actor.actorType}")
+            },
+        )
+      } else {
+        val actorDefinition =
+          actorDefinitionRepository.findByActorDefinitionId(actorDefinitionId!!)
+            ?: throw NotFoundException()
+
+        ActorInfo(
+          actorType = actorDefinition.actorType,
+          actorId = null,
+          actorDefinitionId = actorDefinitionId,
+          workspaceId = workspaceId!!,
+          storedConfiguration = null,
+        )
+      }
+
+    // Determine configuration to use
+    val effectiveConfiguration =
+      when {
+        configuration != null && actorInfo.storedConfiguration != null -> {
+          // Hybrid mode: merge provided config with stored config
+          mergeConfigurations(actorInfo.storedConfiguration, configuration)
+        }
+        configuration != null -> configuration
+        actorInfo.storedConfiguration != null -> actorInfo.storedConfiguration
+        else -> throw IllegalArgumentException("No configuration provided and no stored configuration available")
+      }
+
+    // Get definition metadata
+    val (definition, definitionVersion, resourceRequirements) =
+      when (actorInfo.actorType) {
+        ActorType.source -> {
+          val info = getSourceInformationByDefinitionId(actorInfo.actorDefinitionId, actorInfo.workspaceId)
+          Triple(info.sourceDefinition as Any, info.sourceDefinitionVersion, info.resourceRequirements)
+        }
+        ActorType.destination -> {
+          val info = getDestinationInformationByDefinitionId(actorInfo.actorDefinitionId, actorInfo.workspaceId)
+          Triple(info.destinationDefinition as Any, info.destinationDefinitionVersion, info.resourceRequirements)
+        }
+        else -> throw IllegalStateException("Unsupported actor type: ${actorInfo.actorType}")
+      }
+
+    // Inject OAuth parameters
+    val configWithOAuth =
+      when (actorInfo.actorType) {
+        ActorType.source ->
+          oAuthConfigSupplier.injectSourceOAuthParameters(
+            actorInfo.actorDefinitionId,
+            actorInfo.actorId,
+            actorInfo.workspaceId,
+            effectiveConfiguration,
+          )
+        ActorType.destination ->
+          oAuthConfigSupplier.injectDestinationOAuthParameters(
+            actorInfo.actorDefinitionId,
+            actorInfo.actorId,
+            actorInfo.workspaceId,
+            effectiveConfiguration,
+          )
+        else -> effectiveConfiguration
+      }
+
+    // Build actor context
+    val actorContext =
+      when {
+        actorInfo.actorId != null && actorInfo.actorType == ActorType.source -> {
+          contextBuilder.fromSource(sourceService.getSourceConnection(actorInfo.actorId))
+        }
+        actorInfo.actorId != null && actorInfo.actorType == ActorType.destination -> {
+          contextBuilder.fromDestination(destinationService.getDestinationConnection(actorInfo.actorId))
+        }
+        else -> {
+          contextBuilder.fromActorDefinitionId(
+            actorInfo.actorDefinitionId,
+            when (actorInfo.actorType) {
+              ActorType.source -> ConfigActorType.SOURCE
+              ActorType.destination -> ConfigActorType.DESTINATION
+              else -> throw IllegalStateException("Unsupported actor type")
+            },
+            actorInfo.workspaceId,
+          )
+        }
+      }
+
+    // Build final CheckConnectionInput
+    return buildJobCheckConnectionConfig(
+      actorType =
+        when (actorInfo.actorType) {
+          ActorType.source -> ConfigActorType.SOURCE
+          ActorType.destination -> ConfigActorType.DESTINATION
+          else -> throw IllegalStateException("Unsupported actor type")
+        },
+      definitionId = actorInfo.actorDefinitionId,
+      actorId = actorInfo.actorId,
+      workspaceId = actorInfo.workspaceId,
+      configuration = configWithOAuth,
+      dockerImage = ActorDefinitionVersionHelper.getDockerImageName(definitionVersion),
+      protocolVersion = Version(definitionVersion.protocolVersion),
+      isCustomConnector =
+        when (actorInfo.actorType) {
+          ActorType.source -> (definition as StandardSourceDefinition).custom
+          ActorType.destination -> (definition as StandardDestinationDefinition).custom
+          else -> false
+        },
+      resourceRequirements = resourceRequirements,
+      allowedHosts = definitionVersion.allowedHosts,
+      actorContext = actorContext,
+      jobId = jobId,
+      attemptId = attemptId,
+    )
   }
 
-  fun getCheckInput(
-    actorDefinitionId: UUID,
-    workspaceId: UUID,
-    configuration: JsonNode,
-  ): CheckConnectionInput {
-    val actorDefinition =
-      actorDefinitionRepository.findByActorDefinitionId(actorDefinitionId)
-        ?: throw NotFoundException() // Better exception?
-
-    return when (actorDefinition.actorType) {
-      ActorType.source -> getCheckInputBySourceDefinitionId(actorDefinitionId, workspaceId, configuration)
-      ActorType.destination -> getCheckInputByDestinationDefinitionId(actorDefinitionId, workspaceId, configuration)
-      else -> throw IllegalStateException("Actor type ${actorDefinition.actorType} not supported")
-    }
-  }
+  /**
+   * Internal data class to hold actor information during check input creation
+   */
+  private data class ActorInfo(
+    val actorType: ActorType,
+    val actorId: UUID?,
+    val actorDefinitionId: UUID,
+    val workspaceId: UUID,
+    val storedConfiguration: JsonNode?,
+  )
 
   fun getReplicationInput(
     connectionId: UUID,
@@ -482,152 +621,32 @@ class JobInputService(
     }
   }
 
-  private fun getCheckInputBySourceId(
-    sourceId: UUID,
-    jobId: String?,
-    attemptId: Long?,
-  ): CheckConnectionInput {
-    val (source, sourceDefinition, sourceDefinitionVersion, resourceRequirements) = getSourceInformation(sourceId)
+  /**
+   * Merges a provided configuration with stored configuration.
+   * Strategy: Prioritize user-provided fields (including sanitized secrets),
+   * but preserve secrets from stored config for fields NOT provided by user.
+   *
+   * This allows callers to test new configuration values (including updated secrets)
+   * while using existing credentials for fields they don't specify.
+   */
+  @InternalForTesting
+  internal fun mergeConfigurations(
+    storedConfig: JsonNode,
+    providedConfig: JsonNode,
+  ): JsonNode {
+    // Start with stored config (has full secrets)
+    val merged = storedConfig.deepCopy() as com.fasterxml.jackson.databind.node.ObjectNode
 
-    val dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceDefinitionVersion)
-    val configWithOauthParams: JsonNode =
-      oAuthConfigSupplier.injectSourceOAuthParameters(
-        sourceDefinition.sourceDefinitionId,
-        source.sourceId,
-        source.workspaceId,
-        source.configuration,
-      )
+    // Overlay all provided config fields (secrets are already sanitized by this point)
+    providedConfig.fields().forEach { (key, value) ->
+      merged.set<JsonNode>(key, value)
+    }
 
-    return buildJobCheckConnectionConfig(
-      actorType = io.airbyte.config.ActorType.SOURCE,
-      definitionId = source.sourceDefinitionId,
-      actorId = source.sourceId,
-      workspaceId = source.workspaceId,
-      configuration = configWithOauthParams,
-      dockerImage = dockerImage,
-      protocolVersion = Version(sourceDefinitionVersion.protocolVersion),
-      isCustomConnector = sourceDefinition.custom,
-      resourceRequirements = resourceRequirements,
-      allowedHosts = sourceDefinitionVersion.allowedHosts,
-      actorContext = contextBuilder.fromSource(source),
-      jobId = jobId,
-      attemptId = attemptId,
-    )
-  }
-
-  private fun getCheckInputBySourceDefinitionId(
-    sourceDefinitionId: UUID,
-    workspaceId: UUID,
-    configuration: JsonNode,
-  ): CheckConnectionInput {
-    val (sourceDefinition, sourceDefinitionVersion, resourceRequirements) = getSourceInformationByDefinitionId(sourceDefinitionId, workspaceId)
-
-    val dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceDefinitionVersion)
-
-    val configWithOauthParams: JsonNode =
-      oAuthConfigSupplier.injectSourceOAuthParameters(
-        sourceDefinition.sourceDefinitionId,
-        null,
-        workspaceId,
-        configuration,
-      )
-
-    val jobId = UUID.randomUUID().toString()
-    val attemptId = 0L
-    val actorType = io.airbyte.config.ActorType.SOURCE
-
-    return buildJobCheckConnectionConfig(
-      actorType = actorType,
-      definitionId = sourceDefinition.sourceDefinitionId,
-      actorId = null,
-      workspaceId = workspaceId,
-      configuration = configWithOauthParams,
-      dockerImage = dockerImage,
-      protocolVersion = Version(sourceDefinitionVersion.protocolVersion),
-      isCustomConnector = sourceDefinition.custom,
-      resourceRequirements = resourceRequirements,
-      allowedHosts = sourceDefinitionVersion.allowedHosts,
-      actorContext = contextBuilder.fromActorDefinitionId(sourceDefinition.sourceDefinitionId, actorType, workspaceId),
-      jobId = jobId,
-      attemptId = attemptId,
-    )
-  }
-
-  private fun getCheckInputByDestinationDefinitionId(
-    destinationDefinitionId: UUID,
-    workspaceId: UUID,
-    configuration: JsonNode,
-  ): CheckConnectionInput {
-    val destinationInformation = getDestinationInformationByDefinitionId(destinationDefinitionId, workspaceId)
-    val destinationDefinition = destinationInformation.destinationDefinition
-
-    val dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationInformation.destinationDefinitionVersion)
-    val configWithOauthParams: JsonNode =
-      oAuthConfigSupplier.injectDestinationOAuthParameters(
-        destinationDefinition.destinationDefinitionId,
-        null,
-        workspaceId,
-        configuration,
-      )
-
-    val jobId = UUID.randomUUID().toString()
-    val attemptId = 0L
-    val actorType = io.airbyte.config.ActorType.DESTINATION
-
-    return buildJobCheckConnectionConfig(
-      actorType = actorType,
-      definitionId = destinationDefinition.destinationDefinitionId,
-      actorId = null,
-      workspaceId = workspaceId,
-      configuration = configWithOauthParams,
-      dockerImage = dockerImage,
-      protocolVersion = Version(destinationInformation.destinationDefinitionVersion.protocolVersion),
-      isCustomConnector = destinationInformation.destinationDefinition.custom,
-      resourceRequirements = destinationInformation.resourceRequirements,
-      allowedHosts = destinationInformation.destinationDefinitionVersion.allowedHosts,
-      actorContext = contextBuilder.fromActorDefinitionId(destinationDefinition.destinationDefinitionId, actorType, workspaceId),
-      jobId = jobId,
-      attemptId = attemptId,
-    )
-  }
-
-  private fun getCheckInputByDestinationId(
-    destinationId: UUID,
-    jobId: String?,
-    attemptId: Long?,
-  ): CheckConnectionInput {
-    val destination = destinationService.getDestinationConnection(destinationId) ?: throw NotFoundException()
-    val destinationInformation = getDestinationInformation(destinationId)
-    val destinationDefinition = destinationInformation.destinationDefinition
-
-    val dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationInformation.destinationDefinitionVersion)
-    val configWithOauthParams: JsonNode =
-      oAuthConfigSupplier.injectDestinationOAuthParameters(
-        destinationDefinition.destinationDefinitionId,
-        destination.destinationId,
-        destination.workspaceId,
-        destination.configuration,
-      )
-
-    return buildJobCheckConnectionConfig(
-      actorType = io.airbyte.config.ActorType.DESTINATION,
-      definitionId = destination.destinationDefinitionId,
-      actorId = destination.destinationId,
-      workspaceId = destination.workspaceId,
-      configuration = configWithOauthParams,
-      dockerImage = dockerImage,
-      protocolVersion = Version(destinationInformation.destinationDefinitionVersion.protocolVersion),
-      isCustomConnector = destinationInformation.destinationDefinition.custom,
-      resourceRequirements = destinationInformation.resourceRequirements,
-      allowedHosts = destinationInformation.destinationDefinitionVersion.allowedHosts,
-      actorContext = contextBuilder.fromDestination(destination),
-      jobId = jobId,
-      attemptId = attemptId,
-    )
+    return merged
   }
 
   private fun buildJobCheckConnectionConfig(
-    actorType: io.airbyte.config.ActorType,
+    actorType: ConfigActorType,
     definitionId: UUID,
     actorId: UUID?,
     workspaceId: UUID,
@@ -706,7 +725,7 @@ class JobInputService(
       .withConnectionId(connectionId)
 
   private fun buildJobDiscoverConfig(
-    actorType: io.airbyte.config.ActorType,
+    actorType: ConfigActorType,
     definitionId: UUID,
     actorId: UUID?,
     workspaceId: UUID,
@@ -785,7 +804,7 @@ class JobInputService(
     val hashedConfiguration = HASH_FUNCTION.hashBytes(Jsons.serialize(source.configuration).toByteArray(Charsets.UTF_8)).toString()
 
     return buildJobDiscoverConfig(
-      actorType = io.airbyte.config.ActorType.SOURCE,
+      actorType = ConfigActorType.SOURCE,
       definitionId = source.sourceDefinitionId,
       actorId = source.sourceId,
       workspaceId = source.workspaceId,
@@ -826,7 +845,7 @@ class JobInputService(
     val hashedConfiguration = HASH_FUNCTION.hashBytes(Jsons.serialize(destination.configuration).toByteArray(Charsets.UTF_8)).toString()
 
     return buildJobDiscoverConfig(
-      actorType = io.airbyte.config.ActorType.DESTINATION,
+      actorType = ConfigActorType.DESTINATION,
       definitionId = destination.destinationDefinitionId,
       actorId = destination.destinationId,
       workspaceId = destination.workspaceId,

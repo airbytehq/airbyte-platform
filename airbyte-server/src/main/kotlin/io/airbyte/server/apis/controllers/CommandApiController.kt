@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.generated.CommandApi
 import io.airbyte.api.model.generated.CancelCommandRequest
 import io.airbyte.api.model.generated.CancelCommandResponse
@@ -41,7 +42,6 @@ import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.converters.toApi
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
-import io.airbyte.commons.server.helpers.SecretSanitizer
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.temporal.scheduling.ReplicationCommandApiInput
@@ -62,9 +62,11 @@ import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Post
+import io.micronaut.http.server.exceptions.NotFoundException
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
+import java.util.UUID
 import io.airbyte.api.model.generated.JobLogs as ApiJobLogs
 
 @Controller("/api/v1/commands")
@@ -76,7 +78,6 @@ class CommandApiController(
   private val catalogConverter: CatalogConverter,
   private val apiPojoConverters: ApiPojoConverters,
   private val commandService: CommandService,
-  private val secretSanitizer: SecretSanitizer,
   private val workspaceService: WorkspaceService,
   private val logUtils: LogUtils,
 ) : CommandApi {
@@ -268,44 +269,56 @@ class CommandApiController(
   ): RunCheckCommandResponse =
     withRoleValidation(
       id =
-        if (runCheckCommandRequest.workspaceId !=
-          null
-        ) {
+        if (runCheckCommandRequest.workspaceId != null) {
           WorkspaceId(runCheckCommandRequest.workspaceId)
-        } else {
+        } else if (runCheckCommandRequest.actorId != null) {
           ActorId(runCheckCommandRequest.actorId)
+        } else {
+          throw IllegalArgumentException("Must provide either workspaceId or actorId")
         },
       role = AuthRoleConstants.WORKSPACE_RUNNER,
     ) {
       val priority: WorkloadPriority = runCheckCommandRequest.priority?.toWorkloadPriority() ?: WorkloadPriority.DEFAULT
-      if (runCheckCommandRequest.actorId != null) {
-        commandService.createCheckCommand(
-          commandId = runCheckCommandRequest.id,
-          actorId = runCheckCommandRequest.actorId,
-          jobId = runCheckCommandRequest.jobId,
-          attemptNumber = runCheckCommandRequest.attemptNumber?.toLong(),
-          workloadPriority = priority,
-          signalInput = runCheckCommandRequest.signalInput,
-          commandInput = Jsons.jsonNode(runCheckCommandRequest),
-        )
-      } else {
-        val sanitizedConfig =
-          secretSanitizer.sanitizePartialConfig(
-            actorDefinitionId = runCheckCommandRequest.actorDefinitionId,
-            workspaceId = runCheckCommandRequest.workspaceId,
-            connectionConfiguration = Jsons.jsonNode(runCheckCommandRequest.config),
+
+      // Process and sanitize config if present
+      val sanitizedConfig =
+        if (runCheckCommandRequest.config != null) {
+          // Get actor context from service
+          val context =
+            commandService.getCheckCommandContext(
+              actorId = runCheckCommandRequest.actorId,
+              actorDefinitionId = runCheckCommandRequest.actorDefinitionId,
+              workspaceId = runCheckCommandRequest.workspaceId,
+            )
+
+          commandService.processCheckConfig(
+            actorId = runCheckCommandRequest.actorId,
+            actorDefinitionId = context.actorDefinitionId,
+            workspaceId = context.workspaceId,
+            providedConfig = Jsons.jsonNode(runCheckCommandRequest.config),
           )
+        } else {
+          null
+        }
+
+      // Update request with sanitized config for commandInput (logging/auditing)
+      if (sanitizedConfig != null) {
         runCheckCommandRequest.config = sanitizedConfig
-        commandService.createCheckCommand(
-          commandId = runCheckCommandRequest.id,
-          actorDefinitionId = runCheckCommandRequest.actorDefinitionId,
-          workspaceId = runCheckCommandRequest.workspaceId,
-          configuration = sanitizedConfig,
-          workloadPriority = priority,
-          signalInput = runCheckCommandRequest.signalInput,
-          commandInput = Jsons.jsonNode(runCheckCommandRequest),
-        )
       }
+
+      commandService.createCheckCommand(
+        commandId = runCheckCommandRequest.id,
+        actorId = runCheckCommandRequest.actorId,
+        actorDefinitionId = runCheckCommandRequest.actorDefinitionId,
+        workspaceId = runCheckCommandRequest.workspaceId,
+        configuration = sanitizedConfig,
+        jobId = runCheckCommandRequest.jobId,
+        attemptNumber = runCheckCommandRequest.attemptNumber?.toLong(),
+        workloadPriority = priority,
+        signalInput = runCheckCommandRequest.signalInput,
+        commandInput = Jsons.jsonNode(runCheckCommandRequest),
+      )
+
       return RunCheckCommandResponse().id(runCheckCommandRequest.id)
     }
 

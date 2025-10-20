@@ -836,4 +836,17 @@ internal class SecretsHelpersTest {
           )
         }
   }
+
+  @Test
+  fun `isSecretReference identifies secret reference objects`() {
+    val secretRef = Jsons.deserialize("""{"_secret":"secret-123"}""")
+    val secretRefId = Jsons.deserialize("""{"_secret_reference_id":"ref-456"}""")
+    val nonSecret = Jsons.deserialize("""{"value":"not-a-secret"}""")
+    val plainString = Jsons.deserialize(""""just-a-string"""")
+
+    Assertions.assertTrue(SecretsHelpers.isSecretReference(secretRef))
+    Assertions.assertTrue(SecretsHelpers.isSecretReference(secretRefId))
+    Assertions.assertFalse(SecretsHelpers.isSecretReference(nonSecret))
+    Assertions.assertFalse(SecretsHelpers.isSecretReference(plainString))
+  }
 }
