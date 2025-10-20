@@ -4,7 +4,6 @@
 
 package io.airbyte.config
 
-import jakarta.annotation.Nullable
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -13,11 +12,11 @@ import java.util.UUID
  * Groups are organization-scoped collections of users that can have permissions assigned to them.
  * Group names must be unique within an organization.
  */
-@JvmRecord
+
 data class Group(
   val groupId: UUID,
   val name: String,
-  @field:Nullable @param:Nullable val description: String?,
+  val description: String?,
   val organizationId: UUID,
   val createdAt: OffsetDateTime,
   val updatedAt: OffsetDateTime,
@@ -29,8 +28,4 @@ data class Group(
       require(it.length <= 1024) { "Group description cannot exceed 1024 characters" }
     }
   }
-
-  override fun toString(): String =
-    "Group(groupId=$groupId, name='$name', description=$description, " +
-      "organizationId=$organizationId, createdAt=$createdAt, updatedAt=$updatedAt)"
 }

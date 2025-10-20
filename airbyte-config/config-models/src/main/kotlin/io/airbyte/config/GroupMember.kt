@@ -12,12 +12,9 @@ import java.util.UUID
  * This establishes many-to-many relationships between users and groups.
  * The combination of groupId and userId is unique - a user can only be a member of a group once.
  */
-@JvmRecord
 data class GroupMember(
   val id: UUID,
   val groupId: UUID,
   val userId: UUID,
   val createdAt: OffsetDateTime,
-) {
-  override fun toString(): String = "GroupMember(id=$id, groupId=$groupId, userId=$userId, createdAt=$createdAt)"
-}
+)
