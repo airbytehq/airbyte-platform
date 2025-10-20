@@ -303,12 +303,20 @@ internal class EntitlementServiceImpl(
   }
 
   private fun hasConfigTemplateEntitlement(organizationId: OrganizationId): EntitlementResult {
-    val entitlementResult = entitlementClient.checkEntitlement(organizationId, ConfigTemplateEntitlement)
+    val (clientResult, clientReason) =
+      try {
+        entitlementClient.checkEntitlement(organizationId, ConfigTemplateEntitlement).let {
+          Pair(it.isEntitled, it.reason)
+        }
+      } catch (e: Exception) {
+        logger.error(e) { "Error checking entitlement" }
+        Pair(false, "Error while checking entitlement: ${e.message}; falling back to feature flag")
+      }
     val ffResult = entitlementProvider.hasConfigTemplateEntitlements(organizationId)
     return EntitlementResult(
       featureId = ConfigTemplateEntitlement.featureId,
-      isEntitled = entitlementResult.isEntitled || ffResult,
-      reason = entitlementResult.reason,
+      isEntitled = clientResult || ffResult,
+      reason = clientReason,
     )
   }
 

@@ -179,6 +179,40 @@ class EntitlementServiceTest {
   }
 
   @Test
+  fun `checkEntitlement for ConfigTemplateEntitlement falls back to FF on client exception`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    // Test exception handling: Stigg throws exception, fall back to FF
+    every { entitlementClient.checkEntitlement(orgId, ConfigTemplateEntitlement) } throws RuntimeException("Stigg API error")
+    every { entitlementProvider.hasConfigTemplateEntitlements(orgId) } returns true
+
+    val result = entitlementService.checkEntitlement(orgId, ConfigTemplateEntitlement)
+
+    assertEquals(true, result.isEntitled)
+    assertEquals("feature-embedded", result.featureId)
+    assertEquals("Error while checking entitlement: Stigg API error; falling back to feature flag", result.reason)
+    verify { entitlementClient.checkEntitlement(orgId, ConfigTemplateEntitlement) }
+    verify { entitlementProvider.hasConfigTemplateEntitlements(orgId) }
+  }
+
+  @Test
+  fun `checkEntitlement for ConfigTemplateEntitlement returns false when client throws and FF is false`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    // Test exception handling: Stigg throws exception, FF is false = false overall
+    every { entitlementClient.checkEntitlement(orgId, ConfigTemplateEntitlement) } throws RuntimeException("Stigg API error")
+    every { entitlementProvider.hasConfigTemplateEntitlements(orgId) } returns false
+
+    val result = entitlementService.checkEntitlement(orgId, ConfigTemplateEntitlement)
+
+    assertEquals(false, result.isEntitled)
+    assertEquals("feature-embedded", result.featureId)
+    assertEquals("Error while checking entitlement: Stigg API error; falling back to feature flag", result.reason)
+    verify { entitlementClient.checkEntitlement(orgId, ConfigTemplateEntitlement) }
+    verify { entitlementProvider.hasConfigTemplateEntitlements(orgId) }
+  }
+
+  @Test
   fun `getCurrentPlanId returns string id of current plan`() {
     val orgId = OrganizationId(UUID.randomUUID())
 
