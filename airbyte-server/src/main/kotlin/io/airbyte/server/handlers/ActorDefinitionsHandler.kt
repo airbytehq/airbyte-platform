@@ -30,7 +30,11 @@ import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.server.services.CommandService
 import jakarta.inject.Singleton
 import java.io.IOException
+import java.time.Instant
 import java.util.UUID
+import io.airbyte.api.model.generated.FailureOrigin as ApiFailureOrigin
+import io.airbyte.api.model.generated.FailureReason as ApiFailureReason
+import io.airbyte.api.model.generated.FailureType as ApiFailureType
 
 /**
  * Handler for unified actor definition operations (sources and destinations).
@@ -143,31 +147,72 @@ class ActorDefinitionsHandler(
       .orElseThrow { IdNotFoundKnownException("Could not find configuration for actorDefinition", actorDefinitionId.toString()) }
       .versionId
 
+  /**
+   * Result of finishing an actor definition create or update operation.
+   */
+  data class ActorDefinitionFinishResult(
+    val actorDefinitionId: UUID?,
+    val failureReason: ApiFailureReason?,
+  )
+
+  /**
+   * Result of retrieving spec from command, including potential failure.
+   */
+  private data class SpecResult(
+    val spec: ConnectorSpecification?,
+    val failureReason: ApiFailureReason?,
+  )
+
   fun finishActorDefinitionUpdate(
     actorType: ActorType,
     actorUpdateRequest: ActorUpdateRequest,
     actorDefinitionMetadata: ActorDefinitionMetadata,
     commandId: String?,
     workspaceId: UUID,
-  ): UUID? {
-    val spec = if (commandId != null) getSpecFromCommand(commandId, actorUpdateRequest.imageName, actorUpdateRequest.imageTag) else null
+  ): ActorDefinitionFinishResult {
+    val specResult =
+      if (commandId !=
+        null
+      ) {
+        getSpecFromCommandSafely(commandId, actorUpdateRequest.imageName, actorUpdateRequest.imageTag)
+      } else {
+        SpecResult(null, null)
+      }
 
-    return if (actorUpdateRequest.actorDefinitionId == null) {
-      finishCreate(
-        actorType = actorType,
-        spec = spec ?: throw IllegalStateException("Spec not found"),
-        imageName = actorUpdateRequest.imageName,
-        imageTag = actorUpdateRequest.imageTag,
-        workspaceId = workspaceId,
-        actorDefinitionMetadata = actorDefinitionMetadata,
-      )
-    } else {
-      finishUpdate(
-        actorType = actorType,
-        actorDefinitionId = actorUpdateRequest.actorDefinitionId,
-        spec = spec,
-        imageTag = actorUpdateRequest.imageTag,
-        actorDefinitionMetadata = actorDefinitionMetadata,
+    // If spec retrieval failed, return failure immediately
+    if (specResult.failureReason != null) {
+      return ActorDefinitionFinishResult(null, specResult.failureReason)
+    }
+
+    return try {
+      val actorDefinitionId =
+        if (actorUpdateRequest.actorDefinitionId == null) {
+          finishCreate(
+            actorType = actorType,
+            spec = specResult.spec ?: throw IllegalStateException("Spec not found"),
+            imageName = actorUpdateRequest.imageName,
+            imageTag = actorUpdateRequest.imageTag,
+            workspaceId = workspaceId,
+            actorDefinitionMetadata = actorDefinitionMetadata,
+          )
+        } else {
+          finishUpdate(
+            actorType = actorType,
+            actorDefinitionId = actorUpdateRequest.actorDefinitionId,
+            spec = specResult.spec,
+            imageTag = actorUpdateRequest.imageTag,
+            actorDefinitionMetadata = actorDefinitionMetadata,
+          )
+        }
+      ActorDefinitionFinishResult(actorDefinitionId, null)
+    } catch (e: Exception) {
+      ActorDefinitionFinishResult(
+        null,
+        ApiFailureReason()
+          .failureOrigin(ApiFailureOrigin.AIRBYTE_PLATFORM)
+          .failureType(ApiFailureType.SYSTEM_ERROR)
+          .internalMessage(e.message ?: "Unknown error occurred during actor definition finish")
+          .timestamp(Instant.now().toEpochMilli()),
       )
     }
   }
@@ -258,6 +303,57 @@ class ActorDefinitionsHandler(
     }
     return commandOutput.spec
   }
+
+  /**
+   * Safely retrieve spec from command, returning failure reason instead of throwing.
+   * This allows the workflow to complete gracefully with a failure result.
+   */
+  private fun getSpecFromCommandSafely(
+    commandId: String,
+    imageName: String,
+    imageTag: String,
+  ): SpecResult =
+    try {
+      val commandOutput = commandService.getSpecJobOutput(commandId, withLogs = false)
+      if (commandOutput == null) {
+        SpecResult(
+          null,
+          ApiFailureReason()
+            .failureOrigin(ApiFailureOrigin.AIRBYTE_PLATFORM)
+            .failureType(ApiFailureType.SYSTEM_ERROR)
+            .internalMessage("Command output not found for commandId: $commandId")
+            .timestamp(Instant.now().toEpochMilli()),
+        )
+      } else if (commandOutput.spec == null) {
+        // If the command has a failure reason, convert it to API FailureReason
+        // Otherwise create a new one with a default message
+        val apiFailureReason =
+          if (commandOutput.failureReason != null) {
+            // Convert from config.FailureReason to API FailureReason
+            // This already has proper origin/type set from the launcher/workload
+            apiToPojoConverters.failureReasonToApi(commandOutput.failureReason)
+          } else {
+            // Fallback if no failure reason was provided
+            ApiFailureReason()
+              .failureOrigin(ApiFailureOrigin.AIRBYTE_PLATFORM)
+              .failureType(ApiFailureType.SYSTEM_ERROR)
+              .internalMessage("Failed to retrieve spec for image: $imageName:$imageTag")
+              .timestamp(Instant.now().toEpochMilli())
+          }
+        SpecResult(null, apiFailureReason)
+      } else {
+        SpecResult(commandOutput.spec, null)
+      }
+    } catch (e: Exception) {
+      SpecResult(
+        null,
+        ApiFailureReason()
+          .failureOrigin(ApiFailureOrigin.AIRBYTE_PLATFORM)
+          .failureType(ApiFailureType.SYSTEM_ERROR)
+          .internalMessage(e.message ?: "Unknown error retrieving spec for image: $imageName:$imageTag")
+          .timestamp(Instant.now().toEpochMilli()),
+      )
+    }
 
   /**
    * Get the result of an actor definition create or update operation.

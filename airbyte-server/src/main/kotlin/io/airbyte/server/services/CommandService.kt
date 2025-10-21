@@ -981,7 +981,9 @@ class CommandService(
           .withTimestamp(clock.millis())
 
       // do some classification from workload.terminationSource
-      WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE ->
+      WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE -> {
+        val isImagePullError = workload.terminationReason?.contains("Failed to pull container image", ignoreCase = true) ?: false
+
         FailureReason()
           .withFailureOrigin(
             when (workload.terminationSource) {
@@ -989,10 +991,16 @@ class CommandService(
               "destination" -> FailureReason.FailureOrigin.DESTINATION
               else -> FailureReason.FailureOrigin.AIRBYTE_PLATFORM
             },
-          ).withExternalMessage(
-            "Workload ${if (workload.status == WorkloadStatus.CANCELLED) "cancelled by" else "failed, source:"} ${workload.terminationSource}",
-          ).withInternalMessage(workload.terminationReason)
+          ).withFailureType(
+            if (isImagePullError) {
+              FailureReason.FailureType.CONFIG_ERROR
+            } else {
+              FailureReason.FailureType.SYSTEM_ERROR
+            },
+          ).withExternalMessage(workload.terminationReason)
+          .withInternalMessage(workload.terminationReason)
           .withTimestamp(clock.millis())
+      }
 
       // We should never be in this situation, workload is still running not having an output is expected,
       // we should not be trying to read the output of a non-terminal workload.

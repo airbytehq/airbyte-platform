@@ -7,6 +7,7 @@ package io.airbyte.workload.launcher.client
 import com.amazonaws.internal.ExceptionUtils
 import io.airbyte.config.WorkloadConstants.Companion.LAUNCH_ERROR_SOURCE
 import io.airbyte.config.WorkloadPriority
+import io.airbyte.workers.exception.ImagePullException
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.ClaimResponse
 import io.airbyte.workload.api.domain.Workload
@@ -37,7 +38,18 @@ class WorkloadApiClient(
     error: Throwable,
   ) {
     try {
-      updateStatusToFailed(workloadId = workloadId, source = LAUNCH_ERROR_SOURCE, reason = ExceptionUtils.exceptionStackTrace(error))
+      // For ImagePullException, use a concise user-friendly message instead of full stack trace
+      val reason =
+        if (error is ImagePullException || error.cause is ImagePullException) {
+          val imagePullException = if (error is ImagePullException) error else error.cause as ImagePullException
+          // Extract just the error message without the stack trace
+          imagePullException.message ?: "Unable to pull container image"
+        } else {
+          // For other exceptions, use the full stack trace for debugging
+          ExceptionUtils.exceptionStackTrace(error)
+        }
+
+      updateStatusToFailed(workloadId = workloadId, source = LAUNCH_ERROR_SOURCE, reason = reason)
     } catch (e: Exception) {
       logger.warn(e) {
         "Could not set the status for workload $workloadId to failed.\n" +

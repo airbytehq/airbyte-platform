@@ -60,7 +60,7 @@ open class ActorDefinitionUpdateWorkflowImpl : ActorDefinitionUpdateWorkflow {
     return ActorDefinitionUpdateOutput(
       actorDefinitionId = output.actorDefinitionId,
       commandId = commandId,
-      failureReason = null,
+      failureReason = output.failureReason,
     )
   }
 }

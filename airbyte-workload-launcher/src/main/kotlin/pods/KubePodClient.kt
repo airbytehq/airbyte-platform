@@ -13,6 +13,7 @@ import io.airbyte.featureflag.EnableAsyncProfiler
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.ProfilingMode
 import io.airbyte.metrics.lib.ApmTraceUtils
+import io.airbyte.workers.exception.ImagePullException
 import io.airbyte.workers.exception.KubeClientException
 import io.airbyte.workers.exception.KubeCommandType
 import io.airbyte.workers.exception.PodType
@@ -268,11 +269,23 @@ class KubePodClient(
       kubePodLauncher.waitForPodReadyOrTerminalByPod(pod, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE)
     } catch (e: RuntimeException) {
       ApmTraceUtils.addExceptionToTrace(e)
-      throw KubeClientException(
-        message = "$podLogLabel pod failed to start within allotted timeout.",
-        cause = e,
-        commandType = KubeCommandType.WAIT_MAIN,
-      )
+      when (e) {
+        is ImagePullException -> {
+          // Re-throw with more context - this will be caught by FailureHandler and reported to workload API
+          throw ImagePullException(
+            message = "Failed to pull container image(s) for $podLogLabel pod main containers. ${e.message}",
+            cause = e,
+            commandType = KubeCommandType.WAIT_MAIN,
+          )
+        }
+        else -> {
+          throw KubeClientException(
+            message = "$podLogLabel pod failed to start within allotted timeout.",
+            cause = e,
+            commandType = KubeCommandType.WAIT_MAIN,
+          )
+        }
+      }
     }
   }
 
@@ -301,6 +314,15 @@ class KubePodClient(
       kubePodLauncher.waitForPodInitComplete(pod, POD_INIT_TIMEOUT_VALUE)
     } catch (e: Exception) {
       when (e) {
+        is ImagePullException -> {
+          ApmTraceUtils.addExceptionToTrace(e)
+          // Re-throw with more context - this will be caught by FailureHandler and reported to workload API
+          throw ImagePullException(
+            message = "Failed to pull container image(s) for $podLogLabel pod. ${e.message}",
+            cause = e,
+            commandType = KubeCommandType.WAIT_INIT,
+          )
+        }
         is TimeoutException, is KubernetesClientTimeoutException -> {
           ApmTraceUtils.addExceptionToTrace(e)
           throw ResourceConstraintException(
@@ -308,7 +330,8 @@ class KubePodClient(
             e,
             KubeCommandType.WAIT_INIT,
           )
-        } else -> throw e
+        }
+        else -> throw e
       }
     }
   }

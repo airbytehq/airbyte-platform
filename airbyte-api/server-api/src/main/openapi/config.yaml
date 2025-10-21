@@ -1028,6 +1028,8 @@ paths:
                     type: string
                     format: uuid
                     description: The ID of the actor definition (returned for create operations, null for updates)
+                  failureReason:
+                    $ref: "#/components/schemas/FailureReason"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":

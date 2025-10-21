@@ -11,6 +11,8 @@ import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
+import io.airbyte.workers.exception.ImagePullException
+import io.airbyte.workers.exception.KubeCommandType
 import io.airbyte.workers.models.InitContainerConstants
 import io.airbyte.workload.launcher.constants.ContainerConstants
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.FABRIC8_COMPLETED_REASON_VALUE
@@ -69,6 +71,8 @@ class KubePodLauncher(
     pod: Pod,
     waitDuration: Duration,
   ) {
+    var imagePullErrors: List<PodStatusChecker.ImagePullError> = emptyList()
+
     val initializedPod =
       runKubeCommand(
         {
@@ -77,6 +81,13 @@ class KubePodLauncher(
             .waitUntilCondition(
               { p: Pod? ->
                 p?.let {
+                  // Check for image pull errors on every poll - store but don't throw yet
+                  imagePullErrors = PodStatusChecker.checkForImagePullErrors(p)
+                  if (imagePullErrors.isNotEmpty()) {
+                    // Return true to exit the wait condition - we'll throw outside the predicate
+                    return@waitUntilCondition true
+                  }
+
                   p.status.initContainerStatuses.isNotEmpty() &&
                     p.status.initContainerStatuses[0]
                       .state.terminated != null
@@ -88,6 +99,14 @@ class KubePodLauncher(
         },
         "wait",
       )
+
+    // If we found image pull errors, throw now
+    if (imagePullErrors.isNotEmpty()) {
+      throw ImagePullException(
+        message = "Failed to pull container images for pod ${pod.fullResourceName}: ${PodStatusChecker.formatImagePullErrors(imagePullErrors)}",
+        commandType = KubeCommandType.WAIT_INIT,
+      )
+    }
 
     val containerState =
       initializedPod
@@ -126,6 +145,8 @@ class KubePodLauncher(
     pod: Pod,
     waitDuration: Duration,
   ) {
+    var imagePullErrors: List<PodStatusChecker.ImagePullError> = emptyList()
+
     val initializedPod =
       runKubeCommand(
         {
@@ -133,6 +154,13 @@ class KubePodLauncher(
             .resource(pod)
             .waitUntilCondition(
               { p: Pod ->
+                // Check for image pull errors on every poll - store but don't throw yet
+                imagePullErrors = PodStatusChecker.checkForImagePullErrors(p)
+                if (imagePullErrors.isNotEmpty()) {
+                  // Return true to exit the wait condition - we'll throw outside the predicate
+                  return@waitUntilCondition true
+                }
+
                 (
                   p.status.initContainerStatuses.isNotEmpty() &&
                     p.status.initContainerStatuses[0]
@@ -145,6 +173,14 @@ class KubePodLauncher(
         },
         "wait",
       )
+
+    // If we found image pull errors, throw now
+    if (imagePullErrors.isNotEmpty()) {
+      throw ImagePullException(
+        message = "Failed to pull container images for pod ${pod.fullResourceName}: ${PodStatusChecker.formatImagePullErrors(imagePullErrors)}",
+        commandType = KubeCommandType.WAIT_INIT,
+      )
+    }
 
     val containerState: ContainerState =
       initializedPod
@@ -187,14 +223,26 @@ class KubePodLauncher(
     pod: Pod,
     waitDuration: Duration,
   ) {
+    var imagePullErrors: List<PodStatusChecker.ImagePullError> = emptyList()
+
     runKubeCommand(
       {
         kubernetesClient
           .resource(pod)
           .waitUntilCondition(
             { p: Pod? ->
-              Objects.nonNull(p) &&
-                (Readiness.getInstance().isReady(p) || isTerminal(p))
+              if (Objects.nonNull(p)) {
+                // Check for image pull errors on every poll - store but don't throw yet
+                imagePullErrors = PodStatusChecker.checkForImagePullErrors(p)
+                if (imagePullErrors.isNotEmpty()) {
+                  // Return true to exit the wait condition - we'll throw outside the predicate
+                  return@waitUntilCondition true
+                }
+
+                Readiness.getInstance().isReady(p) || isTerminal(p)
+              } else {
+                false
+              }
             },
             waitDuration.toMinutes(),
             TimeUnit.MINUTES,
@@ -202,6 +250,14 @@ class KubePodLauncher(
       },
       "wait",
     )
+
+    // If we found image pull errors, throw now
+    if (imagePullErrors.isNotEmpty()) {
+      throw ImagePullException(
+        message = "Failed to pull container images for pod ${pod.fullResourceName}: ${PodStatusChecker.formatImagePullErrors(imagePullErrors)}",
+        commandType = KubeCommandType.WAIT_MAIN,
+      )
+    }
   }
 
   fun podsRunning(labels: Map<String, String>): Boolean {

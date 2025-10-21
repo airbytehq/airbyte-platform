@@ -11,14 +11,17 @@ import io.airbyte.api.client.model.generated.ActorUpdateRequest
 import io.airbyte.commons.temporal.scheduling.SpecMetadata
 import io.airbyte.commons.temporal.scheduling.SpecRequest
 import io.airbyte.config.ActorType
+import io.airbyte.config.FailureReason
 import io.airbyte.config.JobTypeResourceLimit
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.ScopedResourceRequirements
+import io.airbyte.workers.commands.FailureConverter
 import io.temporal.activity.ActivityInterface
 import io.temporal.activity.ActivityMethod
 import jakarta.inject.Singleton
 import java.util.UUID
 import io.airbyte.api.client.model.generated.ActorType as ApiActorType
+import io.airbyte.api.client.model.generated.FailureReason as ApiFailureReason
 import io.airbyte.api.client.model.generated.JobType as ApiJobType
 import io.airbyte.api.client.model.generated.JobTypeResourceLimit as ApiJobTypeResourceLimit
 import io.airbyte.api.client.model.generated.ResourceRequirements as ApiResourceRequirements
@@ -36,6 +39,7 @@ data class FinishInput(
 data class FinishOutput(
   val requestId: String,
   val actorDefinitionId: UUID?,
+  val failureReason: FailureReason?,
 )
 
 @ActivityInterface
@@ -47,6 +51,7 @@ interface ActorDefinitionUpdateActivity {
 @Singleton
 class ActorDefinitionUpdateActivityImpl(
   val airbyteApiClient: AirbyteApiClient,
+  val failureConverter: FailureConverter,
 ) : ActorDefinitionUpdateActivity {
   override fun finish(input: FinishInput): FinishOutput {
     val request =
@@ -72,8 +77,19 @@ class ActorDefinitionUpdateActivityImpl(
     return FinishOutput(
       requestId = input.requestId,
       actorDefinitionId = response.actorDefinitionId,
+      failureReason = response.failureReason?.toInternal(),
     )
   }
+
+  private fun ApiFailureReason.toInternal(): FailureReason =
+    FailureReason()
+      .withFailureType(failureConverter.getFailureType(this.failureType))
+      .withFailureOrigin(failureConverter.getFailureOrigin(this.failureOrigin))
+      .withInternalMessage(this.internalMessage)
+      .withExternalMessage(this.externalMessage)
+      .withStacktrace(this.stacktrace)
+      .withRetryable(this.retryable)
+      .withTimestamp(this.timestamp)
 
   private fun ActorType.toApi(): ApiActorType =
     when (this) {

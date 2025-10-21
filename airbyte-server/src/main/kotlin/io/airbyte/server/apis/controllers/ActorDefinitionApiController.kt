@@ -78,7 +78,7 @@ open class ActorDefinitionApiController(
       accessValidator.validateWriteAccess(actorUpdateRequest.actorDefinitionId)
     }
     return execute {
-      val actorDefinitionId =
+      val result =
         actorDefinitionsHandler.finishActorDefinitionUpdate(
           actorType = ActorType.fromValue(actorUpdateRequest.actorType.toString()),
           actorUpdateRequest = actorUpdateRequest,
@@ -86,7 +86,9 @@ open class ActorDefinitionApiController(
           commandId = actorDefinitionFinishRequest.commandId,
           workspaceId = actorDefinitionFinishRequest.workspaceId,
         )
-      ActorDefinitionFinishResponse().actorDefinitionId(actorDefinitionId)
+      ActorDefinitionFinishResponse()
+        .actorDefinitionId(result.actorDefinitionId)
+        .failureReason(result.failureReason)
     }
   }
 
