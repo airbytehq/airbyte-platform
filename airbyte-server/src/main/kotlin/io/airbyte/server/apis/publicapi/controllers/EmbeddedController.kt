@@ -6,8 +6,8 @@ package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
-import io.airbyte.commons.entitlements.Entitlement
-import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.ConfigTemplateEntitlement
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.EmbeddedWorkspacesHandler
 import io.airbyte.commons.server.handlers.OrganizationsHandler
@@ -53,7 +53,7 @@ class EmbeddedController(
   private val organizationsHandler: OrganizationsHandler,
   val permissionHandler: PermissionHandler,
   val embeddedWorkspacesHandler: EmbeddedWorkspacesHandler,
-  val licenseEntitlementChecker: LicenseEntitlementChecker,
+  val entitlementService: EntitlementService,
 ) : EmbeddedWidgetApi {
   var clock: Clock = Clock.systemUTC()
 
@@ -90,10 +90,12 @@ class EmbeddedController(
     val entitledOrganizations =
       organizations.organizations.filter { organization ->
         val organizationId = OrganizationId(organization.organizationId)
-        licenseEntitlementChecker.checkEntitlements(
-          organizationId.value,
-          Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
-        )
+        val entitled =
+          entitlementService.checkEntitlement(
+            organizationId,
+            ConfigTemplateEntitlement,
+          )
+        entitled.isEntitled
       }
 
     // Map to organizations where the user has any permission
@@ -138,9 +140,9 @@ class EmbeddedController(
   override fun getEmbeddedWidget(req: EmbeddedWidgetRequest): Response {
     val organizationId = OrganizationId(req.organizationId)
 
-    licenseEntitlementChecker.ensureEntitled(
-      organizationId.value,
-      Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
+    entitlementService.ensureEntitled(
+      organizationId,
+      ConfigTemplateEntitlement,
     )
 
     val currentUser = currentUserService.getCurrentUser()

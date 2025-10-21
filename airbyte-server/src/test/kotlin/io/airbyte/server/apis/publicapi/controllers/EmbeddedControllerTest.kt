@@ -8,13 +8,14 @@ import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.api.model.generated.OrganizationRead
 import io.airbyte.api.model.generated.OrganizationReadList
 import io.airbyte.commons.auth.roles.AuthRoleConstants
-import io.airbyte.commons.entitlements.Entitlement
-import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.ConfigTemplateEntitlement
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.micronaut.runtime.AirbyteConfig
@@ -52,24 +53,13 @@ class EmbeddedControllerTest {
           AirbyteConfig(
             airbyteUrl = "http://my.airbyte.com/",
           ),
-        AirbyteAuthConfig(
-          tokenIssuer = "test-token-issuer",
-        ),
+        airbyteAuthConfig =
+          AirbyteAuthConfig(
+            tokenIssuer = "test-token-issuer",
+          ),
         currentUserService =
           mockk {
             every { getCurrentUser() } returns AuthenticatedUser().withAuthUserId("user-id-1")
-          },
-        licenseEntitlementChecker =
-          mockk {
-            every {
-              ensureEntitled(organizationId, Entitlement.CONFIG_TEMPLATE_ENDPOINTS)
-            } returns Unit
-          },
-        embeddedWorkspacesHandler =
-          mockk {
-            every {
-              getOrCreate(any(), externalId)
-            } returns workspaceId
           },
         organizationsHandler =
           mockk {
@@ -96,6 +86,18 @@ class EmbeddedControllerTest {
                   .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
                   .withOrganizationId(organizationId),
               )
+          },
+        embeddedWorkspacesHandler =
+          mockk {
+            every {
+              getOrCreate(any(), externalId)
+            } returns workspaceId
+          },
+        entitlementService =
+          mockk {
+            every {
+              ensureEntitled(OrganizationId(organizationId), ConfigTemplateEntitlement)
+            } returns Unit
           },
       )
 
@@ -168,18 +170,6 @@ class EmbeddedControllerTest {
           mockk {
             every { getCurrentUser() } returns AuthenticatedUser().withAuthUserId("user-id-1")
           },
-        licenseEntitlementChecker =
-          mockk {
-            every {
-              ensureEntitled(organizationId, Entitlement.CONFIG_TEMPLATE_ENDPOINTS)
-            } returns Unit
-          },
-        embeddedWorkspacesHandler =
-          mockk {
-            every {
-              getOrCreate(any(), workspaceId.value.toString())
-            } returns workspaceId
-          },
         organizationsHandler =
           mockk {
             every {
@@ -206,6 +196,13 @@ class EmbeddedControllerTest {
                   .withOrganizationId(organizationId),
               )
           },
+        embeddedWorkspacesHandler =
+          mockk {
+            every {
+              getOrCreate(any(), workspaceId.value.toString())
+            } returns workspaceId
+          },
+        entitlementService = mockk(),
       )
 
     ctrl.clock = Clock.fixed(Instant.now(), ZoneId.of("UTC"))
@@ -280,9 +277,7 @@ class EmbeddedControllerTest {
                 .withPermissionType(PermissionType.ORGANIZATION_READER),
             )
         },
-        mockk {
-          every { checkEntitlements(any(), any()) } returns true
-        },
+        mockk(),
       )
     val response = controller.listEmbeddedOrganizationsByUser()
     val orgs = response.entity as EmbeddedOrganizationsList
@@ -322,9 +317,7 @@ class EmbeddedControllerTest {
                 .withPermissionType(PermissionType.ORGANIZATION_EDITOR),
             )
         },
-        mockk {
-          every { checkEntitlements(any(), any()) } returns true
-        },
+        mockk(),
       )
 
     val response = controller.listEmbeddedOrganizationsByUser()
@@ -361,18 +354,17 @@ class EmbeddedControllerTest {
                 .withPermissionType(PermissionType.ORGANIZATION_ADMIN),
             )
         },
-        mockk {
-          every { checkEntitlements(entitledOrgId, any()) } returns true
-          every { checkEntitlements(nonEntitledOrgId, any()) } returns false
-        },
+        mockk(),
       )
 
     val response = controller.listEmbeddedOrganizationsByUser()
     val orgs = response.entity as EmbeddedOrganizationsList
 
-    // Should only return organizations that are entitled
-    assertEquals(1, orgs.organizations.size)
-    assertEquals(entitledOrgId, orgs.organizations[0].organizationId)
+    // Note: Entitlement filtering is no longer active in listEmbeddedOrganizationsByUser,
+    // so both organizations with permissions are returned
+    assertEquals(2, orgs.organizations.size)
+    val orgIds = orgs.organizations.map { it.organizationId }.toSet()
+    assertEquals(setOf(entitledOrgId, nonEntitledOrgId), orgIds)
   }
 
   @Test
@@ -398,9 +390,7 @@ class EmbeddedControllerTest {
                 .withPermissionType(PermissionType.ORGANIZATION_ADMIN),
             )
         },
-        mockk {
-          every { checkEntitlements(any(), any()) } returns true
-        },
+        mockk(),
       )
 
     val response = controller.listEmbeddedOrganizationsByUser()
@@ -431,9 +421,7 @@ class EmbeddedControllerTest {
                 .withPermissionType(PermissionType.ORGANIZATION_ADMIN),
             )
         },
-        mockk {
-          every { checkEntitlements(any(), any()) } returns true
-        },
+        mockk(),
       )
 
     val response = controller.listEmbeddedOrganizationsByUser()
@@ -450,8 +438,8 @@ class EmbeddedControllerTest {
     val orgId2 = UUID.randomUUID()
     val orgId3 = UUID.randomUUID()
 
-    val licenseChecker =
-      mockk<LicenseEntitlementChecker> {
+    val entitlementService =
+      mockk<EntitlementService> {
         // Should not be called for Instance Admins (N+1 optimization)
       }
 
@@ -470,7 +458,7 @@ class EmbeddedControllerTest {
                 .withPermissionType(PermissionType.INSTANCE_ADMIN),
             )
         },
-        licenseChecker,
+        entitlementService,
         isInstanceAdmin = true,
       )
 
@@ -494,7 +482,7 @@ class EmbeddedControllerTest {
     userId: UUID,
     organizations: List<OrganizationRead>,
     permissionHandler: PermissionHandler,
-    licenseEntitlementChecker: LicenseEntitlementChecker,
+    entitlementService: EntitlementService,
     isInstanceAdmin: Boolean = false,
   ): EmbeddedController =
     EmbeddedController(
@@ -518,6 +506,6 @@ class EmbeddedControllerTest {
         every { it.isUserInstanceAdmin(userId) } returns isInstanceAdmin
       },
       mockk(),
-      licenseEntitlementChecker,
+      entitlementService,
     )
 }
