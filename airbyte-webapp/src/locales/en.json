@@ -38,6 +38,7 @@
   "workspaces.status.failedSyncs": "Failed syncs",
 
   "proFeatures.modal.title": "Continue to experience Pro features",
+  "proFeatures.modal.titleUpgrade": "Upgrade to experience Pro features",
   "proFeatures.modal.featuresTitle": "You're about to use one of the following Pro features:",
   "proFeatures.modal.features.subHourSyncs": "Sub 1-hour syncs",
   "proFeatures.modal.features.multipleWorkspaces": "Multiple workspaces",
@@ -46,7 +47,10 @@
   "proFeatures.modal.features.mappers": "Mappers",
   "proFeatures.modal.features.connectors": "Enterprise connectors, including Oracle, Netsuite, Salesforce Marketing Cloud",
   "proFeatures.modal.warningMessage": "Please note you will lose access to these features once your trial ends unless you upgrade to Pro. All syncs using these features will be disabled and all members invited will be deleted.",
+  "proFeatures.modal.upgradeMessage": "Talk to our sales team about upgrading to Pro or Enterprise to unlock these features.",
   "proFeatures.modal.button.continue": "Continue",
+  "proFeatures.modal.button.talkToSales": "Talk to sales",
+  "proFeatures.modal.button.noThanks": "No thanks",
   "proFeatures.modal.button.talkToSalesNow": "Talk to Sales now",
 
   "role.admin": "Admin",
