@@ -7,6 +7,7 @@ import {
   AirbyteStreamAndConfiguration,
   SyncMode,
   DestinationSyncMode,
+  SourceDiscoverSchemaRead,
 } from "@src/core/api/types/AirbyteClient";
 
 import { getApiBaseUrl } from "./api";
@@ -17,6 +18,7 @@ import {
   postgresSourceAPI,
   postgresDestinationAPI,
 } from "./connectors";
+import { createMockPokeApiCatalog, createMockPostgresCatalog } from "./mocks";
 import { appendRandomString } from "./ui";
 
 /**
@@ -45,33 +47,49 @@ export const connectionAPI = {
     request: APIRequestContext,
     source: SourceRead,
     destination: DestinationRead,
-    options: { enableAllStreams?: boolean } = {}
+    options: {
+      enableAllStreams?: boolean;
+      useMockSchemaDiscovery?: boolean;
+      mockSourceType?: "postgres" | "pokeapi";
+    } = {}
   ): Promise<WebBackendConnectionRead> => {
     const apiBaseUrl = getApiBaseUrl();
 
-    // First, discover the source schema
-    const discoverResponse = await request.post(`${apiBaseUrl}/sources/discover_schema`, {
-      data: {
-        sourceId: source.sourceId,
-        disable_cache: true,
-      },
-    });
+    let typedCatalog: AirbyteCatalog;
 
-    if (!discoverResponse.ok()) {
-      const errorText = await discoverResponse.text().catch(() => "Unknown error");
-      throw new Error(`Failed to discover schema: ${discoverResponse.status()} - ${errorText}`);
+    // Mock schema discovery to avoid overloading test databases in CI environments.
+    //
+    // In CI, concurrent test runs making real schema discovery calls can overwhelm
+    // external resources, causing timeouts and flaky test failures.
+    // See mocks.ts for more context
+
+    if (options.useMockSchemaDiscovery) {
+      const mockSourceType = options.mockSourceType || "postgres";
+      typedCatalog = mockSourceType === "postgres" ? createMockPostgresCatalog() : createMockPokeApiCatalog();
+    } else {
+      // First, discover the source schema
+      const discoverResponse = await request.post(`${apiBaseUrl}/sources/discover_schema`, {
+        data: {
+          sourceId: source.sourceId,
+          disable_cache: true,
+        },
+      });
+
+      if (!discoverResponse.ok()) {
+        const errorText = await discoverResponse.text().catch(() => "Unknown error");
+        throw new Error(`Failed to discover schema: ${discoverResponse.status()} - ${errorText}`);
+      }
+
+      const discoverResult = (await discoverResponse.json()) as SourceDiscoverSchemaRead;
+      const catalog = discoverResult.catalog;
+
+      if (!catalog || !catalog.streams) {
+        console.error("Schema discovery failed - invalid catalog:", discoverResult);
+        throw new Error(`Schema discovery returned invalid catalog: ${JSON.stringify(discoverResult)}`);
+      }
+
+      typedCatalog = catalog;
     }
-
-    const discoverResult = await discoverResponse.json();
-    const catalog = discoverResult.catalog || discoverResult; // Handle both response formats
-
-    if (!catalog || !catalog.streams) {
-      console.error("Schema discovery failed - invalid catalog:", discoverResult);
-      throw new Error(`Schema discovery returned invalid catalog: ${JSON.stringify(discoverResult)}`);
-    }
-
-    // Type assert after validation
-    const typedCatalog = catalog as AirbyteCatalog;
 
     // Prepare streams based on options
     let streams: AirbyteStreamAndConfiguration[];
@@ -541,7 +559,7 @@ export const connectionTestScaffold = {
    * @example
    * test.beforeAll(async ({ request }) => {
    *   testData = await connectionTestScaffold.setupConnection(
-   *     request, workspaceId, "postgres-postgres"
+   *     request, workspaceId, "postgres-postgres", { useMockSchemaDiscovery: true }
    *   );
    * });
    */
@@ -549,12 +567,21 @@ export const connectionTestScaffold = {
     request: APIRequestContext,
     workspaceId: string,
     connectorType: ConnectorPair = "poke-e2e",
-    options: { enableAllStreams?: boolean; status?: "active" | "inactive" } = {}
+    options: {
+      enableAllStreams?: boolean;
+      status?: "active" | "inactive";
+      useMockSchemaDiscovery?: boolean;
+    } = {}
   ) => {
     const testResources = await connectionTestHelpers.setupConnectors(request, workspaceId, connectorType);
 
+    // Determine mock source type based on connector type
+    const mockSourceType = connectorType === "poke-e2e" || connectorType === "poke-postgres" ? "pokeapi" : "postgres";
+
     const connection = await connectionAPI.create(request, testResources.source, testResources.destination, {
       enableAllStreams: options.enableAllStreams ?? true,
+      useMockSchemaDiscovery: options.useMockSchemaDiscovery,
+      mockSourceType,
     });
 
     // Apply status if specified
