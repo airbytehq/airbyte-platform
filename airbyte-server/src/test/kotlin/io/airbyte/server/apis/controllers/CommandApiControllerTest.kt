@@ -96,13 +96,15 @@ class CommandApiControllerTest {
 
   @BeforeEach
   fun setup() {
+    val defaultRequestMock = mockk<RoleResolver.Request>()
+    every { defaultRequestMock.withCurrentAuthentication() } returns defaultRequestMock
+    every { defaultRequestMock.withRef(any(), any<UUID>()) } returns defaultRequestMock
+    every { defaultRequestMock.requireRole(any()) } returns Unit
+    every { defaultRequestMock.requireOneOfRoles(any()) } returns Unit
+    every { defaultRequestMock.roles() } returns setOf(AuthRoleConstants.WORKSPACE_RUNNER, AuthRoleConstants.WORKSPACE_READER)
+
     roleResolver = mockk(relaxed = true)
-    mockkConstructor(RoleResolver.Request::class)
-    every { anyConstructed<RoleResolver.Request>().withCurrentUser() } returns
-      mockk {
-        every { withRef(any(), any<UUID>()) } returns this
-        every { requireRole(any()) } returns Unit
-      }
+    every { roleResolver.newRequest() } returns defaultRequestMock
 
     actorRepository = mockk(relaxed = true)
     catalogConverter = mockk(relaxed = true)
@@ -583,7 +585,7 @@ class CommandApiControllerTest {
   fun `role validation from an ActorId should look up actors`() {
     val actorId = UUID.randomUUID()
     val f = { "looked up actor" }
-    val result = controller.withRoleValidation(ActorId(actorId), AuthRoleConstants.WORKSPACE_RUNNER, f)
+    val result = controller.withRoleValidation(ActorId(actorId), role = AuthRoleConstants.WORKSPACE_RUNNER, call = f)
 
     verify { actorRepository.findByActorId(actorId) }
     assertEquals("looked up actor", result)
@@ -593,7 +595,7 @@ class CommandApiControllerTest {
   fun `role validation from a CommandId should look up commands`() {
     val commandId = "my-command"
     val f = { "looked up command" }
-    val result = controller.withRoleValidation(CommandId(commandId), AuthRoleConstants.WORKSPACE_RUNNER, f)
+    val result = controller.withRoleValidation(CommandId(commandId), role = AuthRoleConstants.WORKSPACE_RUNNER, call = f)
 
     verify { commandService.get(commandId = commandId) }
     assertEquals("looked up command", result)
@@ -603,7 +605,7 @@ class CommandApiControllerTest {
   fun `role validation from a ConnectionId should look up connection`() {
     val connectionId = UUID.randomUUID()
     val f = { "looked up connection" }
-    val result = controller.withRoleValidation(ConnectionId(connectionId), AuthRoleConstants.WORKSPACE_RUNNER, f)
+    val result = controller.withRoleValidation(ConnectionId(connectionId), role = AuthRoleConstants.WORKSPACE_RUNNER, call = f)
 
     verify { workspaceService.getStandardWorkspaceFromConnection(connectionId, false) }
     assertEquals("looked up connection", result)
@@ -613,7 +615,7 @@ class CommandApiControllerTest {
   fun `role validation from a WorkspaceId should check the id directly`() {
     val workspaceId = UUID.randomUUID()
     val f = { "didn't look up workspace" }
-    val result = controller.withRoleValidation(WorkspaceId(workspaceId), AuthRoleConstants.WORKSPACE_RUNNER, f)
+    val result = controller.withRoleValidation(WorkspaceId(workspaceId), role = AuthRoleConstants.WORKSPACE_RUNNER, call = f)
 
     verify { workspaceService wasNot Called }
     assertEquals("didn't look up workspace", result)
@@ -623,9 +625,9 @@ class CommandApiControllerTest {
   fun `role validation for an unsupported type throws an IllegalStateException`() {
     val untypedUUID = UUID.randomUUID()
     assertThrows<IllegalStateException> {
-      controller.withRoleValidation(untypedUUID, AuthRoleConstants.WORKSPACE_RUNNER) {
+      controller.withRoleValidation(untypedUUID, role = AuthRoleConstants.WORKSPACE_RUNNER, call = {
         TODO("I should not be executed")
-      }
+      })
     }
   }
 
@@ -634,9 +636,9 @@ class CommandApiControllerTest {
     val actorId = UUID.randomUUID()
     every { actorRepository.findByActorId(actorId) } returns null
     assertThrows<ForbiddenProblem> {
-      controller.withRoleValidation(ActorId(actorId), AuthRoleConstants.WORKSPACE_RUNNER) {
+      controller.withRoleValidation(ActorId(actorId), role = AuthRoleConstants.WORKSPACE_RUNNER, call = {
         TODO("I should not be executed")
-      }
+      })
     }
   }
 
@@ -1232,5 +1234,60 @@ class CommandApiControllerTest {
     assertEquals(null, output.catalog)
     assertEquals(null, output.destinationCatalog)
     assertEquals(DiscoverCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+  }
+
+  @Test
+  fun `getCheckCommandOutput accepts EMBEDDED_END_USER role`() {
+    val requestMock = mockk<RoleResolver.Request>()
+    every { requestMock.withCurrentAuthentication() } returns requestMock
+    every { requestMock.withRef(any(), any<UUID>()) } returns requestMock
+    every { requestMock.requireOneOfRoles(any()) } returns Unit
+    every { requestMock.roles() } returns setOf(AuthRoleConstants.EMBEDDED_END_USER)
+    every { roleResolver.newRequest() } returns requestMock
+
+    every { commandService.getCheckJobOutput(TEST_COMMAND_ID, any()) } returns
+      CommandService.CheckJobOutput(
+        status = StandardCheckConnectionOutput.Status.SUCCEEDED,
+        connectorConfigUpdated = false,
+        message = "",
+        failureReason = null,
+        logs = null,
+      )
+
+    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID))
+
+    assertEquals(CheckCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
+    assertEquals(TEST_COMMAND_ID, output.id)
+    verify { commandService.getCheckJobOutput(TEST_COMMAND_ID, any()) }
+  }
+
+  @Test
+  fun `runCheckCommand accepts EMBEDDED_END_USER role`() {
+    val requestMock = mockk<RoleResolver.Request>()
+    every { requestMock.withCurrentAuthentication() } returns requestMock
+    every { requestMock.withRef(any(), any<UUID>()) } returns requestMock
+    every { requestMock.requireOneOfRoles(any()) } returns Unit
+    every { requestMock.roles() } returns setOf(AuthRoleConstants.EMBEDDED_END_USER)
+    every { roleResolver.newRequest() } returns requestMock
+
+    val request =
+      RunCheckCommandRequest()
+        .id(TEST_COMMAND_ID)
+        .actorId(TEST_ACTOR_ID)
+
+    val output = controller.runCheckCommand(request)
+
+    assertEquals(RunCheckCommandResponse().id(TEST_COMMAND_ID), output)
+    verify {
+      commandService.createCheckCommand(
+        TEST_COMMAND_ID,
+        TEST_ACTOR_ID,
+        null,
+        null,
+        WorkloadPriority.DEFAULT,
+        null,
+        any(),
+      )
+    }
   }
 }

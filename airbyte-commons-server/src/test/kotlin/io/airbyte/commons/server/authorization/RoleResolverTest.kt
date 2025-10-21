@@ -387,6 +387,25 @@ class RoleResolverTest {
   }
 
   @Test
+  fun requireOneOfRolesThrowsWhenNoMatch() {
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns emptyList()
+
+    val req = roleResolver.newRequest().withSubject("auth-user-1", TokenType.USER)
+    assertThrows<ForbiddenProblem> {
+      req.requireOneOfRoles(setOf("FOO", "BAR"))
+    }
+  }
+
+  @Test
+  fun requireOneOfRolesSucceedsWhenAtLeastOneMatches() {
+    every { permissionHandler.getPermissionsByAuthUserId("auth-user-1") } returns emptyList()
+
+    val req = roleResolver.newRequest().withSubject("auth-user-1", TokenType.USER)
+    // Should succeed because AUTHENTICATED_USER is always present
+    req.requireOneOfRoles(setOf("FOO", "AUTHENTICATED_USER", "BAR"))
+  }
+
+  @Test
   fun organizationAdminWithWorkspaceAccess() {
     val workspace1 = UUID.randomUUID()
     val org1 = UUID.randomUUID()

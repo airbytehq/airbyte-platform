@@ -114,7 +114,7 @@ open class SourcesController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.SOURCE_ID, sourceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+      .requireOneOfRoles(setOf(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER))
 
     val sourceResponse: Any? =
       trackingHelper.callWithTracker(
@@ -150,7 +150,7 @@ open class SourcesController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.SOURCE_ID, sourceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_READER)
+      .requireOneOfRoles(setOf(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.EMBEDDED_END_USER))
 
     val sourceResponse: Any? =
       trackingHelper.callWithTracker(
@@ -234,7 +234,7 @@ open class SourcesController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.SOURCE_ID, sourceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+      .requireOneOfRoles(setOf(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER))
 
     val sourceResponse: Any? =
       sourcePatchRequest?.let { request ->
@@ -276,7 +276,7 @@ open class SourcesController(
       .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.SOURCE_ID, sourceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+      .requireOneOfRoles(setOf(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.EMBEDDED_END_USER))
 
     val sourceResponse: Any? =
       sourcePutRequest?.let { request ->

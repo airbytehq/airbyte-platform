@@ -101,7 +101,7 @@ class CommandApiController(
   ): CheckCommandOutputResponse =
     withRoleValidation(
       id = CommandId(checkCommandOutputRequest.id),
-      role = AuthRoleConstants.WORKSPACE_READER,
+      roles = setOf(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.EMBEDDED_END_USER),
     ) {
       val output =
         commandService.getCheckJobOutput(
@@ -276,7 +276,7 @@ class CommandApiController(
         } else {
           throw IllegalArgumentException("Must provide either workspaceId or actorId")
         },
-      role = AuthRoleConstants.WORKSPACE_RUNNER,
+      roles = setOf(AuthRoleConstants.WORKSPACE_RUNNER, AuthRoleConstants.EMBEDDED_END_USER),
     ) {
       val priority: WorkloadPriority = runCheckCommandRequest.priority?.toWorkloadPriority() ?: WorkloadPriority.DEFAULT
 
@@ -403,25 +403,45 @@ class CommandApiController(
     }
 
   @InternalForTesting
+  internal inline fun <reified IdType> resolveWorkspaceId(id: IdType): UUID =
+    when (id) {
+      is ActorId -> actorRepository.findByActorId(id.value)?.workspaceId
+      is CommandId -> commandService.get(commandId = id.value)?.workspaceId
+      is ConnectionId -> workspaceService.getStandardWorkspaceFromConnection(id.value, false).workspaceId
+      is WorkspaceId -> id.value
+      else -> throw IllegalStateException("Unsupported id $id of type ${IdType::class.simpleName}")
+    } ?: throw ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to access the resource(s)."))
+
+  @InternalForTesting
   internal inline fun <reified IdType, T> withRoleValidation(
     id: IdType,
     role: String,
     call: () -> T,
   ): T {
-    val workspaceId =
-      when (id) {
-        is ActorId -> actorRepository.findByActorId(id.value)?.workspaceId
-        is CommandId -> commandService.get(commandId = id.value)?.workspaceId
-        is ConnectionId -> workspaceService.getStandardWorkspaceFromConnection(id.value, false)?.workspaceId
-        is WorkspaceId -> id.value
-        else -> throw IllegalStateException("Unsupported id $id of type ${IdType::class.simpleName}")
-      } ?: throw ForbiddenProblem(ProblemMessageData().message("User does not have the required $role permissions to access the resource(s)."))
+    val workspaceId = resolveWorkspaceId(id)
 
     roleResolver
       .newRequest()
       .withCurrentAuthentication()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireRole(role)
+      .requireOneOfRoles(setOf(role))
+
+    return call()
+  }
+
+  @InternalForTesting
+  internal inline fun <reified IdType, T> withRoleValidation(
+    id: IdType,
+    roles: Set<String>,
+    call: () -> T,
+  ): T {
+    val workspaceId = resolveWorkspaceId(id)
+
+    roleResolver
+      .newRequest()
+      .withCurrentAuthentication()
+      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
+      .requireOneOfRoles(roles)
 
     return call()
   }

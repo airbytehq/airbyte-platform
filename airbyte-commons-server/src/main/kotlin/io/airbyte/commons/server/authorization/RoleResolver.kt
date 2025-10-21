@@ -211,6 +211,19 @@ open class RoleResolver(
         )
       }
     }
+
+    /**
+     * requireOneOfRoles checks whether the request has at least one of the given roles available,
+     * and if not it throws ForbiddenProblem.
+     */
+    fun requireOneOfRoles(requiredRoles: Set<String>) {
+      val userRoles = roles()
+      if (!requiredRoles.any { userRoles.contains(it) }) {
+        throw ForbiddenProblem(
+          ProblemMessageData().message("Caller does not have the required permissions to access the resource(s)."),
+        )
+      }
+    }
   }
 
   /**
