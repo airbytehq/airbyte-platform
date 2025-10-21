@@ -131,14 +131,32 @@ export const ConnectionHeaderControls: React.FC = () => {
         </Button>
       )}
       <Box p="md">
-        <SwitchNext
-          onChange={onChangeStatus}
-          checked={connection.status === ConnectionStatus.active}
-          loading={connectionUpdating}
-          disabled={isSwitchDisabled}
-          className={styles.switch}
-          testId="connection-status-switch"
-        />
+        {connection.status === ConnectionStatus.locked ? (
+          <Tooltip
+            control={
+              <SwitchNext
+                onChange={onChangeStatus}
+                checked={false}
+                loading={connectionUpdating}
+                disabled
+                showLock
+                className={styles.switch}
+                testId="connection-status-switch"
+              />
+            }
+          >
+            <FormattedMessage id="connection.lockedTooltip" />
+          </Tooltip>
+        ) : (
+          <SwitchNext
+            onChange={onChangeStatus}
+            checked={connection.status === ConnectionStatus.active}
+            loading={connectionUpdating}
+            disabled={isSwitchDisabled}
+            className={styles.switch}
+            testId="connection-status-switch"
+          />
+        )}
       </Box>
     </FlexContainer>
   );

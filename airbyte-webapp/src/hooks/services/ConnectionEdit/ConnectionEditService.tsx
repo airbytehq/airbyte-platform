@@ -255,6 +255,7 @@ export const ConnectionEditServiceProvider: React.FC<React.PropsWithChildren<Con
   const formMode = useMemo<FormMode>(
     () =>
       data.connection.status === ConnectionStatus.deprecated ||
+      data.connection.status === ConnectionStatus.locked ||
       !canEditConnection ||
       data.connection.source.isEntitled === false ||
       data.connection.destination.isEntitled === false

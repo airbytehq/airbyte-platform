@@ -1,8 +1,10 @@
 import { CellContext, ColumnDefTemplate } from "@tanstack/react-table";
 import React from "react";
+import { FormattedMessage } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
 import { SwitchWithLock } from "components/ui/Switch/SwitchWithLock";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { useUpdateConnection } from "core/api";
 import { ConnectionStatus, SchemaChange } from "core/api/types/AirbyteClient";
@@ -15,6 +17,7 @@ export const StateSwitchCell: ColumnDefTemplate<CellContext<ConnectionTableDataI
   const connectionId = props.row.original.connectionId;
   const enabled = props.cell.getValue();
   const schemaChange = props.row.original.schemaChange;
+  const connectionStatus = props.row.original.status;
   const { trackConnectionStatusUpdate } = useAnalyticsTrackFunctions();
   const canEditConnection = useGeneratedIntent(Intent.CreateOrEditConnection);
   const { mutateAsync: updateConnection, isLoading } = useUpdateConnection();
@@ -28,18 +31,30 @@ export const StateSwitchCell: ColumnDefTemplate<CellContext<ConnectionTableDataI
     trackConnectionStatusUpdate(updatedConnection);
   };
 
-  const isDisabled = schemaChange === SchemaChange.breaking || !canEditConnection || isLoading;
+  const isLocked = connectionStatus === ConnectionStatus.locked;
+  const isDisabled = isLocked || schemaChange === SchemaChange.breaking || !canEditConnection || isLoading;
+
+  const switchComponent = (
+    <SwitchWithLock
+      size="sm"
+      checked={enabled}
+      onChange={onChange}
+      disabled={isDisabled}
+      loading={isLoading}
+      showLock={isLocked}
+      data-testid={`connection-state-switch-${connectionId}`}
+    />
+  );
 
   return (
     <FlexContainer justifyContent="center">
-      <SwitchWithLock
-        size="sm"
-        checked={enabled}
-        onChange={onChange}
-        disabled={isDisabled}
-        loading={isLoading}
-        data-testid={`connection-state-switch-${connectionId}`}
-      />
+      {isLocked ? (
+        <Tooltip control={switchComponent}>
+          <FormattedMessage id="connection.lockedTooltip" />
+        </Tooltip>
+      ) : (
+        switchComponent
+      )}
     </FlexContainer>
   );
 };
