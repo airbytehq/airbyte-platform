@@ -12,7 +12,7 @@ import { Pre } from "components/ui/Pre";
 import { Spinner } from "components/ui/Spinner";
 
 import { useAirbyteCloudIpsByDataplane } from "area/connector/utils/useAirbyteCloudIpsByDataplane";
-import { ErrorWithJobInfo, useCurrentWorkspace } from "core/api";
+import { CommandErrorWithJobInfo, useCurrentWorkspace, useTestConnectorCommand } from "core/api";
 import { DestinationRead, SourceRead, SupportLevel } from "core/api/types/AirbyteClient";
 import {
   Connector,
@@ -32,7 +32,6 @@ import { Controls } from "./components/Controls";
 import ShowLoadingMessage from "./components/ShowLoadingMessage";
 import styles from "./ConnectorCard.module.scss";
 import { useAnalyticsTrackFunctions } from "./useAnalyticsTrackFunctions";
-import { useTestConnector } from "./useTestConnector";
 import { useDocumentationPanelContext } from "../ConnectorDocumentationLayout/DocumentationPanelContext";
 import { WarningMessage } from "../ConnectorForm/components/WarningMessage";
 
@@ -126,7 +125,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     error,
     reset,
     isSuccess: connectionTestSuccess,
-  } = useTestConnector(props);
+  } = useTestConnectorCommand(props);
   const isCloudApp = useIsCloudApp();
   const { trackTestConnectorFailure, trackTestConnectorSuccess, trackTestConnectorStarted } =
     useAnalyticsTrackFunctions(props.formType);
@@ -175,7 +174,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       trackTestConnectorSuccess(selectedConnectorDefinition);
       return response;
     } catch (e) {
-      trackTestConnectorFailure(selectedConnectorDefinition, ErrorWithJobInfo.getJobInfo(e), e.message);
+      trackTestConnectorFailure(selectedConnectorDefinition, CommandErrorWithJobInfo.getJobInfo(e), e.message);
       throw e;
     }
   };
@@ -207,7 +206,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
         await onSubmit(connectorCardValues);
       } else {
         const response = await testConnectorWithTracking(connectorCardValues);
-        if (response.jobInfo.connectorConfigurationUpdated && reloadConfig) {
+        if (response.connectorConfigurationUpdated && reloadConfig) {
           reloadConfig();
         } else {
           await onSubmit(connectorCardValues);
@@ -225,7 +224,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     }
   };
 
-  const job = ErrorWithJobInfo.getJobInfo(errorStatusRequest);
+  const jobInfo = CommandErrorWithJobInfo.getJobInfo(errorStatusRequest);
 
   const connector = isEditMode ? props.connector : undefined;
   const connectorId = connector ? getConnectorId(connector) : undefined;
@@ -314,7 +313,10 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
               onDeleteClick={onDeleteClick}
               isValid={isValid}
               dirty={dirty}
-              job={job ?? undefined}
+              jobId={jobInfo?.id}
+              jobConfigType={jobInfo?.configType}
+              jobLogs={jobInfo?.logs}
+              jobFailureReason={jobInfo?.failureReason}
               onCancelClick={() => {
                 resetConnectorForm();
               }}

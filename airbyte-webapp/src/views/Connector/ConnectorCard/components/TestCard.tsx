@@ -8,7 +8,7 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { ProgressBar } from "components/ui/ProgressBar";
 import { Text } from "components/ui/Text";
 
-import { SynchronousJobRead } from "core/api/types/AirbyteClient";
+import { FailureReason, JobConfigType, LogEvents, LogRead } from "core/api/types/AirbyteClient";
 
 import TestingConnectionSuccess from "./TestingConnectionSuccess";
 
@@ -20,7 +20,10 @@ interface IProps {
   isTestConnectionInProgress?: boolean;
   successMessage?: React.ReactNode;
   errorMessage?: React.ReactNode;
-  job?: SynchronousJobRead;
+  jobId?: string;
+  jobConfigType?: JobConfigType;
+  jobLogs?: LogEvents | LogRead;
+  jobFailureReason?: FailureReason;
   isEditMode?: boolean;
   dirty: boolean;
   connectionTestSuccess: boolean;
@@ -36,13 +39,24 @@ export const TestCard: React.FC<IProps> = ({
   connectionTestSuccess,
   errorMessage,
   onCancelTesting,
-  job,
+  jobId,
+  jobConfigType,
+  jobLogs,
+  jobFailureReason,
   isEditMode,
   dirty,
 }) => {
   const renderStatusMessage = () => {
     if (errorMessage) {
-      return <JobFailure job={job} fallbackMessage={errorMessage} />;
+      return (
+        <JobFailure
+          fallbackMessage={errorMessage}
+          id={jobId}
+          configType={jobConfigType}
+          logs={jobLogs}
+          failureReason={jobFailureReason}
+        />
+      );
     }
     if (connectionTestSuccess) {
       return <TestingConnectionSuccess />;

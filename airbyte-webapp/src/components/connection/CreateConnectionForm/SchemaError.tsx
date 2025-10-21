@@ -28,7 +28,7 @@ export const SchemaError = ({
             <FormattedMessage id="form.tryAgain" />
           </Button>
         </FlexContainer>
-        <JobFailure job={job} fallbackMessage={formatError(schemaError)} />
+        <JobFailure job={job ?? undefined} fallbackMessage={formatError(schemaError)} />
       </FlexContainer>
     </Card>
   );

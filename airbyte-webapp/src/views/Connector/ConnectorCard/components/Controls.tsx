@@ -8,7 +8,7 @@ import { DropdownButton } from "components/ui/DropdownButton";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 
 import { maskSecrets } from "area/connector/utils/maskSecrets";
-import { SynchronousJobRead } from "core/api/types/AirbyteClient";
+import { FailureReason, JobConfigType, LogEvents, LogRead } from "core/api/types/AirbyteClient";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { TestCard } from "./TestCard";
@@ -24,7 +24,10 @@ interface IProps {
   onCancelTesting: () => void;
   isTestConnectionInProgress?: boolean;
   errorMessage?: React.ReactNode;
-  job?: SynchronousJobRead;
+  jobId?: string;
+  jobConfigType?: JobConfigType;
+  jobLogs?: LogEvents | LogRead;
+  jobFailureReason?: FailureReason;
   connectionTestSuccess: boolean;
   hasDefinition: boolean;
   isEditMode: boolean;

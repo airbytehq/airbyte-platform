@@ -33,7 +33,7 @@ export const AllConnectionsStatusCell: React.FC<AllConnectionsStatusCellProps> =
   ) : (
     <FlexContainer>
       {statusesToDisplay.map(({ status, count }) => (
-        <StatusIcon status={status} value={count} size="sm" />
+        <StatusIcon status={status} value={count} size="sm" key={status} />
       ))}
     </FlexContainer>
   );

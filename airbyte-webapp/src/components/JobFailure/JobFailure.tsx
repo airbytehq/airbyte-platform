@@ -18,8 +18,8 @@ import {
   formatLogEventTimestamp,
 } from "area/connection/components/JobHistoryItem/useCleanLogs";
 import { VirtualLogs } from "area/connection/components/JobHistoryItem/VirtualLogs";
-import { jobHasFormattedLogs, jobHasStructuredLogs } from "area/connection/utils/jobs";
-import { JobConfigType, SynchronousJobRead } from "core/api/types/AirbyteClient";
+import { areLogsFormatted, areLogsStructured } from "area/connection/utils/jobs";
+import { FailureReason, JobConfigType, LogEvents, LogRead, SynchronousJobRead } from "core/api/types/AirbyteClient";
 import { DefaultErrorBoundary } from "core/errors";
 import { downloadFile } from "core/utils/file";
 import { useModalService } from "hooks/services/Modal";
@@ -27,30 +27,30 @@ import { useModalService } from "hooks/services/Modal";
 import styles from "./JobFailure.module.scss";
 
 export interface JobFailureProps {
-  job?: SynchronousJobRead | null;
+  job?: SynchronousJobRead;
   fallbackMessage?: React.ReactNode;
+  id?: string;
+  configType?: JobConfigType;
+  logs?: LogEvents | LogRead;
+  failureReason?: FailureReason;
 }
 
 /**
  * Hook that transforms SynchronousJobRead logs into CleanedLogLines format
  * Similar to useCleanLogs but specifically for SynchronousJobRead
  */
-const useCleanJobLogs = (job: SynchronousJobRead): CleanedLogLines => {
+const useCleanJobLogs = (jobLogs: LogEvents | LogRead): CleanedLogLines => {
   return useMemo(() => {
-    if (!job.logs) {
-      return [];
-    }
-
-    if (jobHasFormattedLogs(job) && job.logs.logLines) {
-      return job.logs.logLines.map((line, index) => ({
+    if (areLogsFormatted(jobLogs)) {
+      return jobLogs.logLines.map((line, index) => ({
         lineNumber: index + 1,
         original: line,
         text: line,
       }));
     }
 
-    if (jobHasStructuredLogs(job) && job.logs.events) {
-      return job.logs.events.map((event, index) => ({
+    if (areLogsStructured(jobLogs) && jobLogs.events) {
+      return jobLogs.events.map((event, index) => ({
         lineNumber: index + 1,
         original: JSON.stringify(event),
         text: formatLogEvent(event),
@@ -60,19 +60,15 @@ const useCleanJobLogs = (job: SynchronousJobRead): CleanedLogLines => {
     }
 
     return [];
-  }, [job]);
+  }, [jobLogs]);
 };
 
-const JobLogsModalContent = ({ job }: { job: SynchronousJobRead }) => {
-  const logLines = useCleanJobLogs(job);
+const JobLogsModalContent = ({ jobLogs }: { jobLogs: LogEvents | LogRead }) => {
+  const logLines = useCleanJobLogs(jobLogs);
+
   return (
     <div className={styles.logsModal}>
-      <VirtualLogs
-        attemptId={1}
-        logLines={logLines}
-        hasFailure={!job.succeeded}
-        showStructuredLogs={jobHasStructuredLogs(job)}
-      />
+      <VirtualLogs attemptId={1} logLines={logLines} hasFailure showStructuredLogs={areLogsStructured(jobLogs)} />
     </div>
   );
 };
@@ -148,34 +144,34 @@ const DownloadButton = ({
   );
 };
 
-export const JobFailure: React.FC<JobFailureProps> = ({ job, fallbackMessage }) => {
+export const JobFailure: React.FC<JobFailureProps> = (props) => {
+  const configType = props.job ? props.job.configType : props.configType;
+  const jobId = props.job ? props.job.id : props.id;
+  const logs = props.job ? props.job.logs : props.logs;
+  const failureReason = props.job ? props.job.failureReason : props.failureReason;
+  const { fallbackMessage } = props;
+
   const [isDetailsExpanded, toggleDetails] = useToggle(false);
   const [isStacktraceExpanded, toggleStacktrace] = useToggle(false);
   const { openModal } = useModalService();
 
-  if (!job) {
+  if (!configType || !jobId) {
     return <Message text={fallbackMessage || <FormattedMessage id="form.someError" />} type="error" />;
   }
-
-  const failureReason = job.failureReason;
 
   const openLogsModal = () => {
     openModal({
       size: "full",
-      title: <FormattedMessage id="jobHistory.logs.title" values={{ connectionName: `${job.configType} job` }} />,
+      title: <FormattedMessage id="jobHistory.logs.title" values={{ connectionName: `${configType} job` }} />,
       content: () => (
         <DefaultErrorBoundary>
-          <Suspense fallback={<LoadingSpinner />}>
-            <JobLogsModalContent job={job} />
-          </Suspense>
+          <Suspense fallback={<LoadingSpinner />}>{logs && <JobLogsModalContent jobLogs={logs} />}</Suspense>
         </DefaultErrorBoundary>
       ),
     });
   };
 
-  const hasLogs =
-    (jobHasFormattedLogs(job) && job.logs?.logLines && job.logs.logLines.length > 0) ||
-    (jobHasStructuredLogs(job) && job.logs?.events && job.logs.events.length > 0);
+  const hasLogs = !!logs;
 
   const hasFailureDetails =
     failureReason && (failureReason.internalMessage || failureReason.failureOrigin || failureReason.failureType);
@@ -183,7 +179,7 @@ export const JobFailure: React.FC<JobFailureProps> = ({ job, fallbackMessage }) 
   return (
     <Message
       type="error"
-      text={<FormattedMessage id={getTitlePhraseIdForJobConfigType(job.configType)} />}
+      text={<FormattedMessage id={getTitlePhraseIdForJobConfigType(configType)} />}
       secondaryText={failureReason?.externalMessage || fallbackMessage}
     >
       {(hasLogs || hasFailureDetails || failureReason?.stacktrace) && (
@@ -201,12 +197,12 @@ export const JobFailure: React.FC<JobFailureProps> = ({ job, fallbackMessage }) 
                   <Tooltip
                     control={
                       <DownloadButton
-                        configType={job.configType}
-                        id={job.id}
+                        configType={configType}
+                        id={jobId}
                         logLines={
-                          jobHasFormattedLogs(job) && job.logs?.logLines
-                            ? job.logs.logLines
-                            : (jobHasStructuredLogs(job) && job.logs?.events?.map(formatLogEvent)) || []
+                          areLogsFormatted(logs)
+                            ? logs.logLines
+                            : (areLogsStructured(logs) && logs.events.map(formatLogEvent)) || []
                         }
                       />
                     }

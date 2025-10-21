@@ -19,6 +19,9 @@ export class ConnectorHelper {
   static id(connector: ConnectorT): string {
     return isSource(connector) ? connector.sourceId : connector.destinationId;
   }
+  static definitionId(connector: ConnectorT): string {
+    return isSource(connector) ? connector.sourceDefinitionId : connector.destinationDefinitionId;
+  }
 }
 
 export class ConnectorSpecification {

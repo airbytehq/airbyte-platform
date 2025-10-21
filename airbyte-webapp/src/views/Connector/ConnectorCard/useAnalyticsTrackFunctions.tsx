@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 
-import { SynchronousJobRead } from "core/api/types/AirbyteClient";
+import { CommandErrorParams } from "core/api";
 import { Connector, ConnectorDefinition } from "core/domain/connector";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 
@@ -14,7 +14,7 @@ export const useAnalyticsTrackFunctions = (connectorType: "source" | "destinatio
       connector: ConnectorDefinition | undefined,
       actionType: Action,
       actionDescription: string,
-      jobInfo?: SynchronousJobRead | null,
+      jobInfo?: CommandErrorParams | null,
       message?: string
     ) => {
       if (!connector) {
@@ -47,7 +47,7 @@ export const useAnalyticsTrackFunctions = (connectorType: "source" | "destinatio
   );
 
   const trackTestConnectorFailure = useCallback(
-    (connector: ConnectorDefinition | undefined, jobInfo: SynchronousJobRead | null, message: string) => {
+    (connector: ConnectorDefinition | undefined, jobInfo: CommandErrorParams | null, message: string) => {
       trackAction(connector, Action.FAILURE, "Tested connector - failure", jobInfo, message);
     },
     [trackAction]
