@@ -14,6 +14,7 @@ import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.micronaut.runtime.AirbyteContainerOrchestratorConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.internal.NamespacingMapper
@@ -26,7 +27,6 @@ import io.airbyte.workers.serde.PayloadDeserializer
 import io.airbyte.workload.api.domain.Workload
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -45,7 +45,7 @@ class ReplicationHydrationProcessor(
   private val fileClient: FileClient,
   private val destinationCatalogGenerator: DestinationCatalogGenerator,
   private val metricClient: MetricClient,
-  @Value("\${airbyte.platform-mode}") private val platformMode: String,
+  private val airbyteContainerOrchestratorConfig: AirbyteContainerOrchestratorConfig,
 ) : InputHydrationProcessor {
   override fun process(workload: Workload) {
     logger.info { "Deserializing replication input..." }
@@ -94,7 +94,7 @@ class ReplicationHydrationProcessor(
         hydrated.prefix,
       )
 
-    if (platformMode == ArchitectureConstants.BOOKKEEPER) {
+    if (airbyteContainerOrchestratorConfig.platformMode.equals(ArchitectureConstants.BOOKKEEPER, true)) {
       // Write original catalog as is
       fileClient.writeInputFile(
         FileConstants.CATALOG_FILE,

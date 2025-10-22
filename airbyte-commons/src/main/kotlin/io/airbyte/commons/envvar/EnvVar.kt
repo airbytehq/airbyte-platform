@@ -115,6 +115,7 @@ enum class EnvVar {
   WORKER_ENVIRONMENT,
   WORKLOAD_ID,
   WORKSPACE_DOCKER_MOUNT,
+  WORKSPACE_ID,
   WORKSPACE_ROOT,
 
   /** These exist testing purposes only! DO NOT USE in non-test code! */

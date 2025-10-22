@@ -5,7 +5,6 @@
 package io.airbyte.workload.launcher.pods.factories
 
 import io.airbyte.workers.pod.FileConstants.CATALOG_FILE
-import io.airbyte.workers.pod.FileConstants.CONFIG_DIR
 import io.airbyte.workers.pod.FileConstants.CONNECTOR_CONFIG_FILE
 import io.airbyte.workers.pod.FileConstants.DEST_DIR
 import io.airbyte.workers.pod.FileConstants.EXIT_CODE_FILE
@@ -59,9 +58,10 @@ internal object ContainerCommandFactory {
   fun connectorOperation(
     operationCommand: String,
     configArgs: String,
+    configDir: String,
   ) = connectorCommandWrapper(
     """
-    eval "${'$'}AIRBYTE_ENTRYPOINT $operationCommand $configArgs" > $CONFIG_DIR/$JOB_OUTPUT_FILE
+    eval "${'$'}AIRBYTE_ENTRYPOINT $operationCommand $configArgs" > $configDir/$JOB_OUTPUT_FILE
     """.trimIndent(),
   )
 

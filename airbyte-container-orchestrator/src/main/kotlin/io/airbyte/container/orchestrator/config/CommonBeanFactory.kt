@@ -26,14 +26,16 @@ import io.airbyte.container.orchestrator.worker.util.ClosableChannelQueue
 import io.airbyte.container.orchestrator.worker.withBufferSize
 import io.airbyte.container.orchestrator.worker.withDefaultConfiguration
 import io.airbyte.featureflag.ReplicationBufferOverride
+import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteConnectorConfig
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.micronaut.runtime.AirbyteWorkloadApiClientConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.pod.FileConstants
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Value
-import jakarta.annotation.Nullable
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.nio.file.Path
@@ -50,31 +52,6 @@ import java.util.function.Supplier
  */
 @Factory
 class CommonBeanFactory {
-  @Singleton
-  @Named("attemptId")
-  fun attemptId(jobRunConfig: JobRunConfig) = Math.toIntExact(jobRunConfig.attemptId)
-
-  @Singleton
-  @Named("connectionId")
-  fun connectionId(replicationInput: ReplicationInput): UUID = replicationInput.connectionId
-
-  /**
-   * Returns the config directory which contains all the configuration files.
-   *
-   * @param configDir optional directory, defaults to FileConstants.CONFIG_DIR if not defined.
-   * @return Configuration directory.
-   */
-  @Singleton
-  @Named("configDir")
-  fun configDir(
-    @Value("\${airbyte.config-dir}") @Nullable configDir: String?,
-  ): String {
-    if (configDir == null) {
-      return FileConstants.CONFIG_DIR
-    }
-    return configDir
-  }
-
   /**
    * Returns the contents of the OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG file.
    *
@@ -83,10 +60,8 @@ class CommonBeanFactory {
    * @return Contents of OrchestratorConstants.INIT_FILE_JOB_RUN_CONFIG
    */
   @Singleton
-  fun jobRunConfig(
-    @Value("\${airbyte.job-id}") @Nullable jobId: String,
-    @Value("\${airbyte.attempt-id}") @Nullable attemptId: Long,
-  ): JobRunConfig = JobRunConfig().withJobId(jobId).withAttemptId(attemptId)
+  fun jobRunConfig(airbyteContextConfig: AirbyteContextConfig): JobRunConfig =
+    JobRunConfig().withJobId(airbyteContextConfig.jobId.toString()).withAttemptId(airbyteContextConfig.attemptId.toLong())
 
   @Singleton
   @Named("jobRoot")
@@ -102,22 +77,12 @@ class CommonBeanFactory {
 
   @Singleton
   @Named("workspaceRoot")
-  fun workspaceRoot(
-    @Value("\${airbyte.workspace-root}") workspaceRoot: String,
-  ): Path = Path.of(workspaceRoot)
+  fun workspaceRoot(airbyteConfig: AirbyteConfig): Path = Path.of(airbyteConfig.workspaceRoot)
 
   @Singleton
-  @Named("workloadId")
-  fun workloadId(
-    @Value("\${airbyte.workload-id}") workloadId: String,
-  ): String = workloadId
-
-  @Singleton
-  fun replicationInput(
-    @Named("configDir") configDir: String,
-  ): ReplicationInput =
+  fun replicationInput(airbyteConnectorConfig: AirbyteConnectorConfig): ReplicationInput =
     Jsons.deserialize(
-      Path.of(configDir).resolve(FileConstants.INIT_INPUT_FILE).toFile(),
+      Path.of(airbyteConnectorConfig.configDir).resolve(FileConstants.INIT_INPUT_FILE).toFile(),
       ReplicationInput::class.java,
     )
 
@@ -143,9 +108,8 @@ class CommonBeanFactory {
 
   @Singleton
   @Named("replicationWorkerExecutor")
-  fun replicationWorkerExecutor(
-    @Value("\${airbyte.replication.dispatcher.n-threads:4}") nThreads: Int,
-  ): ExecutorService = Executors.newFixedThreadPool(nThreads)
+  fun replicationWorkerExecutor(airbyteWorkerConfig: AirbyteWorkerConfig): ExecutorService =
+    Executors.newFixedThreadPool(airbyteWorkerConfig.replication.dispatcher.nThreads)
 
   @Singleton
   @Named("heartbeatExecutor")
@@ -169,12 +133,10 @@ class CommonBeanFactory {
 
   @Singleton
   @Named("onReplicationRunning")
-  fun replicationRunningCallback(
-    @Named("workloadId") workloadId: String,
-  ): VoidCallable =
+  fun replicationRunningCallback(airbyteContextConfig: AirbyteContextConfig): VoidCallable =
     object : VoidCallable {
       override fun voidCall() {
-        println("workloadId = $workloadId")
+        println("workloadId = ${airbyteContextConfig.workloadId}")
       }
     }
 

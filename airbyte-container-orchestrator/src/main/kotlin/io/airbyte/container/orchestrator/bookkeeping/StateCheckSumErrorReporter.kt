@@ -22,6 +22,7 @@ import io.airbyte.config.Metadata
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.State
 import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient
@@ -47,10 +48,7 @@ class StateCheckSumErrorReporter(
   private var errorReported = false
 
   fun reportError(
-    workspaceId: UUID,
-    connectionId: UUID,
-    jobId: Long,
-    attemptNumber: Int,
+    airbyteContextConfig: AirbyteContextConfig,
     origin: FailureReason.FailureOrigin,
     internalMessage: String,
     externalMessage: String,
@@ -62,11 +60,11 @@ class StateCheckSumErrorReporter(
     }
     try {
       jobErrorReportingClient.ifPresent { client ->
-        val standardWorkspace = StandardWorkspace().withWorkspaceId(workspaceId)
+        val standardWorkspace = StandardWorkspace().withWorkspaceId(airbyteContextConfig.workspaceIdAsUUID())
         val commonMetadata: Map<String?, String?> =
-          mapOf(JobErrorReporter.JOB_ID_KEY to jobId.toString()) +
-            getConnectionMetadata(workspaceId, connectionId) +
-            getWorkspaceMetadata(workspaceId) +
+          mapOf(JobErrorReporter.JOB_ID_KEY to airbyteContextConfig.jobId.toString()) +
+            getConnectionMetadata(airbyteContextConfig.workspaceIdAsUUID(), airbyteContextConfig.connectionIdAsUUID()) +
+            getWorkspaceMetadata(airbyteContextConfig.workspaceIdAsUUID()) +
             airbyteMetadata()
 
         val metadata: Map<String, String>
@@ -74,7 +72,8 @@ class StateCheckSumErrorReporter(
 
         when (origin) {
           FailureReason.FailureOrigin.SOURCE -> {
-            val sourceId = retry { airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(connectionId)).sourceId }
+            val sourceId =
+              retry { airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(airbyteContextConfig.connectionIdAsUUID())).sourceId }
             val source = retry { airbyteApiClient.sourceApi.getSource(SourceIdRequestBody(sourceId)) }
             val sourceVersion =
               retry { airbyteApiClient.actorDefinitionVersionApi.getActorDefinitionVersionForSourceId(SourceIdRequestBody(sourceId)) }
@@ -85,7 +84,8 @@ class StateCheckSumErrorReporter(
               getDefinitionMetadata(sourceDefinition.sourceDefinitionId, sourceDefinition.name, dockerImageName, sourceDefinition.releaseStage)
           }
           FailureReason.FailureOrigin.DESTINATION -> {
-            val destinationId = retry { airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(connectionId)).destinationId }
+            val destinationId =
+              retry { airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(airbyteContextConfig.connectionIdAsUUID())).destinationId }
             val destination = retry { airbyteApiClient.destinationApi.getDestination(DestinationIdRequestBody(destinationId)) }
             val destinationVersion =
               retry { airbyteApiClient.actorDefinitionVersionApi.getActorDefinitionVersionForDestinationId(DestinationIdRequestBody(destinationId)) }
@@ -110,7 +110,7 @@ class StateCheckSumErrorReporter(
           }
         }
 
-        val failureReason = createFailureReason(origin, internalMessage, externalMessage, exception, jobId, attemptNumber)
+        val failureReason = createFailureReason(origin, internalMessage, externalMessage, exception, airbyteContextConfig)
         val allMetadata: Map<String?, String?> = getFailureReasonMetadata(failureReason) + metadata + commonMetadata
         client.reportJobFailureReason(
           standardWorkspace,
@@ -132,8 +132,7 @@ class StateCheckSumErrorReporter(
     internalMessage: String,
     externalMessage: String,
     exception: Throwable,
-    jobId: Long,
-    attemptNumber: Int,
+    airbyteContextConfig: AirbyteContextConfig,
   ): FailureReason =
     FailureReason()
       .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
@@ -144,8 +143,8 @@ class StateCheckSumErrorReporter(
       .withStacktrace(ExceptionUtils.exceptionStackTrace(exception))
       .withMetadata(
         Metadata()
-          .withAdditionalProperty("jobId", jobId)
-          .withAdditionalProperty("attemptNumber", attemptNumber),
+          .withAdditionalProperty("jobId", airbyteContextConfig.jobId)
+          .withAdditionalProperty("attemptNumber", airbyteContextConfig.attemptId),
       )
 
   fun getDockerImageName(

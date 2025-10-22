@@ -9,6 +9,7 @@ import io.airbyte.container.orchestrator.persistence.SyncPersistence
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.featureflag.LogConnectorMessages
 import io.airbyte.featureflag.LogStateMsgs
+import io.airbyte.micronaut.runtime.AirbyteContainerOrchestratorConfig
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteMessage
@@ -54,7 +55,7 @@ internal class AirbyteMessageTrackerTest {
         replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
         replicationInput = replicationInput,
         syncPersistence = syncPersistence,
-        platformMode = ArchitectureConstants.ORCHESTRATOR,
+        airbyteContainerOrchestratorConfig = AirbyteContainerOrchestratorConfig(platformMode = ArchitectureConstants.ORCHESTRATOR),
       )
   }
 
@@ -122,7 +123,7 @@ internal class AirbyteMessageTrackerTest {
     val config = mockk<Config>(relaxed = true)
     val control = AirbyteMessageUtils.createConfigControlMessage(config, 0.0)
 
-    messageTracker.acceptFromSource(control!!)
+    messageTracker.acceptFromSource(control)
 
     verify { syncPersistence wasNot Called }
   }
@@ -142,7 +143,7 @@ internal class AirbyteMessageTrackerTest {
   fun testAcceptFromDestinationTraceAnalytics() {
     val trace = AirbyteMessageUtils.createAnalyticsTraceMessage("abc", "def")
 
-    messageTracker.acceptFromDestination(trace!!)
+    messageTracker.acceptFromDestination(trace)
 
     verify { syncPersistence wasNot Called }
   }
@@ -151,7 +152,7 @@ internal class AirbyteMessageTrackerTest {
   fun testAcceptFromSourceTraceAnalytics() {
     val trace = AirbyteMessageUtils.createAnalyticsTraceMessage("abc", "def")
 
-    messageTracker.acceptFromSource(trace!!)
+    messageTracker.acceptFromSource(trace)
 
     verify { syncPersistence wasNot Called }
   }
@@ -211,7 +212,7 @@ internal class AirbyteMessageTrackerTest {
     val config = mockk<Config>(relaxed = true)
     val control = AirbyteMessageUtils.createConfigControlMessage(config, 0.0)
 
-    messageTracker.acceptFromDestination(control!!)
+    messageTracker.acceptFromDestination(control)
 
     verify { syncPersistence wasNot Called }
   }

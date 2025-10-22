@@ -17,8 +17,11 @@ micronaut:
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
 airbyte:
-  platform-mode: ${PLATFORM_MODE:ORCHESTRATOR}
   license-key: ${AIRBYTE_LICENSE_KEY:empty}
+  container.orchestrator:
+    platform-mode: ${PLATFORM_MODE:ORCHESTRATOR}
+  context:
+    workload-id: ${WORKLOAD_ID:}
   control.plane:
     auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT}
   data-plane:
@@ -77,7 +80,6 @@ airbyte:
     retries:
       delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
       max: ${WORKLOAD_API_MAX_RETRIES:5}
-  workload-id: ${WORKLOAD_ID:}
 
 endpoints:
   all:

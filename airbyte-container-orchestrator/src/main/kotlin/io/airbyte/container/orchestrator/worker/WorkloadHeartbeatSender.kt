@@ -9,11 +9,11 @@ import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatTimeoutException
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.WorkloadHeartbeatRequest
 import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import io.micronaut.http.HttpStatus
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -35,18 +35,12 @@ class WorkloadHeartbeatSender(
   @Named("workloadHeartbeatInterval") private val heartbeatInterval: Duration,
   @Named("workloadHeartbeatTimeout") private val heartbeatTimeoutDuration: Duration,
   @Named("hardExitCallable") private val hardExitCallable: () -> Unit,
-  @Named("workloadId") private val workloadId: String,
-  @Value("\${airbyte.job-id}") private val jobId: Long,
-  @Named("attemptId") private val attempt: Int,
+  private val airbyteContextConfig: AirbyteContextConfig,
 ) {
   private var sourceIsHanging = false
 
   /**
    * Sends periodic heartbeat requests until cancellation, terminal error, or heartbeat timeout.
-   *
-   * @param heartbeatInterval the interval between heartbeat requests.
-   * @param heartbeatTimeoutDuration the maximum allowed duration between successful heartbeats.
-   * @param workloadId the workload identifier.
    */
   suspend fun sendHeartbeat() {
     logger.info { "Starting workload heartbeat (interval=${heartbeatInterval.seconds}s; timeout=${heartbeatTimeoutDuration.seconds}s)" }
@@ -58,7 +52,7 @@ class WorkloadHeartbeatSender(
     while (!runningTransitionSucceeded) {
       try {
         logger.info { "Transitioning workload to running state" }
-        workloadApiClient.workloadRunning(WorkloadRunningRequest(workloadId))
+        workloadApiClient.workloadRunning(WorkloadRunningRequest(airbyteContextConfig.workloadId))
         logger.info { "Workload successfully transitioned to running state" }
         runningTransitionSucceeded = true
         lastSuccessfulHeartbeat = Instant.now()
@@ -124,7 +118,7 @@ class WorkloadHeartbeatSender(
 
           else -> {
             logger.debug { "Sending workload heartbeat." }
-            workloadApiClient.workloadHeartbeat(WorkloadHeartbeatRequest(workloadId))
+            workloadApiClient.workloadHeartbeat(WorkloadHeartbeatRequest(airbyteContextConfig.workloadId))
             lastSuccessfulHeartbeat = now
           }
         }
@@ -191,7 +185,7 @@ class WorkloadHeartbeatSender(
    * Fail the current workload.
    */
   private fun failWorkload(throwable: Throwable) {
-    replicationWorkerState.trackFailure(throwable, jobId, attempt)
+    replicationWorkerState.trackFailure(throwable, airbyteContextConfig.jobId, airbyteContextConfig.attemptId)
     replicationWorkerState.markFailed()
     replicationWorkerState.abort()
   }

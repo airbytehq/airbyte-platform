@@ -8,6 +8,7 @@ import io.airbyte.commons.storage.STORAGE_CLAIM_NAME
 import io.airbyte.commons.storage.STORAGE_MOUNT
 import io.airbyte.commons.storage.STORAGE_VOLUME_NAME
 import io.airbyte.featureflag.TestClient
+import io.airbyte.micronaut.runtime.AirbyteConnectorConfig
 import io.airbyte.micronaut.runtime.AirbyteContainerConfig
 import io.airbyte.micronaut.runtime.AirbyteStorageConfig
 import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
@@ -181,6 +182,7 @@ class ReplicationPodFactoryTest {
   }
 
   object Fixtures {
+    val airbyteConnectorConfig = AirbyteConnectorConfig()
     val airbyteContainerConfig = AirbyteContainerConfig(rootlessWorkload = true)
     val workloadSecurityContextProvider = WorkloadSecurityContextProvider(airbyteContainerConfig)
     val featureFlagClient = TestClient()
@@ -247,6 +249,7 @@ class ReplicationPodFactoryTest {
     val defaultVolumeFactory =
       VolumeFactory(
         googleApplicationCredentials = null,
+        airbyteConnectorConfig = airbyteConnectorConfig,
         airbyteStorageConfig = airbyteStorageConfig,
         airbyteWorkerConfig = airbyteWorkerConfig,
       )
@@ -270,6 +273,7 @@ class ReplicationPodFactoryTest {
             envVars = listOf(EnvVar("INIT_ENV_1", "INIT_ENV_VAL_1", null)),
             initContainerInfo = KubeContainerInfo("test-init-image", "Always"),
             featureFlagClient = featureFlagClient,
+            airbyteConnectorConfig = airbyteConnectorConfig,
           ),
         replContainerFactory =
           ReplicationContainerFactory(

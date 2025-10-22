@@ -11,11 +11,12 @@ import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.micronaut.runtime.AirbyteConnectorConfig
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.pod.FileConstants.DEST_DIR
 import io.airbyte.workers.pod.FileConstants.SOURCE_DIR
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import io.micronaut.scheduling.annotation.Scheduled
 import jakarta.inject.Singleton
 import java.io.BufferedReader
@@ -29,8 +30,8 @@ private val logger = KotlinLogging.logger {}
  */
 @Singleton
 class StorageUsageReporter(
-  @Value("\${airbyte.connection-id}") private val connectionId: String,
-  @Value("\${airbyte.staging-dir}") private val stagingDir: String?,
+  private val airbyteConnectorConfig: AirbyteConnectorConfig,
+  private val airbyteContextConfig: AirbyteContextConfig,
   private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
   private val input: ReplicationInput,
@@ -38,7 +39,7 @@ class StorageUsageReporter(
   @Scheduled(fixedDelay = "60s")
   fun reportConnectorDiskUsage() {
     // NO-OP if FF disabled
-    if (!featureFlagClient.boolVariation(ReportConnectorDiskUsage, Connection(connectionId))) {
+    if (!featureFlagClient.boolVariation(ReportConnectorDiskUsage, Connection(airbyteContextConfig.connectionId))) {
       return
     }
 
@@ -46,7 +47,7 @@ class StorageUsageReporter(
 
     val destMbUsed = measureDirMbViaProc(DEST_DIR)
 
-    val connectionIdAttr = MetricAttribute(MetricTags.CONNECTION_ID, connectionId)
+    val connectionIdAttr = MetricAttribute(MetricTags.CONNECTION_ID, airbyteContextConfig.connectionId)
     sourceMbUsed?.let {
       logger.debug { "Disk used by source: $sourceMbUsed MB" }
 
@@ -62,9 +63,9 @@ class StorageUsageReporter(
       metricClient.gauge(OssMetricsRegistry.CONNECTOR_STORAGE_USAGE_MB, it, typeAttr, imageAttr, connectionIdAttr)
     }
 
-    // conditionally record staging usage as separate metric
-    stagingDir?.let {
-      val stagingMbUsed = measureDirMbViaProc(it)
+    // conditionally record staging usage as a separate metric
+    if (airbyteConnectorConfig.stagingDir.isNotBlank()) {
+      val stagingMbUsed = measureDirMbViaProc(airbyteConnectorConfig.stagingDir)
       stagingMbUsed?.let {
         logger.debug { "Disk used by staging: $stagingMbUsed MB" }
 

@@ -1,0 +1,12 @@
+airbyte:
+  cloud:
+    pubsub:
+      enabled: true
+      topic: test-topic
+      request-bytes-threshold: 1
+      message-count-batch-size: 2
+      publish-delay-threshold-ms: 3
+      error-reporting:
+        sentry:
+          dsn: test-dsn
+        strategy: SENTRY

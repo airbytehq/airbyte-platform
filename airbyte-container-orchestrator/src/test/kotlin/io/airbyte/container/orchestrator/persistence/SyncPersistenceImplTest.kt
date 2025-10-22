@@ -24,6 +24,9 @@ import io.airbyte.container.orchestrator.bookkeeping.state.SingleStateAggregator
 import io.airbyte.container.orchestrator.bookkeeping.state.StateAggregator
 import io.airbyte.container.orchestrator.bookkeeping.state.StreamStateAggregator
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteContainerOrchestratorConfig
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
@@ -59,17 +62,14 @@ internal class SyncPersistenceImplTest {
   private lateinit var executorService: ScheduledExecutorService
   private lateinit var actualFlushMethod: CapturingSlot<Runnable>
   private lateinit var stateAggregator: StateAggregator
-  private lateinit var connectionId: UUID
-  private var jobId: Long = 0L
-  private var attemptNumber: Int = 0
+  private lateinit var airbyteContainerOrchestratorConfig: AirbyteContainerOrchestratorConfig
+  private lateinit var airbyteWorkerConfig: AirbyteWorkerConfig
+  private lateinit var airbyteContextConfig: AirbyteContextConfig
   private lateinit var airbyteApiClient: AirbyteApiClient
   private lateinit var metricClient: MetricClient
 
   @BeforeEach
   fun beforeEach() {
-    connectionId = UUID.randomUUID()
-    jobId = (Math.random() * Long.Companion.MAX_VALUE).toLong()
-    attemptNumber = (Math.random() * Int.Companion.MAX_VALUE).toInt()
     metricClient = mockk<MetricClient>(relaxed = true)
 
     stateAggregator = DefaultStateAggregator(StreamStateAggregator(), SingleStateAggregator())
@@ -87,13 +87,13 @@ internal class SyncPersistenceImplTest {
         } returns mockk<ScheduledFuture<*>>(relaxed = true)
         every { shutdown() } returns Unit
       }
-
+    airbyteContainerOrchestratorConfig = AirbyteContainerOrchestratorConfig(platformMode = ArchitectureConstants.ORCHESTRATOR)
     syncStatsTracker =
       spyk(
         ParallelStreamStatsTracker(
           metricClient = metricClient,
           stateCheckSumEventHandler = mockk<StateCheckSumCountEventHandler>(relaxed = true),
-          ArchitectureConstants.ORCHESTRATOR,
+          airbyteContainerOrchestratorConfig = airbyteContainerOrchestratorConfig,
         ),
       )
 
@@ -112,17 +112,24 @@ internal class SyncPersistenceImplTest {
         every { stateApi } returns stateApiClient
       }
 
+    airbyteContextConfig =
+      AirbyteContextConfig(
+        attemptId = (Math.random() * Int.Companion.MAX_VALUE).toInt(),
+        connectionId = UUID.randomUUID().toString(),
+        jobId = (Math.random() * Long.Companion.MAX_VALUE).toLong(),
+      )
+    airbyteWorkerConfig =
+      AirbyteWorkerConfig(replication = AirbyteWorkerConfig.AirbyteWorkerReplicationConfig(persistenceFlushPeriodSec = FLUSH_PERIOD))
+
     syncPersistence =
       SyncPersistenceImpl(
         airbyteApiClient = airbyteApiClient,
         stateBuffer = stateAggregator,
         stateFlushExecutorService = executorService,
-        stateFlushPeriodInSeconds = FLUSH_PERIOD,
         metricClient = metricClient,
         syncStatsTracker = syncStatsTracker,
-        connectionId = connectionId,
-        jobId = jobId,
-        attemptNumber = attemptNumber,
+        airbyteContextConfig = airbyteContextConfig,
+        airbyteWorkerConfig = airbyteWorkerConfig,
       )
   }
 
@@ -136,7 +143,7 @@ internal class SyncPersistenceImplTest {
   @Throws(IOException::class)
   fun testHappyPath() {
     val stateA1 = getStreamState("A", 1)
-    syncPersistence.accept(connectionId, stateA1)
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), stateA1)
     clearInvocations(listOf(executorService, stateApiClient))
 
     // Simulating the expected flush execution
@@ -146,8 +153,8 @@ internal class SyncPersistenceImplTest {
 
     val stateB1 = getStreamState("B", 1)
     val stateC2 = getStreamState("C", 2)
-    syncPersistence.accept(connectionId, stateB1)
-    syncPersistence.accept(connectionId, stateC2)
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), stateB1)
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), stateC2)
 
     // This should only happen the first time before we schedule the task
     verify(exactly = 0) { stateApiClient.getState(any()) }
@@ -170,7 +177,7 @@ internal class SyncPersistenceImplTest {
   @Throws(IOException::class)
   fun testFlushWithApiFailures() {
     val stateF1 = getStreamState("F", 1)
-    syncPersistence.accept(connectionId, stateF1)
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), stateF1)
 
     // Set API call to fail
     every { stateApiClient.createOrUpdateState(any()) } throws IOException()
@@ -182,7 +189,7 @@ internal class SyncPersistenceImplTest {
 
     // Adding more states
     val stateG1 = getStreamState("G", 1)
-    syncPersistence.accept(connectionId, stateG1)
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), stateG1)
 
     // Flushing again
     actualFlushMethod.captured.run()
@@ -191,7 +198,7 @@ internal class SyncPersistenceImplTest {
 
     // Adding more states
     val stateF2 = getStreamState("F", 2)
-    syncPersistence.accept(connectionId, stateF2)
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), stateF2)
 
     // Flushing again
     actualFlushMethod.captured.run()
@@ -216,7 +223,7 @@ internal class SyncPersistenceImplTest {
   @Throws(IOException::class)
   fun testStatsFlushBasicEmissions() {
     syncPersistence.updateStats(AirbyteRecordMessage())
-    syncPersistence.accept(connectionId, getStreamState("a", 1))
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), getStreamState("a", 1))
 
     actualFlushMethod.captured.run()
     verify(exactly = 1) { stateApiClient.createOrUpdateState(any()) }
@@ -234,7 +241,7 @@ internal class SyncPersistenceImplTest {
   fun testStatsFlush() {
     // Setup so that the flush does something
     syncPersistence.updateStats(AirbyteRecordMessage())
-    syncPersistence.accept(connectionId, getStreamState("s1", 1))
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), getStreamState("s1", 1))
 
     val sd1 = AirbyteStreamNameNamespacePair("s1", "ns1")
     val sd2 = AirbyteStreamNameNamespacePair("s2", "ns1")
@@ -260,10 +267,11 @@ internal class SyncPersistenceImplTest {
       )
 
     actualFlushMethod.captured.run()
+
     val expectedSaveStats =
       SaveStatsRequestBody(
-        jobId = jobId,
-        attemptNumber = attemptNumber,
+        attemptNumber = airbyteContextConfig.attemptId,
+        jobId = airbyteContextConfig.jobId,
         stats =
           AttemptStats(
             bytesCommitted = 1010,
@@ -303,7 +311,7 @@ internal class SyncPersistenceImplTest {
                 ),
             ),
           ),
-        connectionId = connectionId,
+        connectionId = airbyteContextConfig.connectionIdAsUUID(),
       )
     verify(exactly = 1) { attemptApiClient.saveStats(expectedSaveStats) }
   }
@@ -313,7 +321,7 @@ internal class SyncPersistenceImplTest {
   fun testStatsAreNotPersistedWhenStateFails() {
     // We should not save stats if persist state failed
     syncPersistence.updateStats(AirbyteRecordMessage())
-    syncPersistence.accept(connectionId, getStreamState("b", 2))
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), getStreamState("b", 2))
     every { stateApiClient.createOrUpdateState(any()) } throws IOException()
     actualFlushMethod.captured.run()
     verify(exactly = 1) { stateApiClient.createOrUpdateState(any()) }
@@ -332,7 +340,7 @@ internal class SyncPersistenceImplTest {
   fun testStatsFailuresAreRetriedOnFollowingRunsEvenWithoutNewStates() {
     // If we failed to save stats, we should retry on the next schedule even if there were no new states
     syncPersistence.updateStats(AirbyteRecordMessage())
-    syncPersistence.accept(connectionId, getStreamState("a", 3))
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), getStreamState("a", 3))
     every { attemptApiClient.saveStats(any()) } throws IOException()
     actualFlushMethod.captured.run()
     verify(exactly = 1) { stateApiClient.createOrUpdateState(any()) }
@@ -396,7 +404,7 @@ internal class SyncPersistenceImplTest {
     // Adding a state to flush, this state should get flushed when we close syncPersistence
     val stateA2 = getStreamState("A", 2)
     syncPersistence.updateStats(AirbyteRecordMessage())
-    syncPersistence.accept(connectionId, stateA2)
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), stateA2)
 
     // Shutdown, we expect the executor service to be stopped and an stateApiClient to be called
     every { executorService.awaitTermination(any(), any()) } returns true
@@ -413,14 +421,14 @@ internal class SyncPersistenceImplTest {
   fun testCloseMergeStatesFromPreviousFailure() {
     // Adding a state to flush, this state should get flushed when we close syncPersistence
     val stateA2 = getStreamState("closeA", 2)
-    syncPersistence.accept(connectionId, stateA2)
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), stateA2)
 
     // Trigger a failure
     every { stateApiClient.createOrUpdateState(any()) } throws IOException()
     actualFlushMethod.captured.run()
 
     val stateB1 = getStreamState("closeB", 1)
-    syncPersistence.accept(connectionId, stateB1)
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), stateB1)
 
     // Final flush
     clearInvocations(listOf(stateApiClient))
@@ -435,14 +443,16 @@ internal class SyncPersistenceImplTest {
   fun testCloseShouldAttemptToRetryFinalFlush() {
     val state = getStreamState("final retry", 2)
     syncPersistence.updateStats(AirbyteRecordMessage())
-    syncPersistence.accept(connectionId, state)
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), state)
 
     every { stateApiClient.createOrUpdateState(any()) } returns mockk(relaxed = true)
 
     // Final flush
     every { executorService.awaitTermination(any(), any()) } returns true
     syncPersistence.close()
-    verify(exactly = 1) { stateApiClient.createOrUpdateState(buildStateRequest(connectionId = connectionId, listOf(state))) }
+    verify(
+      exactly = 1,
+    ) { stateApiClient.createOrUpdateState(buildStateRequest(connectionId = airbyteContextConfig.connectionIdAsUUID(), listOf(state))) }
     verify(exactly = 1) { attemptApiClient.saveStats(any()) }
   }
 
@@ -451,7 +461,7 @@ internal class SyncPersistenceImplTest {
   fun testBadFinalStateFlushThrowsAnException() {
     val state = getStreamState("final retry", 2)
     syncPersistence.updateStats(AirbyteRecordMessage())
-    syncPersistence.accept(connectionId, state)
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), state)
 
     // Setup some API failures
     every { stateApiClient.createOrUpdateState(any()) } throws IOException()
@@ -460,7 +470,9 @@ internal class SyncPersistenceImplTest {
     every { executorService.awaitTermination(any(), any()) } returns true
     assertThrows(Exception::class.java) { syncPersistence.close() }
 
-    verify(exactly = 1) { stateApiClient.createOrUpdateState(buildStateRequest(connectionId = connectionId, listOf(state))) }
+    verify(
+      exactly = 1,
+    ) { stateApiClient.createOrUpdateState(buildStateRequest(connectionId = airbyteContextConfig.connectionIdAsUUID(), listOf(state))) }
     verify(exactly = 0) { attemptApiClient.saveStats(any()) }
 
     // Reset the mock so that the @AfterEach call to close the syncPersistence object doesn't throw on error
@@ -472,7 +484,7 @@ internal class SyncPersistenceImplTest {
   fun testBadFinalStatsFlushThrowsAnException() {
     val state = getStreamState("final retry", 2)
     syncPersistence.updateStats(AirbyteRecordMessage())
-    syncPersistence.accept(connectionId, state)
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), state)
 
     // Setup some API failures
     every { attemptApiClient.saveStats(any()) } throws IOException()
@@ -481,7 +493,9 @@ internal class SyncPersistenceImplTest {
     every { executorService.awaitTermination(any(), any()) } returns true
     assertThrows(Exception::class.java) { syncPersistence.close() }
 
-    verify(exactly = 1) { stateApiClient.createOrUpdateState(buildStateRequest(connectionId = connectionId, listOf(state))) }
+    verify(
+      exactly = 1,
+    ) { stateApiClient.createOrUpdateState(buildStateRequest(connectionId = airbyteContextConfig.connectionIdAsUUID(), listOf(state))) }
     verify(exactly = 1) { attemptApiClient.saveStats(any()) }
 
     // Reset the mock so that the @AfterEach call to close the syncPersistence object doesn't throw on error
@@ -491,7 +505,7 @@ internal class SyncPersistenceImplTest {
   @Test
   @Throws(Exception::class)
   fun testCloseWhenFailBecauseFlushTookTooLong() {
-    syncPersistence.accept(connectionId, getStreamState("oops", 42))
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), getStreamState("oops", 42))
 
     // Simulates a flush taking too long to terminate
     every { executorService.awaitTermination(any(), any()) } returns false
@@ -505,7 +519,7 @@ internal class SyncPersistenceImplTest {
   @Test
   @Throws(Exception::class)
   fun testCloseWhenFailBecauseThreadInterrupted() {
-    syncPersistence.accept(connectionId, getStreamState("oops", 42))
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), getStreamState("oops", 42))
 
     // Simulates a flush taking too long to terminate
     every { executorService.awaitTermination(any(), any()) } throws InterruptedException()
@@ -530,7 +544,7 @@ internal class SyncPersistenceImplTest {
   @Test
   fun testPreventMixingDataFromDifferentConnections() {
     val message = getStreamState("stream", 5)
-    syncPersistence.accept(connectionId, message)
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), message)
 
     assertThrows(IllegalArgumentException::class.java) { syncPersistence.accept(UUID.randomUUID(), message) }
   }
@@ -541,7 +555,7 @@ internal class SyncPersistenceImplTest {
     val captor = CapturingSlot<ConnectionStateCreateOrUpdate>()
 
     val message = getLegacyState("myFirstState")
-    syncPersistence.accept(connectionId, message)
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), message)
 
     verify(exactly = 1) { executorService.scheduleAtFixedRate(any(), any(), any(), any()) }
 
@@ -552,8 +566,8 @@ internal class SyncPersistenceImplTest {
 
     val otherMessage1 = getLegacyState("myOtherState1")
     val otherMessage2 = getLegacyState("myOtherState2")
-    syncPersistence.accept(connectionId, otherMessage1)
-    syncPersistence.accept(connectionId, otherMessage2)
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), otherMessage1)
+    syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), otherMessage2)
     every { executorService.awaitTermination(any(), any()) } returns true
     syncPersistence.close()
     verify(exactly = 1) { stateApiClient.createOrUpdateState(capture(captor)) }
@@ -569,12 +583,10 @@ internal class SyncPersistenceImplTest {
         airbyteApiClient = airbyteApiClient,
         stateBuffer = stateAggregator,
         stateFlushExecutorService = executorService,
-        stateFlushPeriodInSeconds = FLUSH_PERIOD,
         metricClient = metricClient,
         syncStatsTracker = syncStatsTracker,
-        connectionId = connectionId,
-        jobId = jobId,
-        attemptNumber = attemptNumber,
+        airbyteContextConfig = airbyteContextConfig,
+        airbyteWorkerConfig = airbyteWorkerConfig,
       )
 
     syncPersistence.updateStats(AirbyteRecordMessage())
@@ -632,7 +644,7 @@ internal class SyncPersistenceImplTest {
       throw RuntimeException(e)
     }
     val actual = captor.captured
-    val expected = buildStateRequest(connectionId, expectedStateMessages)
+    val expected = buildStateRequest(airbyteContextConfig.connectionIdAsUUID(), expectedStateMessages)
 
     // Checking the stream states
     assertEquals(actual.connectionState.streamState, expected.connectionState.streamState)

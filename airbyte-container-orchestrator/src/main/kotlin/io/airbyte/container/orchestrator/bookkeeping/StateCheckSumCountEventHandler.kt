@@ -35,6 +35,8 @@ import io.airbyte.metrics.lib.MetricTags.FAILURE_ORIGIN
 import io.airbyte.metrics.lib.MetricTags.JOB_ID
 import io.airbyte.metrics.lib.MetricTags.SOURCE_IMAGE
 import io.airbyte.metrics.lib.MetricTags.WORKSPACE_ID
+import io.airbyte.micronaut.runtime.AirbyteContainerOrchestratorConfig
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStateStats
@@ -43,7 +45,6 @@ import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.models.ArchitectureConstants
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
@@ -63,30 +64,29 @@ class StateCheckSumCountEventHandler(
   private val deploymentFetcher: DeploymentFetcher,
   private val trackingIdentityFetcher: TrackingIdentityFetcher,
   private val stateCheckSumReporter: StateCheckSumErrorReporter,
-  @Named("connectionId") private val connectionId: UUID,
-  @Named("workspaceId") private val workspaceId: UUID,
-  @Value("\${airbyte.job-id}") private val jobId: Long,
-  @Named("attemptId") private val attemptNumber: Int,
+  private val airbyteContainerOrchestratorConfig: AirbyteContainerOrchestratorConfig,
+  private val airbyteContextConfig: AirbyteContextConfig,
   @Named("epochMilliSupplier") private val epochMilliSupplier: Supplier<Long>,
   @Named("idSupplier") private val idSupplier: Supplier<UUID>,
-  @Value("\${airbyte.platform-mode}") private val platformMode: String,
   private val metricClient: MetricClient,
   private val replicationInput: ReplicationInput,
 ) {
   private val emitStatsCounterFlag: Boolean by lazy {
-    val connectionContext = Multi(listOf(Connection(connectionId), Workspace(workspaceId)))
+    val connectionContext = Multi(listOf(Connection(airbyteContextConfig.connectionId), Workspace(airbyteContextConfig.workspaceId)))
     featureFlagClient.boolVariation(EmitStateStatsToSegment, connectionContext)
   }
 
   // Temp piece of code for debug
   val logIncomingStreamNames: Boolean by lazy {
-    val connectionContext = Multi(listOf(Connection(connectionId), Workspace(workspaceId)))
+    val connectionContext = Multi(listOf(Connection(airbyteContextConfig.connectionId), Workspace(airbyteContextConfig.workspaceId)))
     featureFlagClient.boolVariation(LogStreamNamesInSateMessage, connectionContext)
   }
 
   private val deployment: Deployment by lazy { retry { deploymentFetcher.get() } }
 
-  private val trackingIdentity: TrackingIdentity by lazy { retry { trackingIdentityFetcher.apply(workspaceId, ScopeType.WORKSPACE) } }
+  private val trackingIdentity: TrackingIdentity by lazy {
+    retry { trackingIdentityFetcher.apply(airbyteContextConfig.workspaceIdAsUUID(), ScopeType.WORKSPACE) }
+  }
 
   private fun shouldEmitStateStatsToSegment(): Boolean = emitStatsCounterFlag
 
@@ -96,7 +96,7 @@ class StateCheckSumCountEventHandler(
         stateMessage.type == AirbyteStateMessage.AirbyteStateType.GLOBAL
     )
 
-  private val isBookkeeperMode: Boolean = platformMode == ArchitectureConstants.BOOKKEEPER
+  private val isBookkeeperMode: Boolean = airbyteContainerOrchestratorConfig.platformMode.equals(ArchitectureConstants.BOOKKEEPER, true)
 
   @Volatile
   private var noCheckSumError = true
@@ -179,13 +179,13 @@ class StateCheckSumCountEventHandler(
     val stateCheckSumCountEvent =
       StateCheckSumCountEvent(
         deployment.getDeploymentVersion(),
-        attemptNumber.toLong(),
-        connectionId.toString(),
+        airbyteContextConfig.attemptId.toLong(),
+        airbyteContextConfig.connectionId,
         deployment.getDeploymentId().toString(),
         deployment.getDeploymentMode(),
         trackingIdentity.email,
         idSupplier.get().toString(),
-        jobId,
+        airbyteContextConfig.jobId,
         recordCount.toLong(),
         stateMessage.getStateHashCode(Hashing.murmur3_32_fixed()).toString(),
         stateMessage.getStateIdForStatsTracking().toString(),
@@ -239,7 +239,8 @@ class StateCheckSumCountEventHandler(
                   validData = checksumValidationEnabled,
                 )
               } else {
-                val shouldIncludeStreamInLogs = includeStreamInLogs || featureFlagClient.boolVariation(LogStateMsgs, Connection(connectionId))
+                val shouldIncludeStreamInLogs =
+                  includeStreamInLogs || featureFlagClient.boolVariation(LogStateMsgs, Connection(airbyteContextConfig.connectionId))
                 checksumIsValid(origin, shouldIncludeStreamInLogs, stateMessage, checksumValidationEnabled)
               }
             }
@@ -270,7 +271,8 @@ class StateCheckSumCountEventHandler(
             streamPlatformRecordCounts = streamPlatformRecordCounts,
           )
         } else {
-          val shouldIncludeStreamInLogs = includeStreamInLogs || featureFlagClient.boolVariation(LogStateMsgs, Connection(connectionId))
+          val shouldIncludeStreamInLogs =
+            includeStreamInLogs || featureFlagClient.boolVariation(LogStateMsgs, Connection(airbyteContextConfig.connectionId))
           checksumIsValid(origin, shouldIncludeStreamInLogs, stateMessage, checksumValidationEnabled)
         }
       }
@@ -426,10 +428,7 @@ class StateCheckSumCountEventHandler(
           else -> FailureReason.FailureOrigin.AIRBYTE_PLATFORM
         }
       stateCheckSumReporter.reportError(
-        workspaceId,
-        connectionId,
-        jobId,
-        attemptNumber,
+        airbyteContextConfig,
         failureOrigin,
         errorMessage,
         "The sync appears to have dropped records",
@@ -438,13 +437,13 @@ class StateCheckSumCountEventHandler(
       )
       val attributes =
         arrayOf(
-          MetricAttribute(ATTEMPT_NUMBER, attemptNumber.toString()),
-          MetricAttribute(CONNECTION_ID, connectionId.toString()),
+          MetricAttribute(ATTEMPT_NUMBER, airbyteContextConfig.attemptId.toString()),
+          MetricAttribute(CONNECTION_ID, airbyteContextConfig.connectionId),
           MetricAttribute(DESTINATION_IMAGE, replicationInput.destinationLauncherConfig.dockerImage),
           MetricAttribute(FAILURE_ORIGIN, failureOrigin.toString()),
-          MetricAttribute(JOB_ID, jobId.toString()),
+          MetricAttribute(JOB_ID, airbyteContextConfig.jobId.toString()),
           MetricAttribute(SOURCE_IMAGE, replicationInput.sourceLauncherConfig.dockerImage),
-          MetricAttribute(WORKSPACE_ID, workspaceId.toString()),
+          MetricAttribute(WORKSPACE_ID, airbyteContextConfig.workspaceId),
         )
       metricClient.count(
         metric = OssMetricsRegistry.STATE_CHECKSUM_COUNT_ERROR,

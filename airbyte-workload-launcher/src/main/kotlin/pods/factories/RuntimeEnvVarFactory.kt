@@ -81,10 +81,11 @@ class RuntimeEnvVarFactory(
 
     return listOf(
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
-      EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
-      EnvVar(AirbyteEnvVar.JOB_ID.toString(), replicationInput.getJobId(), null),
       EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), replicationInput.getAttemptId().toString(), null),
       EnvVar(AirbyteEnvVar.CONNECTION_ID.toString(), replicationInput.connectionId.toString(), null),
+      EnvVar(AirbyteEnvVar.JOB_ID.toString(), replicationInput.getJobId(), null),
+      EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null),
+      EnvVar(AirbyteEnvVar.WORKSPACE_ID.toString(), replicationInput.connectionContext.workspaceId.toString(), null),
       EnvVar(EnvVarConstants.USE_FILE_TRANSFER, useFileTransferEnvVar.toString(), null),
       EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, javaOpts, null),
       EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, airbyteWorkerConfig.job.kubernetes.volumes.staging.mountPath, null),

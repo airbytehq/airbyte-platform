@@ -9,7 +9,6 @@ airbyte:
   acceptance:
     test:
       enabled: false
-  config-dir: src/test/resources/files
   control:
     plane:
       auth-endpoint: ""
@@ -40,6 +39,8 @@ airbyte:
         access-key: ${AWS_ACCESS_KEY_ID:}
         region: ${AWS_DEFAULT_REGION:}
         secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+  connector:
+    config-dir: src/test/resources/files
 
 endpoints:
   all:

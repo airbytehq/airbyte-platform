@@ -10,6 +10,7 @@ import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -119,7 +120,7 @@ internal class ReplicationJobOrchestratorTest {
     val replicationJobOrchestrator =
       ReplicationJobOrchestrator(
         replicationInput,
-        workloadId,
+        AirbyteContextConfig(workloadId = workloadId),
         jobPath,
         jobRunConfig,
         replicationWorker,
@@ -241,7 +242,7 @@ internal class ReplicationJobOrchestratorTest {
     val replicationJobOrchestrator =
       ReplicationJobOrchestrator(
         replicationInput,
-        workloadId,
+        AirbyteContextConfig(workloadId = workloadId),
         jobPath,
         jobRunConfig,
         replicationWorker,
@@ -362,7 +363,7 @@ internal class ReplicationJobOrchestratorTest {
     val replicationJobOrchestrator =
       ReplicationJobOrchestrator(
         replicationInput,
-        workloadId,
+        AirbyteContextConfig(workloadId = workloadId),
         workspacePath,
         jobRunConfig,
         replicationWorker,
@@ -485,7 +486,7 @@ internal class ReplicationJobOrchestratorTest {
     val replicationJobOrchestrator =
       ReplicationJobOrchestrator(
         replicationInput,
-        workloadId,
+        AirbyteContextConfig(workloadId = workloadId),
         workspacePath,
         jobRunConfig,
         replicationWorker,

@@ -499,15 +499,17 @@ class RuntimeEnvVarFactoryTest {
         .withUseFileTransfer(useFileTransfer)
         .withConnectionContext(ConnectionContext().withOrganizationId(UUID.randomUUID()).withWorkspaceId(workspaceId).withConnectionId(connectionId))
         .withSourceLauncherConfig(IntegrationLauncherConfig().withWorkspaceId(workspaceId))
+        .withWorkspaceId(workspaceId)
     val result = factory.orchestratorEnvVars(input, WORKLOAD_ID)
 
     assertEquals(
       listOf(
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
-        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
-        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobRunConfig.jobId, null),
         EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), jobRunConfig.attemptId.toString(), null),
         EnvVar(AirbyteEnvVar.CONNECTION_ID.toString(), input.connectionId.toString(), null),
+        EnvVar(AirbyteEnvVar.JOB_ID.toString(), jobRunConfig.jobId, null),
+        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
+        EnvVar(AirbyteEnvVar.WORKSPACE_ID.toString(), input.workspaceId.toString(), null),
         EnvVar(EnvVarConstants.USE_FILE_TRANSFER, useFileTransfer.toString(), null),
         EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, expectedOpts, null),
         EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),

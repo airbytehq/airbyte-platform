@@ -17,6 +17,8 @@ import io.airbyte.container.orchestrator.worker.model.StateCheckSumCountEvent
 import io.airbyte.container.orchestrator.worker.state.attachIdToStateMessageFromSource
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteContainerOrchestratorConfig
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStateStats
@@ -63,7 +65,7 @@ internal class StateCheckSumCountEventHandlerTest {
     every { trackingIdentityFetcher.apply(any(), any()) } returns trackingIdentity
     every { deploymentFetcher.get() } returns deployment
     every { featureFlagClient.boolVariation(any(), any()) } returns true
-    every { stateCheckSumErrorReporter.reportError(any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
+    every { stateCheckSumErrorReporter.reportError(any(), any(), any(), any(), any(), any()) } just Runs
     handler =
       StateCheckSumCountEventHandler(
         pubSubWriter = pubSubWriter,
@@ -71,13 +73,16 @@ internal class StateCheckSumCountEventHandlerTest {
         deploymentFetcher = deploymentFetcher,
         trackingIdentityFetcher = trackingIdentityFetcher,
         stateCheckSumReporter = stateCheckSumErrorReporter,
-        connectionId = connectionId,
-        workspaceId = workspaceId,
-        jobId = jobId,
-        attemptNumber = attemptNumber,
+        airbyteContextConfig =
+          AirbyteContextConfig(
+            attemptId = attemptNumber,
+            connectionId = connectionId.toString(),
+            jobId = jobId,
+            workspaceId = workspaceId.toString(),
+          ),
+        airbyteContainerOrchestratorConfig = AirbyteContainerOrchestratorConfig(platformMode = ArchitectureConstants.ORCHESTRATOR),
         epochMilliSupplier = epochMilliSupplier,
         idSupplier = idSupplier,
-        platformMode = ArchitectureConstants.ORCHESTRATOR,
         metricClient = metricClient,
         replicationInput = replicationInput,
       )
@@ -104,13 +109,16 @@ internal class StateCheckSumCountEventHandlerTest {
         deploymentFetcher = deploymentFetcher,
         trackingIdentityFetcher = trackingIdentityFetcher,
         stateCheckSumReporter = stateCheckSumErrorReporter,
-        connectionId = connectionId,
-        workspaceId = workspaceId,
-        jobId = jobId,
-        attemptNumber = attemptNumber,
+        airbyteContextConfig =
+          AirbyteContextConfig(
+            attemptId = attemptNumber,
+            connectionId = connectionId.toString(),
+            jobId = jobId,
+            workspaceId = workspaceId.toString(),
+          ),
+        airbyteContainerOrchestratorConfig = AirbyteContainerOrchestratorConfig(platformMode = ArchitectureConstants.ORCHESTRATOR),
         epochMilliSupplier = { System.currentTimeMillis() },
         idSupplier = { UUID.randomUUID() },
-        platformMode = ArchitectureConstants.ORCHESTRATOR,
         metricClient = metricClient,
         replicationInput = replicationInput,
       )

@@ -20,6 +20,7 @@ import io.airbyte.config.Configs
 import io.airbyte.config.FailureReason
 import io.airbyte.config.State
 import io.airbyte.micronaut.runtime.AirbyteConfig
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient
@@ -127,10 +128,13 @@ class StateCheckSumErrorReporterTest {
     every { airbyteApiClient.sourceDefinitionApi.getSourceDefinition(any()) } returns sourceDefinition
 
     stateCheckSumErrorReporter.reportError(
-      workspaceId,
-      connectionId,
-      jobId,
-      attemptNumber,
+      airbyteContextConfig =
+        AirbyteContextConfig(
+          attemptId = attemptNumber,
+          connectionId = connectionId.toString(),
+          jobId = jobId,
+          workspaceId = workspaceId.toString(),
+        ),
       origin,
       internalMessage,
       externalMessage,
@@ -195,10 +199,13 @@ class StateCheckSumErrorReporterTest {
     every { airbyteApiClient.destinationDefinitionApi.getDestinationDefinition(any()) } returns destinationDefinition
 
     stateCheckSumErrorReporter.reportError(
-      workspaceId,
-      connectionId,
-      jobId,
-      attemptNumber,
+      airbyteContextConfig =
+        AirbyteContextConfig(
+          attemptId = attemptNumber,
+          connectionId = connectionId.toString(),
+          jobId = jobId,
+          workspaceId = workspaceId.toString(),
+        ),
       origin,
       internalMessage,
       externalMessage,
@@ -228,10 +235,13 @@ class StateCheckSumErrorReporterTest {
       )
 
     stateCheckSumErrorReporter.reportError(
-      UUID.randomUUID(),
-      UUID.randomUUID(),
-      123L,
-      1,
+      airbyteContextConfig =
+        AirbyteContextConfig(
+          attemptId = 1,
+          connectionId = UUID.randomUUID().toString(),
+          jobId = 123L,
+          workspaceId = UUID.randomUUID().toString(),
+        ),
       FailureReason.FailureOrigin.SOURCE,
       "Internal message",
       "External message",
@@ -259,7 +269,14 @@ class StateCheckSumErrorReporterTest {
     val jobId = 123L
     val attemptNumber = 1
 
-    val failureReason = stateCheckSumErrorReporter.createFailureReason(origin, internalMessage, externalMessage, exception, jobId, attemptNumber)
+    val failureReason =
+      stateCheckSumErrorReporter.createFailureReason(
+        origin,
+        internalMessage,
+        externalMessage,
+        exception,
+        AirbyteContextConfig(jobId = jobId, attemptId = attemptNumber),
+      )
 
     assert(failureReason.failureOrigin == origin)
     assert(failureReason.internalMessage == internalMessage)

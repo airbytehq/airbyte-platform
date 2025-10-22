@@ -1,0 +1,4 @@
+airbyte:
+  sidecar:
+    file-timeout-minutes: 1
+    file-timeout-minutes-within-sync: 2

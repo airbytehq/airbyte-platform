@@ -116,6 +116,10 @@ airbyte:
     notify:
       enabled: false
       max-workers: 3
+    replication:
+      dispatcher:
+        n-threads: 60
+      persistence-flush-period-sec: 50
     spec:
       enabled: false
       max-workers: 4

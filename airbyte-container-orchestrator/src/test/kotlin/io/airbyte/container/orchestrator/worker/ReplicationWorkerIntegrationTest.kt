@@ -52,6 +52,9 @@ import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.mappers.transformations.Mapper
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteContainerOrchestratorConfig
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteErrorTraceMessage
@@ -82,7 +85,7 @@ import java.util.concurrent.Executors
 /**
  * This class is mostly just a demo of [ReplicationWorkerIntegrationTestUtil].
  */
-class ReplicationWorkerIntegrationTest {
+internal class ReplicationWorkerIntegrationTest {
   @Test
   fun emptySource() =
     runTest {
@@ -281,12 +284,10 @@ object ReplicationWorkerIntegrationTestUtil {
               )
           }
         }
-    val jobId = 1234L
-    val attempt = 5678
+
     // TODO in principle we might want to capture the metrics / state checksum / attemptApi calls
     //   but for now, meh
     val metricClient = mockk<MetricClient>(relaxed = true)
-    val platformMode = ArchitectureConstants.ORCHESTRATOR
     val syncStatsTracker =
       ParallelStreamStatsTracker(
         metricClient = metricClient,
@@ -295,7 +296,20 @@ object ReplicationWorkerIntegrationTestUtil {
             every { validateStateChecksum(any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
             every { close(any()) } just Runs
           },
-        platformMode = platformMode,
+        airbyteContainerOrchestratorConfig = AirbyteContainerOrchestratorConfig(platformMode = ArchitectureConstants.ORCHESTRATOR),
+      )
+    val airbyteContextConfig =
+      AirbyteContextConfig(
+        attemptId = 5678,
+        connectionId = connectionId.toString(),
+        jobId = 1234L,
+      )
+    val airbyteWorkerConfig =
+      AirbyteWorkerConfig(
+        replication =
+          AirbyteWorkerConfig.AirbyteWorkerReplicationConfig(
+            persistenceFlushPeriodSec = 1,
+          ),
       )
     val syncPersistence =
       SyncPersistenceImpl(
@@ -305,15 +319,16 @@ object ReplicationWorkerIntegrationTestUtil {
           },
         stateBuffer = DefaultStateAggregator(StreamStateAggregator(), SingleStateAggregator()),
         stateFlushExecutorService = stateFlushExecutorService,
-        stateFlushPeriodInSeconds = 1,
         metricClient = metricClient,
         syncStatsTracker = syncStatsTracker,
-        connectionId = connectionId,
-        jobId = jobId,
-        attemptNumber = attempt,
+        airbyteContextConfig = airbyteContextConfig,
+        airbyteWorkerConfig = airbyteWorkerConfig,
       )
     val replicationInputFeatureFlagReader = ReplicationInputFeatureFlagReader(replicationInput)
-    val context = ReplicationContextProvider(attempt = attempt, jobId = jobId).provideContext(replicationInput)
+    val context =
+      ReplicationContextProvider(
+        airbyteContextConfig = airbyteContextConfig,
+      ).provideContext(replicationInput)
     val replicationWorkerHelper =
       ReplicationWorkerHelper(
         fieldSelector =
@@ -330,7 +345,7 @@ object ReplicationWorkerIntegrationTestUtil {
           replicationInputFeatureFlagReader,
           replicationInput,
           syncPersistence,
-          platformMode = platformMode,
+          airbyteContainerOrchestratorConfig = AirbyteContainerOrchestratorConfig(platformMode = ArchitectureConstants.ORCHESTRATOR),
         ),
         mockk<ReplicationAirbyteMessageEventPublishingHelper>(),
         ThreadedTimeTracker(),
@@ -352,8 +367,7 @@ object ReplicationWorkerIntegrationTestUtil {
       )
     val replicationWorkerContext =
       ReplicationWorkerContext(
-        jobId = jobId,
-        attempt = attempt,
+        airbyteContextConfig = airbyteContextConfig,
         bufferConfiguration,
         replicationWorkerHelper,
         replicationWorkerState,

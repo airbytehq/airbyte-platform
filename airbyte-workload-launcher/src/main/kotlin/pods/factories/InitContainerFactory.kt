@@ -7,6 +7,7 @@ package io.airbyte.workload.launcher.pods.factories
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.PlatformInitContainerImage
 import io.airbyte.featureflag.Workspace
+import io.airbyte.micronaut.runtime.AirbyteConnectorConfig
 import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workload.launcher.constants.ContainerConstants
 import io.airbyte.workload.launcher.context.WorkloadSecurityContextProvider
@@ -29,6 +30,7 @@ class InitContainerFactory(
   @Named("initEnvVars") private val envVars: List<EnvVar>,
   @Named("initContainerInfo") private val initContainerInfo: KubeContainerInfo,
   private val featureFlagClient: FeatureFlagClient,
+  private val airbyteConnectorConfig: AirbyteConnectorConfig,
 ) {
   internal fun create(
     resourceReqs: ResourceRequirements?,
@@ -45,7 +47,7 @@ class InitContainerFactory(
       .withName(ContainerConstants.INIT_CONTAINER_NAME)
       .withImage(resolvedImage)
       .withImagePullPolicy(initContainerInfo.pullPolicy)
-      .withWorkingDir(FileConstants.CONFIG_DIR)
+      .withWorkingDir(airbyteConnectorConfig.configDir)
       .withResources(resourceReqs)
       .withVolumeMounts(volumeMounts)
       .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())

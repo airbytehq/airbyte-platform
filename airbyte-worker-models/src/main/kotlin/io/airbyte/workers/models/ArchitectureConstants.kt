@@ -4,6 +4,8 @@
 
 package io.airbyte.workers.models
 
+import io.airbyte.micronaut.runtime.DEFAULT_CONTAINER_ORCHESTRATOR_PLATFORM_MODE
+
 object ArchitectureConstants {
   const val SOCKET_PATH = "/var/run/sockets"
   const val SOCKET_FILE_PREFIX = "airbyte_socket_"
@@ -15,5 +17,5 @@ object ArchitectureConstants {
   const val PLATFORM_MODE = "PLATFORM_MODE"
 
   const val BOOKKEEPER = "BOOKKEEPER"
-  const val ORCHESTRATOR = "ORCHESTRATOR"
+  const val ORCHESTRATOR = DEFAULT_CONTAINER_ORCHESTRATOR_PLATFORM_MODE
 }

@@ -16,6 +16,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceConstants
 import io.airbyte.metrics.lib.ApmTraceUtils
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.exception.WorkerException
@@ -66,7 +67,7 @@ private val DURATION_GAUGE_FUNCTION =
 @Singleton
 class ReplicationJobOrchestrator(
   private val replicationInput: ReplicationInput,
-  @Named("workloadId") private val workloadId: String,
+  private val airbyteContextConfig: AirbyteContextConfig,
   @Named("jobRoot") private val jobRoot: Path,
   private val jobRunConfig: JobRunConfig,
   private val replicationWorker: ReplicationWorker,
@@ -92,10 +93,10 @@ class ReplicationJobOrchestrator(
     logger.info { "Running replication worker..." }
 
     val replicationOutput =
-      run(replicationWorker, replicationInput, jobRoot, workloadId)
+      run(replicationWorker, replicationInput, jobRoot, airbyteContextConfig.workloadId)
 
-    outputWriter.writeSyncOutput(workloadId, replicationOutput)
-    updateStatusInWorkloadApi(replicationOutput, workloadId)
+    outputWriter.writeSyncOutput(airbyteContextConfig.workloadId, replicationOutput)
+    updateStatusInWorkloadApi(replicationOutput, airbyteContextConfig.workloadId)
 
     val attributes =
       buildMetricAttributes(

@@ -2,11 +2,11 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.asyncProfiler
+package io.airbyte.async.profiler
 
 import io.airbyte.commons.storage.StorageClient
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.io.File
@@ -18,9 +18,7 @@ import java.nio.file.Files
 @Singleton
 class ProfilerThreadManager(
   private val profilerService: ProfilerService,
-  @Value("\${airbyte.connection-id}") private val connectionId: String,
-  @Value("\${airbyte.job-id}") private val jobId: Long,
-  @Value("\${airbyte.attempt-id}") private val attemptId: String,
+  private val airbyteContextConfig: AirbyteContextConfig,
   @Named("profilerOutputStore") private val storageClient: StorageClient,
 ) {
   private val logger = KotlinLogging.logger {}
@@ -95,7 +93,7 @@ class ProfilerThreadManager(
     profilingResult: ProfilingResult,
   ) {
     if (outputFile.exists()) {
-      val remotePath = "$connectionId/$jobId/$attemptId/${outputFile.name}"
+      val remotePath = "${airbyteContextConfig.connectionId}/${airbyteContextConfig.jobId}/$${airbyteContextConfig.attemptId}/${outputFile.name}"
       storageClient.write(remotePath, Files.readString(outputFile.toPath()))
     } else {
       logger.warn { "File ${profilingResult.outputFilePath} not found; skipping upload." }

@@ -6,15 +6,13 @@ package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.container.orchestrator.worker.context.ReplicationContext
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.micronaut.context.annotation.Value
-import jakarta.inject.Named
 import jakarta.inject.Singleton
 
 @Singleton
 class ReplicationContextProvider(
-  @Named("attemptId") private val attempt: Int,
-  @Value("\${airbyte.job-id}") private val jobId: Long,
+  private val airbyteContextConfig: AirbyteContextConfig,
 ) {
   fun provideContext(replicationInput: ReplicationInput): Context {
     val replicationContext =
@@ -23,8 +21,8 @@ class ReplicationContextProvider(
         connectionId = replicationInput.connectionId,
         sourceId = replicationInput.sourceId,
         destinationId = replicationInput.destinationId,
-        jobId = jobId,
-        attempt = attempt,
+        jobId = airbyteContextConfig.jobId,
+        attempt = airbyteContextConfig.attemptId,
         workspaceId = replicationInput.workspaceId,
         sourceDefinitionId = replicationInput.connectionContext.sourceDefinitionId,
         destinationDefinitionId = replicationInput.connectionContext.destinationDefinitionId,

@@ -100,6 +100,8 @@ internal class AirbyteWorkerConfigDefaultTest {
     assertEquals(DEFAULT_WORKER_SYNC_MAX_TIMEOUT_DAYS, airbyteWorkerConfig.sync.maxTimeout)
     assertEquals(DEFAULT_WORKER_SYNC_MAX_INIT_TIMEOUT_MINUTES, airbyteWorkerConfig.sync.maxInitTimeout)
     assertEquals(emptyList<AirbyteWorkerConfig.AirbyteWorkerKubeJobConfig>(), airbyteWorkerConfig.kubeJobConfigs)
+    assertEquals(DEFAULT_WORKER_REPLICATION_DISPATCHER_THREADS, airbyteWorkerConfig.replication.dispatcher.nThreads)
+    assertEquals(DEFAULT_WORKER_REPLICATION_PERSISTENCE_FLUSH_PERIOD_SEC, airbyteWorkerConfig.replication.persistenceFlushPeriodSec)
   }
 }
 
@@ -214,6 +216,8 @@ internal class AirbyteWorkerConfigOverridesTest {
       "test-test1-ephemeral-storage-request",
       airbyteWorkerConfig.kubeJobConfigs.find { it.name == "test1" }?.ephemeralStorageRequest,
     )
+    assertEquals(50L, airbyteWorkerConfig.replication.persistenceFlushPeriodSec)
+    assertEquals(60, airbyteWorkerConfig.replication.dispatcher.nThreads)
   }
 }
 
@@ -328,5 +332,7 @@ internal class AirbyteWorkerConfigOverridesYamlListTest {
       "test-test1-ephemeral-storage-request",
       airbyteWorkerConfig.kubeJobConfigs.find { it.name == "test1" }?.ephemeralStorageRequest,
     )
+    assertEquals(50L, airbyteWorkerConfig.replication.persistenceFlushPeriodSec)
+    assertEquals(60, airbyteWorkerConfig.replication.dispatcher.nThreads)
   }
 }

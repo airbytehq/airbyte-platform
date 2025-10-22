@@ -9,7 +9,8 @@ airbyte:
   acceptance:
     test:
       enabled: false
-  config-dir: src/test/resources/files
+  connector:
+    config-dir: src/test/resources/files
   control:
     plane:
       auth-endpoint: ""

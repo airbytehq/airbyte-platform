@@ -9,6 +9,7 @@ import io.airbyte.initContainer.input.InputHydrationProcessor
 import io.airbyte.initContainer.system.SystemClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.workers.models.InitContainerConstants
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.WorkloadFailureRequest
@@ -25,17 +26,17 @@ class InputFetcher(
   private val hydrationProcessor: InputHydrationProcessor,
   private val systemClient: SystemClient,
   private val metricClient: MetricClient,
-  @Value("\${airbyte.workload-id}") private val workloadId: String,
+  private val airbyteContextConfig: AirbyteContextConfig,
 ) {
   fun fetch() {
     logger.info { "Fetching workload..." }
 
     val workload =
       try {
-        workloadApiClient.workloadGet(workloadId)
+        workloadApiClient.workloadGet(airbyteContextConfig.workloadId)
       } catch (e: Exception) {
         metricClient.count(metric = OssMetricsRegistry.WORKLOAD_HYDRATION_FETCH_FAILURE)
-        return failWorkloadAndExit(workloadId, "fetching workload", e, InitContainerConstants.WORKLOAD_API_ERROR_EXIT_CODE)
+        return failWorkloadAndExit(airbyteContextConfig.workloadId, "fetching workload", e, InitContainerConstants.WORKLOAD_API_ERROR_EXIT_CODE)
       }
 
     logger.info { "Workload ${workload.id} fetched." }
@@ -44,9 +45,9 @@ class InputFetcher(
     try {
       hydrationProcessor.process(workload)
     } catch (e: SecretCoordinateException) {
-      return failWorkloadAndExit(workloadId, "hydrating secrets", e, InitContainerConstants.SECRET_HYDRATION_ERROR_EXIT_CODE)
+      return failWorkloadAndExit(airbyteContextConfig.workloadId, "hydrating secrets", e, InitContainerConstants.SECRET_HYDRATION_ERROR_EXIT_CODE)
     } catch (e: Exception) {
-      return failWorkloadAndExit(workloadId, "processing workload", e, InitContainerConstants.UNEXPECTED_ERROR_EXIT_CODE)
+      return failWorkloadAndExit(airbyteContextConfig.workloadId, "processing workload", e, InitContainerConstants.UNEXPECTED_ERROR_EXIT_CODE)
     }
     logger.info { "Workload processed." }
   }

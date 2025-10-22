@@ -12,6 +12,7 @@ import io.airbyte.container.orchestrator.persistence.SyncPersistence
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.exception.WorkerException
 import io.mockk.clearAllMocks
@@ -68,8 +69,7 @@ internal class ReplicationWorkerTest {
     every { mockContext.replicationWorkerHelper } returns mockWorkerHelper
     every { mockContext.replicationWorkerState } returns mockWorkerState
     every { mockContext.bufferConfiguration } returns mockBufferConfig
-    every { mockContext.jobId } returns 0L
-    every { mockContext.attempt } returns 1
+    every { mockContext.airbyteContextConfig } returns AirbyteContextConfig(jobId = 0L, attemptId = 1)
     every { mockContext.streamStatusCompletionTracker } returns mockStreamStatusCompletionTracker
 
     // Default buffer sizes

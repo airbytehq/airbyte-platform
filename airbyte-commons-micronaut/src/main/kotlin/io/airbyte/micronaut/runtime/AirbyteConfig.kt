@@ -22,6 +22,7 @@ const val ANALYTICS_PREFIX = "$AIRBYTE_PREFIX.tracking"
 const val API_PREFIX = "$AIRBYTE_PREFIX.api"
 const val AUDIT_LOGGING_PREFIX = "$AIRBYTE_PREFIX.audit.logging"
 const val AUTH_PREFIX = "$AIRBYTE_PREFIX.auth"
+const val CLOUD_PUBSUB_PREFIX = "$AIRBYTE_PREFIX.cloud.pubsub"
 const val CONNECTOR_BUILDER_PREFIX = "$AIRBYTE_PREFIX.connector-builder-server"
 const val CONNECTOR_PREFIX = "$AIRBYTE_PREFIX.connector"
 const val CONNECTOR_REGISTRY_PREFIX = "$AIRBYTE_PREFIX.connector-registry"
@@ -31,7 +32,14 @@ const val CONTROL_PLANE_PREFIX = "$AIRBYTE_PREFIX.control-plane"
 const val DATA_DOG_PREFIX = "$AIRBYTE_PREFIX.datadog"
 const val DATA_PLANE_PREFIX = "$AIRBYTE_PREFIX.data-plane"
 const val DATAPLANE_GROUPS_PREFIX = "$AIRBYTE_PREFIX.dataplane-groups"
-const val ENTITLEMENTS_PREFIX = "$AIRBYTE_PREFIX.entitlements"
+const val DB_PREFIX = "$AIRBYTE_PREFIX.db"
+const val DB_PATH_PREFIX = "$DB_PREFIX.path"
+const val DB_PASSWORD_PREFIX = "$DB_PREFIX.password"
+const val DB_USERNAME_PREFIX = "$DB_PREFIX.username"
+const val DB_URL_PREFIX = "$DB_PREFIX.url"
+const val DB_DRIVER_CLASS_PREFIX = "$DB_PREFIX.driver-class-name"
+const val DB_MIGRATION_PREFIX = "$DB_PREFIX.migration"
+const val DB_SSL_PREFIX = "$DB_PREFIX.ssl"
 const val STIGG_PREFIX = "$AIRBYTE_PREFIX.stigg"
 const val FEATURE_FLAG_PREFIX = "$AIRBYTE_PREFIX.feature-flag"
 const val FLYWAY_PREFIX = "$AIRBYTE_PREFIX.flyway"
@@ -49,6 +57,7 @@ const val PLATFORM_COMPATIBILITY_PREFIX = "$AIRBYTE_PREFIX.platform-compatibilit
 const val POD_SWEEPER_PREFIX = "$AIRBYTE_PREFIX.pod-sweeper"
 const val SECRET_PREFIX = "$AIRBYTE_PREFIX.secret"
 const val SHUTDOWN_PREFIX = "$AIRBYTE_PREFIX.shutdown"
+const val SIDECAR_PREFIX = "$AIRBYTE_PREFIX.sidecar"
 const val STORAGE_PREFIX = "$AIRBYTE_PREFIX.cloud.storage"
 const val STRIPE_PREFIX = "$AIRBYTE_PREFIX.stripe"
 const val TEMPORAL_PREFIX = "$AIRBYTE_PREFIX.temporal"
@@ -86,6 +95,8 @@ internal const val DEFAULT_CONNECTOR_REGISTRY_SEED_PROVIDER = "remote"
 internal const val DEFAULT_CONNECTOR_ROLLOUT_WAIT_TIME_BETWEEN_ROLLOUT_SECONDS = 60
 internal const val DEFAULT_CONNECTOR_ROLLOUT_WAIT_BETWEEN_SYNC_RESULTS_QUERIES_SECONDS = 10
 internal const val DEFAULT_CONNECTOR_ROLLOUT_EXPIRATION_SECONDS = 360
+internal const val DEFAULT_CONTEXT_ATTEMPT_ID = 0
+internal const val DEFAULT_CONTEXT_JOB_ID = 0L
 internal const val DEFAULT_DATA_DOG_ORCHESTRATOR_DISABLED_INTEGRATIONS =
   "GRPC,GRPC_CLIENT,GRPC_SERVER,NETTY,NETTY_4_1,GOOGLE_HTTP_CLIENT,HTTPURLCONNECTION,URLCONNECTION"
 internal const val DEFAULT_DATA_PLANE_QUEUE_CHECK = "CHECK_CONNECTION"
@@ -122,6 +133,8 @@ internal const val DEFAULT_POD_SWEEPER_SUCCEEDED_TTL_MINUTES = 10L
 internal const val DEFAULT_POD_SWEEPER_UNSUCCESSFUL_TTL_MINUTES = 120L
 internal const val DEFAULT_POD_SWEEPER_RATE_MINUTES = "PT2M"
 internal const val DEFAULT_SHUTDOWN_DELAY_MS = 20000L
+internal const val DEFAULT_SIDECAR_FILE_TIMEOUT_MINUTES = 9
+internal const val DEFAULT_SIDECAR_FILE_TIMEOUT_MINUTES_WITHIN_SYNC = 30
 internal const val DEFAULT_STORAGE_LOCAL_ROOT = "/storage"
 internal const val DEFAULT_STORAGE_LOCATION = "airbyte-storage"
 internal const val DEFAULT_STORAGE_REPLICATION_DUMP_LOCATION = "cloud-replication-dump"
@@ -152,6 +165,8 @@ internal const val DEFAULT_WORKER_KUBE_PROFILER_MEMORY_REQUEST = "1024Mi"
 internal const val DEFAULT_WORKER_KUBE_SERVICE_ACCOUNT = "airbyte-admin"
 internal const val DEFAULT_WORKER_KUBE_VOLUME_STAGING_MOUNT_PATH = "/staging/files"
 internal const val DEFAULT_WORKER_NOTIFY_MAX_WORKERS = 5
+internal const val DEFAULT_WORKER_REPLICATION_DISPATCHER_THREADS = 4
+internal const val DEFAULT_WORKER_REPLICATION_PERSISTENCE_FLUSH_PERIOD_SEC = 10L
 internal const val DEFAULT_WORKER_SPEC_MAX_WORKERS = 5
 internal const val DEFAULT_WORKER_SYNC_MAX_ATTEMPTS = 3
 internal const val DEFAULT_WORKER_SYNC_MAX_INIT_TIMEOUT_MINUTES = 3
@@ -169,6 +184,11 @@ internal const val DEFAULT_WORKLOAD_LAUNCHER_QUEUE_CONSUMER_QUEUE_TASK_CAP = 5
 internal const val DEFAULT_DATAPLANE_GROUPS_DEFAULT_DATAPLANE_GROUP_NAME = "AUTO"
 
 const val DEFAULT_AUTH_IDENTITY_PROVIDER_TYPE = "simple"
+const val DEFAULT_CLOUD_PUBSUB_MESSAGE_COUNT_BATCH_SIZE = 50L
+const val DEFAULT_CLOUD_PUBSUB_PUBLISH_DELAY_THRESHOLD_MS = 100L
+const val DEFAULT_CLOUD_PUBSUB_REQUEST_BYTES_THRESHOLD = 5000L
+const val DEFAULT_CONNECTOR_CONFIG_DIR = "/config"
+const val DEFAULT_CONTAINER_ORCHESTRATOR_PLATFORM_MODE = "ORCHESTRATOR"
 const val STORAGE_TYPE = "$STORAGE_PREFIX.type"
 const val DEFAULT_WORKER_KUBE_JOB_CONFIGURATION = "default"
 const val SECRET_MANAGER_AWS: SecretPersistenceTypeName = "aws_secret_manager"
@@ -336,6 +356,27 @@ data class AirbyteAuthConfig(
   }
 }
 
+@ConfigurationProperties(CLOUD_PUBSUB_PREFIX)
+data class AirbyteCloudPubSubConfig(
+  val enabled: Boolean = false,
+  val errorReporting: AirbyteCloudPubSubErrorReportingConfig = AirbyteCloudPubSubErrorReportingConfig(),
+  val messageCountBatchSize: Long = DEFAULT_CLOUD_PUBSUB_MESSAGE_COUNT_BATCH_SIZE,
+  val publishDelayThresholdMs: Long = DEFAULT_CLOUD_PUBSUB_PUBLISH_DELAY_THRESHOLD_MS,
+  val requestBytesThreshold: Long = DEFAULT_CLOUD_PUBSUB_REQUEST_BYTES_THRESHOLD,
+  val topic: String = "",
+) {
+  @ConfigurationProperties("error-reporting")
+  data class AirbyteCloudPubSubErrorReportingConfig(
+    val sentry: AirbyteCloudPubSubErrorReportingSentryConfig = AirbyteCloudPubSubErrorReportingSentryConfig(),
+    val strategy: JobErrorReportingStrategy = JobErrorReportingStrategy.LOGGING,
+  ) {
+    @ConfigurationProperties("sentry")
+    data class AirbyteCloudPubSubErrorReportingSentryConfig(
+      val dsn: String = "",
+    )
+  }
+}
+
 @ConfigurationProperties(AIRBYTE_PREFIX)
 data class AirbyteConfig(
   val acceptanceTestEnabled: Boolean = false,
@@ -388,8 +429,10 @@ data class AirbyteConnectorBuilderConfig(
 
 @ConfigurationProperties(CONNECTOR_PREFIX)
 data class AirbyteConnectorConfig(
+  val configDir: String = DEFAULT_CONNECTOR_CONFIG_DIR,
   val specificResourceDefaultsEnabled: Boolean = false,
   val source: AirbyteSourceConnectorConfig = AirbyteSourceConnectorConfig(),
+  val stagingDir: String = "",
 ) {
   @ConfigurationProperties("source")
   data class AirbyteSourceConnectorConfig(
@@ -462,7 +505,21 @@ data class AirbyteContainerConfig(
 data class AirbyteContainerOrchestratorConfig(
   val enableUnsafeCode: Boolean = false,
   val javaOpts: String = "",
+  val platformMode: String = DEFAULT_CONTAINER_ORCHESTRATOR_PLATFORM_MODE,
 )
+
+@ConfigurationProperties("${AIRBYTE_PREFIX}.context")
+data class AirbyteContextConfig(
+  val attemptId: Int = DEFAULT_CONTEXT_ATTEMPT_ID,
+  val connectionId: String = "",
+  val jobId: Long = DEFAULT_CONTEXT_JOB_ID,
+  val workloadId: String = "",
+  val workspaceId: String = "",
+) {
+  fun connectionIdAsUUID(): UUID = UUID.fromString(connectionId)
+
+  fun workspaceIdAsUUID(): UUID = UUID.fromString(workspaceId)
+}
 
 @ConfigurationProperties(CONTROL_PLANE_PREFIX)
 data class AirbyteControlPlaneConfig(
@@ -851,6 +908,12 @@ data class AirbyteShutdownConfig(
   val delayMs: Long = DEFAULT_SHUTDOWN_DELAY_MS,
 )
 
+@ConfigurationProperties(SIDECAR_PREFIX)
+data class AirbyteSidecarConfig(
+  val fileTimeoutMinutes: Int = DEFAULT_SIDECAR_FILE_TIMEOUT_MINUTES,
+  val fileTimeoutMinutesWithinSync: Int = DEFAULT_SIDECAR_FILE_TIMEOUT_MINUTES_WITHIN_SYNC,
+)
+
 @ConfigurationProperties(STORAGE_PREFIX)
 data class AirbyteStorageConfig(
   val type: StorageType = StorageType.MINIO,
@@ -1081,6 +1144,7 @@ data class AirbyteWorkerConfig(
   val kubeJobConfigVariantOverride: String = "",
   val kubeJobConfigs: List<AirbyteWorkerKubeJobConfig> = listOf(AirbyteWorkerKubeJobConfig()),
   val notify: AirbyteWorkerNotifyConfig = AirbyteWorkerNotifyConfig(),
+  val replication: AirbyteWorkerReplicationConfig = AirbyteWorkerReplicationConfig(),
   val spec: AirbyteWorkerSpecConfig = AirbyteWorkerSpecConfig(),
   val sync: AirbyteWorkerSyncConfig = AirbyteWorkerSyncConfig(),
 ) {
@@ -1322,6 +1386,17 @@ data class AirbyteWorkerConfig(
     val enabled: Boolean = true,
     val maxWorkers: Int = DEFAULT_WORKER_NOTIFY_MAX_WORKERS,
   )
+
+  @ConfigurationProperties("replication")
+  data class AirbyteWorkerReplicationConfig(
+    val dispatcher: AirbyteWorkerReplicationDispatcherConfig = AirbyteWorkerReplicationDispatcherConfig(),
+    val persistenceFlushPeriodSec: Long = DEFAULT_WORKER_REPLICATION_PERSISTENCE_FLUSH_PERIOD_SEC,
+  ) {
+    @ConfigurationProperties("dispatcher")
+    data class AirbyteWorkerReplicationDispatcherConfig(
+      val nThreads: Int = DEFAULT_WORKER_REPLICATION_DISPATCHER_THREADS,
+    )
+  }
 
   @ConfigurationProperties("spec")
   data class AirbyteWorkerSpecConfig(

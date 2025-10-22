@@ -10,6 +10,7 @@ import io.airbyte.container.orchestrator.persistence.SyncPersistence
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.featureflag.LogConnectorMessages
 import io.airbyte.featureflag.LogStateMsgs
+import io.airbyte.micronaut.runtime.AirbyteContainerOrchestratorConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteAnalyticsTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage
@@ -17,7 +18,6 @@ import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.models.ArchitectureConstants
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 
@@ -34,13 +34,13 @@ class AirbyteMessageTracker(
   private val replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
   private val replicationInput: ReplicationInput,
   @Named("syncPersistence") private val syncPersistence: SyncPersistence,
-  @Value("\${airbyte.platform-mode}") private val platformMode: String,
+  private val airbyteContainerOrchestratorConfig: AirbyteContainerOrchestratorConfig,
 ) {
   private val dstErrorTraceMsgs = mutableListOf<AirbyteTraceMessage>()
   private val srcErrorTraceMsgs = mutableListOf<AirbyteTraceMessage>()
   private val sourceDockerImage = replicationInput.sourceLauncherConfig.dockerImage
   private val destinationDockerImage = replicationInput.destinationLauncherConfig.dockerImage
-  private val isBookkeeperMode: Boolean = platformMode == ArchitectureConstants.BOOKKEEPER
+  private val isBookkeeperMode: Boolean = airbyteContainerOrchestratorConfig.platformMode.equals(ArchitectureConstants.BOOKKEEPER, true)
 
   /**
    * Accepts an AirbyteMessage emitted from a source and tracks any metadata about it that is required

@@ -27,6 +27,7 @@ configurations.all {
 dependencies {
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
+  ksp(project(":oss:airbyte-configuration-processor"))
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.kotlin.logging)
@@ -36,6 +37,7 @@ dependencies {
   implementation("org.apache.commons:commons-compress:1.27.1")
 
   implementation(project(":oss:airbyte-api:server-api"))
+  implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-storage"))
 
   runtimeOnly(libs.snakeyaml)
@@ -54,7 +56,7 @@ dependencies {
 
 airbyte {
   application {
-    mainClass.set("io.airbyte.asyncProfiler.ApplicationKt")
+    mainClass.set("io.airbyte.async.profiler.ApplicationKt")
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     localEnvVars.putAll(
       mapOf(

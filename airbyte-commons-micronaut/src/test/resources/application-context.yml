@@ -1,0 +1,7 @@
+airbyte:
+  context:
+    attempt-id: 3
+    connection-id: 2c7c3141-16e0-4558-9033-55b52350d4c7
+    job-id: 1234
+    workload-id: test-workload-id
+    workspace-id: 3a23cb17-912e-4f03-b2ec-8fe25dff0962

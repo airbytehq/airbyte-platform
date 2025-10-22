@@ -18,6 +18,7 @@ import io.airbyte.initContainer.serde.ObjectSerializer
 import io.airbyte.initContainer.system.FileClient
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteContainerOrchestratorConfig
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.ReplicationInputHydrator
@@ -40,7 +41,7 @@ import java.util.UUID
 import java.util.stream.Stream
 
 @ExtendWith(MockKExtension::class)
-class ReplicationHydrationProcessorTest {
+internal class ReplicationHydrationProcessorTest {
   @MockK
   lateinit var replicationInputHydrator: ReplicationInputHydrator
 
@@ -75,7 +76,7 @@ class ReplicationHydrationProcessorTest {
         fileClient,
         destinationCatalogGenerator,
         metricClient,
-        ArchitectureConstants.ORCHESTRATOR,
+        AirbyteContainerOrchestratorConfig(platformMode = ArchitectureConstants.ORCHESTRATOR),
       )
   }
 
@@ -173,8 +174,6 @@ class ReplicationHydrationProcessorTest {
   }
 
   object Fixtures {
-    private const val WORKLOAD_ID = "workload-id-13"
-
     val workload =
       Workload(
         id = InputFetcherTest.Fixtures.WORKLOAD_ID,

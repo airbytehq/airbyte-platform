@@ -38,15 +38,15 @@ airbyte:
   platform-mode: ${PLATFORM_MODE:ORCHESTRATOR}
   airbyte-url: ${AIRBYTE_URL:}
   license-key: ${AIRBYTE_LICENSE_KEY:empty}
-  workload-id: ${WORKLOAD_ID:}
-  connection-id: ${CONNECTION_ID:}
-  job-id: ${JOB_ID:}
-  attempt-id: ${ATTEMPT_ID:}
+  context:
+    attempt-id: ${ATTEMPT_ID:0}
+    connection-id: ${CONNECTION_ID:}
+    job-id: ${JOB_ID:0}
+    workload-id: ${WORKLOAD_ID:}
+    workspace-id: ${WORKSPACE_ID:}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   role: ${AIRBYTE_ROLE:dev}
   version: ${AIRBYTE_VERSION:dev}
-  config-dir: ${AIRBYTE_CONFIG_DIR:/config}
-  staging-dir: ${AIRBYTE_STAGING_DIRECTORY}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}
@@ -81,6 +81,9 @@ airbyte:
         access-key: ${AWS_ACCESS_KEY_ID:}
         region: ${AWS_DEFAULT_REGION:}
         secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+  connector:
+    config-dir: ${AIRBYTE_CONFIG_DIR:/config}
+    staging-dir: ${AIRBYTE_STAGING_DIRECTORY:}
   control:
     plane:
       auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}

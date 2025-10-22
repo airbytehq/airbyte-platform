@@ -17,10 +17,12 @@ internal class AirbyteConnectorConfigDefaultTest {
 
   @Test
   fun testLoadingValuesFromConfig() {
+    assertEquals(DEFAULT_CONNECTOR_CONFIG_DIR, airbyteConnectorConfig.configDir)
     assertEquals(false, airbyteConnectorConfig.specificResourceDefaultsEnabled)
     assertEquals(DEFAULT_AWS_ASSUMED_ROLE_ACCESS_KEY, airbyteConnectorConfig.source.credentials.aws.assumedRole.accessKey)
     assertEquals(DEFAULT_AWS_ASSUMED_ROLE_SECRET_KEY, airbyteConnectorConfig.source.credentials.aws.assumedRole.secretKey)
     assertEquals("", airbyteConnectorConfig.source.credentials.aws.assumedRole.secretName)
+    assertEquals("", airbyteConnectorConfig.stagingDir)
   }
 }
 
@@ -31,9 +33,11 @@ internal class AirbyteConnectorConfigOverridesTest {
 
   @Test
   fun testLoadingValuesFromConfig() {
+    assertEquals("/test-config-dir", airbyteConnectorConfig.configDir)
     assertEquals(true, airbyteConnectorConfig.specificResourceDefaultsEnabled)
     assertEquals("test-access-key", airbyteConnectorConfig.source.credentials.aws.assumedRole.accessKey)
     assertEquals("test-secret-key", airbyteConnectorConfig.source.credentials.aws.assumedRole.secretKey)
     assertEquals("test-secret-name", airbyteConnectorConfig.source.credentials.aws.assumedRole.secretName)
+    assertEquals("/staging-dir", airbyteConnectorConfig.stagingDir)
   }
 }

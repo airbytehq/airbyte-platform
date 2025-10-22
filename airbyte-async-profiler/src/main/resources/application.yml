@@ -12,14 +12,16 @@ micronaut:
     enabled: false
 
 airbyte:
-  workload-id: ${WORKLOAD_ID:}
-  connection-id: ${CONNECTION_ID:}
-  job-id: ${JOB_ID:}
-  attempt-id: ${ATTEMPT_ID:}
-  source-keyword: ${SOURCE_KEYWORD:source}
-  destination-keyword: ${DESTINATION_KEYWORD:destination}
-  orchestrator-keyword: ${ORCHESTRATOR_KEYWORD:orchestrator}
-  profiling-mode: ${PROFILING_MODE:cpu}
+  context:
+    attempt-id: ${ATTEMPT_ID:0}
+    connection-id: ${CONNECTION_ID:}
+    job-id: ${JOB_ID:0}
+    workload-id: ${WORKLOAD_ID:}
+  async-profiler:
+    source-keyword: ${SOURCE_KEYWORD:source}
+    destination-keyword: ${DESTINATION_KEYWORD:destination}
+    orchestrator-keyword: ${ORCHESTRATOR_KEYWORD:orchestrator}
+    profiling-mode: ${PROFILING_MODE:cpu}
   cloud:
     storage:
       type: ${STORAGE_TYPE}

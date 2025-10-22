@@ -35,6 +35,7 @@ import io.airbyte.featureflag.RemoveValidationLimit
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteLogMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage
@@ -209,8 +210,10 @@ class ReplicationWorkerPortedTests {
 
     ctx =
       ReplicationWorkerContext(
-        JOB_ID,
-        JOB_ATTEMPT,
+        AirbyteContextConfig(
+          attemptId = JOB_ATTEMPT,
+          jobId = JOB_ID,
+        ),
         withPollTimeout(1),
         replicationWorkerHelper,
         replicationWorkerState,
@@ -430,8 +433,10 @@ class ReplicationWorkerPortedTests {
       )
     val ctxEnabled =
       ReplicationWorkerContext(
-        JOB_ID,
-        JOB_ATTEMPT,
+        AirbyteContextConfig(
+          attemptId = JOB_ATTEMPT,
+          jobId = JOB_ID,
+        ),
         withPollTimeout(1),
         helperEnabled,
         replicationWorkerState,
@@ -497,8 +502,10 @@ class ReplicationWorkerPortedTests {
       )
     val ctxDisabled =
       ReplicationWorkerContext(
-        JOB_ID,
-        JOB_ATTEMPT,
+        AirbyteContextConfig(
+          attemptId = JOB_ATTEMPT,
+          jobId = JOB_ID,
+        ),
         withPollTimeout(1),
         helperDisabled,
         replicationWorkerState,

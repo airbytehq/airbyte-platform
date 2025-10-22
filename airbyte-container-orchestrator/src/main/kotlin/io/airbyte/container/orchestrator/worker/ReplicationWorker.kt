@@ -66,7 +66,7 @@ class ReplicationWorker(
       if (!context.replicationWorkerState.cancelled && !ignoreApmTrace) {
         ApmTraceUtils.addExceptionToTrace(e)
       }
-      context.replicationWorkerState.trackFailure(e.cause ?: e, context.jobId, context.attempt)
+      context.replicationWorkerState.trackFailure(e.cause ?: e, context.getJobId(), context.getAttempt())
       context.replicationWorkerState.markFailed()
     }
   }
@@ -97,7 +97,7 @@ class ReplicationWorker(
     try {
       val mdc = MDC.getCopyOfContextMap() ?: emptyMap()
       coroutineScope {
-        logger.info { "Starting replication worker. job id: ${context.jobId} attempt: ${context.attempt}" }
+        logger.info { "Starting replication worker. job id: ${context.getJobId()} attempt: ${context.getAttempt()}" }
         LineGobbler.startSection("REPLICATION")
 
         context.replicationWorkerHelper.initialize(jobRoot)

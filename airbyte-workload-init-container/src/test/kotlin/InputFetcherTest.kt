@@ -10,6 +10,7 @@ import io.airbyte.initContainer.InputFetcherTest.Fixtures.workload
 import io.airbyte.initContainer.input.InputHydrationProcessor
 import io.airbyte.initContainer.system.SystemClient
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.workers.models.InitContainerConstants
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.domain.Workload
@@ -24,7 +25,7 @@ import secrets.persistence.SecretCoordinateException
 import java.util.UUID
 
 @ExtendWith(MockKExtension::class)
-class InputFetcherTest {
+internal class InputFetcherTest {
   @MockK
   lateinit var workloadApiClient: WorkloadApiClient
 
@@ -47,7 +48,7 @@ class InputFetcherTest {
         inputProcessor,
         systemClient,
         metricClient,
-        WORKLOAD_ID,
+        AirbyteContextConfig(workloadId = WORKLOAD_ID),
       )
   }
 

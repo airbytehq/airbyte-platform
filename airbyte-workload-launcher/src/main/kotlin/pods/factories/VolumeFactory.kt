@@ -7,6 +7,7 @@ package io.airbyte.workload.launcher.pods.factories
 import io.airbyte.commons.storage.STORAGE_CLAIM_NAME
 import io.airbyte.commons.storage.STORAGE_MOUNT
 import io.airbyte.commons.storage.STORAGE_VOLUME_NAME
+import io.airbyte.micronaut.runtime.AirbyteConnectorConfig
 import io.airbyte.micronaut.runtime.AirbyteStorageConfig
 import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.micronaut.runtime.StorageType
@@ -25,6 +26,7 @@ import jakarta.inject.Singleton
 @Singleton
 data class VolumeFactory(
   @Value("\${google.application.credentials}") private val googleApplicationCredentials: String?,
+  private val airbyteConnectorConfig: AirbyteConnectorConfig,
   private val airbyteWorkerConfig: AirbyteWorkerConfig,
   private val airbyteStorageConfig: AirbyteStorageConfig,
 ) {
@@ -40,7 +42,7 @@ data class VolumeFactory(
     val mount =
       VolumeMountBuilder()
         .withName(CONFIG_VOLUME_NAME)
-        .withMountPath(FileConstants.CONFIG_DIR)
+        .withMountPath(airbyteConnectorConfig.configDir)
         .build()
 
     return VolumeMountPair(volume, mount)

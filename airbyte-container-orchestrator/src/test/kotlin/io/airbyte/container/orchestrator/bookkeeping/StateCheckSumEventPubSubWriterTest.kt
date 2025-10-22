@@ -13,6 +13,7 @@ import io.airbyte.container.orchestrator.worker.model.StateCheckSumCountEvent
 import io.airbyte.workers.models.ArchitectureConstants.ORCHESTRATOR
 import io.airbyte.workers.models.ArchitectureConstants.PLATFORM_MODE
 import io.micronaut.context.annotation.Property
+import io.micronaut.context.env.Environment
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.Runs
 import io.mockk.clearAllMocks
@@ -29,9 +30,9 @@ import java.util.Random
 import java.util.UUID
 import java.util.function.Supplier
 
-@MicronautTest
+@MicronautTest(environments = [Environment.TEST])
 @Property(name = PLATFORM_MODE, value = ORCHESTRATOR)
-@Property(name = "airbyte.attempt-id", value = "1")
+@Property(name = "airbyte.context.attempt-id", value = "1")
 @Property(name = "airbyte.internal-api.auth.token-endpoint", value = "https://localhost:8080/test-token-endpoint")
 @Property(name = "airbyte.auth.dataplane-client-id", value = "test")
 @Property(name = "airbyte.auth.dataplane-client-secret", value = "test")
@@ -42,11 +43,12 @@ import java.util.function.Supplier
 @Property(name = "airbyte.cloud.pubsub.message-count-batch-size", value = "10")
 @Property(name = "airbyte.cloud.pubsub.publish-delay-threshold-ms", value = "10")
 @Property(name = "airbyte.cloud.storage.type", value = "LOCAL")
-@Property(name = "airbyte.job-id", value = "1")
+@Property(name = "airbyte.context.job-id", value = "1")
+@Property(name = "airbyte.connector.config-dir", value = "src/test/resources/files")
 @Property(name = "airbyte.workspace-root", value = "/tmp")
 @Property(name = "micronaut.http.services.workload-api.url", value = "http://localhost")
 @Property(name = "INTERNAL_API_HOST", value = "http://localhost:8080")
-class StateCheckSumEventPubSubWriterTest {
+internal class StateCheckSumEventPubSubWriterTest {
   private val publisherSupplier = mockk<Supplier<Publisher>>(relaxed = true)
 
   private val publisher = mockk<Publisher>(relaxed = true)

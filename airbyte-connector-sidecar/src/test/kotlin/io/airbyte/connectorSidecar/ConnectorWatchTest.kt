@@ -13,6 +13,8 @@ import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteConnectorConfig
+import io.airbyte.micronaut.runtime.AirbyteSidecarConfig
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.workers.exception.WorkerException
@@ -46,8 +48,8 @@ import java.nio.file.Path
 import java.util.stream.Stream
 
 @ExtendWith(MockKExtension::class)
-class ConnectorWatchTest {
-  val outputPath = Path.of("output")
+internal class ConnectorWatchTest {
+  val outputPath: Path = Path.of("output")
   val configDir = "config"
 
   @MockK
@@ -98,9 +100,8 @@ class ConnectorWatchTest {
       spyk(
         ConnectorWatcher(
           outputPath,
-          configDir,
-          fileTimeoutMinutes = 42,
-          fileTimeoutMinutesWithinSync = 43,
+          AirbyteConnectorConfig(configDir = configDir),
+          AirbyteSidecarConfig(fileTimeoutMinutes = 42, fileTimeoutMinutesWithinSync = 43),
           sidecarInput = sidecarInput,
           connectorMessageProcessor,
           serDeProvider,
@@ -315,10 +316,9 @@ class ConnectorWatchTest {
 
     every { sidecarInput.operationType } returns operationType
 
-    val exception =
-      assertThrows<MockKException> {
-        connectorWatcher.run()
-      }
+    assertThrows<MockKException> {
+      connectorWatcher.run()
+    }
 
     verify {
       heartbeatMonitor.startHeartbeatThread(any())

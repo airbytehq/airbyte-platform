@@ -10,6 +10,7 @@ import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureF
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum
 import io.airbyte.featureflag.LogStateMsgs
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteContainerOrchestratorConfig
 import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage.Type
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
@@ -19,7 +20,6 @@ import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.models.ArchitectureConstants
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.lang.IllegalStateException
@@ -38,13 +38,13 @@ private data class SyncStatsCounters(
 class ParallelStreamStatsTracker(
   private val metricClient: MetricClient,
   private val stateCheckSumEventHandler: StateCheckSumCountEventHandler,
-  @Value("\${airbyte.platform-mode}") private val platformMode: String,
+  airbyteContainerOrchestratorConfig: AirbyteContainerOrchestratorConfig,
 ) : SyncStatsTracker {
   private val streamTrackers: MutableMap<AirbyteStreamNameNamespacePair, StreamStatsTracker> = ConcurrentHashMap()
   private val syncStatsCounters = SyncStatsCounters()
   private var expectedEstimateType: Type? = null
   private var replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader? = null
-  private val isBookkeeperMode: Boolean = platformMode == ArchitectureConstants.BOOKKEEPER
+  private val isBookkeeperMode: Boolean = airbyteContainerOrchestratorConfig.platformMode.equals(ArchitectureConstants.BOOKKEEPER, true)
 
   @Volatile
   private var hasEstimatesErrors = false

@@ -8,6 +8,7 @@ import io.airbyte.api.client.ApiException
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.micronaut.http.HttpStatus
 import io.mockk.clearAllMocks
@@ -30,7 +31,7 @@ import java.util.Optional
 import java.util.concurrent.atomic.AtomicLong
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class WorkloadHeartbeatSenderTest {
+internal class WorkloadHeartbeatSenderTest {
   private lateinit var mockWorkloadApiClient: WorkloadApiClient
   private lateinit var mockReplicationWorkerState: ReplicationWorkerState
   private lateinit var mockDestinationTimeoutMonitor: DestinationTimeoutMonitor
@@ -258,9 +259,7 @@ class WorkloadHeartbeatSenderTest {
       sourceTimeoutMonitor = mockSourceTimeoutMonitor,
       heartbeatInterval = shortHeartbeatInterval,
       heartbeatTimeoutDuration = heartbeatTimeoutDuration, // e.g. 50ms
-      workloadId = testWorkloadId,
-      jobId = testJobId,
-      attempt = testAttempt,
+      airbyteContextConfig = AirbyteContextConfig(attemptId = testAttempt, jobId = testJobId, workloadId = testWorkloadId),
       hardExitCallable = hardExitCallable,
       source = source,
     )

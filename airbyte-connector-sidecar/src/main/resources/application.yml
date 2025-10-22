@@ -22,7 +22,6 @@ airbyte:
   edition: ${AIRBYTE_EDITION:COMMUNITY}
   role: ${AIRBYTE_ROLE:dev}
   version: ${AIRBYTE_VERSION:dev}
-  config-dir: ${AIRBYTE_CONFIG_DIR:/config}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}
@@ -47,6 +46,8 @@ airbyte:
         access-key: ${AWS_ACCESS_KEY_ID:}
         region: ${AWS_DEFAULT_REGION:}
         secret-access-key: ${AWS_SECRET_ACCESS_KEY:}
+  connector:
+    config-dir: ${AIRBYTE_CONFIG_DIR:/config}
   internal-api:
     base-path: ${INTERNAL_API_HOST}/api
     connect-timeout-seconds: ${AIRBYTE_API_CONNECT_TIMEOUT_SECONDS:30}

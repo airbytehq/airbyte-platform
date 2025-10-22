@@ -17,15 +17,14 @@ import io.airbyte.container.orchestrator.bookkeeping.SyncStatsTracker
 import io.airbyte.container.orchestrator.bookkeeping.getPerStreamStats
 import io.airbyte.container.orchestrator.bookkeeping.getTotalStats
 import io.airbyte.container.orchestrator.bookkeeping.state.StateAggregator
-import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
-import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
+import io.airbyte.micronaut.runtime.AirbyteWorkerConfig
 import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -59,12 +58,10 @@ class SyncPersistenceImpl(
   private val airbyteApiClient: AirbyteApiClient,
   @Named("stateAggregator") private val stateBuffer: StateAggregator,
   @Named("syncPersistenceExecutorService") private val stateFlushExecutorService: ScheduledExecutorService,
-  @Value("\${airbyte.worker.replication.persistence-flush-period-sec}") private val stateFlushPeriodInSeconds: Long,
+  private val airbyteWorkerConfig: AirbyteWorkerConfig,
   private val metricClient: MetricClient,
   @Named("parallelStreamStatsTracker") private val syncStatsTracker: SyncStatsTracker,
-  @Named("connectionId") private val connectionId: UUID,
-  @Value("\${airbyte.job-id}") private val jobId: Long,
-  @Named("attemptId") private val attemptNumber: Int,
+  private val airbyteContextConfig: AirbyteContextConfig,
 ) : SyncPersistence,
   SyncStatsTracker by syncStatsTracker {
   private var stateFlushFuture: ScheduledFuture<*>? = null
@@ -74,7 +71,7 @@ class SyncPersistenceImpl(
   private var statsToPersist: SaveStatsRequestBody? = null
 
   init {
-    startBackgroundFlushStateTask(connectionId)
+    startBackgroundFlushStateTask(airbyteContextConfig.connectionIdAsUUID())
   }
 
   @Trace
@@ -82,8 +79,8 @@ class SyncPersistenceImpl(
     connectionId: UUID,
     stateMessage: AirbyteStateMessage,
   ) {
-    require(this.connectionId == connectionId) {
-      "Invalid connectionId $connectionId, expected ${this.connectionId}"
+    require(this.airbyteContextConfig.connectionIdAsUUID() == connectionId) {
+      "Invalid connectionId $connectionId, expected ${this.airbyteContextConfig.connectionIdAsUUID()}"
     }
 
     metricClient.count(metric = OssMetricsRegistry.STATE_BUFFERING)
@@ -99,7 +96,7 @@ class SyncPersistenceImpl(
           stateFlushExecutorService.scheduleAtFixedRate(
             { this.flush() },
             RUN_IMMEDIATELY,
-            stateFlushPeriodInSeconds,
+            airbyteWorkerConfig.replication.persistenceFlushPeriodSec,
             TimeUnit.SECONDS,
           )
       }
@@ -177,10 +174,14 @@ class SyncPersistenceImpl(
         // flush failed
         doFlushStats()
       } catch (e: Exception) {
-        logger.warn(e) { "Failed to persist stats for connectionId $connectionId, it will be retried as part of the next flush" }
+        logger.warn(e) {
+          "Failed to persist stats for connectionId ${airbyteContextConfig.connectionIdAsUUID()}, it will be retried as part of the next flush"
+        }
       }
     } catch (e: Exception) {
-      logger.warn(e) { "Failed to persist state for connectionId $connectionId, it will be retried as part of the next flush" }
+      logger.warn(e) {
+        "Failed to persist state for connectionId ${airbyteContextConfig.connectionIdAsUUID()}, it will be retried as part of the next flush"
+      }
     }
   }
 
@@ -200,7 +201,7 @@ class SyncPersistenceImpl(
       return
     }
 
-    statsToPersist = buildSaveStatsRequest(syncStatsTracker, jobId, attemptNumber, connectionId)
+    statsToPersist = buildSaveStatsRequest(syncStatsTracker, airbyteContextConfig)
   }
 
   private fun doFlushState() {
@@ -212,7 +213,10 @@ class SyncPersistenceImpl(
     val maybeStateWrapper = StateMessageHelper.getTypedState(state.state).getOrNull() ?: return
 
     val stateApiRequest =
-      ConnectionStateCreateOrUpdate(connectionId = connectionId, connectionState = StateConverter.toClient(connectionId, maybeStateWrapper))
+      ConnectionStateCreateOrUpdate(
+        connectionId = airbyteContextConfig.connectionIdAsUUID(),
+        connectionState = StateConverter.toClient(airbyteContextConfig.connectionIdAsUUID(), maybeStateWrapper),
+      )
 
     airbyteApiClient.stateApi.createOrUpdateState(stateApiRequest)
 
@@ -268,18 +272,16 @@ class SyncPersistenceImpl(
 
 private fun buildSaveStatsRequest(
   syncStatsTracker: SyncStatsTracker,
-  jobId: Long,
-  attemptNumber: Int,
-  connectionId: UUID,
+  airbyteContextConfig: AirbyteContextConfig,
 ): SaveStatsRequestBody {
   val streamSyncStats = syncStatsTracker.getPerStreamStats(false)
   val totalSyncStats = syncStatsTracker.getTotalStats(streamSyncStats, false)
 
   return SaveStatsRequestBody(
-    jobId = jobId,
-    attemptNumber = attemptNumber,
+    jobId = airbyteContextConfig.jobId,
+    attemptNumber = airbyteContextConfig.attemptId,
     stats = totalSyncStats.toAttemptStats(),
-    connectionId = connectionId,
+    connectionId = airbyteContextConfig.connectionIdAsUUID(),
     streamStats =
       streamSyncStats
         .map {

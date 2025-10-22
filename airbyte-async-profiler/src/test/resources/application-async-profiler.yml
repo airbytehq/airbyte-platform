@@ -1,0 +1,6 @@
+airbyte:
+  async-profiler:
+    source-keyword: test-source-keyword
+    destination-keyword: test-destination-keyword
+    orchestrator-keyword: test-orchestrator-keyword
+    profiling-mode: test-profiling-mode

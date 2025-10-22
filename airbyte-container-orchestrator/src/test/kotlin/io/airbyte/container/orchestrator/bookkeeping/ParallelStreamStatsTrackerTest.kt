@@ -21,6 +21,8 @@ import io.airbyte.featureflag.LogStateMsgs
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.micronaut.runtime.AirbyteContainerOrchestratorConfig
+import io.airbyte.micronaut.runtime.AirbyteContextConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteGlobalState
@@ -53,7 +55,7 @@ import java.util.UUID
 
 private val logger = KotlinLogging.logger { }
 
-class ParallelStreamStatsTrackerTest {
+internal class ParallelStreamStatsTrackerTest {
   companion object {
     const val FIELD_NAME = "field"
     const val STREAM1_NAME = "stream1"
@@ -88,7 +90,7 @@ class ParallelStreamStatsTrackerTest {
   fun beforeEach() {
     val trackingIdentityFetcher = mockk<TrackingIdentityFetcher>()
     val stateCheckSumErrorReporter = mockk<StateCheckSumErrorReporter>()
-    every { stateCheckSumErrorReporter.reportError(any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
+    every { stateCheckSumErrorReporter.reportError(any(), any(), any(), any(), any(), any()) } just Runs
     val trackingIdentity = mockk<TrackingIdentity>()
     every { trackingIdentity.email } returns "test"
     every { trackingIdentityFetcher.apply(any(), any()) }.returns(trackingIdentity)
@@ -102,17 +104,25 @@ class ParallelStreamStatsTrackerTest {
         deploymentFetcher = DeploymentFetcher { DeploymentMetadataRead(UUID.randomUUID(), "test", "test") },
         trackingIdentityFetcher = trackingIdentityFetcher,
         stateCheckSumReporter = stateCheckSumErrorReporter,
-        connectionId = CONNECTION_ID,
-        workspaceId = WORKSPACE_ID,
-        jobId = JOB_ID,
-        attemptNumber = ATTEMPT_NUMBER,
+        airbyteContainerOrchestratorConfig = AirbyteContainerOrchestratorConfig(platformMode = ArchitectureConstants.ORCHESTRATOR),
+        airbyteContextConfig =
+          AirbyteContextConfig(
+            attemptId = ATTEMPT_NUMBER,
+            connectionId = CONNECTION_ID.toString(),
+            jobId = JOB_ID,
+            workspaceId = WORKSPACE_ID.toString(),
+          ),
         epochMilliSupplier = { System.currentTimeMillis() },
         idSupplier = { UUID.randomUUID() },
-        platformMode = ArchitectureConstants.ORCHESTRATOR,
         metricClient = metricClient,
         replicationInput = replicationInput,
       )
-    statsTracker = ParallelStreamStatsTracker(metricClient, checkSumCountEventHandler, platformMode = ArchitectureConstants.ORCHESTRATOR)
+    statsTracker =
+      ParallelStreamStatsTracker(
+        metricClient,
+        checkSumCountEventHandler,
+        AirbyteContainerOrchestratorConfig(platformMode = ArchitectureConstants.ORCHESTRATOR),
+      )
   }
 
   @Test

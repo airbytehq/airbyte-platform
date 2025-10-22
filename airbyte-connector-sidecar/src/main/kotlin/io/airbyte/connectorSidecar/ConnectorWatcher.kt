@@ -19,6 +19,8 @@ import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.metrics.MetricClient
+import io.airbyte.micronaut.runtime.AirbyteConnectorConfig
+import io.airbyte.micronaut.runtime.AirbyteSidecarConfig
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.internal.AirbyteStreamFactory
@@ -48,9 +50,8 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class ConnectorWatcher(
   @Named("output") val outputPath: Path,
-  @Named("configDir") val configDir: String,
-  @Value("\${airbyte.sidecar.file-timeout-minutes}") val fileTimeoutMinutes: Int,
-  @Value("\${airbyte.sidecar.file-timeout-minutes-within-sync}") val fileTimeoutMinutesWithinSync: Int,
+  private val airbyteConnectorConfig: AirbyteConnectorConfig,
+  private val airbyteSidecarConfig: AirbyteSidecarConfig,
   private val sidecarInput: SidecarInput,
   private val connectorMessageProcessor: ConnectorMessageProcessor,
   private val serDeProvider: AirbyteMessageSerDeProvider,
@@ -103,7 +104,9 @@ class ConnectorWatcher(
       if (hasFileTimeoutReached(stopwatch, isWithinSync)) {
         readOutputForLogs()
 
-        val message = "Failed to find output files from connector within timeout of $fileTimeoutMinutes minute(s). Is the connector still running?"
+        val message =
+          "Failed to find output files from connector within timeout of " +
+            "${airbyteSidecarConfig.fileTimeoutMinutes} minute(s). Is the connector still running?"
         logger.warn { message }
         val failureReason =
           FailureReason()
@@ -221,10 +224,11 @@ class ConnectorWatcher(
   }
 
   @VisibleForTesting
-  fun readFile(fileName: String): String = Files.readString(Path.of(configDir, fileName))
+  fun readFile(fileName: String): String = Files.readString(Path.of(airbyteConnectorConfig.configDir, fileName))
 
   @VisibleForTesting
-  fun areNeededFilesPresent(): Boolean = Files.exists(outputPath) && Files.exists(Path.of(configDir, FileConstants.EXIT_CODE_FILE))
+  fun areNeededFilesPresent(): Boolean =
+    Files.exists(outputPath) && Files.exists(Path.of(airbyteConnectorConfig.configDir, FileConstants.EXIT_CODE_FILE))
 
   @VisibleForTesting
   fun getStreamFactory(integrationLauncherConfig: IntegrationLauncherConfig): AirbyteStreamFactory {
@@ -265,7 +269,7 @@ class ConnectorWatcher(
     stopwatch: Stopwatch,
     withinSync: Boolean,
   ): Boolean {
-    val timeoutMinutes = if (withinSync) fileTimeoutMinutesWithinSync else fileTimeoutMinutes
+    val timeoutMinutes = if (withinSync) airbyteSidecarConfig.fileTimeoutMinutesWithinSync else airbyteSidecarConfig.fileTimeoutMinutes
     return stopwatch.elapsed() > Duration.ofMinutes(timeoutMinutes.toLong())
   }
 
