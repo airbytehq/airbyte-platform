@@ -304,17 +304,15 @@ create table "public"."connector_rollout" (
   constraint "pk_connector_rollout" primary key ("id")
 );
 create table "public"."data_worker_usage" (
-  "job_id" bigint not null,
   "organization_id" uuid not null,
   "workspace_id" uuid not null,
   "dataplane_group_id" uuid not null,
   "source_cpu_request" real not null,
   "destination_cpu_request" real not null,
   "orchestrator_cpu_request" real not null,
-  "job_start" timestamp(6) with time zone not null,
-  "job_end" timestamp(6) with time zone,
+  "bucket_start" timestamp(6) with time zone not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
-  constraint "data_worker_usage_pkey" primary key ("job_id")
+  constraint "data_worker_usage_pkey" primary key ("organization_id", "bucket_start", "workspace_id", "dataplane_group_id")
 );
 create table "public"."dataplane" (
   "id" uuid not null,
@@ -816,10 +814,6 @@ where ((job_id IS NOT NULL));
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
 create unique index "actor_definition_id_state_tag_unique_idx" on "public"."connector_rollout"("actor_definition_id" asc, "tag" asc)
 where (((state)::text = ANY ((ARRAY['initialized'::character varying, 'in_progress'::character varying, 'paused'::character varying, 'workflow_started'::character varying, 'finalizing'::character varying, 'errored'::character varying])::text[])));
-create index "data_worker_usage_job_end_is_null_idx" on "public"."data_worker_usage"("job_end" asc)
-where ((job_end IS NULL));
-create index "data_worker_usage_job_id_idx" on "public"."data_worker_usage"("job_id" asc);
-create index "data_worker_usage_organization_id_job_start_idx" on "public"."data_worker_usage"("organization_id" asc, "job_start" asc);
 create index "group_organization_id_name_idx" on "public"."group"("organization_id" asc, "name" asc);
 create index "group_member_group_id_user_id_idx" on "public"."group_member"("group_id" asc, "user_id" asc);
 create index "group_member_user_id_idx" on "public"."group_member"("user_id" asc);
