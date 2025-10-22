@@ -86,6 +86,7 @@ export const DbtCloudTransformationsForm: React.FC<DbtCloudTransformationsFormPr
       onSuccess={onSuccess}
       onError={onError}
       trackDirtyChanges
+      reinitializeDefaultValues
     >
       <Card title={formatMessage({ id: "connection.dbtCloudJobs.cardTitle" })} collapsible>
         <FlexContainer direction="column">
