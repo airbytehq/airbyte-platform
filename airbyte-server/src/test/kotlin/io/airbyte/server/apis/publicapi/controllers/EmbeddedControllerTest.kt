@@ -10,6 +10,7 @@ import io.airbyte.api.model.generated.OrganizationReadList
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.ConfigTemplateEntitlement
+import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.config.AuthenticatedUser
@@ -127,7 +128,7 @@ class EmbeddedControllerTest {
         "exp" to
           ctrl.clock
             .instant()
-            .plusSeconds(60 * 15)
+            .plusSeconds(60 * 20)
             .epochSecond,
       ),
       claims.captured,
@@ -202,7 +203,16 @@ class EmbeddedControllerTest {
               getOrCreate(any(), workspaceId.value.toString())
             } returns workspaceId
           },
-        entitlementService = mockk(),
+        entitlementService =
+          mockk {
+            every { checkEntitlement(OrganizationId(organizationId), ConfigTemplateEntitlement) } returns
+              EntitlementResult(
+                featureId = ConfigTemplateEntitlement.featureId,
+                true,
+                null,
+                ConfigTemplateEntitlement.featureId,
+              )
+          },
       )
 
     ctrl.clock = Clock.fixed(Instant.now(), ZoneId.of("UTC"))
@@ -229,7 +239,7 @@ class EmbeddedControllerTest {
         "exp" to
           ctrl.clock
             .instant()
-            .plusSeconds(60 * 15)
+            .plusSeconds(60 * 20)
             .epochSecond,
       ),
       claims.captured,
@@ -277,7 +287,29 @@ class EmbeddedControllerTest {
                 .withPermissionType(PermissionType.ORGANIZATION_READER),
             )
         },
-        mockk(),
+        mockk {
+          every { checkEntitlement(OrganizationId(orgId1), ConfigTemplateEntitlement) } returns
+            EntitlementResult(
+              featureId = ConfigTemplateEntitlement.featureId,
+              true,
+              null,
+              ConfigTemplateEntitlement.featureId,
+            )
+          every { checkEntitlement(OrganizationId(orgId2), ConfigTemplateEntitlement) } returns
+            EntitlementResult(
+              featureId = ConfigTemplateEntitlement.featureId,
+              true,
+              null,
+              ConfigTemplateEntitlement.featureId,
+            )
+          every { checkEntitlement(OrganizationId(orgId3), ConfigTemplateEntitlement) } returns
+            EntitlementResult(
+              featureId = ConfigTemplateEntitlement.featureId,
+              true,
+              null,
+              ConfigTemplateEntitlement.featureId,
+            )
+        },
       )
     val response = controller.listEmbeddedOrganizationsByUser()
     val orgs = response.entity as EmbeddedOrganizationsList
@@ -317,7 +349,22 @@ class EmbeddedControllerTest {
                 .withPermissionType(PermissionType.ORGANIZATION_EDITOR),
             )
         },
-        mockk(),
+        mockk {
+          every { checkEntitlement(OrganizationId(orgId1), ConfigTemplateEntitlement) } returns
+            EntitlementResult(
+              featureId = ConfigTemplateEntitlement.featureId,
+              true,
+              null,
+              ConfigTemplateEntitlement.featureId,
+            )
+          every { checkEntitlement(OrganizationId(orgId2), ConfigTemplateEntitlement) } returns
+            EntitlementResult(
+              featureId = ConfigTemplateEntitlement.featureId,
+              false,
+              null,
+              ConfigTemplateEntitlement.featureId,
+            )
+        },
       )
 
     val response = controller.listEmbeddedOrganizationsByUser()
@@ -354,17 +401,30 @@ class EmbeddedControllerTest {
                 .withPermissionType(PermissionType.ORGANIZATION_ADMIN),
             )
         },
-        mockk(),
+        mockk {
+          every { checkEntitlement(OrganizationId(entitledOrgId), ConfigTemplateEntitlement) } returns
+            EntitlementResult(
+              featureId = ConfigTemplateEntitlement.featureId,
+              true,
+              null,
+              ConfigTemplateEntitlement.featureId,
+            )
+          every { checkEntitlement(OrganizationId(nonEntitledOrgId), ConfigTemplateEntitlement) } returns
+            EntitlementResult(
+              featureId = ConfigTemplateEntitlement.featureId,
+              false,
+              null,
+              ConfigTemplateEntitlement.featureId,
+            )
+        },
       )
 
     val response = controller.listEmbeddedOrganizationsByUser()
     val orgs = response.entity as EmbeddedOrganizationsList
 
-    // Note: Entitlement filtering is no longer active in listEmbeddedOrganizationsByUser,
-    // so both organizations with permissions are returned
-    assertEquals(2, orgs.organizations.size)
+    assertEquals(1, orgs.organizations.size)
     val orgIds = orgs.organizations.map { it.organizationId }.toSet()
-    assertEquals(setOf(entitledOrgId, nonEntitledOrgId), orgIds)
+    assertEquals(setOf(entitledOrgId), orgIds)
   }
 
   @Test
@@ -390,7 +450,15 @@ class EmbeddedControllerTest {
                 .withPermissionType(PermissionType.ORGANIZATION_ADMIN),
             )
         },
-        mockk(),
+        mockk {
+          every { checkEntitlement(OrganizationId(orgId), ConfigTemplateEntitlement) } returns
+            EntitlementResult(
+              featureId = ConfigTemplateEntitlement.featureId,
+              true,
+              null,
+              ConfigTemplateEntitlement.featureId,
+            )
+        },
       )
 
     val response = controller.listEmbeddedOrganizationsByUser()
@@ -421,7 +489,15 @@ class EmbeddedControllerTest {
                 .withPermissionType(PermissionType.ORGANIZATION_ADMIN),
             )
         },
-        mockk(),
+        mockk {
+          every { checkEntitlement(OrganizationId(orgId), ConfigTemplateEntitlement) } returns
+            EntitlementResult(
+              featureId = ConfigTemplateEntitlement.featureId,
+              true,
+              null,
+              ConfigTemplateEntitlement.featureId,
+            )
+        },
       )
 
     val response = controller.listEmbeddedOrganizationsByUser()
@@ -438,11 +514,6 @@ class EmbeddedControllerTest {
     val orgId2 = UUID.randomUUID()
     val orgId3 = UUID.randomUUID()
 
-    val entitlementService =
-      mockk<EntitlementService> {
-        // Should not be called for Instance Admins (N+1 optimization)
-      }
-
     val controller =
       buildController(
         userId,
@@ -458,7 +529,15 @@ class EmbeddedControllerTest {
                 .withPermissionType(PermissionType.INSTANCE_ADMIN),
             )
         },
-        entitlementService,
+        mockk {
+          every { checkEntitlement(OrganizationId(orgId1), ConfigTemplateEntitlement) } returns
+            EntitlementResult(
+              featureId = ConfigTemplateEntitlement.featureId,
+              true,
+              null,
+              ConfigTemplateEntitlement.featureId,
+            )
+        },
         isInstanceAdmin = true,
       )
 

@@ -26,6 +26,9 @@ import io.airbyte.api.model.generated.SpecCommandOutputResponse
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.logging.LogEvent
+import io.airbyte.commons.logging.LogEvents
+import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
@@ -645,14 +648,14 @@ class CommandApiControllerTest {
   @Test
   fun `getCheckCommandOutput returns structured logs when withLogs is true`() {
     val logEvents =
-      io.airbyte.commons.logging.LogEvents(
+      LogEvents(
         events =
           listOf(
-            io.airbyte.commons.logging.LogEvent(
+            LogEvent(
               timestamp = 1234567890L,
               message = "Test log message",
               level = "INFO",
-              logSource = io.airbyte.commons.logging.LogSource.PLATFORM,
+              logSource = LogSource.PLATFORM,
             ),
           ),
         version = "1",
@@ -726,14 +729,14 @@ class CommandApiControllerTest {
     val protocolCatalog = AirbyteCatalog().withStreams(listOf(AirbyteStream().withName("streamname")))
     val domainCatalog = ActorCatalog().withCatalog(Jsons.jsonNode(protocolCatalog))
     val logEvents =
-      io.airbyte.commons.logging.LogEvents(
+      LogEvents(
         events =
           listOf(
-            io.airbyte.commons.logging.LogEvent(
+            LogEvent(
               timestamp = 1234567890L,
               message = "Discover log message",
               level = "INFO",
-              logSource = io.airbyte.commons.logging.LogSource.PLATFORM,
+              logSource = LogSource.PLATFORM,
             ),
           ),
         version = "1",
@@ -1056,14 +1059,14 @@ class CommandApiControllerTest {
       ConnectorSpecification()
         .withConnectionSpecification(Jsons.deserialize("""{"type":"object"}"""))
     val logEvents =
-      io.airbyte.commons.logging.LogEvents(
+      LogEvents(
         events =
           listOf(
-            io.airbyte.commons.logging.LogEvent(
+            LogEvent(
               timestamp = 1234567890L,
               message = "Spec log message",
               level = "INFO",
-              logSource = io.airbyte.commons.logging.LogSource.PLATFORM,
+              logSource = LogSource.PLATFORM,
             ),
           ),
         version = "1",
@@ -1080,7 +1083,7 @@ class CommandApiControllerTest {
     assertEquals(TEST_COMMAND_ID, output.id)
     assertEquals(SpecCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
     assertEquals(Jsons.jsonNode(spec), output.spec)
-    assertEquals(io.airbyte.api.model.generated.LogFormatType.STRUCTURED, output.logs?.logType)
+    assertEquals(ApiLogFormatType.STRUCTURED, output.logs?.logType)
     assertEquals(
       1,
       output.logs
@@ -1110,7 +1113,7 @@ class CommandApiControllerTest {
     assertEquals(TEST_COMMAND_ID, output.id)
     assertEquals(SpecCommandOutputResponse.StatusEnum.SUCCEEDED, output.status)
     assertEquals(Jsons.jsonNode(spec), output.spec)
-    assertEquals(io.airbyte.api.model.generated.LogFormatType.FORMATTED, output.logs?.logType)
+    assertEquals(ApiLogFormatType.FORMATTED, output.logs?.logType)
     assertEquals(2, output.logs?.logLines?.size)
     assertEquals("spec line 1", output.logs?.logLines?.get(0))
     verify { commandService.getSpecJobOutput(commandId = TEST_COMMAND_ID, withLogs = true) }
@@ -1280,13 +1283,13 @@ class CommandApiControllerTest {
     assertEquals(RunCheckCommandResponse().id(TEST_COMMAND_ID), output)
     verify {
       commandService.createCheckCommand(
-        TEST_COMMAND_ID,
-        TEST_ACTOR_ID,
-        null,
-        null,
-        WorkloadPriority.DEFAULT,
-        null,
-        any(),
+        commandId = TEST_COMMAND_ID,
+        actorId = TEST_ACTOR_ID,
+        jobId = null,
+        attemptNumber = null,
+        workloadPriority = WorkloadPriority.DEFAULT,
+        signalInput = null,
+        commandInput = any(),
       )
     }
   }
