@@ -35,9 +35,10 @@ micronaut:
   security:
     enabled: false
 airbyte:
-  platform-mode: ${PLATFORM_MODE:ORCHESTRATOR}
   airbyte-url: ${AIRBYTE_URL:}
   license-key: ${AIRBYTE_LICENSE_KEY:empty}
+  container.orchestrator:
+    platform-mode: ${PLATFORM_MODE:ORCHESTRATOR}
   context:
     attempt-id: ${ATTEMPT_ID:0}
     connection-id: ${CONNECTION_ID:}
