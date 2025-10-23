@@ -2,13 +2,12 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.server.handlers
+package io.airbyte.config.helpers
 
 import com.cronutils.model.CronType
 import com.cronutils.model.definition.CronDefinitionBuilder
 import com.cronutils.parser.CronParser
-import io.airbyte.commons.server.helpers.CronExpressionHelper
-import junit.framework.TestCase.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
@@ -32,7 +31,7 @@ class CronExpressionHelperTest {
     val result = cronExpressionHelper.getNextExecutions(everyHour, 2)
 
     assertEquals(2, result.size)
-    assertEquals(result[1] - result[0], 3600)
+    assertEquals(3600, result[1] - result[0])
   }
 
   @ParameterizedTest

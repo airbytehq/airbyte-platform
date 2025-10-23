@@ -18,10 +18,10 @@ import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper
-import io.airbyte.commons.server.helpers.CronExpressionHelper
 import io.airbyte.config.BasicSchedule
 import io.airbyte.config.Schedule
 import io.airbyte.config.StandardSync
+import io.airbyte.config.helpers.CronExpressionHelper
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper

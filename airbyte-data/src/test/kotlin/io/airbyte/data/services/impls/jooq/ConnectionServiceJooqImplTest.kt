@@ -4,19 +4,31 @@
 
 package io.airbyte.data.services.impls.jooq
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.airbyte.api.model.generated.ActorStatus
+import io.airbyte.config.AirbyteStream
+import io.airbyte.config.BasicSchedule
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.DestinationConnection
+import io.airbyte.config.DestinationSyncMode
 import io.airbyte.config.JobSyncConfig
+import io.airbyte.config.Schedule
+import io.airbyte.config.ScheduleData
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSync
 import io.airbyte.config.StatusReason
 import io.airbyte.config.StreamDescriptorForDestination
+import io.airbyte.config.SyncMode
 import io.airbyte.config.Tag
 import io.airbyte.config.helpers.CatalogHelpers
 import io.airbyte.config.helpers.FieldGenerator
+import io.airbyte.config.mapper.configs.HashingConfig
+import io.airbyte.config.mapper.configs.HashingMapperConfig
+import io.airbyte.config.mapper.configs.HashingMethods
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.services.shared.ConnectionCronSchedule
 import io.airbyte.data.services.shared.ConnectionJobStatus
 import io.airbyte.data.services.shared.ConnectionWithJobInfo
 import io.airbyte.data.services.shared.Cursor
@@ -40,6 +52,7 @@ import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus
 import io.airbyte.db.instance.jobs.jooq.generated.tables.records.JobsRecord
 import io.airbyte.db.instance.test.TestDatabaseProviders
 import io.airbyte.protocol.models.JsonSchemaType
+import io.airbyte.protocol.models.v0.CatalogHelpers.fieldsToJsonSchema
 import io.airbyte.protocol.models.v0.Field
 import io.airbyte.test.utils.BaseConfigDatabaseTest
 import io.airbyte.test.utils.Databases
@@ -48,7 +61,6 @@ import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.SQLDialect
 import org.jooq.SortField
-import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeAll
@@ -2361,5 +2373,432 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     val reactivatedConnection = connectionServiceJooqImpl.getStandardSync(connectionId)
     Assertions.assertEquals(StandardSync.Status.ACTIVE, reactivatedConnection.status)
     Assertions.assertNull(reactivatedConnection.statusReason)
+  }
+
+  @Test
+  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
+  fun testListConnectionIdsForOrganizationAndActorDefinitions() {
+    val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
+    jooqTestDbSetupHelper.setupForVersionUpgradeTest()
+
+    val organization = jooqTestDbSetupHelper.organization
+
+    val destination = jooqTestDbSetupHelper.destination
+    val source = jooqTestDbSetupHelper.source
+
+    val standardSync =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source!!.sourceId)
+        .withDestinationId(destination!!.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.MANUAL)
+        .withManual(true)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(standardSync)
+
+    val org2 = jooqTestDbSetupHelper.createOrganization(UUID.randomUUID(), "org2", "org@airbyte.no")
+    val dataplaneGroup2 = jooqTestDbSetupHelper.createDataplaneGroup(UUID.randomUUID(), org2.organizationId)
+    val workspace2 =
+      jooqTestDbSetupHelper.createWorkspace(
+        UUID.randomUUID(),
+        org2.organizationId,
+        dataplaneGroup2.id,
+        "workspace2",
+        "workspace2-slug",
+      )
+
+    val source2 = jooqTestDbSetupHelper.createActorForActorDefinition(jooqTestDbSetupHelper.sourceDefinition!!, workspaceId = workspace2.workspaceId)
+    val destination2 =
+      jooqTestDbSetupHelper.createActorForActorDefinition(
+        jooqTestDbSetupHelper.destinationDefinition!!,
+        workspaceId = workspace2.workspaceId,
+      )
+
+    val sync2 =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source2.sourceId)
+        .withDestinationId(destination2.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.MANUAL)
+        .withManual(true)
+        .withBreakingChange(false)
+    connectionServiceJooqImpl.writeStandardSync(sync2)
+
+    val successfulLookupBySources =
+      connectionServiceJooqImpl.listConnectionIdsForOrganizationAndActorDefinitions(
+        organization!!.organizationId,
+        listOf(source.sourceDefinitionId),
+        io.airbyte.config.ActorType.SOURCE,
+      )
+    Assertions.assertEquals(listOf(standardSync.connectionId), successfulLookupBySources)
+
+    val successfulLookupByDestinations =
+      connectionServiceJooqImpl.listConnectionIdsForOrganizationAndActorDefinitions(
+        organization.organizationId,
+        listOf(destination.destinationDefinitionId),
+        io.airbyte.config.ActorType.DESTINATION,
+      )
+    Assertions.assertEquals(listOf(standardSync.connectionId), successfulLookupByDestinations)
+
+    val otherOrgLookup =
+      connectionServiceJooqImpl.listConnectionIdsForOrganizationAndActorDefinitions(
+        org2.organizationId,
+        listOf(source.sourceDefinitionId),
+        io.airbyte.config.ActorType.SOURCE,
+      )
+    Assertions.assertEquals(listOf(sync2.connectionId), otherOrgLookup)
+  }
+
+  @Test
+  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
+  fun testListConnectionIdsForOrganizationWithMappers() {
+    val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
+    jooqTestDbSetupHelper.setupForVersionUpgradeTest()
+
+    val organization = jooqTestDbSetupHelper.organization
+
+    val destination = jooqTestDbSetupHelper.destination
+    val source = jooqTestDbSetupHelper.source
+
+    val standardSync =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source!!.sourceId)
+        .withDestinationId(destination!!.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.MANUAL)
+        .withManual(true)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(standardSync)
+
+    val jsonSchema = fieldsToJsonSchema(Field.of("name", JsonSchemaType.STRING))
+
+    val catalog =
+      ConfiguredAirbyteCatalog().withStreams(
+        mutableListOf(
+          ConfiguredAirbyteStream
+            .Builder()
+            .stream(AirbyteStream("streamName", jsonSchema, listOf(SyncMode.FULL_REFRESH)))
+            .syncMode(SyncMode.FULL_REFRESH)
+            .destinationSyncMode(DestinationSyncMode.OVERWRITE)
+            .mappers(
+              listOf(
+                HashingMapperConfig(
+                  name = "hash-mapper",
+                  config = HashingConfig(targetField = "name", method = HashingMethods.MD5, fieldNameSuffix = "_hashed"),
+                ),
+              ),
+            ).build(),
+        ),
+      )
+
+    val standardSyncWithMappers =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source.sourceId)
+        .withDestinationId(destination.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(catalog)
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.MANUAL)
+        .withManual(true)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(standardSyncWithMappers)
+
+    val result = connectionServiceJooqImpl.listConnectionIdsForOrganizationWithMappers(organization!!.organizationId)
+    Assertions.assertEquals(listOf(standardSyncWithMappers.connectionId), result)
+  }
+
+  @Test
+  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
+  fun testListSubHourConnectionIdsForOrganization() {
+    val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
+    jooqTestDbSetupHelper.setupForVersionUpgradeTest()
+
+    val organization = jooqTestDbSetupHelper.organization
+
+    val destination = jooqTestDbSetupHelper.destination
+    val source = jooqTestDbSetupHelper.source
+
+    val standardSync =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source!!.sourceId)
+        .withDestinationId(destination!!.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.MANUAL)
+        .withManual(true)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(standardSync)
+
+    val standardSyncWithSchedule =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source.sourceId)
+        .withDestinationId(destination.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.BASIC_SCHEDULE)
+        .withScheduleData(ScheduleData().withBasicSchedule(BasicSchedule().withTimeUnit(BasicSchedule.TimeUnit.DAYS).withUnits(10L)))
+        .withSchedule(Schedule().withTimeUnit(Schedule.TimeUnit.DAYS).withUnits(10L))
+        .withManual(false)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(standardSyncWithSchedule)
+
+    val standardSyncWithFastSchedule =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source.sourceId)
+        .withDestinationId(destination.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.BASIC_SCHEDULE)
+        .withScheduleData(ScheduleData().withBasicSchedule(BasicSchedule().withTimeUnit(BasicSchedule.TimeUnit.MINUTES).withUnits(15L)))
+        .withSchedule(Schedule().withTimeUnit(Schedule.TimeUnit.MINUTES).withUnits(15L))
+        .withManual(false)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(standardSyncWithFastSchedule)
+
+    val result = connectionServiceJooqImpl.listSubHourConnectionIdsForOrganization(organization!!.organizationId)
+    Assertions.assertEquals(listOf(standardSyncWithFastSchedule.connectionId), result)
+  }
+
+  @Test
+  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
+  fun testListConnectionCronSchedulesForOrganization() {
+    val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
+    jooqTestDbSetupHelper.setupForVersionUpgradeTest()
+
+    val organization = jooqTestDbSetupHelper.organization
+
+    val destination = jooqTestDbSetupHelper.destination
+    val source = jooqTestDbSetupHelper.source
+
+    val standardSync =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source!!.sourceId)
+        .withDestinationId(destination!!.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.MANUAL)
+        .withManual(true)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(standardSync)
+
+    val standardSyncWithSchedule =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source.sourceId)
+        .withDestinationId(destination.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.BASIC_SCHEDULE)
+        .withScheduleData(ScheduleData().withBasicSchedule(BasicSchedule().withTimeUnit(BasicSchedule.TimeUnit.DAYS).withUnits(10L)))
+        .withSchedule(Schedule().withTimeUnit(Schedule.TimeUnit.DAYS).withUnits(10L))
+        .withManual(false)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(standardSyncWithSchedule)
+
+    val standardSyncWithCronSchedule =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source.sourceId)
+        .withDestinationId(destination.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.CRON)
+        .withScheduleData(
+          ScheduleData().withCron(
+            io.airbyte.config
+              .Cron()
+              .withCronExpression("* * */5 * * ?")
+              .withCronTimeZone("PST"),
+          ),
+        ).withManual(false)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(standardSyncWithCronSchedule)
+
+    val standardSyncWithFastCronSchedule =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source.sourceId)
+        .withDestinationId(destination.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.CRON)
+        .withScheduleData(
+          ScheduleData().withCron(
+            io.airbyte.config
+              .Cron()
+              .withCronExpression("* */5 * * * ?")
+              .withCronTimeZone("PST"),
+          ),
+        ).withManual(false)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(standardSyncWithFastCronSchedule)
+
+    val result = connectionServiceJooqImpl.listConnectionCronSchedulesForOrganization(organization!!.organizationId)
+    Assertions.assertTrue(
+      result.containsAll(
+        listOf(
+          ConnectionCronSchedule(standardSyncWithCronSchedule.connectionId, standardSyncWithCronSchedule.scheduleData),
+          ConnectionCronSchedule(standardSyncWithFastCronSchedule.connectionId, standardSyncWithFastCronSchedule.scheduleData),
+        ),
+      ),
+    )
+  }
+
+  @Test
+  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
+  fun testLockConnectionsById() {
+    val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
+    jooqTestDbSetupHelper.setupForVersionUpgradeTest()
+
+    val organization = jooqTestDbSetupHelper.organization
+
+    val destination = jooqTestDbSetupHelper.destination
+    val source = jooqTestDbSetupHelper.source
+
+    val standardSync =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source!!.sourceId)
+        .withDestinationId(destination!!.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.MANUAL)
+        .withManual(true)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(standardSync)
+
+    val standardSyncWithSchedule =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source.sourceId)
+        .withDestinationId(destination.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.BASIC_SCHEDULE)
+        .withScheduleData(ScheduleData().withBasicSchedule(BasicSchedule().withTimeUnit(BasicSchedule.TimeUnit.DAYS).withUnits(10L)))
+        .withSchedule(Schedule().withTimeUnit(Schedule.TimeUnit.DAYS).withUnits(10L))
+        .withManual(false)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(standardSyncWithSchedule)
+
+    val standardSyncWithCronSchedule =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source.sourceId)
+        .withDestinationId(destination.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.CRON)
+        .withScheduleData(
+          ScheduleData().withCron(
+            io.airbyte.config
+              .Cron()
+              .withCronExpression("* * */5 * * ?")
+              .withCronTimeZone("PST"),
+          ),
+        ).withManual(false)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(standardSyncWithCronSchedule)
+
+    val standardSyncWithFastCronSchedule =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source.sourceId)
+        .withDestinationId(destination.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.CRON)
+        .withScheduleData(
+          ScheduleData().withCron(
+            io.airbyte.config
+              .Cron()
+              .withCronExpression("* */5 * * * ?")
+              .withCronTimeZone("PST"),
+          ),
+        ).withManual(false)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(standardSyncWithFastCronSchedule)
+
+    connectionServiceJooqImpl.lockConnectionsById(
+      listOf(standardSyncWithCronSchedule.connectionId, standardSyncWithFastCronSchedule.connectionId),
+      StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value,
+    )
+
+    val result1 = connectionServiceJooqImpl.getStandardSync(standardSyncWithCronSchedule.connectionId)
+    Assertions.assertEquals(result1.status, StandardSync.Status.LOCKED)
+    Assertions.assertEquals(result1.statusReason, StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value)
+
+    val result2 = connectionServiceJooqImpl.getStandardSync(standardSyncWithFastCronSchedule.connectionId)
+    Assertions.assertEquals(result2.status, StandardSync.Status.LOCKED)
+    Assertions.assertEquals(result2.statusReason, StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value)
   }
 }

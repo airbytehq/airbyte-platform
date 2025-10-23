@@ -54,6 +54,8 @@ abstract class ConnectorEntitlement(
     /** Prefix used for all enterprise connector feature IDs */
     const val PREFIX = "feature-enterprise-connector-"
 
+    const val SOURCE_PREFIX = "source-"
+
     /**
      * Checks if a feature ID represents an enterprise connector entitlement.
      *

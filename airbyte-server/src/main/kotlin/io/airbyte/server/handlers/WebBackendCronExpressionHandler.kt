@@ -8,7 +8,7 @@ import io.airbyte.api.model.generated.WebBackendCronExpressionDescription
 import io.airbyte.api.model.generated.WebBackendDescribeCronExpressionRequestBody
 import io.airbyte.api.problems.model.generated.ProblemCronExpressionData
 import io.airbyte.api.problems.throwable.generated.CronValidationInvalidExpressionProblem
-import io.airbyte.commons.server.helpers.CronExpressionHelper
+import io.airbyte.config.helpers.CronExpressionHelper
 import jakarta.inject.Singleton
 
 @Singleton

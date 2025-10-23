@@ -131,15 +131,13 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
   @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun setupForVersionUpgradeTest() {
     // Create org
-    organization = createBaseOrganization()
-    organizationServiceJooqImpl.writeOrganization(organization!!)
+    organization = createOrganization()
 
     // Create dataplane group
-    dataplaneGroupServiceDataImpl.writeDataplaneGroup(createBaseDataplaneGroup()!!)
+    createDataplaneGroup()
 
     // Create workspace
-    workspace = createBaseWorkspace()
-    workspaceServiceJooqImpl.writeStandardWorkspaceNoSecrets(createBaseWorkspace())
+    workspace = createWorkspace()
 
     // Create source definition
     sourceDefinition =
@@ -177,15 +175,13 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
   @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun setUpDependencies() {
     // Create org
-    organization = createBaseOrganization()
-    organizationServiceJooqImpl.writeOrganization(organization!!)
+    organization = createOrganization()
 
     // Create dataplane group
-    dataplaneGroupServiceDataImpl.writeDataplaneGroup(createBaseDataplaneGroup()!!)
+    createDataplaneGroup()
 
     // Create workspace
-    workspace = createBaseWorkspace()
-    workspaceServiceJooqImpl.writeStandardWorkspaceNoSecrets(createBaseWorkspace())
+    workspace = createWorkspace()
 
     // Create source definition
     sourceDefinition =
@@ -222,7 +218,6 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
     // Create connection tags
     tags = createTags(workspace!!.workspaceId)
     val secondWorkspace = createSecondWorkspace()
-    workspaceServiceJooqImpl.writeStandardWorkspaceNoSecrets(secondWorkspace)
     tagsFromAnotherWorkspace = createTags(secondWorkspace.workspaceId)
   }
 
@@ -308,65 +303,131 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
   }
 
   @Throws(IOException::class)
-  fun createActorForActorDefinition(sourceDefinition: StandardSourceDefinition): SourceConnection {
-    val source = createBaseSourceActor()!!.withSourceDefinitionId(sourceDefinition.sourceDefinitionId)
+  fun createActorForActorDefinition(
+    sourceDefinition: StandardSourceDefinition,
+    sourceId: UUID = UUID.randomUUID(),
+    workspaceId: UUID = this.workspaceId,
+    name: String = "source",
+  ): SourceConnection {
+    val source = createBaseSourceActor(sourceId, workspaceId, name)!!.withSourceDefinitionId(sourceDefinition.sourceDefinitionId)
     sourceServiceJooqImpl.writeSourceConnectionNoSecrets(source)
     return source
   }
 
   @Throws(IOException::class)
-  fun createActorForActorDefinition(destinationDefinition: StandardDestinationDefinition): DestinationConnection {
+  fun createActorForActorDefinition(
+    destinationDefinition: StandardDestinationDefinition,
+    destinationId: UUID = UUID.randomUUID(),
+    workspaceId: UUID = this.workspaceId,
+    name: String = "destination",
+  ): DestinationConnection {
     val destination =
-      createBaseDestinationActor()!!.withDestinationDefinitionId(destinationDefinition.destinationDefinitionId)
+      createBaseDestinationActor(destinationId, workspaceId, name)!!.withDestinationDefinitionId(destinationDefinition.destinationDefinitionId)
     destinationServiceJooqImpl.writeDestinationConnectionNoSecrets(destination)
     return destination
   }
 
-  private fun createBaseDestinationActor(): DestinationConnection? =
+  @Throws(IOException::class)
+  private fun createBaseDestinationActor(
+    destinationId: UUID,
+    workspaceId: UUID,
+    name: String,
+  ): DestinationConnection? =
     DestinationConnection()
-      .withDestinationId(UUID.randomUUID())
+      .withDestinationId(destinationId)
       .withWorkspaceId(workspaceId)
-      .withName("destination")
+      .withName(name)
 
-  private fun createBaseSourceActor(): SourceConnection? =
+  @Throws(IOException::class)
+  private fun createBaseSourceActor(
+    sourceId: UUID,
+    workspaceId: UUID,
+    name: String,
+  ): SourceConnection? =
     SourceConnection()
-      .withSourceId(UUID.randomUUID())
+      .withSourceId(sourceId)
       .withWorkspaceId(workspaceId)
-      .withName("source")
+      .withName(name)
 
-  private fun createBaseOrganization(): Organization =
-    Organization()
-      .withOrganizationId(organizationId)
-      .withName("organization")
-      .withEmail("org@airbyte.io")
+  @Throws(IOException::class)
+  fun createOrganization(
+    organizationId: UUID = this.organizationId,
+    name: String = "organization",
+    email: String = "org@airbyte.io",
+  ): Organization {
+    val organization =
+      Organization()
+        .withOrganizationId(organizationId)
+        .withName(name)
+        .withEmail(email)
+    organizationServiceJooqImpl.writeOrganization(organization)
+    return organization
+  }
 
-  private fun createBaseDataplaneGroup(): DataplaneGroup? =
-    DataplaneGroup()
-      .withId(dataplaneGroupId)
-      .withOrganizationId(organizationId)
-      .withName("test")
-      .withEnabled(true)
-      .withTombstone(false)
+  @Throws(IOException::class)
+  fun createDataplaneGroup(
+    id: UUID = this.dataplaneGroupId,
+    organizationId: UUID = this.organizationId,
+    name: String = "test",
+    enabled: Boolean = true,
+    tombstone: Boolean = false,
+  ): DataplaneGroup {
+    val dataplaneGroup =
+      DataplaneGroup()
+        .withId(id)
+        .withOrganizationId(organizationId)
+        .withName(name)
+        .withEnabled(enabled)
+        .withTombstone(tombstone)
+    dataplaneGroupServiceDataImpl.writeDataplaneGroup(dataplaneGroup)
+    return dataplaneGroup
+  }
 
-  private fun createBaseWorkspace(): StandardWorkspace =
-    StandardWorkspace()
-      .withWorkspaceId(workspaceId)
-      .withOrganizationId(organizationId)
-      .withName("default")
-      .withSlug("workspace-slug")
-      .withInitialSetupComplete(false)
-      .withTombstone(false)
-      .withDataplaneGroupId(dataplaneGroupId)
+  @Throws(IOException::class)
+  fun createWorkspace(
+    workspaceId: UUID = this.workspaceId,
+    organizationId: UUID = this.organizationId,
+    dataplaneGroupId: UUID = this.dataplaneGroupId,
+    name: String = "default",
+    slug: String = "workspace-slug",
+    initialSetupComplete: Boolean = false,
+    tombstone: Boolean = false,
+  ): StandardWorkspace {
+    val workspace =
+      StandardWorkspace()
+        .withWorkspaceId(workspaceId)
+        .withOrganizationId(organizationId)
+        .withName(name)
+        .withSlug(slug)
+        .withInitialSetupComplete(initialSetupComplete)
+        .withTombstone(tombstone)
+        .withDataplaneGroupId(dataplaneGroupId)
+    workspaceServiceJooqImpl.writeStandardWorkspaceNoSecrets(workspace)
+    return workspace
+  }
 
-  private fun createSecondWorkspace(): StandardWorkspace =
-    StandardWorkspace()
-      .withWorkspaceId(UUID.randomUUID())
-      .withOrganizationId(organizationId)
-      .withName("second")
-      .withSlug("second-workspace-slug")
-      .withInitialSetupComplete(false)
-      .withTombstone(false)
-      .withDataplaneGroupId(dataplaneGroupId)
+  @Throws(IOException::class)
+  fun createSecondWorkspace(
+    workspaceId: UUID = UUID.randomUUID(),
+    organizationId: UUID = this.organizationId,
+    dataplaneGroupId: UUID = this.dataplaneGroupId,
+    name: String = "second",
+    slug: String = "second-workspace-slug",
+    initialSetupComplete: Boolean = false,
+    tombstone: Boolean = false,
+  ): StandardWorkspace {
+    val workspace =
+      StandardWorkspace()
+        .withWorkspaceId(workspaceId)
+        .withOrganizationId(organizationId)
+        .withName(name)
+        .withSlug(slug)
+        .withInitialSetupComplete(initialSetupComplete)
+        .withTombstone(tombstone)
+        .withDataplaneGroupId(dataplaneGroupId)
+    workspaceServiceJooqImpl.writeStandardWorkspaceNoSecrets(workspace)
+    return workspace
+  }
 
   companion object {
     private fun createBaseActorDefVersion(

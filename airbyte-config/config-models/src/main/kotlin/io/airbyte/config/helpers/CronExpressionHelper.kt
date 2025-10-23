@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.server.helpers
+package io.airbyte.config.helpers
 
 import com.cronutils.descriptor.CronDescriptor
 import com.cronutils.model.Cron
@@ -58,16 +58,25 @@ class CronExpressionHelper {
     return nextExecutions
   }
 
-  fun checkDoesNotExecuteMoreThanOncePerHour(cron: Cron) {
+  fun executesMoreThanOncePerHour(cronExpression: String): Boolean = executesMoreThanOncePerHour(validateCronExpression(cronExpression))
+
+  fun executesMoreThanOncePerHour(cron: Cron): Boolean {
     val nextExecutions = getNextExecutions(cron, 3)
     // Make sure the time difference between the next 3 executions does not exceed 1 hour
 
     nextExecutions.zipWithNext { prev, next ->
       if (next - prev < 3600) {
-        throw IllegalArgumentException(
-          "Cron executions must be more than 1 hour apart",
-        )
+        return true
       }
+    }
+    return false
+  }
+
+  fun checkDoesNotExecuteMoreThanOncePerHour(cron: Cron) {
+    if (executesMoreThanOncePerHour(cron)) {
+      throw IllegalArgumentException(
+        "Cron executions must be more than 1 hour apart",
+      )
     }
   }
 

@@ -4,12 +4,14 @@
 
 package io.airbyte.data.services
 
+import io.airbyte.config.ActorType
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConnectionSummary
 import io.airbyte.config.StandardSync
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.StreamDescriptorForDestination
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.services.shared.ConnectionCronSchedule
 import io.airbyte.data.services.shared.ConnectionWithJobInfo
 import io.airbyte.data.services.shared.Filters
 import io.airbyte.data.services.shared.SortKey
@@ -158,10 +160,32 @@ interface ConnectionService {
   fun disableConnectionsById(connectionIds: List<UUID>): Set<UUID>
 
   @Throws(IOException::class)
+  fun lockConnectionsById(
+    connectionIds: Collection<UUID>,
+    statusReason: String,
+  ): Set<UUID>
+
+  @Throws(IOException::class)
   fun listConnectionIdsForWorkspace(workspaceId: UUID): List<UUID>
 
   @Throws(IOException::class)
   fun listConnectionIdsForOrganization(organizationId: UUID): List<UUID>
+
+  @Throws(IOException::class)
+  fun listConnectionIdsForOrganizationAndActorDefinitions(
+    organizationId: UUID,
+    actorDefinitionIds: Collection<UUID>,
+    actorType: ActorType,
+  ): List<UUID>
+
+  @Throws(IOException::class)
+  fun listConnectionIdsForOrganizationWithMappers(organizationId: UUID): List<UUID>
+
+  @Throws(IOException::class)
+  fun listSubHourConnectionIdsForOrganization(organizationId: UUID): List<UUID>
+
+  @Throws(IOException::class)
+  fun listConnectionCronSchedulesForOrganization(organizationId: UUID): List<ConnectionCronSchedule>
 
   @Throws(IOException::class)
   fun listStreamsForDestination(

@@ -16,6 +16,7 @@ import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.ConnectionSummary
 import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.Schedule
+import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.StreamDescriptorForDestination
@@ -25,6 +26,7 @@ import io.airbyte.config.helpers.ScheduleHelpers
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.impls.jooq.DbConverter.buildStandardSync
+import io.airbyte.data.services.shared.ConnectionCronSchedule
 import io.airbyte.data.services.shared.ConnectionJobStatus
 import io.airbyte.data.services.shared.ConnectionWithJobInfo
 import io.airbyte.data.services.shared.Cursor
@@ -1600,6 +1602,30 @@ class ConnectionServiceJooqImpl
       }
 
     @Throws(IOException::class)
+    override fun lockConnectionsById(
+      connectionIds: Collection<UUID>,
+      statusReason: String,
+    ): Set<UUID> =
+      database.transaction { ctx: DSLContext ->
+        ctx
+          .update(Tables.CONNECTION)
+          .set(
+            Tables.CONNECTION.UPDATED_AT,
+            OffsetDateTime.now(),
+          ).set(
+            Tables.CONNECTION.STATUS,
+            StatusType.locked,
+          ).set(
+            Tables.CONNECTION.STATUS_REASON,
+            statusReason,
+          ).where(
+            Tables.CONNECTION.ID
+              .`in`(connectionIds),
+          ).returning(Tables.CONNECTION.ID)
+          .fetchSet(Tables.CONNECTION.ID)
+      }
+
+    @Throws(IOException::class)
     override fun listConnectionIdsForWorkspace(workspaceId: UUID): List<UUID> =
       database.query { ctx: DSLContext ->
         ctx
@@ -1624,6 +1650,117 @@ class ConnectionServiceJooqImpl
           .where(Tables.WORKSPACE.ORGANIZATION_ID.eq(organizationId))
           .and(Tables.CONNECTION.STATUS.ne(StatusType.deprecated))
           .fetchInto(UUID::class.java)
+      }
+
+    @Throws(IOException::class)
+    override fun listConnectionIdsForOrganizationAndActorDefinitions(
+      organizationId: UUID,
+      actorDefinitionIds: Collection<UUID>,
+      actorType: io.airbyte.config.ActorType,
+    ): List<UUID> {
+      val actorIdField =
+        when (actorType) {
+          io.airbyte.config.ActorType.SOURCE -> Tables.CONNECTION.SOURCE_ID
+          io.airbyte.config.ActorType.DESTINATION -> Tables.CONNECTION.DESTINATION_ID
+        }
+      val actorDefinitionIdsCondition =
+        when {
+          actorDefinitionIds.isNotEmpty() -> Tables.ACTOR.ACTOR_DEFINITION_ID.`in`(actorDefinitionIds)
+          else -> DSL.noCondition()
+        }
+
+      return database.query { ctx: DSLContext ->
+        ctx
+          .select(Tables.CONNECTION.ID)
+          .from(Tables.CONNECTION)
+          .join(Tables.ACTOR)
+          .on(Tables.ACTOR.ID.eq(actorIdField))
+          .and(actorDefinitionIdsCondition)
+          .join(Tables.WORKSPACE)
+          .on(Tables.WORKSPACE.ID.eq(Tables.ACTOR.WORKSPACE_ID))
+          .where(Tables.WORKSPACE.ORGANIZATION_ID.eq(organizationId))
+          .and(Tables.CONNECTION.STATUS.ne(StatusType.deprecated))
+          .fetchInto(UUID::class.java)
+      }
+    }
+
+    @Throws(IOException::class)
+    override fun listConnectionIdsForOrganizationWithMappers(organizationId: UUID): List<UUID> =
+      database.query { ctx: DSLContext ->
+        ctx
+          .select(Tables.CONNECTION.ID)
+          .from(Tables.CONNECTION)
+          .join(Tables.ACTOR)
+          .on(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
+          .join(Tables.WORKSPACE)
+          .on(Tables.WORKSPACE.ID.eq(Tables.ACTOR.WORKSPACE_ID))
+          .where(Tables.WORKSPACE.ORGANIZATION_ID.eq(organizationId))
+          .and(Tables.CONNECTION.STATUS.ne(StatusType.deprecated))
+          .and(
+            DSL.field(
+              "jsonb_path_exists({0}, {1})",
+              Boolean::class.java,
+              Tables.CONNECTION.CATALOG,
+              DSL.inline("$.streams[*].mappers ? (@.size() > 0)"),
+            ),
+          ).fetchInto(UUID::class.java)
+      }
+
+    @Throws(IOException::class)
+    override fun listSubHourConnectionIdsForOrganization(organizationId: UUID): List<UUID> =
+      database.query { ctx: DSLContext ->
+        ctx
+          .select(Tables.CONNECTION.ID)
+          .from(Tables.CONNECTION)
+          .join(Tables.ACTOR)
+          .on(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
+          .join(Tables.WORKSPACE)
+          .on(Tables.WORKSPACE.ID.eq(Tables.ACTOR.WORKSPACE_ID))
+          .where(Tables.WORKSPACE.ORGANIZATION_ID.eq(organizationId))
+          .and(Tables.CONNECTION.STATUS.ne(StatusType.deprecated))
+          .and(Tables.CONNECTION.SCHEDULE_TYPE.eq(ScheduleType.basic_schedule))
+          .and(
+            DSL.condition(
+              "jsonb_path_exists(({0}), '$.basicSchedule')",
+              Tables.CONNECTION.SCHEDULE_DATA,
+            ),
+          ).and(
+            DSL
+              .field(
+                "jsonb_extract_path_text(({0}), 'basicSchedule', 'timeUnit')",
+                String::class.java,
+                Tables.CONNECTION.SCHEDULE_DATA,
+              ).eq("minutes"),
+          ).and(
+            DSL
+              .field(
+                "(jsonb_extract_path_text(({0}), 'basicSchedule', 'units')::int)",
+                Int::class.java,
+                Tables.CONNECTION.SCHEDULE_DATA,
+              ).lt(60),
+          ).fetchInto(UUID::class.java)
+      }
+
+    @Throws(IOException::class)
+    override fun listConnectionCronSchedulesForOrganization(organizationId: UUID): List<ConnectionCronSchedule> =
+      database.query { ctx: DSLContext ->
+        ctx
+          .select(Tables.CONNECTION.ID, Tables.CONNECTION.SCHEDULE_DATA)
+          .from(Tables.CONNECTION)
+          .join(Tables.ACTOR)
+          .on(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
+          .join(Tables.WORKSPACE)
+          .on(Tables.WORKSPACE.ID.eq(Tables.ACTOR.WORKSPACE_ID))
+          .where(Tables.WORKSPACE.ORGANIZATION_ID.eq(organizationId))
+          .and(Tables.CONNECTION.STATUS.ne(StatusType.deprecated))
+          .and(Tables.CONNECTION.SCHEDULE_TYPE.eq(ScheduleType.cron))
+          .fetch()
+          .map { record ->
+            ConnectionCronSchedule(
+              record.get(Tables.CONNECTION.ID),
+              Jsons.deserialize(record.get(Tables.CONNECTION.SCHEDULE_DATA).data(), ScheduleData::class.java),
+            )
+          }
       }
 
     private fun getEarlySyncJobsFromResult(result: Result<Record>): Set<Long> {

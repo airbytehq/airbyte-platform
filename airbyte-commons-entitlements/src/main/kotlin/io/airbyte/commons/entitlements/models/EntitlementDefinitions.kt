@@ -139,5 +139,20 @@ object Entitlements {
     }
   }
 
+  fun isEnterpriseConnectorEntitlementId(featureId: String): Boolean {
+    val parsedUuid = ConnectorEntitlement.parseActorDefinitionIdOrNull(featureId)
+    return CONNECTORS_BY_ACTOR_ID.containsKey(parsedUuid)
+  }
+
+  fun isEnterpriseSourceConnectorEntitlementId(featureId: String): Boolean {
+    val parsedUuid = ConnectorEntitlement.parseActorDefinitionIdOrNull(featureId)
+    return CONNECTORS_BY_ACTOR_ID[parsedUuid]?.name?.startsWith(ConnectorEntitlement.SOURCE_PREFIX) ?: false
+  }
+
   fun connectorFromActorDefinitionId(id: UUID): ConnectorEntitlement? = CONNECTORS_BY_ACTOR_ID[id]
+
+  fun actorDefinitionIdFromFeatureId(featureId: String): UUID? {
+    val parsedUuid = ConnectorEntitlement.parseActorDefinitionIdOrNull(featureId)
+    return CONNECTORS_BY_ACTOR_ID[parsedUuid]?.actorDefinitionId
+  }
 }

@@ -6,7 +6,7 @@ package io.airbyte.server.handlers
 
 import io.airbyte.api.model.generated.WebBackendDescribeCronExpressionRequestBody
 import io.airbyte.api.problems.throwable.generated.CronValidationInvalidExpressionProblem
-import io.airbyte.commons.server.helpers.CronExpressionHelper
+import io.airbyte.config.helpers.CronExpressionHelper
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNotNull
 import org.junit.jupiter.api.Test

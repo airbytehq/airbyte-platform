@@ -23,6 +23,7 @@ dependencies {
   implementation(libs.micronaut.kotlin.extension.functions)
   implementation(libs.airbyte.protocol)
   implementation(libs.kotlin.logging)
+  implementation(libs.cron.utils)
 
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)

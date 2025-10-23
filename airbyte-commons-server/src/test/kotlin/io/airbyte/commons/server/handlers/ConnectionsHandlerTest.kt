@@ -116,7 +116,6 @@ import io.airbyte.commons.server.helpers.ConnectionHelpers.generateBasicSchedule
 import io.airbyte.commons.server.helpers.ConnectionHelpers.generateExpectedConnectionRead
 import io.airbyte.commons.server.helpers.ConnectionHelpers.generateMultipleStreamsApiCatalog
 import io.airbyte.commons.server.helpers.ConnectionHelpers.generateMultipleStreamsConfiguredAirbyteCatalog
-import io.airbyte.commons.server.helpers.CronExpressionHelper
 import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.commons.server.validation.CatalogValidator
@@ -170,6 +169,7 @@ import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncMode
 import io.airbyte.config.SyncStats
 import io.airbyte.config.helpers.CatalogHelpers.Companion.createAirbyteStream
+import io.airbyte.config.helpers.CronExpressionHelper
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.config.mapper.configs.HashingConfig
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper

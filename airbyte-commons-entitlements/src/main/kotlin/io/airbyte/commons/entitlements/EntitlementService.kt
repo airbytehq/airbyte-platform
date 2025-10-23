@@ -10,10 +10,21 @@ import io.airbyte.api.problems.throwable.generated.EntitlementServiceInvalidOrga
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.commons.entitlements.models.ConfigTemplateEntitlement
 import io.airbyte.commons.entitlements.models.DestinationObjectStorageEntitlement
+import io.airbyte.commons.entitlements.models.DestinationSalesforceEnterpriseConnector
 import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.Entitlements
+import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
+import io.airbyte.commons.entitlements.models.MappersEntitlement
+import io.airbyte.commons.entitlements.models.RbacRolesEntitlement
 import io.airbyte.commons.entitlements.models.SelfManagedRegionsEntitlement
+import io.airbyte.commons.entitlements.models.SourceDb2EnterpriseConnector
+import io.airbyte.commons.entitlements.models.SourceNetsuiteEnterpriseConnector
+import io.airbyte.commons.entitlements.models.SourceOracleEnterpriseConnector
+import io.airbyte.commons.entitlements.models.SourceSapHanaEnterpriseConnector
+import io.airbyte.commons.entitlements.models.SourceServicenowEnterpriseConnector
+import io.airbyte.commons.entitlements.models.SourceSharepointEnterpriseConnector
+import io.airbyte.commons.entitlements.models.SourceWorkdayEnterpriseConnector
 import io.airbyte.commons.entitlements.models.SsoEntitlement
 import io.airbyte.config.ActorType
 import io.airbyte.domain.models.EntitlementFeature
@@ -187,7 +198,7 @@ internal class EntitlementServiceImpl(
         }
 
         // Handle feature downgrades if needed
-        downgradeFeaturesIfRequired(organizationId, currentPlan, plan)
+        featureDegradationService.downgradeFeaturesIfRequired(organizationId, currentPlan, plan)
 
         // Update with preserved add-ons
         entitlementClient.updateOrganization(organizationId, plan)
@@ -195,53 +206,6 @@ internal class EntitlementServiceImpl(
     } else {
       sendCountMetric(OssMetricsRegistry.ENTITLEMENT_ORGANIZATION_ENROLMENT, organizationId, true)
       entitlementClient.addOrganization(organizationId, plan)
-    }
-  }
-
-  internal fun downgradeFeaturesIfRequired(
-    organizationId: OrganizationId,
-    fromPlan: EntitlementPlan,
-    toPlan: EntitlementPlan,
-  ) {
-    logger.info { "Checking for feature downgrades. organizationId=$organizationId fromPlan=$fromPlan toPlan=$toPlan" }
-
-    if (!(fromPlan == EntitlementPlan.UNIFIED_TRIAL && toPlan == EntitlementPlan.STANDARD)) {
-      logger.info { "Downgrade not supported from plan $fromPlan to $toPlan. Skipping downgrade." }
-      return
-    }
-
-    try {
-      // Get current entitlements to identify features the customer currently has
-      val currentEntitlements = entitlementClient.getEntitlements(organizationId)
-      val currentFeatureIds = currentEntitlements.filter { it.isEntitled }.map { it.featureId }.toSet()
-
-      val newFeatureIds = entitlementClient.getEntitlementsForPlan(toPlan).map { it.featureId }.toSet()
-      logger.info {
-        "Customer currently has ${currentFeatureIds.size} entitled features. " +
-          "organizationId=$organizationId features=$currentFeatureIds"
-      }
-
-      val entitlementsToDowngrade = currentFeatureIds - newFeatureIds
-
-      logger.info {
-        "Updating entitlement plan from $fromPlan to $toPlan. Revoking access to featureIds=$entitlementsToDowngrade for organizationId=$organizationId"
-      }
-
-      for (entitlementToDowngrade in entitlementsToDowngrade) {
-        logger.debug {
-          "Downgrading access to featureId=$entitlementToDowngrade organizationId=$organizationId"
-        }
-        // TODO: Implement specific downgrade flows for features
-        when (entitlementToDowngrade) {
-          EntitlementFeature.RBAC.id -> featureDegradationService.downgradeRBACRoles(organizationId)
-          else -> logger.debug { "No downgrade flow defined for $entitlementToDowngrade" }
-        }
-      }
-
-      logger.info { "Feature downgrade check completed. organizationId=$organizationId fromPlan=$fromPlan toPlan=$toPlan" }
-    } catch (e: Exception) {
-      logger.error(e) { "Error checking for feature downgrades. organizationId=$organizationId fromPlan=$fromPlan toPlan=$toPlan" }
-      // Don't fail the plan update if we can't check for downgrades
     }
   }
 

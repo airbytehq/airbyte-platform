@@ -18,11 +18,11 @@ import io.airbyte.api.problems.throwable.generated.CronValidationUnderOneHourNot
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.FasterSyncFrequencyEntitlement
 import io.airbyte.commons.server.converters.ApiPojoConverters
-import io.airbyte.commons.server.helpers.CronExpressionHelper
 import io.airbyte.config.BasicSchedule
 import io.airbyte.config.Schedule
 import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync
+import io.airbyte.config.helpers.CronExpressionHelper
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.domain.models.OrganizationId
