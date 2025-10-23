@@ -262,8 +262,8 @@ micronaut-validation = { module = "io.micronaut.validation:micronaut-validation"
 
 # Transitive security patches direct dependency does not have a fix
 json-smart = { module = "net.minidev:json-smart", version = "2.5.2" } # Comes from com.jayway.jsonpath:json-path:2.9.0 (latest version). Force upgrade from 2.5.1 to 2.5.2 to deal with CVE-2024-57699
-netty-handler = { module = "io.netty:netty-handler", version = "4.2.2.Final" } # Comes from micronout. Force upgrade from 4.1.116.Final to 4.2.2.Final to deal with CVE-2025-24970
-netty-common = { module = "io.netty:netty-common", version = "4.2.2.Final" } # Comes from micronout. Force upgrade from 4.1.116.Final to 4.2.2.Final to deal with CVE-2025-24970
+netty-handler = { module = "io.netty:netty-handler", version = "4.2.7.Final" } # Comes from micronout. Force upgrade from 4.1.116.Final to 4.2.7.Final to deal with CVE-2025-24970
+netty-common = { module = "io.netty:netty-common", version = "4.2.7.Final" } # Comes from micronout. Force upgrade from 4.1.116.Final to 4.2.7.Final to deal with CVE-2025-24970
 httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", version = "5.5" } # Comes from micronout. Force upgrade from 5.4.1 to 5.5 to deal with CVE-2025-27820
 
 [bundles]
