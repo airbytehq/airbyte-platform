@@ -30,6 +30,7 @@ import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.shared.ConnectionCronSchedule
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
+import io.mockk.Called
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -44,7 +45,7 @@ import java.util.UUID
 class FeatureDegradationServiceTest {
   private val permissionService = mockk<PermissionService>()
   private val entitlementClient = mockk<EntitlementClient>()
-  private val connectionService = mockk<ConnectionService>()
+  private val connectionService = mockk<ConnectionService>(relaxed = true)
   private val workspacePersistence = mockk<WorkspacePersistence>()
   private val cronExpressionHelper = CronExpressionHelper()
   private val featureDegradationService =
@@ -54,23 +55,55 @@ class FeatureDegradationServiceTest {
   private val cronTimezoneUtc = "UTC"
 
   @Test
-  fun `downgradeFeaturesIfRequired downgrades RBAC only when going from UNIFIED_TRIAL to STANDARD`() {
+  fun `downgradeFeaturesIfRequired only executes downgrades when going from UNIFIED_TRIAL to STANDARD`() {
     val orgId = OrganizationId(UUID.randomUUID())
+    val connectionId = UUID.randomUUID()
 
     // Even for upgrades, the function is called (it just checks if it needs to do anything)
-    every { entitlementClient.getEntitlements(orgId) } returns listOf(EntitlementResult("feature-rbac-roles", true))
+    every { entitlementClient.getEntitlements(orgId) } returns
+      listOf(
+        EntitlementResult(RbacRolesEntitlement.featureId, true),
+        EntitlementResult(MappersEntitlement.featureId, true),
+        EntitlementResult(FasterSyncFrequencyEntitlement.featureId, true),
+        EntitlementResult(SourceOracleEnterpriseConnector.featureId, true),
+        EntitlementResult(DestinationSalesforceEnterpriseConnector.featureId, true),
+      )
     every { entitlementClient.getEntitlementsForPlan(EntitlementPlan.STANDARD) } returns emptyList()
     every { entitlementClient.updateOrganization(orgId, EntitlementPlan.STANDARD) } just runs
     every { featureDegradationServiceStubbed.downgradeRBACRoles(orgId) } just runs
+    every { connectionService.listSubHourConnectionIdsForOrganization(orgId.value) } returns listOf(connectionId)
 
     featureDegradationServiceStubbed.downgradeFeaturesIfRequired(orgId, EntitlementPlan.UNIFIED_TRIAL, EntitlementPlan.STANDARD)
 
     // Verify downgrade RBAC function is called only when going from UNIFIED_TRIAL to STANDARD
     verify { featureDegradationServiceStubbed.downgradeRBACRoles(orgId) }
+    verify { connectionService.listConnectionIdsForOrganizationWithMappers(orgId.value) }
+    verify {
+      connectionService.listConnectionIdsForOrganizationAndActorDefinitions(
+        orgId.value,
+        any(),
+        ActorType.SOURCE,
+      )
+    }
+    verify {
+      connectionService.listConnectionIdsForOrganizationAndActorDefinitions(
+        orgId.value,
+        any(),
+        ActorType.DESTINATION,
+      )
+    }
+    verify { connectionService.listSubHourConnectionIdsForOrganization(orgId.value) }
+    verify { connectionService.listConnectionCronSchedulesForOrganization(orgId.value) }
+    verify {
+      connectionService.lockConnectionsById(
+        match { it.contains(connectionId) },
+        StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value,
+      )
+    }
   }
 
   @Test
-  fun `downgradeFeaturesIfRequired does not downgrade RBAC when going from PRO to STANDARD`() {
+  fun `downgradeFeaturesIfRequired does not execute any downgrades when going from PRO to STANDARD`() {
     val orgId = OrganizationId(UUID.randomUUID())
 
     // Even for upgrades, the function is called (it just checks if it needs to do anything)
@@ -83,6 +116,7 @@ class FeatureDegradationServiceTest {
 
     // Verify downgrade RBAC function is not called if not going from UNIFIED_TRIAL to STANDARD
     verify(exactly = 0) { featureDegradationServiceStubbed.downgradeRBACRoles(orgId) }
+    verify { connectionService wasNot Called }
   }
 
   @Test
