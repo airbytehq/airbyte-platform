@@ -11,11 +11,6 @@ import java.util.UUID
 interface DataWorkerUsageDataService {
   fun insertDataWorkerUsage(dataWorkerUsage: DataWorkerUsage)
 
-  fun updateDataWorkerUsage(
-    jobId: Long,
-    jobEnd: OffsetDateTime,
-  )
-
   fun getDataWorkerUsageByOrganizationAndTimeRange(
     organizationId: UUID,
     startDate: OffsetDateTime,

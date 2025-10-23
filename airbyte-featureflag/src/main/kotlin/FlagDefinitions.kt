@@ -242,3 +242,5 @@ object SkipCheckBeforeSync : Temporary<Boolean>(key = "skip-check-before-sync", 
 object UnifiedTrial : Temporary<Boolean>(key = "platform.unified-trial", default = false)
 
 object SkipStiggPlanLookup : Temporary<Boolean>(key = "platform.skip-stigg-plan-lookup", default = false)
+
+object EnableDataWorkerUsage : Temporary<Boolean>(key = "platform.enable-data-worker-usage", default = false)

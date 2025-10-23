@@ -18,13 +18,16 @@ class DataWorkerUsageServiceDataImpl(
   private val repository: DataWorkerUsageRepository,
 ) : DataWorkerUsageDataService {
   override fun insertDataWorkerUsage(dataWorkerUsage: DataWorkerUsage) {
-    repository.save(dataWorkerUsage)
+    repository.insert(
+      dataWorkerUsage.organizationId,
+      dataWorkerUsage.workspaceId,
+      dataWorkerUsage.dataplaneGroupId,
+      dataWorkerUsage.bucketStart,
+      dataWorkerUsage.sourceCpuRequest,
+      dataWorkerUsage.destinationCpuRequest,
+      dataWorkerUsage.orchestratorCpuRequest,
+    )
   }
-
-  override fun updateDataWorkerUsage(
-    jobId: Long,
-    jobEnd: OffsetDateTime,
-  ) = repository.updateUsageByJobId(jobId, jobEnd)
 
   /**
    * Returns data worker usage by inclusive range (ie. both the start date and end date

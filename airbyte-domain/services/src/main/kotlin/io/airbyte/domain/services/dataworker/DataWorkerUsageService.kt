@@ -4,16 +4,19 @@
 
 package io.airbyte.domain.services.dataworker
 
+import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.config.Job
+import io.airbyte.config.JobConfig
 import io.airbyte.data.repositories.entities.DataWorkerUsage
 import io.airbyte.data.services.DataWorkerUsageDataService
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.domain.models.dataworker.DataWorkerUsageWithTime
-import io.airbyte.domain.models.dataworker.DataplaneGroupDataWorkerUsage
+import io.airbyte.domain.models.EntitlementPlan
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.dataworker.OrganizationDataWorkerUsage
-import io.airbyte.domain.models.dataworker.WorkspaceDataWorkerUsage
+import io.airbyte.featureflag.EnableDataWorkerUsage
+import io.airbyte.featureflag.FeatureFlagClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.time.Instant
@@ -30,8 +33,10 @@ class DataWorkerUsageService(
   private val dataplaneGroupService: DataplaneGroupService,
   private val dataWorkerUsageDataService: DataWorkerUsageDataService,
   private val workspaceService: WorkspaceService,
+  private val featureFlagClient: FeatureFlagClient,
+  private val entitlementService: EntitlementService,
 ) {
-  fun insertUsageWhenJobStarts(job: Job) {
+  fun insertUsageForCompletedJob(job: Job) {
     val workspaceId = job.config.sync?.workspaceId
     if (workspaceId == null) {
       // TODO: metrics and alerting
@@ -43,6 +48,15 @@ class DataWorkerUsageService(
     if (organization == null) {
       // TODO: metrics and alerting
       logger.error { "Organization not found for workspace $workspaceId (job ${job.id}), skipping data worker usage insertion." }
+      return
+    }
+
+    // before proceeding with writing the usage, we must check the following conditions:
+    // 1. is the feature flag enabled for data worker usage
+    // 2. is the org a pro/flex/sme customer
+    // 3. is the job a sync
+    if (!isJobValidForInsertion(job, organization.organizationId)) {
+      logger.debug { "Job ${job.id} for org ${organization.organizationId} is not valid for data worker usage insertion." }
       return
     }
 
@@ -75,26 +89,15 @@ class DataWorkerUsageService(
     // the toDouble() calls below are safe, given that areJobResourceRequirementsValid has been called above.
     dataWorkerUsageDataService.insertDataWorkerUsage(
       DataWorkerUsage(
-        jobId = job.id,
         organizationId = organizationId,
         workspaceId = workspaceId,
         dataplaneGroupId = dataplaneGroupId,
         sourceCpuRequest = sourceCpu.toDouble(),
         destinationCpuRequest = destCpu.toDouble(),
         orchestratorCpuRequest = orchCpu.toDouble(),
-        jobStart = jobStart,
-        jobEnd = null,
+        bucketStart = jobStart,
         createdAt = OffsetDateTime.now(),
       ),
-    )
-  }
-
-  fun updateUsageWhenJobFinishes(job: Job) {
-    val jobEnd = OffsetDateTime.ofInstant(Instant.ofEpochSecond(job.updatedAtInSecond), ZoneOffset.UTC)
-
-    dataWorkerUsageDataService.updateDataWorkerUsage(
-      jobId = job.id,
-      jobEnd = jobEnd,
     )
   }
 
@@ -104,6 +107,19 @@ class DataWorkerUsageService(
     endDate: LocalDate,
   ): OrganizationDataWorkerUsage {
     TODO("not implemented")
+  }
+
+  private fun isJobValidForInsertion(
+    job: Job,
+    organizationId: UUID,
+  ): Boolean {
+    val isSync = job.configType == JobConfig.ConfigType.SYNC
+    val flagEnabled = featureFlagClient.boolVariation(EnableDataWorkerUsage, io.airbyte.featureflag.Organization(organizationId))
+
+    val planId = entitlementService.getCurrentPlanId(OrganizationId(organizationId))
+    val isEntitled = VALID_PLANS.contains(planId)
+
+    return isSync && flagEnabled && isEntitled
   }
 
   private fun areJobResourceRequirementsValid(
@@ -119,4 +135,8 @@ class DataWorkerUsageService(
     } catch (_: Exception) {
       false
     }
+
+  companion object {
+    val VALID_PLANS = setOf(EntitlementPlan.PRO.id, EntitlementPlan.FLEX.id, EntitlementPlan.SME.id)
+  }
 }

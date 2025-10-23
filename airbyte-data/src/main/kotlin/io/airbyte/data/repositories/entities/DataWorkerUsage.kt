@@ -12,15 +12,16 @@ import java.util.UUID
 @MappedEntity("data_worker_usage")
 data class DataWorkerUsage(
   @field:Id
-  var jobId: Long,
   var organizationId: UUID,
+  @field:Id
   var workspaceId: UUID,
+  @field:Id
   var dataplaneGroupId: UUID,
   var sourceCpuRequest: Double,
   var destinationCpuRequest: Double,
   var orchestratorCpuRequest: Double,
-  var jobStart: OffsetDateTime,
-  var jobEnd: OffsetDateTime?,
+  @field:Id
+  var bucketStart: OffsetDateTime,
   var createdAt: OffsetDateTime,
 ) {
   fun calculateDataWorkers(): Double {

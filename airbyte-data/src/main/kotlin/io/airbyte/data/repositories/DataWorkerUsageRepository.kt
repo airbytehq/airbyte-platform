@@ -13,12 +13,12 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
-interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, Long> {
+interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, UUID> {
   @Query(
     """
     SELECT * from data_worker_usage
     WHERE organization_id = :organizationId
-    AND job_start >= :startDate AND (job_end <= :endDate OR job_end IS NULL)
+    AND bucket_start >= :startDate AND bucket_start <= :endDate
     """,
   )
   fun findByOrganizationIdAndJobStartBetween(
@@ -29,13 +29,36 @@ interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, Long> 
 
   @Query(
     """
-    UPDATE data_worker_usage
-    SET job_end = :jobEnd
-    WHERE job_id = :jobId
+    INSERT INTO data_worker_usage (
+      organization_id,
+      workspace_id,
+      dataplane_group_id,
+      bucket_start,
+      source_cpu_request,
+      destination_cpu_request,
+      orchestrator_cpu_request
+    ) VALUES (
+      :organizationId,
+      :workspaceId,
+      :dataplaneGroupId,
+      DATE_TRUNC('hour', :jobStart::TIMESTAMP),
+      :sourceCpuRequest,
+      :destinationCpuRequest,
+      :orchestratorCpuRequest
+    ) ON CONFLICT (organization_id, bucket_start, workspace_id, dataplane_group_id) DO UPDATE
+    SET 
+    source_cpu_request = data_worker_usage.source_cpu_request + EXCLUDED.source_cpu_request,
+    destination_cpu_request = data_worker_usage.destination_cpu_request + EXCLUDED.destination_cpu_request,
+    orchestrator_cpu_request = data_worker_usage.orchestrator_cpu_request + EXCLUDED.orchestrator_cpu_request
     """,
   )
-  fun updateUsageByJobId(
-    jobId: Long,
-    jobEnd: OffsetDateTime,
+  fun insert(
+    organizationId: UUID,
+    workspaceId: UUID,
+    dataplaneGroupId: UUID,
+    jobStart: OffsetDateTime,
+    sourceCpuRequest: Double,
+    destinationCpuRequest: Double,
+    orchestratorCpuRequest: Double,
   )
 }

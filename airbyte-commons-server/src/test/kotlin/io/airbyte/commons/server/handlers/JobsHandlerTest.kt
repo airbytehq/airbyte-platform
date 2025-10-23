@@ -27,6 +27,7 @@ import io.airbyte.config.StandardSyncOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.SyncMode
 import io.airbyte.config.SyncStats
+import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
@@ -67,6 +68,7 @@ class JobsHandlerTest {
   private lateinit var connectionTimelineEventHelper: ConnectionTimelineEventHelper
   private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var metricClient: MetricClient
+  private lateinit var dataWorkerUsageService: DataWorkerUsageService
 
   private val jobId = 12L
   private val attemptNumber = 1
@@ -104,8 +106,19 @@ class JobsHandlerTest {
     connectionTimelineEventHelper = mock()
     featureFlagClient = mock<TestClient>()
     metricClient = mock()
+    dataWorkerUsageService = mock()
 
-    jobsHandler = JobsHandler(jobPersistence, helper, jobNotifier, jobErrorReporter, connectionTimelineEventHelper, featureFlagClient, metricClient)
+    jobsHandler =
+      JobsHandler(
+        jobPersistence,
+        helper,
+        jobNotifier,
+        jobErrorReporter,
+        connectionTimelineEventHelper,
+        featureFlagClient,
+        metricClient,
+        dataWorkerUsageService,
+      )
   }
 
   @ParameterizedTest
@@ -151,6 +164,7 @@ class JobsHandlerTest {
     verify(jobNotifier).successJob(anyOrNull(), anyOrNull())
     verify(helper).trackCompletion(anyOrNull(), eq(io.airbyte.commons.server.JobStatus.SUCCEEDED))
     verify(connectionTimelineEventHelper).logJobSuccessEventInConnectionTimeline(job, connectionId, listOf(attemptStats))
+    verify(dataWorkerUsageService).insertUsageForCompletedJob(any())
   }
 
   @Test
@@ -231,6 +245,7 @@ class JobsHandlerTest {
     verify(jobPersistence).writeAttemptFailureSummary(jobId, attemptNumber, failureSummary)
     verify(jobPersistence).cancelJob(jobId)
     verify(helper).trackCompletion(anyOrNull(), eq(io.airbyte.commons.server.JobStatus.FAILED))
+    verify(dataWorkerUsageService).insertUsageForCompletedJob(any())
   }
 
   @Test

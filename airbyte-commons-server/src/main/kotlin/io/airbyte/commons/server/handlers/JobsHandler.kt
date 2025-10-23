@@ -18,6 +18,7 @@ import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
 import io.airbyte.config.JobOutput
 import io.airbyte.config.StandardSyncOutput
+import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.MergeStreamStatWithMetadata
@@ -33,6 +34,8 @@ import jakarta.inject.Singleton
 import java.io.IOException
 import java.util.UUID
 
+private val logger = KotlinLogging.logger {}
+
 /**
  * AttemptHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
@@ -45,6 +48,7 @@ open class JobsHandler(
   private val connectionTimelineEventHelper: ConnectionTimelineEventHelper,
   private val featureFlagClient: FeatureFlagClient,
   private val metricClient: MetricClient,
+  private val dataWorkerUsageService: DataWorkerUsageService,
 ) {
   /**
    * Mark job as failure.
@@ -99,6 +103,12 @@ open class JobsHandler(
       val jobContext = SyncJobReportingContext(jobId, sourceDefinitionVersionId, destinationDefinitionVersionId)
       reportIfLastFailedAttempt(job, connectionId, jobContext)
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.FAILED)
+      try {
+        dataWorkerUsageService.insertUsageForCompletedJob(job)
+      } catch (e: Exception) {
+        logger.error(e) { "Failed to insert usage for job ${job.id}" }
+      }
+
       return InternalOperationResult().succeeded(true)
     } catch (e: IOException) {
       jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(
@@ -190,6 +200,12 @@ open class JobsHandler(
       connectionTimelineEventHelper.logJobSuccessEventInConnectionTimeline(job, input.connectionId, attemptStats)
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_SUCCEEDED_BY_RELEASE_STAGE, job, input)
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.SUCCEEDED)
+
+      try {
+        dataWorkerUsageService.insertUsageForCompletedJob(job)
+      } catch (e: Exception) {
+        logger.error(e) { "Failed to insert usage for job ${job.id}" }
+      }
 
       return InternalOperationResult().succeeded(true)
     } catch (e: IOException) {
@@ -287,6 +303,12 @@ open class JobsHandler(
       }
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CANCELLED_BY_RELEASE_STAGE, job)
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.FAILED)
+
+      try {
+        dataWorkerUsageService.insertUsageForCompletedJob(job)
+      } catch (e: Exception) {
+        logger.error(e) { "Failed to insert usage for job ${job.id}" }
+      }
     } catch (e: IOException) {
       jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(
         jobId,
