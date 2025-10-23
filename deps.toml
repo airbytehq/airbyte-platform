@@ -41,6 +41,7 @@ micronaut-test = "4.10.1"
 moshi = "1.15.0"
 mockito = "5.18.0"
 mockito-kotlin = "5.2.1"
+netty = "4.2.7.Final"
 okhttp3 = "4.12.0"
 picocli = "4.7.6"
 platform-testcontainers = "1.19.4"
@@ -158,6 +159,7 @@ mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
 mockk = { module = "io.mockk:mockk", version = "1.14.6" }
 mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp3" }
+netty-transport-native-epoll = { module = "io.netty:netty-transport-native-epoll", version.ref = "netty" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp3" }
 okhttp-logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp3" }
 openai-java = { module = "com.openai:openai-java", version = "0.36.0" }
@@ -262,8 +264,8 @@ micronaut-validation = { module = "io.micronaut.validation:micronaut-validation"
 
 # Transitive security patches direct dependency does not have a fix
 json-smart = { module = "net.minidev:json-smart", version = "2.5.2" } # Comes from com.jayway.jsonpath:json-path:2.9.0 (latest version). Force upgrade from 2.5.1 to 2.5.2 to deal with CVE-2024-57699
-netty-handler = { module = "io.netty:netty-handler", version = "4.2.7.Final" } # Comes from micronout. Force upgrade from 4.1.116.Final to 4.2.7.Final to deal with CVE-2025-24970
-netty-common = { module = "io.netty:netty-common", version = "4.2.7.Final" } # Comes from micronout. Force upgrade from 4.1.116.Final to 4.2.7.Final to deal with CVE-2025-24970
+netty-handler = { module = "io.netty:netty-handler", version.ref = "netty" } # Comes from micronout. Force upgrade from 4.1.116.Final to deal with CVE-2025-24970
+netty-common = { module = "io.netty:netty-common", version.ref = "netty" } # Comes from micronout. Force upgrade from 4.1.116.Final to deal with CVE-2025-24970
 httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", version = "5.5" } # Comes from micronout. Force upgrade from 5.4.1 to 5.5 to deal with CVE-2025-27820
 
 [bundles]
