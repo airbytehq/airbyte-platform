@@ -14,10 +14,12 @@ import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.SyncResourceRequirements
 import io.airbyte.data.repositories.entities.DataWorkerUsage
+import io.airbyte.data.repositories.entities.DataplaneGroup
 import io.airbyte.data.services.DataWorkerUsageDataService
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfigModel
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.featureflag.FeatureFlagClient
 import io.mockk.every
@@ -26,7 +28,9 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.time.LocalDate
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.Optional
 import java.util.UUID
 
@@ -292,6 +296,195 @@ class DataWorkerUsageServiceTest {
 
     val result = dataWorkerUsage.calculateDataWorkers()
     assertEquals(0.75, result, 0.001)
+  }
+
+  @Test
+  fun `getDataWorkerUsage should return organization usage grouped by dataplane and workspace`() {
+    val organizationId = UUID.randomUUID()
+    val workspaceId1 = UUID.randomUUID()
+    val workspaceId2 = UUID.randomUUID()
+    val dataplaneGroupId1 = UUID.randomUUID()
+    val dataplaneGroupId2 = UUID.randomUUID()
+    val startDate = LocalDate.of(2025, 1, 1)
+    val endDate = LocalDate.of(2025, 1, 2)
+
+    val hour1 = OffsetDateTime.of(2025, 1, 1, 10, 0, 0, 0, ZoneOffset.UTC)
+    val hour2 = OffsetDateTime.of(2025, 1, 1, 11, 0, 0, 0, ZoneOffset.UTC)
+
+    val usageRecords =
+      listOf(
+        DataWorkerUsage(
+          organizationId = organizationId,
+          workspaceId = workspaceId1,
+          dataplaneGroupId = dataplaneGroupId1,
+          sourceCpuRequest = 2.0,
+          destinationCpuRequest = 3.0,
+          orchestratorCpuRequest = 1.0,
+          bucketStart = hour1,
+          createdAt = OffsetDateTime.now(),
+        ),
+        DataWorkerUsage(
+          organizationId = organizationId,
+          workspaceId = workspaceId1,
+          dataplaneGroupId = dataplaneGroupId1,
+          sourceCpuRequest = 4.0,
+          destinationCpuRequest = 2.0,
+          orchestratorCpuRequest = 2.0,
+          bucketStart = hour2,
+          createdAt = OffsetDateTime.now(),
+        ),
+        DataWorkerUsage(
+          organizationId = organizationId,
+          workspaceId = workspaceId2,
+          dataplaneGroupId = dataplaneGroupId2,
+          sourceCpuRequest = 1.0,
+          destinationCpuRequest = 1.0,
+          orchestratorCpuRequest = 1.0,
+          bucketStart = hour1,
+          createdAt = OffsetDateTime.now(),
+        ),
+      )
+
+    val dataplaneGroup1 =
+      DataplaneGroup(
+        id = dataplaneGroupId1,
+        organizationId = organizationId,
+        name = "Dataplane Group 1",
+        enabled = true,
+        tombstone = false,
+      )
+
+    val dataplaneGroup2 =
+      DataplaneGroup(
+        id = dataplaneGroupId2,
+        organizationId = organizationId,
+        name = "Dataplane Group 2",
+        enabled = true,
+        tombstone = false,
+      )
+
+    val workspace1 =
+      StandardWorkspace()
+        .withWorkspaceId(workspaceId1)
+        .withName("Workspace 1")
+        .withDataplaneGroupId(dataplaneGroupId1)
+
+    val workspace2 =
+      StandardWorkspace()
+        .withWorkspaceId(workspaceId2)
+        .withName("Workspace 2")
+        .withDataplaneGroupId(dataplaneGroupId2)
+
+    every {
+      dataWorkerUsageDataService.getDataWorkerUsageByOrganizationAndTimeRange(
+        organizationId,
+        startDate.atStartOfDay(ZoneOffset.UTC).toOffsetDateTime(),
+        endDate.atTime(23, 59, 59).atZone(ZoneOffset.UTC).toOffsetDateTime(),
+      )
+    } returns usageRecords
+
+    every { dataplaneGroupService.getDataplaneGroup(dataplaneGroupId1) } returns dataplaneGroup1.toConfigModel()
+    every { dataplaneGroupService.getDataplaneGroup(dataplaneGroupId2) } returns dataplaneGroup2.toConfigModel()
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId1, false) } returns workspace1
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId2, false) } returns workspace2
+
+    val result = service.getDataWorkerUsage(organizationId, startDate, endDate)
+
+    assertEquals(organizationId, result.organizationId.value)
+    assertEquals(2, result.dataplaneGroups.size)
+
+    val dp1 = result.dataplaneGroups.find { it.dataplaneGroupId.value == dataplaneGroupId1 }!!
+    assertEquals("Dataplane Group 1", dp1.dataplaneGroupName)
+    assertEquals(1, dp1.workspaces.size)
+    assertEquals(workspaceId1, dp1.workspaces[0].workspaceId.value)
+    assertEquals("Workspace 1", dp1.workspaces[0].workspaceName)
+    assertEquals(2, dp1.workspaces[0].dataWorkers.size)
+    assertEquals(0.75, dp1.workspaces[0].dataWorkers[0].usage, 0.001)
+    assertEquals(1.0, dp1.workspaces[0].dataWorkers[1].usage, 0.001)
+
+    val dp2 = result.dataplaneGroups.find { it.dataplaneGroupId.value == dataplaneGroupId2 }!!
+    assertEquals("Dataplane Group 2", dp2.dataplaneGroupName)
+    assertEquals(1, dp2.workspaces.size)
+    assertEquals(workspaceId2, dp2.workspaces[0].workspaceId.value)
+    assertEquals("Workspace 2", dp2.workspaces[0].workspaceName)
+    assertEquals(1, dp2.workspaces[0].dataWorkers.size)
+    assertEquals(0.375, dp2.workspaces[0].dataWorkers[0].usage, 0.001)
+  }
+
+  @Test
+  fun `getDataWorkerUsage should exclude workspace that does not exist`() {
+    val organizationId = UUID.randomUUID()
+    val workspaceId1 = UUID.randomUUID()
+    val workspaceId2 = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
+    val startDate = LocalDate.of(2025, 1, 1)
+    val endDate = LocalDate.of(2025, 1, 2)
+
+    val hour1 = OffsetDateTime.of(2025, 1, 1, 10, 0, 0, 0, ZoneOffset.UTC)
+
+    val usageRecords =
+      listOf(
+        DataWorkerUsage(
+          organizationId = organizationId,
+          workspaceId = workspaceId1,
+          dataplaneGroupId = dataplaneGroupId,
+          sourceCpuRequest = 2.0,
+          destinationCpuRequest = 3.0,
+          orchestratorCpuRequest = 1.0,
+          bucketStart = hour1,
+          createdAt = OffsetDateTime.now(),
+        ),
+        DataWorkerUsage(
+          organizationId = organizationId,
+          workspaceId = workspaceId2,
+          dataplaneGroupId = dataplaneGroupId,
+          sourceCpuRequest = 4.0,
+          destinationCpuRequest = 2.0,
+          orchestratorCpuRequest = 2.0,
+          bucketStart = hour1,
+          createdAt = OffsetDateTime.now(),
+        ),
+      )
+
+    val dataplaneGroup =
+      DataplaneGroup(
+        id = dataplaneGroupId,
+        organizationId = organizationId,
+        name = "Dataplane Group 1",
+        enabled = true,
+        tombstone = false,
+      )
+
+    val workspace1 =
+      StandardWorkspace()
+        .withWorkspaceId(workspaceId1)
+        .withName("Workspace 1")
+        .withDataplaneGroupId(dataplaneGroupId)
+
+    every {
+      dataWorkerUsageDataService.getDataWorkerUsageByOrganizationAndTimeRange(
+        organizationId,
+        startDate.atStartOfDay(ZoneOffset.UTC).toOffsetDateTime(),
+        endDate.atTime(23, 59, 59).atZone(ZoneOffset.UTC).toOffsetDateTime(),
+      )
+    } returns usageRecords
+
+    every { dataplaneGroupService.getDataplaneGroup(dataplaneGroupId) } returns dataplaneGroup.toConfigModel()
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId1, false) } returns workspace1
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId2, false) } throws RuntimeException("Workspace not found")
+
+    val result = service.getDataWorkerUsage(organizationId, startDate, endDate)
+
+    assertEquals(organizationId, result.organizationId.value)
+    assertEquals(1, result.dataplaneGroups.size)
+
+    val dp = result.dataplaneGroups[0]
+    assertEquals("Dataplane Group 1", dp.dataplaneGroupName)
+    assertEquals(1, dp.workspaces.size)
+    assertEquals(workspaceId1, dp.workspaces[0].workspaceId.value)
+    assertEquals("Workspace 1", dp.workspaces[0].workspaceName)
+    assertEquals(1, dp.workspaces[0].dataWorkers.size)
+    assertEquals(0.75, dp.workspaces[0].dataWorkers[0].usage, 0.001)
   }
 
   private fun buildTestJob(

@@ -29,6 +29,7 @@ import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.server.apis.execute
 import io.airbyte.server.helpers.OrganizationAccessAuthorizationHelper
 import io.micronaut.http.annotation.Body
@@ -46,6 +47,7 @@ import kotlin.random.Random
 open class OrganizationApiController(
   val organizationsHandler: OrganizationsHandler,
   val organizationAccessAuthorizationHelper: OrganizationAccessAuthorizationHelper,
+  val dataWorkerUsageService: DataWorkerUsageService,
 ) : OrganizationApi {
   @Post("/get")
   @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)
@@ -119,33 +121,32 @@ open class OrganizationApiController(
     @Body organizationDataWorkerUsageRequestBody: OrganizationDataWorkerUsageRequestBody,
   ): OrganizationDataWorkerUsageRead? =
     execute {
-      val regionNames = listOf("US-WEST-1", "US-WEST-2", "US-EAST-1")
-      val workspacesPerRegion = 3
-
-      fun dataWorkers(
-        start: LocalDate,
-        end: LocalDate,
-      ) = buildList {
-        var d = start
-        while (!d.isAfter(end)) {
-          add(DataWorkerUsage().date(d).used(Random.nextDouble(0.0, 3.0)))
-          d = d.plusDays(1)
-        }
-      }
+      val dataWorkerUsage =
+        dataWorkerUsageService.getDataWorkerUsage(
+          organizationDataWorkerUsageRequestBody.organizationId,
+          organizationDataWorkerUsageRequestBody.startDate,
+          organizationDataWorkerUsageRequestBody.endDate,
+        )
 
       OrganizationDataWorkerUsageRead()
         .organizationId(organizationDataWorkerUsageRequestBody.organizationId)
         .regions(
-          regionNames.map { regionName ->
+          dataWorkerUsage.dataplaneGroups.map { usageByDataplaneGroup ->
             RegionDataWorkerUsage()
-              .id(UUID.randomUUID())
-              .name(regionName)
+              .id(usageByDataplaneGroup.dataplaneGroupId.value)
+              .name(usageByDataplaneGroup.dataplaneGroupName)
               .workspaces(
-                (1..workspacesPerRegion).map { idx ->
+                usageByDataplaneGroup.workspaces.map { usageByWorkspace ->
                   WorkspaceDataWorkerUsage()
-                    .id(UUID.randomUUID())
-                    .name("$regionName workspace $idx")
-                    .dataWorkers(dataWorkers(organizationDataWorkerUsageRequestBody.startDate, organizationDataWorkerUsageRequestBody.endDate))
+                    .id(usageByWorkspace.workspaceId.value)
+                    .name(usageByWorkspace.workspaceName)
+                    .dataWorkers(
+                      usageByWorkspace.dataWorkers.map { usageByTime ->
+                        DataWorkerUsage()
+                          .date(usageByTime.date)
+                          .used(usageByTime.usage)
+                      },
+                    )
                 },
               )
           },

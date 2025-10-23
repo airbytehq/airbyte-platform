@@ -5,16 +5,23 @@
 package io.airbyte.domain.services.dataworker
 
 import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
+import io.airbyte.config.StandardWorkspace
 import io.airbyte.data.repositories.entities.DataWorkerUsage
 import io.airbyte.data.services.DataWorkerUsageDataService
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.domain.models.DataplaneGroupId
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.domain.models.WorkspaceId
+import io.airbyte.domain.models.dataworker.DataWorkerUsageWithTime
+import io.airbyte.domain.models.dataworker.DataplaneGroupDataWorkerUsage
 import io.airbyte.domain.models.dataworker.OrganizationDataWorkerUsage
+import io.airbyte.domain.models.dataworker.WorkspaceDataWorkerUsage
 import io.airbyte.featureflag.EnableDataWorkerUsage
 import io.airbyte.featureflag.FeatureFlagClient
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -106,7 +113,53 @@ class DataWorkerUsageService(
     startDate: LocalDate,
     endDate: LocalDate,
   ): OrganizationDataWorkerUsage {
-    TODO("not implemented")
+    val startDateTime = startDate.atStartOfDay(ZoneOffset.UTC).toOffsetDateTime()
+    val endDateTime = endDate.atTime(23, 59, 59).atZone(ZoneOffset.UTC).toOffsetDateTime()
+
+    val usageRecords =
+      dataWorkerUsageDataService.getDataWorkerUsageByOrganizationAndTimeRange(
+        organizationId,
+        startDateTime,
+        endDateTime,
+      )
+
+    val dataplaneGroups =
+      usageRecords
+        .groupBy { it.dataplaneGroupId }
+        .mapNotNull { (dataplaneGroupId, entries) ->
+          val dataplaneGroup = retrieveDataplaneGroupOrNull(dataplaneGroupId) ?: return@mapNotNull null
+
+          DataplaneGroupDataWorkerUsage(
+            dataplaneGroupId = DataplaneGroupId(dataplaneGroupId),
+            dataplaneGroupName = dataplaneGroup.name,
+            workspaces =
+              entries
+                .groupBy { it.workspaceId }
+                .mapNotNull { (workspaceId, records) ->
+                  val workspace = retrieveWorkspaceOrNull(workspaceId) ?: return@mapNotNull null
+                  val hourlyUsage =
+                    records
+                      .groupBy { it.bucketStart }
+                      .map { (hour, hourRecords) ->
+                        DataWorkerUsageWithTime(
+                          date = hour,
+                          usage = hourRecords.sumOf { it.calculateDataWorkers() },
+                        )
+                      }.sortedBy { it.date }
+
+                  WorkspaceDataWorkerUsage(
+                    workspaceId = WorkspaceId(workspaceId),
+                    workspaceName = workspace.name,
+                    dataWorkers = hourlyUsage,
+                  )
+                },
+          )
+        }
+
+    return OrganizationDataWorkerUsage(
+      organizationId = OrganizationId(organizationId),
+      dataplaneGroups = dataplaneGroups,
+    )
   }
 
   private fun isJobValidForInsertion(
@@ -135,6 +188,24 @@ class DataWorkerUsageService(
     } catch (_: Exception) {
       false
     }
+
+  private fun retrieveDataplaneGroupOrNull(dataplaneGroupId: UUID): DataplaneGroup? {
+    try {
+      return dataplaneGroupService.getDataplaneGroup(dataplaneGroupId)
+    } catch (e: Exception) {
+      logger.error(e) { "Failed to fetch dataplane group $dataplaneGroupId, skipping usage retrieval" }
+      return null
+    }
+  }
+
+  private fun retrieveWorkspaceOrNull(workspaceId: UUID): StandardWorkspace? {
+    try {
+      return workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)
+    } catch (e: Exception) {
+      logger.error(e) { "Failed to fetch workspace $workspaceId, skipping usage retrieval" }
+      return null
+    }
+  }
 
   companion object {
     val VALID_PLANS = setOf(EntitlementPlan.PRO.id, EntitlementPlan.FLEX.id, EntitlementPlan.SME.id)
