@@ -120,17 +120,20 @@ export const createConnectorAPI = (connectorType: keyof typeof CONNECTOR_CONFIGS
   const apiBaseUrl = getApiBaseUrl();
 
   return {
-    // Create a new connector via API
     create: async (
       request: APIRequestContext,
       name: string,
-      workspaceId: string
+      workspaceId: string,
+      configOverrides?: Record<string, unknown>
     ): Promise<SourceRead | DestinationRead> => {
       const createData = {
         name,
         [`${connectorType}DefinitionId`]: config.definitionId,
         workspaceId,
-        connectionConfiguration: config.defaultConfig,
+        connectionConfiguration: {
+          ...config.defaultConfig,
+          ...configOverrides,
+        },
       };
 
       const response = await request.post(`${apiBaseUrl}/${config.endpoint}/create`, {

@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests",
   testIgnore: ["cloud/**", "**/cloud/**", "**/embedded/**", "embedded/**"],
+  globalTeardown: "./global-teardown.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -32,16 +33,18 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
-    // Setup project
+    // Setup project - runs first for authentication
     { name: "setup", testMatch: /.*\.setup\.ts/ },
-
+    // OSS Acceptance tests
     {
-      name: "chromium",
+      name: "oss-acceptance",
       use: {
         ...devices["Desktop Chrome"],
         // Use signed-in state.
         storageState: ".auth/user.json",
       },
+      // Must include top-level testIgnore patterns plus schema exclusion
+      testIgnore: ["cloud/**", "**/cloud/**", "**/embedded/**", "embedded/**"],
       dependencies: ["setup"],
     },
   ],

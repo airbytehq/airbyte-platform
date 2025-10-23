@@ -49,6 +49,7 @@ export const connectionAPI = {
     destination: DestinationRead,
     options: {
       enableAllStreams?: boolean;
+      nonBreakingChangesPreference?: "propagate_columns" | "propagate_fully" | "ignore" | "disable";
       useMockSchemaDiscovery?: boolean;
       mockSourceType?: "postgres" | "pokeapi";
     } = {}
@@ -56,8 +57,9 @@ export const connectionAPI = {
     const apiBaseUrl = getApiBaseUrl();
 
     let typedCatalog: AirbyteCatalog;
+    let sourceCatalogId: string | undefined;
 
-    // Mock schema discovery to avoid overloading test databases in CI environments.
+    // Optionally mock schema discovery to avoid overloading test databases in CI environments.
     //
     // In CI, concurrent test runs making real schema discovery calls can overwhelm
     // external resources, causing timeouts and flaky test failures.
@@ -82,13 +84,20 @@ export const connectionAPI = {
 
       const discoverResult = (await discoverResponse.json()) as SourceDiscoverSchemaRead;
       const catalog = discoverResult.catalog;
+      const catalogId = discoverResult.catalogId;
 
       if (!catalog || !catalog.streams) {
         console.error("Schema discovery failed - invalid catalog:", discoverResult);
         throw new Error(`Schema discovery returned invalid catalog: ${JSON.stringify(discoverResult)}`);
       }
 
+      if (!catalogId) {
+        console.error("Schema discovery did not return catalogId:", discoverResult);
+        throw new Error(`Schema discovery missing catalogId: ${JSON.stringify(discoverResult)}`);
+      }
+
       typedCatalog = catalog;
+      sourceCatalogId = catalogId;
     }
 
     // Prepare streams based on options
@@ -115,7 +124,7 @@ export const connectionAPI = {
     }
 
     // Create the connection
-    const connectionData = {
+    const connectionData: Record<string, unknown> = {
       name: `${source.name} → ${destination.name}`,
       sourceId: source.sourceId,
       destinationId: destination.destinationId,
@@ -123,6 +132,16 @@ export const connectionAPI = {
       scheduleType: "manual",
       status: "active",
     };
+
+    // Add optional fields
+    if (options.nonBreakingChangesPreference) {
+      connectionData.nonBreakingChangesPreference = options.nonBreakingChangesPreference;
+    }
+
+    // Add sourceCatalogId for schema change detection (only when not mocking)
+    if (sourceCatalogId) {
+      connectionData.sourceCatalogId = sourceCatalogId;
+    }
 
     const response = await request.post(`${apiBaseUrl}/web_backend/connections/create`, {
       data: connectionData,
@@ -169,6 +188,11 @@ export const connectionAPI = {
     }
 
     return await response.json();
+  },
+
+  // Refresh connection schema (convenience method for get with withRefreshedCatalog)
+  refreshSchema: async (request: APIRequestContext, connectionId: string): Promise<WebBackendConnectionRead> => {
+    return connectionAPI.get(request, connectionId, { withRefreshedCatalog: true });
   },
 
   // Update a connection
@@ -298,7 +322,10 @@ export const connectionTestHelpers = {
     workspaceId: string,
     connectorType: ConnectorPair = "poke-e2e",
     sourcePrefix?: string,
-    destinationPrefix?: string
+    destinationPrefix?: string,
+    options?: {
+      schema?: string; // PostgreSQL schema for worker isolation
+    }
   ) => {
     // Determine connector APIs and default names based on type
     const configs: Record<
@@ -340,8 +367,33 @@ export const connectionTestHelpers = {
     const sourceName = appendRandomString(sourcePrefix ?? config.defaultSourcePrefix);
     const destinationName = appendRandomString(destinationPrefix ?? config.defaultDestinationPrefix);
 
-    const source = (await config.sourceAPI.create(request, sourceName, workspaceId)) as SourceRead;
-    const destination = (await config.destinationAPI.create(request, destinationName, workspaceId)) as DestinationRead;
+    // Apply schema configuration for Postgres connectors
+    let sourceConfigOverrides: Record<string, unknown> | undefined;
+    let destConfigOverrides: Record<string, unknown> | undefined;
+
+    if (options?.schema) {
+      // Only apply source schema overrides when source is Postgres
+      if (connectorType === "postgres-postgres") {
+        sourceConfigOverrides = { schemas: [options.schema] };
+        destConfigOverrides = { schema: options.schema };
+      } else if (connectorType === "poke-postgres") {
+        // For poke-postgres, only destination needs schema config
+        destConfigOverrides = { schema: options.schema };
+      }
+    }
+
+    const source = (await config.sourceAPI.create(
+      request,
+      sourceName,
+      workspaceId,
+      sourceConfigOverrides
+    )) as SourceRead;
+    const destination = (await config.destinationAPI.create(
+      request,
+      destinationName,
+      workspaceId,
+      destConfigOverrides
+    )) as DestinationRead;
 
     return {
       source,
@@ -549,6 +601,18 @@ export const connectionForm = {
   },
 };
 
+/**
+ * Type alias for connection test data returned by setupConnection
+ * Provides explicit typing for test variables
+ */
+export interface ConnectionTestData {
+  connection: WebBackendConnectionRead;
+  sourceId: string;
+  destinationId: string;
+  source: SourceRead;
+  destination: DestinationRead;
+}
+
 // Reusable test scaffolding for connection test suites
 // This provides a pattern for managing connection lifecycle in tests
 export const connectionTestScaffold = {
@@ -559,7 +623,7 @@ export const connectionTestScaffold = {
    * @example
    * test.beforeAll(async ({ request }) => {
    *   testData = await connectionTestScaffold.setupConnection(
-   *     request, workspaceId, "postgres-postgres", { useMockSchemaDiscovery: true }
+   *     request, workspaceId, "postgres-postgres", { schema: "test_worker_0" }
    *   );
    * });
    */
@@ -570,16 +634,26 @@ export const connectionTestScaffold = {
     options: {
       enableAllStreams?: boolean;
       status?: "active" | "inactive";
+      nonBreakingChangesPreference?: "propagate_columns" | "propagate_fully" | "ignore" | "disable";
+      schema?: string; // PostgreSQL schema for worker isolation
       useMockSchemaDiscovery?: boolean;
     } = {}
-  ) => {
-    const testResources = await connectionTestHelpers.setupConnectors(request, workspaceId, connectorType);
+  ): Promise<ConnectionTestData> => {
+    const testResources = await connectionTestHelpers.setupConnectors(
+      request,
+      workspaceId,
+      connectorType,
+      undefined,
+      undefined,
+      { schema: options.schema }
+    );
 
     // Determine mock source type based on connector type
     const mockSourceType = connectorType === "poke-e2e" || connectorType === "poke-postgres" ? "pokeapi" : "postgres";
 
     const connection = await connectionAPI.create(request, testResources.source, testResources.destination, {
       enableAllStreams: options.enableAllStreams ?? true,
+      nonBreakingChangesPreference: options.nonBreakingChangesPreference,
       useMockSchemaDiscovery: options.useMockSchemaDiscovery,
       mockSourceType,
     });

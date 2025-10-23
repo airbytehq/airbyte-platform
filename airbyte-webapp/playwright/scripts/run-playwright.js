@@ -114,7 +114,7 @@ async function main() {
 
       // When targeting specific tests, force setup to still run first
       command.push("--project=setup");
-      command.push("--project=chromium");
+      command.push("--project=oss-acceptance");
       command.push(...testPaths);
     }
 

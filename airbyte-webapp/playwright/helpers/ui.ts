@@ -78,7 +78,7 @@ export const fillFormField = async (page: Page, selector: string, value: string)
 export const submitFormAndWaitForCreation = async (
   page: Page,
   connectorType: "source" | "destination",
-  timeoutMs = 15000
+  timeoutMs = 30000
 ) => {
   const submitButton = page.locator("button[type='submit']");
   await submitButton.waitFor({ state: "visible", timeout: 10000 });
