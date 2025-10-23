@@ -476,13 +476,12 @@ abstract class BaseOAuth2Flow
       authCode: String,
       redirectUrl: String,
     ): Map<String, String> =
-      ImmutableMap
-        .builder<String, String>() // required
-        .put("client_id", clientId)
-        .put("redirect_uri", redirectUrl)
-        .put("client_secret", clientSecret)
-        .put("code", authCode)
-        .build()
+      mapOf(
+        "code" to authCode,
+        "client_id" to clientId,
+        "client_secret" to clientSecret,
+        "redirect_uri" to redirectUrl,
+      )
 
     /**
      * Once the user is redirected after getting their consent, the API should redirect them to a

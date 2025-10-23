@@ -5,7 +5,6 @@
 package io.airbyte.persistence.job
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.json.Jsons.emptyObject
@@ -54,10 +53,11 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.Field
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.EnumSource
@@ -73,8 +73,6 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.IOException
-import java.util.List
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
@@ -180,7 +178,7 @@ internal class DefaultJobCreatorTest {
           RefreshStream()
             .withRefreshType(refreshType)
             .withStreamDescriptor(StreamDescriptor().withName(streamToRefresh).withNamespace(streamNamespace)),
-        ) as java.util.List<RefreshStream>,
+        ) as List<RefreshStream>,
       )
 
     val jobConfig =
@@ -231,9 +229,9 @@ internal class DefaultJobCreatorTest {
     jobCreator =
       DefaultJobCreator(jobPersistence, resourceRequirementsProvider, mFeatureFlagClient, streamRefreshesRepository, null)
 
-    Assertions.assertThrows<IllegalStateException?>(
+    assertThrows(
       IllegalStateException::class.java,
-      Executable {
+      {
         jobCreator.createRefreshConnection(
           SOURCE_CONNECTION,
           DESTINATION_CONNECTION,
@@ -249,7 +247,7 @@ internal class DefaultJobCreatorTest {
           SOURCE_DEFINITION_VERSION,
           DESTINATION_DEFINITION_VERSION.withSupportsRefreshes(false),
           WORKSPACE_ID,
-          mutableListOf<StreamRefresh>(),
+          emptyList(),
         )
       },
     )
@@ -319,21 +317,21 @@ internal class DefaultJobCreatorTest {
 
   private fun mockResourcesRequirement(expectedSourceType: Optional<String>) {
     whenever(
-      resourceRequirementsProvider!!.getResourceRequirements(
+      resourceRequirementsProvider.getResourceRequirements(
         ResourceRequirementsType.ORCHESTRATOR,
         expectedSourceType.orElse(null),
         DEFAULT_VARIANT,
       ),
     ).thenReturn(workerResourceRequirements)
     whenever(
-      resourceRequirementsProvider!!.getResourceRequirements(
+      resourceRequirementsProvider.getResourceRequirements(
         ResourceRequirementsType.SOURCE,
         expectedSourceType.orElse(null),
         DEFAULT_VARIANT,
       ),
     ).thenReturn(sourceResourceRequirements)
     whenever(
-      resourceRequirementsProvider!!.getResourceRequirements(
+      resourceRequirementsProvider.getResourceRequirements(
         ResourceRequirementsType.DESTINATION,
         expectedSourceType.orElse(null),
         DEFAULT_VARIANT,
@@ -376,7 +374,7 @@ internal class DefaultJobCreatorTest {
     val expectedScope = STANDARD_SYNC.connectionId.toString()
     whenever(jobPersistence.enqueueJob(expectedScope, jobConfig, true)).thenReturn(Optional.empty())
 
-    Assertions.assertTrue(
+    assertTrue(
       jobCreator
         .createSyncJob(
           SOURCE_CONNECTION,
@@ -563,7 +561,7 @@ internal class DefaultJobCreatorTest {
         .withDestinationDefinitionId(UUID.randomUUID())
         .withResourceRequirements(
           ScopedResourceRequirements().withJobSpecific(
-            List.of<JobTypeResourceLimit?>(
+            listOf(
               JobTypeResourceLimit().withJobType(JobTypeResourceLimit.JobType.SYNC).withResourceRequirements(destResourceRequirements),
             ),
           ),
@@ -643,10 +641,10 @@ internal class DefaultJobCreatorTest {
 
     val jobCreator =
       DefaultJobCreator(
-        jobPersistence!!,
-        resourceRequirementsProvider!!,
-        TestClient(Map.of<String, String?>(DestResourceOverrides.key, serialize<HashMap<Any?, Any?>?>(overrides))),
-        streamRefreshesRepository!!,
+        jobPersistence,
+        resourceRequirementsProvider,
+        TestClient(mapOf(DestResourceOverrides.key to serialize<HashMap<Any?, Any?>?>(overrides))),
+        streamRefreshesRepository,
         null,
       )
 
@@ -669,7 +667,7 @@ internal class DefaultJobCreatorTest {
         .withDestinationDefinitionId(UUID.randomUUID())
         .withResourceRequirements(
           ScopedResourceRequirements().withJobSpecific(
-            List.of<JobTypeResourceLimit?>(
+            listOf<JobTypeResourceLimit?>(
               JobTypeResourceLimit().withJobType(JobTypeResourceLimit.JobType.SYNC).withResourceRequirements(originalReqs),
             ),
           ),
@@ -690,16 +688,16 @@ internal class DefaultJobCreatorTest {
         .getDestination()
 
     val expectedCpuReq = if (StringUtils.isNotBlank(cpuReqOverride)) cpuReqOverride else originalReqs.getCpuRequest()
-    Assertions.assertEquals(expectedCpuReq, destConfigValues.getCpuRequest())
+    assertEquals(expectedCpuReq, destConfigValues.getCpuRequest())
 
     val expectedCpuLimit = if (StringUtils.isNotBlank(cpuLimitOverride)) cpuLimitOverride else originalReqs.getCpuLimit()
-    Assertions.assertEquals(expectedCpuLimit, destConfigValues.getCpuLimit())
+    assertEquals(expectedCpuLimit, destConfigValues.getCpuLimit())
 
     val expectedMemReq = if (StringUtils.isNotBlank(memReqOverride)) memReqOverride else originalReqs.getMemoryRequest()
-    Assertions.assertEquals(expectedMemReq, destConfigValues.getMemoryRequest())
+    assertEquals(expectedMemReq, destConfigValues.getMemoryRequest())
 
     val expectedMemLimit = if (StringUtils.isNotBlank(memLimitOverride)) memLimitOverride else originalReqs.getMemoryLimit()
-    Assertions.assertEquals(expectedMemLimit, destConfigValues.getMemoryLimit())
+    assertEquals(expectedMemLimit, destConfigValues.getMemoryLimit())
   }
 
   @ParameterizedTest
@@ -734,10 +732,10 @@ internal class DefaultJobCreatorTest {
 
     val jobCreator =
       DefaultJobCreator(
-        jobPersistence!!,
-        resourceRequirementsProvider!!,
-        TestClient(Map.of<String, String?>(OrchestratorResourceOverrides.key, serialize<HashMap<Any?, Any?>?>(overrides))),
-        streamRefreshesRepository!!,
+        jobPersistence,
+        resourceRequirementsProvider,
+        TestClient(mapOf(OrchestratorResourceOverrides.key to serialize<HashMap<Any?, Any?>?>(overrides))),
+        streamRefreshesRepository,
         null,
       )
 
@@ -752,7 +750,7 @@ internal class DefaultJobCreatorTest {
         .withCatalog(CONFIGURED_AIRBYTE_CATALOG)
         .withSourceId(UUID.randomUUID())
         .withDestinationId(UUID.randomUUID())
-        .withOperationIds(List.of<UUID?>(UUID.randomUUID()))
+        .withOperationIds(listOf(UUID.randomUUID()))
         .withResourceRequirements(originalReqs)
 
     jobCreator.createSyncJob(
@@ -789,16 +787,16 @@ internal class DefaultJobCreatorTest {
         .getOrchestrator()
 
     val expectedCpuReq = if (StringUtils.isNotBlank(cpuReqOverride)) cpuReqOverride else originalReqs.getCpuRequest()
-    Assertions.assertEquals(expectedCpuReq, orchestratorConfigValues.getCpuRequest())
+    assertEquals(expectedCpuReq, orchestratorConfigValues.getCpuRequest())
 
     val expectedCpuLimit = if (StringUtils.isNotBlank(cpuLimitOverride)) cpuLimitOverride else originalReqs.getCpuLimit()
-    Assertions.assertEquals(expectedCpuLimit, orchestratorConfigValues.getCpuLimit())
+    assertEquals(expectedCpuLimit, orchestratorConfigValues.getCpuLimit())
 
     val expectedMemReq = if (StringUtils.isNotBlank(memReqOverride)) memReqOverride else originalReqs.getMemoryRequest()
-    Assertions.assertEquals(expectedMemReq, orchestratorConfigValues.getMemoryRequest())
+    assertEquals(expectedMemReq, orchestratorConfigValues.getMemoryRequest())
 
     val expectedMemLimit = if (StringUtils.isNotBlank(memLimitOverride)) memLimitOverride else originalReqs.getMemoryLimit()
-    Assertions.assertEquals(expectedMemLimit, orchestratorConfigValues.getMemoryLimit())
+    assertEquals(expectedMemLimit, orchestratorConfigValues.getMemoryLimit())
   }
 
   @ParameterizedTest
@@ -833,10 +831,10 @@ internal class DefaultJobCreatorTest {
 
     val jobCreator =
       DefaultJobCreator(
-        jobPersistence!!,
-        resourceRequirementsProvider!!,
-        TestClient(Map.of<String, String?>(SourceResourceOverrides.key, serialize<HashMap<Any?, Any?>?>(overrides))),
-        streamRefreshesRepository!!,
+        jobPersistence,
+        resourceRequirementsProvider,
+        TestClient(mapOf(SourceResourceOverrides.key to serialize<HashMap<Any?, Any?>?>(overrides))),
+        streamRefreshesRepository,
         null,
       )
 
@@ -856,7 +854,7 @@ internal class DefaultJobCreatorTest {
         .withSourceDefinitionId(UUID.randomUUID())
         .withResourceRequirements(
           ScopedResourceRequirements().withJobSpecific(
-            List.of<JobTypeResourceLimit?>(
+            listOf<JobTypeResourceLimit?>(
               JobTypeResourceLimit().withJobType(JobTypeResourceLimit.JobType.SYNC).withResourceRequirements(originalReqs),
             ),
           ),
@@ -880,16 +878,16 @@ internal class DefaultJobCreatorTest {
         .getSource()
 
     val expectedCpuReq = if (StringUtils.isNotBlank(cpuReqOverride)) cpuReqOverride else originalReqs.getCpuRequest()
-    Assertions.assertEquals(expectedCpuReq, sourceConfigValues.getCpuRequest())
+    assertEquals(expectedCpuReq, sourceConfigValues.getCpuRequest())
 
     val expectedCpuLimit = if (StringUtils.isNotBlank(cpuLimitOverride)) cpuLimitOverride else originalReqs.getCpuLimit()
-    Assertions.assertEquals(expectedCpuLimit, sourceConfigValues.getCpuLimit())
+    assertEquals(expectedCpuLimit, sourceConfigValues.getCpuLimit())
 
     val expectedMemReq = if (StringUtils.isNotBlank(memReqOverride)) memReqOverride else originalReqs.getMemoryRequest()
-    Assertions.assertEquals(expectedMemReq, sourceConfigValues.getMemoryRequest())
+    assertEquals(expectedMemReq, sourceConfigValues.getMemoryRequest())
 
     val expectedMemLimit = if (StringUtils.isNotBlank(memLimitOverride)) memLimitOverride else originalReqs.getMemoryLimit()
-    Assertions.assertEquals(expectedMemLimit, sourceConfigValues.getMemoryLimit())
+    assertEquals(expectedMemLimit, sourceConfigValues.getMemoryLimit())
   }
 
   @ParameterizedTest
@@ -905,10 +903,10 @@ internal class DefaultJobCreatorTest {
 
     val jobCreator =
       DefaultJobCreator(
-        jobPersistence!!,
-        resourceRequirementsProvider!!,
-        TestClient(Map.of<String, String?>(DestResourceOverrides.key, serialize<String?>(weirdness))),
-        streamRefreshesRepository!!,
+        jobPersistence,
+        resourceRequirementsProvider,
+        TestClient(mapOf(DestResourceOverrides.key to serialize<String?>(weirdness))),
+        streamRefreshesRepository,
         null,
       )
 
@@ -931,7 +929,7 @@ internal class DefaultJobCreatorTest {
         .withDestinationDefinitionId(UUID.randomUUID())
         .withResourceRequirements(
           ScopedResourceRequirements().withJobSpecific(
-            List.of<JobTypeResourceLimit?>(
+            listOf(
               JobTypeResourceLimit().withJobType(JobTypeResourceLimit.JobType.SYNC).withResourceRequirements(originalReqs),
             ),
           ),
@@ -951,41 +949,41 @@ internal class DefaultJobCreatorTest {
         .getSyncResourceRequirements()
         .getDestination()
 
-    Assertions.assertEquals(originalReqs.getCpuRequest(), destConfigValues.getCpuRequest())
-    Assertions.assertEquals(originalReqs.getCpuLimit(), destConfigValues.getCpuLimit())
-    Assertions.assertEquals(originalReqs.getMemoryRequest(), destConfigValues.getMemoryRequest())
-    Assertions.assertEquals(originalReqs.getMemoryLimit(), destConfigValues.getMemoryLimit())
+    assertEquals(originalReqs.getCpuRequest(), destConfigValues.getCpuRequest())
+    assertEquals(originalReqs.getCpuLimit(), destConfigValues.getCpuLimit())
+    assertEquals(originalReqs.getMemoryRequest(), destConfigValues.getMemoryRequest())
+    assertEquals(originalReqs.getMemoryLimit(), destConfigValues.getMemoryLimit())
   }
 
   @Test
   @Throws(IOException::class)
   fun testCreateResetConnectionJob() {
     whenever(
-      resourceRequirementsProvider!!.getResourceRequirements(
+      resourceRequirementsProvider.getResourceRequirements(
         ResourceRequirementsType.ORCHESTRATOR,
         null,
         DEFAULT_VARIANT,
       ),
     ).thenReturn(workerResourceRequirements)
     whenever(
-      resourceRequirementsProvider!!.getResourceRequirements(
+      resourceRequirementsProvider.getResourceRequirements(
         ResourceRequirementsType.SOURCE,
         null,
         DEFAULT_VARIANT,
       ),
     ).thenReturn(sourceResourceRequirements)
     whenever(
-      resourceRequirementsProvider!!.getResourceRequirements(
+      resourceRequirementsProvider.getResourceRequirements(
         ResourceRequirementsType.DESTINATION,
         null,
         DEFAULT_VARIANT,
       ),
     ).thenReturn(destResourceRequirements)
 
-    val streamsToReset = List.of<StreamDescriptor?>(STREAM1_DESCRIPTOR, STREAM2_DESCRIPTOR)
+    val streamsToReset = listOf(STREAM1_DESCRIPTOR, STREAM2_DESCRIPTOR)
     val expectedCatalog =
       ConfiguredAirbyteCatalog().withStreams(
-        List.of<ConfiguredAirbyteStream>(
+        listOf(
           ConfiguredAirbyteStream(
             createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
             SyncMode.FULL_REFRESH,
@@ -1045,17 +1043,17 @@ internal class DefaultJobCreatorTest {
       )
 
     verify(jobPersistence).enqueueJob(expectedScope, jobConfig, false)
-    Assertions.assertTrue(jobId.isPresent())
-    Assertions.assertEquals(JOB_ID, jobId.get())
+    assertTrue(jobId.isPresent())
+    assertEquals(JOB_ID, jobId.get())
   }
 
   @Test
   @Throws(IOException::class)
   fun testCreateResetConnectionJobEnsureNoQueuing() {
-    val streamsToReset = List.of<StreamDescriptor?>(STREAM1_DESCRIPTOR, STREAM2_DESCRIPTOR)
+    val streamsToReset = listOf(STREAM1_DESCRIPTOR, STREAM2_DESCRIPTOR)
     val expectedCatalog =
       ConfiguredAirbyteCatalog().withStreams(
-        List.of<ConfiguredAirbyteStream>(
+        listOf(
           ConfiguredAirbyteStream(
             createAirbyteStream(STREAM1_NAME, Field.of(FIELD_NAME, JsonSchemaType.STRING)),
             SyncMode.FULL_REFRESH,
@@ -1115,7 +1113,7 @@ internal class DefaultJobCreatorTest {
       )
 
     verify(jobPersistence).enqueueJob(expectedScope, jobConfig, false)
-    Assertions.assertTrue(jobId.isEmpty())
+    assertTrue(jobId.isEmpty())
   }
 
   @Test
@@ -1124,19 +1122,19 @@ internal class DefaultJobCreatorTest {
       StandardSync()
         .withCatalog(
           ConfiguredAirbyteCatalog().withStreams(
-            List.of<ConfiguredAirbyteStream>(
+            listOf(
               ConfiguredAirbyteStream(
-                AirbyteStream("no1", emptyObject(), List.of<SyncMode?>(SyncMode.INCREMENTAL)).withIsResumable(true),
+                AirbyteStream("no1", emptyObject(), listOf(SyncMode.INCREMENTAL)).withIsResumable(true),
                 SyncMode.INCREMENTAL,
                 DestinationSyncMode.APPEND,
               ),
               ConfiguredAirbyteStream(
-                AirbyteStream("no2", emptyObject(), List.of<SyncMode?>(SyncMode.FULL_REFRESH)).withIsResumable(false),
+                AirbyteStream("no2", emptyObject(), listOf(SyncMode.FULL_REFRESH)).withIsResumable(false),
                 SyncMode.FULL_REFRESH,
                 DestinationSyncMode.APPEND,
               ),
               ConfiguredAirbyteStream(
-                AirbyteStream("yes", emptyObject(), List.of<SyncMode?>(SyncMode.FULL_REFRESH)).withIsResumable(true),
+                AirbyteStream("yes", emptyObject(), listOf(SyncMode.FULL_REFRESH)).withIsResumable(true),
                 SyncMode.FULL_REFRESH,
                 DestinationSyncMode.APPEND,
               ),
@@ -1144,9 +1142,9 @@ internal class DefaultJobCreatorTest {
           ),
         )
 
-    var streamDescriptors = jobCreator!!.getResumableFullRefresh(standardSync, true)
-    Assertions.assertEquals(1, streamDescriptors.size)
-    Assertions.assertEquals(
+    var streamDescriptors = jobCreator.getResumableFullRefresh(standardSync, true)
+    assertEquals(1, streamDescriptors.size)
+    assertEquals(
       "yes",
       streamDescriptors
         .stream()
@@ -1155,8 +1153,8 @@ internal class DefaultJobCreatorTest {
         .getName(),
     )
 
-    streamDescriptors = jobCreator!!.getResumableFullRefresh(standardSync, false)
-    Assertions.assertTrue(streamDescriptors.isEmpty())
+    streamDescriptors = jobCreator.getResumableFullRefresh(standardSync, false)
+    assertTrue(streamDescriptors.isEmpty())
   }
 
   companion object {
@@ -1202,12 +1200,11 @@ internal class DefaultJobCreatorTest {
       WEBHOOK_NAME = "test-name"
 
       val implementationJson =
-        jsonNode<ImmutableMap<Any?, Any?>?>(
-          ImmutableMap
-            .builder<Any?, Any?>()
-            .put("apiKey", "123-abc")
-            .put("hostname", "airbyte.io")
-            .build(),
+        jsonNode(
+          mapOf(
+            "apiKey" to "123-abc",
+            "hostname" to "airbyte.io",
+          ),
         )
 
       SOURCE_CONNECTION =
@@ -1250,7 +1247,7 @@ internal class DefaultJobCreatorTest {
           SyncMode.FULL_REFRESH,
           DestinationSyncMode.OVERWRITE,
         )
-      CONFIGURED_AIRBYTE_CATALOG = ConfiguredAirbyteCatalog().withStreams(List.of<ConfiguredAirbyteStream>(stream1, stream2, stream3))
+      CONFIGURED_AIRBYTE_CATALOG = ConfiguredAirbyteCatalog().withStreams(listOf(stream1, stream2, stream3))
 
       STANDARD_SYNC =
         StandardSync()
@@ -1263,7 +1260,7 @@ internal class DefaultJobCreatorTest {
           .withCatalog(CONFIGURED_AIRBYTE_CATALOG)
           .withSourceId(sourceId)
           .withDestinationId(destinationId)
-          .withOperationIds(List.of<UUID?>(operationId))
+          .withOperationIds(listOf(operationId))
 
       STANDARD_SYNC_OPERATION =
         StandardSyncOperation()
@@ -1313,7 +1310,7 @@ internal class DefaultJobCreatorTest {
         .withWorkspaceId(WORKSPACE_ID)
         .withSourceDefinitionVersionId(SOURCE_DEFINITION_VERSION.versionId)
         .withDestinationDefinitionVersionId(DESTINATION_DEFINITION_VERSION.versionId)
-        .withStreamsToRefresh(streamToRefresh as kotlin.collections.List<RefreshStream>)
+        .withStreamsToRefresh(streamToRefresh.toList())
 
     @JvmStatic
     private fun resourceOverrideMatrix(): Stream<Arguments?> =

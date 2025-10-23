@@ -5,7 +5,6 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.oauth.BaseOAuth2Flow
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
@@ -58,14 +57,13 @@ class StravaOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("client_id", clientId)
-      .put("redirect_uri", redirectUrl)
-      .put("client_secret", clientSecret)
-      .put("code", authCode)
-      .put("grant_type", "authorization_code")
-      .build()
+    mapOf(
+      "grant_type" to "authorization_code",
+      "code" to authCode,
+      "client_id" to clientId,
+      "client_secret" to clientSecret,
+      "redirect_uri" to redirectUrl,
+    )
 
   private val scopes: String
     get() = "activity:read_all"

@@ -6,7 +6,6 @@ package io.airbyte.oauth
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
 import io.airbyte.oauth.MoreOAuthParameters.flattenOAuthConfig
 import io.airbyte.oauth.MoreOAuthParameters.mergeJsons
@@ -18,47 +17,15 @@ import java.util.UUID
 internal class MoreOAuthParametersTest {
   @Test
   fun testFlattenConfig() {
-    val nestedConfig =
-      Jsons.jsonNode(
-        java.util.Map.of(
-          FIELD,
-          "value1",
-          "top-level",
-          java.util.Map.of(
-            "nested_field",
-            "value2",
-          ),
-        ),
-      )
-    val expectedConfig =
-      Jsons.jsonNode(
-        java.util.Map.of(
-          FIELD,
-          "value1",
-          "nested_field",
-          "value2",
-        ),
-      )
+    val nestedConfig = Jsons.jsonNode(mapOf(FIELD to "value1", "top-level" to mapOf("nested_field" to "value2")))
+    val expectedConfig = Jsons.jsonNode(mapOf(FIELD to "value1", "nested_field" to "value2"))
     val actualConfig = flattenOAuthConfig(nestedConfig)
     Assertions.assertEquals(expectedConfig, actualConfig)
   }
 
   @Test
   fun testFailureFlattenConfig() {
-    val nestedConfig =
-      Jsons.jsonNode(
-        java.util.Map.of(
-          FIELD,
-          "value1",
-          "top-level",
-          java.util.Map.of(
-            "nested_field",
-            "value2",
-            FIELD,
-            "value3",
-          ),
-        ),
-      )
+    val nestedConfig = Jsons.jsonNode(mapOf(FIELD to "value1", "top-level" to mapOf(FIELD to "value2", "nested_field" to "value3")))
     Assertions.assertThrows(
       IllegalStateException::class.java,
     ) { flattenOAuthConfig(nestedConfig) }
@@ -81,13 +48,7 @@ internal class MoreOAuthParametersTest {
   @DisplayName("A nested config should be inserted with the same nesting structure")
   fun testInjectNewNestedNode() {
     val oauthParams = Jsons.jsonNode(generateOAuthParameters()) as ObjectNode
-    val nestedConfig =
-      Jsons.jsonNode(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(OAUTH_CREDS, oauthParams)
-          .build(),
-      ) as ObjectNode
+    val nestedConfig = Jsons.jsonNode(mapOf(OAUTH_CREDS to oauthParams)) as ObjectNode
 
     // nested node does not exist in actual object
     val actual = generateJsonConfig()
@@ -105,13 +66,7 @@ internal class MoreOAuthParametersTest {
   )
   fun testInjectedPartiallyExistingNestedNode() {
     val oauthParams = Jsons.jsonNode(generateOAuthParameters()) as ObjectNode
-    val nestedConfig =
-      Jsons.jsonNode(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(OAUTH_CREDS, oauthParams)
-          .build(),
-      ) as ObjectNode
+    val nestedConfig = Jsons.jsonNode(mapOf(OAUTH_CREDS to oauthParams)) as ObjectNode
 
     // nested node partially exists in actual object
     val actual = generateJsonConfig()
@@ -124,21 +79,9 @@ internal class MoreOAuthParametersTest {
     Assertions.assertEquals(expected, actual)
   }
 
-  private fun generateJsonConfig(): ObjectNode =
-    Jsons.jsonNode(
-      ImmutableMap
-        .builder<Any, Any>()
-        .put("apiSecret", "123")
-        .put("client", "testing")
-        .build(),
-    ) as ObjectNode
+  private fun generateJsonConfig(): ObjectNode = Jsons.jsonNode(mapOf("apiSecret" to "123", "client" to "testing")) as ObjectNode
 
-  private fun generateOAuthParameters(): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>()
-      .put("api_secret", "mysecret")
-      .put("api_client", UUID.randomUUID().toString())
-      .build()
+  private fun generateOAuthParameters(): Map<String, String> = mapOf("api_secret" to "mysecret", "api_client" to UUID.randomUUID().toString())
 
   companion object {
     private const val FIELD = "field"

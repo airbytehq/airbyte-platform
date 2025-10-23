@@ -7,12 +7,11 @@ package io.airbyte.config.secrets
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDINATE_PREFIX
 import io.airbyte.commons.json.Jsons
 import io.airbyte.domain.models.SecretStorage
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -257,186 +256,134 @@ internal class JsonSecretsProcessorTest {
   @Test
   fun testCopySecrets() {
     val src =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            FIELD_1,
-            VALUE_1,
-          ).put(FIELD_2, 2)
-          .put(
-            ADDITIONAL_FIELD,
-            DONT_COPY_ME,
-          ).put(
-            SECRET_1,
-            DONT_TELL_ANYONE,
-          ).put(SECRET_2, "updateme")
-          .build(),
+      Jsons.jsonNode(
+        mapOf(
+          FIELD_1 to VALUE_1,
+          FIELD_2 to 2,
+          ADDITIONAL_FIELD to DONT_COPY_ME,
+          SECRET_1 to DONT_TELL_ANYONE,
+          SECRET_2 to "updateme",
+        ),
       )
     val dst =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            FIELD_1,
-            VALUE_1,
-          ).put(FIELD_2, 2)
-          .put(SECRET_1, AirbyteSecretConstants.SECRETS_MASK)
-          .put(SECRET_2, "newvalue")
-          .build(),
+      Jsons.jsonNode(
+        mapOf(
+          FIELD_1 to VALUE_1,
+          FIELD_2 to 2,
+          SECRET_1 to AirbyteSecretConstants.SECRETS_MASK,
+          SECRET_2 to "newvalue",
+        ),
       )
     val actual = processor.copySecrets(src, dst, SCHEMA_ONE_LAYER)
     val expected =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            FIELD_1,
-            VALUE_1,
-          ).put(FIELD_2, 2)
-          .put(
-            SECRET_1,
-            DONT_TELL_ANYONE,
-          ).put(SECRET_2, "newvalue")
-          .build(),
+      Jsons.jsonNode(
+        mapOf(
+          FIELD_1 to VALUE_1,
+          FIELD_2 to 2,
+          SECRET_1 to DONT_TELL_ANYONE,
+          SECRET_2 to "newvalue",
+        ),
       )
-    Assertions.assertEquals(expected, actual)
+    assertEquals(expected, actual)
   }
 
   @Test
   fun testCopySecretsNotInSrc() {
     val src =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            FIELD_1,
-            VALUE_1,
-          ).put(FIELD_2, 2)
-          .put(
-            ADDITIONAL_FIELD,
-            DONT_COPY_ME,
-          ).build(),
+      Jsons.jsonNode(
+        mapOf(
+          FIELD_1 to VALUE_1,
+          FIELD_2 to 2,
+          ADDITIONAL_FIELD to DONT_COPY_ME,
+        ),
       )
     val dst =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            FIELD_1,
-            VALUE_1,
-          ).put(FIELD_2, 2)
-          .put(SECRET_1, AirbyteSecretConstants.SECRETS_MASK)
-          .build(),
+      Jsons.jsonNode(
+        mapOf(
+          FIELD_1 to VALUE_1,
+          FIELD_2 to 2,
+          SECRET_1 to AirbyteSecretConstants.SECRETS_MASK,
+        ),
       )
     val expected = dst.deepCopy<JsonNode>()
     val actual = processor.copySecrets(src, dst, SCHEMA_ONE_LAYER)
-    Assertions.assertEquals(expected, actual)
+    assertEquals(expected, actual)
   }
 
   @Test
   fun testCopySecretInnerObject() {
     val srcOneOf =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            BUCKET_NAME,
-            NAME,
-          ).put(SECRET_ACCESS_KEY, "secret")
-          .put(
-            ADDITIONAL_FIELD,
-            DONT_COPY_ME,
-          ).build(),
+      Jsons.jsonNode(
+        mapOf(
+          BUCKET_NAME to NAME,
+          SECRET_ACCESS_KEY to "secret",
+          ADDITIONAL_FIELD to DONT_COPY_ME,
+        ),
       )
     val src =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            WAREHOUSE,
-            HOUSE,
-          ).put("loading_method", srcOneOf)
-          .build(),
+      Jsons.jsonNode(
+        mapOf(
+          WAREHOUSE to HOUSE,
+          "loading_method" to srcOneOf,
+        ),
       )
     val dstOneOf =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            BUCKET_NAME,
-            NAME,
-          ).put(SECRET_ACCESS_KEY, AirbyteSecretConstants.SECRETS_MASK)
-          .build(),
+      Jsons.jsonNode(
+        mapOf(
+          BUCKET_NAME to NAME,
+          SECRET_ACCESS_KEY to AirbyteSecretConstants.SECRETS_MASK,
+        ),
       )
     val dst =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            WAREHOUSE,
-            HOUSE,
-          ).put(LOADING_METHOD, dstOneOf)
-          .build(),
+      Jsons.jsonNode(
+        mapOf(
+          WAREHOUSE to HOUSE,
+          LOADING_METHOD to dstOneOf,
+        ),
       )
     val actual = processor.copySecrets(src, dst, SCHEMA_INNER_OBJECT)
     val expectedOneOf =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            BUCKET_NAME,
-            NAME,
-          ).put(SECRET_ACCESS_KEY, "secret")
-          .build(),
+      Jsons.jsonNode(
+        mapOf(
+          BUCKET_NAME to NAME,
+          SECRET_ACCESS_KEY to "secret",
+        ),
       )
     val expected =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            WAREHOUSE,
-            HOUSE,
-          ).put(LOADING_METHOD, expectedOneOf)
-          .build(),
+      Jsons.jsonNode(
+        mapOf(
+          WAREHOUSE to HOUSE,
+          LOADING_METHOD to expectedOneOf,
+        ),
       )
-    Assertions.assertEquals(expected, actual)
+    assertEquals(expected, actual)
   }
 
   @Test
   fun testCopySecretNotInSrcInnerObject() {
     val src =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            WAREHOUSE,
-            HOUSE,
-          ).build(),
+      Jsons.jsonNode(
+        mapOf(
+          WAREHOUSE to HOUSE,
+        ),
       )
     val dstOneOf =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            BUCKET_NAME,
-            NAME,
-          ).put(SECRET_ACCESS_KEY, AirbyteSecretConstants.SECRETS_MASK)
-          .build(),
+      Jsons.jsonNode(
+        mapOf(
+          BUCKET_NAME to NAME,
+          SECRET_ACCESS_KEY to AirbyteSecretConstants.SECRETS_MASK,
+        ),
       )
     val dst =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            WAREHOUSE,
-            HOUSE,
-          ).put(LOADING_METHOD, dstOneOf)
-          .build(),
+      Jsons.jsonNode(
+        mapOf(
+          WAREHOUSE to HOUSE,
+          LOADING_METHOD to dstOneOf,
+        ),
       )
     val actual = processor.copySecrets(src, dst, SCHEMA_INNER_OBJECT)
     val expected = dst.deepCopy<JsonNode>()
-    Assertions.assertEquals(expected, actual)
+    assertEquals(expected, actual)
   }
 
   // test the case where multiple sub schemas of a oneOf contain the same key but a different type.
@@ -444,45 +391,36 @@ internal class JsonSecretsProcessorTest {
   fun testHandlesSameKeyInOneOf() {
     val compressionCodecObject =
       Jsons.jsonNode(
-        ImmutableMap.of(
-          "codec",
-          "no compression",
+        mapOf(
+          "codec" to "no compression",
         ),
       )
     val avroConfig =
       Jsons.jsonNode(
-        ImmutableMap.of(
-          "format_type",
-          "Avro",
-          "compression_codec",
-          compressionCodecObject,
+        mapOf(
+          "format_type" to "Avro",
+          "compression_codec" to compressionCodecObject,
         ),
       )
     val src =
       Jsons.jsonNode(
-        ImmutableMap.of(
-          "client_id",
-          "whatever",
-          "format",
-          avroConfig,
+        mapOf(
+          "client_id" to "whatever",
+          "format" to avroConfig,
         ),
       )
     val parquetConfig =
       Jsons.jsonNode(
-        ImmutableMap.of(
-          "format_type",
-          "Parquet",
-          "compression_codec",
-          "GZIP",
+        mapOf(
+          "format_type" to "Parquet",
+          "compression_codec" to "GZIP",
         ),
       )
     val dst =
       Jsons.jsonNode(
-        ImmutableMap.of(
-          "client_id",
-          "whatever",
-          "format",
-          parquetConfig,
+        mapOf(
+          "client_id" to "whatever",
+          "format" to parquetConfig,
         ),
       )
     processor.copySecrets(src, dst, ONE_OF_WITH_SAME_KEY_IN_SUB_SCHEMAS)
@@ -509,7 +447,7 @@ internal class JsonSecretsProcessorTest {
     val expected = objectMapper.readTree(expectedIs)
 
     val actual = processor.prepareSecretsForOutput(input, specs)
-    Assertions.assertEquals(expected, actual)
+    assertEquals(expected, actual)
   }
 
   @Test
@@ -570,7 +508,7 @@ internal class JsonSecretsProcessorTest {
         
         """.trimIndent(),
       )
-    Assertions.assertEquals(expected, copied)
+    assertEquals(expected, copied)
   }
 
   @Test
@@ -629,7 +567,7 @@ internal class JsonSecretsProcessorTest {
         
         """.trimIndent(),
       )
-    Assertions.assertEquals(expected, copied)
+    assertEquals(expected, copied)
   }
 
   @Test
@@ -703,7 +641,7 @@ internal class JsonSecretsProcessorTest {
         
         """.trimIndent(),
       )
-    Assertions.assertEquals(expected, result)
+    assertEquals(expected, result)
   }
 
   @Test
@@ -711,53 +649,36 @@ internal class JsonSecretsProcessorTest {
     processor = JsonSecretsProcessor(false)
 
     val src =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            FIELD_1,
-            VALUE_1,
-          ).put(FIELD_2, 2)
-          .put(
-            ADDITIONAL_FIELD,
-            DONT_COPY_ME,
-          ).put(
-            SECRET_1,
-            DONT_TELL_ANYONE,
-          ).put(SECRET_2, "updateme")
-          .build(),
+      Jsons.jsonNode(
+        mapOf(
+          FIELD_1 to VALUE_1,
+          FIELD_2 to 2,
+          ADDITIONAL_FIELD to DONT_COPY_ME,
+          SECRET_1 to DONT_TELL_ANYONE,
+          SECRET_2 to "updateme",
+        ),
       )
     val dst =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            FIELD_1,
-            VALUE_1,
-          ).put(FIELD_2, 2)
-          .put(SECRET_1, AirbyteSecretConstants.SECRETS_MASK)
-          .put(SECRET_2, "newvalue")
-          .build(),
+      Jsons.jsonNode(
+        mapOf(
+          FIELD_1 to VALUE_1,
+          FIELD_2 to 2,
+          SECRET_1 to AirbyteSecretConstants.SECRETS_MASK,
+          SECRET_2 to "newvalue",
+        ),
       )
     val actual = processor.copySecrets(src, dst, SCHEMA_ONE_LAYER)
     val expected =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            FIELD_1,
-            VALUE_1,
-          ).put(FIELD_2, 2)
-          .put(
-            ADDITIONAL_FIELD,
-            DONT_COPY_ME,
-          ).put(
-            SECRET_1,
-            DONT_TELL_ANYONE,
-          ).put(SECRET_2, "updateme")
-          .build(),
+      Jsons.jsonNode(
+        mapOf(
+          FIELD_1 to VALUE_1,
+          FIELD_2 to 2,
+          ADDITIONAL_FIELD to DONT_COPY_ME,
+          SECRET_1 to DONT_TELL_ANYONE,
+          SECRET_2 to "updateme",
+        ),
       )
-    Assertions.assertEquals(expected, actual)
+    assertEquals(expected, actual)
   }
 
   @ParameterizedTest
@@ -783,33 +704,25 @@ internal class JsonSecretsProcessorTest {
     val expected = objectMapper.readTree(expectedIs)
 
     val actual = processor.prepareSecretsForOutput(input, specs)
-    Assertions.assertEquals(expected, actual)
+    assertEquals(expected, actual)
   }
 
   @Test
   fun `test simplify secrets with default secret storage is default and showing coordinates from the default manager is disabled`() {
     val secretCoordinate = "external_secret_123abc"
     val secretPayload =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            "_secret",
-            secretCoordinate,
-          ).build(),
+      Jsons.jsonNode(
+        mapOf(
+          "_secret" to secretCoordinate,
+        ),
       )
     val src =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            FIELD_1,
-            VALUE_1,
-          ).put(FIELD_2, 2)
-          .put(
-            SECRET_1,
-            secretPayload,
-          ).build(),
+      Jsons.jsonNode(
+        mapOf(
+          FIELD_1 to VALUE_1,
+          FIELD_2 to 2,
+          SECRET_1 to secretPayload,
+        ),
       )
 
     val secretReferenceConfig =
@@ -817,7 +730,7 @@ internal class JsonSecretsProcessorTest {
         SecretCoordinate.ExternalSecretCoordinate(secretCoordinate),
         SecretStorage.DEFAULT_SECRET_STORAGE_ID.value,
       )
-    val referencedSecrets = ImmutableMap.of("$.$SECRET_1", secretReferenceConfig).toMap()
+    val referencedSecrets = mapOf("$.$SECRET_1" to secretReferenceConfig)
     val configWIthSecretReferences =
       ConfigWithSecretReferences(
         src,
@@ -825,45 +738,32 @@ internal class JsonSecretsProcessorTest {
       )
     val actual = processor.simplifySecretsForOutput(configWIthSecretReferences, SCHEMA_ONE_LAYER, false)
     val expected =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            FIELD_1,
-            VALUE_1,
-          ).put(FIELD_2, 2)
-          .put(
-            SECRET_1,
-            "**********",
-          ).build(),
+      Jsons.jsonNode(
+        mapOf(
+          FIELD_1 to VALUE_1,
+          FIELD_2 to 2,
+          SECRET_1 to "**********",
+        ),
       )
-    Assertions.assertEquals(expected, actual)
+    assertEquals(expected, actual)
   }
 
   @Test
   fun `test simplify secrets with non-default secret storage and showing coordinates from the default manager is disabled`() {
     val secretCoordinate = "external_secret_123abc"
     val secretPayload =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            "_secret",
-            secretCoordinate,
-          ).build(),
+      Jsons.jsonNode(
+        mapOf(
+          "_secret" to secretCoordinate,
+        ),
       )
     val src =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            FIELD_1,
-            VALUE_1,
-          ).put(FIELD_2, 2)
-          .put(
-            SECRET_1,
-            secretPayload,
-          ).build(),
+      Jsons.jsonNode(
+        mapOf(
+          FIELD_1 to VALUE_1,
+          FIELD_2 to 2,
+          SECRET_1 to secretPayload,
+        ),
       )
 
     val secretReferenceConfig =
@@ -871,7 +771,7 @@ internal class JsonSecretsProcessorTest {
         SecretCoordinate.ExternalSecretCoordinate(secretCoordinate),
         UUID.randomUUID(),
       )
-    val referencedSecrets = ImmutableMap.of("$.$SECRET_1", secretReferenceConfig).toMap()
+    val referencedSecrets = mapOf("$.$SECRET_1" to secretReferenceConfig)
     val configWIthSecretReferences =
       ConfigWithSecretReferences(
         src,
@@ -879,45 +779,32 @@ internal class JsonSecretsProcessorTest {
       )
     val actual = processor.simplifySecretsForOutput(configWIthSecretReferences, SCHEMA_ONE_LAYER, false)
     val expected =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            FIELD_1,
-            VALUE_1,
-          ).put(FIELD_2, 2)
-          .put(
-            SECRET_1,
-            "${AIRBYTE_SECRET_COORDINATE_PREFIX}$secretCoordinate",
-          ).build(),
+      Jsons.jsonNode(
+        mapOf(
+          FIELD_1 to VALUE_1,
+          FIELD_2 to 2,
+          SECRET_1 to "${AIRBYTE_SECRET_COORDINATE_PREFIX}$secretCoordinate",
+        ),
       )
-    Assertions.assertEquals(expected, actual)
+    assertEquals(expected, actual)
   }
 
   @Test
   fun `test simplify secrets for output with default secret storage and showing coordinates from the default manager is enabled`() {
     val secretCoordinate = "external_secret_123abc"
     val secretPayload =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            "_secret",
-            secretCoordinate,
-          ).build(),
+      Jsons.jsonNode(
+        mapOf(
+          "_secret" to secretCoordinate,
+        ),
       )
     val src =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            FIELD_1,
-            VALUE_1,
-          ).put(FIELD_2, 2)
-          .put(
-            SECRET_1,
-            secretPayload,
-          ).build(),
+      Jsons.jsonNode(
+        mapOf(
+          FIELD_1 to VALUE_1,
+          FIELD_2 to 2,
+          SECRET_1 to secretPayload,
+        ),
       )
 
     val secretReferenceConfig =
@@ -925,7 +812,7 @@ internal class JsonSecretsProcessorTest {
         SecretCoordinate.ExternalSecretCoordinate(secretCoordinate),
         SecretStorage.DEFAULT_SECRET_STORAGE_ID.value,
       )
-    val referencedSecrets = ImmutableMap.of("$.$SECRET_1", secretReferenceConfig).toMap()
+    val referencedSecrets = mapOf("$.$SECRET_1" to secretReferenceConfig)
     val configWIthSecretReferences =
       ConfigWithSecretReferences(
         src,
@@ -933,45 +820,32 @@ internal class JsonSecretsProcessorTest {
       )
     val actual = processor.simplifySecretsForOutput(configWIthSecretReferences, SCHEMA_ONE_LAYER, true)
     val expected =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            FIELD_1,
-            VALUE_1,
-          ).put(FIELD_2, 2)
-          .put(
-            SECRET_1,
-            "${AIRBYTE_SECRET_COORDINATE_PREFIX}$secretCoordinate",
-          ).build(),
+      Jsons.jsonNode(
+        mapOf(
+          FIELD_1 to VALUE_1,
+          FIELD_2 to 2,
+          SECRET_1 to "${AIRBYTE_SECRET_COORDINATE_PREFIX}$secretCoordinate",
+        ),
       )
-    Assertions.assertEquals(expected, actual)
+    assertEquals(expected, actual)
   }
 
   @Test
   fun `test simplify secrets for output exposes with non default storage and showing coordinates from the default manager is enabled`() {
     val secretCoordinate = "external_secret_123abc"
     val secretPayload =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            "_secret",
-            secretCoordinate,
-          ).build(),
+      Jsons.jsonNode(
+        mapOf(
+          "_secret" to secretCoordinate,
+        ),
       )
     val src =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            FIELD_1,
-            VALUE_1,
-          ).put(FIELD_2, 2)
-          .put(
-            SECRET_1,
-            secretPayload,
-          ).build(),
+      Jsons.jsonNode(
+        mapOf(
+          FIELD_1 to VALUE_1,
+          FIELD_2 to 2,
+          SECRET_1 to secretPayload,
+        ),
       )
 
     val secretReferenceConfig =
@@ -979,7 +853,7 @@ internal class JsonSecretsProcessorTest {
         SecretCoordinate.ExternalSecretCoordinate(secretCoordinate),
         UUID.randomUUID(),
       )
-    val referencedSecrets = ImmutableMap.of("$.$SECRET_1", secretReferenceConfig).toMap()
+    val referencedSecrets = mapOf("$.$SECRET_1" to secretReferenceConfig)
     val configWIthSecretReferences =
       ConfigWithSecretReferences(
         src,
@@ -987,18 +861,13 @@ internal class JsonSecretsProcessorTest {
       )
     val actual = processor.simplifySecretsForOutput(configWIthSecretReferences, SCHEMA_ONE_LAYER, true)
     val expected =
-      Jsons.jsonNode<ImmutableMap<Any, Any>>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(
-            FIELD_1,
-            VALUE_1,
-          ).put(FIELD_2, 2)
-          .put(
-            SECRET_1,
-            "${AIRBYTE_SECRET_COORDINATE_PREFIX}$secretCoordinate",
-          ).build(),
+      Jsons.jsonNode(
+        mapOf(
+          FIELD_1 to VALUE_1,
+          FIELD_2 to 2,
+          SECRET_1 to "${AIRBYTE_SECRET_COORDINATE_PREFIX}$secretCoordinate",
+        ),
       )
-    Assertions.assertEquals(expected, actual)
+    assertEquals(expected, actual)
   }
 }

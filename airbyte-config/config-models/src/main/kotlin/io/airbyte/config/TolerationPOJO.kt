@@ -49,7 +49,7 @@ data class TolerationPOJO(
         } else {
           Splitter
             .on(";")
-            .splitToStream(tolerationsStr)
+            .splitToStream(tolerationsStr as CharSequence)
             .filter { tolerationStr: String? -> !Strings.isNullOrEmpty(tolerationStr) }
         }
 

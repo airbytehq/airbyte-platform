@@ -218,7 +218,7 @@ class WorkspaceHelper(
       }
     }
 
-    private fun <K, V> getExpiringCache(cacheLoader: CacheLoader<K, V>): LoadingCache<K, V> =
+    private fun <K : Any, V : Any> getExpiringCache(cacheLoader: CacheLoader<K, V>): LoadingCache<K, V> =
       CacheBuilder
         .newBuilder()
         .maximumSize(20000)

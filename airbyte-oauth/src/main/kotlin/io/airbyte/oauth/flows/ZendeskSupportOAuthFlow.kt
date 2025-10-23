@@ -5,7 +5,6 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.oauth.BaseOAuth2Flow
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
@@ -55,15 +54,14 @@ class ZendeskSupportOAuthFlow(
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("grant_type", "authorization_code")
-      .put("code", authCode)
-      .put("client_id", clientId)
-      .put("client_secret", clientSecret)
-      .put("redirect_uri", redirectUrl)
-      .put("scope", "read")
-      .build()
+    mapOf(
+      "grant_type" to "authorization_code",
+      "code" to authCode,
+      "client_id" to clientId,
+      "client_secret" to clientSecret,
+      "redirect_uri" to redirectUrl,
+      "scope" to "read",
+    )
 
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String {
     // getting subdomain value from user's config

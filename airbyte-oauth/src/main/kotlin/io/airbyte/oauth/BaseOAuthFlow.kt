@@ -5,7 +5,6 @@
 package io.airbyte.oauth
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
@@ -204,18 +203,18 @@ abstract class BaseOAuthFlow : OAuthFlowImplementation {
       validator: JsonSchemaValidator,
       outputSchema: JsonNode?,
       keys: Collection<String>,
-      replacement: BiConsumer<ImmutableMap.Builder<String, Any>, String>,
+      replacement: BiConsumer<MutableMap<String, Any>, String>,
     ): Map<String, Any> {
       var result = java.util.Map.of<String, Any>()
       if (outputSchema != null && outputSchema.has(PROPERTIES)) {
-        val mapBuilder = ImmutableMap.builder<String, Any>()
+        val mapBuilder = mutableMapOf<String, Any>()
         for (key in keys) {
           if (outputSchema[PROPERTIES].has(key)) {
             replacement.accept(mapBuilder, key)
           }
         }
-        result = mapBuilder.build()
-        validator.ensure(outputSchema, Jsons.jsonNode<Map<String, Any>>(result))
+        result = mapBuilder.toMap()
+        validator.ensure(outputSchema, Jsons.jsonNode(result))
       }
       return result
     }

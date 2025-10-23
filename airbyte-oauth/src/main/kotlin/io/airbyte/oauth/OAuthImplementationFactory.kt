@@ -4,7 +4,6 @@
 
 package io.airbyte.oauth
 
-import com.google.common.collect.ImmutableMap
 import io.airbyte.oauth.declarative.DeclarativeOAuthFlow
 import io.airbyte.oauth.flows.AirtableOAuthFlow
 import io.airbyte.oauth.flows.AmazonAdsOAuthFlow
@@ -77,66 +76,67 @@ class OAuthImplementationFactory(
   private val oauthFlowMapping: Map<String, OAuthFlowImplementation>
 
   init {
-    val builder = ImmutableMap.builder<String, OAuthFlowImplementation>()
-    builder.put("airbyte/source-airtable", AirtableOAuthFlow(httpClient)) // revert me
-    builder.put("airbyte/source-amazon-ads", AmazonAdsOAuthFlow(httpClient))
-    builder.put("airbyte/source-amazon-seller-partner", AmazonSellerPartnerOAuthFlow(httpClient))
-    builder.put("airbyte/source-asana", AsanaOAuthFlow(httpClient))
-    builder.put("airbyte/source-azure-blob-storage", MicrosoftAzureBlobStorageOAuthFlow(httpClient))
-    builder.put("airbyte/source-bing-ads", MicrosoftBingAdsOAuthFlow(httpClient))
-    builder.put("airbyte/source-drift", DriftOAuthFlow(httpClient))
-    builder.put("airbyte/source-facebook-marketing", FacebookMarketingOAuthFlow(httpClient))
-    builder.put("airbyte/source-facebook-pages", FacebookPagesOAuthFlow(httpClient))
-    builder.put("airbyte/source-github", GithubOAuthFlow(httpClient))
-    builder.put("airbyte/source-gitlab", GitlabOAuthFlow(httpClient))
-    builder.put("airbyte/source-google-ads", GoogleAdsOAuthFlow(httpClient))
-    builder.put("airbyte/source-google-analytics-v4", GoogleAnalyticsViewIdOAuthFlow(httpClient))
-    builder.put("airbyte/source-google-analytics-data-api", GoogleAnalyticsPropertyIdOAuthFlow(httpClient))
-    builder.put("airbyte/source-gcs", GoogleCloudStorageOAuthFlow(httpClient))
-    builder.put("airbyte/source-google-search-console", GoogleSearchConsoleOAuthFlow(httpClient))
-    builder.put("airbyte/source-google-sheets", GoogleSheetsOAuthFlow(httpClient))
-    builder.put("airbyte/source-google-drive", GoogleDriveOAuthFlow(httpClient))
-    builder.put("airbyte/source-harvest", HarvestOAuthFlow(httpClient))
-    builder.put("airbyte/source-hubspot", HubspotOAuthFlow(httpClient))
-    builder.put("airbyte/source-intercom", IntercomOAuthFlow(httpClient))
-    builder.put("airbyte/source-instagram", InstagramOAuthFlow(httpClient))
-    builder.put("airbyte/source-lever-hiring", LeverOAuthFlow(httpClient))
-    builder.put("airbyte/source-linkedin-ads", LinkedinAdsOAuthFlow(httpClient))
-    builder.put("airbyte/source-mailchimp", MailchimpOAuthFlow(httpClient))
-    builder.put("airbyte/source-microsoft-teams", MicrosoftTeamsOAuthFlow(httpClient))
-    builder.put("airbyte/source-microsoft-onedrive", MicrosoftOneDriveOAuthFlow(httpClient))
-    builder.put("airbyte/source-microsoft-sharepoint", MicrosoftSharepointOAuthFlow(httpClient))
-    builder.put("airbyte/source-monday", MondayOAuthFlow(httpClient))
-    builder.put("airbyte/source-notion", NotionOAuthFlow(httpClient))
-    builder.put("airbyte/source-okta", OktaOAuthFlow(httpClient))
-    builder.put("airbyte/source-paypal-transaction", PayPalTransactionOAuthFlow(httpClient))
-    builder.put("airbyte/source-pinterest", PinterestOAuthFlow(httpClient))
-    builder.put("airbyte/source-pipedrive", PipeDriveOAuthFlow(httpClient))
-    builder.put("airbyte/source-quickbooks", QuickbooksOAuthFlow(httpClient))
-    builder.put("airbyte/source-retently", RetentlyOAuthFlow(httpClient))
-    builder.put("airbyte/source-salesforce", SalesforceOAuthFlow(httpClient))
-    builder.put("airbyte/source-shopify", ShopifyOAuthFlow(httpClient))
-    builder.put("airbyte/source-slack", SlackOAuthFlow(httpClient))
-    builder.put("airbyte/source-smartsheets", SmartsheetsOAuthFlow(httpClient))
-    builder.put("airbyte/source-snapchat-marketing", SnapchatMarketingOAuthFlow(httpClient))
-    builder.put("airbyte/source-snowflake", SourceSnowflakeOAuthFlow(httpClient))
-    builder.put("airbyte/source-square", SquareOAuthFlow(httpClient))
-    builder.put("airbyte/source-strava", StravaOAuthFlow(httpClient))
-    builder.put("airbyte/source-surveymonkey", SurveymonkeyOAuthFlow(httpClient))
-    builder.put("airbyte/source-tiktok-marketing", TikTokMarketingOAuthFlow(httpClient))
-    builder.put("airbyte/source-trello", TrelloOAuthFlow())
-    builder.put("airbyte/source-typeform", TypeformOAuthFlow(httpClient))
-    builder.put("airbyte/source-youtube-analytics", YouTubeAnalyticsOAuthFlow(httpClient))
-    builder.put("airbyte/source-xero", XeroOAuthFlow(httpClient))
-    builder.put("airbyte/source-zendesk-chat", ZendeskChatOAuthFlow(httpClient))
-    builder.put("airbyte/source-zendesk-sunshine", ZendeskSunshineOAuthFlow(httpClient))
-    builder.put("airbyte/source-zendesk-support", ZendeskSupportOAuthFlow(httpClient))
-    builder.put("airbyte/source-zendesk-talk", ZendeskTalkOAuthFlow(httpClient))
-    builder.put("airbyte/destination-snowflake", DestinationSnowflakeOAuthFlow(httpClient))
-    builder.put("airbyte/destination-google-sheets", DestinationGoogleSheetsOAuthFlow(httpClient))
-    builder.put("airbyte/destination-cobra", SalesforceOAuthFlow(httpClient))
-    builder.put("airbyte/destination-salesforce", SalesforceOAuthFlow(httpClient))
-    oauthFlowMapping = builder.build()
+    oauthFlowMapping =
+      mapOf(
+        "airbyte/source-airtable" to AirtableOAuthFlow(httpClient), // revert me
+        "airbyte/source-amazon-ads" to AmazonAdsOAuthFlow(httpClient),
+        "airbyte/source-amazon-seller-partner" to AmazonSellerPartnerOAuthFlow(httpClient),
+        "airbyte/source-asana" to AsanaOAuthFlow(httpClient),
+        "airbyte/source-azure-blob-storage" to MicrosoftAzureBlobStorageOAuthFlow(httpClient),
+        "airbyte/source-bing-ads" to MicrosoftBingAdsOAuthFlow(httpClient),
+        "airbyte/source-drift" to DriftOAuthFlow(httpClient),
+        "airbyte/source-facebook-marketing" to FacebookMarketingOAuthFlow(httpClient),
+        "airbyte/source-facebook-pages" to FacebookPagesOAuthFlow(httpClient),
+        "airbyte/source-github" to GithubOAuthFlow(httpClient),
+        "airbyte/source-gitlab" to GitlabOAuthFlow(httpClient),
+        "airbyte/source-google-ads" to GoogleAdsOAuthFlow(httpClient),
+        "airbyte/source-google-analytics-v4" to GoogleAnalyticsViewIdOAuthFlow(httpClient),
+        "airbyte/source-google-analytics-data-api" to GoogleAnalyticsPropertyIdOAuthFlow(httpClient),
+        "airbyte/source-gcs" to GoogleCloudStorageOAuthFlow(httpClient),
+        "airbyte/source-google-search-console" to GoogleSearchConsoleOAuthFlow(httpClient),
+        "airbyte/source-google-sheets" to GoogleSheetsOAuthFlow(httpClient),
+        "airbyte/source-google-drive" to GoogleDriveOAuthFlow(httpClient),
+        "airbyte/source-harvest" to HarvestOAuthFlow(httpClient),
+        "airbyte/source-hubspot" to HubspotOAuthFlow(httpClient),
+        "airbyte/source-intercom" to IntercomOAuthFlow(httpClient),
+        "airbyte/source-instagram" to InstagramOAuthFlow(httpClient),
+        "airbyte/source-lever-hiring" to LeverOAuthFlow(httpClient),
+        "airbyte/source-linkedin-ads" to LinkedinAdsOAuthFlow(httpClient),
+        "airbyte/source-mailchimp" to MailchimpOAuthFlow(httpClient),
+        "airbyte/source-microsoft-teams" to MicrosoftTeamsOAuthFlow(httpClient),
+        "airbyte/source-microsoft-onedrive" to MicrosoftOneDriveOAuthFlow(httpClient),
+        "airbyte/source-microsoft-sharepoint" to MicrosoftSharepointOAuthFlow(httpClient),
+        "airbyte/source-monday" to MondayOAuthFlow(httpClient),
+        "airbyte/source-notion" to NotionOAuthFlow(httpClient),
+        "airbyte/source-okta" to OktaOAuthFlow(httpClient),
+        "airbyte/source-paypal-transaction" to PayPalTransactionOAuthFlow(httpClient),
+        "airbyte/source-pinterest" to PinterestOAuthFlow(httpClient),
+        "airbyte/source-pipedrive" to PipeDriveOAuthFlow(httpClient),
+        "airbyte/source-quickbooks" to QuickbooksOAuthFlow(httpClient),
+        "airbyte/source-retently" to RetentlyOAuthFlow(httpClient),
+        "airbyte/source-salesforce" to SalesforceOAuthFlow(httpClient),
+        "airbyte/source-shopify" to ShopifyOAuthFlow(httpClient),
+        "airbyte/source-slack" to SlackOAuthFlow(httpClient),
+        "airbyte/source-smartsheets" to SmartsheetsOAuthFlow(httpClient),
+        "airbyte/source-snapchat-marketing" to SnapchatMarketingOAuthFlow(httpClient),
+        "airbyte/source-snowflake" to SourceSnowflakeOAuthFlow(httpClient),
+        "airbyte/source-square" to SquareOAuthFlow(httpClient),
+        "airbyte/source-strava" to StravaOAuthFlow(httpClient),
+        "airbyte/source-surveymonkey" to SurveymonkeyOAuthFlow(httpClient),
+        "airbyte/source-tiktok-marketing" to TikTokMarketingOAuthFlow(httpClient),
+        "airbyte/source-trello" to TrelloOAuthFlow(),
+        "airbyte/source-typeform" to TypeformOAuthFlow(httpClient),
+        "airbyte/source-youtube-analytics" to YouTubeAnalyticsOAuthFlow(httpClient),
+        "airbyte/source-xero" to XeroOAuthFlow(httpClient),
+        "airbyte/source-zendesk-chat" to ZendeskChatOAuthFlow(httpClient),
+        "airbyte/source-zendesk-sunshine" to ZendeskSunshineOAuthFlow(httpClient),
+        "airbyte/source-zendesk-support" to ZendeskSupportOAuthFlow(httpClient),
+        "airbyte/source-zendesk-talk" to ZendeskTalkOAuthFlow(httpClient),
+        "airbyte/destination-snowflake" to DestinationSnowflakeOAuthFlow(httpClient),
+        "airbyte/destination-google-sheets" to DestinationGoogleSheetsOAuthFlow(httpClient),
+        "airbyte/destination-cobra" to SalesforceOAuthFlow(httpClient),
+        "airbyte/destination-salesforce" to SalesforceOAuthFlow(httpClient),
+      )
   }
 
   /**
@@ -154,7 +154,7 @@ class OAuthImplementationFactory(
   ): OAuthFlowImplementation? =
     try {
       createDeclarativeOAuthImplementation(connectorSpecification)
-    } catch (e: IllegalStateException) {
+    } catch (_: IllegalStateException) {
       createNonDeclarativeOAuthImplementation(imageName)
     }
 

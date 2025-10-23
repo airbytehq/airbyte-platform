@@ -5,7 +5,6 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
 import io.airbyte.oauth.BaseOAuth2Flow
 import org.apache.http.client.utils.URIBuilder
@@ -60,12 +59,11 @@ class NotionOAuthFlow(
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("grant_type", "authorization_code")
-      .put("code", authCode)
-      .put("redirect_uri", redirectUrl)
-      .build()
+    mapOf(
+      "grant_type" to "authorization_code",
+      "code" to authCode,
+      "redirect_uri" to redirectUrl,
+    )
 
   /**
    * Returns the URL where to retrieve the access token from.

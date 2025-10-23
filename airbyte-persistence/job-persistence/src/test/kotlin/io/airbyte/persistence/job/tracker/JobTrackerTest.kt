@@ -8,7 +8,6 @@ import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.base.Preconditions
-import com.google.common.collect.ImmutableMap
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.commons.json.Jsons.arrayNode
 import io.airbyte.commons.json.Jsons.deserialize
@@ -135,16 +134,15 @@ internal class JobTrackerTest {
   @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testTrackCheckConnectionSource() {
     val metadata: MutableMap<String?, Any?> =
-      ImmutableMap
-        .builder<String?, Any?>()
-        .put(JOB_TYPE, ConfigType.CHECK_CONNECTION_SOURCE)
-        .put(JOB_ID_KEY, JOB_ID.toString())
-        .put(ATTEMPT_ID, 0)
-        .put(CONNECTOR_SOURCE_KEY, SOURCE_DEF_NAME)
-        .put(CONNECTOR_SOURCE_DEFINITION_ID_KEY, UUID1)
-        .put(CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY, CONNECTOR_REPOSITORY)
-        .put(CONNECTOR_SOURCE_VERSION_KEY, CONNECTOR_VERSION)
-        .build()
+      mutableMapOf(
+        JOB_TYPE to ConfigType.CHECK_CONNECTION_SOURCE,
+        JOB_ID_KEY to JOB_ID.toString(),
+        ATTEMPT_ID to 0,
+        CONNECTOR_SOURCE_KEY to SOURCE_DEF_NAME,
+        CONNECTOR_SOURCE_DEFINITION_ID_KEY to UUID1,
+        CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY to CONNECTOR_REPOSITORY,
+        CONNECTOR_SOURCE_VERSION_KEY to CONNECTOR_VERSION,
+      )
 
     val sourceDefinition =
       StandardSourceDefinition()
@@ -179,7 +177,7 @@ internal class JobTrackerTest {
     whenever(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, null))
       .thenReturn(sourceVersion)
     assertCheckConnCorrectMessageForEachState(
-      BiConsumer { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
+      { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
         jobTracker.trackCheckConnectionSource<Any?>(
           JOB_ID,
           UUID1,
@@ -199,16 +197,15 @@ internal class JobTrackerTest {
   @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testTrackCheckConnectionDestination() {
     val metadata: MutableMap<String?, Any?> =
-      ImmutableMap
-        .builder<String?, Any?>()
-        .put(JOB_TYPE, ConfigType.CHECK_CONNECTION_DESTINATION)
-        .put(JOB_ID_KEY, JOB_ID.toString())
-        .put(ATTEMPT_ID, 0)
-        .put("connector_destination", DESTINATION_DEF_NAME)
-        .put("connector_destination_definition_id", UUID2)
-        .put("connector_destination_docker_repository", CONNECTOR_REPOSITORY)
-        .put("connector_destination_version", CONNECTOR_VERSION)
-        .build()
+      mutableMapOf(
+        JOB_TYPE to ConfigType.CHECK_CONNECTION_DESTINATION,
+        JOB_ID_KEY to JOB_ID.toString(),
+        ATTEMPT_ID to 0,
+        "connector_destination" to DESTINATION_DEF_NAME,
+        "connector_destination_definition_id" to UUID2,
+        "connector_destination_docker_repository" to CONNECTOR_REPOSITORY,
+        "connector_destination_version" to CONNECTOR_VERSION,
+      )
 
     val destinationDefinition =
       StandardDestinationDefinition()
@@ -231,7 +228,7 @@ internal class JobTrackerTest {
       .thenReturn(StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME))
 
     assertCheckConnCorrectMessageForEachState(
-      BiConsumer { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
+      { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
         jobTracker.trackCheckConnectionDestination<Any?>(
           JOB_ID,
           UUID2,
@@ -248,7 +245,7 @@ internal class JobTrackerTest {
     whenever(actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, WORKSPACE_ID, null))
       .thenReturn(destinationVersion)
     assertCheckConnCorrectMessageForEachState(
-      BiConsumer { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
+      { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
         jobTracker.trackCheckConnectionDestination<Any?>(
           JOB_ID,
           UUID2,
@@ -268,16 +265,15 @@ internal class JobTrackerTest {
   @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testTrackDiscover() {
     val metadata: MutableMap<String?, Any?> =
-      ImmutableMap
-        .builder<String?, Any?>()
-        .put(JOB_TYPE, ConfigType.DISCOVER_SCHEMA)
-        .put(JOB_ID_KEY, JOB_ID.toString())
-        .put(ATTEMPT_ID, 0)
-        .put(CONNECTOR_SOURCE_KEY, SOURCE_DEF_NAME)
-        .put(CONNECTOR_SOURCE_DEFINITION_ID_KEY, UUID1)
-        .put(CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY, CONNECTOR_REPOSITORY)
-        .put(CONNECTOR_SOURCE_VERSION_KEY, CONNECTOR_VERSION)
-        .build()
+      mutableMapOf(
+        JOB_TYPE to ConfigType.DISCOVER_SCHEMA,
+        JOB_ID_KEY to JOB_ID.toString(),
+        ATTEMPT_ID to 0,
+        CONNECTOR_SOURCE_KEY to SOURCE_DEF_NAME,
+        CONNECTOR_SOURCE_DEFINITION_ID_KEY to UUID1,
+        CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY to CONNECTOR_REPOSITORY,
+        CONNECTOR_SOURCE_VERSION_KEY to CONNECTOR_VERSION,
+      )
 
     val sourceDefinition =
       StandardSourceDefinition()
@@ -295,7 +291,7 @@ internal class JobTrackerTest {
       .thenReturn(StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME))
 
     assertDiscoverCorrectMessageForEachState(
-      BiConsumer { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
+      { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
         jobTracker.trackDiscover(
           JOB_ID,
           UUID1,
@@ -312,7 +308,7 @@ internal class JobTrackerTest {
     whenever(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, WORKSPACE_ID, null))
       .thenReturn(sourceVersion)
     assertDiscoverCorrectMessageForEachState(
-      BiConsumer { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
+      { jobState: JobTracker.JobState?, output: ConnectorJobOutput? ->
         jobTracker.trackDiscover(
           JOB_ID,
           UUID1,
@@ -507,7 +503,7 @@ internal class JobTrackerTest {
         Map.of<String?, Any?>(FREQUENCY_KEY, "manual"),
         additionalExpectedMetadata,
       )
-    assertCorrectMessageForEachState(Consumer { jobState: JobTracker.JobState? -> jobTracker.trackSync(job, jobState!!) }, manualMetadata)
+    assertCorrectMessageForEachState({ jobState: JobTracker.JobState? -> jobTracker.trackSync(job, jobState!!) }, manualMetadata)
 
     // test when frequency is scheduled.
     whenever(connectionService.getStandardSync(CONNECTION_ID))
@@ -526,7 +522,7 @@ internal class JobTrackerTest {
         Map.of<String?, Any?>(FREQUENCY_KEY, "1 min"),
         additionalExpectedMetadata,
       )
-    assertCorrectMessageForEachState(Consumer { jobState: JobTracker.JobState? -> jobTracker.trackSync(job, jobState!!) }, scheduledMetadata)
+    assertCorrectMessageForEachState({ jobState: JobTracker.JobState? -> jobTracker.trackSync(job, jobState!!) }, scheduledMetadata)
   }
 
   @Test
@@ -559,23 +555,22 @@ internal class JobTrackerTest {
     val schema = deserialize(schemaJson)
 
     val expected: MutableMap<String?, Any?> =
-      ImmutableMap
-        .Builder<String?, Any?>()
-        .put("username", JobTracker.SET)
-        .put("has_ssl", false)
-        .put("password", JobTracker.SET)
-        .put("one_of.type_key", "foo")
-        .put("one_of.some_key", JobTracker.SET)
-        .put("const_object.sub_key", "bar")
-        .put("const_object.sub_array", "[1,2,3]")
-        .put("const_object.sub_object.sub_sub_key", "baz")
-        .put("enum_string", "foo")
-        .put("additionalPropertiesUnset.foo", JobTracker.SET)
-        .put("additionalPropertiesBoolean.foo", JobTracker.SET)
-        .put("additionalPropertiesSchema.foo", JobTracker.SET)
-        .put("additionalPropertiesConst.foo", 42)
-        .put("additionalPropertiesEnumString", "foo")
-        .build()
+      mutableMapOf(
+        "username" to JobTracker.SET,
+        "has_ssl" to false,
+        "password" to JobTracker.SET,
+        "one_of.type_key" to "foo",
+        "one_of.some_key" to JobTracker.SET,
+        "const_object.sub_key" to "bar",
+        "const_object.sub_array" to "[1,2,3]",
+        "const_object.sub_object.sub_sub_key" to "baz",
+        "enum_string" to "foo",
+        "additionalPropertiesUnset.foo" to JobTracker.SET,
+        "additionalPropertiesBoolean.foo" to JobTracker.SET,
+        "additionalPropertiesSchema.foo" to JobTracker.SET,
+        "additionalPropertiesConst.foo" to 42,
+        "additionalPropertiesEnumString" to "foo",
+      )
 
     val actual = configToMetadata(config, schema).toMutableMap()
 
@@ -675,36 +670,36 @@ internal class JobTrackerTest {
   }
 
   private fun configFailureJson(): JsonNode {
-    val linkedHashMap: MutableMap<String?, Any?> = LinkedHashMap<String?, Any?>()
+    val linkedHashMap: MutableMap<String?, Any?> = LinkedHashMap()
     linkedHashMap.put("failureOrigin", "source")
     linkedHashMap.put("failureType", "config_error")
     linkedHashMap.put("internalMessage", "Internal config error error msg")
     linkedHashMap.put("externalMessage", "Config error related msg")
-    linkedHashMap.put(METADATA, ImmutableMap.of<String?, String?>(SOME, METADATA))
+    linkedHashMap.put(METADATA, mapOf<String?, String?>(SOME to METADATA))
     linkedHashMap.put("retryable", true)
     linkedHashMap.put("timestamp", 1010)
     return jsonNode<MutableMap<String?, Any?>?>(linkedHashMap)
   }
 
   private fun systemFailureJson(): JsonNode {
-    val linkedHashMap1: MutableMap<String?, Any?> = LinkedHashMap<String?, Any?>()
+    val linkedHashMap1: MutableMap<String?, Any?> = LinkedHashMap()
     linkedHashMap1.put("failureOrigin", "replication")
     linkedHashMap1.put("failureType", "system_error")
     linkedHashMap1.put("internalMessage", "Internal system error error msg")
     linkedHashMap1.put("externalMessage", "System error related msg")
-    linkedHashMap1.put(METADATA, ImmutableMap.of<String?, String?>(SOME, METADATA))
+    linkedHashMap1.put(METADATA, mapOf<String?, String?>(SOME to METADATA))
     linkedHashMap1.put("retryable", true)
     linkedHashMap1.put("timestamp", 1100)
     return jsonNode<MutableMap<String?, Any?>?>(linkedHashMap1)
   }
 
   private fun unknownFailureJson(): JsonNode {
-    val linkedHashMap2: MutableMap<String?, Any?> = LinkedHashMap<String?, Any?>()
+    val linkedHashMap2: MutableMap<String?, Any?> = LinkedHashMap()
     linkedHashMap2.put("failureOrigin", null)
     linkedHashMap2.put("failureType", null)
     linkedHashMap2.put("internalMessage", "Internal unknown error error msg")
     linkedHashMap2.put("externalMessage", "Unknown error related msg")
-    linkedHashMap2.put(METADATA, ImmutableMap.of<String?, String?>(SOME, METADATA))
+    linkedHashMap2.put(METADATA, mapOf<String?, String?>(SOME to METADATA))
     linkedHashMap2.put("retryable", true)
     linkedHashMap2.put("timestamp", 1110)
     return jsonNode<MutableMap<String?, Any?>?>(linkedHashMap2)
@@ -716,11 +711,9 @@ internal class JobTrackerTest {
     additionalExpectedMetadata: MutableMap<String?, Any?>,
   ) {
     val failureMetadata: MutableMap<String?, Any?> =
-      ImmutableMap.of<String?, Any?>(
-        "failure_reasons",
-        arrayNode().addAll(Arrays.asList<JsonNode?>(configFailureJson(), systemFailureJson(), unknownFailureJson())).toString(),
-        "main_failure_reason",
-        configFailureJson().toString(),
+      mutableMapOf(
+        "failure_reasons" to arrayNode().addAll(listOf(configFailureJson(), systemFailureJson(), unknownFailureJson())).toString(),
+        "main_failure_reason" to configFailureJson().toString(),
       )
     testAsynchronousAttempt(
       configType,
@@ -790,9 +783,9 @@ internal class JobTrackerTest {
 
     val catalog =
       ConfiguredAirbyteCatalog().withStreams(
-        List.of<ConfiguredAirbyteStream>(
+        listOf(
           ConfiguredAirbyteStream(
-            AirbyteStream("stream", emptyObject(), List.of<SyncMode?>(SyncMode.FULL_REFRESH)).withNamespace("namespace"),
+            AirbyteStream("stream", emptyObject(), listOf(SyncMode.FULL_REFRESH)).withNamespace("namespace"),
             SyncMode.FULL_REFRESH,
             DestinationSyncMode.APPEND,
           ),
@@ -801,8 +794,8 @@ internal class JobTrackerTest {
 
     val attemptSyncConfig =
       AttemptSyncConfig()
-        .withSourceConfiguration(jsonNode<ImmutableMap<String?, String?>?>(ImmutableMap.of<String?, String?>(KEY, "some_value")))
-        .withDestinationConfiguration(jsonNode<ImmutableMap<String?, Boolean?>?>(ImmutableMap.of<String?, Boolean?>(KEY, false)))
+        .withSourceConfiguration(jsonNode(mapOf(KEY to "some_value")))
+        .withDestinationConfiguration(jsonNode(mapOf(KEY to false)))
 
     val jobConfig = mock<JobConfig>()
     whenever(jobConfig.configType).thenReturn(configType)
@@ -820,7 +813,7 @@ internal class JobTrackerTest {
           .withStreamsToRefresh(
             catalog.streams
               .stream()
-              .map<RefreshStream?> { s: ConfiguredAirbyteStream? ->
+              .map { s: ConfiguredAirbyteStream? ->
                 RefreshStream()
                   .withRefreshType(RefreshStream.RefreshType.TRUNCATE)
                   .withStreamDescriptor(StreamDescriptor().withName(s!!.stream.name).withNamespace(s.stream.namespace))
@@ -869,13 +862,9 @@ internal class JobTrackerTest {
       val attemptSyncConfig =
         AttemptSyncConfig()
           .withSourceConfiguration(
-            jsonNode<ImmutableMap<String?, String?>?>(
-              ImmutableMap.of<String?, String?>(KEY, "some_value"),
-            ),
+            jsonNode(mapOf(KEY to "some_value")),
           ).withDestinationConfiguration(
-            jsonNode<ImmutableMap<String?, Boolean?>?>(
-              ImmutableMap.of<String?, Boolean?>(KEY, false),
-            ),
+            jsonNode(mapOf(KEY to false)),
           )
       whenever(attempt.syncConfig)
         .thenReturn(Optional.of(attemptSyncConfig).orElse(null))
@@ -907,7 +896,7 @@ internal class JobTrackerTest {
   private fun getJobWithAttemptsMock(
     configType: ConfigType,
     jobId: Long,
-  ): Job = getJobWithAttemptsMock(configType, jobId, mutableListOf<Attempt?>(this.attemptMock))
+  ): Job = getJobWithAttemptsMock(configType, jobId, mutableListOf(this.attemptMock))
 
   @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   private fun getJobWithAttemptsMock(
@@ -959,14 +948,14 @@ internal class JobTrackerTest {
       val attemptWithSingleFailure = this.attemptMock
       val singleFailureSummary = mock<AttemptFailureSummary>()
       whenever(singleFailureSummary.failures)
-        .thenReturn(List.of<FailureReason?>(this.configFailureReasonMock))
+        .thenReturn(listOf(this.configFailureReasonMock))
       whenever(attemptWithSingleFailure.getFailureSummary())
         .thenReturn(Optional.of<AttemptFailureSummary>(singleFailureSummary))
 
       val attemptWithMultipleFailures = this.attemptMock
       val multipleFailuresSummary = mock<AttemptFailureSummary>()
       whenever(multipleFailuresSummary.failures)
-        .thenReturn(List.of<FailureReason?>(this.systemFailureReasonMock, this.unknownFailureReasonMock))
+        .thenReturn(listOf(this.systemFailureReasonMock, this.unknownFailureReasonMock))
       whenever(attemptWithMultipleFailures.getFailureSummary())
         .thenReturn(Optional.of<AttemptFailureSummary>(multipleFailuresSummary))
 
@@ -976,7 +965,7 @@ internal class JobTrackerTest {
 
       // in non-test cases we shouldn't actually get failures out of order chronologically
       // this is to verify that we are explicitly sorting the results with tracking failure metadata
-      return List.of<Attempt?>(attemptWithMultipleFailures, attemptWithSingleFailure, attemptWithNoFailures)
+      return mutableListOf(attemptWithMultipleFailures, attemptWithSingleFailure, attemptWithNoFailures)
     }
 
   @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
@@ -989,27 +978,26 @@ internal class JobTrackerTest {
     configType: ConfigType?,
     jobId: Long,
   ): MutableMap<String?, Any?> =
-    ImmutableMap
-      .builder<String?, Any?>()
-      .put(JOB_TYPE, if (configType != ConfigType.RESET_CONNECTION) configType else ConfigType.CLEAR)
-      .put(JOB_ID_KEY, jobId.toString())
-      .put(ATTEMPT_ID, 1)
-      .put("connection_id", CONNECTION_ID)
-      .put(CONNECTOR_SOURCE_KEY, SOURCE_DEF_NAME)
-      .put(CONNECTOR_SOURCE_DEFINITION_ID_KEY, UUID1)
-      .put(CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY, CONNECTOR_REPOSITORY)
-      .put(CONNECTOR_SOURCE_VERSION_KEY, CONNECTOR_VERSION)
-      .put("connector_destination", DESTINATION_DEF_NAME)
-      .put("connector_destination_definition_id", UUID2)
-      .put("connector_destination_docker_repository", CONNECTOR_REPOSITORY)
-      .put("connector_destination_version", CONNECTOR_VERSION)
-      .put("namespace_definition", JobSyncConfig.NamespaceDefinitionType.SOURCE)
-      .put("table_prefix", false)
-      .put("operation_count", 0)
-      .put("number_of_streams", 1)
-      .put("source_id", SOURCE_ID)
-      .put("destination_id", DESTINATION_ID)
-      .build()
+    mutableMapOf(
+      JOB_TYPE to if (configType != ConfigType.RESET_CONNECTION) configType else ConfigType.CLEAR,
+      JOB_ID_KEY to jobId.toString(),
+      ATTEMPT_ID to 1,
+      "connection_id" to CONNECTION_ID,
+      CONNECTOR_SOURCE_KEY to SOURCE_DEF_NAME,
+      CONNECTOR_SOURCE_DEFINITION_ID_KEY to UUID1,
+      CONNECTOR_SOURCE_DOCKER_REPOSITORY_KEY to CONNECTOR_REPOSITORY,
+      CONNECTOR_SOURCE_VERSION_KEY to CONNECTOR_VERSION,
+      "connector_destination" to DESTINATION_DEF_NAME,
+      "connector_destination_definition_id" to UUID2,
+      "connector_destination_docker_repository" to CONNECTOR_REPOSITORY,
+      "connector_destination_version" to CONNECTOR_VERSION,
+      "namespace_definition" to JobSyncConfig.NamespaceDefinitionType.SOURCE,
+      "table_prefix" to false,
+      "operation_count" to 0,
+      "number_of_streams" to 1,
+      "source_id" to SOURCE_ID,
+      "destination_id" to DESTINATION_ID,
+    )
 
   private fun assertCheckConnCorrectMessageForEachState(
     jobStateConsumer: BiConsumer<JobTracker.JobState?, ConnectorJobOutput?>,
@@ -1026,7 +1014,7 @@ internal class JobTrackerTest {
     connectionCheckSuccessOutput.status = StandardCheckConnectionOutput.Status.SUCCEEDED
     val checkConnectionSuccessJobOutput = ConnectorJobOutput().withCheckConnection(connectionCheckSuccessOutput)
     jobStateConsumer.accept(JobTracker.JobState.SUCCEEDED, checkConnectionSuccessJobOutput)
-    val checkConnSuccessMetadata: MutableMap<String?, Any?> = ImmutableMap.of<String?, Any?>("check_connection_outcome", "succeeded")
+    val checkConnSuccessMetadata: MutableMap<String?, Any?> = mutableMapOf("check_connection_outcome" to "succeeded")
 
     val connectionCheckFailureOutput = StandardCheckConnectionOutput()
     connectionCheckFailureOutput.status = StandardCheckConnectionOutput.Status.FAILED
@@ -1037,18 +1025,16 @@ internal class JobTrackerTest {
       checkConnectionFailureJobOutput,
     ) // The job still succeeded, only the connection check failed
     val checkConnFailureMetadata: MutableMap<String?, Any?> =
-      ImmutableMap.of<String?, Any?>(
-        "check_connection_outcome",
-        "failed",
-        "check_connection_message",
-        "Please check your Personal Access Token.",
+      mutableMapOf(
+        "check_connection_outcome" to "failed",
+        "check_connection_message" to "Please check your Personal Access Token.",
       )
 
     // Failure implies the job threw an exception which almost always meant no output.
     val failedCheckJobOutput = ConnectorJobOutput()
     failedCheckJobOutput.failureReason = this.configFailureReasonMock
     jobStateConsumer.accept(JobTracker.JobState.FAILED, failedCheckJobOutput)
-    val failedCheckJobMetadata: MutableMap<String?, Any?> = ImmutableMap.of<String?, Any?>("failure_reason", configFailureJson().toString())
+    val failedCheckJobMetadata: MutableMap<String?, Any?> = mutableMapOf("failure_reason" to configFailureJson().toString())
 
     if (workspaceSet) {
       assertCorrectMessageForStartedState(
@@ -1115,7 +1101,7 @@ internal class JobTrackerTest {
     failedDiscoverOutput.failureReason = this.systemFailureReasonMock
     jobStateConsumer.accept(JobTracker.JobState.FAILED, failedDiscoverOutput)
 
-    val failedDiscoverMetadata: MutableMap<String?, Any?> = ImmutableMap.of<String?, Any?>("failure_reason", systemFailureJson().toString())
+    val failedDiscoverMetadata: MutableMap<String?, Any?> = mutableMapOf("failure_reason" to systemFailureJson().toString())
 
     if (workspaceSet) {
       assertCorrectMessageForStartedState(JobTracker.DISCOVER_EVENT, metadata)
@@ -1177,12 +1163,11 @@ internal class JobTrackerTest {
       .track(eq(WORKSPACE_ID), eq(ScopeType.WORKSPACE), eq(action), any())
   }
 
-  private fun mockWorkspaceInfo(): MutableMap<String?, Any?> {
-    val map: MutableMap<String?, Any?> = HashMap<String?, Any?>()
-    map.put("workspace_id", WORKSPACE_ID)
-    map.put("workspace_name", WORKSPACE_NAME)
-    return map
-  }
+  private fun mockWorkspaceInfo(): MutableMap<String?, Any?> =
+    mutableMapOf(
+      "workspace_id" to WORKSPACE_ID,
+      "workspace_name" to WORKSPACE_NAME,
+    )
 
   companion object {
     private val OBJECT_MAPPER = ObjectMapper()
@@ -1221,56 +1206,48 @@ internal class JobTrackerTest {
     private const val SYNC_RECORDS_SYNC = 4L
     private const val LONG_JOB_ID = 10L // for sync the job id is a long not a uuid.
 
-    private val STARTED_STATE_METADATA: MutableMap<String?, Any?> =
-      ImmutableMap
-        .builder<String?, Any?>()
-        .put(ATTEMPT_STAGE_KEY, "STARTED")
-        .build()
+    private val STARTED_STATE_METADATA: MutableMap<String?, Any?> = mutableMapOf(ATTEMPT_STAGE_KEY to "STARTED")
     private val SUCCEEDED_STATE_METADATA: MutableMap<String?, Any?> =
-      ImmutableMap
-        .builder<String?, Any?>()
-        .put(ATTEMPT_STAGE_KEY, "ENDED")
-        .put("attempt_completion_status", JobTracker.JobState.SUCCEEDED)
-        .build()
+      mutableMapOf(
+        ATTEMPT_STAGE_KEY to "ENDED",
+        "attempt_completion_status" to JobTracker.JobState.SUCCEEDED,
+      )
     private val FAILED_STATE_METADATA: MutableMap<String?, Any?> =
-      ImmutableMap
-        .builder<String?, Any?>()
-        .put(ATTEMPT_STAGE_KEY, "ENDED")
-        .put("attempt_completion_status", JobTracker.JobState.FAILED)
-        .build()
+      mutableMapOf(
+        ATTEMPT_STAGE_KEY to "ENDED",
+        "attempt_completion_status" to JobTracker.JobState.FAILED,
+      )
     private val ATTEMPT_METADATA: MutableMap<String?, Any?> =
-      ImmutableMap
-        .builder<String?, Any?>()
-        .put("sync_start_time", SYNC_START_TIME)
-        .put("duration", SYNC_DURATION)
-        .put("volume_rows", SYNC_RECORDS_SYNC)
-        .put("volume_mb", SYNC_BYTES_SYNC)
-        .put("count_state_messages_from_source", 3L)
-        .put("count_state_messages_from_destination", 1L)
-        .put("max_seconds_before_source_state_message_emitted", 5L)
-        .put("mean_seconds_before_source_state_message_emitted", 4L)
-        .put("max_seconds_between_state_message_emit_and_commit", 7L)
-        .put("mean_seconds_between_state_message_emit_and_commit", 6L)
-        .put("replication_start_time", 7L)
-        .put("replication_end_time", 8L)
-        .put("source_read_start_time", 9L)
-        .put("source_read_end_time", 10L)
-        .put("destination_write_start_time", 11L)
-        .put("destination_write_end_time", 12L)
-        .build()
+      mutableMapOf(
+        "sync_start_time" to SYNC_START_TIME,
+        "duration" to SYNC_DURATION,
+        "volume_rows" to SYNC_RECORDS_SYNC,
+        "volume_mb" to SYNC_BYTES_SYNC,
+        "count_state_messages_from_source" to 3L,
+        "count_state_messages_from_destination" to 1L,
+        "max_seconds_before_source_state_message_emitted" to 5L,
+        "mean_seconds_before_source_state_message_emitted" to 4L,
+        "max_seconds_between_state_message_emit_and_commit" to 7L,
+        "mean_seconds_between_state_message_emit_and_commit" to 6L,
+        "replication_start_time" to 7L,
+        "replication_end_time" to 8L,
+        "source_read_start_time" to 9L,
+        "source_read_end_time" to 10L,
+        "destination_write_start_time" to 11L,
+        "destination_write_end_time" to 12L,
+      )
     private val SYNC_CONFIG_METADATA: MutableMap<String?, Any?> =
-      ImmutableMap
-        .builder<String?, Any?>()
-        .put(JobTracker.CONFIG + ".source", "{\"key\":\"set\"}")
-        .put(JobTracker.CONFIG + ".destination", "{\"key\":false}")
-        .put(JobTracker.CATALOG + ".sync_mode.full_refresh", JobTracker.SET)
-        .put(JobTracker.CATALOG + ".destination_sync_mode.append", JobTracker.SET)
-        .put("namespace_definition", JobSyncConfig.NamespaceDefinitionType.SOURCE)
-        .put("table_prefix", false)
-        .put("operation_count", 0)
-        .put("source_id", SOURCE_ID)
-        .put("destination_id", DESTINATION_ID)
-        .build()
+      mutableMapOf(
+        JobTracker.CONFIG + ".source" to "{\"key\":\"set\"}",
+        JobTracker.CONFIG + ".destination" to "{\"key\":false}",
+        JobTracker.CATALOG + ".sync_mode.full_refresh" to JobTracker.SET,
+        JobTracker.CATALOG + ".destination_sync_mode.append" to JobTracker.SET,
+        "namespace_definition" to JobSyncConfig.NamespaceDefinitionType.SOURCE,
+        "table_prefix" to false,
+        "operation_count" to 0,
+        "source_id" to SOURCE_ID,
+        "destination_id" to DESTINATION_ID,
+      )
     private val catalogHelpers = CatalogHelpers(FieldGenerator())
     private val CATALOG: ConfiguredAirbyteCatalog =
       catalogHelpers
@@ -1334,10 +1311,10 @@ internal class JobTrackerTest {
      </V></K> */
     @SafeVarargs
     private fun <K, V> mergeMaps(vararg maps: MutableMap<K?, V?>?): MutableMap<K?, V?> {
-      val outputMap: MutableMap<K?, V?> = HashMap<K?, V?>()
+      val outputMap: MutableMap<K?, V?> = HashMap()
 
       for (map in maps) {
-        Preconditions.checkNotNull<MutableMap<K?, V?>?>(map!!)
+        Preconditions.checkNotNull(map!!)
         outputMap.putAll(map)
       }
 

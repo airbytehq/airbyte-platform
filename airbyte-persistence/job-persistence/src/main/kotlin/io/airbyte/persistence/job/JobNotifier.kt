@@ -4,7 +4,6 @@
 
 package io.airbyte.persistence.job
 
-import com.google.common.collect.ImmutableMap
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.config.Attempt
@@ -167,8 +166,8 @@ class JobNotifier(
     connectionId: UUID,
     notificationItem: NotificationItem,
   ): Map<String, Any?> {
-    val notificationMetadata = ImmutableMap.builder<String, Any?>()
-    notificationMetadata.put("connection_id", connectionId)
+    val notificationMetadata = mutableMapOf<String, Any?>()
+    notificationMetadata["connection_id"] = connectionId
     val notificationTypes: MutableList<String> = ArrayList()
     for (notificationType in notificationItem.notificationType) {
       // NOTE: NotificationType.SLACK is used for both slack and traditional webhook notifications.
@@ -185,9 +184,9 @@ class JobNotifier(
       }
     }
     if (!notificationTypes.isEmpty()) {
-      notificationMetadata.put("notification_type", notificationTypes)
+      notificationMetadata["notification_type"] = notificationTypes
     }
-    return notificationMetadata.build()
+    return notificationMetadata.toMap()
   }
 
   private fun submitToMetricClient(

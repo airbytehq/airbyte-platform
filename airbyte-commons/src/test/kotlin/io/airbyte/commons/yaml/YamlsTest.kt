@@ -6,17 +6,16 @@ package io.airbyte.commons.yaml
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.yaml.Yamls.serializeWithoutQuotes
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.util.Objects
 
 internal class YamlsTest {
   @Test
   fun testSerialize() {
-    Assertions.assertEquals(
+    assertEquals(
       (
         LINE_BREAK +
           STR_ABC +
@@ -26,26 +25,19 @@ internal class YamlsTest {
       Yamls.serialize<ToClass?>(ToClass(ABC, 999, 888L)),
     )
 
-    Assertions.assertEquals(
+    assertEquals(
       (
         LINE_BREAK +
           "test: \"abc\"\n" +
           "test2: \"def\"\n"
       ),
-      Yamls.serialize<ImmutableMap<String?, String?>?>(
-        ImmutableMap.of<String?, String?>(
-          "test",
-          ABC,
-          "test2",
-          "def",
-        ),
-      ),
+      Yamls.serialize(mapOf("test" to ABC, "test2" to "def")),
     )
   }
 
   @Test
   fun testSerializeWithoutQuotes() {
-    Assertions.assertEquals(
+    assertEquals(
       (
         LINE_BREAK +
           "str: abc\n" +
@@ -55,26 +47,21 @@ internal class YamlsTest {
       serializeWithoutQuotes(ToClass(ABC, 999, 888L)),
     )
 
-    Assertions.assertEquals(
+    assertEquals(
       (
         LINE_BREAK +
           "test: abc\n" +
           "test2: def\n"
       ),
       serializeWithoutQuotes(
-        ImmutableMap.of<String?, String?>(
-          "test",
-          ABC,
-          "test2",
-          "def",
-        ),
+        mapOf("test" to ABC, "test2" to "def"),
       ),
     )
   }
 
   @Test
   fun testSerializeJsonNode() {
-    Assertions.assertEquals(
+    assertEquals(
       (
         LINE_BREAK +
           STR_ABC +
@@ -84,20 +71,15 @@ internal class YamlsTest {
       Yamls.serialize<JsonNode?>(jsonNode<ToClass?>(ToClass(ABC, 999, 888L))),
     )
 
-    Assertions.assertEquals(
+    assertEquals(
       (
         LINE_BREAK +
           "test: \"abc\"\n" +
           "test2: \"def\"\n"
       ),
       Yamls.serialize<JsonNode?>(
-        jsonNode<ImmutableMap<String?, String?>?>(
-          ImmutableMap.of<String?, String?>(
-            "test",
-            ABC,
-            "test2",
-            "def",
-          ),
+        jsonNode(
+          mapOf("test" to ABC, "test2" to "def"),
         ),
       ),
     )
@@ -105,7 +87,7 @@ internal class YamlsTest {
 
   @Test
   fun testDeserialize() {
-    Assertions.assertEquals(
+    assertEquals(
       ToClass(ABC, 999, 888L),
       Yamls.deserialize(
         (
@@ -121,7 +103,7 @@ internal class YamlsTest {
 
   @Test
   fun testDeserializeToJsonNode() {
-    Assertions.assertEquals(
+    assertEquals(
       "{\"str\":\"abc\"}",
       Yamls
         .deserialize(
@@ -130,7 +112,7 @@ internal class YamlsTest {
         ).toString(),
     )
 
-    Assertions.assertEquals(
+    assertEquals(
       "[{\"str\":\"abc\"},{\"str\":\"abc\"}]",
       Yamls
         .deserialize(
@@ -161,14 +143,14 @@ internal class YamlsTest {
       this.numLong = numLong
     }
 
-    override fun equals(o: Any?): Boolean {
-      if (this === o) {
+    override fun equals(other: Any?): Boolean {
+      if (this === other) {
         return true
       }
-      if (o == null || javaClass != o.javaClass) {
+      if (other == null || javaClass != other.javaClass) {
         return false
       }
-      val toClass = o as ToClass
+      val toClass = other as ToClass
       return numLong == toClass.numLong &&
         str == toClass.str &&
         num == toClass.num

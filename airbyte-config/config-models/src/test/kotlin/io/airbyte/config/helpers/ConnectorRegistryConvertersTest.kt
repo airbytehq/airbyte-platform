@@ -4,7 +4,6 @@
 
 package io.airbyte.config.helpers
 
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.version.Version
 import io.airbyte.config.AbInternal
@@ -38,9 +37,11 @@ import io.airbyte.config.helpers.ConnectorRegistryConverters.toStandardDestinati
 import io.airbyte.config.helpers.ConnectorRegistryConverters.toStandardSourceDefinition
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
-import org.junit.jupiter.api.function.ThrowingSupplier
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.util.List
@@ -101,9 +102,9 @@ internal class ConnectorRegistryConvertersTest {
         .withSuggestedStreams(suggestedStreams)
         .withSupportsFileTransfer(true)
 
-    Assertions.assertEquals(stdSourceDef, toStandardSourceDefinition(registrySourceDef))
-    Assertions.assertEquals(actorDefinitionVersion, toActorDefinitionVersion(registrySourceDef))
-    Assertions.assertEquals(expectedBreakingChanges, toActorDefinitionBreakingChanges(registrySourceDef))
+    assertEquals(stdSourceDef, toStandardSourceDefinition(registrySourceDef))
+    assertEquals(actorDefinitionVersion, toActorDefinitionVersion(registrySourceDef))
+    assertEquals(expectedBreakingChanges, toActorDefinitionBreakingChanges(registrySourceDef))
   }
 
   @Test
@@ -130,8 +131,8 @@ internal class ConnectorRegistryConvertersTest {
         .withReleases(ConnectorReleasesSource().withBreakingChanges(sourceRegistryBreakingChanges))
 
     val convertedAdv = toActorDefinitionVersion(registrySourceDef)
-    Assertions.assertEquals(SupportLevel.NONE, convertedAdv.getSupportLevel())
-    Assertions.assertFalse(convertedAdv.getSupportsFileTransfer())
+    assertEquals(SupportLevel.NONE, convertedAdv.getSupportLevel())
+    assertFalse(convertedAdv.getSupportsFileTransfer())
   }
 
   @Test
@@ -186,9 +187,9 @@ internal class ConnectorRegistryConvertersTest {
         .withSupportsFileTransfer(true)
         .withSupportsDataActivation(true)
 
-    Assertions.assertEquals(stdDestinationDef, toStandardDestinationDefinition(registryDestinationDef))
-    Assertions.assertEquals(actorDefinitionVersion, toActorDefinitionVersion(registryDestinationDef))
-    Assertions.assertEquals(expectedBreakingChanges, toActorDefinitionBreakingChanges(registryDestinationDef))
+    assertEquals(stdDestinationDef, toStandardDestinationDefinition(registryDestinationDef))
+    assertEquals(actorDefinitionVersion, toActorDefinitionVersion(registryDestinationDef))
+    assertEquals(expectedBreakingChanges, toActorDefinitionBreakingChanges(registryDestinationDef))
   }
 
   @Test
@@ -212,7 +213,7 @@ internal class ConnectorRegistryConvertersTest {
         .withReleases(ConnectorReleasesDestination().withBreakingChanges(destinationBreakingChanges))
 
     val convertedAdv = toActorDefinitionVersion(registryDestinationDef)
-    Assertions.assertEquals(SupportLevel.NONE, convertedAdv.getSupportLevel())
+    assertEquals(SupportLevel.NONE, convertedAdv.getSupportLevel())
   }
 
   @Test
@@ -237,46 +238,46 @@ internal class ConnectorRegistryConvertersTest {
 
     val actorDefinitionBreakingChanges =
       toActorDefinitionBreakingChanges(registryDestinationDef)
-    Assertions.assertEquals(expectedBreakingChanges.size, actorDefinitionBreakingChanges.size)
+    assertEquals(expectedBreakingChanges.size, actorDefinitionBreakingChanges.size)
     for (actorDefinitionBreakingChange in actorDefinitionBreakingChanges) {
-      Assertions.assertEquals(actorDefinitionBreakingChange.getScopedImpact(), mutableListOf<Any?>())
+      assertEquals(actorDefinitionBreakingChange.getScopedImpact(), mutableListOf<Any?>())
     }
   }
 
   @Test
   fun testParseSourceDefinitionWithNoBreakingChangesReturnsEmptyList() {
     var registrySourceDef: ConnectorRegistrySourceDefinition? = ConnectorRegistrySourceDefinition()
-    Assertions.assertEquals(toActorDefinitionBreakingChanges(registrySourceDef), mutableListOf<Any?>())
+    assertEquals(toActorDefinitionBreakingChanges(registrySourceDef), mutableListOf<Any?>())
 
     registrySourceDef = ConnectorRegistrySourceDefinition().withReleases(ConnectorReleasesSource())
-    Assertions.assertEquals(toActorDefinitionBreakingChanges(registrySourceDef), mutableListOf<Any?>())
+    assertEquals(toActorDefinitionBreakingChanges(registrySourceDef), mutableListOf<Any?>())
 
     registrySourceDef =
       ConnectorRegistrySourceDefinition()
         .withReleases(ConnectorReleasesSource().withBreakingChanges(BreakingChanges()))
         .withSourceDefinitionId(UUID.randomUUID())
-    Assertions.assertEquals(toActorDefinitionBreakingChanges(registrySourceDef), mutableListOf<Any?>())
+    assertEquals(toActorDefinitionBreakingChanges(registrySourceDef), mutableListOf<Any?>())
   }
 
   @Test
   fun testParseDestinationDefinitionWithNoBreakingChangesReturnsEmptyList() {
     var registryDestinationDef: ConnectorRegistryDestinationDefinition? = ConnectorRegistryDestinationDefinition()
-    Assertions.assertEquals(toActorDefinitionBreakingChanges(registryDestinationDef), mutableListOf<Any?>())
+    assertEquals(toActorDefinitionBreakingChanges(registryDestinationDef), mutableListOf<Any?>())
 
     registryDestinationDef = ConnectorRegistryDestinationDefinition().withReleases(ConnectorReleasesDestination())
-    Assertions.assertEquals(toActorDefinitionBreakingChanges(registryDestinationDef), mutableListOf<Any?>())
+    assertEquals(toActorDefinitionBreakingChanges(registryDestinationDef), mutableListOf<Any?>())
 
     registryDestinationDef =
       ConnectorRegistryDestinationDefinition()
         .withReleases(ConnectorReleasesDestination().withBreakingChanges(BreakingChanges()))
         .withDestinationDefinitionId(UUID.randomUUID())
-    Assertions.assertEquals(toActorDefinitionBreakingChanges(registryDestinationDef), mutableListOf<Any?>())
+    assertEquals(toActorDefinitionBreakingChanges(registryDestinationDef), mutableListOf<Any?>())
   }
 
   @Test
   fun testToReleaseCandidateSourceDefinitions() {
     var registrySourceDef = ConnectorRegistrySourceDefinition()
-    Assertions.assertEquals(toRcSourceDefinitions(registrySourceDef), mutableListOf<Any?>())
+    assertEquals(toRcSourceDefinitions(registrySourceDef), mutableListOf<Any?>())
 
     registrySourceDef =
       ConnectorRegistrySourceDefinition()
@@ -289,9 +290,9 @@ internal class ConnectorRegistryConvertersTest {
           ),
         )
     var rcDefs = toRcSourceDefinitions(registrySourceDef)
-    Assertions.assertEquals(rcDefs.size, 1)
-    Assertions.assertEquals(rcDefs.get(0)!!.getDockerImageTag(), DOCKER_TAG)
-    Assertions.assertEquals(rcDefs.get(0)!!.getDockerRepository(), DOCKER_REPOSITORY)
+    assertEquals(rcDefs.size, 1)
+    assertEquals(rcDefs[0].dockerImageTag, DOCKER_TAG)
+    assertEquals(rcDefs[0].dockerRepository, DOCKER_REPOSITORY)
 
     registrySourceDef =
       ConnectorRegistrySourceDefinition()
@@ -304,13 +305,13 @@ internal class ConnectorRegistryConvertersTest {
           ),
         )
     rcDefs = toRcSourceDefinitions(registrySourceDef)
-    Assertions.assertEquals(rcDefs.size, 0)
+    assertEquals(rcDefs.size, 0)
   }
 
   @Test
   fun testToReleaseCandidateDestinationDefinitions() {
     var registryDestinationDef = ConnectorRegistryDestinationDefinition()
-    Assertions.assertEquals(toRcDestinationDefinitions(registryDestinationDef), mutableListOf<Any?>())
+    assertEquals(toRcDestinationDefinitions(registryDestinationDef), mutableListOf<Any?>())
 
     registryDestinationDef =
       ConnectorRegistryDestinationDefinition()
@@ -325,9 +326,9 @@ internal class ConnectorRegistryConvertersTest {
 
     var rcDefs =
       toRcDestinationDefinitions(registryDestinationDef)
-    Assertions.assertEquals(rcDefs.size, 1)
-    Assertions.assertEquals(rcDefs.get(0)!!.getDockerImageTag(), DOCKER_TAG)
-    Assertions.assertEquals(rcDefs.get(0)!!.getDockerRepository(), DOCKER_REPOSITORY)
+    assertEquals(rcDefs.size, 1)
+    assertEquals(rcDefs[0].dockerImageTag, DOCKER_TAG)
+    assertEquals(rcDefs[0].dockerRepository, DOCKER_REPOSITORY)
 
     registryDestinationDef =
       ConnectorRegistryDestinationDefinition()
@@ -340,7 +341,7 @@ internal class ConnectorRegistryConvertersTest {
           ),
         )
     rcDefs = toRcDestinationDefinitions(registryDestinationDef)
-    Assertions.assertEquals(rcDefs.size, 0)
+    assertEquals(rcDefs.size, 0)
   }
 
   @Test
@@ -372,11 +373,11 @@ internal class ConnectorRegistryConvertersTest {
     // Normal behavior
     val rollout = toConnectorRollout(rcDef, rcAdv, initialAdv)
 
-    Assertions.assertEquals(actorDefinitionId, rollout.actorDefinitionId)
-    Assertions.assertEquals(rolloutConfiguration.getInitialPercentage().toInt(), rollout.initialRolloutPct)
-    Assertions.assertEquals(rolloutConfiguration.getMaxPercentage().toInt(), rollout.finalTargetRolloutPct)
-    Assertions.assertEquals(rolloutConfiguration.getAdvanceDelayMinutes().toInt(), rollout.maxStepWaitTimeMins)
-    Assertions.assertEquals(ConnectorEnumRolloutState.INITIALIZED, rollout.state)
+    assertEquals(actorDefinitionId, rollout.actorDefinitionId)
+    assertEquals(rolloutConfiguration.getInitialPercentage().toInt(), rollout.initialRolloutPct)
+    assertEquals(rolloutConfiguration.getMaxPercentage().toInt(), rollout.finalTargetRolloutPct)
+    assertEquals(rolloutConfiguration.getAdvanceDelayMinutes().toInt(), rollout.maxStepWaitTimeMins)
+    assertEquals(ConnectorEnumRolloutState.INITIALIZED, rollout.state)
 
     // With dockerImageTag mismatch
     val rcDefWithDockerImageTagMismatch =
@@ -391,9 +392,9 @@ internal class ConnectorRegistryConvertersTest {
         .withVersionId(advId)
         .withDockerImageTag("1.1.0")
         .withDockerRepository(DOCKER_REPOSITORY)
-    Assertions.assertThrows<AssertionError?>(
+    assertThrows(
       AssertionError::class.java,
-      Executable {
+      {
         toConnectorRollout(rcDefWithDockerImageTagMismatch, rcAdvWithDockerImageTagMismatch, initialAdv)
       },
     )
@@ -411,9 +412,9 @@ internal class ConnectorRegistryConvertersTest {
         .withVersionId(advId)
         .withDockerImageTag(DOCKER_TAG)
         .withDockerRepository(DOCKER_REPOSITORY)
-    Assertions.assertThrows<AssertionError?>(
+    assertThrows(
       AssertionError::class.java,
-      Executable {
+      {
         toConnectorRollout(rcDefWithDefinitionIdTagMismatch, rcAdvWithDefinitionIdMismatch, initialAdv)
       },
     )
@@ -431,9 +432,9 @@ internal class ConnectorRegistryConvertersTest {
         .withVersionId(advId)
         .withDockerImageTag(DOCKER_TAG)
         .withDockerRepository("airbyte/source-mismatch")
-    Assertions.assertThrows<AssertionError?>(
+    assertThrows(
       AssertionError::class.java,
-      Executable {
+      {
         toConnectorRollout(rcDefDockerRepoMismatch, rcAdvDockerRepoMismatch, initialAdv)
       },
     )
@@ -453,16 +454,16 @@ internal class ConnectorRegistryConvertersTest {
         .withDockerImageTag(dockerImageTag)
 
     if (isValid) {
-      Assertions.assertDoesNotThrow<ActorDefinitionVersion?>(ThrowingSupplier { toActorDefinitionVersion(registrySourceDefinition) })
-      Assertions.assertDoesNotThrow<ActorDefinitionVersion?>(ThrowingSupplier { toActorDefinitionVersion(registryDestinationDefinition) })
+      assertDoesNotThrow({ toActorDefinitionVersion(registrySourceDefinition) })
+      assertDoesNotThrow({ toActorDefinitionVersion(registryDestinationDefinition) })
     } else {
-      Assertions.assertThrows<IllegalArgumentException?>(
+      assertThrows(
         IllegalArgumentException::class.java,
-        Executable { toActorDefinitionVersion(registrySourceDefinition) },
+        { toActorDefinitionVersion(registrySourceDefinition) },
       )
-      Assertions.assertThrows<IllegalArgumentException?>(
+      assertThrows(
         IllegalArgumentException::class.java,
-        Executable { toActorDefinitionVersion(registryDestinationDefinition) },
+        { toActorDefinitionVersion(registryDestinationDefinition) },
       )
     }
   }
@@ -487,7 +488,7 @@ internal class ConnectorRegistryConvertersTest {
     private val SPEC: ConnectorSpecification? =
       ConnectorSpecification()
         .withConnectionSpecification(
-          jsonNode<ImmutableMap<String?, String?>?>(ImmutableMap.of<String?, String?>("key", "val")),
+          jsonNode(mapOf("key" to "val")),
         ).withProtocolVersion(PROTOCOL_VERSION)
     private val ALLOWED_HOSTS: AllowedHosts? = AllowedHosts().withHosts(mutableListOf<String?>("host1", "host2"))
     private val RESOURCE_REQUIREMENTS: ScopedResourceRequirements? =

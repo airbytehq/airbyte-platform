@@ -6,7 +6,6 @@ package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.ImmutableMap
 import io.airbyte.oauth.BaseOAuth2Flow
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
@@ -52,11 +51,8 @@ class AsanaOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>()
-      .putAll(super.getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl))
-      .put("grant_type", "authorization_code")
-      .build()
+    mapOf("grant_type" to "authorization_code") +
+      super.getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl)
 
   companion object {
     private const val AUTHORIZE_URL = "https://app.asana.com/-/oauth_authorize"

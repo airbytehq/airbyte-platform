@@ -6,7 +6,6 @@ package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.ImmutableMap
 import io.airbyte.oauth.BaseOAuth2Flow
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
@@ -60,14 +59,13 @@ class MicrosoftOneDriveOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>()
-      .put("client_id", clientId)
-      .put("code", authCode)
-      .put("redirect_uri", redirectUrl)
-      .put("client_secret", clientSecret)
-      .put("grant_type", "authorization_code")
-      .build()
+    mapOf(
+      "grant_type" to "authorization_code",
+      "code" to authCode,
+      "client_id" to clientId,
+      "client_secret" to clientSecret,
+      "redirect_uri" to redirectUrl,
+    )
 
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String {
     val tenantId = getConfigValueUnsafe(inputOAuthConfiguration, FIELD_NAME)

@@ -10,9 +10,6 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.BinaryNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.TextNode
-import com.google.common.base.Charsets
-import com.google.common.collect.ImmutableList
-import com.google.common.collect.ImmutableMap
 import com.google.common.collect.Lists
 import com.google.common.collect.Sets
 import io.airbyte.commons.json.Jsons.arrayNode
@@ -39,75 +36,54 @@ import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.CatalogHelpers
 import io.airbyte.protocol.models.v0.Field
 import org.assertj.core.util.Maps
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotSame
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import java.io.IOException
-import java.io.Serializable
 import java.nio.charset.StandardCharsets
-import java.util.Map
 import java.util.Objects
 import java.util.Optional
 
 internal class JsonsTest {
   @Test
   fun testSerialize() {
-    Assertions.assertEquals(
+    assertEquals(
       SERIALIZED_JSON,
       Jsons.serialize<ToClass?>(ToClass(ABC, 999, 888L)),
     )
 
-    Assertions.assertEquals(
+    assertEquals(
       "{\"test\":\"abc\",\"test2\":\"def\"}",
-      Jsons.serialize<ImmutableMap<String?, String?>?>(
-        ImmutableMap.of<String?, String?>(
-          TEST,
-          ABC,
-          TEST2,
-          DEF,
-        ),
-      ),
+      Jsons.serialize(mapOf(TEST to ABC, TEST2 to DEF)),
     )
   }
 
   @Test
   fun testSerializeJsonNode() {
-    Assertions.assertEquals(
+    assertEquals(
       SERIALIZED_JSON,
       Jsons.serialize<JsonNode?>(jsonNode<ToClass?>(ToClass(ABC, 999, 888L))),
     )
 
-    Assertions.assertEquals(
+    assertEquals(
       "{\"test\":\"abc\",\"test2\":\"def\"}",
-      Jsons.serialize<JsonNode?>(
-        jsonNode<ImmutableMap<String?, String?>?>(
-          ImmutableMap.of<String?, String?>(
-            TEST,
-            ABC,
-            TEST2,
-            DEF,
-          ),
-        ),
-      ),
+      Jsons.serialize<JsonNode?>(jsonNode(mapOf(TEST to ABC, TEST2 to DEF))),
     )
     // issue: 5878 add test for binary node serialization, binary data are
     // serialized into base64
-    Assertions.assertEquals(
+    assertEquals(
       "{\"test\":\"dGVzdA==\"}",
       Jsons.serialize<JsonNode?>(
-        jsonNode<ImmutableMap<String?, BinaryNode?>?>(
-          ImmutableMap.of<String?, BinaryNode?>(
-            TEST,
-            BinaryNode("test".toByteArray(StandardCharsets.UTF_8)),
-          ),
-        ),
+        jsonNode(mapOf(TEST to BinaryNode("test".toByteArray(StandardCharsets.UTF_8)))),
       ),
     )
   }
 
   @Test
   fun testDeserialize() {
-    Assertions.assertEquals(
+    assertEquals(
       ToClass(ABC, 999, 888L),
       Jsons.deserialize("{\"str\":\"abc\", \"num\": 999, \"numLong\": 888}", ToClass::class.java),
     )
@@ -115,18 +91,18 @@ internal class JsonsTest {
 
   @Test
   fun testDeserializeToJsonNode() {
-    Assertions.assertEquals(
+    assertEquals(
       SERIALIZED_JSON2,
       Jsons.deserialize(SERIALIZED_JSON2).toString(),
     )
 
-    Assertions.assertEquals(
+    assertEquals(
       "[{\"str\":\"abc\"},{\"str\":\"abc\"}]",
       Jsons.deserialize("[{\"str\":\"abc\"},{\"str\":\"abc\"}]").toString(),
     )
     // issue: 5878 add test for binary node deserialization, for now should be
     // base64 string
-    Assertions.assertEquals(
+    assertEquals(
       "{\"test\":\"dGVzdA==\"}",
       Jsons.deserialize("{\"test\":\"dGVzdA==\"}").toString(),
     )
@@ -134,12 +110,12 @@ internal class JsonsTest {
 
   @Test
   fun testTryDeserializeToJsonNode() {
-    Assertions.assertEquals(
+    assertEquals(
       Optional.of<JsonNode?>(Jsons.deserialize(SERIALIZED_JSON2)),
       tryDeserialize(SERIALIZED_JSON2),
     )
 
-    Assertions.assertEquals(
+    assertEquals(
       Optional.empty<Any?>(),
       tryDeserialize("{\"str\":\"abc\", \"num\": 999, \"test}"),
     )
@@ -147,36 +123,22 @@ internal class JsonsTest {
 
   @Test
   fun testToJsonNode() {
-    Assertions.assertEquals(
+    assertEquals(
       SERIALIZED_JSON,
       jsonNode<ToClass?>(ToClass(ABC, 999, 888L)).toString(),
     )
 
-    Assertions.assertEquals(
+    assertEquals(
       "{\"test\":\"abc\",\"test2\":\"def\"}",
-      jsonNode<ImmutableMap<String?, String?>?>(
-        ImmutableMap.of<String?, String?>(
-          TEST,
-          ABC,
-          TEST2,
-          DEF,
-        ),
-      ).toString(),
+      jsonNode(mapOf(TEST to ABC, TEST2 to DEF)).toString(),
     )
 
-    Assertions.assertEquals(
+    assertEquals(
       "{\"test\":\"abc\",\"test2\":{\"inner\":1}}",
-      jsonNode<ImmutableMap<String?, Serializable?>?>(
-        ImmutableMap.of<String?, Serializable?>(
-          TEST,
-          ABC,
-          TEST2,
-          ImmutableMap.of<String?, Int?>("inner", 1),
-        ),
-      ).toString(),
+      jsonNode(mapOf(TEST to ABC, TEST2 to mapOf("inner" to 1))).toString(),
     )
 
-    Assertions.assertEquals(
+    assertEquals(
       jsonNode<ToClass?>(ToClass(ABC, 999, 888L)),
       jsonNode<JsonNode?>(jsonNode<ToClass?>(ToClass(ABC, 999, 888L))),
     )
@@ -184,58 +146,58 @@ internal class JsonsTest {
 
   @Test
   fun testEmptyObject() {
-    Assertions.assertEquals(Jsons.deserialize("{}"), emptyObject())
+    assertEquals(Jsons.deserialize("{}"), emptyObject())
   }
 
   @Test
   fun testArrayNode() {
-    Assertions.assertEquals(Jsons.deserialize("[]"), arrayNode())
+    assertEquals(Jsons.deserialize("[]"), arrayNode())
   }
 
   @Test
   fun testToObject() {
     val expected = ToClass(ABC, 999, 888L)
-    Assertions.assertEquals(
+    assertEquals(
       expected,
-      Jsons.`object`(jsonNode<ToClass?>(expected), ToClass::class.java),
+      `object`(jsonNode<ToClass?>(expected), ToClass::class.java),
     )
 
-    Assertions.assertEquals(
+    assertEquals(
       Lists.newArrayList<ToClass?>(expected),
-      `object`<MutableList<ToClass?>?>(
-        jsonNode<ArrayList<ToClass?>?>(Lists.newArrayList<ToClass?>(expected)),
+      `object`(
+        jsonNode<ArrayList<ToClass?>?>(Lists.newArrayList(expected)),
         object : TypeReference<MutableList<ToClass?>?>() {},
       ),
     )
 
-    Assertions.assertEquals(
+    assertEquals(
       ToClass(),
-      Jsons.`object`(Jsons.deserialize("{\"a\":1}"), ToClass::class.java),
+      `object`(Jsons.deserialize("{\"a\":1}"), ToClass::class.java),
     )
   }
 
   @Test
   fun testTryToObject() {
     val expected = ToClass(ABC, 999, 888L)
-    Assertions.assertEquals(
+    assertEquals(
       Optional.of<ToClass?>(expected),
-      Jsons.tryObject(Jsons.deserialize(SERIALIZED_JSON), ToClass::class.java),
+      tryObject(Jsons.deserialize(SERIALIZED_JSON), ToClass::class.java),
     )
 
-    Assertions.assertEquals(
+    assertEquals(
       Optional.of<ToClass?>(expected),
-      Jsons.tryObject(Jsons.deserialize(SERIALIZED_JSON), object : TypeReference<ToClass>() {}),
+      tryObject(Jsons.deserialize(SERIALIZED_JSON), object : TypeReference<ToClass>() {}),
     )
 
     val emptyExpected = ToClass()
-    Assertions.assertEquals(
+    assertEquals(
       Optional.of<ToClass?>(emptyExpected),
-      Jsons.tryObject(Jsons.deserialize("{\"str1\":\"abc\"}"), ToClass::class.java),
+      tryObject(Jsons.deserialize("{\"str1\":\"abc\"}"), ToClass::class.java),
     )
 
-    Assertions.assertEquals(
+    assertEquals(
       Optional.of<ToClass?>(emptyExpected),
-      Jsons.tryObject(Jsons.deserialize("{\"str1\":\"abc\"}"), object : TypeReference<ToClass>() {}),
+      tryObject(Jsons.deserialize("{\"str1\":\"abc\"}"), object : TypeReference<ToClass>() {}),
     )
   }
 
@@ -243,104 +205,78 @@ internal class JsonsTest {
   fun testClone() {
     val expected = ToClass("abc", 999, 888L)
     val actual = clone<ToClass>(expected)
-    Assertions.assertNotSame(expected, actual)
-    Assertions.assertEquals(expected, actual)
+    assertNotSame(expected, actual)
+    assertEquals(expected, actual)
   }
 
   @Test
   fun testToBytes() {
     val jsonString = "{\"test\":\"abc\",\"type\":[\"object\"]}"
-    Assertions.assertArrayEquals(jsonString.toByteArray(Charsets.UTF_8), toBytes(Jsons.deserialize(jsonString)))
+    assertArrayEquals(jsonString.toByteArray(StandardCharsets.UTF_8), toBytes(Jsons.deserialize(jsonString)))
   }
 
   @Test
   fun testKeys() {
     // test object json node
-    val jsonNode = jsonNode<ImmutableMap<String?, String?>?>(ImmutableMap.of<String?, String?>(TEST, ABC, TEST2, DEF))
-    Assertions.assertEquals(Sets.newHashSet<String?>(TEST, TEST2), keys(jsonNode))
+    val jsonNode = jsonNode(mapOf(TEST to ABC, TEST2 to DEF))
+    assertEquals(Sets.newHashSet<String?>(TEST, TEST2), keys(jsonNode))
 
     // test literal jsonNode
-    Assertions.assertEquals(mutableSetOf<Any?>(), keys(jsonNode.get("test")))
+    assertEquals(mutableSetOf<Any?>(), keys(jsonNode.get("test")))
 
     // test nested object json node. should only return top-level keys.
-    val nestedJsonNode =
-      jsonNode<ImmutableMap<String?, Serializable?>?>(
-        ImmutableMap.of<String?, Serializable?>(
-          TEST,
-          ABC,
-          TEST2,
-          ImmutableMap.of<String?, String?>("test3", "def"),
-        ),
-      )
-    Assertions.assertEquals(Sets.newHashSet<String?>(TEST, TEST2), keys(nestedJsonNode))
+    val nestedJsonNode = jsonNode(mapOf(TEST to ABC, TEST2 to mapOf("test3" to "def")))
+    assertEquals(Sets.newHashSet<String?>(TEST, TEST2), keys(nestedJsonNode))
 
     // test array json node
-    val arrayJsonNode =
-      jsonNode<ImmutableList<ImmutableMap<String?, String?>?>?>(
-        ImmutableList.of<ImmutableMap<String?, String?>?>(
-          ImmutableMap.of<String?, String?>(
-            TEST,
-            ABC,
-            TEST2,
-            DEF,
-          ),
-        ),
-      )
-    Assertions.assertEquals(mutableSetOf<Any?>(), keys(arrayJsonNode))
+    val arrayJsonNode = jsonNode(listOf(mapOf(TEST to ABC), mapOf(TEST2 to DEF)))
+    assertEquals(mutableSetOf<Any?>(), keys(arrayJsonNode))
   }
 
   @Test
   fun testToPrettyString() {
-    val jsonNode = jsonNode<ImmutableMap<String?, String?>?>(ImmutableMap.of<String?, String?>(TEST, ABC))
+    val jsonNode = jsonNode(mapOf(TEST to ABC))
     val expectedOutput = (
       "{\n" +
         "  \"test\" : \"abc\"\n" +
         "}\n"
     )
-    Assertions.assertEquals(expectedOutput, toPrettyString(jsonNode))
+    assertEquals(expectedOutput, toPrettyString(jsonNode))
   }
 
   @Test
   fun testGetEstimatedByteSize() {
     val json = Jsons.deserialize("{\"string_key\":\"abc\",\"array_key\":[\"item1\", \"item2\"]}")
-    Assertions.assertEquals(toBytes(json).size, getEstimatedByteSize(json))
+    assertEquals(toBytes(json).size, getEstimatedByteSize(json))
   }
 
   @Test
   fun testDeserializeToStringMap() {
-    Assertions.assertEquals(Maps.newHashMap<String?, String?>("a", "b"), deserializeToStringMap(Jsons.deserialize("{ \"a\": \"b\" }")))
-    Assertions.assertEquals(Maps.newHashMap<String?, Any?>("a", null), deserializeToStringMap(Jsons.deserialize("{ \"a\": null }")))
-    Assertions.assertEquals(mutableMapOf<Any?, Any?>(), deserializeToStringMap(emptyObject()))
+    assertEquals(Maps.newHashMap<String?, String?>("a", "b"), deserializeToStringMap(Jsons.deserialize("{ \"a\": \"b\" }")))
+    assertEquals(Maps.newHashMap<String?, Any?>("a", null), deserializeToStringMap(Jsons.deserialize("{ \"a\": null }")))
+    assertEquals(mutableMapOf<Any?, Any?>(), deserializeToStringMap(emptyObject()))
   }
 
   @Test
   fun testDeserializeToIntegerMap() {
-    Assertions.assertEquals(Maps.newHashMap<String?, Int?>("a", 1), deserializeToIntegerMap(Jsons.deserialize("{ \"a\": 1 }")))
-    Assertions.assertEquals(mutableMapOf<Any?, Any?>(), deserializeToIntegerMap(emptyObject()))
+    assertEquals(Maps.newHashMap<String?, Int?>("a", 1), deserializeToIntegerMap(Jsons.deserialize("{ \"a\": 1 }")))
+    assertEquals(mutableMapOf<Any?, Any?>(), deserializeToIntegerMap(emptyObject()))
   }
 
   @Test
   fun testDeserializeToStringList() {
-    Assertions.assertEquals(mutableListOf<String?>("a", "b"), deserializeToStringList(Jsons.deserialize("[ \"a\", \"b\" ]")))
-    Assertions.assertThrows<IllegalArgumentException?>(
+    assertEquals(mutableListOf<String?>("a", "b"), deserializeToStringList(Jsons.deserialize("[ \"a\", \"b\" ]")))
+    assertThrows(
       IllegalArgumentException::class.java,
-      Executable { deserializeToStringList(emptyObject()) },
+      { deserializeToStringList(emptyObject()) },
     )
   }
 
   @Test
   fun testFlatten__noArrays() {
     val json = Jsons.deserialize("{ \"abc\": { \"def\": \"ghi\" }, \"jkl\": true, \"pqr\": 1 }")
-    val expected =
-      Map.of<String?, Any?>(
-        "abc.def",
-        GHI,
-        JKL,
-        true,
-        PQR,
-        1,
-      )
-    Assertions.assertEquals(expected, flatten(json, false))
+    val expected = mapOf("abc.def" to GHI, JKL to true, PQR to 1)
+    assertEquals(expected, flatten(json, false))
   }
 
   @Test
@@ -348,16 +284,8 @@ internal class JsonsTest {
     val json =
       Jsons
         .deserialize("{ \"abc\": [{ \"def\": \"ghi\" }, { \"fed\": \"ihg\" }], \"jkl\": true, \"pqr\": 1 }")
-    val expected =
-      Map.of<String?, Any?>(
-        ABC,
-        "[{\"def\":\"ghi\"},{\"fed\":\"ihg\"}]",
-        JKL,
-        true,
-        PQR,
-        1,
-      )
-    Assertions.assertEquals(expected, flatten(json, false))
+    val expected = mapOf(ABC to "[{\"def\":\"ghi\"},{\"fed\":\"ihg\"}]", JKL to true, PQR to 1)
+    assertEquals(expected, flatten(json, false))
   }
 
   @Test
@@ -365,16 +293,8 @@ internal class JsonsTest {
     val json =
       Jsons
         .deserialize("{ \"abc\": [{ \"def\": \"ghi\" }, { \"fed\": \"ihg\" }], \"jkl\": true, \"pqr\": 1 }")
-    val expected =
-      Map.of<String?, Any?>(
-        ABC,
-        "[{\"def\":\"ghi\"},{\"fed\":\"ihg\"}]",
-        JKL,
-        true,
-        PQR,
-        1,
-      )
-    Assertions.assertEquals(expected, flatten(json))
+    val expected = mapOf(ABC to "[{\"def\":\"ghi\"},{\"fed\":\"ihg\"}]", JKL to true, PQR to 1)
+    assertEquals(expected, flatten(json))
   }
 
   @Test
@@ -382,18 +302,8 @@ internal class JsonsTest {
     val json =
       Jsons
         .deserialize("{ \"abc\": [{ \"def\": \"ghi\" }, { \"fed\": \"ihg\" }], \"jkl\": true, \"pqr\": 1 }")
-    val expected =
-      Map.of<String?, Any?>(
-        "abc.[0].def",
-        "ghi",
-        "abc.[1].fed",
-        "ihg",
-        JKL,
-        true,
-        PQR,
-        1,
-      )
-    Assertions.assertEquals(expected, flatten(json, true))
+    val expected = mapOf("abc.[0].def" to "ghi", "abc.[1].fed" to "ihg", JKL to true, PQR to 1)
+    assertEquals(expected, flatten(json, true))
   }
 
   @Test
@@ -403,18 +313,8 @@ internal class JsonsTest {
         .deserialize(
           "{ \"abc\": [{ \"def\": {\"ghi\": [\"xyz\"] }}, { \"fed\": \"ihg\" }], \"jkl\": true, \"pqr\": 1 }",
         )
-    val expected =
-      Map.of<String?, Any?>(
-        "abc.[0].def.ghi.[0]",
-        "xyz",
-        "abc.[1].fed",
-        "ihg",
-        JKL,
-        true,
-        PQR,
-        1,
-      )
-    Assertions.assertEquals(expected, flatten(json, true))
+    val expected = mapOf("abc.[0].def.ghi.[0]" to "xyz", "abc.[1].fed" to "ihg", JKL to true, PQR to 1)
+    assertEquals(expected, flatten(json, true))
   }
 
   @Test
@@ -430,7 +330,7 @@ internal class JsonsTest {
       Jsons.deserialize(
         "{ \"abc\": \"never-mind\", \"ghi\": {\"more\": \"things\"}, \"def\": \"asdf\"}",
       )
-    Assertions.assertEquals(expected, mergeNodes(mainNode, updateNode))
+    assertEquals(expected, mergeNodes(mainNode, updateNode))
   }
 
   @Test
@@ -444,21 +344,21 @@ internal class JsonsTest {
       )
 
     setNestedValue(node, mutableListOf<String>("nest", "key"), TextNode.valueOf("value"))
-    Assertions.assertEquals(expected, node)
+    assertEquals(expected, node)
   }
 
   @Test
   fun testGetNodeOrEmptyObject() {
     val root = Jsons.deserialize("{\"child\": {\"key\": \"value\"}}")
     val result = getNodeOrEmptyObject(root)
-    Assertions.assertEquals(root, result)
+    assertEquals(root, result)
   }
 
   @Test
   fun testGetNodeOrEmptyObjectNested() {
     val root = Jsons.deserialize("{\"nested\": {\"key\": \"value\"}}")
     val result = getNodeOrEmptyObject(root, "nested", "key")
-    Assertions.assertEquals(TextNode.valueOf("value"), result)
+    assertEquals(TextNode.valueOf("value"), result)
   }
 
   @Test
@@ -466,21 +366,21 @@ internal class JsonsTest {
     val root = Jsons.deserialize("{\"emptyObjectKey\": {}}")
 
     val result = getNodeOrEmptyObject(root, "emptyObjectKey", "foo")
-    Assertions.assertEquals(emptyObject(), result)
+    assertEquals(emptyObject(), result)
   }
 
   @Test
   fun testGetNodeOrEmptyObjectFromNullRootNode() {
     val root = Jsons.deserialize("null")
     val result = getNodeOrEmptyObject(root, "child")
-    Assertions.assertEquals(emptyObject(), result)
+    assertEquals(emptyObject(), result)
   }
 
   @Test
   fun testGetNodeOrEmptyObjectPathToNullValue() {
     val root = Jsons.deserialize("{\"nullValueKey\": null}")
     val result = getNodeOrEmptyObject(root, "nullValueKey")
-    Assertions.assertEquals(emptyObject(), result)
+    assertEquals(emptyObject(), result)
   }
 
   private class ToClass {
@@ -501,14 +401,14 @@ internal class JsonsTest {
       this.numLong = numLong
     }
 
-    override fun equals(o: Any?): Boolean {
-      if (this === o) {
+    override fun equals(other: Any?): Boolean {
+      if (this === other) {
         return true
       }
-      if (o == null || javaClass != o.javaClass) {
+      if (other == null || javaClass != other.javaClass) {
         return false
       }
-      val toClass = o as ToClass
+      val toClass = other as ToClass
       return numLong == toClass.numLong &&
         str == toClass.str &&
         num == toClass.num
@@ -559,7 +459,7 @@ internal class JsonsTest {
       )
 
     // Assert that the result is a JSON string with keys sorted in alphabetical order
-    Assertions.assertEquals(expectedJson, actualJson)
+    assertEquals(expectedJson, actualJson)
   }
 
   @Test
@@ -567,14 +467,14 @@ internal class JsonsTest {
     val textNode = TextNode.valueOf("{\"key1\": \"value1\"}")
     val jsonNode = JsonNodeFactory.instance.objectNode().set<JsonNode?>("key1", TextNode.valueOf("value1"))
 
-    Assertions.assertEquals(jsonNode, deserializeIfText(textNode))
+    assertEquals(jsonNode, deserializeIfText(textNode))
   }
 
   @Test
   fun testDeserializeIfTextOnObjectNode() {
     val objectNode = JsonNodeFactory.instance.objectNode().set<JsonNode>("key1", TextNode.valueOf("value1"))
 
-    Assertions.assertEquals(objectNode, deserializeIfText(objectNode))
+    assertEquals(objectNode, deserializeIfText(objectNode))
   }
 
   companion object {

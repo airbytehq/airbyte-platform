@@ -7,7 +7,6 @@ package io.airbyte.oauth.flows
 import com.fasterxml.jackson.databind.JsonNode
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.base.Preconditions
-import com.google.common.collect.ImmutableMap
 import io.airbyte.oauth.BaseOAuth2Flow
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
@@ -72,21 +71,18 @@ class SurveymonkeyOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>()
-      .putAll(super.getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl))
-      .put("grant_type", "authorization_code")
-      .build()
+    mapOf("grant_type" to "authorization_code") +
+      super.getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl)
 
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,
   ): Map<String, Any> {
     Preconditions.checkArgument(data.has("access_token"), "Missing 'access_token' in query params from %s", ACCESS_TOKEN_URL)
-    return java.util.Map.of<String, Any>("access_token", data["access_token"].asText())
+    return mapOf("access_token" to data["access_token"].asText())
   }
 
-  override fun getDefaultOAuthOutputPath(): List<String> = listOf()
+  override fun getDefaultOAuthOutputPath(): List<String> = emptyList()
 
   companion object {
     /**
