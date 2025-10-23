@@ -220,8 +220,10 @@ class FeatureDegradationServiceTest {
     val cronSlow2 = "0 0 */2 * * ?"
     val cronFast = "0 */30 * * * ?"
     val cronFast2 = "0 */14 * * * ?"
+    val invalidCron = "0 0 0 0"
 
-    val connectionIds = listOf(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())
+    val connectionIds =
+      listOf(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())
     every { connectionService.listSubHourConnectionIdsForOrganization(orgId.value) } returns listOf(connectionIds[0], connectionIds[1])
     every { connectionService.listConnectionCronSchedulesForOrganization(orgId.value) } returns
       listOf(
@@ -229,6 +231,7 @@ class FeatureDegradationServiceTest {
         ConnectionCronSchedule(connectionIds[3], ScheduleData().withCron(Cron().withCronExpression(cronFast).withCronTimeZone(cronTimezoneUtc))),
         ConnectionCronSchedule(connectionIds[4], ScheduleData().withCron(Cron().withCronExpression(cronSlow2).withCronTimeZone(cronTimezoneUtc))),
         ConnectionCronSchedule(connectionIds[5], ScheduleData().withCron(Cron().withCronExpression(cronFast2).withCronTimeZone(cronTimezoneUtc))),
+        ConnectionCronSchedule(connectionIds[6], ScheduleData().withCron(Cron().withCronExpression(invalidCron).withCronTimeZone(cronTimezoneUtc))),
       )
 
     val result = featureDegradationService.findSubHourSyncIds(orgId)

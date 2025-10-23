@@ -168,7 +168,12 @@ internal class FeatureDegradationService(
     val fastCronSyncIds =
       cronSchedules
         .filter {
-          cronExpressionHelper.executesMoreThanOncePerHour(it.scheduleData.cron.cronExpression)
+          try {
+            cronExpressionHelper.executesMoreThanOncePerHour(it.scheduleData.cron.cronExpression)
+          } catch (e: IllegalArgumentException) {
+            logger.warn { "Invalid cron expression for connection id=${it.id}, ${e.message}" }
+            false
+          }
         }.map(ConnectionCronSchedule::id)
 
     return fastBasicSyncIds + fastCronSyncIds
