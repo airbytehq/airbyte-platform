@@ -513,6 +513,32 @@ open class UserPersistence(
         )
       }
 
+  /**
+   * Check if any users with emails matching the given domain exist outside of the specified organization.
+   *
+   * @param emailDomain the email domain to check (e.g., "example.com")
+   * @param organizationId the organization ID to exclude from the check
+   * @return list of user IDs with the email domain that belong to different organizations
+   */
+  @Throws(IOException::class)
+  fun findUsersWithEmailDomainOutsideOrganization(
+    emailDomain: String,
+    organizationId: UUID,
+  ): List<UUID> =
+    database.query { ctx: DSLContext ->
+      ctx
+        .select(Tables.USER.ID)
+        .from(Tables.USER)
+        .leftJoin(Tables.PERMISSION)
+        .on(Tables.USER.ID.eq(Tables.PERMISSION.USER_ID))
+        .where(Tables.USER.EMAIL.likeIgnoreCase("%@$emailDomain"))
+        .and(
+          Tables.PERMISSION.ORGANIZATION_ID.isNull
+            .or(Tables.PERMISSION.ORGANIZATION_ID.ne(organizationId)),
+        ).groupBy(Tables.USER.ID)
+        .fetch(Tables.USER.ID)
+    }
+
   private fun buildWorkspaceUserAccessInfoFromRecord(
     record: Record,
     workspaceId: UUID,

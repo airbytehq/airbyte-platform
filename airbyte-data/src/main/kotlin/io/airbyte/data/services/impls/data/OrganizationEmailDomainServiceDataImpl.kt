@@ -16,7 +16,7 @@ class OrganizationEmailDomainServiceDataImpl(
   private val repository: OrganizationEmailDomainRepository,
 ) : OrganizationEmailDomainService {
   override fun findByEmailDomain(emailDomain: String): List<OrganizationEmailDomain> =
-    repository.findByEmailDomain(emailDomain).map { it.toConfigModel() }
+    repository.findByEmailDomainIgnoreCase(emailDomain).map { it.toConfigModel() }
 
   override fun createEmailDomain(emailDomainConfig: OrganizationEmailDomain) {
     repository.save(

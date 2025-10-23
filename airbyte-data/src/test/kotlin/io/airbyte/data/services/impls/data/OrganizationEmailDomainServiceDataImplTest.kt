@@ -35,7 +35,7 @@ internal class OrganizationEmailDomainServiceDataImplTest {
         ),
       )
 
-    every { organizationEmailDomainRepository.findByEmailDomain("airbyte.io") } returns orgEmailDomains
+    every { organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.io") } returns orgEmailDomains
 
     val result = organizationEmailDomainServiceDataImpl.findByEmailDomain("airbyte.io")
     assert(result.size == 1)
@@ -48,5 +48,26 @@ internal class OrganizationEmailDomainServiceDataImplTest {
         .withOrganizationId(orgId)
 
     assert(result[0] == expectedOrgEmailDomain)
+  }
+
+  @Test
+  fun `test findByEmailDomain is case insensitive`() {
+    val id = UUID.randomUUID()
+    val orgId = UUID.randomUUID()
+    val orgEmailDomains =
+      listOf(
+        OrganizationEmailDomain(
+          id = id,
+          organizationId = orgId,
+          emailDomain = "Airbyte.IO",
+        ),
+      )
+
+    // Repository should find the domain regardless of case
+    every { organizationEmailDomainRepository.findByEmailDomainIgnoreCase("airbyte.io") } returns orgEmailDomains
+
+    val result = organizationEmailDomainServiceDataImpl.findByEmailDomain("airbyte.io")
+    assert(result.size == 1)
+    assert(result[0].emailDomain == "Airbyte.IO")
   }
 }

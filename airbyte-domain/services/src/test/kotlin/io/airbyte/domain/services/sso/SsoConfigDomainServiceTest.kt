@@ -4,12 +4,12 @@
 
 package io.airbyte.domain.services.sso
 
-import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.SSOActivationProblem
 import io.airbyte.api.problems.throwable.generated.SSODeletionProblem
 import io.airbyte.api.problems.throwable.generated.SSOSetupProblem
 import io.airbyte.config.Organization
+import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
@@ -39,6 +39,7 @@ class SsoConfigDomainServiceTest {
   private lateinit var organizationEmailDomainService: OrganizationEmailDomainService
   private lateinit var airbyteKeycloakClient: AirbyteKeycloakClient
   private lateinit var organizationService: OrganizationService
+  private lateinit var userPersistence: UserPersistence
 
   private lateinit var ssoConfigDomainService: SsoConfigDomainService
 
@@ -48,12 +49,14 @@ class SsoConfigDomainServiceTest {
     organizationEmailDomainService = mockk()
     airbyteKeycloakClient = mockk()
     organizationService = mockk()
+    userPersistence = mockk()
     ssoConfigDomainService =
       SsoConfigDomainService(
         ssoConfigService,
         organizationEmailDomainService,
         airbyteKeycloakClient,
         organizationService,
+        userPersistence,
       )
   }
 
@@ -124,6 +127,7 @@ class SsoConfigDomainServiceTest {
     every { organizationEmailDomainService.createEmailDomain(any()) } returns mockk()
     every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
     every { organizationService.getOrganization(any()) } returns Optional.of(org)
+    every { userPersistence.findUsersWithEmailDomainOutsideOrganization(any(), any()) } returns emptyList()
 
     ssoConfigDomainService.createAndStoreSsoConfig(config)
 
@@ -157,6 +161,7 @@ class SsoConfigDomainServiceTest {
     every { ssoConfigService.getSsoConfig(any()) } returns null
     every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
     every { organizationService.getOrganization(any()) } returns Optional.of(org)
+    every { userPersistence.findUsersWithEmailDomainOutsideOrganization(any(), any()) } returns emptyList()
     every { airbyteKeycloakClient.createOidcSsoConfig(config) } throws RuntimeException("Keycloak failed")
 
     assertThrows<SSOSetupProblem> {
@@ -181,6 +186,7 @@ class SsoConfigDomainServiceTest {
     every { ssoConfigService.getSsoConfigByCompanyIdentifier(any()) } returns null
     every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
     every { organizationService.getOrganization(any()) } returns Optional.of(org)
+    every { userPersistence.findUsersWithEmailDomainOutsideOrganization(any(), any()) } returns emptyList()
     every { airbyteKeycloakClient.createOidcSsoConfig(config) } just Runs
     every { ssoConfigService.createSsoConfig(any()) } throws RuntimeException("Database failed")
     every { airbyteKeycloakClient.deleteRealm(config.companyIdentifier) } just Runs
@@ -323,6 +329,7 @@ class SsoConfigDomainServiceTest {
     every { ssoConfigService.getSsoConfig(any()) } returns existingActiveConfig
     every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
     every { organizationService.getOrganization(any()) } returns Optional.of(org)
+    every { userPersistence.findUsersWithEmailDomainOutsideOrganization(any(), any()) } returns emptyList()
 
     assertThrows<SSOSetupProblem> {
       ssoConfigDomainService.createAndStoreSsoConfig(config)
@@ -346,6 +353,7 @@ class SsoConfigDomainServiceTest {
     every { ssoConfigService.getSsoConfig(orgId) } returns existingDraftConfig
     every { organizationEmailDomainService.findByEmailDomain(emailDomain) } returns emptyList()
     every { organizationService.getOrganization(orgId) } returns Optional.of(org)
+    every { userPersistence.findUsersWithEmailDomainOutsideOrganization(any(), any()) } returns emptyList()
 
     assertThrows<SSOSetupProblem> {
       ssoConfigDomainService.createAndStoreSsoConfig(newConfig)
@@ -369,6 +377,7 @@ class SsoConfigDomainServiceTest {
     every { ssoConfigService.getSsoConfig(orgId) } returns existingActiveConfig
     every { organizationEmailDomainService.findByEmailDomain(emailDomain) } returns emptyList()
     every { organizationService.getOrganization(orgId) } returns Optional.of(org)
+    every { userPersistence.findUsersWithEmailDomainOutsideOrganization(any(), any()) } returns emptyList()
 
     assertThrows<SSOSetupProblem> {
       ssoConfigDomainService.createAndStoreSsoConfig(newConfig)
@@ -425,6 +434,7 @@ class SsoConfigDomainServiceTest {
     every { ssoConfigService.getSsoConfigByCompanyIdentifier(any()) } returns null
     every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
     every { organizationService.getOrganization(any()) } returns Optional.of(org)
+    every { userPersistence.findUsersWithEmailDomainOutsideOrganization(any(), any()) } returns emptyList()
     every { airbyteKeycloakClient.createOidcSsoConfig(config) } throws
       InvalidOidcDiscoveryDocumentException("Missing required fields", listOf("authorizationUrl", "tokenUrl"))
 
@@ -538,6 +548,7 @@ class SsoConfigDomainServiceTest {
     every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
     every { organizationService.getOrganization(orgId) } returns Optional.of(org)
     every { organizationEmailDomainService.findByEmailDomain(emailDomain) } returns emptyList()
+    every { userPersistence.findUsersWithEmailDomainOutsideOrganization(emailDomain, orgId) } returns emptyList()
     every { ssoConfigService.updateSsoConfigStatus(orgId, SsoConfigStatus.ACTIVE) } just Runs
     every { organizationEmailDomainService.createEmailDomain(any()) } returns mockk()
 
@@ -712,5 +723,67 @@ class SsoConfigDomainServiceTest {
     verify(exactly = 1) { airbyteKeycloakClient.createOidcSsoConfig(newConfig) }
     verify(exactly = 1) { ssoConfigService.createSsoConfig(newConfig) }
     verify(exactly = 0) { airbyteKeycloakClient.replaceOidcIdpConfig(any()) }
+  }
+
+  @Test
+  fun `activateSsoConfig throws when users from other organizations already use the domain`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.com"
+
+    val org = buildTestOrganization(orgId, orgEmail)
+    val existingConfig =
+      ConfigSsoConfig()
+        .withOrganizationId(orgId)
+        .withKeycloakRealm("airbyte")
+        .withStatus(ConfigSsoConfigStatus.DRAFT)
+
+    val otherUserId = UUID.randomUUID()
+
+    every { ssoConfigService.getSsoConfig(orgId) } returns existingConfig
+    every { organizationService.getOrganization(orgId) } returns Optional.of(org)
+    every { organizationEmailDomainService.findByEmailDomain(emailDomain) } returns emptyList()
+    every { userPersistence.findUsersWithEmailDomainOutsideOrganization(emailDomain, orgId) } returns listOf(otherUserId)
+
+    val exception =
+      assertThrows<SSOActivationProblem> {
+        ssoConfigDomainService.activateSsoConfig(orgId, emailDomain)
+      }
+
+    assert(
+      exception.problem
+        .getData()
+        .toString()
+        .contains("1 user(s) from other organizations"),
+    )
+  }
+
+  @Test
+  fun `createAndStoreSsoConfig with ACTIVE status throws when users from other organizations already use the domain`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.com"
+
+    val org = buildTestOrganization(orgId, orgEmail)
+    val config = buildTestSsoConfig(orgId, emailDomain)
+
+    val otherUserId = UUID.randomUUID()
+
+    every { ssoConfigService.getSsoConfig(any()) } returns null
+    every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
+    every { organizationService.getOrganization(any()) } returns Optional.of(org)
+    every { userPersistence.findUsersWithEmailDomainOutsideOrganization(emailDomain, orgId) } returns listOf(otherUserId)
+
+    val exception =
+      assertThrows<SSOActivationProblem> {
+        ssoConfigDomainService.createAndStoreSsoConfig(config)
+      }
+
+    assert(
+      exception.problem
+        .getData()
+        .toString()
+        .contains("1 user(s) from other organizations"),
+    )
   }
 }

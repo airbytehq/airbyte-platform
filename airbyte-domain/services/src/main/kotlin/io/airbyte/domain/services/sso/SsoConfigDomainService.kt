@@ -4,7 +4,6 @@
 
 package io.airbyte.domain.services.sso
 
-import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.model.generated.ProblemSSOActivationData
 import io.airbyte.api.problems.model.generated.ProblemSSOConfigRetrievalData
@@ -12,7 +11,6 @@ import io.airbyte.api.problems.model.generated.ProblemSSOCredentialUpdateData
 import io.airbyte.api.problems.model.generated.ProblemSSODeletionData
 import io.airbyte.api.problems.model.generated.ProblemSSOSetupData
 import io.airbyte.api.problems.model.generated.ProblemSSOTokenValidationData
-import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.SSOActivationProblem
 import io.airbyte.api.problems.throwable.generated.SSOConfigRetrievalProblem
@@ -22,6 +20,7 @@ import io.airbyte.api.problems.throwable.generated.SSOSetupProblem
 import io.airbyte.api.problems.throwable.generated.SSOTokenValidationProblem
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.OrganizationEmailDomain
+import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
@@ -57,6 +56,7 @@ open class SsoConfigDomainService internal constructor(
   private val organizationEmailDomainService: OrganizationEmailDomainService,
   private val airbyteKeycloakClient: AirbyteKeycloakClient,
   private val organizationService: OrganizationService,
+  private val userPersistence: UserPersistence,
 ) {
   fun retrieveSsoConfig(organizationId: UUID): SsoConfigRetrieval {
     val currentConfig =
@@ -267,8 +267,7 @@ open class SsoConfigDomainService internal constructor(
           .companyIdentifier(config.companyIdentifier)
           .errorMessage("An email domain is required when creating an active SSO configuration."),
       )
-    validateEmailDomainMatchesOrganization(config.organizationId, configEmailDomain, config.companyIdentifier)
-    validateExistingEmailDomainEntries(config)
+    validateEmailDomainForActivation(config.organizationId, configEmailDomain, config.companyIdentifier)
 
     val existingConfig = ssoConfigService.getSsoConfig(config.organizationId)
     if (existingConfig != null) {
@@ -543,15 +542,6 @@ open class SsoConfigDomainService internal constructor(
     }
   }
 
-  private fun validateExistingEmailDomainEntries(config: SsoConfig) {
-    val emailDomain =
-      config.emailDomain ?: throw BadRequestProblem(
-        ProblemMessageData()
-          .message("Email domain is required when validating existing email domain entries"),
-      )
-    validateEmailDomainNotExists(emailDomain, config.organizationId, config.companyIdentifier)
-  }
-
   private fun validateEmailDomainNotExists(
     emailDomain: String,
     organizationId: UUID,
@@ -568,6 +558,25 @@ open class SsoConfigDomainService internal constructor(
     }
   }
 
+  private fun validateNoExistingUsersOutsideOrganization(
+    emailDomain: String,
+    organizationId: UUID,
+    companyIdentifier: String,
+  ) {
+    val usersOutsideOrg = userPersistence.findUsersWithEmailDomainOutsideOrganization(emailDomain, organizationId)
+    if (usersOutsideOrg.isNotEmpty()) {
+      throw SSOActivationProblem(
+        ProblemSSOActivationData()
+          .organizationId(organizationId)
+          .companyIdentifier(companyIdentifier)
+          .errorMessage(
+            "Cannot activate SSO for domain '$emailDomain' because ${usersOutsideOrg.size} user(s) from other organizations are already using this " +
+              "domain. Please contact support to resolve this conflict.",
+          ),
+      )
+    }
+  }
+
   private fun validateDiscoveryUrl(config: SsoConfig) {
     try {
       URL(config.discoveryUrl)
@@ -579,6 +588,16 @@ open class SsoConfigDomainService internal constructor(
           .errorMessage("The discovery URL format is invalid. Please verify your identity provider's discovery URL and try again."),
       )
     }
+  }
+
+  private fun validateEmailDomainForActivation(
+    organizationId: UUID,
+    emailDomain: String,
+    companyIdentifier: String,
+  ) {
+    validateEmailDomainMatchesOrganization(organizationId, emailDomain, companyIdentifier)
+    validateEmailDomainNotExists(emailDomain, organizationId, companyIdentifier)
+    validateNoExistingUsersOutsideOrganization(emailDomain, organizationId, companyIdentifier)
   }
 
   @Transactional("config")
@@ -600,8 +619,7 @@ open class SsoConfigDomainService internal constructor(
           .errorMessage("This SSO configuration is already active."),
       )
     }
-    validateEmailDomainMatchesOrganization(organizationId, emailDomain, currentSsoConfig.keycloakRealm)
-    validateEmailDomainNotExists(emailDomain, organizationId, currentSsoConfig.keycloakRealm)
+    validateEmailDomainForActivation(organizationId, emailDomain, currentSsoConfig.keycloakRealm)
 
     try {
       ssoConfigService.updateSsoConfigStatus(organizationId, SsoConfigStatus.ACTIVE)

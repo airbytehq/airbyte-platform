@@ -194,6 +194,120 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
       val newAuthUserIds: MutableSet<String?> = HashSet<String?>(userPersistence.listAuthUserIdsForUser(user1.getUserId()))
       Assertions.assertEquals(Set.of<String?>(newAuthUserId), newAuthUserIds)
     }
+
+    @Test
+    @Throws(IOException::class, JsonValidationException::class)
+    fun findUsersWithEmailDomainOutsideOrganizationTest() {
+      // Create two organizations
+      val org1 =
+        Organization()
+          .withOrganizationId(UUID.randomUUID())
+          .withName("Org 1")
+          .withEmail("admin@org1.com")
+      val org2 =
+        Organization()
+          .withOrganizationId(UUID.randomUUID())
+          .withName("Org 2")
+          .withEmail("admin@org2.com")
+
+      organizationService.writeOrganization(org1)
+      organizationService.writeOrganization(org2)
+
+      // Create users with different email domains
+      val user1Org1 =
+        AuthenticatedUser()
+          .withUserId(UUID.randomUUID())
+          .withName("User 1 Org1")
+          .withEmail("user1@example.com")
+          .withAuthUserId("auth1")
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+      val user2Org1 =
+        AuthenticatedUser()
+          .withUserId(UUID.randomUUID())
+          .withName("User 2 Org1")
+          .withEmail("user2@example.com")
+          .withAuthUserId("auth2")
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+      val user3Org2 =
+        AuthenticatedUser()
+          .withUserId(UUID.randomUUID())
+          .withName("User 3 Org2")
+          .withEmail("user3@example.com")
+          .withAuthUserId("auth3")
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+      val user4DifferentDomain =
+        AuthenticatedUser()
+          .withUserId(UUID.randomUUID())
+          .withName("User 4 Different")
+          .withEmail("user4@other.com")
+          .withAuthUserId("auth4")
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+      val user5MixedCase =
+        AuthenticatedUser()
+          .withUserId(UUID.randomUUID())
+          .withName("User 5 Mixed Case")
+          .withEmail("User5@Example.COM")
+          .withAuthUserId("auth5")
+          .withAuthProvider(AuthProvider.KEYCLOAK)
+
+      userPersistence.writeAuthenticatedUser(user1Org1)
+      userPersistence.writeAuthenticatedUser(user2Org1)
+      userPersistence.writeAuthenticatedUser(user3Org2)
+      userPersistence.writeAuthenticatedUser(user4DifferentDomain)
+      userPersistence.writeAuthenticatedUser(user5MixedCase)
+
+      // Create permissions linking users to organizations
+      writePermission(
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(user1Org1.getUserId())
+          .withOrganizationId(org1.getOrganizationId())
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER),
+      )
+      writePermission(
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(user2Org1.getUserId())
+          .withOrganizationId(org1.getOrganizationId())
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER),
+      )
+      writePermission(
+        Permission()
+          .withPermissionId(UUID.randomUUID())
+          .withUserId(user3Org2.getUserId())
+          .withOrganizationId(org2.getOrganizationId())
+          .withPermissionType(Permission.PermissionType.ORGANIZATION_MEMBER),
+      )
+
+      // Test: Find users with @example.com domain outside of org1
+      // Should return user3Org2 (belongs to org2, not org1) and user5MixedCase (no org permission)
+      // This also tests case-insensitive matching (user5MixedCase has "Example.COM")
+      val usersOutsideOrg1 = userPersistence.findUsersWithEmailDomainOutsideOrganization("example.com", org1.getOrganizationId())
+      Assertions.assertEquals(2, usersOutsideOrg1.size)
+      Assertions.assertTrue(usersOutsideOrg1.contains(user3Org2.getUserId()))
+      Assertions.assertTrue(usersOutsideOrg1.contains(user5MixedCase.getUserId()))
+      Assertions.assertFalse(usersOutsideOrg1.contains(user1Org1.getUserId()))
+      Assertions.assertFalse(usersOutsideOrg1.contains(user2Org1.getUserId()))
+
+      // Test: Find users with @example.com domain outside of org2
+      // Should return user1Org1, user2Org1 (both belong to org1, not org2), and user5MixedCase (no org)
+      val usersOutsideOrg2 = userPersistence.findUsersWithEmailDomainOutsideOrganization("example.com", org2.getOrganizationId())
+      Assertions.assertEquals(3, usersOutsideOrg2.size)
+      Assertions.assertTrue(usersOutsideOrg2.contains(user1Org1.getUserId()))
+      Assertions.assertTrue(usersOutsideOrg2.contains(user2Org1.getUserId()))
+      Assertions.assertTrue(usersOutsideOrg2.contains(user5MixedCase.getUserId()))
+      Assertions.assertFalse(usersOutsideOrg2.contains(user3Org2.getUserId()))
+
+      // Test: Find users with @other.com domain outside of org1
+      // Should return user4DifferentDomain (no organization permission)
+      val usersWithOtherDomain = userPersistence.findUsersWithEmailDomainOutsideOrganization("other.com", org1.getOrganizationId())
+      Assertions.assertEquals(1, usersWithOtherDomain.size)
+      Assertions.assertTrue(usersWithOtherDomain.contains(user4DifferentDomain.getUserId()))
+
+      // Test: Find users with non-existent domain
+      val usersWithNonexistentDomain = userPersistence.findUsersWithEmailDomainOutsideOrganization("nonexistent.com", org1.getOrganizationId())
+      Assertions.assertEquals(0, usersWithNonexistentDomain.size)
+    }
   }
 
   @Nested
