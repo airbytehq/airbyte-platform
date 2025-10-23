@@ -161,10 +161,14 @@ class WorkloadClient(
                   "destination" -> FailureReason.FailureOrigin.DESTINATION
                   else -> FailureReason.FailureOrigin.AIRBYTE_PLATFORM
                 },
-              ).withExternalMessage(
-                "Workload ${if (workload.status == WorkloadStatus.CANCELLED) "cancelled by" else "failed, source:"} ${workload.terminationSource}",
-              ).withInternalMessage(workload.terminationReason)
-              .withTimestamp(clock.millis())
+              ).withInternalMessage(workload.terminationSource)
+              .withExternalMessage(
+                workload.terminationReason
+                  ?: run {
+                    val action = if (workload.status == WorkloadStatus.CANCELLED) "cancelled by" else "failed, source:"
+                    "Workload $action ${workload.terminationSource}"
+                  },
+              ).withTimestamp(clock.millis())
 
           // We should never be in this situation, workload is still running not having an output is expected,
           // we should not be trying to read the output of a non-terminal workload.

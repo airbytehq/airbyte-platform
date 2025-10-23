@@ -76,7 +76,7 @@ open class WorkloadMonitor(
 
     failWorkloads(
       notStartedWorkloads.workloads,
-      "Airbyte could not start the process within time limit. The workload was claimed but never started.",
+      "Airbyte could not start the process within time limit. Unable to start the job.",
       CHECK_START,
     )
   }
@@ -103,7 +103,7 @@ open class WorkloadMonitor(
 
     failWorkloads(
       notClaimedWorkloads.workloads,
-      "Airbyte could not start the process within time limit. The workload was never claimed.",
+      "Airbyte could not start the process within time limit. No data-plane available to process the job.",
       CHECK_CLAIMS,
     )
   }

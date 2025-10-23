@@ -38,15 +38,14 @@ class WorkloadApiClient(
     error: Throwable,
   ) {
     try {
-      // For ImagePullException, use a concise user-friendly message instead of full stack trace
+      // Use concise error messages instead of full stack traces for better user experience
       val reason =
         if (error is ImagePullException || error.cause is ImagePullException) {
           val imagePullException = if (error is ImagePullException) error else error.cause as ImagePullException
-          // Extract just the error message without the stack trace
           imagePullException.message ?: "Unable to pull container image"
         } else {
-          // For other exceptions, use the full stack trace for debugging
-          ExceptionUtils.exceptionStackTrace(error)
+          // Extract the exception message; fallback to exception type if message is null
+          error.message ?: "Failed to launch workload: ${error.javaClass.simpleName}"
         }
 
       updateStatusToFailed(workloadId = workloadId, source = LAUNCH_ERROR_SOURCE, reason = reason)
