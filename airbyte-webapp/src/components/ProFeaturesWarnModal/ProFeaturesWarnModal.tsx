@@ -45,9 +45,6 @@ export const ProFeaturesWarnModal: React.FC<ProFeaturesWarnModalProps> = ({ onCo
                   <FormattedMessage id="proFeatures.modal.features.multipleWorkspaces" />
                 </li>
                 <li>
-                  <FormattedMessage id="proFeatures.modal.features.sso" />
-                </li>
-                <li>
                   <FormattedMessage id="proFeatures.modal.features.rbac" />
                 </li>
                 <li>

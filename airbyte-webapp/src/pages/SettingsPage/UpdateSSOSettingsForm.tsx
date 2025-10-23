@@ -8,7 +8,6 @@ import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrga
 import { HttpProblem, useSSOConfigManagement } from "core/api";
 import { useFormatError } from "core/errors";
 import { useIntent } from "core/utils/rbac";
-import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
 import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -43,11 +42,9 @@ export const UpdateSSOSettingsForm = () => {
   const organizationId = useCurrentOrganizationId();
   const canUpdateOrganization = useIntent("UpdateOrganization", { organizationId });
   const { ssoConfig, createSsoConfig } = useSSOConfigManagement();
-  const { showProFeatureModalIfNeeded } = useProFeaturesModal("sso");
   const isSSOConfigValidationEnabled = useExperiment("settings.ssoConfigValidation");
 
   const onSubmit = async (values: SSOFormValues | SSOFormValuesValidation) => {
-    await showProFeatureModalIfNeeded();
     await createSsoConfig(values);
 
     // For validation flow, redirect to OAuth test after saving draft config

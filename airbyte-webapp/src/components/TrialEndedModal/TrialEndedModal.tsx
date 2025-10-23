@@ -168,12 +168,6 @@ export const TrialEndedModal: React.FC<ModalContentProps<TrialEndedModalResult>>
                   <FlexContainer direction="row" gap="sm" alignItems="center">
                     <Icon type="check" size="sm" color="action" />
                     <Text size="sm">
-                      <FormattedMessage id="trialEnded.modal.pro.feature.sso" />
-                    </Text>
-                  </FlexContainer>
-                  <FlexContainer direction="row" gap="sm" alignItems="center">
-                    <Icon type="check" size="sm" color="action" />
-                    <Text size="sm">
                       <FormattedMessage id="trialEnded.modal.pro.feature.audit" />
                     </Text>
                   </FlexContainer>

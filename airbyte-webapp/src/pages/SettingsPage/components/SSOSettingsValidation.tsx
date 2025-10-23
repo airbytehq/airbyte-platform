@@ -9,7 +9,6 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { FormControl } from "components/forms/FormControl";
 import { Box } from "components/ui/Box";
-import { BrandingBadge } from "components/ui/BrandingBadge";
 import { Button } from "components/ui/Button";
 import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer } from "components/ui/Flex";
@@ -25,7 +24,6 @@ import { useFormatError } from "core/errors";
 import { useAuthService } from "core/services/auth";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
-import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -35,7 +33,6 @@ import { useSSOTestCallback } from "./useSSOTestCallback";
 import { SSOFormValuesValidation } from "../UpdateSSOSettingsForm";
 
 export const SSOSettingsValidation = () => {
-  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
   const { formatMessage } = useIntl();
   const formatError = useFormatError();
   const organizationId = useCurrentOrganizationId();
@@ -175,9 +172,6 @@ export const SSOSettingsValidation = () => {
                     <Text size="sm" color="grey300" italicized>
                       {formatMessage({ id: "settings.organizationSettings.sso.label.optional" })}
                     </Text>
-                  )}
-                  {isUnifiedTrialPlan && (
-                    <BrandingBadge product="cloudForTeams" testId="sso-label-cloud-for-teams-badge" />
                   )}
                 </FlexContainer>
               </DisclosureButton>

@@ -6,7 +6,6 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { FormControl } from "components/forms/FormControl";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Box } from "components/ui/Box";
-import { BrandingBadge } from "components/ui/BrandingBadge";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -16,13 +15,11 @@ import { Text } from "components/ui/Text";
 
 import { useSSOConfigManagement } from "core/api";
 import { links } from "core/utils/links";
-import { useOrganizationSubscriptionStatus } from "core/utils/useOrganizationSubscriptionStatus";
 
 import styles from "./SSOSettings.module.scss";
 import { SSOFormValues } from "../UpdateSSOSettingsForm";
 
 export const SSOSettings = () => {
-  const { isUnifiedTrialPlan } = useOrganizationSubscriptionStatus();
   const { formatMessage } = useIntl();
   const { isSSOConfigured, isLoading } = useSSOConfigManagement();
   const { isSubmitting } = useFormState();
@@ -47,9 +44,6 @@ export const SSOSettings = () => {
                     <Text size="sm" color="grey300" italicized>
                       {formatMessage({ id: "settings.organizationSettings.sso.label.optional" })}
                     </Text>
-                  )}
-                  {isUnifiedTrialPlan && (
-                    <BrandingBadge product="cloudForTeams" testId="sso-label-cloud-for-teams-badge" />
                   )}
                 </FlexContainer>
               </DisclosureButton>
