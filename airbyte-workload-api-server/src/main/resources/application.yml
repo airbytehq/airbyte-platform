@@ -25,7 +25,7 @@ micronaut:
         channels:
           enabled: false
         queues:
-          enabled: true
+          enabled: false
       web:
         enabled: true
         server:
@@ -62,7 +62,6 @@ micronaut:
         enabled: ${HTTP_ACCESS_LOG_ENABLED:false}
       aggregator:
         max-content-length: 52428800 # 50MB
-      use-native-transport: true
     max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
 
 airbyte:
