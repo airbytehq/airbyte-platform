@@ -182,8 +182,10 @@ export const isTeamsFeaturePermissionType = (permission: PermissionType): boolea
   const warningPermissions: PermissionType[] = [
     PermissionType.workspace_editor,
     PermissionType.workspace_runner,
+    PermissionType.workspace_reader,
     PermissionType.organization_editor,
     PermissionType.organization_runner,
+    PermissionType.organization_reader,
   ];
   return warningPermissions.includes(permission);
 };

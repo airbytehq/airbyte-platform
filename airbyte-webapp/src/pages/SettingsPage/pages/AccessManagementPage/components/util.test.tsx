@@ -12,6 +12,7 @@ import {
   unifyOrganizationUserData,
   getWorkspaceAccessLevel,
   getOrganizationAccessLevel,
+  isTeamsFeaturePermissionType,
 } from "./util";
 
 describe("unifyWorkspaceUserData", () => {
@@ -177,5 +178,47 @@ describe("getOrganizationAccessLevel", () => {
     const unifiedUser = {};
     const result = getOrganizationAccessLevel(unifiedUser);
     expect(result).toBeUndefined();
+  });
+});
+
+describe("isTeamsFeaturePermissionType", () => {
+  it("should return true for workspace_reader", () => {
+    expect(isTeamsFeaturePermissionType(PermissionType.workspace_reader)).toBe(true);
+  });
+
+  it("should return true for organization_reader", () => {
+    expect(isTeamsFeaturePermissionType(PermissionType.organization_reader)).toBe(true);
+  });
+
+  it("should return true for workspace_editor", () => {
+    expect(isTeamsFeaturePermissionType(PermissionType.workspace_editor)).toBe(true);
+  });
+
+  it("should return true for workspace_runner", () => {
+    expect(isTeamsFeaturePermissionType(PermissionType.workspace_runner)).toBe(true);
+  });
+
+  it("should return true for organization_editor", () => {
+    expect(isTeamsFeaturePermissionType(PermissionType.organization_editor)).toBe(true);
+  });
+
+  it("should return true for organization_runner", () => {
+    expect(isTeamsFeaturePermissionType(PermissionType.organization_runner)).toBe(true);
+  });
+
+  it("should return false for workspace_admin", () => {
+    expect(isTeamsFeaturePermissionType(PermissionType.workspace_admin)).toBe(false);
+  });
+
+  it("should return false for organization_admin", () => {
+    expect(isTeamsFeaturePermissionType(PermissionType.organization_admin)).toBe(false);
+  });
+
+  it("should return false for organization_member", () => {
+    expect(isTeamsFeaturePermissionType(PermissionType.organization_member)).toBe(false);
+  });
+
+  it("should return false for instance_admin", () => {
+    expect(isTeamsFeaturePermissionType(PermissionType.instance_admin)).toBe(false);
   });
 });
