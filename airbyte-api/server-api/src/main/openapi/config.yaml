@@ -6346,6 +6346,48 @@ paths:
       tags:
         - entitlements
 
+  /v1/entitlements/list_plans:
+    post:
+      responses:
+        "200":
+          description: A list of all available entitlement plans
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListAllEntitlementPlansResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+
+      summary: List of all available entitlement plans
+      operationId: listAllEntitlementPlans
+      tags:
+        - entitlements
+
+  /v1/entitlements/update_plan:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrganizationEntitlementPlanRequestBody"
+      responses:
+        "200":
+          description: Organization plan updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateOrganizationEntitlementPlanResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Update an organization's entitlement plan
+      operationId: updateOrganizationEntitlementPlan
+      tags:
+        - entitlements
+
   # User Invitations
   /v1/user_invitations/create:
     post:
@@ -11240,6 +11282,63 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/OrganizationIsEntitledResponse"
+
+    ListAllEntitlementPlansResponse:
+      type: object
+      required:
+        - plans
+      properties:
+        plans:
+          type: array
+          items:
+            $ref: "#/components/schemas/EntitlementPlanInfo"
+
+    EntitlementPlanInfo:
+      type: object
+      required:
+        - plan_id
+        - plan_name
+      properties:
+        plan_id:
+          type: string
+        plan_name:
+          type: string
+
+    UpdateOrganizationEntitlementPlanRequestBody:
+      type: object
+      required:
+        - organization_id
+        - plan_name
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        plan_name:
+          type: string
+          enum:
+            - CORE
+            - SME
+            - STANDARD
+            - STANDARD_TRIAL
+            - PRO
+            - UNIFIED_TRIAL
+            - PARTNER
+            - POV
+            - FLEX
+            - EMBEDDED_PAYG
+            - EMBEDDED_ANNUAL_COMMITMENT
+
+    UpdateOrganizationEntitlementPlanResponse:
+      type: object
+      required:
+        - organization_id
+        - plan_name
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        plan_name:
+          type: string
 
     # WORKSPACE
     WorkspaceId:
