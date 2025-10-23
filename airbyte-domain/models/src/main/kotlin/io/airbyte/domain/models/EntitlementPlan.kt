@@ -39,6 +39,10 @@ enum class EntitlementPlan(
 
   // fka Cloud Enterprise
   FLEX("plan-airbyte-flex"),
+
+  // Sonar
+  EMBEDDED_PAYG("plan-airbyte-embedded-payg"),
+  EMBEDDED_ANNUAL_COMMITMENT("plan-airbyte-embedded-annual-commitment"),
   ;
 
   companion object {

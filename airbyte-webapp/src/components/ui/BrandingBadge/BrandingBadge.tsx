@@ -20,6 +20,8 @@ export const ORG_PLAN_IDS = {
   STANDARD_TRIAL: "plan-airbyte-standard-trial",
   UNIFIED_TRIAL: "plan-airbyte-unified-trial",
   PRO: "plan-airbyte-pro",
+  EMBEDDED_PAYG: "plan-airbyte-embedded-payg",
+  EMBEDDED_ANNUAL_COMMITMENT: "plan-airbyte-embedded-annual-commitment",
 } as const;
 
 type PlanId = (typeof ORG_PLAN_IDS)[keyof typeof ORG_PLAN_IDS];
@@ -32,6 +34,8 @@ const planIdToBrandingMap: Record<PlanId, ProductBranding> = {
   [ORG_PLAN_IDS.STANDARD_TRIAL]: "cloudInTrial",
   [ORG_PLAN_IDS.UNIFIED_TRIAL]: "cloudInTrial",
   [ORG_PLAN_IDS.PRO]: "cloudForTeams",
+  [ORG_PLAN_IDS.EMBEDDED_PAYG]: null,
+  [ORG_PLAN_IDS.EMBEDDED_ANNUAL_COMMITMENT]: null,
 };
 
 export interface BrandingBadgeProps {
