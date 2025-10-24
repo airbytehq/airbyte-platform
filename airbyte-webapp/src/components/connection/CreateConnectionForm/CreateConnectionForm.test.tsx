@@ -46,6 +46,10 @@ jest.mock("core/api", () => ({
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
   useSourceDefinition: () => mockSourceDefinition,
   useDestinationDefinition: () => mockDestinationDefinition,
+  useDiscoverSchemaMutation: jest.fn(() => ({
+    mutateAsync: jest.fn(),
+    isLoading: false,
+  })),
   useDiscoverSchemaQuery: jest.fn(() => mockBaseUseDiscoverSchemaQuery),
   ErrorWithJobInfo: jest.requireActual("core/api/errors").ErrorWithJobInfo,
   useDescribeCronExpressionFetchQuery: () => async () => ({

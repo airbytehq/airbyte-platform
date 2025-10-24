@@ -110,7 +110,7 @@ test.describe("Connection - Create new connection", () => {
         // Continue from previous test - we're already on destination selection step
         // Set up API interceptor for discover schema request before selecting destination
         const discoverSchemaRequests: Request[] = [];
-        await page.route("**/sources/discover_schema", (route) => {
+        await page.route("**/commands/run/discover", (route) => {
           discoverSchemaRequests.push(route.request());
           return route.continue();
         });

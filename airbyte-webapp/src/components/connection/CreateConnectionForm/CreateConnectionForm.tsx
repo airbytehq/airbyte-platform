@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import React, { Suspense, useCallback } from "react";
+import React, { Suspense, useCallback, useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
@@ -17,14 +17,15 @@ import {
   useCreateConnection,
   useDestinationDefinitionVersion,
   useDiscoverSchemaQuery,
+  useDiscoverSchemaMutation,
 } from "core/api";
-import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
+import { AirbyteCatalog, ConnectionScheduleType } from "core/api/types/AirbyteClient";
 import { FormModeProvider, useFormMode } from "core/services/ui/FormModeContext";
 import {
   ConnectionFormServiceProvider,
   useConnectionFormService,
 } from "hooks/services/ConnectionForm/ConnectionFormService";
-import { useExperimentContext } from "hooks/services/Experiment";
+import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -175,15 +176,29 @@ const CreateConnectionFormInner: React.FC = () => {
 export const CreateConnectionForm: React.FC = () => {
   const source = useGetSourceFromSearchParams();
   const destination = useGetDestinationFromSearchParams();
+  const asyncSchemaDiscoveryEnabled = useExperiment("asyncSchemaDiscovery");
 
   const { data, error, isFetching, refetch } = useDiscoverSchemaQuery(source, { useErrorBoundary: false });
-  const schema = data?.catalog;
-  const catalogId = data?.catalogId;
+  const { mutateAsync: discoverSchemaMutation, isLoading: isMutationLoading } = useDiscoverSchemaMutation(source);
+  const [refreshedSchema, setRefreshedSchema] = useState<{ catalog: AirbyteCatalog; catalogId: string } | null>(null);
+
+  const schema = refreshedSchema?.catalog ?? data?.catalog;
+  const catalogId = refreshedSchema?.catalogId ?? data?.catalogId;
+  const isLoading = isFetching || isMutationLoading;
+
+  const refreshSchema = useCallback(async () => {
+    if (asyncSchemaDiscoveryEnabled) {
+      const result = await discoverSchemaMutation();
+      setRefreshedSchema({ catalog: result.catalog, catalogId: result.catalogId });
+    } else {
+      await refetch();
+    }
+  }, [asyncSchemaDiscoveryEnabled, discoverSchemaMutation, refetch]);
 
   if (error && error instanceof Error) {
     return (
       <ScrollParent>
-        <SchemaError schemaError={error} refreshSchema={refetch} />
+        <SchemaError schemaError={error} refreshSchema={refreshSchema} />
       </ScrollParent>
     );
   }
@@ -202,10 +217,10 @@ export const CreateConnectionForm: React.FC = () => {
     <FormModeProvider mode="create">
       <ConnectionFormServiceProvider
         connection={partialConnection}
-        refreshSchema={refetch}
+        refreshSchema={refreshSchema}
         schemaError={error instanceof Error ? error : null}
       >
-        {isFetching ? <LoadingSchema /> : <CreateConnectionFormInner />}
+        {isLoading ? <LoadingSchema /> : <CreateConnectionFormInner key={catalogId} />}
       </ConnectionFormServiceProvider>
     </FormModeProvider>
   );

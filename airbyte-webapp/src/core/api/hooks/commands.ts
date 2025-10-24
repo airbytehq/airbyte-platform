@@ -7,6 +7,7 @@ import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { ConnectorHelper, ConnectorT } from "core/domain/connector";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm";
 
+import { ApiCallOptions } from "../apiCall";
 import { CommandErrorWithJobInfo } from "../errors";
 import { runCheckCommand, getCommandStatus, getCheckCommandOutput, cancelCommand } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
@@ -63,12 +64,38 @@ const sleep = (milliseconds: number, signal?: AbortSignal) =>
     signal?.addEventListener("abort", onAbort, { once: true });
   });
 
-const useCancelCommand = () => {
+export const useCancelCommand = () => {
   const requestOptions = useRequestOptions();
   return useMutation(async (commandId: string) => cancelCommand({ id: commandId }, requestOptions));
 };
 
 const COMMAND_POLLING_INTERVAL_MS = 2000;
+
+/**
+ * Polls a command until it resolves (status is not "running" or "pending")
+ * @returns The final status of the command or "cancelled" if it was cancelled
+ */
+export const pollCommandUntilResolved = async (
+  commandId: string,
+  requestOptions: ApiCallOptions,
+  signal?: AbortSignal
+): Promise<"completed" | "cancelled"> => {
+  let commandResolved = false;
+
+  while (!commandResolved) {
+    const commandStatus = await getCommandStatus({ id: commandId }, { ...requestOptions, signal });
+    const status = commandStatus.status;
+    if (status === "pending" || status === "running") {
+      await sleep(COMMAND_POLLING_INTERVAL_MS, signal);
+    } else {
+      commandResolved = true;
+      return status;
+    }
+  }
+
+  // This should never be reached, but TypeScript needs a return statement
+  throw new Error("Command polling loop exited without a status");
+};
 
 export const useTestConnectorCommand = (
   props: {
@@ -126,23 +153,9 @@ export const useTestConnectorCommand = (
 
       await runCheckCommand(checkCommandPayload, { ...requestOptions, signal: abortControllerRef.current.signal });
 
-      let cancelled = false;
-      let commandResolved = false;
+      const status = await pollCommandUntilResolved(commandId, requestOptions, abortControllerRef.current.signal);
 
-      while (!commandResolved) {
-        const { status } = await getCommandStatus(
-          { id: commandId },
-          { ...requestOptions, signal: abortControllerRef.current.signal }
-        );
-        if (status === "pending" || status === "running") {
-          await sleep(COMMAND_POLLING_INTERVAL_MS, abortControllerRef.current?.signal);
-        } else {
-          commandResolved = true;
-          cancelled = status === "cancelled";
-        }
-      }
-
-      if (cancelled) {
+      if (status === "cancelled") {
         return {
           id: commandId,
           status: GetCheckCommandOutput200Status.failed,
