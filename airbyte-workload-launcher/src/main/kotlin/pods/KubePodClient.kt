@@ -12,6 +12,7 @@ import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EnableAsyncProfiler
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.ProfilingMode
+import io.airbyte.featureflag.ShouldWaitForMainContainersOnReplication
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.workers.exception.ImagePullException
 import io.airbyte.workers.exception.KubeClientException
@@ -118,6 +119,12 @@ class KubePodClient(
     // If it blocks until it moves from PENDING, then we are good. Otherwise, we
     // need this or something similar to wait for the pod to be running on the node.
     waitForPodInitComplete(pod, PodType.REPLICATION.toString())
+
+    // Wait for main containers to be ready or terminal to detect image pull errors early
+    val shouldWait = featureFlagClient.boolVariation(ShouldWaitForMainContainersOnReplication, Connection(replicationInput.connectionId))
+    if (shouldWait) {
+      waitForMainContainersReady(pod)
+    }
   }
 
   @Trace(operationName = LAUNCH_RESET_OPERATION_NAME)
@@ -174,6 +181,12 @@ class KubePodClient(
     // If it blocks until it moves from PENDING, then we are good. Otherwise, we
     // need this or something similar to wait for the pod to be running on the node.
     waitForPodInitComplete(pod, PodType.REPLICATION.toString())
+
+    // Wait for main containers to be ready or terminal to detect image pull errors early
+    val shouldWait = featureFlagClient.boolVariation(ShouldWaitForMainContainersOnReplication, Connection(replicationInput.connectionId))
+    if (shouldWait) {
+      waitForMainContainersReady(pod)
+    }
   }
 
   fun launchCheck(
@@ -265,28 +278,7 @@ class KubePodClient(
 
     waitForPodInitComplete(pod, podLogLabel)
 
-    try {
-      kubePodLauncher.waitForPodReadyOrTerminalByPod(pod, REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE)
-    } catch (e: RuntimeException) {
-      ApmTraceUtils.addExceptionToTrace(e)
-      when (e) {
-        is ImagePullException -> {
-          // Re-throw with more context - this will be caught by FailureHandler and reported to workload API
-          throw ImagePullException(
-            message = "Failed to pull container image(s) for $podLogLabel pod main containers. ${e.message}",
-            cause = e,
-            commandType = KubeCommandType.WAIT_MAIN,
-          )
-        }
-        else -> {
-          throw KubeClientException(
-            message = "$podLogLabel pod failed to start within allotted timeout.",
-            cause = e,
-            commandType = KubeCommandType.WAIT_MAIN,
-          )
-        }
-      }
-    }
+    waitForMainContainersReady(pod)
   }
 
   fun deleteMutexPods(mutexKey: String): Boolean {
@@ -333,6 +325,22 @@ class KubePodClient(
         }
         else -> throw e
       }
+    }
+  }
+
+  /**
+   * Waits for main containers to be ready or terminal, detecting image pull errors.
+   * Adds APM tracing for any exceptions encountered.
+   */
+  private fun waitForMainContainersReady(
+    pod: Pod,
+    timeout: Duration = REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE,
+  ) {
+    try {
+      kubePodLauncher.waitForPodReadyOrTerminalByPod(pod, timeout)
+    } catch (e: RuntimeException) {
+      ApmTraceUtils.addExceptionToTrace(e)
+      throw e
     }
   }
 
