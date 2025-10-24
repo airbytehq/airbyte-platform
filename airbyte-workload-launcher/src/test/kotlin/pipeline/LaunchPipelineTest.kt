@@ -5,7 +5,7 @@
 package pipeline
 
 import fixtures.RecordFixtures.launcherInput
-import io.airbyte.metrics.MetricClient
+import io.airbyte.workload.launcher.metrics.DataplaneAwareMetricClient
 import io.airbyte.workload.launcher.pipeline.LaunchPipeline
 import io.airbyte.workload.launcher.pipeline.PipelineIngressAdapter
 import io.airbyte.workload.launcher.pipeline.handlers.FailureHandler
@@ -37,13 +37,14 @@ class LaunchPipelineTest {
   private lateinit var ingressAdapter: PipelineIngressAdapter
 
   @MockK(relaxed = true)
-  private lateinit var metricClient: MetricClient
+  private lateinit var dataplaneAwareMetricClient: DataplaneAwareMetricClient
 
   private lateinit var pipeline: LaunchPipeline
 
   @BeforeEach
   fun setup() {
     every { ingressAdapter.apply(any()) } answers { LaunchStageIO(msg = firstArg()) }
+    every { dataplaneAwareMetricClient.registerDataplaneGauge(any(), any<Any>(), any()) } returnsArgument 1
 
     pipeline =
       LaunchPipeline(
@@ -57,7 +58,7 @@ class LaunchPipelineTest {
         successHandler = successHandler,
         failureHandler = failureHandler,
         ingressAdapter = ingressAdapter,
-        metricClient = metricClient,
+        dataplaneAwareMetricClient = dataplaneAwareMetricClient,
       )
   }
 
@@ -116,7 +117,7 @@ class LaunchPipelineTest {
         successHandler = successHandler,
         failureHandler = failureHandler,
         ingressAdapter = ingressAdapter,
-        metricClient = metricClient,
+        dataplaneAwareMetricClient = dataplaneAwareMetricClient,
       )
 
     val appliedPipe = pipeline.apply(inputFlux)
