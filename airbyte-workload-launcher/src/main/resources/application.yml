@@ -40,7 +40,7 @@ airbyte:
     runningTtl: ${RUNNING_TTL_MINUTES:-1}
     succeededTtl: ${SUCCEEDED_TTL_MINUTES:10}
     unsuccessfulTtl: ${UNSUCCESSFUL_TTL_MINUTES:120}
-    rate: PT10M
+    rate: PT2M
   connector:
     source:
       credentials:
