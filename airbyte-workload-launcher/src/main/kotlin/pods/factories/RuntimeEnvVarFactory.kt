@@ -14,7 +14,9 @@ import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
 import io.airbyte.featureflag.Context
+import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.ForceDdRemoteConfigVar
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Organization
@@ -68,6 +70,7 @@ class RuntimeEnvVarFactory(
     replicationInput: ReplicationInput,
     workloadId: String,
   ): List<EnvVar> {
+    val ddConfigEnvVars = getDdConfiguration()
     val optionsOverride: String = featureFlagClient.stringVariation(ContainerOrchestratorJavaOpts, Connection(replicationInput.connectionId))
     val javaOpts = optionsOverride.trim().ifEmpty { airbyteContainerOrchestratorConfig.javaOpts }
     val secretPersistenceEnvVars = getSecretPersistenceEnvVars(replicationInput.connectionContext.organizationId)
@@ -89,7 +92,7 @@ class RuntimeEnvVarFactory(
       EnvVar(EnvVarConstants.USE_FILE_TRANSFER, useFileTransferEnvVar.toString(), null),
       EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, javaOpts, null),
       EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, airbyteWorkerConfig.job.kubernetes.volumes.staging.mountPath, null),
-    ) + secretPersistenceEnvVars + logLevelEnvVars
+    ) + secretPersistenceEnvVars + logLevelEnvVars + ddConfigEnvVars
   }
 
   fun replicationConnectorEnvVars(
@@ -97,6 +100,7 @@ class RuntimeEnvVarFactory(
     resourceReqs: AirbyteResourceRequirements?,
     useFileTransfers: Boolean,
   ): List<EnvVar> {
+    val ddConfigEnvVars = getDdConfiguration()
     val awsEnvVars = resolveAwsAssumedRoleEnvVars(launcherConfig)
     val apmEnvVars = getConnectorApmEnvVars(launcherConfig.dockerImage, Workspace(launcherConfig.workspaceId))
     val configurationEnvVars = getConfigurationEnvVars(launcherConfig.dockerImage, launcherConfig.connectionId ?: ANONYMOUS, useFileTransfers)
@@ -107,7 +111,8 @@ class RuntimeEnvVarFactory(
     val logLevelEnvVars =
       getLogLevelEnvVars(Multi(listOf(Workspace(launcherConfig.workspaceId), Connection(launcherConfig.connectionId))))
 
-    return awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + configPassThroughEnv + customCodeEnvVars +
+    return ddConfigEnvVars + awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + configPassThroughEnv +
+      customCodeEnvVars +
       logLevelEnvVars
   }
 
@@ -117,7 +122,8 @@ class RuntimeEnvVarFactory(
     organizationId: UUID,
     workloadId: String,
   ): List<EnvVar> =
-    resolveAwsAssumedRoleEnvVars(launcherConfig) +
+    getDdConfiguration() +
+      resolveAwsAssumedRoleEnvVars(launcherConfig) +
       getSecretPersistenceEnvVars(organizationId) +
       getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId)) +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
@@ -129,7 +135,8 @@ class RuntimeEnvVarFactory(
     organizationId: UUID,
     workloadId: String,
   ): List<EnvVar> =
-    resolveAwsAssumedRoleEnvVars(launcherConfig) +
+    getDdConfiguration() +
+      resolveAwsAssumedRoleEnvVars(launcherConfig) +
       getSecretPersistenceEnvVars(organizationId) +
       getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId)) +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +
@@ -140,9 +147,17 @@ class RuntimeEnvVarFactory(
     launcherConfig: IntegrationLauncherConfig,
     workloadId: String,
   ): List<EnvVar> =
-    getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId)) +
+    getDdConfiguration() +
+      getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId)) +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SPEC.toString(), null) +
       EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
+
+  private fun getDdConfiguration(): List<EnvVar> =
+    if (featureFlagClient.boolVariation(ForceDdRemoteConfigVar, Empty)) {
+      listOf(EnvVar(AirbyteEnvVar.DD_REMOTE_CONFIGURATION_ENABLED.toString(), "false", null))
+    } else {
+      emptyList()
+    }
 
   /**
    * Env vars to enable APM metrics for the connector if enabled.

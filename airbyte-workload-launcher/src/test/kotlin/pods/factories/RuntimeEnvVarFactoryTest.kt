@@ -12,6 +12,7 @@ import io.airbyte.featureflag.ConcurrentSourceStreamRead
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
+import io.airbyte.featureflag.ForceDdRemoteConfigVar
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.ReplicationDebugLogLevelEnabled
 import io.airbyte.featureflag.TestClient
@@ -80,6 +81,7 @@ class RuntimeEnvVarFactoryTest {
     every { ffClient.boolVariation(InjectAwsSecretsToConnectorPods, any()) } returns false
     every { ffClient.boolVariation(UseAllowCustomCode, any()) } returns false
     every { ffClient.boolVariation(ReplicationDebugLogLevelEnabled, any()) } returns false
+    every { ffClient.boolVariation(ForceDdRemoteConfigVar, any()) } returns false
     airbyteEdition = AirbyteEdition.COMMUNITY
 
     airbyteWorkerConfig =

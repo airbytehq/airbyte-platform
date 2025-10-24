@@ -221,6 +221,8 @@ object DisableWorkloadLabelTableWrite : Temporary<Boolean>(key = "platform.disab
 
 object EnableOrchestration : Permanent<Boolean>(key = "platform.enable-orchestration", default = false)
 
+object ForceDdRemoteConfigVar : Temporary<Boolean>(key = "platform.force-dd-remote-config-var", default = false)
+
 object ReplicationCommandFallsBackToWorkloadStatus : Temporary<Boolean>(
   key = "platform.replication-command-falls-back-to-workload-status",
   default = false,
