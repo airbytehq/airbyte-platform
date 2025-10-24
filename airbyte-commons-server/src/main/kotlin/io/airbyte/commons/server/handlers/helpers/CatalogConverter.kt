@@ -175,7 +175,6 @@ class CatalogConverter(
       )
   }
 
-  @Throws(JsonValidationException::class)
   private fun toConfiguredProtocol(
     stream: io.airbyte.api.model.generated.AirbyteStream,
     config: AirbyteStreamConfiguration,
@@ -282,7 +281,6 @@ class CatalogConverter(
    * @param catalog api catalog
    * @return protocol catalog
    */
-  @Throws(JsonValidationException::class)
   fun toConfiguredInternal(catalog: AirbyteCatalog): ConfiguredAirbyteCatalog {
     val errors: MutableList<JsonValidationException> = ArrayList()
     val streams =
@@ -422,7 +420,6 @@ class CatalogConverter(
    * @param catalog api catalog
    * @return protocol catalog
    */
-  @Throws(JsonValidationException::class)
   fun toProtocolKeepAllStreams(catalog: AirbyteCatalog): ConfiguredAirbyteCatalog {
     val clone = Jsons.clone(catalog)
     clone.streams.forEach(
@@ -438,7 +435,6 @@ class CatalogConverter(
    * To convert AirbyteCatalog from APIs to model. This is to differentiate between
    * toConfiguredProtocol as the other one converts to ConfiguredAirbyteCatalog object instead.
    */
-  @Throws(JsonValidationException::class)
   fun toProtocol(catalog: AirbyteCatalog): io.airbyte.protocol.models.v0.AirbyteCatalog {
     val errors: MutableList<JsonValidationException> = ArrayList()
 

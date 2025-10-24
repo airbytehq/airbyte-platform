@@ -30,7 +30,6 @@ class TypeformOAuthFlow : BaseOAuth2Flow {
     this.clock = clock
   }
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -72,7 +71,6 @@ class TypeformOAuthFlow : BaseOAuth2Flow {
       "redirect_uri" to redirectUrl,
     )
 
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,
@@ -98,7 +96,6 @@ class TypeformOAuthFlow : BaseOAuth2Flow {
   }
 
   @Deprecated("")
-  @Throws(IOException::class)
   override fun completeSourceOAuth(
     workspaceId: UUID,
     sourceDefinitionId: UUID?,

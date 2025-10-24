@@ -24,7 +24,6 @@ class MailchimpOAuthFlow : BaseOAuth2Flow {
   @VisibleForTesting
   constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -61,7 +60,6 @@ class MailchimpOAuthFlow : BaseOAuth2Flow {
 
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String = ACCESS_TOKEN_URL
 
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,

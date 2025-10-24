@@ -33,7 +33,6 @@ class ConnectionHelper(
   private val connectionService: ConnectionService,
   private val workspaceHelper: WorkspaceHelper,
 ) {
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun deleteConnection(connectionId: UUID) {
     val update = Jsons.clone(connectionService.getStandardSync(connectionId).withStatus(StandardSync.Status.DEPRECATED))
     updateConnection(update)
@@ -49,7 +48,6 @@ class ConnectionHelper(
    * @throws ConfigNotFoundException - if there is no sync already persisted
    * @throws IOException - you never know when you io
    */
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun updateConnection(update: StandardSync): StandardSync {
     val original = connectionService.getStandardSync(update.connectionId)
     val newConnection = updateConnectionObject(workspaceHelper, original, update)

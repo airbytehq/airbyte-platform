@@ -40,14 +40,12 @@ import java.nio.charset.StandardCharsets
 import java.util.stream.Stream
 
 internal class CatalogDiffHelpersTest {
-  @Throws(IOException::class)
   private fun readResource(name: String): String {
     val resource = Resources.getResource(name)
     return Resources.toString(resource, StandardCharsets.UTF_8)
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetFieldNames() {
     val node = Jsons.deserialize(readResource(VALID_SCHEMA_JSON))
     val actualFieldNames = getAllFieldNames(node)
@@ -76,7 +74,6 @@ internal class CatalogDiffHelpersTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetCatalogDiff() {
     val schema1 = Jsons.deserialize(readResource(VALID_SCHEMA_JSON))
     val schema2 = Jsons.deserialize(readResource("diffs/valid_schema2.json"))
@@ -182,7 +179,6 @@ internal class CatalogDiffHelpersTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetFullyQualifiedFieldNamesWithTypes() {
     getFullyQualifiedFieldNamesWithTypes(
       Jsons.deserialize(readResource(COMPANIES_VALID)),
@@ -195,7 +191,6 @@ internal class CatalogDiffHelpersTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetFullyQualifiedFieldNamesWithTypesOnInvalidSchema() {
     val resultField =
       CatalogDiffHelpers
@@ -212,7 +207,6 @@ internal class CatalogDiffHelpersTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetCatalogDiffWithInvalidSchema() {
     val schema1 = Jsons.deserialize(readResource(COMPANIES_INVALID))
     val schema2 = Jsons.deserialize(readResource(COMPANIES_VALID))
@@ -262,7 +256,6 @@ internal class CatalogDiffHelpersTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetCatalogDiffWithBothInvalidSchema() {
     val schema1 = Jsons.deserialize(readResource(COMPANIES_INVALID))
     val schema2 = Jsons.deserialize(readResource(COMPANIES_INVALID))
@@ -303,7 +296,6 @@ internal class CatalogDiffHelpersTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testCatalogDiffWithBreakingChanges() {
     val schema1 = Jsons.deserialize(readResource(VALID_SCHEMA_JSON))
     val breakingSchema = Jsons.deserialize(readResource("diffs/breaking_change_schema.json"))
@@ -363,7 +355,6 @@ internal class CatalogDiffHelpersTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testCatalogDiffWithoutStreamConfig() {
     val schema1 = Jsons.deserialize(readResource(VALID_SCHEMA_JSON))
     val breakingSchema = Jsons.deserialize(readResource("diffs/breaking_change_schema.json"))
@@ -401,7 +392,6 @@ internal class CatalogDiffHelpersTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testCatalogDiffStreamChangeWithNoTransforms() {
     val schema1 = Jsons.deserialize(readResource(VALID_SCHEMA_JSON))
 
@@ -459,9 +449,6 @@ internal class CatalogDiffHelpersTest {
 
   @ParameterizedTest
   @MethodSource("testCatalogDiffWithSourceDefinedPrimaryKeyChangeMethodSource")
-  @Throws(
-    IOException::class,
-  )
   fun testCatalogDiffWithSourceDefinedPrimaryKeyChange(
     destSyncMode: DestinationSyncMode,
     configuredPK: List<List<String>>,

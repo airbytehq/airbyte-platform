@@ -38,7 +38,6 @@ class TestDatabaseProviders(
    * @throws IOException exception while accessing db
    * @throws DatabaseInitializationException exception while initializing db
    */
-  @Throws(IOException::class, DatabaseInitializationException::class)
   fun createNewConfigsDatabase(): Database {
     val flyway =
       create(
@@ -57,7 +56,6 @@ class TestDatabaseProviders(
    * @throws IOException exception while accessing db
    * @throws DatabaseInitializationException exception while initializing db
    */
-  @Throws(IOException::class, DatabaseInitializationException::class)
   fun createNewJobsDatabase(): Database {
     val flyway =
       create(

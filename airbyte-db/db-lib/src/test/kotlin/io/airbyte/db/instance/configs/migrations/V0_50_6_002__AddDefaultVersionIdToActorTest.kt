@@ -39,7 +39,6 @@ internal class V0_50_6_002__AddDefaultVersionIdToActorTest : AbstractConfigsData
   }
 
   @Test
-  @Throws(IOException::class, SQLException::class)
   fun test() {
     val context = dslContext!!
     addDefaultVersionIdColumnToActor(context)

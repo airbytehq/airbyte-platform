@@ -99,7 +99,6 @@ class WorkspacesHandler
     private val airbyteEdition: AirbyteEdition,
     private val roleResolver: RoleResolver,
   ) {
-    @Throws(JsonValidationException::class, IOException::class, ValueConflictKnownException::class, ConfigNotFoundException::class)
     fun createWorkspace(workspaceCreate: WorkspaceCreate): WorkspaceRead {
       val workspaceCreateWithId =
         WorkspaceCreateWithId()
@@ -144,7 +143,6 @@ class WorkspacesHandler
       }
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ValueConflictKnownException::class, ConfigNotFoundException::class)
     fun createWorkspaceIfNotExist(workspaceCreateWithId: WorkspaceCreateWithId): WorkspaceRead {
       // We expect that the caller is specifying the workspace ID.
       // Since this code is currently only called by OSS, it's enforced in the public API and the UI
@@ -206,12 +204,6 @@ class WorkspacesHandler
       return persistStandardWorkspace(workspace)
     }
 
-    @Throws(
-      JsonValidationException::class,
-      IOException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun deleteWorkspace(workspaceIdRequestBody: WorkspaceIdRequestBody) {
       // get existing implementation
       val persistedWorkspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceIdRequestBody.workspaceId, false)
@@ -240,7 +232,6 @@ class WorkspacesHandler
       persistStandardWorkspace(persistedWorkspace)
     }
 
-    @Throws(IOException::class)
     fun listWorkspaces(): WorkspaceReadList {
       val reads =
         workspaceService
@@ -251,7 +242,6 @@ class WorkspacesHandler
       return WorkspaceReadList().workspaces(reads)
     }
 
-    @Throws(IOException::class)
     fun listWorkspacesPaginated(listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody): WorkspaceReadList {
       val standardWorkspaces =
         workspaceService.listStandardWorkspacesPaginated(
@@ -272,7 +262,6 @@ class WorkspacesHandler
       return WorkspaceReadList().workspaces(reads)
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun getWorkspace(workspaceIdRequestBody: WorkspaceIdRequestBody): WorkspaceRead {
       val workspaceId = workspaceIdRequestBody.workspaceId
       val includeTombstone = if (workspaceIdRequestBody.includeTombstone != null) workspaceIdRequestBody.includeTombstone else false
@@ -286,7 +275,6 @@ class WorkspacesHandler
       return result
     }
 
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun getWorkspaceOrganizationInfo(workspaceIdRequestBody: WorkspaceIdRequestBody): OrganizationInfoRead {
       val workspaceId = workspaceIdRequestBody.workspaceId
       val organization = organizationPersistence.getOrganizationByWorkspaceId(workspaceId)
@@ -297,14 +285,12 @@ class WorkspacesHandler
     }
 
     @Suppress("unused")
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun getWorkspaceBySlug(slugRequestBody: SlugRequestBody): WorkspaceRead {
       // for now we assume there is one workspace and it has a default uuid.
       val workspace = workspaceService.getWorkspaceBySlug(slugRequestBody.slug, false)
       return domainToApiModel(workspace)
     }
 
-    @Throws(ConfigNotFoundException::class)
     fun getWorkspaceByConnectionId(
       connectionIdRequestBody: ConnectionIdRequestBody,
       includeTombstone: Boolean,
@@ -314,7 +300,6 @@ class WorkspacesHandler
       return domainToApiModel(workspace)
     }
 
-    @Throws(IOException::class)
     fun listWorkspacesInOrganization(request: ListWorkspacesInOrganizationRequestBody): WorkspaceReadList {
       val nameContains = if (StringUtils.isBlank(request.nameContains)) Optional.empty() else Optional.of(request.nameContains)
       val standardWorkspaces =
@@ -341,7 +326,6 @@ class WorkspacesHandler
       return WorkspaceReadList().workspaces(standardWorkspaces)
     }
 
-    @Throws(IOException::class)
     fun listWorkspacesInOrganizationForUser(
       userId: UUID,
       request: ListWorkspacesInOrganizationRequestBody,
@@ -376,7 +360,6 @@ class WorkspacesHandler
       return WorkspaceReadList().workspaces(standardWorkspaces)
     }
 
-    @Throws(IOException::class)
     private fun listWorkspacesByInstanceAdminUser(request: ListWorkspacesByUserRequestBody): WorkspaceReadList {
       val nameContains = if (StringUtils.isBlank(request.nameContains)) Optional.empty() else Optional.of(request.nameContains)
       val standardWorkspaces =
@@ -400,7 +383,6 @@ class WorkspacesHandler
       return WorkspaceReadList().workspaces(standardWorkspaces)
     }
 
-    @Throws(IOException::class)
     fun listWorkspacesByUser(request: ListWorkspacesByUserRequestBody): WorkspaceReadList {
       // If user has instance_admin permission, list all workspaces.
       if (permissionHandler.isUserInstanceAdmin(request.userId)) {
@@ -432,7 +414,6 @@ class WorkspacesHandler
       return WorkspaceReadList().workspaces(standardWorkspaces)
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun updateWorkspace(workspacePatch: WorkspaceUpdate): WorkspaceRead {
       val workspaceId = workspacePatch.workspaceId
 
@@ -465,7 +446,6 @@ class WorkspacesHandler
       return buildWorkspaceReadFromId(workspaceId)
     }
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun updateWorkspaceName(workspaceUpdateName: WorkspaceUpdateName): WorkspaceRead {
       val workspaceId = workspaceUpdateName.workspaceId
 
@@ -482,7 +462,6 @@ class WorkspacesHandler
       return buildWorkspaceReadFromId(workspaceId)
     }
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun updateWorkspaceOrganization(workspaceUpdateOrganization: WorkspaceUpdateOrganization): WorkspaceRead {
       val workspaceId = workspaceUpdateOrganization.workspaceId
 
@@ -493,12 +472,10 @@ class WorkspacesHandler
       return buildWorkspaceReadFromId(workspaceId)
     }
 
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun setFeedbackDone(workspaceGiveFeedback: WorkspaceGiveFeedback) {
       workspaceService.setFeedback(workspaceGiveFeedback.workspaceId)
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     private fun buildWorkspaceReadFromId(workspaceId: UUID): WorkspaceRead {
       val workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false)
       return domainToApiModel(workspace)
@@ -510,7 +487,6 @@ class WorkspacesHandler
         .organizationName(organization.name)
         .sso(organization.ssoRealm != null && organization.ssoRealm.isNotEmpty())
 
-    @Throws(IOException::class)
     private fun generateUniqueSlug(workspaceName: String): String {
       val proposedSlug = slugify(workspaceName)
 
@@ -541,7 +517,6 @@ class WorkspacesHandler
       Preconditions.checkArgument(persistedWorkspace.workspaceId == workspacePatch.workspaceId)
     }
 
-    @Throws(IOException::class)
     private fun applyPatchToStandardWorkspace(
       workspace: StandardWorkspace,
       workspacePatch: WorkspaceUpdate,
@@ -695,7 +670,6 @@ class WorkspacesHandler
       item.notificationType.remove(type)
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     private fun persistStandardWorkspace(workspace: StandardWorkspace): WorkspaceRead {
       workspaceService.writeWorkspaceWithSecrets(workspace)
       return domainToApiModel(workspace)

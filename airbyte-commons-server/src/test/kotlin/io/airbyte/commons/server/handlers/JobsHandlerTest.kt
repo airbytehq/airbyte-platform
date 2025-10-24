@@ -47,6 +47,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -187,7 +188,7 @@ class JobsHandlerTest {
   @Test
   fun setJobSuccessWrapException() {
     val exception = IOException("oops")
-    doThrow(exception).whenever(jobPersistence).succeedAttempt(jobId, attemptNumber)
+    doAnswer { throw exception }.whenever(jobPersistence).succeedAttempt(jobId, attemptNumber)
 
     assertThatThrownBy {
       jobsHandler.jobSuccessWithAttemptNumber(
@@ -251,7 +252,7 @@ class JobsHandlerTest {
   @Test
   fun persistJobCancellationIOException() {
     val exception = IOException("bang.")
-    whenever(jobPersistence.getJob(jobId)).thenThrow(exception)
+    whenever(jobPersistence.getJob(jobId)).thenAnswer { throw exception }
 
     assertThrows(RuntimeException::class.java) {
       jobsHandler.persistJobCancellation(connectionId, jobId, attemptNumber, failureSummary)

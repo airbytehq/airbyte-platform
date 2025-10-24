@@ -99,7 +99,6 @@ class DestinationHandler
     private val currentUserService: CurrentUserService,
     private val connectorConfigEntitlementService: ConnectorConfigEntitlementService,
   ) {
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun createDestination(destinationCreate: DestinationCreate): DestinationRead {
       if (destinationCreate.resourceAllocation != null && airbyteEdition == AirbyteEdition.CLOUD) {
         throw BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition))
@@ -128,12 +127,6 @@ class DestinationHandler
       return buildDestinationRead(destinationService.getDestinationConnection(destinationId), spec)
     }
 
-    @Throws(
-      JsonValidationException::class,
-      IOException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun deleteDestination(destinationIdRequestBody: DestinationIdRequestBody) {
       // get existing implementation
       val destination = buildDestinationRead(destinationIdRequestBody.destinationId)
@@ -141,12 +134,6 @@ class DestinationHandler
       deleteDestination(destination)
     }
 
-    @Throws(
-      JsonValidationException::class,
-      IOException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun deleteDestination(destination: DestinationRead) {
       // disable all connections associated with this destination
       // Delete connections first in case it fails in the middle, destination will still be visible
@@ -184,12 +171,6 @@ class DestinationHandler
       }
     }
 
-    @Throws(
-      ConfigNotFoundException::class,
-      IOException::class,
-      JsonValidationException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun updateDestination(destinationUpdate: DestinationUpdate): DestinationRead {
       if (destinationUpdate.resourceAllocation != null && airbyteEdition == AirbyteEdition.CLOUD) {
         throw BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition))
@@ -232,12 +213,6 @@ class DestinationHandler
       )
     }
 
-    @Throws(
-      ConfigNotFoundException::class,
-      IOException::class,
-      JsonValidationException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun partialDestinationUpdate(partialDestinationUpdate: PartialDestinationUpdate): DestinationRead {
       if (partialDestinationUpdate.resourceAllocation != null && airbyteEdition == AirbyteEdition.CLOUD) {
         throw BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition))
@@ -288,7 +263,6 @@ class DestinationHandler
      *
      * @param destinationIdRequestBody - ID of the destination to upgrade
      */
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun upgradeDestinationVersion(destinationIdRequestBody: DestinationIdRequestBody) {
       val destinationConnection = destinationService.getDestinationConnection(destinationIdRequestBody.destinationId)
       val destinationDefinition =
@@ -296,16 +270,13 @@ class DestinationHandler
       actorDefinitionVersionUpdater.upgradeActorVersion(destinationConnection, destinationDefinition)
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun getDestination(destinationIdRequestBody: DestinationIdRequestBody): DestinationRead = getDestination(destinationIdRequestBody, false)
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun getDestination(
       destinationIdRequestBody: DestinationIdRequestBody,
       includeSecretCoordinates: Boolean,
     ): DestinationRead = buildDestinationRead(destinationIdRequestBody.destinationId, includeSecretCoordinates)
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun listDestinationsForWorkspace(actorListCursorPaginatedRequestBody: ActorListCursorPaginatedRequestBody): DestinationReadList {
       val filters = actorListCursorPaginatedRequestBody.filters
       val pageSize =
@@ -373,7 +344,6 @@ class DestinationHandler
       return DestinationReadList().destinations(destinationReads).numConnections(numDestinations).pageSize(pageSize)
     }
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     private fun buildDestinationReadWithStatus(destinationConnection: DestinationConnection): DestinationRead {
       val destinationRead = buildDestinationRead(destinationConnection)
       // add destination status into destinationRead
@@ -385,7 +355,6 @@ class DestinationHandler
       return destinationRead
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun listDestinationsForWorkspaces(listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody): DestinationReadList {
       val reads: MutableList<DestinationRead> = Lists.newArrayList()
       val destinationConnections =
@@ -404,7 +373,6 @@ class DestinationHandler
       return DestinationReadList().destinations(reads)
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun listDestinationsForDestinationDefinition(destinationDefinitionId: UUID): DestinationReadList {
       val reads: MutableList<DestinationRead> = Lists.newArrayList()
 
@@ -416,7 +384,6 @@ class DestinationHandler
       return DestinationReadList().destinations(reads)
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun searchDestinations(destinationSearch: DestinationSearch?): DestinationReadList {
       val reads: MutableList<DestinationRead> = Lists.newArrayList()
 
@@ -432,7 +399,6 @@ class DestinationHandler
       return DestinationReadList().destinations(reads)
     }
 
-    @Throws(JsonValidationException::class)
     private fun validateDestination(
       spec: ConnectorSpecification,
       configuration: JsonNode,
@@ -448,7 +414,6 @@ class DestinationHandler
      * Note: The existing destination config may have been persisted with secret object nodes instead of
      * raw values, which must be replaced with placeholder text nodes in order to pass validation.
      */
-    @Throws(JsonValidationException::class)
     private fun validateDestinationUpdate(
       providedUpdateJson: JsonNode?,
       updatedDestination: DestinationConnection,
@@ -475,7 +440,6 @@ class DestinationHandler
       validateDestination(spec, mergedConfig)
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun getDestinationVersionForDestinationId(
       destinationDefinitionId: UUID,
       workspaceId: UUID,
@@ -485,7 +449,6 @@ class DestinationHandler
       return actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId, destinationId)
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun getDestinationVersionForWorkspaceId(
       destinationDefinitionId: UUID,
       workspaceId: UUID,
@@ -500,7 +463,6 @@ class DestinationHandler
      * coordinates are split out from the provided config and replaced with coordinates or secret
      * reference IDs, depending on whether the workspace has a secret storage configured.
      */
-    @Throws(JsonValidationException::class, IOException::class)
     private fun persistDestinationConnection(
       name: String,
       destinationDefinitionId: UUID,
@@ -557,7 +519,6 @@ class DestinationHandler
      *
      * @return new config with secret values replaced with secret coordinate nodes.
      */
-    @Throws(JsonValidationException::class)
     private fun persistConfigRawSecretValues(
       config: JsonNode,
       secretStorageId: Optional<UUID>,
@@ -600,13 +561,11 @@ class DestinationHandler
     }
 
     @JvmOverloads
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun buildDestinationRead(
       destinationId: UUID,
       includeSecretCoordinates: Boolean = false,
     ): DestinationRead = buildDestinationRead(destinationService.getDestinationConnection(destinationId), includeSecretCoordinates)
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     private fun buildDestinationRead(
       destinationConnection: DestinationConnection,
       includeSecretCoordinates: Boolean = false,
@@ -623,7 +582,6 @@ class DestinationHandler
       return buildDestinationRead(destinationConnection, spec, includeSecretCoordinates)
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     private fun buildDestinationRead(
       destinationConnection: DestinationConnection,
       spec: ConnectorSpecification,
@@ -656,7 +614,6 @@ class DestinationHandler
       return toDestinationRead(dci, standardDestinationDefinition)
     }
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun toDestinationRead(
       destinationConnection: DestinationConnection,
       standardDestinationDefinition: StandardDestinationDefinition,

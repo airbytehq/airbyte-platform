@@ -34,7 +34,6 @@ class SmartsheetsOAuthFlow : BaseOAuth2Flow {
     this.clock = clock
   }
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -70,7 +69,6 @@ class SmartsheetsOAuthFlow : BaseOAuth2Flow {
       .put("code", authCode)
       .build()
 
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,
@@ -96,7 +94,6 @@ class SmartsheetsOAuthFlow : BaseOAuth2Flow {
   }
 
   @Deprecated("")
-  @Throws(IOException::class)
   override fun completeSourceOAuth(
     workspaceId: UUID,
     sourceDefinitionId: UUID?,

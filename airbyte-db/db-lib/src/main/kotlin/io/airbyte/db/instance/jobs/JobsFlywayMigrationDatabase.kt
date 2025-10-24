@@ -35,7 +35,6 @@ class JobsFlywayMigrationDatabase : FlywayMigrationDatabase() {
   override val migrationFileLocations: Array<String>
     get() = arrayOf(JobsDatabaseMigrator.MIGRATION_FILE_LOCATION)
 
-  @Throws(DatabaseInitializationException::class, IOException::class)
   override fun initializeDatabase(dslContext: DSLContext) {
     val initialSchema = Resources.read(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH)
     createJobsDatabaseInitializer(

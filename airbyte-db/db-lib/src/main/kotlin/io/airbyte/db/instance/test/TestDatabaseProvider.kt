@@ -20,6 +20,5 @@ interface TestDatabaseProvider {
    * unit test. Usually this parameter should be false only when the migration itself is being
    * tested.
    */
-  @Throws(IOException::class, DatabaseInitializationException::class)
   fun create(runMigration: Boolean): Database
 }

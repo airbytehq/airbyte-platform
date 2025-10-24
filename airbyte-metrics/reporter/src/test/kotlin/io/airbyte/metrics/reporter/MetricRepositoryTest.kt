@@ -117,7 +117,6 @@ abstract class MetricRepositoryTest {
     }
 
     @Test
-    @Throws(SQLException::class)
     fun runningJobsShouldReturnZero() {
       // non-pending jobs
       ctx!!
@@ -143,7 +142,6 @@ abstract class MetricRepositoryTest {
     }
 
     @Test
-    @Throws(SQLException::class)
     fun pendingJobsShouldReturnCorrectCount() {
       // non-pending jobs
       val connectionUuid = UUID.randomUUID()
@@ -277,7 +275,6 @@ abstract class MetricRepositoryTest {
     }
 
     @Test
-    @Throws(SQLException::class)
     fun pendingJobsShouldReturnZero() {
       val connectionUuid = UUID.randomUUID()
       val workspaceId = UUID.randomUUID()
@@ -412,7 +409,6 @@ abstract class MetricRepositoryTest {
   @Nested
   internal inner class OldestPendingJob {
     @Test
-    @Throws(SQLException::class)
     fun shouldReturnOnlyPendingSeconds() {
       val expAgeSecs = 1000
       val oldestCreateAt = OffsetDateTime.now().minus(expAgeSecs.toLong(), ChronoUnit.SECONDS)
@@ -870,7 +866,6 @@ abstract class MetricRepositoryTest {
   @Nested
   internal inner class OverallJobRuntimeForTerminalJobsInLastHour {
     @Test
-    @Throws(SQLException::class)
     fun shouldIgnoreNonTerminalJobs() {
       ctx!!
         .insertInto(
@@ -1032,7 +1027,6 @@ abstract class MetricRepositoryTest {
   @Nested
   internal inner class AbnormalJobsInLastDay {
     @Test
-    @Throws(SQLException::class)
     fun shouldCountInJobsWithMissingRun() {
       val updateAt = OffsetDateTime.now().minus(300, ChronoUnit.HOURS)
       val connectionId = UUID.randomUUID()
@@ -1200,7 +1194,6 @@ abstract class MetricRepositoryTest {
   @Nested
   internal inner class UnusuallyLongJobs {
     @Test
-    @Throws(SQLException::class)
     fun shouldCountJobsWithUnusuallyLongTime() {
       val connectionId = UUID.randomUUID()
       val syncConfigType = JobConfigType.sync
@@ -1336,7 +1329,6 @@ abstract class MetricRepositoryTest {
     }
 
     @Test
-    @Throws(SQLException::class)
     fun handlesNullConfigRows() {
       val connectionId = UUID.randomUUID()
       val syncConfigType = JobConfigType.sync
@@ -1446,7 +1438,6 @@ abstract class MetricRepositoryTest {
     }
 
     @Test
-    @Throws(SQLException::class)
     fun shouldNotCountInJobsWithinFifteenMinutes() {
       val connectionId = UUID.randomUUID()
       val syncConfigType = JobConfigType.sync
@@ -1559,7 +1550,6 @@ abstract class MetricRepositoryTest {
     }
 
     @Test
-    @Throws(SQLException::class)
     fun shouldSkipInsufficientJobRuns() {
       val connectionId = UUID.randomUUID()
       val syncConfigType = JobConfigType.sync

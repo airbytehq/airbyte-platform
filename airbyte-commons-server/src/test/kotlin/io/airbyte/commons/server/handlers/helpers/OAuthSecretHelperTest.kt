@@ -22,7 +22,6 @@ import java.io.IOException
 
 internal class OAuthSecretHelperTest {
   @Test
-  @Throws(IOException::class, JsonValidationException::class)
   fun testGetOAuthConfigPaths() {
     val connectorSpecification = ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification()!!
     val result = getOAuthConfigPaths(connectorSpecification)
@@ -36,7 +35,6 @@ internal class OAuthSecretHelperTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class)
   fun testGetOAuthInputPathsForNestedAdvancedAuth() {
     val connectorSpecification = ConnectorSpecificationHelpers.generateNestedAdvancedAuthConnectorSpecification()!!
     val result = getOAuthInputPaths(connectorSpecification)
@@ -49,7 +47,6 @@ internal class OAuthSecretHelperTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class)
   fun testGetOAuthInputPathsForAdvancedAuth() {
     val connectorSpecification = ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification()!!
     val result = getOAuthInputPaths(connectorSpecification)
@@ -62,7 +59,6 @@ internal class OAuthSecretHelperTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class)
   fun testSetSecretsInConnectionConfigurationForAdvancedAuth() {
     val connectorSpecification = ConnectorSpecificationHelpers.generateAdvancedAuthConnectorSpecification()!!
     val connectionConfiguration = JsonNodeFactory.instance.objectNode()
@@ -97,7 +93,6 @@ internal class OAuthSecretHelperTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class)
   fun testValidateOauthParamConfigAndReturnAdvancedAuthSecretSpec() {
     val emptyConnectorSpecification = ConnectorSpecification()
     Assertions.assertThrows<BadObjectSchemaKnownException?>(

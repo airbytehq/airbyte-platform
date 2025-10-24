@@ -18,7 +18,6 @@ import java.util.UUID
 class ZendeskChatOAuthFlow(
   httpClient: HttpClient,
 ) : BaseOAuth2Flow(httpClient) {
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -68,7 +67,6 @@ class ZendeskChatOAuthFlow(
 
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String = ACCESS_TOKEN_URL
 
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,

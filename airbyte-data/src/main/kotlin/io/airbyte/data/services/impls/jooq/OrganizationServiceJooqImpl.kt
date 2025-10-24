@@ -39,7 +39,6 @@ class OrganizationServiceJooqImpl(
    * @return organization, if present.
    * @throws IOException - you never know when you IO
    */
-  @Throws(IOException::class)
   override fun getOrganization(organizationId: UUID): Optional<Organization> {
     val result: Result<Record> =
       database
@@ -54,7 +53,6 @@ class OrganizationServiceJooqImpl(
     return result.stream().findFirst().map { record: Record -> DbConverter.buildOrganization(record) }
   }
 
-  @Throws(IOException::class)
   override fun getOrganizationForWorkspaceId(workspaceId: UUID): Optional<Organization> {
     val result =
       database
@@ -75,7 +73,6 @@ class OrganizationServiceJooqImpl(
    * @param organization - The configuration of the organization
    * @throws IOException - you never know when you IO
    */
-  @Throws(IOException::class)
   override fun writeOrganization(organization: Organization) {
     database.transaction<Any?> { ctx: DSLContext ->
       val timestamp = OffsetDateTime.now()

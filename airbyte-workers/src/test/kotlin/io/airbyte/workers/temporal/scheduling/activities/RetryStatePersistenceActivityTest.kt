@@ -37,7 +37,6 @@ internal class RetryStatePersistenceActivityTest {
   private lateinit var mWorkspaceApi: WorkspaceApi
 
   @BeforeEach
-  @Throws(Exception::class)
   fun setup() {
     mAirbyteApiClient = org.mockito.Mockito.mock<AirbyteApiClient>(AirbyteApiClient::class.java)
     mRetryStateClient = org.mockito.Mockito.mock<RetryStateClient>(RetryStateClient::class.java)
@@ -87,7 +86,6 @@ internal class RetryStatePersistenceActivityTest {
 
   @ParameterizedTest
   @MethodSource("persistMatrix")
-  @Throws(IOException::class)
   fun persistDelegatesToRetryStatePersistence(
     jobId: Long,
     connectionId: UUID,

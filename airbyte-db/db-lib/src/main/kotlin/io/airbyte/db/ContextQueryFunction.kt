@@ -13,6 +13,5 @@ import java.sql.SQLException
  * @param <T> return type of query </T>
  * */
 fun interface ContextQueryFunction<T> {
-  @Throws(SQLException::class)
   fun query(context: DSLContext): T
 }

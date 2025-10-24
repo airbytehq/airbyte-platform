@@ -36,7 +36,6 @@ abstract class OAuthFlowIntegrationTest {
   ): OAuthFlowImplementation
 
   @BeforeEach
-  @Throws(IOException::class)
   open fun setup() {
     check(Files.exists(getCredentialsPath())) { "Must provide path to a oauth credentials file." }
     httpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build()
@@ -55,7 +54,6 @@ abstract class OAuthFlowIntegrationTest {
     server.stop(1)
   }
 
-  @Throws(InterruptedException::class)
   protected fun waitForResponse(limit: Int) {
     // TODO: To automate, start a selenium job to navigate to the Consent URL and click on allowing
     // access...

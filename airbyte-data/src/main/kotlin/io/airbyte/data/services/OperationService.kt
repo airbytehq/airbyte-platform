@@ -14,21 +14,16 @@ import java.util.UUID
  * Operation Service.
  */
 interface OperationService {
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun getStandardSyncOperation(operationId: UUID): StandardSyncOperation
 
-  @Throws(IOException::class)
   fun writeStandardSyncOperation(standardSyncOperation: StandardSyncOperation)
 
-  @Throws(IOException::class)
   fun listStandardSyncOperations(): List<StandardSyncOperation>
 
-  @Throws(IOException::class)
   fun updateConnectionOperationIds(
     connectionId: UUID,
     newOperationIds: Set<UUID>,
   )
 
-  @Throws(IOException::class)
   fun deleteStandardSyncOperation(standardSyncOperationId: UUID)
 }

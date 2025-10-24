@@ -49,7 +49,6 @@ class RepositoryTestSyncHelper(
    * @param standardSync standard sync (a.k.a. connection)
    * @throws IOException exception when interacting with the db
    */
-  @Throws(IOException::class)
   fun createStandardSync(standardSync: StandardSync) {
     database.transaction<Any?>(
       ContextQueryFunction { ctx: DSLContext? ->

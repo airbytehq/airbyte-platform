@@ -25,7 +25,6 @@ import java.util.UUID
 class OktaOAuthFlow(
   httpClient: HttpClient,
 ) : BaseOAuth2Flow(httpClient) {
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -73,7 +72,6 @@ class OktaOAuthFlow(
     return "https://$domain.okta.com/oauth2/v1/token"
   }
 
-  @Throws(IOException::class)
   override fun completeOAuthFlow(
     clientId: String,
     clientSecret: String,

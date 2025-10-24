@@ -24,7 +24,6 @@ open class LocalTestingSecretPersistence(
 ) : SecretPersistence {
   private var initialized = false
 
-  @Throws(DataAccessException::class)
   @Transactional
   @TransactionalAdvice("local-secrets")
   override fun initialize() {
@@ -34,7 +33,6 @@ open class LocalTestingSecretPersistence(
     }
   }
 
-  @Throws(DataAccessException::class)
   @Transactional
   @TransactionalAdvice("local-secrets")
   override fun read(coordinate: SecretCoordinate): String {

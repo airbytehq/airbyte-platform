@@ -12,7 +12,6 @@ import java.io.IOException
 interface AirbyteCdkProcess : AutoCloseable {
   fun getProcess(): Process
 
-  @Throws(IOException::class)
   fun start(): Process
 
   override fun close()

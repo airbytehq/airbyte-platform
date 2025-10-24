@@ -38,7 +38,6 @@ class SurveymonkeyOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
   ): OAuthFlowImplementation = SurveymonkeyOAuthFlow(httpClient)
 
   @BeforeEach
-  @Throws(IOException::class)
   override fun setup() {
     super.setup()
   }
@@ -46,12 +45,6 @@ class SurveymonkeyOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
   override fun getServerListeningPort(): Int = 3000
 
   @Test
-  @Throws(
-    InterruptedException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-  )
   fun testFullSurveymonkeyOAuthFlow() {
     val workspaceId = UUID.randomUUID()
     val definitionId = UUID.randomUUID()

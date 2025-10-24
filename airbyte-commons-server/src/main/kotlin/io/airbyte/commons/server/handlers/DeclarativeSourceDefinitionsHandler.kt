@@ -43,7 +43,6 @@ open class DeclarativeSourceDefinitionsHandler
     private val manifestInjector: DeclarativeSourceManifestInjector,
     private val airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator,
   ) {
-    @Throws(IOException::class)
     fun createDeclarativeSourceDefinitionManifest(requestBody: DeclarativeSourceDefinitionCreateManifestRequestBody) {
       validateAccessToSource(requestBody.sourceDefinitionId, requestBody.workspaceId)
 
@@ -91,7 +90,6 @@ open class DeclarativeSourceDefinitionsHandler
       connectorBuilderService.deleteManifestDraftForActorDefinition(requestBody.sourceDefinitionId, requestBody.workspaceId)
     }
 
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun updateDeclarativeManifestVersion(requestBody: UpdateActiveManifestRequestBody) {
       val sourceDefinitionId = requestBody.sourceDefinitionId
       val workspaceId = requestBody.workspaceId
@@ -145,14 +143,12 @@ open class DeclarativeSourceDefinitionsHandler
       )
     }
 
-    @Throws(IOException::class)
     private fun fetchAvailableManifestVersions(sourceDefinitionId: UUID): Collection<Long> =
       connectorBuilderService
         .getDeclarativeManifestsByActorDefinitionId(sourceDefinitionId)
         .map { obj: DeclarativeManifest -> obj.version }
         .collect(Collectors.toSet())
 
-    @Throws(IOException::class)
     private fun validateAccessToSource(
       actorDefinitionId: UUID,
       workspaceId: UUID,
@@ -164,7 +160,6 @@ open class DeclarativeSourceDefinitionsHandler
       }
     }
 
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun listManifestVersions(requestBody: ListDeclarativeManifestsRequestBody): DeclarativeManifestsReadList {
       validateAccessToSource(requestBody.sourceDefinitionId, requestBody.workspaceId)
       val existingVersions =

@@ -54,7 +54,6 @@ internal class KeycloakSetupTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testRun() {
     keycloakSetup.run()
 
@@ -76,7 +75,7 @@ internal class KeycloakSetupTest {
           ArgumentMatchers.any(HttpRequest::class.java),
           ArgumentMatchers.eq(String::class.java),
         ),
-      ).thenThrow(HttpClientResponseException("Error", HttpResponse.serverError<String>()))
+      ).thenAnswer { throw HttpClientResponseException("Error", HttpResponse.serverError<String>()) }
 
     Assertions.assertThrows(HttpClientResponseException::class.java) { keycloakSetup.run() }
 
@@ -90,7 +89,6 @@ internal class KeycloakSetupTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testResetRealm() {
     Mockito.`when`(keycloakConfiguration.resetRealm).thenReturn(true)
 

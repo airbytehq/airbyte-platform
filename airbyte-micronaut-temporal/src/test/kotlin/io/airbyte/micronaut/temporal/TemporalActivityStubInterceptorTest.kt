@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 internal class TemporalActivityStubInterceptorTest {
   @Test
-  @Throws(Exception::class)
   fun testExecutionOfValidWorkflowWithActivities() {
     val activityOptions = Mockito.mock<ActivityOptions?>(ActivityOptions::class.java)
     val testActivity = Mockito.mock<TestActivity?>(TestActivity::class.java)
@@ -81,7 +80,6 @@ internal class TemporalActivityStubInterceptorTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testActivityStubsAreOnlyInitializedOnce() {
     val activityStubInitializationCounter = AtomicInteger(0)
     val activityOptions = Mockito.mock<ActivityOptions?>(ActivityOptions::class.java)

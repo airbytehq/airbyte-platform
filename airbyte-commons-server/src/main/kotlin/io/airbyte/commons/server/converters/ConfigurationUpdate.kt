@@ -43,12 +43,6 @@ class ConfigurationUpdate(
    * @throws IOException thrown if exception while interacting with the db
    * @throws JsonValidationException thrown if newConfiguration is invalid json
    */
-  @Throws(
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-  )
   fun source(
     sourceId: UUID,
     sourceName: String?,
@@ -90,7 +84,6 @@ class ConfigurationUpdate(
    * @throws IOException thrown if exception while interacting with the db
    * @throws JsonValidationException thrown if newConfiguration is invalid json
    */
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun partialSource(
     sourceId: UUID,
     sourceName: String?,
@@ -118,12 +111,6 @@ class ConfigurationUpdate(
    * @throws IOException thrown if exception while interacting with the db
    * @throws JsonValidationException thrown if newConfiguration is invalid json
    */
-  @Throws(
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-  )
   fun destination(
     destinationId: UUID,
     destName: String?,
@@ -167,7 +154,6 @@ class ConfigurationUpdate(
    * @throws IOException thrown if exception while interacting with the db
    * @throws JsonValidationException thrown if newConfiguration is invalid json
    */
-  @Throws(io.airbyte.config.persistence.ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun partialDestination(
     destinationId: UUID,
     destinationName: String?,

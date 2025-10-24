@@ -53,7 +53,6 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
 
   @Test
   @DisplayName("updateConnectorBuilderProject should update an existing project removing the draft")
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testUpdateConnectorBuilderProjectWipeDraft() {
     val project = generateBuilderProject()
 
@@ -85,7 +84,6 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
 
   @Test
   @DisplayName("updateConnectorBuilderProject should update an existing project")
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testUpdateConnectorBuilderProject() {
     val project = generateBuilderProject()
 
@@ -119,7 +117,6 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun givenActorDefinitionAssociatedWithProjectWhenUpdateConnectorBuilderProjectThenUpdateProjectAndDefinition() {
     Mockito.`when`<ConnectorBuilderProject?>(connectorBuilderService!!.getConnectorBuilderProject(A_BUILDER_PROJECT_ID, false)).thenReturn(
       anyBuilderProject()
@@ -159,7 +156,6 @@ internal class ConfigRepositoryBuilderProjectUpdaterTest {
       )
   }
 
-  @Throws(JsonProcessingException::class)
   private fun generateBuilderProject(): ConnectorBuilderProject {
     val projectId = UUID.randomUUID()
     return ConnectorBuilderProject()

@@ -18,7 +18,6 @@ internal class EmptyAirbyteDestination : AirbyteDestination {
   @Volatile
   private var finished = false
 
-  @Throws(Exception::class)
   override fun start(
     destinationConfig: WorkerDestinationConfig,
     jobRoot: Path,
@@ -26,11 +25,9 @@ internal class EmptyAirbyteDestination : AirbyteDestination {
     finished = false
   }
 
-  @Throws(Exception::class)
   override fun accept(message: AirbyteMessage) {
   }
 
-  @Throws(Exception::class)
   override fun notifyEndOfInput() {
     finished = true
   }
@@ -43,11 +40,9 @@ internal class EmptyAirbyteDestination : AirbyteDestination {
 
   override fun attemptRead(): Optional<AirbyteMessage> = Optional.empty<AirbyteMessage>()
 
-  @Throws(Exception::class)
   override fun close() {
   }
 
-  @Throws(Exception::class)
   override fun cancel() {
   }
 }

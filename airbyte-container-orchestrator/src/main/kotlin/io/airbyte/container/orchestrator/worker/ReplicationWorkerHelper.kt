@@ -204,7 +204,6 @@ class ReplicationWorkerHelper(
   fun getStreamStatusToSend(exitValue: Int): List<AirbyteMessage> = streamStatusCompletionTracker.finalize(exitValue, mapper)
 
   @JvmOverloads
-  @Throws(JsonProcessingException::class)
   fun getReplicationOutput(performanceMetrics: PerformanceMetrics? = null): ReplicationOutput {
     val outputStatus =
       when {

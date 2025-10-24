@@ -18,26 +18,20 @@ import java.util.UUID
  * This service is responsible for Catalogs.
  */
 interface CatalogService {
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun getActorCatalogById(actorCatalogId: UUID): ActorCatalog
 
-  @Throws(IOException::class)
   fun getActorCatalog(
     actorId: UUID,
     actorVersion: String,
     configHash: String,
   ): Optional<ActorCatalog>
 
-  @Throws(IOException::class)
   fun getMostRecentSourceActorCatalog(sourceId: UUID): Optional<ActorCatalogWithUpdatedAt>
 
-  @Throws(IOException::class)
   fun getMostRecentActorCatalogForSource(sourceId: UUID): Optional<ActorCatalog>
 
-  @Throws(IOException::class)
   fun getMostRecentActorCatalogFetchEventForSource(sourceId: UUID): Optional<ActorCatalogFetchEvent>
 
-  @Throws(IOException::class)
   fun writeActorCatalogWithFetchEvent(
     catalog: AirbyteCatalog,
     actorId: UUID,
@@ -45,7 +39,6 @@ interface CatalogService {
     configurationHash: String,
   ): UUID
 
-  @Throws(IOException::class)
   fun writeActorCatalogWithFetchEvent(
     catalog: DestinationCatalog,
     actorId: UUID,
@@ -53,7 +46,6 @@ interface CatalogService {
     configurationHash: String,
   ): UUID
 
-  @Throws(IOException::class)
   fun getMostRecentActorCatalogFetchEventForSources(sourceIds: List<UUID>): Map<UUID, ActorCatalogFetchEvent>
 
   @Throws(IOException::class)

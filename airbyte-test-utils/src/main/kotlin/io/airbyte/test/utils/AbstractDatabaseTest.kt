@@ -26,7 +26,6 @@ abstract class AbstractDatabaseTest {
   protected var dslContext: DSLContext? = null
 
   @BeforeEach
-  @Throws(IOException::class, DatabaseInitializationException::class)
   fun setup() {
     dataSource = createDataSource(container!!)
     dslContext = create(dataSource!!, SQLDialect.POSTGRES)
@@ -34,7 +33,6 @@ abstract class AbstractDatabaseTest {
   }
 
   @AfterEach
-  @Throws(Exception::class)
   fun tearDown() {
     close(dataSource)
   }
@@ -47,7 +45,6 @@ abstract class AbstractDatabaseTest {
    * @param dslContext The [DSLContext] used to execute queries.
    * @return an initialized [Database] instance.
    */
-  @Throws(IOException::class, DatabaseInitializationException::class)
   abstract fun createDatabase(
     dataSource: DataSource,
     dslContext: DSLContext,

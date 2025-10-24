@@ -33,7 +33,6 @@ class WorkspacePersistence(
    * List all workspaces as user has instance_admin role. Returning result ordered by workspace name.
    * Supports pagination and keyword search.
    */
-  @Throws(IOException::class)
   fun listWorkspacesByInstanceAdminUserPaginated(
     includeDeleted: Boolean,
     pageSize: Int,
@@ -66,7 +65,6 @@ class WorkspacePersistence(
    * List all workspaces as user has instance_admin role. Returning result ordered by workspace name.
    * Supports keyword search.
    */
-  @Throws(IOException::class)
   fun listWorkspacesByInstanceAdminUser(
     includeDeleted: Boolean,
     keyword: Optional<String>,
@@ -95,7 +93,6 @@ class WorkspacePersistence(
    * List all workspaces owned by org id, returning result ordered by workspace name. Supports
    * pagination and keyword search.
    */
-  @Throws(IOException::class)
   fun listWorkspacesByOrganizationIdPaginated(
     query: ResourcesByOrganizationQueryPaginated,
     keyword: Optional<String>,
@@ -127,7 +124,6 @@ class WorkspacePersistence(
    * List all workspaces owned by org id, returning result ordered by workspace name. Supports keyword
    * search.
    */
-  @Throws(IOException::class)
   fun listWorkspacesByOrganizationId(
     organizationId: UUID?,
     includeDeleted: Boolean,
@@ -159,7 +155,6 @@ class WorkspacePersistence(
    * Uses similar logic to listActiveWorkspacesByUserId but filters by organization.
    * Returns result ordered by workspace name. Supports keyword search.
    */
-  @Throws(IOException::class)
   fun listWorkspacesInOrganizationByUserId(
     organizationId: UUID,
     userId: UUID,
@@ -184,7 +179,6 @@ class WorkspacePersistence(
    * List all workspaces in an organization that a particular user has access to based on their permissions.
    * Supports pagination and keyword search. Returns result ordered by workspace name.
    */
-  @Throws(IOException::class)
   fun listWorkspacesInOrganizationByUserIdPaginated(
     query: ResourcesByOrganizationQueryPaginated,
     userId: UUID,
@@ -227,7 +221,6 @@ class WorkspacePersistence(
    * List all active workspaces readable by user id, returning result ordered by workspace name.
    * Supports keyword search.
    */
-  @Throws(IOException::class)
   fun listActiveWorkspacesByUserId(
     userId: UUID?,
     keyword: Optional<String>,
@@ -250,7 +243,6 @@ class WorkspacePersistence(
    * List all workspaces readable by user id, returning result ordered by workspace name. Supports
    * pagination and keyword search.
    */
-  @Throws(IOException::class)
   fun listWorkspacesByUserIdPaginated(
     query: ResourcesByUserQueryPaginated,
     keyword: Optional<String>,
@@ -280,7 +272,6 @@ class WorkspacePersistence(
   /**
    * Fetch the oldest, non-tombstoned Workspace that belongs to the given Organization.
    */
-  @Throws(IOException::class)
   fun getDefaultWorkspaceForOrganization(organizationId: UUID): StandardWorkspace =
     database
       .query<Result<Record>> { ctx: DSLContext ->
@@ -300,7 +291,6 @@ class WorkspacePersistence(
   /**
    * Check if any workspace exists with initialSetupComplete: true, tombstoned or not.
    */
-  @Throws(IOException::class)
   fun getInitialSetupComplete(): Boolean =
     database.query { ctx: DSLContext ->
       ctx.fetchExists(

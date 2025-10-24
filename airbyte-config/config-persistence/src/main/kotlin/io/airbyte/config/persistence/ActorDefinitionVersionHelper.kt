@@ -47,7 +47,6 @@ class ActorDefinitionVersionHelper(
     log.info { "ActorDefinitionVersionHelper initialized with override provider: ${configOverrideProvider.javaClass.simpleName}" }
   }
 
-  @Throws(IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun getDefaultSourceVersion(sourceDefinition: StandardSourceDefinition): ActorDefinitionVersion {
     val versionId =
       sourceDefinition.defaultVersionId
@@ -61,7 +60,6 @@ class ActorDefinitionVersionHelper(
     return actorDefinitionService.getActorDefinitionVersion(versionId)
   }
 
-  @Throws(IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun getDefaultDestinationVersion(destinationDefinition: StandardDestinationDefinition): ActorDefinitionVersion {
     val versionId =
       destinationDefinition.defaultVersionId
@@ -197,7 +195,6 @@ class ActorDefinitionVersionHelper(
    * @param actorId source id
    * @return actor definition version with override status
    */
-  @Throws(IOException::class, JsonValidationException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun getSourceVersionWithOverrideStatus(
     sourceDefinition: StandardSourceDefinition,
     workspaceId: UUID,
@@ -223,7 +220,6 @@ class ActorDefinitionVersionHelper(
    * @param actorId source id
    * @return actor definition version
    */
-  @Throws(IOException::class, JsonValidationException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun getSourceVersion(
     sourceDefinition: StandardSourceDefinition,
     workspaceId: UUID,
@@ -237,7 +233,6 @@ class ActorDefinitionVersionHelper(
    * @param workspaceId workspace id
    * @return actor definition version
    */
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun getSourceVersion(
     sourceDefinition: StandardSourceDefinition,
     workspaceId: UUID,
@@ -251,7 +246,6 @@ class ActorDefinitionVersionHelper(
    * @param actorId destination id
    * @return actor definition version with override status
    */
-  @Throws(IOException::class, JsonValidationException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun getDestinationVersionWithOverrideStatus(
     destinationDefinition: StandardDestinationDefinition,
     workspaceId: UUID,
@@ -277,7 +271,6 @@ class ActorDefinitionVersionHelper(
    * @param actorId destination id
    * @return actor definition version
    */
-  @Throws(IOException::class, JsonValidationException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun getDestinationVersion(
     destinationDefinition: StandardDestinationDefinition,
     workspaceId: UUID,
@@ -291,7 +284,6 @@ class ActorDefinitionVersionHelper(
    * @param workspaceId workspace id
    * @return actor definition version
    */
-  @Throws(IOException::class, JsonValidationException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun getDestinationVersion(
     destinationDefinition: StandardDestinationDefinition,
     workspaceId: UUID,

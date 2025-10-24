@@ -29,7 +29,6 @@ class WorkloadOutputWriter(
 ) {
   // reader code
   @Deprecated("Once transitioned to commands, we should use the API version instead of direct DocStore for read access")
-  @Throws(DocStoreAccessException::class)
   fun read(workloadId: String): Optional<ConnectorJobOutput> {
     val output: String? =
       try {
@@ -42,7 +41,6 @@ class WorkloadOutputWriter(
   }
 
   @Deprecated("Once transitioned to commands, we should use the API version instead of direct DocStore for read access")
-  @Throws(DocStoreAccessException::class)
   fun readSyncOutput(workloadId: String): Optional<ReplicationOutput> {
     val output: String? =
       try {
@@ -57,7 +55,6 @@ class WorkloadOutputWriter(
   }
 
   // writer code
-  @Throws(DocStoreAccessException::class)
   fun write(
     workloadId: String,
     connectorJobOutput: ConnectorJobOutput,
@@ -65,7 +62,6 @@ class WorkloadOutputWriter(
     writeOutputThroughServer(workloadId, connectorJobOutput)
   }
 
-  @Throws(DocStoreAccessException::class)
   fun writeSyncOutput(
     workloadId: String,
     connectorJobOutput: ReplicationOutput,

@@ -114,7 +114,6 @@ class ReplicationInputHydrator(
    * @return the input to be passed down to the source/destination/orchestrator processes
    * @throws Exception from the Airbyte API
    */
-  @Throws(Exception::class)
   fun getHydratedReplicationInput(replicationActivityInput: ReplicationActivityInput): ReplicationInput {
     addTagsToTrace(java.util.Map.of("api_base_url", airbyteApiClient.destinationApi.baseUrl))
     refreshSecretsReferences(replicationActivityInput)
@@ -208,7 +207,6 @@ class ReplicationInputHydrator(
   }
 
   @VisibleForTesting
-  @Throws(IOException::class)
   fun trackBackfillAndResume(
     jobId: Long,
     attemptNumber: Long,
@@ -245,7 +243,6 @@ class ReplicationInputHydrator(
     )
   }
 
-  @Throws(Exception::class)
   private fun getUpdatedStateForBackfill(
     state: State?,
     schemaRefreshOutput: RefreshSchemaActivityOutput?,
@@ -287,7 +284,6 @@ class ReplicationInputHydrator(
     return catalog
   }
 
-  @Throws(IOException::class)
   private fun persistState(
     resetState: State,
     connectionId: UUID,
@@ -298,7 +294,6 @@ class ReplicationInputHydrator(
     airbyteApiClient.stateApi.createOrUpdateState(ConnectionStateCreateOrUpdate(connectionId, connectionState))
   }
 
-  @Throws(IOException::class)
   private fun retrieveState(replicationActivityInput: ReplicationActivityInput): State? {
     val connectionState =
       airbyteApiClient.stateApi.getState(ConnectionIdRequestBody(replicationActivityInput.connectionId!!))
@@ -311,7 +306,6 @@ class ReplicationInputHydrator(
     return state
   }
 
-  @Throws(IOException::class)
   private fun updateCatalogForReset(
     replicationActivityInput: ReplicationActivityInput,
     catalog: ConfiguredAirbyteCatalog,

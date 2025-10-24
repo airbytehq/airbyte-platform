@@ -127,7 +127,6 @@ internal class ConnectionManagerWorkflowTest {
   private lateinit var temporalProxyHelper: TemporalProxyHelper
 
   @BeforeEach
-  @Throws(Exception::class)
   fun setUp() {
     Mockito.reset<ConfigFetchActivity?>(mConfigFetchActivity)
     Mockito.reset<JobCreationAndStatusUpdateActivity?>(mJobCreationAndStatusUpdateActivity)
@@ -224,7 +223,6 @@ internal class ConnectionManagerWorkflowTest {
     temporalProxyHelper = TemporalProxyHelper(listOf(activityOptionsBeanRegistration))
   }
 
-  @Throws(Exception::class)
   private fun returnTrueForLastJobOrAttemptFailure() {
     Mockito
       .`when`(mJobCreationAndStatusUpdateActivity.shouldRunSourceCheck(any()))
@@ -259,7 +257,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test that a successful workflow restarts waits")
-    @Throws(Exception::class)
     fun runSuccess() {
       returnTrueForLastJobOrAttemptFailure()
       Mockito
@@ -324,7 +321,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test workflow does not wait to run after a failure")
-    @Throws(Exception::class)
     fun retryAfterFail() {
       returnTrueForLastJobOrAttemptFailure()
       Mockito
@@ -387,9 +383,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test workflow which receives a manual run signal stops waiting")
-    @Throws(
-      Exception::class,
-    )
     fun manualRun() {
       returnTrueForLastJobOrAttemptFailure()
       val testId = UUID.randomUUID()
@@ -464,9 +457,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test workflow which receives an update signal stops waiting, doesn't run, and doesn't update the job status")
-    @Throws(
-      Exception::class,
-    )
     fun updatedSignalReceived() {
       returnTrueForLastJobOrAttemptFailure()
       val testId = UUID.randomUUID()
@@ -561,9 +551,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test that cancelling a non-running workflow doesn't do anything")
-    @Throws(
-      Exception::class,
-    )
     fun cancelNonRunning() {
       returnTrueForLastJobOrAttemptFailure()
       val testId = UUID.randomUUID()
@@ -624,7 +611,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test that the sync is properly deleted")
-    @Throws(Exception::class)
     fun deleteSync() {
       returnTrueForLastJobOrAttemptFailure()
       val testId = UUID.randomUUID()
@@ -694,7 +680,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test that fresh workflow cleans the job state")
-    @Throws(Exception::class)
     fun testStartFromCleanJobState() {
       returnTrueForLastJobOrAttemptFailure()
       val input =
@@ -733,9 +718,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test workflow which receives a manual sync while running a scheduled sync does nothing")
-    @Throws(
-      Exception::class,
-    )
     fun manualRun() {
       returnTrueForLastJobOrAttemptFailure()
       Mockito
@@ -785,7 +767,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test that cancelling a running workflow cancels the sync")
-    @Throws(Exception::class)
     fun cancelRunning() {
       returnTrueForLastJobOrAttemptFailure()
       val testId = UUID.randomUUID()
@@ -842,7 +823,6 @@ internal class ConnectionManagerWorkflowTest {
 
     @Timeout(value = 40, unit = TimeUnit.SECONDS)
     @DisplayName("Test that deleting a running workflow cancels the sync")
-    @Throws(Exception::class)
     fun deleteRunning() {
       returnTrueForLastJobOrAttemptFailure()
       val testId = UUID.randomUUID()
@@ -909,9 +889,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test that resetting a non-running workflow starts a reset job")
-    @Throws(
-      Exception::class,
-    )
     fun resetStart() {
       returnTrueForLastJobOrAttemptFailure()
       val testId = UUID.randomUUID()
@@ -953,9 +930,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test that resetting a non-running workflow starts a reset job")
-    @Throws(
-      Exception::class,
-    )
     fun resetAndContinue() {
       returnTrueForLastJobOrAttemptFailure()
       val testId = UUID.randomUUID()
@@ -1006,9 +980,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 60, unit = TimeUnit.SECONDS)
     @DisplayName("Test that resetting a running workflow cancels the running workflow")
-    @Throws(
-      Exception::class,
-    )
     fun resetCancelRunningWorkflow() {
       returnTrueForLastJobOrAttemptFailure()
       val testId = UUID.randomUUID()
@@ -1060,9 +1031,6 @@ internal class ConnectionManagerWorkflowTest {
 
     @Test
     @DisplayName("Test that running workflow which receives an update signal waits for the current run and reports the job status")
-    @Throws(
-      Exception::class,
-    )
     fun updatedSignalReceivedWhileRunning() {
       returnTrueForLastJobOrAttemptFailure()
       val testId = UUID.randomUUID()
@@ -1143,9 +1111,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test that auto disable activity is touched during failure")
-    @Throws(
-      Exception::class,
-    )
     fun testAutoDisableOnFailure() {
       val connectionId = UUID.randomUUID()
       setupSourceAndDestinationFailure(connectionId)
@@ -1166,9 +1131,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test that auto disable activity is not touched during job success")
-    @Throws(
-      Exception::class,
-    )
     fun testNoAutoDisableOnSuccess() {
       returnTrueForLastJobOrAttemptFailure()
       val syncWorker = testEnv.newWorker(TemporalJobType.SYNC.name)
@@ -1216,7 +1178,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test that Source CHECK failures are recorded")
-    @Throws(Exception::class)
     fun testSourceCheckFailuresRecorded() {
       returnTrueForLastJobOrAttemptFailure()
       Mockito
@@ -1265,9 +1226,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test that Source CHECK failures are recorded when running in child workflow")
-    @Throws(
-      Exception::class,
-    )
     fun testSourceCheckInChildWorkflowFailuresRecorded() {
       returnTrueForLastJobOrAttemptFailure()
       Mockito
@@ -1314,7 +1272,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test that Source CHECK failure reasons are recorded")
-    @Throws(Exception::class)
     fun testSourceCheckFailureReasonsRecorded() {
       returnTrueForLastJobOrAttemptFailure()
       Mockito
@@ -1361,7 +1318,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test that Destination CHECK failures are recorded")
-    @Throws(Exception::class)
     fun testDestinationCheckFailuresRecorded() {
       returnTrueForLastJobOrAttemptFailure()
       Mockito
@@ -1409,7 +1365,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test that Destination CHECK failure reasons are recorded")
-    @Throws(Exception::class)
     fun testDestinationCheckFailureReasonsRecorded() {
       returnTrueForLastJobOrAttemptFailure()
       Mockito
@@ -1457,7 +1412,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test that reset workflows do not CHECK the source")
-    @Throws(Exception::class)
     fun testSourceCheckSkippedWhenReset() {
       Mockito
         .`when`(mJobCreationAndStatusUpdateActivity.shouldRunSourceCheck(any()))
@@ -1518,7 +1472,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Test that source and destination failures are recorded")
-    @Throws(Exception::class)
     fun testSourceAndDestinationFailuresRecorded() {
       setupSourceAndDestinationFailure(UUID.randomUUID())
 
@@ -1540,7 +1493,6 @@ internal class ConnectionManagerWorkflowTest {
   internal inner class FailedActivityWorkflow {
     @ParameterizedTest
     @MethodSource("io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowTest#getSetupFailingActivity")
-    @Throws(Exception::class)
     fun testWorkflowRestartedAfterFailedActivity(
       mockSetup: Thread,
       expectedEventsCount: Int,
@@ -1619,9 +1571,6 @@ internal class ConnectionManagerWorkflowTest {
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("We check the progress of the last attempt on failure")
     @MethodSource("io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowTest#coreFailureTypesMatrix")
-    @Throws(
-      Exception::class,
-    )
     fun checksProgressOnFailure(failureCase: Class<out SyncWorkflowV2?>?) {
       // We check attempt progress using the 0-based attempt number counting system used everywhere except
       // the ConnectionUpdaterInput where it is 1-based. This will be fixed to be more consistent later.
@@ -1647,9 +1596,6 @@ internal class ConnectionManagerWorkflowTest {
     @DisplayName("We hydrate, persist and use retry manager.")
     @MethodSource("io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowTest#coreFailureTypesMatrix")
     @Disabled("Flaky in CI.")
-    @Throws(
-      Exception::class,
-    )
     fun hydratePersistRetryManagerFlow(failureCase: Class<out SyncWorkflowV2?>?) {
       val connectionId = UUID.randomUUID()
       val jobId = 32198714L
@@ -1762,9 +1708,6 @@ internal class ConnectionManagerWorkflowTest {
     @Timeout(value = 30, unit = TimeUnit.SECONDS)
     @DisplayName("We use attempt-based retries when retry manager not present.")
     @MethodSource("io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowTest#coreFailureTypesMatrix")
-    @Throws(
-      Exception::class,
-    )
     fun usesAttemptBasedRetriesIfRetryManagerUnset(failureCase: Class<out SyncWorkflowV2?>?) {
       val connectionId = UUID.randomUUID()
       val jobId = 32198714L
@@ -1801,9 +1744,6 @@ internal class ConnectionManagerWorkflowTest {
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Uses scheduling resolution if no retry manager.")
     @MethodSource("io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowTest#noBackoffSchedulingMatrix")
-    @Throws(
-      Exception::class,
-    )
     fun useSchedulingIfNoRetryManager(
       fromFailure: Boolean,
       timeToWait: Duration,
@@ -1844,9 +1784,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Uses scheduling if not from failure and retry manager present.")
-    @Throws(
-      Exception::class,
-    )
     fun useSchedulingIfNotFromFailure() {
       val backoff = Duration.ofMinutes(1)
       val policy = BackoffPolicy(backoff, backoff)
@@ -1900,9 +1837,6 @@ internal class ConnectionManagerWorkflowTest {
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Uses backoff policy if present and from failure.")
     @ValueSource(longs = [1, 5, 20, 30, 1439, 21])
-    @Throws(
-      Exception::class,
-    )
     fun usesBackoffPolicyIfPresent(minutes: Long) {
       val backoff = Duration.ofMinutes(minutes)
       val policy = BackoffPolicy(backoff, backoff)
@@ -1956,9 +1890,6 @@ internal class ConnectionManagerWorkflowTest {
     @DisplayName("Jobs can be cancelled during the backoff.")
     @ValueSource(longs = [1, 5, 20, 30, 1439, 21])
     @Disabled("Flaky in CI")
-    @Throws(
-      Exception::class,
-    )
     fun cancelWorksDuringBackoff(minutes: Long) {
       val backoff = Duration.ofMinutes(minutes)
       val policy = BackoffPolicy(backoff, backoff)
@@ -2015,9 +1946,6 @@ internal class ConnectionManagerWorkflowTest {
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Does not fail job if backoff longer than time til next scheduled run.")
     @MethodSource("io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowTest#backoffJobFailureMatrix")
-    @Throws(
-      Exception::class,
-    )
     fun doesNotFailJobIfBackoffTooLong(backoffMinutes: Long) {
       val backoff = Duration.ofMinutes(backoffMinutes)
       val policy = BackoffPolicy(backoff, backoff)
@@ -2056,7 +1984,6 @@ internal class ConnectionManagerWorkflowTest {
 
     @Test
     @DisplayName("When a sync returns a status of cancelled we report the run as cancelled")
-    @Throws(Exception::class)
     fun reportsCancelledWhenConnectionDisabled() {
       val input = testInputBuilder()
       setupSuccessfulWorkflow(CancelledSyncWorkflow::class.java, input)
@@ -2124,7 +2051,6 @@ internal class ConnectionManagerWorkflowTest {
     @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     @DisplayName("Load shed backoff loop waits and exits")
-    @Throws(Exception::class)
     fun happyPath() {
       val backoff = Duration.ofMinutes(10)
       val backoffOutput = GetLoadShedBackoffOutput(backoff)
@@ -2304,7 +2230,6 @@ internal class ConnectionManagerWorkflowTest {
    * ConnectionUpdaterInput is pluggable for various test needs. Feel free to update input/return
    * values as is necessary.
    */
-  @Throws(Exception::class)
   private fun setupFailureCase(
     failureClass: Class<out SyncWorkflowV2?>?,
     input: ConnectionUpdaterInput?,
@@ -2327,14 +2252,12 @@ internal class ConnectionManagerWorkflowTest {
     testEnv.sleep(Duration.ofMinutes(1))
   }
 
-  @Throws(Exception::class)
   private fun setupFailureCase(failureClass: Class<out SyncWorkflowV2?>?) {
     val input = testInputBuilder()
 
     setupFailureCase(failureClass, input)
   }
 
-  @Throws(Exception::class)
   private fun setupSourceAndDestinationFailure(connectionId: UUID?) {
     val input = testInputBuilder()
     input.connectionId = connectionId
@@ -2379,12 +2302,10 @@ internal class ConnectionManagerWorkflowTest {
       )
   }
 
-  @Throws(Exception::class)
   private fun setupSuccessfulWorkflow(input: ConnectionUpdaterInput?) {
     setupSuccessfulWorkflow(EmptySyncWorkflow::class.java, input)
   }
 
-  @Throws(Exception::class)
   private fun <T : SyncWorkflowV2> setupSuccessfulWorkflow(
     syncWorkflowMockClass: Class<T>,
     input: ConnectionUpdaterInput?,
@@ -2450,7 +2371,6 @@ internal class ConnectionManagerWorkflowTest {
           Arguments.of(1),
         )
 
-    @Throws(InterruptedException::class)
     private fun startWorkflowAndWaitUntilReady(
       workflow: ConnectionManagerWorkflow,
       input: ConnectionUpdaterInput?,
@@ -2476,7 +2396,6 @@ internal class ConnectionManagerWorkflowTest {
       }
     }
 
-    @Throws(InterruptedException::class)
     private fun waitUntilDeleted(workflow: ConnectionManagerWorkflow) {
       var isDeleted = false
 
@@ -2500,7 +2419,7 @@ internal class ConnectionManagerWorkflowTest {
                 mJobCreationAndStatusUpdateActivity.createNewJob(
                   any(),
                 ),
-              ).thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))
+              ).thenAnswer { throw ApplicationFailure.newNonRetryableFailure("", "") }
           },
           0,
         ),
@@ -2511,7 +2430,7 @@ internal class ConnectionManagerWorkflowTest {
                 mJobCreationAndStatusUpdateActivity.createNewAttemptNumber(
                   any(),
                 ),
-              ).thenThrow(ApplicationFailure.newNonRetryableFailure("", ""))
+              ).thenAnswer { throw ApplicationFailure.newNonRetryableFailure("", "") }
           },
           0,
         ),

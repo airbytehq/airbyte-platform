@@ -52,7 +52,6 @@ class CatalogServiceJooqImpl
      * @throws ConfigNotFoundException if the config does not exist
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class, ConfigNotFoundException::class)
     override fun getActorCatalogById(actorCatalogId: UUID): ActorCatalog {
       val result =
         database
@@ -78,7 +77,6 @@ class CatalogServiceJooqImpl
      * @return actor catalog for config has and actor version
      * @throws IOException - error while interacting with db
      */
-    @Throws(IOException::class)
     override fun getActorCatalog(
       actorId: UUID,
       actorVersion: String,
@@ -109,7 +107,6 @@ class CatalogServiceJooqImpl
      * @return current actor catalog with updated at
      * @throws IOException - error while interacting with db
      */
-    @Throws(IOException::class)
     override fun getMostRecentSourceActorCatalog(sourceId: UUID): Optional<ActorCatalogWithUpdatedAt> {
       val records =
         database.query { ctx: DSLContext ->
@@ -139,7 +136,6 @@ class CatalogServiceJooqImpl
      * @return current actor catalog
      * @throws IOException - error while interacting with db
      */
-    @Throws(IOException::class)
     override fun getMostRecentActorCatalogForSource(sourceId: UUID): Optional<ActorCatalog> {
       val records =
         database.query { ctx: DSLContext ->
@@ -163,7 +159,6 @@ class CatalogServiceJooqImpl
      * @return last actor catalog fetch event
      * @throws IOException - error while interacting with db
      */
-    @Throws(IOException::class)
     override fun getMostRecentActorCatalogFetchEventForSource(sourceId: UUID): Optional<ActorCatalogFetchEvent> {
       val records =
         database.query { ctx: DSLContext ->
@@ -200,7 +195,6 @@ class CatalogServiceJooqImpl
      * @return The identifier (UUID) of the fetch event inserted in the database
      * @throws IOException - error while interacting with db
      */
-    @Throws(IOException::class)
     override fun writeActorCatalogWithFetchEvent(
       catalog: AirbyteCatalog,
       actorId: UUID,
@@ -225,7 +219,6 @@ class CatalogServiceJooqImpl
       }
     }
 
-    @Throws(IOException::class)
     override fun writeActorCatalogWithFetchEvent(
       catalog: DestinationCatalog,
       actorId: UUID,
@@ -258,7 +251,6 @@ class CatalogServiceJooqImpl
      * @throws IOException - error while interacting with db
      */
     @Trace
-    @Throws(IOException::class)
     override fun getMostRecentActorCatalogFetchEventForSources(sourceIds: List<UUID>): Map<UUID, ActorCatalogFetchEvent> {
       // noinspection SqlResolve
       if (sourceIds.isEmpty()) {

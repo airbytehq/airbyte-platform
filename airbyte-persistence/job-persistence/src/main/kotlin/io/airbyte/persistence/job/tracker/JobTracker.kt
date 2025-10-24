@@ -421,7 +421,6 @@ class JobTracker
       return output
     }
 
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     private fun generateSyncMetadata(standardSync: StandardSync): Map<String, Any?> {
       val operationUsage: MutableMap<String, Any?> = HashMap()
       for (operationId in standardSync.operationIds) {
@@ -466,7 +465,6 @@ class JobTracker
       return java.util.Map.of<String, Any?>("failure_reason", TrackingMetadata.failureReasonAsJson(failureReason).toString())
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     private fun generateDestinationDefinitionMetadata(
       destinationDefinitionId: UUID,
       workspaceId: UUID,
@@ -482,7 +480,6 @@ class JobTracker
       destinationVersion: ActorDefinitionVersion,
     ): Map<String, Any?> = TrackingMetadata.generateDestinationDefinitionMetadata(destinationDefinition, destinationVersion)
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     private fun generateSourceDefinitionMetadata(
       sourceDefinitionId: UUID,
       workspaceId: UUID,
@@ -529,7 +526,6 @@ class JobTracker
       return Collections.unmodifiableMap(metadata)
     }
 
-    @Throws(IOException::class)
     private fun generateJobAttemptMetadata(
       jobId: Long,
       jobState: JobState,
@@ -542,7 +538,6 @@ class JobTracker
       }
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     private fun track(
       workspaceId: UUID?,
       action: String,

@@ -30,7 +30,6 @@ interface SecretPersistence : ReadOnlySecretPersistence {
    *
    * @throws Exception if unable to perform the initialization.
    */
-  @Throws(Exception::class)
   fun initialize() {}
 
   override fun read(coordinate: SecretCoordinate): String

@@ -14,7 +14,6 @@ import java.util.UUID
  */
 @Singleton
 class CommunityActorDefinitionAccessValidator : ActorDefinitionAccessValidator {
-  @Throws(ApplicationErrorKnownException::class)
   override fun validateWriteAccess(actorDefinitionId: UUID) {
     // do nothing
   }

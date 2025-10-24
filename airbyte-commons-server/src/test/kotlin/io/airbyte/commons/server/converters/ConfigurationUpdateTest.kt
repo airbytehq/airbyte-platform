@@ -54,12 +54,6 @@ internal class ConfigurationUpdateTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testSourceUpdate() {
     Mockito.`when`(sourceService.getSourceConnection(UUID1)).thenReturn(ORIGINAL_SOURCE_CONNECTION)
     Mockito.`when`(sourceService.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION)
@@ -75,12 +69,6 @@ internal class ConfigurationUpdateTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testDestinationUpdate() {
     Mockito.`when`(destinationService.getDestinationConnection(UUID1)).thenReturn(ORIGINAL_DESTINATION_CONNECTION)
     Mockito
@@ -100,7 +88,6 @@ internal class ConfigurationUpdateTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testPartialUpdateSourceNoUpdate() {
     Mockito.`when`(sourceService.getSourceConnection(UUID1)).thenReturn(clone(ORIGINAL_SOURCE_CONNECTION))
     Mockito.`when`(sourceService.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION)
@@ -111,7 +98,6 @@ internal class ConfigurationUpdateTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testPartialUpdateSourceName() {
     Mockito.`when`(sourceService.getSourceConnection(UUID1)).thenReturn(clone(ORIGINAL_SOURCE_CONNECTION))
     Mockito.`when`(sourceService.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION)
@@ -122,7 +108,6 @@ internal class ConfigurationUpdateTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testPartialUpdateSourceConfig() {
     Mockito.`when`(sourceService.getSourceConnection(UUID1)).thenReturn(clone(ORIGINAL_SOURCE_CONNECTION))
     Mockito.`when`(sourceService.getStandardSourceDefinition(UUID2)).thenReturn(SOURCE_DEFINITION)
@@ -133,7 +118,6 @@ internal class ConfigurationUpdateTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testPartialUpdateSourcePartialConfig() {
     Mockito.`when`(sourceService.getSourceConnection(UUID1)).thenReturn(
       clone(ORIGINAL_SOURCE_CONNECTION),

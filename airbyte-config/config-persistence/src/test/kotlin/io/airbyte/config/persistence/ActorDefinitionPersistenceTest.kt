@@ -62,7 +62,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   private lateinit var dataplaneGroupService: DataplaneGroupService
 
   @BeforeEach
-  @Throws(SQLException::class, IOException::class)
   fun setup() {
     truncateAllTables()
 
@@ -156,31 +155,26 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testSourceDefinitionWithNullTombstone() {
     assertReturnsSrcDef(createBaseSourceDef())
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testSourceDefinitionWithTrueTombstone() {
     assertReturnsSrcDef(createBaseSourceDef().withTombstone(true))
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testSourceDefinitionWithFalseTombstone() {
     assertReturnsSrcDef(createBaseSourceDef().withTombstone(false))
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testSourceDefinitionDefaultMaxSeconds() {
     assertReturnsSrcDefDefaultMaxSecondsBetweenMessages(createBaseSourceDefWithoutMaxSecondsBetweenMessages())
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testSourceDefinitionMaxSecondsGreaterThenDefaultShouldReturnConfigured() {
     assertReturnsSrcDef(
       createBaseSourceDefWithoutMaxSecondsBetweenMessages().withMaxSecondsBetweenMessages(TEST_DEFAULT_MAX_SECONDS.toLong() + 1),
@@ -188,7 +182,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testSourceDefinitionMaxSecondsLessThenDefaultShouldReturnDefault() {
     val def: StandardSourceDefinition = createBaseSourceDefWithoutMaxSecondsBetweenMessages().withMaxSecondsBetweenMessages(1L)
     val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(def.getSourceDefinitionId())
@@ -198,7 +191,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
     Assertions.assertEquals(exp, sourceService.getStandardSourceDefinition(def.getSourceDefinitionId()))
   }
 
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   private fun assertReturnsSrcDef(srcDef: StandardSourceDefinition) {
     val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(srcDef.getSourceDefinitionId())
     sourceService.writeConnectorMetadata(srcDef, actorDefinitionVersion, mutableListOf())
@@ -208,7 +200,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
     )
   }
 
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   private fun assertReturnsSrcDefDefaultMaxSecondsBetweenMessages(srcDef: StandardSourceDefinition) {
     val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(srcDef.getSourceDefinitionId())
     sourceService.writeConnectorMetadata(srcDef, actorDefinitionVersion, mutableListOf())
@@ -221,7 +212,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testGetSourceDefinitionFromSource() {
     val workspace: StandardWorkspace = createBaseStandardWorkspace()
     val srcDef: StandardSourceDefinition = createBaseSourceDef().withTombstone(false)
@@ -238,7 +228,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testGetSourceDefinitionsFromConnection() {
     val workspace: StandardWorkspace = createBaseStandardWorkspace()
     val destDef: StandardDestinationDefinition = createBaseDestDef().withTombstone(false)
@@ -273,7 +262,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @ValueSource(ints = [0, 1, 2, 10])
-  @Throws(IOException::class)
   fun testListStandardSourceDefsHandlesTombstoneSourceDefs(numSrcDefs: Int) {
     val allSourceDefinitions: MutableList<StandardSourceDefinition?> = ArrayList<StandardSourceDefinition?>()
     val notTombstoneSourceDefinitions: MutableList<StandardSourceDefinition?> = ArrayList<StandardSourceDefinition?>()
@@ -297,24 +285,20 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testDestinationDefinitionWithNullTombstone() {
     assertReturnsDestDef(createBaseDestDef())
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testDestinationDefinitionWithTrueTombstone() {
     assertReturnsDestDef(createBaseDestDef().withTombstone(true))
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testDestinationDefinitionWithFalseTombstone() {
     assertReturnsDestDef(createBaseDestDef().withTombstone(false))
   }
 
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun assertReturnsDestDef(destDef: StandardDestinationDefinition) {
     val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destDef.getDestinationDefinitionId())
     destinationService.writeConnectorMetadata(destDef, actorDefinitionVersion, mutableListOf())
@@ -325,7 +309,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testGetDestinationDefinitionFromDestination() {
     val workspace: StandardWorkspace = createBaseStandardWorkspace()
     val destDef: StandardDestinationDefinition = createBaseDestDef().withTombstone(false)
@@ -342,7 +325,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testGetDestinationDefinitionsFromConnection() {
     val workspace: StandardWorkspace = createBaseStandardWorkspace()
     val destDef: StandardDestinationDefinition = createBaseDestDef().withTombstone(false)
@@ -377,7 +359,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @ValueSource(ints = [0, 1, 2, 10])
-  @Throws(IOException::class)
   fun testListStandardDestDefsHandlesTombstoneDestDefs(numDestinationDefinitions: Int) {
     val allDestinationDefinitions: MutableList<StandardDestinationDefinition?> = ArrayList<StandardDestinationDefinition?>()
     val notTombstoneDestinationDefinitions: MutableList<StandardDestinationDefinition?> = ArrayList<StandardDestinationDefinition?>()
@@ -402,7 +383,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testUpdateDeclarativeActorDefinitionVersions() {
     val declarativeDockerRepository = "airbyte/source-declarative-manifest"
     val previousTag = "0.1.0"
@@ -455,7 +435,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class)
   fun getActorDefinitionIdsInUse() {
     val workspace: StandardWorkspace = createBaseStandardWorkspace()
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
@@ -487,7 +466,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetActorDefinitionIdsToDefaultVersionsMap() {
     val sourceDef: StandardSourceDefinition = createBaseSourceDef()
     val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(sourceDef.getSourceDefinitionId())
@@ -505,7 +483,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testUpdateStandardSourceDefinition() {
     val sourceDefinition: StandardSourceDefinition = createBaseSourceDef()
     val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId())
@@ -543,7 +520,6 @@ internal class ActorDefinitionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testUpdateStandardDestinationDefinition() {
     val destinationDefinition: StandardDestinationDefinition = createBaseDestDef()
     val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(destinationDefinition.getDestinationDefinitionId())

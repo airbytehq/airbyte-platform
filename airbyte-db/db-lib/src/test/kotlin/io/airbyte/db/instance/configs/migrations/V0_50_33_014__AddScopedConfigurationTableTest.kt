@@ -23,7 +23,6 @@ import java.util.UUID
 @Disabled
 internal class V0_50_33_014__AddScopedConfigurationTableTest : AbstractConfigsDatabaseTest() {
   @Test
-  @Throws(SQLException::class, IOException::class)
   fun test() {
     val context = dslContext!!
 

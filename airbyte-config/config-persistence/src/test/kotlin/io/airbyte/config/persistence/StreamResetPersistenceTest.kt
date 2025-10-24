@@ -18,7 +18,6 @@ import java.util.UUID
 
 internal class StreamResetPersistenceTest : BaseConfigDatabaseTest() {
   @BeforeEach
-  @Throws(Exception::class)
   fun setup() {
     truncateAllTables()
 
@@ -26,7 +25,6 @@ internal class StreamResetPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testCreateSameResetTwiceOnlyCreateItOnce() {
     val connectionId = UUID.randomUUID()
     val streamDescriptor1 = StreamDescriptor().withName("n1").withNamespace("ns2")
@@ -48,7 +46,6 @@ internal class StreamResetPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testCreateAndGetAndDeleteStreamResets() {
     val streamResetList: MutableList<StreamDescriptor> = ArrayList<StreamDescriptor>()
     val streamDescriptor1 = StreamDescriptor().withName("stream_name_1").withNamespace("stream_namespace_1")

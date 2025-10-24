@@ -78,7 +78,6 @@ class WorkspaceServiceJooqImpl
      * @throws IOException - you never know when you IO
      * @throws ConfigNotFoundException - throws if no source with that id can be found.
      */
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     override fun getStandardWorkspaceNoSecrets(
       workspaceId: UUID,
       includeTombstone: Boolean,
@@ -100,7 +99,6 @@ class WorkspaceServiceJooqImpl
      * @return workspace, if present.
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun getWorkspaceBySlugOptional(
       slug: String,
       includeTombstone: Boolean,
@@ -137,7 +135,6 @@ class WorkspaceServiceJooqImpl
      * @throws IOException - you never know when you IO
      * @throws ConfigNotFoundException - throws if no source with that id can be found.
      */
-    @Throws(IOException::class, ConfigNotFoundException::class)
     override fun getWorkspaceBySlug(
       slug: String,
       includeTombstone: Boolean,
@@ -157,11 +154,9 @@ class WorkspaceServiceJooqImpl
      * @return workspaces
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun listStandardWorkspaces(includeTombstone: Boolean): List<StandardWorkspace> =
       listWorkspaceQuery(Optional.empty(), includeTombstone).toList()
 
-    @Throws(IOException::class)
     override fun listWorkspaceQuery(
       workspaceIds: Optional<List<UUID>>,
       includeTombstone: Boolean,
@@ -197,7 +192,6 @@ class WorkspaceServiceJooqImpl
      * @return A List of StandardWorkspace objects
      * @throws IOException you never know when you IO
      */
-    @Throws(IOException::class)
     override fun listStandardWorkspacesPaginated(resourcesQueryPaginated: ResourcesQueryPaginated): List<StandardWorkspace> =
       database
         .query { ctx: DSLContext ->
@@ -227,7 +221,6 @@ class WorkspaceServiceJooqImpl
      * @param isTombstone include tombstoned workspaces
      * @return workspace to which the connection belongs
      */
-    @Throws(ConfigNotFoundException::class)
     override fun getStandardWorkspaceFromConnection(
       connectionId: UUID,
       isTombstone: Boolean,
@@ -253,7 +246,6 @@ class WorkspaceServiceJooqImpl
      * @throws JsonValidationException - throws is the workspace is invalid
      * @throws IOException - you never know when you IO
      */
-    @Throws(JsonValidationException::class, IOException::class)
     override fun writeStandardWorkspaceNoSecrets(workspace: StandardWorkspace) {
       database.transaction<Any?> { ctx: DSLContext ->
         val timestamp = OffsetDateTime.now()
@@ -376,7 +368,6 @@ class WorkspaceServiceJooqImpl
      * @param workspaceId workspace id.
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class, ConfigNotFoundException::class)
     override fun setFeedback(workspaceId: UUID) {
       try {
         database.query { ctx: DSLContext ->
@@ -399,7 +390,6 @@ class WorkspaceServiceJooqImpl
      * @return true, if the workspace has access. otherwise, false.
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun workspaceCanUseDefinition(
       actorDefinitionId: UUID,
       workspaceId: UUID,
@@ -413,7 +403,6 @@ class WorkspaceServiceJooqImpl
      * @return true, if the workspace has access. otherwise, false.
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun workspaceCanUseCustomDefinition(
       actorDefinitionId: UUID,
       workspaceId: UUID,
@@ -436,7 +425,6 @@ class WorkspaceServiceJooqImpl
      * @return list of workspace IDs
      * @throws IOException - failed to query data
      */
-    @Throws(IOException::class)
     override fun listActiveWorkspacesByMostRecentlyRunningJobs(timeWindowInHours: Int): List<UUID> {
       val records =
         database.query { ctx: DSLContext ->
@@ -469,7 +457,6 @@ class WorkspaceServiceJooqImpl
      * @return number of connections in workspace
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun countConnectionsForWorkspace(workspaceId: UUID): Int =
       database
         .query { ctx: DSLContext ->
@@ -491,7 +478,6 @@ class WorkspaceServiceJooqImpl
      * @return number of sources in workspace
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun countSourcesForWorkspace(workspaceId: UUID): Int =
       database
         .query { ctx: DSLContext ->
@@ -511,7 +497,6 @@ class WorkspaceServiceJooqImpl
      * @return number of destinations in workspace
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun countDestinationsForWorkspace(workspaceId: UUID): Int =
       database
         .query { ctx: DSLContext ->
@@ -538,7 +523,6 @@ class WorkspaceServiceJooqImpl
      * @param workspaceId ID of the workspace to check connectors for
      * @return boolean indicating if an alpha or beta connector exists within the workspace
      */
-    @Throws(IOException::class)
     override fun getWorkspaceHasAlphaOrBetaConnector(workspaceId: UUID): Boolean {
       val releaseStageAlphaOrBeta =
         Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE
@@ -570,7 +554,6 @@ class WorkspaceServiceJooqImpl
      * @return list of connection IDs
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun listWorkspaceActiveSyncIds(standardSyncQuery: StandardSyncQuery): List<UUID> =
       database
         .query { ctx: DSLContext ->
@@ -607,7 +590,6 @@ class WorkspaceServiceJooqImpl
      * @return workspaces
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun listStandardWorkspacesWithIds(
       workspaceIds: List<UUID>,
       includeTombstone: Boolean,
@@ -624,11 +606,6 @@ class WorkspaceServiceJooqImpl
      * @throws ConfigNotFoundException - throws if no source with that id can be found.
      */
     @VisibleForTesting
-    @Throws(
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      IOException::class,
-    )
     fun getSourceConnection(sourceId: UUID): SourceConnection =
       listSourceQuery(Optional.of(sourceId))
         .findFirst()
@@ -648,7 +625,6 @@ class WorkspaceServiceJooqImpl
      * @return true, if the workspace or organization has access. otherwise, false.
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     private fun scopeCanUseDefinition(
       actorDefinitionId: UUID,
       scopeId: UUID,
@@ -667,7 +643,6 @@ class WorkspaceServiceJooqImpl
       return records.isNotEmpty
     }
 
-    @Throws(IOException::class)
     private fun listSourceQuery(configId: Optional<UUID>): Stream<SourceConnection> {
       val result =
         database.query { ctx: DSLContext ->
@@ -687,7 +662,6 @@ class WorkspaceServiceJooqImpl
       return result.map { record: Record -> DbConverter.buildSourceConnection(record) }.stream()
     }
 
-    @Throws(IOException::class)
     private fun actorDefinitionsJoinedWithGrants(
       scopeId: UUID,
       scopeType: ScopeType,
@@ -727,7 +701,6 @@ class WorkspaceServiceJooqImpl
       }
     }
 
-    @Throws(IOException::class)
     override fun getOrganizationIdFromWorkspaceId(scopeId: UUID?): Optional<UUID> {
       if (scopeId == null) {
         return Optional.empty()
@@ -753,7 +726,6 @@ class WorkspaceServiceJooqImpl
      * @throws ConfigNotFoundException if the config does not exist
      * @throws IOException if there is an issue while interacting with the secrets store or db.
      */
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     override fun getWorkspaceWithSecrets(
       workspaceId: UUID,
       includeTombstone: Boolean,
@@ -776,7 +748,6 @@ class WorkspaceServiceJooqImpl
       return workspace
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     override fun writeWorkspaceWithSecrets(workspace: StandardWorkspace) {
       // Get the schema for the webhook config, so we can split out any secret fields.
       val webhookConfigSchema = Yamls.deserialize(Resources.read("types/WebhookOperationConfigs.yaml"))

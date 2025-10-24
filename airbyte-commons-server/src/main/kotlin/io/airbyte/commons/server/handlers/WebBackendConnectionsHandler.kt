@@ -121,7 +121,6 @@ class WebBackendConnectionsHandler(
   private val connectionTimelineEventHelper: ConnectionTimelineEventHelper,
   private val catalogConfigDiffHelper: CatalogConfigDiffHelper,
 ) {
-  @Throws(IOException::class)
   fun getWorkspaceState(webBackendWorkspaceState: WebBackendWorkspaceState): WebBackendWorkspaceStateResult {
     val workspaceId = webBackendWorkspaceState.workspaceId
     val connectionCount = workspaceService.countConnectionsForWorkspace(workspaceId)
@@ -134,7 +133,6 @@ class WebBackendConnectionsHandler(
       .hasSources(sourceCount > 0)
   }
 
-  @Throws(IOException::class)
   fun webBackendGetConnectionStatusCounts(workspaceIdRequestBody: WorkspaceIdRequestBody): WebBackendConnectionStatusCounts {
     val statusCounts = connectionService.getConnectionStatusCounts(workspaceIdRequestBody.workspaceId)
     return WebBackendConnectionStatusCounts()
@@ -145,17 +143,9 @@ class WebBackendConnectionsHandler(
       .notSynced(statusCounts.notSynced)
   }
 
-  @Throws(IOException::class)
   fun getStateType(connectionIdRequestBody: ConnectionIdRequestBody): ConnectionStateType? =
     stateHandler.getState(connectionIdRequestBody).stateType.convertTo<ConnectionStateType>()
 
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   fun webBackendListConnectionsForWorkspace(webBackendConnectionListRequestBody: WebBackendConnectionListRequestBody): WebBackendConnectionReadList {
     val filters = webBackendConnectionListRequestBody.filters
     val pageSize =
@@ -222,7 +212,6 @@ class WebBackendConnectionsHandler(
     return WebBackendConnectionReadList().connections(connectionItems).pageSize(pageSize).numConnections(numConnections)
   }
 
-  @Throws(IOException::class)
   private fun getSourceSnippetReadById(sourceIds: List<UUID>): Map<UUID, SourceSnippetRead> =
     sourceService
       .getSourceAndDefinitionsFromSourceIds(sourceIds)
@@ -239,7 +228,6 @@ class WebBackendConnectionsHandler(
         ),
       )
 
-  @Throws(IOException::class)
   private fun getDestinationSnippetReadById(destinationIds: List<UUID>): Map<UUID, DestinationSnippetRead> =
     destinationService
       .getDestinationAndDefinitionsFromDestinationIds(destinationIds)
@@ -256,13 +244,6 @@ class WebBackendConnectionsHandler(
         ),
       )
 
-  @Throws(
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   private fun buildWebBackendConnectionRead(
     connectionRead: ConnectionRead,
     currentSourceCatalogId: Optional<UUID>,
@@ -304,13 +285,6 @@ class WebBackendConnectionsHandler(
     return webBackendConnectionRead
   }
 
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   private fun buildWebBackendConnectionListItem(
     connectionWithJobInfo: ConnectionWithJobInfo,
     sourceReadById: Map<UUID, SourceSnippetRead>,
@@ -380,38 +354,18 @@ class WebBackendConnectionsHandler(
       .color(tag.color)
 
   @Trace
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   private fun getSourceRead(sourceId: UUID): SourceRead {
     val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceId)
     return sourceHandler.getSource(sourceIdRequestBody)
   }
 
   @Trace
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   private fun getDestinationRead(destinationId: UUID): DestinationRead {
     val destinationIdRequestBody = DestinationIdRequestBody().destinationId(destinationId)
     return destinationHandler.getDestination(destinationIdRequestBody)
   }
 
   @Trace
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   private fun getOperationReadList(connectionRead: ConnectionRead): OperationReadList {
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionRead.connectionId)
     return operationsHandler.listOperationsForConnection(connectionIdRequestBody)
@@ -420,13 +374,6 @@ class WebBackendConnectionsHandler(
   // todo (cgardens) - This logic is a headache to follow it stems from the internal data model not
   // tracking selected streams in any reasonable way. We should update that.
   @Trace
-  @Throws(
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   fun webBackendGetConnection(webBackendConnectionRequestBody: WebBackendConnectionRequestBody): WebBackendConnectionRead {
     addTagsToTrace(java.util.Map.of(MetricTags.CONNECTION_ID, webBackendConnectionRequestBody.connectionId.toString()))
     val connectionIdRequestBody =
@@ -508,13 +455,6 @@ class WebBackendConnectionsHandler(
     return updateSchemaWithRefreshedDiscoveredCatalog(configuredCatalog, originalDiscoveredCatalog, originalDiscoveredCatalog)
   }
 
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   private fun getRefreshedSchema(
     sourceId: UUID,
     connectionId: UUID,
@@ -682,13 +622,6 @@ class WebBackendConnectionsHandler(
     return AirbyteCatalog().streams(streams)
   }
 
-  @Throws(
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   fun webBackendCreateConnection(webBackendConnectionCreate: WebBackendConnectionCreate): WebBackendConnectionRead {
     val operationIds = createOperations(webBackendConnectionCreate)
 
@@ -704,13 +637,6 @@ class WebBackendConnectionsHandler(
    * As a convenience to the front-end, this endpoint also creates new operations present in the
    * request, and bundles those newly-created operationIds into the connection update.
    */
-  @Throws(
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   fun webBackendUpdateConnection(webBackendConnectionPatch: WebBackendConnectionUpdate): WebBackendConnectionRead {
     val connectionId = webBackendConnectionPatch.connectionId
     val originalConnectionRead = connectionsHandler.getConnection(connectionId)
@@ -808,13 +734,6 @@ class WebBackendConnectionsHandler(
    * Given a fully updated connection, check for a diff between the old catalog and the updated
    * catalog to see if any streams need to be reset.
    */
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   private fun resetStreamsIfNeeded(
     webBackendConnectionPatch: WebBackendConnectionUpdate,
     oldConfiguredCatalog: ConfiguredAirbyteCatalog,
@@ -882,7 +801,6 @@ class WebBackendConnectionsHandler(
     }
   }
 
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   private fun createOperations(webBackendConnectionCreate: WebBackendConnectionCreate): List<UUID> {
     if (webBackendConnectionCreate.operations == null) {
       return emptyList()
@@ -894,7 +812,6 @@ class WebBackendConnectionsHandler(
     return operationIds
   }
 
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   private fun createOrUpdateOperations(
     connectionRead: ConnectionRead,
     webBackendConnectionPatch: WebBackendConnectionUpdate,

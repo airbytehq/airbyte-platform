@@ -81,7 +81,6 @@ class DestinationServiceJooqImpl
       this.actorPaginationServiceHelper = actorPaginationServiceHelper
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     override fun getStandardDestinationDefinition(destinationDefinitionId: UUID): StandardDestinationDefinition =
       getStandardDestinationDefinition(destinationDefinitionId, true)
 
@@ -94,7 +93,6 @@ class DestinationServiceJooqImpl
      * @throws IOException - you never know when you IO
      * @throws ConfigNotFoundException - throws if no source with that id can be found.
      */
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     override fun getStandardDestinationDefinition(
       destinationDefinitionId: UUID,
       includeTombstone: Boolean,
@@ -131,7 +129,6 @@ class DestinationServiceJooqImpl
      * @return boolean - if destination is active or not
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun isDestinationActive(destinationId: UUID): Boolean =
       database.query(
         { ctx: DSLContext ->
@@ -167,7 +164,6 @@ class DestinationServiceJooqImpl
      * @return list destination definitions
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun listStandardDestinationDefinitions(includeTombstone: Boolean): MutableList<StandardDestinationDefinition> =
       destDefQuery(Optional.empty(), includeTombstone).toList()
 
@@ -178,7 +174,6 @@ class DestinationServiceJooqImpl
      * @return public destination definitions
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun listPublicDestinationDefinitions(includeTombstone: Boolean): MutableList<StandardDestinationDefinition> =
       listStandardActorDefinitions(
         ActorType.destination,
@@ -195,7 +190,6 @@ class DestinationServiceJooqImpl
      * @return public destination definitions
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun listDestinationDefinitionsForWorkspace(
       workspaceId: UUID,
       includeTombstone: Boolean,
@@ -224,7 +218,6 @@ class DestinationServiceJooqImpl
      * @return list standard destination definitions
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun listGrantedDestinationDefinitions(
       workspaceId: UUID,
       includeTombstones: Boolean,
@@ -246,7 +239,6 @@ class DestinationServiceJooqImpl
      * @return list of pairs from destination definition and whether it can be granted
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun listGrantableDestinationDefinitions(
       workspaceId: UUID,
       includeTombstones: Boolean,
@@ -279,7 +271,6 @@ class DestinationServiceJooqImpl
      * @param destinationDefinition destination definition
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     override fun updateStandardDestinationDefinition(destinationDefinition: StandardDestinationDefinition) {
       // Check existence before updating
       // TODO: split out write and update methods so that we don't need explicit checking
@@ -302,7 +293,6 @@ class DestinationServiceJooqImpl
      * @throws IOException - you never know when you IO
      * @throws ConfigNotFoundException - throws if no destination with that id can be found.
      */
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     override fun getDestinationConnection(destinationId: UUID): DestinationConnection =
       listDestinationQuery(Optional.of(destinationId))
         .findFirst()
@@ -319,7 +309,6 @@ class DestinationServiceJooqImpl
      * (no secrets, just pointer to the secrets store)
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun writeDestinationConnectionNoSecrets(partialDestination: DestinationConnection) {
       database.transaction<Any?>(
         { ctx: DSLContext ->
@@ -335,7 +324,6 @@ class DestinationServiceJooqImpl
      * @return destinations
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun listDestinationConnection(): MutableList<DestinationConnection> = listDestinationQuery(Optional.empty()).toList()
 
     /**
@@ -345,7 +333,6 @@ class DestinationServiceJooqImpl
      * @return destinations
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun listWorkspaceDestinationConnection(workspaceId: UUID): MutableList<DestinationConnection> {
       val result =
         database.query<Result<Record>>(
@@ -372,7 +359,6 @@ class DestinationServiceJooqImpl
      * @return destinations
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun listWorkspacesDestinationConnections(resourcesQueryPaginated: ResourcesQueryPaginated): MutableList<DestinationConnection> {
       val result =
         database.query<Result<Record>>(
@@ -401,7 +387,6 @@ class DestinationServiceJooqImpl
      * @return destinations
      * @throws IOException - exception while interacting with the db
      */
-    @Throws(IOException::class)
     override fun listDestinationsForDefinition(definitionId: UUID): MutableList<DestinationConnection> {
       val result =
         database.query<Result<Record>>(
@@ -428,7 +413,6 @@ class DestinationServiceJooqImpl
      * @return pair of destination and definition
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun getDestinationAndDefinitionsFromDestinationIds(destinationIds: List<UUID>): List<DestinationAndDefinition> {
       val records: Result<Record> =
         database.query<Result<Record>>(
@@ -464,7 +448,6 @@ class DestinationServiceJooqImpl
      * @param scopeType enum of workspace or organization
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun writeCustomConnectorMetadata(
       destinationDefinition: StandardDestinationDefinition,
       defaultVersion: ActorDefinitionVersion,
@@ -502,7 +485,6 @@ class DestinationServiceJooqImpl
      * @param breakingChangesForDefinition - list of breaking changes for the definition
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun writeConnectorMetadata(
       destinationDefinition: StandardDestinationDefinition,
       actorDefinitionVersion: ActorDefinitionVersion,
@@ -519,7 +501,6 @@ class DestinationServiceJooqImpl
       actorDefinitionVersionUpdater.updateDestinationDefaultVersion(destinationDefinition, actorDefinitionVersion, breakingChangesForDefinition)
     }
 
-    @Throws(IOException::class)
     override fun listDestinationsWithIds(destinationIds: List<UUID>): List<DestinationConnection> {
       val result =
         database.query<Result<Record>>(
@@ -567,7 +548,6 @@ class DestinationServiceJooqImpl
       ConnectorMetadataJooqHelper.writeActorDefinitionVersion(actorDefinitionVersion, ctx)
     }
 
-    @Throws(IOException::class)
     private fun destDefQuery(
       destDefId: Optional<UUID>,
       includeTombstone: Boolean,
@@ -584,7 +564,6 @@ class DestinationServiceJooqImpl
         }.stream()
         .map { record: Record -> DbConverter.buildStandardDestinationDefinition(record) }
 
-    @Throws(IOException::class)
     private fun <T> listStandardActorDefinitions(
       actorType: ActorType,
       recordToActorDefinition: Function<Record, T>,
@@ -608,7 +587,6 @@ class DestinationServiceJooqImpl
         .toList()
     }
 
-    @Throws(IOException::class)
     private fun <T> listActorDefinitionsJoinedWithGrants(
       scopeId: UUID,
       scopeType: ScopeType,
@@ -635,7 +613,6 @@ class DestinationServiceJooqImpl
         .toList()
     }
 
-    @Throws(IOException::class)
     private fun actorDefinitionsJoinedWithGrants(
       scopeId: UUID,
       scopeType: ScopeType,
@@ -683,7 +660,6 @@ class DestinationServiceJooqImpl
       )
     }
 
-    @Throws(IOException::class)
     private fun getOrganizationIdFromWorkspaceId(scopeId: UUID?): Optional<UUID> {
       val optionalRecord =
         database.query<Optional<Record1<UUID?>>>(
@@ -769,7 +745,6 @@ class DestinationServiceJooqImpl
       return entry(actorDefinition, granted)
     }
 
-    @Throws(IOException::class)
     private fun listDestinationQuery(configId: Optional<UUID>): Stream<DestinationConnection> {
       val result =
         database.query<Result<Record>>(
@@ -796,7 +771,6 @@ class DestinationServiceJooqImpl
      * @throws JsonValidationException if the config is or contains invalid json
      * @throws IOException if there is an issue while interacting with the secrets store or db.
      */
-    @Throws(ConfigNotFoundException::class, JsonValidationException::class, IOException::class)
     override fun tombstoneDestination(
       name: String,
       workspaceId: UUID,
@@ -847,7 +821,6 @@ class DestinationServiceJooqImpl
           } ?: throw IllegalStateException("Expected destination connection for destination actor type")
         }
 
-    @Throws(IOException::class)
     override fun countWorkspaceDestinationsFiltered(
       workspaceId: UUID,
       workspaceResourceCursorPagination: WorkspaceResourceCursorPagination,

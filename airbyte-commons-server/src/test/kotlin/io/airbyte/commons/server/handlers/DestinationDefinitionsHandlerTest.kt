@@ -212,7 +212,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listDestinationDefinition should return the right list")
-  @Throws(IOException::class, URISyntaxException::class)
   fun testListDestinations() {
     Mockito
       .`when`(destinationService.listStandardDestinationDefinitions(false))
@@ -301,7 +300,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listDestinationDefinitionsForWorkspace should return the right list")
-  @Throws(IOException::class, URISyntaxException::class, ConfigNotFoundException::class, JsonValidationException::class)
   fun testListDestinationDefinitionsForWorkspace() {
     Mockito
       .`when`(
@@ -375,7 +373,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listDestinationDefinitionsForWorkspace should return the right list, filtering out unentitled connectors")
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testListDestinationDefinitionsForWorkspaceWithUnentitledConnectors() {
     val unentitledDestinationDefinition = generateDestinationDefinition()
 
@@ -445,7 +442,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listDestinationDefinitionsForWorkspace should return the right list, filtering out hidden connectors")
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testListDestinationDefinitionsForWorkspaceWithHiddenConnectors() {
     val hiddenDestinationDefinition = generateDestinationDefinition()
 
@@ -522,7 +518,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listDestinationDefinitionsUsedByWorkspace should return the right list")
-  @Throws(IOException::class, URISyntaxException::class, ConfigNotFoundException::class, JsonValidationException::class)
   fun testListDestinationDefinitionsUsedByWorkspace() {
     val usedDestinationDefinition = generateDestinationDefinition()
     val usedDestinationDefinitionVersion = generateVersionFromDestinationDefinition(usedDestinationDefinition)
@@ -572,7 +567,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listDestinationDefinitionsUsedByWorkspace should return all definitions when filterByUsed is false")
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testListDestinationDefinitionsUsedByWorkspaceWithFilterByUsedFalse() {
     val destinationDefinition2 = generateDestinationDefinition()
     val destinationDefinitionVersion2 = generateVersionFromDestinationDefinition(destinationDefinition2)
@@ -642,7 +636,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listDestinationDefinitionsUsedByWorkspace should return only used definitions when filterByUsed is true")
-  @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class)
   fun testListDestinationDefinitionsUsedByWorkspaceWithFilterByUsedTrue() {
     val usedDestinationDefinition = generateDestinationDefinition()
     val usedDestinationDefinitionVersion = generateVersionFromDestinationDefinition(usedDestinationDefinition)
@@ -690,7 +683,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listPrivateDestinationDefinitions should return the right list")
-  @Throws(IOException::class, URISyntaxException::class)
   fun testListPrivateDestinationDefinitions() {
     Mockito
       .`when`(
@@ -756,7 +748,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("getDestinationDefinition should return the right destination")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, URISyntaxException::class)
   fun testGetDestination() {
     Mockito
       .`when`(
@@ -804,7 +795,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("getDestinationDefinitionForWorkspace should throw an exception for a missing grant")
-  @Throws(IOException::class)
   fun testGetDefinitionWithoutGrantForWorkspace() {
     Mockito
       .`when`(workspaceService.workspaceCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), workspaceId))
@@ -822,7 +812,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("getDestinationDefinitionForScope should throw an exception for a missing grant")
-  @Throws(IOException::class)
   fun testGetDefinitionWithoutGrantForScope() {
     Mockito
       .`when`(
@@ -861,7 +850,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("getDestinationDefinitionForWorkspace should return the destination definition if the grant exists")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, URISyntaxException::class)
   fun testGetDefinitionWithGrantForWorkspace() {
     Mockito
       .`when`(workspaceService.workspaceCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), workspaceId))
@@ -918,7 +906,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("getDestinationDefinitionForScope should return the destination definition if the grant exists")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, URISyntaxException::class)
   fun testGetDefinitionWithGrantForScope() {
     Mockito
       .`when`(
@@ -1001,7 +988,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("createCustomDestinationDefinition should correctly create a destinationDefinition")
-  @Throws(URISyntaxException::class, IOException::class)
   fun testCreateCustomDestinationDefinition() {
     val newDestinationDefinition = generateDestinationDefinition()
     val destinationDefinitionVersion = generateCustomVersionFromDestinationDefinition(destinationDefinition)
@@ -1089,7 +1075,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("createCustomDestinationDefinition should correctly create a destinationDefinition for a workspace and organization using scopes")
-  @Throws(URISyntaxException::class, IOException::class)
   fun testCreateCustomDestinationDefinitionUsingScopes() {
     val newDestinationDefinition = generateDestinationDefinition()
     val destinationDefinitionVersion = generateCustomVersionFromDestinationDefinition(destinationDefinition)
@@ -1212,7 +1197,6 @@ internal class DestinationDefinitionsHandlerTest {
         "if defaultDefinitionVersionFromCreate throws unsupported protocol version error"
     ),
   )
-  @Throws(URISyntaxException::class, IOException::class)
   fun testCreateCustomDestinationDefinitionShouldCheckProtocolVersion() {
     val newDestinationDefinition = generateDestinationDefinition()
     val destinationDefinitionVersion = generateVersionFromDestinationDefinition(newDestinationDefinition)
@@ -1247,7 +1231,7 @@ internal class DestinationDefinitionsHandlerTest {
           create.getDocumentationUrl(),
           customCreate.getWorkspaceId(),
         ),
-      ).thenThrow(UnsupportedProtocolVersionException::class.java)
+      ).thenAnswer { throw UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0")) }
     Assertions.assertThrows(
       UnsupportedProtocolVersionException::class.java,
     ) { destinationDefinitionsHandler.createCustomDestinationDefinition(customCreate) }
@@ -1270,7 +1254,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("updateDestinationDefinition should correctly update a destinationDefinition")
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class, URISyntaxException::class)
   fun testUpdateDestination() {
     Mockito
       .`when`(
@@ -1412,7 +1395,6 @@ internal class DestinationDefinitionsHandlerTest {
         "if defaultDefinitionVersionFromUpdate throws unsupported protocol version error"
     ),
   )
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun testOutOfProtocolRangeUpdateDestination() {
     Mockito
       .`when`(
@@ -1450,7 +1432,7 @@ internal class DestinationDefinitionsHandlerTest {
           destinationDefinition.getCustom(),
           workspaceId,
         ),
-      ).thenThrow(UnsupportedProtocolVersionException::class.java)
+      ).thenAnswer { throw UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0")) }
 
     Assertions.assertThrows(UnsupportedProtocolVersionException::class.java) {
       destinationDefinitionsHandler.updateDestinationDefinition(
@@ -1485,7 +1467,6 @@ internal class DestinationDefinitionsHandlerTest {
         "if Airbyte version is unsupported"
     ),
   )
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun testUnsupportedAirbyteVersionUpdateDestination() {
     Mockito
       .`when`(
@@ -1494,7 +1475,7 @@ internal class DestinationDefinitionsHandlerTest {
           eq("12.4.0"),
           eq(ActorType.DESTINATION),
         ),
-      ).thenThrow(BadRequestProblem())
+      ).thenAnswer { throw BadRequestProblem() }
     Mockito
       .`when`(
         destinationService.getStandardDestinationDefinition(
@@ -1530,12 +1511,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("deleteDestinationDefinition should correctly delete a sourceDefinition")
-  @Throws(
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testDeleteDestinationDefinition() {
     val updatedDestinationDefinition = clone<StandardDestinationDefinition>(this.destinationDefinition).withTombstone(true)
     val newDestinationDefinition = DestinationRead()
@@ -1557,7 +1532,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("grantDestinationDefinitionToWorkspace should correctly create a workspace grant")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, URISyntaxException::class)
   fun testGrantDestinationDefinitionToWorkspace() {
     Mockito
       .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
@@ -1614,7 +1588,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("grantDestinationDefinitionToWorkspaceOrOrganization should correctly create an organization grant")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, URISyntaxException::class)
   fun testGrantDestinationDefinitionToOrganization() {
     Mockito
       .`when`(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
@@ -1671,7 +1644,6 @@ internal class DestinationDefinitionsHandlerTest {
 
   @Test
   @DisplayName("revokeDestinationDefinitionFromWorkspace should correctly delete a workspace grant")
-  @Throws(IOException::class)
   fun testRevokeDestinationDefinitionFromWorkspace() {
     destinationDefinitionsHandler.revokeDestinationDefinition(
       ActorDefinitionIdWithScope()
@@ -1744,9 +1716,10 @@ internal class DestinationDefinitionsHandlerTest {
     @Test
     @DisplayName("returns empty collection if cannot find latest definitions")
     fun testHttpTimeout() {
-      Mockito.`when`(remoteDefinitionsProvider.getDestinationDefinitions()).thenThrow(
-        RuntimeException(),
-      )
+      Mockito.`when`(remoteDefinitionsProvider.getDestinationDefinitions()).thenAnswer {
+        throw
+        RuntimeException()
+      }
       Assertions.assertEquals(0, destinationDefinitionsHandler.listLatestDestinationDefinitions().getDestinationDefinitions().size)
     }
   }

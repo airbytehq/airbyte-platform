@@ -28,7 +28,6 @@ internal class CustomerIoNotificationSenderTest {
   private val customerIoEmailNotificationSender = CustomerIoEmailNotificationSender(okHttpClient, airbyteNotificationConfig, metricClient)
 
   @Test
-  @Throws(IOException::class)
   fun testSuccessfulSend() {
     val call = Mockito.mock(Call::class.java)
     val response = Mockito.mock(Response::class.java)
@@ -48,7 +47,6 @@ internal class CustomerIoNotificationSenderTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testUnsuccessfulSend() {
     val call = Mockito.mock(Call::class.java)
     val response = Mockito.mock(Response::class.java)

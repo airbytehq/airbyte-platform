@@ -42,7 +42,6 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
   private lateinit var overrideProvider: ConfigurationDefinitionVersionOverrideProvider
 
   @BeforeEach
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun setup() {
     mWorkspaceService = Mockito.mock(WorkspaceService::class.java)
     mActorDefinitionService = Mockito.mock(ActorDefinitionService::class.java)
@@ -97,7 +96,6 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
 
   @ParameterizedTest
   @ValueSource(strings = ["user", "breaking_change"])
-  @Throws(ConfigNotFoundException::class, IOException::class)
   fun testGetVersionWithOverride(originTypeStr: String) {
     val versionId = UUID.randomUUID()
     val versionConfig =
@@ -158,7 +156,6 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
 
   @ParameterizedTest
   @ValueSource(strings = ["user", "breaking_change"])
-  @Throws(ConfigNotFoundException::class, IOException::class)
   fun testGetVersionWithOverrideNoActor(originTypeStr: String) {
     val versionId = UUID.randomUUID()
     val versionConfig =
@@ -214,7 +211,6 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class)
   fun testThrowsIfVersionIdDoesNotExist() {
     val versionId = UUID.randomUUID()
     val versionConfig =
@@ -245,7 +241,7 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
 
     Mockito
       .`when`(mActorDefinitionService.getActorDefinitionVersion(versionId))
-      .thenThrow(ConfigNotFoundException(ConfigNotFoundType.ACTOR_DEFINITION_VERSION, versionId))
+      .thenAnswer { throw ConfigNotFoundException(ConfigNotFoundType.ACTOR_DEFINITION_VERSION, versionId) }
 
     Assertions.assertThrows(
       RuntimeException::class.java,
@@ -272,7 +268,6 @@ internal class ConfigurationDefinitionVersionOverrideProviderTest {
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  @Throws(ConfigNotFoundException::class, IOException::class)
   fun testBCPinIntegrityMetricsEmitted(withMismatchedVersions: Boolean?) {
     val versionId: UUID = OVERRIDE_VERSION.getVersionId()
     val breakingChangePin =

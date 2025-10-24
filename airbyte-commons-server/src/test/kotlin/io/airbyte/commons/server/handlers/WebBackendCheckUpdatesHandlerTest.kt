@@ -36,7 +36,6 @@ internal class WebBackendCheckUpdatesHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testCheckWithoutUpdate() {
     val source1 = UUID.randomUUID()
     val source2 = UUID.randomUUID()
@@ -68,7 +67,6 @@ internal class WebBackendCheckUpdatesHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testCheckWithUpdate() {
     val source1 = UUID.randomUUID()
     val source2 = UUID.randomUUID()
@@ -104,7 +102,6 @@ internal class WebBackendCheckUpdatesHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testCheckWithMissingActorDefFromLatest() {
     val source1 = UUID.randomUUID()
     val source2 = UUID.randomUUID()
@@ -133,12 +130,11 @@ internal class WebBackendCheckUpdatesHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testCheckErrorNoCurrentDestinations() {
     setMocksForExceptionCases()
     Mockito
       .`when`(destinationDefinitionsHandler!!.listDestinationDefinitions())
-      .thenThrow(IOException("unable to read current destinations"))
+      .thenAnswer { throw IOException("unable to read current destinations") }
 
     val actual = webBackendCheckUpdatesHandler!!.checkUpdates()
 
@@ -146,19 +142,17 @@ internal class WebBackendCheckUpdatesHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testCheckErrorNoCurrentSources() {
     setMocksForExceptionCases()
     Mockito
       .`when`(sourceDefinitionsHandler!!.listSourceDefinitions())
-      .thenThrow(IOException("unable to read current sources"))
+      .thenAnswer { throw IOException("unable to read current sources") }
 
     val actual = webBackendCheckUpdatesHandler!!.checkUpdates()
 
     Assertions.assertEquals(WebBackendCheckUpdatesRead().destinationDefinitions(1).sourceDefinitions(0), actual)
   }
 
-  @Throws(IOException::class, InterruptedException::class)
   private fun setMocksForExceptionCases() {
     val source1 = UUID.randomUUID()
     val sourceTag1 = source1.toString()
@@ -174,7 +168,6 @@ internal class WebBackendCheckUpdatesHandlerTest {
     )
   }
 
-  @Throws(IOException::class, InterruptedException::class)
   private fun setMocks(
     currentSources: List<MutableMap.MutableEntry<UUID?, String?>?>,
     latestSources: List<MutableMap.MutableEntry<UUID?, String?>?>,

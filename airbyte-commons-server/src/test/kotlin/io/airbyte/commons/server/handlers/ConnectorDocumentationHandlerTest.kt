@@ -70,7 +70,6 @@ internal class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testGetVersionedExistingSourceDocumentation() {
     val sourceDefinitionId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
@@ -98,7 +97,6 @@ internal class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testGetLatestExistingSourceDocumentation() {
     val sourceDefinitionId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
@@ -135,7 +133,6 @@ internal class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testGetVersionedNewSourceDocumentation() {
     val sourceDefinitionId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
@@ -158,7 +155,6 @@ internal class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testGetLatestNewSourceDocumentation() {
     val sourceDefinitionId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
@@ -217,7 +213,6 @@ internal class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testGetVersionedExistingDestinationDocumentation() {
     val destinationDefinitionId = UUID.randomUUID()
     val destinationId = UUID.randomUUID()
@@ -251,7 +246,6 @@ internal class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testGetLatestExistingDestinationDocumentation() {
     val destinationDefinitionId = UUID.randomUUID()
     val destinationId = UUID.randomUUID()
@@ -293,7 +287,6 @@ internal class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testGetVersionedNewDestinationDocumentation() {
     val destinationDefinitionId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
@@ -317,7 +310,6 @@ internal class ConnectorDocumentationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testGetLatestNewDestinationDocumentation() {
     val destinationDefinitionId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()

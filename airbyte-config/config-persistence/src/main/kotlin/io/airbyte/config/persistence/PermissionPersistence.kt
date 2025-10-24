@@ -31,7 +31,6 @@ class PermissionPersistence(
 ) {
   private val database = ExceptionWrappingDatabase(database)
 
-  @Throws(IOException::class)
   fun listInstanceAdminUsers(): List<UserPermission> =
     database.query { ctx: DSLContext ->
       this.listInstanceAdminPermissions(
@@ -39,7 +38,6 @@ class PermissionPersistence(
       )
     }
 
-  @Throws(IOException::class)
   fun listUsersInOrganization(organizationId: UUID): List<UserPermission> =
     database.query { ctx: DSLContext ->
       listPermissionsForOrganization(
@@ -72,7 +70,6 @@ class PermissionPersistence(
       )
   }
 
-  @Throws(IOException::class)
   fun findPermissionTypeForUserAndWorkspace(
     workspaceId: UUID,
     authUserId: String,
@@ -114,7 +111,6 @@ class PermissionPersistence(
     return jooqPermissionType.literal.toEnum<Permission.PermissionType>()!!
   }
 
-  @Throws(IOException::class)
   fun findPermissionTypeForUserAndOrganization(
     organizationId: UUID,
     authUserId: String,
@@ -159,7 +155,6 @@ class PermissionPersistence(
   /**
    * List all organization-level permissions for an organization.
    */
-  @Throws(IOException::class)
   fun listPermissionsForOrganization(organizationId: UUID): List<UserPermission> =
     database.query { ctx: DSLContext ->
       listPermissionsForOrganization(

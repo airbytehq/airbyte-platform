@@ -66,7 +66,6 @@ open class OrganizationsHandler(
         .ssoRealm(organization.ssoRealm)
   }
 
-  @Throws(IOException::class, JsonValidationException::class, PermissionRedundantException::class)
   fun createOrganization(request: OrganizationCreateRequestBody): OrganizationRead {
     val organizationName = request.organizationName
     val email = request.email
@@ -115,7 +114,6 @@ open class OrganizationsHandler(
     return buildOrganizationRead(organization)
   }
 
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun updateOrganization(request: OrganizationUpdateRequestBody): OrganizationRead {
     val organizationId = request.organizationId
     val organization =
@@ -141,7 +139,6 @@ open class OrganizationsHandler(
     return buildOrganizationRead(organization)
   }
 
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun getOrganization(request: OrganizationIdRequestBody): OrganizationRead {
     val organizationId = request.organizationId
     val organization =
@@ -152,7 +149,6 @@ open class OrganizationsHandler(
     return buildOrganizationRead(organization)
   }
 
-  @Throws(IOException::class)
   fun listOrganizationsByUser(request: ListOrganizationsByUserRequestBody): OrganizationReadList {
     val nameContains =
       if (StringUtils.isBlank(request.nameContains)) {

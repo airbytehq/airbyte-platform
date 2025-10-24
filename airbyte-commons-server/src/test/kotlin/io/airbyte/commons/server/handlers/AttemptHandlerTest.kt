@@ -138,7 +138,6 @@ internal class AttemptHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testInternalHandlerSetsAttemptSyncConfig() {
     val attemptNumberCapture = argumentCaptor<Int>()
     val jobIdCapture = argumentCaptor<Long>()
@@ -178,7 +177,6 @@ internal class AttemptHandlerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun createAttemptNumberForSync(enableRfr: Boolean) {
     val attemptNumber = 0
     val connId = UUID.randomUUID()
@@ -278,7 +276,6 @@ internal class AttemptHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun createAttemptNumberForClear() {
     val attemptNumber = 0
     val connId = UUID.randomUUID()
@@ -371,7 +368,6 @@ internal class AttemptHandlerTest {
 
   @ParameterizedTest
   @ValueSource(ints = [0, 2])
-  @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun createAttemptNumberForRefresh(attemptNumber: Int) {
     val connId = UUID.randomUUID()
 
@@ -536,7 +532,6 @@ internal class AttemptHandlerTest {
 
     @ParameterizedTest
     @MethodSource("io.airbyte.commons.server.handlers.AttemptHandlerTest#provideCreateAttemptConfig")
-    @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class, io.airbyte.data.ConfigNotFoundException::class)
     fun createAttemptShouldAlwaysDeleteFullRefreshStreamState(
       attemptNumber: Int,
       enableResumableFullRefresh: Boolean,
@@ -662,7 +657,6 @@ internal class AttemptHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun createAttemptNumberWithUnknownJobId() {
     val job = Mockito.mock(Job::class.java)
     Mockito
@@ -671,7 +665,7 @@ internal class AttemptHandlerTest {
 
     Mockito
       .`when`(jobPersistence.getJob(JOB_ID))
-      .thenThrow(RuntimeException("unknown jobId $JOB_ID"))
+      .thenAnswer { throw RuntimeException("unknown jobId $JOB_ID") }
 
     org.assertj.core.api.Assertions
       .assertThatThrownBy { handler.createNewAttemptNumber(JOB_ID) }
@@ -679,7 +673,6 @@ internal class AttemptHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun getAttemptThrowsNotFound() {
     Mockito.`when`(jobPersistence.getAttemptForJob(anyOrNull(), anyOrNull())).thenReturn(
       Optional.empty<Attempt>(),
@@ -691,7 +684,6 @@ internal class AttemptHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun getAttemptCombinedStatsThrowsNotFound() {
     Mockito
       .`when`(jobPersistence.getAttemptCombinedStats(anyOrNull(), anyOrNull()))
@@ -703,7 +695,6 @@ internal class AttemptHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun getAttemptCombinedStatsReturnsStats() {
     val stats = SyncStats()
     stats.setRecordsEmitted(123L)
@@ -728,7 +719,6 @@ internal class AttemptHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun failAttemptSyncSummaryOutputPresent() {
     handler.failAttempt(ATTEMPT_NUMBER, JOB_ID, failureSummary, standardSyncOutput)
 
@@ -738,7 +728,6 @@ internal class AttemptHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun failAttemptSyncSummaryOutputNotPresent() {
     handler.failAttempt(ATTEMPT_NUMBER, JOB_ID, failureSummary, null)
 
@@ -748,7 +737,6 @@ internal class AttemptHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun failAttemptSyncSummaryNotPresent() {
     handler.failAttempt(ATTEMPT_NUMBER, JOB_ID, null, standardSyncOutput)
 
@@ -822,7 +810,7 @@ internal class AttemptHandlerTest {
     val jobId = 123L
     val attemptNumber = 1
 
-    Mockito.doThrow(RuntimeException("oops")).`when`(streamAttemptMetadataService).upsertStreamAttemptMetadata(
+    Mockito.doAnswer { throw RuntimeException("oops") }.`when`(streamAttemptMetadataService).upsertStreamAttemptMetadata(
       anyOrNull(),
       anyOrNull(),
       anyOrNull(),
@@ -844,7 +832,6 @@ internal class AttemptHandlerTest {
 
   @ParameterizedTest
   @MethodSource("testStateClearingLogicProvider")
-  @Throws(Exception::class)
   fun testStateClearingLogic(
     attemptNumber: Int,
     supportsRefresh: Boolean,

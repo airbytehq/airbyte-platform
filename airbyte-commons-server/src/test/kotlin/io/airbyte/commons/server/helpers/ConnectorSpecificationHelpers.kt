@@ -25,7 +25,6 @@ object ConnectorSpecificationHelpers {
     )
   private const val DOCUMENTATION_URL = "https://airbyte.io"
 
-  @Throws(IOException::class)
   fun generateConnectorSpecification(): ConnectorSpecification {
     val path =
       Paths.get(
@@ -46,7 +45,6 @@ object ConnectorSpecificationHelpers {
     }
   }
 
-  @Throws(IOException::class)
   fun generateAdvancedAuthConnectorSpecification(): ConnectorSpecification? {
     val advancedAuthPath =
       Paths.get(
@@ -69,7 +67,6 @@ object ConnectorSpecificationHelpers {
     }
   }
 
-  @Throws(IOException::class)
   fun generateNestedAdvancedAuthConnectorSpecification(): ConnectorSpecification? {
     val advancedAuthPath =
       Paths.get(

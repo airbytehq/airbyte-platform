@@ -48,7 +48,6 @@ internal class OperationsHandlerTest {
   lateinit var connectionService: ConnectionService
 
   @BeforeEach
-  @Throws(IOException::class)
   fun setUp() {
     workspaceService = Mockito.mock(WorkspaceService::class.java)
     operationService = Mockito.mock(OperationService::class.java)
@@ -77,7 +76,6 @@ internal class OperationsHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, ConfigNotFoundException::class)
   fun testCreateWebhookOperation() {
     Mockito.`when`<UUID?>(uuidGenerator.get()).thenReturn(WEBHOOK_OPERATION_ID)
     val webhookConfig =
@@ -160,7 +158,6 @@ internal class OperationsHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, ConfigNotFoundException::class)
   fun testUpdateWebhookOperation() {
     Mockito.`when`(uuidGenerator.get()).thenReturn(WEBHOOK_OPERATION_ID)
     val webhookConfig =
@@ -262,7 +259,6 @@ internal class OperationsHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testGetOperation() {
     Mockito
       .`when`(operationService.getStandardSyncOperation(standardSyncOperation.getOperationId()))
@@ -300,7 +296,6 @@ internal class OperationsHandlerTest {
       )
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testListOperationsForConnection() {
     val connectionId = UUID.randomUUID()
 
@@ -326,7 +321,6 @@ internal class OperationsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testDeleteOperation() {
     val operationIdRequestBody = OperationIdRequestBody().operationId(standardSyncOperation.getOperationId())
 
@@ -338,7 +332,6 @@ internal class OperationsHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testDeleteOperationsForConnection() {
     val syncConnectionId = UUID.randomUUID()
     val otherConnectionId = UUID.randomUUID()
@@ -424,7 +417,6 @@ internal class OperationsHandlerTest {
     )
   }
 
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   private fun checkDbtCloudUrl(urlToCheck: String?) {
     val persistedOperation =
       StandardSyncOperation()

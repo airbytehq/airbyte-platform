@@ -19,7 +19,6 @@ import java.io.IOException
  * Configs database for jOOQ code generation.
  */
 class ConfigsFlywayMigrationDatabase : FlywayMigrationDatabase() {
-  @Throws(IOException::class)
   override fun getDatabase(dslContext: DSLContext): Database = Database(dslContext)
 
   override fun getDatabaseMigrator(
@@ -36,7 +35,6 @@ class ConfigsFlywayMigrationDatabase : FlywayMigrationDatabase() {
   override val migrationFileLocations: Array<String>
     get() = arrayOf(ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION)
 
-  @Throws(DatabaseInitializationException::class, IOException::class)
   override fun initializeDatabase(dslContext: DSLContext) {
     val initialSchema = Resources.read(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH)
     createConfigsDatabaseInitializer(

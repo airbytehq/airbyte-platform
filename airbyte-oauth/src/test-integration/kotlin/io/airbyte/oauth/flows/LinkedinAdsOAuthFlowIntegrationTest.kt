@@ -39,12 +39,6 @@ class LinkedinAdsOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
   ): OAuthFlowImplementation = LinkedinAdsOAuthFlow(httpClient)
 
   @Test
-  @Throws(
-    InterruptedException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-  )
   fun testFullOAuthFlow() {
     var limit = 20
     val workspaceId = UUID.randomUUID()

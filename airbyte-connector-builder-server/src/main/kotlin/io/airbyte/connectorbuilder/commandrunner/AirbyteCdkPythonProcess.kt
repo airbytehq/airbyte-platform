@@ -27,7 +27,6 @@ open class AirbyteCdkPythonProcess(
   /**
    * Create a python process to process the request.
    */
-  @Throws(IOException::class)
   override fun start(): Process {
     if (this.process == null) {
       this.process = processBuilder.start()

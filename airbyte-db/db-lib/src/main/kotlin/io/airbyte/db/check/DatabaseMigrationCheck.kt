@@ -66,7 +66,6 @@ interface DatabaseMigrationCheck {
    *
    * @throws DatabaseCheckException if unable to perform the check.
    */
-  @Throws(DatabaseCheckException::class)
   fun check() {
     val startTime = System.currentTimeMillis()
     val sleepTime: Long = timeoutMs / NUM_POLL_TIMES

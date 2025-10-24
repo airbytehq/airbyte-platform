@@ -75,7 +75,6 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
   private var workspaceService: WorkspaceService? = null
 
   @BeforeEach
-  @Throws(SQLException::class, JsonValidationException::class, IOException::class)
   fun setup() {
     truncateAllTables()
 
@@ -157,7 +156,6 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testWriteConnectorMetadataForSource() {
     // Initial insert
     val sourceDefinition: StandardSourceDefinition = createBaseSourceDef()
@@ -222,7 +220,6 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testWriteConnectorMetadataForDestination() {
     // Initial insert
     val destinationDefinition: StandardDestinationDefinition = createBaseDestDef()
@@ -289,7 +286,6 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testUpdateConnectorMetadata() {
     val sourceDefinition: StandardSourceDefinition = createBaseSourceDef()
     val actorDefinitionId = sourceDefinition.getSourceDefinitionId()
@@ -342,9 +338,6 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @ValueSource(strings = ["2.0.0", "dev", "test", "1.9.1-dev.33a53e6236", "97b69a76-1f06-4680-8905-8beda74311d0"])
-  @Throws(
-    IOException::class,
-  )
   fun testCustomImageTagsDoNotBreakCustomConnectorUpgrade(dockerImageTag: String?) {
     // Initial insert
     val customSourceDefinition: StandardSourceDefinition = createBaseSourceDef().withCustom(true)
@@ -382,9 +375,6 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @ValueSource(strings = ["2.0.0", "dev", "test", "1.9.1-dev.33a53e6236", "97b69a76-1f06-4680-8905-8beda74311d0"])
-  @Throws(
-    IOException::class,
-  )
   fun testImageTagExpectationsNorNonCustomConnectorUpgradesWithoutBreakingChanges(dockerImageTag: String?) {
     // Initial insert
     val sourceDefinition: StandardSourceDefinition = createBaseSourceDef()
@@ -421,9 +411,6 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @CsvSource("0.0.1, true", "dev, true", "test, false", "1.9.1-dev.33a53e6236, true", "97b69a76-1f06-4680-8905-8beda74311d0, false")
-  @Throws(
-    IOException::class,
-  )
   fun testImageTagExpectationsNorNonCustomConnectorUpgradesWithBreakingChanges(
     dockerImageTag: String?,
     upgradeShouldSucceed: Boolean,
@@ -494,7 +481,6 @@ internal class ConnectorMetadataPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, ConfigNotFoundException::class)
   fun testTransactionRollbackOnFailure() {
     val initialADVId = UUID.randomUUID()
     val sourceDefinition: StandardSourceDefinition = createBaseSourceDef()

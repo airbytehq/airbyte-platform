@@ -62,7 +62,6 @@ class AirtableOAuthFlow(
    * Base64 url encoding of the sha256 hash of code_verifier.
    * https://airtable.com/developers/web/api/oauth-reference#authorization-parameter-rules
    */
-  @Throws(IOException::class)
   fun getCodeChallenge(codeVerifier: String): String {
     try {
       val messageDigest = MessageDigest.getInstance("SHA-256")
@@ -74,7 +73,6 @@ class AirtableOAuthFlow(
     }
   }
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -122,7 +120,6 @@ class AirtableOAuthFlow(
       .put("code_challenge_method", "S256")
       .build()
 
-  @Throws(IOException::class, JsonValidationException::class)
   override fun completeSourceOAuth(
     workspaceId: UUID,
     sourceDefinitionId: UUID?,
@@ -151,7 +148,6 @@ class AirtableOAuthFlow(
     )
   }
 
-  @Throws(IOException::class)
   protected fun completeOAuthFlow(
     clientId: String,
     clientSecret: String,
@@ -193,7 +189,6 @@ class AirtableOAuthFlow(
     }
   }
 
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,
@@ -222,7 +217,6 @@ class AirtableOAuthFlow(
    * This function should parse and extract the state from these query parameters in order to continue
    * the OAuth Flow.
    */
-  @Throws(IOException::class)
   protected fun extractStateParameter(queryParams: Map<String, Any>): String? {
     if (queryParams.containsKey("state")) {
       return queryParams["state"] as String?

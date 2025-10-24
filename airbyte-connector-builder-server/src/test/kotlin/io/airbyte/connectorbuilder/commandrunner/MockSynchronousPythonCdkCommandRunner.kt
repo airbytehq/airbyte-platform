@@ -29,7 +29,6 @@ class MockSynchronousPythonCdkCommandRunner(
   private val errorStream = errorStream ?: ByteArrayInputStream(ByteArray(0))
   private val outputStream = outputStream ?: ByteArrayOutputStream(1)
 
-  @Throws(AirbyteCdkInvalidInputException::class, IOException::class)
   override fun start(
     cdkCommand: String,
     configFilepath: String,

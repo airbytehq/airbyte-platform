@@ -52,7 +52,6 @@ class BreakingChangesHelper(
    * @return list of workspace ids with active syncs on unsupported versions, along with the sync ids
    * and the scopedConfigurations entries
    */
-  @Throws(IOException::class)
   fun getBreakingActiveSyncsPerWorkspace(
     actorType: ActorType,
     actorDefinitionId: UUID,
@@ -99,7 +98,6 @@ class BreakingChangesHelper(
     return returnValue
   }
 
-  @Throws(IOException::class)
   private fun getActorIdsByWorkspace(
     actorType: ActorType,
     scopedConfigs: Collection<ScopedConfiguration>,
@@ -169,7 +167,6 @@ class BreakingChangesHelper(
      * @return last applicable breaking change
      */
     @JvmStatic
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun getLastApplicableBreakingChange(
       actorDefinitionService: ActorDefinitionService,
       defaultActorDefinitionVersionId: UUID,

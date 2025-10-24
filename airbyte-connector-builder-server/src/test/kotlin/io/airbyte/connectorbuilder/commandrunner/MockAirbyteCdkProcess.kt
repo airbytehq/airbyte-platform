@@ -12,7 +12,6 @@ import java.io.IOException
 class MockAirbyteCdkProcess(
   private val process: Process,
 ) : AirbyteCdkProcess {
-  @Throws(IOException::class)
   override fun start(): Process = this.getProcess()
 
   override fun getProcess(): Process = this.process

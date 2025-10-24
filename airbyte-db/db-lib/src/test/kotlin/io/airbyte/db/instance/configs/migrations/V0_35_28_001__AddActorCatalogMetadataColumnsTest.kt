@@ -20,7 +20,6 @@ import java.util.UUID
 @Disabled
 internal class V0_35_28_001__AddActorCatalogMetadataColumnsTest : AbstractConfigsDatabaseTest() {
   @Test
-  @Throws(SQLException::class, IOException::class)
   fun test() {
     val context = dslContext!!
     V0_32_8_001__AirbyteConfigDatabaseDenormalization.migrate(context)

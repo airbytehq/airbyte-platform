@@ -29,7 +29,6 @@ object Asserts {
   private val log = KotlinLogging.logger {}
 
   @JvmStatic
-  @Throws(Exception::class)
   fun assertSourceAndDestinationDbRawRecordsInSync(
     source: Database,
     destination: Database,
@@ -57,7 +56,6 @@ object Asserts {
    * @param withNormalizedTable indicates whether a normalized table is expected.
    * @param withScdTable indicates whether an SCD table is expected.
    */
-  @Throws(Exception::class)
   fun assertSourceAndDestinationDbRawRecordsInSync(
     source: Database,
     destination: Database,
@@ -91,7 +89,6 @@ object Asserts {
       )
   }
 
-  @Throws(Exception::class)
   private fun assertSourceAndDestinationInSync(
     source: Database,
     destination: Database,
@@ -132,7 +129,6 @@ object Asserts {
     }
   }
 
-  @Throws(Exception::class)
   @JvmStatic
   fun assertRawDestinationContains(
     dst: Database,
@@ -178,7 +174,6 @@ object Asserts {
    * @param expectedJobType The expected type of the stream status.
    */
   @JvmStatic
-  @Throws(Exception::class)
   fun assertStreamStatuses(
     testHarness: AcceptanceTestHarness,
     workspaceId: UUID,
@@ -206,7 +201,6 @@ object Asserts {
    * @param expectedStreamDescriptors the streams we expect to find
    * @throws Exception if the API requests fail
    */
-  @Throws(Exception::class)
   fun assertStreamStateContainsStream(
     testHarness: AcceptanceTestHarness,
     connectionId: UUID,

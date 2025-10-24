@@ -42,7 +42,6 @@ internal class KeycloakTokenValidatorTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testValidTokenCreatesAuthentication() {
     val expectedUserId = "0f0cbf9a-24c2-46cc-b582-d1ff2c0d5ef5"
     val httpRequest = mockHttpRequest(VALID_ACCESS_TOKEN)
@@ -74,12 +73,11 @@ internal class KeycloakTokenValidatorTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testInvalidTokenPassesToNextValidator() {
     val httpRequest = mockHttpRequest(VALID_ACCESS_TOKEN)
 
     // Mock the AirbyteKeycloakClient to throw an exception (invalid token)
-    Mockito.doThrow(InvalidTokenException("Invalid token")).`when`(airbyteKeycloakClient).validateToken(VALID_ACCESS_TOKEN)
+    Mockito.doAnswer { InvalidTokenException("Invalid token") }.`when`(airbyteKeycloakClient).validateToken(VALID_ACCESS_TOKEN)
 
     val responsePublisher: Publisher<Authentication> = keycloakTokenValidator.validateToken(VALID_ACCESS_TOKEN, httpRequest)
 
@@ -91,12 +89,11 @@ internal class KeycloakTokenValidatorTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testExceptionDuringValidationReturnsEmpty() {
     val httpRequest = mockHttpRequest(VALID_ACCESS_TOKEN)
 
     // Mock the AirbyteKeycloakClient to throw an exception
-    Mockito.doThrow(RuntimeException("Keycloak unavailable")).`when`(airbyteKeycloakClient).validateToken(VALID_ACCESS_TOKEN)
+    Mockito.doAnswer { throw RuntimeException("Keycloak unavailable") }.`when`(airbyteKeycloakClient).validateToken(VALID_ACCESS_TOKEN)
 
     val responsePublisher: Publisher<Authentication> = keycloakTokenValidator.validateToken(VALID_ACCESS_TOKEN, httpRequest)
 

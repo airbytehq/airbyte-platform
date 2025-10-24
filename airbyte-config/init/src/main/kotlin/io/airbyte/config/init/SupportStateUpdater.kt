@@ -160,7 +160,6 @@ class SupportStateUpdater(
   /**
    * Updates the version support states for all source and destination definitions.
    */
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun updateSupportStates() {
     updateSupportStates(LocalDate.now())
   }
@@ -170,7 +169,6 @@ class SupportStateUpdater(
    * reference date, and disables syncs with unsupported versions.
    */
   @VisibleForTesting
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun updateSupportStates(referenceDate: LocalDate?) {
     log.info { "Updating support states for all definitions" }
     val sourceDefinitions = sourceService.listPublicSourceDefinitions(false)
@@ -265,7 +263,6 @@ class SupportStateUpdater(
   }
 
   @VisibleForTesting
-  @Throws(IOException::class)
   fun buildSourceNotificationData(
     sourceDefinition: StandardSourceDefinition,
     breakingChange: ActorDefinitionBreakingChange,
@@ -289,7 +286,6 @@ class SupportStateUpdater(
   }
 
   @VisibleForTesting
-  @Throws(IOException::class)
   fun buildDestinationNotificationData(
     destinationDefinition: StandardDestinationDefinition,
     breakingChange: ActorDefinitionBreakingChange,
@@ -335,7 +331,6 @@ class SupportStateUpdater(
   /**
    * Updates the version support states for a given source definition.
    */
-  @Throws(ConfigNotFoundException::class, IOException::class)
   fun updateSupportStatesForSourceDefinition(sourceDefinition: StandardSourceDefinition) {
     if (!sourceDefinition.custom) {
       log.info { "Updating support states for source definition: ${sourceDefinition.name}" }
@@ -351,7 +346,6 @@ class SupportStateUpdater(
   /**
    * Updates the version support states for a given destination definition.
    */
-  @Throws(ConfigNotFoundException::class, IOException::class)
   fun updateSupportStatesForDestinationDefinition(destinationDefinition: StandardDestinationDefinition) {
     if (!destinationDefinition.custom) {
       log.info { "Updating support states for destination definition: ${destinationDefinition.name}" }
@@ -364,7 +358,6 @@ class SupportStateUpdater(
     }
   }
 
-  @Throws(IOException::class)
   private fun updateSupportStatesForActorDefinition(
     actorDefinitionId: UUID,
     currentDefaultVersion: Version,
@@ -421,7 +414,6 @@ class SupportStateUpdater(
    *
    * @param supportStateUpdate - the SupportStateUpdate to process.
    */
-  @Throws(IOException::class)
   private fun executeSupportStateUpdate(supportStateUpdate: SupportStateUpdate) {
     if (supportStateUpdate.unsupportedVersionIds.isNotEmpty()) {
       actorDefinitionService.setActorDefinitionVersionSupportStates(

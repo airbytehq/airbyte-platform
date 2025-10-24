@@ -26,7 +26,6 @@ abstract class GoogleOAuthFlow : BaseOAuth2Flow {
   @VisibleForTesting
   internal constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -77,7 +76,6 @@ abstract class GoogleOAuthFlow : BaseOAuth2Flow {
       .put("redirect_uri", redirectUrl)
       .build()
 
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,

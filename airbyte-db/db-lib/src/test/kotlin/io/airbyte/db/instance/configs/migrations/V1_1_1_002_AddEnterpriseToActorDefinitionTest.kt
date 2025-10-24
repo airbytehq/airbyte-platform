@@ -38,7 +38,6 @@ internal class V1_1_1_002_AddEnterpriseToActorDefinitionTest : AbstractConfigsDa
   }
 
   @Test
-  @Throws(SQLException::class, IOException::class)
   fun test() {
     val context = dslContext!!
 

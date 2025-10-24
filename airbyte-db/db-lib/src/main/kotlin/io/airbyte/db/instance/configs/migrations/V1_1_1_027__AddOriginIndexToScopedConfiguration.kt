@@ -11,7 +11,6 @@ import org.jooq.impl.DSL
 
 @Suppress("ktlint:standard:class-naming")
 class V1_1_1_027__AddOriginIndexToScopedConfiguration : BaseJavaMigration() {
-  @Throws(Exception::class)
   override fun migrate(context: Context) {
     log.info { "Running migration: ${javaClass.simpleName}" }
 

@@ -54,7 +54,6 @@ class ConnectorBuilderServiceJooqImpl
      * @throws IOException exception while interacting with db
      * @throws ConfigNotFoundException if build project is not found
      */
-    @Throws(IOException::class, ConfigNotFoundException::class)
     override fun getConnectorBuilderProject(
       builderProjectId: UUID,
       fetchManifestDraft: Boolean,
@@ -96,7 +95,6 @@ class ConnectorBuilderServiceJooqImpl
       }
     }
 
-    @Throws(IOException::class)
     override fun getConnectorBuilderProjectIdForActorDefinitionId(actorDefinitionId: UUID): Optional<UUID> =
       database.query { ctx: DSLContext ->
         ctx
@@ -121,7 +119,6 @@ class ConnectorBuilderServiceJooqImpl
      * true, this error is thrown
      * @throws IOException exception while interacting with db
      */
-    @Throws(ConfigNotFoundException::class, IOException::class)
     override fun getVersionedConnectorBuilderProject(
       builderProjectId: UUID,
       version: Long,
@@ -177,7 +174,6 @@ class ConnectorBuilderServiceJooqImpl
      * @return builder project
      * @throws IOException exception while interacting with db
      */
-    @Throws(IOException::class)
     override fun getConnectorBuilderProjectsByWorkspace(workspaceId: UUID): Stream<ConnectorBuilderProject> {
       val matchByWorkspace = Tables.CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID.eq(workspaceId)
 
@@ -203,7 +199,6 @@ class ConnectorBuilderServiceJooqImpl
      * @return true if successful
      * @throws IOException exception while interacting with db
      */
-    @Throws(IOException::class)
     override fun deleteBuilderProject(builderProjectId: UUID): Boolean =
       database.transaction { ctx: DSLContext ->
         ctx
@@ -227,7 +222,6 @@ class ConnectorBuilderServiceJooqImpl
      * @param componentsFileContent the content of the components file (can be null)
      * @throws IOException exception while interacting with db
      */
-    @Throws(IOException::class)
     override fun writeBuilderProjectDraft(
       projectId: UUID,
       workspaceId: UUID,
@@ -260,7 +254,6 @@ class ConnectorBuilderServiceJooqImpl
      * @param projectId the id of the project
      * @throws IOException exception while interacting with db
      */
-    @Throws(IOException::class)
     override fun deleteBuilderProjectDraft(projectId: UUID) {
       database.transaction<Any?> { ctx: DSLContext ->
         ctx
@@ -284,7 +277,6 @@ class ConnectorBuilderServiceJooqImpl
      * @param workspaceId the id of the workspace containing the project
      * @throws IOException exception while interacting with db
      */
-    @Throws(IOException::class)
     override fun deleteManifestDraftForActorDefinition(
       actorDefinitionId: UUID,
       workspaceId: UUID,
@@ -325,7 +317,6 @@ class ConnectorBuilderServiceJooqImpl
      * @param actorDefinitionId the id of the associated actor definition
      * @throws IOException exception while interacting with db
      */
-    @Throws(IOException::class)
     override fun updateBuilderProjectAndActorDefinition(
       projectId: UUID,
       workspaceId: UUID,
@@ -371,7 +362,6 @@ class ConnectorBuilderServiceJooqImpl
      * @param actorDefinitionId the actor definition id associated with the connector builder project
      * @throws IOException exception while interacting with db
      */
-    @Throws(IOException::class)
     override fun assignActorDefinitionToConnectorBuilderProject(
       builderProjectId: UUID,
       actorDefinitionId: UUID,
@@ -445,7 +435,6 @@ class ConnectorBuilderServiceJooqImpl
      * @throws IOException exception while interacting with db
      * @throws IllegalArgumentException if there is a mismatch between the different arguments
      */
-    @Throws(IOException::class)
     override fun createDeclarativeManifestAsActiveVersion(
       declarativeManifest: DeclarativeManifest,
       configInjections: List<ActorDefinitionConfigInjection>,
@@ -523,7 +512,6 @@ class ConnectorBuilderServiceJooqImpl
      * being made active
      * @throws IOException exception while interacting with db
      */
-    @Throws(IOException::class)
     override fun setDeclarativeSourceActiveVersion(
       sourceDefinitionId: UUID,
       version: Long,
@@ -549,7 +537,6 @@ class ConnectorBuilderServiceJooqImpl
      * @return stream of config injection objects
      * @throws IOException exception while interacting with db
      */
-    @Throws(IOException::class)
     override fun getActorDefinitionConfigInjections(actorDefinitionId: UUID): Stream<ActorDefinitionConfigInjection> =
       database
         .query { ctx: DSLContext ->
@@ -569,7 +556,6 @@ class ConnectorBuilderServiceJooqImpl
      * @param actorDefinitionConfigInjection the config injection object to write to the database
      * @throws IOException exception while interacting with db
      */
-    @Throws(IOException::class)
     override fun writeActorDefinitionConfigInjectionForPath(actorDefinitionConfigInjection: ActorDefinitionConfigInjection) {
       database.transaction<Any?> { ctx: DSLContext ->
         writeActorDefinitionConfigInjectionForPath(actorDefinitionConfigInjection, ctx)
@@ -585,7 +571,6 @@ class ConnectorBuilderServiceJooqImpl
      * @param actorDefinitionConfigInjections the config injections to write to the database
      * @throws IOException exception while interacting with db
      */
-    @Throws(IOException::class)
     override fun writeActorDefinitionConfigInjectionsForPath(actorDefinitionConfigInjections: List<ActorDefinitionConfigInjection>) {
       database.transaction<Any?> { ctx: DSLContext ->
         writeActorDefinitionConfigInjectionsForPath(actorDefinitionConfigInjections, ctx)
@@ -658,7 +643,6 @@ class ConnectorBuilderServiceJooqImpl
      * @param declarativeManifest declarative manifest to insert
      * @throws IOException exception while interacting with db
      */
-    @Throws(IOException::class)
     override fun insertDeclarativeManifest(declarativeManifest: DeclarativeManifest) {
       database.transaction<Any?> { ctx: DSLContext ->
         insertDeclarativeManifest(declarativeManifest, ctx)
@@ -674,7 +658,6 @@ class ConnectorBuilderServiceJooqImpl
      * @param declarativeManifest declarative manifest to insert
      * @throws IOException exception while interacting with db
      */
-    @Throws(IOException::class)
     override fun insertActiveDeclarativeManifest(declarativeManifest: DeclarativeManifest) {
       database.transaction<Any?> { ctx: DSLContext ->
         insertDeclarativeManifest(declarativeManifest, ctx)
@@ -694,7 +677,6 @@ class ConnectorBuilderServiceJooqImpl
      * @param actorDefinitionId actor definition id
      * @throws IOException exception while interacting with db
      */
-    @Throws(IOException::class)
     override fun getDeclarativeManifestsByActorDefinitionId(actorDefinitionId: UUID): Stream<DeclarativeManifest> =
       database
         .query { ctx: DSLContext ->
@@ -721,7 +703,6 @@ class ConnectorBuilderServiceJooqImpl
      * @throws ConfigNotFoundException exception if no match on DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID
      * and DECLARATIVE_MANIFEST.VERSION
      */
-    @Throws(IOException::class, ConfigNotFoundException::class)
     override fun getDeclarativeManifestByActorDefinitionIdAndVersion(
       actorDefinitionId: UUID,
       version: Long,
@@ -757,7 +738,6 @@ class ConnectorBuilderServiceJooqImpl
      * @throws ConfigNotFoundException exception if no match on DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID
      * that matches the version of an active manifest
      */
-    @Throws(IOException::class, ConfigNotFoundException::class)
     override fun getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(actorDefinitionId: UUID): DeclarativeManifest {
       val declarativeManifest =
         database
@@ -792,7 +772,6 @@ class ConnectorBuilderServiceJooqImpl
      * @param testingValues testing values to set on the project
      * @throws IOException exception while interacting with db
      */
-    @Throws(IOException::class)
     override fun updateBuilderProjectTestingValues(
       projectId: UUID,
       testingValues: JsonNode,

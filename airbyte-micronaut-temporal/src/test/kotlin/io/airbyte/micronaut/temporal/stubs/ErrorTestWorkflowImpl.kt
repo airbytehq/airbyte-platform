@@ -7,7 +7,6 @@ package io.airbyte.micronaut.temporal.stubs
 import io.airbyte.commons.temporal.exception.RetryableException
 
 open class ErrorTestWorkflowImpl : TestWorkflow {
-  @Throws(RetryableException::class)
   override fun run(): Unit = throw RetryableException(NullPointerException("test"))
 
   override fun cancel() {}

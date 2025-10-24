@@ -219,7 +219,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listSourceDefinition should return the right list")
-  @Throws(IOException::class, URISyntaxException::class)
   fun testListSourceDefinitions() {
     val sourceDefinition2 = generateSourceDefinition()
     val sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2)
@@ -340,7 +339,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listSourceDefinitionsForWorkspace should return the right list")
-  @Throws(IOException::class, URISyntaxException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testListSourceDefinitionsForWorkspace() {
     val sourceDefinition2 = generateSourceDefinition()
     val sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2)
@@ -445,7 +443,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listSourceDefinitionsForWorkspace should return the right list, filtering out hidden connectors")
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testListSourceDefinitionsForWorkspaceWithHiddenConnectors() {
     val hiddenSourceDefinition = generateSourceDefinition()
     val sourceDefinition2 = generateSourceDefinition()
@@ -525,7 +522,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listSourceDefinitionsForWorkspace should return the right list, filtering out unentitled connectors")
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testListSourceDefinitionsForWorkspaceWithUnentitledConnectors() {
     val unentitledSourceDefinition = generateSourceDefinition()
     val sourceDefinition2 = generateSourceDefinition()
@@ -599,7 +595,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listPrivateSourceDefinitions should return the right list")
-  @Throws(IOException::class, URISyntaxException::class)
   fun testListPrivateSourceDefinitions() {
     val sourceDefinition2 = generateSourceDefinition()
     val sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2)
@@ -693,7 +688,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("getSourceDefinition should return the right source")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, URISyntaxException::class)
   fun testGetSourceDefinition() {
     whenever(sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId, true))
       .thenReturn(sourceDefinition)
@@ -733,7 +727,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("getSourceDefinitionForWorkspace should throw an exception for a missing grant")
-  @Throws(IOException::class)
   fun testGetDefinitionWithoutGrantForWorkspace() {
     whenever(workspaceService.workspaceCanUseDefinition(sourceDefinition.sourceDefinitionId, workspaceId))
       .thenReturn(false)
@@ -750,7 +743,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("getSourceDefinitionForScope should throw an exception for a missing grant")
-  @Throws(IOException::class)
   fun testGetDefinitionWithoutGrantForScope() {
     whenever(
       actorDefinitionService.scopeCanUseDefinition(
@@ -791,7 +783,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("getSourceDefinitionForWorkspace should return the source definition if the grant exists")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, URISyntaxException::class)
   fun testGetDefinitionWithGrantForWorkspace() {
     whenever(workspaceService.workspaceCanUseDefinition(sourceDefinition.sourceDefinitionId, workspaceId))
       .thenReturn(true)
@@ -839,13 +830,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("getSourceDefinitionForScope should return the source definition if the grant exists")
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    URISyntaxException::class,
-    ConfigNotFoundException::class,
-  )
   fun testGetDefinitionWithGrantForScope() {
     whenever(
       actorDefinitionService.scopeCanUseDefinition(
@@ -920,7 +904,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("createCustomSourceDefinition should correctly create a sourceDefinition")
-  @Throws(URISyntaxException::class, IOException::class)
   fun testCreateCustomSourceDefinition() {
     val newSourceDefinition = generateSourceDefinition()
     val sourceDefinitionVersion = generateCustomVersionFromSourceDefinition(sourceDefinition)
@@ -1004,7 +987,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("createCustomSourceDefinition should correctly create a sourceDefinition for a workspace and organization using scopes")
-  @Throws(URISyntaxException::class, IOException::class)
   fun testCreateCustomSourceDefinitionUsingScopes() {
     val newSourceDefinition = generateSourceDefinition()
     val sourceDefinitionVersion = generateCustomVersionFromSourceDefinition(sourceDefinition)
@@ -1123,7 +1105,6 @@ internal class SourceDefinitionsHandlerTest {
         "if defaultDefinitionVersionFromCreate throws unsupported protocol version error"
     ),
   )
-  @Throws(URISyntaxException::class, IOException::class)
   fun testCreateCustomSourceDefinitionShouldCheckProtocolVersion() {
     val newSourceDefinition = generateSourceDefinition()
     val sourceDefinitionVersion = generateVersionFromSourceDefinition(newSourceDefinition)
@@ -1157,7 +1138,8 @@ internal class SourceDefinitionsHandlerTest {
         create.documentationUrl,
         customCreate.workspaceId,
       ),
-    ).thenThrow(UnsupportedProtocolVersionException::class.java)
+    ).thenAnswer { throw UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0")) }
+
     whenever<UUID?>(uuidSupplier.get()).thenReturn(UUID.randomUUID())
     Assertions.assertThrows<UnsupportedProtocolVersionException?>(
       UnsupportedProtocolVersionException::class.java,
@@ -1181,13 +1163,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("updateSourceDefinition should correctly update a sourceDefinition")
-  @Throws(
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    URISyntaxException::class,
-    ConfigNotFoundException::class,
-  )
   fun testUpdateSource() {
     whenever(
       airbyteCompatibleConnectorsValidator.validate(
@@ -1318,7 +1293,6 @@ internal class SourceDefinitionsHandlerTest {
         "if defaultDefinitionVersionFromUpdate throws unsupported protocol version error"
     ),
   )
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testOutOfProtocolRangeUpdateSource() {
     whenever<ConnectorPlatformCompatibilityValidationResult?>(
       airbyteCompatibleConnectorsValidator.validate(any(), any()),
@@ -1348,7 +1322,7 @@ internal class SourceDefinitionsHandlerTest {
         sourceDefinition.custom,
         workspaceId,
       ),
-    ).thenThrow(UnsupportedProtocolVersionException::class.java)
+    ).thenAnswer { throw UnsupportedProtocolVersionException(Version("1.0.0"), Version("1.0.0"), Version("1.0.0")) }
 
     Assertions.assertThrows<UnsupportedProtocolVersionException?>(
       UnsupportedProtocolVersionException::class.java,
@@ -1385,7 +1359,6 @@ internal class SourceDefinitionsHandlerTest {
         "if Airbyte version is unsupported"
     ),
   )
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun testUnsupportedAirbyteVersionUpdateSource() {
     whenever(
       actorDefinitionHandlerHelper.validateVersionSupport(
@@ -1393,7 +1366,7 @@ internal class SourceDefinitionsHandlerTest {
         eq("12.4.0"),
         eq(ActorType.SOURCE),
       ),
-    ).thenThrow(BadRequestProblem())
+    ).thenAnswer { throw BadRequestProblem() }
     whenever(
       sourceService.getStandardSourceDefinition(
         sourceDefinition.sourceDefinitionId,
@@ -1426,12 +1399,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("deleteSourceDefinition should correctly delete a sourceDefinition")
-  @Throws(
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testDeleteSourceDefinition() {
     val updatedSourceDefinition = clone<StandardSourceDefinition>(this.sourceDefinition).withTombstone(true)
     val newSourceDefinition = SourceRead()
@@ -1451,7 +1418,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("grantSourceDefinitionToWorkspace should correctly create a workspace grant")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, URISyntaxException::class)
   fun testGrantSourceDefinitionToWorkspace() {
     whenever(sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId))
       .thenReturn(sourceDefinition)
@@ -1501,7 +1467,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("grantSourceDefinitionToWorkspace should correctly create an organization grant")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, URISyntaxException::class)
   fun testGrantSourceDefinitionToOrganization() {
     whenever(sourceService.getStandardSourceDefinition(sourceDefinition.sourceDefinitionId))
       .thenReturn(sourceDefinition)
@@ -1554,7 +1519,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("revokeSourceDefinition should correctly delete a workspace grant and organization grant")
-  @Throws(IOException::class)
   fun testRevokeSourceDefinition() {
     sourceDefinitionsHandler.revokeSourceDefinition(
       ActorDefinitionIdWithScope()
@@ -1660,16 +1624,16 @@ internal class SourceDefinitionsHandlerTest {
     @Test
     @DisplayName("returns empty collection if cannot find latest definitions")
     fun testHttpTimeout() {
-      whenever(remoteDefinitionsProvider.getSourceDefinitions()).thenThrow(
-        RuntimeException(),
-      )
+      whenever(remoteDefinitionsProvider.getSourceDefinitions()).thenAnswer {
+        throw
+        RuntimeException()
+      }
       Assertions.assertEquals(0, sourceDefinitionsHandler.listLatestSourceDefinitions().sourceDefinitions.size)
     }
   }
 
   @Test
   @DisplayName("listSourceDefinitionsUsedByWorkspace should return the right list")
-  @Throws(IOException::class, URISyntaxException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testListSourceDefinitionsUsedByWorkspace() {
     val sourceDefinition2 = generateSourceDefinition()
     val sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2)
@@ -1775,7 +1739,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listSourceDefinitionsUsedByWorkspace should return only used definitions when filterByUsed is true")
-  @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class)
   fun testListSourceDefinitionsUsedByWorkspaceWithFilterByUsedTrue() {
     val usedSourceDefinition = generateSourceDefinition()
     val usedSourceDefinitionVersion = generateVersionFromSourceDefinition(usedSourceDefinition)
@@ -1810,7 +1773,6 @@ internal class SourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listSourceDefinitionsUsedByWorkspace should return all definitions when filterByUsed is false")
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testListSourceDefinitionsUsedByWorkspaceWithFilterByUsedFalse() {
     val sourceDefinition2 = generateSourceDefinition()
     val sourceDefinitionVersion2 = generateVersionFromSourceDefinition(sourceDefinition2)

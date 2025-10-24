@@ -146,7 +146,6 @@ internal class StreamStatusesHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testUptimeHistory() {
     val connectionId = UUID.randomUUID()
     val numJobs = 10

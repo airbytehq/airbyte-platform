@@ -90,7 +90,6 @@ internal class JobInputHandlerTest {
   private val apiPojoConverters = ApiPojoConverters(CatalogConverter(FieldGenerator(), mutableListOf<Mapper<out MapperConfig>>()))
 
   @BeforeEach
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun init() {
     jobPersistence = mockk()
     configInjector = mockk()
@@ -178,7 +177,6 @@ internal class JobInputHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testGetSyncWorkflowInput() {
     val syncInput = SyncInput().jobId(JOB_ID).attemptNumber(ATTEMPT_NUMBER)
 
@@ -349,7 +347,6 @@ internal class JobInputHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetResetSyncWorkflowInput() {
     val syncInput = SyncInput().jobId(JOB_ID).attemptNumber(ATTEMPT_NUMBER)
 

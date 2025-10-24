@@ -52,7 +52,6 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   private var handler: DeclarativeSourceDefinitionsHandler? = null
 
   @BeforeEach
-  @Throws(JsonProcessingException::class)
   fun setUp() {
     declarativeManifestImageVersionService =
       Mockito.mock(DeclarativeManifestImageVersionService::class.java)
@@ -79,7 +78,6 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun givenSourceNotAvailableInWorkspaceWhenCreateDeclarativeSourceDefinitionManifestThenThrowException() {
     whenever(workspaceService.workspaceCanUseCustomDefinition(A_SOURCE_DEFINITION_ID, A_WORKSPACE_ID)).thenReturn(false)
     Assertions.assertThrows(DeclarativeSourceNotFoundException::class.java) {
@@ -90,7 +88,6 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun givenNoDeclarativeManifestForSourceDefinitionIdWhenCreateDeclarativeSourceDefinitionManifestThenThrowException() {
     givenSourceDefinitionAvailableInWorkspace()
     Mockito
@@ -112,7 +109,6 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun givenVersionAlreadyExistsWhenCreateDeclarativeSourceDefinitionManifestThenThrowException() {
     givenSourceDefinitionAvailableInWorkspace()
     Mockito
@@ -132,7 +128,6 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun givenSetAsActiveWhenCreateDeclarativeSourceDefinitionManifestThenCreateDeclarativeManifest() {
     givenSourceDefinitionAvailableInWorkspace()
     givenSourceIsDeclarative()
@@ -183,7 +178,6 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun givenNotSetAsActiveWhenCreateDeclarativeSourceDefinitionManifestThenCreateDeclarativeManifest() {
     givenSourceDefinitionAvailableInWorkspace()
     givenSourceIsDeclarative()
@@ -230,7 +224,6 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun whenCreateDeclarativeSourceDefinitionManifestThenManifestDraftDeleted() {
     givenSourceDefinitionAvailableInWorkspace()
     givenSourceIsDeclarative()
@@ -256,7 +249,6 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun givenSourceNotAvailableInWorkspaceWhenUpdateDeclarativeManifestVersionThenThrowException() {
     whenever(workspaceService.workspaceCanUseCustomDefinition(A_SOURCE_DEFINITION_ID, A_WORKSPACE_ID)).thenReturn(false)
     Assertions.assertThrows(DeclarativeSourceNotFoundException::class.java) {
@@ -267,7 +259,6 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun givenNoDeclarativeManifestForSourceDefinitionIdWhenUpdateDeclarativeManifestVersionThenThrowException() {
     givenSourceDefinitionAvailableInWorkspace()
     Mockito
@@ -285,7 +276,6 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("updateDeclarativeManifest throws a helpful error if no associated CDK version is found")
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testUpdateDeclarativeManifestVersionNoCdkVersion() {
     givenSourceDefinitionAvailableInWorkspace()
     givenSourceIsDeclarative()
@@ -311,7 +301,7 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
     whenever(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION)
     Mockito
       .`when`(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(0))
-      .thenThrow(IllegalStateException("No declarative manifest image version found in database for major version 0"))
+      .thenAnswer { throw IllegalStateException("No declarative manifest image version found in database for major version 0") }
 
     Assertions.assertEquals(
       "No declarative manifest image version found in database for major version 0",
@@ -325,13 +315,12 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun givenNotFoundWhenUpdateDeclarativeManifestVersionThenThrowException() {
     givenSourceDefinitionAvailableInWorkspace()
     givenSourceIsDeclarative()
     Mockito
       .`when`(connectorBuilderService.getDeclarativeManifestByActorDefinitionIdAndVersion(anyOrNull(), anyOrNull()))
-      .thenThrow(ConfigNotFoundException::class.java)
+      .thenAnswer { throw ConfigNotFoundException("test", "test") }
 
     Assertions.assertThrows(ConfigNotFoundException::class.java) {
       handler!!.updateDeclarativeManifestVersion(
@@ -341,7 +330,6 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun whenUpdateDeclarativeManifestVersionThenSetDeclarativeSourceActiveVersion() {
     Mockito
       .`when`<ConnectorPlatformCompatibilityValidationResult?>(
@@ -396,7 +384,6 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun updateShouldNotWorkIfValidationFails() {
     Mockito
       .`when`<ConnectorPlatformCompatibilityValidationResult?>(
@@ -446,7 +433,6 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
 
   @Test
   @DisplayName("listManifestVersions should return a list of all manifest versions with their descriptions and status")
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testListManifestVersions() {
     val sourceDefinitionId = UUID.randomUUID()
     givenSourceDefinitionAvailableInWorkspace()
@@ -479,13 +465,11 @@ internal class DeclarativeSourceDefinitionsHandlerTest {
     Assertions.assertEquals(manifest3.getVersion(), response.getManifestVersions().get(2).getVersion())
   }
 
-  @Throws(IOException::class)
   private fun givenSourceDefinitionAvailableInWorkspace() {
     whenever(workspaceService.workspaceCanUseCustomDefinition(anyOrNull(), anyOrNull()))
       .thenReturn(true)
   }
 
-  @Throws(IOException::class)
   private fun givenSourceIsDeclarative() {
     Mockito
       .`when`(connectorBuilderService.getDeclarativeManifestsByActorDefinitionId(A_SOURCE_DEFINITION_ID))

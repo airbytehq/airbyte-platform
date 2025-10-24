@@ -19,7 +19,6 @@ import java.time.OffsetDateTime
 @Disabled
 internal class V0_57_4_004__AddDeclarativeManifestImageVersionTableTest : AbstractConfigsDatabaseTest() {
   @Test
-  @Throws(SQLException::class, IOException::class)
   fun test() {
     val context = dslContext!!
     createDeclarativeManifestImageVersionTable(context)

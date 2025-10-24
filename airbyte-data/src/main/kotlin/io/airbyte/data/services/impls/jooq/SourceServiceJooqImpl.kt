@@ -89,7 +89,6 @@ class SourceServiceJooqImpl(
     this.actorPaginationServiceHelper = actorPaginationServiceHelper
   }
 
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   override fun getStandardSourceDefinition(sourceDefinitionId: UUID): StandardSourceDefinition = getStandardSourceDefinition(sourceDefinitionId, true)
 
   /**
@@ -101,7 +100,6 @@ class SourceServiceJooqImpl(
    * @throws IOException - you never know when you IO
    * @throws ConfigNotFoundException - throws if no source with that id can be found.
    */
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   override fun getStandardSourceDefinition(
     sourceDefinitionId: UUID,
     includeTombstones: Boolean,
@@ -149,7 +147,6 @@ class SourceServiceJooqImpl(
    * @return list source definitions
    * @throws IOException - you never know when you IO
    */
-  @Throws(IOException::class)
   override fun listStandardSourceDefinitions(includeTombstone: Boolean): MutableList<StandardSourceDefinition> =
     sourceDefQuery(Optional.empty<UUID?>(), includeTombstone).toList()
 
@@ -160,7 +157,6 @@ class SourceServiceJooqImpl(
    * @return public source definitions
    * @throws IOException - you never know when you IO
    */
-  @Throws(IOException::class)
   override fun listPublicSourceDefinitions(includeTombstone: Boolean): MutableList<StandardSourceDefinition> =
     listStandardActorDefinitions(
       ActorType.source,
@@ -186,7 +182,6 @@ class SourceServiceJooqImpl(
    * @return source definitions used by workspace
    * @throws IOException - you never know when you IO
    */
-  @Throws(IOException::class)
   override fun listSourceDefinitionsForWorkspace(
     workspaceId: UUID,
     includeTombstone: Boolean,
@@ -221,7 +216,6 @@ class SourceServiceJooqImpl(
    * @return list standard source definitions
    * @throws IOException - you never know when you IO
    */
-  @Throws(IOException::class)
   override fun listGrantedSourceDefinitions(
     workspaceId: UUID,
     includeTombstones: Boolean,
@@ -252,7 +246,6 @@ class SourceServiceJooqImpl(
    * @return list of pairs from source definition and whether it can be granted
    * @throws IOException - you never know when you IO
    */
-  @Throws(IOException::class)
   override fun listGrantableSourceDefinitions(
     workspaceId: UUID,
     includeTombstones: Boolean,
@@ -285,7 +278,6 @@ class SourceServiceJooqImpl(
    * @throws JsonValidationException - throws if returned sources are invalid
    * @throws IOException - you never know when you IO
    */
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   override fun updateStandardSourceDefinition(sourceDefinition: StandardSourceDefinition) {
     // Check existence before updating
     // TODO: split out write and update methods so that we don't need explicit checking
@@ -308,7 +300,6 @@ class SourceServiceJooqImpl(
    * @throws IOException - you never know when you IO
    * @throws ConfigNotFoundException - throws if no source with that id can be found.
    */
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   override fun getSourceConnection(sourceId: UUID): SourceConnection {
     val sourceConnection =
       listSourceQuery(Optional.of(sourceId))
@@ -354,7 +345,6 @@ class SourceServiceJooqImpl(
    * @param workspaceResourceCursorPagination - the cursor object for paginating over results
    * @throws IOException - you never know when you IO
    */
-  @Throws(IOException::class)
   override fun countWorkspaceSourcesFiltered(
     workspaceId: UUID,
     workspaceResourceCursorPagination: WorkspaceResourceCursorPagination,
@@ -377,7 +367,6 @@ class SourceServiceJooqImpl(
    * secrets, just pointer to the secrets store)
    * @throws IOException - you never know when you IO
    */
-  @Throws(IOException::class)
   override fun writeSourceConnectionNoSecrets(partialSource: SourceConnection) {
     database.transaction<Any?>(
       { ctx: DSLContext? ->
@@ -393,7 +382,6 @@ class SourceServiceJooqImpl(
    * @return sources
    * @throws IOException - you never know when you IO
    */
-  @Throws(IOException::class)
   override fun listSourceConnection(): MutableList<SourceConnection> = listSourceQuery(Optional.empty<UUID>()).toList()
 
   /**
@@ -403,7 +391,6 @@ class SourceServiceJooqImpl(
    * @return sources
    * @throws IOException - you never know when you IO
    */
-  @Throws(IOException::class)
   override fun listWorkspaceSourceConnection(workspaceId: UUID): MutableList<SourceConnection> {
     val result =
       database.query<Result<Record>>(
@@ -427,7 +414,6 @@ class SourceServiceJooqImpl(
    * @return boolean - if source is active or not
    * @throws IOException - you never know when you IO
    */
-  @Throws(IOException::class)
   override fun isSourceActive(sourceId: UUID): Boolean =
     database.query(
       { ctx: DSLContext? ->
@@ -448,7 +434,6 @@ class SourceServiceJooqImpl(
    * @return sources
    * @throws IOException - you never know when you IO
    */
-  @Throws(IOException::class)
   override fun listWorkspacesSourceConnections(resourcesQueryPaginated: ResourcesQueryPaginated): MutableList<SourceConnection> {
     val result =
       database.query<Result<Record>>(
@@ -474,7 +459,6 @@ class SourceServiceJooqImpl(
    * @return sources
    * @throws IOException - exception while interacting with the db
    */
-  @Throws(IOException::class)
   override fun listSourcesForDefinition(definitionId: UUID): MutableList<SourceConnection> {
     val result =
       database.query<Result<Record>>(
@@ -498,7 +482,6 @@ class SourceServiceJooqImpl(
    * @return pair of source and definition
    * @throws IOException if there is an issue while interacting with db.
    */
-  @Throws(IOException::class)
   override fun getSourceAndDefinitionsFromSourceIds(sourceIds: List<UUID>): List<SourceAndDefinition> {
     val records =
       database.query<Result<Record>>(
@@ -539,7 +522,6 @@ class SourceServiceJooqImpl(
    * @param breakingChangesForDefinition - list of breaking changes for the definition
    * @throws IOException - you never know when you IO
    */
-  @Throws(IOException::class)
   override fun writeConnectorMetadata(
     sourceDefinition: StandardSourceDefinition,
     actorDefinitionVersion: ActorDefinitionVersion,
@@ -556,7 +538,6 @@ class SourceServiceJooqImpl(
     actorDefinitionVersionUpdater.updateSourceDefaultVersion(sourceDefinition, actorDefinitionVersion, breakingChangesForDefinition)
   }
 
-  @Throws(IOException::class)
   override fun writeCustomConnectorMetadata(
     sourceDefinition: StandardSourceDefinition,
     defaultVersion: ActorDefinitionVersion,
@@ -579,7 +560,6 @@ class SourceServiceJooqImpl(
     actorDefinitionVersionUpdater.updateSourceDefaultVersion(sourceDefinition, defaultVersion, mutableListOf())
   }
 
-  @Throws(IOException::class)
   override fun listSourcesWithIds(sourceIds: List<UUID>): List<SourceConnection> {
     val result =
       database.query<Result<Record>>(
@@ -638,7 +618,6 @@ class SourceServiceJooqImpl(
     ConnectorMetadataJooqHelper.writeActorDefinitionVersion(actorDefinitionVersion, ctx)
   }
 
-  @Throws(IOException::class)
   private fun sourceDefQuery(
     sourceDefId: Optional<UUID>,
     includeTombstone: Boolean,
@@ -664,7 +643,6 @@ class SourceServiceJooqImpl(
         )
       }
 
-  @Throws(IOException::class)
   private fun <T> listStandardActorDefinitions(
     actorType: ActorType,
     recordToActorDefinition: Function<Record, T>,
@@ -688,7 +666,6 @@ class SourceServiceJooqImpl(
       .toList()
   }
 
-  @Throws(IOException::class)
   private fun <T> listActorDefinitionsJoinedWithGrants(
     scopeId: UUID,
     scopeType: ScopeType,
@@ -715,7 +692,6 @@ class SourceServiceJooqImpl(
       .toList()
   }
 
-  @Throws(IOException::class)
   private fun actorDefinitionsJoinedWithGrants(
     scopeId: UUID,
     scopeType: ScopeType,
@@ -763,7 +739,6 @@ class SourceServiceJooqImpl(
     )
   }
 
-  @Throws(IOException::class)
   private fun getOrganizationIdFromWorkspaceId(scopeId: UUID?): Optional<UUID> {
     val optionalRecord =
       database.query<Optional<Record1<UUID?>?>>(
@@ -839,7 +814,6 @@ class SourceServiceJooqImpl(
     )
   }
 
-  @Throws(IOException::class)
   private fun listSourceQuery(configId: Optional<UUID>): Stream<SourceConnection> {
     val result =
       database.query<Result<Record>>(
@@ -876,7 +850,6 @@ class SourceServiceJooqImpl(
    * @throws JsonValidationException if the config is or contains invalid json
    * @throws IOException if there is an issue while interacting with the secrets store or db.
    */
-  @Throws(ConfigNotFoundException::class, JsonValidationException::class, IOException::class)
   override fun tombstoneSource(
     name: String,
     workspaceId: UUID,

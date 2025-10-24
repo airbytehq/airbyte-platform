@@ -112,7 +112,6 @@ open class RemoteDefinitionsProvider(
     )
   }
 
-  @Throws(RegistryDefinitionNotFoundException::class)
   override fun getSourceDefinition(definitionId: UUID): ConnectorRegistrySourceDefinition {
     val definition =
       getSourceDefinitionsMap()[definitionId]
@@ -139,7 +138,6 @@ open class RemoteDefinitionsProvider(
 
   override fun getSourceDefinitions(): List<ConnectorRegistrySourceDefinition> = ArrayList(getSourceDefinitionsMap().values)
 
-  @Throws(RegistryDefinitionNotFoundException::class)
   override fun getDestinationDefinition(definitionId: UUID): ConnectorRegistryDestinationDefinition {
     val definition =
       getDestinationDefinitionsMap()[definitionId]
@@ -361,7 +359,6 @@ open class RemoteDefinitionsProvider(
    * @return Optional containing the file contents if found, empty otherwise
    * @throws IOException if there is an error reading the zip file
    */
-  @Throws(IOException::class)
   private fun extractFileContentFromZip(
     zipBytes: ByteArray,
     fileName: String,
@@ -374,7 +371,6 @@ open class RemoteDefinitionsProvider(
   /**
    * Finds and extracts a specific file from a ZipInputStream.
    */
-  @Throws(IOException::class)
   private fun findAndExtractFile(
     zipStream: ZipInputStream,
     fileName: String,
@@ -393,7 +389,6 @@ open class RemoteDefinitionsProvider(
   /**
    * Reads a stream into a String using UTF-8 encoding.
    */
-  @Throws(IOException::class)
   private fun readStreamToString(inputStream: InputStream): String {
     val outputStream = ByteArrayOutputStream()
     inputStream.transferTo(outputStream)

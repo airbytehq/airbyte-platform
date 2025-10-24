@@ -38,7 +38,6 @@ internal class V0_50_41_006__AlterSupportLevelAddArchivedTest : AbstractConfigsD
   }
 
   @Test
-  @Throws(Exception::class)
   fun testArchivedConnectorVersion() {
     val ctx = dslContext!!
 

@@ -19,7 +19,6 @@ internal class DatabaseInitializerTest {
   fun testExceptionHandling() {
     val initializer: DatabaseInitializer =
       object : DatabaseInitializer {
-        @Throws(DatabaseInitializationException::class)
         override fun initialize(): Unit = throw DatabaseInitializationException("test")
 
         override val databaseAvailabilityCheck = null

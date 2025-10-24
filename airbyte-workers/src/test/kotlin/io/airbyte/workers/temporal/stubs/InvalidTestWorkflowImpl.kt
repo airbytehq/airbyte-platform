@@ -13,7 +13,6 @@ class InvalidTestWorkflowImpl : TestWorkflow {
 
   override val state: Int? = 1
 
-  @Throws(RetryableException::class)
   override fun run() {
   }
 

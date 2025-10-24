@@ -38,12 +38,6 @@ class SlackOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
   ): OAuthFlowImplementation = SlackOAuthFlow(httpClient)
 
   @Test
-  @Throws(
-    InterruptedException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-  )
   fun testFullSlackOAuthFlow() {
     var limit = 20
     val workspaceId = UUID.randomUUID()

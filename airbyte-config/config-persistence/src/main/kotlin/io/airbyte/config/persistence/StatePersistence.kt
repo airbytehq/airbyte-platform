@@ -55,7 +55,6 @@ class StatePersistence(
    * @return current state for the connection
    * @throws IOException if there is an issue while interacting with the db.
    */
-  @Throws(IOException::class)
   fun getCurrentState(connectionId: UUID): Optional<StateWrapper> {
     val records =
       database.query { ctx: DSLContext ->
@@ -91,7 +90,6 @@ class StatePersistence(
    * @param state new state
    * @throws IOException if there is an issue while interacting with the db.
    */
-  @Throws(IOException::class)
   fun updateOrCreateState(
     connectionId: UUID,
     state: StateWrapper,
@@ -147,7 +145,6 @@ class StatePersistence(
    * @param connectionId the id of the connection
    * @throws IOException if there is an issue while interacting with the db.
    */
-  @Throws(IOException::class)
   fun eraseState(connectionId: UUID) {
     database.transaction<Any?> { ctx: DSLContext ->
       deleteStateRecords(ctx, connectionId)
@@ -155,7 +152,6 @@ class StatePersistence(
     }
   }
 
-  @Throws(IOException::class)
   private fun getAllStreamsForConnection(connectionId: UUID): Set<StreamDescriptor> =
     try {
       HashSet(connectionServiceJooqImpl.getAllStreamsForConnection(connectionId))
@@ -163,7 +159,6 @@ class StatePersistence(
       emptySet()
     }
 
-  @Throws(IOException::class)
   fun bulkDelete(
     connectionId: UUID,
     streamsToDelete: Set<StreamDescriptor>?,

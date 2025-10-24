@@ -171,7 +171,6 @@ class ActorServicePaginationHelper(
       }
     }
 
-  @Throws(IOException::class)
   fun countWorkspaceActorsFiltered(
     workspaceId: UUID,
     workspaceResourceCursorPagination: WorkspaceResourceCursorPagination,
@@ -468,7 +467,6 @@ class ActorServicePaginationHelper(
   }
 
   @Trace
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun getCursorActor(
     cursorId: UUID?,
     internalSortKey: SortKey,

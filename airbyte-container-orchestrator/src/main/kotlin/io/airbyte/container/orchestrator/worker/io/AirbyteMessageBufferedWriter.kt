@@ -23,19 +23,16 @@ class AirbyteMessageBufferedWriter<T : Any>(
   private val migrator: AirbyteMessageVersionedMigrator<T>,
   private val configuredAirbyteCatalog: Optional<ConfiguredAirbyteCatalog>,
 ) {
-  @Throws(IOException::class)
   fun write(message: AirbyteMessage) {
     val downgradedMessage = migrator.downgrade(message, configuredAirbyteCatalog)
     writer.write(serializer.serialize(downgradedMessage))
     writer.newLine()
   }
 
-  @Throws(IOException::class)
   fun flush() {
     writer.flush()
   }
 
-  @Throws(IOException::class)
   fun close() {
     writer.close()
   }

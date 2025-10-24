@@ -14,7 +14,6 @@ import java.util.UUID
  * OAuth flow impl.
  */
 interface OAuthFlowImplementation {
-  @Throws(IOException::class, JsonValidationException::class)
   fun getSourceConsentUrl(
     workspaceId: UUID,
     sourceDefinitionId: UUID?,
@@ -24,7 +23,6 @@ interface OAuthFlowImplementation {
     sourceOAuthParamConfig: JsonNode?,
   ): String
 
-  @Throws(IOException::class, JsonValidationException::class)
   fun getDestinationConsentUrl(
     workspaceId: UUID,
     destinationDefinitionId: UUID?,
@@ -35,7 +33,6 @@ interface OAuthFlowImplementation {
   ): String
 
   @Deprecated("")
-  @Throws(IOException::class)
   fun completeSourceOAuth(
     workspaceId: UUID,
     sourceDefinitionId: UUID?,
@@ -44,7 +41,6 @@ interface OAuthFlowImplementation {
     oauthParamConfig: JsonNode,
   ): Map<String, Any>
 
-  @Throws(IOException::class, JsonValidationException::class)
   fun completeSourceOAuth(
     workspaceId: UUID,
     sourceDefinitionId: UUID?,
@@ -56,7 +52,6 @@ interface OAuthFlowImplementation {
   ): Map<String, Any>
 
   @Deprecated("")
-  @Throws(IOException::class)
   fun completeDestinationOAuth(
     workspaceId: UUID,
     destinationDefinitionId: UUID?,
@@ -65,7 +60,6 @@ interface OAuthFlowImplementation {
     oauthParamConfig: JsonNode,
   ): Map<String, Any>
 
-  @Throws(IOException::class, JsonValidationException::class)
   fun completeDestinationOAuth(
     workspaceId: UUID,
     destinationDefinitionId: UUID?,
@@ -76,7 +70,6 @@ interface OAuthFlowImplementation {
     oauthParamConfig: JsonNode,
   ): Map<String, Any>
 
-  @Throws(IOException::class)
   fun revokeSourceOauth(
     workspaceId: UUID,
     sourceDefinitionId: UUID,

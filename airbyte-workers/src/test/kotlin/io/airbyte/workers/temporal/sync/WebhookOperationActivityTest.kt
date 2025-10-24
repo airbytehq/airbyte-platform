@@ -56,7 +56,6 @@ internal class WebhookOperationActivityTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun webhookActivityInvokesConfiguredWebhook() {
     val mockHttpResponse = Mockito.mock(HttpResponse::class.java) as HttpResponse<Any>
     whenever(mockHttpResponse.statusCode()).thenReturn(HttpStatus.OK.code)
@@ -83,7 +82,6 @@ internal class WebhookOperationActivityTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun webhookActivityFailsWhenRetriesExhausted() {
     val exception = IOException("test")
     whenever(
@@ -91,7 +89,7 @@ internal class WebhookOperationActivityTest {
         any<HttpRequest>(),
         any<HttpResponse.BodyHandler<Any>>(),
       ),
-    ).thenThrow(exception)
+    ).thenAnswer { throw exception }
     whenever(
       secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(
         any<JsonNode>(),

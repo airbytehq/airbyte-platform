@@ -16,7 +16,6 @@ import java.io.IOException
 class CompositeBuilderProjectUpdater(
   private val updaters: List<BuilderProjectUpdater>,
 ) : BuilderProjectUpdater {
-  @Throws(IOException::class, ConfigNotFoundException::class)
   override fun persistBuilderProjectUpdate(projectUpdate: ExistingConnectorBuilderProjectWithWorkspaceId) {
     for (updater in updaters) {
       updater.persistBuilderProjectUpdate(projectUpdate)

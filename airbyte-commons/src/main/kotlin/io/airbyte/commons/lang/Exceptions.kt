@@ -93,7 +93,6 @@ object Exceptions {
    * Abstraction for swallowing exceptions.
    */
   interface Procedure {
-    @Throws(Exception::class)
     fun call()
   }
 }

@@ -17,7 +17,6 @@ class MockAirbyteFileWriterImpl : AirbyteFileWriter {
   /**
    * Mocks writing files.
    */
-  @Throws(IOException::class)
   override fun write(
     name: String,
     contents: String,

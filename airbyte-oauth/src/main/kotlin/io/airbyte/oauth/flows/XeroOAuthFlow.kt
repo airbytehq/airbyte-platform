@@ -38,7 +38,6 @@ class XeroOAuthFlow : BaseOAuth2Flow {
     this.clock = Clock.systemUTC()
   }
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -59,7 +58,6 @@ class XeroOAuthFlow : BaseOAuth2Flow {
     }
   }
 
-  @Throws(IOException::class)
   override fun completeOAuthFlow(
     clientId: String,
     clientSecret: String,
@@ -112,7 +110,6 @@ class XeroOAuthFlow : BaseOAuth2Flow {
 
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String = ACCESS_TOKEN_URL
 
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,

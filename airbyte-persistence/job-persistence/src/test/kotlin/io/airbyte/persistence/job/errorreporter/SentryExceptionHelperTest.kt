@@ -687,14 +687,12 @@ internal class SentryExceptionHelperTest {
       	  Invalid input
       	  DETAIL:
 
-
       --	    error:  Invalid input
       	    code:      8001
       	    context:   SUPER value exceeds export size.
       	    query:     3667701
       	    location:  partiql_export.cpp:9
       	    process:   query0_127_3667701 [pid=17836]
-
 
       --	  compiled SQL at ../build/run/airbyte_utils/models/generated/airbyte_tables/tdym_processing_test/tdym_api_data.sql
       Setting attempt to FAILED because the job was cancelled

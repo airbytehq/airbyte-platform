@@ -128,7 +128,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   private lateinit var dataplaneGroupIds: MutableMap<String, UUID>
 
   @BeforeEach
-  @Throws(IOException::class, JsonValidationException::class, SQLException::class)
   fun setup() {
     truncateAllTables()
 
@@ -277,7 +276,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testWorkspaceCountConnections() {
     val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
     Assertions.assertEquals(3, workspaceService.countConnectionsForWorkspace(workspaceId))
@@ -286,7 +284,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testWorkspaceCountConnectionsDeprecated() {
     val workspaceId = standardWorkspaces().get(1)!!.getWorkspaceId()
     // One connection is active and one is locked
@@ -294,7 +291,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testFetchActorsUsingDefinition() {
     val destinationDefinitionId = publicDestinationDefinition()!!.getDestinationDefinitionId()
     val sourceDefinitionId = publicSourceDefinition()!!.getSourceDefinitionId()
@@ -342,7 +338,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testReadActorCatalog() {
     val otherConfigHash = "OtherConfigHash"
     val workspace = standardWorkspaces().get(0)
@@ -419,7 +414,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, SQLException::class)
   fun testWriteCanonicalHashActorCatalog() {
     val canonicalConfigHash = "8ad32981"
     val workspace = standardWorkspaces().get(0)
@@ -484,7 +478,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, SQLException::class)
   fun testSimpleInsertActorCatalog() {
     val otherConfigHash = "OtherConfigHash"
     val workspace = standardWorkspaces().get(0)
@@ -585,7 +578,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testSimpleInsertDestinationActorCatalog() {
     val otherConfigHash = "OtherConfigHash"
     val workspace = standardWorkspaces().get(0)
@@ -654,7 +646,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testListWorkspaceStandardSyncAll() {
     val expectedSyncs = standardSyncs().subList(0, 4).filterNotNull().toMutableList()
     val actualSyncs =
@@ -669,7 +660,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testListWorkspaceStandardSyncWithAllFiltering() {
     val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
     val query = StandardSyncQuery(workspaceId, listOf(MockData.SOURCE_ID_1), listOf(MockData.DESTINATION_ID_1), false)
@@ -688,7 +678,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testListWorkspaceStandardSyncDestinationFiltering() {
     val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
     val query = StandardSyncQuery(workspaceId, null, listOf(MockData.DESTINATION_ID_1), false)
@@ -706,7 +695,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testListWorkspaceStandardSyncSourceFiltering() {
     val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
     val query = StandardSyncQuery(workspaceId, listOf(MockData.SOURCE_ID_2), null, false)
@@ -724,7 +712,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testListWorkspaceStandardSyncExcludeDeleted() {
     val expectedSyncs =
       standardSyncs()
@@ -740,7 +727,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetWorkspaceBySlug() {
     val workspace =
       standardWorkspaces().get(0)
@@ -772,7 +758,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testUpdateConnectionOperationIds() {
     val sync = standardSyncs().get(0)
     val existingOperationIds = sync!!.getOperationIds()
@@ -805,7 +790,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     Assertions.assertEquals(expectedOperationIds, actualOperationIds)
   }
 
-  @Throws(SQLException::class)
   private fun fetchOperationIdsForConnectionId(connectionId: UUID?): MutableSet<UUID> =
     database
       ?.query(
@@ -818,7 +802,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
       )?.toMutableSet() ?: mutableSetOf()
 
   @Test
-  @Throws(IOException::class)
   fun testActorDefinitionWorkspaceGrantExists() {
     val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
     val definitionId = standardSourceDefinitions().get(0)!!.getSourceDefinitionId()
@@ -833,14 +816,12 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testListPublicSourceDefinitions() {
     val actualDefinitions = sourceService.listPublicSourceDefinitions(false)
     Assertions.assertEquals(listOf<StandardSourceDefinition?>(publicSourceDefinition()), actualDefinitions)
   }
 
   @Test
-  @Throws(IOException::class)
   fun testListWorkspaceSources() {
     val workspaceId = standardWorkspaces().get(1)!!.getWorkspaceId()
     val expectedSources =
@@ -859,7 +840,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testListWorkspaceDestinations() {
     val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
     val expectedDestinations =
@@ -879,7 +859,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testSourceDefinitionGrants() {
     val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
     val grantableDefinition1 = grantableSourceDefinition1()
@@ -910,14 +889,12 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
 
   // todo: testSourceDefinitionGrants for organization
   @Test
-  @Throws(IOException::class)
   fun testListPublicDestinationDefinitions() {
     val actualDefinitions = destinationService.listPublicDestinationDefinitions(false)
     Assertions.assertEquals(listOf(publicDestinationDefinition()), actualDefinitions)
   }
 
   @Test
-  @Throws(IOException::class)
   fun testDestinationDefinitionGrants() {
     val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
     val grantableDefinition1 = grantableDestinationDefinition1()
@@ -954,7 +931,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
 
   // todo: testDestinationDefinitionGrants for organization
   @Test
-  @Throws(IOException::class)
   fun testWorkspaceCanUseDefinition() {
     val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
     val otherWorkspaceId = standardWorkspaces().get(1)!!.getWorkspaceId()
@@ -991,7 +967,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetDestinationOAuthByDefinitionIdAndWorkspaceId() {
     val destinationOAuthParameter = destinationOauthParameters().get(0)
     val result =
@@ -1005,7 +980,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetDestinationOAuthByDefinitionIdAndOrganizationId() {
     val destinationOAuthParameter = destinationOauthParameters().get(2)
     val result =
@@ -1019,7 +993,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetDestinationOAuthByDefinitionIdAndNullWorkspaceIdOrganizationId() {
     val destinationOAuthParameter = destinationOauthParameters().get(3)
     val result =
@@ -1033,7 +1006,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testMissingDestinationOAuthByDefinitionId() {
     val missingId = UUID.fromString("fc59cfa0-06de-4c8b-850b-46d4cfb65629")
     val destinationOAuthParameter = destinationOauthParameters().get(0)
@@ -1055,7 +1027,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetSourceOAuthByDefinitionIdAndWorkspaceId() {
     val sourceOAuthParameter = sourceOauthParameters().get(0)
     val result =
@@ -1069,7 +1040,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetSourceOAuthByDefinitionIdAndOrganizationId() {
     val sourceOAuthParameter = sourceOauthParameters().get(2)
     val result =
@@ -1083,7 +1053,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetSourceOAuthByDefinitionIdAndNullWorkspaceIdAndOrganizationId() {
     val sourceOAuthParameter = sourceOauthParameters().get(3)
     val result =
@@ -1097,7 +1066,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testMissingSourceOAuthByDefinitionId() {
     val missingId = UUID.fromString("fc59cfa0-06de-4c8b-850b-46d4cfb65629")
     val sourceOAuthParameter = sourceOauthParameters().get(0)
@@ -1119,7 +1087,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetStandardSyncUsingOperation() {
     val operationId = standardSyncOperations().get(0)!!.getOperationId()
     val expectedSyncs =
@@ -1171,7 +1138,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testDeleteStandardSyncOperation() {
     val deletedOperationId = standardSyncOperations().get(0)!!.getOperationId()
     val syncs = standardSyncs()
@@ -1194,7 +1160,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetSourceAndDefinitionsFromSourceIds() {
     val sourceIds =
       sourceConnections()
@@ -1226,7 +1191,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetDestinationAndDefinitionsFromDestinationIds() {
     val destinationIds =
       destinationConnections()
@@ -1260,7 +1224,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(SQLException::class, IOException::class)
   fun testGetMostRecentActorCatalogFetchEventForSource() {
     for (actorCatalog in actorCatalogs()) {
       Companion.writeActorCatalog(database!!, mutableListOf<ActorCatalog?>(actorCatalog))
@@ -1306,7 +1269,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(SQLException::class, IOException::class)
   fun testGetMostRecentActorCatalogFetchEventForSources() {
     for (actorCatalog in actorCatalogs()) {
       Companion.writeActorCatalog(database!!, mutableListOf<ActorCatalog?>(actorCatalog))
@@ -1342,7 +1304,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(SQLException::class, IOException::class)
   fun testGetMostRecentActorCatalogFetchEventWithDuplicates() {
     // Tests that we can handle two fetch events in the db with the same actor id, actor catalog id, and
     // timestamp e.g., from duplicate discoveries.
@@ -1386,7 +1347,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetActorDefinitionsInUseToProtocolVersion() {
     val actorDefinitionIds: MutableSet<UUID?> = HashSet<UUID?>()
     actorDefinitionIds.addAll(sourceConnections().stream().map<UUID?> { obj: SourceConnection? -> obj!!.getSourceDefinitionId() }.toList())
@@ -1420,7 +1380,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetEarlySyncJobs() {
     // This test just verifies that the query can be run against configAPI DB.
     // The query has been tested locally against prod DB to verify the outputs.
@@ -1434,7 +1393,6 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     private const val CONFIG_HASH = "ConfigHash"
     private val DATAPLANE_GROUP_ID: UUID = UUID.randomUUID()
 
-    @Throws(SQLException::class)
     private fun writeActorCatalog(
       database: Database,
       configs: MutableList<ActorCatalog?>,

@@ -43,7 +43,6 @@ internal class ExceptionsTest {
     }
   }
 
-  @Throws(IOException::class)
   private fun callable(
     input: String?,
     shouldThrow: Boolean,
@@ -55,7 +54,6 @@ internal class ExceptionsTest {
     }
   }
 
-  @Throws(IOException::class)
   private fun voidCallable(
     list: MutableList<String?>,
     input: String?,

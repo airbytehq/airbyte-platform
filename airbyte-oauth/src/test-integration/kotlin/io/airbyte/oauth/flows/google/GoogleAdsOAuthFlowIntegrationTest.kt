@@ -38,7 +38,6 @@ class GoogleAdsOAuthFlowIntegrationTest {
   private lateinit var oAuthService: OAuthService
 
   @BeforeEach
-  @Throws(IOException::class)
   fun setup() {
     check(Files.exists(CREDENTIALS_PATH)) { "Must provide path to a oauth credentials file." }
     oAuthService = Mockito.mock(OAuthService::class.java)
@@ -58,7 +57,6 @@ class GoogleAdsOAuthFlowIntegrationTest {
   }
 
   @Test
-  @Throws(InterruptedException::class, IOException::class, JsonValidationException::class)
   fun testFullGoogleOAuthFlow() {
     var limit = 20
     val workspaceId = UUID.randomUUID()

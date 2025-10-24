@@ -53,7 +53,6 @@ class QuickbooksOAuthFlow : BaseOAuth2Flow {
   val scopes: String
     get() = "com.intuit.quickbooks.accounting"
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -95,7 +94,6 @@ class QuickbooksOAuthFlow : BaseOAuth2Flow {
    */
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String = TOKEN_URL
 
-  @Throws(IOException::class)
   protected fun extractRealmIdParameter(queryParams: Map<String, Any>): String? {
     if (queryParams.containsKey("realmId")) {
       return queryParams["realmId"] as String?
@@ -105,7 +103,6 @@ class QuickbooksOAuthFlow : BaseOAuth2Flow {
   }
 
   @Deprecated("")
-  @Throws(IOException::class)
   override fun completeSourceOAuth(
     workspaceId: UUID,
     sourceDefinitionId: UUID?,
@@ -131,7 +128,6 @@ class QuickbooksOAuthFlow : BaseOAuth2Flow {
     )
   }
 
-  @Throws(IOException::class, JsonValidationException::class)
   override fun completeSourceOAuth(
     workspaceId: UUID,
     sourceDefinitionId: UUID?,
@@ -160,7 +156,6 @@ class QuickbooksOAuthFlow : BaseOAuth2Flow {
     )
   }
 
-  @Throws(IOException::class)
   protected fun completeOAuthFlow(
     clientId: String,
     clientSecret: String,
@@ -190,7 +185,6 @@ class QuickbooksOAuthFlow : BaseOAuth2Flow {
     }
   }
 
-  @Throws(IOException::class)
   protected fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String?,
@@ -217,7 +211,6 @@ class QuickbooksOAuthFlow : BaseOAuth2Flow {
     return result
   }
 
-  @Throws(IOException::class)
   override fun revokeSourceOauth(
     workspaceId: UUID,
     sourceDefinitionId: UUID,

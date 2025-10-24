@@ -130,7 +130,6 @@ open class SchedulerHandler
         metricClient,
       )
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun checkSourceConnectionFromSourceId(sourceIdRequestBody: SourceIdRequestBody): CheckConnectionRead {
       val sourceId = sourceIdRequestBody.sourceId
       val source = sourceService.getSourceConnection(sourceId)
@@ -148,7 +147,6 @@ open class SchedulerHandler
       )
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun checkSourceConnectionFromSourceCreate(sourceConfig: SourceCoreConfig): CheckConnectionRead {
       val sourceDef = sourceService.getStandardSourceDefinition(sourceConfig.sourceDefinitionId)
       val sourceVersion =
@@ -182,12 +180,6 @@ open class SchedulerHandler
       )
     }
 
-    @Throws(
-      ConfigNotFoundException::class,
-      IOException::class,
-      JsonValidationException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun checkSourceConnectionFromSourceIdForUpdate(sourceUpdate: SourceUpdate): CheckConnectionRead {
       val updatedSource =
         configurationUpdate.source(sourceUpdate.sourceId, sourceUpdate.name, sourceUpdate.connectionConfiguration)
@@ -212,7 +204,6 @@ open class SchedulerHandler
       return checkSourceConnectionFromSourceCreate(sourceCoreConfig)
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun checkDestinationConnectionFromDestinationId(destinationIdRequestBody: DestinationIdRequestBody): CheckConnectionRead {
       val destination = destinationService.getDestinationConnection(destinationIdRequestBody.destinationId)
       val destinationDef =
@@ -230,7 +221,6 @@ open class SchedulerHandler
       )
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun checkDestinationConnectionFromDestinationCreate(destinationConfig: DestinationCoreConfig): CheckConnectionRead {
       val destDef = destinationService.getStandardDestinationDefinition(destinationConfig.destinationDefinitionId)
       val destinationVersion =
@@ -262,12 +252,6 @@ open class SchedulerHandler
       )
     }
 
-    @Throws(
-      JsonValidationException::class,
-      IOException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun checkDestinationConnectionFromDestinationIdForUpdate(destinationUpdate: DestinationUpdate): CheckConnectionRead {
       val updatedDestination =
         configurationUpdate
@@ -298,12 +282,6 @@ open class SchedulerHandler
       return checkDestinationConnectionFromDestinationCreate(destinationCoreConfig)
     }
 
-    @Throws(
-      ConfigNotFoundException::class,
-      IOException::class,
-      JsonValidationException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun discoverSchemaForSourceFromSourceId(req: SourceDiscoverSchemaRequestBody): SourceDiscoverSchemaRead {
       val source = sourceService.getSourceConnection(req.sourceId)
 
@@ -313,12 +291,6 @@ open class SchedulerHandler
     /**
      * Runs discover schema and does not disable other connections.
      */
-    @Throws(
-      ConfigNotFoundException::class,
-      IOException::class,
-      JsonValidationException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun discover(
       req: SourceDiscoverSchemaRequestBody,
       source: SourceConnection,
@@ -373,12 +345,6 @@ open class SchedulerHandler
         .catalogId(existingCatalog.get().id)
     }
 
-    @Throws(
-      ConfigNotFoundException::class,
-      IOException::class,
-      JsonValidationException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     private fun runDiscoverJobDiffAndConditionallyDisable(
       source: SourceConnection,
       sourceDef: StandardSourceDefinition,
@@ -411,12 +377,6 @@ open class SchedulerHandler
       return connectionsHandler.diffCatalogAndConditionallyDisable(connectionId, schemaRead.catalogId)
     }
 
-    @Throws(
-      IOException::class,
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun applySchemaChangeForSource(sourceAutoPropagateChange: SourceAutoPropagateChange) {
       log.info {
         "Applying schema changes for source '${sourceAutoPropagateChange.sourceId}' in workspace '${sourceAutoPropagateChange.workspaceId}'"
@@ -455,7 +415,6 @@ open class SchedulerHandler
       }
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun discoverSchemaForSourceFromSourceCreate(sourceCreate: SourceCoreConfig): SourceDiscoverSchemaRead {
       val sourceDef = sourceService.getStandardSourceDefinition(sourceCreate.sourceDefinitionId)
       val sourceVersion =
@@ -491,7 +450,6 @@ open class SchedulerHandler
       return retrieveDiscoveredSchema(response, sourceVersion)
     }
 
-    @Throws(IOException::class, ConfigNotFoundException::class)
     private fun retrieveDiscoveredSchema(
       response: SynchronousResponse<UUID>,
       sourceVersion: ActorDefinitionVersion,
@@ -514,18 +472,14 @@ open class SchedulerHandler
       return sourceDiscoverSchemaRead
     }
 
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun syncConnection(connectionIdRequestBody: ConnectionIdRequestBody): JobInfoRead = submitManualSyncToWorker(connectionIdRequestBody.connectionId)
 
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun resetConnection(connectionIdRequestBody: ConnectionIdRequestBody): JobInfoRead =
       submitResetConnectionToWorker(connectionIdRequestBody.connectionId)
 
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun resetConnectionStream(connectionStreamRequestBody: ConnectionStreamRequestBody): JobInfoRead =
       submitResetConnectionStreamsToWorker(connectionStreamRequestBody.connectionId, connectionStreamRequestBody.streams)
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun createJob(jobCreate: JobCreate): JobInfoRead {
       // Fail non-terminal jobs first to prevent failing to create a new job
       jobCreationAndStatusUpdateHelper.failNonTerminalJobs(jobCreate.connectionId)
@@ -594,7 +548,6 @@ open class SchedulerHandler
       }
     }
 
-    @Throws(IOException::class)
     fun cancelJob(jobIdRequestBody: JobIdRequestBody): JobInfoRead {
       log.info { "Canceling job ${jobIdRequestBody.id}" }
       return submitCancellationToWorker(jobIdRequestBody.id)
@@ -615,7 +568,6 @@ open class SchedulerHandler
       return checkConnectionRead
     }
 
-    @Throws(IOException::class)
     private fun submitCancellationToWorker(jobId: Long): JobInfoRead {
       val job = jobPersistence.getJob(jobId)
 
@@ -633,7 +585,6 @@ open class SchedulerHandler
       return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId))
     }
 
-    @Throws(IOException::class, IllegalStateException::class, JsonValidationException::class, ConfigNotFoundException::class)
     private fun submitManualSyncToWorker(connectionId: UUID): JobInfoRead {
       // get standard sync to validate connection id before submitting sync to temporal
       val sync = connectionService.getStandardSync(connectionId)
@@ -644,7 +595,6 @@ open class SchedulerHandler
       return jobInfo
     }
 
-    @Throws(IOException::class)
     private fun submitResetConnectionToWorker(
       connectionId: UUID,
       streamsToReset: List<StreamDescriptor> = connectionService.getAllStreamsForConnection(connectionId),
@@ -660,7 +610,6 @@ open class SchedulerHandler
       return jobInfo
     }
 
-    @Throws(IOException::class, IllegalStateException::class, ConfigNotFoundException::class)
     private fun submitResetConnectionStreamsToWorker(
       connectionId: UUID,
       streams: List<ConnectionStream>,
@@ -674,7 +623,6 @@ open class SchedulerHandler
       return submitResetConnectionToWorker(connectionId, actualStreamsToReset)
     }
 
-    @Throws(IOException::class, IllegalStateException::class)
     fun readJobFromResult(manualOperationResult: ManualOperationResult): JobInfoRead {
       if (manualOperationResult.failingReason != null) {
         if (VALUE_CONFLICT_EXCEPTION_ERROR_CODE_SET.contains(manualOperationResult.errorCode)) {

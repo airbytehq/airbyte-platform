@@ -45,7 +45,6 @@ internal class ConnectionSchedulerHelperTest {
   val entitlementService: EntitlementService = Mockito.mock(EntitlementService::class.java)
 
   @BeforeEach
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun setup() {
     val workspaceHelper = Mockito.mock(WorkspaceHelper::class.java)
     Mockito.`when`(workspaceHelper.getWorkspaceForSourceId(anyOrNull())).thenReturn(WORKSPACE_ID)
@@ -56,7 +55,6 @@ internal class ConnectionSchedulerHelperTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun testPopulateSyncScheduleFromManualType() {
     val actual = StandardSync()
     connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
@@ -71,7 +69,6 @@ internal class ConnectionSchedulerHelperTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun testPopulateSyncScheduleFromBasicType() {
     val actual = StandardSync()
     connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
@@ -94,7 +91,6 @@ internal class ConnectionSchedulerHelperTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun testPopulateSyncScheduleFromCron() {
     Mockito
       .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement))
@@ -183,7 +179,6 @@ internal class ConnectionSchedulerHelperTest {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class)
   fun testAvailableCronTimeZonesStayTheSame() {
         /*
          * NOTE: this test exists to make sure that the server stays in sync with the frontend. The list of

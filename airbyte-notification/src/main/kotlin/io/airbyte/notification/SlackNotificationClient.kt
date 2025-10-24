@@ -377,7 +377,6 @@ class SlackNotificationClient : NotificationClient {
     return false
   }
 
-  @Throws(IOException::class, InterruptedException::class)
   private fun notify(message: String): Boolean {
     val mapper = ObjectMapper()
     val node = mapper.createObjectNode()
@@ -385,7 +384,6 @@ class SlackNotificationClient : NotificationClient {
     return notifyJson(node, null)
   }
 
-  @Throws(IOException::class)
   private fun notifyJson(
     node: JsonNode,
     workspaceId: UUID?,
@@ -434,7 +432,6 @@ class SlackNotificationClient : NotificationClient {
   /**
    * Used when user tries to test the notification webhook settings on UI.
    */
-  @Throws(IOException::class, InterruptedException::class)
   fun notifyTest(message: String): Boolean {
     val webhookUrl = config.webhook
     if (!StringUtils.isEmpty(webhookUrl)) {
@@ -443,7 +440,6 @@ class SlackNotificationClient : NotificationClient {
     return false
   }
 
-  @Throws(IOException::class)
   fun renderTemplate(
     templateFile: String,
     vararg data: String?,

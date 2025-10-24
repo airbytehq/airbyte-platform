@@ -78,7 +78,6 @@ internal class JobErrorReporterTest {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testReportSyncJobFailure() {
     val mFailureSummary = mock<AttemptFailureSummary>()
 
@@ -221,7 +220,6 @@ internal class JobErrorReporterTest {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class, ConfigNotFoundException::class)
   fun testReportSyncJobFailureDoesNotThrow() {
     val mFailureSummary = mock<AttemptFailureSummary>()
     val jobContext = SyncJobReportingContext(1L, SOURCE_DEFINITION_VERSION_ID, DESTINATION_DEFINITION_VERSION_ID)
@@ -289,7 +287,6 @@ internal class JobErrorReporterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testReportSourceCheckJobFailureNullWorkspaceId() {
     val failureReason =
       FailureReason()
@@ -333,7 +330,6 @@ internal class JobErrorReporterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testDoNotReportSourceCheckJobFailureFromOtherOrigins() {
     val failureReason =
       FailureReason()
@@ -353,7 +349,6 @@ internal class JobErrorReporterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testReportDestinationCheckJobFailure() {
     val failureReason =
       FailureReason()
@@ -405,7 +400,6 @@ internal class JobErrorReporterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testDoNotReportDestinationCheckJobFailureFromOtherOrigins() {
     val failureReason =
       FailureReason()
@@ -425,7 +419,6 @@ internal class JobErrorReporterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testReportDestinationCheckJobFailureNullWorkspaceId() {
     val failureReason =
       FailureReason()
@@ -469,7 +462,6 @@ internal class JobErrorReporterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testReportDiscoverJobFailure() {
     val failureReason =
       FailureReason()
@@ -521,7 +513,6 @@ internal class JobErrorReporterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testReportDiscoverJobFailureNullWorkspaceId() {
     val failureReason =
       FailureReason()
@@ -565,7 +556,6 @@ internal class JobErrorReporterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testDoNotReportDiscoverJobFailureFromOtherOrigins() {
     val failureReason =
       FailureReason()

@@ -56,7 +56,6 @@ class OrganizationPersistence(
    * @return fetched organization
    * @throws IOException when interaction with DB failed
    */
-  @Throws(IOException::class)
   fun getOrganization(organizationId: UUID?): Optional<Organization> {
     val result =
       database.query { ctx: DSLContext ->
@@ -72,7 +71,6 @@ class OrganizationPersistence(
     return Optional.of(createOrganizationFromRecord(result[0]))
   }
 
-  @Throws(IOException::class)
   fun getOrganizationByWorkspaceId(workspaceId: UUID?): Optional<Organization> {
     val result =
       database.query { ctx: DSLContext ->
@@ -90,7 +88,6 @@ class OrganizationPersistence(
     return Optional.of(createOrganizationFromRecord(result[0]))
   }
 
-  @Throws(IOException::class)
   fun getOrganizationByConnectionId(connectionId: UUID?): Optional<Organization> {
     val result =
       database.query { ctx: DSLContext ->
@@ -119,7 +116,6 @@ class OrganizationPersistence(
    * @return created organization
    * @throws IOException when interaction with DB failed
    */
-  @Throws(IOException::class)
   fun createOrganization(organization: Organization): Organization {
     database.transaction<Any?> { ctx: DSLContext ->
       try {
@@ -139,7 +135,6 @@ class OrganizationPersistence(
    * @return updated organization
    * @throws IOException - when interaction with DB failed
    */
-  @Throws(IOException::class)
   fun updateOrganization(organization: Organization): Organization {
     database.transaction<Any?> { ctx: DSLContext ->
       try {
@@ -166,7 +161,6 @@ class OrganizationPersistence(
    * 2. Workspace-level permissions (user has access to organization containing the workspace)
    * 3. Instance admin permission (access to all organizations)
    */
-  @Throws(IOException::class)
   fun listOrganizationsByUserId(
     userId: UUID,
     keyword: Optional<String>,
@@ -187,7 +181,6 @@ class OrganizationPersistence(
    * 2. Workspace-level permissions (user has access to organization containing the workspace)
    * 3. Instance admin permission (access to all organizations)
    */
-  @Throws(IOException::class)
   fun listOrganizationsByUserIdPaginated(
     query: ResourcesByUserQueryPaginated,
     keyword: Optional<String>,
@@ -336,7 +329,6 @@ class OrganizationPersistence(
    * Get the matching organization that has the given sso config realm. If not exists, returns empty
    * optional obejct.
    */
-  @Throws(IOException::class)
   fun getOrganizationBySsoConfigRealm(ssoConfigRealm: String?): Optional<Organization> {
     val result =
       database.query { ctx: DSLContext ->
@@ -352,7 +344,6 @@ class OrganizationPersistence(
     return Optional.of(createOrganizationFromRecord(result[0]))
   }
 
-  @Throws(IOException::class)
   fun createSsoConfig(ssoConfig: SsoConfig): SsoConfig {
     database.transaction<Any?> { ctx: DSLContext ->
       try {
@@ -365,7 +356,6 @@ class OrganizationPersistence(
     return ssoConfig
   }
 
-  @Throws(IOException::class)
   fun updateSsoConfig(ssoConfig: SsoConfig): SsoConfig {
     database.transaction<Any?> { ctx: DSLContext ->
       try {
@@ -378,7 +368,6 @@ class OrganizationPersistence(
     return ssoConfig
   }
 
-  @Throws(IOException::class)
   fun getSsoConfigForOrganization(organizationId: UUID?): Optional<SsoConfig> {
     val result =
       database.query { ctx: DSLContext ->
@@ -396,7 +385,6 @@ class OrganizationPersistence(
     return Optional.of(createSsoConfigFromRecord(result[0]))
   }
 
-  @Throws(IOException::class)
   fun getSsoConfigByRealmName(realmName: String?): Optional<SsoConfig> {
     val result =
       database.query { ctx: DSLContext ->
@@ -414,7 +402,6 @@ class OrganizationPersistence(
     return Optional.of(createSsoConfigFromRecord(result[0]))
   }
 
-  @Throws(IOException::class)
   private fun updateOrganizationInDB(
     ctx: DSLContext,
     organization: Organization,
@@ -442,7 +429,6 @@ class OrganizationPersistence(
       .execute()
   }
 
-  @Throws(IOException::class)
   private fun insertOrganizationIntoDB(
     ctx: DSLContext,
     organization: Organization,
@@ -471,7 +457,6 @@ class OrganizationPersistence(
       .execute()
   }
 
-  @Throws(IOException::class)
   private fun insertSsoConfigIntoDB(
     ctx: DSLContext,
     ssoConfig: SsoConfig,
@@ -499,7 +484,6 @@ class OrganizationPersistence(
       .execute()
   }
 
-  @Throws(IOException::class)
   private fun updateSsoConfigInDB(
     ctx: DSLContext,
     ssoConfig: SsoConfig,

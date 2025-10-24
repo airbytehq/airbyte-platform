@@ -39,7 +39,6 @@ internal class SimpleAirbyteSource : AirbyteSource {
     this.messages.addAll(Arrays.stream(messages).toList())
   }
 
-  @Throws(Exception::class)
   override fun start(
     sourceConfig: WorkerSourceConfig,
     jobRoot: Path?,
@@ -64,11 +63,9 @@ internal class SimpleAirbyteSource : AirbyteSource {
     return Optional.empty<AirbyteMessage>()
   }
 
-  @Throws(Exception::class)
   override fun close() {
   }
 
-  @Throws(Exception::class)
   override fun cancel() {
   }
 }

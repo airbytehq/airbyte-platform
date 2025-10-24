@@ -28,13 +28,11 @@ interface UserInvitationService {
   /**
    * Create a new user invitation.
    */
-  @Throws(InvitationDuplicateException::class)
   fun createUserInvitation(invitation: UserInvitation): UserInvitation
 
   /**
    * Accept a user invitation and create resulting permission record.
    */
-  @Throws(InvitationStatusUnexpectedException::class)
   fun acceptUserInvitation(
     inviteCode: String,
     acceptingUserId: UUID,
@@ -51,7 +49,6 @@ interface UserInvitationService {
   /**
    * Cancel a user invitation.
    */
-  @Throws(InvitationStatusUnexpectedException::class)
   fun cancelUserInvitation(inviteCode: String): UserInvitation
 }
 

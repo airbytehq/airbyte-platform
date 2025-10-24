@@ -19,7 +19,6 @@ import java.util.function.Function
 
 internal class ConnectionManageUtilsTest {
   @Test
-  @Throws(DeletedWorkflowException::class)
   fun signalAndRepairIfNeceesaryWhenNoWorkflowWillCreate() {
     val mWorkflow = Mockito.mock(WorkflowClientWrapped::class.java)
     val mMetric = Mockito.mock(MetricClient::class.java)

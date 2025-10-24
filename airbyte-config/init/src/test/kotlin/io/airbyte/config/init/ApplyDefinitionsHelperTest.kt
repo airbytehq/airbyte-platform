@@ -114,7 +114,6 @@ internal class ApplyDefinitionsHelperTest {
     justRun { supportStateUpdater.updateSupportStates() }
   }
 
-  @Throws(IOException::class)
   private fun mockSeedInitialDefinitions() {
     val seededDefinitionsAndDefaultVersions: MutableMap<UUID, ActorDefinitionVersion> = HashMap()
     seededDefinitionsAndDefaultVersions[POSTGRES_ID] =
@@ -124,7 +123,6 @@ internal class ApplyDefinitionsHelperTest {
     every { actorDefinitionService.getActorDefinitionIdsToDefaultVersionsMap() } returns seededDefinitionsAndDefaultVersions
   }
 
-  @Throws(IOException::class)
   private fun verifyActorDefinitionServiceInteractions() {
     verify { actorDefinitionService.getActorDefinitionIdsToDefaultVersionsMap() }
     verify { actorDefinitionService.getActorDefinitionIdsInUse() }
@@ -132,12 +130,6 @@ internal class ApplyDefinitionsHelperTest {
 
   @ParameterizedTest
   @MethodSource("updateScenario")
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   fun `a new connector should always be written`(
     updateAll: Boolean,
     reImport: Boolean,
@@ -181,12 +173,6 @@ internal class ApplyDefinitionsHelperTest {
 
   @ParameterizedTest
   @MethodSource("updateScenario")
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   fun `a connector with release candidate should write RC ADVS and ConnectorRollout`(
     updateAll: Boolean,
     reImport: Boolean,
@@ -292,12 +278,6 @@ internal class ApplyDefinitionsHelperTest {
 
   @ParameterizedTest
   @MethodSource("invalidInsertStates")
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   fun `applyReleaseCandidates should not write ConnectorRollout if a rollout exists in a non-canceled state`(state: ConnectorEnumRolloutState) {
     mockSeedInitialDefinitions()
     every { definitionsProvider.getSourceDefinitions() } returns listOf(SOURCE_POSTGRES_WITH_RC)
@@ -360,12 +340,6 @@ internal class ApplyDefinitionsHelperTest {
 
   @ParameterizedTest
   @MethodSource("validInsertStates")
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   fun `applyReleaseCandidates should write ConnectorRollout if a rollout exists in canceled state`(state: ConnectorEnumRolloutState) {
     mockSeedInitialDefinitions()
 
@@ -527,12 +501,6 @@ internal class ApplyDefinitionsHelperTest {
 
   @ParameterizedTest
   @MethodSource("updateScenario")
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   fun `a connector with malformed release candidate should not raise an error`(
     updateAll: Boolean,
     reImport: Boolean,
@@ -557,12 +525,6 @@ internal class ApplyDefinitionsHelperTest {
 
   @ParameterizedTest
   @MethodSource("updateScenario")
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   fun `a connector with release candidate with no initial version does not write connector rollout`(
     updateAll: Boolean,
     reImport: Boolean,
@@ -609,12 +571,6 @@ internal class ApplyDefinitionsHelperTest {
 
   @ParameterizedTest
   @MethodSource("updateScenario")
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   fun `an existing connector that is not in use should always be updated`(
     updateAll: Boolean,
     reImport: Boolean,
@@ -684,12 +640,6 @@ internal class ApplyDefinitionsHelperTest {
 
   @ParameterizedTest
   @MethodSource("updateScenario")
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   fun `updateAll should affect whether existing connectors in use have their versions updated`(
     updateAll: Boolean,
     reImport: Boolean,
@@ -753,12 +703,6 @@ internal class ApplyDefinitionsHelperTest {
 
   @ParameterizedTest
   @MethodSource("updateScenario")
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   fun `new definitions that are incompatible with the protocol version range should not be written`(
     updateAll: Boolean,
     reImport: Boolean,
@@ -832,12 +776,6 @@ internal class ApplyDefinitionsHelperTest {
 
   @ParameterizedTest
   @MethodSource("updateScenario")
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.data.ConfigNotFoundException::class,
-  )
   fun `new definitions that are incompatible with the airbyte version range should not be written`(
     updateAll: Boolean,
     reImport: Boolean,

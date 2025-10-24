@@ -60,7 +60,6 @@ internal class JobNotifierTest {
   private lateinit var workspaceService: WorkspaceService
 
   @BeforeEach
-  @Throws(Exception::class)
   fun setup() {
     trackingClient = Mockito.mock(TrackingClient::class.java)
     connectionService = Mockito.mock(ConnectionService::class.java)
@@ -144,7 +143,6 @@ internal class JobNotifierTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testFailJob() {
     val attemptStats: List<JobPersistence.AttemptStats> = ArrayList()
     jobNotifier.failJob(job, attemptStats)
@@ -173,7 +171,6 @@ internal class JobNotifierTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testSuccessfulJobSendNotification() {
     val item =
       NotificationItem()
@@ -196,7 +193,6 @@ internal class JobNotifierTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testSendOnSyncDisabledWarning() {
     val attemptStats: List<JobPersistence.AttemptStats> = ArrayList()
     jobNotifier.autoDisableConnectionWarning(job, attemptStats)
@@ -209,7 +205,6 @@ internal class JobNotifierTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testSendOnSyncDisabled() {
     val attemptStats: List<JobPersistence.AttemptStats> = ArrayList()
     jobNotifier.autoDisableConnection(job, attemptStats)

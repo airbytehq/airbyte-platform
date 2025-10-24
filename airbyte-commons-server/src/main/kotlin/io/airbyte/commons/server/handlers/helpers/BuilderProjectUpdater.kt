@@ -9,6 +9,5 @@ import io.airbyte.data.ConfigNotFoundException
 import java.io.IOException
 
 interface BuilderProjectUpdater {
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun persistBuilderProjectUpdate(projectUpdate: ExistingConnectorBuilderProjectWithWorkspaceId)
 }

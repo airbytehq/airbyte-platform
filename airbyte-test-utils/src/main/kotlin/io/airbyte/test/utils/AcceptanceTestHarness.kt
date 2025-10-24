@@ -239,7 +239,6 @@ class AcceptanceTestHarness(
     }
   }
 
-  @Throws(SQLException::class, URISyntaxException::class, IOException::class)
   fun setup() {
     if (isGke) {
       // Prepare the database data sources.
@@ -303,7 +302,6 @@ class AcceptanceTestHarness(
 
   fun getDatabase(dataSource: DataSource): Database = Database(createDslContext(dataSource, SQLDialect.POSTGRES))
 
-  @Throws(Exception::class)
   fun createConnection(create: TestConnectionCreate): ConnectionRead {
         /*
          * We control the name inside this method to avoid collisions of sync name and namespace. Especially
@@ -342,17 +340,14 @@ class AcceptanceTestHarness(
     )
   }
 
-  @Throws(IOException::class)
   private fun createConnectionFromRequest(request: ConnectionCreate): ConnectionRead {
     val connection = apiClient.connectionApi.createConnection(request)
     connectionIds.add(connection.connectionId)
     return connection
   }
 
-  @Throws(IOException::class)
   fun getConnection(connectionId: UUID): ConnectionRead = apiClient.connectionApi.getConnection(ConnectionIdRequestBody(connectionId))
 
-  @Throws(IOException::class, InterruptedException::class)
   private fun updateConnection(request: ConnectionUpdate): ConnectionRead {
     val result = apiClient.connectionApi.updateConnection(request)
     // Attempting to sync immediately after updating the connection can run into a race condition in the
@@ -362,10 +357,8 @@ class AcceptanceTestHarness(
     return result
   }
 
-  @Throws(IOException::class)
   fun syncConnection(connectionId: UUID): JobInfoRead = apiClient.connectionApi.syncConnection(ConnectionIdRequestBody(connectionId))
 
-  @Throws(IOException::class)
   fun deleteConnection(connectionId: UUID) {
     apiClient.connectionApi.deleteConnection(ConnectionIdRequestBody(connectionId))
   }
@@ -449,10 +442,8 @@ class AcceptanceTestHarness(
       }
     }
 
-  @Throws(IOException::class)
   fun getJobInfoRead(id: Long): JobInfoRead = apiClient.jobsApi.getJobInfo(JobIdRequestBody(id))
 
-  @Throws(IOException::class)
   fun updateDestinationDefinitionVersion(
     destinationDefinitionId: UUID,
     dockerImageTag: String,
@@ -472,7 +463,6 @@ class AcceptanceTestHarness(
     )
   }
 
-  @Throws(SQLException::class)
   private fun clearSourceDbData() {
     val database = getSourceDatabase()
     val pairs = listAllTables(database)
@@ -490,7 +480,6 @@ class AcceptanceTestHarness(
     }
   }
 
-  @Throws(SQLException::class)
   private fun clearDestinationDbData() {
     val database = getDestinationDatabase()
     val pairs = listAllTables(database)
@@ -508,7 +497,6 @@ class AcceptanceTestHarness(
     }
   }
 
-  @Throws(Exception::class)
   private fun disableConnection(connectionId: UUID) {
     val connectionUpdate =
       ConnectionUpdate(
@@ -549,7 +537,6 @@ class AcceptanceTestHarness(
     Failsafe.with(retryPolicy).run(CheckedRunnable { apiClient.operationApi.deleteOperation(OperationIdRequestBody(destinationId)) })
   }
 
-  @Throws(InterruptedException::class)
   private fun waitWhileJobHasStatus(
     originalJob: JobRead,
     jobStatuses: Set<JobStatus>,

@@ -114,7 +114,6 @@ class DefaultSyncJobFactory(
     }
   }
 
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   private fun getJobCreatorInput(connectionId: UUID): JobCreatorInput {
     val standardSync = connectionService.getStandardSync(connectionId)
     val workspaceId = workspaceHelper.getWorkspaceForSourceId(standardSync.sourceId)

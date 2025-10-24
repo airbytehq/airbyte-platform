@@ -48,12 +48,6 @@ open class ActorDefinitionVersionHandler
     private val apiPojoConverters: ApiPojoConverters,
   ) {
     @Trace
-    @Throws(
-      JsonValidationException::class,
-      IOException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun getActorDefinitionVersionForSourceId(sourceIdRequestBody: SourceIdRequestBody): ActorDefinitionVersionRead {
       val sourceConnection = sourceService.getSourceConnection(sourceIdRequestBody.sourceId)
       val sourceDefinition = sourceService.getSourceDefinitionFromSource(sourceConnection.sourceId)
@@ -66,7 +60,6 @@ open class ActorDefinitionVersionHandler
       return createActorDefinitionVersionRead(versionWithOverrideStatus)
     }
 
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     private fun getDefaultVersion(
       actorType: ActorType,
       actorDefinitionId: UUID,
@@ -82,14 +75,12 @@ open class ActorDefinitionVersionHandler
           )
       }
 
-    @Throws(IOException::class)
     fun getDefaultVersion(actorDefinitionVersionDefaultRequestBody: GetActorDefinitionVersionDefaultRequestBody): ActorDefinitionVersionRead {
       val version =
         actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionVersionDefaultRequestBody.actorDefinitionId)
       return createActorDefinitionVersionRead(ActorDefinitionVersionWithOverrideStatus(version.get(), false))
     }
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun resolveActorDefinitionVersionByTag(resolveVersionReq: ResolveActorDefinitionVersionRequestBody): ResolveActorDefinitionVersionResponse {
       val actorDefinitionId = resolveVersionReq.actorDefinitionId
       val actorType = apiPojoConverters.toInternalActorType(resolveVersionReq.actorType)
@@ -126,12 +117,6 @@ open class ActorDefinitionVersionHandler
     }
 
     @Trace
-    @Throws(
-      JsonValidationException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-      IOException::class,
-      ConfigNotFoundException::class,
-    )
     fun getActorDefinitionVersionForDestinationId(destinationIdRequestBody: DestinationIdRequestBody): ActorDefinitionVersionRead {
       val destinationConnection = destinationService.getDestinationConnection(destinationIdRequestBody.destinationId)
       val destinationDefinition =
@@ -146,7 +131,6 @@ open class ActorDefinitionVersionHandler
     }
 
     @VisibleForTesting
-    @Throws(IOException::class)
     fun createActorDefinitionVersionRead(versionWithOverrideStatus: ActorDefinitionVersionWithOverrideStatus): ActorDefinitionVersionRead {
       val actorDefinitionVersion = versionWithOverrideStatus.actorDefinitionVersion
       val advRead =

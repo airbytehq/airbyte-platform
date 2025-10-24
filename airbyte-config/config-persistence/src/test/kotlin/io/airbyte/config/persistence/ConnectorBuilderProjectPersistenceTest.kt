@@ -60,7 +60,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   private var project2: ConnectorBuilderProject? = null
 
   @BeforeEach
-  @Throws(Exception::class)
   fun beforeEach() {
     truncateAllTables()
 
@@ -119,7 +118,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testRead() {
     createBaseObjects()
     val project = connectorBuilderService!!.getConnectorBuilderProject(project1!!.getBuilderProjectId(), true)
@@ -135,7 +133,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testReadWithoutManifest() {
     createBaseObjects()
     project1!!.setManifestDraft(null)
@@ -152,7 +149,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testReadWithLinkedDefinition() {
     createBaseObjects()
 
@@ -188,7 +184,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(IOException::class)
   fun testList() {
     createBaseObjects()
 
@@ -215,7 +210,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(IOException::class)
   fun testListWithLinkedDefinition() {
     createBaseObjects()
 
@@ -248,7 +242,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(IOException::class)
   fun testListWithNoManifest() {
     createBaseObjects()
 
@@ -290,7 +283,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testUpdate() {
     createBaseObjects()
     project1!!.setName("Updated name")
@@ -318,7 +310,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(Exception::class)
   fun whenUpdateBuilderProjectAndActorDefinitionThenUpdateConnectorBuilderAndActorDefinition() {
     connectorBuilderService!!.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST, null, null, null, null)
     workspaceService!!.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0)!!.withWorkspaceId(A_WORKSPACE_ID))
@@ -357,7 +348,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(Exception::class)
   fun givenSourceIsPublicWhenUpdateBuilderProjectAndActorDefinitionThenActorDefinitionNameIsNotUpdated() {
     connectorBuilderService!!.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST, null, null, null, null)
     workspaceService!!.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0)!!.withWorkspaceId(A_WORKSPACE_ID))
@@ -389,7 +379,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(Exception::class)
   fun testUpdateWithComponentsFile() {
     connectorBuilderService!!.writeBuilderProjectDraft(A_BUILDER_PROJECT_ID, A_WORKSPACE_ID, A_PROJECT_NAME, A_MANIFEST, null, null, null, null)
     workspaceService!!.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0)!!.withWorkspaceId(A_WORKSPACE_ID))
@@ -426,7 +415,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testDelete() {
     createBaseObjects()
 
@@ -447,7 +435,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testAssignActorDefinitionToConnectorBuilderProject() {
     val connectorBuilderProject = createConnectorBuilderProject(UUID.randomUUID(), "any", false)
     val aNewActorDefinitionId = UUID.randomUUID()
@@ -474,7 +461,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(IOException::class)
   fun givenNoMatchingActiveDeclarativeManifestWhenGetVersionedConnectorBuilderProjectThenThrowException() {
     connectorBuilderService!!.writeBuilderProjectDraft(
       A_BUILDER_PROJECT_ID,
@@ -498,7 +484,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class)
   fun whenGetVersionedConnectorBuilderProjectThenReturnVersionedProject() {
     connectorBuilderService!!.writeBuilderProjectDraft(
       A_BUILDER_PROJECT_ID,
@@ -547,7 +532,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testDeleteBuilderProjectDraft() {
     createBaseObjects()
     org.junit.jupiter.api.Assertions.assertNotNull(
@@ -560,7 +544,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testDeleteManifestDraftForActorDefinitionId() {
     createBaseObjects()
     val sourceDefinition = linkSourceDefinition(project1!!.getBuilderProjectId())
@@ -574,7 +557,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetConnectorBuilderProjectIdByActorDefinitionId() {
     createBaseObjects()
     val sourceDefinition = linkSourceDefinition(project1!!.getBuilderProjectId())
@@ -585,7 +567,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetConnectorBuilderProjectIdByActorDefinitionIdWhenNoMatch() {
     createBaseObjects()
     org.junit.jupiter.api.Assertions.assertEquals(
@@ -597,7 +578,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testCreateForkedProject() {
     createBaseObjects()
 
@@ -638,7 +618,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testAddContributionInfo() {
     createBaseObjects()
     val contributionActorDefinitionId = UUID.randomUUID()
@@ -678,7 +657,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
     }
   }
 
-  @Throws(IOException::class)
   private fun createBaseObjects() {
     mainWorkspace = UUID.randomUUID()
     val workspaceId2 = UUID.randomUUID()
@@ -693,7 +671,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
     createConnectorBuilderProject(workspaceId2, "Other workspace project", false)
   }
 
-  @Throws(IOException::class)
   private fun createConnectorBuilderProject(
     workspace: UUID?,
     name: String?,
@@ -724,7 +701,6 @@ internal class ConnectorBuilderProjectPersistenceTest : BaseConfigDatabaseTest()
     return project
   }
 
-  @Throws(IOException::class)
   private fun linkSourceDefinition(projectId: UUID): StandardSourceDefinition {
     val id = UUID.randomUUID()
 

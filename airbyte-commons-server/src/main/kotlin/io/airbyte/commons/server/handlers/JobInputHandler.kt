@@ -215,7 +215,6 @@ open class JobInputHandler(
     )
   }
 
-  @Throws(IOException::class)
   fun getJobWebhookConfig(jobId: Long): JobWebhookConfig {
     val job = jobPersistence.getJob(jobId)
     val jobConfig = job.config
@@ -311,7 +310,6 @@ open class JobInputHandler(
     }
   }
 
-  @Throws(IOException::class)
   private fun getCurrentConnectionState(connectionId: UUID): Optional<State> {
     val state = stateHandler.getState(ConnectionIdRequestBody().connectionId(connectionId))
 
@@ -323,7 +321,6 @@ open class JobInputHandler(
     return Optional.of(getState(internalState))
   }
 
-  @Throws(IOException::class)
   private fun getSourceIntegrationLauncherConfig(
     jobId: Long,
     attempt: Int,
@@ -351,7 +348,6 @@ open class JobInputHandler(
     return sourceLauncherConfig
   }
 
-  @Throws(IOException::class)
   private fun getDestinationIntegrationLauncherConfig(
     jobId: Long,
     attempt: Int,
@@ -375,7 +371,6 @@ open class JobInputHandler(
       .withAdditionalEnvironmentVariables(additionalEnviornmentVariables)
   }
 
-  @Throws(IOException::class)
   private fun getSourceConfiguration(source: SourceConnection): ConfigWithSecretReferences {
     val injectedConfig =
       configInjector.injectConfig(
@@ -390,7 +385,6 @@ open class JobInputHandler(
     return secretReferenceService.getConfigWithSecretReferences(ActorId(source.sourceId), injectedConfig, WorkspaceId(source.workspaceId))
   }
 
-  @Throws(IOException::class)
   private fun getDestinationConfiguration(destination: DestinationConnection): ConfigWithSecretReferences {
     val injectedConfig =
       configInjector.injectConfig(

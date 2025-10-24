@@ -39,7 +39,6 @@ internal class V0_50_33_016__AddIconUrlToActorDefinitionTest : AbstractConfigsDa
   }
 
   @Test
-  @Throws(SQLException::class, IOException::class)
   fun test() {
     val context = dslContext!!
 

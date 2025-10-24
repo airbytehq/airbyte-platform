@@ -30,7 +30,6 @@ class SourceSnowflakeOAuthFlow : BaseOAuth2Flow {
   @VisibleForTesting
   constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -59,7 +58,6 @@ class SourceSnowflakeOAuthFlow : BaseOAuth2Flow {
 
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String = String.format(ACCESS_TOKEN_URL, extractUrl(inputOAuthConfiguration))
 
-  @Throws(IOException::class)
   override fun extractCodeParameter(queryParams: Map<String, Any>): String = super.extractCodeParameter(queryParams)
 
   override fun getAccessTokenQueryParameters(
@@ -75,7 +73,6 @@ class SourceSnowflakeOAuthFlow : BaseOAuth2Flow {
       .put("redirect_uri", redirectUrl)
       .build()
 
-  @Throws(IOException::class)
   override fun completeOAuthFlow(
     clientId: String,
     clientSecret: String,
@@ -118,7 +115,6 @@ class SourceSnowflakeOAuthFlow : BaseOAuth2Flow {
     }
   }
 
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,
@@ -173,7 +169,6 @@ class SourceSnowflakeOAuthFlow : BaseOAuth2Flow {
     private const val AUTHORIZE_URL = "https://%s/oauth/authorize"
     private const val ACCESS_TOKEN_URL = "https://%s/oauth/token-request"
 
-    @Throws(URISyntaxException::class)
     private fun getConsentUrlWithScopeRole(
       consentUrl: String,
       providedRole: String,

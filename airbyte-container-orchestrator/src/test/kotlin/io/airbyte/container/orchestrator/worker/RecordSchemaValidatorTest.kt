@@ -46,7 +46,6 @@ internal class RecordSchemaValidatorTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testValidateValidSchema() {
     RecordSchemaValidator(
       jsonSchemaValidator = JsonSchemaValidator(),
@@ -63,7 +62,6 @@ internal class RecordSchemaValidatorTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testValidateValidSchemaWithoutCounting() {
     RecordSchemaValidator(
       jsonSchemaValidator = JsonSchemaValidator(),
@@ -80,7 +78,6 @@ internal class RecordSchemaValidatorTest {
   }
 
   @Test
-  @Throws(InterruptedException::class)
   fun testValidateInvalidSchema() {
     val executorService = Executors.newSingleThreadExecutor()
     val recordSchemaValidator =
@@ -107,7 +104,6 @@ internal class RecordSchemaValidatorTest {
   }
 
   @Test
-  @Throws(InterruptedException::class)
   fun testValidateInvalidSchemaWithoutCounting() {
     val executorService = Executors.newSingleThreadExecutor()
     val recordSchemaValidator =
@@ -135,7 +131,6 @@ internal class RecordSchemaValidatorTest {
   }
 
   @Test
-  @Throws(InterruptedException::class, IOException::class)
   fun testMigrationOfIdPropertyToEscapedVersion() {
     val jsonSchema = Resources.read("catalog-json-schema-with-id.json")
     val airbyteStream = AirbyteStream().withJsonSchema(Jsons.deserialize(jsonSchema))

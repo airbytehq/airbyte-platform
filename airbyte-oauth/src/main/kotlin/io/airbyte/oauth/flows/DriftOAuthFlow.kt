@@ -25,7 +25,6 @@ class DriftOAuthFlow : BaseOAuth2Flow {
   @VisibleForTesting
   internal constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -48,7 +47,6 @@ class DriftOAuthFlow : BaseOAuth2Flow {
     }
   }
 
-  @Throws(IOException::class)
   override fun extractCodeParameter(queryParams: Map<String, Any>): String {
     if (queryParams.containsKey(CODE)) {
       return queryParams[CODE] as String
@@ -73,7 +71,6 @@ class DriftOAuthFlow : BaseOAuth2Flow {
       .put("grant_type", "authorization_code")
       .build()
 
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,

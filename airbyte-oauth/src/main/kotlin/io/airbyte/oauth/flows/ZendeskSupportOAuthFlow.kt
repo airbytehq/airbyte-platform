@@ -19,7 +19,6 @@ import java.util.UUID
 class ZendeskSupportOAuthFlow(
   httpClient: HttpClient,
 ) : BaseOAuth2Flow(httpClient) {
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -69,7 +68,6 @@ class ZendeskSupportOAuthFlow(
     return "https://$subdomain.zendesk.com/oauth/tokens"
   }
 
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,

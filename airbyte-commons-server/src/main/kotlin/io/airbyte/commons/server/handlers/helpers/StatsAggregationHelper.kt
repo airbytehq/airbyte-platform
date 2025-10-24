@@ -138,7 +138,6 @@ object StatsAggregationHelper {
   }
 
   @JvmStatic
-  @Throws(IOException::class)
   fun hydrateWithStats(
     jobReads: List<JobWithAttemptsRead>,
     jobs: List<Job>,

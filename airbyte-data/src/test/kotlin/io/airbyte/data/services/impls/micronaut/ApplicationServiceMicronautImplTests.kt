@@ -36,7 +36,6 @@ internal class ApplicationServiceMicronautImplTests {
   private val issuer = "https://example.com"
 
   @BeforeEach
-  @Throws(IOException::class)
   fun setup() {
     token = read("test.token")
     instanceAdminConfig =

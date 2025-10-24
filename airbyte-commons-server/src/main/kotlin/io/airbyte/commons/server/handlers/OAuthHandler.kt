@@ -95,7 +95,6 @@ open class OAuthHandler(
   private val workspaceService: WorkspaceService,
   private val secretStorageService: SecretStorageService,
 ) {
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun getSourceOAuthConsent(sourceOauthConsentRequest: SourceOauthConsentRequest): OAuthConsentRead {
     val traceTags =
       java.util.Map.of<String?, Any?>(
@@ -205,7 +204,6 @@ open class OAuthHandler(
     return result
   }
 
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun getDestinationOAuthConsent(destinationOauthConsentRequest: DestinationOauthConsentRequest): OAuthConsentRead {
     val traceTags =
       java.util.Map.of<String?, Any?>(
@@ -317,7 +315,6 @@ open class OAuthHandler(
     return result
   }
 
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun completeSourceOAuthHandleReturnSecret(completeSourceOauthRequest: CompleteSourceOauthRequest): CompleteOAuthResponse? {
     val completeOAuthResponse = completeSourceOAuth(completeSourceOauthRequest)
     return if (completeSourceOauthRequest.returnSecretCoordinate) {
@@ -328,11 +325,6 @@ open class OAuthHandler(
   }
 
   @VisibleForTesting
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-  )
   fun completeSourceOAuth(completeSourceOauthRequest: CompleteSourceOauthRequest): CompleteOAuthResponse {
     val traceTags =
       java.util.Map.of<String?, Any?>(
@@ -428,7 +420,6 @@ open class OAuthHandler(
     return mapToCompleteOAuthResponse(result)
   }
 
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun completeDestinationOAuth(completeDestinationOAuthRequest: CompleteDestinationOAuthRequest): CompleteOAuthResponse {
     val traceTags =
       java.util.Map.of<String?, Any?>(
@@ -524,7 +515,6 @@ open class OAuthHandler(
     return mapToCompleteOAuthResponse(result)
   }
 
-  @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class)
   fun revokeSourceOauthTokens(revokeSourceOauthTokensRequest: RevokeSourceOauthTokensRequest) {
     val sourceDefinition =
       sourceService.getStandardSourceDefinition(revokeSourceOauthTokensRequest.sourceDefinitionId)
@@ -562,7 +552,6 @@ open class OAuthHandler(
     )
   }
 
-  @Throws(IOException::class)
   fun setSourceInstancewideOauthParams(requestBody: SetInstancewideSourceOauthParamsRequestBody) {
     val param =
       oAuthService
@@ -575,7 +564,6 @@ open class OAuthHandler(
     oAuthService.writeSourceOAuthParam(param)
   }
 
-  @Throws(IOException::class)
   fun setDestinationInstancewideOauthParams(requestBody: SetInstancewideDestinationOauthParamsRequestBody) {
     val param =
       oAuthService
@@ -713,12 +701,6 @@ open class OAuthHandler(
    *
    * @param requestBody request body
    */
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun setWorkspaceOverrideOAuthParams(requestBody: WorkspaceOverrideOauthParamsRequestBody) {
     when (requestBody.actorType) {
       ActorType.SOURCE -> setSourceWorkspaceOverrideOauthParams(requestBody)
@@ -726,12 +708,6 @@ open class OAuthHandler(
     }
   }
 
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun setOrganizationOverrideOAuthParams(
     organizationId: OrganizationId,
     actorDefinitionId: ActorDefinitionId,
@@ -744,12 +720,6 @@ open class OAuthHandler(
     }
   }
 
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun setSourceOrganizationOverrideOauthParams(
     organizationId: OrganizationId,
     actorDefinitionId: ActorDefinitionId,
@@ -820,12 +790,6 @@ open class OAuthHandler(
     oAuthService.writeSourceOAuthParam(param)
   }
 
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun setDestinationOrganizationOverrideOauthParams(
     organizationId: OrganizationId,
     actorDefinitionId: ActorDefinitionId,
@@ -860,7 +824,6 @@ open class OAuthHandler(
     oAuthService.writeDestinationOAuthParam(param)
   }
 
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun setDestinationWorkspaceOverrideOauthParams(requestBody: WorkspaceOverrideOauthParamsRequestBody) {
     val workspaceId = requestBody.workspaceId
     val definitionId = requestBody.definitionId
@@ -910,7 +873,6 @@ open class OAuthHandler(
    * @return new oauth param configuration to be stored to the db.
    * @throws JsonValidationException if oauth param configuration doesn't pass spec validation
    */
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   private fun sanitizeOauthConfiguration(
     organizationId: UUID,
     connectorSpecification: ConnectorSpecification,

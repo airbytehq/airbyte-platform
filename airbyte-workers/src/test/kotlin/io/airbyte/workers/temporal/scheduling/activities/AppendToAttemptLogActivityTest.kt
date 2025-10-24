@@ -26,7 +26,6 @@ internal class AppendToAttemptLogActivityTest {
   private lateinit var mLogClientManager: LogClientManager
 
   @BeforeEach
-  @Throws(Exception::class)
   fun setup() {
     mLogger = Mockito.mock<Logger>(Logger::class.java)
     mLogClientManager = Mockito.mock<LogClientManager>(LogClientManager::class.java)

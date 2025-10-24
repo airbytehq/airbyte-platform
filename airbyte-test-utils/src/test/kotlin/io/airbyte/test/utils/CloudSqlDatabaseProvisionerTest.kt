@@ -56,7 +56,6 @@ internal class CloudSqlDatabaseProvisionerTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testCreateDatabase() {
     mockOperation()
     Mockito.`when`(operation!!.status).thenReturn("DONE")
@@ -81,7 +80,6 @@ internal class CloudSqlDatabaseProvisionerTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testDeleteDatabase() {
     mockOperation()
     Mockito.`when`(operation!!.status).thenReturn("DONE")
@@ -99,7 +97,6 @@ internal class CloudSqlDatabaseProvisionerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testPollOperationNotDoneAfterMaxStatusChecks() {
     mockOperation()
     Mockito
@@ -113,7 +110,6 @@ internal class CloudSqlDatabaseProvisionerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testPollOperationDoneBeforeMaxStatusChecks() {
     mockOperation()
     Mockito
@@ -128,7 +124,6 @@ internal class CloudSqlDatabaseProvisionerTest {
     }
   }
 
-  @Throws(IOException::class)
   private fun mockOperation() {
     Mockito.`when`(sqlAdmin!!.operations()).thenReturn(operations)
     Mockito
@@ -143,9 +138,8 @@ internal class CloudSqlDatabaseProvisionerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testMoreThanMaxAttempts() {
-    Mockito.`when`(callable!!.call()).thenThrow(googleJsonResponseException)
+    Mockito.`when`(callable!!.call()).thenAnswer { throw googleJsonResponseException!! }
     Mockito.`when`(googleJsonResponseException!!.statusCode).thenReturn(409)
     Assertions.assertThrows(
       RuntimeException::class.java,
@@ -153,21 +147,19 @@ internal class CloudSqlDatabaseProvisionerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testNoRetry() {
-    Mockito.`when`(callable!!.call()).thenThrow(RuntimeException())
+    Mockito.`when`(callable!!.call()).thenAnswer { throw RuntimeException() }
     Assertions.assertThrows(
       RuntimeException::class.java,
     ) { provisioner.runWithRetry(callable) }
   }
 
   @Test
-  @Throws(Exception::class)
   fun testOneRetry() {
     Mockito.`when`(googleJsonResponseException!!.statusCode).thenReturn(409)
     Mockito
       .`when`(callable!!.call())
-      .thenThrow(googleJsonResponseException)
+      .thenAnswer { throw googleJsonResponseException!! }
       .thenReturn(Operation())
 
     Assertions.assertDoesNotThrow<Operation> { provisioner.runWithRetry(callable) }

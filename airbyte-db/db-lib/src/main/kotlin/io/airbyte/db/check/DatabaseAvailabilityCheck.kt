@@ -55,7 +55,6 @@ interface DatabaseAvailabilityCheck {
    *
    * @throws DatabaseCheckException if unable to perform the check.
    */
-  @Throws(DatabaseCheckException::class)
   fun check() {
     var initialized = false
     var totalTime = 0

@@ -61,7 +61,6 @@ class OAuthConfigSupplier(
    * @return masked config
    * @throws IOException while fetching oauth configs
    */
-  @Throws(IOException::class)
   fun maskSourceOAuthParameters(
     sourceDefinitionId: UUID,
     workspaceId: UUID,
@@ -97,7 +96,6 @@ class OAuthConfigSupplier(
    * @return masked config
    * @throws IOException while fetching oauth configs
    */
-  @Throws(IOException::class)
   fun maskDestinationOAuthParameters(
     destinationDefinitionId: UUID,
     workspaceId: UUID,
@@ -133,7 +131,6 @@ class OAuthConfigSupplier(
    * @return config with oauth params injected
    * @throws IOException while fetching oauth configs
    */
-  @Throws(IOException::class)
   fun injectSourceOAuthParameters(
     sourceDefinitionId: UUID,
     sourceId: UUID?,
@@ -190,7 +187,6 @@ class OAuthConfigSupplier(
    * @return config with oauth params injected
    * @throws IOException while fetching oauth configs
    */
-  @Throws(IOException::class)
   fun injectDestinationOAuthParameters(
     destinationDefinitionId: UUID,
     destinationId: UUID?,

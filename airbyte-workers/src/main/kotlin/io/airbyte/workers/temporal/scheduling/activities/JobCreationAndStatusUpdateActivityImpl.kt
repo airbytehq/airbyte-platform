@@ -84,7 +84,6 @@ class JobCreationAndStatusUpdateActivityImpl(
   }
 
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
-  @Throws(RetryableException::class)
   override fun createNewAttemptNumber(input: AttemptCreationInput): AttemptNumberCreationOutput {
     AttemptContext(null, input.jobId, null).addTagsToTrace()
 

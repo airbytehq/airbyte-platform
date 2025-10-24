@@ -24,7 +24,6 @@ class SurveymonkeyOAuthFlow : BaseOAuth2Flow {
   @VisibleForTesting
   internal constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
-  @Throws(Error::class)
   protected fun getBaseURLByOrigin(inputOAuthConfiguration: JsonNode): String {
     val origin = getConfigValueUnsafe(inputOAuthConfiguration, "origin")
     return if (EUROPE == origin) {
@@ -38,7 +37,6 @@ class SurveymonkeyOAuthFlow : BaseOAuth2Flow {
     }
   }
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,

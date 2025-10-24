@@ -119,7 +119,6 @@ internal class UserInvitationHandlerTest {
 
     @Nested
     internal inner class CreateAndSendInvitation {
-      @Throws(Exception::class)
       private fun setupSendInvitationMocks() {
         Mockito.`when`<String>(webUrlHelper!!.baseUrl).thenReturn(webappBaseUrl)
         Mockito.`when`<UserInvitation>(service!!.createUserInvitation(userInvitation)).thenReturn(userInvitation)
@@ -138,7 +137,6 @@ internal class UserInvitationHandlerTest {
       }
 
       @Test
-      @Throws(Exception::class)
       fun testNewEmailWorkspaceInOrg() {
         setupSendInvitationMocks()
 
@@ -164,7 +162,6 @@ internal class UserInvitationHandlerTest {
       }
 
       @Test
-      @Throws(Exception::class)
       fun testWorkspaceNotInAnyOrg() {
         setupSendInvitationMocks()
 
@@ -183,7 +180,6 @@ internal class UserInvitationHandlerTest {
       }
 
       @Test
-      @Throws(Exception::class)
       fun testExistingEmailButNotInWorkspaceOrg() {
         setupSendInvitationMocks()
 
@@ -216,9 +212,8 @@ internal class UserInvitationHandlerTest {
       }
 
       @Test
-      @Throws(Exception::class)
       fun testThrowsConflictExceptionOnDuplicateInvitation() {
-        Mockito.`when`<UserInvitation>(service!!.createUserInvitation(userInvitation)).thenThrow(InvitationDuplicateException("duplicate"))
+        Mockito.`when`<UserInvitation>(service!!.createUserInvitation(userInvitation)).thenAnswer { throw InvitationDuplicateException("duplicate") }
 
         Assertions.assertThrows<ConflictException>(
           ConflictException::class.java,
@@ -412,7 +407,6 @@ internal class UserInvitationHandlerTest {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testEmailDoesNotMatch() {
       val invitation =
         UserInvitation()
@@ -430,7 +424,6 @@ internal class UserInvitationHandlerTest {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testInvitationStatusUnexpected() {
       val invitation =
         UserInvitation()
@@ -440,7 +433,7 @@ internal class UserInvitationHandlerTest {
       Mockito.`when`(service!!.getUserInvitationByInviteCode(inviteCode)).thenReturn(invitation)
 
       Mockito
-        .doThrow(InvitationStatusUnexpectedException("not pending"))
+        .doAnswer { throw InvitationStatusUnexpectedException("not pending") }
         .`when`(service!!)
         .acceptUserInvitation(inviteCode, currentUser.userId)
 
@@ -450,7 +443,6 @@ internal class UserInvitationHandlerTest {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testInvitationExpired() {
       val invitation =
         UserInvitation()
@@ -459,7 +451,7 @@ internal class UserInvitationHandlerTest {
 
       Mockito.`when`(service!!.getUserInvitationByInviteCode(inviteCode)).thenReturn(invitation)
       Mockito
-        .doThrow(InvitationStatusUnexpectedException("expired"))
+        .doAnswer { throw InvitationStatusUnexpectedException("expired") }
         .`when`(service!!)
         .acceptUserInvitation(inviteCode, currentUser.userId)
 
@@ -472,7 +464,6 @@ internal class UserInvitationHandlerTest {
   @Nested
   internal inner class CancelInvitation {
     @Test
-    @Throws(Exception::class)
     fun testCancelInvitationCallsService() {
       val inviteCode = "invite-code"
       val req = InviteCodeRequestBody().inviteCode(inviteCode)
@@ -497,12 +488,11 @@ internal class UserInvitationHandlerTest {
     }
 
     @Test
-    @Throws(Exception::class)
     fun testCancelInvitationThrowsConflictExceptionOnUnexpectedStatus() {
       val inviteCode = "invite-code"
       val req = InviteCodeRequestBody().inviteCode(inviteCode)
 
-      Mockito.`when`(service!!.cancelUserInvitation(inviteCode)).thenThrow(InvitationStatusUnexpectedException("unexpected status"))
+      Mockito.`when`(service!!.cancelUserInvitation(inviteCode)).thenAnswer { throw InvitationStatusUnexpectedException("unexpected status") }
 
       Assertions.assertThrows(
         ConflictException::class.java,

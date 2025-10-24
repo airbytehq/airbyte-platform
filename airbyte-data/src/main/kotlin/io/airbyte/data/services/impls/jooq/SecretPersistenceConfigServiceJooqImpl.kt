@@ -34,7 +34,6 @@ class SecretPersistenceConfigServiceJooqImpl(
 ) : SecretPersistenceConfigService {
   private val database = ExceptionWrappingDatabase(database)
 
-  @Throws(IOException::class)
   private fun getSecretPersistenceCoordinate(
     scope: ScopeType,
     scopeId: UUID,
@@ -61,7 +60,6 @@ class SecretPersistenceConfigServiceJooqImpl(
     }
   }
 
-  @Throws(IOException::class, ConfigNotFoundException::class)
   override fun get(
     scope: ScopeType,
     scopeId: UUID,
@@ -83,7 +81,6 @@ class SecretPersistenceConfigServiceJooqImpl(
     throw ConfigNotFoundException(ConfigNotFoundType.SECRET_PERSISTENCE_CONFIG, List.of(scope, scopeId).toString())
   }
 
-  @Throws(IOException::class)
   override fun createOrUpdate(
     scope: ScopeType,
     scopeId: UUID,

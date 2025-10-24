@@ -32,7 +32,6 @@ internal class CustomerIoEmailConfigFetcherTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testReturnTheRightConfig() {
     val connectionId = UUID.randomUUID()
     val email = "em@il.com"

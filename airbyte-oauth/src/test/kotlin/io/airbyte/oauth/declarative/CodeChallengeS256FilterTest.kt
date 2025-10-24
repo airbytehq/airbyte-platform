@@ -24,7 +24,6 @@ internal class CodeChallengeS256FilterTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testFilterWithValidString() {
     val input = "testValue"
     val expectedHash = "gv4Mg0y+oGkBPF63go5Zmmk+DSQRiH4qsnMnFmKXMII="

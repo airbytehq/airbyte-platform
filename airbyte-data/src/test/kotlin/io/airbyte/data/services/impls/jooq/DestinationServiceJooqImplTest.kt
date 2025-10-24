@@ -83,7 +83,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListWorkspaceDestinationConnectionsWithCounts_NoConnections() {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -117,7 +116,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListWorkspaceDestinationConnectionsWithCounts_WithActiveConnections() {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -176,7 +174,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListWorkspaceDestinationConnectionsWithCounts_ExcludesDeprecatedConnections() {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -215,7 +212,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListWorkspaceDestinationConnectionsWithCounts_MultipleDestinations() {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -269,7 +265,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListWorkspaceDestinationConnectionsWithCounts_DifferentWorkspaces() {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -305,7 +300,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListWorkspaceDestinationConnectionsWithCounts_WithMixedConnectionStatuses() {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -399,7 +393,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListWorkspaceDestinationConnectionsWithCounts_WithConnectionsButNoJobs() {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -438,7 +431,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListWorkspaceDestinationConnectionsWithCounts_MixedConnectionStates() {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -478,7 +470,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListWorkspaceDestinationConnectionsWithCounts_AllJobStatuses() {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -556,7 +547,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
     )
   }
 
-  @Throws(IOException::class)
   fun createDestination(
     workspaceId: UUID?,
     destinationDefinition: StandardDestinationDefinition,
@@ -574,7 +564,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListDestinationDefinitionsForWorkspace_ReturnsUsedDestinations() {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -592,7 +581,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListDestinationDefinitionsForWorkspace_ExcludesTombstonedActors() {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -617,7 +605,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListDestinationDefinitionsForWorkspace_IncludesTombstonedActorsWhenRequested() {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -646,7 +633,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListDestinationDefinitionsForWorkspace_EmptyWhenNoDestinationsInWorkspace() {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -662,7 +648,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListDestinationDefinitionsForWorkspace_MultipleDestinationsWithSameDefinition() {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -686,7 +671,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListDestinationDefinitionsForWorkspace_MultipleDestinationsWithDifferentDefinitions() {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -733,7 +717,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
     Assertions.assertTrue(definitionIds.contains(secondDestinationDefinitionId))
   }
 
-  @Throws(IOException::class, JsonValidationException::class)
   private fun createConnection(
     source: SourceConnection,
     destination: DestinationConnection,
@@ -762,7 +745,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
     return connection
   }
 
-  @Throws(IOException::class)
   private fun createAdditionalDestination(
     workspaceId: UUID?,
     helper: JooqTestDbSetupHelper,
@@ -781,7 +763,6 @@ internal class DestinationServiceJooqImplTest : BaseConfigDatabaseTest() {
     return destination
   }
 
-  @Throws(IOException::class, JsonValidationException::class)
   private fun createConnectionWithName(
     source: SourceConnection,
     destination: DestinationConnection,

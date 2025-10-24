@@ -20,7 +20,6 @@ import java.util.function.Function
 
 internal class CatalogTransformsTest {
   @Test
-  @Throws(IOException::class)
   fun testResetCatalogSyncModeReplacement() {
     val catalog = Resources.read("catalogs/simple_catalog.json")
     val configuredAirbyteCatalog =
@@ -52,7 +51,6 @@ internal class CatalogTransformsTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testResetCatalogSyncModeReplacementMultipleStreams() {
     val catalog = Resources.read("catalogs/multiple_stream_catalog.json")
     val configuredAirbyteCatalog =

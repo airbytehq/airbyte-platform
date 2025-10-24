@@ -98,7 +98,6 @@ class DefaultJobPersistence
      * in the queue.
      * @throws IOException when interacting with the db
      */
-    @Throws(IOException::class)
     override fun enqueueJob(
       scope: String,
       jobConfig: JobConfig,
@@ -155,7 +154,6 @@ class DefaultJobPersistence
         .map { r: Record -> r.getValue("id", Long::class.java) }
     }
 
-    @Throws(IOException::class)
     override fun cancelJob(jobId: Long) {
       // TODO: stop using LocalDateTime
       // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
@@ -165,7 +163,6 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     override fun failJob(jobId: Long) {
       // TODO: stop using LocalDateTime
       // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
@@ -199,7 +196,6 @@ class DefaultJobPersistence
       return now
     }
 
-    @Throws(IOException::class)
     override fun createAttempt(
       jobId: Long,
       logPath: Path,
@@ -253,7 +249,6 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     override fun failAttempt(
       jobId: Long,
       attemptNumber: Int,
@@ -274,7 +269,6 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     override fun succeedAttempt(
       jobId: Long,
       attemptNumber: Int,
@@ -295,7 +289,6 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     override fun getAttemptForJob(
       jobId: Long,
       attemptNumber: Int,
@@ -314,7 +307,6 @@ class DefaultJobPersistence
       return result.map { record: Record -> getAttemptFromRecord(record) }
     }
 
-    @Throws(IOException::class)
     override fun writeOutput(
       jobId: Long,
       attemptNumber: Int,
@@ -356,7 +348,6 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     override fun writeStats(
       jobId: Long,
       attemptNumber: Int,
@@ -389,7 +380,6 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     override fun writeAttemptSyncConfig(
       jobId: Long,
       attemptNumber: Int,
@@ -411,7 +401,6 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     override fun writeAttemptFailureSummary(
       jobId: Long,
       attemptNumber: Int,
@@ -437,7 +426,6 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     override fun getAttemptStatsWithStreamMetadata(
       jobId: Long,
       attemptNumber: Int,
@@ -462,7 +450,6 @@ class DefaultJobPersistence
         }
 
     @Deprecated("") // This return AttemptStats without stream metadata. Use getAttemptStatsWithStreamMetadata instead.
-    @Throws(IOException::class)
     override fun getAttemptStats(jobId: Long, attemptNumber: Int): JobPersistence.AttemptStats =
       jobDatabase
         .query { ctx: DSLContext ->
@@ -483,7 +470,6 @@ class DefaultJobPersistence
           JobPersistence.AttemptStats(syncStats, perStreamStats)
         }
 
-    @Throws(IOException::class)
     override fun getAttemptStats(jobIds: List<Long>?): Map<JobAttemptPair, JobPersistence.AttemptStats> {
       if (jobIds == null || jobIds.isEmpty()) {
         return java.util.Map.of()
@@ -504,7 +490,6 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     override fun getAttemptCombinedStats(
       jobId: Long,
       attemptNumber: Int,
@@ -520,7 +505,6 @@ class DefaultJobPersistence
             .fetchOne(syncStatsRecordMapper)
         }
 
-    @Throws(IOException::class)
     override fun getJob(jobId: Long): Job = jobDatabase.query { ctx: DSLContext -> getJob(ctx, jobId) }
 
     private fun getJob(
@@ -538,7 +522,6 @@ class DefaultJobPersistence
       jobId: Long,
     ): Optional<Job> = getJobFromResult(ctx.fetch(BASE_JOB_SELECT_AND_JOIN + "WHERE jobs.id = ?", jobId))
 
-    @Throws(IOException::class)
     override fun getJobCount(
       configTypes: Set<ConfigType>,
       connectionId: String?,
@@ -585,7 +568,6 @@ class DefaultJobPersistence
           .into(Long::class.java)
       }
 
-    @Throws(IOException::class)
     private fun listJobsQuery(
       configTypes: Set<ConfigType>,
       configId: String?,
@@ -618,7 +600,6 @@ class DefaultJobPersistence
         ctx.fetch(jobSelectAndJoin(jobsSubquery) + orderByString)
       }
 
-    @Throws(IOException::class)
     private fun listJobsQuery(
       configTypes: Set<ConfigType>,
       configId: String?,
@@ -707,7 +688,6 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     private fun listJobsQuery(
       configTypes: Set<ConfigType>,
       workspaceIds: List<UUID?>,
@@ -803,14 +783,12 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     override fun listJobs(
       configTypes: Set<ConfigType>,
       configId: String?,
       pagesize: Int,
     ): List<Job> = getJobsFromResult(listJobsQuery(configTypes, configId, pagesize, ORDER_BY_JOB_TIME_ATTEMPT_TIME))
 
-    @Throws(IOException::class)
     override fun listJobs(
       configTypes: Set<ConfigType>,
       jobStatuses: Set<JobStatus>?,
@@ -858,7 +836,6 @@ class DefaultJobPersistence
       }
 
     @VisibleForTesting
-    @Throws(IOException::class)
     fun listJobs(
       configTypes: Set<ConfigType>,
       configId: String?,
@@ -948,7 +925,6 @@ class DefaultJobPersistence
     }
 
     @VisibleForTesting
-    @Throws(IOException::class)
     fun listJobs(
       configType: ConfigType,
       attemptEndedAtTimestamp: Instant,
@@ -972,7 +948,6 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     override fun listJobsForConvertingToEvents(
       configTypes: Set<ConfigType>,
       jobStatuses: Set<JobStatus>?,
@@ -1027,7 +1002,6 @@ class DefaultJobPersistence
         getJobsFromResult(ctx.fetch(fullQuery))
       }
 
-    @Throws(IOException::class)
     override fun listJobsLight(jobIds: Set<Long>): List<Job> =
       jobDatabase.query { ctx: DSLContext ->
         val jobsSubquery =
@@ -1043,14 +1017,12 @@ class DefaultJobPersistence
         getJobsFromResultLight(ctx.fetch(jobSelectAndJoin(jobsSubquery)))
       }
 
-    @Throws(IOException::class)
     override fun listJobsLight(
       configTypes: Set<ConfigType>,
       configId: String?,
       pagesize: Int,
     ): List<Job> = getJobsFromResultLight(listJobsQuery(configTypes, configId, pagesize, ORDER_BY_JOB_TIME_ATTEMPT_TIME))
 
-    @Throws(IOException::class)
     override fun listJobsLight(
       configTypes: Set<ConfigType>,
       configId: String?,
@@ -1080,7 +1052,6 @@ class DefaultJobPersistence
         ),
       )
 
-    @Throws(IOException::class)
     override fun listJobsLight(
       configTypes: Set<ConfigType>,
       workspaceIds: List<UUID>,
@@ -1111,7 +1082,6 @@ class DefaultJobPersistence
       )
 
     @Trace
-    @Throws(IOException::class)
     override fun listJobsIncludingId(
       configTypes: Set<ConfigType>,
       connectionId: String?,
@@ -1178,7 +1148,6 @@ class DefaultJobPersistence
       return listJobs(configTypes, connectionId, pageSizeThatIncludesJob)
     }
 
-    @Throws(IOException::class)
     override fun listJobsForConnectionWithStatuses(
       connectionId: UUID,
       configTypes: Set<ConfigType>,
@@ -1200,7 +1169,6 @@ class DefaultJobPersistence
         )
       }
 
-    @Throws(IOException::class)
     override fun listAttemptsForConnectionAfterTimestamp(
       connectionId: UUID,
       configType: ConfigType,
@@ -1227,7 +1195,6 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     override fun getLastReplicationJob(connectionId: UUID): Optional<Job> =
       jobDatabase.query { ctx: DSLContext ->
         ctx
@@ -1261,7 +1228,6 @@ class DefaultJobPersistence
      * @param connectionId the connection id for which we want to get the last job
      * @return the last job for the connection including the cancelled jobs
      */
-    @Throws(IOException::class)
     override fun getLastReplicationJobWithCancel(connectionId: UUID): Optional<Job> {
       val query = (
         "SELECT id FROM jobs " +
@@ -1287,7 +1253,6 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     override fun getLastSyncJob(connectionId: UUID): Optional<Job> =
       jobDatabase.query { ctx: DSLContext ->
         ctx
@@ -1316,7 +1281,6 @@ class DefaultJobPersistence
      * For each connection ID in the input, find that connection's latest job if one exists and return a
      * status summary.
      */
-    @Throws(IOException::class)
     override fun getLastSyncJobForConnections(connectionIds: List<UUID>): List<JobStatusSummary> {
       if (connectionIds.isEmpty()) {
         return emptyList()
@@ -1352,7 +1316,6 @@ class DefaultJobPersistence
      * For each connection ID in the input, find that connection's most recent non-terminal sync job and
      * return it if one exists.
      */
-    @Throws(IOException::class)
     override fun getRunningSyncJobForConnections(connectionIds: List<UUID>): List<Job> {
       if (connectionIds.isEmpty()) {
         return emptyList()
@@ -1385,7 +1348,6 @@ class DefaultJobPersistence
      * For the connection ID in the input, find that connection's most recent non-terminal
      * clear/reset/sync/refresh job and return it if one exists.
      */
-    @Throws(IOException::class)
     override fun getRunningJobForConnection(connectionId: UUID): List<Job> =
       jobDatabase.query { ctx: DSLContext ->
         ctx
@@ -1419,7 +1381,6 @@ class DefaultJobPersistence
           .collect(Collectors.joining(",")),
       )
 
-    @Throws(IOException::class)
     override fun getFirstReplicationJob(connectionId: UUID): Optional<Job> =
       jobDatabase.query { ctx: DSLContext ->
         ctx
@@ -1446,10 +1407,8 @@ class DefaultJobPersistence
           }
       }
 
-    @Throws(IOException::class)
     override fun getVersion(): Optional<String> = getMetadata(AirbyteVersion.AIRBYTE_VERSION_KEY_NAME).findFirst()
 
-    @Throws(IOException::class)
     override fun setVersion(airbyteVersion: String?) {
       // This is not using setMetadata due to the extra (<timestamp>s_init_db, airbyteVersion) that is
       // added to the metadata table
@@ -1472,29 +1431,24 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     override fun getAirbyteProtocolVersionMax(): Optional<Version> =
       getMetadata(AirbyteProtocolVersion.AIRBYTE_PROTOCOL_VERSION_MAX_KEY_NAME)
         .findFirst()
         .map { version: String -> Version(version) }
 
-    @Throws(IOException::class)
     override fun setAirbyteProtocolVersionMax(version: Version) {
       setMetadata(AirbyteProtocolVersion.AIRBYTE_PROTOCOL_VERSION_MAX_KEY_NAME, version.serialize())
     }
 
-    @Throws(IOException::class)
     override fun getAirbyteProtocolVersionMin(): Optional<Version> =
       getMetadata(AirbyteProtocolVersion.AIRBYTE_PROTOCOL_VERSION_MIN_KEY_NAME)
         .findFirst()
         .map { version: String -> Version(version) }
 
-    @Throws(IOException::class)
     override fun setAirbyteProtocolVersionMin(version: Version) {
       setMetadata(AirbyteProtocolVersion.AIRBYTE_PROTOCOL_VERSION_MIN_KEY_NAME, version.serialize())
     }
 
-    @Throws(IOException::class)
     override fun getCurrentProtocolVersionRange(): Optional<AirbyteProtocolVersionRange> {
       val min = getAirbyteProtocolVersionMin()
       val max = getAirbyteProtocolVersionMax()
@@ -1523,7 +1477,6 @@ class DefaultJobPersistence
       )
     }
 
-    @Throws(IOException::class)
     private fun getMetadata(keyName: String): Stream<String> =
       jobDatabase
         .query { ctx: DSLContext ->
@@ -1540,7 +1493,6 @@ class DefaultJobPersistence
           )
         }
 
-    @Throws(IOException::class)
     private fun setMetadata(
       keyName: String,
       value: String,
@@ -1559,7 +1511,6 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     override fun getDeployment(): Optional<UUID> {
       val result =
         jobDatabase.query { ctx: DSLContext ->
@@ -1580,7 +1531,6 @@ class DefaultJobPersistence
       }
     }
 
-    @Throws(IOException::class)
     override fun setDeployment(deployment: UUID) {
       // if an existing deployment id already exists, on conflict, return it so we can log it.
       val committedDeploymentId =

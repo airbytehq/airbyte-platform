@@ -46,7 +46,7 @@ internal class WorkflowServiceStubsWrappedTest {
     val response = ListClosedWorkflowExecutionsResponse.newBuilder().build()
     Mockito
       .`when`(temporalWorkflowServiceBlockingStub.listClosedWorkflowExecutions(request))
-      .thenThrow(unavailable())
+      .thenAnswer { throw unavailable() }
       .thenReturn(response)
 
     val actual = serviceStubsWrapped.blockingStubListClosedWorkflowExecutions(request)
@@ -59,7 +59,7 @@ internal class WorkflowServiceStubsWrappedTest {
     val response = ListOpenWorkflowExecutionsResponse.newBuilder().build()
     Mockito
       .`when`(temporalWorkflowServiceBlockingStub.listOpenWorkflowExecutions(request))
-      .thenThrow(unavailable())
+      .thenAnswer { throw unavailable() }
       .thenReturn(response)
 
     val actual = serviceStubsWrapped.blockingStubListOpenWorkflowExecutions(request)

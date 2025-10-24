@@ -42,7 +42,6 @@ internal class V0_50_41_002__AddAuthUsersTableTest : AbstractConfigsDatabaseTest
   }
 
   @Test
-  @Throws(SQLException::class, IOException::class)
   fun testPopulateAuthUsersTable() {
     val context = dslContext!!
 

@@ -49,7 +49,6 @@ internal class RecordMetricActivityImplTest {
   private lateinit var activity: RecordMetricActivityImpl
 
   @BeforeEach
-  @Throws(IOException::class)
   fun setup() {
     val workspaceApi = org.mockito.Mockito.mock(WorkspaceApi::class.java)
 
@@ -79,7 +78,7 @@ internal class RecordMetricActivityImplTest {
         ),
       )
     whenever(workspaceApi.getWorkspaceByConnectionId(ConnectionIdRequestBody(CONNECTION_ID_WITHOUT_WORKSPACE)))
-      .thenThrow(ClientException("Not Found", HttpStatus.NOT_FOUND.code, null))
+      .thenAnswer { throw ClientException("Not Found", HttpStatus.NOT_FOUND.code, null) }
     whenever(airbyteApiClient.workspaceApi).thenReturn(workspaceApi)
 
     activity = RecordMetricActivityImpl(airbyteApiClient, metricClient)

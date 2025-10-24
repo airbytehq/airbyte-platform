@@ -161,7 +161,6 @@ class VersionedAirbyteStreamFactory<T>(
    * @return The Version if found
    * @throws IOException exception while writing
    */
-  @Throws(IOException::class)
   private fun detectVersion(bufferedReader: BufferedReader): Version? {
     // Buffer size needs to be big enough to containing everything we need for the detection. Otherwise,
     // the reset will fail.

@@ -39,7 +39,6 @@ internal class V0_40_3_002__RemoveActorForeignKeyFromOauthParamsTableTest : Abst
   }
 
   @Test
-  @Throws(IOException::class, SQLException::class)
   fun test() {
     val context = dslContext!!
     Assertions.assertTrue(foreignKeyExists(context))

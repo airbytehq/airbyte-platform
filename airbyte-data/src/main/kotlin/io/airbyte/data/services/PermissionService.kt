@@ -41,19 +41,16 @@ interface PermissionService {
   /**
    * Delete a permission by its unique id.
    */
-  @Throws(RemoveLastOrgAdminPermissionException::class)
   fun deletePermission(permissionId: UUID)
 
   /**
    * Delete a list of permissions by their unique ids.
    */
-  @Throws(RemoveLastOrgAdminPermissionException::class)
   fun deletePermissions(permissionIds: List<UUID>)
 
   /**
    * Create a permission.
    */
-  @Throws(PermissionRedundantException::class)
   fun createPermission(permission: Permission): Permission
 
   /**
@@ -64,7 +61,6 @@ interface PermissionService {
   /**
    * Update a permission
    */
-  @Throws(RemoveLastOrgAdminPermissionException::class)
   fun updatePermission(permission: Permission)
 
   fun getMemberCountsForOrganizationList(orgIds: List<UUID>): List<OrgMemberCount>

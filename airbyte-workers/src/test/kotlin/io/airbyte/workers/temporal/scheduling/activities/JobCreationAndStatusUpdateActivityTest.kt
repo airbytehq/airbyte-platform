@@ -107,7 +107,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
   internal inner class Creation {
     @Test
     @DisplayName("Test job creation")
-    @Throws(IOException::class)
     fun createJob() {
       whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
       whenever(jobsApi.createJob(JobCreate(CONNECTION_ID, true)))
@@ -137,10 +136,9 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     @DisplayName("Test job creation throws retryable exception")
-    @Throws(IOException::class)
     fun createJobThrows() {
       whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.createJob(any<JobCreate>())).thenThrow(IOException())
+      whenever(jobsApi.createJob(any<JobCreate>())).thenAnswer { throw IOException() }
       Assertions.assertThrows<RetryableException?>(
         RetryableException::class.java,
         Executable {
@@ -156,7 +154,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
     // shouldRunSourceCheck tests
     @Test
-    @Throws(IOException::class)
     fun shouldRunSourceCheckReturnsFalseForResetJob() {
       val input =
         JobCheckFailureInput(
@@ -186,7 +183,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun shouldRunSourceCheckReturnsTrueForSyncJobOnFirstAttemptWithPreviousFailure() {
       val input =
         JobCheckFailureInput(
@@ -218,7 +214,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun shouldRunSourceCheckReturnsFalseForSyncJobOnFirstAttemptWithPreviousSuccess() {
       val input =
         JobCheckFailureInput(
@@ -250,7 +245,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun shouldRunSourceCheckReturnsTrueForSyncJobOnRetryAttempt() {
       val input =
         JobCheckFailureInput(
@@ -280,7 +274,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun shouldRunSourceCheckHandlesApiFailureGracefully() {
       val input =
         JobCheckFailureInput(
@@ -291,7 +284,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
       whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
       whenever(jobsApi.getJobInfoLight(any<JobIdRequestBody>()))
-        .thenThrow(IOException(TEST_EXCEPTION_MESSAGE))
+        .thenAnswer { throw IOException(TEST_EXCEPTION_MESSAGE) }
 
       // When API fails to get job info, it should fall back to checking previous job status
       // For first attempt, it should check previous job status
@@ -304,7 +297,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun shouldRunSourceCheckReturnsFalseWhenFeatureFlagEnabled() {
       val input =
         JobCheckFailureInput(
@@ -333,7 +325,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun shouldRunSourceCheckReturnsIsLastJobOrAttemptFailureResultWhenFeatureFlagDisabled() {
       val input =
         JobCheckFailureInput(
@@ -367,7 +358,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun shouldRunSourceCheckHandlesWorkspaceIdFetchFailureGracefully() {
       val input =
         JobCheckFailureInput(
@@ -379,7 +369,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
       // Mock the connection API to fail
       whenever(airbyteApiClient.connectionApi).thenReturn(connectionApi)
       whenever(connectionApi.getConnectionContext(any<ConnectionIdRequestBody>()))
-        .thenThrow(IOException("Failed to fetch workspace"))
+        .thenAnswer { throw IOException("Failed to fetch workspace") }
 
       // Feature flag check should still work with just connection context
       whenever(
@@ -396,7 +386,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
     // shouldRunDestinationCheck tests
     @Test
-    @Throws(IOException::class)
     fun shouldRunDestinationCheckReturnsTrueOnRetryAttempt() {
       val input =
         JobCheckFailureInput(
@@ -411,7 +400,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun shouldRunDestinationCheckReturnsTrueOnFirstAttemptWithPreviousFailure() {
       val input =
         JobCheckFailureInput(
@@ -430,7 +418,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun shouldRunDestinationCheckReturnsFalseOnFirstAttemptWithPreviousSuccess() {
       val input =
         JobCheckFailureInput(
@@ -449,7 +436,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun shouldRunDestinationCheckReturnsFalseWhenFeatureFlagEnabled() {
       val input =
         JobCheckFailureInput(
@@ -478,7 +464,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun shouldRunDestinationCheckReturnsIsLastJobOrAttemptFailureResultWhenFeatureFlagDisabled() {
       val input =
         JobCheckFailureInput(
@@ -532,7 +517,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
-    @Throws(IOException::class)
     fun isLastJobOrAttemptFailureReturnsChecksPreviousJobIfFirstAttempt(didSucceed: Boolean) {
       // Test that first attempts check previous job status (testing isLastJobOrAttemptFailure logic)
       val input =
@@ -555,7 +539,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun isLastJobOrAttemptFailureThrowsRetryableErrorIfApiCallFails() {
       // Test that API failures result in RetryableException (testing isLastJobOrAttemptFailure error handling)
       val input =
@@ -567,7 +550,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
       whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
       whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
-        .thenThrow(IOException(EXCEPTION_MESSAGE))
+        .thenAnswer { throw IOException(EXCEPTION_MESSAGE) }
 
       // Both methods should throw RetryableException when the underlying API call fails
       Assertions.assertThrows<RetryableException?>(
@@ -577,7 +560,7 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
       // Reset mock for second call
       whenever(jobsApi.didPreviousJobSucceed(any<ConnectionJobRequestBody>()))
-        .thenThrow(IOException(EXCEPTION_MESSAGE))
+        .thenAnswer { throw IOException(EXCEPTION_MESSAGE) }
 
       Assertions.assertThrows<RetryableException?>(
         RetryableException::class.java,
@@ -587,7 +570,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     @DisplayName("Test attempt creation")
-    @Throws(IOException::class)
     fun createAttemptNumber() {
       whenever(airbyteApiClient.attemptApi).thenReturn(attemptApi)
       whenever(attemptApi.createNewAttemptNumber(CreateNewAttemptNumberRequest(JOB_ID)))
@@ -601,11 +583,10 @@ internal class JobCreationAndStatusUpdateActivityTest {
 
     @Test
     @DisplayName("Test exception errors are properly wrapped")
-    @Throws(IOException::class)
     fun createAttemptNumberThrowException() {
       whenever(airbyteApiClient.attemptApi).thenReturn(attemptApi)
       whenever(attemptApi.createNewAttemptNumber(CreateNewAttemptNumberRequest(JOB_ID)))
-        .thenThrow(IOException())
+        .thenAnswer { throw IOException() }
 
       org.assertj.core.api.Assertions
         .assertThatThrownBy(
@@ -624,7 +605,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
   @Nested
   internal inner class Update {
     @Test
-    @Throws(IOException::class)
     fun setJobSuccess() {
       whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
       val request =
@@ -648,7 +628,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun setJobSuccessWrapException() {
       whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
       val exception: IOException = IOException(TEST_EXCEPTION_MESSAGE)
@@ -668,7 +647,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun setJobFailure() {
       whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
       jobCreationAndStatusUpdateActivity.jobFailure(JobFailureInput(JOB_ID, 1, CONNECTION_ID, REASON))
@@ -685,10 +663,9 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun setJobFailureWithNullJobSyncConfig() {
       whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
-      whenever(jobsApi.jobFailure(any<JobFailureRequest>())).thenThrow(IOException())
+      whenever(jobsApi.jobFailure(any<JobFailureRequest>())).thenAnswer { throw IOException() }
 
       org.assertj.core.api.Assertions
         .assertThatThrownBy(
@@ -741,7 +718,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun attemptFailureWithAttemptNumberThrowsRetryableOnApiFailure() {
       whenever(airbyteApiClient.attemptApi).thenReturn(attemptApi)
       val input =
@@ -764,7 +740,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun cancelJobHappyPath() {
       whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
       val input =
@@ -787,7 +762,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun cancelJobThrowsRetryableOnJobsApiFailure() {
       whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
       val input =
@@ -817,7 +791,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun ensureCleanJobStateThrowsRetryableOnApiFailure() {
       whenever(airbyteApiClient.jobsApi).thenReturn(jobsApi)
       doThrow(IOException(EXCEPTION_MESSAGE)).`when`(jobsApi).failNonTerminalJobs(

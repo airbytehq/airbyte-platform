@@ -31,7 +31,6 @@ class EnterpriseActorDefinitionAccessValidator(
   private val permissionHandler: PermissionHandler,
   private val securityService: SecurityService,
 ) : ActorDefinitionAccessValidator {
-  @Throws(ApplicationErrorKnownException::class)
   override fun validateWriteAccess(actorDefinitionId: UUID) {
     try {
       val authId = securityService.username().orElse(null)

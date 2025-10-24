@@ -45,9 +45,10 @@ internal class WorkflowClientWrappedTest {
 
   @Test
   fun testRetryLogic() {
-    Mockito.`when`(temporalWorkflowClient.newWorkflowStub(ArgumentMatchers.any<Class<Any>>(), ArgumentMatchers.anyString())).thenThrow(
-      unavailable(),
-    )
+    Mockito.`when`(temporalWorkflowClient.newWorkflowStub(ArgumentMatchers.any<Class<Any>>(), ArgumentMatchers.anyString())).thenAnswer {
+      throw
+      unavailable()
+    }
 
     Assertions.assertThrows(
       StatusRuntimeException::class.java,
@@ -61,7 +62,7 @@ internal class WorkflowClientWrappedTest {
     val expected = MyWorkflow()
     Mockito
       .`when`(temporalWorkflowClient.newWorkflowStub(ArgumentMatchers.any<Class<Any>>(), ArgumentMatchers.anyString()))
-      .thenThrow(unavailable())
+      .thenAnswer { throw unavailable() }
       .thenReturn(expected)
 
     val actual = workflowClient.newWorkflowStub(MyWorkflow::class.java, "woot")
@@ -73,7 +74,7 @@ internal class WorkflowClientWrappedTest {
     val expected = MyWorkflow()
     Mockito
       .`when`(temporalWorkflowClient.newWorkflowStub(anyOrNull<Class<Any>>(), anyOrNull<WorkflowOptions>()))
-      .thenThrow(unavailable())
+      .thenAnswer { throw unavailable() }
       .thenReturn(expected)
 
     val actual = workflowClient.newWorkflowStub(MyWorkflow::class.java, WorkflowOptions.getDefaultInstance())
@@ -85,7 +86,7 @@ internal class WorkflowClientWrappedTest {
     val workflowStub = Mockito.mock(WorkflowStub::class.java)
     Mockito
       .`when`(temporalWorkflowClient.newUntypedWorkflowStub(ArgumentMatchers.anyString()))
-      .thenThrow(unavailable())
+      .thenAnswer { throw unavailable() }
       .thenReturn(workflowStub)
 
     workflowClient.terminateWorkflow("workflow", "test terminate")
@@ -98,7 +99,7 @@ internal class WorkflowClientWrappedTest {
     val expected = Mockito.mock(DescribeWorkflowExecutionResponse::class.java)
     Mockito
       .`when`(temporalWorkflowServiceBlockingStub.describeWorkflowExecution(ArgumentMatchers.any()))
-      .thenThrow(unavailable())
+      .thenAnswer { throw unavailable() }
       .thenReturn(expected)
 
     val actual =
@@ -112,7 +113,7 @@ internal class WorkflowClientWrappedTest {
 
   @Test
   fun testSignalsAreNotRetried() {
-    Mockito.`when`(temporalWorkflowClient.signalWithStart(ArgumentMatchers.any())).thenThrow(unavailable())
+    Mockito.`when`(temporalWorkflowClient.signalWithStart(ArgumentMatchers.any())).thenAnswer { throw unavailable() }
     Mockito.`when`(temporalWorkflowClient.newSignalWithStartRequest()).thenReturn(Mockito.mock())
     Assertions.assertThrows(StatusRuntimeException::class.java) {
       val request = workflowClient.newSignalWithStartRequest()

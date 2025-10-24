@@ -81,7 +81,6 @@ internal class DefaultJobPersistenceTest {
   private lateinit var dslContext: DSLContext
 
   @BeforeEach
-  @Throws(Exception::class)
   fun setup() {
     dataSource = Databases.createDataSource(container)
     dslContext = DSLContextFactory.create(dataSource, SQLDialect.POSTGRES)
@@ -96,12 +95,10 @@ internal class DefaultJobPersistenceTest {
   }
 
   @AfterEach
-  @Throws(Exception::class)
   fun tearDown() {
     close(dataSource)
   }
 
-  @Throws(SQLException::class)
   private fun resetDb() {
     // todo (cgardens) - truncate whole db.
     jobDatabase.query<Int?> { ctx: DSLContext? -> ctx!!.truncateTable(Tables.JOBS).cascade().execute() }
@@ -123,7 +120,6 @@ internal class DefaultJobPersistenceTest {
     }
   }
 
-  @Throws(SQLException::class)
   private fun getJobRecord(jobId: Long): Result<Record> =
     jobDatabase.query(
       ContextQueryFunction { ctx: DSLContext ->
@@ -168,7 +164,6 @@ internal class DefaultJobPersistenceTest {
 
   @Test
   @DisplayName("Should set a job to incomplete if an attempt fails")
-  @Throws(IOException::class)
   fun testCompleteAttemptFailed() {
     val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
     val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -189,7 +184,6 @@ internal class DefaultJobPersistenceTest {
 
   @Test
   @DisplayName("Should set a job to succeeded if an attempt succeeds")
-  @Throws(IOException::class)
   fun testCompleteAttemptSuccess() {
     val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
     val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -210,7 +204,6 @@ internal class DefaultJobPersistenceTest {
 
   @Test
   @DisplayName("Should be able to read what is written")
-  @Throws(IOException::class)
   fun testWriteOutput() {
     val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
     val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -280,7 +273,6 @@ internal class DefaultJobPersistenceTest {
 
   @Test
   @DisplayName("Should be able to read AttemptSyncConfig that was written")
-  @Throws(IOException::class)
   fun testWriteAttemptSyncConfig() {
     val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
     val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -301,7 +293,6 @@ internal class DefaultJobPersistenceTest {
 
   @Test
   @DisplayName("Should be able to read attemptFailureSummary that was written")
-  @Throws(IOException::class)
   fun testWriteAttemptFailureSummary() {
     val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
     val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -321,7 +312,6 @@ internal class DefaultJobPersistenceTest {
 
   @Test
   @DisplayName("Should be able to read attemptFailureSummary that was written with unsupported unicode")
-  @Throws(IOException::class)
   fun testWriteAttemptFailureSummaryWithUnsupportedUnicode() {
     val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
     val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -353,7 +343,6 @@ internal class DefaultJobPersistenceTest {
 
   @Test
   @DisplayName("When getting the last replication job should return the most recently created job")
-  @Throws(IOException::class)
   fun testGetLastSyncJobWithMultipleAttempts() {
     val jobId = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true).orElseThrow()
     jobPersistence.failAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH))
@@ -378,9 +367,6 @@ internal class DefaultJobPersistenceTest {
 
   @Test
   @DisplayName("When getting the last replication job should return the most recently created job without scheduled functionalities")
-  @Throws(
-    IOException::class,
-  )
   fun testGetLastSyncJobWithCancelWithScheduleEnabledForNonScheduledJob() {
     val jobId = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, false).orElseThrow()
     jobPersistence.failAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH))
@@ -394,9 +380,6 @@ internal class DefaultJobPersistenceTest {
 
   @Test
   @DisplayName("When getting the last replication job should return the most recently created job with scheduled functionalities")
-  @Throws(
-    IOException::class,
-  )
   fun testGetLastSyncJobWithCancelWithScheduleEnabledForScheduledJob() {
     val jobId = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true).orElseThrow()
     jobPersistence.failAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH))
@@ -423,7 +406,6 @@ internal class DefaultJobPersistenceTest {
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   @DisplayName("Should extract a Job model from a JOOQ result set")
-  @Throws(IOException::class, SQLException::class)
   fun testGetJobFromRecord(isScheduled: Boolean) {
     val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, isScheduled).orElseThrow()
 
@@ -435,7 +417,6 @@ internal class DefaultJobPersistenceTest {
 
   @Test
   @DisplayName("Should extract a Job model from a JOOQ result set")
-  @Throws(IOException::class, SQLException::class)
   fun testGetJobFromRecordDefaultIsScheduled() {
     val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
 
@@ -447,7 +428,6 @@ internal class DefaultJobPersistenceTest {
 
   @Test
   @DisplayName("Should return correct set of jobs when querying on end timestamp")
-  @Throws(IOException::class)
   fun testListJobsWithTimestamp() {
     // TODO : Once we fix the problem of precision loss in DefaultJobPersistence, change the test value
     // to contain milliseconds as well
@@ -562,7 +542,6 @@ internal class DefaultJobPersistenceTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testAirbyteProtocolVersionMaxMetadata() {
     Assertions.assertTrue(jobPersistence.getAirbyteProtocolVersionMax().isEmpty)
 
@@ -578,7 +557,6 @@ internal class DefaultJobPersistenceTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testAirbyteProtocolVersionMinMetadata() {
     Assertions.assertTrue(jobPersistence.getAirbyteProtocolVersionMin().isEmpty)
 
@@ -594,7 +572,6 @@ internal class DefaultJobPersistenceTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testAirbyteProtocolVersionRange() {
     val v1 = Version("1.5.0")
     val v2 = Version("2.5.0")
@@ -623,7 +600,6 @@ internal class DefaultJobPersistenceTest {
   internal inner class Stats {
     @Test
     @DisplayName("Writing stats the first time should only write record and bytes information correctly")
-    @Throws(IOException::class)
     fun testWriteStatsFirst() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -691,7 +667,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Fetch stream stats get the default metadata correctly")
-    @Throws(IOException::class)
     fun testWriteStatsWithMetadataDefault() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -751,7 +726,6 @@ internal class DefaultJobPersistenceTest {
     @ParameterizedTest
     @ValueSource(booleans = [true, false])
     @DisplayName("Fetch stream stats get the metadata correctly")
-    @Throws(IOException::class, SQLException::class)
     fun testWriteStatsWithMetadata(resumedBackfilledValue: Boolean) {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -838,7 +812,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Writing stats multiple times should write record and bytes information correctly without exceptions")
-    @Throws(IOException::class)
     fun testWriteStatsRepeated() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -891,10 +864,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Writing multiple stats of the same attempt id, stream name and namespace should update the previous record")
-    @Throws(
-      IOException::class,
-      SQLException::class,
-    )
     fun testWriteStatsUpsert() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -970,7 +939,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Writing multiple stats a stream with null namespace should write correctly without exceptions")
-    @Throws(IOException::class)
     fun testWriteNullNamespace() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -1020,7 +988,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Writing multiple stats a stream with null namespace should write correctly without exceptions")
-    @Throws(IOException::class)
     fun testGetStatsNoResult() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -1032,7 +999,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Retrieving all attempts stats for a job should return the right information")
-    @Throws(IOException::class, SQLException::class)
     fun testGetMultipleStats() {
       val jobOneId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val jobOneAttemptNumberOne = jobPersistence.createAttempt(jobOneId, LOG_PATH)
@@ -1326,7 +1292,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Writing stats for different streams should not have side effects")
-    @Throws(IOException::class)
     fun testWritingStatsForDifferentStreams() {
       val jobOneId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val jobOneAttemptNumberOne = jobPersistence.createAttempt(jobOneId, LOG_PATH)
@@ -1423,21 +1388,18 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Retrieving stats for an empty list should not cause an exception.")
-    @Throws(IOException::class)
     fun testGetStatsForEmptyJobList() {
       Assertions.assertNotNull(jobPersistence.getAttemptStats(mutableListOf()))
     }
 
     @Test
     @DisplayName("Retrieving stats for a bad job attempt input should not cause an exception.")
-    @Throws(IOException::class)
     fun testGetStatsForBadJobAttemptInput() {
       Assertions.assertNotNull(jobPersistence.getAttemptStats(-1, -1))
     }
 
     @Test
     @DisplayName("Combined stats can be retrieved without per stream stats.")
-    @Throws(IOException::class)
     fun testGetAttemptCombinedStats() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -1490,7 +1452,6 @@ internal class DefaultJobPersistenceTest {
   @Nested
   internal inner class GetAndSetVersion {
     @Test
-    @Throws(IOException::class)
     fun testSetVersion() {
       val version = UUID.randomUUID().toString()
       jobPersistence.setVersion(version)
@@ -1498,7 +1459,6 @@ internal class DefaultJobPersistenceTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun testSetVersionReplacesExistingId() {
       val deploymentId1 = UUID.randomUUID().toString()
       val deploymentId2 = UUID.randomUUID().toString()
@@ -1511,7 +1471,6 @@ internal class DefaultJobPersistenceTest {
   @Nested
   internal inner class GetAndSetDeployment {
     @Test
-    @Throws(IOException::class)
     fun testSetDeployment() {
       val deploymentId = UUID.randomUUID()
       jobPersistence.setDeployment(deploymentId)
@@ -1519,7 +1478,6 @@ internal class DefaultJobPersistenceTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun testSetDeploymentIdDoesNotReplaceExistingId() {
       val deploymentId1 = UUID.randomUUID()
       val deploymentId2 = UUID.randomUUID()
@@ -1534,7 +1492,6 @@ internal class DefaultJobPersistenceTest {
   internal inner class CancelJob {
     @Test
     @DisplayName("Should cancel job and leave job in cancelled state")
-    @Throws(IOException::class)
     fun testCancelJob() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val created = jobPersistence.getJob(jobId)
@@ -1549,7 +1506,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should not raise an exception if job is already succeeded")
-    @Throws(IOException::class)
     fun testCancelJobAlreadySuccessful() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -1567,7 +1523,6 @@ internal class DefaultJobPersistenceTest {
   internal inner class CreateAttempt {
     @Test
     @DisplayName("Should create an attempt")
-    @Throws(IOException::class)
     fun testCreateAttempt() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -1586,7 +1541,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should increment attempt id if creating multiple attempts")
-    @Throws(IOException::class)
     fun testCreateAttemptAttemptId() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber1 = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -1609,7 +1563,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should not create an attempt if an attempt is running")
-    @Throws(IOException::class)
     fun testCreateAttemptWhileAttemptAlreadyRunning() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -1632,7 +1585,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should not create an attempt if job is in terminal state")
-    @Throws(IOException::class)
     fun testCreateAttemptTerminal() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -1660,7 +1612,6 @@ internal class DefaultJobPersistenceTest {
   internal inner class GetAttempt {
     @Test
     @DisplayName("Should get an attempt by job id")
-    @Throws(IOException::class)
     fun testGetAttemptSimple() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val num = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -1673,7 +1624,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should get an attempt specified by attempt number")
-    @Throws(IOException::class)
     fun testGetAttemptMultiple() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
 
@@ -1711,7 +1661,6 @@ internal class DefaultJobPersistenceTest {
   internal inner class ListAttemptsByConnectionByTimestamp {
     @Test
     @DisplayName("Returns only entries after the timestamp")
-    @Throws(IOException::class)
     fun testListAttemptsForConnectionAfterTimestamp() {
       val jobId1 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true).orElseThrow()
       val attemptId1 = jobPersistence.createAttempt(jobId1, LOG_PATH)
@@ -1747,7 +1696,6 @@ internal class DefaultJobPersistenceTest {
   internal inner class EnqueueJob {
     @Test
     @DisplayName("Should create initial job without attempt")
-    @Throws(IOException::class)
     fun testCreateJobAndGetWithoutAttemptJob() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
 
@@ -1758,7 +1706,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should not create a second job if a job under the same scope is in a non-terminal state")
-    @Throws(IOException::class)
     fun testCreateJobNoQueueing() {
       val jobId1 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true)
       val jobId2 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true)
@@ -1773,7 +1720,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should create a second job if a previous job under the same scope has failed")
-    @Throws(IOException::class)
     fun testCreateJobIfPrevJobFailed() {
       val jobId1 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true)
       Assertions.assertTrue(jobId1.isPresent)
@@ -1793,7 +1739,6 @@ internal class DefaultJobPersistenceTest {
   internal inner class FailJob {
     @Test
     @DisplayName("Should set job status to failed")
-    @Throws(IOException::class)
     fun failJob() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val created = jobPersistence.getJob(jobId)
@@ -1808,7 +1753,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should not raise an exception if job is already succeeded")
-    @Throws(IOException::class)
     fun testFailJobAlreadySucceeded() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -1826,7 +1770,6 @@ internal class DefaultJobPersistenceTest {
   internal inner class GetLastReplicationJob {
     @Test
     @DisplayName("Should return nothing if no job exists")
-    @Throws(IOException::class)
     fun testGetLastReplicationJobForConnectionIdEmpty() {
       val actual = jobPersistence.getLastReplicationJob(CONNECTION_ID)
 
@@ -1835,7 +1778,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return the last sync job")
-    @Throws(IOException::class)
     fun testGetLastSyncJobForConnectionId() {
       val jobId1 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true).orElseThrow()
       jobPersistence.succeedAttempt(jobId1, jobPersistence.createAttempt(jobId1, LOG_PATH))
@@ -1852,7 +1794,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return the last reset job")
-    @Throws(IOException::class)
     fun testGetLastResetJobForConnectionId() {
       val jobId1 = jobPersistence.enqueueJob(SCOPE, RESET_JOB_CONFIG, true).orElseThrow()
       jobPersistence.succeedAttempt(jobId1, jobPersistence.createAttempt(jobId1, LOG_PATH))
@@ -1873,7 +1814,6 @@ internal class DefaultJobPersistenceTest {
   internal inner class GetLastSyncJob {
     @Test
     @DisplayName("Should return nothing if no job exists")
-    @Throws(IOException::class)
     fun testGetLastSyncJobForConnectionIdEmpty() {
       val actual = jobPersistence.getLastSyncJob(CONNECTION_ID)
 
@@ -1882,7 +1822,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return the last enqueued sync job")
-    @Throws(IOException::class)
     fun testGetLastSyncJobForConnectionId() {
       val jobId1 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true).orElseThrow()
       jobPersistence.succeedAttempt(jobId1, jobPersistence.createAttempt(jobId1, LOG_PATH))
@@ -1911,7 +1850,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return nothing if only reset job exists")
-    @Throws(IOException::class)
     fun testGetLastSyncJobForConnectionIdEmptyBecauseOnlyReset() {
       val jobId = jobPersistence.enqueueJob(SCOPE, RESET_JOB_CONFIG, true).orElseThrow()
       jobPersistence.succeedAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH))
@@ -1930,7 +1868,6 @@ internal class DefaultJobPersistenceTest {
   internal inner class GetLastSyncJobForConnections {
     @Test
     @DisplayName("Should return nothing if no sync job exists")
-    @Throws(IOException::class)
     fun testGetLastSyncJobsForConnectionsEmpty() {
       val actual = jobPersistence.getLastSyncJobForConnections(CONNECTION_IDS)
 
@@ -1939,7 +1876,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return the last enqueued sync job for each connection")
-    @Throws(IOException::class)
     fun testGetLastSyncJobForConnections() {
       val scope1Job1 = jobPersistence.enqueueJob(SCOPE_1, SYNC_JOB_CONFIG, true).orElseThrow()
       jobPersistence.succeedAttempt(scope1Job1, jobPersistence.createAttempt(scope1Job1, LOG_PATH))
@@ -1974,7 +1910,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return nothing if only reset job exists")
-    @Throws(IOException::class)
     fun testGetLastSyncJobsForConnectionsEmptyBecauseOnlyReset() {
       val jobId = jobPersistence.enqueueJob(SCOPE_1, RESET_JOB_CONFIG, true).orElseThrow()
       jobPersistence.succeedAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH))
@@ -1993,7 +1928,6 @@ internal class DefaultJobPersistenceTest {
   internal inner class GetRunningSyncJobForConnections {
     @Test
     @DisplayName("Should return nothing if no sync job exists")
-    @Throws(IOException::class)
     fun testGetRunningSyncJobsForConnectionsEmpty() {
       val actual = jobPersistence.getRunningSyncJobForConnections(CONNECTION_IDS)
 
@@ -2002,7 +1936,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return the last running sync job for each connection")
-    @Throws(IOException::class)
     fun testGetRunningSyncJobsForConnections() {
       // succeeded jobs should not be present in the result
       val scope1Job1 = jobPersistence.enqueueJob(SCOPE_1, SYNC_JOB_CONFIG, true).orElseThrow()
@@ -2051,7 +1984,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return nothing if only a running reset job exists")
-    @Throws(IOException::class)
     fun testGetRunningSyncJobsForConnectionsEmptyBecauseOnlyReset() {
       val jobId = jobPersistence.enqueueJob(SCOPE_1, RESET_JOB_CONFIG, true).orElseThrow()
       jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -2070,7 +2002,6 @@ internal class DefaultJobPersistenceTest {
   internal inner class GetRunningJobForConnection {
     @Test
     @DisplayName("Should return nothing if no sync job exists")
-    @Throws(IOException::class)
     fun testGetRunningSyncJobsForConnectionsEmpty() {
       val actual = jobPersistence.getRunningJobForConnection(CONNECTION_ID_1)
 
@@ -2079,7 +2010,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return a running sync job for the connection")
-    @Throws(IOException::class)
     fun testGetRunningJobForConnection() {
       val scope1Job1 = jobPersistence.enqueueJob(SCOPE_1, SYNC_JOB_CONFIG, true).orElseThrow()
       jobPersistence.createAttempt(scope1Job1, LOG_PATH)
@@ -2113,7 +2043,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return job if only a running reset job exists")
-    @Throws(IOException::class)
     fun testGetRunningSyncJobsForConnectionsEmptyBecauseOnlyReset() {
       val jobId = jobPersistence.enqueueJob(SCOPE_1, RESET_JOB_CONFIG, true).orElseThrow()
       jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -2152,7 +2081,6 @@ internal class DefaultJobPersistenceTest {
   internal inner class GetFirstReplicationJob {
     @Test
     @DisplayName("Should return nothing if no job exists")
-    @Throws(IOException::class)
     fun testGetFirstSyncJobForConnectionIdEmpty() {
       val actual = jobPersistence.getFirstReplicationJob(CONNECTION_ID)
 
@@ -2161,7 +2089,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return the first job")
-    @Throws(IOException::class)
     fun testGetFirstSyncJobForConnectionId() {
       val jobId1 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true).orElseThrow()
       jobPersistence.succeedAttempt(jobId1, jobPersistence.createAttempt(jobId1, LOG_PATH))
@@ -2184,7 +2111,6 @@ internal class DefaultJobPersistenceTest {
   internal inner class GetJobCount {
     @Test
     @DisplayName("Should return the total job count for all connections in any status")
-    @Throws(IOException::class)
     fun testGetJobCount() {
       val numJobsToCreate = 10
       val ids: MutableList<Long?> = ArrayList()
@@ -2213,7 +2139,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return the total job count for the connection")
-    @Throws(IOException::class)
     fun testGetJobCountWithConnectionFilter() {
       val numJobsToCreate = 10
       for (i in 0..<numJobsToCreate) {
@@ -2236,7 +2161,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return the total job count for the connection when filtering by failed jobs only")
-    @Throws(IOException::class)
     fun testGetJobCountWithFailedJobFilter() {
       val numPendingJobsToCreate = 10
       for (i in 0..<numPendingJobsToCreate) {
@@ -2265,9 +2189,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return the total job count for the connection when filtering by failed and cancelled jobs only")
-    @Throws(
-      IOException::class,
-    )
     fun testGetJobCountWithFailedAndCancelledJobFilter() {
       val jobId1 = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG, true).orElseThrow()
       jobPersistence.failJob(jobId1)
@@ -2293,7 +2214,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return the total job count filtering by createdAtStart")
-    @Throws(IOException::class)
     fun testGetJobCountWithCreatedAtStart() {
       val jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG, true).orElseThrow()
       val job = jobPersistence.getJob(jobId)
@@ -2313,7 +2233,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return the total job count filtering by createdAtEnd")
-    @Throws(IOException::class)
     fun testGetJobCountCreatedAtEnd() {
       val jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG, true).orElseThrow()
       val job = jobPersistence.getJob(jobId)
@@ -2333,7 +2252,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return the total job count filtering by updatedAtStart")
-    @Throws(IOException::class)
     fun testGetJobCountWithUpdatedAtStart() {
       val jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG, true).orElseThrow()
       val job = jobPersistence.getJob(jobId)
@@ -2353,7 +2271,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return the total job count filtering by updatedAtEnd")
-    @Throws(IOException::class)
     fun testGetJobCountUpdatedAtEnd() {
       val jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG, true).orElseThrow()
       val job = jobPersistence.getJob(jobId)
@@ -2373,7 +2290,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return 0 if there are no jobs for this connection")
-    @Throws(IOException::class)
     fun testGetJobCountNoneForConnection() {
       val otherConnectionId1 = UUID.randomUUID()
       val otherConnectionId2 = UUID.randomUUID()
@@ -2401,7 +2317,6 @@ internal class DefaultJobPersistenceTest {
   internal inner class ListJobs {
     @Test
     @DisplayName("Should return the correct page of results with multiple pages of history")
-    @Throws(IOException::class)
     fun testListJobsByPage() {
       val ids: MutableList<Long?> = ArrayList()
       for (i in 0..49) {
@@ -2427,7 +2342,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return the results in the correct sort order")
-    @Throws(IOException::class)
     fun testListJobsSortsDescending() {
       val ids: MutableList<Long?> = ArrayList()
       for (i in 0..99) {
@@ -2446,7 +2360,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should list all jobs")
-    @Throws(IOException::class)
     fun testListJobs() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
 
@@ -2462,7 +2375,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should list all jobs matching multiple config types")
-    @Throws(IOException::class)
     fun testListJobsMultipleConfigTypes() {
       val specJobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val checkJobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG, true).orElseThrow()
@@ -2488,7 +2400,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should list all jobs with all attempts")
-    @Throws(IOException::class)
     fun testListJobsWithMultipleAttempts() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber0 = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -2522,7 +2433,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should list all jobs light with all attempts")
-    @Throws(IOException::class)
     fun testListJobsLightWithMultipleAttempts() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber0 = jobPersistence.createAttempt(jobId, LOG_PATH)
@@ -2556,7 +2466,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should list all jobs with all attempts in descending order")
-    @Throws(IOException::class)
     fun testListJobsWithMultipleAttemptsInDescOrder() {
       // create first job with multiple attempts
       val jobId1 = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
@@ -2583,7 +2492,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should apply limits after ordering by the key provided by the caller")
-    @Throws(IOException::class)
     fun testListJobsOrderedByUpdatedAt() {
       val jobId1 = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val job1Attempt1 = jobPersistence.createAttempt(jobId1, LOG_PATH)
@@ -2636,7 +2544,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should list jobs across all connections in any status")
-    @Throws(IOException::class)
     fun testListJobsWithNoFilters() {
       val numJobsToCreate = 10
       val ids: MutableList<Long?> = ArrayList()
@@ -2676,7 +2583,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should list jobs for one connection only")
-    @Throws(IOException::class)
     fun testListJobsWithConnectionFilters() {
       val numJobsToCreate = 10
       val idsConnection1: MutableSet<Long?> = HashSet()
@@ -2709,7 +2615,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should list jobs filtering by failed and cancelled jobs")
-    @Throws(IOException::class)
     fun testListJobWithFailedAndCancelledJobFilter() {
       val jobId1 = jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG, true).orElseThrow()
       jobPersistence.failJob(jobId1)
@@ -2744,7 +2649,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should list jobs including the specified job across all connections")
-    @Throws(IOException::class)
     fun testListJobsIncludingId() {
       val ids: MutableList<Long?> = ArrayList()
       for (i in 0..99) {
@@ -2777,7 +2681,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should list jobs including the specified job")
-    @Throws(IOException::class)
     fun testListJobsIncludingIdWithConnectionFilter() {
       val ids: MutableList<Long?> = ArrayList()
       for (i in 0..99) {
@@ -2808,7 +2711,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should list jobs including the specified job, including multiple pages if necessary")
-    @Throws(IOException::class)
     fun testListJobsIncludingIdMultiplePages() {
       val ids: MutableList<Long?> = ArrayList()
       for (i in 0..99) {
@@ -2840,7 +2742,6 @@ internal class DefaultJobPersistenceTest {
 
     @Test
     @DisplayName("Should return an empty list if there is no job with the includingJob ID for this connection")
-    @Throws(IOException::class)
     fun testListJobsIncludingIdFromWrongConnection() {
       for (i in 0..9) {
         jobPersistence.enqueueJob(CONNECTION_ID.toString(), SPEC_JOB_CONFIG, true)
@@ -2865,7 +2766,6 @@ internal class DefaultJobPersistenceTest {
   internal inner class ListJobsWithStatus {
     @Test
     @DisplayName("Should only list jobs for the requested connection and with the requested statuses and config types")
-    @Throws(IOException::class, InterruptedException::class)
     fun testListJobsWithStatusesAndConfigTypesForConnection() {
       val desiredConnectionId = UUID.randomUUID()
       val otherConnectionId = UUID.randomUUID()

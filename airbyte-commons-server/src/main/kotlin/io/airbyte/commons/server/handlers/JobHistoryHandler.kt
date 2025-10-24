@@ -94,7 +94,6 @@ class JobHistoryHandler(
   private val workflowStateConverter = WorkflowStateConverter()
 
   @Trace
-  @Throws(IOException::class)
   fun listJobsFor(request: JobListRequestBody): JobReadList {
     Preconditions.checkNotNull(request.configTypes, "configType cannot be null.")
     Preconditions.checkState(!request.configTypes.isEmpty(), "Must include at least one configType.")
@@ -167,7 +166,6 @@ class JobHistoryHandler(
     return JobReadList().jobs(jobReads).totalJobCount(totalJobCount)
   }
 
-  @Throws(IOException::class)
   fun listJobsForLight(request: JobListRequestBody): JobReadList {
     Preconditions.checkNotNull(request.configTypes, "configType cannot be null.")
     Preconditions.checkState(!request.configTypes.isEmpty(), "Must include at least one configType.")
@@ -240,7 +238,6 @@ class JobHistoryHandler(
     return JobReadList().jobs(jobReads).totalJobCount(totalJobCount)
   }
 
-  @Throws(IOException::class)
   fun listJobsForWorkspaces(request: JobListForWorkspacesRequestBody): JobReadList {
     Preconditions.checkNotNull(request.configTypes, "configType cannot be null.")
     Preconditions.checkState(!request.configTypes.isEmpty(), "Must include at least one configType.")
@@ -289,42 +286,30 @@ class JobHistoryHandler(
     return JobReadList().jobs(jobReads).totalJobCount(jobs.size.toLong())
   }
 
-  @Throws(IOException::class)
   fun getJob(jobId: Long): Job = jobPersistence.getJob(jobId)
 
-  @Throws(IOException::class)
   fun getJobInfo(jobId: Long): JobInfoRead {
     val job = jobPersistence.getJob(jobId)
     return jobConverter.getJobInfoRead(job)
   }
 
-  @Throws(IOException::class)
   fun getJobInfoWithoutLogs(jobId: Long): JobInfoRead = getJobInfoWithoutLogsStatic(jobPersistence, jobId)
 
-  @Throws(IOException::class)
   fun getJobInfoLight(jobIdRequestBody: JobIdRequestBody): JobInfoLightRead {
     val job = jobPersistence.getJob(jobIdRequestBody.id)
     return jobConverter.getJobInfoLightRead(job)
   }
 
-  @Throws(IOException::class)
   fun getLastReplicationJob(connectionIdRequestBody: ConnectionIdRequestBody): JobOptionalRead {
     val job = jobPersistence.getLastReplicationJob(connectionIdRequestBody.connectionId)
     return jobConverter.getJobOptionalRead(job)
   }
 
-  @Throws(IOException::class)
   fun getLastReplicationJobWithCancel(connectionIdRequestBody: ConnectionIdRequestBody): JobOptionalRead {
     val job = jobPersistence.getLastReplicationJobWithCancel(connectionIdRequestBody.connectionId)
     return jobConverter.getJobOptionalRead(job)
   }
 
-  @Throws(
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-  )
   fun getJobDebugInfo(jobId: Long): JobDebugInfoRead {
     val job = jobPersistence.getJob(jobId)
     val jobinfoRead = jobConverter.getJobInfoRead(job)
@@ -354,7 +339,6 @@ class JobHistoryHandler(
   }
 
   @Trace
-  @Throws(IOException::class)
   fun getLatestRunningSyncJob(connectionId: UUID): Optional<JobRead> {
     val nonTerminalSyncJobsForConnection =
       jobPersistence.listJobsForConnectionWithStatuses(
@@ -369,7 +353,6 @@ class JobHistoryHandler(
     return nonTerminalSyncJobsForConnection.stream().map { obj: Job -> JobConverter.getJobRead(obj) }.findFirst()
   }
 
-  @Throws(IOException::class)
   fun getConnectionSyncProgress(connectionIdRequestBody: ConnectionIdRequestBody): ConnectionSyncProgressRead {
     val jobs = jobPersistence.getRunningJobForConnection(connectionIdRequestBody.connectionId)
 
@@ -464,16 +447,13 @@ class JobHistoryHandler(
   }
 
   @Trace
-  @Throws(IOException::class)
   fun getLatestSyncJob(connectionId: UUID): Optional<JobRead> =
     jobPersistence.getLastSyncJob(connectionId).map { obj: Job -> JobConverter.getJobRead(obj) }
 
   @Trace
-  @Throws(IOException::class)
   fun getLatestSyncJobsForConnections(connectionIds: List<UUID>): List<JobStatusSummary> = jobPersistence.getLastSyncJobForConnections(connectionIds)
 
   @Trace
-  @Throws(IOException::class)
   fun getRunningSyncJobForConnections(connectionIds: List<UUID>): List<JobRead> =
     jobPersistence
       .getRunningSyncJobForConnections(connectionIds)
@@ -481,42 +461,22 @@ class JobHistoryHandler(
       .map { obj: Job -> JobConverter.getJobRead(obj) }
       .collect(Collectors.toList())
 
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    ConfigNotFoundException::class,
-  )
   private fun getSourceRead(connectionRead: ConnectionRead): SourceRead {
     val sourceIdRequestBody = SourceIdRequestBody().sourceId(connectionRead.sourceId)
     return sourceHandler.getSource(sourceIdRequestBody)
   }
 
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    ConfigNotFoundException::class,
-  )
   private fun getDestinationRead(connectionRead: ConnectionRead): DestinationRead {
     val destinationIdRequestBody = DestinationIdRequestBody().destinationId(connectionRead.destinationId)
     return destinationHandler.getDestination(destinationIdRequestBody)
   }
 
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   private fun getSourceDefinitionRead(sourceRead: SourceRead): SourceDefinitionRead =
     sourceDefinitionsHandler.getSourceDefinition(sourceRead.sourceDefinitionId, true)
 
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   private fun getDestinationDefinitionRead(destinationRead: DestinationRead): DestinationDefinitionRead =
     destinationDefinitionsHandler.getDestinationDefinition(destinationRead.destinationDefinitionId, true)
 
-  @Throws(
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-  )
   private fun buildJobDebugInfoRead(jobInfoRead: JobInfoRead): JobDebugInfoRead {
     val configId = jobInfoRead.job.configId
     val standardSync: StandardSync

@@ -92,7 +92,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @MethodSource("actorSyncsStreamTestProvider")
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testActorSyncsAnyListedStream(
     mockActorConnections: MutableList<MutableList<String?>>,
     streamsToCheck: MutableList<String?>,
@@ -147,7 +146,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, SQLException::class)
   fun testCreateConnectionWithTags() {
     val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
     jooqTestDbSetupHelper.setUpDependencies()
@@ -176,7 +174,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, SQLException::class)
   fun testUpdateConnectionWithTags() {
     val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
     jooqTestDbSetupHelper.setUpDependencies()
@@ -210,7 +207,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, SQLException::class)
   fun testUpdateConnectionWithTagsFromMultipleWorkspaces() {
     val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
     jooqTestDbSetupHelper.setUpDependencies()
@@ -241,7 +237,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testWriteAndReadConnectionWithStatusReason() {
     val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
     jooqTestDbSetupHelper.setUpDependencies()
@@ -291,7 +286,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testGetStreamsForDestination() {
     val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
     jooqTestDbSetupHelper.setUpDependencies()
@@ -363,7 +357,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testGetStreamsForDestinationWithMultipleConnections() {
     val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
     jooqTestDbSetupHelper.setUpDependencies()
@@ -430,7 +423,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testGetConnectionStatusCounts() {
     val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
     jooqTestDbSetupHelper.setUpDependencies()
@@ -630,7 +622,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testGetConnectionStatusCountsNoJobs() {
     val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
     jooqTestDbSetupHelper.setUpDependencies()
@@ -665,7 +656,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetConnectionStatusCountsEmptyWorkspace() {
     val nonExistentWorkspaceId = UUID.randomUUID()
 
@@ -821,7 +811,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspaceStandardSyncsCursorPaginated() {
     val setupHelper = JooqTestDbSetupHelper()
     setupHelper.setUpDependencies()
@@ -861,7 +850,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testCountWorkspaceStandardSyncs() {
     val setupHelper = JooqTestDbSetupHelper()
     setupHelper.setUpDependencies()
@@ -883,7 +871,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testBuildCursorPaginationNoCursor() {
     val setupHelper = JooqTestDbSetupHelper()
     setupHelper.setUpDependencies()
@@ -916,7 +903,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testBuildCursorPaginationWithCursor() {
     val setupHelper = JooqTestDbSetupHelper()
     setupHelper.setUpDependencies()
@@ -950,7 +936,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @MethodSource("paginationTestProvider")
-  @Throws(Exception::class)
   fun testListWorkspaceStandardSyncsCursorPaginatedComprehensive(
     sortKey: SortKey,
     ascending: Boolean,
@@ -1045,7 +1030,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @MethodSource("paginationTestProvider")
-  @Throws(Exception::class)
   fun testCountWorkspaceStandardSyncsComprehensive(
     sortKey: SortKey,
     ascending: Boolean,
@@ -1107,7 +1091,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
   }
 
-  @Throws(Exception::class)
   private fun createComprehensiveTestData(): ComprehensiveTestData {
     val setupHelper = JooqTestDbSetupHelper()
     setupHelper.setUpDependencies()
@@ -1340,7 +1323,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
   }
 
-  @Throws(IOException::class)
   private fun createAdditionalSource(
     setupHelper: JooqTestDbSetupHelper,
     name: String?,
@@ -1374,7 +1356,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     return source
   }
 
-  @Throws(IOException::class)
   private fun createAdditionalDestination(
     setupHelper: JooqTestDbSetupHelper,
     name: String?,
@@ -2325,7 +2306,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testUpdateConnectionStatus() {
     val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
     jooqTestDbSetupHelper.setupForVersionUpgradeTest()
@@ -2376,7 +2356,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testListConnectionIdsForOrganizationAndActorDefinitions() {
     val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
     jooqTestDbSetupHelper.setupForVersionUpgradeTest()
@@ -2461,7 +2440,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testListConnectionIdsForOrganizationWithMappers() {
     val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
     jooqTestDbSetupHelper.setupForVersionUpgradeTest()
@@ -2529,7 +2507,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testListSubHourConnectionIdsForOrganization() {
     val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
     jooqTestDbSetupHelper.setupForVersionUpgradeTest()
@@ -2596,7 +2573,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testListConnectionCronSchedulesForOrganization() {
     val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
     jooqTestDbSetupHelper.setupForVersionUpgradeTest()
@@ -2698,7 +2674,6 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testLockConnectionsById() {
     val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
     jooqTestDbSetupHelper.setupForVersionUpgradeTest()

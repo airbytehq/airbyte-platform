@@ -45,7 +45,6 @@ internal class StreamResetActivityTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun deleteStreamResetRecordsForJobSuccess() {
     val input = DeleteStreamResetRecordsForJobInput(UUID.randomUUID(), "123".toLong())
 
@@ -59,7 +58,6 @@ internal class StreamResetActivityTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun deleteStreamResetRecordsForJobThrowsRetryableException() {
     val input = DeleteStreamResetRecordsForJobInput(UUID.randomUUID(), "123".toLong())
 

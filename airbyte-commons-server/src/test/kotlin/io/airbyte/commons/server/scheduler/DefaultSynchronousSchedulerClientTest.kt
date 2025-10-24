@@ -282,7 +282,6 @@ internal class DefaultSynchronousSchedulerClientTest {
   @DisplayName("Test job creation for each configuration type.")
   internal inner class TestJobCreation {
     @Test
-    @Throws(IOException::class)
     fun testCreateSourceCheckConnectionJob() {
       val jobCheckConnectionConfig =
         JobCheckConnectionConfig()
@@ -317,7 +316,6 @@ internal class DefaultSynchronousSchedulerClientTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun testCreateSourceCheckConnectionJobWithConfigInjection() {
       val configAfterInjection = ObjectMapper().readTree("{\"injected\": true }")
       val configWithRefsAfterInjection = ConfigWithSecretReferences(configAfterInjection, mapOf<String, SecretReferenceConfig>())
@@ -359,7 +357,6 @@ internal class DefaultSynchronousSchedulerClientTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun testCreateDestinationCheckConnectionJob() {
       val jobCheckConnectionConfig =
         JobCheckConnectionConfig()
@@ -394,7 +391,6 @@ internal class DefaultSynchronousSchedulerClientTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun testCreateDiscoverSchemaJob() {
       val expectedCatalogId = UUID.randomUUID()
       val jobOutput = ConnectorJobOutput().withDiscoverCatalogId(expectedCatalogId)
@@ -421,7 +417,6 @@ internal class DefaultSynchronousSchedulerClientTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun testCreateDestinationDiscoverJob() {
       val expectedCatalogId = UUID.randomUUID()
       val jobOutput = ConnectorJobOutput().withDiscoverCatalogId(expectedCatalogId)
@@ -442,7 +437,6 @@ internal class DefaultSynchronousSchedulerClientTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun testCreateGetSpecJob() {
       val jobSpecConfig = JobGetSpecConfig().withDockerImage(DOCKER_IMAGE).withIsCustomConnector(false)
 

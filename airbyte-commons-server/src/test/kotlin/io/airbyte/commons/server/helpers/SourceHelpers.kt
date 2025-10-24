@@ -18,20 +18,17 @@ import java.nio.file.Paths
 import java.util.UUID
 
 object SourceHelpers {
-  @Throws(IOException::class)
   fun generateSource(
     sourceDefinitionId: UUID?,
     tombstone: Boolean,
   ): SourceConnection = generateSource(sourceDefinitionId, "my default source name", tombstone, null)
 
-  @Throws(IOException::class)
   fun generateSource(
     sourceDefinitionId: UUID?,
     resourceRequirements: ScopedResourceRequirements?,
   ): SourceConnection = generateSource(sourceDefinitionId, "my default source name", false, resourceRequirements)
 
   @JvmOverloads
-  @Throws(IOException::class)
   fun generateSource(
     sourceDefinitionId: UUID?,
     name: String? = "my default source name",

@@ -46,7 +46,6 @@ internal class RemoteDefinitionsProviderTest {
   private lateinit var airbyteConnectorRegistryConfig: AirbyteConnectorRegistryConfig
 
   @BeforeEach
-  @Throws(IOException::class)
   fun setup() {
     webServer = MockWebServer()
     baseUrl = webServer!!.url("/").toString()
@@ -73,7 +72,6 @@ internal class RemoteDefinitionsProviderTest {
   }
 
   // Helper method to create a test zip file with specified content
-  @Throws(IOException::class)
   private fun createTestZip(
     filename: String,
     content: String,
@@ -89,7 +87,6 @@ internal class RemoteDefinitionsProviderTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testGetSourceDefinition() {
     webServer!!.enqueue(validCatalogResponse!!)
     val remoteDefinitionsProvider =
@@ -109,7 +106,6 @@ internal class RemoteDefinitionsProviderTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testGetDestinationDefinition() {
     webServer!!.enqueue(validCatalogResponse!!)
     val remoteDefinitionsProvider =
@@ -411,7 +407,6 @@ internal class RemoteDefinitionsProviderTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetConnectorCustomComponents() {
     // Create a zip file containing components.py with test content
     val expectedContent = "def test_function():\n    return 'test'"
@@ -443,7 +438,6 @@ internal class RemoteDefinitionsProviderTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetConnectorCustomComponentsWithNoComponentsFile() {
     // Create a zip file containing a different file
     val content = "some other content"

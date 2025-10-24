@@ -94,7 +94,6 @@ internal class OAuthHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun setSourceInstancewideOauthParams() {
     val sourceDefId = UUID.randomUUID()
     val params: MutableMap<String?, Any?> = HashMap()
@@ -120,7 +119,6 @@ internal class OAuthHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun setDestinationInstancewideOauthParams() {
     val destinationDefId = UUID.randomUUID()
     val params: MutableMap<String?, Any?> = HashMap()
@@ -244,7 +242,6 @@ internal class OAuthHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testCompleteSourceOAuthHandleReturnSecret() {
     val sourceDefinitionId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
@@ -284,7 +281,6 @@ internal class OAuthHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testGetSourceOAuthParamConfig() {
     val sourceDefinitionId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
@@ -342,7 +338,6 @@ internal class OAuthHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testGetDestinationOAuthParamConfig() {
     val destinationDefinitionId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()

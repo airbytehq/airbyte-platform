@@ -55,7 +55,6 @@ class EmptyAirbyteSource(
   }
 
   @Trace(operationName = ApmTraceConstants.WORKER_OPERATION_NAME)
-  @Throws(Exception::class)
   override fun start(
     sourceConfig: WorkerSourceConfig,
     jobRoot: Path?,
@@ -111,13 +110,11 @@ class EmptyAirbyteSource(
   }
 
   @Trace(operationName = ApmTraceConstants.WORKER_OPERATION_NAME)
-  @Throws(Exception::class)
   override fun close() {
     // no op.
   }
 
   @Trace(operationName = ApmTraceConstants.WORKER_OPERATION_NAME)
-  @Throws(Exception::class)
   override fun cancel() {
     // no op.
   }

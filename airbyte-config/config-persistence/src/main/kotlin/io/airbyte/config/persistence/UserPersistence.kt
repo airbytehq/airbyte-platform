@@ -48,7 +48,6 @@ open class UserPersistence(
    * @param user user to create or update.
    * @throws IOException in case of a db error
    */
-  @Throws(IOException::class)
   fun writeUser(user: User) {
     database.transaction<Any?> { ctx: DSLContext ->
       val isExistingConfig =
@@ -124,7 +123,6 @@ open class UserPersistence(
    *
    * @param user user to create or update.
    */
-  @Throws(IOException::class)
   fun writeAuthenticatedUser(user: AuthenticatedUser) {
     database.transaction<Any?> { ctx: DSLContext ->
       val isExistingConfig =
@@ -144,7 +142,6 @@ open class UserPersistence(
     }
   }
 
-  @Throws(IOException::class)
   fun writeAuthUser(
     userId: UUID,
     authUserId: String,
@@ -188,7 +185,6 @@ open class UserPersistence(
    * @param newAuthProvider new auth provider
    * @throws IOException in case of a db error
    */
-  @Throws(IOException::class)
   fun replaceAuthUserForUserId(
     userId: UUID,
     newAuthUserId: String,
@@ -210,7 +206,6 @@ open class UserPersistence(
    * @param userId internal user id
    * @return user if found
    */
-  @Throws(IOException::class)
   fun deleteUserById(userId: UUID?): Boolean =
     database
       .transaction { ctx: DSLContext -> ctx.deleteFrom(Tables.USER) }
@@ -224,7 +219,6 @@ open class UserPersistence(
    * @return user if found
    */
   @Deprecated("")
-  @Throws(IOException::class)
   fun getAuthenticatedUser(userId: UUID?): Optional<AuthenticatedUser> {
     val result =
       database.query { ctx: DSLContext ->
@@ -252,7 +246,6 @@ open class UserPersistence(
    * @return user if found
    * @throws IOException in case of a db error
    */
-  @Throws(IOException::class)
   fun getUser(userId: UUID?): Optional<User> {
     val result =
       database.query { ctx: DSLContext ->
@@ -332,7 +325,6 @@ open class UserPersistence(
    * @return the user information if it exists in the database, Optional.empty() otherwise
    * @throws IOException in case of a db error
    */
-  @Throws(IOException::class)
   fun getUserByAuthId(userAuthId: String?): Optional<AuthenticatedUser> {
     val result =
       database.query { ctx: DSLContext ->
@@ -371,7 +363,6 @@ open class UserPersistence(
    * @throws IOException in case of a db error
    */
   @Deprecated("")
-  @Throws(IOException::class)
   fun getAuthenticatedUserByEmail(email: String?): Optional<AuthenticatedUser> {
     val result =
       database.query { ctx: DSLContext ->
@@ -392,7 +383,6 @@ open class UserPersistence(
     return Optional.of(createAuthenticatedUserFromRecord(result[0]))
   }
 
-  @Throws(IOException::class)
   fun getUserByEmail(email: String?): Optional<User> {
     val result =
       database.query { ctx: DSLContext ->
@@ -413,13 +403,11 @@ open class UserPersistence(
   /**
    * Get the default user if it exists by looking up the hardcoded default user id.
    */
-  @Throws(IOException::class)
   fun getDefaultUser(): Optional<AuthenticatedUser> = getAuthenticatedUser(DEFAULT_USER_ID)
 
   /**
    * Get all users that have read access to the specified workspace.
    */
-  @Throws(IOException::class)
   fun getUsersWithWorkspaceAccess(workspaceId: UUID?): List<User> =
     database
       .query { ctx: DSLContext ->
@@ -436,7 +424,6 @@ open class UserPersistence(
    * Get all user access info for a particular workspace, including the specific workspace-level
    * and/or organization-level permissions that the user has that grant read-access to the workspace.
    */
-  @Throws(IOException::class)
   fun listWorkspaceUserAccessInfo(workspaceId: UUID): List<WorkspaceUserAccessInfo> =
     queryWorkspaceUserAccessInfo(workspaceId)
       .stream()
@@ -447,7 +434,6 @@ open class UserPersistence(
    * Get all auth user IDs for a particular Airbyte user. Once Firebase is deprecated, there should
    * only be one auth user ID per Airbyte user and this method can be removed.
    */
-  @Throws(IOException::class)
   fun listAuthUserIdsForUser(userId: UUID?): List<String> =
     database.query { ctx: DSLContext ->
       ctx
@@ -457,7 +443,6 @@ open class UserPersistence(
         .fetch(Tables.AUTH_USER.AUTH_USER_ID)
     }
 
-  @Throws(IOException::class)
   fun listAuthUsersForUser(userId: UUID?): List<AuthUser> =
     database.query { ctx: DSLContext ->
       ctx
@@ -495,14 +480,12 @@ open class UserPersistence(
   // that the right users are being returned in our CI tests, while leaving out
   // the problematic enum value mapping that isn't as critical to test.
   @VisibleForTesting
-  @Throws(IOException::class)
   fun listJustUsersForWorkspaceUserAccessInfo(workspaceId: UUID): List<UUID> =
     queryWorkspaceUserAccessInfo(workspaceId)
       .stream()
       .map { record: Record -> record.get(Tables.USER.ID) }
       .toList()
 
-  @Throws(IOException::class)
   private fun queryWorkspaceUserAccessInfo(workspaceId: UUID): Collection<Record> =
     database
       .query { ctx: DSLContext ->
@@ -520,7 +503,6 @@ open class UserPersistence(
    * @param organizationId the organization ID to exclude from the check
    * @return list of user IDs with the email domain that belong to different organizations
    */
-  @Throws(IOException::class)
   fun findUsersWithEmailDomainOutsideOrganization(
     emailDomain: String,
     organizationId: UUID,

@@ -11,6 +11,5 @@ import java.net.HttpURLConnection
  * Proxy to the Assist Service. Blocks until the job completes.
  */
 interface AssistConfiguration {
-  @Throws(IOException::class)
   fun getConnection(path: String): HttpURLConnection
 }

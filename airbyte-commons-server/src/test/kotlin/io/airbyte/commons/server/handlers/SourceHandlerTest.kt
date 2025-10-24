@@ -137,7 +137,6 @@ internal class SourceHandlerTest {
   private val apiPojoConverters = ApiPojoConverters(catalogConverter)
 
   @BeforeEach
-  @Throws(IOException::class)
   fun setUp() {
     catalogService = mockk(relaxed = true)
     secretsRepositoryReader = mockk(relaxed = true)
@@ -235,12 +234,6 @@ internal class SourceHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testCreateSource() {
     // ===== GIVEN =====
     // Create the SourceCreate request with the necessary fields.
@@ -378,12 +371,6 @@ internal class SourceHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testCreateSourceChecksConfigEntitlements() {
     val sourceCreate =
       SourceCreate()
@@ -425,12 +412,6 @@ internal class SourceHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testCreateSourceNoEntitlementThrows() {
     val sourceCreate =
       SourceCreate()
@@ -472,7 +453,6 @@ internal class SourceHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testNonNullCreateSourceThrowsOnInvalidResourceAllocation() {
     val cloudSourceHandler =
       SourceHandler(
@@ -518,12 +498,6 @@ internal class SourceHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testUpdateSource() {
     // ===== GIVEN =====
     // Update the source name and configuration.
@@ -687,12 +661,6 @@ internal class SourceHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testUpdateSourceChecksConfigEntitlements() {
     val updatedSourceName = "my updated source name for config entitlements"
     val newConfiguration = sourceConnection.configuration
@@ -756,12 +724,6 @@ internal class SourceHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testUpdateSourceNoEntitlementThrows() {
     val updatedSourceName = "my updated source name"
     val newConfiguration = sourceConnection.configuration
@@ -874,7 +836,6 @@ internal class SourceHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testUpgradeSourceVersion() {
     val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceConnection.sourceId)
 
@@ -890,7 +851,6 @@ internal class SourceHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testGetSource() {
     val expectedSourceRead =
       SourceHelpers.getSourceRead(
@@ -1027,7 +987,6 @@ internal class SourceHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testListSourcesForWorkspaceWithPagination() {
     // Create multiple sources for pagination testing
     val source1 = createSourceConnectionWithCount("source1", 2)
@@ -1080,7 +1039,6 @@ internal class SourceHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testListSourcesForWorkspaceWithFilters() {
     val workspaceId = sourceConnectionWithCount.source.workspaceId
     val requestBody =
@@ -1155,7 +1113,6 @@ internal class SourceHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testListSourcesForSourceDefinition() {
     val expectedSourceRead =
       SourceHelpers.getSourceRead(
@@ -1217,7 +1174,6 @@ internal class SourceHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testSearchSources() {
     val expectedSourceRead =
       SourceHelpers.getSourceRead(
@@ -1277,12 +1233,6 @@ internal class SourceHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testDeleteSourceAndDeleteSecrets() {
     val newConfiguration = sourceConnection.configuration
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
@@ -1349,7 +1299,6 @@ internal class SourceHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testWriteDiscoverCatalogResult() {
     val actorId = UUID.randomUUID()
     val catalogId = UUID.randomUUID()
@@ -1465,12 +1414,6 @@ internal class SourceHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testCreateSourceHandleSecret() {
     val oauthDefinitionVersion =
       ActorDefinitionVersion()

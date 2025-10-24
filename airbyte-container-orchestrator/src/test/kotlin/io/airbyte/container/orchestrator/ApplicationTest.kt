@@ -26,7 +26,6 @@ internal class ApplicationTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testHappyPath() {
     every { jobOrchestrator.runJob() } returns Optional.of("result output")
     val app = Application(jobOrchestrator = jobOrchestrator, replicationLogMdcBuilder = replicationLogMdcBuilder)
@@ -37,7 +36,6 @@ internal class ApplicationTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testJobFailedWritesFailedStatus() {
     every { jobOrchestrator.runJob() } throws Exception()
     val app = Application(jobOrchestrator = jobOrchestrator, replicationLogMdcBuilder = replicationLogMdcBuilder)

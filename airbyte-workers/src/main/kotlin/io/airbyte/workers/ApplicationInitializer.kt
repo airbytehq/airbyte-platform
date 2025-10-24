@@ -108,7 +108,6 @@ class ApplicationInitializer(
     globalTracer.addTraceInterceptor(TemporalSdkInterceptor())
   }
 
-  @Throws(ExecutionException::class, InterruptedException::class, TimeoutException::class)
   private fun initializeCommonDependencies() {
     log.info("Initializing common worker dependencies.")
 
@@ -307,7 +306,6 @@ class ApplicationInitializer(
    * @throws InterruptedException if unable to perform the additional configuration.
    * @throws TimeoutException if unable to perform the additional configuration.
    */
-  @Throws(ExecutionException::class, InterruptedException::class, TimeoutException::class)
   private fun configureTemporal(
     temporalUtils: TemporalUtils,
     temporalService: WorkflowServiceStubs,

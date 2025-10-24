@@ -54,7 +54,6 @@ open class PermissionHandler(
    * @throws IOException if unable to retrieve the existing permissions.
    * @throws JsonValidationException if unable to validate the existing permission data.
    */
-  @Throws(IOException::class, JsonValidationException::class, PermissionRedundantException::class)
   fun createPermission(permissionCreate: Permission): Permission {
     // INSTANCE_ADMIN permissions are only created in special cases, so we block them here.
 
@@ -81,7 +80,6 @@ open class PermissionHandler(
     return permissionService.createPermission(permissionCreate)
   }
 
-  @Throws(PermissionRedundantException::class)
   fun grantInstanceAdmin(userId: UUID?) {
     permissionService.createPermission(
       Permission()
@@ -91,7 +89,6 @@ open class PermissionHandler(
     )
   }
 
-  @Throws(io.airbyte.config.persistence.ConfigNotFoundException::class, IOException::class)
   fun getPermissionById(permissionId: UUID): Permission = permissionService.getPermission(permissionId)
 
   private fun checkPermissionsAreEqual(
@@ -125,7 +122,6 @@ open class PermissionHandler(
    * @throws ConfigNotFoundException if unable to get the permissions.
    * @throws JsonValidationException if unable to get the permissions.
    */
-  @Throws(io.airbyte.config.persistence.ConfigNotFoundException::class, IOException::class)
   fun getPermissionRead(permissionIdRequestBody: PermissionIdRequestBody): PermissionRead {
     val permission = getPermissionById(permissionIdRequestBody.permissionId)
     return buildPermissionRead(permission)
@@ -152,12 +148,6 @@ open class PermissionHandler(
    * @throws ConfigNotFoundException if unable to update the permissions.
    * @throws OperationNotAllowedException if update is prevented by business logic.
    */
-  @Throws(
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    OperationNotAllowedException::class,
-    JsonValidationException::class,
-  )
   fun updatePermission(permissionUpdate: PermissionUpdate) {
     // INSTANCE_ADMIN permissions are only created in special cases, so we block them here.
 
@@ -190,7 +180,6 @@ open class PermissionHandler(
    * @return The result of the permission check.
    * @throws IOException if unable to check the permission.
    */
-  @Throws(IOException::class)
   fun checkPermissions(permissionCheckRequest: PermissionCheckRequest): PermissionCheckRead {
     val userPermissions = permissionReadListForUser(permissionCheckRequest.userId).permissions
 
@@ -214,7 +203,6 @@ open class PermissionHandler(
    * see if the requested permission is for a workspace that the user permission should grant access
    * to.
    */
-  @Throws(JsonValidationException::class, IOException::class, io.airbyte.config.persistence.ConfigNotFoundException::class)
   private fun checkPermissions(
     permissionCheckRequest: PermissionCheckRequest,
     userPermission: PermissionRead,
@@ -270,7 +258,6 @@ open class PermissionHandler(
 
   // check if this permission request is for a workspace that belongs to a different organization than
   // the user permission.
-  @Throws(JsonValidationException::class, IOException::class, io.airbyte.config.persistence.ConfigNotFoundException::class)
   private fun requestedWorkspaceNotInOrganization(
     userPermission: PermissionRead,
     request: PermissionCheckRequest,
@@ -355,7 +342,6 @@ open class PermissionHandler(
    * @throws IOException if unable to retrieve the permissions for the user.
    * @throws JsonValidationException if unable to retrieve the permissions for the user.
    */
-  @Throws(IOException::class)
   fun permissionReadListForUser(userId: UUID): PermissionReadList {
     val permissions = permissionService.getPermissionsForUser(userId)
     return PermissionReadList().permissions(
@@ -366,7 +352,6 @@ open class PermissionHandler(
     )
   }
 
-  @Throws(IOException::class)
   fun listPermissionsForUser(userId: UUID): List<Permission> = permissionService.getPermissionsForUser(userId)
 
   /**
@@ -378,7 +363,6 @@ open class PermissionHandler(
    * @throws IOException if unable to retrieve the permissions for the user.
    * @throws JsonValidationException if unable to retrieve the permissions for the user.
    */
-  @Throws(IOException::class)
   fun listPermissionsByUserInAnOrganization(
     userId: UUID,
     organizationId: UUID,
@@ -414,7 +398,6 @@ open class PermissionHandler(
   /**
    * Delete all permission records that match a particular userId and workspaceId.
    */
-  @Throws(IOException::class)
   fun deleteUserFromWorkspace(deleteUserFromWorkspaceRequestBody: PermissionDeleteUserFromWorkspaceRequestBody) {
     val userId = deleteUserFromWorkspaceRequestBody.userId
     val workspaceId = deleteUserFromWorkspaceRequestBody.workspaceId
@@ -440,14 +423,11 @@ open class PermissionHandler(
   fun getPermissionsByServiceAccountId(serviceAccountId: UUID): List<Permission> =
     permissionService.getPermissionsByServiceAccountId(serviceAccountId)
 
-  @Throws(IOException::class)
   fun listUsersInOrganization(organizationId: UUID): List<UserPermission> =
     permissionPersistence?.listUsersInOrganization(organizationId) ?: emptyList()
 
-  @Throws(IOException::class)
   fun listInstanceAdminUsers(): List<UserPermission> = permissionPersistence?.listInstanceAdminUsers() ?: emptyList()
 
-  @Throws(IOException::class)
   fun listPermissionsForOrganization(organizationId: UUID): List<UserPermission> =
     permissionPersistence?.listPermissionsForOrganization(organizationId) ?: emptyList()
 
@@ -472,7 +452,6 @@ open class PermissionHandler(
       .size
   }
 
-  @Throws(IOException::class)
   fun findPermissionTypeForUserAndOrganization(
     organizationId: UUID,
     authUserId: String,

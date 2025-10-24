@@ -38,7 +38,6 @@ abstract class BaseOAuthFlowTest {
   private lateinit var destinationOAuthParameter: DestinationOAuthParameter
 
   @BeforeEach
-  @Throws(JsonValidationException::class, IOException::class)
   fun setup() {
     httpClient = Mockito.mock(HttpClient::class.java)
     oAuthService = Mockito.mock(OAuthService::class.java)
@@ -292,7 +291,6 @@ abstract class BaseOAuthFlowTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testGetConsentUrlEmptyOAuthParameters() {
     Mockito
       .`when`(
@@ -328,7 +326,6 @@ abstract class BaseOAuthFlowTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class)
   fun testGetConsentUrlIncompleteOAuthParameters() {
     val sourceOAuthParameter =
       SourceOAuthParameter()
@@ -373,11 +370,6 @@ abstract class BaseOAuthFlowTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-  )
   open fun testGetSourceConsentUrlEmptyOAuthSpec() {
     if (hasDependencyOnConnectorConfigValues()) {
       Assertions.assertThrows(
@@ -409,11 +401,6 @@ abstract class BaseOAuthFlowTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-  )
   open fun testGetDestinationConsentUrlEmptyOAuthSpec() {
     if (hasDependencyOnConnectorConfigValues()) {
       Assertions.assertThrows(
@@ -445,11 +432,6 @@ abstract class BaseOAuthFlowTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-  )
   open fun testGetSourceConsentUrl() {
     val consentUrl =
       oauthFlow.getSourceConsentUrl(
@@ -464,11 +446,6 @@ abstract class BaseOAuthFlowTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-  )
   open fun testGetDestinationConsentUrl() {
     val consentUrl =
       oauthFlow.getDestinationConsentUrl(
@@ -499,7 +476,6 @@ abstract class BaseOAuthFlowTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class, ConfigNotFoundException::class)
   open fun testDeprecatedCompleteSourceOAuth() {
     val returnedCredentials = expectedOutput
     val response = Mockito.mock(HttpResponse::class.java)
@@ -537,7 +513,6 @@ abstract class BaseOAuthFlowTest {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class, InterruptedException::class)
   open fun testDeprecatedCompleteDestinationOAuth() {
     val returnedCredentials = expectedOutput
     val response = Mockito.mock(HttpResponse::class.java)
@@ -589,12 +564,6 @@ abstract class BaseOAuthFlowTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    InterruptedException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-  )
   open fun testEmptyOutputCompleteSourceOAuth() {
     val response = Mockito.mock(HttpResponse::class.java)
     Mockito.`when`(response.body()).thenReturn(mockedResponse)
@@ -618,12 +587,6 @@ abstract class BaseOAuthFlowTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    InterruptedException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-  )
   open fun testEmptyOutputCompleteDestinationOAuth() {
     val response = Mockito.mock(HttpResponse::class.java)
     Mockito.`when`(response.body()).thenReturn(mockedResponse)
@@ -647,12 +610,6 @@ abstract class BaseOAuthFlowTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    InterruptedException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-  )
   open fun testEmptyInputCompleteSourceOAuth() {
     val response = Mockito.mock(HttpResponse::class.java)
     Mockito.`when`(response.body()).thenReturn(mockedResponse)
@@ -683,12 +640,6 @@ abstract class BaseOAuthFlowTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    InterruptedException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-  )
   open fun testEmptyInputCompleteDestinationOAuth() {
     val response = Mockito.mock(HttpResponse::class.java)
     Mockito.`when`(response.body()).thenReturn(mockedResponse)
@@ -719,12 +670,6 @@ abstract class BaseOAuthFlowTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    InterruptedException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-  )
   open fun testCompleteSourceOAuth() {
     val response = Mockito.mock(HttpResponse::class.java)
     Mockito.`when`(response.body()).thenReturn(mockedResponse)
@@ -755,12 +700,6 @@ abstract class BaseOAuthFlowTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    InterruptedException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-  )
   open fun testCompleteDestinationOAuth() {
     val response = Mockito.mock(HttpResponse::class.java)
     Mockito.`when`(response.body()).thenReturn(mockedResponse)
@@ -791,12 +730,6 @@ abstract class BaseOAuthFlowTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    InterruptedException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-  )
   open fun testValidateOAuthOutputFailure() {
     val response = Mockito.mock(HttpResponse::class.java)
     Mockito.`when`(response.body()).thenReturn(mockedResponse)

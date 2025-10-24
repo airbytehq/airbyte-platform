@@ -65,7 +65,6 @@ open class OperationsHandler
       return CheckOperationRead().status(CheckOperationRead.StatusEnum.SUCCEEDED)
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun createOperation(operationCreate: OperationCreate): OperationRead {
       val operationId = uuidGenerator.get()
       val workspace: StandardWorkspace
@@ -100,7 +99,6 @@ open class OperationsHandler
       }
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun updateOperation(operationUpdate: OperationUpdate): OperationRead {
       val standardSyncOperation = operationService.getStandardSyncOperation(operationUpdate.operationId)
       val workspace: StandardWorkspace
@@ -112,13 +110,11 @@ open class OperationsHandler
       return persistOperation(updateOperation(operationUpdate, standardSyncOperation, workspace))
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     private fun persistOperation(standardSyncOperation: StandardSyncOperation): OperationRead {
       operationService.writeStandardSyncOperation(standardSyncOperation)
       return buildOperationRead(standardSyncOperation.operationId)
     }
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun listOperationsForConnection(connectionIdRequestBody: ConnectionIdRequestBody): OperationReadList {
       val operationReads: MutableList<OperationRead> = Lists.newArrayList()
       val standardSync = connectionService.getStandardSync(connectionIdRequestBody.connectionId)
@@ -132,16 +128,13 @@ open class OperationsHandler
       return OperationReadList().operations(operationReads)
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun getOperation(operationIdRequestBody: OperationIdRequestBody): OperationRead = buildOperationRead(operationIdRequestBody.operationId)
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun deleteOperationsForConnection(connectionIdRequestBody: ConnectionIdRequestBody) {
       val standardSync = connectionService.getStandardSync(connectionIdRequestBody.connectionId)
       deleteOperationsForConnection(standardSync, standardSync.operationIds)
     }
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun deleteOperationsForConnection(
       connectionId: UUID,
       deleteOperationIds: List<UUID>,
@@ -150,7 +143,6 @@ open class OperationsHandler
       deleteOperationsForConnection(standardSync, deleteOperationIds)
     }
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun deleteOperationsForConnection(
       standardSync: StandardSync,
       deleteOperationIds: List<UUID>,
@@ -174,13 +166,11 @@ open class OperationsHandler
       operationService.updateConnectionOperationIds(standardSync.connectionId, HashSet(operationIds))
     }
 
-    @Throws(IOException::class)
     fun deleteOperation(operationIdRequestBody: OperationIdRequestBody) {
       val operationId = operationIdRequestBody.operationId
       operationService.deleteStandardSyncOperation(operationId)
     }
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     private fun removeOperation(operationId: UUID) {
       val standardSyncOperation = operationService.getStandardSyncOperation(operationId)
       if (standardSyncOperation != null) {
@@ -191,7 +181,6 @@ open class OperationsHandler
       }
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     private fun buildOperationRead(operationId: UUID): OperationRead {
       val standardSyncOperation = operationService.getStandardSyncOperation(operationId)
       if (standardSyncOperation != null) {

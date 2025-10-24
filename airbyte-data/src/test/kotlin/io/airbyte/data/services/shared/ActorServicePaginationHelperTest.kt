@@ -103,7 +103,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @MethodSource("actorTypeProvider")
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListWorkspaceActorConnectionsWithCounts_NoConnections(actorType: ActorType) {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -131,7 +130,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun testListWorkspaceSourceConnectionsWithCounts_NoConnections_Legacy() {
     val helper = JooqTestDbSetupHelper()
     helper.setUpDependencies()
@@ -228,7 +226,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @MethodSource("actorTypeProvider")
-  @Throws(Exception::class)
   fun testBuildCursorPaginationNoCursor(actorType: ActorType) {
     val setupHelper = JooqTestDbSetupHelper()
     setupHelper.setUpDependencies()
@@ -265,7 +262,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @MethodSource("actorTypeProvider")
-  @Throws(Exception::class)
   fun testBuildCursorPaginationWithCursor(actorType: ActorType) {
     val setupHelper = JooqTestDbSetupHelper()
     setupHelper.setUpDependencies()
@@ -294,7 +290,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @MethodSource("actorTypeProvider")
-  @Throws(Exception::class)
   fun testCountWorkspaceActorsFiltered(actorType: ActorType) {
     val setupHelper = JooqTestDbSetupHelper()
     setupHelper.setUpDependencies()
@@ -473,7 +468,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @MethodSource("actorTypeProvider")
-  @Throws(Exception::class)
   fun testGetCursorActorBasic(actorType: ActorType) {
     // Setup test data
     val helper = JooqTestDbSetupHelper()
@@ -500,7 +494,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @MethodSource("actorTypeProvider")
-  @Throws(java.lang.Exception::class)
   fun testGetCursorActorWithAllDeprecatedConnections(actorType: ActorType) {
     // Setup test data
     val helper = JooqTestDbSetupHelper()
@@ -579,7 +572,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @MethodSource("sourcePaginationTestProvider")
-  @Throws(Exception::class)
   fun testListWorkspaceSourceConnectionsWithCountsPaginatedComprehensive(
     sortKey: SortKey,
     ascending: Boolean,
@@ -677,7 +669,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @MethodSource("sourcePaginationTestProvider")
-  @Throws(Exception::class)
   fun testCountWorkspaceSourcesFilteredComprehensive(
     sortKey: SortKey,
     ascending: Boolean,
@@ -730,7 +721,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @MethodSource("destinationPaginationTestProvider")
-  @Throws(Exception::class)
   fun testListWorkspaceDestinationConnectionsWithCountsPaginatedComprehensive(
     sortKey: SortKey,
     ascending: Boolean,
@@ -828,7 +818,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
 
   @ParameterizedTest
   @MethodSource("destinationPaginationTestProvider")
-  @Throws(Exception::class)
   fun testCountWorkspaceDestinationsFilteredComprehensive(
     sortKey: SortKey,
     ascending: Boolean,
@@ -901,7 +890,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     }
   }
 
-  @Throws(Exception::class)
   private fun createComprehensiveTestData(): ComprehensiveTestData {
     val setupHelper = JooqTestDbSetupHelper()
     setupHelper.setUpDependencies()
@@ -1097,7 +1085,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     }
   }
 
-  @Throws(IOException::class)
   private fun createAdditionalSourceWithDef(
     setupHelper: JooqTestDbSetupHelper,
     name: String?,
@@ -1131,7 +1118,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     return source
   }
 
-  @Throws(IOException::class)
   private fun createAdditionalDestination(
     setupHelper: JooqTestDbSetupHelper,
     name: String?,
@@ -1165,7 +1151,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     return destination
   }
 
-  @Throws(IOException::class)
   private fun createAdditionalDestination(
     workspaceId: UUID?,
     helper: JooqTestDbSetupHelper,
@@ -1505,7 +1490,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
   }
 
   // Keep existing helper methods from the original test file
-  @Throws(IOException::class)
   private fun createConnection(
     source: SourceConnection,
     destination: DestinationConnection,
@@ -1528,7 +1512,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     return sync
   }
 
-  @Throws(IOException::class)
   private fun createAdditionalSource(
     workspaceId: UUID?,
     helper: JooqTestDbSetupHelper,
@@ -1545,7 +1528,6 @@ internal class ActorServicePaginationHelperTest : BaseConfigDatabaseTest() {
     return source
   }
 
-  @Throws(IOException::class)
   private fun createConnectionWithName(
     source: SourceConnection,
     destination: DestinationConnection,

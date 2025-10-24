@@ -286,7 +286,7 @@ internal class SecretsRepositoryWriterTest {
 
   // TODO - port this to source service test
 //  @Test
-//  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
+//
 //  fun testWriteSourceConnection() {
 //    every { configRepository.getSourceConnection(UUID1) } throws ConfigNotFoundException("test", UUID1.toString())
 //    every { configRepository.writeSourceConnectionNoSecrets(any()) } returns Unit
@@ -312,7 +312,7 @@ internal class SecretsRepositoryWriterTest {
 
   // TODO -port this to destinationservicetest
 //  @Test
-//  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
+//
 //  fun testWriteDestinationConnection() {
 //    every { configRepository.getDestinationConnection(UUID1) } throws ConfigNotFoundException("test", UUID1.toString())
 //    every { configRepository.writeDestinationConnectionNoSecrets(any()) } returns Unit
@@ -341,7 +341,7 @@ internal class SecretsRepositoryWriterTest {
 
   // TODO - port this to source service test
 //  @Test
-//  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
+//
 //  fun testWriteSourceConnectionWithTombstone() {
 //    every { configRepository.getSourceConnection(UUID1) } throws ConfigNotFoundException("test", UUID1.toString())
 //    every { configRepository.writeSourceConnectionNoSecrets(any()) } returns Unit
@@ -375,7 +375,7 @@ internal class SecretsRepositoryWriterTest {
 
   // TODO - port this to destination service test
 //  @Test
-//  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
+//
 //  fun testWriteDestinationConnectionWithTombstone() {
 //    every { configRepository.getDestinationConnection(UUID1) } throws ConfigNotFoundException("test", UUID1.toString())
 //    every { configRepository.writeDestinationConnectionNoSecrets(any()) } returns Unit
@@ -412,7 +412,7 @@ internal class SecretsRepositoryWriterTest {
   private fun getCoordinateFromSecretsStore(secretPersistence: MemorySecretPersistence): SecretCoordinate = secretPersistence.map.keys.first()
 
 //  @Test
-//  @Throws(JsonValidationException::class, IOException::class)
+//
 //  fun `writeWorkspace should ensure that secret fields are replaced`() {
 //    val configRepository: ConfigRepository = mockk()
 //    val secretPersistence: SecretPersistence = mockk()

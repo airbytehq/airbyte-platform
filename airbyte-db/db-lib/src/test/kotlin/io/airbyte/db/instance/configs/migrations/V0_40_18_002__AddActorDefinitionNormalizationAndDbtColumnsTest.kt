@@ -39,7 +39,6 @@ internal class V0_40_18_002__AddActorDefinitionNormalizationAndDbtColumnsTest : 
   }
 
   @Test
-  @Throws(Exception::class)
   fun test() {
     val context = dslContext!!
     Assertions.assertFalse(columnExists(context, "normalization_repository"))

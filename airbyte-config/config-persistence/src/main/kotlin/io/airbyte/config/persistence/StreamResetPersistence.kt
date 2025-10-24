@@ -33,7 +33,6 @@ class StreamResetPersistence(
    * @return streams marked as needed resets
    * @throws IOException if there is an issue while interacting with the db.
    */
-  @Throws(IOException::class)
   fun getStreamResets(connectionId: UUID?): List<StreamDescriptor> =
     database
       .query { ctx: DSLContext ->
@@ -54,7 +53,6 @@ class StreamResetPersistence(
    * @param streamsToDelete streams to delete
    * @throws IOException if there is an issue while interacting with the db.
    */
-  @Throws(IOException::class)
   fun deleteStreamResets(
     connectionId: UUID?,
     streamsToDelete: List<StreamDescriptor>,
@@ -86,7 +84,6 @@ class StreamResetPersistence(
    * It will not attempt to create entries for any stream that already exists in the stream_reset
    * table.
    */
-  @Throws(IOException::class)
   fun createStreamResets(
     connectionId: UUID,
     streamsToCreate: List<StreamDescriptor>,

@@ -12,12 +12,10 @@ import java.util.concurrent.Callable
  */
 @FunctionalInterface
 interface VoidCallable : Callable<Void?> {
-  @Throws(Exception::class)
   override fun call(): Void? {
     voidCall()
     return null
   }
 
-  @Throws(Exception::class)
   fun voidCall()
 }

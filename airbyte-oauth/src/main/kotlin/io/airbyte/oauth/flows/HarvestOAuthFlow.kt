@@ -30,7 +30,6 @@ class HarvestOAuthFlow : BaseOAuth2Flow {
    * @param clientId The configured client ID
    * @param redirectUrl the redirect URL
    */
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,

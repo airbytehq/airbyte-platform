@@ -29,7 +29,6 @@ class AssistProxyHandler
     /**
      * Call the Assistant to get connector data
      */
-    @Throws(ConnectorBuilderException::class)
     fun process(
       requestBody: Map<String, Any>,
       waitForResponse: Boolean = true,

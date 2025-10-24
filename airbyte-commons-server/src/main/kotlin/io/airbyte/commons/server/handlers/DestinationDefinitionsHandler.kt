@@ -80,7 +80,6 @@ open class DestinationDefinitionsHandler
     private val licenseEntitlementChecker: LicenseEntitlementChecker,
     private val apiPojoConverters: ApiPojoConverters,
   ) {
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun buildDestinationDefinitionRead(
       destinationDefinitionId: UUID,
       includeTombstone: Boolean,
@@ -123,7 +122,6 @@ open class DestinationDefinitionsHandler
       }
     }
 
-    @Throws(IOException::class)
     fun listDestinationDefinitions(): DestinationDefinitionReadList {
       val standardDestinationDefinitions = destinationService.listStandardDestinationDefinitions(false)
       val destinationDefinitionVersionMap = getVersionsForDestinationDefinitions(standardDestinationDefinitions)
@@ -146,7 +144,6 @@ open class DestinationDefinitionsHandler
       return DestinationDefinitionReadList().destinationDefinitions(reads)
     }
 
-    @Throws(IOException::class)
     private fun getVersionsForDestinationDefinitions(
       destinationDefinitions: List<StandardDestinationDefinition>,
     ): Map<UUID, ActorDefinitionVersion?> =
@@ -201,7 +198,6 @@ open class DestinationDefinitionsHandler
       return toDestinationDefinitionReadList(validDestinationDefs, destinationDefVersions)
     }
 
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun listDestinationDefinitionsForWorkspace(
       workspaceIdActorDefinitionRequestBody: WorkspaceIdActorDefinitionRequestBody,
     ): DestinationDefinitionReadList =
@@ -211,7 +207,6 @@ open class DestinationDefinitionsHandler
         listAllowedDestinationDefinitions(workspaceIdActorDefinitionRequestBody.workspaceId)
       }
 
-    @Throws(IOException::class)
     fun listDestinationDefinitionsUsedByWorkspace(workspaceId: UUID): DestinationDefinitionReadList {
       val destinationDefs = destinationService.listDestinationDefinitionsForWorkspace(workspaceId, false)
 
@@ -221,7 +216,6 @@ open class DestinationDefinitionsHandler
       return toDestinationDefinitionReadList(destinationDefs, destinationDefVersionMap)
     }
 
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun listAllowedDestinationDefinitions(workspaceId: UUID): DestinationDefinitionReadList {
       val publicDestinationDefs = destinationService.listPublicDestinationDefinitions(false)
 
@@ -266,7 +260,6 @@ open class DestinationDefinitionsHandler
       return toDestinationDefinitionReadList(shownDestinationDefs, sourceDefVersionMap)
     }
 
-    @Throws(IOException::class)
     fun listPrivateDestinationDefinitions(workspaceIdRequestBody: WorkspaceIdRequestBody): PrivateDestinationDefinitionReadList {
       val standardDestinationDefinitionBooleanMap =
         destinationService.listGrantableDestinationDefinitions(workspaceIdRequestBody.workspaceId, false)
@@ -277,7 +270,6 @@ open class DestinationDefinitionsHandler
       return toPrivateDestinationDefinitionReadList(standardDestinationDefinitionBooleanMap, destinationDefinitionVersionMap)
     }
 
-    @Throws(IOException::class)
     fun listPublicDestinationDefinitions(): DestinationDefinitionReadList {
       val standardDestinationDefinitions = destinationService.listPublicDestinationDefinitions(false)
       val destinationDefinitionVersionMap = getVersionsForDestinationDefinitions(standardDestinationDefinitions)
@@ -299,13 +291,11 @@ open class DestinationDefinitionsHandler
       return PrivateDestinationDefinitionReadList().destinationDefinitions(reads)
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun getDestinationDefinition(
       destinationDefinitionId: UUID,
       includeTombstone: Boolean,
     ): DestinationDefinitionRead = buildDestinationDefinitionRead(destinationDefinitionId, includeTombstone)
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun getDestinationDefinitionForWorkspace(
       destinationDefinitionIdWithWorkspaceId: DestinationDefinitionIdWithWorkspaceId,
     ): DestinationDefinitionRead {
@@ -317,7 +307,6 @@ open class DestinationDefinitionsHandler
       return getDestinationDefinition(definitionId, true)
     }
 
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun getDestinationDefinitionForScope(actorDefinitionIdWithScope: ActorDefinitionIdWithScope): DestinationDefinitionRead {
       val definitionId = actorDefinitionIdWithScope.actorDefinitionId
       val scopeId = actorDefinitionIdWithScope.scopeId
@@ -329,7 +318,6 @@ open class DestinationDefinitionsHandler
       return getDestinationDefinition(definitionId, true)
     }
 
-    @Throws(IOException::class)
     fun createCustomDestinationDefinition(customDestinationDefinitionCreate: CustomDestinationDefinitionCreate): DestinationDefinitionRead {
       val id = uuidSupplier.get()
       val destinationDefCreate = customDestinationDefinitionCreate.destinationDefinition
@@ -412,7 +400,6 @@ open class DestinationDefinitionsHandler
       )
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun updateDestinationDefinition(destinationDefinitionUpdate: DestinationDefinitionUpdate): DestinationDefinitionRead {
       actorDefinitionHandlerHelper.validateVersionSupport(
         actorDefinitionId = destinationDefinitionUpdate.destinationDefinitionId,
@@ -491,12 +478,6 @@ open class DestinationDefinitionsHandler
       return newDestination
     }
 
-    @Throws(
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      IOException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun deleteDestinationDefinition(destinationDefinitionId: UUID) {
       // "delete" all destinations associated with the destination definition as well. This will cascade
       // to connections that depend on any deleted
@@ -515,7 +496,6 @@ open class DestinationDefinitionsHandler
       destinationService.updateStandardDestinationDefinition(persistedDestinationDefinition)
     }
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun grantDestinationDefinitionToWorkspaceOrOrganization(
       actorDefinitionIdWithScope: ActorDefinitionIdWithScope,
     ): PrivateDestinationDefinitionRead {
@@ -533,7 +513,6 @@ open class DestinationDefinitionsHandler
         .granted(true)
     }
 
-    @Throws(IOException::class)
     fun revokeDestinationDefinition(actorDefinitionIdWithScope: ActorDefinitionIdWithScope) {
       actorDefinitionService.deleteActorDefinitionWorkspaceGrant(
         actorDefinitionIdWithScope.actorDefinitionId,

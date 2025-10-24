@@ -38,7 +38,6 @@ internal class StreamResetRecordsHelperTest {
   private lateinit var streamResetRecordsHelper: StreamResetRecordsHelper
 
   @Test
-  @Throws(IOException::class)
   fun testDeleteStreamResetRecordsForJob() {
     val streamsToDelete = listOf(StreamDescriptor().withName("streamname").withNamespace("namespace"))
     val jobMock =
@@ -63,7 +62,6 @@ internal class StreamResetRecordsHelperTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testIncorrectConfigType() {
     val jobMock =
       Job(JOB_ID, ConfigType.SYNC, CONNECTION_ID.toString(), JobConfig(), mutableListOf<Attempt>(), JobStatus.PENDING, 0L, 0L, 0L, true)
@@ -77,7 +75,6 @@ internal class StreamResetRecordsHelperTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testNoJobId() {
     streamResetRecordsHelper.deleteStreamResetRecordsForJob(null, CONNECTION_ID)
     Mockito.verify(jobPersistence, Mockito.never()).getJob(Mockito.anyLong())

@@ -50,7 +50,6 @@ internal class BreakingChangesHelperTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetBreakingActiveSyncsPerWorkspaceWithSource() {
     val unsupportedVersionId1 = UUID.randomUUID()
     val unsupportedVersionId2 = UUID.randomUUID()
@@ -163,7 +162,6 @@ internal class BreakingChangesHelperTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetBreakingActiveSyncsPerWorkspaceWithDestination() {
     val unsupportedVersionId1 = UUID.randomUUID()
     val unsupportedVersionId2 = UUID.randomUUID()
@@ -294,7 +292,6 @@ internal class BreakingChangesHelperTest {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class)
   fun testGetLastApplicableBreakingChange() {
     val defaultVersion =
       ActorDefinitionVersion()

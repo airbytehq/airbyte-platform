@@ -31,7 +31,6 @@ open class ConnectorDocumentationHandler(
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
 ) {
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, ConfigNotFoundException::class)
   fun getConnectorDocumentation(request: ConnectorDocumentationRequestBody): ConnectorDocumentationRead {
     val actorDefinitionVersion =
       if (request.actorType == ActorType.SOURCE) {
@@ -56,7 +55,6 @@ open class ConnectorDocumentationHandler(
     throw NotFoundException(String.format("Could not find any documentation for connector %s", dockerRepo))
   }
 
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   private fun getSourceActorDefinitionVersion(
     sourceDefinitionId: UUID,
     workspaceId: UUID,
@@ -66,7 +64,6 @@ open class ConnectorDocumentationHandler(
     return actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, workspaceId, sourceId)
   }
 
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, ConfigNotFoundException::class)
   private fun getDestinationActorDefinitionVersion(
     destDefinitionId: UUID,
     workspaceId: UUID,

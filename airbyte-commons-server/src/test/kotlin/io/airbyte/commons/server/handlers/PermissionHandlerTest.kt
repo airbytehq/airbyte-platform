@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
@@ -67,7 +68,6 @@ internal class PermissionHandlerTest {
         .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
 
     @Test
-    @Throws(Exception::class)
     fun testCreatePermission() {
       val existingPermissions = mutableListOf<Permission>()
       whenever(permissionService.getPermissionsForUser(anyOrNull()))
@@ -128,7 +128,6 @@ internal class PermissionHandlerTest {
         .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
 
     @BeforeEach
-    @Throws(IOException::class)
     fun setup() {
       whenever(permissionService.getPermission(permissionWorkspaceReader.getPermissionId()))
         .thenReturn(
@@ -150,7 +149,6 @@ internal class PermissionHandlerTest {
     }
 
     @Test
-    @Throws(Exception::class)
     fun updatesPermission() {
       val update =
         PermissionUpdate()
@@ -181,21 +179,19 @@ internal class PermissionHandlerTest {
     }
 
     @Test
-    @Throws(Exception::class)
     fun throwsConflictExceptionIfServiceBlocksUpdate() {
       val update =
         PermissionUpdate()
           .permissionId(permissionOrganizationAdmin.getPermissionId())
           .permissionType(PermissionType.ORGANIZATION_EDITOR) // changing to organization_editor
 
-      doThrow(RemoveLastOrgAdminPermissionException::class)
+      doAnswer { throw RemoveLastOrgAdminPermissionException("test") }
         .whenever(permissionService)
         .updatePermission(anyOrNull())
       Assertions.assertThrows(ConflictException::class.java) { permissionHandler.updatePermission(update) }
     }
 
     @Test
-    @Throws(Exception::class)
     fun workspacePermissionUpdatesDoNotModifyIdFields() {
       val workspacePermissionUpdate =
         PermissionUpdate()
@@ -214,7 +210,6 @@ internal class PermissionHandlerTest {
     }
 
     @Test
-    @Throws(Exception::class)
     fun organizationPermissionUpdatesDoNotModifyIdFields() {
       val orgPermissionUpdate =
         PermissionUpdate()
@@ -259,7 +254,6 @@ internal class PermissionHandlerTest {
         .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
 
     @Test
-    @Throws(Exception::class)
     fun deletesPermission() {
       permissionHandler.deletePermission(PermissionIdRequestBody().permissionId(permissionWorkspaceReader.getPermissionId()))
 
@@ -267,9 +261,8 @@ internal class PermissionHandlerTest {
     }
 
     @Test
-    @Throws(Exception::class)
     fun throwsConflictIfPersistenceBlocks() {
-      doThrow(RemoveLastOrgAdminPermissionException::class)
+      doAnswer { throw RemoveLastOrgAdminPermissionException("test") }
         .whenever(permissionService)
         .deletePermission(anyOrNull())
 
@@ -288,7 +281,6 @@ internal class PermissionHandlerTest {
     private val userId: UUID = UUID.randomUUID()
 
     @Test
-    @Throws(IOException::class)
     fun mismatchedUserId() {
       whenever(permissionService.getPermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
@@ -310,7 +302,6 @@ internal class PermissionHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun mismatchedWorkspaceId() {
       whenever(permissionService.getPermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
@@ -333,7 +324,6 @@ internal class PermissionHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun mismatchedOrganizationId() {
       whenever(permissionService.getPermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
@@ -356,7 +346,6 @@ internal class PermissionHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun permissionsCheckMultipleWorkspaces() {
       val otherWorkspaceId = UUID.randomUUID()
       whenever(permissionService.getPermissionsForUser(userId)).thenReturn(
@@ -396,7 +385,6 @@ internal class PermissionHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun permissionsCheckMultipleWorkspacesOrgPermission() {
       val otherWorkspaceId = UUID.randomUUID()
       whenever(permissionService.getPermissionsForUser(userId)).thenReturn(
@@ -440,7 +428,6 @@ internal class PermissionHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun workspaceNotInOrganization() {
       whenever(permissionService.getPermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
@@ -468,9 +455,6 @@ internal class PermissionHandlerTest {
 
     @ParameterizedTest
     @EnumSource(value = Permission.PermissionType::class, names = ["WORKSPACE_OWNER", "WORKSPACE_ADMIN", "WORKSPACE_EDITOR", "WORKSPACE_READER"])
-    @Throws(
-      IOException::class,
-    )
     fun workspaceLevelPermissions(userPermissionType: Permission.PermissionType?) {
       whenever(permissionService.getPermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
@@ -629,11 +613,6 @@ internal class PermissionHandlerTest {
     @EnumSource(
       value = Permission.PermissionType::class,
       names = ["ORGANIZATION_ADMIN", "ORGANIZATION_EDITOR", "ORGANIZATION_READER", "ORGANIZATION_MEMBER"],
-    )
-    @Throws(
-      IOException::class,
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
     )
     fun organizationLevelPermissions(userPermissionType: Permission.PermissionType?) {
       whenever(permissionService.getPermissionsForUser(userId)).thenReturn(
@@ -804,7 +783,6 @@ internal class PermissionHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun instanceAdminPermissions() {
       whenever(permissionService.getPermissionsForUser(userId)).thenReturn(
         listOf<Permission>(
@@ -887,7 +865,6 @@ internal class PermissionHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun ensureNoExceptionOnOrgPermissionCheckForWorkspaceOutsideTheOrg() {
       // Ensure that when we check permissions for a workspace that's not in an organization against an
       // org permission, we don't throw an exception.
@@ -920,7 +897,6 @@ internal class PermissionHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun ensureFailedPermissionCheckForWorkspaceOutsideTheOrg() {
       // Ensure that when we check permissions for a workspace that's not in an organization against an
       // org permission, we fail the check if the workspace has no org ID set
@@ -987,7 +963,6 @@ internal class PermissionHandlerTest {
     private val userId: UUID = UUID.randomUUID()
 
     @Test
-    @Throws(Exception::class)
     fun testDeleteUserFromWorkspace() {
       // should be deleted
       val workspacePermission =

@@ -12,7 +12,6 @@ import java.nio.charset.Charset
 
 internal class OpenApiConfigHandlerTest {
   @Test
-  @Throws(IOException::class)
   fun testGetFile() {
     val lines: MutableList<String> = Files.readLines(OpenApiConfigHandler().file, Charset.defaultCharset())
     Assertions.assertTrue(lines.get(0).contains("openapi"))

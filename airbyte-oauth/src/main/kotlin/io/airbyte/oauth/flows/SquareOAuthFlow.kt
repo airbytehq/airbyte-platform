@@ -30,7 +30,6 @@ class SquareOAuthFlow : BaseOAuth2Flow {
     stateSupplier: Supplier<String>,
   ) : super(httpClient, stateSupplier)
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,

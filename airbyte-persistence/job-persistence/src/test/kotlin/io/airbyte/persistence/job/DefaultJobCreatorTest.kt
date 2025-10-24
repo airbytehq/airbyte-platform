@@ -141,7 +141,6 @@ internal class DefaultJobCreatorTest {
 
   @ParameterizedTest
   @EnumSource(RefreshStream.RefreshType::class)
-  @Throws(IOException::class)
   fun testCreateRefreshJob(refreshType: RefreshStream.RefreshType?) {
     val streamToRefresh = "name"
     val streamNamespace = "namespace"
@@ -255,7 +254,6 @@ internal class DefaultJobCreatorTest {
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  @Throws(IOException::class)
   fun testCreateSyncJob(isScheduled: Boolean) {
     val expectedSourceType: Optional<String> = Optional.of("database")
 
@@ -348,7 +346,6 @@ internal class DefaultJobCreatorTest {
         .withSource(sourceResourceRequirements)
 
   @Test
-  @Throws(IOException::class)
   fun testCreateSyncJobEnsureNoQueuing() {
     val jobSyncConfig =
       JobSyncConfig()
@@ -399,7 +396,6 @@ internal class DefaultJobCreatorTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testCreateSyncJobDefaultWorkerResourceReqs() {
     jobCreator.createSyncJob(
       SOURCE_CONNECTION,
@@ -459,7 +455,6 @@ internal class DefaultJobCreatorTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testCreateSyncJobConnectionResourceReqs() {
     val standardSyncResourceRequirements =
       ResourceRequirements()
@@ -527,7 +522,6 @@ internal class DefaultJobCreatorTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testCreateSyncJobSourceAndDestinationResourceReqs() {
     val sourceResourceRequirements =
       ResourceRequirements()
@@ -611,7 +605,6 @@ internal class DefaultJobCreatorTest {
 
   @ParameterizedTest
   @MethodSource("resourceOverrideMatrix")
-  @Throws(IOException::class)
   fun testDestinationResourceReqsOverrides(
     cpuReqOverride: String?,
     cpuLimitOverride: String?,
@@ -702,7 +695,6 @@ internal class DefaultJobCreatorTest {
 
   @ParameterizedTest
   @MethodSource("resourceOverrideMatrix")
-  @Throws(IOException::class)
   fun testOrchestratorResourceReqsOverrides(
     cpuReqOverride: String?,
     cpuLimitOverride: String?,
@@ -801,7 +793,6 @@ internal class DefaultJobCreatorTest {
 
   @ParameterizedTest
   @MethodSource("resourceOverrideMatrix")
-  @Throws(IOException::class)
   fun testSourceResourceReqsOverrides(
     cpuReqOverride: String?,
     cpuLimitOverride: String?,
@@ -892,7 +883,6 @@ internal class DefaultJobCreatorTest {
 
   @ParameterizedTest
   @MethodSource("weirdnessOverrideMatrix")
-  @Throws(IOException::class)
   fun ignoresOverridesIfJsonStringWeird(weirdness: String?) {
     val originalReqs =
       ResourceRequirements()
@@ -956,7 +946,6 @@ internal class DefaultJobCreatorTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testCreateResetConnectionJob() {
     whenever(
       resourceRequirementsProvider.getResourceRequirements(
@@ -1048,7 +1037,6 @@ internal class DefaultJobCreatorTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testCreateResetConnectionJobEnsureNoQueuing() {
     val streamsToReset = listOf(STREAM1_DESCRIPTOR, STREAM2_DESCRIPTOR)
     val expectedCatalog =

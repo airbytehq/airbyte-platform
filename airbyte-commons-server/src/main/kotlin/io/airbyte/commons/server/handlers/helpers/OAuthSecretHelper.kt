@@ -24,7 +24,6 @@ object OAuthSecretHelper {
    * necessary for source creation and where to put them.
    */
   @JvmStatic
-  @Throws(JsonValidationException::class)
   fun setSecretsInConnectionConfiguration(
     spec: ConnectorSpecification,
     hydratedSecret: JsonNode,
@@ -50,7 +49,6 @@ object OAuthSecretHelper {
    * path_in_connector_config i.e. { client_id: ['credentials', 'client_id']}
    */
   @VisibleForTesting
-  @Throws(JsonValidationException::class)
   fun getAdvancedAuthOAuthPaths(
     connectorSpecification: ConnectorSpecification,
     includeOutputPaths: Boolean,
@@ -82,7 +80,6 @@ object OAuthSecretHelper {
    * @return Map where the key = the property and the value = the path to the property in list form.
    */
   @JvmStatic
-  @Throws(JsonValidationException::class)
   fun getOAuthConfigPaths(spec: ConnectorSpecification): Map<String, List<String>> {
     if (hasOAuthConfigSpecification(spec)) {
       return getAdvancedAuthOAuthPaths(spec, true)
@@ -99,7 +96,6 @@ object OAuthSecretHelper {
    * @return Map where the key = the property and the value = the path to the property in list form.
    */
   @JvmStatic
-  @Throws(JsonValidationException::class)
   fun getOAuthInputPaths(spec: ConnectorSpecification): Map<String, List<String>> {
     if (hasOAuthConfigSpecification(spec)) {
       return getAdvancedAuthOAuthPaths(spec, false)
@@ -116,7 +112,6 @@ object OAuthSecretHelper {
    * @return Map of property: path in connector config.
    * @throws JsonValidationException if we don't have an oauth config specification to parse.
    */
-  @Throws(JsonValidationException::class)
   fun getCompleteOauthServerOutputPaths(connectorSpecification: ConnectorSpecification): Map<String, List<String>> {
     if (hasOAuthConfigSpecification(connectorSpecification)) {
       val completeOAuthServerOutputSpecification =
@@ -150,7 +145,6 @@ object OAuthSecretHelper {
    */
   @JvmStatic
   @VisibleForTesting
-  @Throws(JsonValidationException::class)
   fun validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(
     connectorSpecification: ConnectorSpecification,
     oauthParamConfiguration: JsonNode?,
@@ -198,7 +192,6 @@ object OAuthSecretHelper {
    * airbyte_secret field which might be injected by the server in the spec.
    */
   @JvmStatic
-  @Throws(JsonValidationException::class)
   fun validateNoSecretsInConfiguration(
     spec: ConnectorSpecification,
     connectionConfiguration: JsonNode?,

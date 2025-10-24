@@ -77,12 +77,6 @@ open class AttemptHandler(
   private val streamAttemptMetadataService: StreamAttemptMetadataService,
   private val apiPojoConverters: ApiPojoConverters,
 ) {
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun createNewAttemptNumber(jobId: Long): CreateNewAttemptNumberResponse {
     val job: Job
     try {
@@ -122,7 +116,6 @@ open class AttemptHandler(
   }
 
   @VisibleForTesting
-  @Throws(IOException::class)
   fun updateGenerationAndStateForSubsequentAttempts(
     job: Job,
     supportRefreshes: Boolean,
@@ -145,7 +138,6 @@ open class AttemptHandler(
   }
 
   @VisibleForTesting
-  @Throws(IOException::class)
   fun updateGenerationAndStateForFirstAttempt(
     job: Job,
     connectionId: UUID,
@@ -224,7 +216,6 @@ open class AttemptHandler(
       .collect(Collectors.toSet())
   }
 
-  @Throws(IOException::class)
   fun getAttemptForJob(
     jobId: Long,
     attemptNo: Int,
@@ -241,7 +232,6 @@ open class AttemptHandler(
     return read.get()
   }
 
-  @Throws(IOException::class)
   fun getAttemptCombinedStats(
     jobId: Long,
     attemptNo: Int,
@@ -343,7 +333,6 @@ open class AttemptHandler(
     return InternalOperationResult().succeeded(true)
   }
 
-  @Throws(IOException::class)
   fun failAttempt(
     attemptNumber: Int,
     jobId: Long,

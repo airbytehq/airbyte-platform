@@ -48,7 +48,7 @@ internal class LineGobblerTest {
   @Test
   fun shutdownOnError() {
     val consumer: Consumer<String> = Mockito.mock()
-    Mockito.doThrow(RuntimeException::class.java).`when`(consumer).accept(ArgumentMatchers.anyString())
+    Mockito.doAnswer { throw RuntimeException() }.`when`(consumer).accept(ArgumentMatchers.anyString())
     val `is`: InputStream = ByteArrayInputStream("test\ntest2\n".toByteArray(StandardCharsets.UTF_8))
     val executor: ExecutorService = Mockito.spy(MoreExecutors.newDirectExecutorService())
 

@@ -63,7 +63,6 @@ interface SecretsTestCase {
       }
     }
 
-  @Throws(IOException::class)
   fun getNodeResource(
     testCase: String,
     fileName: String,

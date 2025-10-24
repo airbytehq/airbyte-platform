@@ -93,7 +93,6 @@ internal class V0_50_16_002__RemoveInvalidSourceStripeCatalogTest : AbstractConf
   }
 
   @Test
-  @Throws(Exception::class)
   fun testRemoveInvalidSourceStripeCatalog() {
     val ctx = dslContext!!
 

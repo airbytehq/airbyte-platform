@@ -32,7 +32,6 @@ internal class ActorDefinitionServiceJooqImplTest : BaseConfigDatabaseTest() {
   private lateinit var actorDefinitionService: ActorDefinitionServiceJooqImpl
 
   @BeforeEach
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, SQLException::class)
   fun setUp() {
     this.actorDefinitionService = ActorDefinitionServiceJooqImpl(database)
 
@@ -75,7 +74,6 @@ internal class ActorDefinitionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun updateActorDefinitionDefaultVersionId() {
     val actorDefinitionId = jooqTestDbSetupHelper.sourceDefinition!!.sourceDefinitionId
     val sourceDefinition = sourceService.getStandardSourceDefinition(actorDefinitionId)
@@ -96,14 +94,12 @@ internal class ActorDefinitionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun shouldNotFailOnDuplicateWrite() {
     val version = jooqTestDbSetupHelper.sourceDefinitionVersion!!
     Assertions.assertDoesNotThrow { actorDefinitionService.writeActorDefinitionVersion(version) }
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun getActorDefinitionVersion() {
     val actorDefinitionVersion =
       actorDefinitionService.getActorDefinitionVersion(
@@ -115,7 +111,6 @@ internal class ActorDefinitionServiceJooqImplTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun listActorDefinitionVersionsForDefinition() {
     val actorDefinitionVersions =
       actorDefinitionService.listActorDefinitionVersionsForDefinition(

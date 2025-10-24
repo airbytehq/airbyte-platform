@@ -305,7 +305,6 @@ class DeclarativeOAuthSpecHandler {
    * @return the rendered string with the template variables replaced by their corresponding values
    * @throws IOException if an I/O error occurs during rendering
    */
-  @Throws(IOException::class)
   fun renderStringTemplate(
     templateValues: Map<String?, String?>?,
     templateString: String?,
@@ -373,7 +372,6 @@ class DeclarativeOAuthSpecHandler {
    * @return a map of interpolated access token headers.
    * @throws IOException if an I/O error occurs during interpolation
    */
-  @Throws(IOException::class)
   fun renderCompleteOAuthHeaders(
     templateValues: Map<String?, String?>?,
     userConfig: JsonNode?,
@@ -402,7 +400,6 @@ class DeclarativeOAuthSpecHandler {
    * @return A map containing the processed OAuth output.
    * @throws IOException If a required field is missing in the data.
    */
-  @Throws(IOException::class)
   fun processOAuthOutput(
     userConfig: JsonNode,
     data: JsonNode,

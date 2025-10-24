@@ -26,7 +26,6 @@ class MicrosoftAzureBlobStorageOAuthFlow : BaseOAuth2Flow {
 
   private val scopes: String get() = "offline_access%20https://storage.azure.com/.default"
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,

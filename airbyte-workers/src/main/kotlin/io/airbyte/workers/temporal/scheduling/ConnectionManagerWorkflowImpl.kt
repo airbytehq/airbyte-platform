@@ -146,7 +146,6 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
   private var connectionContext: ConnectionContext? = null
 
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
-  @Throws(RetryableException::class)
   override fun run(connectionUpdaterInput: ConnectionUpdaterInput) {
     try {
       if (connectionUpdaterInput.connectionId == null || isTombstone(connectionUpdaterInput.connectionId)) {

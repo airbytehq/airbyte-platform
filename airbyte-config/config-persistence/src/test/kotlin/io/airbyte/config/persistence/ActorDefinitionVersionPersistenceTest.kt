@@ -54,7 +54,6 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
   private lateinit var sourceService: SourceService
 
   @BeforeEach
-  @Throws(Exception::class)
   fun beforeEach() {
     truncateAllTables()
 
@@ -103,7 +102,6 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
   }
 
   @Test
-  @Throws(IOException::class)
   fun testWriteActorDefinitionVersion() {
     val defId = sourceDefinition.getSourceDefinitionId()
     val adv: ActorDefinitionVersion = baseActorDefinitionVersion(defId)
@@ -116,7 +114,6 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetActorDefinitionVersionByTag() {
     val defId = sourceDefinition.getSourceDefinitionId()
     val adv: ActorDefinitionVersion = baseActorDefinitionVersion(defId)
@@ -129,7 +126,6 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
   }
 
   @Test
-  @Throws(IOException::class)
   fun testUpdateActorDefinitionVersion() {
     val defId = sourceDefinition.getSourceDefinitionId()
     val initialADV: ActorDefinitionVersion = baseActorDefinitionVersion(defId)
@@ -163,7 +159,6 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
   }
 
   @Test
-  @Throws(IOException::class)
   fun testUpdateActorDefinitionVersionWithMismatchedIdFails() {
     val defId = sourceDefinition.getSourceDefinitionId()
     val initialADV: ActorDefinitionVersion = baseActorDefinitionVersion(defId)
@@ -191,14 +186,12 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetForNonExistentTagReturnsEmptyOptional() {
     val defId = sourceDefinition.getSourceDefinitionId()
     Assertions.assertTrue(actorDefinitionService.getActorDefinitionVersion(defId, UNPERSISTED_DOCKER_IMAGE_TAG).isEmpty())
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testGetActorDefinitionVersionById() {
     val defId = sourceDefinition.getSourceDefinitionId()
     val adv: ActorDefinitionVersion = baseActorDefinitionVersion(defId)
@@ -222,7 +215,6 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
   }
 
   @Test
-  @Throws(IOException::class)
   fun testWriteSourceDefinitionSupportLevelNone() {
     val defId = sourceDefinition.getSourceDefinitionId()
     val adv: ActorDefinitionVersion = baseActorDefinitionVersion(defId).withActorDefinitionId(defId).withSupportLevel(SupportLevel.NONE)
@@ -248,7 +240,6 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
   }
 
   @Test
-  @Throws(IOException::class)
   fun testAlwaysGetWithProtocolVersion() {
     val defId = sourceDefinition.getSourceDefinitionId()
 
@@ -288,7 +279,6 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testListActorDefinitionVersionsForDefinition() {
     val defId = sourceDefinition.getSourceDefinitionId()
     val otherSourceDef =
@@ -338,7 +328,6 @@ internal class ActorDefinitionVersionPersistenceTest : BaseConfigDatabaseTest() 
     "UNSUPPORTED, SUPPORTED",
     "UNSUPPORTED, DEPRECATED",
   )
-  @Throws(IOException::class)
   fun testSetActorDefinitionVersionSupportStates(
     initialSupportStateStr: String,
     targetSupportStateStr: String,

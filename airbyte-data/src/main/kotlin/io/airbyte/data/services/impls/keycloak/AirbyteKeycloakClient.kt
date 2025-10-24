@@ -366,7 +366,6 @@ class AirbyteKeycloakClient(
    * @throws MalformedTokenResponseException if the response is malformed
    * @throws KeycloakServiceException if there's an error communicating with Keycloak
    */
-  @Throws(InvalidTokenException::class, TokenExpiredException::class, MalformedTokenResponseException::class, KeycloakServiceException::class)
   fun validateToken(token: String) {
     val realm =
       extractRealmFromToken(token)
@@ -383,7 +382,6 @@ class AirbyteKeycloakClient(
    * @throws MalformedTokenResponseException if the response is malformed or missing required claims
    * @throws KeycloakServiceException if there's an error communicating with Keycloak
    */
-  @Throws(InvalidTokenException::class, TokenExpiredException::class, MalformedTokenResponseException::class, KeycloakServiceException::class)
   fun validateTokenWithRealm(
     token: String,
     realm: String,

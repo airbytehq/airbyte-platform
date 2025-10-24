@@ -19,7 +19,6 @@ import java.util.UUID
 @Disabled
 internal class V0_50_5_001__CreateOrganizationTableTest : AbstractConfigsDatabaseTest() {
   @Test
-  @Throws(SQLException::class, IOException::class)
   fun test() {
     val context = dslContext!!
     createOrganization(context)

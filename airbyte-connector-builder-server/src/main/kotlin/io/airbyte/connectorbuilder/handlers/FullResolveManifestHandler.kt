@@ -27,7 +27,6 @@ internal open class FullResolveManifestHandler
     /**
      * Use the requester to send the full_resolve_manifest request to the CDK.
      */
-    @Throws(AirbyteCdkInvalidInputException::class, ConnectorBuilderException::class)
     fun fullResolveManifest(fullResolveManifestRequestBody: FullResolveManifestRequestBody): ResolveManifest {
       try {
         TracingHelper.addWorkspaceAndProjectIdsToTrace(

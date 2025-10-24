@@ -160,7 +160,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
     )
 
   @BeforeEach
-  @Throws(JsonProcessingException::class)
   fun setUp() {
     declarativeManifestImageVersionService =
       Mockito.mock(DeclarativeManifestImageVersionService::class.java)
@@ -228,7 +227,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   @DisplayName("createConnectorBuilderProject should create a new project and return the id")
-  @Throws(IOException::class)
   fun testCreateConnectorBuilderProject() {
     val project = generateBuilderProject()
 
@@ -262,7 +260,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   @DisplayName("publishConnectorBuilderProject throws a helpful error if no associated CDK version is found")
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testCreateConnectorBuilderProjectNoCdkVersion() {
     val project = generateBuilderProject()
     Mockito
@@ -279,7 +276,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
         declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(
           anyOrNull(),
         ),
-      ).thenThrow(IllegalStateException("No declarative manifest image version found in database for major version 0"))
+      ).thenAnswer { throw IllegalStateException("No declarative manifest image version found in database for major version 0") }
 
     val publish =
       ConnectorBuilderPublishRequestBody()
@@ -300,7 +297,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   @DisplayName("updateConnectorBuilderProject should update an existing project")
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testUpdateConnectorBuilderProject() {
     val project = generateBuilderProject()
 
@@ -328,7 +324,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   @DisplayName("updateConnectorBuilderProject should validate whether the workspace does not match")
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testUpdateConnectorBuilderProjectValidateWorkspace() {
     val project = generateBuilderProject()
     val wrongWorkspace = UUID.randomUUID()
@@ -369,7 +364,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   @DisplayName("deleteConnectorBuilderProject should validate whether the workspace does not match")
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testDeleteConnectorBuilderProjectValidateWorkspace() {
     val project = generateBuilderProject()
     val wrongWorkspace = UUID.randomUUID()
@@ -395,7 +389,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   @DisplayName("publishBuilderProject should validate whether the workspace does not match")
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testPublishConnectorBuilderProjectValidateWorkspace() {
     val project = generateBuilderProject()
     Mockito
@@ -433,7 +426,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   @DisplayName("deleteConnectorBuilderProject should delete an existing project")
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testDeleteConnectorBuilderProject() {
     val project = generateBuilderProject()
 
@@ -454,7 +446,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   @DisplayName("listConnectorBuilderProject should list all projects without drafts")
-  @Throws(IOException::class)
   fun testListConnectorBuilderProject() {
     val project1 = generateBuilderProject()
     val project2 = generateBuilderProject()
@@ -489,7 +480,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   @DisplayName("listConnectorBuilderProject should list both forked and non-forked projects")
-  @Throws(IOException::class)
   fun testListForkedAndNonForkedProjects() {
     val unforkedProject = generateBuilderProject()
     val forkedProject = generateBuilderProject().withActorDefinitionId(UUID.randomUUID())
@@ -535,11 +525,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   @DisplayName("getConnectorBuilderProject should return a builder project with draft and retain object structures without primitive leafs")
-  @Throws(
-    IOException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-  )
   fun testGetConnectorBuilderProject() {
     val project = generateBuilderProject()
     project.setActorDefinitionId(UUID.randomUUID())
@@ -575,11 +560,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   @DisplayName("getConnectorBuilderProject should return a builder project with draft and null testing values if it doesn't have any")
-  @Throws(
-    IOException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-  )
   fun testGetConnectorBuilderProjectNullTestingValues() {
     val project = generateBuilderProject()
     project.setActorDefinitionId(UUID.randomUUID())
@@ -615,7 +595,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   @DisplayName("getConnectorBuilderProject should return a builder project even if there is no draft")
-  @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class)
   fun testGetConnectorBuilderProjectWithoutDraft() {
     val project = generateBuilderProject()
     project.setManifestDraft(null)
@@ -645,7 +624,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun testGetConnectorBuilderProjectWithBaseActorDefinitionVersion() {
     val project = generateBuilderProject()
     project.setBaseActorDefinitionVersionId(FORKED_ADV.getVersionId())
@@ -681,7 +659,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun testGetConnectorBuilderProjectWithContributionInfo() {
     val project = generateBuilderProject()
     project.setContributionPullRequestUrl(A_PULL_REQUEST_URL)
@@ -707,7 +684,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   @DisplayName("getConnectorBuilderProject should return a builder project even if there is no draft")
-  @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class)
   fun givenNoVersionButActiveManifestWhenGetConnectorBuilderProjectWithManifestThenReturnActiveVersion() {
     val project =
       generateBuilderProject()
@@ -753,7 +729,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun givenVersionWhenGetConnectorBuilderProjectWithManifestThenReturnSpecificVersion() {
     val manifest = addSpec(A_MANIFEST)
     Mockito
@@ -805,7 +780,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun whenPublishConnectorBuilderProjectThenReturnActorDefinition() {
     Mockito.`when`(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID)
     val project = generateBuilderProject().withBuilderProjectId(A_BUILDER_PROJECT_ID).withWorkspaceId(A_WORKSPACE_ID)
@@ -827,7 +801,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun whenPublishConnectorBuilderProjectThenCreateActorDefinition() {
     Mockito.`when`(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID)
     Mockito
@@ -911,7 +884,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun whenNoOrganizationFoundShouldUseWorkspaceScope() {
     Mockito.`when`(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID)
     Mockito
@@ -987,7 +959,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun whenPublishConnectorBuilderProjectThenUpdateConnectorBuilderProject() {
     Mockito.`when`(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID)
     val project = generateBuilderProject().withWorkspaceId(A_WORKSPACE_ID)
@@ -1029,7 +1000,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun whenPublishConnectorBuilderProjectThenDraftDeleted() {
     val project = generateBuilderProject().withBuilderProjectId(A_BUILDER_PROJECT_ID).withWorkspaceId(A_WORKSPACE_ID)
     Mockito
@@ -1058,7 +1028,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testUpdateTestingValuesOnProjectWithNoExistingValues() {
     val project = generateBuilderProject()
     val spec =
@@ -1104,7 +1073,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testUpdateTestingValuesOnProjectWithExistingValues() {
     val project = generateBuilderProject().withTestingValues(testingValuesWithSecretCoordinates)
     val newTestingValues =
@@ -1165,7 +1133,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testReadStreamWithNoExistingTestingValues() {
     val project = generateBuilderProject()
 
@@ -1173,7 +1140,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testReadStreamWithExistingTestingValues() {
     val project = generateBuilderProject().withTestingValues(testingValuesWithSecretCoordinates)
     Mockito
@@ -1183,7 +1149,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
     testStreamReadForProject(project, testingValues)
   }
 
-  @Throws(Exception::class)
   private fun testStreamReadForProject(
     project: ConnectorBuilderProject,
     testingValues: JsonNode,
@@ -1270,7 +1235,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testReadStreamUpdatesPersistedTestingValues() {
     val spec = deserialize(specString)
     val project = generateBuilderProject().withTestingValues(testingValuesWithSecretCoordinates)
@@ -1386,7 +1350,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testGetConnectorBuilderProjectIdBySourceDefinitionId() {
     val actorDefinitionId = UUID.randomUUID()
     val projectId = UUID.randomUUID()
@@ -1408,7 +1371,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testGetConnectorBuilderProjectIdBySourceDefinitionIdWhenNotFound() {
     val actorDefinitionId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
@@ -1426,7 +1388,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testGetConnectorBuilderProjectIdBySourceDefinitionIdWhenProjectNotFound() {
     val actorDefinitionId = UUID.randomUUID()
     val projectId = UUID.randomUUID()
@@ -1461,7 +1422,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testCreateForkedConnectorBuilderProjectActorDefinitionIdNotFound() {
     val workspaceId = UUID.randomUUID()
     val baseActorDefinitionId = UUID.randomUUID()
@@ -1469,7 +1429,7 @@ internal class ConnectorBuilderProjectsHandlerTest {
       ConnectorBuilderProjectForkRequestBody().workspaceId(workspaceId).baseActorDefinitionId(baseActorDefinitionId)
     Mockito
       .`when`(sourceService.getStandardSourceDefinition(baseActorDefinitionId))
-      .thenThrow(ConfigNotFoundException(ConfigNotFoundType.STANDARD_SOURCE_DEFINITION, baseActorDefinitionId))
+      .thenAnswer { throw ConfigNotFoundException(ConfigNotFoundType.STANDARD_SOURCE_DEFINITION, baseActorDefinitionId) }
 
     Assertions.assertThrows(
       ConfigNotFoundException::class.java,
@@ -1477,7 +1437,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testCreateForkedConnectorBuilderProjectManifestNotFound() {
     val workspaceId = UUID.randomUUID()
     val baseActorDefinitionId = UUID.randomUUID()
@@ -1506,7 +1465,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testCreateForkedConnectorBuilderProject() {
     val workspaceId = UUID.randomUUID()
     val baseActorDefinitionId = UUID.randomUUID()
@@ -1556,7 +1514,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testCreateForkedConnectorBuilderProjectWithComponents() {
     val workspaceId = UUID.randomUUID()
     val baseActorDefinitionId = UUID.randomUUID()
@@ -1609,7 +1566,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testGetConnectorBuilderProjectOAuthConsent() {
     val projectId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
@@ -1674,7 +1630,6 @@ internal class ConnectorBuilderProjectsHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testCompleteConnectorBuilderProjectOAuth() {
     val projectId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()

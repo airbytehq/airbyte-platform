@@ -27,7 +27,6 @@ class ConfigsDatabaseTestProvider(
   private val dslContext: DSLContext,
   private val flyway: Flyway,
 ) : TestDatabaseProvider {
-  @Throws(IOException::class, DatabaseInitializationException::class)
   override fun create(runMigration: Boolean): Database {
     val initalSchema = Resources.read(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH)
     createConfigsDatabaseInitializer(

@@ -13,7 +13,6 @@ import java.nio.file.Files
 
 internal class IOsTest {
   @Test
-  @Throws(IOException::class)
   fun testReadWrite() {
     val path = Files.createTempDirectory("tmp")
     writeFile(path.resolve(FILE), ABC)

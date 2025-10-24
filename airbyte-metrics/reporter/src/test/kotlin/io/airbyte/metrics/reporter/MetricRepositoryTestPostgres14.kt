@@ -21,7 +21,6 @@ import java.util.UUID
 
 object MetricRepositoryTestPostgres14 : MetricRepositoryTest() {
   @BeforeAll
-  @Throws(DatabaseInitializationException::class, IOException::class)
   @JvmStatic
   fun setUpAll() {
     val psqlContainer =

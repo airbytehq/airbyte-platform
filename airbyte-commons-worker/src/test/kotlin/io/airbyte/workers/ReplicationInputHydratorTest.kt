@@ -94,7 +94,6 @@ internal class ReplicationInputHydratorTest {
   private var metricClient: MetricClient? = null
 
   @BeforeEach
-  @Throws(IOException::class)
   fun setup() {
     mapperSecretHydrationHelper = Mockito.mock<MapperSecretHydrationHelper>(MapperSecretHydrationHelper::class.java)
     connectorSecretsHydrator = Mockito.mock<ConnectorSecretsHydrator>(ConnectorSecretsHydrator::class.java)
@@ -181,7 +180,6 @@ internal class ReplicationInputHydratorTest {
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  @Throws(Exception::class)
   fun testGenerateReplicationInputRetrievesInputs(withRefresh: Boolean) {
     if (withRefresh) {
       mockRefresh()
@@ -213,7 +211,6 @@ internal class ReplicationInputHydratorTest {
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  @Throws(Exception::class)
   fun testGenerateReplicationInputHandlesResets(withRefresh: Boolean) {
     if (withRefresh) {
       mockRefresh()
@@ -255,7 +252,6 @@ internal class ReplicationInputHydratorTest {
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  @Throws(Exception::class)
   fun testGenerateReplicationInputHandlesBackfills(withRefresh: Boolean) {
     if (withRefresh) {
       mockRefresh()
@@ -283,7 +279,6 @@ internal class ReplicationInputHydratorTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testTrackBackfillAndResume() {
     val replicationInputHydrator = this.replicationInputHydrator
     val stream1 =
@@ -336,7 +331,6 @@ internal class ReplicationInputHydratorTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testTrackBackfillAndResumeWithoutBackfill() {
     val replicationInputHydrator = this.replicationInputHydrator
     val stream1 =
@@ -383,7 +377,6 @@ internal class ReplicationInputHydratorTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testTrackBackfillAndResumeWithoutResume() {
     val replicationInputHydrator = this.replicationInputHydrator
     val stream1 =
@@ -430,7 +423,6 @@ internal class ReplicationInputHydratorTest {
       .containsExactlyInAnyOrderElementsOf(expectedRequest.streamMetadata)
   }
 
-  @Throws(IOException::class)
   private fun mockEnableBackfillForConnection(withRefresh: Boolean) {
     if (withRefresh) {
       Mockito
@@ -501,7 +493,6 @@ internal class ReplicationInputHydratorTest {
     }
   }
 
-  @Throws(IOException::class)
   private fun mockRefresh() {
     Mockito
       .`when`<ConnectionRead?>(connectionApi.getConnectionForJob(ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
@@ -536,7 +527,6 @@ internal class ReplicationInputHydratorTest {
       )
   }
 
-  @Throws(IOException::class)
   private fun mockNonRefresh() {
     Mockito
       .`when`<ConnectionRead?>(connectionApi.getConnection(ConnectionIdRequestBody(CONNECTION_ID)))

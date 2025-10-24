@@ -43,7 +43,6 @@ class LeverOAuthFlow(
    */
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String = String.format(ACCESS_TOKEN_URL, getBaseAuthUrl(inputOAuthConfiguration))
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,

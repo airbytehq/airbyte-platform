@@ -25,7 +25,6 @@ interface AirbyteDestination : AutoCloseable {
    * @param jobRoot - directory where the job can write data.
    * @throws Exception - throws if there is any failure in startup.
    */
-  @Throws(Exception::class)
   fun start(
     destinationConfig: WorkerDestinationConfig,
     jobRoot: Path,
@@ -38,7 +37,6 @@ interface AirbyteDestination : AutoCloseable {
    * @param message message to send to destination.
    * @throws Exception - throws if there is any failure in writing to Destination.
    */
-  @Throws(Exception::class)
   fun accept(message: AirbyteMessage)
 
   /**
@@ -53,7 +51,6 @@ interface AirbyteDestination : AutoCloseable {
    *
    * @throws Exception - throws if there is any failure when flushing.
    */
-  @Throws(Exception::class)
   fun notifyEndOfInput()
 
   /**
@@ -87,7 +84,6 @@ interface AirbyteDestination : AutoCloseable {
    *
    * @throws Exception - throws if there is any failure in shutdown.
    */
-  @Throws(Exception::class)
   override fun close()
 
   /**
@@ -95,6 +91,5 @@ interface AirbyteDestination : AutoCloseable {
    *
    * @throws Exception - throws if there is any failure in shutdown.
    */
-  @Throws(Exception::class)
   fun cancel()
 }

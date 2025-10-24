@@ -62,7 +62,6 @@ class TemporalActivityStubInterceptor<T : Any>(
    * be initialized.
    */
   @RuntimeType
-  @Throws(Exception::class)
   fun execute(
     @This workflowImplInstance: T,
     @SuperCall call: Callable<Any?>,

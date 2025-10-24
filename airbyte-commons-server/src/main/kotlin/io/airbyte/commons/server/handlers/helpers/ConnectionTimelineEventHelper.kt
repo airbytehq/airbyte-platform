@@ -77,7 +77,6 @@ class ConnectionTimelineEventHelper
       return airbyteSupportEmailDomains.contains(emailDomain)
     }
 
-    @Throws(IOException::class)
     private fun isAirbyteUser(user: User): Boolean {
       // User is an Airbyte user if:
       // 1. the user is an instance admin

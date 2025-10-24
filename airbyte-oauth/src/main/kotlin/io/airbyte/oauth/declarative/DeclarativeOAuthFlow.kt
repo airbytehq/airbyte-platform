@@ -42,7 +42,6 @@ class DeclarativeOAuthFlow : BaseOAuth2Flow {
    * specification
    * @throws ResourceNotFoundProblem if the OAuth parameter configuration is null
    */
-  @Throws(IOException::class, JsonValidationException::class)
   protected fun validateInputOAuthConfiguration(
     oauthConfigSpecification: OAuthConfigSpecification?,
     inputOAuthConfiguration: JsonNode?,
@@ -79,7 +78,6 @@ class DeclarativeOAuthFlow : BaseOAuth2Flow {
    * @throws IOException if an I/O error occurs.
    * @throws JsonValidationException if the JSON validation fails.
    */
-  @Throws(IOException::class, JsonValidationException::class)
   override fun getSourceConsentUrl(
     workspaceId: UUID,
     sourceDefinitionId: UUID?,
@@ -111,7 +109,6 @@ class DeclarativeOAuthFlow : BaseOAuth2Flow {
    * @throws IOException if an I/O error occurs
    * @throws JsonValidationException if the JSON validation fails
    */
-  @Throws(IOException::class, JsonValidationException::class)
   override fun getDestinationConsentUrl(
     workspaceId: UUID,
     destinationDefinitionId: UUID?,
@@ -142,7 +139,6 @@ class DeclarativeOAuthFlow : BaseOAuth2Flow {
    * @return The formatted consent URL as a string.
    * @throws IOException If there is an error in formatting the consent URL or if the URL is invalid.
    */
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -265,7 +261,6 @@ class DeclarativeOAuthFlow : BaseOAuth2Flow {
    * @return A map containing the complete OAuth flow request headers.
    * @throws IOException If an I/O error occurs during the process.
    */
-  @Throws(IOException::class)
   override fun getCompleteOAuthFlowRequestHeaders(
     clientId: String?,
     clientSecret: String?,
@@ -309,7 +304,6 @@ class DeclarativeOAuthFlow : BaseOAuth2Flow {
    * @param inputOAuthConfiguration Additional OAuth configuration parameters.
    * @return The formatted access token URL.
    */
-  @Throws(IOException::class)
   override fun formatAccessTokenUrl(
     accessTokenUrl: String,
     clientId: String?,
@@ -353,7 +347,6 @@ class DeclarativeOAuthFlow : BaseOAuth2Flow {
    * @throws IOException if an I/O error occurs
    * @throws JsonValidationException if the input OAuth configuration is invalid
    */
-  @Throws(IOException::class, JsonValidationException::class)
   override fun completeSourceOAuth(
     workspaceId: UUID,
     sourceDefinitionId: UUID?,
@@ -401,7 +394,6 @@ class DeclarativeOAuthFlow : BaseOAuth2Flow {
    * @throws IOException if an I/O error occurs during the OAuth flow
    * @throws JsonValidationException if the input OAuth configuration is invalid
    */
-  @Throws(IOException::class, JsonValidationException::class)
   override fun completeDestinationOAuth(
     workspaceId: UUID,
     destinationDefinitionId: UUID?,
@@ -444,7 +436,6 @@ class DeclarativeOAuthFlow : BaseOAuth2Flow {
    * @return A map containing the extracted OAuth output.
    * @throws IOException If an I/O error occurs during the extraction process.
    */
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,
@@ -459,7 +450,6 @@ class DeclarativeOAuthFlow : BaseOAuth2Flow {
    * @return the state parameter value if present in the query parameters
    * @throws IOException if the state key is not found in the query parameters
    */
-  @Throws(IOException::class)
   protected override fun extractStateParameter(
     queryParams: Map<String, Any>,
     inputOAuthConfiguration: JsonNode?,
@@ -482,7 +472,6 @@ class DeclarativeOAuthFlow : BaseOAuth2Flow {
    * @return the extracted authorization code as a String
    * @throws IOException if the authorization code key is not found in the query parameters
    */
-  @Throws(IOException::class)
   protected fun extractCodeParameter(
     queryParams: Map<String, Any>,
     inputOAuthConfiguration: JsonNode,

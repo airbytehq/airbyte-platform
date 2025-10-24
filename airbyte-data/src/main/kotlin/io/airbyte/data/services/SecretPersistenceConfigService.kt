@@ -13,13 +13,11 @@ import java.util.Optional
 import java.util.UUID
 
 interface SecretPersistenceConfigService {
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun get(
     scope: ScopeType,
     scopeId: UUID,
   ): SecretPersistenceConfig
 
-  @Throws(IOException::class)
   fun createOrUpdate(
     scope: ScopeType,
     scopeId: UUID,

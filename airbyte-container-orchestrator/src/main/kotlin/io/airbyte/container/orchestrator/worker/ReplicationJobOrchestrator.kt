@@ -76,7 +76,6 @@ class ReplicationJobOrchestrator(
   private val metricClient: MetricClient,
 ) {
   @Trace(operationName = ApmTraceConstants.JOB_ORCHESTRATOR_OPERATION_NAME)
-  @Throws(Exception::class)
   fun runJob(): Optional<String> {
     val sourceLauncherConfig = replicationInput.sourceLauncherConfig
     val destinationLauncherConfig = replicationInput.destinationLauncherConfig
@@ -156,7 +155,6 @@ class ReplicationJobOrchestrator(
   }
 
   @VisibleForTesting
-  @Throws(IOException::class)
   fun updateStatusInWorkloadApi(
     replicationOutput: ReplicationOutput?,
     workloadId: String,
@@ -173,7 +171,6 @@ class ReplicationJobOrchestrator(
     }
   }
 
-  @Throws(IOException::class)
   private fun cancelWorkload(workloadId: String) {
     val req = WorkloadCancelRequest(workloadId, "Replication job has been cancelled", "orchestrator")
     workloadApiClient.workloadCancel(req)
@@ -191,7 +188,6 @@ class ReplicationJobOrchestrator(
     }
   }
 
-  @Throws(IOException::class)
   private fun failWorkload(
     workloadId: String,
     failureReason: FailureReason?,
@@ -209,7 +205,6 @@ class ReplicationJobOrchestrator(
     }
   }
 
-  @Throws(IOException::class)
   private fun succeedWorkload(workloadId: String) {
     workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId))
   }

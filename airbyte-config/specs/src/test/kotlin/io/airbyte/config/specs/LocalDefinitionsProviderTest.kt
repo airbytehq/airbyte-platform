@@ -16,7 +16,6 @@ import java.util.UUID
 
 internal class LocalDefinitionsProviderTest {
   @Test
-  @Throws(Exception::class)
   fun testGetSourceDefinition() {
     // source
     val stripeSourceId = UUID.fromString("e094cb9a-26de-4645-8761-65c0c425d1de")
@@ -31,7 +30,6 @@ internal class LocalDefinitionsProviderTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testGetDestinationDefinition() {
     val s3DestinationId = UUID.fromString("4816b78f-1489-44c1-9060-4b19d5fa9362")
     val s3Destination =
@@ -80,7 +78,6 @@ internal class LocalDefinitionsProviderTest {
     private lateinit var localDefinitionsProvider: LocalDefinitionsProvider
 
     @BeforeAll
-    @Throws(IOException::class)
     @JvmStatic
     fun setup() {
       localDefinitionsProvider = LocalDefinitionsProvider()

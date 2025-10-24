@@ -21,7 +21,6 @@ class AirbyteFileWriterImpl : AirbyteFileWriter {
   /**
    * Create a temporary file.
    */
-  @Throws(IOException::class)
   override fun write(
     name: String,
     contents: String,

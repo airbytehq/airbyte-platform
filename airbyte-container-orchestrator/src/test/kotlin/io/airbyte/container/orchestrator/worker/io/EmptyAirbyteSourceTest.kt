@@ -56,7 +56,6 @@ internal class EmptyAirbyteSourceTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testLegacy() {
     emptyAirbyteSource.start(sourceConfig = WorkerSourceConfig(), jobRoot = null, connectionId = null)
 
@@ -64,7 +63,6 @@ internal class EmptyAirbyteSourceTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testLegacyWithEmptyConfig() {
     emptyAirbyteSource.start(
       sourceConfig =
@@ -78,7 +76,6 @@ internal class EmptyAirbyteSourceTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testLegacyWithWrongConfigFormat() {
     emptyAirbyteSource.start(
       sourceConfig =
@@ -93,7 +90,6 @@ internal class EmptyAirbyteSourceTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testEmptyListOfStreams() {
     val resetSourceConfiguration =
       ResetSourceConfiguration()
@@ -116,7 +112,6 @@ internal class EmptyAirbyteSourceTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testGlobal() {
     val streamDescriptors = getProtocolStreamDescriptorFromName(mutableListOf("a", "b", "c"))
     val expectedStreamDescriptors = streamDescriptors.map { obj: StreamDescriptor -> obj.toProtocol() }.toList()
@@ -175,7 +170,6 @@ internal class EmptyAirbyteSourceTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testGlobalPartial() {
     val notResetStreamName = "c"
 
@@ -224,7 +218,6 @@ internal class EmptyAirbyteSourceTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testGlobalNewStream() {
     val newStream = "c"
 
@@ -275,7 +268,6 @@ internal class EmptyAirbyteSourceTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testPerStream() {
     val streamDescriptors = getProtocolStreamDescriptorFromName(mutableListOf("a", "b", "c"))
 
@@ -301,7 +293,6 @@ internal class EmptyAirbyteSourceTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testPerStreamCustomFormat() {
     emptyAirbyteSource = EmptyAirbyteSource(true)
 
@@ -329,7 +320,6 @@ internal class EmptyAirbyteSourceTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testPerStreamWithExtraState() {
     // This should never happen but nothing keeps us from processing the reset and not fail
     val streamDescriptors = getProtocolStreamDescriptorFromName(mutableListOf("a", "b", "c", "d"))
@@ -356,7 +346,6 @@ internal class EmptyAirbyteSourceTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testPerStreamWithMissingState() {
     val newStream = "c"
 
@@ -417,7 +406,6 @@ internal class EmptyAirbyteSourceTest {
   // If there are extra streams to reset that do not exist in the Catalog, the reset should work
   // properly with all streams being reset
   @Test
-  @Throws(Exception::class)
   fun testLegacyWithResettingExtraStreamNotInCatalog() {
     val streamsToResetWithExtra = getConfigStreamDescriptorFromName(mutableListOf("a", "b", "c", "d"))
 
@@ -461,7 +449,6 @@ internal class EmptyAirbyteSourceTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testLegacyWithNewConfig() {
     val streamsToReset = getConfigStreamDescriptorFromName(mutableListOf("a", "b", "c"))
 
@@ -505,7 +492,6 @@ internal class EmptyAirbyteSourceTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testLegacyWithNewConfigWithCustomFormat() {
     emptyAirbyteSource = EmptyAirbyteSource(true)
     val streamsToReset = getConfigStreamDescriptorFromName(mutableListOf("a", "b", "c"))
@@ -548,7 +534,6 @@ internal class EmptyAirbyteSourceTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testLegacyWithNullState() {
     val streamsToReset = getConfigStreamDescriptorFromName(mutableListOf("a", "b", "c"))
 
@@ -701,7 +686,6 @@ internal class EmptyAirbyteSourceTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun emptyLegacyStateShouldNotEmitState() {
     val streamDescriptor = StreamDescriptor().withName("test").withNamespace("schema")
     val resetSourceConfiguration =

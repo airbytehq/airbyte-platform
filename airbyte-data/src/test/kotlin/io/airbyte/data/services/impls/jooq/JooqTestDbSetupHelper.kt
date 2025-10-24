@@ -128,7 +128,6 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
     this.organizationServiceJooqImpl = OrganizationServiceJooqImpl(database)
   }
 
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun setupForVersionUpgradeTest() {
     // Create org
     organization = createOrganization()
@@ -172,7 +171,6 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
     Assertions.assertNotNull(initialDestinationDefinitionDefaultVersionId)
   }
 
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, SQLException::class)
   fun setUpDependencies() {
     // Create org
     organization = createOrganization()
@@ -221,7 +219,6 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
     tagsFromAnotherWorkspace = createTags(secondWorkspace.workspaceId)
   }
 
-  @Throws(IOException::class)
   fun setupForGetActorDefinitionVersionByDockerRepositoryAndDockerImageTagTests(
     sourceDefinitionId: UUID?,
     name: String?,
@@ -240,7 +237,6 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
 
   // It's kind of ugly and brittle to create the tags in this way, but since TagService is a micronaut
   // data service, we cannot instantiate it here and use it to create the tags
-  @Throws(SQLException::class)
   fun createTags(workspaceId: UUID?): MutableList<Tag?> {
     val tagOne =
       Tag()
@@ -282,7 +278,6 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
     return tags
   }
 
-  @Throws(IOException::class)
   fun createActorDefinition(
     sourceDefinition: StandardSourceDefinition,
     actorDefinitionVersion: ActorDefinitionVersion,
@@ -290,7 +285,6 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
     sourceServiceJooqImpl.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, mutableListOf())
   }
 
-  @Throws(IOException::class)
   fun createActorDefinition(
     destinationDefinition: StandardDestinationDefinition,
     actorDefinitionVersion: ActorDefinitionVersion,
@@ -302,7 +296,6 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
     )
   }
 
-  @Throws(IOException::class)
   fun createActorForActorDefinition(
     sourceDefinition: StandardSourceDefinition,
     sourceId: UUID = UUID.randomUUID(),
@@ -314,7 +307,6 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
     return source
   }
 
-  @Throws(IOException::class)
   fun createActorForActorDefinition(
     destinationDefinition: StandardDestinationDefinition,
     destinationId: UUID = UUID.randomUUID(),
@@ -327,7 +319,6 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
     return destination
   }
 
-  @Throws(IOException::class)
   private fun createBaseDestinationActor(
     destinationId: UUID,
     workspaceId: UUID,
@@ -338,7 +329,6 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
       .withWorkspaceId(workspaceId)
       .withName(name)
 
-  @Throws(IOException::class)
   private fun createBaseSourceActor(
     sourceId: UUID,
     workspaceId: UUID,
@@ -349,7 +339,6 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
       .withWorkspaceId(workspaceId)
       .withName(name)
 
-  @Throws(IOException::class)
   fun createOrganization(
     organizationId: UUID = this.organizationId,
     name: String = "organization",
@@ -364,7 +353,6 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
     return organization
   }
 
-  @Throws(IOException::class)
   fun createDataplaneGroup(
     id: UUID = this.dataplaneGroupId,
     organizationId: UUID = this.organizationId,
@@ -383,7 +371,6 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
     return dataplaneGroup
   }
 
-  @Throws(IOException::class)
   fun createWorkspace(
     workspaceId: UUID = this.workspaceId,
     organizationId: UUID = this.organizationId,
@@ -406,7 +393,6 @@ class JooqTestDbSetupHelper : BaseConfigDatabaseTest() {
     return workspace
   }
 
-  @Throws(IOException::class)
   fun createSecondWorkspace(
     workspaceId: UUID = UUID.randomUUID(),
     organizationId: UUID = this.organizationId,

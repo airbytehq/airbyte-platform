@@ -29,7 +29,6 @@ class WorkspaceNotificationConfigFetcher(
   /**
    * Fetch corresponding notificationItem based on notification action.
    */
-  @Throws(IOException::class)
   fun fetchNotificationConfig(
     connectionId: UUID,
     notificationEvent: NotificationEvent,

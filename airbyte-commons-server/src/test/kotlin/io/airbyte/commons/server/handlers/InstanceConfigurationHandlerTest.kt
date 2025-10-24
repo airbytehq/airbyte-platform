@@ -87,7 +87,6 @@ internal class InstanceConfigurationHandlerTest {
   private lateinit var instanceConfigurationHandler: InstanceConfigurationHandler
 
   @BeforeEach
-  @Throws(IOException::class)
   fun setup() {
     keycloakConfiguration = AirbyteKeycloakConfig(airbyteRealm = AIRBYTE_REALM, webClientId = WEB_CLIENT_ID)
 
@@ -102,7 +101,6 @@ internal class InstanceConfigurationHandlerTest {
     "false, true",
     "false, false",
   )
-  @Throws(IOException::class)
   fun testGetInstanceConfiguration(
     isEnterprise: Boolean,
     isInitialSetupComplete: Boolean,
@@ -153,7 +151,6 @@ internal class InstanceConfigurationHandlerTest {
     "segment, SEGMENT", // lower case segment env works
     "SEGMENT, SEGMENT", // upper case segment env works
   )
-  @Throws(IOException::class)
   fun testGetInstanceConfigurationTrackingStrategy(
     envValue: String,
     expectedResult: TrackingStrategyEnum?,
@@ -187,7 +184,6 @@ internal class InstanceConfigurationHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testSetupInstanceConfigurationAlreadySetup() {
     stubGetDefaultOrganization()
 
@@ -221,7 +217,6 @@ internal class InstanceConfigurationHandlerTest {
     "false, false, true",
     "false, false, false",
   )
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testSetupInstanceConfiguration(
     userNamePresent: Boolean,
     orgNamePresent: Boolean,
@@ -435,7 +430,6 @@ internal class InstanceConfigurationHandlerTest {
     Assertions.assertEquals(handler.currentLicenseStatus(), LicenseStatus.EXCEEDED)
   }
 
-  @Throws(IOException::class)
   private fun stubGetDefaultUser() {
     whenever(mUserPersistence.getDefaultUser()).thenReturn(
       Optional.of(
@@ -447,7 +441,6 @@ internal class InstanceConfigurationHandlerTest {
     )
   }
 
-  @Throws(IOException::class)
   private fun stubGetDefaultOrganization() {
     whenever(mOrganizationPersistence.defaultOrganization).thenReturn(
       Optional.of(

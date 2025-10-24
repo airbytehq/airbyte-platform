@@ -14,10 +14,6 @@ import java.io.IOException
 class CompositeBuilderProjectUpdaterTest {
   @Test
   @DisplayName("updateConnectorBuilderProject should call updateConnectorBuilderProject on underlying updaters")
-  @Throws(
-    ConfigNotFoundException::class,
-    IOException::class,
-  )
   fun testUpdateCompositeBuilderProjectUpdaterDelegates() {
     val update = Mockito.mock(ExistingConnectorBuilderProjectWithWorkspaceId::class.java)
     val updaterA = Mockito.mock(BuilderProjectUpdater::class.java)

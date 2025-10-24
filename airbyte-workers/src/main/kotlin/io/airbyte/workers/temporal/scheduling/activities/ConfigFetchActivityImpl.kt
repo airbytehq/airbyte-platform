@@ -163,7 +163,6 @@ class ConfigFetchActivityImpl
      * @return time to wait
      * @throws IOException exception while interacting with db
      */
-    @Throws(IOException::class)
     private fun getTimeToWaitFromScheduleType(
       connectionRead: ConnectionRead,
       connectionId: UUID,

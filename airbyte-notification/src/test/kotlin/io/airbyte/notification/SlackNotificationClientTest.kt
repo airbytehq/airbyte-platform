@@ -40,7 +40,6 @@ internal class SlackNotificationClientTest {
   private lateinit var server: HttpServer
 
   @BeforeEach
-  @Throws(IOException::class)
   fun setup() {
     server = HttpServer.create(InetSocketAddress(0), 0)
     server.setExecutor(null) // creates a default executor
@@ -80,7 +79,6 @@ internal class SlackNotificationClientTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testEmptyWebhookUrl() {
     val client =
       SlackNotificationClient(SlackNotificationConfiguration())
@@ -108,7 +106,6 @@ internal class SlackNotificationClientTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testNotifyJobFailure() {
     server.createContext(TEST_PATH, ServerHandler(EXPECTED_FAIL_MESSAGE))
     val summary =
@@ -137,7 +134,6 @@ internal class SlackNotificationClientTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testNotifyJobSuccess() {
     server.createContext(TEST_PATH, ServerHandler(EXPECTED_SUCCESS_MESSAGE))
     val summary =
@@ -166,7 +162,6 @@ internal class SlackNotificationClientTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testNotifyConnectionDisabled() {
     val expectedNotificationMessage =
       String.format(
@@ -210,7 +205,6 @@ internal class SlackNotificationClientTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testNotifyConnectionDisabledWarning() {
     val expectedNotificationWarningMessage =
       String.format(
@@ -255,7 +249,6 @@ internal class SlackNotificationClientTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testNotifySchemaPropagated() {
     val connectionId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
@@ -593,7 +586,6 @@ internal class SlackNotificationClientTest {
   internal class ServerHandler(
     private val expectedMessage: String,
   ) : HttpHandler {
-    @Throws(IOException::class)
     override fun handle(t: HttpExchange) {
       val body = String(t.requestBody.readAllBytes())
       log.info { "Received: '$body'" }

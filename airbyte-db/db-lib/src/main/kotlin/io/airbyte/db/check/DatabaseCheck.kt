@@ -13,6 +13,5 @@ interface DatabaseCheck {
    *
    * @throws DatabaseCheckException if unable to perform the check.
    */
-  @Throws(DatabaseCheckException::class)
   fun check()
 }

@@ -19,7 +19,6 @@ internal class ConfigReplacerTest {
   val mapper: ObjectMapper = ObjectMapper()
 
   @Test
-  @Throws(IOException::class)
   fun getAllowedHostsGeneralTest() {
     val allowedHosts = AllowedHosts()
     val hosts: MutableList<String?> = ArrayList<String?>()
@@ -58,7 +57,6 @@ internal class ConfigReplacerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun getAllowedHostsNestingTest() {
     val allowedHosts = AllowedHosts()
     val hosts: MutableList<String?> = ArrayList<String?>()
@@ -77,7 +75,6 @@ internal class ConfigReplacerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun ensureEmptyArrayIncludesAlwaysAllowedHosts() {
     val allowedHosts = AllowedHosts()
     allowedHosts.setHosts(ArrayList<String?>())
@@ -94,7 +91,6 @@ internal class ConfigReplacerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun nullAllowedHostsRemainsNull() {
     val configJson = "{}"
     val config = mapper.readValue<JsonNode>(configJson, JsonNode::class.java)

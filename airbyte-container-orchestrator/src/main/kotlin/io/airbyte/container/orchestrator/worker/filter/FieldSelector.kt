@@ -93,7 +93,6 @@ class FieldSelector(
    *
    * @param airbyteMessage message to filter.
    */
-  @Throws(RuntimeException::class)
   fun filterSelectedFields(airbyteMessage: AirbyteMessage) {
     val record = airbyteMessage.record
 
@@ -146,7 +145,6 @@ class FieldSelector(
    *
    * @param catalog catalog
    */
-  @Throws(RuntimeException::class)
   private fun populatedStreamToSelectedFields(catalog: ConfiguredAirbyteCatalog) {
     catalog.streams.forEach { s ->
       val selectedFields = mutableListOf<String>()
@@ -166,7 +164,6 @@ class FieldSelector(
    *
    * @param catalog catalog
    */
-  @Throws(RuntimeException::class)
   private fun populateStreamToAllFields(catalog: ConfiguredAirbyteCatalog) {
     catalog.streams.forEach { s ->
       val fields = mutableSetOf<String>()

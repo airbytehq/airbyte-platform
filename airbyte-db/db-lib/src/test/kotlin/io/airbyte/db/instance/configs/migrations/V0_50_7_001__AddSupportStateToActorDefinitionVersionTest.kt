@@ -40,7 +40,6 @@ internal class V0_50_7_001__AddSupportStateToActorDefinitionVersionTest : Abstra
   }
 
   @Test
-  @Throws(IOException::class, SQLException::class)
   fun test() {
     val context = dslContext!!
     addSupportStateType(context)

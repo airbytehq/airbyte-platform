@@ -48,9 +48,6 @@ internal class SecretsHelpersTest {
 
   @ParameterizedTest
   @MethodSource(PROVIDE_TEST_CASES)
-  @Throws(
-    JsonValidationException::class,
-  )
   fun validateTestCases(testCase: SecretsTestCase) {
     val validator = JsonSchemaValidator()
     val spec: JsonNode = testCase.spec.connectionSpecification
@@ -405,9 +402,6 @@ internal class SecretsHelpersTest {
 
   @ParameterizedTest
   @MethodSource(PROVIDE_TEST_CASES)
-  @Throws(
-    IOException::class,
-  )
   fun testSecretPath(testCase: SecretsTestCase) {
     val spec: JsonNode = testCase.spec.connectionSpecification
     val secretsPaths: List<String> = SecretsHelpers.getSortedSecretPaths(spec)

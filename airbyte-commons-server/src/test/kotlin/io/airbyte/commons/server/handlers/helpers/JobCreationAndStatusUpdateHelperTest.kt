@@ -123,7 +123,6 @@ internal class JobCreationAndStatusUpdateHelperTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun failNonTerminalJobs() {
     val jobId1 = 1
     val jobId2 = 2
@@ -176,7 +175,6 @@ internal class JobCreationAndStatusUpdateHelperTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testReportJobStart() {
     val jobId = 5L
     val job = Mockito.mock(Job::class.java)
@@ -197,7 +195,6 @@ internal class JobCreationAndStatusUpdateHelperTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetSyncJobToReleaseStages() {
     val sourceDefVersionId = UUID.randomUUID()
     val destinationDefVersionId = UUID.randomUUID()
@@ -246,7 +243,6 @@ internal class JobCreationAndStatusUpdateHelperTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetResetJobToReleaseStages() {
     val destinationDefVersionId = UUID.randomUUID()
     val jobConfig =

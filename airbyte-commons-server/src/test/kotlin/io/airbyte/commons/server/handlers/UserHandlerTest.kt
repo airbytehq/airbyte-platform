@@ -146,7 +146,6 @@ class UserHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListUsersInOrg() {
     val organizationId = UUID.randomUUID()
     val userID = UUID.randomUUID()
@@ -184,7 +183,6 @@ class UserHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListInstanceAdminUser() {
     whenever(permissionHandler.listInstanceAdminUsers()).thenReturn(
       listOf<UserPermission>(
@@ -211,7 +209,6 @@ class UserHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListAccessInfoByWorkspaceId() {
     val workspaceId = UUID.randomUUID()
     whenever(userPersistence.listWorkspaceUserAccessInfo(workspaceId)).thenReturn(
@@ -260,7 +257,6 @@ class UserHandlerTest {
   internal inner class GetOrCreateUserByAuthIdTest {
     @ParameterizedTest
     @EnumSource(AuthProvider::class)
-    @Throws(Exception::class)
     fun authIdExists(authProvider: AuthProvider) {
       // set the auth provider for the existing user to match the test case
       user.setAuthProvider(authProvider)
@@ -296,7 +292,6 @@ class UserHandlerTest {
 
       @ParameterizedTest
       @CsvSource("true", "false")
-      @Throws(Exception::class)
       fun testNonSSOSignInEmailExistsThrowsError(isExistingUserSSO: Boolean) {
         whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
         whenever(userPersistence.getUserByAuthId(newAuthUserId))
@@ -320,7 +315,6 @@ class UserHandlerTest {
       }
 
       @Test
-      @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, PermissionRedundantException::class)
       fun testExistingDefaultUserWithEmailUpdatesDefault() {
         whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
         whenever(userPersistence.getUserByAuthId(newAuthUserId))
@@ -357,7 +351,6 @@ class UserHandlerTest {
       }
 
       @Test
-      @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, PermissionRedundantException::class)
       fun testRelinkOrphanedUser() {
         // Auth user in JWT is not linked to any user in the database
         whenever(jwtUserAuthenticationResolver.resolveUser(newAuthUserId)).thenReturn(jwtUser)
@@ -384,7 +377,6 @@ class UserHandlerTest {
 
       @ParameterizedTest
       @MethodSource("io.airbyte.commons.server.handlers.UserHandlerTest#ssoSignInArgsProvider")
-      @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, PermissionRedundantException::class)
       fun testSSOSignInEmailExistsMigratesAuthUser(
         isExistingUserSSO: Boolean,
         doesExistingUserHaveOrgPermission: Boolean,
@@ -499,7 +491,6 @@ class UserHandlerTest {
       private var defaultWorkspace: WorkspaceRead? = null
 
       @BeforeEach
-      @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
       fun setUp() {
         newAuthedUser = AuthenticatedUser().withUserId(newUserId).withEmail(newEmail).withAuthUserId(newAuthUserId)
         newUser = AuthenticatedUserConverter.toUser(newAuthedUser!!)
@@ -517,7 +508,6 @@ class UserHandlerTest {
 
       @ParameterizedTest
       @ArgumentsSource(NewUserArgumentsProvider::class)
-      @Throws(Exception::class)
       fun testNewUserCreation(
         authProvider: AuthProvider,
         authRealm: String?,
@@ -648,7 +638,6 @@ class UserHandlerTest {
         verifyDefaultWorkspaceCreation(isDefaultWorkspaceForOrgPresent, userPersistenceInOrder)
       }
 
-      @Throws(IOException::class)
       private fun verifyCreatedUser(
         expectedAuthProvider: AuthProvider?,
         inOrder: InOrder,
@@ -665,7 +654,6 @@ class UserHandlerTest {
           )
       }
 
-      @Throws(IOException::class)
       private fun verifyDefaultWorkspaceCreation(
         isDefaultWorkspaceForOrgPresent: Boolean,
         inOrder: InOrder,
@@ -710,7 +698,6 @@ class UserHandlerTest {
         Assertions.assertEquals(userRes.getAuthProvider(), expectedAuthProvider)
       }
 
-      @Throws(Exception::class)
       private fun verifyInstanceAdminPermissionCreation(
         initialUserEmail: String?,
         initialUserPresent: Boolean,
@@ -735,7 +722,6 @@ class UserHandlerTest {
         }
       }
 
-      @Throws(IOException::class, JsonValidationException::class, PermissionRedundantException::class)
       private fun verifyOrganizationPermissionCreation(
         ssoRealm: String?,
         isFirstOrgUser: Boolean,

@@ -14,7 +14,6 @@ class AirbyteArgument(
 ) {
   var filepath: String? = null
 
-  @Throws(IOException::class)
   fun setUpArg(
     name: String,
     contents: String,

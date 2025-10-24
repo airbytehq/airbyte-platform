@@ -77,7 +77,6 @@ interface DatabaseInitializer {
    *
    * @throws DatabaseInitializationException if unable to verify the database availability.
    */
-  @Throws(DatabaseInitializationException::class)
   fun initialize() {
     // Verify that the database is up and reachable first
     val availabilityCheck = databaseAvailabilityCheck ?: throw DatabaseInitializationException("Availability check not configured.")

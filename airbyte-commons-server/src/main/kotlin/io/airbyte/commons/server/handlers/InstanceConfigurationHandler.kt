@@ -85,7 +85,6 @@ open class InstanceConfigurationHandler(
         )
     }
 
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun setupInstanceConfiguration(requestBody: InstanceConfigurationSetupRequestBody): InstanceConfigurationResponse {
     val defaultOrganization = defaultOrganization
     val defaultWorkspace = getDefaultWorkspace(defaultOrganization.organizationId)
@@ -155,7 +154,6 @@ open class InstanceConfigurationHandler(
           IllegalStateException("Default user does not exist.")
         }.userId
 
-  @Throws(IOException::class)
   private fun updateDefaultUser(requestBody: InstanceConfigurationSetupRequestBody) {
     val defaultUser =
       userPersistence.getDefaultUser().orElseThrow { IllegalStateException("Default user does not exist.") }
@@ -189,7 +187,6 @@ open class InstanceConfigurationHandler(
           )
         }
 
-  @Throws(IOException::class)
   private fun updateDefaultOrganization(requestBody: InstanceConfigurationSetupRequestBody) {
     val defaultOrganization =
       organizationPersistence.defaultOrganization.orElseThrow { IllegalStateException("Default organization does not exist.") }
@@ -209,7 +206,6 @@ open class InstanceConfigurationHandler(
   // workspace that was created for the instance. Now that OSS supports multiple workspaces, we
   // use the default Organization ID to select a workspace to use for instance setup. This is a hack.
   // TODO persist instance configuration to a separate resource, rather than using a workspace.
-  @Throws(IOException::class)
   private fun getDefaultWorkspace(organizationId: UUID): StandardWorkspace = workspacePersistence.getDefaultWorkspaceForOrganization(organizationId)
 
   fun licenseInfo(): LicenseInfoResponse? {

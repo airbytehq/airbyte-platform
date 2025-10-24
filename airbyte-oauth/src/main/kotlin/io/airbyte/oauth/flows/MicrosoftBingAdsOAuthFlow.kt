@@ -26,7 +26,6 @@ class MicrosoftBingAdsOAuthFlow : BaseOAuth2Flow {
   private val scopes: String
     get() = "offline_access%20https://ads.microsoft.com/msads.manage"
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,

@@ -40,7 +40,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
   private lateinit var workspaceService: WorkspaceService
 
   @BeforeEach
-  @Throws(IOException::class, SQLException::class, ConfigNotFoundException::class)
   fun setUp() {
     val featureFlagClient: FeatureFlagClient = Mockito.mock(TestClient::class.java, Mockito.withSettings().withoutAnnotations())
     secretsRepositoryReader =
@@ -78,7 +77,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     deleteActorOAuthParams()
   }
 
-  @Throws(SQLException::class)
   private fun deleteActorOAuthParams() {
     database!!.query<Int?>(
       ContextQueryFunction { ctx: DSLContext? ->
@@ -93,7 +91,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
   @Nested
   internal inner class SourceOauthTests {
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testGetInstanceWideSourceOAuthParam() {
       createActorOAuthParameter(ID, Optional.empty(), Optional.empty(), ActorType.SOURCE)
 
@@ -108,7 +105,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testGetNoInstanceWideSourceOAuthParam() {
       val fetchedOAuthParam =
         oAuthService.getSourceOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
@@ -116,7 +112,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testGetWorkspaceSourceOAuthParam() {
       createActorOAuthParameter(ID, Optional.of<UUID>(WORKSPACE_ID), Optional.empty(), ActorType.SOURCE)
 
@@ -131,7 +126,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testGetWorkspaceSourceOAuthParamWithDifferentWorkspaceId() {
       createActorOAuthParameter(ID, Optional.of<UUID>(WORKSPACE_ID), Optional.empty(), ActorType.SOURCE)
 
@@ -142,7 +136,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testGetOrganizationSourceOAuthParam() {
       createActorOAuthParameter(ID, Optional.empty(), Optional.of<UUID>(ORGANIZATION_ID), ActorType.SOURCE)
 
@@ -157,7 +150,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testGetOrganizationSourceOAuthParamWrongOrg() {
       createActorOAuthParameter(ID, Optional.empty(), Optional.of<UUID>(A_DIFFERENT_ORGANIZATION_ID), ActorType.SOURCE)
 
@@ -168,7 +160,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testOrganizationSourceOverridesArePrioritizedOverOrgWideOverridesWithInstanceWideCreatedFirst() {
       val instanceWideParamId = UUID.randomUUID()
       val organizationWideParamId = UUID.randomUUID()
@@ -184,7 +175,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testOrganizationSourceOverridesArePrioritizedOverOrgWideOverridesWithInstanceWideCreatedLast() {
       val instanceWideParamId = UUID.randomUUID()
       val organizationWideParamId = UUID.randomUUID()
@@ -200,7 +190,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testWorkspaceSourceOverridesArePrioritizedOverOrgWideOverridesWithInstanceWideCreatedFirst() {
       val instanceWideParamId = UUID.randomUUID()
       val workspaceWideParamId = UUID.randomUUID()
@@ -224,7 +213,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testWorkspaceSourceOverridesArePrioritizedOverOrgWideOverridesWithInstanceWideCreatedLast() {
       val instanceWideParamId = UUID.randomUUID()
       val workspaceWideParamId = UUID.randomUUID()
@@ -240,7 +228,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testWorkspaceSourceOverridesArePrioritizedOverOrgWideOverridesWithWorkspaceOverrideCreatedFirst() {
       val workspaceWideParamId = UUID.randomUUID()
       val organizationWideParamId = UUID.randomUUID()
@@ -256,7 +243,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testWorkspaceSourceOverridesArePrioritizedOverOrgWideOverridesWithWorkspaceOverrideCreatedLast() {
       val workspaceWideParamId = UUID.randomUUID()
       val organizationWideParamId = UUID.randomUUID()
@@ -275,7 +261,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
   @Nested
   internal inner class DestinationOAuthTests {
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testGetInstanceWideDestinatonOAuthParam() {
       createActorOAuthParameter(ID, Optional.empty(), Optional.empty(), ActorType.DESTINATION)
 
@@ -290,7 +275,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testGetNoInstanceWideDestinationOAuthParam() {
       val fetchedOAuthParam =
         oAuthService.getDestinationOAuthParameterOptional(WORKSPACE_ID, ACTOR_DEFINITION_ID)
@@ -298,7 +282,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testGetWorkspaceDestinationOAuthParam() {
       createActorOAuthParameter(ID, Optional.of<UUID>(WORKSPACE_ID), Optional.empty(), ActorType.DESTINATION)
 
@@ -313,7 +296,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testGetWorkspaceDestinationOAuthParamWithDifferentWorkspaceId() {
       createActorOAuthParameter(ID, Optional.of<UUID>(WORKSPACE_ID), Optional.empty(), ActorType.DESTINATION)
 
@@ -324,7 +306,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testGetOrganizationDestinationOAuthParam() {
       createActorOAuthParameter(ID, Optional.empty(), Optional.of<UUID>(ORGANIZATION_ID), ActorType.DESTINATION)
 
@@ -339,7 +320,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testGetOrganizationDestinationOAuthParamWrongOrg() {
       createActorOAuthParameter(ID, Optional.empty(), Optional.of<UUID>(A_DIFFERENT_ORGANIZATION_ID), ActorType.DESTINATION)
 
@@ -350,7 +330,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testOrganizationDestinationOverridesArePrioritizedOverOrgWideOverridesWithInstanceWideCreatedFirst() {
       val instanceWideParamId = UUID.randomUUID()
       val organizationWideParamId = UUID.randomUUID()
@@ -366,7 +345,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testOrganizationDestinationOverridesArePrioritizedOverOrgWideOverridesWithInstanceWideCreatedLast() {
       val instanceWideParamId = UUID.randomUUID()
       val organizationWideParamId = UUID.randomUUID()
@@ -382,7 +360,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testWorkspaceDestinationOverridesArePrioritizedOverOrgWideOverridesWithInstanceWideCreatedFirst() {
       val instanceWideParamId = UUID.randomUUID()
       val workspaceWideParamId = UUID.randomUUID()
@@ -398,7 +375,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testWorkspaceDestinationOverridesArePrioritizedOverOrgWideOverridesWithInstanceWideCreatedLast() {
       val instanceWideParamId = UUID.randomUUID()
       val workspaceWideParamId = UUID.randomUUID()
@@ -414,7 +390,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testWorkspaceDestinationOverridesArePrioritizedOverOrgWideOverridesWithWorkspaceOverrideCreatedFirst() {
       val workspaceWideParamId = UUID.randomUUID()
       val organizationWideParamId = UUID.randomUUID()
@@ -430,7 +405,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun testWorkspaceDestinationOverridesArePrioritizedOverOrgWideOverridesWithWorkspaceOverrideCreatedLast() {
       val workspaceWideParamId = UUID.randomUUID()
       val organizationWideParamId = UUID.randomUUID()
@@ -446,7 +420,6 @@ internal class OAuthServiceJooqImplTest : BaseConfigDatabaseTest() {
     }
   }
 
-  @Throws(IOException::class)
   private fun createActorOAuthParameter(
     id: UUID?,
     workspaceId: Optional<UUID>,

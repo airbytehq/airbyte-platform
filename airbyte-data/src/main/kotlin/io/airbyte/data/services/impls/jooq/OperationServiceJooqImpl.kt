@@ -48,7 +48,6 @@ class OperationServiceJooqImpl
      * @throws ConfigNotFoundException if the config does not exist
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     override fun getStandardSyncOperation(operationId: UUID): StandardSyncOperation =
       listStandardSyncOperationQuery(Optional.of(operationId))
         .findFirst()
@@ -65,7 +64,6 @@ class OperationServiceJooqImpl
      * @param standardSyncOperation standard sync operation.
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun writeStandardSyncOperation(standardSyncOperation: StandardSyncOperation) {
       database.transaction<Any?> { ctx: DSLContext ->
         writeStandardSyncOperation(listOf(standardSyncOperation), ctx)
@@ -79,7 +77,6 @@ class OperationServiceJooqImpl
      * @return standard sync operations.
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun listStandardSyncOperations(): List<StandardSyncOperation> = listStandardSyncOperationQuery(Optional.empty()).toList()
 
     /**
@@ -90,7 +87,6 @@ class OperationServiceJooqImpl
      * @param newOperationIds Set of all operationIds that should be associated to the connection
      * @throws IOException - exception while interacting with the db
      */
-    @Throws(IOException::class)
     override fun updateConnectionOperationIds(
       connectionId: UUID,
       newOperationIds: Set<UUID>,
@@ -140,7 +136,6 @@ class OperationServiceJooqImpl
      * @param standardSyncOperationId standard sync operation id
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun deleteStandardSyncOperation(standardSyncOperationId: UUID) {
       database.transaction<Any?> { ctx: DSLContext ->
         ctx
@@ -159,7 +154,6 @@ class OperationServiceJooqImpl
       }
     }
 
-    @Throws(IOException::class)
     private fun listStandardSyncOperationQuery(configId: Optional<UUID>): Stream<StandardSyncOperation> {
       val result =
         database.query { ctx: DSLContext ->

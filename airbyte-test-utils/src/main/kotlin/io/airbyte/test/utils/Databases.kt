@@ -64,7 +64,6 @@ object Databases {
    * @throws SQLException in case of database error.
    */
   @JvmStatic
-  @Throws(SQLException::class)
   fun listAllTables(database: Database): Set<SchemaTableNamePair> =
     database.query { context: DSLContext ->
       val fetch =
@@ -88,7 +87,6 @@ object Databases {
    * @return a set of Schema to Table name pairs.
    * @throws SQLException in case of database error.
    */
-  @Throws(SQLException::class)
   fun listAllTables(
     database: Database,
     schema: String,
@@ -108,7 +106,6 @@ object Databases {
     }
 
   @JvmStatic
-  @Throws(SQLException::class)
   fun retrieveRecordsFromDatabase(
     database: Database,
     table: String?,
@@ -126,7 +123,6 @@ object Databases {
       .map { `object`: Map<String, Any>? -> Jsons.jsonNode(`object`) }
       .collect(Collectors.toList())
 
-  @Throws(Exception::class)
   fun retrieveRawDestinationRecords(
     destDb: Database,
     schema: String,
@@ -148,7 +144,6 @@ object Databases {
   }
 
   @JvmStatic
-  @Throws(SQLException::class)
   fun retrieveDestinationRecords(
     database: Database,
     table: String?,

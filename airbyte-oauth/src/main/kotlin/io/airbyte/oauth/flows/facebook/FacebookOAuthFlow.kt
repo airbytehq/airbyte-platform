@@ -29,7 +29,6 @@ abstract class FacebookOAuthFlow : BaseOAuth2Flow {
 
   protected abstract fun getScopes(): String
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -61,7 +60,6 @@ abstract class FacebookOAuthFlow : BaseOAuth2Flow {
     return java.util.Map.of<String, Any>(ACCESS_TOKEN, data[ACCESS_TOKEN].asText())
   }
 
-  @Throws(IOException::class)
   override fun completeOAuthFlow(
     clientId: String,
     clientSecret: String,
@@ -85,7 +83,6 @@ abstract class FacebookOAuthFlow : BaseOAuth2Flow {
     return java.util.Map.of<String, Any>(ACCESS_TOKEN, longLivedAccessToken)
   }
 
-  @Throws(URISyntaxException::class)
   protected fun createLongLivedTokenURI(
     clientId: String?,
     clientSecret: String?,
@@ -105,7 +102,6 @@ abstract class FacebookOAuthFlow : BaseOAuth2Flow {
       .build()
   }
 
-  @Throws(IOException::class)
   protected fun getLongLivedAccessToken(
     clientId: String?,
     clientSecret: String?,

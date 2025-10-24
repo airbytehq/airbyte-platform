@@ -300,7 +300,6 @@ internal class WorkspacesHandlerTest {
 
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testCreateWorkspace(airbyteEdition: AirbyteEdition) {
     workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
     Mockito
@@ -363,7 +362,6 @@ internal class WorkspacesHandlerTest {
 
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testCreateWorkspaceIfNotExist(airbyteEdition: AirbyteEdition) {
     workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
     Mockito
@@ -431,7 +429,6 @@ internal class WorkspacesHandlerTest {
 
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testCreateWorkspaceWithMinimumInput(airbyteEdition: AirbyteEdition) {
     Mockito
       .`when`(
@@ -481,7 +478,6 @@ internal class WorkspacesHandlerTest {
 
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testCreateWorkspaceDuplicateSlug(airbyteEdition: AirbyteEdition) {
     Mockito
       .`when`(
@@ -552,12 +548,6 @@ internal class WorkspacesHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testDeleteWorkspace() {
     val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.getWorkspaceId())
 
@@ -602,7 +592,6 @@ internal class WorkspacesHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testListWorkspaces() {
     val workspace2 = generateWorkspace()
 
@@ -658,7 +647,6 @@ internal class WorkspacesHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testGetWorkspace() {
     workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
     Mockito
@@ -690,7 +678,6 @@ internal class WorkspacesHandlerTest {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class)
   fun testGetWorkspaceBySlug() {
     Mockito.`when`(workspaceService.getWorkspaceBySlug("default", false)).thenReturn(workspace)
 
@@ -701,7 +688,6 @@ internal class WorkspacesHandlerTest {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class)
   fun testGetWorkspaceByConnectionId() {
     val connectionId = UUID.randomUUID()
     Mockito.`when`(workspaceService.getStandardWorkspaceFromConnection(connectionId, false)).thenReturn(workspace)
@@ -733,12 +719,11 @@ internal class WorkspacesHandlerTest {
       .tombstone(workspace.getTombstone())
 
   @Test
-  @Throws(ConfigNotFoundException::class)
   fun testGetWorkspaceByConnectionIdOnConfigNotFound() {
     val connectionId = UUID.randomUUID()
     Mockito
       .`when`(workspaceService.getStandardWorkspaceFromConnection(connectionId, false))
-      .thenThrow(ConfigNotFoundException("something", connectionId.toString()))
+      .thenAnswer { throw ConfigNotFoundException("something", connectionId.toString()) }
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
     Assertions.assertThrows(
       ConfigNotFoundException::class.java,
@@ -747,7 +732,6 @@ internal class WorkspacesHandlerTest {
 
   @ParameterizedTest
   @CsvSource("true", "false")
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testGetWorkspaceOrganizationInfo(isSso: Boolean) {
     val organization = generateOrganization(if (isSso) "test-realm" else null)
     val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.getWorkspaceId())
@@ -765,7 +749,6 @@ internal class WorkspacesHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGerWorkspaceOrganizationInfoConfigNotFound() {
     val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.getWorkspaceId())
 
@@ -780,7 +763,6 @@ internal class WorkspacesHandlerTest {
 
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testUpdateWorkspace(airbyteEdition: AirbyteEdition) {
     val apiNotification = generateApiNotification()
     apiNotification.getSlackConfiguration().webhook(UPDATED)
@@ -887,7 +869,6 @@ internal class WorkspacesHandlerTest {
 
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testUpdateWorkspaceWithoutWebhookConfigs(airbyteEdition: AirbyteEdition?) {
     val apiNotification = generateApiNotification()
     apiNotification.getSlackConfiguration().webhook(UPDATED)
@@ -929,7 +910,6 @@ internal class WorkspacesHandlerTest {
 
   @Test
   @DisplayName("Updating workspace name should update name and slug")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testUpdateWorkspaceNoNameUpdate() {
     val workspaceUpdate =
       WorkspaceUpdateName()
@@ -986,7 +966,6 @@ internal class WorkspacesHandlerTest {
 
   @Test
   @DisplayName("Update organization in workspace")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testWorkspaceUpdateOrganization() {
     val newOrgId = UUID.randomUUID()
     val workspaceUpdateOrganization =
@@ -1028,7 +1007,6 @@ internal class WorkspacesHandlerTest {
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
   @DisplayName("Partial patch update should preserve unchanged fields")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testWorkspacePatchUpdate(airbyteEdition: AirbyteEdition) {
     val expectedNewEmail = "expected-new-email@example.com"
     val workspaceUpdate =
@@ -1088,7 +1066,6 @@ internal class WorkspacesHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testWorkspacePatchUpdateWithPublicNotificationConfig() {
     // This is the workspace that exists before the update. It has a customerio notification for both
     // success and failure, and a webhook ("slack") notification for failure.
@@ -1171,7 +1148,6 @@ internal class WorkspacesHandlerTest {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class)
   fun testSetFeedbackDone() {
     val workspaceGiveFeedback =
       WorkspaceGiveFeedback()
@@ -1184,7 +1160,6 @@ internal class WorkspacesHandlerTest {
 
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testWorkspaceIsWrittenThroughSecretsWriter(airbyteEdition: AirbyteEdition) {
     val workspacesHandler =
       WorkspacesHandler(
@@ -1252,7 +1227,6 @@ internal class WorkspacesHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesInOrgNoKeyword() {
     val request =
       ListWorkspacesInOrganizationRequestBody().organizationId(ORGANIZATION_ID).pagination(Pagination().pageSize(100).rowOffset(0))
@@ -1270,7 +1244,6 @@ internal class WorkspacesHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesInOrgWithKeyword() {
     val request =
       ListWorkspacesInOrganizationRequestBody()
@@ -1291,7 +1264,6 @@ internal class WorkspacesHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesInOrgForUserNoKeyword() {
     val userId = UUID.randomUUID()
     val request =
@@ -1310,7 +1282,6 @@ internal class WorkspacesHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesInOrgForUserWithKeyword() {
     val userId = UUID.randomUUID()
     val request =
@@ -1332,7 +1303,6 @@ internal class WorkspacesHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesInOrgForUserNoPagination() {
     val userId = UUID.randomUUID()
     val request = ListWorkspacesInOrganizationRequestBody().organizationId(ORGANIZATION_ID)
@@ -1352,7 +1322,6 @@ internal class WorkspacesHandlerTest {
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
   @DisplayName("Creating workspace with explicit dataplane group requires org editor permission")
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testCreateWorkspaceWithDataplaneGroupRequiresOrgEditor(airbyteEdition: AirbyteEdition) {
     workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
     Mockito
@@ -1406,7 +1375,6 @@ internal class WorkspacesHandlerTest {
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
   @DisplayName("Updating workspace dataplane group requires org editor permission")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testUpdateWorkspaceDataplaneGroupRequiresOrgEditor(airbyteEdition: AirbyteEdition) {
     // Mock that DATAPLANE_GROUP_ID_2 is not a default group
     val defaultDataplaneGroups =
@@ -1451,7 +1419,6 @@ internal class WorkspacesHandlerTest {
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
   @DisplayName("Creating workspace with default dataplane group should not require org editor permission")
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testCreateWorkspaceWithDefaultDataplaneGroupDoesNotRequireOrgEditor(airbyteEdition: AirbyteEdition) {
     workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
     Mockito
@@ -1501,7 +1468,6 @@ internal class WorkspacesHandlerTest {
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
   @DisplayName("Creating workspace with non-default dataplane group from wrong org should throw forbidden")
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testCreateWorkspaceWithWrongOrgDataplaneGroupThrowsForbidden(airbyteEdition: AirbyteEdition) {
     workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
     Mockito
@@ -1553,7 +1519,6 @@ internal class WorkspacesHandlerTest {
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
   @DisplayName("Updating workspace with default dataplane group should not require additional validation")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testUpdateWorkspaceWithDefaultDataplaneGroupSucceeds(airbyteEdition: AirbyteEdition) {
     // Mock that DATAPLANE_GROUP_ID_2 is a default group
     val defaultDataplaneGroups =
@@ -1595,7 +1560,6 @@ internal class WorkspacesHandlerTest {
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
   @DisplayName("Updating workspace with non-default dataplane group from wrong org should throw forbidden")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testUpdateWorkspaceWithWrongOrgDataplaneGroupThrowsForbidden(airbyteEdition: AirbyteEdition) {
     // Mock that DATAPLANE_GROUP_ID_2 is not a default group
     val defaultDataplaneGroups =

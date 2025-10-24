@@ -20,7 +20,6 @@ import java.util.UUID
  * metadata will be stored in the Jobs table for jobs triggered via this client.
  */
 interface SynchronousSchedulerClient {
-  @Throws(IOException::class)
   fun createSourceCheckConnectionJob(
     source: SourceConnection,
     sourceVersion: ActorDefinitionVersion,
@@ -28,7 +27,6 @@ interface SynchronousSchedulerClient {
     actorDefinitionResourceRequirements: ResourceRequirements?,
   ): SynchronousResponse<StandardCheckConnectionOutput>
 
-  @Throws(IOException::class)
   fun createDestinationCheckConnectionJob(
     destination: DestinationConnection,
     destinationVersion: ActorDefinitionVersion,
@@ -36,7 +34,6 @@ interface SynchronousSchedulerClient {
     actorDefinitionResourceRequirements: ResourceRequirements?,
   ): SynchronousResponse<StandardCheckConnectionOutput>
 
-  @Throws(IOException::class)
   fun createDiscoverSchemaJob(
     source: SourceConnection,
     sourceVersion: ActorDefinitionVersion,
@@ -45,14 +42,12 @@ interface SynchronousSchedulerClient {
     priority: WorkloadPriority?,
   ): SynchronousResponse<UUID>
 
-  @Throws(IOException::class)
   fun createDestinationDiscoverJob(
     destination: DestinationConnection,
     destinationDefinition: StandardDestinationDefinition,
     destinationVersion: ActorDefinitionVersion,
   ): SynchronousResponse<UUID>
 
-  @Throws(IOException::class)
   fun createGetSpecJob(
     dockerImage: String,
     isCustomConnector: Boolean,

@@ -30,10 +30,8 @@ class ClosableLinkedBlockingQueue<T>(
     this.closedLock = ReentrantReadWriteLock()
   }
 
-  @Throws(InterruptedException::class)
   override fun poll(): T? = queue.poll(timeOutDuration.toLong(), TimeUnit.SECONDS)
 
-  @Throws(InterruptedException::class)
   override fun add(e: T): Boolean {
     try {
       // We use a ReadWriteLock to make sure we are not adding to the queue while attempting to close

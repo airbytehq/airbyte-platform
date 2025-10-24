@@ -119,12 +119,6 @@ class SourceHandler
     private val currentUserService: CurrentUserService,
     private val partialUserConfigService: PartialUserConfigService,
   ) {
-    @Throws(
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      IOException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun createSourceWithOptionalSecret(sourceCreate: SourceCreate): SourceRead {
       if (sourceCreate.secretId != null && !sourceCreate.secretId.isBlank()) {
         val hydratedSecret = hydrateOAuthResponseSecret(sourceCreate.secretId, sourceCreate.workspaceId)
@@ -142,7 +136,6 @@ class SourceHandler
     }
 
     @Trace
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun updateSourceWithOptionalSecret(partialSourceUpdate: PartialSourceUpdate): SourceRead {
       val spec = getSourceVersionForSourceId(partialSourceUpdate.sourceId).spec
       addTagsToTrace(
@@ -183,12 +176,6 @@ class SourceHandler
     }
 
     @VisibleForTesting
-    @Throws(
-      ConfigNotFoundException::class,
-      IOException::class,
-      JsonValidationException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun createSource(sourceCreate: SourceCreate): SourceRead {
       if (sourceCreate.resourceAllocation != null && airbyteEdition == AirbyteEdition.CLOUD) {
         throw BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition))
@@ -220,7 +207,6 @@ class SourceHandler
       return buildSourceRead(sourceService.getSourceConnection(sourceId), spec)
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun partialUpdateSource(partialSourceUpdate: PartialSourceUpdate): SourceRead {
       if (partialSourceUpdate.resourceAllocation != null && airbyteEdition == AirbyteEdition.CLOUD) {
         throw BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition))
@@ -259,12 +245,6 @@ class SourceHandler
     }
 
     @Trace
-    @Throws(
-      ConfigNotFoundException::class,
-      IOException::class,
-      JsonValidationException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun updateSource(sourceUpdate: SourceUpdate): SourceRead {
       if (sourceUpdate.resourceAllocation != null && airbyteEdition == AirbyteEdition.CLOUD) {
         throw BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition))
@@ -309,23 +289,19 @@ class SourceHandler
      *
      * @param sourceIdRequestBody - ID of the source to upgrade
      */
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun upgradeSourceVersion(sourceIdRequestBody: SourceIdRequestBody) {
       val sourceConnection = sourceService.getSourceConnection(sourceIdRequestBody.sourceId)
       val sourceDefinition = sourceService.getStandardSourceDefinition(sourceConnection.sourceDefinitionId)
       actorDefinitionVersionUpdater.upgradeActorVersion(sourceConnection, sourceDefinition)
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun getSource(sourceIdRequestBody: SourceIdRequestBody): SourceRead = getSource(sourceIdRequestBody, false)
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun getSource(
       sourceIdRequestBody: SourceIdRequestBody,
       includeSecretCoordinates: Boolean,
     ): SourceRead = buildSourceRead(sourceIdRequestBody.sourceId, includeSecretCoordinates)
 
-    @Throws(IOException::class)
     fun getMostRecentSourceActorCatalogWithUpdatedAt(sourceIdRequestBody: SourceIdRequestBody): ActorCatalogWithUpdatedAt {
       val actorCatalog =
         catalogService.getMostRecentSourceActorCatalog(sourceIdRequestBody.sourceId)
@@ -336,7 +312,6 @@ class SourceHandler
       }
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun listSourcesForWorkspace(actorListCursorPaginatedRequestBody: ActorListCursorPaginatedRequestBody): SourceReadList {
       val filters = actorListCursorPaginatedRequestBody.filters
       val pageSize =
@@ -404,7 +379,6 @@ class SourceHandler
       return SourceReadList().sources(sourceReads).numConnections(numSources).pageSize(pageSize)
     }
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun listSourcesForWorkspaces(listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody): SourceReadList {
       val sourceConnections =
         sourceService.listWorkspacesSourceConnections(
@@ -425,7 +399,6 @@ class SourceHandler
       return SourceReadList().sources(reads)
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun listSourcesForSourceDefinition(sourceDefinitionId: UUID): SourceReadList {
       val reads: MutableList<SourceRead> = Lists.newArrayList()
       for (sourceConnection in sourceService.listSourcesForDefinition(sourceDefinitionId)) {
@@ -435,7 +408,6 @@ class SourceHandler
       return SourceReadList().sources(reads)
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun searchSources(sourceSearch: SourceSearch?): SourceReadList {
       val reads: MutableList<SourceRead> = Lists.newArrayList()
 
@@ -451,24 +423,12 @@ class SourceHandler
       return SourceReadList().sources(reads)
     }
 
-    @Throws(
-      JsonValidationException::class,
-      IOException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun deleteSource(sourceIdRequestBody: SourceIdRequestBody) {
       // get existing source
       val source = buildSourceRead(sourceIdRequestBody.sourceId)
       deleteSource(source)
     }
 
-    @Throws(
-      JsonValidationException::class,
-      IOException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun deleteSource(source: SourceRead) {
       // "delete" all connections associated with source as well.
       // Delete connections first in case it fails in the middle, source will still be visible
@@ -519,7 +479,6 @@ class SourceHandler
       }
     }
 
-    @Throws(JsonValidationException::class, IOException::class)
     fun writeDiscoverCatalogResult(request: SourceDiscoverSchemaWriteRequestBody): DiscoverCatalogResult {
       val persistenceCatalog = catalogConverter.toProtocol(request.catalog)
       val catalogId = writeActorCatalog(persistenceCatalog, request)
@@ -527,7 +486,6 @@ class SourceHandler
       return DiscoverCatalogResult().catalogId(catalogId)
     }
 
-    @Throws(IOException::class)
     private fun writeActorCatalog(
       persistenceCatalog: AirbyteCatalog,
       request: SourceDiscoverSchemaWriteRequestBody,
@@ -539,7 +497,6 @@ class SourceHandler
         request.configurationHash,
       )
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, ConfigNotFoundException::class)
     private fun buildSourceReadWithStatus(sourceConnection: SourceConnection): SourceRead {
       val sourceRead = buildSourceRead(sourceConnection)
       // add source status into sourceRead
@@ -552,7 +509,6 @@ class SourceHandler
     }
 
     @JvmOverloads
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun buildSourceRead(
       sourceId: UUID,
       includeSecretCoordinates: Boolean = false,
@@ -562,7 +518,6 @@ class SourceHandler
       return buildSourceRead(sourceConnection, includeSecretCoordinates)
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     private fun buildSourceRead(
       sourceConnection: SourceConnection,
       includeSecretCoordinates: Boolean = false,
@@ -574,7 +529,6 @@ class SourceHandler
       return buildSourceRead(sourceConnection, spec, includeSecretCoordinates)
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     private fun buildSourceRead(
       sourceConnection: SourceConnection,
       spec: ConnectorSpecification,
@@ -605,7 +559,6 @@ class SourceHandler
       return toSourceRead(sourceConnection, standardSourceDefinition)
     }
 
-    @Throws(JsonValidationException::class)
     private fun validateSource(
       spec: ConnectorSpecification,
       implementationJson: JsonNode,
@@ -621,7 +574,6 @@ class SourceHandler
      * Note: The existing source config may have been persisted with secret object nodes instead of raw
      * values, which must be replaced with placeholder text nodes in order to pass validation.
      */
-    @Throws(JsonValidationException::class)
     private fun validateSourceUpdate(
       providedUpdateJson: JsonNode?,
       updatedSource: SourceConnection,
@@ -648,19 +600,12 @@ class SourceHandler
       validateSource(spec, mergedConfig)
     }
 
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     private fun getSourceVersionForSourceId(sourceId: UUID): ActorDefinitionVersion {
       val source = sourceService.getSourceConnection(sourceId)
       val sourceDef = sourceService.getStandardSourceDefinition(source.sourceDefinitionId)
       return actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.workspaceId, sourceId)
     }
 
-    @Throws(
-      IOException::class,
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun getSourceVersionForWorkspaceId(
       sourceDefId: UUID,
       workspaceId: UUID,
@@ -675,7 +620,6 @@ class SourceHandler
      * coordinates are split out from the provided config and replaced with coordinates or secret
      * reference IDs, depending on whether the workspace has a secret storage configured.
      */
-    @Throws(JsonValidationException::class, IOException::class)
     private fun persistSourceConnection(
       name: String,
       sourceDefinitionId: UUID,
@@ -732,7 +676,6 @@ class SourceHandler
      *
      * @return new config with secret values replaced with secret coordinate nodes.
      */
-    @Throws(JsonValidationException::class)
     fun persistConfigRawSecretValues(
       config: JsonNode,
       secretStorageId: Optional<UUID>,
@@ -774,7 +717,6 @@ class SourceHandler
       }
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun toSourceRead(
       sourceConnection: SourceConnection,
       standardSourceDefinition: StandardSourceDefinition,

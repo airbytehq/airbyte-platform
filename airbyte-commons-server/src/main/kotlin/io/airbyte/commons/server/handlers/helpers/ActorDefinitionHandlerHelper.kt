@@ -88,7 +88,6 @@ class ActorDefinitionHandlerHelper(
    * @return - the new actor definition version
    * @throws IOException - if there is an error fetching the spec
    */
-  @Throws(IOException::class)
   fun defaultDefinitionVersionFromCreate(
     dockerRepository: String,
     dockerImageTag: String,
@@ -136,7 +135,6 @@ class ActorDefinitionHandlerHelper(
    * @return - a new actor definition version
    * @throws IOException - if there is an error fetching the spec
    */
-  @Throws(IOException::class)
   fun defaultDefinitionVersionFromUpdate(
     currentVersion: ActorDefinitionVersion,
     actorType: ActorType,
@@ -191,7 +189,6 @@ class ActorDefinitionHandlerHelper(
       .withSupportsRefreshes(currentVersion.supportsRefreshes)
   }
 
-  @Throws(IOException::class)
   fun defaultDefinitionVersionFromUpdate(
     currentVersionId: UUID,
     spec: ConnectorSpecification?,
@@ -259,7 +256,6 @@ class ActorDefinitionHandlerHelper(
     return !newVersionFromCache.isPresent
   }
 
-  @Throws(IOException::class)
   private fun getSpecForImage(
     dockerRepository: String,
     imageTag: String,
@@ -297,7 +293,6 @@ class ActorDefinitionHandlerHelper(
    * @param actorType - the actor type
    * @throws IOException - if there is an error persisting the breaking changes
    */
-  @Throws(IOException::class)
   fun getBreakingChanges(
     actorDefinitionVersion: ActorDefinitionVersion,
     actorType: ActorType,
@@ -347,7 +342,6 @@ class ActorDefinitionHandlerHelper(
         },
       )
 
-  @Throws(IOException::class)
   fun getVersionBreakingChanges(actorDefinitionVersion: ActorDefinitionVersion): Optional<ActorDefinitionVersionBreakingChanges> {
     val breakingChanges =
       actorDefinitionService.listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion)

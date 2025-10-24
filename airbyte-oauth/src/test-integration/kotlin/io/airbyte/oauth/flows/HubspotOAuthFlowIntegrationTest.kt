@@ -39,12 +39,6 @@ class HubspotOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
   ): OAuthFlowImplementation = HubspotOAuthFlow(httpClient)
 
   @Test
-  @Throws(
-    InterruptedException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-  )
   fun testFullOAuthFlow() {
     var limit = 100
     val workspaceId = UUID.randomUUID()

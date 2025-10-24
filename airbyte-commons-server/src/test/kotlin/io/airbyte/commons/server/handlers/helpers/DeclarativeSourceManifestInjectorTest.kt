@@ -27,7 +27,6 @@ internal class DeclarativeSourceManifestInjectorTest {
   }
 
   @Test
-  @Throws(JsonProcessingException::class)
   fun whenAddInjectedDeclarativeManifestThenJsonHasInjectedDeclarativeManifestProperty() {
     val spec: JsonNode = A_SPEC.deepCopy()
     injector.addInjectedDeclarativeManifest(spec)
@@ -103,7 +102,6 @@ internal class DeclarativeSourceManifestInjectorTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun whenGetManifestConnectorInjectionsWithNoCustomCodeThenReturnOnlyManifestInjection() {
     val injections: List<ActorDefinitionConfigInjection> =
       injector.getManifestConnectorInjections(A_SOURCE_DEFINITION_ID, A_MANIFEST, null)
@@ -119,7 +117,6 @@ internal class DeclarativeSourceManifestInjectorTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun whenGetManifestConnectorInjectionsWithCustomCodeThenReturnAllInjections() {
     val injections: List<ActorDefinitionConfigInjection> =
       injector.getManifestConnectorInjections(A_SOURCE_DEFINITION_ID, A_MANIFEST, A_COMPONENT_FILE)
@@ -157,7 +154,6 @@ internal class DeclarativeSourceManifestInjectorTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun whenGetManifestConnectorInjectionsWithEmptyCustomCodeThenReturnOnlyManifestInjection() {
     val injections: List<ActorDefinitionConfigInjection> =
       injector.getManifestConnectorInjections(A_SOURCE_DEFINITION_ID, A_MANIFEST, "")

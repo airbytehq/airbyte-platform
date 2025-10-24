@@ -41,7 +41,6 @@ internal class BreakingChangeNotificationHelperTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun `no notifications should be sent if the feature flag is disabled`() {
     every { mFeatureFlagClient.boolVariation(NotifyOnConnectorBreakingChanges, Workspace(WORKSPACE_ID_1)) } returns false
     every { mWorkspaceService.listStandardWorkspacesWithIds(listOf(WORKSPACE_ID_1), false) } returns
@@ -73,7 +72,6 @@ internal class BreakingChangeNotificationHelperTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun `notifications are sent for disabled syncs`() {
     val workspaceIds = listOf(WORKSPACE_ID_1, WORKSPACE_ID_2)
     val breakingChange = ActorDefinitionBreakingChange().withMessage("some breaking change")
@@ -112,7 +110,6 @@ internal class BreakingChangeNotificationHelperTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun `notifications are sent for deprecated syncs`() {
     val workspaceIds = listOf(WORKSPACE_ID_1, WORKSPACE_ID_2)
     val breakingChange =

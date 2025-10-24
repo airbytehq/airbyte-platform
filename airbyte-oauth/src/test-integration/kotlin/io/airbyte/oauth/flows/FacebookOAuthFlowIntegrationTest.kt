@@ -39,7 +39,6 @@ class FacebookOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
   ): OAuthFlowImplementation = FacebookMarketingOAuthFlow(httpClient)
 
   @BeforeEach
-  @Throws(IOException::class)
   override fun setup() {
     super.setup()
   }
@@ -47,12 +46,6 @@ class FacebookOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
   override fun getServerListeningPort(): Int = 9000
 
   @Test
-  @Throws(
-    InterruptedException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-  )
   fun testFullFacebookOAuthFlow() {
     val workspaceId = UUID.randomUUID()
     val definitionId = UUID.randomUUID()

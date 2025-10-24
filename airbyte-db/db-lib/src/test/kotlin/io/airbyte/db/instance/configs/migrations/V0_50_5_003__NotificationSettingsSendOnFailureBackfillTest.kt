@@ -44,7 +44,6 @@ internal class V0_50_5_003__NotificationSettingsSendOnFailureBackfillTest : Abst
   }
 
   @Test
-  @Throws(Exception::class)
   fun testBackfillCustomerIoValues() {
     val ctx = dslContext!!
 
@@ -108,7 +107,6 @@ internal class V0_50_5_003__NotificationSettingsSendOnFailureBackfillTest : Abst
   }
 
   @Test
-  @Throws(Exception::class)
   fun testKeepCustomerIoValues() {
     val ctx = dslContext!!
 

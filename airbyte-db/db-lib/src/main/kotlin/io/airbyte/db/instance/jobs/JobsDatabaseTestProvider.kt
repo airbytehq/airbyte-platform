@@ -22,7 +22,6 @@ class JobsDatabaseTestProvider(
   private val dslContext: DSLContext,
   private val flyway: Flyway?,
 ) : TestDatabaseProvider {
-  @Throws(IOException::class, DatabaseInitializationException::class)
   override fun create(runMigration: Boolean): Database {
     val initialSchema = Resources.read(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH)
     createJobsDatabaseInitializer(

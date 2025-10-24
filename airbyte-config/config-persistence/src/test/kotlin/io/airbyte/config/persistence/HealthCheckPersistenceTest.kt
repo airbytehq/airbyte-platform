@@ -20,14 +20,12 @@ internal class HealthCheckPersistenceTest {
   private var healthCheckService: HealthCheckService? = null
 
   @BeforeEach
-  @Throws(Exception::class)
   fun beforeEach() {
     database = Mockito.mock<Database>(Database::class.java)
     healthCheckService = HealthCheckServiceJooqImpl(database)
   }
 
   @Test
-  @Throws(SQLException::class)
   fun testHealthCheckSuccess() {
     val mResult = Mockito.mock<Result<*>?>(Result::class.java)
     Mockito.`when`<Any?>(database!!.query<Any?>(org.mockito.kotlin.any<ContextQueryFunction<Any?>>())).thenReturn(mResult)
@@ -37,9 +35,8 @@ internal class HealthCheckPersistenceTest {
   }
 
   @Test
-  @Throws(SQLException::class)
   fun testHealthCheckFailure() {
-    Mockito.`when`<Any?>(database!!.query<Any?>(org.mockito.kotlin.any<ContextQueryFunction<Any?>>())).thenThrow(RuntimeException::class.java)
+    Mockito.`when`<Any?>(database!!.query<Any?>(org.mockito.kotlin.any<ContextQueryFunction<Any?>>())).thenAnswer { throw RuntimeException() }
 
     val check = healthCheckService!!.healthCheck()
     Assertions.assertFalse(check)

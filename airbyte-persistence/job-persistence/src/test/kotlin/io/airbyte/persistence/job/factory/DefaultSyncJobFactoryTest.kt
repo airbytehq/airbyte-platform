@@ -43,7 +43,6 @@ import java.util.UUID
 
 internal class DefaultSyncJobFactoryTest {
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun createSyncJobFromConnectionId() {
     val sourceDefinitionId = UUID.randomUUID()
     val destinationDefinitionId = UUID.randomUUID()

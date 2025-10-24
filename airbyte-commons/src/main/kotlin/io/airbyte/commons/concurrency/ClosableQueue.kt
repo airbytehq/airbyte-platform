@@ -5,10 +5,8 @@
 package io.airbyte.commons.concurrency
 
 interface ClosableQueue<T> {
-  @Throws(InterruptedException::class)
   fun poll(): T?
 
-  @Throws(InterruptedException::class)
   fun add(e: T): Boolean
 
   fun size(): Int

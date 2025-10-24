@@ -47,7 +47,6 @@ internal class WorkspaceHelperTest {
   private lateinit var workspaceService: WorkspaceService
 
   @BeforeEach
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun setup() {
     jobService = mock<JobService>()
     sourceService = mock<SourceService>()
@@ -58,26 +57,22 @@ internal class WorkspaceHelperTest {
 
     whenever(sourceService.getSourceConnection(SOURCE_ID)).thenReturn(SOURCE)
     whenever(sourceService.getSourceConnection(argThat<UUID> { this != SOURCE_ID }))
-      .thenThrow(
-        ConfigNotFoundException::class.java,
-      )
+      .thenAnswer { throw ConfigNotFoundException("test", "test") }
     whenever(destinationService.getDestinationConnection(DEST_ID)).thenReturn(DEST)
     whenever(
       destinationService.getDestinationConnection(
         argThat<UUID> { this != DEST_ID },
       ),
-    ).thenThrow(ConfigNotFoundException::class.java)
+    ).thenAnswer { throw ConfigNotFoundException("test", "test") }
     whenever(connectionService.getStandardSync(CONNECTION_ID)).thenReturn(CONNECTION)
     whenever(connectionService.getStandardSync(argThat<UUID> { this != CONNECTION_ID }))
-      .thenThrow(
-        ConfigNotFoundException::class.java,
-      )
+      .thenAnswer { throw ConfigNotFoundException("test", "test") }
     whenever(operationService.getStandardSyncOperation(OPERATION_ID)).thenReturn(OPERATION)
     whenever(
       operationService.getStandardSyncOperation(
         argThat<UUID> { this != OPERATION_ID },
       ),
-    ).thenThrow(ConfigNotFoundException::class.java)
+    ).thenAnswer { throw ConfigNotFoundException("test", "test") }
 
     workspaceHelper =
       WorkspaceHelper(jobService, connectionService, sourceService, destinationService, operationService, workspaceService)
@@ -171,7 +166,6 @@ internal class WorkspaceHelperTest {
 
   @Test
   @DisplayName("Validate that source caching is working")
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testSource() {
     val retrievedWorkspace = workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(SOURCE_ID)
     Assertions.assertEquals(WORKSPACE_ID, retrievedWorkspace)
@@ -184,7 +178,6 @@ internal class WorkspaceHelperTest {
 
   @Test
   @DisplayName("Validate that destination caching is working")
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testDestination() {
     val retrievedWorkspace = workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DEST_ID)
     Assertions.assertEquals(WORKSPACE_ID, retrievedWorkspace)
@@ -196,7 +189,6 @@ internal class WorkspaceHelperTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testConnection() {
     // test retrieving by connection id
     val retrievedWorkspace = workspaceHelper.getWorkspaceForConnectionIdIgnoreExceptions(CONNECTION_ID)
@@ -213,7 +205,6 @@ internal class WorkspaceHelperTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testOperation() {
     // test retrieving by connection id
     val retrievedWorkspace = workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(OPERATION_ID)
@@ -225,7 +216,6 @@ internal class WorkspaceHelperTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testConnectionAndJobs() {
     // test jobs
     val jobId: Long = 123

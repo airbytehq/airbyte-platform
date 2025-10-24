@@ -41,12 +41,6 @@ class SnapchatMarketingOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
   ): OAuthFlowImplementation = SnapchatMarketingOAuthFlow(httpClient)
 
   @Test
-  @Throws(
-    InterruptedException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-  )
   fun testFullSnapchatMarketingOAuthFlow() {
     val workspaceId = UUID.randomUUID()
     val definitionId = UUID.randomUUID()

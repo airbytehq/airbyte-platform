@@ -140,7 +140,6 @@ internal class SyncPersistenceImplTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testHappyPath() {
     val stateA1 = getStreamState("A", 1)
     syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), stateA1)
@@ -174,7 +173,6 @@ internal class SyncPersistenceImplTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testFlushWithApiFailures() {
     val stateF1 = getStreamState("F", 1)
     syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), stateF1)
@@ -220,7 +218,6 @@ internal class SyncPersistenceImplTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testStatsFlushBasicEmissions() {
     syncPersistence.updateStats(AirbyteRecordMessage())
     syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), getStreamState("a", 1))
@@ -317,7 +314,6 @@ internal class SyncPersistenceImplTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testStatsAreNotPersistedWhenStateFails() {
     // We should not save stats if persist state failed
     syncPersistence.updateStats(AirbyteRecordMessage())
@@ -336,7 +332,6 @@ internal class SyncPersistenceImplTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testStatsFailuresAreRetriedOnFollowingRunsEvenWithoutNewStates() {
     // If we failed to save stats, we should retry on the next schedule even if there were no new states
     syncPersistence.updateStats(AirbyteRecordMessage())
@@ -361,7 +356,6 @@ internal class SyncPersistenceImplTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun statsDontPersistIfTheresBeenNoChanges() {
     // update stats
     syncPersistence.updateStats(AirbyteRecordMessage().withStream("stream1"))
@@ -399,7 +393,6 @@ internal class SyncPersistenceImplTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testClose() {
     // Adding a state to flush, this state should get flushed when we close syncPersistence
     val stateA2 = getStreamState("A", 2)
@@ -417,7 +410,6 @@ internal class SyncPersistenceImplTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testCloseMergeStatesFromPreviousFailure() {
     // Adding a state to flush, this state should get flushed when we close syncPersistence
     val stateA2 = getStreamState("closeA", 2)
@@ -439,7 +431,6 @@ internal class SyncPersistenceImplTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testCloseShouldAttemptToRetryFinalFlush() {
     val state = getStreamState("final retry", 2)
     syncPersistence.updateStats(AirbyteRecordMessage())
@@ -457,7 +448,6 @@ internal class SyncPersistenceImplTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testBadFinalStateFlushThrowsAnException() {
     val state = getStreamState("final retry", 2)
     syncPersistence.updateStats(AirbyteRecordMessage())
@@ -480,7 +470,6 @@ internal class SyncPersistenceImplTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testBadFinalStatsFlushThrowsAnException() {
     val state = getStreamState("final retry", 2)
     syncPersistence.updateStats(AirbyteRecordMessage())
@@ -503,7 +492,6 @@ internal class SyncPersistenceImplTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testCloseWhenFailBecauseFlushTookTooLong() {
     syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), getStreamState("oops", 42))
 
@@ -517,7 +505,6 @@ internal class SyncPersistenceImplTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testCloseWhenFailBecauseThreadInterrupted() {
     syncPersistence.accept(airbyteContextConfig.connectionIdAsUUID(), getStreamState("oops", 42))
 
@@ -531,7 +518,6 @@ internal class SyncPersistenceImplTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testCloseWithPendingFlushShouldCallTheApi() {
     // Shutdown, we expect the executor service to be stopped and an stateApiClient to be called
     every { executorService.awaitTermination(any(), any()) } returns true
@@ -550,7 +536,6 @@ internal class SyncPersistenceImplTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testLegacyStatesAreGettingIntoTheScheduledFlushLogic() {
     val captor = CapturingSlot<ConnectionStateCreateOrUpdate>()
 

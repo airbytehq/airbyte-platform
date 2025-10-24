@@ -14,6 +14,5 @@ interface PostLoadExecutor {
    *
    * @throws Exception if unable to perform the additional tasks.
    */
-  @Throws(Exception::class)
   fun execute()
 }

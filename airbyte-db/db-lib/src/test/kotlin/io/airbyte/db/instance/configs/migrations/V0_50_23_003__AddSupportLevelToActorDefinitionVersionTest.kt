@@ -41,7 +41,6 @@ internal class V0_50_23_003__AddSupportLevelToActorDefinitionVersionTest : Abstr
   }
 
   @Test
-  @Throws(SQLException::class, IOException::class)
   fun test() {
     val context = dslContext!!
 

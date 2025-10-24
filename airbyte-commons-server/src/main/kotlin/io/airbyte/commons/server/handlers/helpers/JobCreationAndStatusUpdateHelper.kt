@@ -81,7 +81,6 @@ class JobCreationAndStatusUpdateHelper(
 
   fun didJobSucceed(job: Job): Boolean = job.status == io.airbyte.config.JobStatus.SUCCEEDED
 
-  @Throws(IOException::class)
   fun failNonTerminalJobs(connectionId: UUID) {
     val jobs =
       jobPersistence.listJobsForConnectionWithStatuses(
@@ -130,7 +129,6 @@ class JobCreationAndStatusUpdateHelper(
     return (job.config.sync.isSourceCustomConnector || job.config.sync.isDestinationCustomConnector).toString()
   }
 
-  @Throws(IOException::class)
   private fun emitAttemptEvent(
     metric: OssMetricsRegistry,
     job: Job,
@@ -166,7 +164,6 @@ class JobCreationAndStatusUpdateHelper(
     metricClient.count(metric, 1L, *allMetricAttributes)
   }
 
-  @Throws(IOException::class)
   fun emitAttemptCreatedEvent(
     job: Job,
     attemptNumber: Int,
@@ -323,7 +320,6 @@ class JobCreationAndStatusUpdateHelper(
   }
 
   @VisibleForTesting
-  @Throws(IOException::class)
   fun getJobToReleaseStages(job: Job?): List<ReleaseStage> {
     if (job?.config == null || job.config.configType == null) {
       return emptyList()
@@ -349,7 +345,6 @@ class JobCreationAndStatusUpdateHelper(
       .toList()
   }
 
-  @Throws(IOException::class)
   fun emitJobToReleaseStagesMetric(
     metric: OssMetricsRegistry,
     job: Job,
@@ -357,7 +352,6 @@ class JobCreationAndStatusUpdateHelper(
     emitToReleaseStagesMetricHelper(metric, job, emptyList())
   }
 
-  @Throws(IOException::class)
   fun emitJobToReleaseStagesMetric(
     metric: OssMetricsRegistry,
     job: Job,
@@ -378,7 +372,6 @@ class JobCreationAndStatusUpdateHelper(
     emitToReleaseStagesMetricHelper(metric, job, additionalAttributes)
   }
 
-  @Throws(IOException::class)
   fun emitJobToReleaseStagesMetric(
     metric: OssMetricsRegistry,
     job: Job,
@@ -413,7 +406,6 @@ class JobCreationAndStatusUpdateHelper(
     emitToReleaseStagesMetricHelper(metric, job, additionalAttributes)
   }
 
-  @Throws(IOException::class)
   private fun emitToReleaseStagesMetricHelper(
     metric: OssMetricsRegistry,
     job: Job,
@@ -435,7 +427,6 @@ class JobCreationAndStatusUpdateHelper(
     }
   }
 
-  @Throws(IOException::class)
   fun trackCompletion(
     job: Job,
     status: JobStatus,
@@ -554,7 +545,6 @@ class JobCreationAndStatusUpdateHelper(
   /**
    * Report a job as started.
    */
-  @Throws(IOException::class)
   fun reportJobStart(jobId: Long) {
     val job = jobPersistence.getJob(jobId)
     jobTracker.trackSync(job, JobTracker.JobState.STARTED)

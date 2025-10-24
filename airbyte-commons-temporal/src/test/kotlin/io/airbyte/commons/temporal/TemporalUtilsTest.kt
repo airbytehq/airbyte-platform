@@ -51,14 +51,14 @@ internal class TemporalUtilsTest {
     Mockito.`when`(describeNamespaceResponse.getNamespaceInfo()).thenReturn(namespaceInfo)
     Mockito
       .`when`(serviceSupplier.get())
-      .thenThrow(java.lang.RuntimeException::class.java)
+      .thenAnswer { throw java.lang.RuntimeException() }
       .thenReturn(workflowServiceStubs)
     Mockito
       .`when`(
         workflowServiceStubs.blockingStub().describeNamespace(
           any(),
         ),
-      ).thenThrow(java.lang.RuntimeException::class.java)
+      ).thenAnswer { throw java.lang.RuntimeException() }
       .thenReturn(describeNamespaceResponse)
     temporalUtils.getTemporalClientWhenConnected(Duration.ofMillis(10), Duration.ofSeconds(1), Duration.ofSeconds(0), serviceSupplier, namespace)
   }
@@ -77,7 +77,7 @@ internal class TemporalUtilsTest {
     Mockito.`when`(describeNamespaceResponse.getNamespaceInfo()).thenReturn(namespaceInfo)
     Mockito
       .`when`(serviceSupplier.get())
-      .thenThrow(java.lang.RuntimeException::class.java)
+      .thenAnswer { throw java.lang.RuntimeException() }
       .thenReturn(workflowServiceStubs)
     Mockito
       .`when`(
@@ -86,7 +86,7 @@ internal class TemporalUtilsTest {
           .listNamespaces(
             any(),
           ).getNamespacesList(),
-      ).thenThrow(java.lang.RuntimeException::class.java)
+      ).thenAnswer { throw java.lang.RuntimeException() }
       .thenReturn(listOf(describeNamespaceResponse))
     Assertions.assertThrows<java.lang.RuntimeException>(
       java.lang.RuntimeException::class.java,

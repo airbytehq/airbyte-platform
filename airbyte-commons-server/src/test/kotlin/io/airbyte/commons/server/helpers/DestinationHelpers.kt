@@ -33,20 +33,17 @@ object DestinationHelpers {
       return deserialize(Files.readString(path))
     }
 
-  @Throws(IOException::class)
   fun generateDestination(
     destinationDefinitionId: UUID?,
     tombstone: Boolean,
   ): DestinationConnection = generateDestination(destinationDefinitionId, "my default dest name", tombstone, null)
 
-  @Throws(IOException::class)
   fun generateDestination(
     destinationDefinitionId: UUID?,
     resourceRequirements: ScopedResourceRequirements?,
   ): DestinationConnection = generateDestination(destinationDefinitionId, "my default dest name", false, resourceRequirements)
 
   @JvmOverloads
-  @Throws(IOException::class)
   fun generateDestination(
     destinationDefinitionId: UUID?,
     name: String? = "my default dest name",

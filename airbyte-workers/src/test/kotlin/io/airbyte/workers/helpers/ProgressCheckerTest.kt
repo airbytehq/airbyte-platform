@@ -37,7 +37,6 @@ internal class ProgressCheckerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun noRespReturnsFalse() {
     val activity = ProgressChecker(mAirbyteApiClient, mPredicates)
     val requestBody = GetAttemptStatsRequestBody(Fixtures.jobId1, Fixtures.attemptNo1)
@@ -52,7 +51,6 @@ internal class ProgressCheckerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  @Throws(Exception::class)
   fun respReturnsCheckedValue(madeProgress: Boolean) {
     val activity = ProgressChecker(mAirbyteApiClient, mPredicates)
     val requestBody = GetAttemptStatsRequestBody(Fixtures.jobId1, Fixtures.attemptNo1)
@@ -70,13 +68,12 @@ internal class ProgressCheckerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun notFoundsAreTreatedAsNoProgress() {
     val activity = ProgressChecker(mAirbyteApiClient, mPredicates)
     val requestBody = GetAttemptStatsRequestBody(Fixtures.jobId1, Fixtures.attemptNo1)
     Mockito
       .`when`(mAttemptApi.getAttemptCombinedStats(requestBody))
-      .thenThrow(ClientException("Not Found.", HttpStatus.NOT_FOUND.code, null))
+      .thenAnswer { throw ClientException("Not Found.", HttpStatus.NOT_FOUND.code, null) }
 
     val result = activity.check(Fixtures.jobId1, Fixtures.attemptNo1)
 

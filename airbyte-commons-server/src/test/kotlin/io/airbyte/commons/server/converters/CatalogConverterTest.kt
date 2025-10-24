@@ -39,7 +39,6 @@ internal class CatalogConverterTest {
   lateinit var catalogConverter: CatalogConverter
 
   @Test
-  @Throws(JsonValidationException::class)
   fun testConvertToProtocol() {
     Assertions.assertEquals(
       ConnectionHelpers.generateBasicConfiguredAirbyteCatalog(),
@@ -66,7 +65,6 @@ internal class CatalogConverterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class)
   fun testConvertInternal() {
     val hashingMapper = createHashingMapper(ConnectionHelpers.SECOND_FIELD_NAME)
     val hashingMapper2 = createHashingMapper(ConnectionHelpers.FIELD_NAME, UUID.randomUUID())
@@ -99,7 +97,6 @@ internal class CatalogConverterTest {
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  @Throws(JsonValidationException::class)
   fun testConvertInternalWithFiles(includeFiles: Boolean) {
     val apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields()
     val apiStream: AirbyteStreamAndConfiguration = apiCatalog.getStreams().first()
@@ -112,7 +109,6 @@ internal class CatalogConverterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class)
   fun testConvertInternalWithDestinationObjectName() {
     val apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields()
     val apiStream: AirbyteStreamAndConfiguration = apiCatalog.getStreams().first()
@@ -126,7 +122,6 @@ internal class CatalogConverterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class)
   fun testConvertInternalWithHashedFields() {
     val apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields()
     val apiStream: AirbyteStreamAndConfiguration = apiCatalog.getStreams().first()
@@ -148,7 +143,6 @@ internal class CatalogConverterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class)
   fun testConvertToInternalOnlyIncludeSelectedFields() {
     val apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields()
     val apiStream: AirbyteStreamAndConfiguration = apiCatalog.getStreams().first()
@@ -326,7 +320,6 @@ internal class CatalogConverterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class)
   fun testConvertToProtocolFieldSelection() {
     val catalog = ConnectionHelpers.generateApiCatalogWithTwoFields()
     catalog
@@ -339,7 +332,6 @@ internal class CatalogConverterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class)
   fun testDiscoveredToApiDefaultSyncModesNoSourceCursor() {
     val persistedCatalog = catalogConverter.toProtocol(ConnectionHelpers.generateBasicApiCatalog())
     val actualStreamConfig =
@@ -355,7 +347,6 @@ internal class CatalogConverterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class)
   fun testDiscoveredToApiDefaultSyncModesSourceCursorAndPrimaryKey() {
     val persistedCatalog = catalogConverter.toProtocol(ConnectionHelpers.generateBasicApiCatalog())
     persistedCatalog
@@ -376,7 +367,6 @@ internal class CatalogConverterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class)
   fun testDiscoveredToApiDefaultSyncModesSourceCursorNoPrimaryKey() {
     val persistedCatalog = catalogConverter.toProtocol(ConnectionHelpers.generateBasicApiCatalog())
     persistedCatalog.getStreams().get(0).withSourceDefinedCursor(true)
@@ -393,7 +383,6 @@ internal class CatalogConverterTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class)
   fun testDiscoveredToApiDefaultSyncModesSourceCursorNoFullRefresh() {
     val persistedCatalog = catalogConverter.toProtocol(ConnectionHelpers.generateBasicApiCatalog())
     persistedCatalog

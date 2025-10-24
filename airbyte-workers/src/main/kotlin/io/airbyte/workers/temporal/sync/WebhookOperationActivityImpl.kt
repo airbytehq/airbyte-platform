@@ -120,7 +120,6 @@ class WebhookOperationActivityImpl(
     return requestBuilder
   }
 
-  @Throws(IOException::class, InterruptedException::class)
   private fun sendWebhook(
     requestBuilder: HttpRequest.Builder,
     webhookConfig: WebhookConfig,

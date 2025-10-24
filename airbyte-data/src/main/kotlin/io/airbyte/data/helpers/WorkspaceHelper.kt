@@ -39,7 +39,6 @@ class WorkspaceHelper(
   private val sourceToWorkspaceCache: LoadingCache<UUID, UUID> =
     getExpiringCache(
       object : CacheLoader<UUID, UUID>() {
-        @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
         override fun load(sourceId: UUID): UUID {
           val source = sourceService.getSourceConnection(sourceId)
           return source.workspaceId
@@ -49,7 +48,6 @@ class WorkspaceHelper(
   private val destinationToWorkspaceCache: LoadingCache<UUID, UUID> =
     getExpiringCache(
       object : CacheLoader<UUID, UUID>() {
-        @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
         override fun load(destinationId: UUID): UUID {
           val destination = destinationService.getDestinationConnection(destinationId)
           return destination.workspaceId
@@ -59,7 +57,6 @@ class WorkspaceHelper(
   private val connectionToWorkspaceCache: LoadingCache<UUID, UUID> =
     getExpiringCache(
       object : CacheLoader<UUID, UUID>() {
-        @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
         override fun load(connectionId: UUID): UUID {
           val connection = connectionService.getStandardSync(connectionId)
           return getWorkspaceForConnectionIgnoreExceptions(connection.sourceId, connection.destinationId)
@@ -69,7 +66,6 @@ class WorkspaceHelper(
   private val operationToWorkspaceCache: LoadingCache<UUID, UUID> =
     getExpiringCache(
       object : CacheLoader<UUID, UUID>() {
-        @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
         override fun load(operationId: UUID): UUID {
           val operation = operationService.getStandardSyncOperation(operationId)
           return operation.workspaceId
@@ -79,7 +75,6 @@ class WorkspaceHelper(
   private val jobToWorkspaceCache: LoadingCache<Long, UUID> =
     getExpiringCache(
       object : CacheLoader<Long, UUID>() {
-        @Throws(ConfigNotFoundException::class, IOException::class)
         override fun load(jobId: Long): UUID {
           val job =
             jobService.findById(jobId)
@@ -96,7 +91,6 @@ class WorkspaceHelper(
   private val workspaceToOrganizationCache: LoadingCache<UUID, UUID> =
     getExpiringCache(
       object : CacheLoader<UUID, UUID>() {
-        @Throws(Exception::class)
         override fun load(workspaceId: UUID): UUID = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).organizationId
       },
     )
@@ -111,20 +105,17 @@ class WorkspaceHelper(
    *
    * In API calls, distinguishing between various exceptions helps return the correct status code.
    */
-  @Throws(ConfigNotFoundException::class, JsonValidationException::class)
   fun getWorkspaceForSourceId(sourceId: UUID): UUID = handleCacheExceptions { sourceToWorkspaceCache[sourceId] }
 
   fun getWorkspaceForSourceIdIgnoreExceptions(sourceId: UUID): UUID = swallowExecutionException { getWorkspaceForSourceId(sourceId) }
 
   // DESTINATION ID
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun getWorkspaceForDestinationId(destinationId: UUID): UUID = handleCacheExceptions { destinationToWorkspaceCache[destinationId] }
 
   fun getWorkspaceForDestinationIdIgnoreExceptions(destinationId: UUID): UUID =
     swallowExecutionException { destinationToWorkspaceCache[destinationId] }
 
   // JOB ID
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun getWorkspaceForJobId(jobId: Long): UUID = handleCacheExceptions { jobToWorkspaceCache[jobId] }
 
   fun getWorkspaceForJobIdIgnoreExceptions(jobId: Long): UUID = swallowExecutionException { jobToWorkspaceCache[jobId] }
@@ -142,7 +133,6 @@ class WorkspaceHelper(
    * @param destinationId destination id
    * @return workspace id
    */
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun getWorkspaceForConnection(
     sourceId: UUID,
     destinationId: UUID,
@@ -177,13 +167,11 @@ class WorkspaceHelper(
     return sourceWorkspace
   }
 
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun getWorkspaceForConnectionId(connectionId: UUID): UUID = handleCacheExceptions { connectionToWorkspaceCache[connectionId] }
 
   fun getWorkspaceForConnectionIdIgnoreExceptions(connectionId: UUID): UUID = swallowExecutionException { connectionToWorkspaceCache[connectionId] }
 
   // OPERATION ID
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun getWorkspaceForOperationId(operationId: UUID): UUID = handleCacheExceptions { operationToWorkspaceCache[operationId] }
 
   fun getWorkspaceForOperationIdIgnoreExceptions(operationId: UUID): UUID = swallowExecutionException { operationToWorkspaceCache[operationId] }
@@ -191,7 +179,6 @@ class WorkspaceHelper(
   companion object {
     private val log = KotlinLogging.logger {}
 
-    @Throws(ConfigNotFoundException::class, JsonValidationException::class)
     private fun handleCacheExceptions(supplier: () -> UUID): UUID {
       try {
         return supplier()

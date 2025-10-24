@@ -28,14 +28,12 @@ open class StateHandler(
   private val statePersistence: StatePersistence,
   private val jobHistoryHandler: JobHistoryHandler,
 ) {
-  @Throws(IOException::class)
   fun getState(connectionIdRequestBody: ConnectionIdRequestBody): ConnectionState {
     val connectionId = connectionIdRequestBody.connectionId
     val currentState: Optional<StateWrapper> = statePersistence.getCurrentState(connectionId)
     return toApi(connectionId, currentState.orElse(null))
   }
 
-  @Throws(IOException::class)
   fun createOrUpdateState(connectionStateCreateOrUpdate: ConnectionStateCreateOrUpdate): ConnectionState {
     val connectionId = connectionStateCreateOrUpdate.connectionId
     addTagsToTrace(Map.of(MetricTags.CONNECTION_ID, connectionId))
@@ -47,7 +45,6 @@ open class StateHandler(
     return toApi(connectionId, newInternalState.orElse(null))
   }
 
-  @Throws(IOException::class)
   fun createOrUpdateStateSafe(connectionStateCreateOrUpdate: ConnectionStateCreateOrUpdate): ConnectionState {
     if (jobHistoryHandler.getLatestRunningSyncJob(connectionStateCreateOrUpdate.connectionId).isPresent) {
       throw SyncIsRunningException("State cannot be updated while a sync is running for this connection.")
@@ -56,7 +53,6 @@ open class StateHandler(
     return createOrUpdateState(connectionStateCreateOrUpdate)
   }
 
-  @Throws(IOException::class)
   fun wipeState(connectionId: UUID) {
     statePersistence.eraseState(connectionId)
   }

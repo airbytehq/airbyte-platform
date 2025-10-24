@@ -55,7 +55,6 @@ class OAuthServiceJooqImpl(
    * @return source oauth parameter
    * @throws IOException if there is an issue while interacting with db.
    */
-  @Throws(IOException::class)
   override fun getSourceOAuthParamByDefinitionIdOptional(
     workspaceId: Optional<UUID>,
     organizationId: Optional<UUID>,
@@ -92,7 +91,6 @@ class OAuthServiceJooqImpl(
    * @param sourceOAuthParameter source oauth param
    * @throws IOException if there is an issue while interacting with db.
    */
-  @Throws(IOException::class)
   override fun writeSourceOAuthParam(sourceOAuthParameter: SourceOAuthParameter) {
     database.transaction<Any?> { ctx: DSLContext ->
       writeSourceOauthParameter(listOf(sourceOAuthParameter), ctx)
@@ -107,7 +105,6 @@ class OAuthServiceJooqImpl(
    * @throws IOException
    * @throws ConfigNotFoundException if secret persistence coordinate is not present
    </SourceOAuthParameter> */
-  @Throws(IOException::class, ConfigNotFoundException::class)
   override fun getSourceOAuthParameterWithSecretsOptional(
     workspaceId: UUID,
     sourceDefinitionId: UUID,
@@ -134,7 +131,6 @@ class OAuthServiceJooqImpl(
    * @return the found source OAuth parameter
    * @throws IOException it could happen
    */
-  @Throws(IOException::class)
   override fun getSourceOAuthParameterOptional(
     workspaceId: UUID,
     sourceDefinitionId: UUID,
@@ -151,7 +147,6 @@ class OAuthServiceJooqImpl(
    * @return the found source OAuth parameter
    * @throws IOException it could happen
    */
-  @Throws(IOException::class)
   override fun getSourceOAuthParameterOptional(
     workspaceId: UUID,
     organizationId: UUID,
@@ -164,7 +159,6 @@ class OAuthServiceJooqImpl(
       ActorType.source,
     ) { record: Record -> DbConverter.buildSourceOAuthParameter(record) }
 
-  @Throws(IOException::class)
   private fun <T> getActorOAuthParameterOptional(
     workspaceId: UUID,
     organizationId: UUID,
@@ -206,7 +200,6 @@ class OAuthServiceJooqImpl(
    * @throws IOException
    * @throws ConfigNotFoundException if secret persistence coordinate is not present
    </DestinationOAuthParameter> */
-  @Throws(IOException::class, ConfigNotFoundException::class)
   override fun getDestinationOAuthParameterWithSecretsOptional(
     workspaceId: UUID,
     destinationDefinitionId: UUID,
@@ -233,7 +226,6 @@ class OAuthServiceJooqImpl(
    * @return the found source OAuth parameter
    * @throws IOException it could happen
    */
-  @Throws(IOException::class)
   override fun getDestinationOAuthParameterOptional(
     workspaceId: UUID,
     destinationDefinitionId: UUID,
@@ -251,7 +243,6 @@ class OAuthServiceJooqImpl(
    * @return the found source OAuth parameter
    * @throws IOException it could happen
    */
-  @Throws(IOException::class)
   override fun getDestinationOAuthParameterOptional(
     workspaceId: UUID,
     organizationId: UUID,
@@ -272,7 +263,6 @@ class OAuthServiceJooqImpl(
    * @return oauth parameters if present
    * @throws IOException if there is an issue while interacting with db.
    */
-  @Throws(IOException::class)
   override fun getDestinationOAuthParamByDefinitionIdOptional(
     workspaceId: Optional<UUID>,
     organizationId: Optional<UUID>,
@@ -313,7 +303,6 @@ class OAuthServiceJooqImpl(
    * @param destinationOAuthParameter destination oauth parameter
    * @throws IOException if there is an issue while interacting with db.
    */
-  @Throws(IOException::class)
   override fun writeDestinationOAuthParam(destinationOAuthParameter: DestinationOAuthParameter) {
     database.transaction<Any?> { ctx: DSLContext ->
       writeDestinationOauthParameter(listOf(destinationOAuthParameter), ctx)
@@ -321,7 +310,6 @@ class OAuthServiceJooqImpl(
     }
   }
 
-  @Throws(IOException::class, ConfigNotFoundException::class)
   private fun hydrateConfig(
     config: JsonNode,
     organizationId: UUID,

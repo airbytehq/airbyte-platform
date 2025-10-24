@@ -58,7 +58,6 @@ internal class V0_30_22_001__Store_last_sync_state_test : AbstractConfigsDatabas
 
   @Test
   @Order(30)
-  @Throws(SQLException::class)
   fun testCopyData() {
     val newConnectionStates =
       setOf(

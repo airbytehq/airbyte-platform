@@ -40,7 +40,6 @@ open class MatchSearchHandler
     private val connectionService: ConnectionService,
     private val apiPojoConverters: ApiPojoConverters,
   ) {
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun matchSearch(
       connectionSearch: ConnectionSearch?,
       connectionRead: ConnectionRead,
@@ -63,7 +62,6 @@ open class MatchSearchHandler
         matchSearch(connectionSearch?.destination, destinationRead)
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun searchConnections(connectionSearch: ConnectionSearch?): ConnectionReadList {
       val reads: MutableList<ConnectionRead> = Lists.newArrayList()
       for (standardSync in connectionService.listStandardSyncs()) {

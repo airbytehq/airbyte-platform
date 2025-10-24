@@ -17,7 +17,6 @@ class VersionSerializer
   constructor(
     t: Class<Version>? = null,
   ) : com.fasterxml.jackson.databind.ser.std.StdSerializer<Version>(t) {
-    @Throws(IOException::class)
     override fun serialize(
       value: Version,
       gen: JsonGenerator,

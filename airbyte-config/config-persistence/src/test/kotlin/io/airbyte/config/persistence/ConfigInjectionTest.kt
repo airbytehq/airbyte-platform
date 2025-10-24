@@ -54,7 +54,6 @@ internal class ConfigInjectionTest : BaseConfigDatabaseTest() {
   private lateinit var sourceService: SourceService
 
   @BeforeEach
-  @Throws(Exception::class)
   fun beforeEach() {
     truncateAllTables()
     val featureFlagClient: FeatureFlagClient = Mockito.mock(TestClient::class.java)
@@ -104,7 +103,6 @@ internal class ConfigInjectionTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testInject() {
     createBaseObjects()
 
@@ -116,7 +114,6 @@ internal class ConfigInjectionTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testInjectOverwrite() {
     createBaseObjects()
 
@@ -130,7 +127,6 @@ internal class ConfigInjectionTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testUpdate() {
     createBaseObjects()
 
@@ -151,7 +147,6 @@ internal class ConfigInjectionTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testCreate() {
     createBaseObjects()
 
@@ -171,7 +166,6 @@ internal class ConfigInjectionTest : BaseConfigDatabaseTest() {
     Assertions.assertEquals("thirdInject", injected.get("c").asText())
   }
 
-  @Throws(IOException::class)
   private fun createBaseObjects() {
     sourceDefinition = createBaseSourceDef()
     val actorDefinitionVersion: ActorDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId())
@@ -187,7 +181,6 @@ internal class ConfigInjectionTest : BaseConfigDatabaseTest() {
     createInjection(otherSourceDefinition, "c")
   }
 
-  @Throws(IOException::class)
   private fun createInjection(
     definition: StandardSourceDefinition,
     path: String,

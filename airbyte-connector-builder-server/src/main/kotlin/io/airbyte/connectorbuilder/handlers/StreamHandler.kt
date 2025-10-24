@@ -27,7 +27,6 @@ open class StreamHandler
     /**
      * Use the requester to send the test_read request to the CDK.
      */
-    @Throws(AirbyteCdkInvalidInputException::class, ConnectorBuilderException::class)
     fun readStream(streamReadRequestBody: StreamReadRequestBody): StreamRead {
       try {
         addWorkspaceAndProjectIdsToTrace(streamReadRequestBody.workspaceId, streamReadRequestBody.projectId)

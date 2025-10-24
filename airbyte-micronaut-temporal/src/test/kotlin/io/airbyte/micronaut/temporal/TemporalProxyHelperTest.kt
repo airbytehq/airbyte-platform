@@ -20,7 +20,6 @@ import java.time.Duration
  */
 internal class TemporalProxyHelperTest {
   @Test
-  @Throws(NoSuchMethodException::class, InvocationTargetException::class, InstantiationException::class, IllegalAccessException::class)
   fun testProxyToImplementation() {
     val activityOptions =
       ActivityOptions

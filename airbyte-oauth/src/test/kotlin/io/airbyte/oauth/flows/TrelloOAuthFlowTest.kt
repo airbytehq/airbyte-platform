@@ -35,20 +35,17 @@ internal class TrelloOAuthFlowTest {
   private var oauthService: OAuthService? = null
 
   @BeforeEach
-  @Throws(IOException::class, JsonValidationException::class)
   fun setup() {
     workspaceId = UUID.randomUUID()
     definitionId = UUID.randomUUID()
 
     transport =
       object : MockHttpTransport() {
-        @Throws(IOException::class)
         override fun buildRequest(
           method: String,
           url: String,
         ): LowLevelHttpRequest {
           return object : MockLowLevelHttpRequest() {
-            @Throws(IOException::class)
             override fun execute(): LowLevelHttpResponse {
               val response = MockLowLevelHttpResponse()
               response.setStatusCode(200)
@@ -79,7 +76,6 @@ internal class TrelloOAuthFlowTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class, ConfigNotFoundException::class)
   fun testGetSourceConsentUrl() {
     val consentUrl =
       trelloOAuthFlow!!.getSourceConsentUrl(
@@ -94,7 +90,6 @@ internal class TrelloOAuthFlowTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class, ConfigNotFoundException::class)
   fun testCompleteSourceAuth() {
     val expectedParams =
       Map.of(

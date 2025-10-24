@@ -38,7 +38,6 @@ abstract class FlywayMigrationDatabase : PostgresDatabase() {
 
   private var dslContext: DSLContext? = null
 
-  @Throws(IOException::class)
   protected abstract fun getDatabase(dslContext: DSLContext): Database
 
   protected abstract fun getDatabaseMigrator(
@@ -52,7 +51,6 @@ abstract class FlywayMigrationDatabase : PostgresDatabase() {
 
   protected abstract val migrationFileLocations: Array<String>
 
-  @Throws(DatabaseInitializationException::class, IOException::class)
   protected abstract fun initializeDatabase(dslContext: DSLContext)
 
   override fun create0(): DSLContext = DSL.using(internalConnection, SQLDialect.POSTGRES)

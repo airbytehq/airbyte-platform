@@ -127,7 +127,6 @@ class GcsBucketSpecFetcher {
     const val DEFAULT_SPEC_FILE: String = "spec.json"
     const val CLOUD_SPEC_FILE: String = "spec.cloud.json"
 
-    @Throws(JsonValidationException::class)
     private fun validateConfig(json: JsonNode) {
       val jsonSchemaValidator = JsonSchemaValidator()
       val specJsonSchema = JsonSchemaValidator.getSchema(AirbyteProtocolSchema.PROTOCOL.file, "ConnectorSpecification")

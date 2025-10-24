@@ -232,7 +232,6 @@ internal class RetryStateClientTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun hydratesFailureCountsFromApiIfPresent() {
     val retryStateRead =
       RetryStateRead(
@@ -265,11 +264,10 @@ internal class RetryStateClientTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun initializesFailureCountsFreshWhenApiReturnsNothing() {
     Mockito
       .`when`(mJobRetryStatesApi.get(ArgumentMatchers.any<JobIdRequestBody>()))
-      .thenThrow(ClientException("Not Found.", HttpStatus.NOT_FOUND.code, null))
+      .thenAnswer { throw ClientException("Not Found.", HttpStatus.NOT_FOUND.code, null) }
 
     val client =
       RetryStateClient(

@@ -618,7 +618,6 @@ internal class ParallelStreamStatsTrackerTest {
   }
 
   @Test
-  @Throws(InterruptedException::class)
   fun testCheckpointingMetrics() {
     val s1State1 = createStreamState(STREAM1_NAME, 1)
     val s1State2 = createStreamState(STREAM1_NAME, 2)

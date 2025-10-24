@@ -332,7 +332,6 @@ internal class ConnectionsHandlerTest {
 
   @Suppress("UNCHECKED_CAST")
   @BeforeEach
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun setUp() {
     workspaceId = UUID.randomUUID()
     organizationId = UUID.randomUUID()
@@ -639,7 +638,6 @@ internal class ConnectionsHandlerTest {
   @Nested
   internal inner class UnMockedConnectionHelper {
     @BeforeEach
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun setUp() {
       whenever(uuidGenerator.get()).thenReturn(standardSync.getConnectionId())
       val sourceDefinition =
@@ -668,7 +666,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun testGetConnection() {
       whenever(connectionService.getStandardSync(standardSync.getConnectionId()))
         .thenReturn(standardSync)
@@ -679,7 +676,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun testGetConnectionForJob() {
       val jobId = 456L
 
@@ -717,7 +713,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun testGetConnectionForJobWithRefresh() {
       val jobId = 456L
 
@@ -766,7 +761,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun testGetConnectionForClearJob() {
       val jobId = 456L
 
@@ -815,7 +809,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun testListConnectionsForWorkspace() {
       whenever(connectionService.listWorkspaceStandardSyncs(source.getWorkspaceId(), false))
         .thenReturn(Lists.newArrayList(standardSync, standardSyncLocked))
@@ -841,7 +834,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun testListConnections() {
       whenever(connectionService.listStandardSyncs())
         .thenReturn(Lists.newArrayList(standardSync))
@@ -859,7 +851,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun testListConnectionsByActorDefinition() {
       whenever(
         connectionService.listConnectionsByActorDefinitionIdAndType(
@@ -903,7 +894,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun testSearchConnections() {
       val connectionRead1 = generateExpectedConnectionRead(standardSync)
       val standardSync2 =
@@ -1075,7 +1065,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun testDeleteConnection() {
       connectionsHandler.deleteConnection(connectionId)
 
@@ -1084,7 +1073,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun failOnUnmatchedWorkspacesInCreate() {
       whenever(workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(standardSync.getSourceId()))
         .thenReturn(UUID.randomUUID())
@@ -1287,12 +1275,6 @@ internal class ConnectionsHandlerTest {
     @Nested
     internal inner class CreateConnection {
       @BeforeEach
-      @Throws(
-        IOException::class,
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
-      )
       fun setup() {
         // for create calls
         whenever(workspaceHelper.getWorkspaceForDestinationId(standardSync.getDestinationId())).thenReturn(workspaceId)
@@ -1349,12 +1331,6 @@ internal class ConnectionsHandlerTest {
           )
 
       @Test
-      @Throws(
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        IOException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
-      )
       fun testCreateConnection() {
         val catalog = generateBasicApiCatalog()
 
@@ -1390,7 +1366,6 @@ internal class ConnectionsHandlerTest {
 
       @ParameterizedTest
       @ValueSource(strings = ["SOURCE_CONNECTOR", "DESTINATION_CONNECTOR"])
-      @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
       fun testCreateConnectionWithUnentitledSourceShouldThrow(entitlement: Entitlement) {
         val catalog = generateBasicApiCatalog()
 
@@ -1424,12 +1399,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(
-        IOException::class,
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
-      )
       fun testCreateConnectionWithSelectedFields() {
         val workspace =
           StandardWorkspace()
@@ -1459,12 +1428,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        IOException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
-      )
       fun testCreateConnectionWithHashedFields() {
         val workspace =
           StandardWorkspace()
@@ -1494,12 +1457,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        IOException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
-      )
       fun testCreateConnectionWithMappers() {
         val workspace =
           StandardWorkspace()
@@ -1535,12 +1492,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        IOException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
-      )
       fun testCreateConnectionWithDestinationCatalog() {
         val workspace =
           StandardWorkspace()
@@ -1570,12 +1521,6 @@ internal class ConnectionsHandlerTest {
         "true, false, false", // destination does not support
         "false, true, false", // source does not support
         "false, false, false", // nothing supports it
-      )
-      @Throws(
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        IOException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
       )
       fun testCreateConnectionValidatesFileTransfer(
         sourceSupportsFiles: Boolean,
@@ -1639,7 +1584,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
       fun testCreateConnectionValidatesMappers() {
         val workspace =
           StandardWorkspace()
@@ -1694,12 +1638,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(
-        IOException::class,
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
-      )
       fun testCreateFullRefreshConnectionWithSelectedFields() {
         val workspace =
           StandardWorkspace()
@@ -1736,7 +1674,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
       fun testFieldSelectionRemoveCursorFails() {
         // Test that if we try to de-select a field that's being used for the cursor, the request will fail.
         // The connection initially has a catalog with one stream, and two fields in that stream.
@@ -1764,7 +1701,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
       fun testFieldSelectionRemovePrimaryKeyFails() {
         // Test that if we try to de-select a field that's being used for the primary key, the request will
         // fail.
@@ -1807,7 +1743,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(IOException::class)
       fun testCreateConnectionWithConflictingStreamsThrows() {
         whenever(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)))
           .thenReturn(true)
@@ -1852,12 +1787,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(
-        IOException::class,
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
-      )
       fun testCreateConnectionWithNoConflictingStreamSucceeds() {
         whenever(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)))
           .thenReturn(true)
@@ -1877,12 +1806,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        IOException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
-      )
       fun testCreateConnectionWithConflictingStreamButUnselected() {
         whenever(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)))
           .thenReturn(true)
@@ -1945,15 +1868,14 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
       fun testCreateConnectionWithBadDefinitionIds() {
         val sourceIdBad = UUID.randomUUID()
         val destinationIdBad = UUID.randomUUID()
 
         whenever(sourceService.getSourceConnection(sourceIdBad))
-          .thenThrow(ConfigNotFoundException(ConfigNotFoundType.SOURCE_CONNECTION, sourceIdBad))
+          .thenAnswer { throw ConfigNotFoundException(ConfigNotFoundType.SOURCE_CONNECTION, sourceIdBad) }
         whenever(destinationService.getDestinationConnection(destinationIdBad))
-          .thenThrow(ConfigNotFoundException(ConfigNotFoundType.DESTINATION_CONNECTION, destinationIdBad))
+          .thenAnswer { throw ConfigNotFoundException(ConfigNotFoundType.DESTINATION_CONNECTION, destinationIdBad) }
 
         val catalog = generateBasicApiCatalog()
 
@@ -2019,12 +1941,6 @@ internal class ConnectionsHandlerTest {
         "false, true, true, true", // feature flag disabled, destination supports data activation, has destination catalog
         "false, true, false, true", // feature flag disabled, destination supports data activation, no destination catalog
         "false, false, false, true", // feature flag disabled, destination doesn't support data activation, no destination catalog
-      )
-      @Throws(
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        IOException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
       )
       fun testCreateConnectionValidatesDestinationCatalog(
         featureFlagEnabled: Boolean,
@@ -2093,12 +2009,6 @@ internal class ConnectionsHandlerTest {
       val catalogStreamNames: MutableList<String?> = mutableListOf("user", "permission", "organization", "workspace", "order")
 
       @BeforeEach
-      @Throws(
-        IOException::class,
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
-      )
       fun setup() {
         val connection3Id = UUID.randomUUID()
         whenever(workspaceHelper.getWorkspaceForDestinationId(anyOrNull())).thenReturn(workspaceId)
@@ -2195,7 +2105,6 @@ internal class ConnectionsHandlerTest {
           )
 
       @Test
-      @Throws(Exception::class)
       fun testUpdateConnectionLockedThrowsProblem() {
         val lockedSync =
           clone(
@@ -2211,7 +2120,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(Exception::class)
       fun testUpdateConnectionPatchSingleField() {
         val connectionUpdate =
           ConnectionUpdate()
@@ -2233,7 +2141,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(Exception::class)
       fun testUpdateConnectionPatchScheduleToManual() {
         val connectionUpdate =
           ConnectionUpdate()
@@ -2296,7 +2203,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(Exception::class)
       fun testUpdateConnectionPatchScheduleToCron() {
         whenever(workspaceHelper.getWorkspaceForSourceId(anyOrNull())).thenReturn(UUID.randomUUID())
         whenever(workspaceHelper.getOrganizationForWorkspace(anyOrNull())).thenReturn(organizationId)
@@ -2341,7 +2247,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(Exception::class)
       fun testUpdateConnectionPatchBasicSchedule() {
         val newScheduleData =
           ConnectionScheduleData().basicSchedule(
@@ -2377,7 +2282,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(Exception::class)
       fun testUpdateConnectionPatchAddingNewStream() {
         // the connection initially has a catalog with one stream. this test generates another catalog with
         // one stream, changes that stream's name to something new, and sends both streams in the patch
@@ -2438,7 +2342,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(Exception::class)
       fun testUpdateConnectionPatchEditExistingStreamWhileAddingNewStream() {
         // the connection initially has a catalog with two streams. this test updates the catalog
         // with a sync mode change for one of the initial streams while also adding a brand-new
@@ -2495,12 +2398,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        IOException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
-      )
       fun testUpdateConnectionPatchDestinationCatalogId() {
         val newDestinationCatalogId = UUID.randomUUID()
         val connectionUpdate =
@@ -2532,12 +2429,6 @@ internal class ConnectionsHandlerTest {
         "true, false, false", // destination does not support
         "false, true, false", // source does not support
         "false, false, false", // nothing supports it
-      )
-      @Throws(
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        IOException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
       )
       fun testUpdateConnectionValidatesFileTransfer(
         sourceSupportsFiles: Boolean,
@@ -2599,7 +2490,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(Exception::class)
       fun testUpdateConnectionPatchValidatesMappers() {
         standardSync.setCatalog(generateAirbyteCatalogWithTwoFields())
 
@@ -2657,7 +2547,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(Exception::class)
       fun testUpdateConnectionPatchHashedFields() {
         // The connection initially has a catalog with one stream, and two fields in that stream.
         standardSync.setCatalog(generateAirbyteCatalogWithTwoFields())
@@ -2704,7 +2593,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(Exception::class)
       fun testUpdateConnectionPatchMappers() {
         // The connection initially has a catalog with one stream, and two fields in that stream.
         standardSync.setCatalog(generateAirbyteCatalogWithTwoFields())
@@ -2754,7 +2642,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(Exception::class)
       fun testUpdateConnectionPatchColumnSelection() {
         // The connection initially has a catalog with one stream, and two fields in that stream.
         standardSync.setCatalog(generateAirbyteCatalogWithTwoFields())
@@ -2795,12 +2682,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        IOException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
-      )
       fun testUpdateConnectionPatchingSeveralFieldsAndReplaceAStream() {
         val catalogForUpdate = generateMultipleStreamsApiCatalog(2)
 
@@ -2906,7 +2787,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(Exception::class)
       fun testUpdateConnectionPatchTags() {
         val workspaceId = UUID.randomUUID()
         val apiTag1 =
@@ -2955,7 +2835,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(IOException::class)
       fun testUpdateConnectionWithConflictingStreamsThrows() {
         whenever(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)))
           .thenReturn(true)
@@ -3002,7 +2881,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(IOException::class)
       fun testUpdateConnectionWithNoConflictingStreamSucceeds() {
         whenever(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)))
           .thenReturn(true)
@@ -3031,7 +2909,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(IOException::class)
       fun testUpdateConnectionWithConflictingStreamButUnselected() {
         whenever(featureFlagClient.boolVariation(ValidateConflictingDestinationStreams, Organization(organizationId)))
           .thenReturn(true)
@@ -3088,7 +2965,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
       fun testValidateConnectionUpdateOperationInDifferentWorkspace() {
         whenever(workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(operationId)).thenReturn(UUID.randomUUID())
         whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync)
@@ -3127,12 +3003,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        IOException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
-      )
       fun testDeactivateStreamsWipeState() {
         val catalog = complexCatalog!!
         val deactivatedStreams = mutableListOf<String?>("user", "permission")
@@ -3174,12 +3044,6 @@ internal class ConnectionsHandlerTest {
         "false, true, true, true", // feature flag disabled, destination supports data activation, has destination catalog
         "false, true, false, true", // feature flag disabled, destination supports data activation, no destination catalog
         "false, false, false, true", // feature flag disabled, destination doesn't support data activation, no destination catalog
-      )
-      @Throws(
-        JsonValidationException::class,
-        ConfigNotFoundException::class,
-        IOException::class,
-        io.airbyte.config.persistence.ConfigNotFoundException::class,
       )
       fun testUpdateConnectionValidatesDestinationCatalog(
         featureFlagEnabled: Boolean,
@@ -3247,7 +3111,6 @@ internal class ConnectionsHandlerTest {
     @Nested
     internal inner class ValidateCatalogWithDestinationCatalog {
       @Test
-      @Throws(JsonValidationException::class)
       fun testValidateCatalogWithDestinationCatalogSuccess() {
         // Create test data
         val catalog = generateBasicApiCatalog()
@@ -3292,7 +3155,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(JsonValidationException::class)
       fun testValidateCatalogWithDestinationCatalogMissingObjectName() {
         // Create test data with missing destination object name
         val catalog = generateBasicApiCatalog()
@@ -3316,7 +3178,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(JsonValidationException::class)
       fun testValidateCatalogWithDestinationCatalogInvalidOperation() {
         // Create test data with invalid operation (missing from destination catalog)
         val catalog = generateBasicApiCatalog()
@@ -3345,7 +3206,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(JsonValidationException::class)
       fun testValidateCatalogWithDestinationCatalogMissingRequiredField() {
         // Create test data with missing required field
         val catalog = generateBasicApiCatalog()
@@ -3396,7 +3256,6 @@ internal class ConnectionsHandlerTest {
       }
 
       @Test
-      @Throws(JsonValidationException::class)
       fun testValidateCatalogWithDestinationCatalogInvalidAdditionalField() {
         // Create test data with additional field not allowed
         val catalog = generateApiCatalogWithTwoFields()
@@ -3447,7 +3306,6 @@ internal class ConnectionsHandlerTest {
 
       @ParameterizedTest
       @MethodSource("io.airbyte.commons.server.handlers.ConnectionsHandlerTest#matchingKeysTestCases")
-      @Throws(JsonValidationException::class)
       fun testValidateCatalogWithDestinationCatalogMatchingKeys(testCase: MatchingKeyTestCase) {
         // Create test data
         val catalog = generateBasicApiCatalog()
@@ -3541,7 +3399,6 @@ internal class ConnectionsHandlerTest {
     @Nested
     internal inner class GetConnectionDataHistory {
       @Test
-      @Throws(IOException::class)
       fun testGetConnectionDataHistory() {
         val connectionId = UUID.randomUUID()
         val numJobs = 10
@@ -3639,7 +3496,6 @@ internal class ConnectionsHandlerTest {
     internal inner class GetConnectionStreamHistory {
       @Test
       @DisplayName("Handles empty history response")
-      @Throws(IOException::class)
       fun testStreamHistoryWithEmptyResponse() {
         val connectionId = UUID.randomUUID()
         val requestBody =
@@ -3665,7 +3521,6 @@ internal class ConnectionsHandlerTest {
 
       @Test
       @DisplayName("Aggregates data correctly")
-      @Throws(IOException::class)
       fun testStreamHistoryAggregation() {
         val connectionId = UUID.randomUUID()
         val endTime = Instant.ofEpochMilli(946684800000L)
@@ -4238,7 +4093,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class)
     fun testGetCatalogDiffHandlesInvalidTypes() {
       val badCatalogJson =
         String(
@@ -4398,7 +4252,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun testConnectionStatus() {
       whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync)
 
@@ -4452,7 +4305,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun testConnectionStatus_syncing() {
       whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync)
 
@@ -4502,7 +4354,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun testConnectionStatus_failed_breakingSchemaChange() {
       val standardSyncWithBreakingSchemaChange = clone(standardSync).withBreakingChange(true)
       whenever(connectionService.getStandardSync(standardSync.getConnectionId()))
@@ -4542,7 +4393,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun testConnectionStatus_failed_hasConfigError() {
       whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync)
 
@@ -4589,7 +4439,6 @@ internal class ConnectionsHandlerTest {
 
     @ParameterizedTest
     @EnumSource(StandardSync.Status::class, names = ["INACTIVE", "DEPRECATED", "LOCKED"])
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun testConnectionStatus_paused_if_not_active(status: StandardSync.Status) {
       val standardSyncPaused = clone(standardSync).withStatus(status)
       whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSyncPaused)
@@ -4628,7 +4477,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun testConnectionStatus_pending_nosyncs() {
       whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync)
 
@@ -4651,7 +4499,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun testConnectionStatus_pending_afterSuccessfulReset() {
       whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync)
 
@@ -4690,7 +4537,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun testConnectionStatus_pending_afterFailedReset() {
       whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync)
 
@@ -4729,7 +4575,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun testConnectionStatus_pending_afterSuccessfulClear() {
       whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync)
 
@@ -4768,7 +4613,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun testConnectionStatus_pending_afterFailedClear() {
       whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync)
 
@@ -4807,7 +4651,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun testConnectionStatus_incomplete_afterCancelledReset() {
       whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync)
 
@@ -4858,7 +4701,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun testConnectionStatus_incomplete_failed() {
       whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync)
 
@@ -4897,7 +4739,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun testConnectionStatus_incomplete_cancelled() {
       whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync)
 
@@ -4935,7 +4776,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun testConnectionStatus_synced() {
       whenever(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync)
 
@@ -5002,13 +4842,6 @@ internal class ConnectionsHandlerTest {
   @Nested
   internal inner class ApplySchemaChanges {
     @BeforeEach
-    @Throws(
-      IOException::class,
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun setup() {
       airbyteCatalog
         .getStreams()
@@ -5076,13 +4909,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(
-      IOException::class,
-      ConfigNotFoundException::class,
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun testAutoPropagateSchemaChange() {
       // Somehow standardSync is being mutated in the test (the catalog is changed) and verifying that the
       // notification function is called correctly requires the original object.
@@ -5169,13 +4995,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      IOException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun testAutoPropagateColumnsOnly() {
       // See test above for why this part is necessary.
       val originalSync = clone(standardSync!!)
@@ -5230,12 +5049,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(
-      JsonValidationException::class,
-      IOException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun testSendingNotificationToManuallyApplySchemaChange() {
       // Override the non-breaking changes preference to ignore so that the changes are not
       // auto-propagated, but needs to be manually applied.
@@ -5294,12 +5107,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(
-      JsonValidationException::class,
-      IOException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun testSendingNotificationToManuallyApplySchemaChangeWithPropagationDisabled() {
       // Override the non-breaking changes preference to DISABLE so that the changes are not
       // auto-propagated, but needs to be manually applied.
@@ -5358,12 +5165,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      IOException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun diffCatalogGeneratesADiffAndUpdatesTheConnection() {
       val newField = Field.of(aDifferentColumn, JsonSchemaType.STRING)
       val catalogWithDiff =
@@ -5407,14 +5208,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      IOException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-      NoSuchFieldException::class,
-      IllegalAccessException::class,
-    )
     fun diffCatalogADisablesForBreakingChange() {
       val helper = mock(ApplySchemaChangeHelper::class.java)
       val field = ConnectionsHandler::class.java.getDeclaredField("applySchemaChangeHelper")
@@ -5433,12 +5226,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(
-      IOException::class,
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun diffCatalogDisablesForNonBreakingChangeIfConfiguredSo() {
       // configure the sync to be disabled on non-breaking change
       standardSync = standardSync!!.withNonBreakingChangesPreference(StandardSync.NonBreakingChangesPreference.DISABLE)
@@ -5465,12 +5252,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      IOException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun postprocessDiscoveredComposesDiffingAndSchemaPropagation() {
       val catalog = catalogConverter.toApi(clone(airbyteCatalog), sourceVersion)
       val diffResult = SourceDiscoverSchemaRead().catalog(catalog)
@@ -5500,12 +5281,6 @@ internal class ConnectionsHandlerTest {
     }
 
     @Test
-    @Throws(
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      IOException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun postprocessDiscoveredComposesDiffingAndSchemaPropagationUsesMostRecentCatalog() {
       val catalog = catalogConverter.toApi(clone(airbyteCatalog), sourceVersion)
       val diffResult = SourceDiscoverSchemaRead().catalog(catalog)
@@ -5603,7 +5378,6 @@ internal class ConnectionsHandlerTest {
   @Nested
   internal inner class ConnectionLastJobPerStream {
     @Test
-    @Throws(IOException::class)
     fun testGetConnectionLastJobPerStream() {
       val connectionId = UUID.randomUUID()
       val jobId = 1L

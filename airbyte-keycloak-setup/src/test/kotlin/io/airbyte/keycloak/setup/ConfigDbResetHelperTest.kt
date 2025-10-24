@@ -20,7 +20,6 @@ internal class ConfigDbResetHelperTest : BaseConfigDatabaseTest() {
   private lateinit var configDbResetHelper: ConfigDbResetHelper
 
   @BeforeEach
-  @Throws(Exception::class)
   fun setUp() {
     configDbResetHelper = ConfigDbResetHelper(database!!)
     truncateAllTables()
@@ -73,7 +72,6 @@ internal class ConfigDbResetHelperTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun throwsIfMultipleOrgsDetected() {
     // Insert a second organization
     database!!.query { ctx: DSLContext ->
@@ -97,7 +95,6 @@ internal class ConfigDbResetHelperTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(SQLException::class)
   fun deleteConfigDbUsers_KeycloakUsersExist_UsersAndPermissionsDeleted() {
     // Before deletion, assert the initial state of the database
     Assertions.assertEquals(3, countRowsInTable(Tables.USER))
@@ -132,7 +129,6 @@ internal class ConfigDbResetHelperTest : BaseConfigDatabaseTest() {
     Assertions.assertEquals(PermissionType.instance_admin, remainingPermissionType)
   }
 
-  @Throws(SQLException::class)
   private fun countRowsInTable(table: TableImpl<*>): Int =
     database!!.query { ctx: DSLContext ->
       ctx.selectCount().from(table).fetchOne(0, Int::class.javaPrimitiveType)!!

@@ -35,7 +35,6 @@ open class SynchronousPythonCdkCommandRunner(
    * returned by the CDK.
    */
   @Trace(operationName = TracingHelper.CONNECTOR_BUILDER_OPERATION_NAME)
-  @Throws(IOException::class)
   override fun runCommand(
     cdkCommand: String,
     configContents: String,
@@ -57,7 +56,6 @@ open class SynchronousPythonCdkCommandRunner(
    * statement, to ensure that the files are cleaned up after the process is done.
    */
   @Trace(operationName = TracingHelper.CONNECTOR_BUILDER_OPERATION_NAME)
-  @Throws(IOException::class)
   open fun start(
     cdkCommand: String,
     configContents: String,
@@ -96,7 +94,6 @@ open class SynchronousPythonCdkCommandRunner(
     return cdkProcess
   }
 
-  @Throws(IOException::class)
   private fun write(
     name: String,
     contents: String,

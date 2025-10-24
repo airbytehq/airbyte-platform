@@ -42,11 +42,6 @@ class AirbyteCdkRequesterImpl(
    * Launch a CDK process responsible for handling resolve_manifest requests.
    */
   @Trace(operationName = TracingHelper.CONNECTOR_BUILDER_OPERATION_NAME)
-  @Throws(
-    IOException::class,
-    AirbyteCdkInvalidInputException::class,
-    CdkProcessException::class,
-  )
   override fun readStream(
     manifest: JsonNode,
     customComponentsCode: String?,
@@ -87,11 +82,6 @@ class AirbyteCdkRequesterImpl(
    * Launch a CDK process responsible for handling resolve_manifest requests.
    */
   @Trace(operationName = TracingHelper.CONNECTOR_BUILDER_OPERATION_NAME)
-  @Throws(
-    IOException::class,
-    AirbyteCdkInvalidInputException::class,
-    CdkProcessException::class,
-  )
   override fun resolveManifest(manifest: JsonNode): ResolveManifest {
     val record =
       request(
@@ -107,11 +97,6 @@ class AirbyteCdkRequesterImpl(
    * Launch a CDK process responsible for handling full_resolve_manifest requests.
    */
   @Trace(operationName = TracingHelper.CONNECTOR_BUILDER_OPERATION_NAME)
-  @Throws(
-    IOException::class,
-    AirbyteCdkInvalidInputException::class,
-    CdkProcessException::class,
-  )
   override fun fullResolveManifest(
     manifest: JsonNode,
     config: JsonNode,
@@ -131,7 +116,6 @@ class AirbyteCdkRequesterImpl(
   /**
    * Launch a CDK process responsible for handling requests.
    */
-  @Throws(IOException::class, AirbyteCdkInvalidInputException::class, CdkProcessException::class)
   private fun request(
     manifest: JsonNode,
     customComponentsCode: String?,
@@ -152,7 +136,6 @@ class AirbyteCdkRequesterImpl(
     )
   }
 
-  @Throws(IOException::class, AirbyteCdkInvalidInputException::class, CdkProcessException::class)
   private fun request(
     manifest: JsonNode,
     customComponentsCode: String?,
@@ -175,7 +158,6 @@ class AirbyteCdkRequesterImpl(
     )
   }
 
-  @Throws(IOException::class, AirbyteCdkInvalidInputException::class, CdkProcessException::class)
   private fun request(
     manifest: JsonNode,
     customComponentsCode: String?,
@@ -199,7 +181,6 @@ class AirbyteCdkRequesterImpl(
   private fun adaptCatalog(stream: String): String = String.format(CATALOG_TEMPLATE, stream)
 
   @VisibleForTesting
-  @Throws(IOException::class)
   fun adaptState(state: List<JsonNode>?): String =
     if (state == null || state.isEmpty()) {
       OBJECT_WRITER.writeValueAsString(emptyList<Any>())
@@ -222,7 +203,6 @@ class AirbyteCdkRequesterImpl(
     return Jsons.jsonNode(Collections.singletonMap("md5", md5Checksum))
   }
 
-  @Throws(IOException::class)
   private fun adaptConfig(
     manifest: JsonNode,
     customComponentsCode: String?,
@@ -243,7 +223,6 @@ class AirbyteCdkRequesterImpl(
     return OBJECT_WRITER.writeValueAsString(adaptedConfig)
   }
 
-  @Throws(IOException::class)
   private fun adaptConfig(
     manifest: JsonNode,
     customComponentsCode: String?,
@@ -278,7 +257,6 @@ class AirbyteCdkRequesterImpl(
     return OBJECT_WRITER.writeValueAsString(adaptedConfig)
   }
 
-  @Throws(IOException::class)
   private fun adaptConfig(
     manifest: JsonNode,
     customComponentsCode: String?,

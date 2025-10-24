@@ -88,7 +88,6 @@ open class BaseConfigDatabaseTest {
      * @throws IOException - failure when interacting with db.
      */
     @BeforeAll
-    @Throws(DatabaseInitializationException::class, IOException::class)
     @JvmStatic
     fun dbSetup() {
       createDbContainer()
@@ -103,7 +102,6 @@ open class BaseConfigDatabaseTest {
      * @throws Exception - exception while closing resources
      */
     @AfterAll
-    @Throws(Exception::class)
     @JvmStatic
     fun dbDown() {
       close(dataSource)
@@ -118,7 +116,6 @@ open class BaseConfigDatabaseTest {
      * @throws SQLException - failure in truncate query.
      */
     @JvmStatic
-    @Throws(SQLException::class)
     protected fun truncateAllTables() {
       database!!.query { ctx: DSLContext ->
         ctx
@@ -187,7 +184,6 @@ open class BaseConfigDatabaseTest {
      * implemented here for tests only.
      */
     @JvmStatic
-    @Throws(SQLException::class)
     protected fun writePermission(permission: Permission) {
       val permissionType =
         PermissionPersistenceHelper.convertConfigPermissionTypeToJooqPermissionType(permission.permissionType)
@@ -219,7 +215,6 @@ open class BaseConfigDatabaseTest {
       container!!.start()
     }
 
-    @Throws(DatabaseInitializationException::class, IOException::class)
     private fun setDb() {
       dataSource = Databases.createDataSource(container!!)
       dslContext = create(dataSource!!, SQLDialect.POSTGRES)
@@ -232,7 +227,6 @@ open class BaseConfigDatabaseTest {
       databaseProviders.createNewJobsDatabase()
     }
 
-    @Throws(IOException::class, DatabaseInitializationException::class)
     private fun migrateDb() {
       val flyway =
         create(

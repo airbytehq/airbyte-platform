@@ -23,7 +23,6 @@ class ExceptionWrappingDatabase(
    * @return value of query
    * @throws IOException exception when accessing db </T>
    * */
-  @Throws(IOException::class)
   fun <T> query(transform: ContextQueryFunction<T>): T =
     try {
       database ?: throw IOException("missing database connection")
@@ -40,7 +39,6 @@ class ExceptionWrappingDatabase(
    * @return value of query
    * @throws IOException exception when accessing db </T>
    * */
-  @Throws(IOException::class)
   fun <T> transaction(transform: ContextQueryFunction<T>): T =
     try {
       database ?: throw IOException("missing database connection")

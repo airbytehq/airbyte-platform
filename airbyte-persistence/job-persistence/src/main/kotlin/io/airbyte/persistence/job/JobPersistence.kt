@@ -37,7 +37,6 @@ interface JobPersistence {
    *
    * @return [AttemptStats]
    */
-  @Throws(IOException::class)
   fun getAttemptStatsWithStreamMetadata(
     jobId: Long,
     attemptNumber: Int,
@@ -49,7 +48,6 @@ interface JobPersistence {
    * @return [AttemptStats]
    */
   @Deprecated("")
-  @Throws(IOException::class)
   fun getAttemptStats(
     jobId: Long,
     attemptNumber: Int,
@@ -67,7 +65,6 @@ interface JobPersistence {
    * @return attempt status for desired jobs
    * @throws IOException while interacting with the db
    */
-  @Throws(IOException::class)
   fun getAttemptStats(jobIds: List<Long>?): Map<JobAttemptPair, AttemptStats>
 
   /**
@@ -75,13 +72,11 @@ interface JobPersistence {
    *
    * @return [AttemptStats]
    */
-  @Throws(IOException::class)
   fun getAttemptCombinedStats(
     jobId: Long,
     attemptNumber: Int,
   ): SyncStats?
 
-  @Throws(IOException::class)
   fun getJob(jobId: Long): Job
 
   /**
@@ -94,7 +89,6 @@ interface JobPersistence {
    * @return job id
    * @throws IOException exception due to interaction with persistence
    */
-  @Throws(IOException::class)
   fun enqueueJob(
     scope: String,
     jobConfig: JobConfig,
@@ -111,7 +105,6 @@ interface JobPersistence {
    * @param jobId job to cancel
    * @throws IOException exception due to interaction with persistence
    */
-  @Throws(IOException::class)
   fun cancelJob(jobId: Long)
 
   /**
@@ -120,7 +113,6 @@ interface JobPersistence {
    * @param jobId job to fail
    * @throws IOException exception due to interaction with persistence
    */
-  @Throws(IOException::class)
   fun failJob(jobId: Long)
 
   /**
@@ -132,7 +124,6 @@ interface JobPersistence {
    * @return The attempt number of the created attempt (see [DefaultJobPersistence])
    * @throws IOException exception due to interaction with persistence
    */
-  @Throws(IOException::class)
   fun createAttempt(
     jobId: Long,
     logPath: Path,
@@ -146,7 +137,6 @@ interface JobPersistence {
    * @param attemptNumber attempt id
    * @throws IOException exception due to interaction with persistence
    */
-  @Throws(IOException::class)
   fun failAttempt(
     jobId: Long,
     attemptNumber: Int,
@@ -164,7 +154,6 @@ interface JobPersistence {
    * @param attemptNumber attempt id
    * @throws IOException exception due to interaction with persistence
    */
-  @Throws(IOException::class)
   fun succeedAttempt(
     jobId: Long,
     attemptNumber: Int,
@@ -177,7 +166,6 @@ interface JobPersistence {
   /**
    * Retrieves an Attempt from a given jobId and attemptNumber.
    */
-  @Throws(IOException::class)
   fun getAttemptForJob(
     jobId: Long,
     attemptNumber: Int,
@@ -188,14 +176,12 @@ interface JobPersistence {
    * StandardSyncOutput#state in the configs database by calling
    * ConfigRepository#updateConnectionState, which takes care of persisting the connection state.
    */
-  @Throws(IOException::class)
   fun writeOutput(
     jobId: Long,
     attemptNumber: Int,
     output: JobOutput,
   )
 
-  @Throws(IOException::class)
   fun writeStats(
     jobId: Long,
     attemptNumber: Int,
@@ -218,7 +204,6 @@ interface JobPersistence {
    * @param failureSummary summary containing failure metadata and ordered list of failures
    * @throws IOException exception due to interaction with persistence
    */
-  @Throws(IOException::class)
   fun writeAttemptFailureSummary(
     jobId: Long,
     attemptNumber: Int,
@@ -234,7 +219,6 @@ interface JobPersistence {
    * attempt
    * @throws IOException exception due to interaction with persistence
    */
-  @Throws(IOException::class)
   fun writeAttemptSyncConfig(
     jobId: Long,
     attemptNumber: Int,
@@ -254,7 +238,6 @@ interface JobPersistence {
    * @param updatedAtEnd - maximum updated at date to filter by
    * @return count of jobs belonging to the specified connection
    */
-  @Throws(IOException::class)
   fun getJobCount(
     configTypes: Set<ConfigType>,
     connectionId: String?,
@@ -273,14 +256,12 @@ interface JobPersistence {
    * @return lists job in descending order by created_at
    * @throws IOException - what you do when you IO
    */
-  @Throws(IOException::class)
   fun listJobs(
     configTypes: Set<ConfigType>,
     configId: String?,
     limit: Int,
   ): List<Job>
 
-  @Throws(IOException::class)
   fun listJobs(
     configTypes: Set<ConfigType>,
     jobStatuses: Set<JobStatus>?,
@@ -288,7 +269,6 @@ interface JobPersistence {
     pagesize: Int,
   ): List<Job>
 
-  @Throws(IOException::class)
   fun listJobsForConvertingToEvents(
     configTypes: Set<ConfigType>,
     jobStatuses: Set<JobStatus>?,
@@ -303,17 +283,14 @@ interface JobPersistence {
    * @return list of jobs
    * @throws IOException you never know
    */
-  @Throws(IOException::class)
   fun listJobsLight(jobIds: Set<Long>): List<Job>
 
-  @Throws(IOException::class)
   fun listJobsLight(
     configTypes: Set<ConfigType>,
     configId: String?,
     pagesize: Int,
   ): List<Job>
 
-  @Throws(IOException::class)
   fun listJobsLight(
     configTypes: Set<ConfigType>,
     configId: String?,
@@ -328,7 +305,6 @@ interface JobPersistence {
     orderByMethod: String?,
   ): List<Job>
 
-  @Throws(IOException::class)
   fun listJobsLight(
     configTypes: Set<ConfigType>,
     workspaceIds: List<UUID>,
@@ -356,7 +332,6 @@ interface JobPersistence {
    * multiple pages of jobs if required to include the specified job. If the specified job
    * does not exist in the connection, the returned list will be empty.
    */
-  @Throws(IOException::class)
   fun listJobsIncludingId(
     configTypes: Set<ConfigType>,
     connectionId: String?,
@@ -364,79 +339,61 @@ interface JobPersistence {
     pagesize: Int,
   ): List<Job>
 
-  @Throws(IOException::class)
   fun listJobsForConnectionWithStatuses(
     connectionId: UUID,
     configTypes: Set<ConfigType>,
     statuses: Set<JobStatus>,
   ): List<Job>
 
-  @Throws(IOException::class)
   fun listAttemptsForConnectionAfterTimestamp(
     connectionId: UUID,
     configType: ConfigType,
     attemptEndedAtTimestamp: Instant,
   ): List<AttemptWithJobInfo>
 
-  @Throws(IOException::class)
   fun getLastReplicationJob(connectionId: UUID): Optional<Job>
 
-  @Throws(IOException::class)
   fun getLastReplicationJobWithCancel(connectionId: UUID): Optional<Job>
 
-  @Throws(IOException::class)
   fun getLastSyncJob(connectionId: UUID): Optional<Job>
 
-  @Throws(IOException::class)
   fun getLastSyncJobForConnections(connectionIds: List<UUID>): List<JobStatusSummary>
 
-  @Throws(IOException::class)
   fun getRunningSyncJobForConnections(connectionIds: List<UUID>): List<Job>
 
-  @Throws(IOException::class)
   fun getRunningJobForConnection(connectionId: UUID): List<Job>
 
-  @Throws(IOException::class)
   fun getFirstReplicationJob(connectionId: UUID): Optional<Job>
 
-  @Throws(IOException::class)
   fun getVersion(): Optional<String>
 
   /**
    * Set the airbyte version.
    */
-  @Throws(IOException::class)
   fun setVersion(airbyteVersion: String?)
 
   /** ARCHIVE */
-  @Throws(IOException::class)
   fun getAirbyteProtocolVersionMax(): Optional<Version>
 
   /**
    * Set the max supported Airbyte Protocol Version.
    */
-  @Throws(IOException::class)
   fun setAirbyteProtocolVersionMax(version: Version)
 
-  @Throws(IOException::class)
   fun getAirbyteProtocolVersionMin(): Optional<Version>
 
   /**
    * Set the min supported Airbyte Protocol Version.
    */
-  @Throws(IOException::class)
   fun setAirbyteProtocolVersionMin(version: Version)
 
-  @Throws(IOException::class)
   fun getCurrentProtocolVersionRange(): Optional<AirbyteProtocolVersionRange>
 
-  @Throws(IOException::class)
   fun getDeployment(): Optional<UUID>
 
   /**
    * Set deployment id. If one is already set, the new value is ignored.
    */
-  @Throws(IOException::class)
   fun setDeployment(uuid: UUID)
 
   // a deployment references a setup of airbyte. it is created the first time the docker compose or

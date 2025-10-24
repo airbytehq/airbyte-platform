@@ -145,7 +145,6 @@ class BreakingChangeNotificationHelper {
     }
   }
 
-  @Throws(IOException::class)
   private fun notifyBreakingChange(
     workspaceIds: List<UUID>,
     breakingChange: ActorDefinitionBreakingChange,

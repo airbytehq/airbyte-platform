@@ -29,7 +29,6 @@ class ConfigInjector(
    * definition id
    * @throws IOException exception while interacting with db
    */
-  @Throws(IOException::class)
   fun injectConfig(
     configuration: JsonNode,
     actorDefinitionId: UUID,

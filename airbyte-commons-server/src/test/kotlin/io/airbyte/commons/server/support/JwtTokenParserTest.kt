@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test
 
 internal class JwtTokenParserTest {
   @Test
-  @Throws(Exception::class)
   fun testResolveUser_firebase() {
     val jsonNode =
       ObjectMapper().readTree(
@@ -37,7 +36,6 @@ internal class JwtTokenParserTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testResolveUser_keycloak() {
     val jsonNode =
       ObjectMapper().readTree(
@@ -62,7 +60,6 @@ internal class JwtTokenParserTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testResolveSsoRealm_firebase() {
     val issuer = "https://securetoken.google.com/test-firebase"
     val jsonNode = ObjectMapper().readTree("{\"iss\": \"" + issuer + "\"}")
@@ -73,7 +70,6 @@ internal class JwtTokenParserTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testResolveSsoRealm_keycloak() {
     val jsonNode = ObjectMapper().readTree("{\"iss\": \"http://localhost:8000/auth/realms/airbyte\"}")
 

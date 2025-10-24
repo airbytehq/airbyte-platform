@@ -52,7 +52,6 @@ internal class CustomerioNotificationClientTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testSendNotifyRequest() {
     mockWebServer.enqueue(MockResponse())
 
@@ -78,7 +77,6 @@ internal class CustomerioNotificationClientTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testNotifyByEmailBroadcast() {
     mockWebServer.enqueue(MockResponse())
 
@@ -104,7 +102,6 @@ internal class CustomerioNotificationClientTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testNotifyBreakingChangeWarning() {
     mockWebServer.enqueue(MockResponse())
 
@@ -146,7 +143,6 @@ internal class CustomerioNotificationClientTest {
   }
 
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testNotifyBreakingChangeSyncsDisabled() {
     mockWebServer.enqueue(MockResponse().setResponseCode(429))
     mockWebServer.enqueue(MockResponse().setResponseCode(429))
@@ -192,7 +188,6 @@ internal class CustomerioNotificationClientTest {
   // correct URI
   // this test does _not_ check the body of the request.
   @Test
-  @Throws(IOException::class, InterruptedException::class)
   fun testNotifyConnectionDisabled() {
     mockWebServer.enqueue(MockResponse())
 
@@ -300,7 +295,6 @@ internal class CustomerioNotificationClientTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testBuildJobSuccessNotificationMessageData() {
     val workspaceId = UUID.fromString("a39591af-6872-41e3-836d-984e35554324")
     val workspaceName = "workspace-name"

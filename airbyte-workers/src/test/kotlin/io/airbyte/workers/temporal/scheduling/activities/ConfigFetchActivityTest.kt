@@ -100,7 +100,6 @@ internal class ConfigFetchActivityTest {
   @Nested
   internal inner class TimeToWaitTest {
     @BeforeEach
-    @Throws(IOException::class)
     fun setup() {
       whenever(mWorkspaceApi!!.getWorkspaceByConnectionId(any<ConnectionIdRequestBody>())).thenReturn(
         WorkspaceRead(
@@ -146,7 +145,6 @@ internal class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the job will wait for a long time if it is disabled")
-      @Throws(IOException::class)
       fun testDisable() {
         whenever(mConnectionApi!!.getConnection(any<ConnectionIdRequestBody>()))
           .thenReturn(connectionReadWithScheduleDisable)
@@ -162,7 +160,6 @@ internal class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the connection will wait for a long time if it is deleted")
-      @Throws(IOException::class)
       fun testDeleted() {
         whenever(mConnectionApi!!.getConnection(any<ConnectionIdRequestBody>()))
           .thenReturn(connectionReadWithScheduleDeleted)
@@ -178,7 +175,6 @@ internal class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the job will wait a long time if it is MANUAL scheduleType")
-      @Throws(IOException::class)
       fun testManualScheduleType() {
         whenever(mConnectionApi!!.getConnection(any<ConnectionIdRequestBody>()))
           .thenReturn(connectionReadWithManualScheduleType)
@@ -194,7 +190,6 @@ internal class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the job will be immediately scheduled if it is a BASIC_SCHEDULE type on the first run")
-      @Throws(IOException::class)
       fun testBasicScheduleTypeFirstRun() {
         whenever(mAirbyteApiClient!!.jobsApi).thenReturn(mJobsApi)
         whenever(mJobsApi!!.getLastReplicationJobWithCancel(any<ConnectionIdRequestBody>()))
@@ -214,9 +209,6 @@ internal class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that we will wait the required amount of time with a BASIC_SCHEDULE type on a subsequent run")
-      @Throws(
-        IOException::class,
-      )
       fun testBasicScheduleSubsequentRun() {
         whenever(mAirbyteApiClient!!.jobsApi).thenReturn(mJobsApi)
         configFetchActivity =
@@ -259,7 +251,6 @@ internal class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the job will wait to be scheduled if it is a CRON type, and the prior job ran recently")
-      @Throws(IOException::class)
       fun testCronScheduleSubsequentRunPriorJobRanRecently() {
         val mockRightNow: Calendar = Calendar.getInstance(TimeZone.getTimeZone(UTC))
         mockRightNow.set(Calendar.HOUR_OF_DAY, 0)
@@ -301,9 +292,6 @@ internal class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the job will run immediately if it is CRON type, and the expected interval has elapsed since the prior job")
-      @Throws(
-        IOException::class,
-      )
       fun testCronScheduleSubsequentRunPriorJobRanLongAgo() {
         val mockRightNow: Calendar = Calendar.getInstance(TimeZone.getTimeZone(UTC))
         mockRightNow.set(Calendar.HOUR_OF_DAY, 0)
@@ -349,7 +337,6 @@ internal class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that the job will only be scheduled once per minimum cron interval")
-      @Throws(IOException::class)
       fun testCronScheduleMinimumInterval() {
         val mockRightNow: Calendar = Calendar.getInstance(TimeZone.getTimeZone(UTC))
         mockRightNow.set(Calendar.HOUR_OF_DAY, 12)
@@ -387,7 +374,6 @@ internal class ConfigFetchActivityTest {
 
       @Test
       @DisplayName("Test that for specific workspace ids, we add some noise in the cron scheduling")
-      @Throws(IOException::class)
       fun testCronSchedulingNoise() {
         val mockRightNow: Calendar = Calendar.getInstance(TimeZone.getTimeZone(UTC))
         mockRightNow.set(Calendar.HOUR_OF_DAY, 0)
@@ -492,7 +478,6 @@ internal class ConfigFetchActivityTest {
 
     @Test
     @DisplayName("Retrieves connection context from server")
-    @Throws(IOException::class)
     fun happyPath() {
       val contextRead =
         ConnectionContextRead(
@@ -517,10 +502,9 @@ internal class ConfigFetchActivityTest {
     @MockitoSettings(strictness = Strictness.LENIENT)
     @Test
     @DisplayName("Propagates API exception as Retryable")
-    @Throws(IOException::class)
     fun exceptionalPath() {
       whenever(mConnectionApi!!.getConnectionContext(request))
-        .thenThrow(IOException("bang"))
+        .thenAnswer { throw IOException("bang") }
 
       org.junit.jupiter.api.Assertions.assertThrows<RetryableException?>(
         RetryableException::class.java,
@@ -551,7 +535,6 @@ internal class ConfigFetchActivityTest {
     private val ffContext: Context = Multi(List.of<Context?>(Workspace(UUID.randomUUID()), Connection(UUID.randomUUID())))
 
     @BeforeEach
-    @Throws(IOException::class)
     fun setup() {
       whenever(mFfContextMapper!!.map(connectionContext)).thenReturn(ffContext)
 

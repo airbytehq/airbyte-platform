@@ -60,7 +60,6 @@ abstract class BaseOAuthFlow : OAuthFlowImplementation {
    * back to the connector config. This function follows the connector's oauth specifications of which
    * outputs are expected and filters them accordingly.
    */
-  @Throws(JsonValidationException::class)
   protected fun formatOAuthOutput(
     oauthParamConfig: JsonNode,
     completeOAuthFlow: Map<String, Any>,
@@ -198,7 +197,6 @@ abstract class BaseOAuthFlow : OAuthFlowImplementation {
      * @return a map containing the formatted OAuth output
      * @throws JsonValidationException if the output schema validation fails
      */
-    @Throws(JsonValidationException::class)
     private fun formatOAuthOutput(
       validator: JsonSchemaValidator,
       outputSchema: JsonNode?,

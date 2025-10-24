@@ -37,7 +37,6 @@ class TikTokMarketingOAuthFlow : BaseOAuth2Flow {
   @VisibleForTesting
   constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier, TokenRequestContentType.JSON)
 
-  @Throws(IOException::class)
   override fun completeOAuthFlow(
     clientId: String,
     clientSecret: String,
@@ -67,7 +66,6 @@ class TikTokMarketingOAuthFlow : BaseOAuth2Flow {
     }
   }
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -105,7 +103,6 @@ class TikTokMarketingOAuthFlow : BaseOAuth2Flow {
 
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String = ACCESS_TOKEN_URL
 
-  @Throws(IOException::class)
   override fun extractCodeParameter(queryParams: Map<String, Any>): String =
     if (queryParams.containsKey("auth_code")) {
       queryParams["auth_code"] as String
@@ -115,7 +112,6 @@ class TikTokMarketingOAuthFlow : BaseOAuth2Flow {
       throw IOException("Undefined 'auth_code'/'code' from consent redirected url.")
     }
 
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,

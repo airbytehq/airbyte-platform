@@ -50,7 +50,6 @@ internal class OAuthConfigSupplierTest {
   private lateinit var secretReferenceService: SecretReferenceService
 
   @BeforeEach
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun setup() {
     trackingClient = mockk<TrackingClient>(relaxed = true)
     sourceService = mockk<SourceService>()
@@ -82,7 +81,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testNoOAuthInjectionBecauseEmptyParams() {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
@@ -93,7 +91,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testNoAuthMaskingBecauseEmptyParams() {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
@@ -103,7 +100,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testNoOAuthInjectionBecauseMissingPredicateKey() {
     setupStandardDefinitionMock(
       createAdvancedAuth()!!
@@ -120,7 +116,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testNoOAuthInjectionBecauseWrongPredicateValue() {
     setupStandardDefinitionMock(
       createAdvancedAuth()!!
@@ -137,7 +132,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class)
   fun testNoOAuthMaskingBecauseWrongPredicateValue() {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
@@ -153,7 +147,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testOAuthInjection() {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
@@ -168,7 +161,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testOAuthMasking() {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
@@ -181,7 +173,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testOAuthInjectionWithoutPredicate() {
     setupStandardDefinitionMock(
       createAdvancedAuth()!!
@@ -201,7 +192,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testOAuthMaskingWithoutPredicate() {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
@@ -219,7 +209,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testOAuthInjectionWithoutPredicateValue() {
     setupStandardDefinitionMock(
       createAdvancedAuth()!!
@@ -239,7 +228,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testOAuthMaskingWithoutPredicateValue() {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
@@ -257,7 +245,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testOAuthFullInjectionBecauseNoOAuthSpec() {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
@@ -281,7 +268,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testOAuthNoMaskingBecauseNoOAuthSpec() {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
@@ -292,7 +278,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testOAuthInjectionScopedToWorkspace() {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
@@ -341,7 +326,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testOAuthFullInjectionBecauseNoOAuthSpecNestedParameters() {
     // Until https://github.com/airbytehq/airbyte/issues/7624 is solved, we need to handle nested oauth
     // parameters
@@ -372,7 +356,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testOAuthInjectionNestedParameters() {
     // Until https://github.com/airbytehq/airbyte/issues/7624 is solved, we need to handle nested oauth
     // parameters
@@ -393,7 +376,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testOAuthMaskingNestedParameters() {
     // Until https://github.com/airbytehq/airbyte/issues/7624 is solved, we need to handle nested oauth
     // parameters
@@ -408,7 +390,6 @@ internal class OAuthConfigSupplierTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testOAuthInjectingNestedSecrets() {
     val config: JsonNode = generateJsonConfig()
     val workspaceId = UUID.randomUUID()
@@ -421,7 +402,6 @@ internal class OAuthConfigSupplierTest {
     Assertions.assertEquals(expectedConfig, actualConfig)
   }
 
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   private fun setupStandardDefinitionMock(advancedAuth: AdvancedAuth?) {
     every { sourceService.getStandardSourceDefinition(any<UUID>()) } returns testSourceDefinition
     every {
@@ -437,7 +417,6 @@ internal class OAuthConfigSupplierTest {
     } returns Optional.empty()
   }
 
-  @Throws(JsonValidationException::class, IOException::class)
   private fun setupOAuthParamMocks(
     oauthParameters: MutableMap<String?, Any?>?,
     workspaceId: UUID,

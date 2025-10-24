@@ -121,7 +121,6 @@ class DeclarativeSourceManifestInjector {
    * (if custom code exists)
    * @throws IOException If there are issues serializing/deserializing the component file content
    */
-  @Throws(IOException::class)
   fun getManifestConnectorInjections(
     sourceDefinitionId: UUID?,
     manifest: JsonNode?,

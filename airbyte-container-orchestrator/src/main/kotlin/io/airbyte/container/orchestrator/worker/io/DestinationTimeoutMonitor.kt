@@ -156,7 +156,6 @@ class DestinationTimeoutMonitor(
     return false
   }
 
-  @Throws(Exception::class)
   override fun close() {
   }
 

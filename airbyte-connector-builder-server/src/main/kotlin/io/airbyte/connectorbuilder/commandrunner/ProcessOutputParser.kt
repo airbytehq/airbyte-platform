@@ -25,7 +25,6 @@ import java.util.stream.Collectors
  */
 class ProcessOutputParser {
   @Trace(operationName = TracingHelper.CONNECTOR_BUILDER_OPERATION_NAME)
-  @Throws(IOException::class)
   fun parse(
     process: Process,
     streamFactory: AirbyteStreamFactory,
@@ -78,7 +77,6 @@ class ProcessOutputParser {
     cdkCommand: String,
   ): Unit = throw generateError(process, cdkCommand)
 
-  @Throws(CdkProcessException::class, CdkUnknownException::class)
   private fun generateError(
     process: Process,
     cdkCommand: String,

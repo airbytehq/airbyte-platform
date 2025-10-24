@@ -13,7 +13,6 @@ interface AirbyteFileWriter {
   /**
    * Writes `contents` to a temporary file prepended with `name`.
    */
-  @Throws(IOException::class)
   fun write(
     name: String,
     contents: String,

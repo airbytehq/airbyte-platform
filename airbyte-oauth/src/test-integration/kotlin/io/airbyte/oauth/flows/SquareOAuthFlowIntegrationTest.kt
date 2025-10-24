@@ -40,18 +40,11 @@ class SquareOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
   override fun getServerListeningPort(): Int = SERVER_LISTENING_PORT
 
   @BeforeEach
-  @Throws(IOException::class)
   override fun setup() {
     super.setup()
   }
 
   @Test
-  @Throws(
-    InterruptedException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-  )
   fun testFullSquareOAuthFlow() {
     var limit = 20
     val workspaceId = UUID.randomUUID()

@@ -41,7 +41,6 @@ internal class AutoDisableConnectionActivityTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testConnectionAutoDisabled() {
     whenever(mAirbyteApiClient.connectionApi).thenReturn(connectionApi)
     whenever(connectionApi.autoDisableConnection(any<ConnectionIdRequestBody>()))
@@ -51,7 +50,6 @@ internal class AutoDisableConnectionActivityTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testConnectionNotAutoDisabled() {
     whenever(mAirbyteApiClient.connectionApi).thenReturn(connectionApi)
     whenever(connectionApi.autoDisableConnection(any<ConnectionIdRequestBody>()))

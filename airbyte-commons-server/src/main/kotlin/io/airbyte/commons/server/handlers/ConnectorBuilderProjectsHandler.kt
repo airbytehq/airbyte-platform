@@ -152,7 +152,6 @@ open class ConnectorBuilderProjectsHandler
         .icon(sourceDefinition.iconUrl)
         .documentationUrl(actorDefinitionVersion.documentationUrl)
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     private fun builderProjectToDetailsRead(project: ConnectorBuilderProject): ConnectorBuilderProjectDetailsRead {
       val detailsRead = getProjectDetailsWithoutBaseAdvInfo(project)
       if (project.baseActorDefinitionVersionId != null) {
@@ -168,7 +167,6 @@ open class ConnectorBuilderProjectsHandler
       return detailsRead
     }
 
-    @Throws(IOException::class)
     private fun builderProjectsToDetailsReads(projects: List<ConnectorBuilderProject>): List<ConnectorBuilderProjectDetailsRead> {
       val baseActorDefinitionVersionIds =
         projects
@@ -233,7 +231,6 @@ open class ConnectorBuilderProjectsHandler
       workspaceId: UUID,
     ): ConnectorBuilderProjectIdWithWorkspaceId = ConnectorBuilderProjectIdWithWorkspaceId().workspaceId(workspaceId).builderProjectId(projectId)
 
-    @Throws(ConfigNotFoundException::class, IOException::class)
     private fun validateProjectUnderRightWorkspace(
       projectId: UUID,
       workspaceId: UUID,
@@ -242,7 +239,6 @@ open class ConnectorBuilderProjectsHandler
       validateProjectUnderRightWorkspace(project, workspaceId)
     }
 
-    @Throws(ConfigNotFoundException::class)
     private fun validateProjectUnderRightWorkspace(
       project: ConnectorBuilderProject,
       workspaceId: UUID,
@@ -253,7 +249,6 @@ open class ConnectorBuilderProjectsHandler
       }
     }
 
-    @Throws(IOException::class)
     fun createConnectorBuilderProject(projectCreate: ConnectorBuilderProjectWithWorkspaceId): ConnectorBuilderProjectIdWithWorkspaceId {
       val id = uuidSupplier.get()
 
@@ -293,7 +288,6 @@ open class ConnectorBuilderProjectsHandler
       return projectDetailsUpdate
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class)
     fun updateConnectorBuilderProject(projectUpdate: ExistingConnectorBuilderProjectWithWorkspaceId) {
       val connectorBuilderProject =
         connectorBuilderService.getConnectorBuilderProject(projectUpdate.builderProjectId, false)
@@ -304,13 +298,11 @@ open class ConnectorBuilderProjectsHandler
       buildProjectUpdater.persistBuilderProjectUpdate(projectUpdate.builderProject(projectDetailsUpdate))
     }
 
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun deleteConnectorBuilderProject(projectDelete: ConnectorBuilderProjectIdWithWorkspaceId) {
       validateProjectUnderRightWorkspace(projectDelete.builderProjectId, projectDelete.workspaceId)
       connectorBuilderService.deleteBuilderProject(projectDelete.builderProjectId)
     }
 
-    @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class)
     fun getConnectorBuilderProjectWithManifest(request: ConnectorBuilderProjectIdWithWorkspaceId): ConnectorBuilderProjectRead {
       if (request.version != null) {
         validateProjectUnderRightWorkspace(request.builderProjectId, request.workspaceId)
@@ -322,7 +314,6 @@ open class ConnectorBuilderProjectsHandler
       return getWithManifestWithoutVersion(request)
     }
 
-    @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class)
     private fun getWithManifestWithoutVersion(request: ConnectorBuilderProjectIdWithWorkspaceId): ConnectorBuilderProjectRead {
       val project = connectorBuilderService.getConnectorBuilderProject(request.builderProjectId, true)
       validateProjectUnderRightWorkspace(project, request.workspaceId)
@@ -383,7 +374,6 @@ open class ConnectorBuilderProjectsHandler
       return testingValues
     }
 
-    @Throws(IOException::class)
     fun listConnectorBuilderProjects(workspaceIdRequestBody: WorkspaceIdRequestBody): ConnectorBuilderProjectReadList {
       val projects =
         connectorBuilderService.getConnectorBuilderProjectsByWorkspace(workspaceIdRequestBody.workspaceId)
@@ -391,7 +381,6 @@ open class ConnectorBuilderProjectsHandler
       return ConnectorBuilderProjectReadList().projects(builderProjectsToDetailsReads(projects.toList()))
     }
 
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun publishConnectorBuilderProject(connectorBuilderPublishRequestBody: ConnectorBuilderPublishRequestBody): SourceDefinitionIdBody {
       validateProjectUnderRightWorkspace(connectorBuilderPublishRequestBody.builderProjectId, connectorBuilderPublishRequestBody.workspaceId)
       val manifest = connectorBuilderPublishRequestBody.initialDeclarativeManifest.manifest
@@ -427,7 +416,6 @@ open class ConnectorBuilderProjectsHandler
       return SourceDefinitionIdBody().sourceDefinitionId(actorDefinitionId)
     }
 
-    @Throws(IOException::class)
     private fun createActorDefinition(
       name: String,
       workspaceId: UUID,
@@ -471,7 +459,6 @@ open class ConnectorBuilderProjectsHandler
       return source.sourceDefinitionId
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun updateConnectorBuilderProjectTestingValues(testingValuesUpdate: ConnectorBuilderProjectTestingValuesUpdate): JsonNode {
       try {
         validateProjectUnderRightWorkspace(testingValuesUpdate.builderProjectId, testingValuesUpdate.workspaceId)
@@ -508,7 +495,6 @@ open class ConnectorBuilderProjectsHandler
       }
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun readConnectorBuilderProjectStream(requestBody: ConnectorBuilderProjectStreamReadRequestBody): ConnectorBuilderProjectStreamRead? {
       try {
         val project = connectorBuilderService.getConnectorBuilderProject(requestBody.builderProjectId, false)
@@ -554,7 +540,6 @@ open class ConnectorBuilderProjectsHandler
       }
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class)
     fun fullResolveManifestBuilderProject(requestBody: ConnectorBuilderProjectFullResolveRequestBody): ConnectorBuilderResolvedManifest {
       val project = connectorBuilderService.getConnectorBuilderProject(requestBody.builderProjectId, false)
       val secretPersistenceConfig = getSecretPersistenceConfig(project.workspaceId)
@@ -583,7 +568,6 @@ open class ConnectorBuilderProjectsHandler
         workspaceId = workspaceId,
       )
 
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun getConnectorBuilderProjectForDefinitionId(requestBody: BuilderProjectForDefinitionRequestBody): BuilderProjectForDefinitionResponse {
       val builderProjectId: Optional<UUID> =
         connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(requestBody.actorDefinitionId)
@@ -603,7 +587,6 @@ open class ConnectorBuilderProjectsHandler
         .workspaceId(workspaceId.orElse(null))
     }
 
-    @Throws(JsonValidationException::class)
     private fun writeSecretsToSecretPersistence(
       existingTestingValues: Optional<JsonNode>,
       updatedTestingValues: JsonNode,
@@ -631,7 +614,6 @@ open class ConnectorBuilderProjectsHandler
       return secretsRepositoryWriter.createFromConfigLegacy(workspaceId, updatedTestingValues, spec, secretPersistence)
     }
 
-    @Throws(IOException::class, ConfigNotFoundException::class)
     private fun getSecretPersistenceConfig(workspaceId: UUID): Optional<SecretPersistenceConfig> {
       try {
         val organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId)
@@ -689,7 +671,6 @@ open class ConnectorBuilderProjectsHandler
         .getDeclarativeManifestImageVersionByMajorVersion(manifestVersion.getMajorVersion()!!.toInt())
     }
 
-    @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class)
     fun createForkedConnectorBuilderProject(requestBody: ConnectorBuilderProjectForkRequestBody): ConnectorBuilderProjectIdWithWorkspaceId {
       val sourceDefinition = sourceService.getStandardSourceDefinition(requestBody.baseActorDefinitionId)
       val defaultVersion = actorDefinitionService.getActorDefinitionVersion(sourceDefinition.defaultVersionId)
@@ -720,7 +701,6 @@ open class ConnectorBuilderProjectsHandler
       )
     }
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun getConnectorBuilderProjectOAuthConsent(requestBody: BuilderProjectOauthConsentRequest): OAuthConsentRead {
       val project = connectorBuilderService.getConnectorBuilderProject(requestBody.builderProjectId, true)
       val spec =
@@ -777,7 +757,6 @@ open class ConnectorBuilderProjectsHandler
       )
     }
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun completeConnectorBuilderProjectOAuth(requestBody: CompleteConnectorBuilderProjectOauthRequest): CompleteOAuthResponse {
       val project = connectorBuilderService.getConnectorBuilderProject(requestBody.builderProjectId, true)
       val spec =

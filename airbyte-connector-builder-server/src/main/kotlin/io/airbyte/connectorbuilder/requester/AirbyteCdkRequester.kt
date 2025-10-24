@@ -15,17 +15,14 @@ import java.io.IOException
  * Exposes a way of handling synchronous Connector Builder requests. Blocks until the job completes.
  */
 interface AirbyteCdkRequester {
-  @Throws(IOException::class, AirbyteCdkInvalidInputException::class, ConnectorBuilderException::class)
   fun resolveManifest(manifest: JsonNode): ResolveManifest
 
-  @Throws(IOException::class, AirbyteCdkInvalidInputException::class, ConnectorBuilderException::class)
   fun fullResolveManifest(
     manifest: JsonNode,
     config: JsonNode,
     streamLimit: Int?,
   ): ResolveManifest
 
-  @Throws(IOException::class, AirbyteCdkInvalidInputException::class, ConnectorBuilderException::class)
   fun readStream(
     manifest: JsonNode,
     customComponentsCode: String?,

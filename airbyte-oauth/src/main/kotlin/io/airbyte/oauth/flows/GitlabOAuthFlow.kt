@@ -23,7 +23,6 @@ class GitlabOAuthFlow : BaseOAuth2Flow {
 
   constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -67,7 +66,6 @@ class GitlabOAuthFlow : BaseOAuth2Flow {
       .put("redirect_uri", redirectUrl)
       .build()
 
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,
@@ -93,7 +91,6 @@ class GitlabOAuthFlow : BaseOAuth2Flow {
   }
 
   @Deprecated("")
-  @Throws(IOException::class)
   override fun completeSourceOAuth(
     workspaceId: UUID,
     sourceDefinitionId: UUID?,

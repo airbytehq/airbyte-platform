@@ -28,7 +28,6 @@ internal class SlackConfigActivityTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testFetchSlackConfigurationSlackNotificationPresent() {
     val connectionId = UUID.randomUUID()
     val requestBody = ConnectionIdRequestBody(connectionId)
@@ -61,7 +60,6 @@ internal class SlackConfigActivityTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testFetchSlackConfigurationSlackNotificationNotPresent() {
     val connectionId = UUID.randomUUID()
     val requestBody = ConnectionIdRequestBody(connectionId)

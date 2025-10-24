@@ -55,7 +55,6 @@ class ActorDefinitionServiceJooqImpl
      * @return list of IDs
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun getActorDefinitionIdsInUse(): Set<UUID> =
       database.query { ctx: DSLContext ->
         getActorDefinitionsInUse(ctx)
@@ -72,7 +71,6 @@ class ActorDefinitionServiceJooqImpl
      * @return map of definition id to pair of actor type and protocol version.
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun getActorDefinitionToProtocolVersionMap(): Map<UUID, Map.Entry<io.airbyte.config.ActorType, Version>> =
       database.query { ctx: DSLContext ->
         getActorDefinitionsInUse(ctx)
@@ -104,7 +102,6 @@ class ActorDefinitionServiceJooqImpl
      * @return map of definition id to default version.
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun getActorDefinitionIdsToDefaultVersionsMap(): Map<UUID, ActorDefinitionVersion> =
       database.query { ctx: DSLContext ->
         ctx
@@ -136,7 +133,6 @@ class ActorDefinitionServiceJooqImpl
      * @param targetImageTag the new docker image tag for these actor definition versions
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun updateDeclarativeActorDefinitionVersions(
       currentImageTag: String,
       targetImageTag: String,
@@ -157,7 +153,6 @@ class ActorDefinitionServiceJooqImpl
      * @param scopeType ScopeType of either workspace or organization
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun writeActorDefinitionWorkspaceGrant(
       actorDefinitionId: UUID,
       scopeId: UUID,
@@ -183,7 +178,6 @@ class ActorDefinitionServiceJooqImpl
      * @return true, if the scope has access. otherwise, false.
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun actorDefinitionWorkspaceGrantExists(
       actorDefinitionId: UUID,
       scopeId: UUID,
@@ -218,7 +212,6 @@ class ActorDefinitionServiceJooqImpl
      * @param scopeType enum of workspace or organization
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun deleteActorDefinitionWorkspaceGrant(
       actorDefinitionId: UUID,
       scopeId: UUID,
@@ -246,7 +239,6 @@ class ActorDefinitionServiceJooqImpl
      * @returns the POJO associated with the actor definition version inserted. Contains the versionId
      * field from the DB.
      */
-    @Throws(IOException::class)
     override fun writeActorDefinitionVersion(actorDefinitionVersion: ActorDefinitionVersion): ActorDefinitionVersion =
       database.transaction { ctx: DSLContext ->
         writeActorDefinitionVersion(
@@ -264,7 +256,6 @@ class ActorDefinitionServiceJooqImpl
      * otherwise an empty optional
      * @throws IOException - you never know when you io
      */
-    @Throws(IOException::class)
     override fun getActorDefinitionVersion(
       actorDefinitionId: UUID,
       dockerImageTag: String,
@@ -286,7 +277,6 @@ class ActorDefinitionServiceJooqImpl
      * exist
      * @throws IOException - you never know when you io
      */
-    @Throws(IOException::class, ConfigNotFoundException::class)
     override fun getActorDefinitionVersion(actorDefinitionVersionId: UUID): ActorDefinitionVersion =
       getActorDefinitionVersions(java.util.List.of(actorDefinitionVersionId))
         .stream()
@@ -305,7 +295,6 @@ class ActorDefinitionServiceJooqImpl
      * @return list of actor definition versions
      * @throws IOException - you never know when you io
      */
-    @Throws(IOException::class)
     override fun listActorDefinitionVersionsForDefinition(actorDefinitionId: UUID): List<ActorDefinitionVersion> =
       database.query { ctx: DSLContext ->
         ctx
@@ -327,7 +316,6 @@ class ActorDefinitionServiceJooqImpl
      * @return list of actor definition version
      * @throws IOException - you never know when you io
      */
-    @Throws(IOException::class)
     override fun getActorDefinitionVersions(actorDefinitionVersionIds: List<UUID?>): List<ActorDefinitionVersion> =
       database
         .query { ctx: DSLContext ->
@@ -340,7 +328,6 @@ class ActorDefinitionServiceJooqImpl
         .map { record: ActorDefinitionVersionRecord -> DbConverter.buildActorDefinitionVersion(record) }
         .collect(Collectors.toList())
 
-    @Throws(IOException::class)
     override fun getActorIdsForDefinition(actorDefinitionId: UUID): List<ActorWorkspaceOrganizationIds> =
       database.query { ctx: DSLContext ->
         ctx
@@ -363,7 +350,6 @@ class ActorDefinitionServiceJooqImpl
           }.toList()
       }
 
-    @Throws(IOException::class)
     override fun getIdsForActors(actorIds: List<UUID>): List<ActorWorkspaceOrganizationIds> =
       database.query { ctx: DSLContext ->
         ctx
@@ -386,7 +372,6 @@ class ActorDefinitionServiceJooqImpl
           }.toList()
       }
 
-    @Throws(IOException::class)
     override fun updateActorDefinitionDefaultVersionId(
       actorDefinitionId: UUID,
       versionId: UUID,
@@ -410,7 +395,6 @@ class ActorDefinitionServiceJooqImpl
      * @return list of breaking changes
      * @throws IOException - you never know when you io
      */
-    @Throws(IOException::class)
     override fun listBreakingChangesForActorDefinition(actorDefinitionId: UUID): List<ActorDefinitionBreakingChange> =
       database.query { ctx: DSLContext ->
         listBreakingChangesForActorDefinition(
@@ -426,7 +410,6 @@ class ActorDefinitionServiceJooqImpl
      * @param supportState - support state to update to
      * @throws IOException - you never know when you io
      */
-    @Throws(IOException::class)
     override fun setActorDefinitionVersionSupportStates(
       actorDefinitionVersionIds: List<UUID>,
       supportState: ActorDefinitionVersion.SupportState,
@@ -456,7 +439,6 @@ class ActorDefinitionServiceJooqImpl
      * @return list of breaking changes
      * @throws IOException - you never know when you io
      */
-    @Throws(IOException::class)
     override fun listBreakingChangesForActorDefinitionVersion(actorDefinitionVersion: ActorDefinitionVersion): List<ActorDefinitionBreakingChange> {
       val breakingChanges = listBreakingChangesForActorDefinition(actorDefinitionVersion.actorDefinitionId)
       if (breakingChanges.isEmpty()) {
@@ -482,7 +464,6 @@ class ActorDefinitionServiceJooqImpl
      * @return list of breaking changes
      * @throws IOException - you never know when you io
      */
-    @Throws(IOException::class)
     override fun listBreakingChanges(): List<ActorDefinitionBreakingChange> =
       database.query { ctx: DSLContext ->
         ctx
@@ -505,7 +486,6 @@ class ActorDefinitionServiceJooqImpl
      * @return true, if the workspace or organization has access. otherwise, false.
      * @throws IOException - you never know when you IO
      */
-    @Throws(IOException::class)
     override fun scopeCanUseDefinition(
       actorDefinitionId: UUID,
       scopeId: UUID,
@@ -525,7 +505,6 @@ class ActorDefinitionServiceJooqImpl
       return records.isNotEmpty
     }
 
-    @Throws(IOException::class)
     private fun getOrganizationIdFromWorkspaceId(scopeId: UUID): Optional<UUID> {
       val optionalRecord =
         database.query { ctx: DSLContext ->
@@ -538,7 +517,6 @@ class ActorDefinitionServiceJooqImpl
       return optionalRecord.map { obj: Record1<UUID> -> obj.value1() }
     }
 
-    @Throws(IOException::class)
     private fun actorDefinitionsJoinedWithGrants(
       scopeId: UUID,
       scopeType: io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType,
@@ -637,7 +615,6 @@ class ActorDefinitionServiceJooqImpl
         .map { record: ActorDefinitionBreakingChangeRecord -> DbConverter.buildActorDefinitionBreakingChange(record) }
         .collect(Collectors.toList())
 
-    @Throws(IOException::class)
     private fun getDefaultVersionForActorDefinitionId(actorDefinitionId: UUID): ActorDefinitionVersion =
       database.query { ctx: DSLContext ->
         getDefaultVersionForActorDefinitionId(
@@ -657,7 +634,6 @@ class ActorDefinitionServiceJooqImpl
      * the case is if we are in the process of inserting and have already written the source definition,
      * but not yet set its default version.
      */
-    @Throws(IOException::class)
     override fun getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId: UUID): Optional<ActorDefinitionVersion> =
       database.query { ctx: DSLContext ->
         ConnectorMetadataJooqHelper.getDefaultVersionForActorDefinitionIdOptional(

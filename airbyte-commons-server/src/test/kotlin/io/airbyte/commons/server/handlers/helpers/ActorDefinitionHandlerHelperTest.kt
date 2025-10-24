@@ -83,7 +83,6 @@ internal class ActorDefinitionHandlerHelperTest {
   internal inner class TestDefaultDefinitionVersionFromCreate {
     @Test
     @DisplayName("The ActorDefinitionVersion created fromCreate should always be custom")
-    @Throws(IOException::class)
     fun testDefaultDefinitionVersionFromCreate() {
       Mockito
         .`when`(
@@ -131,9 +130,6 @@ internal class ActorDefinitionHandlerHelperTest {
 
     @Test
     @DisplayName("Creating an ActorDefinitionVersion from create with an invalid protocol version should throw an exception")
-    @Throws(
-      IOException::class,
-    )
     fun testDefaultDefinitionVersionFromCreateInvalidProtocolVersionThrows() {
       Mockito
         .`when`(
@@ -173,7 +169,6 @@ internal class ActorDefinitionHandlerHelperTest {
   @Nested
   internal inner class TestDefaultDefinitionVersionFromUpdate {
     @BeforeEach
-    @Throws(IOException::class)
     fun setUp() {
       // default version resolver to not have the new version already
       Mockito
@@ -190,9 +185,6 @@ internal class ActorDefinitionHandlerHelperTest {
     @ParameterizedTest
     @ValueSource(booleans = [true, false])
     @DisplayName("Creating an ActorDefinitionVersion from update with a new version gets a new spec and new protocol version")
-    @Throws(
-      IOException::class,
-    )
     fun testDefaultDefinitionVersionFromUpdateNewVersion(isCustomConnector: Boolean) {
       val previousDefaultVersion: ActorDefinitionVersion = actorDefinitionVersion
       val newDockerImageTag = "newTag"
@@ -243,9 +235,6 @@ internal class ActorDefinitionHandlerHelperTest {
     @ParameterizedTest
     @ValueSource(booleans = [true, false])
     @DisplayName("If the 'new' version has the same dockerImageTag, we don't attempt to fetch a new spec")
-    @Throws(
-      IOException::class,
-    )
     fun testDefaultDefinitionVersionFromUpdateSameVersion(isCustomConnector: Boolean) {
       val previousDefaultVersion: ActorDefinitionVersion = actorDefinitionVersion
       val newDockerImageTag = previousDefaultVersion.getDockerImageTag()
@@ -285,7 +274,6 @@ internal class ActorDefinitionHandlerHelperTest {
     @ParameterizedTest
     @ValueSource(booleans = [true, false])
     @DisplayName("Always fetch specs for dev versions")
-    @Throws(IOException::class)
     fun testDefaultDefinitionVersionFromUpdateSameDevVersion(isCustomConnector: Boolean) {
       val previousDefaultVersion = clone(actorDefinitionVersion).withDockerImageTag(DEV)
       val newDockerImageTag: String = DEV
@@ -334,9 +322,6 @@ internal class ActorDefinitionHandlerHelperTest {
     @ParameterizedTest
     @ValueSource(booleans = [true, false])
     @DisplayName("Creating an ActorDefinitionVersion from update with an invalid protocol version should throw an exception")
-    @Throws(
-      IOException::class,
-    )
     fun testDefaultDefinitionVersionFromUpdateInvalidProtocolVersion(isCustomConnector: Boolean) {
       val previousDefaultVersion: ActorDefinitionVersion = actorDefinitionVersion
       val newDockerImageTag = "newTag"
@@ -381,9 +366,6 @@ internal class ActorDefinitionHandlerHelperTest {
     @ParameterizedTest
     @ValueSource(booleans = [true, false])
     @DisplayName("Creating an ActorDefinitionVersion from update should return an already existing one from db/remote before creating a new one")
-    @Throws(
-      IOException::class,
-    )
     fun testDefaultDefinitionVersionFromUpdateVersionResolved(isCustomConnector: Boolean) {
       val previousDefaultVersion: ActorDefinitionVersion = actorDefinitionVersion
 
@@ -427,9 +409,6 @@ internal class ActorDefinitionHandlerHelperTest {
     @ParameterizedTest
     @ValueSource(booleans = [true, false])
     @DisplayName("Re-fetch spec for dev versions resolved from the db")
-    @Throws(
-      IOException::class,
-    )
     fun testUpdateVersionResolvedDevVersion(isCustomConnector: Boolean) {
       val previousDefaultVersion = clone(actorDefinitionVersion).withDockerImageTag(DEV)
       val dockerImage = getDockerImageForTag(DEV)
@@ -490,7 +469,6 @@ internal class ActorDefinitionHandlerHelperTest {
   @Nested
   internal inner class TestGetBreakingChanges {
     @Test
-    @Throws(IOException::class)
     fun testGetBreakingChanges() {
       val sourceRegistryBreakingChanges =
         BreakingChanges().withAdditionalProperty(
@@ -529,7 +507,6 @@ internal class ActorDefinitionHandlerHelperTest {
   @Nested
   internal inner class TestGetVersionBreakingChanges {
     @Test
-    @Throws(IOException::class)
     fun testGetVersionBreakingChanges() {
       val breakingChangeList =
         listOf(
@@ -586,7 +563,6 @@ internal class ActorDefinitionHandlerHelperTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun testGetVersionBreakingChangesNoBreakingChanges() {
       Mockito
         .`when`(
@@ -604,7 +580,6 @@ internal class ActorDefinitionHandlerHelperTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetNoBreakingChangesAvailable() {
     Mockito
       .`when`(
@@ -628,7 +603,6 @@ internal class ActorDefinitionHandlerHelperTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetBreakingChangesIfDefinitionNotFound() {
     Mockito
       .`when`(

@@ -57,7 +57,6 @@ open class ConnectorDefinitionSpecificationHandler(
    * @throws ConfigNotFoundException - if the source does not exist.
    * @throws IOException - if there is an error reading the specification.
    */
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun getSpecificationForSourceId(sourceIdRequestBody: SourceIdRequestBody): SourceDefinitionSpecificationRead {
     val source = sourceService.getSourceConnection(sourceIdRequestBody.sourceId)
     val sourceDefinition = sourceService.getStandardSourceDefinition(source.sourceDefinitionId)
@@ -78,12 +77,6 @@ open class ConnectorDefinitionSpecificationHandler(
    * @throws ConfigNotFoundException - if the source does not exist.
    * @throws IOException - if there is an error reading the specification.
    */
-  @Throws(
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun getSourceDefinitionSpecification(sourceDefinitionIdWithWorkspaceId: SourceDefinitionIdWithWorkspaceId): SourceDefinitionSpecificationRead {
     val sourceDefinitionId = sourceDefinitionIdWithWorkspaceId.sourceDefinitionId
     val source = sourceService.getStandardSourceDefinition(sourceDefinitionId)
@@ -104,7 +97,6 @@ open class ConnectorDefinitionSpecificationHandler(
    * @throws ConfigNotFoundException - if the destination does not exist.
    * @throws IOException - if there is an error reading the specification.
    */
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun getSpecificationForDestinationId(destinationIdRequestBody: DestinationIdRequestBody): DestinationDefinitionSpecificationRead {
     val destination = destinationService.getDestinationConnection(destinationIdRequestBody.destinationId)
     val destinationDefinition =
@@ -136,7 +128,6 @@ open class ConnectorDefinitionSpecificationHandler(
    * @throws ConfigNotFoundException - if the destination does not exist.
    * @throws IOException - if there is an error reading the specification.
    */
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun getDestinationSpecification(
     destinationDefinitionIdWithWorkspaceId: DestinationDefinitionIdWithWorkspaceId,
   ): DestinationDefinitionSpecificationRead {
@@ -156,7 +147,6 @@ open class ConnectorDefinitionSpecificationHandler(
   }
 
   @VisibleForTesting
-  @Throws(IOException::class)
   fun getSourceSpecificationRead(
     sourceDefinition: StandardSourceDefinition,
     entitledConnectorSpec: EntitledConnectorSpec,
@@ -188,7 +178,6 @@ open class ConnectorDefinitionSpecificationHandler(
   }
 
   @VisibleForTesting
-  @Throws(IOException::class)
   fun getDestinationSpecificationRead(
     destinationDefinition: StandardDestinationDefinition,
     entitledConnectorSpec: EntitledConnectorSpec,

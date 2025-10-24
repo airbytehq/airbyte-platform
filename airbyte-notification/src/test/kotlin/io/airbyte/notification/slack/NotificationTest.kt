@@ -20,7 +20,6 @@ import java.util.UUID
 
 internal class NotificationTest {
   @Test
-  @Throws(JsonProcessingException::class)
   fun testTextSerialization() {
     val notification = Notification()
     notification.setText("test content")
@@ -37,7 +36,6 @@ internal class NotificationTest {
   }
 
   @Test
-  @Throws(JsonProcessingException::class)
   fun testBlockSerialization() {
     val notification = Notification()
     notification.setText("A text node")
@@ -92,7 +90,6 @@ internal class NotificationTest {
   }
 
   @Test
-  @Throws(JsonProcessingException::class)
   fun testDataNode() {
     val workspaceId = UUID.fromString("b510e39b-e9e2-4833-9a3a-963e51d35fb4")
     val connectionId = UUID.fromString("64d901a1-2520-4d91-93c8-9df438668ff0")

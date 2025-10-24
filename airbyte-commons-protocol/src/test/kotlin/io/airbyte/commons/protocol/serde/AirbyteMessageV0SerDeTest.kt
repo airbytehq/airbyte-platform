@@ -13,7 +13,6 @@ import java.net.URISyntaxException
 
 internal class AirbyteMessageV0SerDeTest {
   @Test
-  @Throws(URISyntaxException::class)
   fun v0SerDeRoundTripTest() {
     val deser = AirbyteMessageV0Deserializer()
     val ser = AirbyteMessageV0Serializer()

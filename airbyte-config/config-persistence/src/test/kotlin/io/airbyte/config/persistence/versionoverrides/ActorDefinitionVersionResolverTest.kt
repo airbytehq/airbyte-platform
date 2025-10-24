@@ -39,7 +39,6 @@ internal class ActorDefinitionVersionResolverTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testResolveVersionFromDB() {
     Mockito
       .`when`(actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG))
@@ -59,7 +58,6 @@ internal class ActorDefinitionVersionResolverTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testResolveVersionFromRemoteIfNotInDB() {
     Mockito
       .`when`(actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG))
@@ -96,7 +94,6 @@ internal class ActorDefinitionVersionResolverTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testReturnsEmptyOptionalIfNoVersionFoundInDbOrRemote() {
     Mockito
       .`when`(actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG))

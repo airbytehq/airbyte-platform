@@ -27,7 +27,6 @@ class MicrosoftOneDriveOAuthFlow : BaseOAuth2Flow {
   private val scopes: String
     get() = java.lang.String.join(" ", "offline_access", "Files.Read.All")
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,

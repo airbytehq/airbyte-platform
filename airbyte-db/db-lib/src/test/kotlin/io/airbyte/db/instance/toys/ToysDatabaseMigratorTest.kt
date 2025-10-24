@@ -63,7 +63,6 @@ internal class ToysDatabaseMigratorTest : AbstractDatabaseTest() {
     )
   }
 
-  @Throws(DatabaseInitializationException::class, IOException::class)
   private fun initializeDatabase(dslContext: DSLContext) {
     val initialSchema = Resources.read(ToysDatabaseConstants.SCHEMA_PATH)
     val availabilityCheck: DatabaseAvailabilityCheck =

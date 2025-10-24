@@ -44,7 +44,6 @@ internal class V0_44_5_004__BackFillNotificationSettingsColumnTest : AbstractCon
   }
 
   @Test
-  @Throws(Exception::class)
   fun testMigrateEmptyValues() {
     val ctx = dslContext!!
 
@@ -93,7 +92,6 @@ internal class V0_44_5_004__BackFillNotificationSettingsColumnTest : AbstractCon
   }
 
   @Test
-  @Throws(Exception::class)
   fun testMigrateSlackConfigs() {
     val ctx = dslContext!!
 

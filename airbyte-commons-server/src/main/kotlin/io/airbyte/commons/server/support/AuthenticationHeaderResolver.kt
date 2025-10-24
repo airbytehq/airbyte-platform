@@ -213,7 +213,6 @@ class AuthenticationHeaderResolver(
     }
   }
 
-  @Throws(IOException::class)
   private fun resolveAirbyteUserIdToAuthUserIds(airbyteUserId: String): Set<String> {
     val authUserIds = userPersistence?.listAuthUserIdsForUser(UUID.fromString(airbyteUserId)) ?: emptySet()
 
@@ -222,7 +221,6 @@ class AuthenticationHeaderResolver(
     return HashSet(authUserIds)
   }
 
-  @Throws(ConfigNotFoundException::class, IOException::class, io.airbyte.config.persistence.ConfigNotFoundException::class)
   private fun resolveWorkspaceIdFromPermissionHeader(properties: Map<String, String>): UUID? {
     if (!properties.containsKey(PERMISSION_ID_HEADER)) {
       return null
@@ -234,7 +232,6 @@ class AuthenticationHeaderResolver(
     return permission.workspaceId
   }
 
-  @Throws(ConfigNotFoundException::class, IOException::class, io.airbyte.config.persistence.ConfigNotFoundException::class)
   private fun resolveOrganizationIdFromPermissionHeader(properties: Map<String, String>): UUID? {
     if (!properties.containsKey(PERMISSION_ID_HEADER)) {
       return null

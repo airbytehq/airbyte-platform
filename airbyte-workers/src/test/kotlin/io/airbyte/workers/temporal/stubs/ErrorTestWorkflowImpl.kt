@@ -9,7 +9,6 @@ import io.airbyte.commons.temporal.exception.RetryableException
 class ErrorTestWorkflowImpl : TestWorkflow {
   override val state: Int? = 1
 
-  @Throws(RetryableException::class)
   override fun run(): Unit = throw RetryableException(NullPointerException("test"))
 
   override fun cancel() {}

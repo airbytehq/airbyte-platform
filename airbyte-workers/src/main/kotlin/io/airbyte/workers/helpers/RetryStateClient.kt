@@ -55,7 +55,6 @@ class RetryStateClient(
    * @throws RetryableException — Delegates to Temporal to retry for now (retryWithJitter swallowing
    * 404's is problematic).
    */
-  @Throws(RetryableException::class)
   fun hydrateRetryState(
     jobId: Long?,
     workspaceId: UUID,
@@ -151,7 +150,6 @@ class RetryStateClient(
     b: Int,
   ): Int = if (a == -1) b else a
 
-  @Throws(RetryableException::class)
   private fun fetchRetryState(jobId: Long): RetryStateRead? {
     val req = JobIdRequestBody(jobId)
 
@@ -175,7 +173,6 @@ class RetryStateClient(
    * @param manager — the RetryManager we want to persist.
    * @return true if successful, otherwise false.
    */
-  @Throws(IOException::class)
   fun persistRetryState(
     jobId: Long,
     connectionId: UUID,

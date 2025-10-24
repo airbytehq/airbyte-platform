@@ -43,7 +43,6 @@ internal class JsonSchemaValidatorTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun test() {
     val schema = (
       "{\n" +
@@ -85,7 +84,6 @@ internal class JsonSchemaValidatorTest {
   }
 
   @Test
-  @Throws(IOException::class, URISyntaxException::class)
   fun testResolveReferences() {
     val referencableSchemas =
       """

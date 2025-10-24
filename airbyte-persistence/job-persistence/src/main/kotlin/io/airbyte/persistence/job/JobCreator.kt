@@ -36,7 +36,6 @@ interface JobCreator {
    * @return the new job if no other conflicting job was running, otherwise empty
    * @throws IOException if something wrong happens
    */
-  @Throws(IOException::class)
   fun createSyncJob(
     source: SourceConnection,
     destination: DestinationConnection,
@@ -67,7 +66,6 @@ interface JobCreator {
    * @return the new job if no other conflicting job was running, otherwise empty
    * @throws IOException if something wrong happens
    */
-  @Throws(IOException::class)
   fun createResetConnectionJob(
     destination: DestinationConnection,
     standardSync: StandardSync,
@@ -81,7 +79,6 @@ interface JobCreator {
     workspaceId: UUID,
   ): Optional<Long>
 
-  @Throws(IOException::class)
   fun createRefreshConnection(
     source: SourceConnection,
     destination: DestinationConnection,

@@ -28,7 +28,6 @@ internal class CheckRunProgressActivityTest {
 
   @ParameterizedTest
   @MethodSource("jobAttemptMatrix")
-  @Throws(IOException::class)
   fun delegatesToProgressChecker(
     jobId: Long,
     attemptNo: Int,

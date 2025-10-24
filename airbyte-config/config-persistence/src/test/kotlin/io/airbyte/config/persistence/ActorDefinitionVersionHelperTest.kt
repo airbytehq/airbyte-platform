@@ -36,7 +36,6 @@ internal class ActorDefinitionVersionHelperTest {
   private lateinit var actorDefinitionVersionHelper: ActorDefinitionVersionHelper
 
   @BeforeEach
-  @Throws(ConfigNotFoundException::class, IOException::class, ConfigNotFoundException::class)
   fun setup() {
     mConfigOverrideProvider = Mockito.mock(ConfigurationDefinitionVersionOverrideProvider::class.java)
     Mockito
@@ -56,12 +55,6 @@ internal class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  @Throws(
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-  )
   fun testGetSourceVersion() {
     val sourceDefinition =
       StandardSourceDefinition()
@@ -76,12 +69,6 @@ internal class ActorDefinitionVersionHelperTest {
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  @Throws(
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-  )
   fun testGetSourceVersionWithConfigOverride(isOverrideApplied: Boolean) {
     Mockito
       .`when`(
@@ -113,12 +100,6 @@ internal class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  @Throws(
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-  )
   fun testGetSourceVersionForWorkspace() {
     val sourceDefinition =
       StandardSourceDefinition()
@@ -130,12 +111,6 @@ internal class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  @Throws(
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-  )
   fun testGetSourceVersionForWorkspaceWithConfigOverride() {
     Mockito
       .`when`(
@@ -158,12 +133,6 @@ internal class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  @Throws(
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-  )
   fun testGetDestinationVersion() {
     val destinationDefinition =
       StandardDestinationDefinition()
@@ -177,12 +146,6 @@ internal class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  @Throws(
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-  )
   fun testGetDestinationVersionWithConfigOverride() {
     Mockito
       .`when`(
@@ -207,12 +170,6 @@ internal class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  @Throws(
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-  )
   fun testGetDestinationVersionForWorkspace() {
     val destinationDefinition =
       StandardDestinationDefinition()
@@ -224,12 +181,6 @@ internal class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  @Throws(
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-  )
   fun testGetDestinationVersionForWorkspaceWithConfigOverride() {
     Mockito
       .`when`(
@@ -252,12 +203,6 @@ internal class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  @Throws(
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-  )
   fun testGetDefaultSourceVersion() {
     val sourceDefinition =
       StandardSourceDefinition()
@@ -273,12 +218,6 @@ internal class ActorDefinitionVersionHelperTest {
   }
 
   @Test
-  @Throws(
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-  )
   fun testGetDefaultDestinationVersion() {
     val destinationDefinition =
       StandardDestinationDefinition()

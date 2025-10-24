@@ -11,7 +11,6 @@ open class InvalidTestWorkflowImpl : TestWorkflow {
   @TemporalActivityStub(activityOptionsBeanName = "missingActivityOptions")
   private lateinit var testActivity: TestActivity
 
-  @Throws(RetryableException::class)
   override fun run() {
   }
 

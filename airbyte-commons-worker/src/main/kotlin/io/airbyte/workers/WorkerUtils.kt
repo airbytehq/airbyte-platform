@@ -171,7 +171,6 @@ object WorkerUtils {
    * @return map of message type to messages
    * @throws IOException exception while reading
    */
-  @Throws(IOException::class)
   fun getMessagesByType(
     process: Process,
     streamFactory: AirbyteStreamFactory,

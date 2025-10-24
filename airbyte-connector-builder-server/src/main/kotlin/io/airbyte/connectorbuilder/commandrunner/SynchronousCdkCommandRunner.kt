@@ -14,7 +14,6 @@ interface SynchronousCdkCommandRunner {
   /**
    * Launch a CDK process responsible for handling requests.
    */
-  @Throws(IOException::class)
   fun runCommand(
     command: String,
     config: String,

@@ -417,7 +417,6 @@ object SecretsHelpers {
    * @return a json string containing the secret value or a JSON
    * @throws SecretCoordinateException when a secret at that coordinate is not available in the persistence
    */
-  @Throws(SecretCoordinateException::class)
   private fun getOrThrowSecretValue(
     secretPersistence: ReadOnlySecretPersistence,
     coordinate: SecretCoordinate,

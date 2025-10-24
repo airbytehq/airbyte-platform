@@ -28,7 +28,6 @@ class SlackOAuthFlow : BaseOAuth2Flow {
    * especially in the query parameters to be provided. This function should generate such consent URL
    * accordingly.
    */
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -53,7 +52,6 @@ class SlackOAuthFlow : BaseOAuth2Flow {
    */
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String = ACCESS_TOKEN_URL
 
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,

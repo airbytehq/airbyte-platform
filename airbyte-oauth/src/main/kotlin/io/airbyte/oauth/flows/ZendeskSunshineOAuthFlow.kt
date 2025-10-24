@@ -25,7 +25,6 @@ class ZendeskSunshineOAuthFlow : BaseOAuth2Flow {
   @VisibleForTesting
   constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -77,7 +76,6 @@ class ZendeskSunshineOAuthFlow : BaseOAuth2Flow {
     return String.format("https://%s.zendesk.com/oauth/tokens", subdomain)
   }
 
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,

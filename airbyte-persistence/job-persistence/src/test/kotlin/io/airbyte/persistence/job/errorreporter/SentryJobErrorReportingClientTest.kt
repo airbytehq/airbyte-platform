@@ -79,7 +79,6 @@ internal class SentryJobErrorReportingClientTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testReportJobFailureReason() {
     val eventCaptor = ArgumentCaptor.forClass<SentryEvent?, SentryEvent?>(SentryEvent::class.java)
 
@@ -241,7 +240,6 @@ internal class SentryJobErrorReportingClientTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testSimpleFlatJson() {
     val node = objectMapper.readTree("{\"key1\":\"value1\", \"key2\":\"value2\"}")
     val flatMap = mutableMapOf<String, String>()
@@ -253,7 +251,6 @@ internal class SentryJobErrorReportingClientTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testJsonWithArray() {
     val node = objectMapper.readTree("{\"a\": { \"b\": [{\"c\": 1}, {\"c\": 2}]}}")
     val flatMap = mutableMapOf<String, String>()
@@ -265,7 +262,6 @@ internal class SentryJobErrorReportingClientTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testJsonWithNestedObject() {
     val node =
       objectMapper.readTree(
@@ -281,7 +277,6 @@ internal class SentryJobErrorReportingClientTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testJsonWithNestedObjectsAndArray() {
     val node =
       objectMapper.readTree(

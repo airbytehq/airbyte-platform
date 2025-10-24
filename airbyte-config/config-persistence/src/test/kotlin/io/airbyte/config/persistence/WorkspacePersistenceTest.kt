@@ -72,7 +72,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   private lateinit var dataplaneGroupService: DataplaneGroupService
 
   @BeforeEach
-  @Throws(Exception::class)
   fun setup() {
     featureFlagClient = Mockito.mock<TestClient>(TestClient::class.java)
     secretsRepositoryReader = Mockito.mock<SecretsRepositoryReader>(SecretsRepositoryReader::class.java)
@@ -187,7 +186,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun testGetWorkspace() {
     workspaceService.writeStandardWorkspaceNoSecrets(
       createBaseStandardWorkspace().withWorkspaceId(UUID.randomUUID()).withOrganizationId(MockData.DEFAULT_ORGANIZATION_ID),
@@ -196,24 +194,20 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun testWorkspaceWithNullTombstone() {
     assertReturnsWorkspace(createBaseStandardWorkspace())
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun testWorkspaceWithFalseTombstone() {
     assertReturnsWorkspace(createBaseStandardWorkspace().withTombstone(false))
   }
 
   @Test
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun testWorkspaceWithTrueTombstone() {
     assertReturnsWorkspace(createBaseStandardWorkspace().withTombstone(true))
   }
 
-  @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
   fun assertReturnsWorkspace(workspace: StandardWorkspace) {
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
 
@@ -284,7 +278,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   // verify(workspaceService).getStandardWorkspaceNoSecrets(WORKSPACE_ID, isTombstone);
   // }
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun testUpdateFeedback() {
     val workspace: StandardWorkspace = createBaseStandardWorkspace()
 
@@ -306,7 +299,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     "GENERALLY_AVAILABLE, BETA, true",
     "CUSTOM, CUSTOM, false",
   )
-  @Throws(JsonValidationException::class, IOException::class)
   fun testWorkspaceHasAlphaOrBetaConnector(
     sourceReleaseStage: ReleaseStage?,
     destinationReleaseStage: ReleaseStage?,
@@ -337,7 +329,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesInOrgNoKeyword() {
     val workspace: StandardWorkspace =
       createBaseStandardWorkspace()
@@ -366,7 +357,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesInOrgWithPagination() {
     val workspace: StandardWorkspace =
       createBaseStandardWorkspace()
@@ -396,7 +386,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesByInstanceAdminUserPaginated() {
     val workspace1: StandardWorkspace =
       createBaseStandardWorkspace()
@@ -465,7 +454,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesInOrgWithKeyword() {
     val workspace: StandardWorkspace =
       createBaseStandardWorkspace()
@@ -495,7 +483,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testGetDefaultWorkspaceForOrganization() {
     val expectedWorkspace: StandardWorkspace =
       createBaseStandardWorkspace()
@@ -533,7 +520,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     "true",
     "false",
   )
-  @Throws(JsonValidationException::class, IOException::class)
   fun getInitialSetupComplete(initialSetupComplete: Boolean) {
     val workspace: StandardWorkspace =
       createBaseStandardWorkspace()
@@ -551,7 +537,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesByUserIdWithKeywordWithPagination() {
     val workspaceId1 = UUID.randomUUID()
     val workspaceId2 = UUID.randomUUID()
@@ -639,7 +624,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesByUserIdWithoutKeywordWithoutPagination() {
     val workspace1Id = UUID.randomUUID()
     val workspace2Id = UUID.randomUUID()
@@ -720,7 +704,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesInOrganizationByUserIdWithKeyword() {
     val workspaceId1 = UUID.randomUUID()
     val workspaceId2 = UUID.randomUUID()
@@ -820,7 +803,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesInOrganizationByUserIdWithoutKeyword() {
     val workspaceId1 = UUID.randomUUID()
     val workspaceId2 = UUID.randomUUID()
@@ -936,7 +918,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesInOrganizationByUserIdPaginatedWithKeyword() {
     val workspaceId1 = UUID.randomUUID()
     val workspaceId2 = UUID.randomUUID()
@@ -1058,7 +1039,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesInOrganizationByUserIdPaginatedWithoutPermission() {
     val workspaceId1 = UUID.randomUUID()
     val workspaceId2 = UUID.randomUUID()
@@ -1133,7 +1113,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesInOrganizationByUserIdWithInstanceAdminPermission() {
     val workspaceId1 = UUID.randomUUID()
     val workspaceId2 = UUID.randomUUID()
@@ -1209,7 +1188,6 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testListWorkspacesInOrganizationByUserIdPaginatedWithInstanceAdminPermission() {
     val workspaceId1 = UUID.randomUUID()
     val workspaceId2 = UUID.randomUUID()

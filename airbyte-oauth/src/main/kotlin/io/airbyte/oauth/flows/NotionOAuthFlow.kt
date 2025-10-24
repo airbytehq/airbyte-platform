@@ -33,7 +33,6 @@ class NotionOAuthFlow(
    * @param clientId The configured client ID
    * @param redirectUrl the redirect URL
    */
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -71,7 +70,6 @@ class NotionOAuthFlow(
    */
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String = ACCESS_TOKEN_URL
 
-  @Throws(IOException::class)
   override fun completeOAuthFlow(
     clientId: String,
     clientSecret: String,
@@ -109,7 +107,6 @@ class NotionOAuthFlow(
     }
   }
 
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,

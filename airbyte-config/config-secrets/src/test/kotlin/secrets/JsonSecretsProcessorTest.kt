@@ -428,7 +428,6 @@ internal class JsonSecretsProcessorTest {
 
   @ParameterizedTest
   @MethodSource("scenarioProvider")
-  @Throws(IOException::class)
   fun testSecretScenario(
     folder: String,
     partial: Boolean,
@@ -451,7 +450,6 @@ internal class JsonSecretsProcessorTest {
   }
 
   @Test
-  @Throws(JsonProcessingException::class)
   fun copiesSecretsInNestedNonCombinationNode() {
     val objectMapper = ObjectMapper()
     val source =
@@ -512,7 +510,6 @@ internal class JsonSecretsProcessorTest {
   }
 
   @Test
-  @Throws(JsonProcessingException::class)
   fun doesNotCopySecretsInNestedNonCombinationNodeWhenDestinationMissing() {
     val objectMapper = ObjectMapper()
     val source =
@@ -683,7 +680,6 @@ internal class JsonSecretsProcessorTest {
 
   @ParameterizedTest
   @MethodSource("scenarioProviderNoOp")
-  @Throws(IOException::class)
   fun testSecretScenarioNoOp(
     folder: String,
     partial: Boolean,

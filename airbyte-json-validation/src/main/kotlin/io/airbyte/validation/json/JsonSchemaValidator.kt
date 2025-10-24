@@ -148,7 +148,6 @@ class JsonSchemaValidator
      * @throws JsonValidationException thrown is the objectJson is not valid against the schema in
      * schemaJson.
      */
-    @Throws(JsonValidationException::class)
     fun ensure(
       schemaJson: JsonNode,
       objectJson: JsonNode,

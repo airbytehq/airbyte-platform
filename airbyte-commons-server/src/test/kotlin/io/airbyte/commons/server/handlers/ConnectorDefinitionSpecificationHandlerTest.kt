@@ -89,7 +89,6 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testGetDestinationSpecForDestinationId() {
     val destinationId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
@@ -132,12 +131,6 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testGetSourceSpecWithoutDocs() {
     val workspaceId = UUID.randomUUID()
     val sourceDefinitionIdWithWorkspaceId =
@@ -170,7 +163,6 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testGetSourceSpecForSourceId() {
     val sourceId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
@@ -204,7 +196,6 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testGetDestinationSpec() {
     val destinationDefinitionIdWithWorkspaceId =
       DestinationDefinitionIdWithWorkspaceId().destinationDefinitionId(UUID.randomUUID()).workspaceId(UUID.randomUUID())
@@ -239,12 +230,6 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testGetSourceSpec() {
     val workspaceId = UUID.randomUUID()
     val sourceDefinitionIdWithWorkspaceId =
@@ -277,7 +262,6 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
 
   @ValueSource(booleans = [true, false])
   @ParameterizedTest
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testDestinationSyncModeEnrichment(supportsRefreshes: Boolean) {
     val workspaceId = UUID.randomUUID()
     val destinationDefinitionIdWithWorkspaceId =
@@ -353,7 +337,6 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
 
   @ValueSource(booleans = [true, false])
   @ParameterizedTest
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testDestinationSyncModeEnrichmentWithoutOverwrite(supportsRefreshes: Boolean) {
     val workspaceId = UUID.randomUUID()
     val destinationDefinitionIdWithWorkspaceId =
@@ -408,7 +391,6 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
 
   @ValueSource(booleans = [true, false])
   @ParameterizedTest
-  @Throws(IOException::class)
   fun getDestinationSpecificationReadAdvancedAuth(advancedAuthGlobalCredentialsAvailable: Boolean) {
     val workspaceId = UUID.randomUUID()
     val destinationDefinitionId = UUID.randomUUID()
@@ -446,7 +428,6 @@ internal class ConnectorDefinitionSpecificationHandlerTest {
 
   @ValueSource(booleans = [true, false])
   @ParameterizedTest
-  @Throws(IOException::class)
   fun getSourceSpecificationReadAdvancedAuth(advancedAuthGlobalCredentialsAvailable: Boolean) {
     val workspaceId = UUID.randomUUID()
     val sourceDefinitionId = UUID.randomUUID()

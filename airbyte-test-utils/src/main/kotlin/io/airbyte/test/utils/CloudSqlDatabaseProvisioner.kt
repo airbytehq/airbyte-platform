@@ -48,7 +48,6 @@ class CloudSqlDatabaseProvisioner {
   }
 
   @Synchronized
-  @Throws(IOException::class, InterruptedException::class)
   fun createDatabase(
     projectId: String?,
     instanceId: String?,
@@ -65,7 +64,6 @@ class CloudSqlDatabaseProvisioner {
   }
 
   @Synchronized
-  @Throws(IOException::class, InterruptedException::class)
   fun deleteDatabase(
     projectId: String?,
     instanceId: String?,
@@ -82,7 +80,6 @@ class CloudSqlDatabaseProvisioner {
    * Database operations are asynchronous. This method polls the operation until it is done.
    */
   @VisibleForTesting
-  @Throws(IOException::class, InterruptedException::class)
   fun pollOperation(
     projectId: String?,
     operationName: String,
@@ -105,7 +102,6 @@ class CloudSqlDatabaseProvisioner {
    * return a 409 error. This method will retry api calls that return a 409 error.
    */
   @VisibleForTesting
-  @Throws(InterruptedException::class)
   fun runWithRetry(callable: Callable<Operation>): Operation {
     var attempts = 0
     while (attempts < maxApiCallAttempts) {

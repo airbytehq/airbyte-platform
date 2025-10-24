@@ -93,7 +93,6 @@ class ConnectionServiceJooqImpl
      * @param syncId - id of the sync (a.k.a. connection_id)
      * @throws IOException - error while accessing db.
      */
-    @Throws(IOException::class)
     override fun deleteStandardSync(syncId: UUID) {
       database.transaction<Any?> { ctx: DSLContext ->
         deleteConfig(
@@ -134,7 +133,6 @@ class ConnectionServiceJooqImpl
      * @throws IOException if there is an issue while interacting with db.
      */
     @Trace
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     override fun getStandardSync(connectionId: UUID): StandardSync {
       val result = listStandardSyncWithMetadata(Optional.of(connectionId))
 
@@ -160,7 +158,6 @@ class ConnectionServiceJooqImpl
      * @param standardSync connection
      * @throws IOException - exception while interacting with the db
      */
-    @Throws(IOException::class)
     override fun writeStandardSync(standardSync: StandardSync) {
       database.transaction<Any?> { ctx: DSLContext ->
         writeStandardSync(standardSync, ctx)
@@ -174,7 +171,6 @@ class ConnectionServiceJooqImpl
      * @return connections
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun listStandardSyncs(): List<StandardSync> = listStandardSyncWithMetadata(Optional.empty())
 
     /**
@@ -184,7 +180,6 @@ class ConnectionServiceJooqImpl
      * @return Connections that use the operation.
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun listStandardSyncsUsingOperation(operationId: UUID): List<StandardSync> {
       val connectionAndOperationIdsResult =
         database
@@ -235,7 +230,6 @@ class ConnectionServiceJooqImpl
       )
     }
 
-    @Throws(IOException::class)
     override fun updateConnectionStatus(
       connectionId: UUID,
       status: StandardSync.Status,
@@ -265,7 +259,6 @@ class ConnectionServiceJooqImpl
      * @return list of connections
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun listWorkspaceStandardSyncs(
       workspaceId: UUID,
       includeDeleted: Boolean,
@@ -279,7 +272,6 @@ class ConnectionServiceJooqImpl
      * @throws IOException if there is an issue while interacting with db.
      */
     @Trace
-    @Throws(IOException::class)
     override fun listWorkspaceStandardSyncs(standardSyncQuery: StandardSyncQuery): List<StandardSync> {
       val connectionAndOperationIdsResult =
         database
@@ -346,7 +338,6 @@ class ConnectionServiceJooqImpl
     }
 
     @Trace
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun getWorkspaceStandardSyncWithJobInfo(connectionId: UUID): ConnectionWithJobInfo {
       val connectionAndOperationIdsResult =
         database.query({ ctx: DSLContext ->
@@ -426,7 +417,6 @@ class ConnectionServiceJooqImpl
     }
 
     @Trace
-    @Throws(IOException::class)
     override fun listWorkspaceStandardSyncsCursorPaginated(
       standardSyncQuery: StandardSyncQuery,
       workspaceResourceCursorPagination: WorkspaceResourceCursorPagination,
@@ -895,7 +885,6 @@ class ConnectionServiceJooqImpl
      * @return count of connections matching the query
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun countWorkspaceStandardSyncs(
       standardSyncQuery: StandardSyncQuery,
       filters: Filters?,
@@ -936,7 +925,6 @@ class ConnectionServiceJooqImpl
     /**
      * List connections. Paginated.
      */
-    @Throws(IOException::class)
     override fun listWorkspaceStandardSyncsLimitOffsetPaginated(
       workspaceIds: List<UUID>,
       tagIds: List<UUID>,
@@ -963,7 +951,6 @@ class ConnectionServiceJooqImpl
      * @return Map of workspace ID -> list of connections
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun listWorkspaceStandardSyncsLimitOffsetPaginated(
       standardSyncsQueryPaginated: StandardSyncsQueryPaginated,
     ): Map<UUID, MutableList<StandardSync>> {
@@ -1052,7 +1039,6 @@ class ConnectionServiceJooqImpl
      * @return connections that use the provided source
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun listConnectionsBySource(
       sourceId: UUID,
       includeDeleted: Boolean,
@@ -1110,7 +1096,6 @@ class ConnectionServiceJooqImpl
      * @return connections that use the provided destination
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun listConnectionsByDestination(
       destinationId: UUID,
       includeDeleted: Boolean,
@@ -1169,7 +1154,6 @@ class ConnectionServiceJooqImpl
      * @return connections that use the provided source
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun listConnectionsBySources(
       sourceIds: List<UUID>,
       includeDeleted: Boolean,
@@ -1237,7 +1221,6 @@ class ConnectionServiceJooqImpl
      * @return connections that use the provided destination
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun listConnectionsByDestinations(
       destinationIds: List<UUID>,
       includeDeleted: Boolean,
@@ -1305,7 +1288,6 @@ class ConnectionServiceJooqImpl
      * @return List of connections that use the actor definition.
      * @throws IOException you never know when you IO
      */
-    @Throws(IOException::class)
     override fun listConnectionsByActorDefinitionIdAndType(
       actorDefinitionId: UUID,
       actorTypeValue: String,
@@ -1389,7 +1371,6 @@ class ConnectionServiceJooqImpl
      * @return List of connections matching the given definition and actor IDs.
      * @throws IOException in case of database access issues
      */
-    @Throws(IOException::class)
     override fun listConnectionSummaryByActorDefinitionIdAndActorIds(
       actorDefinitionId: UUID,
       actorTypeValue: String,
@@ -1451,7 +1432,6 @@ class ConnectionServiceJooqImpl
      * @throws ConfigNotFoundException if the config does not exist
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(ConfigNotFoundException::class, IOException::class)
     override fun getAllStreamsForConnection(connectionId: UUID): List<StreamDescriptor> {
       try {
         val standardSync = getStandardSync(connectionId)
@@ -1473,7 +1453,6 @@ class ConnectionServiceJooqImpl
      * @throws ConfigNotFoundException if the config does not exist
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     override fun getConfiguredCatalogForConnection(connectionId: UUID): ConfiguredAirbyteCatalog {
       val standardSync = getStandardSync(connectionId)
       return standardSync.catalog
@@ -1486,7 +1465,6 @@ class ConnectionServiceJooqImpl
      * @return dataplane group name
      * @throws IOException exception while interacting with the db
      */
-    @Throws(IOException::class)
     override fun getDataplaneGroupNameForConnection(connectionId: UUID): String {
       val nameString =
         database
@@ -1531,7 +1509,6 @@ class ConnectionServiceJooqImpl
      * @param connectionId ID of the connection to check connectors for
      * @return boolean indicating if an alpha or beta connector is used by the connection
      */
-    @Throws(IOException::class)
     override fun getConnectionHasAlphaOrBetaConnector(connectionId: UUID): Boolean {
       val releaseStageAlphaOrBeta =
         Tables.ACTOR_DEFINITION_VERSION.RELEASE_STAGE
@@ -1560,7 +1537,6 @@ class ConnectionServiceJooqImpl
       return countResult!! > 0
     }
 
-    @Throws(IOException::class)
     override fun listEarlySyncJobs(
       freeUsageInterval: Int,
       jobsFetchRange: Int,
@@ -1582,7 +1558,6 @@ class ConnectionServiceJooqImpl
      * @return set of connection ids that were updated
      * @throws IOException if there is an issue while interacting with db.
      */
-    @Throws(IOException::class)
     override fun disableConnectionsById(connectionIds: List<UUID>): Set<UUID> =
       database.transaction { ctx: DSLContext ->
         ctx
@@ -1601,7 +1576,6 @@ class ConnectionServiceJooqImpl
           .fetchSet(Tables.CONNECTION.ID)
       }
 
-    @Throws(IOException::class)
     override fun lockConnectionsById(
       connectionIds: Collection<UUID>,
       statusReason: String,
@@ -1625,7 +1599,6 @@ class ConnectionServiceJooqImpl
           .fetchSet(Tables.CONNECTION.ID)
       }
 
-    @Throws(IOException::class)
     override fun listConnectionIdsForWorkspace(workspaceId: UUID): List<UUID> =
       database.query { ctx: DSLContext ->
         ctx
@@ -1637,7 +1610,6 @@ class ConnectionServiceJooqImpl
           .fetchInto(UUID::class.java)
       }
 
-    @Throws(IOException::class)
     override fun listConnectionIdsForOrganization(organizationId: UUID): List<UUID> =
       database.query { ctx: DSLContext ->
         ctx
@@ -1652,7 +1624,6 @@ class ConnectionServiceJooqImpl
           .fetchInto(UUID::class.java)
       }
 
-    @Throws(IOException::class)
     override fun listConnectionIdsForOrganizationAndActorDefinitions(
       organizationId: UUID,
       actorDefinitionIds: Collection<UUID>,
@@ -1684,7 +1655,6 @@ class ConnectionServiceJooqImpl
       }
     }
 
-    @Throws(IOException::class)
     override fun listConnectionIdsForOrganizationWithMappers(organizationId: UUID): List<UUID> =
       database.query { ctx: DSLContext ->
         ctx
@@ -1706,7 +1676,6 @@ class ConnectionServiceJooqImpl
           ).fetchInto(UUID::class.java)
       }
 
-    @Throws(IOException::class)
     override fun listSubHourConnectionIdsForOrganization(organizationId: UUID): List<UUID> =
       database.query { ctx: DSLContext ->
         ctx
@@ -1741,7 +1710,6 @@ class ConnectionServiceJooqImpl
           ).fetchInto(UUID::class.java)
       }
 
-    @Throws(IOException::class)
     override fun listConnectionCronSchedulesForOrganization(organizationId: UUID): List<ConnectionCronSchedule> =
       database.query { ctx: DSLContext ->
         ctx
@@ -1773,7 +1741,6 @@ class ConnectionServiceJooqImpl
       return earlySyncJobs.filterNotNull().toSet()
     }
 
-    @Throws(IOException::class)
     private fun listStandardSyncWithMetadata(configId: Optional<UUID>): List<StandardSync> {
       val result =
         database.query { ctx: DSLContext ->
@@ -1829,7 +1796,6 @@ class ConnectionServiceJooqImpl
       }
     }
 
-    @Throws(IOException::class)
     private fun connectionOperationIds(connectionId: UUID): List<UUID> {
       val result =
         database.query { ctx: DSLContext ->
@@ -2176,7 +2142,6 @@ class ConnectionServiceJooqImpl
       }
     }
 
-    @Throws(IOException::class)
     override fun actorSyncsAnyListedStream(
       actorId: UUID,
       streamNames: List<String>,
@@ -2268,7 +2233,6 @@ class ConnectionServiceJooqImpl
       return standardSyncs
     }
 
-    @Throws(IOException::class)
     private fun getNotificationConfigurationByConnectionIds(connectionIds: List<UUID?>): List<NotificationConfigurationRecord> =
       database.query { ctx: DSLContext ->
         ctx
@@ -2277,7 +2241,6 @@ class ConnectionServiceJooqImpl
           .fetch()
       }
 
-    @Throws(IOException::class)
     private fun getTagsByConnectionIds(connectionIds: List<UUID>): Map<UUID, List<TagRecord>> {
       val records: List<Record> =
         database.query { ctx: DSLContext ->
@@ -2358,7 +2321,6 @@ class ConnectionServiceJooqImpl
      * @return List of stream configurations containing namespace settings and stream details
      * @throws IOException if there is an issue while interacting with db
      */
-    @Throws(IOException::class)
     override fun listStreamsForDestination(
       destinationId: UUID,
       connectionId: UUID?,
@@ -2569,7 +2531,6 @@ class ConnectionServiceJooqImpl
           }.collect(Collectors.toList())
     }
 
-    @Throws(IOException::class)
     override fun getConnectionStatusCounts(workspaceId: UUID): ConnectionService.ConnectionStatusCounts {
       val sql =
         """

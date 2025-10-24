@@ -152,7 +152,6 @@ interface JobCreationAndStatusUpdateActivity {
    * @return A POJO containing the attemptNumber
    */
   @ActivityMethod
-  @Throws(RetryableException::class)
   fun createNewAttemptNumber(input: AttemptCreationInput): AttemptNumberCreationOutput
 
   /**

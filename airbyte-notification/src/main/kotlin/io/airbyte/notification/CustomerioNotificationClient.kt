@@ -73,7 +73,6 @@ class CustomerioNotificationClient(
    * sleep for 10 seconds if a broadcast request fails with a 429 error.
    */
   private class CampaignsRateLimitInterceptor : Interceptor {
-    @Throws(IOException::class)
     override fun intercept(chain: Interceptor.Chain): Response {
       val request = chain.request()
       var response = chain.proceed(request)
@@ -347,14 +346,12 @@ class CustomerioNotificationClient(
 
   override fun getNotificationClientType(): String = CUSTOMERIO_TYPE
 
-  @Throws(IOException::class)
   private fun notifyByEmail(
     requestPayload: String,
     workspaceId: UUID?,
   ): Boolean = sendNotifyRequest(CUSTOMERIO_EMAIL_API_ENDPOINT, requestPayload, workspaceId)
 
   @VisibleForTesting
-  @Throws(IOException::class)
   fun notifyByEmailBroadcast(
     broadcastId: String?,
     emails: List<String>,
@@ -387,7 +384,6 @@ class CustomerioNotificationClient(
   }
 
   @VisibleForTesting
-  @Throws(IOException::class)
   fun sendNotifyRequest(
     urlEndpoint: String,
     payload: String,

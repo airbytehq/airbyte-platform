@@ -15,7 +15,6 @@ import java.nio.file.Files
 
 internal class ConfigsDatabaseMigratorTest : AbstractConfigsDatabaseTest() {
   @Test
-  @Throws(IOException::class)
   fun dumpSchema() {
     val schemaDumpFile = File.createTempFile("configs-schema-dump", "txt")
     schemaDumpFile.deleteOnExit()

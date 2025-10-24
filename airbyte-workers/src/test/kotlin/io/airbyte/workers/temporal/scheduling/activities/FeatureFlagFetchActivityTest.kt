@@ -24,7 +24,6 @@ internal class FeatureFlagFetchActivityTest {
   private var featureFlagFetchActivity: FeatureFlagFetchActivity? = null
 
   @BeforeEach
-  @Throws(IOException::class)
   fun setUp() {
     mWorkspaceApi = org.mockito.Mockito.mock<WorkspaceApi>(WorkspaceApi::class.java)
     mAirbyteApiClient = org.mockito.Mockito.mock<AirbyteApiClient>(AirbyteApiClient::class.java)

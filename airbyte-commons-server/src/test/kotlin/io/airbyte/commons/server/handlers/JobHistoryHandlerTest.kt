@@ -663,7 +663,6 @@ internal class JobHistoryHandlerTest {
 
   @Test
   @DisplayName("Should return the right job info without attempt information")
-  @Throws(IOException::class)
   fun testGetJobInfoLight() {
     val job =
       Job(
@@ -752,7 +751,6 @@ internal class JobHistoryHandlerTest {
 
   @Test
   @DisplayName("Should return the latest running sync job")
-  @Throws(IOException::class)
   fun testGetLatestRunningSyncJob() {
     val connectionId = UUID.randomUUID()
 
@@ -810,7 +808,6 @@ internal class JobHistoryHandlerTest {
 
   @Test
   @DisplayName("Should return an empty optional if no running sync job")
-  @Throws(IOException::class)
   fun testGetLatestRunningSyncJobWhenNone() {
     val connectionId = UUID.randomUUID()
 
@@ -833,7 +830,6 @@ internal class JobHistoryHandlerTest {
   internal inner class ConnectionSyncProgressTests {
     @Test
     @DisplayName("Should not throw with no running sync")
-    @Throws(IOException::class)
     fun testGetConnectionSyncProgressNoJobs() {
       val connectionId = UUID.randomUUID()
 
@@ -849,7 +845,6 @@ internal class JobHistoryHandlerTest {
 
     @Test
     @DisplayName("Should return data for a running sync")
-    @Throws(IOException::class)
     fun testGetConnectionSyncProgressWithRunningJob() {
       val connectionId = UUID.randomUUID()
       val request = ConnectionIdRequestBody().connectionId(connectionId)
@@ -959,7 +954,6 @@ internal class JobHistoryHandlerTest {
 
     @Test
     @DisplayName("Should return data for a running refresh")
-    @Throws(IOException::class)
     fun testGetConnectionSyncProgressWithRefresh() {
       val connectionId = UUID.randomUUID()
       val request = ConnectionIdRequestBody().connectionId(connectionId)
@@ -1067,7 +1061,6 @@ internal class JobHistoryHandlerTest {
     // todo (cgardens) - get rid of mockstatic
     @Test
     @DisplayName("Should return data for a running clear")
-    @Throws(IOException::class)
     @Disabled
     fun testGetConnectionSyncProgressWithClear() {
       val connectionId = UUID.randomUUID()
@@ -1134,7 +1127,6 @@ internal class JobHistoryHandlerTest {
 
   @Test
   @DisplayName("Should return the latest sync job")
-  @Throws(IOException::class)
   fun testGetLatestSyncJob() {
     val connectionId = UUID.randomUUID()
 
@@ -1173,7 +1165,6 @@ internal class JobHistoryHandlerTest {
 
   @Test
   @DisplayName("Should test to ensure that JobInfoReadWithoutLogs includes the bytes and records committed")
-  @Throws(IOException::class)
   fun testGetJobInfoWithoutLogs() {
     Mockito
       .`when`(jobPersistence.getJob(JOB_ID))

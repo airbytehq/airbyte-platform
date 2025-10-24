@@ -15,7 +15,6 @@ import java.nio.file.Files
 
 internal class JobsDatabaseMigratorTest : AbstractJobsDatabaseTest() {
   @Test
-  @Throws(IOException::class)
   fun dumpSchema() {
     val schemaDumpFile = File.createTempFile("jobs-schema-dump", "txt")
     schemaDumpFile.deleteOnExit()

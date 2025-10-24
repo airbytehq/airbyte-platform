@@ -27,7 +27,6 @@ class WorkloadOutputDocStoreReader(
   @Named("outputDocumentStore") val storageClient: StorageClient,
   val metricClient: MetricClient,
 ) {
-  @Throws(DocStoreAccessException::class)
   fun readConnectorOutput(workloadId: String): ConnectorJobOutput? {
     val output: String? =
       try {
@@ -39,7 +38,6 @@ class WorkloadOutputDocStoreReader(
     return output?.let { Jsons.deserialize(it, ConnectorJobOutput::class.java) }
   }
 
-  @Throws(DocStoreAccessException::class)
   fun readSyncOutput(workloadId: String): ReplicationOutput? {
     val output: String? =
       try {

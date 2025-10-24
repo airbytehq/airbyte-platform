@@ -432,10 +432,10 @@ class ConnectorRolloutWorkflowImplTest {
     ).thenReturn(getMockOutput(ConnectorEnumRolloutState.WORKFLOW_STARTED))
     if (exceptionType == ApplicationFailure::class.java) {
       `when`(doRolloutActivity.doRollout(MockitoHelper.anyObject()))
-        .thenThrow(ApplicationFailure.newFailure("Simulated ApplicationFailure", "TestFailure"))
+        .thenAnswer { throw ApplicationFailure.newFailure("Simulated ApplicationFailure", "TestFailure") }
     } else {
       `when`(doRolloutActivity.doRollout(MockitoHelper.anyObject()))
-        .thenThrow(IllegalArgumentException("Simulated IllegalArgumentException"))
+        .thenAnswer { throw IllegalArgumentException("Simulated IllegalArgumentException") }
     }
     `when`(pauseRolloutActivity.pauseRollout(MockitoHelper.anyObject())).thenReturn(pausedConnectorRolloutOutput)
 
@@ -604,7 +604,7 @@ class ConnectorRolloutWorkflowImplTest {
         Mockito.anyString(),
         MockitoHelper.anyObject(),
       ),
-    ).thenThrow(RuntimeException("Simulated failure in startRollout"))
+    ).thenAnswer { throw RuntimeException("Simulated failure in startRollout") }
     doNothing().`when`(cleanupActivity).cleanup(MockitoHelper.anyObject())
 
     val workflowById: WorkflowStub = testEnv.workflowClient.newUntypedWorkflowStub(WORKFLOW_ID)

@@ -17,6 +17,5 @@ import java.util.UUID
 @ActivityInterface
 interface SlackConfigActivity {
   @ActivityMethod
-  @Throws(IOException::class)
   fun fetchSlackConfiguration(connectionId: UUID): Optional<SlackNotificationConfiguration>
 }

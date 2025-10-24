@@ -27,7 +27,6 @@ internal class PermissionPersistenceTest : BaseConfigDatabaseTest() {
   private var organizationPersistence: OrganizationPersistence? = null
 
   @BeforeEach
-  @Throws(Exception::class)
   fun beforeEach() {
     permissionPersistence = PermissionPersistence(database)
     organizationPersistence = OrganizationPersistence(database)
@@ -35,7 +34,6 @@ internal class PermissionPersistenceTest : BaseConfigDatabaseTest() {
     setupTestData()
   }
 
-  @Throws(Exception::class)
   private fun setupTestData() {
     val userPersistence = UserPersistence(database)
     val dataplaneGroupService = Mockito.mock<DataplaneGroupService>(DataplaneGroupService::class.java)
@@ -77,14 +75,12 @@ internal class PermissionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun listUsersInOrganizationTest() {
     val userPermissions = permissionPersistence!!.listUsersInOrganization(MockData.ORGANIZATION_ID_1)
     Assertions.assertEquals(2, userPermissions.size)
   }
 
   @Test
-  @Throws(IOException::class)
   fun listInstanceUsersTest() {
     val userPermissions = permissionPersistence!!.listInstanceAdminUsers()
     Assertions.assertEquals(1, userPermissions.size)
@@ -93,7 +89,6 @@ internal class PermissionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun findUsersInWorkspaceTest() {
     val permissionType =
       permissionPersistence!!
@@ -102,7 +97,6 @@ internal class PermissionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun findUsersInOrganizationTest() {
     val permissionType =
       permissionPersistence!!
@@ -111,7 +105,6 @@ internal class PermissionPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun listPermissionsForOrganizationTest() {
     val actualPermissions = permissionPersistence!!.listPermissionsForOrganization(MockData.ORGANIZATION_ID_1)
     val expectedPermissions =

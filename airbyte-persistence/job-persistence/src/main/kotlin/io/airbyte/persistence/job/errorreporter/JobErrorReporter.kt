@@ -131,7 +131,6 @@ class JobErrorReporter(
    * @param failureReason - failure reason from the check connection job
    * @param jobContext - connector job reporting context
    */
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun reportSourceCheckJobFailure(
     sourceDefinitionId: UUID,
     workspaceId: UUID?,
@@ -157,7 +156,6 @@ class JobErrorReporter(
    * @param failureReason - failure reason from the check connection job
    * @param jobContext - connector job reporting context
    */
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun reportDestinationCheckJobFailure(
     destinationDefinitionId: UUID,
     workspaceId: UUID?,
@@ -188,7 +186,6 @@ class JobErrorReporter(
    * @param failureReason - failure reason from the Discover job
    * @param jobContext - connector job reporting context
    */
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun reportDiscoverJobFailure(
     actorDefinitionId: UUID,
     actorType: ActorType,

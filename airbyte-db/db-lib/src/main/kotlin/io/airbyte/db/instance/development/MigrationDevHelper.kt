@@ -30,7 +30,6 @@ object MigrationDevHelper {
    * database schema.
    */
   @JvmStatic
-  @Throws(IOException::class)
   fun runLastMigration(migrator: DevDatabaseMigrator) {
     migrator.createBaseline()
 
@@ -103,7 +102,6 @@ object MigrationDevHelper {
    * @throws IOException exception while accessing database
    */
   @JvmStatic
-  @Throws(IOException::class)
   fun dumpSchema(
     schema: String,
     schemaDumpFile: String,

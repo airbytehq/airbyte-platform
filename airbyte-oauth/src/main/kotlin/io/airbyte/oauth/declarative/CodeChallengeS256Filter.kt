@@ -21,7 +21,6 @@ open class CodeChallengeS256Filter : Filter {
    * @return the Base64 encoded SHA-256 hash of the input value
    * @throws Exception if the SHA-256 algorithm is not available
    */
-  @Throws(Exception::class)
   protected open fun getCodeChallenge(value: String): String {
     val digest = MessageDigest.getInstance("SHA-256")
     return Base64.getEncoder().encodeToString(digest.digest(value.toByteArray(StandardCharsets.UTF_8)))

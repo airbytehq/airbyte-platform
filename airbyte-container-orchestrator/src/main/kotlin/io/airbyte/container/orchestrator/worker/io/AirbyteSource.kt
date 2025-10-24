@@ -25,7 +25,6 @@ interface AirbyteSource : AutoCloseable {
    * @param connectionId - connectionId if applicable
    * @throws Exception - throws if there is any failure in startup.
    */
-  @Throws(Exception::class)
   fun start(
     sourceConfig: WorkerSourceConfig,
     jobRoot: Path?,
@@ -62,7 +61,6 @@ interface AirbyteSource : AutoCloseable {
    *
    * @throws Exception - throws if there is any failure in shutdown.
    */
-  @Throws(Exception::class)
   override fun close()
 
   /**
@@ -70,6 +68,5 @@ interface AirbyteSource : AutoCloseable {
    *
    * @throws Exception - throws if there is any failure in shutdown.
    */
-  @Throws(Exception::class)
   fun cancel()
 }

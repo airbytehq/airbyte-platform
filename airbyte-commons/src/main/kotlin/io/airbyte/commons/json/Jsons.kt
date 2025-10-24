@@ -736,7 +736,6 @@ object Jsons {
    * @throws IOException if there is an error serializing the object
    */
   @JvmStatic
-  @Throws(IOException::class)
   fun canonicalJsonSerialize(obj: Any?): String {
     val mapper = ObjectMapper()
     val objectNode = mapper.valueToTree<ObjectNode>(obj)

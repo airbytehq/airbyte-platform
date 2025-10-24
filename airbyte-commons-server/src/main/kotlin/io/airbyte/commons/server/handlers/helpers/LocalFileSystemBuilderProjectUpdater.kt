@@ -28,7 +28,6 @@ class LocalFileSystemBuilderProjectUpdater : BuilderProjectUpdater {
   companion object {
     private val log = KotlinLogging.logger {}
 
-    @Throws(IOException::class)
     fun writeJsonNodeToYamlFile(
       manifest: String,
       basePath: String,

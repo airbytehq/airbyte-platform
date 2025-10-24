@@ -120,7 +120,6 @@ open class SecretsRepositoryWriter(
    * @param config secret config to be deleted
    * @param secretPersistence where secrets are stored
    */
-  @Throws(JsonValidationException::class)
   fun deleteFromConfig(
     config: ConfigWithSecretReferences,
     secretPersistence: SecretPersistence,
@@ -156,7 +155,6 @@ open class SecretsRepositoryWriter(
   }
 
   @Deprecated("Use deleteFromConfig() that takes in ConfigWithSecretReferences instead")
-  @Throws(JsonValidationException::class)
   fun deleteFromConfig(
     config: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence? = null,
@@ -182,7 +180,6 @@ open class SecretsRepositoryWriter(
    * @param secretPersistence where secrets are stored
    * @return partial config
    */
-  @Throws(JsonValidationException::class)
   fun updateFromConfig(
     workspaceId: UUID,
     oldPartialConfig: ConfigWithSecretReferences,
@@ -217,7 +214,6 @@ open class SecretsRepositoryWriter(
    * @param secretBasePrefix the base prefix of the secret (airbyte_workspace_ by default). This value is only used if there when no existing coordinates
    * @return partial config
    */
-  @Throws(JsonValidationException::class)
   fun updateFromConfig(
     secretBaseId: UUID,
     oldPartialConfig: ConfigWithSecretReferences,
@@ -270,7 +266,6 @@ open class SecretsRepositoryWriter(
   }
 
   @Deprecated("Use updateFromConfig() that takes in ConfigWithSecretReferences instead")
-  @Throws(JsonValidationException::class)
   fun updateFromConfigLegacy(
     secretBaseId: UUID,
     oldPartialConfig: JsonNode,
@@ -298,7 +293,6 @@ open class SecretsRepositoryWriter(
   }
 
   @Deprecated("Use updateFromConfig() that takes in ConfigWithSecretReferences instead")
-  @Throws(JsonValidationException::class)
   fun updateFromConfigLegacy(
     secretBaseId: UUID,
     oldPartialConfig: JsonNode,

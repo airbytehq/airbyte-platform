@@ -93,7 +93,6 @@ class RecordSchemaValidator(
   /**
    * Shuts down the ExecutorService used by this validator.
    */
-  @Throws(IOException::class)
   override fun close() {
     schemaValidationExecutorService.shutdownNow()
   }

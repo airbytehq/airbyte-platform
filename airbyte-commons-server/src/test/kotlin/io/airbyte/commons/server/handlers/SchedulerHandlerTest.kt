@@ -193,7 +193,6 @@ internal class SchedulerHandlerTest {
   private lateinit var secretSanitizer: SecretSanitizer
 
   @BeforeEach
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun setup() {
     job =
       Job(
@@ -318,7 +317,6 @@ internal class SchedulerHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
   @DisplayName("Test job creation")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun createJob(isScheduled: Boolean) {
     whenever<Long?>(jobFactory.createSync(CONNECTION_ID, isScheduled))
       .thenReturn(JOB_ID)
@@ -337,7 +335,6 @@ internal class SchedulerHandlerTest {
 
   @Test
   @DisplayName("Test refresh job creation")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun createRefreshJob() {
     whenever<Long?>(
       jobFactory.createRefresh(
@@ -366,7 +363,6 @@ internal class SchedulerHandlerTest {
 
   @Test
   @DisplayName("Test reset job creation")
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun createResetJob() {
     whenever<StandardSyncOperation?>(operationService.getStandardSyncOperation(WEBHOOK_OPERATION_ID)).thenReturn(WEBHOOK_OPERATION)
     val standardSync =
@@ -435,7 +431,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testCheckSourceConnectionFromSourceId() {
     val source = SourceHelpers.generateSource(UUID.randomUUID())
     val request = SourceIdRequestBody().sourceId(source.getSourceId())
@@ -476,7 +471,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testCheckSourceConnectionFromSourceCreate() {
     val source =
       SourceConnection()
@@ -547,12 +541,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testCheckSourceConnectionFromUpdate() {
     val source = SourceHelpers.generateSource(UUID.randomUUID())
     val sourceUpdate =
@@ -621,7 +609,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testCheckDestinationConnectionFromDestinationId() {
     val destination = DestinationHelpers.generateDestination(UUID.randomUUID())
     val request = DestinationIdRequestBody().destinationId(destination.getDestinationId())
@@ -663,7 +650,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testCheckDestinationConnectionFromDestinationCreate() {
     val destination =
       DestinationConnection()
@@ -726,12 +712,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testCheckDestinationConnectionFromUpdate() {
     val destination = DestinationHelpers.generateDestination(UUID.randomUUID())
     val destinationUpdate =
@@ -830,7 +810,6 @@ internal class SchedulerHandlerTest {
 
   @ParameterizedTest
   @MethodSource("provideArguments")
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testCheckConnectionReadFormat(
     standardCheckConnectionOutputStatusEmittedBySource: Optional<String?>,
     traceMessageEmittedBySource: Boolean,
@@ -946,12 +925,6 @@ internal class SchedulerHandlerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testDiscoverSchemaForSourceFromSourceId(enabled: Boolean) {
     val source = SourceHelpers.generateSource(UUID.randomUUID())
     val request = SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId())
@@ -1044,12 +1017,6 @@ internal class SchedulerHandlerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testDiscoverSchemaForSourceFromSourceIdCachedCatalog(enabled: Boolean) {
     val source = SourceHelpers.generateSource(UUID.randomUUID())
     val request = SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId())
@@ -1114,12 +1081,6 @@ internal class SchedulerHandlerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testDiscoverSchemaForSourceFromSourceIdDisableCache(enabled: Boolean) {
     val source = SourceHelpers.generateSource(UUID.randomUUID())
     val request = SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId()).disableCache(true)
@@ -1190,12 +1151,6 @@ internal class SchedulerHandlerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testDiscoverSchemaForSourceFromSourceIdFailed(enabled: Boolean) {
     val source = SourceHelpers.generateSource(UUID.randomUUID())
     val request = SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId())
@@ -1244,7 +1199,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testDiscoverSchemaForSourceFromSourceCreate() {
     val source =
       SourceConnection()
@@ -1335,7 +1289,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testDiscoverSchemaForSourceFromSourceCreateFailed() {
     val source =
       SourceConnection()
@@ -1416,7 +1369,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testSyncConnection() {
     val connectionId = UUID.randomUUID()
 
@@ -1436,7 +1388,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testSyncConnectionFailWithOtherSyncRunning() {
     val connectionId = UUID.randomUUID()
 
@@ -1451,7 +1402,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun disabledSyncThrows() {
     val connectionId = UUID.randomUUID()
     whenever<StandardSync?>(connectionService.getStandardSync(connectionId))
@@ -1466,7 +1416,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun deprecatedSyncThrows() {
     val connectionId = UUID.randomUUID()
     whenever<StandardSync?>(connectionService.getStandardSync(connectionId))
@@ -1481,7 +1430,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   fun lockedSyncThrows() {
     val connectionId = UUID.randomUUID()
     whenever<StandardSync?>(connectionService.getStandardSync(connectionId))
@@ -1496,7 +1444,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testResetConnection() {
     val connectionId = UUID.randomUUID()
 
@@ -1520,7 +1467,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testResetConnectionStream() {
     val connectionId = UUID.randomUUID()
     val streamName = "name"
@@ -1548,7 +1494,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun testResetConnectionStreamWithEmptyList() {
     val connectionId = UUID.randomUUID()
     val streamName = "name"
@@ -1578,7 +1523,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testCancelJob() {
     whenever<Job?>(jobPersistence.getJob(JOB_ID)).thenReturn(job)
 
@@ -1602,12 +1546,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testAutoPropagateSchemaChangeAddStream() {
     // Verify that if auto propagation is fully enabled, a new stream can be added.
     val source = SourceHelpers.generateSource(UUID.randomUUID())
@@ -1661,12 +1599,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testAutoPropagateSchemaChangeUpdateStream() {
     // Verify that if auto propagation is fully enabled, an existing stream can be modified.
     val source = SourceHelpers.generateSource(UUID.randomUUID())
@@ -1719,12 +1651,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testAutoPropagateSchemaChangeRemoveStream() {
     // Verify that if auto propagation is fully enabled, an existing stream can be removed.
     val source = SourceHelpers.generateSource(UUID.randomUUID())
@@ -1772,12 +1698,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testAutoPropagateSchemaChangeColumnsOnly() {
     // Verify that if auto propagation is set to PROPAGATE_COLUMNS, then column changes are applied but
     // a new stream is ignored.
@@ -1832,12 +1752,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testAutoPropagateSchemaChangeWithIgnoreMode() {
     val source = SourceHelpers.generateSource(UUID.randomUUID())
 
@@ -1882,12 +1796,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testAutoPropagateSchemaChangeEarlyExits() {
     var request = this.mockedSourceAutoPropagateChange.sourceId(null)
     schedulerHandler.applySchemaChangeForSource(request)
@@ -1907,12 +1815,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testSchemaPropagatedEmptyDiff() {
     val sourceId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
@@ -1988,12 +1890,6 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testEmptyDiffIsAlwaysPropagated() {
     // Verify that if auto propagation is fully enabled, a new stream can be added.
     val source = SourceHelpers.generateSource(UUID.randomUUID())
@@ -2049,7 +1945,6 @@ internal class SchedulerHandlerTest {
             .AirbyteCatalog(),
         )
 
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   private fun mockSourceForDiscoverJob(
     source: SourceConnection,
     sourceDefinition: StandardSourceDefinition,
@@ -2070,7 +1965,6 @@ internal class SchedulerHandlerTest {
     whenever<SourceConnection?>(sourceService.getSourceConnection(source.getSourceId())).thenReturn(source)
   }
 
-  @Throws(ConfigNotFoundException::class, IOException::class)
   private fun mockSuccessfulDiscoverJob(
     source: SourceConnection,
     sourceVersion: ActorDefinitionVersion,
@@ -2111,7 +2005,6 @@ internal class SchedulerHandlerTest {
     return newSourceCatalogId
   }
 
-  @Throws(IOException::class, JsonValidationException::class)
   private fun mockConnectionForDiscoverJobWithAutopropagation(
     source: SourceConnection,
     sourceVersion: ActorDefinitionVersion?,
@@ -2138,7 +2031,6 @@ internal class SchedulerHandlerTest {
     return connectionRead
   }
 
-  @Throws(JsonValidationException::class)
   private fun mockNewStreamDiff() {
     val catalogDiff =
       CatalogDiff().transforms(
@@ -2155,7 +2047,6 @@ internal class SchedulerHandlerTest {
     ).thenReturn(catalogDiff)
   }
 
-  @Throws(JsonValidationException::class)
   private fun mockRemoveStreamDiff() {
     val catalogDiff =
       CatalogDiff().transforms(
@@ -2172,7 +2063,6 @@ internal class SchedulerHandlerTest {
     ).thenReturn(catalogDiff)
   }
 
-  @Throws(JsonValidationException::class)
   private fun mockUpdateStreamDiff() {
     val catalogDiff =
       CatalogDiff().transforms(
@@ -2200,7 +2090,6 @@ internal class SchedulerHandlerTest {
     ).thenReturn(catalogDiff)
   }
 
-  @Throws(JsonValidationException::class)
   private fun mockUpdateAndAddStreamDiff() {
     val catalogDiff =
       CatalogDiff().transforms(
@@ -2233,7 +2122,6 @@ internal class SchedulerHandlerTest {
     ).thenReturn(catalogDiff)
   }
 
-  @Throws(JsonValidationException::class)
   private fun mockEmptyDiff() {
     val emptyDiff = CatalogDiff().transforms(mutableListOf<@Valid StreamTransform?>())
     whenever(

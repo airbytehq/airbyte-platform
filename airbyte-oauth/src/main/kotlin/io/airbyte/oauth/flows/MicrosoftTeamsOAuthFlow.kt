@@ -31,7 +31,6 @@ class MicrosoftTeamsOAuthFlow : BaseOAuth2Flow {
    * @param clientId The configured client ID
    * @param redirectUrl the redirect URL
    */
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -105,7 +104,6 @@ class MicrosoftTeamsOAuthFlow : BaseOAuth2Flow {
       )
 
   @Deprecated("")
-  @Throws(IOException::class)
   override fun completeSourceOAuth(
     workspaceId: UUID,
     sourceDefinitionId: UUID?,
@@ -116,7 +114,6 @@ class MicrosoftTeamsOAuthFlow : BaseOAuth2Flow {
     throw IOException("Using the deprecated OAuth methods is not supported. This OAuth flow depends on values defined in connector configs")
 
   @Deprecated("")
-  @Throws(IOException::class)
   override fun completeDestinationOAuth(
     workspaceId: UUID,
     destinationDefinitionId: UUID?,

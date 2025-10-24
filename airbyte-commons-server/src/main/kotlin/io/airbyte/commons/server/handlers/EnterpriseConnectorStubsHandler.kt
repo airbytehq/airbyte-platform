@@ -48,7 +48,6 @@ open class EnterpriseConnectorStubsHandler(
     val definitionId: String? = null,
   )
 
-  @Throws(IOException::class)
   private fun getRegistryEnterpriseStubs(): List<RegistryEnterpriseStub> {
     try {
       val request =

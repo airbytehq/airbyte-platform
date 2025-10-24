@@ -46,7 +46,6 @@ internal class StreamHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun whenReadStreamThenReturnRequesterResponse() {
     Mockito
       .`when`(
@@ -77,7 +76,6 @@ internal class StreamHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun givenIOExceptionWhenReadStreamThenRaiseConnectorBuilderException() {
     Mockito
       .`when`(
@@ -91,9 +89,7 @@ internal class StreamHandlerTest {
           A_LIMIT,
           A_LIMIT,
         ),
-      ).thenThrow(
-        IOException::class.java,
-      )
+      ).thenAnswer { throw IOException() }
     Assertions.assertThrows(
       ConnectorBuilderException::class.java,
     ) {
@@ -111,7 +107,6 @@ internal class StreamHandlerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun givenAirbyteCdkInvalidInputExceptionWhenReadStreamThenRaiseConnectorBuilderException() {
     Mockito
       .`when`(
@@ -125,7 +120,7 @@ internal class StreamHandlerTest {
           A_LIMIT,
           A_LIMIT,
         ),
-      ).thenThrow(AirbyteCdkInvalidInputException::class.java)
+      ).thenAnswer { throw AirbyteCdkInvalidInputException("test error") }
     Assertions.assertThrows(
       AirbyteCdkInvalidInputException::class.java,
     ) {

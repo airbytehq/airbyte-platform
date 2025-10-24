@@ -25,7 +25,6 @@ import java.util.UUID
 class ShopifyOAuthFlow(
   httpClient: HttpClient,
 ) : BaseOAuth2Flow(httpClient) {
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -48,7 +47,6 @@ class ShopifyOAuthFlow(
     }
   }
 
-  @Throws(IOException::class, JsonValidationException::class)
   override fun completeSourceOAuth(
     workspaceId: UUID,
     sourceDefinitionId: UUID?,
@@ -77,7 +75,6 @@ class ShopifyOAuthFlow(
     )
   }
 
-  @Throws(IOException::class)
   protected fun completeOAuthFlow(
     clientId: String,
     clientSecret: String,
@@ -130,7 +127,6 @@ class ShopifyOAuthFlow(
     return "https://$shopName/admin/oauth/access_token"
   }
 
-  @Throws(IOException::class)
   private fun extractShopParameter(queryParams: Map<String, Any>): String {
     if (queryParams.containsKey(SHOP)) {
       return queryParams[SHOP] as String
@@ -139,7 +135,6 @@ class ShopifyOAuthFlow(
     }
   }
 
-  @Throws(IOException::class)
   protected fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,

@@ -75,12 +75,6 @@ class ApplyDefinitionsHelper(
    * @param reImportVersionInUse - It forces the connector in use to re-import their connector definition.
    */
   @JvmOverloads
-  @Throws(
-    JsonValidationException::class,
-    IOException::class,
-    ConfigNotFoundException::class,
-    ConfigNotFoundException::class,
-  )
   fun apply(
     updateAll: Boolean = false,
     reImportVersionInUse: Boolean = false,
@@ -115,7 +109,6 @@ class ApplyDefinitionsHelper(
     log.info { "Version changes applied: $changedConnectorCount" }
   }
 
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   private fun applySourceDefinition(
     actorDefinitionIdsAndDefaultVersions: Map<UUID, ActorDefinitionVersion>,
     newDef: ConnectorRegistrySourceDefinition,
@@ -250,7 +243,6 @@ class ApplyDefinitionsHelper(
     }
   }
 
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   private fun applyDestinationDefinition(
     actorDefinitionIdsAndDefaultVersions: Map<UUID, ActorDefinitionVersion>,
     newDef: ConnectorRegistryDestinationDefinition,

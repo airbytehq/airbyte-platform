@@ -20,7 +20,6 @@ import java.net.URL
 class AssistConfigurationImpl(
   private val airbyteConnectorBuilderConfig: AirbyteConnectorBuilderConfig,
 ) : AssistConfiguration {
-  @Throws(IOException::class)
   override fun getConnection(path: String): HttpURLConnection {
     if (StringUtils.isBlank(airbyteConnectorBuilderConfig.aiAssist.urlBase)) {
       throw RuntimeException("Assist Service URL is not set.")

@@ -42,7 +42,6 @@ internal class JsonSchemasTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testTraverse() {
     val jsonWithAllTypes = Jsons.deserialize(read("json_schemas/json_with_all_types.json"))
     val mock: BiConsumer<JsonNode, MutableList<JsonSchemas.FieldNameOrList>> =
@@ -126,7 +125,6 @@ internal class JsonSchemasTest {
     ],
   )
   @ParameterizedTest
-  @Throws(IOException::class)
   fun testTraverseComposite(compositeKeyword: String) {
     val jsonSchemaString =
       read("json_schemas/composite_json_schema.json")
@@ -197,7 +195,6 @@ internal class JsonSchemasTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testTraverseMultiType() {
     val jsonWithAllTypes = Jsons.deserialize(read("json_schemas/json_with_array_type_fields.json"))
     val mock: BiConsumer<JsonNode, MutableList<JsonSchemas.FieldNameOrList>> =
@@ -232,7 +229,6 @@ internal class JsonSchemasTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testTraverseMultiTypeComposite() {
     val compositeKeyword = "anyOf"
     val jsonWithAllTypes = Jsons.deserialize(read("json_schemas/json_with_array_type_fields_with_composites.json"))
@@ -281,7 +277,6 @@ internal class JsonSchemasTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testTraverseArrayTypeWithNoItemsDoNotThrowsException() {
     val jsonWithAllTypes = Jsons.deserialize(read("json_schemas/json_with_array_type_fields_no_items.json"))
     val mock: BiConsumer<JsonNode, MutableList<JsonSchemas.FieldNameOrList>> =

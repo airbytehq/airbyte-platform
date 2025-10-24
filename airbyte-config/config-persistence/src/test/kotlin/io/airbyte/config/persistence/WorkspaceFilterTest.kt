@@ -36,7 +36,6 @@ internal class WorkspaceFilterTest : BaseConfigDatabaseTest() {
   private lateinit var workspaceService: WorkspaceService
 
   @BeforeEach
-  @Throws(IOException::class)
   fun beforeEach() {
     val featureFlagClient: FeatureFlagClient = Mockito.mock<TestClient>(TestClient::class.java)
     val secretsRepositoryReader = Mockito.mock<SecretsRepositoryReader>(SecretsRepositoryReader::class.java)
@@ -57,7 +56,6 @@ internal class WorkspaceFilterTest : BaseConfigDatabaseTest() {
 
   @Test
   @DisplayName("Should return a list of active workspace IDs with most recently running jobs")
-  @Throws(IOException::class)
   fun testListActiveWorkspacesByMostRecentlyRunningJobs() {
     val timeWindowInHours = 48
         /*
@@ -108,7 +106,6 @@ internal class WorkspaceFilterTest : BaseConfigDatabaseTest() {
 
     @BeforeAll
     @JvmStatic
-    @Throws(SQLException::class, IOException::class)
     fun setUpAll() {
       // create organization first
       val defaultOrg = MockData.defaultOrganization()

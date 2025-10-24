@@ -36,7 +36,6 @@ internal class SyncOperationPersistenceTest : BaseConfigDatabaseTest() {
   private var operationService: OperationService? = null
 
   @BeforeEach
-  @Throws(Exception::class)
   fun beforeEach() {
     truncateAllTables()
 
@@ -50,7 +49,6 @@ internal class SyncOperationPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class)
   fun testReadWrite() {
     for (op in OPS) {
       Assertions.assertEquals(op, operationService!!.getStandardSyncOperation(op.getOperationId()))
@@ -70,13 +68,11 @@ internal class SyncOperationPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class)
   fun testList() {
     Assertions.assertEquals(OPS, operationService!!.listStandardSyncOperations())
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class)
   fun testDelete() {
     for (op in OPS) {
       Assertions.assertEquals(op, operationService!!.getStandardSyncOperation(op.getOperationId()))
@@ -92,7 +88,6 @@ internal class SyncOperationPersistenceTest : BaseConfigDatabaseTest() {
     }
   }
 
-  @Throws(IOException::class, JsonValidationException::class)
   private fun createWorkspace() {
     val featureFlagClient: FeatureFlagClient = Mockito.mock<TestClient>(TestClient::class.java)
     val secretsRepositoryReader = Mockito.mock<SecretsRepositoryReader>(SecretsRepositoryReader::class.java)

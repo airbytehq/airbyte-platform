@@ -33,7 +33,6 @@ class ActorDefinitionVersionResolver(
    *
    * @return ActorDefinitionVersion if the version was resolved, otherwise empty optional
    */
-  @Throws(IOException::class)
   fun resolveVersionForTag(
     actorDefinitionId: UUID,
     actorType: ActorType,

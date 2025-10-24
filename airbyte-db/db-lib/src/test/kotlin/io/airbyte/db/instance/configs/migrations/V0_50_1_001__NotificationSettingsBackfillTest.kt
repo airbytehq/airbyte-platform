@@ -45,7 +45,6 @@ internal class V0_50_1_001__NotificationSettingsBackfillTest : AbstractConfigsDa
   }
 
   @Test
-  @Throws(Exception::class)
   fun testMigrateEmptyValues() {
     val ctx = dslContext!!
 
@@ -100,7 +99,6 @@ internal class V0_50_1_001__NotificationSettingsBackfillTest : AbstractConfigsDa
   }
 
   @Test
-  @Throws(Exception::class)
   fun testMigrateSlackConfigs() {
     val ctx = dslContext!!
 

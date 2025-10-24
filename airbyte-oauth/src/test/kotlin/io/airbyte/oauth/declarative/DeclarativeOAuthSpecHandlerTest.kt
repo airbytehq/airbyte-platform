@@ -77,7 +77,6 @@ internal class DeclarativeOAuthSpecHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testRenderStringTemplate() {
     val templateValues = java.util.Map.of("key", "value")
     val templateString = "{{ key }}"
@@ -100,7 +99,6 @@ internal class DeclarativeOAuthSpecHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testRenderCompleteOAuthHeaders() {
     val userConfig =
       Jsons.jsonNode(
@@ -128,7 +126,6 @@ internal class DeclarativeOAuthSpecHandlerTest {
    *
    */
   @Test
-  @Throws(IOException::class)
   fun testProcessOAuthOutput() {
     val extractOutputInputValues = List.of(DeclarativeOAuthSpecHandler.ACCESS_TOKEN, DeclarativeOAuthSpecHandler.REFRESH_TOKEN)
 
@@ -169,7 +166,6 @@ internal class DeclarativeOAuthSpecHandlerTest {
    * into a map.
    */
   @Test
-  @Throws(IOException::class)
   fun testProcessOAuthOutputFromNestedDataObject() {
     val accessTokenEntry = "data.nested.auth." + DeclarativeOAuthSpecHandler.ACCESS_TOKEN
     val refreshTokenEntry = "data.nested." + DeclarativeOAuthSpecHandler.REFRESH_TOKEN

@@ -29,7 +29,6 @@ class ProgressChecker(
    * @return whether we made progress. Returns false if we failed to check.
    * @throws IOException Rethrows the OkHttp execute method exception
    */
-  @Throws(IOException::class)
   fun check(
     jobId: Long,
     attemptNo: Int,
@@ -41,7 +40,6 @@ class ProgressChecker(
       ?: false
   }
 
-  @Throws(RetryableException::class)
   private fun fetchAttemptStats(
     jobId: Long,
     attemptNo: Int,

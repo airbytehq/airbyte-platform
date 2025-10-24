@@ -108,7 +108,6 @@ internal class DestinationHandlerTest {
   private lateinit var secretPersistence: SecretPersistence
 
   @BeforeEach
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun setUp() {
     validator = mockk(relaxed = true)
     uuidGenerator = mockk(relaxed = true)
@@ -207,7 +206,6 @@ internal class DestinationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun testCreateDestination() {
     // ===== GIVEN =====
     // Create the DestinationCreate request with the necessary fields.
@@ -353,7 +351,6 @@ internal class DestinationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun testCreateDestinationNoEntitlementThrows() {
     every { uuidGenerator.get() } returns destinationConnection.destinationId
     every {
@@ -400,7 +397,6 @@ internal class DestinationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, io.airbyte.data.ConfigNotFoundException::class, IOException::class)
   fun testCreateDestinationChecksConfigEntitlements() {
     every { uuidGenerator.get() } returns destinationConnection.destinationId
     every {
@@ -447,7 +443,6 @@ internal class DestinationHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testNonNullCreateDestinationThrowsOnInvalidResourceAllocation() {
     val cloudDestinationHandler =
       DestinationHandler(
@@ -489,7 +484,6 @@ internal class DestinationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun testUpdateDestination() {
     // ===== GIVEN =====
     // Update the destination name and configuration.
@@ -668,7 +662,6 @@ internal class DestinationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, io.airbyte.data.ConfigNotFoundException::class, IOException::class, ConfigNotFoundException::class)
   fun testUpdateDestinationChecksConfigEntitlements() {
     val updatedDestName = "my updated dest name for config entitlements"
     val newConfiguration = destinationConnection.configuration
@@ -748,7 +741,6 @@ internal class DestinationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun testUpdateDestinationNoEntitlementThrows() {
     val updatedDestName = "my updated dest name"
     val newConfiguration = destinationConnection.configuration
@@ -872,7 +864,6 @@ internal class DestinationHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun testUpgradeDestinationVersion() {
     val requestBody = DestinationIdRequestBody().destinationId(destinationConnection.destinationId)
 
@@ -892,7 +883,6 @@ internal class DestinationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun testGetDestination() {
     val expectedDestinationRead =
       DestinationRead()
@@ -968,7 +958,6 @@ internal class DestinationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun testListDestinationForWorkspace() {
     val expectedDestinationRead =
       DestinationRead()
@@ -1089,7 +1078,6 @@ internal class DestinationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun testListDestinationsForWorkspaceWithPagination() {
     // Create multiple destinations for pagination testing
     val destination1 = createDestinationConnectionWithCount("dest1", 2)
@@ -1215,7 +1203,6 @@ internal class DestinationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun testListDestinationsForWorkspaceWithFilters() {
     val workspaceId = destinationConnectionWithCount.destination.workspaceId
     val requestBody =
@@ -1353,7 +1340,6 @@ internal class DestinationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun testDeleteDestinationAndDeleteSecrets() {
     val newConfiguration = destinationConnection.configuration
     (newConfiguration as ObjectNode).put(API_KEY_FIELD, API_KEY_VALUE)
@@ -1432,7 +1418,6 @@ internal class DestinationHandlerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, io.airbyte.data.ConfigNotFoundException::class)
   fun testSearchDestinations() {
     val expectedDestinationRead =
       DestinationRead()

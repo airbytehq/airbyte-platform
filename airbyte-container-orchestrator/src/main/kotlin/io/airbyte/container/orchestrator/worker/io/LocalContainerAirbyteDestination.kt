@@ -125,7 +125,6 @@ class LocalContainerAirbyteDestination(
     close()
   }
 
-  @Throws(IOException::class)
   fun acceptWithNoTimeoutMonitor(message: AirbyteMessage) {
     // TODO also check if stdout file exists? or check if some other startup file exists?
     check(!inputHasEnded.get())
@@ -136,7 +135,6 @@ class LocalContainerAirbyteDestination(
     }
   }
 
-  @Throws(IOException::class)
   private fun notifyEndOfInputWithNoTimeoutMonitor() {
     // TODO also check if stdout file exists? or check if some other startup file exists?
     check(!inputHasEnded.get())

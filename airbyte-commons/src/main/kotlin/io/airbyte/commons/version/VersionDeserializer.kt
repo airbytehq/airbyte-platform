@@ -19,7 +19,6 @@ class VersionDeserializer
   constructor(
     vc: Class<*>? = null,
   ) : com.fasterxml.jackson.databind.deser.std.StdDeserializer<Version>(vc) {
-    @Throws(IOException::class, JacksonException::class)
     override fun deserialize(
       p: JsonParser,
       ctxt: DeserializationContext,

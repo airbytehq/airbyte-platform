@@ -40,12 +40,6 @@ class PipeDriveOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
   ): OAuthFlowImplementation = PipeDriveOAuthFlow(httpClient)
 
   @Test
-  @Throws(
-    InterruptedException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-  )
   fun testFullPipeDriveOAuthFlow() {
     val workspaceId = UUID.randomUUID()
     val definitionId = UUID.randomUUID()

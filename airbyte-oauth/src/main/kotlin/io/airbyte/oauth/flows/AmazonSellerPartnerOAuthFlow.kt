@@ -35,7 +35,6 @@ class AmazonSellerPartnerOAuthFlow : BaseOAuth2Flow {
      * Overriden default method to provide possibility to retrieve `app_id` from
      * `sourceOAuthParamConfig` bypassing `formatConsentUrl()` method.
      */
-  @Throws(IOException::class, JsonValidationException::class)
   override fun getSourceConsentUrl(
     workspaceId: UUID,
     sourceDefinitionId: UUID?,
@@ -85,7 +84,6 @@ class AmazonSellerPartnerOAuthFlow : BaseOAuth2Flow {
     }
   }
 
-  @Throws(IOException::class)
   override fun extractCodeParameter(queryParams: Map<String, Any>): String {
     if (queryParams.containsKey("spapi_oauth_code")) {
       return queryParams["spapi_oauth_code"] as String
@@ -120,7 +118,6 @@ class AmazonSellerPartnerOAuthFlow : BaseOAuth2Flow {
     /*
      * Should be overriden to satisfy the BaseOAuth2Flow abstraction requirements
      */
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,

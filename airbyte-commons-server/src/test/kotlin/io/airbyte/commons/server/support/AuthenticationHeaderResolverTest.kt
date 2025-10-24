@@ -70,7 +70,6 @@ internal class AuthenticationHeaderResolverTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun testResolvingFromConnectionId() {
     val workspaceId = UUID.randomUUID()
     val connectionId = UUID.randomUUID()
@@ -82,7 +81,6 @@ internal class AuthenticationHeaderResolverTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun testResolvingFromConnectionIds() {
     val workspaceId = UUID.randomUUID()
     val connectionId = UUID.randomUUID()
@@ -97,7 +95,6 @@ internal class AuthenticationHeaderResolverTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun testResolvingFromSourceAndDestinationId() {
     val workspaceId = UUID.randomUUID()
     val destinationId = UUID.randomUUID()
@@ -110,7 +107,6 @@ internal class AuthenticationHeaderResolverTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun testResolvingFromDestinationId() {
     val workspaceId = UUID.randomUUID()
     val destinationId = UUID.randomUUID()
@@ -122,7 +118,6 @@ internal class AuthenticationHeaderResolverTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun testResolvingFromJobId() {
     val workspaceId = UUID.randomUUID()
     val jobId = System.currentTimeMillis()
@@ -134,7 +129,6 @@ internal class AuthenticationHeaderResolverTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun testResolvingFromSourceId() {
     val workspaceId = UUID.randomUUID()
     val sourceId = UUID.randomUUID()
@@ -146,7 +140,6 @@ internal class AuthenticationHeaderResolverTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun testResolvingFromOperationId() {
     val workspaceId = UUID.randomUUID()
     val operationId = UUID.randomUUID()
@@ -166,14 +159,6 @@ internal class AuthenticationHeaderResolverTest {
 
   @ParameterizedTest
   @ValueSource(classes = [JsonValidationException::class, NumberFormatException::class, ConfigNotFoundException::class])
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    NoSuchMethodException::class,
-    InvocationTargetException::class,
-    InstantiationException::class,
-    IllegalAccessException::class,
-  )
   fun testResolvingWithException(exceptionType: Class<Throwable?>) {
     val connectionId = UUID.randomUUID()
     val properties = mapOf(CONNECTION_ID_HEADER to connectionId.toString())
@@ -185,7 +170,7 @@ internal class AuthenticationHeaderResolverTest {
           exceptionType.getDeclaredConstructor(String::class.java).newInstance("test")
         }
       )!!
-    Mockito.`when`(workspaceHelper.getWorkspaceForConnectionId(connectionId)).thenThrow(exception)
+    Mockito.`when`(workspaceHelper.getWorkspaceForConnectionId(connectionId)).thenAnswer { throw exception }
 
     val workspaceId: List<UUID>? = resolver.resolveWorkspace(properties)
     Assertions.assertNull(workspaceId)
@@ -221,7 +206,6 @@ internal class AuthenticationHeaderResolverTest {
   }
 
   @Test
-  @Throws(IOException::class, io.airbyte.config.persistence.ConfigNotFoundException::class)
   fun testResolvingWorkspaceFromPermissionHeader() {
     val workspaceId = UUID.randomUUID()
     val permissionId = UUID.randomUUID()
@@ -235,7 +219,6 @@ internal class AuthenticationHeaderResolverTest {
   }
 
   @Test
-  @Throws(IOException::class, io.airbyte.config.persistence.ConfigNotFoundException::class)
   fun testResolvingOrganizationFromPermissionHeader() {
     val organizationId = UUID.randomUUID()
     val permissionId = UUID.randomUUID()
@@ -249,7 +232,6 @@ internal class AuthenticationHeaderResolverTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testResolvingAuthUserFromUserId() {
     val userId = UUID.randomUUID()
     val properties = mapOf<String?, String?>(AIRBYTE_USER_ID_HEADER to userId.toString())
@@ -262,7 +244,6 @@ internal class AuthenticationHeaderResolverTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testResolvingAuthUserFromCreatorUserId() {
     val userId = UUID.randomUUID()
     val properties = mapOf<String?, String?>(CREATOR_USER_ID_HEADER to userId.toString())
@@ -344,7 +325,7 @@ internal class AuthenticationHeaderResolverTest {
   fun testResolvingOrganizationFromDataplaneIdWhenDataplaneNotFound() {
     val dataplaneId = UUID.randomUUID()
     val properties = mapOf(DATAPLANE_ID_HEADER to dataplaneId.toString())
-    Mockito.`when`(dataplaneService.getDataplane(dataplaneId)).thenThrow(RuntimeException("Dataplane not found: $dataplaneId"))
+    Mockito.`when`(dataplaneService.getDataplane(dataplaneId)).thenAnswer { throw RuntimeException("Dataplane not found: $dataplaneId") }
 
     val result: List<UUID>? = resolver.resolveOrganization(properties)
     Assertions.assertNull(result)

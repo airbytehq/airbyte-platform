@@ -62,7 +62,6 @@ class DefaultSynchronousSchedulerClient(
   private val contextBuilder: ContextBuilder,
   private val secretReferenceService: SecretReferenceService,
 ) : SynchronousSchedulerClient {
-  @Throws(IOException::class)
   override fun createSourceCheckConnectionJob(
     source: SourceConnection,
     sourceVersion: ActorDefinitionVersion,
@@ -119,7 +118,6 @@ class DefaultSynchronousSchedulerClient(
     )
   }
 
-  @Throws(IOException::class)
   override fun createDestinationCheckConnectionJob(
     destination: DestinationConnection,
     destinationVersion: ActorDefinitionVersion,
@@ -176,7 +174,6 @@ class DefaultSynchronousSchedulerClient(
     )
   }
 
-  @Throws(IOException::class)
   override fun createDiscoverSchemaJob(
     source: SourceConnection,
     sourceVersion: ActorDefinitionVersion,
@@ -238,7 +235,6 @@ class DefaultSynchronousSchedulerClient(
     )
   }
 
-  @Throws(IOException::class)
   override fun createDestinationDiscoverJob(
     destination: DestinationConnection,
     destinationDefinition: StandardDestinationDefinition,

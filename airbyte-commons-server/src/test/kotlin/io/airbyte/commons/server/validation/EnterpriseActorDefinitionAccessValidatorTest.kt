@@ -49,7 +49,6 @@ internal class EnterpriseActorDefinitionAccessValidatorTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun defaultOrgAdminAllowed() {
       Mockito.`when`(mSecurityService.username()).thenReturn(Optional.of(USERNAME))
       Mockito
@@ -66,7 +65,6 @@ internal class EnterpriseActorDefinitionAccessValidatorTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun otherwiseThrows() {
     Mockito.`when`(mSecurityService!!.username()).thenReturn(Optional.of(USERNAME))
     Mockito.`when`(mSecurityService.hasRole(ADMIN)).thenReturn(false)

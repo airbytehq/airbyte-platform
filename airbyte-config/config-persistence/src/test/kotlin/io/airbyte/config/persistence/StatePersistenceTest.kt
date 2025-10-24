@@ -70,7 +70,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   private var workspaceService: WorkspaceService? = null
 
   @BeforeEach
-  @Throws(DatabaseInitializationException::class, IOException::class, JsonValidationException::class, SQLException::class)
   fun beforeEach() {
     truncateAllTables()
 
@@ -140,7 +139,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     connectionId = setupTestData()
   }
 
-  @Throws(JsonValidationException::class, IOException::class)
   private fun setupTestData(): UUID {
     val organizationService: OrganizationService = OrganizationServiceJooqImpl(database)
     organizationService.writeOrganization(MockData.defaultOrganization())
@@ -174,13 +172,11 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testReadingNonExistingState() {
     Assertions.assertTrue(statePersistence!!.getCurrentState(UUID.randomUUID()).isEmpty())
   }
 
   @Test
-  @Throws(IOException::class)
   fun testLegacyReadWrite() {
     val state0 =
       StateWrapper()
@@ -212,7 +208,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testLegacyMigrationToGlobal() {
     val state0 =
       StateWrapper()
@@ -248,7 +243,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testLegacyMigrationToStream() {
     val state0 =
       StateWrapper()
@@ -284,7 +278,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGlobalReadWrite() {
     val state0 =
       StateWrapper()
@@ -345,7 +338,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGlobalPartialReset() {
     val state0 =
       StateWrapper()
@@ -448,7 +440,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGlobalFullReset() {
     val state0 =
       StateWrapper()
@@ -501,7 +492,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGlobalStateAllowsEmptyNameAndNamespace() {
     val state0 =
       StateWrapper()
@@ -531,7 +521,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testStreamReadWrite() {
     val state0 =
       StateWrapper()
@@ -584,7 +573,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testStreamPartialUpdates() {
     val state0 =
       StateWrapper()
@@ -687,7 +675,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testStreamFullReset() {
     val state0 =
       StateWrapper()
@@ -741,7 +728,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, SQLException::class)
   fun testInconsistentTypeUpdates() {
     val streamState =
       StateWrapper()
@@ -833,7 +819,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, SQLException::class)
   fun testStatePersistenceLegacyWriteConsistency() {
     val jsonState = deserialize("{\"my\": \"state\"}")
     val stateWrapper = StateWrapper().withStateType(StateType.LEGACY).withLegacyState(jsonState)
@@ -874,7 +859,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testBulkDeletePerStream() {
     val perStreamToModify =
       StateWrapper()
@@ -962,7 +946,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testBulkDeleteGlobal() {
     val globalToModify =
       StateWrapper()
@@ -1039,7 +1022,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testBulkDeleteGlobalAllStreams() {
     val globalToModify =
       StateWrapper()
@@ -1090,7 +1072,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class)
   fun testBulkDeleteCorrectConnection() {
     val globalToModify =
       StateWrapper()
@@ -1160,7 +1141,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class)
   fun testBulkDeleteNoStreamsNoDelete() {
     val globalToModify =
       StateWrapper()
@@ -1202,7 +1182,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class)
   fun testEraseGlobalState() {
     val connectionState =
       StateWrapper()
@@ -1268,7 +1247,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class)
   fun testEraseStreamState() {
     val connectionState =
       StateWrapper()
@@ -1332,7 +1310,6 @@ internal class StatePersistenceTest : BaseConfigDatabaseTest() {
     assertEquals(otherState, statePersistence!!.getCurrentState(otherConnectionId).get(), "the other connection state has been altered")
   }
 
-  @Throws(JsonValidationException::class, IOException::class)
   private fun setupSecondConnection(): UUID {
     val workspace = MockData.standardWorkspaces().get(0)!!
     val sourceDefinition = MockData.publicSourceDefinition()!!

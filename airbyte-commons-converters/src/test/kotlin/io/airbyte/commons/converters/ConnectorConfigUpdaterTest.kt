@@ -36,7 +36,6 @@ internal class ConnectorConfigUpdaterTest {
   private lateinit var connectorConfigUpdater: ConnectorConfigUpdater
 
   @BeforeEach
-  @Throws(IOException::class)
   fun setUp() {
     every { mSourceApi.getSource(SourceIdRequestBody(SOURCE_ID)) } returns
       SourceRead(
@@ -67,7 +66,6 @@ internal class ConnectorConfigUpdaterTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testPersistSourceConfig() {
     val newConfiguration = Config().withAdditionalProperty("key", "new_value")
     val configJson = Jsons.jsonNode(newConfiguration.additionalProperties)
@@ -90,7 +88,6 @@ internal class ConnectorConfigUpdaterTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testPersistDestinationConfig() {
     val newConfiguration = Config().withAdditionalProperty("key", "new_value")
     val configJson = Jsons.jsonNode(newConfiguration.additionalProperties)

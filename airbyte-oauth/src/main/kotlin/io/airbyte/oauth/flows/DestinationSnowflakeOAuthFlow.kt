@@ -25,7 +25,6 @@ import java.util.UUID
 class DestinationSnowflakeOAuthFlow(
   httpClient: HttpClient,
 ) : BaseOAuth2Flow(httpClient) {
-  @Throws(IOException::class)
   override fun formatConsentUrl(
     definitionId: UUID?,
     clientId: String,
@@ -49,7 +48,6 @@ class DestinationSnowflakeOAuthFlow(
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String =
     String.format(ACCESS_TOKEN_URL, extractTokenUrl(inputOAuthConfiguration))
 
-  @Throws(IOException::class)
   override fun extractCodeParameter(queryParams: Map<String, Any>): String = super.extractCodeParameter(queryParams)
 
   override fun getAccessTokenQueryParameters(
@@ -66,7 +64,6 @@ class DestinationSnowflakeOAuthFlow(
       .build()
 
   // --------------------------------------------
-  @Throws(IOException::class)
   override fun completeOAuthFlow(
     clientId: String,
     clientSecret: String,
@@ -113,7 +110,6 @@ class DestinationSnowflakeOAuthFlow(
   /**
    * Extract all OAuth outputs from distant API response and store them in a flat map.
    */
-  @Throws(IOException::class)
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,

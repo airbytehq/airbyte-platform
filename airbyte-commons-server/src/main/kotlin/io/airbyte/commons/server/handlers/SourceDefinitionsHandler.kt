@@ -81,7 +81,6 @@ open class SourceDefinitionsHandler
     private val licenseEntitlementChecker: LicenseEntitlementChecker,
     private val apiPojoConverters: ApiPojoConverters,
   ) {
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun buildSourceDefinitionRead(
       sourceDefinitionId: UUID,
       includeTombstone: Boolean,
@@ -124,14 +123,12 @@ open class SourceDefinitionsHandler
       }
     }
 
-    @Throws(IOException::class)
     fun listSourceDefinitions(): SourceDefinitionReadList {
       val standardSourceDefinitions = sourceService.listStandardSourceDefinitions(false)
       val sourceDefinitionVersionMap = getVersionsForSourceDefinitions(standardSourceDefinitions)
       return toSourceDefinitionReadList(standardSourceDefinitions, sourceDefinitionVersionMap)
     }
 
-    @Throws(IOException::class)
     private fun getVersionsForSourceDefinitions(sourceDefinitions: List<StandardSourceDefinition>): Map<UUID, ActorDefinitionVersion?> =
       actorDefinitionService
         .getActorDefinitionVersions(
@@ -200,7 +197,6 @@ open class SourceDefinitionsHandler
       return toSourceDefinitionReadList(validSourceDefs, sourceDefVersionMap)
     }
 
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun listSourceDefinitionsForWorkspace(workspaceIdActorDefinitionRequestBody: WorkspaceIdActorDefinitionRequestBody): SourceDefinitionReadList =
       if (workspaceIdActorDefinitionRequestBody.filterByUsed != null && workspaceIdActorDefinitionRequestBody.filterByUsed) {
         listSourceDefinitionsUsedByWorkspace(workspaceIdActorDefinitionRequestBody.workspaceId)
@@ -208,7 +204,6 @@ open class SourceDefinitionsHandler
         listAllowedSourceDefinitions(workspaceIdActorDefinitionRequestBody.workspaceId)
       }
 
-    @Throws(IOException::class)
     fun listSourceDefinitionsUsedByWorkspace(workspaceId: UUID): SourceDefinitionReadList {
       val sourceDefs = sourceService.listSourceDefinitionsForWorkspace(workspaceId, false)
 
@@ -218,7 +213,6 @@ open class SourceDefinitionsHandler
       return toSourceDefinitionReadList(sourceDefs, sourceDefVersionMap)
     }
 
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun listAllowedSourceDefinitions(workspaceId: UUID): SourceDefinitionReadList {
       val publicSourceDefs = sourceService.listPublicSourceDefinitions(false)
 
@@ -258,7 +252,6 @@ open class SourceDefinitionsHandler
       return toSourceDefinitionReadList(shownSourceDefs, sourceDefVersionMap)
     }
 
-    @Throws(IOException::class)
     fun listPrivateSourceDefinitions(workspaceIdRequestBody: WorkspaceIdRequestBody): PrivateSourceDefinitionReadList {
       val standardSourceDefinitionBooleanMap =
         sourceService.listGrantableSourceDefinitions(workspaceIdRequestBody.workspaceId, false)
@@ -269,7 +262,6 @@ open class SourceDefinitionsHandler
       return toPrivateSourceDefinitionReadList(standardSourceDefinitionBooleanMap, sourceDefinitionVersionMap)
     }
 
-    @Throws(IOException::class)
     fun listPublicSourceDefinitions(): SourceDefinitionReadList {
       val standardSourceDefinitions = sourceService.listPublicSourceDefinitions(false)
       val sourceDefinitionVersionMap = getVersionsForSourceDefinitions(standardSourceDefinitions)
@@ -291,13 +283,11 @@ open class SourceDefinitionsHandler
       return PrivateSourceDefinitionReadList().sourceDefinitions(reads)
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun getSourceDefinition(
       sourceDefinitionId: UUID,
       includeTombstone: Boolean,
     ): SourceDefinitionRead = buildSourceDefinitionRead(sourceDefinitionId, includeTombstone)
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun getSourceDefinitionForScope(actorDefinitionIdWithScope: ActorDefinitionIdWithScope): SourceDefinitionRead {
       val definitionId = actorDefinitionIdWithScope.actorDefinitionId
       val scopeId = actorDefinitionIdWithScope.scopeId
@@ -309,7 +299,6 @@ open class SourceDefinitionsHandler
       return getSourceDefinition(definitionId, true)
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun getSourceDefinitionForWorkspace(sourceDefinitionIdWithWorkspaceId: SourceDefinitionIdWithWorkspaceId): SourceDefinitionRead {
       val definitionId = sourceDefinitionIdWithWorkspaceId.sourceDefinitionId
       val workspaceId = sourceDefinitionIdWithWorkspaceId.workspaceId
@@ -319,7 +308,6 @@ open class SourceDefinitionsHandler
       return getSourceDefinition(definitionId, true)
     }
 
-    @Throws(IOException::class)
     fun createCustomSourceDefinition(customSourceDefinitionCreate: CustomSourceDefinitionCreate): SourceDefinitionRead {
       val id = uuidSupplier.get()
       val sourceDefinitionCreate = customSourceDefinitionCreate.sourceDefinition
@@ -397,7 +385,6 @@ open class SourceDefinitionsHandler
       )
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun updateSourceDefinition(sourceDefinitionUpdate: SourceDefinitionUpdate): SourceDefinitionRead {
       actorDefinitionHandlerHelper.validateVersionSupport(
         actorDefinitionId = sourceDefinitionUpdate.sourceDefinitionId,
@@ -470,12 +457,6 @@ open class SourceDefinitionsHandler
       return newSource
     }
 
-    @Throws(
-      JsonValidationException::class,
-      IOException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun deleteSourceDefinition(sourceDefinitionId: UUID) {
       // "delete" all sources associated with the source definition as well. This will cascade to
       // connections that depend on any deleted sources.
@@ -492,7 +473,6 @@ open class SourceDefinitionsHandler
       sourceService.updateStandardSourceDefinition(persistedSourceDefinition)
     }
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun grantSourceDefinitionToWorkspaceOrOrganization(actorDefinitionIdWithScope: ActorDefinitionIdWithScope): PrivateSourceDefinitionRead {
       val standardSourceDefinition =
         sourceService.getStandardSourceDefinition(actorDefinitionIdWithScope.actorDefinitionId)
@@ -508,7 +488,6 @@ open class SourceDefinitionsHandler
         .granted(true)
     }
 
-    @Throws(IOException::class)
     fun revokeSourceDefinition(actorDefinitionIdWithScope: ActorDefinitionIdWithScope) {
       actorDefinitionService.deleteActorDefinitionWorkspaceGrant(
         actorDefinitionIdWithScope.actorDefinitionId,

@@ -91,12 +91,6 @@ internal class ActorDefinitionVersionHandlerTest {
 
   @ParameterizedTest
   @CsvSource("true", "false")
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testGetActorDefinitionVersionForSource(isVersionOverrideApplied: Boolean) {
     val sourceId = UUID.randomUUID()
     val actorDefinitionVersion = createActorDefinitionVersion()
@@ -149,12 +143,6 @@ internal class ActorDefinitionVersionHandlerTest {
 
   @ParameterizedTest
   @CsvSource("true", "false")
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testGetActorDefinitionVersionForDestination(isVersionOverrideApplied: Boolean) {
     val destinationId = UUID.randomUUID()
     val actorDefinitionVersion = createActorDefinitionVersion()
@@ -206,12 +194,6 @@ internal class ActorDefinitionVersionHandlerTest {
 
   @ParameterizedTest
   @CsvSource("true", "false")
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testGetActorDefinitionVersionForDestinationWithNormalization(isVersionOverrideApplied: Boolean) {
     val destinationId = UUID.randomUUID()
     val actorDefinitionVersion = createActorDefinitionVersionWithNormalization()
@@ -263,7 +245,6 @@ internal class ActorDefinitionVersionHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testCreateActorDefinitionVersionReadWithBreakingChange() {
     val breakingChanges = Mockito.mock(ActorDefinitionVersionBreakingChanges::class.java)
 
@@ -303,7 +284,6 @@ internal class ActorDefinitionVersionHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testResolveActorDefinitionVersionByTag() {
     val actorDefinitionId = UUID.randomUUID()
     val actorDefinitionVersion = createActorDefinitionVersion()
@@ -355,7 +335,6 @@ internal class ActorDefinitionVersionHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testResolveMissingActorDefinitionVersionByTag() {
     val actorDefinitionId = UUID.randomUUID()
     val defaultVersionId = UUID.randomUUID()

@@ -257,7 +257,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
      * patch. Any fields that are null in the patch will be left unchanged.
      */
     @VisibleForTesting
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class)
     fun applyPatchToStandardSync(
       sync: StandardSync,
       patch: ConnectionUpdate,
@@ -405,7 +404,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       streamName: String,
     ): String = namespaceDefinition + namespaceFormat + streamNamespace + prefix + streamName
 
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     private fun validateStreamsDoNotConflictWithExistingDestinationStreams(
       newCatalog: AirbyteCatalog,
       destinationId: UUID,
@@ -487,12 +485,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       }
     }
 
-    @Throws(
-      JsonValidationException::class,
-      IOException::class,
-      ConfigNotFoundException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun createConnection(connectionCreate: ConnectionCreate): ConnectionRead {
       // Validate source and destination
 
@@ -751,12 +743,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         connectionPatch.namespaceFormat != null ||
         connectionPatch.prefix != null
 
-    @Throws(
-      ConfigNotFoundException::class,
-      IOException::class,
-      JsonValidationException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun updateConnection(
       connectionPatch: ConnectionUpdate,
       updateReason: String?,
@@ -922,7 +908,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       return updatedRead
     }
 
-    @Throws(IOException::class)
     private fun deleteStateForStreamsWithSyncModeChanged(
       connectionPatch: ConnectionUpdate,
       sync: StandardSync,
@@ -1035,7 +1020,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     }
 
     @VisibleForTesting
-    @Throws(JsonValidationException::class)
     fun validateCatalogWithDestinationCatalog(
       catalog: AirbyteCatalog,
       destinationCatalog: DestinationCatalog,
@@ -1205,14 +1189,12 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     }
 
     @Trace
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun listConnectionsForWorkspace(workspaceIdRequestBody: WorkspaceIdRequestBody): ConnectionReadList {
       addTagsToTrace(java.util.Map.of(MetricTags.WORKSPACE_ID, workspaceIdRequestBody.workspaceId.toString()))
       return listConnectionsForWorkspace(workspaceIdRequestBody, false)
     }
 
     @Trace
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun listConnectionsForWorkspace(
       workspaceIdRequestBody: WorkspaceIdRequestBody,
       includeDeleted: Boolean,
@@ -1226,11 +1208,9 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       return ConnectionReadList().connections(connectionReads)
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun listAllConnectionsForWorkspace(workspaceIdRequestBody: WorkspaceIdRequestBody): ConnectionReadList =
       listConnectionsForWorkspace(workspaceIdRequestBody, true)
 
-    @Throws(IOException::class)
     fun listConnectionsForSource(
       sourceId: UUID,
       includeDeleted: Boolean,
@@ -1242,7 +1222,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       return ConnectionReadList().connections(connectionReads)
     }
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun listConnections(): ConnectionReadList {
       val connectionReads: MutableList<ConnectionRead> = Lists.newArrayList()
 
@@ -1257,16 +1236,13 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     }
 
     @Trace
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun getConnection(connectionId: UUID): ConnectionRead = buildConnectionRead(connectionId)
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     fun getConnectionForJob(
       connectionId: UUID,
       jobId: Long,
     ): ConnectionRead = buildConnectionRead(connectionId, jobId)
 
-    @Throws(JsonValidationException::class)
     fun getDiff(
       oldCatalog: AirbyteCatalog,
       newCatalog: AirbyteCatalog,
@@ -1279,7 +1255,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         configuredCatalog,
       )
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, ConfigNotFoundException::class)
     fun getDiff(
       connectionRead: ConnectionRead,
       discoveredCatalog: AirbyteCatalog,
@@ -1357,7 +1332,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       )
 
     @Trace
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun getConnectionAirbyteCatalog(connectionId: UUID): Optional<AirbyteCatalog> {
       val connection = connectionService.getStandardSync(connectionId)
       if (connection.sourceCatalogId == null) {
@@ -1390,7 +1364,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       return convertedCatalog
     }
 
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun deleteConnection(connectionId: UUID) {
       connectionHelper.deleteConnection(connectionId)
       log.info { "Marked connectionId $connectionId as deleted in postgres" }
@@ -1400,7 +1373,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       log.info { "Deleted connectionId $connectionId stream refreshes" }
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun buildConnectionRead(connectionId: UUID): ConnectionRead {
       val standardSync = connectionService.getStandardSync(connectionId)
 
@@ -1410,7 +1382,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       return apiPojoConverters.internalToConnectionRead(standardSync)
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     private fun buildConnectionRead(
       connectionId: UUID,
       jobId: Long,
@@ -1457,7 +1428,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       return apiPojoConverters.internalToConnectionRead(standardSync)
     }
 
-    @Throws(IOException::class)
     fun listConnectionsForWorkspaces(listConnectionsForWorkspacesRequestBody: ListConnectionsForWorkspacesRequestBody): ConnectionReadList {
       val connectionReads: MutableList<ConnectionRead> = Lists.newArrayList()
 
@@ -1480,7 +1450,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       return ConnectionReadList().connections(connectionReads)
     }
 
-    @Throws(IOException::class)
     fun listConnectionsForActorDefinition(actorDefinitionRequestBody: ActorDefinitionRequestBody): ConnectionReadList {
       val connectionReads: MutableList<ConnectionRead> = ArrayList()
 
@@ -1514,7 +1483,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     }
 
     @Trace
-    @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
     fun getConnectionStatuses(connectionStatusesRequestBody: ConnectionStatusesRequestBody): List<ConnectionStatusRead> {
       addTagsToTrace(java.util.Map.of(MetricTags.CONNECTION_IDS, connectionStatusesRequestBody.connectionIds.toString()))
       val connectionIds = connectionStatusesRequestBody.connectionIds
@@ -1730,7 +1698,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
      * 3. RESET_CONNECTION is just the old enum name of CLEAR.
      *
      */
-    @Throws(IOException::class)
     fun backfillConnectionEvents(connectionEventsBackfillRequestBody: ConnectionEventsBackfillRequestBody) {
       val connectionId = connectionEventsBackfillRequestBody.connectionId
       val startTime = connectionEventsBackfillRequestBody.createdAtStart
@@ -1812,7 +1779,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       )
     }
 
-    @Throws(IOException::class)
     fun listConnectionEventsMinimal(requestBody: ConnectionEventsListMinimalRequestBody): ConnectionEventListMinimal {
       if (requestBody.workspaceId == null) {
         return ConnectionEventListMinimal()
@@ -1900,7 +1866,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
      * @return list of ConnectionStreamHistoryReadItems (timestamp, stream namespace, stream name,
      * records synced)
      */
-    @Throws(IOException::class)
     fun getConnectionStreamHistory(connectionStreamHistoryRequestBody: ConnectionStreamHistoryRequestBody): List<ConnectionStreamHistoryReadItem> =
       getConnectionStreamHistoryInternal(connectionStreamHistoryRequestBody, Instant.now())
 
@@ -1993,21 +1958,9 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       return result
     }
 
-    @Throws(
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      IOException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun applySchemaChange(request: ConnectionAutoPropagateSchemaChange): ConnectionAutoPropagateResult =
       applySchemaChange(request.connectionId, request.workspaceId, request.catalogId, request.catalog, true)
 
-    @Throws(
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      IOException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun applySchemaChange(
       connectionId: UUID,
       workspaceId: UUID,
@@ -2219,12 +2172,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
      * Does all secondary steps from a source discover for a connection. Currently, it calculates the
      * diff, conditionally disables and auto-propagates schema changes.
      */
-    @Throws(
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      IOException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun postprocessDiscoveredCatalog(
       connectionId: UUID,
       discoveredCatalogId: UUID,
@@ -2247,12 +2194,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
      * changes but the connection is configured to disable for any schema changes
      *
      */
-    @Throws(
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      IOException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun disableConnectionIfNeeded(
       connectionRead: ConnectionRead,
       containsBreakingChange: Boolean,
@@ -2298,12 +2239,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
      * For a given discovered catalog and connection, calculate a catalog diff, determine if there are
      * breaking changes then disable the connection if necessary.
      */
-    @Throws(
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      IOException::class,
-      io.airbyte.config.persistence.ConfigNotFoundException::class,
-    )
     fun diffCatalogAndConditionallyDisable(
       connectionId: UUID,
       discoveredCatalogId: UUID,
@@ -2331,7 +2266,6 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       return domainModel.toServerApi()
     }
 
-    @Throws(IOException::class, ConfigNotFoundException::class)
     private fun retrieveDiscoveredCatalog(
       catalogId: UUID,
       sourceVersion: ActorDefinitionVersion,

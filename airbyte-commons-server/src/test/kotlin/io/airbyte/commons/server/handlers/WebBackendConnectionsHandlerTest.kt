@@ -190,12 +190,6 @@ internal class WebBackendConnectionsHandlerTest {
   private lateinit var partialUserConfigService: PartialUserConfigService
 
   @BeforeEach
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun setup() {
     actorDefinitionVersionHandler = mockk()
     connectionsHandler = mockk(relaxed = true)
@@ -636,7 +630,6 @@ internal class WebBackendConnectionsHandlerTest {
       .destinationActorDefinitionVersion(ActorDefinitionVersionRead())
 
   @Test
-  @Throws(IOException::class)
   fun testGetWorkspaceState() {
     val uuid = UUID.randomUUID()
     val request = WebBackendWorkspaceState().workspaceId(uuid)
@@ -650,7 +643,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetWorkspaceStateEmpty() {
     val uuid = UUID.randomUUID()
     val request = WebBackendWorkspaceState().workspaceId(uuid)
@@ -664,12 +656,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testWebBackendListConnectionsForWorkspace() {
     val requestBody =
       WebBackendConnectionListRequestBody().apply {
@@ -696,12 +682,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testWebBackendGetConnection() {
     val connectionIdRequestBody = ConnectionIdRequestBody()
     connectionIdRequestBody.setConnectionId(connectionRead.getConnectionId())
@@ -720,12 +700,6 @@ internal class WebBackendConnectionsHandlerTest {
     Assertions.assertEquals(expectedListItem.getDestination().getIcon(), ICON_URL)
   }
 
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testWebBackendGetConnection(
     withCatalogRefresh: Boolean,
     connectionRead: ConnectionRead,
@@ -747,12 +721,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testWebBackendGetConnectionWithDiscoveryAndNewSchema() {
     val newCatalogId = UUID.randomUUID()
     every { catalogService.getMostRecentActorCatalogFetchEventForSource(any()) } returns
@@ -777,12 +745,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testWebBackendGetConnectionWithDiscoveryAndNewSchemaBreakingChange() {
     val newCatalogId = UUID.randomUUID()
     every { catalogService.getMostRecentActorCatalogFetchEventForSource(any()) } returns
@@ -808,12 +770,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(
-    IOException::class,
-    ConfigNotFoundException::class,
-    JsonValidationException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testWebBackendGetConnectionWithDiscoveryMissingCatalogUsedToMakeConfiguredCatalog() {
     val newCatalogId = UUID.randomUUID()
     every { catalogService.getMostRecentActorCatalogFetchEventForSource(any()) } returns
@@ -838,12 +794,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testWebBackendGetConnectionWithDiscoveryAndFieldSelectionAddField() {
     // Mock this because the API uses it to determine whether there was a schema change.
     every { catalogService.getMostRecentActorCatalogFetchEventForSource(any()) } returns
@@ -925,12 +875,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(
-    ConfigNotFoundException::class,
-    IOException::class,
-    JsonValidationException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testWebBackendGetConnectionWithDiscoveryAndFieldSelectionRemoveField() {
     // Mock this because the API uses it to determine whether there was a schema change.
     every { catalogService.getMostRecentActorCatalogFetchEventForSource(any()) } returns
@@ -1000,12 +944,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testWebBackendGetConnectionNoRefreshCatalog() {
     val result = testWebBackendGetConnection(false, connectionRead, operationReadList)
     verify(exactly = 0) { schedulerHandler.discoverSchemaForSourceFromSourceId(any()) }
@@ -1013,12 +951,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testWebBackendGetConnectionNoDiscoveryWithNewSchema() {
     every { catalogService.getMostRecentActorCatalogFetchEventForSource(any()) } returns
       Optional.of(ActorCatalogFetchEvent().withActorCatalogId(UUID.randomUUID()))
@@ -1028,12 +960,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testWebBackendGetConnectionNoDiscoveryWithNewSchemaBreaking() {
     every { connectionsHandler.getConnection(brokenConnectionRead.getConnectionId()) } returns brokenConnectionRead
     every { catalogService.getMostRecentActorCatalogFetchEventForSource(any()) } returns
@@ -1044,7 +970,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testToConnectionCreate() {
     val source = generateSource(UUID.randomUUID())
     val standardSync = generateSyncWithSourceId(source.getSourceId())
@@ -1108,7 +1033,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testToConnectionPatch() {
     val source = generateSource(UUID.randomUUID())
     val standardSync = generateSyncWithSourceId(source.getSourceId())
@@ -1268,12 +1192,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testUpdateConnection() {
     val updateBody =
       WebBackendConnectionUpdate()
@@ -1348,12 +1266,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testUpdateConnectionWithOperations() {
     val operationCreateOrUpdate =
       WebBackendOperationCreateOrUpdate()
@@ -1417,12 +1329,6 @@ internal class WebBackendConnectionsHandlerTest {
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testUpdateConnectionWithUpdatedSchemaPerStream(useRefresh: Boolean) {
     every { actorDefinitionVersionHandler.getActorDefinitionVersionForDestinationId(any()) } returns
       ActorDefinitionVersionRead().supportsRefreshes(useRefresh)
@@ -1540,12 +1446,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testUpdateConnectionNoStreamsToReset() {
     val updateBody =
       WebBackendConnectionUpdate()
@@ -1602,12 +1502,6 @@ internal class WebBackendConnectionsHandlerTest {
   }
 
   @Test
-  @Throws(
-    JsonValidationException::class,
-    ConfigNotFoundException::class,
-    IOException::class,
-    io.airbyte.config.persistence.ConfigNotFoundException::class,
-  )
   fun testUpdateConnectionFixingBreakingSchemaChange() {
     val updateBody =
       WebBackendConnectionUpdate()

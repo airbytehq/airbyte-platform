@@ -69,13 +69,11 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
   @Nested
   internal inner class BasicTests {
     @BeforeEach
-    @Throws(Exception::class)
     fun beforeEach() {
       truncateAllTables()
       setupTestData()
     }
 
-    @Throws(IOException::class, JsonValidationException::class)
     private fun setupTestData() {
       // Create organization
       organizationService.writeOrganization(MockData.defaultOrganization())
@@ -101,7 +99,6 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class)
     fun getUserByIdTest() {
       for (user in MockData.users()) {
         val userFromDb = userPersistence.getAuthenticatedUser(user!!.getUserId())
@@ -110,7 +107,6 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class)
     fun getUserByAuthIdTest() {
       for (user in MockData.users()) {
         val userFromDb = userPersistence.getUserByAuthId(user!!.getAuthUserId())
@@ -119,7 +115,6 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class)
     fun getUserByEmailTest() {
       for (user in MockData.users()) {
         val userFromDb = userPersistence.getAuthenticatedUserByEmail(user!!.getEmail())
@@ -128,14 +123,12 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class)
     fun deleteUserByIdTest() {
       userPersistence.deleteUserById(MockData.CREATOR_USER_ID_1)
       Assertions.assertEquals(Optional.empty<Any?>(), userPersistence.getAuthenticatedUser(MockData.CREATOR_USER_ID_1))
     }
 
     @Test
-    @Throws(IOException::class)
     fun listAuthUserIdsForUserTest() {
       val user1: AuthenticatedUser = MockData.users().first()!!
       // set auth_user_id to a known value
@@ -147,7 +140,6 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class)
     fun listAuthUsersTest() {
       val user1: AuthenticatedUser = MockData.users().first()!!
 
@@ -174,7 +166,6 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class)
     fun replaceAuthUserTest() {
       val user1: AuthenticatedUser = MockData.users().first()!!
 
@@ -196,7 +187,6 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
     }
 
     @Test
-    @Throws(IOException::class, JsonValidationException::class)
     fun findUsersWithEmailDomainOutsideOrganizationTest() {
       // Create two organizations
       val org1 =
@@ -313,7 +303,6 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
   @Nested
   internal inner class UserAccessTests {
     @BeforeEach
-    @Throws(IOException::class, JsonValidationException::class, SQLException::class)
     fun setup() {
       truncateAllTables()
 
@@ -362,7 +351,7 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
 
     // Temporarily commented out due to Kotlin compiler internal error
     // @Test
-    // @Throws(IOException::class)
+    //
     // fun getUsersWithWorkspaceAccess() {
     //     val expectedUsersWorkspace1 = setOf(
     //         AuthenticatedUserConverter.toUser(ORG_READER_USER),
@@ -390,7 +379,6 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
     // }
 
     @Test
-    @Throws(IOException::class)
     fun listWorkspaceUserAccessInfo() {
       // Due to a jooq bug that only impacts CI, I can't get this test to pass.
       // PermissionType enum values are mapped to 'null' even though they are

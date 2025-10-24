@@ -12,7 +12,6 @@ import java.io.IOException
 class ConfigRepositoryBuilderProjectUpdater(
   private val connectorBuilderService: ConnectorBuilderService,
 ) : BuilderProjectUpdater {
-  @Throws(IOException::class, ConfigNotFoundException::class)
   override fun persistBuilderProjectUpdate(projectUpdate: ExistingConnectorBuilderProjectWithWorkspaceId) {
     val connectorBuilderProject =
       connectorBuilderService.getConnectorBuilderProject(projectUpdate.builderProjectId, false)

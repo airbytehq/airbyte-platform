@@ -27,7 +27,6 @@ open class ResolveManifestHandler
     /**
      * Use the requester to send the resolve_manifest request to the CDK.
      */
-    @Throws(AirbyteCdkInvalidInputException::class, ConnectorBuilderException::class)
     fun resolveManifest(resolveManifestRequestBody: ResolveManifestRequestBody): ResolveManifest {
       try {
         addWorkspaceAndProjectIdsToTrace(resolveManifestRequestBody.workspaceId, resolveManifestRequestBody.projectId)

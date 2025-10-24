@@ -82,7 +82,6 @@ class ReplicationWorker(
     }
   }
 
-  @Throws(WorkerException::class)
   fun runReplicationBlocking(jobRoot: Path): ReplicationOutput =
     runBlocking {
       replicationLogMdcBuilder.build().use { _ ->
@@ -92,7 +91,6 @@ class ReplicationWorker(
       }
     }
 
-  @Throws(WorkerException::class)
   internal suspend fun run(jobRoot: Path): ReplicationOutput {
     try {
       val mdc = MDC.getCopyOfContextMap() ?: emptyMap()

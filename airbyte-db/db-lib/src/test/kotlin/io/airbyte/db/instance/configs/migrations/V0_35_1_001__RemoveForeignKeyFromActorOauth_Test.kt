@@ -19,7 +19,6 @@ import java.sql.SQLException
 @Suppress("ktlint:standard:class-naming")
 internal class V0_35_1_001__RemoveForeignKeyFromActorOauth_Test : AbstractConfigsDatabaseTest() {
   @Test
-  @Throws(IOException::class, SQLException::class)
   fun testCompleteMigration() {
     val context = dslContext!!
     SetupForNormalizedTablesTest.setup(context)

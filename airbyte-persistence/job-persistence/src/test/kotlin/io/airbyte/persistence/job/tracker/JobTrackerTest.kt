@@ -131,7 +131,6 @@ internal class JobTrackerTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testTrackCheckConnectionSource() {
     val metadata: MutableMap<String?, Any?> =
       mutableMapOf(
@@ -194,7 +193,6 @@ internal class JobTrackerTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testTrackCheckConnectionDestination() {
     val metadata: MutableMap<String?, Any?> =
       mutableMapOf(
@@ -262,7 +260,6 @@ internal class JobTrackerTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testTrackDiscover() {
     val metadata: MutableMap<String?, Any?> =
       mutableMapOf(
@@ -325,13 +322,11 @@ internal class JobTrackerTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testTrackSync() {
     testAsynchronous(ConfigType.SYNC, SYNC_CONFIG_METADATA)
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testTrackRefresh() {
     val expectedExtraMetadata: MutableMap<String?, Any?> =
       mergeMaps<String?, Any?>(
@@ -342,7 +337,6 @@ internal class JobTrackerTest {
   }
 
   @Test
-  @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
   fun testTrackSyncForInternalFailure() {
     val jobId = 12345L
     val attemptNumber = 2
@@ -448,14 +442,12 @@ internal class JobTrackerTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testTrackReset() {
     testAsynchronous(ConfigType.RESET_CONNECTION)
   }
 
   // todo update with connection-specific test
   @JvmOverloads
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testAsynchronous(
     configType: ConfigType,
     additionalExpectedMetadata: MutableMap<String?, Any?>? = mutableMapOf<String?, Any?>(),
@@ -526,13 +518,11 @@ internal class JobTrackerTest {
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testTrackSyncAttempt() {
     testAsynchronousAttempt(ConfigType.SYNC, SYNC_CONFIG_METADATA)
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testTrackResetAttempt() {
     testAsynchronousAttempt(ConfigType.RESET_CONNECTION)
   }
@@ -540,13 +530,11 @@ internal class JobTrackerTest {
   // todo (cgardens)
   @Disabled
   @Test
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testTrackSyncAttemptWithFailures() {
     testAsynchronousAttemptWithFailures(ConfigType.SYNC, SYNC_CONFIG_METADATA)
   }
 
   @Test
-  @Throws(IOException::class)
   fun testConfigToMetadata() {
     val configJson = read("example_config.json")
     val config = deserialize(configJson)
@@ -603,7 +591,6 @@ internal class JobTrackerTest {
     Assertions.assertEquals(ConfigType.RESET_CONNECTION, metadata.get("previous_job_type"))
   }
 
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testAsynchronousAttempt(
     configType: ConfigType,
     additionalExpectedMetadata: MutableMap<String?, Any?>?,
@@ -612,7 +599,6 @@ internal class JobTrackerTest {
   }
 
   @JvmOverloads
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testAsynchronousAttempt(
     configType: ConfigType?,
     job: Job =
@@ -705,7 +691,6 @@ internal class JobTrackerTest {
     return jsonNode<MutableMap<String?, Any?>?>(linkedHashMap2)
   }
 
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   fun testAsynchronousAttemptWithFailures(
     configType: ConfigType,
     additionalExpectedMetadata: MutableMap<String?, Any?>,
@@ -722,13 +707,11 @@ internal class JobTrackerTest {
     )
   }
 
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
   private fun getJobMock(
     configType: ConfigType,
     jobId: Long,
   ): Job = getJobMock(configType, jobId, null)
 
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   private fun getJobMock(
     configType: ConfigType,
     jobId: Long,
@@ -892,13 +875,11 @@ internal class JobTrackerTest {
       return attempt
     }
 
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   private fun getJobWithAttemptsMock(
     configType: ConfigType,
     jobId: Long,
   ): Job = getJobWithAttemptsMock(configType, jobId, mutableListOf(this.attemptMock))
 
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   private fun getJobWithAttemptsMock(
     configType: ConfigType,
     jobId: Long,
@@ -968,7 +949,6 @@ internal class JobTrackerTest {
       return mutableListOf(attemptWithMultipleFailures, attemptWithSingleFailure, attemptWithNoFailures)
     }
 
-  @Throws(IOException::class, JsonValidationException::class, ConfigNotFoundException::class)
   private fun getJobWithFailuresMock(
     configType: ConfigType,
     jobId: Long,

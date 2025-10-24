@@ -59,7 +59,6 @@ class ConnectionScheduleHelper(
    * @param scheduleData schedule data to add to sync
    * @throws JsonValidationException exception if any of the inputs are invalid json
    */
-  @Throws(JsonValidationException::class, ConfigNotFoundException::class)
   fun populateSyncFromScheduleTypeAndData(
     standardSync: StandardSync,
     scheduleType: ConnectionScheduleType,

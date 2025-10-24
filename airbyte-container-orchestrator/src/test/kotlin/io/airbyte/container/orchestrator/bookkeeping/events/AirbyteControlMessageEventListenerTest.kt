@@ -36,7 +36,6 @@ internal class AirbyteControlMessageEventListenerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testDestinationControlMessage() {
     val destinationUUID = UUID.randomUUID()
     val airbyteMessageOrigin = AirbyteMessageOrigin.DESTINATION
@@ -73,7 +72,6 @@ internal class AirbyteControlMessageEventListenerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testSourceControlMessage() {
     val sourceUUID = UUID.randomUUID()
     val airbyteMessageOrigin = AirbyteMessageOrigin.SOURCE
@@ -110,7 +108,6 @@ internal class AirbyteControlMessageEventListenerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testInternalControlMessage() {
     val airbyteMessageOrigin = AirbyteMessageOrigin.INTERNAL
     val airbyteMessage =

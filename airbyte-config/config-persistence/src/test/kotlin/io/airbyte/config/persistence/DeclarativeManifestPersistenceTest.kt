@@ -52,7 +52,6 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   private var workspaceService: WorkspaceService? = null
 
   @BeforeEach
-  @Throws(Exception::class)
   fun beforeEach() {
     truncateAllTables()
 
@@ -115,7 +114,6 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun whenInsertDeclarativeManifestThenEntryIsInDb() {
     val manifest = MockData.declarativeManifest()!!.withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION)
     connectorBuilderService!!.insertDeclarativeManifest(manifest)
@@ -126,7 +124,6 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun givenActorDefinitionIdAndVersionAlreadyInDbWhenInsertDeclarativeManifestThenThrowException() {
     val manifest = MockData.declarativeManifest()!!
     connectorBuilderService!!.insertDeclarativeManifest(manifest)
@@ -155,7 +152,6 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun whenGetDeclarativeManifestsByActorDefinitionIdThenReturnDeclarativeManifestWithoutManifestAndSpec() {
     val declarativeManifest =
       MockData
@@ -172,7 +168,6 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun givenManyEntriesMatchingWhenGetDeclarativeManifestsByActorDefinitionIdThenReturnAllEntries() {
     connectorBuilderService!!.insertDeclarativeManifest(
       MockData.declarativeManifest()!!.withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(1L),
@@ -187,7 +182,6 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun whenGetDeclarativeManifestByActorDefinitionIdAndVersionThenReturnDeclarativeManifest() {
     val declarativeManifest =
       MockData.declarativeManifest()!!.withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION)
@@ -207,7 +201,6 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class)
   fun whenGetCurrentlyActiveDeclarativeManifestsByActorDefinitionIdThenReturnDeclarativeManifest() {
     val activeDeclarativeManifest =
       MockData.declarativeManifest()!!.withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION)
@@ -221,7 +214,6 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class)
   fun givenNoActiveManifestWhenGetCurrentlyActiveDeclarativeManifestsByActorDefinitionIdThenReturnDeclarativeManifest() {
     connectorBuilderService!!
       .insertDeclarativeManifest(MockData.declarativeManifest()!!.withActorDefinitionId(AN_ACTOR_DEFINITION_ID).withVersion(A_VERSION))
@@ -232,7 +224,6 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(IOException::class, ConfigNotFoundException::class, JsonValidationException::class)
   fun whenCreateDeclarativeManifestAsActiveVersionThenUpdateSourceDefinitionAndConfigInjectionAndDeclarativeManifest() {
     givenSourceDefinition(AN_ACTOR_DEFINITION_ID)
     val declarativeManifest =
@@ -375,7 +366,6 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun whenSetDeclarativeSourceActiveVersionThenUpdateSourceDefinitionAndConfigInjectionAndActiveDeclarativeManifest() {
     givenSourceDefinition(AN_ACTOR_DEFINITION_ID)
     connectorBuilderService!!.insertDeclarativeManifest(
@@ -446,7 +436,6 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun givenActiveDeclarativeManifestDoesNotExistWhenSetDeclarativeSourceActiveVersionThenThrowException() {
     givenSourceDefinition(AN_ACTOR_DEFINITION_ID)
     val configInjection =
@@ -470,7 +459,6 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun whenSetDeclarativeSourceActiveVersionMultipleTimesThenConfigInjectionsAreReplaced() {
     // Set up initial source definition
     givenSourceDefinition(AN_ACTOR_DEFINITION_ID)
@@ -543,7 +531,6 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun whenSetDeclarativeSourceActiveVersionWithMixedActorDefinitionIdsThenThrowException() {
     // Set up initial source definition
     givenSourceDefinition(AN_ACTOR_DEFINITION_ID)
@@ -589,7 +576,6 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun whenSetDeclarativeSourceActiveVersionWithoutManifestInjectionThenThrowException() {
     // Set up initial source definition
     givenSourceDefinition(AN_ACTOR_DEFINITION_ID)
@@ -633,14 +619,12 @@ internal class DeclarativeManifestPersistenceTest : BaseConfigDatabaseTest() {
     )
   }
 
-  @Throws(IOException::class)
   fun givenActiveDeclarativeManifestWithActorDefinitionId(actorDefinitionId: UUID?) {
     val version = 4L
     connectorBuilderService!!
       .insertActiveDeclarativeManifest(MockData.declarativeManifest()!!.withActorDefinitionId(actorDefinitionId).withVersion(version))
   }
 
-  @Throws(JsonValidationException::class, IOException::class)
   fun givenSourceDefinition(sourceDefinitionId: UUID?) {
     val workspaceId = UUID.randomUUID()
     workspaceService!!.writeStandardWorkspaceNoSecrets(MockData.standardWorkspaces().get(0)!!.withWorkspaceId(workspaceId))

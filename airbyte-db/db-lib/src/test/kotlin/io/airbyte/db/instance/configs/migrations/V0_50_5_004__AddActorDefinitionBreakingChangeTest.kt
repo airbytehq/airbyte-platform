@@ -41,7 +41,6 @@ internal class V0_50_5_004__AddActorDefinitionBreakingChangeTest : AbstractConfi
   }
 
   @Test
-  @Throws(SQLException::class, IOException::class)
   fun test() {
     val context = dslContext!!
     createBreakingChangesTable(context)

@@ -43,7 +43,6 @@ internal class OrganizationPersistenceTest : BaseConfigDatabaseTest() {
   private lateinit var dataplaneGroupService: DataplaneGroupService
 
   @BeforeEach
-  @Throws(Exception::class)
   fun beforeEach() {
     userPersistence = UserPersistence(database)
     organizationPersistence = OrganizationPersistence(database)
@@ -82,7 +81,6 @@ internal class OrganizationPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun createOrganization() {
     val organization =
       Organization()
@@ -97,7 +95,6 @@ internal class OrganizationPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun createSsoConfig() {
     val org =
       Organization()
@@ -118,7 +115,6 @@ internal class OrganizationPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun getOrganization() {
     val result = organizationPersistence.getOrganization(MockData.ORGANIZATION_ID_1)
     Assertions.assertTrue(result.isPresent())
@@ -128,14 +124,12 @@ internal class OrganizationPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun getOrganization_notExist() {
     val result = organizationPersistence.getOrganization(UUID.randomUUID())
     Assertions.assertFalse(result.isPresent())
   }
 
   @Test
-  @Throws(IOException::class, JsonValidationException::class)
   fun getOrganizationByWorkspaceId() {
     // write a workspace that belongs to org 1
     val workspace = MockData.standardWorkspaces().get(0)!!
@@ -148,7 +142,6 @@ internal class OrganizationPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun getSsoConfigForOrganization() {
     val result = organizationPersistence.getSsoConfigForOrganization(MockData.ORGANIZATION_ID_1)
     Assertions.assertTrue(result.isPresent())
@@ -156,7 +149,6 @@ internal class OrganizationPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun getSsoConfigByRealmName() {
     val ssoConfig = MockData.ssoConfigs().get(0)!!
     val result = organizationPersistence.getSsoConfigByRealmName(ssoConfig.getKeycloakRealm())
@@ -165,7 +157,6 @@ internal class OrganizationPersistenceTest : BaseConfigDatabaseTest() {
   }
 
   @Test
-  @Throws(Exception::class)
   fun updateOrganization() {
     val updatedOrganization = MockData.organizations().get(0)!!
 
@@ -190,7 +181,6 @@ internal class OrganizationPersistenceTest : BaseConfigDatabaseTest() {
     "false, true",
     "true, true",
   )
-  @Throws(Exception::class)
   fun testListOrganizationsByUserId(
     withKeywordSearch: Boolean,
     withPagination: Boolean,
@@ -297,7 +287,6 @@ internal class OrganizationPersistenceTest : BaseConfigDatabaseTest() {
     "false, true",
     "true, true",
   )
-  @Throws(Exception::class)
   fun testListOrganizationsByUserIdForInstanceAdmin(
     withKeywordSearch: Boolean,
     withPagination: Boolean,
@@ -423,7 +412,6 @@ internal class OrganizationPersistenceTest : BaseConfigDatabaseTest() {
     "false, true",
     "true, true",
   )
-  @Throws(Exception::class)
   fun testListOrganizationsByUserIdWithTombstoneFiltering(
     withPagination: Boolean,
     isInstanceAdmin: Boolean,

@@ -104,7 +104,6 @@ open class UserHandler
      * @throws IOException if unable to get the user.
      * @throws JsonValidationException if unable to get the user.
      */
-    @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class)
     fun getUser(userIdRequestBody: UserIdRequestBody): UserRead = buildUserRead(userIdRequestBody.userId)
 
     /**
@@ -114,7 +113,6 @@ open class UserHandler
      * @return The user associated with the auth ID.
      * @throws IOException if unable to retrieve the user.
      */
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun getUserByAuthId(userAuthIdRequestBody: UserAuthIdRequestBody): UserRead {
       val user = userPersistence.getUserByAuthId(userAuthIdRequestBody.authUserId)
       if (user.isPresent) {
@@ -131,7 +129,6 @@ open class UserHandler
      * @return The user associated with the email.
      * @throws IOException if unable to retrieve the user.
      */
-    @Throws(IOException::class, ConfigNotFoundException::class)
     fun getUserByEmail(userEmailRequestBody: UserEmailRequestBody): UserRead {
       val user = userPersistence.getUserByEmail(userEmailRequestBody.email)
       if (user.isPresent) {
@@ -141,7 +138,6 @@ open class UserHandler
       }
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class)
     private fun buildUserRead(userId: UUID): UserRead {
       val user = userPersistence.getUser(userId)
       if (user.isEmpty) {
@@ -171,7 +167,6 @@ open class UserHandler
      * @throws IOException If user update was not successful.
      * @throws JsonValidationException If input json was not expected.
      */
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun updateUser(userUpdate: UserUpdate): UserRead {
       val userRead = getUser(UserIdRequestBody().userId(userUpdate.userId))
 
@@ -237,13 +232,11 @@ open class UserHandler
      * @throws IOException if unable to delete the user.
      * @throws ConfigNotFoundException if unable to delete the user.
      */
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     fun deleteUser(userIdRequestBody: UserIdRequestBody) {
       val userRead = getUser(userIdRequestBody)
       deleteUser(userRead)
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class, JsonValidationException::class)
     private fun deleteUser(userRead: UserRead) {
       val userUpdate =
         UserUpdate()
@@ -255,21 +248,18 @@ open class UserHandler
       updateUser(userUpdate)
     }
 
-    @Throws(IOException::class)
     fun listUsersInOrganization(organizationIdRequestBody: OrganizationIdRequestBody): OrganizationUserReadList {
       val organizationId = organizationIdRequestBody.organizationId
       val userPermissions = permissionHandler.listUsersInOrganization(organizationId)
       return buildOrganizationUserReadList(userPermissions, organizationId)
     }
 
-    @Throws(IOException::class)
     fun listAccessInfoByWorkspaceId(workspaceIdRequestBody: WorkspaceIdRequestBody): WorkspaceUserAccessInfoReadList {
       val workspaceId = workspaceIdRequestBody.workspaceId
       val userAccessInfo = userPersistence.listWorkspaceUserAccessInfo(workspaceId)
       return buildWorkspaceUserAccessInfoReadList(userAccessInfo)
     }
 
-    @Throws(IOException::class)
     fun listInstanceAdminUsers(): UserWithPermissionInfoReadList {
       val userPermissions = permissionHandler.listInstanceAdminUsers()
       return UserWithPermissionInfoReadList().users(
@@ -285,7 +275,6 @@ open class UserHandler
       )
     }
 
-    @Throws(IOException::class)
     private fun isAllowedDomain(email: String): Boolean {
       if (!featureFlagClient.boolVariation(
           RestrictLoginsForSSODomains,
@@ -309,7 +298,6 @@ open class UserHandler
           .anyMatch { orgEmailDomain: OrganizationEmailDomain -> orgEmailDomain.organizationId == currentSSOOrg.get().organizationId }
     }
 
-    @Throws(IOException::class)
     private fun getExistingUserRealms(userId: UUID): List<String?> {
       val keycloakAuthUsers =
         userPersistence
@@ -327,7 +315,6 @@ open class UserHandler
         .toList()
     }
 
-    @Throws(IOException::class)
     private fun isAnyRealmSSO(realms: List<String?>): Boolean {
       for (realm in realms) {
         val ssoConfig = organizationPersistence.getSsoConfigByRealmName(realm)
@@ -339,7 +326,6 @@ open class UserHandler
       return false
     }
 
-    @Throws(IOException::class)
     private fun handleSSORestrictions(
       incomingJwtUser: AuthenticatedUser,
       authUserExists: Boolean,
@@ -358,12 +344,6 @@ open class UserHandler
       }
     }
 
-    @Throws(
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      IOException::class,
-      PermissionRedundantException::class,
-    )
     private fun handleNewUserLogin(incomingJwtUser: AuthenticatedUser): UserGetOrCreateByAuthIdResponse {
       val createdUser = createUserFromIncomingUser(incomingJwtUser)
       handleUserPermissionsAndWorkspace(createdUser)
@@ -388,7 +368,6 @@ open class UserHandler
         ).newUserCreated(true)
     }
 
-    @Throws(IOException::class, ConfigNotFoundException::class)
     private fun handleRelinkAuthUser(
       existingUser: User,
       incomingJwtUser: AuthenticatedUser,
@@ -414,12 +393,6 @@ open class UserHandler
         ).newUserCreated(false)
     }
 
-    @Throws(
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      IOException::class,
-      PermissionRedundantException::class,
-    )
     private fun handleFirstTimeSSOLogin(
       existingUser: User,
       incomingJwtUser: AuthenticatedUser,
@@ -477,12 +450,6 @@ open class UserHandler
         ).newUserCreated(false)
     }
 
-    @Throws(
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      IOException::class,
-      PermissionRedundantException::class,
-    )
     fun getOrCreateUserByAuthId(userAuthIdRequestBody: UserAuthIdRequestBody): UserGetOrCreateByAuthIdResponse {
       val incomingJwtUser = resolveIncomingJwtUser(userAuthIdRequestBody)
       val existingAuthUser = userPersistence.getUserByAuthId(userAuthIdRequestBody.authUserId)
@@ -547,7 +514,6 @@ open class UserHandler
       return userAuthenticationResolver.resolveUser(authUserId)
     }
 
-    @Throws(ConfigNotFoundException::class, IOException::class)
     private fun createUserFromIncomingUser(incomingUser: AuthenticatedUser): UserRead {
       val userId = uuidGenerator.get()
       val user = incomingUser.withUserId(userId)
@@ -566,12 +532,6 @@ open class UserHandler
       return buildUserRead(userId)
     }
 
-    @Throws(
-      IOException::class,
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      PermissionRedundantException::class,
-    )
     private fun handleUserPermissionsAndWorkspace(createdUser: UserRead) {
       createInstanceAdminPermissionIfInitialUser(createdUser)
       val ssoOrg = ssoOrganizationIfExists
@@ -584,12 +544,6 @@ open class UserHandler
       }
     }
 
-    @Throws(
-      IOException::class,
-      JsonValidationException::class,
-      ConfigNotFoundException::class,
-      PermissionRedundantException::class,
-    )
     private fun handleSsoUser(
       user: UserRead,
       organization: Organization,
@@ -632,7 +586,6 @@ open class UserHandler
       }
     }
 
-    @Throws(JsonValidationException::class, IOException::class, ConfigNotFoundException::class)
     protected fun createDefaultWorkspaceForUser(
       user: UserRead,
       organization: Optional<Organization>,
@@ -677,7 +630,6 @@ open class UserHandler
         return organizationPersistence.getOrganizationBySsoConfigRealm(authRealm)
       }
 
-    @Throws(IOException::class, JsonValidationException::class, PermissionRedundantException::class)
     private fun createPermissionForUserAndOrg(
       userId: UUID,
       orgId: UUID,

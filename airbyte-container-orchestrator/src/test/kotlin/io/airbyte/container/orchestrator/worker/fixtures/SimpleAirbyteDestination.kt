@@ -22,21 +22,18 @@ internal class SimpleAirbyteDestination : AirbyteDestination {
   @Volatile
   private var finished = false
 
-  @Throws(Exception::class)
   override fun start(
     destinationConfig: WorkerDestinationConfig,
     jobRoot: Path,
   ) {
   }
 
-  @Throws(Exception::class)
   override fun accept(message: AirbyteMessage) {
     if (message.type == AirbyteMessage.Type.STATE) {
       messages.put(message)
     }
   }
 
-  @Throws(Exception::class)
   override fun notifyEndOfInput() {
     finished = true
   }
@@ -54,11 +51,9 @@ internal class SimpleAirbyteDestination : AirbyteDestination {
     return Optional.ofNullable<AirbyteMessage>(messages.poll())
   }
 
-  @Throws(Exception::class)
   override fun close() {
   }
 
-  @Throws(Exception::class)
   override fun cancel() {
   }
 }

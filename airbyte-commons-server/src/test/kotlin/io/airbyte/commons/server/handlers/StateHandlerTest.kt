@@ -49,7 +49,6 @@ internal class StateHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetCurrentStateEmpty() {
     whenever<Optional<StateWrapper>?>(statePersistence.getCurrentState(CONNECTION_ID)).thenReturn(Optional.empty<StateWrapper>())
 
@@ -59,7 +58,6 @@ internal class StateHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetLegacyState() {
     whenever<Optional<StateWrapper>?>(statePersistence.getCurrentState(CONNECTION_ID)).thenReturn(
       Optional.of(
@@ -80,7 +78,6 @@ internal class StateHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetGlobalState() {
     whenever<Optional<StateWrapper>?>(statePersistence.getCurrentState(CONNECTION_ID)).thenReturn(
       Optional.of<StateWrapper>(
@@ -119,7 +116,6 @@ internal class StateHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetStreamState() {
     whenever<Optional<StateWrapper>?>(statePersistence.getCurrentState(CONNECTION_ID)).thenReturn(
       Optional.of<StateWrapper>(
@@ -189,7 +185,6 @@ internal class StateHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testCreateOrUpdateState() {
     val input =
       ConnectionStateCreateOrUpdate()
@@ -203,7 +198,6 @@ internal class StateHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testCreateOrUpdateStateSafe() {
     val input =
       ConnectionStateCreateOrUpdate()
@@ -218,7 +212,6 @@ internal class StateHandlerTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun testCreateOrUpdateStateSafeThrowsWhenSyncRunning() {
     val input =
       ConnectionStateCreateOrUpdate()

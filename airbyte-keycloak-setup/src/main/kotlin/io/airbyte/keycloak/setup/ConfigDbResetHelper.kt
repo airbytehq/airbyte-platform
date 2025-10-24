@@ -21,7 +21,6 @@ import java.sql.SQLException
 class ConfigDbResetHelper(
   @param:Named("configDatabase") private val configDb: Database,
 ) {
-  @Throws(SQLException::class)
   fun deleteConfigDbUsers() {
     // DO NOT REMOVE THIS CRITICAL CHECK.
     throwIfMultipleOrganizations()
@@ -48,7 +47,6 @@ class ConfigDbResetHelper(
    * check is an extra layer of protection in case this code were somehow run in a multi-org
    * environment like Airbyte Cloud or any future multi-org setup.
    */
-  @Throws(SQLException::class)
   private fun throwIfMultipleOrganizations() {
     val orgCount = configDb.query { ctx: DSLContext -> ctx.fetchCount(Tables.ORGANIZATION) }
     val orgLimit = 1

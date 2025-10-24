@@ -71,7 +71,6 @@ class DefaultJobCreator(
   private val streamRefreshesRepository: StreamRefreshesRepository,
   @param:Nullable private val variantOverride: String?,
 ) : JobCreator {
-  @Throws(IOException::class)
   override fun createSyncJob(
     source: SourceConnection,
     destination: DestinationConnection,
@@ -123,7 +122,6 @@ class DefaultJobCreator(
     return jobPersistence.enqueueJob(standardSync.connectionId.toString(), jobConfig, isScheduled)
   }
 
-  @Throws(IOException::class)
   override fun createRefreshConnection(
     source: SourceConnection,
     destination: DestinationConnection,
@@ -217,7 +215,6 @@ class DefaultJobCreator(
       .collect(Collectors.toSet())
   }
 
-  @Throws(IOException::class)
   override fun createResetConnectionJob(
     destination: DestinationConnection,
     standardSync: StandardSync,

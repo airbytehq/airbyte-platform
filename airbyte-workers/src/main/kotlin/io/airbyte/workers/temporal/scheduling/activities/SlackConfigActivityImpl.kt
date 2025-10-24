@@ -20,7 +20,6 @@ import java.util.UUID
 class SlackConfigActivityImpl(
   private val airbyteApiClient: AirbyteApiClient,
 ) : SlackConfigActivity {
-  @Throws(IOException::class)
   override fun fetchSlackConfiguration(connectionId: UUID): Optional<SlackNotificationConfiguration> {
     val requestBody =
       ConnectionIdRequestBody(connectionId)

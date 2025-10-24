@@ -39,7 +39,6 @@ internal class V0_50_5_002__AddOrganizationColumnToWorkspaceTableTest : Abstract
   }
 
   @Test
-  @Throws(IOException::class, SQLException::class)
   fun test() {
     val context = dslContext!!
     Assertions.assertFalse(foreignKeyExists(context))

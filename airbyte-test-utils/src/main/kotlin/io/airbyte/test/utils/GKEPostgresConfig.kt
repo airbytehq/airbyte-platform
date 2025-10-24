@@ -64,7 +64,6 @@ internal object GKEPostgresConfig {
     )
 
   @JvmStatic
-  @Throws(SQLException::class, IOException::class)
   fun runSqlScript(
     scriptFilePath: Path,
     db: Database,

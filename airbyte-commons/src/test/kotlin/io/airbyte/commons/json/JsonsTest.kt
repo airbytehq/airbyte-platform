@@ -422,7 +422,6 @@ internal class JsonsTest {
    * alphabetical order.
    */
   @Test
-  @Throws(IOException::class)
   fun testCanonicalJsonSerialize() {
     val actorCatalog =
       CatalogHelpers.createAirbyteCatalog(

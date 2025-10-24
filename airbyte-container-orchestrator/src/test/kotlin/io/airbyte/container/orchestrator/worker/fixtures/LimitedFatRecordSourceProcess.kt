@@ -64,7 +64,6 @@ class LimitedFatRecordSourceProcess : Process() {
 
   override fun getErrorStream(): InputStream = PipedInputStream()
 
-  @Throws(InterruptedException::class)
   override fun waitFor(): Int {
     while (exitValue() != 0) {
       Thread.sleep((1000 * 10).toLong())

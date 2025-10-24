@@ -30,7 +30,6 @@ class LogClientManager(
    * @return last lines in file
    * @throws IOException exception while accessing logs
    */
-  @Throws(IOException::class)
   fun getJobLogFile(logPath: Path?): List<String> =
     when {
       logPath == null || logPath == EMPTY_PATH -> emptyList()

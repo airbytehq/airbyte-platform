@@ -33,7 +33,6 @@ internal class AirbyteCdkRequesterImplTest {
     requester = AirbyteCdkRequesterImpl(commandRunner)
   }
 
-  @Throws(Exception::class)
   fun testReadStreamSuccess(
     recordLimit: Int?,
     pageLimit: Int?,
@@ -108,7 +107,6 @@ internal class AirbyteCdkRequesterImplTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun whenReadStreamWithLimitsThenReturnAdaptedCommandRunnerResponse() {
     // If all test read limits are present, all are passed along in command config
     val configCaptor = testReadStreamSuccess(A_LIMIT, A_LIMIT, A_LIMIT)
@@ -131,7 +129,6 @@ internal class AirbyteCdkRequesterImplTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun whenReadStreamWithExcessiveLimitsThenThrowException() {
     Assertions.assertThrows(
       AirbyteCdkInvalidInputException::class.java,
@@ -163,14 +160,12 @@ internal class AirbyteCdkRequesterImplTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun whenReadStreamWithoutLimitThenReturnAdaptedCommandRunnerResponse() {
     val configCaptor = testReadStreamSuccess(null, null, null)
     assertRunCommandArgs(configCaptor, READ_STREAM_COMMAND, null, null, null)
   }
 
   @Test
-  @Throws(Exception::class)
   fun givenStreamIsNullWhenReadStreamThenThrowException() {
     Mockito
       .`when`(
@@ -198,7 +193,6 @@ internal class AirbyteCdkRequesterImplTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun whenStateIsNotNullAdaptStateConvertsItDirectlyToString() {
     val adaptedState = requester.adaptState(aState)
     Assertions.assertEquals(
@@ -212,13 +206,11 @@ internal class AirbyteCdkRequesterImplTest {
   }
 
   @Test
-  @Throws(IOException::class)
   fun whenStateIsNullAdaptStateReturnsAnEmptyArray() {
     val adaptedState = requester.adaptState(null)
     Assertions.assertEquals("[ ]", adaptedState)
   }
 
-  @Throws(Exception::class)
   fun assertRunCommandArgs(
     configCaptor: org.mockito.kotlin.KArgumentCaptor<String?>,
     command: String?,
@@ -233,7 +225,6 @@ internal class AirbyteCdkRequesterImplTest {
     Assertions.assertEquals(config, ObjectMapper().readTree(configCaptor.firstValue))
   }
 
-  @Throws(Exception::class)
   fun assertRunCommandArgs(
     configCaptor: KArgumentCaptor<String>,
     command: String?,

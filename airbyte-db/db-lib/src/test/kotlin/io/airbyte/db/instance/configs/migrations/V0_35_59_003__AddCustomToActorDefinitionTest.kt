@@ -20,7 +20,6 @@ import java.util.UUID
 @Disabled
 internal class V0_35_59_003__AddCustomToActorDefinitionTest : AbstractConfigsDatabaseTest() {
   @Test
-  @Throws(SQLException::class, IOException::class)
   fun test() {
     val context = dslContext!!
 

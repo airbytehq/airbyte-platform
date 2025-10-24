@@ -57,7 +57,6 @@ class ActorDefinitionsHandler(
    * @return ActorDefinitionCreateResponse with requestId
    * @throws IOException if there is an error creating the definition
    */
-  @Throws(IOException::class)
   fun createActorDefinition(actorDefinitionCreateRequest: ActorDefinitionCreateRequest): ActorDefinitionCreateResponse {
     val requestId = UUID.randomUUID().toString()
 
@@ -97,7 +96,6 @@ class ActorDefinitionsHandler(
    * @return ActorDefinitionUpdateResponse with requestId
    * @throws IOException if there is an error updating the definition
    */
-  @Throws(IOException::class)
   fun updateActorDefinition(actorDefinitionUpdateRequest: ActorDefinitionUpdateRequest): ActorDefinitionUpdateResponse {
     actorDefinitionHandlerHelper.validateVersionSupport(
       actorDefinitionId = actorDefinitionUpdateRequest.actorDefinitionId,

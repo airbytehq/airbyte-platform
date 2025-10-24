@@ -226,7 +226,6 @@ open class JobsHandler(
    * @param connectionId - the connection id.
    * @throws IOException - exception.
    */
-  @Throws(IOException::class)
   fun failNonTerminalJobs(connectionId: UUID) {
     jobCreationAndStatusUpdateHelper.failNonTerminalJobs(connectionId)
   }
@@ -234,7 +233,6 @@ open class JobsHandler(
   /**
    * Report a job as started.
    */
-  @Throws(IOException::class)
   fun reportJobStart(jobId: Long): InternalOperationResult {
     jobCreationAndStatusUpdateHelper.reportJobStart(jobId)
     return InternalOperationResult().succeeded(true)
@@ -248,7 +246,6 @@ open class JobsHandler(
    * @return - the result of the operation.
    * @throws IOException - exception.
    */
-  @Throws(IOException::class)
   fun didPreviousJobSucceed(
     connectionId: UUID,
     jobId: Long,

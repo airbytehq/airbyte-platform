@@ -19,6 +19,5 @@ interface ActorDefinitionAccessValidator {
    * @throws ApplicationErrorKnownException if the user does not have write access to the actor
    * definition
    */
-  @Throws(ApplicationErrorKnownException::class)
   fun validateWriteAccess(actorDefinitionId: UUID)
 }

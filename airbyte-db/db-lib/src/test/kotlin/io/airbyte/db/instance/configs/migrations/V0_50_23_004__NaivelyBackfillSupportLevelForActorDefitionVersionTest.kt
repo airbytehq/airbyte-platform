@@ -40,7 +40,6 @@ internal class V0_50_23_004__NaivelyBackfillSupportLevelForActorDefitionVersionT
   }
 
   @Test
-  @Throws(Exception::class)
   fun testBackfillSupportLevel() {
     val ctx = dslContext!!
 

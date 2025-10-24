@@ -62,7 +62,6 @@ class ConnectionManagerUtils(
    * @return the healthy connection manager workflow that was signaled
    * @throws DeletedWorkflowException if the connection manager workflow was deleted
    */
-  @Throws(DeletedWorkflowException::class)
   fun signalWorkflowAndRepairIfNecessary(
     connectionId: UUID,
     signalMethod: Function<ConnectionManagerWorkflow, Functions.Proc>,
@@ -73,7 +72,6 @@ class ConnectionManagerUtils(
   // Keeping this private and only exposing the above methods outside this class provides a strict
   // type enforcement for external calls, and means this method can assume consistent type
   // implementations for both cases.
-  @Throws(DeletedWorkflowException::class)
   private fun <T> signalWorkflowAndRepairIfNecessary(
     connectionId: UUID,
     signalMethod: Function<ConnectionManagerWorkflow, out TemporalFunctionalInterfaceMarker>,
@@ -186,7 +184,6 @@ class ConnectionManagerUtils(
    * @throws DeletedWorkflowException if the workflow was deleted, according to the workflow state
    * @throws UnreachableWorkflowException if the workflow is in an unreachable state
    */
-  @Throws(DeletedWorkflowException::class, UnreachableWorkflowException::class)
   fun getConnectionManagerWorkflow(connectionId: UUID): ConnectionManagerWorkflow {
     val connectionManagerWorkflow: ConnectionManagerWorkflow
     val workflowState: WorkflowState

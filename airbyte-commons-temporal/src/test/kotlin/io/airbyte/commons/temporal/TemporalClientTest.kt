@@ -82,7 +82,6 @@ class TemporalClientTest {
   private lateinit var workspaceRoot: Path
 
   @BeforeEach
-  @Throws(IOException::class)
   fun setup() {
     workspaceRoot = Files.createTempDirectory(Path.of("/tmp"), "temporal_client_test")
     logPath = workspaceRoot.resolve(JOB_ID.toString()).resolve(ATTEMPT_ID.toString()).resolve(DEFAULT_LOG_FILENAME)
@@ -199,7 +198,7 @@ class TemporalClientTest {
     @Test
     fun testExecuteWithException() {
       val supplier = Mockito.mock(Supplier::class.java) as Supplier<String>
-      Mockito.`when`(supplier.get()).thenThrow(IllegalStateException::class.java)
+      Mockito.`when`(supplier.get()).thenAnswer { throw IllegalStateException() }
 
       val response = temporalClient.execute<String>(JOB_RUN_CONFIG, supplier)
 
@@ -405,7 +404,7 @@ class TemporalClientTest {
     fun testUpdateConnectionInUnexpectedState() {
       val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
 
-      Mockito.`when`(mConnectionManagerWorkflow.getState()).thenThrow(IllegalStateException(EXCEPTION_MESSAGE))
+      Mockito.`when`(mConnectionManagerWorkflow.getState()).thenAnswer { throw IllegalStateException(EXCEPTION_MESSAGE) }
       Mockito
         .`when`(
           workflowClient.newWorkflowStub(
@@ -498,7 +497,7 @@ class TemporalClientTest {
       val mTerminatedConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
 
       // This simulates a workflow that is in a bad state.
-      Mockito.`when`(mTerminatedConnectionManagerWorkflow.getState()).thenThrow(IllegalStateException(EXCEPTION_MESSAGE))
+      Mockito.`when`(mTerminatedConnectionManagerWorkflow.getState()).thenAnswer { throw IllegalStateException(EXCEPTION_MESSAGE) }
       Mockito.`when`(mTerminatedConnectionManagerWorkflow.getJobInformation()).thenReturn(JobInformation(JOB_ID, ATTEMPT_ID))
 
       val mNewConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
@@ -594,7 +593,7 @@ class TemporalClientTest {
       val mTerminatedConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
       Mockito
         .`when`(mTerminatedConnectionManagerWorkflow.getState())
-        .thenThrow(IllegalStateException(EXCEPTION_MESSAGE))
+        .thenAnswer { throw IllegalStateException(EXCEPTION_MESSAGE) }
       Mockito.`when`(mTerminatedConnectionManagerWorkflow.getJobInformation()).thenReturn(JobInformation(JOB_ID, ATTEMPT_ID))
 
       val mNewConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
@@ -663,7 +662,6 @@ class TemporalClientTest {
   internal inner class RefreshConnection {
     @Test
     @DisplayName("Test refreshConnectionAsync saves the stream to refresh and signals workflow")
-    @Throws(DeletedWorkflowException::class)
     fun testRefreshConnectionAsyncHappyPath() {
       val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
       val mWorkflowState = Mockito.mock(WorkflowState::class.java)
@@ -708,7 +706,6 @@ class TemporalClientTest {
   internal inner class ResetConnection {
     @Test
     @DisplayName("Test resetConnection successful")
-    @Throws(IOException::class)
     fun testResetConnectionSuccess() {
       val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
       val mWorkflowState = Mockito.mock(WorkflowState::class.java)
@@ -742,12 +739,11 @@ class TemporalClientTest {
 
     @Test
     @DisplayName("Test resetConnection repairs the workflow if it is in a bad state")
-    @Throws(IOException::class)
     fun testResetConnectionRepairsBadWorkflowState() {
       val mTerminatedConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
 
       // This simulates a workflow that is in a bad state.
-      Mockito.`when`(mTerminatedConnectionManagerWorkflow.getState()).thenThrow(IllegalStateException(EXCEPTION_MESSAGE))
+      Mockito.`when`(mTerminatedConnectionManagerWorkflow.getState()).thenAnswer { throw IllegalStateException(EXCEPTION_MESSAGE) }
       Mockito.`when`(mTerminatedConnectionManagerWorkflow.getJobInformation()).thenReturn(JobInformation(JOB_ID, ATTEMPT_ID))
 
       val mNewConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
@@ -800,7 +796,6 @@ class TemporalClientTest {
 
     @Test
     @DisplayName("Test resetConnection returns a failure reason when connection is deleted")
-    @Throws(IOException::class)
     fun testResetConnectionDeletedWorkflow() {
       val mConnectionManagerWorkflow = Mockito.mock(ConnectionManagerWorkflow::class.java)
       val mWorkflowState = Mockito.mock(WorkflowState::class.java)

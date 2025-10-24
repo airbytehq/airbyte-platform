@@ -64,7 +64,6 @@ internal class ActorDefinitionBreakingChangePersistenceTest : BaseConfigDatabase
   private lateinit var destinationService: DestinationService
 
   @BeforeEach
-  @Throws(SQLException::class, JsonValidationException::class, IOException::class)
   fun setup() {
     truncateAllTables()
 
@@ -129,7 +128,6 @@ internal class ActorDefinitionBreakingChangePersistenceTest : BaseConfigDatabase
   }
 
   @Test
-  @Throws(IOException::class)
   fun testGetBreakingChanges() {
     val breakingChangesForDef1: List<ActorDefinitionBreakingChange> =
       actorDefinitionService.listBreakingChangesForActorDefinition(ACTOR_DEFINITION_ID_1)
@@ -143,7 +141,6 @@ internal class ActorDefinitionBreakingChangePersistenceTest : BaseConfigDatabase
   }
 
   @Test
-  @Throws(IOException::class)
   fun testUpdateActorDefinitionBreakingChange() {
     // Update breaking change
     val updatedBreakingChange =
@@ -176,7 +173,6 @@ internal class ActorDefinitionBreakingChangePersistenceTest : BaseConfigDatabase
   }
 
   @Test
-  @Throws(IOException::class)
   fun testListBreakingChanges() {
     val expectedAllBreakingChanges =
       listOf(
@@ -192,7 +188,6 @@ internal class ActorDefinitionBreakingChangePersistenceTest : BaseConfigDatabase
   }
 
   @Test
-  @Throws(IOException::class)
   fun testListBreakingChangesForVersion() {
     val adv400 = createActorDefVersion(ACTOR_DEFINITION_ID_1, "4.0.0")
     sourceService.writeConnectorMetadata(SOURCE_DEFINITION, adv400, emptyList())
