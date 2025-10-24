@@ -75,6 +75,8 @@ object DatabaseConstants {
 
   const val ORGANIZATION_EMAIL_DOMAIN_TABLE: String = "organization_email_domain"
 
+  const val ORGANIZATION_DOMAIN_VERIFICATION_TABLE: String = "organization_domain_verification"
+
   const val SSO_CONFIG_TABLE: String = "sso_config"
 
   const val ORGANIZATION_PAYMENT_CONFIG_TABLE: String = "organization_payment_config"

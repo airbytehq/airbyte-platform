@@ -490,6 +490,25 @@ create table "public"."organization" (
   "tombstone" boolean not null default false,
   constraint "organization_pkey" primary key ("id")
 );
+create table "public"."organization_domain_verification" (
+  "id" uuid not null,
+  "organization_id" uuid not null,
+  "domain" varchar(255) not null,
+  "verification_token" varchar(255),
+  "status" "public"."domain_verification_status" not null default cast('pending' as domain_verification_status),
+  "verification_method" "public"."domain_verification_method" not null default cast('dns_txt' as domain_verification_method),
+  "dns_record_name" varchar(512),
+  "dns_record_prefix" varchar(512),
+  "attempts" int not null default 0,
+  "last_checked_at" timestamp(6) with time zone,
+  "expires_at" timestamp(6) with time zone,
+  "created_by" uuid,
+  "verified_at" timestamp(6) with time zone,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "organization_domain_verification_pkey" primary key ("id"),
+  constraint "organization_domain_verification_organization_id_domain_key" unique ("organization_id", "domain")
+);
 create table "public"."organization_email_domain" (
   "id" uuid not null,
   "organization_id" uuid not null,
@@ -831,6 +850,10 @@ create unique index "name_unique_key" on "public"."orchestration_task"("orchestr
 create index "orchestration_task_run_orchestration_run_id_idx" on "public"."orchestration_task_run"("orchestration_run_id" asc);
 create index "orchestration_task_run_status_idx" on "public"."orchestration_task_run"("status" asc);
 create index "orchestration_task_run_task_id_idx" on "public"."orchestration_task_run"("task_id" asc);
+create index "idx_domain_verification_created_by" on "public"."organization_domain_verification"("created_by" asc);
+create index "idx_domain_verification_domain" on "public"."organization_domain_verification"("domain" asc);
+create index "idx_domain_verification_org" on "public"."organization_domain_verification"("organization_id" asc);
+create index "idx_domain_verification_status" on "public"."organization_domain_verification"("status" asc);
 create index "organization_email_domain_email_domain_idx" on "public"."organization_email_domain"("email_domain" asc);
 create index "organization_email_domain_organization_id_idx" on "public"."organization_email_domain"("organization_id" asc);
 create index "organization_payment_config_grace_period_end_at_idx" on "public"."organization_payment_config"("grace_period_end_at" asc);
@@ -921,6 +944,8 @@ alter table "public"."orchestration" add constraint "orchestration_workspace_id_
 alter table "public"."orchestration_run" add constraint "orchestration_run_orchestration_id_orchestration_version_i_fkey" foreign key ("orchestration_id", "orchestration_version_id") references "public"."orchestration" ("id", "version_id");
 alter table "public"."orchestration_task" add constraint "orchestration_task_orchestration_id_orchestration_version__fkey" foreign key ("orchestration_id", "orchestration_version_id") references "public"."orchestration" ("id", "version_id");
 alter table "public"."orchestration_task_run" add constraint "orchestration_task_run_orchestration_run_id_fkey" foreign key ("orchestration_run_id") references "public"."orchestration_run" ("id");
+alter table "public"."organization_domain_verification" add constraint "organization_domain_verification_created_by_fkey" foreign key ("created_by") references "public"."user" ("id");
+alter table "public"."organization_domain_verification" add constraint "organization_domain_verification_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."organization_email_domain" add constraint "organization_email_domain_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."organization_payment_config" add constraint "organization_payment_config_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."partial_user_config" add constraint "partial_user_config_actor_id_fkey" foreign key ("actor_id") references "public"."actor" ("id");

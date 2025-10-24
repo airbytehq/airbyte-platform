@@ -156,6 +156,7 @@ open class BaseConfigDatabaseTest {
               orchestration_run,
               orchestration_task_run,
               organization,
+              organization_domain_verification,
               organization_email_domain,
               organization_payment_config,
               partial_user_config,
