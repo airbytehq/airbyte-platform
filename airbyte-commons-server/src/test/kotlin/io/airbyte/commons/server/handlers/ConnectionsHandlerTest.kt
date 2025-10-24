@@ -117,6 +117,7 @@ import io.airbyte.commons.server.helpers.ConnectionHelpers.generateExpectedConne
 import io.airbyte.commons.server.helpers.ConnectionHelpers.generateMultipleStreamsApiCatalog
 import io.airbyte.commons.server.helpers.ConnectionHelpers.generateMultipleStreamsConfiguredAirbyteCatalog
 import io.airbyte.commons.server.scheduler.EventRunner
+import io.airbyte.commons.server.services.CatalogDiffService
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.commons.server.validation.CatalogValidator
 import io.airbyte.commons.server.validation.ValidationError
@@ -314,6 +315,7 @@ internal class ConnectionsHandlerTest {
   private lateinit var catalogService: CatalogService
   private lateinit var connectionService: ConnectionService
   private lateinit var destinationCatalogGenerator: DestinationCatalogGenerator
+  private lateinit var catalogDiffService: CatalogDiffService
   private lateinit var connectionSchedulerHelper: ConnectionScheduleHelper
   private lateinit var licenseEntitlementChecker: LicenseEntitlementChecker
   private lateinit var connectorConfigEntitlementService: ConnectorConfigEntitlementService
@@ -480,6 +482,12 @@ internal class ConnectionsHandlerTest {
     catalogValidator = mock()
     notificationHelper = mock()
     destinationCatalogGenerator = mock()
+    catalogDiffService =
+      CatalogDiffService(
+        catalogService,
+        connectionService,
+        applySchemaChangeHelper,
+      )
 
     connectionSchedulerHelper =
       ConnectionScheduleHelper(
@@ -524,6 +532,7 @@ internal class ConnectionsHandlerTest {
         metricClient,
         licenseEntitlementChecker,
         contextBuilder,
+        catalogDiffService,
       )
 
     destinationHandler =

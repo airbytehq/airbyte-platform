@@ -117,6 +117,7 @@ import io.airbyte.commons.server.handlers.helpers.PaginationHelper.pageSize
 import io.airbyte.commons.server.handlers.helpers.PaginationHelper.rowOffset
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper.getJobIdToJobWithAttemptsReadMap
 import io.airbyte.commons.server.scheduler.EventRunner
+import io.airbyte.commons.server.services.CatalogDiffService
 import io.airbyte.commons.server.services.DestinationDiscoverService.Companion.actorCatalogToDestinationCatalog
 import io.airbyte.commons.server.validation.CatalogValidator
 import io.airbyte.config.ActorCatalogWithUpdatedAt
@@ -247,6 +248,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     private val metricClient: MetricClient,
     private val licenseEntitlementChecker: LicenseEntitlementChecker,
     private val contextBuilder: ContextBuilder,
+    private val catalogDiffService: CatalogDiffService,
   ) {
     private val maxJobLookback = 10
 
@@ -1271,14 +1273,10 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       configuredCatalog: ConfiguredAirbyteCatalog,
       connectionId: UUID?,
     ): CatalogDiff =
-      CatalogDiff().transforms(
-        getCatalogDiff(
-          configuredCatalogToCatalog(catalogConverter.toProtocolKeepAllStreams(oldCatalog)),
-          configuredCatalogToCatalog(catalogConverter.toProtocolKeepAllStreams(newCatalog)),
-          configuredCatalog,
-        ).stream()
-          .map<StreamTransform> { obj: io.airbyte.commons.protocol.transformmodels.StreamTransform -> streamTransformToApi(obj) }
-          .toList(),
+      catalogDiffService.computeDiff(
+        catalogConverter.toProtocol(oldCatalog),
+        catalogConverter.toProtocol(newCatalog),
+        configuredCatalog,
       )
 
     @Throws(JsonValidationException::class, ConfigNotFoundException::class, IOException::class, ConfigNotFoundException::class)

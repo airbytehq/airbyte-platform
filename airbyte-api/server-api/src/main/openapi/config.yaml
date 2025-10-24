@@ -57,6 +57,8 @@ tags:
     description: Destination related resources.
   - name: connection
     description: Connection between sources and destinations.
+  - name: catalog
+    description: Catalog related resources.
   - name: destination_oauth
     description: Source OAuth related resources to delegate access from user.
   - name: source_oauth
@@ -6621,6 +6623,55 @@ paths:
       responses:
         "204":
           description: Successful operation
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/catalogs/diff:
+    post:
+      tags:
+        - catalog
+      summary: Compute the diff between two catalogs
+      operationId: diffCatalogs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: DiffCatalogsRequest
+              required:
+                - current_catalog_id
+                - new_catalog_id
+              properties:
+                current_catalog_id:
+                  type: string
+                  format: uuid
+                  description: The ID of the current catalog
+                new_catalog_id:
+                  type: string
+                  format: uuid
+                  description: The ID of the new catalog
+                connection_id:
+                  type: string
+                  format: uuid
+                  description: Optional connection ID for additional workspace validation and breaking change detection based on configured streams
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                title: DiffCatalogsResponse
+                required:
+                  - catalog_diff
+                  - schema_change
+                properties:
+                  catalog_diff:
+                    $ref: "#/components/schemas/CatalogDiff"
+                  schema_change:
+                    $ref: "#/components/schemas/SchemaChange"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 

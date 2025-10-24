@@ -444,6 +444,28 @@ class CatalogServiceJooqImpl
       return result
     }
 
+    /**
+     * Get actor (source) ID by catalog ID.
+     *
+     * @param actorCatalogId actor catalog id
+     * @return actor id that fetched this catalog
+     * @throws IOException - error while interacting with db
+     */
+    @Throws(IOException::class)
+    override fun getActorIdByCatalogId(actorCatalogId: UUID): Optional<UUID> {
+      val records =
+        database.query { ctx: DSLContext ->
+          ctx
+            .select(Tables.ACTOR_CATALOG_FETCH_EVENT.ACTOR_ID)
+            .from(Tables.ACTOR_CATALOG_FETCH_EVENT)
+            .where(Tables.ACTOR_CATALOG_FETCH_EVENT.ACTOR_CATALOG_ID.eq(actorCatalogId))
+            .orderBy(Tables.ACTOR_CATALOG_FETCH_EVENT.CREATED_AT.desc())
+            .limit(1)
+            .fetch()
+        }
+      return records.stream().findFirst().map { record: Record -> record.get(Tables.ACTOR_CATALOG_FETCH_EVENT.ACTOR_ID) }
+    }
+
     companion object {
       private val log = KotlinLogging.logger {}
     }

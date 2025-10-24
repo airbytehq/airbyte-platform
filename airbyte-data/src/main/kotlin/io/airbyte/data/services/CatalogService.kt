@@ -55,4 +55,7 @@ interface CatalogService {
 
   @Throws(IOException::class)
   fun getMostRecentActorCatalogFetchEventForSources(sourceIds: List<UUID>): Map<UUID, ActorCatalogFetchEvent>
+
+  @Throws(IOException::class)
+  fun getActorIdByCatalogId(actorCatalogId: UUID): Optional<UUID>
 }
