@@ -17,9 +17,10 @@ INSERT INTO users (name, email) VALUES
     ('Eve Adams', 'eve@example.com');
 
 -- Cities table
+-- Note: Deliberately WITHOUT a primary key to test user-defined PK selection in sync mode tests
 DROP TABLE IF EXISTS cities CASCADE;
 CREATE TABLE cities (
-    id SERIAL PRIMARY KEY,
+    id SERIAL,
     city VARCHAR(100),
     city_code VARCHAR(10),
     country VARCHAR(100),

@@ -19,6 +19,22 @@ const SYNC_MODE_STRINGS: Readonly<Record<SyncMode | DestinationSyncMode, string>
 };
 
 /**
+ * Navigates to the replication page for a specific connection
+ */
+export const navigateToReplicationPage = async (
+  page: Page,
+  workspaceId: string,
+  connectionId: string
+): Promise<void> => {
+  await page.goto(`/workspaces/${workspaceId}/connections/${connectionId}/replication`, {
+    timeout: 20000,
+  });
+
+  // Wait for the table to be visible to ensure page is fully loaded
+  return expect(page.locator('table[data-testid="sync-catalog-table"]')).toBeVisible({ timeout: 10000 });
+};
+
+/**
  * Schema change detection banner helpers
  */
 export const schemaChange = {
@@ -206,6 +222,22 @@ export const streamsTable = {
   },
 
   /**
+   * Clears the stream/field name filter input
+   */
+  clearFilterByStreamName: async (page: Page): Promise<void> => {
+    const searchInput = page.locator('input[data-testid="sync-catalog-search"]');
+    return searchInput.clear();
+  },
+
+  /**
+   * Checks if the filter input is enabled
+   */
+  isFilterInputEnabled: async (page: Page): Promise<boolean> => {
+    const searchInput = page.locator('input[data-testid="sync-catalog-search"]');
+    return searchInput.isEnabled();
+  },
+
+  /**
    * Selects a sync mode for a specific stream
    * This is complex as it requires expanding the stream row and interacting with dropdowns
    */
@@ -242,6 +274,219 @@ export const streamsTable = {
     const syncModeText = `${SYNC_MODE_STRINGS[syncMode]} | ${SYNC_MODE_STRINGS[destSyncMode]}`;
     await syncModeOptionsMenu.getByRole("option", { name: syncModeText, exact: true }).click({ force: true });
   },
+
+  // ============================================================================
+  // Namespace operations
+  // ============================================================================
+
+  /**
+   * Toggles the namespace checkbox to enable/disable all streams in the namespace
+   */
+  toggleNamespaceCheckbox: async (page: Page, enabled: boolean): Promise<void> => {
+    const namespaceCheckbox = page.locator('thead tr th input[data-testid="sync-namespace-checkbox"]');
+
+    const isCurrentlyChecked = await namespaceCheckbox.isChecked();
+    if (isCurrentlyChecked !== enabled) {
+      // Force click needed due to potential overlays
+      return namespaceCheckbox.click({ force: true, timeout: 10000 });
+    }
+  },
+
+  /**
+   * Checks if the namespace checkbox is enabled (clickable)
+   */
+  isNamespaceCheckboxEnabled: async (page: Page): Promise<boolean> => {
+    const namespaceCheckbox = page.locator('thead tr th input[data-testid="sync-namespace-checkbox"]');
+    return namespaceCheckbox.isEnabled();
+  },
+
+  /**
+   * Checks if the namespace checkbox is checked
+   */
+  isNamespaceCheckboxChecked: async (page: Page): Promise<boolean> => {
+    const namespaceCheckbox = page.locator('thead tr th input[data-testid="sync-namespace-checkbox"]');
+    return namespaceCheckbox.isChecked();
+  },
+
+  /**
+   * Checks if the namespace checkbox is in mixed/indeterminate state
+   */
+  isNamespaceCheckboxMixed: async (page: Page): Promise<boolean> => {
+    const namespaceCheckbox = page.locator('thead tr th input[data-testid="sync-namespace-checkbox"]');
+    const ariaChecked = await namespaceCheckbox.getAttribute("aria-checked");
+    return ariaChecked === "mixed";
+  },
+
+  /**
+   * Gets the namespace stream count text (e.g., "3 streams" or "1 / 3 streams")
+   */
+  getNamespaceStreamCount: async (page: Page): Promise<string> => {
+    const namespaceCell = page.locator("thead tr th").first();
+    const text = await namespaceCell.textContent();
+    return text || "";
+  },
+
+  /**
+   * Checks if the namespace cell is empty
+   */
+  isNamespaceCellEmpty: async (page: Page): Promise<boolean> => {
+    const namespaceCell = page.locator("thead tr th").first();
+    const text = await namespaceCell.textContent();
+    return text?.trim() === "" || false;
+  },
+
+  // ============================================================================
+  // Filter tab operations
+  // ============================================================================
+
+  /**
+   * Clicks a filter tab (all, enabledStreams, or disabledStreams)
+   */
+  clickFilterTab: async (page: Page, tab: "all" | "enabledStreams" | "disabledStreams"): Promise<void> => {
+    const tabId = {
+      all: "all-step",
+      enabledStreams: "enabledstreams-step",
+      disabledStreams: "disabledstreams-step",
+    }[tab];
+
+    const tabButton = page.locator(`button[data-id="${tabId}"]`);
+    return tabButton.click({ timeout: 10000 });
+  },
+
+  /**
+   * Checks if a filter tab is active (selected)
+   */
+  isFilterTabActive: async (page: Page, tab: "all" | "enabledStreams" | "disabledStreams"): Promise<boolean> => {
+    const tabId = {
+      all: "all-step",
+      enabledStreams: "enabledstreams-step",
+      disabledStreams: "disabledstreams-step",
+    }[tab];
+
+    const tabButton = page.locator(`button[data-id="${tabId}"]`);
+    const className = await tabButton.getAttribute("class");
+    return className?.includes("active") || false;
+  },
+
+  /**
+   * Checks if a filter tab is enabled (clickable)
+   */
+  isFilterTabEnabled: async (page: Page, tab: "all" | "enabledStreams" | "disabledStreams"): Promise<boolean> => {
+    const tabId = {
+      all: "all-step",
+      enabledStreams: "enabledstreams-step",
+      disabledStreams: "disabledstreams-step",
+    }[tab];
+
+    const tabButton = page.locator(`button[data-id="${tabId}"]`);
+    return tabButton.isEnabled();
+  },
+
+  // ============================================================================
+  // Save/discard operations
+  // ============================================================================
+
+  /**
+   * Clicks the save changes button
+   */
+  clickSaveChangesButton: async (page: Page): Promise<void> => {
+    const saveButton = page.locator('button[data-testid="save-edit-button"]');
+    return saveButton.click({ timeout: 10000 });
+  },
+
+  /**
+   * Clicks the discard changes button
+   */
+  clickDiscardChangesButton: async (page: Page): Promise<void> => {
+    const discardButton = page.locator('button[data-testid="cancel-edit-button"]');
+    return discardButton.click({ timeout: 10000 });
+  },
+
+  /**
+   * Checks if the save changes button is enabled
+   */
+  isSaveChangesButtonEnabled: async (page: Page): Promise<boolean> => {
+    const saveButton = page.locator('button[data-testid="save-edit-button"]');
+    return saveButton.isEnabled();
+  },
+
+  // ============================================================================
+  // Error state checks
+  // ============================================================================
+
+  /**
+   * Checks if the "no selected streams" error is displayed
+   */
+  hasNoStreamsSelectedError: async (page: Page): Promise<boolean> => {
+    const errorText = page.getByText("Select at least 1 stream to sync.");
+    return errorText.isVisible();
+  },
+
+  /**
+   * Checks if the "no streams" empty state message is displayed
+   */
+  hasNoStreamsMessage: async (page: Page): Promise<boolean> => {
+    const emptyStateText = page.locator('table[data-testid="sync-catalog-table"]').getByText("No streams");
+    return emptyStateText.isVisible();
+  },
+
+  /**
+   * Checks if the "no matching streams" message is displayed (when filter has no results)
+   */
+  hasNoMatchingStreamsMessage: async (page: Page): Promise<boolean> => {
+    const noMatchText = page.locator('table[data-testid="sync-catalog-table"]').getByText("No matching streams");
+    return noMatchText.isVisible();
+  },
+
+  // ============================================================================
+  // Refresh schema operations
+  // ============================================================================
+
+  /**
+   * Checks if the refresh schema button exists
+   */
+  refreshSchemaButtonExists: async (page: Page): Promise<boolean> => {
+    const button = page.locator('button[data-testid="refresh-schema-btn"]');
+    const count = await button.count();
+    return count > 0;
+  },
+
+  /**
+   * Checks if the refresh schema button is enabled
+   */
+  isRefreshSchemaButtonEnabled: async (page: Page): Promise<boolean> => {
+    const button = page.locator('button[data-testid="refresh-schema-btn"]');
+    return button.isEnabled();
+  },
+
+  // ============================================================================
+  // Expand/collapse all operations
+  // ============================================================================
+
+  /**
+   * Checks if the expand/collapse all streams button exists
+   */
+  expandCollapseAllStreamsButtonExists: async (page: Page): Promise<boolean> => {
+    const button = page.locator('button[data-testid="expand-collapse-all-streams-btn"]');
+    const count = await button.count();
+    return count > 0;
+  },
+
+  /**
+   * Clicks the expand/collapse all streams button
+   */
+  clickExpandCollapseAllStreamsButton: async (page: Page): Promise<void> => {
+    const button = page.locator('button[data-testid="expand-collapse-all-streams-btn"]');
+    return button.click({ timeout: 10000 });
+  },
+
+  /**
+   * Checks if the expand/collapse all streams button is enabled
+   */
+  isExpandCollapseAllStreamsButtonEnabled: async (page: Page): Promise<boolean> => {
+    const button = page.locator('button[data-testid="expand-collapse-all-streams-btn"]');
+    return button.isEnabled();
+  },
 };
 
 /**
@@ -249,8 +494,11 @@ export const streamsTable = {
  */
 export const replicationForm = {
   /**
-   * Saves changes on the replication page and handles the reset modal if it appears
-   * @param expectResetModal - whether to expect the reset data modal to appear
+   * Saves changes on the replication page and handles the reset/refresh modal if it appears
+   * @param expectResetModal - whether to expect the reset/refresh data modal to appear
+   *
+   * Note: The modal can be either a "refresh" modal or "reset" modal depending on the configuration.
+   * This handles both cases.
    */
   saveChanges: async (page: Page, expectResetModal: boolean = false): Promise<void> => {
     // Click the save button
@@ -258,17 +506,34 @@ export const replicationForm = {
     await saveButton.click();
 
     if (expectResetModal) {
-      // Wait for reset modal to appear
-      const resetModal = page.locator('[data-testid="resetModal"]');
-      await expect(resetModal).toBeVisible();
+      // Handle either refresh modal or reset modal (CI vs local differences)
+      const refreshModalSave = page.locator('[data-testid="refreshModal-save"]');
+      const resetModalSave = page.locator('[data-testid="resetModal-save"]');
 
-      // Select "Save without reset" option
-      const saveWithoutResetRadio = page.locator('[data-testid="radio-button-tile-shouldRefresh-saveWithoutRefresh"]');
-      await saveWithoutResetRadio.click();
+      // Wait for either modal to appear
+      let isRefreshModal = false;
+      try {
+        // Try refresh modal first
+        await refreshModalSave.waitFor({ state: "visible", timeout: 15000 });
+        isRefreshModal = true;
+      } catch {
+        // If refresh modal not found, try reset modal
+        await resetModalSave.waitFor({ state: "visible", timeout: 15000 });
+      }
 
-      // Click save button in modal
-      const modalSaveButton = page.locator('button[data-testid="refreshModal-save"]');
-      await modalSaveButton.click();
+      if (isRefreshModal) {
+        // Refresh modal: Select "Save without refresh" option
+        const saveWithoutRefreshRadio = page.locator(
+          '[data-testid="radio-button-tile-shouldRefresh-saveWithoutRefresh"]'
+        );
+        await saveWithoutRefreshRadio.click();
+        await refreshModalSave.click();
+      } else {
+        // Reset modal: Select "Save without reset" option
+        const saveWithoutResetRadio = page.locator('[data-testid="radio-button-tile-shouldClear-saveWithoutClear"]');
+        await saveWithoutResetRadio.click({ force: true });
+        await resetModalSave.click();
+      }
     }
 
     // Wait for success notification

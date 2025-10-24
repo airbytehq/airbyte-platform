@@ -266,12 +266,14 @@ export const dbHelpers = {
     return dbHelpers.runQuery(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
   },
 
-  /** Resets cities table to initial state (without state/country columns) */
+  /**
+   * Resets cities table to initial state (without state/country columns and without PK)
+   * This is needed because the setup script creates cities with state/country already present
+   * Note: Cities table deliberately has NO primary key to test user-defined PK selection
+   */
   resetCitiesToInitialState: async (schema: string = "public"): Promise<void> => {
     await dbHelpers.runQuery(`DROP TABLE IF EXISTS ${schema}.cities CASCADE`);
-    await dbHelpers.runQuery(
-      `CREATE TABLE ${schema}.cities (id SERIAL PRIMARY KEY, city VARCHAR(100), city_code VARCHAR(10))`
-    );
+    await dbHelpers.runQuery(`CREATE TABLE ${schema}.cities (id SERIAL, city VARCHAR(100), city_code VARCHAR(10))`);
     return dbHelpers.runQuery(
       `INSERT INTO ${schema}.cities (city, city_code) VALUES ('New York', 'NYC'), ('Los Angeles', 'LAX'), ('London', 'LON'), ('Tokyo', 'TYO'), ('Sydney', 'SYD')`
     );
