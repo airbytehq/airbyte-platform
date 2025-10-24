@@ -2119,10 +2119,20 @@ class DefaultJobPersistence
             if (record.get("attempt_sync_config", String::class.java) == null) {
               null
             } else {
-              Jsons.deserialize(
-                record.get("attempt_sync_config", String::class.java),
-                AttemptSyncConfig::class.java,
-              )
+              try {
+                Jsons.deserialize(
+                  record.get("attempt_sync_config", String::class.java),
+                  AttemptSyncConfig::class.java,
+                )
+              } catch (e: Exception) {
+                log.error(e) {
+                  "Failed to deserialize attempt_sync_config for job ${record.get(
+                    JOB_ID,
+                    Long::class.java,
+                  )} attempt ${record.get(ATTEMPT_NUMBER_FIELD, Int::class.javaPrimitiveType)}"
+                }
+                null
+              }
             },
             if (attemptOutputString == null) null else parseJobOutputFromString(attemptOutputString),
             record.get("attempt_status", String::class.java).toEnum<AttemptStatus>()!!,
