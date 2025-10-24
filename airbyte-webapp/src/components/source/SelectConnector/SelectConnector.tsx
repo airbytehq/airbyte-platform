@@ -168,7 +168,8 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
       }
     };
 
-    if ("isEnterprise" in definition) {
+    // show pro feature modal if the connector is enterprise or it's a stub of an enterprise connector
+    if ("isEnterprise" in definition || definition.enterprise === true) {
       await showProFeatureModalIfNeeded();
     }
 
