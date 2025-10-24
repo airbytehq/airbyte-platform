@@ -75,3 +75,8 @@ value class DataplaneId(
 value class DataplaneGroupId(
   val value: UUID,
 )
+
+@JvmInline
+value class GroupId(
+  val value: UUID,
+)
