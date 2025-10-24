@@ -6,6 +6,7 @@ package io.airbyte.server.services
 
 import io.airbyte.api.model.generated.AttemptRead
 import io.airbyte.api.model.generated.JobRead
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.config.Attempt
 import io.airbyte.config.JobConfig
@@ -307,11 +308,11 @@ class JobObservabilityService(
 
     // We look up jobs from this because we need the actorVersion to get details about the actual connectors we ran
     val job = jobPersistence.getJob(jobId)
-    val destVersion = actorDefinitionService.getActorDefinitionVersion(job.config.getDestinationVersionId())
-    val sourceVersion = job.config.getSourceVersionId()?.let { actorDefinitionService.getActorDefinitionVersion(it) }
+    val destVersion = actorDefinitionService.getActorDefinitionVersion(getDestinationDefinitionVersionId(job.config))
+    val sourceVersion = getSourceDefinitionVersionId(job.config)?.let { actorDefinitionService.getActorDefinitionVersion(it) }
     val durationSeconds = getDurationSecondsFromAttempts(job.attempts)
 
-    val workspaceId = job.config.getWorkspaceId()
+    val workspaceId = getWorkspaceId(job.config)
     val orgId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId).orElse(UUID_ZERO)
 
     return JobDetails(
@@ -354,20 +355,13 @@ class JobObservabilityService(
    */
   private fun getImageNames(jobId: Long): Pair<String, String> {
     val job = jobPersistence.getJob(jobId)
-    val sourceVersion = job.config.getSourceVersionId()?.let { actorDefinitionService.getActorDefinitionVersion(it) }
-    val destVersion = actorDefinitionService.getActorDefinitionVersion(job.config.getDestinationVersionId())
+    val sourceVersion = getSourceDefinitionVersionId(job.config)?.let { actorDefinitionService.getActorDefinitionVersion(it) }
+    val destVersion = actorDefinitionService.getActorDefinitionVersion(getDestinationDefinitionVersionId(job.config))
     return Pair(
       sourceVersion?.dockerRepository ?: "empty-source",
       destVersion.dockerRepository,
     )
   }
-
-  private fun JobConfig.getDestinationVersionId(): UUID =
-    sync?.destinationDefinitionVersionId ?: resetConnection?.destinationDefinitionVersionId ?: UUID_ZERO
-
-  private fun JobConfig.getSourceVersionId(): UUID? = sync?.sourceDefinitionVersionId
-
-  private fun JobConfig.getWorkspaceId(): UUID = sync?.workspaceId ?: resetConnection?.workspaceId ?: UUID_ZERO
 
   companion object {
     // Define the limits for the history to consider
@@ -378,6 +372,21 @@ class JobObservabilityService(
     private val JOB_TYPES_TO_CONSIDER = listOf(JobConfigType.sync)
 
     private val UUID_ZERO: UUID = UUID.fromString("00000000-0000-0000-0000-000000000000")
+
+    @InternalForTesting
+    fun getDestinationDefinitionVersionId(jobConfig: JobConfig): UUID =
+      jobConfig.sync?.destinationDefinitionVersionId
+        ?: jobConfig.resetConnection?.destinationDefinitionVersionId
+        ?: jobConfig.refresh?.destinationDefinitionVersionId
+        ?: UUID_ZERO
+
+    @InternalForTesting
+    fun getSourceDefinitionVersionId(jobConfig: JobConfig): UUID? =
+      jobConfig.sync?.sourceDefinitionVersionId ?: jobConfig.refresh?.sourceDefinitionVersionId
+
+    @InternalForTesting
+    fun getWorkspaceId(jobConfig: JobConfig): UUID =
+      jobConfig.sync?.workspaceId ?: jobConfig.resetConnection?.workspaceId ?: jobConfig.refresh?.workspaceId ?: UUID_ZERO
   }
 
   private fun ObsJobsStats.toJobMetrics(): JobMetrics =
