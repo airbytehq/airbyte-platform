@@ -5,6 +5,8 @@
 package io.airbyte.workload.launcher.pipeline
 
 import datadog.trace.api.Trace
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_PIPELINE_OPERATION_NAME
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pipeline.handlers.FailureHandler
@@ -17,6 +19,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 import reactor.kotlin.core.publisher.toMono
+import java.util.concurrent.atomic.AtomicInteger
 
 @Singleton
 class LaunchPipeline(
@@ -30,7 +33,18 @@ class LaunchPipeline(
   private val successHandler: SuccessHandler,
   private val failureHandler: FailureHandler,
   private val ingressAdapter: PipelineIngressAdapter,
+  private val metricClient: MetricClient,
 ) {
+  private val activeLaunches = AtomicInteger(0)
+
+  init {
+    metricClient.gauge(
+      metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_ACTIVE_LAUNCH,
+      stateObject = activeLaunches,
+      function = { it.get().toDouble() },
+    )
+  }
+
   @Trace(operationName = LAUNCH_PIPELINE_OPERATION_NAME)
   fun accept(input: LauncherInput) {
     val disposable =
@@ -46,18 +60,29 @@ class LaunchPipeline(
    */
   fun buildPipeline(input: LauncherInput): Mono<LaunchStageIO> {
     val io = ingressAdapter.apply(input)
+    var wasClaimed = false
 
     return io
       .toMono()
       .flatMap(build)
       .flatMap(claim)
-      .flatMap(loadShed)
+      .doOnNext { stageIO ->
+        if (!stageIO.skip) {
+          activeLaunches.incrementAndGet()
+          wasClaimed = true
+        }
+      }.flatMap(loadShed)
       .flatMap(check)
       .flatMap(mutex)
       .flatMap(architecture)
       .flatMap(launch)
       .onErrorResume { e -> failureHandler.accept(e, io) }
       .doOnNext(successHandler::accept)
+      .doFinally {
+        if (wasClaimed) {
+          activeLaunches.decrementAndGet()
+        }
+      }
   }
 
   /*

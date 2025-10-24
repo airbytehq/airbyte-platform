@@ -347,6 +347,10 @@ enum class OssMetricsRegistry(
     metricName = "workload_launcher_cron",
     metricDescription = "number of cron run for the workload_launcher",
   ),
+  WORKLOAD_LAUNCHER_ACTIVE_LAUNCH(
+    metricName = "workload_launcher_active_launch",
+    metricDescription = "gauge of the number of workloads actively being processed by the launcher from claim to completion",
+  ),
   WORKLOAD_LAUNCHER_CRON_DURATION(
     metricName = "workload_launcher_cron_duration",
     metricDescription = "duration of a run of the workload_launcher",

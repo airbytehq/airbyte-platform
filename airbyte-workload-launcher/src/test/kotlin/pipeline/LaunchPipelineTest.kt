@@ -5,6 +5,7 @@
 package pipeline
 
 import fixtures.RecordFixtures.launcherInput
+import io.airbyte.metrics.MetricClient
 import io.airbyte.workload.launcher.pipeline.LaunchPipeline
 import io.airbyte.workload.launcher.pipeline.PipelineIngressAdapter
 import io.airbyte.workload.launcher.pipeline.handlers.FailureHandler
@@ -35,6 +36,9 @@ class LaunchPipelineTest {
   @MockK(relaxed = true)
   private lateinit var ingressAdapter: PipelineIngressAdapter
 
+  @MockK(relaxed = true)
+  private lateinit var metricClient: MetricClient
+
   private lateinit var pipeline: LaunchPipeline
 
   @BeforeEach
@@ -53,6 +57,7 @@ class LaunchPipelineTest {
         successHandler = successHandler,
         failureHandler = failureHandler,
         ingressAdapter = ingressAdapter,
+        metricClient = metricClient,
       )
   }
 
@@ -111,6 +116,7 @@ class LaunchPipelineTest {
         successHandler = successHandler,
         failureHandler = failureHandler,
         ingressAdapter = ingressAdapter,
+        metricClient = metricClient,
       )
 
     val appliedPipe = pipeline.apply(inputFlux)
