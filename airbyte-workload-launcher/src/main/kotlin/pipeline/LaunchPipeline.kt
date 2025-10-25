@@ -5,8 +5,8 @@
 package io.airbyte.workload.launcher.pipeline
 
 import datadog.trace.api.Trace
+import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
-import io.airbyte.workload.launcher.metrics.DataplaneAwareMetricClient
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_PIPELINE_OPERATION_NAME
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
 import io.airbyte.workload.launcher.pipeline.handlers.FailureHandler
@@ -33,14 +33,12 @@ class LaunchPipeline(
   private val successHandler: SuccessHandler,
   private val failureHandler: FailureHandler,
   private val ingressAdapter: PipelineIngressAdapter,
-  private val dataplaneAwareMetricClient: DataplaneAwareMetricClient?,
+  private val metricClient: MetricClient,
 ) {
   private val activeLaunches = AtomicInteger(0)
 
   init {
-    // Register gauge with dataplane-aware client
-    // Will automatically update tags when DataplaneConfig event fires
-    dataplaneAwareMetricClient?.registerDataplaneGauge(
+    metricClient.gauge(
       metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_ACTIVE_LAUNCH,
       stateObject = activeLaunches,
       function = { it.get().toDouble() },
