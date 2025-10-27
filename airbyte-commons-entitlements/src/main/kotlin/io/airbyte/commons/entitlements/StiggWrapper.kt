@@ -76,8 +76,9 @@ internal class StiggWrapper(
       if (e.localizedMessage != null && e.localizedMessage!!.contains("Customer not found")) {
         logger.info { "No active subscriptions; organization not present in Stigg. organizationId=$organizationId" }
         return emptyList()
+      } else {
+        throw e
       }
-      throw e
     }
   }
 

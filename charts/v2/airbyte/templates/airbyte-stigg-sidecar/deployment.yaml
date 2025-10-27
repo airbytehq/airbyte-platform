@@ -35,6 +35,21 @@ spec:
       {{- if .Values.stiggSidecar.podAnnotations }}
       annotations:
         {{- include "airbyte.tplvalues.render" (dict "value" .Values.stiggSidecar.podAnnotations "context" $) | nindent 8 }}
+        {{- if .Values.global.datadog.enabled }}
+        ad.datadoghq.com/airbyte-stigg-sidecar.checks: |
+          {
+            "openmetrics": {
+              "init_config": {},
+              "instances": [
+                {
+                  "openmetrics_endpoint": "http://%%host%%:%%port_metrics%%/metrics",
+                  "namespace": "stigg",
+                  "metrics": ["sidecar_.*"]
+                }
+              ]
+            }
+          }
+        {{- end}}
       {{- end }}
     spec:
       serviceAccountName: {{ default .Values.global.serviceAccountName .Values.stiggSidecar.serviceAccountName }}

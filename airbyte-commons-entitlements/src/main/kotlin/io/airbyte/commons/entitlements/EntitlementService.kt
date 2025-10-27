@@ -157,9 +157,15 @@ internal class EntitlementServiceImpl(
     }
 
   override fun getPlans(organizationId: OrganizationId): List<EntitlementPlanResponse> {
-    val result = entitlementClient.getPlans(organizationId)
-    sendCountMetric(OssMetricsRegistry.ENTITLEMENT_PLAN_RETRIEVAL, organizationId, true)
-    return result
+    try {
+      val result = entitlementClient.getPlans(organizationId)
+      sendCountMetric(OssMetricsRegistry.ENTITLEMENT_PLAN_RETRIEVAL, organizationId, true)
+      return result
+    } catch (e: Exception) {
+      logger.error(e) { "Exception getting entitlement plan for organizationId=$organizationId, ${e.message}" }
+      sendCountMetric(OssMetricsRegistry.ENTITLEMENT_PLAN_RETRIEVAL, organizationId, false)
+      return emptyList()
+    }
   }
 
   // An org can never have more than one active plan at a time, so just get the first element
