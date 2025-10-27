@@ -55,7 +55,6 @@ dependencies {
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.javax.databind)
   runtimeOnly(libs.bundles.logback)
-  runtimeOnly(libs.netty.transport.native.epoll)
 
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.test.annotation.processor)
