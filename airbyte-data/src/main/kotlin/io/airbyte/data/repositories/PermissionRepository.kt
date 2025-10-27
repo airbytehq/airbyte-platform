@@ -65,6 +65,17 @@ interface PermissionRepository : PageableRepository<Permission, UUID> {
     """,
   )
   fun getMemberCountByOrgIdList(orgIds: List<UUID>): List<OrgMemberCount>
+
+  @Query(
+    """
+    SELECT EXISTS (
+      SELECT 1 FROM permission
+      WHERE user_id = :userId
+      AND permission_type = 'instance_admin'
+    )
+    """,
+  )
+  fun isInstanceAdmin(userId: UUID): Boolean
 }
 
 @Introspected

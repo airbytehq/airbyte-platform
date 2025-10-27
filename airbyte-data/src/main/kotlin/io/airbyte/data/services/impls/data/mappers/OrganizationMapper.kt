@@ -4,6 +4,8 @@
 
 package io.airbyte.data.services.impls.data.mappers
 
+import io.airbyte.data.repositories.entities.OrganizationWithSsoRealm
+
 typealias EntityOrganization = io.airbyte.data.repositories.entities.Organization
 typealias ModelOrganization = io.airbyte.config.Organization
 
@@ -13,6 +15,14 @@ fun EntityOrganization.toConfigModel(): ModelOrganization =
     .withName(this.name)
     .withUserId(this.userId)
     .withEmail(this.email)
+
+fun OrganizationWithSsoRealm.toConfigModel(): ModelOrganization =
+  ModelOrganization()
+    .withOrganizationId(this.id)
+    .withName(this.name)
+    .withUserId(this.userId)
+    .withEmail(this.email)
+    .withSsoRealm(this.keycloakRealm)
 
 fun ModelOrganization.toEntity(): EntityOrganization =
   EntityOrganization(

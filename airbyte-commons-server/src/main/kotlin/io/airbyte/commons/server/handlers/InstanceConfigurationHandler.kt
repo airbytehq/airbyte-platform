@@ -22,10 +22,10 @@ import io.airbyte.commons.server.helpers.KubernetesClientPermissionHelper
 import io.airbyte.commons.server.helpers.PermissionDeniedException
 import io.airbyte.config.Organization
 import io.airbyte.config.StandardWorkspace
-import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.services.OrganizationService
 import io.airbyte.micronaut.runtime.AirbyteAnalyticsConfig
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.micronaut.runtime.AirbyteConfig
@@ -52,7 +52,7 @@ open class InstanceConfigurationHandler(
   private val workspacePersistence: WorkspacePersistence,
   private val workspacesHandler: WorkspacesHandler,
   private val userPersistence: UserPersistence,
-  private val organizationPersistence: OrganizationPersistence,
+  private val organizationService: OrganizationService,
   private val authConfigs: AuthConfigs,
   private val permissionHandler: PermissionHandler,
   clock: Optional<Clock>,
@@ -180,16 +180,15 @@ open class InstanceConfigurationHandler(
   @get:Throws(IOException::class)
   private val defaultOrganization: Organization
     get() =
-      organizationPersistence.defaultOrganization
-        .orElseThrow {
-          IllegalStateException(
-            "Default organization does not exist.",
-          )
-        }
+      organizationService.getDefaultOrganization().orElseThrow {
+        IllegalStateException("Default organization does not exist.")
+      }
 
   private fun updateDefaultOrganization(requestBody: InstanceConfigurationSetupRequestBody) {
     val defaultOrganization =
-      organizationPersistence.defaultOrganization.orElseThrow { IllegalStateException("Default organization does not exist.") }
+      organizationService.getDefaultOrganization().orElseThrow {
+        IllegalStateException("Default organization does not exist.")
+      }
 
     // email is a required request property, so always set it.
     defaultOrganization.email = requestBody.email
@@ -199,7 +198,7 @@ open class InstanceConfigurationHandler(
       defaultOrganization.name = requestBody.organizationName
     }
 
-    organizationPersistence.updateOrganization(defaultOrganization)
+    organizationService.writeOrganization(defaultOrganization)
   }
 
   // Historically, instance setup for an OSS installation of Airbyte was stored on the one and only

@@ -17,6 +17,8 @@ interface SsoConfigService {
 
   fun getSsoConfigByCompanyIdentifier(companyIdentifier: String): io.airbyte.config.SsoConfig?
 
+  fun getSsoConfigByRealmName(realmName: String): io.airbyte.config.SsoConfig?
+
   fun updateSsoConfigStatus(
     organizationId: UUID,
     status: SsoConfigStatus,

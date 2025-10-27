@@ -306,10 +306,10 @@ internal class UserPersistenceTest : BaseConfigDatabaseTest() {
     fun setup() {
       truncateAllTables()
 
-      val organizationPersistence = OrganizationPersistence(database)
+      val organizationService = OrganizationServiceJooqImpl(database)
 
-      organizationPersistence.createOrganization(ORG)
-      organizationPersistence.createOrganization(ORG_2)
+      organizationService.writeOrganization(ORG)
+      organizationService.writeOrganization(ORG_2)
 
       // Create dataplane groups
       dataplaneGroupService.writeDataplaneGroup(

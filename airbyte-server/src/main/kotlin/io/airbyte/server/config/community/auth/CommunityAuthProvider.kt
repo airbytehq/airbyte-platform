@@ -10,7 +10,7 @@ import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.auth.RequiresAuthMode
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.commons.auth.roles.AuthRole
-import io.airbyte.config.persistence.OrganizationPersistence
+import io.airbyte.data.services.OrganizationService
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.AuthenticationRequest
@@ -28,7 +28,7 @@ const val SESSION_ID = "sessionId"
 @RequiresAuthMode(AuthMode.SIMPLE)
 class CommunityAuthProvider<B>(
   private val airbyteAuthConfig: AirbyteAuthConfig,
-  private val organizationPersistence: OrganizationPersistence,
+  private val organizationService: OrganizationService,
 ) : HttpRequestAuthenticationProvider<B> {
   override fun authenticate(
     requestContext: HttpRequest<B>?,
@@ -37,7 +37,8 @@ class CommunityAuthProvider<B>(
     // The authRequest identity must match the default organization's email address that
     // was collected during the instanceConfiguration step.
     val defaultOrgEmail =
-      organizationPersistence.defaultOrganization
+      organizationService
+        .getDefaultOrganization()
         .orElseThrow {
           ForbiddenProblem(ProblemMessageData().message("Default organization not found. Cannot authenticate."))
         }.email

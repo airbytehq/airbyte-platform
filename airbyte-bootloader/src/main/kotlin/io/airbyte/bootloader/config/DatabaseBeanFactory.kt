@@ -6,7 +6,6 @@ package io.airbyte.bootloader.config
 
 import io.airbyte.bootloader.runtime.AirbyteBootloaderConfig
 import io.airbyte.commons.resources.Resources
-import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.services.shared.DataSourceUnwrapper
@@ -176,11 +175,6 @@ class DatabaseBeanFactory {
   fun userPersistence(
     @Named("configDatabase") configDatabase: Database?,
   ): UserPersistence = UserPersistence(configDatabase)
-
-  @Singleton
-  fun organizationPersistence(
-    @Named("configDatabase") configDatabase: Database?,
-  ): OrganizationPersistence = OrganizationPersistence(configDatabase)
 
   @Singleton
   fun workspacePersistence(

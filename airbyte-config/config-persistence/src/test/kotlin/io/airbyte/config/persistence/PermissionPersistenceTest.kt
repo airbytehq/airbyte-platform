@@ -9,8 +9,10 @@ import io.airbyte.config.Permission
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
 import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
@@ -24,12 +26,12 @@ import java.util.UUID
 
 internal class PermissionPersistenceTest : BaseConfigDatabaseTest() {
   private var permissionPersistence: PermissionPersistence? = null
-  private var organizationPersistence: OrganizationPersistence? = null
+  private var organizationService: OrganizationService? = null
 
   @BeforeEach
   fun beforeEach() {
     permissionPersistence = PermissionPersistence(database)
-    organizationPersistence = OrganizationPersistence(database)
+    organizationService = OrganizationServiceJooqImpl(database)
     truncateAllTables()
     setupTestData()
   }
@@ -47,7 +49,7 @@ internal class PermissionPersistenceTest : BaseConfigDatabaseTest() {
 
     // Create organizations first (default organization is included in MockData.organizations())
     for (organization in MockData.organizations()) {
-      organizationPersistence!!.createOrganization(organization!!)
+      organizationService!!.writeOrganization(organization!!)
     }
 
     val workspaceService: WorkspaceService =

@@ -23,9 +23,9 @@ import io.airbyte.config.JobConfigProxy
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.User
-import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.ConnectionTimelineEventService
+import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.shared.ConnectionDisabledEvent
 import io.airbyte.data.services.shared.ConnectionEnabledEvent
 import io.airbyte.data.services.shared.ConnectionSettingsChangedEvent
@@ -56,7 +56,7 @@ class ConnectionTimelineEventHelper
   constructor(
     @param:Named("airbyteSupportEmailDomains") private val airbyteSupportEmailDomains: Set<String>,
     private val currentUserService: CurrentUserService,
-    private val organizationPersistence: OrganizationPersistence,
+    private val organizationService: OrganizationService,
     private val permissionHandler: PermissionHandler,
     private val userPersistence: UserPersistence,
     private val connectorObjectStorageService: ConnectorObjectStorageService,
@@ -89,34 +89,46 @@ class ConnectionTimelineEventHelper
       connectionId: UUID?,
     ): UserReadInConnectionEvent? {
       try {
-        val res = userPersistence.getUser(userId)
-        if (res.isEmpty) {
-          // Deleted user
-          return UserReadInConnectionEvent()
-            .isDeleted(true)
+        val userOpt = userPersistence.getUser(userId)
+        if (userOpt.isEmpty) {
+          return UserReadInConnectionEvent().isDeleted(true)
         }
-        val user = res.get()
-        // Check if this event was triggered by an Airbyter Support.
-        if (isAirbyteUser(user)) {
-          // Check if this connection is in external customers workspaces.
-          // 1. get the associated organization
-          val organization = organizationPersistence.getOrganizationByConnectionId(connectionId).orElseThrow()
-          // 2. check the email of the organization owner
-          if (!isUserEmailFromAirbyteSupport(organization.email)) {
-            // Airbyters took an action in customer's workspaces. Obfuscate Airbyter's real name.
-            return UserReadInConnectionEvent()
-              .id(user.userId)
-              .name(AIRBYTE_SUPPORT_USER_NAME)
-          }
+
+        val user = userOpt.get()
+        val shouldObfuscate = shouldObfuscateAirbyteUser(user, connectionId)
+
+        return if (shouldObfuscate) {
+          UserReadInConnectionEvent()
+            .id(user.userId)
+            .name(AIRBYTE_SUPPORT_USER_NAME)
+        } else {
+          UserReadInConnectionEvent()
+            .id(user.userId)
+            .name(user.name)
+            .email(user.email)
         }
-        return UserReadInConnectionEvent()
-          .id(user.userId)
-          .name(user.name)
-          .email(user.email)
       } catch (e: Exception) {
         log.error(e) { "Error while retrieving user information." }
         return null
       }
+    }
+
+    private fun shouldObfuscateAirbyteUser(
+      user: User,
+      connectionId: UUID?,
+    ): Boolean {
+      if (!isAirbyteUser(user) || connectionId == null) {
+        return false
+      }
+
+      val organization = organizationService.getOrganizationForConnectionId(connectionId)
+      if (organization.isEmpty) {
+        return false
+      }
+
+      val orgEmail = organization.get().email
+      // If org email is null or not from Airbyte domain, this is an external customer workspace
+      return orgEmail == null || !isUserEmailFromAirbyteSupport(orgEmail)
     }
 
     @JvmRecord

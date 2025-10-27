@@ -25,8 +25,8 @@ import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.Organization
 import io.airbyte.config.Permission
 import io.airbyte.config.persistence.ConfigNotFoundException
-import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.data.services.OrganizationPaymentConfigService
+import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated
@@ -48,7 +48,7 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 open class OrganizationsHandler(
-  private val organizationPersistence: OrganizationPersistence,
+  private val organizationService: OrganizationService,
   private val permissionHandler: PermissionHandler,
   @Named("uuidGenerator") private val uuidGenerator: Supplier<UUID>,
   private val organizationPaymentConfigService: OrganizationPaymentConfigService,
@@ -99,7 +99,7 @@ open class OrganizationsHandler(
         .withName(organizationName)
         .withEmail(email)
         .withUserId(userId)
-    organizationPersistence.createOrganization(organization)
+    organizationService.writeOrganization(organization)
 
     // Also create an OrgAdmin permission.
     permissionHandler.createPermission(
@@ -117,7 +117,7 @@ open class OrganizationsHandler(
   fun updateOrganization(request: OrganizationUpdateRequestBody): OrganizationRead {
     val organizationId = request.organizationId
     val organization =
-      organizationPersistence
+      organizationService
         .getOrganization(organizationId)
         .orElseThrow { ConfigNotFoundException(ConfigNotFoundType.ORGANIZATION, organizationId) }
 
@@ -133,7 +133,7 @@ open class OrganizationsHandler(
     }
 
     if (hasChanged) {
-      organizationPersistence.updateOrganization(organization)
+      organizationService.writeOrganization(organization)
     }
 
     return buildOrganizationRead(organization)
@@ -142,7 +142,7 @@ open class OrganizationsHandler(
   fun getOrganization(request: OrganizationIdRequestBody): OrganizationRead {
     val organizationId = request.organizationId
     val organization =
-      organizationPersistence
+      organizationService
         .getOrganization(organizationId)
         .orElseThrow { ConfigNotFoundException(ConfigNotFoundType.ORGANIZATION, organizationId) }
 
@@ -159,7 +159,7 @@ open class OrganizationsHandler(
 
     val organizationReadList =
       if (request.pagination != null) {
-        organizationPersistence
+        organizationService
           .listOrganizationsByUserIdPaginated(
             ResourcesByUserQueryPaginated(
               request.userId,
@@ -170,7 +170,7 @@ open class OrganizationsHandler(
             nameContains,
           ).map { buildOrganizationRead(it) }
       } else {
-        organizationPersistence
+        organizationService
           .listOrganizationsByUserId(request.userId, nameContains)
           .map { buildOrganizationRead(it) }
       }
@@ -284,7 +284,7 @@ open class OrganizationsHandler(
       .sso(organization.ssoRealm != null && organization.ssoRealm.isNotEmpty())
 
   fun getOrganizationInfo(organizationId: UUID): OrganizationInfoRead {
-    val organization = organizationPersistence.getOrganization(organizationId)
+    val organization = organizationService.getOrganization(organizationId)
     if (organization.isEmpty) {
       throw io.airbyte.data.ConfigNotFoundException(ConfigNotFoundType.ORGANIZATION, organizationId.toString())
     }

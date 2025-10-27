@@ -20,10 +20,10 @@ import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.Organization
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.User
-import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.ConfigNotFoundException
+import io.airbyte.data.services.OrganizationService
 import io.airbyte.micronaut.runtime.AirbyteAnalyticsConfig
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
 import io.airbyte.micronaut.runtime.AirbyteConfig
@@ -68,7 +68,7 @@ internal class InstanceConfigurationHandlerTest {
   private lateinit var mWorkspacesHandler: WorkspacesHandler
 
   @Mock
-  private lateinit var mOrganizationPersistence: OrganizationPersistence
+  private lateinit var mOrganizationService: OrganizationService
 
   @Mock
   private lateinit var mAuthConfigs: AuthConfigs
@@ -171,7 +171,7 @@ internal class InstanceConfigurationHandlerTest {
         mWorkspacePersistence,
         mWorkspacesHandler,
         mUserPersistence,
-        mOrganizationPersistence,
+        mOrganizationService,
         mAuthConfigs,
         permissionHandler,
         Optional.empty(),
@@ -300,7 +300,7 @@ internal class InstanceConfigurationHandlerTest {
     )
 
     // verify the organization was updated with the name from the request
-    verify(mOrganizationPersistence).updateOrganization(
+    verify(mOrganizationService).writeOrganization(
       eq(
         Organization()
           .withOrganizationId(ORGANIZATION_ID)
@@ -352,7 +352,7 @@ internal class InstanceConfigurationHandlerTest {
         mWorkspacePersistence,
         mWorkspacesHandler,
         mUserPersistence,
-        mOrganizationPersistence,
+        mOrganizationService,
         mAuthConfigs,
         permissionHandler,
         Optional.empty(),
@@ -380,7 +380,7 @@ internal class InstanceConfigurationHandlerTest {
         mWorkspacePersistence,
         mWorkspacesHandler,
         mUserPersistence,
-        mOrganizationPersistence,
+        mOrganizationService,
         mAuthConfigs,
         permissionHandler,
         Optional.empty(),
@@ -400,7 +400,7 @@ internal class InstanceConfigurationHandlerTest {
         mWorkspacePersistence,
         mWorkspacesHandler,
         mUserPersistence,
-        mOrganizationPersistence,
+        mOrganizationService,
         mAuthConfigs,
         permissionHandler,
         Optional.of(Clock.fixed(Instant.MAX, ZoneId.systemDefault())),
@@ -420,7 +420,7 @@ internal class InstanceConfigurationHandlerTest {
         mWorkspacePersistence,
         mWorkspacesHandler,
         mUserPersistence,
-        mOrganizationPersistence,
+        mOrganizationService,
         mAuthConfigs,
         permissionHandler,
         Optional.empty(),
@@ -442,7 +442,7 @@ internal class InstanceConfigurationHandlerTest {
   }
 
   private fun stubGetDefaultOrganization() {
-    whenever(mOrganizationPersistence.defaultOrganization).thenReturn(
+    whenever(mOrganizationService.getDefaultOrganization()).thenReturn(
       Optional.of(
         Organization()
           .withOrganizationId(ORGANIZATION_ID)
@@ -475,7 +475,7 @@ internal class InstanceConfigurationHandlerTest {
       mWorkspacePersistence,
       mWorkspacesHandler,
       mUserPersistence,
-      mOrganizationPersistence,
+      mOrganizationService,
       mAuthConfigs,
       permissionHandler,
       Optional.empty(),
