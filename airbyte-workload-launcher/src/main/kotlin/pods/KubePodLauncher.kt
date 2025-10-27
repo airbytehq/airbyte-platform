@@ -7,6 +7,9 @@ package io.airbyte.workload.launcher.pods
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.function.CheckedSupplier
+import io.airbyte.featureflag.CheckImagePullBackoff
+import io.airbyte.featureflag.Empty
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -48,6 +51,7 @@ class KubePodLauncher(
   private val kubernetesClient: KubernetesClient,
   private val metricClient: MetricClient,
   private val airbyteWorkerConfig: AirbyteWorkerConfig,
+  private val featureFlagClient: FeatureFlagClient,
   @Named("kubernetesClientRetryPolicy") private val kubernetesClientRetryPolicy: RetryPolicy<Any>,
 ) {
   fun create(pod: Pod): Pod =
@@ -71,6 +75,7 @@ class KubePodLauncher(
     pod: Pod,
     waitDuration: Duration,
   ) {
+    val checkImagePullBackoff = featureFlagClient.boolVariation(CheckImagePullBackoff, Empty)
     var imagePullErrors: List<PodStatusChecker.ImagePullError> = emptyList()
 
     val initializedPod =
@@ -81,11 +86,13 @@ class KubePodLauncher(
             .waitUntilCondition(
               { p: Pod? ->
                 p?.let {
-                  // Check for image pull errors on every poll - store but don't throw yet
-                  imagePullErrors = PodStatusChecker.checkForImagePullErrors(p)
-                  if (imagePullErrors.isNotEmpty()) {
-                    // Return true to exit the wait condition - we'll throw outside the predicate
-                    return@waitUntilCondition true
+                  // Check for image pull errors on every poll if feature flag is enabled
+                  if (checkImagePullBackoff) {
+                    imagePullErrors = PodStatusChecker.checkForImagePullErrors(p)
+                    if (imagePullErrors.isNotEmpty()) {
+                      // Return true to exit the wait condition - we'll throw outside the predicate
+                      return@waitUntilCondition true
+                    }
                   }
 
                   p.status.initContainerStatuses.isNotEmpty() &&
@@ -100,7 +107,7 @@ class KubePodLauncher(
         "wait",
       )
 
-    // If we found image pull errors, throw now
+    // If we found image pull errors, throw now (only populated if feature flag is enabled)
     if (imagePullErrors.isNotEmpty()) {
       throw ImagePullException(
         message = "Failed to pull container images for pod ${pod.fullResourceName}: ${PodStatusChecker.formatImagePullErrors(imagePullErrors)}",
@@ -145,6 +152,7 @@ class KubePodLauncher(
     pod: Pod,
     waitDuration: Duration,
   ) {
+    val checkImagePullBackoff = featureFlagClient.boolVariation(CheckImagePullBackoff, Empty)
     var imagePullErrors: List<PodStatusChecker.ImagePullError> = emptyList()
 
     val initializedPod =
@@ -154,11 +162,13 @@ class KubePodLauncher(
             .resource(pod)
             .waitUntilCondition(
               { p: Pod ->
-                // Check for image pull errors on every poll - store but don't throw yet
-                imagePullErrors = PodStatusChecker.checkForImagePullErrors(p)
-                if (imagePullErrors.isNotEmpty()) {
-                  // Return true to exit the wait condition - we'll throw outside the predicate
-                  return@waitUntilCondition true
+                // Check for image pull errors on every poll if feature flag is enabled
+                if (checkImagePullBackoff) {
+                  imagePullErrors = PodStatusChecker.checkForImagePullErrors(p)
+                  if (imagePullErrors.isNotEmpty()) {
+                    // Return true to exit the wait condition - we'll throw outside the predicate
+                    return@waitUntilCondition true
+                  }
                 }
 
                 (
@@ -174,7 +184,7 @@ class KubePodLauncher(
         "wait",
       )
 
-    // If we found image pull errors, throw now
+    // If we found image pull errors, throw now (only populated if feature flag is enabled)
     if (imagePullErrors.isNotEmpty()) {
       throw ImagePullException(
         message = "Failed to pull container images for pod ${pod.fullResourceName}: ${PodStatusChecker.formatImagePullErrors(imagePullErrors)}",
@@ -223,6 +233,7 @@ class KubePodLauncher(
     pod: Pod,
     waitDuration: Duration,
   ) {
+    val checkImagePullBackoff = featureFlagClient.boolVariation(CheckImagePullBackoff, Empty)
     var imagePullErrors: List<PodStatusChecker.ImagePullError> = emptyList()
 
     runKubeCommand(
@@ -232,11 +243,13 @@ class KubePodLauncher(
           .waitUntilCondition(
             { p: Pod? ->
               if (Objects.nonNull(p)) {
-                // Check for image pull errors on every poll - store but don't throw yet
-                imagePullErrors = PodStatusChecker.checkForImagePullErrors(p)
-                if (imagePullErrors.isNotEmpty()) {
-                  // Return true to exit the wait condition - we'll throw outside the predicate
-                  return@waitUntilCondition true
+                // Check for image pull errors on every poll if feature flag is enabled
+                if (checkImagePullBackoff) {
+                  imagePullErrors = PodStatusChecker.checkForImagePullErrors(p)
+                  if (imagePullErrors.isNotEmpty()) {
+                    // Return true to exit the wait condition - we'll throw outside the predicate
+                    return@waitUntilCondition true
+                  }
                 }
 
                 Readiness.getInstance().isReady(p) || isTerminal(p)
@@ -251,7 +264,7 @@ class KubePodLauncher(
       "wait",
     )
 
-    // If we found image pull errors, throw now
+    // If we found image pull errors, throw now (only populated if feature flag is enabled)
     if (imagePullErrors.isNotEmpty()) {
       throw ImagePullException(
         message = "Failed to pull container images for pod ${pod.fullResourceName}: ${PodStatusChecker.formatImagePullErrors(imagePullErrors)}",

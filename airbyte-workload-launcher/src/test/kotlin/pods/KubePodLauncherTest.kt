@@ -5,6 +5,7 @@
 package io.airbyte.workload.launcher.pods
 
 import dev.failsafe.RetryPolicy
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -50,6 +51,9 @@ class KubePodLauncherTest {
   @MockK
   private lateinit var metricClient: MetricClient
 
+  @MockK
+  private lateinit var featureFlagClient: FeatureFlagClient
+
   private lateinit var kubePodLauncher: KubePodLauncher
 
   private lateinit var kubernetesClientRetryPolicy: RetryPolicy<Any>
@@ -72,12 +76,14 @@ class KubePodLauncherTest {
         kubernetesClient,
         metricClient,
         airbyteWorkerConfig,
+        featureFlagClient,
         kubernetesClientRetryPolicy,
       )
 
     every { kubernetesClient.pods() } throws IllegalStateException()
     every { kubernetesClient.resource(any<Pod>()) } throws IllegalStateException()
     every { metricClient.count(metric = any(), value = any(), attributes = anyVararg()) } returns mockk<Counter>()
+    every { featureFlagClient.boolVariation(any(), any()) } returns true
   }
 
   @Test
@@ -163,6 +169,7 @@ class KubePodLauncherTest {
         kubernetesClient,
         metricClient,
         airbyteWorkerConfig,
+        featureFlagClient,
         kubernetesClientRetryPolicy,
       )
 
@@ -201,6 +208,7 @@ class KubePodLauncherTest {
         kubernetesClient,
         metricClient,
         airbyteWorkerConfig,
+        featureFlagClient,
         kubernetesClientRetryPolicy,
       )
 
@@ -242,6 +250,7 @@ class KubePodLauncherTest {
         kubernetesClient,
         metricClient,
         airbyteWorkerConfig,
+        featureFlagClient,
         kubernetesClientRetryPolicy,
       )
 
@@ -281,6 +290,7 @@ class KubePodLauncherTest {
         kubernetesClient,
         metricClient,
         airbyteWorkerConfig,
+        featureFlagClient,
         kubernetesClientRetryPolicy,
       )
 
@@ -322,6 +332,7 @@ class KubePodLauncherTest {
         kubernetesClient,
         metricClient,
         airbyteWorkerConfig,
+        featureFlagClient,
         kubernetesClientRetryPolicy,
       )
 

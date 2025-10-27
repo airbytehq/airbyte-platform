@@ -87,6 +87,8 @@ object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", 
 
 object ShouldWaitForMainContainersOnReplication : Temporary<Boolean>(key = "platform.should-wait-for-main-containers-on-replication", default = true)
 
+object CheckImagePullBackoff : Temporary<Boolean>(key = "platform.check-image-pull-backoff", default = false)
+
 object BillingMigrationMaintenance : Temporary<Boolean>(key = "billing.migrationMaintenance", default = false)
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
