@@ -17,11 +17,11 @@ import { ScrollParent } from "components/ui/ScrollParent";
 import { Spinner } from "components/ui/Spinner";
 
 import { ConnectionActionsBlock } from "area/connection/components/ConnectionActionsBlock";
-import { HttpError, HttpProblem, useDescribeCronExpressionFetchQuery } from "core/api";
-import { ConnectionScheduleType, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
+import { HttpError, HttpProblem } from "core/api";
+import { WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useFormMode } from "core/services/ui/FormModeContext";
-import { isMoreFrequentThanHourlyFromExecutions } from "core/utils/cron/cronFrequency";
+import { useCheckSubHourlySchedule } from "core/utils/checkSubHourlySchedule";
 import { trackError } from "core/utils/datadog";
 import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
@@ -44,7 +44,7 @@ export const ConnectionSettingsPage: React.FC = () => {
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const { mode } = useFormMode();
   const simplifiedInitialValues = useInitialFormValues(connection, mode);
-  const fetchCronDescription = useDescribeCronExpressionFetchQuery();
+  const checkSubHourlySchedule = useCheckSubHourlySchedule();
   const { showProFeatureModalIfNeeded } = useProFeaturesModal("sub-hourly-sync");
 
   const zodValidationSchema = useConnectionValidationZodSchema();
@@ -57,34 +57,19 @@ export const ConnectionSettingsPage: React.FC = () => {
         ...values,
       };
 
-      // Check if we need to show Pro features warning modal for sub-hourly basic schedule
-      const isBasicSchedule = values.scheduleType === ConnectionScheduleType.basic;
-      const basicSchedule = values.scheduleData?.basicSchedule;
+      // Check for sub-hourly schedule and show modal if needed
+      const isSubHourly = await checkSubHourlySchedule({
+        scheduleType: values.scheduleType,
+        scheduleData: values.scheduleData,
+      });
 
-      if (isBasicSchedule && basicSchedule?.timeUnit === "minutes") {
+      if (isSubHourly) {
         await showProFeatureModalIfNeeded();
-        return updateConnection(connectionUpdates);
-      }
-
-      // Check if we need to show Pro features warning modal for sub-hourly cron
-      const isCronSchedule = values.scheduleType === ConnectionScheduleType.cron;
-      const cronExpression = values.scheduleData?.cron?.cronExpression;
-
-      if (isCronSchedule && cronExpression) {
-        const cronValidationResult = await fetchCronDescription(cronExpression);
-
-        if (
-          cronValidationResult.isValid &&
-          isMoreFrequentThanHourlyFromExecutions(cronValidationResult.nextExecutions)
-        ) {
-          await showProFeatureModalIfNeeded();
-          return updateConnection(connectionUpdates);
-        }
       }
 
       return updateConnection(connectionUpdates);
     },
-    [connection.connectionId, updateConnection, fetchCronDescription, showProFeatureModalIfNeeded]
+    [connection.connectionId, updateConnection, checkSubHourlySchedule, showProFeatureModalIfNeeded]
   );
 
   const onSuccess = useCallback(() => {

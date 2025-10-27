@@ -38,6 +38,10 @@ jest.mock("area/workspace/utils", () => ({
 
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => ({}),
+  useCurrentWorkspaceOrUndefined: () => ({
+    workspaceId: "workspace-id",
+    organizationId: "test-org-id",
+  }),
   useInvalidateWorkspaceStateQuery: () => () => null,
   useCreateConnection: () => async () => null,
   useSourceDefinitionVersion: () => mockSourceDefinitionVersion,
@@ -62,6 +66,27 @@ jest.mock("core/api", () => ({
     version: "test-version",
     edition: "community",
   }),
+  useCurrentOrganizationInfo: () => ({
+    organizationId: "test-org-id",
+    organizationName: "Test Organization",
+  }),
+  useFirstOrg: () => ({
+    organizationId: "test-org-id",
+    organizationName: "Test Organization",
+  }),
+  useListPermissions: () => ({
+    permissions: [],
+    isLoading: false,
+  }),
+  useOrgInfo: () => ({
+    billing: {
+      paymentStatus: "okay",
+    },
+  }),
+  useOrganizationTrialStatus: () => ({
+    trialStatus: "in_trial",
+    trialEndsAt: new Date(Date.now() + 86400000).toISOString(),
+  }),
 }));
 
 jest.mock("area/connector/utils", () => ({
@@ -72,6 +97,18 @@ jest.mock("area/connector/utils", () => ({
 
 jest.mock("hooks/theme/useAirbyteTheme", () => ({
   useAirbyteTheme: () => mockTheme,
+}));
+
+jest.mock("core/services/auth", () => ({
+  useAuthService: jest.fn().mockReturnValue({
+    logout: jest.fn(),
+    login: jest.fn(),
+    isLoggedIn: jest.fn().mockReturnValue(true),
+  }),
+  useCurrentUser: jest.fn().mockReturnValue({
+    userId: "test-user-id",
+    email: "test@example.com",
+  }),
 }));
 
 jest.setTimeout(40000);

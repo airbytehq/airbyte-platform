@@ -21,6 +21,8 @@ import {
 } from "core/api";
 import { AirbyteCatalog, ConnectionScheduleType } from "core/api/types/AirbyteClient";
 import { FormModeProvider, useFormMode } from "core/services/ui/FormModeContext";
+import { useCheckSubHourlySchedule } from "core/utils/checkSubHourlySchedule";
+import { useProFeaturesModal } from "core/utils/useProFeaturesModal";
 import {
   ConnectionFormServiceProvider,
   useConnectionFormService,
@@ -50,12 +52,25 @@ const CreateConnectionFormInner: React.FC = () => {
   const { formatMessage } = useIntl();
   useExperimentContext("source-definition", connection.source?.sourceDefinitionId);
   const queryClient = useQueryClient();
+  const checkSubHourlySchedule = useCheckSubHourlySchedule();
+  const { showProFeatureModalIfNeeded } = useProFeaturesModal("sub-hourly-sync");
 
   const zodValidationSchema = useConnectionValidationZodSchema();
 
   const onSubmit = useCallback(
     async ({ ...restFormValues }: FormConnectionFormValues) => {
       try {
+        // Check for sub-hourly schedule and show modal if needed
+        const isSubHourly = await checkSubHourlySchedule({
+          scheduleType: restFormValues.scheduleType,
+          scheduleData: restFormValues.scheduleData,
+        });
+
+        if (isSubHourly) {
+          await showProFeatureModalIfNeeded();
+        }
+
+        // Proceed with connection creation
         const createdConnection = await createConnection({
           values: {
             ...restFormValues,
@@ -111,6 +126,8 @@ const CreateConnectionFormInner: React.FC = () => {
       registerNotification,
       formatMessage,
       queryClient,
+      checkSubHourlySchedule,
+      showProFeatureModalIfNeeded,
     ]
   );
 
