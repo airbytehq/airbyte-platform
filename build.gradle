@@ -22,7 +22,7 @@ buildscript {
     }
 
     ext {
-        airbyteGradleVersion = "0.73.0"
+        airbyteGradleVersion = "0.75.0"
         // uncomment for testing plugin locally
         // airbyteGradleVersion = "local-test"
     }
