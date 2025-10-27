@@ -73,14 +73,10 @@ object PodStatusChecker {
 
   /**
    * Checks if a waiting reason indicates an image pull error.
-   * Kubernetes sets these as the container waiting state reason when image pulls fail.
+   * Only catches ImagePullBackOff errors (when Kubernetes is backing off after repeated failures).
+   * Does not catch ErrImagePull (initial image pull failure) to avoid premature failures.
    */
-  private fun isImagePullError(reason: String?): Boolean =
-    reason in
-      setOf(
-        "ErrImagePull", // Initial image pull failure
-        "ImagePullBackOff", // Kubernetes is backing off after repeated failures
-      )
+  private fun isImagePullError(reason: String?): Boolean = reason == "ImagePullBackOff"
 
   /**
    * Formats a list of image pull errors into a human-readable string.

@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test
 
 class PodStatusCheckerTest {
   @Test
-  fun `checkForImagePullErrors detects ErrImagePull in init container`() {
+  fun `checkForImagePullErrors does not detect ErrImagePull in init container`() {
     val pod =
       PodBuilder()
         .withStatus(
@@ -36,12 +36,8 @@ class PodStatusCheckerTest {
 
     val errors = PodStatusChecker.checkForImagePullErrors(pod)
 
-    assertEquals(1, errors.size)
-    assertEquals("init-container", errors[0].containerName)
-    assertEquals(PodStatusChecker.ContainerType.INIT, errors[0].containerType)
-    assertEquals("airbyte/init:1.0.0", errors[0].image)
-    assertEquals("ErrImagePull", errors[0].reason)
-    assertEquals("Failed to pull image \"airbyte/init:1.0.0\": rpc error", errors[0].message)
+    // ErrImagePull should not be caught, only ImagePullBackOff
+    assertTrue(errors.isEmpty())
   }
 
   @Test
@@ -73,7 +69,7 @@ class PodStatusCheckerTest {
   }
 
   @Test
-  fun `checkForImagePullErrors detects ErrImagePull in main container`() {
+  fun `checkForImagePullErrors does not detect ErrImagePull in main container`() {
     val pod =
       PodBuilder()
         .withStatus(
@@ -95,10 +91,8 @@ class PodStatusCheckerTest {
 
     val errors = PodStatusChecker.checkForImagePullErrors(pod)
 
-    assertEquals(1, errors.size)
-    assertEquals("main-container", errors[0].containerName)
-    assertEquals(PodStatusChecker.ContainerType.MAIN, errors[0].containerType)
-    assertEquals("airbyte/destination-postgres:2.0.0", errors[0].image)
+    // ErrImagePull should not be caught, only ImagePullBackOff
+    assertTrue(errors.isEmpty())
   }
 
   @Test
@@ -194,7 +188,7 @@ class PodStatusCheckerTest {
   }
 
   @Test
-  fun `checkForImagePullErrors handles multiple errors in both init and main containers`() {
+  fun `checkForImagePullErrors only detects ImagePullBackOff errors, not ErrImagePull`() {
     val pod =
       PodBuilder()
         .withStatus(
@@ -239,13 +233,11 @@ class PodStatusCheckerTest {
 
     val errors = PodStatusChecker.checkForImagePullErrors(pod)
 
-    assertEquals(3, errors.size)
-    assertEquals("init-1", errors[0].containerName)
+    // Only ImagePullBackOff should be caught, not ErrImagePull
+    assertEquals(1, errors.size)
+    assertEquals("init-2", errors[0].containerName)
     assertEquals(PodStatusChecker.ContainerType.INIT, errors[0].containerType)
-    assertEquals("init-2", errors[1].containerName)
-    assertEquals(PodStatusChecker.ContainerType.INIT, errors[1].containerType)
-    assertEquals("main", errors[2].containerName)
-    assertEquals(PodStatusChecker.ContainerType.MAIN, errors[2].containerType)
+    assertEquals("ImagePullBackOff", errors[0].reason)
   }
 
   @Test
@@ -274,7 +266,7 @@ class PodStatusCheckerTest {
           containerName = "main-container",
           containerType = PodStatusChecker.ContainerType.MAIN,
           image = null,
-          reason = "ErrImagePull",
+          reason = "ImagePullBackOff",
           message = "Failed to pull image",
         ),
       )
@@ -292,7 +284,7 @@ class PodStatusCheckerTest {
           containerName = "init",
           containerType = PodStatusChecker.ContainerType.INIT,
           image = "airbyte/init:1.0.0",
-          reason = "ErrImagePull",
+          reason = "ImagePullBackOff",
           message = null,
         ),
         PodStatusChecker.ImagePullError(
