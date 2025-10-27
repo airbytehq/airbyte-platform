@@ -12,12 +12,15 @@ import io.airbyte.metrics.lib.ApmTraceUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.Timer
 import io.micronaut.context.annotation.Requires
+import io.micronaut.core.async.publisher.Publishers
 import io.micronaut.http.BasicHttpAttributes
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
-import io.micronaut.http.annotation.RequestFilter
-import io.micronaut.http.annotation.ResponseFilter
-import io.micronaut.http.annotation.ServerFilter
+import io.micronaut.http.MutableHttpResponse
+import io.micronaut.http.annotation.Filter
+import io.micronaut.http.filter.HttpServerFilter
+import io.micronaut.http.filter.ServerFilterChain
+import org.reactivestreams.Publisher
 import kotlin.jvm.optionals.getOrNull
 
 private val logger = KotlinLogging.logger {}
@@ -39,14 +42,13 @@ private const val TRACE_ATTR = "io.airbyte.trace"
  *  is that both implementations of the [CurrentUserService] have a dependency on [UserPersistence] but not every `/api/` endpoint
  *  (i.e. connector-builder) has access to the database, which [UserPersistence] requires. A better solution should be sought here.
  */
-@ServerFilter("/api/**")
+@Filter("/api/**")
 @Requires(beans = [UserPersistence::class])
 class TracingServerFilter(
   val currentUserService: CurrentUserService,
   val authenticationHeaderResolver: AuthenticationHeaderResolver,
   val metricClient: MetricClient,
-) {
-  @RequestFilter
+) : HttpServerFilter {
   fun traceRequest(req: HttpRequest<*>) {
     val trace = Trace()
 
@@ -127,7 +129,6 @@ class TracingServerFilter(
     }
   }
 
-  @ResponseFilter
   fun traceResponse(
     req: HttpRequest<*>,
     resp: HttpResponse<*>,
@@ -164,6 +165,17 @@ class TracingServerFilter(
     } catch (e: Exception) {
       logger.error(e) { "failed to trace response" }
     }
+  }
+
+  override fun doFilter(
+    request: HttpRequest<*>,
+    chain: ServerFilterChain,
+  ): Publisher<MutableHttpResponse<*>> {
+    traceRequest(request)
+    return Publishers.map(chain.proceed(request), {
+      traceResponse(request, it, null)
+      it
+    })
   }
 }
 
