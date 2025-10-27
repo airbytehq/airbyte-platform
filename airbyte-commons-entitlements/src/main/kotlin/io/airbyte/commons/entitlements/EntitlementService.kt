@@ -257,7 +257,7 @@ internal class EntitlementServiceImpl(
           clientValue || providerValue
         }
 
-      logger.info { "Enterprise connector entitlements for organizationId=$organizationId: LDResults=$providerResults StiggResults=$clientResults" }
+      logger.debug { "Enterprise connector entitlements for organizationId=$organizationId: LDResults=$providerResults StiggResults=$clientResults" }
       return mergedResults
     } catch (e: Exception) {
       logger.error(e) { "Exception while getting connector entitlements" }
