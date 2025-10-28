@@ -1,0 +1,11 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.dataWorkerUsage {
+  &__loadingPlaceholder {
+    height: 250px;
+    border: variables.$border-thin solid colors.$grey-100;
+    border-radius: variables.$border-radius-md;
+    padding: variables.$spacing-xl variables.$spacing-md variables.$spacing-md;
+  }
+}

@@ -1,13 +1,12 @@
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
-import { DataWorkerUsageGraph } from "area/organization/DataWorkerUsageGraph";
+import { DataWorkerUsage } from "area/organization/DataWorkerUsage";
 import { ConsumptionTimeWindow } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { links } from "core/utils/links";
@@ -31,9 +30,7 @@ export const OrganizationUsagePage: React.FC = () => {
       </FlexContainer>
 
       {showDataWorkerUsage ? (
-        <Box mt="xl">
-          <DataWorkerUsageGraph />
-        </Box>
+        <DataWorkerUsage />
       ) : (
         <>
           <Text>
