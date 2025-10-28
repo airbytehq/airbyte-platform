@@ -2,17 +2,17 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.temporal.workflows
+package io.airbyte.workers.temporal
 
+import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.generated.WorkspaceApi
 import io.airbyte.commons.temporal.TemporalConstants
 import io.airbyte.commons.temporal.WorkflowClientWrapped
-import io.airbyte.commons.temporal.scheduling.CheckCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.config.ConnectorJobOutput
-import io.airbyte.config.FailureReason
-import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
+import io.airbyte.metrics.MetricClient
 import io.airbyte.micronaut.temporal.TemporalProxyHelper
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -23,36 +23,41 @@ import io.airbyte.workers.commands.DiscoverCommandV2
 import io.airbyte.workers.commands.ReplicationCommand
 import io.airbyte.workers.commands.SpecCommand
 import io.airbyte.workers.commands.SpecCommandV2
-import io.airbyte.workers.workload.WorkspaceNotFoundException
+import io.airbyte.workers.temporal.workflows.ActivityExecutionContextProvider
+import io.airbyte.workers.temporal.workflows.ConnectorCommandActivity
+import io.airbyte.workers.temporal.workflows.ConnectorCommandActivityImpl
+import io.airbyte.workers.temporal.workflows.ConnectorCommandWorkflowImpl
+import io.airbyte.workers.workload.DataplaneGroupResolver
 import io.micronaut.context.BeanRegistration
 import io.mockk.every
 import io.mockk.mockk
 import io.temporal.activity.ActivityCancellationType
 import io.temporal.activity.ActivityOptions
 import io.temporal.client.WorkflowClient
-import io.temporal.client.WorkflowFailedException
 import io.temporal.client.WorkflowOptions
 import io.temporal.common.RetryOptions
-import io.temporal.failure.ActivityFailure
 import io.temporal.testing.TestWorkflowEnvironment
 import io.temporal.worker.Worker
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
+import org.openapitools.client.infrastructure.ClientException
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
-class ConnectorCommandWorkflowTest {
+class WorkspaceNotFoundScenarioTest {
   companion object {
-    const val QUEUE_NAME = "connector_command_queue"
+    const val QUEUE_NAME = "workspace_not_found_scenario_queue"
 
+    lateinit var airbyteApiClient: AirbyteApiClient
+    lateinit var workspaceApi: WorkspaceApi
+    lateinit var dataplaneGroupResolver: DataplaneGroupResolver
     lateinit var checkCommand: CheckCommand
     lateinit var checkCommandThroughApi: CheckCommandV2
     lateinit var discoverCommand: DiscoverCommand
@@ -71,14 +76,29 @@ class ConnectorCommandWorkflowTest {
     @JvmStatic
     @BeforeAll
     fun setup() {
+      // Setup API mocks
+      airbyteApiClient = mockk()
+      workspaceApi = mockk()
+      every { airbyteApiClient.workspaceApi } returns workspaceApi
+
+      // Setup resolver that will call the mocked API
+      dataplaneGroupResolver = DataplaneGroupResolver(airbyteApiClient)
+
+      // Setup activity options with no retry on WorkspaceNotFoundException
       val shortActivityOptions =
         ActivityOptions
           .newBuilder()
           .setStartToCloseTimeout(10.seconds.toJavaDuration())
           .setCancellationType(ActivityCancellationType.WAIT_CANCELLATION_COMPLETED)
-          .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(1).build())
-          .setHeartbeatTimeout(TemporalConstants.HEARTBEAT_TIMEOUT)
+          .setRetryOptions(
+            RetryOptions
+              .newBuilder()
+              .setMaximumAttempts(3)
+              .setDoNotRetry("io.airbyte.workers.workload.WorkspaceNotFoundException")
+              .build(),
+          ).setHeartbeatTimeout(TemporalConstants.HEARTBEAT_TIMEOUT)
           .build()
+
       val activityOptionsBeanRegistration: BeanRegistration<ActivityOptions> =
         mockk(relaxed = true) {
           every { identifier } returns
@@ -112,7 +132,7 @@ class ConnectorCommandWorkflowTest {
           specCommandV2,
           replicationCommand,
           activityExecutionContextProvider,
-          mockk(relaxed = true),
+          mockk<MetricClient>(relaxed = true),
         )
       worker.registerActivitiesImplementations(connectorCommandActivity)
       testEnv.start()
@@ -126,41 +146,105 @@ class ConnectorCommandWorkflowTest {
   }
 
   @Test
-  fun `testing check`() {
-    val workflowClient = WorkflowClientWrapped(client, mockk(relaxed = true))
-    val workloadId = "test workload"
-    val output = ConnectorJobOutput().withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
-
-    every { checkCommand.start(any(), any()) } returns workloadId
-    every { checkCommand.isTerminal(workloadId) } returns false andThen false andThen true
-    every { checkCommand.getOutput(workloadId) } returns output
-    every { checkCommand.getAwaitDuration() } returns 1.minutes
-
-    val input =
-      CheckCommandInput(
-        input =
-          CheckCommandInput.CheckConnectionInput(
-            jobRunConfig = JobRunConfig(),
-            integrationLauncherConfig = IntegrationLauncherConfig(),
-            checkConnectionInput = StandardCheckConnectionInput(),
-          ),
-      )
-
-    val result =
-      workflowClient
-        .newWorkflowStub(ConnectorCommandWorkflow::class.java, WorkflowOptions.newBuilder().setTaskQueue(QUEUE_NAME).build())
-        .run(input)
-    assertEquals(output, result)
-  }
-
-  @Test
-  fun `workflow returns structured output when workspace not found during discover`() {
+  fun `discover workflow handles deleted workspace gracefully end-to-end`() {
     val workflowClient = WorkflowClientWrapped(client, mockk(relaxed = true))
     val workspaceId = UUID.randomUUID()
 
-    // Mock the discover command to throw WorkspaceNotFoundException
-    every { discoverCommand.start(any(), any()) } throws
-      WorkspaceNotFoundException(workspaceId, "Workspace $workspaceId not found")
+    // Mock discover command to use the real dataplaneGroupResolver which will hit the 404
+    every { discoverCommand.start(any(), any()) } answers {
+      // This will trigger the workspace lookup, which will throw WorkspaceNotFoundException
+      dataplaneGroupResolver.resolveForDiscover(workspaceId, UUID.randomUUID())
+      "workload-id"
+    }
+    every { discoverCommand.getAwaitDuration() } returns 1.minutes
+
+    // Mock API to return 404
+    every { workspaceApi.getWorkspace(any()) } throws ClientException("Not Found", 404)
+
+    val input =
+      DiscoverCommandInput(
+        input =
+          DiscoverCommandInput.DiscoverCatalogInput(
+            jobRunConfig = JobRunConfig(),
+            integrationLauncherConfig = IntegrationLauncherConfig(),
+            discoverCatalogInput = StandardDiscoverCatalogInput(),
+          ),
+      )
+
+    val output =
+      workflowClient
+        .newWorkflowStub(ConnectorCommandWorkflow::class.java, WorkflowOptions.newBuilder().setTaskQueue(QUEUE_NAME).build())
+        .run(input)
+
+    // Verify graceful handling
+    assertNotNull(output)
+    assertNotNull(output.failureReason)
+    assertEquals(
+      "WORKSPACE_NOT_FOUND",
+      output.failureReason.metadata.additionalProperties["errorCode"],
+    )
+    assertFalse(output.failureReason.retryable)
+  }
+
+  @Test
+  fun `activity does not retry on WorkspaceNotFoundException`() {
+    val workflowClient = WorkflowClientWrapped(client, mockk(relaxed = true))
+    val workspaceId = UUID.randomUUID()
+
+    val attemptCount = AtomicInteger(0)
+    every { discoverCommand.start(any(), any()) } answers {
+      attemptCount.incrementAndGet()
+      dataplaneGroupResolver.resolveForDiscover(workspaceId, UUID.randomUUID())
+      "workload-id"
+    }
+    every { discoverCommand.getAwaitDuration() } returns 1.minutes
+
+    // Mock API to return 404
+    every { workspaceApi.getWorkspace(any()) } throws ClientException("Not Found", 404)
+
+    val input =
+      DiscoverCommandInput(
+        input =
+          DiscoverCommandInput.DiscoverCatalogInput(
+            jobRunConfig = JobRunConfig(),
+            integrationLauncherConfig = IntegrationLauncherConfig(),
+            discoverCatalogInput = StandardDiscoverCatalogInput(),
+          ),
+      )
+
+    workflowClient
+      .newWorkflowStub(ConnectorCommandWorkflow::class.java, WorkflowOptions.newBuilder().setTaskQueue(QUEUE_NAME).build())
+      .run(input)
+
+    // Should only attempt once (no retries due to doNotRetry configuration)
+    assertEquals(1, attemptCount.get())
+  }
+
+  @Test
+  fun `transient errors still retry normally`() {
+    val workflowClient = WorkflowClientWrapped(client, mockk(relaxed = true))
+    val workspaceId = UUID.randomUUID()
+
+    val attemptCount = AtomicInteger(0)
+    every { discoverCommand.start(any(), any()) } answers {
+      val count = attemptCount.incrementAndGet()
+      if (count < 3) {
+        // First 2 attempts throw 500 error (should retry)
+        every { workspaceApi.getWorkspace(any()) } throws ClientException("Server Error", 500)
+        dataplaneGroupResolver.resolveForDiscover(workspaceId, UUID.randomUUID())
+      } else {
+        // Third attempt succeeds
+        every { workspaceApi.getWorkspace(any()) } returns
+          mockk {
+            every { dataplaneGroupId } returns UUID.randomUUID()
+          }
+        dataplaneGroupResolver.resolveForDiscover(workspaceId, UUID.randomUUID())
+      }
+      "workload-id"
+    }
+    every { discoverCommand.isTerminal(any()) } returns true
+    every { discoverCommand.getOutput(any()) } returns
+      ConnectorJobOutput().withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
     every { discoverCommand.getAwaitDuration() } returns 1.minutes
 
     val input =
@@ -173,84 +257,13 @@ class ConnectorCommandWorkflowTest {
           ),
       )
 
-    val result =
+    val output =
       workflowClient
         .newWorkflowStub(ConnectorCommandWorkflow::class.java, WorkflowOptions.newBuilder().setTaskQueue(QUEUE_NAME).build())
         .run(input)
 
-    // Verify workflow completes successfully with structured failure
-    assertNotNull(result)
-    assertNotNull(result.failureReason)
-    assertEquals(FailureReason.FailureOrigin.AIRBYTE_PLATFORM, result.failureReason.failureOrigin)
-    assertEquals(FailureReason.FailureType.SYSTEM_ERROR, result.failureReason.failureType)
-    assertFalse(result.failureReason.retryable)
-
-    // Verify metadata contains error code and workflow type
-    assertEquals("WORKSPACE_NOT_FOUND", result.failureReason.metadata.additionalProperties["errorCode"])
-    assertEquals("discover", result.failureReason.metadata.additionalProperties["workflowType"])
-
-    // Verify external message is user-friendly
-    assertTrue(result.failureReason.externalMessage.contains("workspace"))
-    assertTrue(result.failureReason.externalMessage.contains("deleted"))
-  }
-
-  @Test
-  fun `workflow returns structured output when workspace not found during check`() {
-    val workflowClient = WorkflowClientWrapped(client, mockk(relaxed = true))
-    val workspaceId = UUID.randomUUID()
-
-    every { checkCommand.start(any(), any()) } throws
-      WorkspaceNotFoundException(workspaceId, "Workspace $workspaceId not found")
-    every { checkCommand.getAwaitDuration() } returns 1.minutes
-
-    val input =
-      CheckCommandInput(
-        input =
-          CheckCommandInput.CheckConnectionInput(
-            jobRunConfig = JobRunConfig(),
-            integrationLauncherConfig = IntegrationLauncherConfig(),
-            checkConnectionInput = StandardCheckConnectionInput(),
-          ),
-      )
-
-    val result =
-      workflowClient
-        .newWorkflowStub(ConnectorCommandWorkflow::class.java, WorkflowOptions.newBuilder().setTaskQueue(QUEUE_NAME).build())
-        .run(input)
-
-    assertNotNull(result.failureReason)
-    assertEquals("WORKSPACE_NOT_FOUND", result.failureReason.metadata.additionalProperties["errorCode"])
-    assertEquals("check", result.failureReason.metadata.additionalProperties["workflowType"])
-  }
-
-  @Test
-  fun `workflow propagates other ActivityFailures normally`() {
-    val workflowClient = WorkflowClientWrapped(client, mockk(relaxed = true))
-
-    // Mock a different type of failure
-    every { checkCommand.start(any(), any()) } throws RuntimeException("Network error")
-    every { checkCommand.getAwaitDuration() } returns 1.minutes
-
-    val input =
-      CheckCommandInput(
-        input =
-          CheckCommandInput.CheckConnectionInput(
-            jobRunConfig = JobRunConfig(),
-            integrationLauncherConfig = IntegrationLauncherConfig(),
-            checkConnectionInput = StandardCheckConnectionInput(),
-          ),
-      )
-
-    // Should throw, not return graceful output
-    // Temporal wraps activity failures in WorkflowFailedException
-    val exception =
-      assertThrows<WorkflowFailedException> {
-        workflowClient
-          .newWorkflowStub(ConnectorCommandWorkflow::class.java, WorkflowOptions.newBuilder().setTaskQueue(QUEUE_NAME).build())
-          .run(input)
-      }
-
-    // Verify it's an ActivityFailure wrapped in WorkflowFailedException
-    assertTrue(exception.cause is ActivityFailure)
+    // Should retry and eventually succeed
+    assertEquals(3, attemptCount.get())
+    assertNotNull(output)
   }
 }

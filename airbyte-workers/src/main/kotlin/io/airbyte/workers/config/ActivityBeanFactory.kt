@@ -24,6 +24,7 @@ import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity
 import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity
 import io.airbyte.workers.temporal.sync.InvokeOperationsActivity
 import io.airbyte.workers.temporal.workflows.ConnectorCommandActivity
+import io.airbyte.workers.workload.WorkspaceNotFoundException
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.temporal.activity.ActivityCancellationType
@@ -115,5 +116,7 @@ class ActivityBeanFactory {
       .setMaximumAttempts(airbyteWorkerActivityConfig.maxAttempts)
       .setInitialInterval(Duration.ofSeconds(airbyteWorkerActivityConfig.initialDelay.toLong()))
       .setMaximumInterval(Duration.ofSeconds(airbyteWorkerActivityConfig.maxDelay.toLong()))
+      // Don't retry WorkspaceNotFoundException - it indicates a workspace lookup failure that won't be resolved by retrying
+      .setDoNotRetry(WorkspaceNotFoundException::class.java.name)
       .build()
 }

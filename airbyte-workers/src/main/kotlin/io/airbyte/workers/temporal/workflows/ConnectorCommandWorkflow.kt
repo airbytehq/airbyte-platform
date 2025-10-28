@@ -19,6 +19,8 @@ import io.airbyte.commons.temporal.scheduling.SpecCommandApiInput
 import io.airbyte.commons.temporal.scheduling.SpecCommandInput
 import io.airbyte.commons.timer.Stopwatch
 import io.airbyte.config.ConnectorJobOutput
+import io.airbyte.config.FailureReason
+import io.airbyte.config.Metadata
 import io.airbyte.config.SignalInput
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
@@ -42,16 +44,19 @@ import io.airbyte.workers.models.DiscoverSourceApiInput
 import io.airbyte.workers.models.ReplicationApiInput
 import io.airbyte.workers.models.SpecApiInput
 import io.airbyte.workers.models.SpecInput
+import io.airbyte.workers.workload.WorkspaceNotFoundException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.activity.Activity
 import io.temporal.activity.ActivityExecutionContext
 import io.temporal.activity.ActivityInterface
 import io.temporal.activity.ActivityMethod
 import io.temporal.failure.ActivityFailure
+import io.temporal.failure.ApplicationFailure
 import io.temporal.failure.CanceledFailure
 import io.temporal.workflow.Workflow
 import jakarta.inject.Singleton
 import java.time.Duration
+import java.util.UUID
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
 
@@ -280,18 +285,27 @@ open class ConnectorCommandWorkflowImpl : ConnectorCommandWorkflow {
         connectorCommandActivity.getAwaitDuration(activityInput)
       }
 
-    val id = connectorCommandActivity.startCommand(activityInput)
-    activityInput = activityInput.copy(id = id)
-
     try {
+      val id = connectorCommandActivity.startCommand(activityInput)
+      activityInput = activityInput.copy(id = id)
+
       shouldBlock = !connectorCommandActivity.isCommandTerminal(activityInput)
       while (shouldBlock) {
         Workflow.await(awaitDuration) { !shouldBlock }
         shouldBlock = !connectorCommandActivity.isCommandTerminal(activityInput)
       }
-    } catch (e: Exception) {
-      when (e) {
-        is CanceledFailure, is ActivityFailure -> {
+
+      return connectorCommandActivity.getCommandOutput(activityInput)
+    } catch (e: ActivityFailure) {
+      // Check if the underlying cause is WorkspaceNotFoundException
+      if (isWorkspaceNotFoundException(e)) {
+        // Return structured output instead of failing the workflow
+        return createWorkspaceNotFoundOutput(input, e)
+      }
+
+      // Handle other activity failures (cancellation, etc.)
+      when (e.cause) {
+        is CanceledFailure -> {
           val detachedCancellationScope =
             Workflow.newDetachedCancellationScope {
               connectorCommandActivity.cancelCommand(activityInput)
@@ -299,10 +313,60 @@ open class ConnectorCommandWorkflowImpl : ConnectorCommandWorkflow {
             }
           detachedCancellationScope.run()
         }
-        else -> throw e
       }
+      throw e
+    }
+  }
+
+  /**
+   * Check if the exception chain contains a WorkspaceNotFoundException.
+   * Temporal wraps exceptions, so we need to check the cause chain.
+   */
+  private fun isWorkspaceNotFoundException(throwable: Throwable?): Boolean {
+    if (throwable == null) return false
+    if (throwable is WorkspaceNotFoundException) return true
+
+    // Check the cause chain
+    var current: Throwable? = throwable.cause
+    while (current != null) {
+      if (current is WorkspaceNotFoundException) return true
+
+      // Check if it's an ApplicationFailure with WorkspaceNotFoundException type
+      // (Temporal serializes exceptions across activity boundaries)
+      if (current is ApplicationFailure && current.type == WorkspaceNotFoundException::class.java.name) {
+        return true
+      }
+
+      current = current.cause
     }
 
-    return connectorCommandActivity.getCommandOutput(activityInput)
+    return false
+  }
+
+  /**
+   * Create a structured failure output for workspace not found errors.
+   * This provides explicit, programmatic error information to workflow consumers.
+   */
+  private fun createWorkspaceNotFoundOutput(
+    input: ConnectorCommandInput,
+    activityFailure: ActivityFailure,
+  ): ConnectorJobOutput {
+    val failureReason =
+      FailureReason()
+        .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
+        .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
+        .withInternalMessage(activityFailure.cause?.message ?: "Workspace not found")
+        .withExternalMessage("The workspace for this operation no longer exists. It may have been deleted.")
+        .withRetryable(false)
+        .withTimestamp(System.currentTimeMillis())
+        .withStacktrace(activityFailure.stackTraceToString())
+        .withMetadata(
+          Metadata()
+            .withAdditionalProperty("errorCode", "WORKSPACE_NOT_FOUND")
+            .withAdditionalProperty("workflowType", input.type),
+        )
+
+    return ConnectorJobOutput()
+      .withFailureReason(failureReason)
   }
 }
