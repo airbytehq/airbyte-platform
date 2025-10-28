@@ -12,6 +12,7 @@ import { HttpProblem, useGetOrCreateUser, useUpdateUser } from "core/api";
 import { UserRead } from "core/api/types/AirbyteClient";
 import { buildConfig } from "core/config";
 import { useFormatError } from "core/errors";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { AuthContext, AuthContextApi } from "core/services/auth";
 import { EmbeddedAuthService } from "core/services/auth/EmbeddedAuthService";
 import { CloudRoutes } from "packages/cloud/cloudRoutePaths";
@@ -232,6 +233,7 @@ const CloudKeycloakAuthService: React.FC<PropsWithChildren> = ({ children }) => 
   const { mutateAsync: updateAirbyteUser } = useUpdateUser();
   const formatError = useFormatError();
   const navigate = useNavigate();
+  const analyticsService = useAnalyticsService();
 
   // Allows us to get the access token as a callback, instead of re-rendering every time a new access token arrives
   const keycloakAccessTokenRef = useRef<string | null>(null);
@@ -353,29 +355,48 @@ const CloudKeycloakAuthService: React.FC<PropsWithChildren> = ({ children }) => 
     };
   }, [userManager, getAirbyteUser, authState, handleAirbyteUserError]);
 
-  const changeRealmAndRedirectToSignin = useCallback(async (realm: string) => {
-    // This is not a security measure. The realm is publicly accessible, but we don't want users to access it via the SSO flow, because that could cause confusion.
-    if (realm === AIRBYTE_CLOUD_REALM) {
-      throw new Error("Realm inaccessible via SSO flow. Use the default login flow instead.");
-    }
-    const newUserManager = createUserManager(realm);
-    await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: KEYCLOAK_IDP_HINT } });
-  }, []);
+  const changeRealmAndRedirectToSignin = useCallback(
+    async (realm: string) => {
+      // This is not a security measure. The realm is publicly accessible, but we don't want users to access it via the SSO flow, because that could cause confusion.
+      if (realm === AIRBYTE_CLOUD_REALM) {
+        throw new Error("Realm inaccessible via SSO flow. Use the default login flow instead.");
+      }
+      analyticsService.track(Namespace.USER, Action.LOGIN, {
+        actionDescription: "SSO login attempted",
+        login_method: "sso",
+      });
+      const newUserManager = createUserManager(realm);
+      await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: KEYCLOAK_IDP_HINT } });
+    },
+    [analyticsService]
+  );
 
   const redirectToSignInWithGoogle = useCallback(async () => {
+    analyticsService.track(Namespace.USER, Action.LOGIN, {
+      actionDescription: "Google login attempted",
+      login_method: "google",
+    });
     const newUserManager = createUserManager(AIRBYTE_CLOUD_REALM);
     await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: "google" } });
-  }, []);
+  }, [analyticsService]);
 
   const redirectToSignInWithGithub = useCallback(async () => {
+    analyticsService.track(Namespace.USER, Action.LOGIN, {
+      actionDescription: "GitHub login attempted",
+      login_method: "github",
+    });
     const newUserManager = createUserManager(AIRBYTE_CLOUD_REALM);
     await newUserManager.signinRedirect({ extraQueryParams: { kc_idp_hint: "github" } });
-  }, []);
+  }, [analyticsService]);
 
   const redirectToSignInWithPassword = useCallback(async () => {
+    analyticsService.track(Namespace.USER, Action.LOGIN, {
+      actionDescription: "Password login attempted",
+      login_method: "password",
+    });
     const newUserManager = createUserManager(AIRBYTE_CLOUD_REALM);
     await newUserManager.signinRedirect();
-  }, []);
+  }, [analyticsService]);
 
   /**
    * Using the keycloak-js library here instead of oidc-ts, because keycloak-js knows how to route us directly to Keycloak's registration page.

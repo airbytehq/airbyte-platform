@@ -40,6 +40,7 @@ export const enum Action {
   INVITE = "Invite",
   OAUTH_ATTEMPT = "OAuthAttempt",
   OAUTH_SUCCESS = "OAuthSuccess",
+  LOGIN = "Login",
   CREATE_OR_UPDATE_STATE = "CreateOrUpdateState",
   DOWNLOAD_SERVER_LOGS = "DownloadServerLogs",
   DOWNLOAD_SCHEDULER_LOGS = "DownloadSchedulerLogs",
