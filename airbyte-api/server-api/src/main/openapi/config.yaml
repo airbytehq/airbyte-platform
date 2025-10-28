@@ -17035,6 +17035,10 @@ components:
         estimatedBytes:
           type: integer
           format: int64
+        additionalStats:
+          type: object
+          additionalProperties:
+            type: number
     AttemptStreamStats:
       type: object
       required:
