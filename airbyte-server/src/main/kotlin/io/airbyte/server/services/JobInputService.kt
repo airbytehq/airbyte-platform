@@ -9,6 +9,7 @@ import com.google.common.hash.Hashing
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.converters.ConfigReplacer
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.commons.version.Version
@@ -552,7 +553,9 @@ class JobInputService(
         ?: throw NotFoundException()
 
     if (TERMINAL_STATUSES.contains(job.status)) {
-      throw IllegalStateException("Cannot create replication input for a non-terminal job. Job status: ${job.status}")
+      throw ConflictException(
+        "Cannot create replication command for job $jobId in terminal state ${job.status}. Commands can only be created for active jobs.",
+      )
     }
 
     val attempt = attemptService.getAttempt(jobId, attemptNumber)
