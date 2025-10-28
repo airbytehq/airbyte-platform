@@ -7,6 +7,9 @@ dependencies {
   ksp(libs.bundles.micronaut.annotation.processor)
   ksp(libs.micronaut.openapi)
 
+  implementation(libs.bundles.micronaut.annotation)
+  implementation(libs.micronaut.cache.caffeine)
+  implementation(libs.bundles.micronaut.data.jdbc)
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-config:config-persistence"))
   implementation(project(":oss:airbyte-config:config-secrets"))

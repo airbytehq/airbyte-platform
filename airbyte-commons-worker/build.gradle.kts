@@ -10,7 +10,7 @@ dependencies {
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
 
-  api(libs.google.cloud.pubsub)
+  implementation(libs.google.cloud.pubsub)
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)

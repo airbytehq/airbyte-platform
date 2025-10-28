@@ -7,7 +7,7 @@ dependencies {
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
 
-  api(libs.bundles.micronaut.annotation)
+  implementation(libs.bundles.micronaut.annotation)
   
   implementation(libs.bundles.temporal)
   implementation(libs.failsafe)

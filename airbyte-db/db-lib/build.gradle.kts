@@ -28,12 +28,13 @@ dependencies {
   implementation(project(":oss:airbyte-commons"))
   implementation(libs.airbyte.protocol)
   implementation(project(":oss:airbyte-json-validation"))
-  implementation(project(":oss:airbyte-config:config-models"))
+  api(project(":oss:airbyte-config:config-models"))  // Exposed in ConfigSchema
   implementation(libs.bundles.flyway)
   implementation(libs.guava)
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
   implementation(libs.kotlin.logging)
+  implementation(libs.jakarta.annotation.api)  // Needed for @Nullable in migrations
 
   migrations(libs.platform.testcontainers.postgresql)
   migrations(sourceSets["main"].runtimeClasspath)

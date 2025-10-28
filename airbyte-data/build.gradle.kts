@@ -5,8 +5,8 @@ plugins {
 }
 
 dependencies {
-  api(libs.bundles.micronaut.annotation)
-  api(libs.micronaut.cache.caffeine)
+  implementation(libs.bundles.micronaut.annotation)
+  implementation(libs.micronaut.cache.caffeine)
 
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)

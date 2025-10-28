@@ -8,20 +8,20 @@ dependencies {
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
 
-  api(libs.bundles.micronaut.annotation)
-  api(libs.bundles.micronaut.kotlin)
-  api(libs.kotlin.logging)
-  api(libs.slf4j.api)
-  api(libs.micronaut.jackson.databind)
-  api(libs.google.cloud.storage)
-  api(libs.micronaut.jooq)
-  api(libs.guava)
-  api(libs.bundles.secret.hydration)
-  api(libs.airbyte.protocol)
-  api(libs.jakarta.transaction.api)
-  api(libs.micronaut.data.tx)
-  api(libs.aws.java.sdk.sts)
-  api(project(":oss:airbyte-commons"))
+  implementation(libs.bundles.micronaut.annotation)
+  implementation(libs.bundles.micronaut.kotlin)
+  implementation(libs.kotlin.logging)
+  implementation(libs.slf4j.api)
+  implementation(libs.micronaut.jackson.databind)
+  implementation(libs.google.cloud.storage)
+  implementation(libs.micronaut.jooq)
+  implementation(libs.guava)
+  api(libs.bundles.secret.hydration)  // Keep: secret hydration types may be in public API
+  api(libs.airbyte.protocol)  // Keep: protocol types in public API
+  implementation(libs.jakarta.transaction.api)
+  implementation(libs.micronaut.data.tx)
+  implementation(libs.aws.java.sdk.sts)
+  api(project(":oss:airbyte-commons"))  // Keep: commons types in public API
 
   /*
    * Marked as "implementation" to avoid leaking these dependencies to services

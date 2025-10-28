@@ -9,6 +9,9 @@ dependencies {
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
 
+  // Explicitly needed for @Singleton annotation (was leaked through api() before)
+  implementation(libs.bundles.micronaut.annotation)
+
   implementation(project(":oss:airbyte-commons"))
   implementation(libs.guava)
   implementation(libs.kotlin.logging)

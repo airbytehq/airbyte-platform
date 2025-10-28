@@ -7,7 +7,7 @@ plugins {
 }
 
 dependencies {
-  api(libs.bundles.micronaut.annotation)
+  implementation(libs.bundles.micronaut.annotation)
 
   implementation(libs.bundles.jackson)
   implementation(libs.guava)

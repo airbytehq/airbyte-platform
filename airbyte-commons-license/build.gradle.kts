@@ -7,10 +7,10 @@ dependencies {
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
 
-  api(libs.bundles.micronaut.annotation)
-  api(libs.bundles.micronaut.kotlin)
-  api(libs.kotlin.logging)
-  api(libs.bundles.jackson)
+  implementation(libs.bundles.micronaut.annotation)
+  implementation(libs.bundles.micronaut.kotlin)
+  implementation(libs.kotlin.logging)
+  implementation(libs.bundles.jackson)
 
   api(project(":oss:airbyte-commons"))
   api(project(":oss:airbyte-commons-micronaut"))

@@ -10,7 +10,7 @@ dependencies {
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
   ksp(libs.bundles.micronaut.annotation.processor)
 
-  api(libs.bundles.micronaut.annotation)
+  implementation(libs.bundles.micronaut.annotation)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-micronaut"))

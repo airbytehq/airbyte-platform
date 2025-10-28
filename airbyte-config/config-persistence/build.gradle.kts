@@ -14,7 +14,7 @@ dependencies {
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
 
-  api(libs.bundles.micronaut.annotation)
+  implementation(libs.bundles.micronaut.annotation)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-converters"))
@@ -30,6 +30,7 @@ dependencies {
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(libs.google.cloud.storage)
   implementation(libs.jackson.databind)
+  implementation(libs.kotlin.logging)
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.micronaut.kotlin)
   implementation(libs.bundles.datadog)

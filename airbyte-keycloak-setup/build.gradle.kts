@@ -14,6 +14,7 @@ dependencies {
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.keycloak.client)
+  implementation(libs.kotlin.logging)  // Explicitly needed for KotlinLogging (was leaked through api() before)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))

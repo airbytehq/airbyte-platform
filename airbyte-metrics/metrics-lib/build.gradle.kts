@@ -6,9 +6,9 @@ plugins {
 dependencies {
   ksp(libs.bundles.micronaut.annotation.processor)
 
-  api(libs.bundles.micronaut.metrics)
-  api(libs.kotlin.logging)
-  api(libs.micronaut.cache.caffeine)
+  api(libs.bundles.micronaut.metrics)  // Keep: metric types may be in public API
+  implementation(libs.kotlin.logging)
+  implementation(libs.micronaut.cache.caffeine)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-config:config-models"))

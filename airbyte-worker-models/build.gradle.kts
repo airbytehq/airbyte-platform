@@ -13,6 +13,7 @@ dependencies {
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-featureflag"))
   implementation(libs.airbyte.protocol)
+  implementation(libs.jakarta.annotation.api)  // Needed for generated @Generated annotations
 }
 
 sourceSets {

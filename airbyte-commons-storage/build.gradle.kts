@@ -7,23 +7,25 @@ dependencies {
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
 
-  api(libs.bundles.micronaut.annotation)
-  api(libs.bundles.micronaut.kotlin)
-  api(libs.bundles.micronaut.metrics)
-  api(libs.kotlin.logging)
-  api(libs.azure.storage)
-  api(libs.aws.java.sdk.s3)
-  api(libs.aws.java.sdk.sts)
-  api(libs.s3)
-  api(libs.google.cloud.storage)
-  api(libs.guava)
-  api(libs.slf4j.api)
-  api(libs.jackson.kotlin)
-
+  // Keep as api only if storage types appear in public method signatures
   api(project(":oss:airbyte-commons"))
   api(project(":oss:airbyte-commons-micronaut"))
-  api(project(":oss:airbyte-metrics:metrics-lib"))
-  api(project(":oss:airbyte-featureflag"))
+
+  // Hide implementation details from consumers - they don't need to see storage SDKs
+  implementation(libs.bundles.micronaut.annotation)
+  implementation(libs.bundles.micronaut.kotlin)
+  implementation(libs.bundles.micronaut.metrics)
+  implementation(libs.kotlin.logging)
+  implementation(libs.azure.storage)          // Hidden: Azure SDK
+  implementation(libs.aws.java.sdk.s3)        // Hidden: AWS S3 SDK
+  implementation(libs.aws.java.sdk.sts)       // Hidden: AWS STS SDK
+  implementation(libs.s3)                     // Hidden: S3 SDK
+  implementation(libs.google.cloud.storage)   // Hidden: GCS SDK (still used in StorageClient.kt)
+  implementation(libs.guava)
+  implementation(libs.slf4j.api)
+  implementation(libs.jackson.kotlin)
+  implementation(project(":oss:airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-featureflag"))
 
   implementation(libs.micronaut.inject)
   implementation(libs.bundles.logback)

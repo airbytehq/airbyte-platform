@@ -36,6 +36,7 @@ dependencies {
   implementation(libs.bundles.micronaut.cache)
   implementation(libs.bundles.micronaut.metrics)
   implementation(libs.guava)
+  implementation(libs.google.cloud.pubsub)  // Explicitly needed for Pub/Sub Publisher usage
   implementation(libs.s3)
   implementation(libs.aws.java.sdk.s3)
   implementation(libs.sts)
