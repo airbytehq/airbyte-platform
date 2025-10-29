@@ -4,10 +4,7 @@
 
 package io.airbyte.server.services
 
-import io.airbyte.api.model.generated.AttemptRead
-import io.airbyte.api.model.generated.JobRead
 import io.airbyte.commons.annotation.InternalForTesting
-import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.config.Attempt
 import io.airbyte.config.JobConfig
 import io.airbyte.config.StandardSyncSummary
@@ -79,13 +76,13 @@ data class StreamInfo(
 class JobObservabilityService(
   private val actorDefinitionService: ActorDefinitionService,
   private val connectionService: ConnectionService,
-  private val jobHistoryHandler: JobHistoryHandler,
   private val jobPersistence: JobPersistence,
   private val obsStatsService: ObsStatsService,
   private val workspaceService: WorkspaceService,
   private val metricClient: MetricClient,
   private val jobObservabilityReportingService: JobObservabilityReportingService?,
   private val jobObservabilityRulesService: JobObservabilityRulesService,
+  private val streamStatsService: StreamStatsService,
 ) {
   private val logger = KotlinLogging.logger {}
   private val outliers = Outliers()
@@ -101,9 +98,11 @@ class JobObservabilityService(
     val destinationId: UUID,
     val destinationDefinitionId: UUID,
     val destinationImageTag: String,
-    val job: JobRead,
-    val attempts: List<AttemptRead>,
-    val attemptsDurationSeconds: Long,
+    val createdAt: OffsetDateTime,
+    val jobType: String,
+    val status: String,
+    val attemptCount: Int,
+    val durationSeconds: Long,
   )
 
   fun finalizeStats(jobId: Long) {
@@ -121,16 +120,18 @@ class JobObservabilityService(
         destinationId = details.destinationId,
         destinationDefinitionId = details.destinationDefinitionId,
         destinationImageTag = details.destinationImageTag,
-        createdAt = OffsetDateTime.ofInstant(Instant.ofEpochSecond(details.job.createdAt), ZoneOffset.UTC),
-        jobType = details.job.configType.toString(),
-        status = details.job.status.toString(),
-        attemptCount = details.attempts.size,
-        durationSeconds = details.attemptsDurationSeconds,
+        createdAt = details.createdAt,
+        jobType = details.jobType,
+        status = details.status,
+        attemptCount = details.attemptCount,
+        durationSeconds = details.durationSeconds,
       )
     obsStatsService.saveJobsStats(obsJobStats)
 
+    // Use StreamStatsService for aggregated stats with billing-safe logic
+    val aggregatedStats = streamStatsService.getAggregatedStatsForJob(jobId)
     val streamStatsList =
-      details.job.streamAggregatedStats.map {
+      aggregatedStats.map {
         ObsStreamStats(
           id =
             ObsStreamStatsId(
@@ -299,19 +300,15 @@ class JobObservabilityService(
     )
 
   private fun fetchJobDetails(jobId: Long): JobDetails {
-    // We look up Job from this because it has the stats aggregation logic we use for billing.
-    val jobRead = jobHistoryHandler.getJobInfoWithoutLogs(jobId)
-    val connectionId = UUID.fromString(jobRead.job.configId)
-
-    // Because that's how we get sourceId/destId currently
-    val standardSync = connectionService.getStandardSync(connectionId)
-
-    // We look up jobs from this because we need the actorVersion to get details about the actual connectors we ran
     val job = jobPersistence.getJob(jobId)
+    val connectionId = UUID.fromString(job.scope)
+
+    // Get source and destination info
+    val standardSync = connectionService.getStandardSync(connectionId)
     val destVersion = actorDefinitionService.getActorDefinitionVersion(getDestinationDefinitionVersionId(job.config))
     val sourceVersion = getSourceDefinitionVersionId(job.config)?.let { actorDefinitionService.getActorDefinitionVersion(it) }
-    val durationSeconds = getDurationSecondsFromAttempts(job.attempts)
 
+    // Get workspace and organization
     val workspaceId = getWorkspaceId(job.config)
     val orgId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId).orElse(UUID_ZERO)
 
@@ -326,9 +323,11 @@ class JobObservabilityService(
       destinationId = standardSync.destinationId,
       destinationDefinitionId = destVersion.actorDefinitionId,
       destinationImageTag = destVersion.dockerImageTag,
-      job = jobRead.job,
-      attempts = jobRead.attempts.map { it.attempt },
-      attemptsDurationSeconds = durationSeconds,
+      createdAt = OffsetDateTime.ofInstant(Instant.ofEpochSecond(job.createdAtInSecond), ZoneOffset.UTC),
+      jobType = job.config.configType.toString(),
+      status = job.status.toString(),
+      attemptCount = job.attempts.size,
+      durationSeconds = getDurationSecondsFromAttempts(job.attempts),
     )
   }
 
