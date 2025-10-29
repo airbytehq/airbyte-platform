@@ -193,7 +193,7 @@ class WorkspacesHandler
           .withWebhookOperationConfigs(toPersistenceWrite(workspaceCreateWithId.webhookConfigs, uuidSupplier))
           .withOrganizationId(workspaceCreateWithId.organizationId)
 
-      if (email.isNotBlank()) {
+      if (email.isNullOrBlank()) {
         workspace.withEmail(email)
       }
 
