@@ -38,7 +38,6 @@ test.describe("Connection - Auto-detect schema changes", () => {
     test.beforeEach(async ({ request }, testInfo) => {
       // Get worker-specific schema for isolation
       schema = getWorkerSchema(testInfo.parallelIndex);
-      console.log(`[Test] Using schema: ${schema} (worker ${testInfo.parallelIndex})`);
 
       // Setup worker schema with baseline tables
       await dbHelpers.setupWorkerSchema(schema);
@@ -51,9 +50,13 @@ test.describe("Connection - Auto-detect schema changes", () => {
     });
 
     test.afterEach(async ({ request }) => {
-      await connectionTestScaffold.cleanupConnection(request, testData);
+      if (testData) {
+        await connectionTestScaffold.cleanupConnection(request, testData);
+      }
       // Teardown worker schema (drops schema and all tables)
-      await dbHelpers.teardownWorkerSchema(schema);
+      if (schema) {
+        await dbHelpers.teardownWorkerSchema(schema);
+      }
     });
 
     test("shows no diff after refresh if there have been no changes", async ({ page }) => {
@@ -90,7 +93,6 @@ test.describe("Connection - Auto-detect schema changes", () => {
     test.beforeEach(async ({ request }, testInfo) => {
       // Get worker-specific schema for isolation
       schema = getWorkerSchema(testInfo.parallelIndex);
-      console.log(`[Test] Using schema: ${schema} (worker ${testInfo.parallelIndex})`);
 
       // Setup worker schema with baseline tables
       await dbHelpers.setupWorkerSchema(schema);
@@ -108,9 +110,13 @@ test.describe("Connection - Auto-detect schema changes", () => {
     });
 
     test.afterEach(async ({ request }) => {
-      await connectionTestScaffold.cleanupConnection(request, testData);
+      if (testData) {
+        await connectionTestScaffold.cleanupConnection(request, testData);
+      }
       // Teardown worker schema
-      await dbHelpers.teardownWorkerSchema(schema);
+      if (schema) {
+        await dbHelpers.teardownWorkerSchema(schema);
+      }
     });
 
     test("does not show non-breaking change on list page", async ({ page, request }) => {
@@ -217,7 +223,6 @@ test.describe("Connection - Auto-detect schema changes", () => {
     test.beforeEach(async ({ request }, testInfo) => {
       // Get worker-specific schema for isolation
       schema = getWorkerSchema(testInfo.parallelIndex);
-      console.log(`[Test] Using schema: ${schema} (worker ${testInfo.parallelIndex})`);
 
       // Setup worker schema with baseline tables
       await dbHelpers.setupWorkerSchema(schema);
@@ -259,9 +264,13 @@ test.describe("Connection - Auto-detect schema changes", () => {
     });
 
     test.afterEach(async ({ request }) => {
-      await connectionTestScaffold.cleanupConnection(request, testData);
+      if (testData) {
+        await connectionTestScaffold.cleanupConnection(request, testData);
+      }
       // Teardown worker schema
-      await dbHelpers.teardownWorkerSchema(schema);
+      if (schema) {
+        await dbHelpers.teardownWorkerSchema(schema);
+      }
     });
 
     test("shows breaking change on list page", async ({ page }) => {
@@ -359,7 +368,6 @@ test.describe("Connection - Auto-detect schema changes", () => {
     test.beforeEach(async ({ request }, testInfo) => {
       // Get worker-specific schema for isolation
       schema = getWorkerSchema(testInfo.parallelIndex);
-      console.log(`[Test] Using schema: ${schema} (worker ${testInfo.parallelIndex})`);
 
       // Setup worker schema with baseline tables
       await dbHelpers.setupWorkerSchema(schema);
@@ -371,9 +379,13 @@ test.describe("Connection - Auto-detect schema changes", () => {
     });
 
     test.afterEach(async ({ request }) => {
-      await connectionTestScaffold.cleanupConnection(request, testData);
+      if (testData) {
+        await connectionTestScaffold.cleanupConnection(request, testData);
+      }
       // Teardown worker schema
-      await dbHelpers.teardownWorkerSchema(schema);
+      if (schema) {
+        await dbHelpers.teardownWorkerSchema(schema);
+      }
     });
 
     test("saves non-breaking schema update preference change", async ({ page }) => {
