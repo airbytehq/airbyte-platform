@@ -4,6 +4,7 @@
 
 package io.airbyte.persistence.job
 
+import com.fasterxml.jackson.core.type.TypeReference
 import datadog.trace.api.Trace
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.toEnum
@@ -48,7 +49,9 @@ import org.jooq.Result
 import org.jooq.SortField
 import org.jooq.conf.ParamType
 import org.jooq.impl.DSL
+import org.jooq.impl.SQLDataType
 import java.io.IOException
+import java.math.BigDecimal
 import java.nio.file.Path
 import java.time.Instant
 import java.time.LocalDateTime
@@ -334,7 +337,7 @@ class DefaultJobPersistence
         }
 
         val streamSyncStats = output.sync.standardSyncSummary.streamStats
-        if (streamSyncStats != null && !streamSyncStats.isEmpty()) {
+        if (!streamSyncStats.isNullOrEmpty()) {
           saveToStreamStatsTableBatch(
             now,
             output.sync.standardSyncSummary.streamStats,
@@ -1803,7 +1806,17 @@ class DefaultJobPersistence
                   .set(Tables.STREAM_STATS.BYTES_COMMITTED, stats.bytesCommitted)
                   .set(Tables.STREAM_STATS.RECORDS_COMMITTED, stats.recordsCommitted)
                   .set(Tables.STREAM_STATS.RECORDS_REJECTED, stats.recordsRejected)
-                  .where(
+                  // Ensure that the incoming additional stats are merged with what is already in the table, with the incoming
+                  // entries overriding the existing entries if the associated key already exists in the data stored in the table.
+                  .set(
+                    Tables.STREAM_STATS.ADDITIONAL_STATS,
+                    DSL.field(
+                      "COALESCE({0}, '{}'::jsonb) || COALESCE({1}, '{}'::jsonb)",
+                      SQLDataType.JSONB,
+                      Tables.STREAM_STATS.ADDITIONAL_STATS,
+                      JSONB.valueOf(Jsons.serialize(stats.additionalStats ?: emptyMap<String, BigDecimal>())),
+                    ),
+                  ).where(
                     Tables.STREAM_STATS.ATTEMPT_ID.eq(attemptId),
                     PersistenceHelpers.isNullOrEquals(Tables.STREAM_STATS.STREAM_NAME, streamStats.streamName),
                     PersistenceHelpers.isNullOrEquals(Tables.STREAM_STATS.STREAM_NAMESPACE, streamStats.streamNamespace),
@@ -1826,7 +1839,8 @@ class DefaultJobPersistence
                   .set(Tables.STREAM_STATS.ESTIMATED_BYTES, stats.estimatedBytes)
                   .set(Tables.STREAM_STATS.BYTES_COMMITTED, stats.bytesCommitted)
                   .set(Tables.STREAM_STATS.RECORDS_COMMITTED, stats.recordsCommitted)
-                  .set(Tables.STREAM_STATS.RECORDS_REJECTED, stats.recordsRejected),
+                  .set(Tables.STREAM_STATS.RECORDS_REJECTED, stats.recordsRejected)
+                  .set(Tables.STREAM_STATS.ADDITIONAL_STATS, JSONB.valueOf(Jsons.serialize(stats.additionalStats))),
               )
             }
           },
@@ -1873,7 +1887,7 @@ class DefaultJobPersistence
       private const val STREAM_STAT_SELECT_STATEMENT = (
         "SELECT atmpt.id, atmpt.attempt_number, atmpt.job_id, " +
           "stats.stream_name, stats.stream_namespace, stats.estimated_bytes, stats.estimated_records, stats.bytes_emitted, stats.records_emitted," +
-          "stats.bytes_committed, stats.records_committed, stats.records_rejected, sam.was_backfilled, sam.was_resumed " +
+          "stats.bytes_committed, stats.records_committed, stats.records_rejected, stats.additional_stats, sam.was_backfilled, sam.was_resumed " +
           "FROM stream_stats stats " +
           "INNER JOIN attempts atmpt ON atmpt.id = stats.attempt_id " +
           "LEFT JOIN stream_attempt_metadata sam ON (" +
@@ -1959,7 +1973,12 @@ class DefaultJobPersistence
                     .withEstimatedBytes(r.get(Tables.STREAM_STATS.ESTIMATED_BYTES))
                     .withBytesCommitted(r.get(Tables.STREAM_STATS.BYTES_COMMITTED))
                     .withRecordsCommitted(r.get(Tables.STREAM_STATS.RECORDS_COMMITTED))
-                    .withRecordsRejected(r.get(Tables.STREAM_STATS.RECORDS_REJECTED)),
+                    .withRecordsRejected(r.get(Tables.STREAM_STATS.RECORDS_REJECTED))
+                    .withAdditionalStats(
+                      r.get(Tables.STREAM_STATS.ADDITIONAL_STATS)?.data()?.let { additionalStats ->
+                        Jsons.deserialize(additionalStats, object : TypeReference<Map<String, BigDecimal>>() {})
+                      },
+                    ),
                 ).withWasBackfilled(wasBackfilled)
                 .withWasResumed(wasResumed)
 
@@ -2009,7 +2028,12 @@ class DefaultJobPersistence
               .withEstimatedBytes(record.get(Tables.STREAM_STATS.ESTIMATED_BYTES))
               .withBytesCommitted(record.get(Tables.STREAM_STATS.BYTES_COMMITTED))
               .withRecordsCommitted(record.get(Tables.STREAM_STATS.RECORDS_COMMITTED))
-              .withRecordsRejected(record.get(Tables.STREAM_STATS.RECORDS_REJECTED)),
+              .withRecordsRejected(record.get(Tables.STREAM_STATS.RECORDS_REJECTED))
+              .withAdditionalStats(
+                record.get(Tables.STREAM_STATS.ADDITIONAL_STATS)?.data()?.let { additionalStats ->
+                  Jsons.deserialize(additionalStats, object : TypeReference<Map<String, BigDecimal>>() {})
+                },
+              ),
           ).withWasBackfilled(wasBackfilled)
           .withWasResumed(wasResumed)
       }
@@ -2078,6 +2102,11 @@ class DefaultJobPersistence
                 .withRecordsCommitted(record.get(Tables.STREAM_STATS.RECORDS_COMMITTED))
                 .withBytesCommitted(record.get(Tables.STREAM_STATS.BYTES_COMMITTED))
                 .withRecordsRejected(record.get(Tables.STREAM_STATS.RECORDS_REJECTED))
+                .withAdditionalStats(
+                  record.get(Tables.STREAM_STATS.ADDITIONAL_STATS)?.data()?.let { additionalStats ->
+                    Jsons.deserialize(additionalStats, object : TypeReference<Map<String, BigDecimal>>() {})
+                  },
+                )
             StreamSyncStats()
               .withStreamName(record.get(Tables.STREAM_STATS.STREAM_NAME))
               .withStreamNamespace(record.get(Tables.STREAM_STATS.STREAM_NAMESPACE))

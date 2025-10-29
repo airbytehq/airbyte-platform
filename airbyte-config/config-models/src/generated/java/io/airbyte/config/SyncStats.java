@@ -13,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import jakarta.annotation.Generated;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -173,6 +174,11 @@ public class SyncStats implements Serializable {
   @JsonProperty("recordsRejected")
   @JsonPropertyDescription("The total number of records rejected by the destination")
   private Long recordsRejected;
+
+  @JsonProperty("additionalStats")
+  @JsonPropertyDescription("Additional stats for this state message. The values are defined as a big decimal to account for integer overflows, and the values should always have a decimal point for proper serialization.")
+  private Map<String, BigDecimal> additionalStats = new HashMap<>();
+
   @JsonIgnore
   private Map<String, Object> additionalProperties = new HashMap<String, Object>();
   private final static long serialVersionUID = 3634698207438746288L;
@@ -643,6 +649,27 @@ public class SyncStats implements Serializable {
 
   public SyncStats withRecordsRejected(Long recordsRejected) {
     this.recordsRejected = recordsRejected;
+    return this;
+  }
+
+  /**
+   * The additional stats
+   */
+  @JsonProperty("additionalStats")
+  public Map<String, BigDecimal> getAdditionalStats() {
+    return this.additionalStats;
+  }
+
+  /**
+   * The additional stats
+   */
+  @JsonProperty("additionalStats")
+  public void setAdditionalStats(Map<String, BigDecimal> additionalStats) {
+    this.additionalStats = additionalStats;
+  }
+
+  public SyncStats withAdditionalStats(Map<String, BigDecimal> additionalStats) {
+    this.additionalStats = additionalStats;
     return this;
   }
 

@@ -228,6 +228,7 @@ internal class DefaultJobPersistenceTest {
       StreamSyncStats()
         .withStats(
           SyncStats()
+            .withAdditionalStats(mapOf("test-stat" to 123L.toBigDecimal()))
             .withBytesEmitted(100L)
             .withRecordsEmitted(9L)
             .withEstimatedBytes(200L)
@@ -272,6 +273,281 @@ internal class DefaultJobPersistenceTest {
     assertEquals(streamSyncStats.stats.recordsEmitted, storedStreamSyncStats[0].stats.recordsEmitted)
     assertEquals(streamSyncStats.stats.estimatedRecords, storedStreamSyncStats[0].stats.estimatedRecords)
     assertEquals(streamSyncStats.stats.estimatedBytes, storedStreamSyncStats[0].stats.estimatedBytes)
+    assertEquals(streamSyncStats.stats.additionalStats, storedStreamSyncStats[0].stats.additionalStats)
+  }
+
+  @Test
+  @DisplayName("Should be able to read what is written when there is a stats upsert")
+  fun testWriteOutputWithStreamStatsUpsert() {
+    val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
+    val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
+    val created = jobPersistence.getJob(jobId)
+    val syncStats1 =
+      SyncStats()
+        .withBytesEmitted(100L)
+        .withRecordsEmitted(9L)
+        .withRecordsCommitted(10L)
+        .withDestinationStateMessagesEmitted(1L)
+        .withSourceStateMessagesEmitted(4L)
+        .withMaxSecondsBeforeSourceStateMessageEmitted(5L)
+        .withMeanSecondsBeforeSourceStateMessageEmitted(2L)
+        .withMaxSecondsBetweenStateMessageEmittedandCommitted(10L)
+        .withMeanSecondsBetweenStateMessageEmittedandCommitted(3L)
+    val streamName = "stream"
+    val streamNamespace = "namespace"
+    val streamSyncStats1 =
+      StreamSyncStats()
+        .withStats(
+          SyncStats()
+            .withAdditionalStats(mapOf("test-stat" to 123L.toBigDecimal()))
+            .withBytesEmitted(100L)
+            .withRecordsEmitted(9L)
+            .withEstimatedBytes(200L)
+            .withEstimatedRecords(10L),
+        ).withStreamNamespace(streamNamespace)
+        .withStreamName(streamName)
+
+    val streamSyncStats2 =
+      StreamSyncStats()
+        .withStats(
+          SyncStats()
+            .withAdditionalStats(mapOf("test-stat" to 246L.toBigDecimal(), "new-stat" to 999L.toBigDecimal()))
+            .withBytesEmitted(200L)
+            .withRecordsEmitted(18L)
+            .withEstimatedBytes(400L)
+            .withEstimatedRecords(20L),
+        ).withStreamNamespace(streamNamespace)
+        .withStreamName(streamName)
+
+    val standardSyncOutput1 =
+      StandardSyncOutput().withStandardSyncSummary(
+        StandardSyncSummary()
+          .withTotalStats(syncStats1)
+          .withStreamStats(listOf(streamSyncStats1)),
+      )
+    val standardSyncOutput2 =
+      StandardSyncOutput().withStandardSyncSummary(
+        StandardSyncSummary()
+          .withTotalStats(syncStats1)
+          .withStreamStats(listOf(streamSyncStats2)),
+      )
+    val jobOutput1 = JobOutput().withOutputType(JobOutput.OutputType.DISCOVER_CATALOG).withSync(standardSyncOutput1)
+    val jobOutput2 = JobOutput().withOutputType(JobOutput.OutputType.DISCOVER_CATALOG).withSync(standardSyncOutput2)
+
+    whenever(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242))
+    jobPersistence.writeOutput(jobId, attemptNumber, jobOutput1)
+    jobPersistence.writeOutput(jobId, attemptNumber, jobOutput2)
+
+    val updated = jobPersistence.getJob(jobId)
+
+    assertEquals(Optional.of(jobOutput2), updated.attempts[0].getOutput())
+    assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
+
+    val attemptStats = jobPersistence.getAttemptStats(jobId, attemptNumber)
+
+    val storedSyncStats = attemptStats.combinedStats
+    assertEquals(100L, storedSyncStats!!.bytesEmitted)
+    assertEquals(9L, storedSyncStats.recordsEmitted)
+    assertEquals(10L, storedSyncStats.recordsCommitted)
+    assertEquals(4L, storedSyncStats.sourceStateMessagesEmitted)
+    assertEquals(1L, storedSyncStats.destinationStateMessagesEmitted)
+    assertEquals(5L, storedSyncStats.maxSecondsBeforeSourceStateMessageEmitted)
+    assertEquals(2L, storedSyncStats.meanSecondsBeforeSourceStateMessageEmitted)
+    assertEquals(10L, storedSyncStats.maxSecondsBetweenStateMessageEmittedandCommitted)
+    assertEquals(3L, storedSyncStats.meanSecondsBetweenStateMessageEmittedandCommitted)
+
+    val storedStreamSyncStats = attemptStats.perStreamStats
+    assertEquals(1, storedStreamSyncStats.size)
+    assertEquals(streamName, storedStreamSyncStats[0].streamName)
+    assertEquals(streamNamespace, storedStreamSyncStats[0].streamNamespace)
+    assertEquals(streamSyncStats2.stats.bytesEmitted, storedStreamSyncStats[0].stats.bytesEmitted)
+    assertEquals(streamSyncStats2.stats.recordsEmitted, storedStreamSyncStats[0].stats.recordsEmitted)
+    assertEquals(streamSyncStats2.stats.estimatedRecords, storedStreamSyncStats[0].stats.estimatedRecords)
+    assertEquals(streamSyncStats2.stats.estimatedBytes, storedStreamSyncStats[0].stats.estimatedBytes)
+    assertEquals(streamSyncStats2.stats.additionalStats, storedStreamSyncStats[0].stats.additionalStats)
+  }
+
+  @Test
+  @DisplayName("Should be able to add additionalStats via upsert when initially missing")
+  fun testWriteOutputWithStreamStatsUpsertNoAdditionalStatsInInsert() {
+    val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
+    val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
+    val created = jobPersistence.getJob(jobId)
+    val syncStats1 =
+      SyncStats()
+        .withBytesEmitted(100L)
+        .withRecordsEmitted(9L)
+        .withRecordsCommitted(10L)
+        .withDestinationStateMessagesEmitted(1L)
+        .withSourceStateMessagesEmitted(4L)
+        .withMaxSecondsBeforeSourceStateMessageEmitted(5L)
+        .withMeanSecondsBeforeSourceStateMessageEmitted(2L)
+        .withMaxSecondsBetweenStateMessageEmittedandCommitted(10L)
+        .withMeanSecondsBetweenStateMessageEmittedandCommitted(3L)
+    val streamName = "stream"
+    val streamNamespace = "namespace"
+    val streamSyncStats1 =
+      StreamSyncStats()
+        .withStats(
+          SyncStats()
+            // No additional stats on purpose
+            .withBytesEmitted(100L)
+            .withRecordsEmitted(9L)
+            .withEstimatedBytes(200L)
+            .withEstimatedRecords(10L),
+        ).withStreamNamespace(streamNamespace)
+        .withStreamName(streamName)
+
+    val streamSyncStats2 =
+      StreamSyncStats()
+        .withStats(
+          SyncStats()
+            .withAdditionalStats(mapOf("test-stat" to 123L.toBigDecimal()))
+            .withBytesEmitted(200L)
+            .withRecordsEmitted(18L)
+            .withEstimatedBytes(400L)
+            .withEstimatedRecords(20L),
+        ).withStreamNamespace(streamNamespace)
+        .withStreamName(streamName)
+
+    val standardSyncOutput1 =
+      StandardSyncOutput().withStandardSyncSummary(
+        StandardSyncSummary()
+          .withTotalStats(syncStats1)
+          .withStreamStats(listOf(streamSyncStats1)),
+      )
+    val standardSyncOutput2 =
+      StandardSyncOutput().withStandardSyncSummary(
+        StandardSyncSummary()
+          .withTotalStats(syncStats1)
+          .withStreamStats(listOf(streamSyncStats2)),
+      )
+    val jobOutput1 = JobOutput().withOutputType(JobOutput.OutputType.DISCOVER_CATALOG).withSync(standardSyncOutput1)
+    val jobOutput2 = JobOutput().withOutputType(JobOutput.OutputType.DISCOVER_CATALOG).withSync(standardSyncOutput2)
+
+    whenever(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242))
+    jobPersistence.writeOutput(jobId, attemptNumber, jobOutput1)
+    jobPersistence.writeOutput(jobId, attemptNumber, jobOutput2)
+
+    val updated = jobPersistence.getJob(jobId)
+
+    assertEquals(Optional.of(jobOutput2), updated.attempts[0].getOutput())
+    assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
+
+    val attemptStats = jobPersistence.getAttemptStats(jobId, attemptNumber)
+
+    val storedSyncStats = attemptStats.combinedStats
+    assertEquals(100L, storedSyncStats!!.bytesEmitted)
+    assertEquals(9L, storedSyncStats.recordsEmitted)
+    assertEquals(10L, storedSyncStats.recordsCommitted)
+    assertEquals(4L, storedSyncStats.sourceStateMessagesEmitted)
+    assertEquals(1L, storedSyncStats.destinationStateMessagesEmitted)
+    assertEquals(5L, storedSyncStats.maxSecondsBeforeSourceStateMessageEmitted)
+    assertEquals(2L, storedSyncStats.meanSecondsBeforeSourceStateMessageEmitted)
+    assertEquals(10L, storedSyncStats.maxSecondsBetweenStateMessageEmittedandCommitted)
+    assertEquals(3L, storedSyncStats.meanSecondsBetweenStateMessageEmittedandCommitted)
+
+    val storedStreamSyncStats = attemptStats.perStreamStats
+    assertEquals(1, storedStreamSyncStats.size)
+    assertEquals(streamName, storedStreamSyncStats[0].streamName)
+    assertEquals(streamNamespace, storedStreamSyncStats[0].streamNamespace)
+    assertEquals(streamSyncStats2.stats.bytesEmitted, storedStreamSyncStats[0].stats.bytesEmitted)
+    assertEquals(streamSyncStats2.stats.recordsEmitted, storedStreamSyncStats[0].stats.recordsEmitted)
+    assertEquals(streamSyncStats2.stats.estimatedRecords, storedStreamSyncStats[0].stats.estimatedRecords)
+    assertEquals(streamSyncStats2.stats.estimatedBytes, storedStreamSyncStats[0].stats.estimatedBytes)
+    assertEquals(streamSyncStats2.stats.additionalStats, storedStreamSyncStats[0].stats.additionalStats)
+  }
+
+  @Test
+  @DisplayName("Should be able to read what is written when there is a stats upsert without additional stats in update")
+  fun testWriteOutputWithStreamStatsUpsertWithNoAdditionalStatsInUpdate() {
+    val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
+    val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
+    val created = jobPersistence.getJob(jobId)
+    val syncStats1 =
+      SyncStats()
+        .withBytesEmitted(100L)
+        .withRecordsEmitted(9L)
+        .withRecordsCommitted(10L)
+        .withDestinationStateMessagesEmitted(1L)
+        .withSourceStateMessagesEmitted(4L)
+        .withMaxSecondsBeforeSourceStateMessageEmitted(5L)
+        .withMeanSecondsBeforeSourceStateMessageEmitted(2L)
+        .withMaxSecondsBetweenStateMessageEmittedandCommitted(10L)
+        .withMeanSecondsBetweenStateMessageEmittedandCommitted(3L)
+    val streamName = "stream"
+    val streamNamespace = "namespace"
+    val streamSyncStats1 =
+      StreamSyncStats()
+        .withStats(
+          SyncStats()
+            .withAdditionalStats(mapOf("test-stat" to 123L.toBigDecimal()))
+            .withBytesEmitted(100L)
+            .withRecordsEmitted(9L)
+            .withEstimatedBytes(200L)
+            .withEstimatedRecords(10L),
+        ).withStreamNamespace(streamNamespace)
+        .withStreamName(streamName)
+
+    val streamSyncStats2 =
+      StreamSyncStats()
+        .withStats(
+          SyncStats()
+            // No additional stats on purpose
+            .withBytesEmitted(200L)
+            .withRecordsEmitted(18L)
+            .withEstimatedBytes(400L)
+            .withEstimatedRecords(20L),
+        ).withStreamNamespace(streamNamespace)
+        .withStreamName(streamName)
+
+    val standardSyncOutput1 =
+      StandardSyncOutput().withStandardSyncSummary(
+        StandardSyncSummary()
+          .withTotalStats(syncStats1)
+          .withStreamStats(listOf(streamSyncStats1)),
+      )
+    val standardSyncOutput2 =
+      StandardSyncOutput().withStandardSyncSummary(
+        StandardSyncSummary()
+          .withTotalStats(syncStats1)
+          .withStreamStats(listOf(streamSyncStats2)),
+      )
+    val jobOutput1 = JobOutput().withOutputType(JobOutput.OutputType.DISCOVER_CATALOG).withSync(standardSyncOutput1)
+    val jobOutput2 = JobOutput().withOutputType(JobOutput.OutputType.DISCOVER_CATALOG).withSync(standardSyncOutput2)
+
+    whenever(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242))
+    jobPersistence.writeOutput(jobId, attemptNumber, jobOutput1)
+    jobPersistence.writeOutput(jobId, attemptNumber, jobOutput2)
+
+    val updated = jobPersistence.getJob(jobId)
+
+    assertEquals(Optional.of(jobOutput2), updated.attempts[0].getOutput())
+    assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
+
+    val attemptStats = jobPersistence.getAttemptStats(jobId, attemptNumber)
+
+    val storedSyncStats = attemptStats.combinedStats
+    assertEquals(100L, storedSyncStats!!.bytesEmitted)
+    assertEquals(9L, storedSyncStats.recordsEmitted)
+    assertEquals(10L, storedSyncStats.recordsCommitted)
+    assertEquals(4L, storedSyncStats.sourceStateMessagesEmitted)
+    assertEquals(1L, storedSyncStats.destinationStateMessagesEmitted)
+    assertEquals(5L, storedSyncStats.maxSecondsBeforeSourceStateMessageEmitted)
+    assertEquals(2L, storedSyncStats.meanSecondsBeforeSourceStateMessageEmitted)
+    assertEquals(10L, storedSyncStats.maxSecondsBetweenStateMessageEmittedandCommitted)
+    assertEquals(3L, storedSyncStats.meanSecondsBetweenStateMessageEmittedandCommitted)
+
+    val storedStreamSyncStats = attemptStats.perStreamStats
+    assertEquals(1, storedStreamSyncStats.size)
+    assertEquals(streamName, storedStreamSyncStats[0].streamName)
+    assertEquals(streamNamespace, storedStreamSyncStats[0].streamNamespace)
+    assertEquals(streamSyncStats2.stats.bytesEmitted, storedStreamSyncStats[0].stats.bytesEmitted)
+    assertEquals(streamSyncStats2.stats.recordsEmitted, storedStreamSyncStats[0].stats.recordsEmitted)
+    assertEquals(streamSyncStats2.stats.estimatedRecords, storedStreamSyncStats[0].stats.estimatedRecords)
+    assertEquals(streamSyncStats2.stats.estimatedBytes, storedStreamSyncStats[0].stats.estimatedBytes)
+    // This is explicitly validating that if the second update does not have any additional stats, it does not erase the previously saved value
+    assertEquals(streamSyncStats1.stats.additionalStats, storedStreamSyncStats[0].stats.additionalStats)
   }
 
   @Test
@@ -606,6 +882,7 @@ internal class DefaultJobPersistenceTest {
     fun testWriteStatsFirst() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
+      val additionalStats = mapOf("additional-stat" to 123L.toBigDecimal())
       val streamStats =
         listOf(
           StreamSyncStats()
@@ -626,7 +903,8 @@ internal class DefaultJobPersistenceTest {
                 .withBytesEmitted(500L)
                 .withRecordsEmitted(500L)
                 .withEstimatedBytes(10000L)
-                .withEstimatedRecords(2000L),
+                .withEstimatedRecords(2000L)
+                .withAdditionalStats(additionalStats),
             ),
         )
       val estimatedRecords = 1000L
@@ -673,6 +951,7 @@ internal class DefaultJobPersistenceTest {
     fun testWriteStatsWithMetadataDefault() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
+      val additionalStats = mapOf("test-stat" to 123L.toBigDecimal())
       val streamStats =
         listOf(
           StreamSyncStats()
@@ -683,7 +962,8 @@ internal class DefaultJobPersistenceTest {
                 .withBytesEmitted(500L)
                 .withRecordsEmitted(500L)
                 .withEstimatedBytes(10000L)
-                .withEstimatedRecords(2000L),
+                .withEstimatedRecords(2000L)
+                .withAdditionalStats(additionalStats),
             ).withWasResumed(false)
             .withWasBackfilled(false),
           StreamSyncStats()
@@ -694,7 +974,8 @@ internal class DefaultJobPersistenceTest {
                 .withBytesEmitted(500L)
                 .withRecordsEmitted(500L)
                 .withEstimatedBytes(10000L)
-                .withEstimatedRecords(2000L),
+                .withEstimatedRecords(2000L)
+                .withAdditionalStats(additionalStats),
             ).withWasResumed(false)
             .withWasBackfilled(false),
         )
@@ -818,6 +1099,7 @@ internal class DefaultJobPersistenceTest {
     fun testWriteStatsRepeated() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
+      val additionalStats = mapOf("additional-stat" to 123L.toBigDecimal())
 
       // First write.
       var streamStats =
@@ -830,7 +1112,8 @@ internal class DefaultJobPersistenceTest {
                 .withBytesEmitted(500L)
                 .withRecordsEmitted(500L)
                 .withEstimatedBytes(10000L)
-                .withEstimatedRecords(2000L),
+                .withEstimatedRecords(2000L)
+                .withAdditionalStats(additionalStats),
             ),
         )
       jobPersistence.writeStats(jobId, attemptNumber, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, CONNECTION_ID, streamStats)
@@ -847,7 +1130,8 @@ internal class DefaultJobPersistenceTest {
                 .withBytesEmitted(1000L)
                 .withRecordsEmitted(1000L)
                 .withEstimatedBytes(10000L)
-                .withEstimatedRecords(2000L),
+                .withEstimatedRecords(2000L)
+                .withAdditionalStats(additionalStats),
             ),
         )
       jobPersistence.writeStats(jobId, attemptNumber, 2000L, 2000L, 2000L, 2000L, 2000L, 2000L, 2000L, CONNECTION_ID, streamStats)
@@ -870,6 +1154,7 @@ internal class DefaultJobPersistenceTest {
     fun testWriteStatsUpsert() {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
+      val additionalStats = mapOf("additional-stat" to 123L.toBigDecimal())
 
       // First write.
       var streamStats =
@@ -882,7 +1167,8 @@ internal class DefaultJobPersistenceTest {
                 .withBytesEmitted(500L)
                 .withRecordsEmitted(500L)
                 .withEstimatedBytes(10000L)
-                .withEstimatedRecords(2000L),
+                .withEstimatedRecords(2000L)
+                .withAdditionalStats(additionalStats),
             ),
         )
       jobPersistence.writeStats(jobId, attemptNumber, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, CONNECTION_ID, streamStats)
@@ -899,7 +1185,8 @@ internal class DefaultJobPersistenceTest {
                 .withBytesEmitted(1000L)
                 .withRecordsEmitted(1000L)
                 .withEstimatedBytes(10000L)
-                .withEstimatedRecords(2000L),
+                .withEstimatedRecords(2000L)
+                .withAdditionalStats(additionalStats),
             ),
         )
       jobPersistence.writeStats(jobId, attemptNumber, 2000L, 2000L, 2000L, 2000L, 2000L, 2000L, 2000L, CONNECTION_ID, streamStats)
@@ -1005,6 +1292,7 @@ internal class DefaultJobPersistenceTest {
     fun testGetMultipleStats() {
       val jobOneId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val jobOneAttemptNumberOne = jobPersistence.createAttempt(jobOneId, LOG_PATH)
+      val additionalStats = mapOf("test-stat" to 123L.toBigDecimal())
 
       // First write for first attempt.
       var streamStats =
@@ -1016,7 +1304,8 @@ internal class DefaultJobPersistenceTest {
                 .withBytesEmitted(1L)
                 .withRecordsEmitted(1L)
                 .withEstimatedBytes(2L)
-                .withEstimatedRecords(2L),
+                .withEstimatedRecords(2L)
+                .withAdditionalStats(additionalStats),
             ),
           StreamSyncStats()
             .withStreamName("name2")
@@ -1026,7 +1315,8 @@ internal class DefaultJobPersistenceTest {
                 .withBytesEmitted(1L)
                 .withRecordsEmitted(1L)
                 .withEstimatedBytes(2L)
-                .withEstimatedRecords(2L),
+                .withEstimatedRecords(2L)
+                .withAdditionalStats(additionalStats),
             ),
         )
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, CONNECTION_ID, streamStats)
@@ -1045,7 +1335,8 @@ internal class DefaultJobPersistenceTest {
                 .withEstimatedRecords(20L)
                 .withBytesCommitted(100L)
                 .withRecordsCommitted(10L)
-                .withRecordsRejected(1L),
+                .withRecordsRejected(1L)
+                .withAdditionalStats(additionalStats),
             ),
           StreamSyncStats()
             .withStreamName("name2")
@@ -1058,7 +1349,8 @@ internal class DefaultJobPersistenceTest {
                 .withEstimatedRecords(200L)
                 .withBytesCommitted(888L)
                 .withRecordsCommitted(88L)
-                .withRecordsRejected(8L),
+                .withRecordsRejected(8L)
+                .withAdditionalStats(additionalStats),
             ),
         )
       jobPersistence.writeStats(jobOneId, jobOneAttemptNumberOne, 220L, 2200L, 110L, 1100L, 98L, 988L, 9L, CONNECTION_ID, streamStats)
@@ -1077,7 +1369,8 @@ internal class DefaultJobPersistenceTest {
                 .withEstimatedRecords(200L)
                 .withBytesCommitted(1000L)
                 .withRecordsCommitted(100L)
-                .withRecordsRejected(10L),
+                .withRecordsRejected(10L)
+                .withAdditionalStats(additionalStats),
             ),
           StreamSyncStats()
             .withStreamName("name2")
@@ -1090,7 +1383,8 @@ internal class DefaultJobPersistenceTest {
                 .withEstimatedRecords(2000L)
                 .withBytesCommitted(8880L)
                 .withRecordsCommitted(880L)
-                .withRecordsRejected(80L),
+                .withRecordsRejected(80L)
+                .withAdditionalStats(additionalStats),
             ),
         )
       val jobOneAttemptNumberTwo = jobPersistence.createAttempt(jobOneId, LOG_PATH)
@@ -1108,7 +1402,8 @@ internal class DefaultJobPersistenceTest {
                 .withBytesEmitted(1000L)
                 .withRecordsEmitted(1000L)
                 .withEstimatedBytes(10000L)
-                .withEstimatedRecords(2000L),
+                .withEstimatedRecords(2000L)
+                .withAdditionalStats(additionalStats),
             ),
           StreamSyncStats()
             .withStreamName("name2")
@@ -1118,7 +1413,8 @@ internal class DefaultJobPersistenceTest {
                 .withBytesEmitted(5000L)
                 .withRecordsEmitted(5000L)
                 .withEstimatedBytes(100000L)
-                .withEstimatedRecords(20000L),
+                .withEstimatedRecords(20000L)
+                .withAdditionalStats(additionalStats),
             ),
         )
       jobPersistence.writeStats(jobTwoId, jobTwoAttemptNumberOne, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, 1000L, CONNECTION_ID, streamStats)
@@ -1183,7 +1479,8 @@ internal class DefaultJobPersistenceTest {
                 .withEstimatedRecords(220L)
                 .withBytesCommitted(988L)
                 .withRecordsCommitted(98L)
-                .withRecordsRejected(9L),
+                .withRecordsRejected(9L)
+                .withAdditionalStats(emptyMap()),
               listOf(
                 StreamSyncStats()
                   .withStreamName("name1")
@@ -1195,7 +1492,8 @@ internal class DefaultJobPersistenceTest {
                       .withEstimatedRecords(20L)
                       .withBytesCommitted(100L)
                       .withRecordsCommitted(10L)
-                      .withRecordsRejected(1L),
+                      .withRecordsRejected(1L)
+                      .withAdditionalStats(additionalStats),
                   ).withWasBackfilled(true)
                   .withWasResumed(false),
                 StreamSyncStats()
@@ -1209,7 +1507,8 @@ internal class DefaultJobPersistenceTest {
                       .withEstimatedRecords(200L)
                       .withBytesCommitted(888L)
                       .withRecordsCommitted(88L)
-                      .withRecordsRejected(8L),
+                      .withRecordsRejected(8L)
+                      .withAdditionalStats(additionalStats),
                   ).withWasBackfilled(false)
                   .withWasResumed(false),
               ),
@@ -1223,7 +1522,8 @@ internal class DefaultJobPersistenceTest {
                 .withEstimatedRecords(1000L)
                 .withBytesCommitted(1000L)
                 .withRecordsCommitted(1000L)
-                .withRecordsRejected(1000L),
+                .withRecordsRejected(1000L)
+                .withAdditionalStats(emptyMap()),
               listOf(
                 StreamSyncStats()
                   .withStreamName("name1")
@@ -1235,7 +1535,8 @@ internal class DefaultJobPersistenceTest {
                       .withEstimatedRecords(200L)
                       .withBytesCommitted(1000L)
                       .withRecordsCommitted(100L)
-                      .withRecordsRejected(10L),
+                      .withRecordsRejected(10L)
+                      .withAdditionalStats(additionalStats),
                   ).withWasBackfilled(false)
                   .withWasResumed(true),
                 StreamSyncStats()
@@ -1249,7 +1550,8 @@ internal class DefaultJobPersistenceTest {
                       .withEstimatedRecords(2000L)
                       .withBytesCommitted(8880L)
                       .withRecordsCommitted(880L)
-                      .withRecordsRejected(80L),
+                      .withRecordsRejected(80L)
+                      .withAdditionalStats(additionalStats),
                   ).withWasBackfilled(false)
                   .withWasResumed(false),
               ),
@@ -1263,7 +1565,8 @@ internal class DefaultJobPersistenceTest {
                 .withEstimatedRecords(1000L)
                 .withBytesCommitted(1000L)
                 .withRecordsCommitted(1000L)
-                .withRecordsRejected(1000L),
+                .withRecordsRejected(1000L)
+                .withAdditionalStats(emptyMap()),
               listOf(
                 StreamSyncStats()
                   .withStreamName("name1")
@@ -1272,7 +1575,8 @@ internal class DefaultJobPersistenceTest {
                       .withBytesEmitted(1000L)
                       .withRecordsEmitted(1000L)
                       .withEstimatedBytes(10000L)
-                      .withEstimatedRecords(2000L),
+                      .withEstimatedRecords(2000L)
+                      .withAdditionalStats(additionalStats),
                   ).withWasBackfilled(false)
                   .withWasResumed(false),
                 StreamSyncStats()
@@ -1283,7 +1587,8 @@ internal class DefaultJobPersistenceTest {
                       .withEstimatedBytes(100000L)
                       .withEstimatedRecords(20000L)
                       .withBytesEmitted(5000L)
-                      .withRecordsEmitted(5000L),
+                      .withRecordsEmitted(5000L)
+                      .withAdditionalStats(additionalStats),
                   ).withWasBackfilled(true)
                   .withWasResumed(false),
               ),
@@ -1298,6 +1603,7 @@ internal class DefaultJobPersistenceTest {
     fun testWritingStatsForDifferentStreams() {
       val jobOneId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       val jobOneAttemptNumberOne = jobPersistence.createAttempt(jobOneId, LOG_PATH)
+      val additionalStats = mapOf("test-stat" to 123L.toBigDecimal())
 
       val stream1 = "s1"
       val namespace1 = "ns1"
@@ -1311,15 +1617,15 @@ internal class DefaultJobPersistenceTest {
           StreamSyncStats()
             .withStreamName(stream1)
             .withStreamNamespace(namespace1)
-            .withStats(SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L)),
+            .withStats(SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L).withAdditionalStats(additionalStats)),
           StreamSyncStats()
             .withStreamName(stream2)
             .withStreamNamespace(namespace2)
-            .withStats(SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L)),
+            .withStats(SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L).withAdditionalStats(additionalStats)),
           StreamSyncStats()
             .withStreamName(stream3)
             .withStreamNamespace(namespace3)
-            .withStats(SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L)),
+            .withStats(SyncStats().withBytesEmitted(0L).withRecordsEmitted(0L).withAdditionalStats(additionalStats)),
         )
       jobPersistence.writeStats(
         jobOneId,
@@ -1335,12 +1641,13 @@ internal class DefaultJobPersistenceTest {
         streamStatsUpdate0,
       )
 
+      val updatedAdditionalStats = mapOf("test-stat" to 246L.toBigDecimal())
       val streamStatsUpdate1 =
         listOf(
           StreamSyncStats()
             .withStreamName(stream1)
             .withStreamNamespace(namespace1)
-            .withStats(SyncStats().withBytesEmitted(10L).withRecordsEmitted(1L))
+            .withStats(SyncStats().withBytesEmitted(10L).withRecordsEmitted(1L).withAdditionalStats(updatedAdditionalStats))
             .withWasBackfilled(false)
             .withWasResumed(false),
         )
@@ -1351,7 +1658,7 @@ internal class DefaultJobPersistenceTest {
           StreamSyncStats()
             .withStreamName(stream2)
             .withStreamNamespace(namespace2)
-            .withStats(SyncStats().withBytesEmitted(20L).withRecordsEmitted(2L))
+            .withStats(SyncStats().withBytesEmitted(20L).withRecordsEmitted(2L).withAdditionalStats(updatedAdditionalStats))
             .withWasBackfilled(false)
             .withWasResumed(false),
         )
@@ -1362,7 +1669,7 @@ internal class DefaultJobPersistenceTest {
           StreamSyncStats()
             .withStreamName(stream3)
             .withStreamNamespace(namespace3)
-            .withStats(SyncStats().withBytesEmitted(30L).withRecordsEmitted(3L))
+            .withStats(SyncStats().withBytesEmitted(30L).withRecordsEmitted(3L).withAdditionalStats(updatedAdditionalStats))
             .withWasBackfilled(false)
             .withWasResumed(false),
         )

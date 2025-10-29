@@ -4,11 +4,14 @@
 
 package io.airbyte.commons.server.handlers
 
+import io.airbyte.api.model.generated.AttemptStats
+import io.airbyte.api.model.generated.AttemptStreamStats
 import io.airbyte.api.model.generated.ConnectionState
 import io.airbyte.api.model.generated.ConnectionStateType
 import io.airbyte.api.model.generated.GlobalState
 import io.airbyte.api.model.generated.InternalOperationResult
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody
+import io.airbyte.api.model.generated.SaveStatsRequestBody
 import io.airbyte.api.model.generated.SaveStreamAttemptMetadataRequestBody
 import io.airbyte.api.model.generated.StreamAttemptMetadata
 import io.airbyte.commons.json.Jsons.emptyObject
@@ -48,6 +51,7 @@ import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.StateType
 import io.airbyte.config.StateWrapper
 import io.airbyte.config.StreamDescriptor
+import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncMode
 import io.airbyte.config.SyncStats
 import io.airbyte.config.helpers.FieldGenerator
@@ -876,6 +880,60 @@ internal class AttemptHandlerTest {
       handler.updateGenerationAndStateForSubsequentAttempts(job, supportsRefresh)
     }
     Mockito.verify(statePersistence).bulkDelete(connectionId, expectedStreamsToClear)
+  }
+
+  @Test
+  fun testSaveStats() {
+    val attemptStats = AttemptStats()
+    attemptStats.bytesEmitted = 123L
+    attemptStats.bytesCommitted = 223L
+    attemptStats.estimatedBytes = 323L
+    attemptStats.estimatedRecords = 423L
+    attemptStats.recordsEmitted = 523L
+    attemptStats.recordsCommitted = 623L
+    attemptStats.recordsRejected = 723L
+    attemptStats.stateMessagesEmitted = 823L
+    attemptStats.additionalStats = mapOf("additional" to 923L.toBigDecimal())
+    val attemptStreamStats = AttemptStreamStats()
+    attemptStreamStats.streamName = "streamName"
+    attemptStreamStats.streamNamespace = "streamNamespace"
+    attemptStreamStats.stats = attemptStats
+    val saveStatsRequest = SaveStatsRequestBody()
+    saveStatsRequest.connectionId = CONNECTION_ID
+    saveStatsRequest.jobId = JOB_ID
+    saveStatsRequest.attemptNumber = ATTEMPT_NUMBER
+    saveStatsRequest.stats = attemptStats
+    saveStatsRequest.streamStats = listOf(attemptStreamStats)
+
+    val expectedStreamSyncStats = StreamSyncStats()
+    expectedStreamSyncStats.streamName = attemptStreamStats.streamName
+    expectedStreamSyncStats.streamNamespace = attemptStreamStats.streamNamespace
+    expectedStreamSyncStats.stats =
+      SyncStats()
+        .withBytesEmitted(attemptStreamStats.stats.bytesEmitted)
+        .withRecordsEmitted(attemptStreamStats.stats.recordsEmitted)
+        .withBytesCommitted(attemptStreamStats.stats.bytesCommitted)
+        .withRecordsCommitted(attemptStreamStats.stats.recordsCommitted)
+        .withRecordsRejected(attemptStreamStats.stats.recordsRejected)
+        .withEstimatedBytes(attemptStreamStats.stats.estimatedBytes)
+        .withEstimatedRecords(attemptStreamStats.stats.estimatedRecords)
+        .withAdditionalStats(attemptStreamStats.stats.additionalStats)
+
+    handler.saveStats(saveStatsRequest)
+
+    Mockito.verify(jobPersistence).writeStats(
+      jobId = JOB_ID,
+      attemptNumber = ATTEMPT_NUMBER,
+      estimatedRecords = attemptStats.estimatedRecords,
+      estimatedBytes = attemptStats.estimatedBytes,
+      bytesEmitted = attemptStats.bytesEmitted,
+      recordsEmitted = attemptStats.recordsEmitted,
+      recordsCommitted = attemptStats.recordsCommitted,
+      recordsRejected = attemptStats.recordsRejected,
+      bytesCommitted = attemptStats.bytesCommitted,
+      connectionId = CONNECTION_ID,
+      streamStats = listOf(expectedStreamSyncStats),
+    )
   }
 
   companion object {

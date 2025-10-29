@@ -271,22 +271,23 @@ open class AttemptHandler(
                   .withRecordsCommitted(s.stats.recordsCommitted)
                   .withRecordsRejected(s.stats.recordsRejected)
                   .withEstimatedBytes(s.stats.estimatedBytes)
-                  .withEstimatedRecords(s.stats.estimatedRecords),
+                  .withEstimatedRecords(s.stats.estimatedRecords)
+                  .withAdditionalStats(s.stats.additionalStats),
               )
           }.collect(Collectors.toList())
 
       jobPersistence.writeStats(
-        requestBody.jobId,
-        requestBody.attemptNumber,
-        stats.estimatedRecords,
-        stats.estimatedBytes,
-        stats.recordsEmitted,
-        stats.bytesEmitted,
-        stats.recordsCommitted,
-        stats.bytesCommitted,
-        stats.recordsRejected,
-        requestBody.connectionId,
-        streamStats,
+        jobId = requestBody.jobId,
+        attemptNumber = requestBody.attemptNumber,
+        estimatedRecords = stats.estimatedRecords,
+        estimatedBytes = stats.estimatedBytes,
+        recordsEmitted = stats.recordsEmitted,
+        bytesEmitted = stats.bytesEmitted,
+        recordsCommitted = stats.recordsCommitted,
+        bytesCommitted = stats.bytesCommitted,
+        recordsRejected = stats.recordsRejected,
+        connectionId = requestBody.connectionId,
+        streamStats = streamStats,
       )
     } catch (ioe: IOException) {
       log.error(ioe) { "IOException when setting temporal workflow in attempt;" }
