@@ -32,6 +32,7 @@ import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ConfigurationUpdate
 import io.airbyte.commons.server.converters.JobConverter
+import io.airbyte.commons.server.errors.NotFoundException
 import io.airbyte.commons.server.errors.ValueConflictKnownException
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
@@ -294,6 +295,11 @@ open class SchedulerHandler
       req: SourceDiscoverSchemaRequestBody,
       source: SourceConnection,
     ): SourceDiscoverSchemaRead {
+      val workspace = workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)
+      if (workspace.tombstone) {
+        throw NotFoundException("Cannot run discover on tombstoned workspace")
+      }
+
       val sourceId = req.sourceId
       val sourceDef = sourceService.getStandardSourceDefinition(source.sourceDefinitionId)
       val sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.workspaceId, sourceId)
@@ -415,6 +421,11 @@ open class SchedulerHandler
     }
 
     fun discoverSchemaForSourceFromSourceCreate(sourceCreate: SourceCoreConfig): SourceDiscoverSchemaRead {
+      val workspace = workspaceService.getStandardWorkspaceNoSecrets(sourceCreate.workspaceId, includeTombstone = true)
+      if (workspace.tombstone) {
+        throw NotFoundException("Cannot run discover on tombstoned workspace")
+      }
+
       val sourceDef = sourceService.getStandardSourceDefinition(sourceCreate.sourceDefinitionId)
       val sourceVersion =
         actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceCreate.workspaceId, sourceCreate.sourceId)

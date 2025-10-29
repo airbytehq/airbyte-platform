@@ -52,9 +52,9 @@ import io.airbyte.commons.logging.LogEvents
 import io.airbyte.commons.logging.LogUtils
 import io.airbyte.commons.server.converters.ConfigurationUpdate
 import io.airbyte.commons.server.converters.JobConverter
+import io.airbyte.commons.server.errors.EntityDeletedException
+import io.airbyte.commons.server.errors.NotFoundException
 import io.airbyte.commons.server.errors.ValueConflictKnownException
-import io.airbyte.commons.server.handlers.ConnectionsHandler
-import io.airbyte.commons.server.handlers.StreamRefreshesHandler
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
 import io.airbyte.commons.server.helpers.DestinationHelpers
@@ -100,7 +100,6 @@ import io.airbyte.config.persistence.StreamResetPersistence
 import io.airbyte.config.persistence.domain.StreamRefresh
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers.processConfigSecrets
 import io.airbyte.config.secrets.SecretsRepositoryWriter
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
@@ -126,12 +125,13 @@ import io.airbyte.protocol.models.v0.CatalogHelpers
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.protocol.models.v0.Field
 import io.airbyte.validation.json.JsonSchemaValidator
-import io.airbyte.validation.json.JsonValidationException
 import jakarta.validation.Valid
 import org.assertj.core.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -148,7 +148,6 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
-import java.io.IOException
 import java.net.URI
 import java.nio.file.Path
 import java.util.Optional
@@ -923,11 +922,16 @@ internal class SchedulerHandlerTest {
       .assertEquals(expectedCheckConnectionRead, checkConnectionRead)
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun testDiscoverSchemaForSourceFromSourceId(enabled: Boolean) {
+  @Test
+  fun testDiscoverSchemaForSourceFromSourceId() {
     val source = SourceHelpers.generateSource(UUID.randomUUID())
     val request = SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId())
+
+    val mockWorkspace =
+      mock<StandardWorkspace>().also {
+        whenever(it.tombstone).thenReturn(false)
+      }
+    whenever(workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)).thenReturn(mockWorkspace)
 
     val metadata =
       SynchronousJobMetadata(
@@ -1015,11 +1019,16 @@ internal class SchedulerHandlerTest {
       .createDiscoverSchemaJob(source, sourceVersion, false, RESOURCE_REQUIREMENT, WorkloadPriority.HIGH)
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun testDiscoverSchemaForSourceFromSourceIdCachedCatalog(enabled: Boolean) {
+  @Test
+  fun testDiscoverSchemaForSourceFromSourceIdCachedCatalog() {
     val source = SourceHelpers.generateSource(UUID.randomUUID())
     val request = SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId())
+
+    val mockWorkspace =
+      mock<StandardWorkspace>().also {
+        whenever(it.tombstone).thenReturn(false)
+      }
+    whenever(workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)).thenReturn(mockWorkspace)
 
     val thisCatalogId = UUID.randomUUID()
     val synchronousJobMetadata =
@@ -1079,11 +1088,16 @@ internal class SchedulerHandlerTest {
     verify(synchronousSchedulerClient, never()).createDiscoverSchemaJob(any(), any(), any(), any(), any())
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun testDiscoverSchemaForSourceFromSourceIdDisableCache(enabled: Boolean) {
+  @Test
+  fun testDiscoverSchemaForSourceFromSourceIdDisableCache() {
     val source = SourceHelpers.generateSource(UUID.randomUUID())
     val request = SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId()).disableCache(true)
+
+    val mockWorkspace =
+      mock<StandardWorkspace>().also {
+        whenever(it.tombstone).thenReturn(false)
+      }
+    whenever(workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)).thenReturn(mockWorkspace)
 
     val discoveredCatalogId = UUID.randomUUID()
     val synchronousJobMetadata =
@@ -1149,11 +1163,16 @@ internal class SchedulerHandlerTest {
       .createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH)
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun testDiscoverSchemaForSourceFromSourceIdFailed(enabled: Boolean) {
+  @Test
+  fun testDiscoverSchemaForSourceFromSourceIdFailed() {
     val source = SourceHelpers.generateSource(UUID.randomUUID())
     val request = SourceDiscoverSchemaRequestBody().sourceId(source.getSourceId())
+
+    val mockWorkspace =
+      mock<StandardWorkspace>().also {
+        whenever(it.tombstone).thenReturn(false)
+      }
+    whenever(workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)).thenReturn(mockWorkspace)
 
     val sourceDefinition =
       StandardSourceDefinition()
@@ -1199,12 +1218,55 @@ internal class SchedulerHandlerTest {
   }
 
   @Test
+  fun testDiscoverSchemaForSourceFromSourceIdDisabledWorkspace() {
+    val source = SourceHelpers.generateSource(UUID.randomUUID())
+    val request = SourceDiscoverSchemaRequestBody().sourceId(source.sourceId)
+    whenever(sourceService.getSourceConnection(source.sourceId)).thenReturn(source)
+    val mockWorkspace =
+      mock<StandardWorkspace>().also {
+        whenever(it.tombstone).thenReturn(true)
+      }
+    whenever(workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)).thenReturn(mockWorkspace)
+
+    val e = assertThrows<NotFoundException> { schedulerHandler.discoverSchemaForSourceFromSourceId(request) }
+    assertEquals("Cannot run discover on tombstoned workspace", e.message)
+  }
+
+  @Test
+  fun testDiscoverSchemaForSourceFromSourceCreateDisabledWorkspace() {
+    val source =
+      SourceConnection()
+        .withSourceDefinitionId(SOURCE.sourceDefinitionId)
+        .withConfiguration(SOURCE.configuration)
+        .withWorkspaceId(SOURCE.workspaceId)
+    val sourceCoreConfig =
+      SourceCoreConfig()
+        .sourceDefinitionId(source.sourceDefinitionId)
+        .connectionConfiguration(source.configuration)
+        .workspaceId(source.workspaceId)
+    val mockWorkspace =
+      mock<StandardWorkspace>().also {
+        whenever(it.tombstone).thenReturn(true)
+      }
+    whenever(workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)).thenReturn(mockWorkspace)
+
+    val e = assertThrows<NotFoundException> { schedulerHandler.discoverSchemaForSourceFromSourceCreate(sourceCoreConfig) }
+    assertEquals("Cannot run discover on tombstoned workspace", e.message)
+  }
+
+  @Test
   fun testDiscoverSchemaForSourceFromSourceCreate() {
     val source =
       SourceConnection()
         .withSourceDefinitionId(SOURCE.getSourceDefinitionId())
         .withConfiguration(SOURCE.getConfiguration())
         .withWorkspaceId(SOURCE.getWorkspaceId())
+
+    val mockWorkspace =
+      mock<StandardWorkspace>().also {
+        whenever(it.tombstone).thenReturn(false)
+      }
+    whenever(workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)).thenReturn(mockWorkspace)
 
     val synchronousJobMetadata =
       SynchronousJobMetadata(
@@ -1295,6 +1357,12 @@ internal class SchedulerHandlerTest {
         .withSourceDefinitionId(SOURCE.getSourceDefinitionId())
         .withConfiguration(SOURCE.getConfiguration())
         .withWorkspaceId(SOURCE.getWorkspaceId())
+
+    val mockWorkspace =
+      mock<StandardWorkspace>().also {
+        whenever(it.tombstone).thenReturn(false)
+      }
+    whenever(workspaceService.getStandardWorkspaceNoSecrets(source.workspaceId, includeTombstone = true)).thenReturn(mockWorkspace)
 
     val sourceCoreConfig =
       SourceCoreConfig()
@@ -2195,11 +2263,6 @@ internal class SchedulerHandlerTest {
     private val CONNECTOR_SPECIFICATION: ConnectorSpecification =
       ConnectorSpecification()
         .withDocumentationUrl(toRuntime<URI?> { URI("https://google.com") })
-        .withChangelogUrl(toRuntime<URI?> { URI("https://google.com") })
-        .withConnectionSpecification(jsonNode<HashMap<Any?, Any?>?>(HashMap<Any?, Any?>()))
-
-    private val CONNECTOR_SPECIFICATION_WITHOUT_DOCS_URL: ConnectorSpecification =
-      ConnectorSpecification()
         .withChangelogUrl(toRuntime<URI?> { URI("https://google.com") })
         .withConnectionSpecification(jsonNode<HashMap<Any?, Any?>?>(HashMap<Any?, Any?>()))
 
