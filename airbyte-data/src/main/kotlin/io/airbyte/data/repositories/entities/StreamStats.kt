@@ -9,6 +9,9 @@ import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.DateUpdated
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
+import io.micronaut.data.annotation.TypeDef
+import io.micronaut.data.model.DataType
+import java.math.BigDecimal
 import java.util.UUID
 
 @MappedEntity("stream_stats")
@@ -30,4 +33,9 @@ open class StreamStats(
   var bytesCommitted: Long? = null,
   var recordsCommitted: Long? = null,
   var connectionId: UUID? = null,
+  var recordsRejected: Long? = null,
+  @field:TypeDef(type = DataType.JSON)
+  var additionalStats: Map<String, BigDecimal>? = null,
+  var wasBackfilled: Boolean? = null,
+  var wasResumed: Boolean? = null,
 )
