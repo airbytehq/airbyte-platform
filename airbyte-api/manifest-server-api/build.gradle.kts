@@ -46,7 +46,7 @@ dependencies {
 }
 
 val openapiSpecFilePath: String = "${layout.buildDirectory.get()}/openapi/manifest-server-openapi.yaml"
-val remoteSpecUrl = "https://raw.githubusercontent.com/airbytehq/airbyte-python-cdk/refs/tags/v7.3.6/airbyte_cdk/manifest_server/openapi.yaml"
+val remoteSpecUrl = "https://raw.githubusercontent.com/airbytehq/airbyte-python-cdk/refs/tags/v7.4.1/airbyte_cdk/manifest_server/openapi.yaml"
 
 val downloadManifestServerSpec =
   tasks.register("downloadManifestServerSpec") {
