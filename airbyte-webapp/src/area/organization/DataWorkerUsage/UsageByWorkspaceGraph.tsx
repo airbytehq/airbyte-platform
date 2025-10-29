@@ -45,6 +45,10 @@ const tooltipConfig: TooltipProps<number, string> = {
   isAnimationActive: false,
 };
 
+const LEGEND_ITEM_HEIGHT = 20; // Height of .graphLegend__item in GraphLegend.module.scss
+const LEGEND_ITEM_GAP = 5; // Matches variables.$spacing-sm
+const BASE_CHART_HEIGHT = 250;
+
 export const UsageByWorkspaceGraph = ({ selectedRegionId, dateRange }: UsageByWorkspaceGraphProps) => {
   const { formatMessage } = useIntl();
   const allUsage = useOrganizationWorkerUsage({
@@ -95,7 +99,12 @@ export const UsageByWorkspaceGraph = ({ selectedRegionId, dateRange }: UsageByWo
 
   const graphHeight = useMemo(() => {
     const numberOfWorkspaces = selectedRegionUsage?.workspaces.length ?? 0;
-    return 200 + numberOfWorkspaces * 18.89;
+
+    const legendItemsHeight = LEGEND_ITEM_HEIGHT * numberOfWorkspaces;
+    const legendItemsGap = numberOfWorkspaces > 0 ? LEGEND_ITEM_GAP * (numberOfWorkspaces - 1) : 0;
+    const legendHeight = legendItemsHeight + legendItemsGap;
+
+    return BASE_CHART_HEIGHT + legendHeight;
   }, [selectedRegionUsage?.workspaces.length]);
 
   const animationDuration = useMemo(() => {
@@ -118,7 +127,7 @@ export const UsageByWorkspaceGraph = ({ selectedRegionId, dateRange }: UsageByWo
 
   return (
     <Box className={styles.usageByWorkspaceGraph}>
-      <ResponsiveContainer width="99%" minHeight={graphHeight}>
+      <ResponsiveContainer width="99%" height={graphHeight} key={selectedRegionId}>
         <BarChart
           data={data}
           margin={{

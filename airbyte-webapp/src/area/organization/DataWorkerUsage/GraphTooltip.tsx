@@ -19,6 +19,9 @@ export const GraphTooltip: ContentType<number, string> = ({ active, payload }) =
 
   const totalWorkspaceUsage = formatWorkerUsageNumber(payload?.reduce((acc, { value }) => acc + Number(value), 0) ?? 0);
 
+  const workspacesSortedByUsage = [...(payload ?? [])].sort((a, b) => {
+    return (b.value ?? 0) - (a.value ?? 0);
+  });
   return (
     <Card noPadding>
       <Box p="md">
@@ -38,9 +41,9 @@ export const GraphTooltip: ContentType<number, string> = ({ active, payload }) =
               values={{ value: totalWorkspaceUsage }}
             />
           </Text>
-          {payload && (
+          {workspacesSortedByUsage && (
             <FlexContainer direction="column" gap="xs">
-              {payload?.map((entry) => {
+              {workspacesSortedByUsage?.map((entry) => {
                 if (!entry.value || !entry.name) {
                   return null;
                 }
