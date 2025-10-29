@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.google.common.collect.Lists
 import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.model.generated.ActorListFilters
 import io.airbyte.api.model.generated.ActorStatus
@@ -584,7 +583,7 @@ internal class DestinationHandlerTest {
     } returns newConfigWithProcessedSecrets.originalConfig
 
     val newConfigWithSecretRefIds = clone(newConfiguration)
-    (newConfigWithSecretRefIds as ObjectNode).put("updated_with", "secret_reference_ids")
+    newConfigWithSecretRefIds.put("updated_with", "secret_reference_ids")
     every {
       secretReferenceService.createAndInsertSecretReferencesWithStorageId(
         newConfigWithProcessedSecrets,
@@ -1212,7 +1211,7 @@ internal class DestinationHandlerTest {
         .filters(
           ActorListFilters()
             .searchTerm("test")
-            .states(Lists.newArrayList(ActorStatus.ACTIVE)),
+            .states(listOf(ActorStatus.ACTIVE)),
         )
 
     every {
@@ -1237,7 +1236,7 @@ internal class DestinationHandlerTest {
         any(),
         any(),
       )
-    } returns Lists.newArrayList(destinationConnectionWithCount)
+    } returns listOf(destinationConnectionWithCount)
 
     every {
       destinationService.getStandardDestinationDefinition(any())
@@ -1438,7 +1437,7 @@ internal class DestinationHandlerTest {
     } returns destinationConnection
     every {
       destinationService.listDestinationConnection()
-    } returns Lists.newArrayList(destinationConnection)
+    } returns listOf(destinationConnection)
     every {
       destinationService.getStandardDestinationDefinition(standardDestinationDefinition.destinationDefinitionId)
     } returns standardDestinationDefinition

@@ -12,7 +12,7 @@ import com.google.cloud.storage.BlobInfo
 import com.google.cloud.storage.BucketInfo
 import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageOptions
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.io.IOs
 import io.airbyte.micronaut.runtime.AirbyteStorageConfig
 import io.airbyte.micronaut.runtime.StorageType
@@ -302,7 +302,7 @@ class GcsStorageClient(
 
   override fun delete(id: String): Boolean = gcsClient.delete(BlobId.of(bucketName, key(id)))
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun blobId(id: String): BlobId = BlobId.of(bucketName, key(id))
 
   private fun createBucketIfNotExists() {

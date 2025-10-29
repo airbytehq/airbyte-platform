@@ -5,7 +5,6 @@
 package io.airbyte.container.orchestrator.bookkeeping
 
 import com.google.common.hash.HashFunction
-import com.google.common.util.concurrent.AtomicDouble
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FileTransferInformations
 import io.airbyte.container.orchestrator.worker.state.getIdFromStateMessage
@@ -53,12 +52,41 @@ data class StreamStatsCounters(
   val sourceStateCount: AtomicLong = AtomicLong(),
   val destinationStateCount: AtomicLong = AtomicLong(),
   val maxSecondsToReceiveState: LongAccumulator = LongAccumulator(Math::max, 0),
-  val meanSecondsToReceiveState: AtomicDouble = AtomicDouble(),
+  val meanSecondsToReceiveState: AtomicLong = AtomicLong(),
   val maxSecondsBetweenStateEmittedAndCommitted: LongAccumulator = LongAccumulator(Math::max, 0),
-  val meanSecondsBetweenStateEmittedAndCommitted: AtomicDouble = AtomicDouble(),
+  val meanSecondsBetweenStateEmittedAndCommitted: AtomicLong = AtomicLong(),
   val unreliableStateOperations: AtomicBoolean = AtomicBoolean(false),
   val rejectedRecordsCount: AtomicLong = AtomicLong(),
-)
+) {
+  /**
+   * Returns the [meanSecondsToReceiveState] as a [Double] by converting the underlying
+   * [AtomicLong] to a [Double].  This is necessary as Java/Kotlin do not provide a native
+   * atomic [Double] implementation.
+   */
+  fun meanSecondsToReceiveStateAsDouble() = java.lang.Double.longBitsToDouble(meanSecondsToReceiveState.get())
+
+  /**
+   * Sets the [meanSecondsToReceiveState] as a [Double] by converting the provided value
+   * into an [AtomicLong] via [java.lang.Double.doubleToLongBits].  This is necessary as Java/Kotlin
+   * do not provide a native atomic [Double] implementation.
+   */
+  fun setMeanSecondsToReceiveStateFromDouble(value: Double) = meanSecondsToReceiveState.set(java.lang.Double.doubleToLongBits(value))
+
+  /**
+   * Returns the [meanSecondsBetweenStateEmittedAndCommitted] as a [Double] by converting the underlying
+   * [AtomicLong] to a [Double].  This is necessary as Java/Kotlin do not provide a native
+   * atomic [Double] implementation.
+   */
+  fun meanSecondsBetweenStateEmittedAndCommittedAsDouble() = java.lang.Double.longBitsToDouble(meanSecondsBetweenStateEmittedAndCommitted.get())
+
+  /**
+   * Sets the [meanSecondsBetweenStateEmittedAndCommitted] as a [Double] by converting the provided value
+   * into an [AtomicLong] via [java.lang.Double.doubleToLongBits].  This is necessary as Java/Kotlin
+   * do not provide a native atomic [Double] implementation.
+   */
+  fun setMeanSecondsBetweenStateEmittedAndCommittedFromDouble(value: Double) =
+    meanSecondsBetweenStateEmittedAndCommitted.set(java.lang.Double.doubleToLongBits(value))
+}
 
 /**
  * Data class for tracking Emitted stats.
@@ -257,9 +285,9 @@ class StreamStatsTracker(
 
       // We are measuring intervals in-between states, so there's going to be one less interval than the
       // number of states.
-      streamStats.meanSecondsToReceiveState.set(
+      streamStats.setMeanSecondsToReceiveStateFromDouble(
         updateMean(
-          previousMean = streamStats.meanSecondsToReceiveState.get(),
+          previousMean = streamStats.meanSecondsToReceiveStateAsDouble(),
           previousCount = streamStats.sourceStateCount.get() - 1,
           newDataPoint = timeSinceLastState.toDouble(),
         ),
@@ -376,9 +404,9 @@ class StreamStatsTracker(
     // Updating state checkpointing metrics
     stagedStats?.receivedTime?.until(currentTime, ChronoUnit.SECONDS)?.let { durationBetweenStateEmittedAndCommitted ->
       streamStats.maxSecondsBetweenStateEmittedAndCommitted.accumulate(durationBetweenStateEmittedAndCommitted)
-      streamStats.meanSecondsBetweenStateEmittedAndCommitted.set(
+      streamStats.setMeanSecondsBetweenStateEmittedAndCommittedFromDouble(
         updateMean(
-          previousMean = streamStats.meanSecondsBetweenStateEmittedAndCommitted.get(),
+          previousMean = streamStats.meanSecondsBetweenStateEmittedAndCommittedAsDouble(),
           previousCount = streamStats.destinationStateCount.get() - 1,
           newDataPoint = durationBetweenStateEmittedAndCommitted.toDouble(),
         ),

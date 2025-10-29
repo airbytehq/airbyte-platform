@@ -4,7 +4,7 @@
 
 package io.airbyte.oauth.flows.google
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import java.net.http.HttpClient
 import java.util.function.Supplier
 
@@ -14,7 +14,7 @@ import java.util.function.Supplier
 class GoogleDriveOAuthFlow : GoogleOAuthFlow {
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   internal constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
   override fun getScope(): String = SCOPE_URL
@@ -22,7 +22,7 @@ class GoogleDriveOAuthFlow : GoogleOAuthFlow {
   companion object {
     // space-delimited string for multiple scopes, see:
     // https://datatracker.ietf.org/doc/html/rfc6749#section-3.3
-    @VisibleForTesting
+    @InternalForTesting
     const val SCOPE_URL: String = "https://www.googleapis.com/auth/drive.readonly"
   }
 }

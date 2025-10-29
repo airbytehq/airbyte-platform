@@ -4,7 +4,6 @@
 
 package io.airbyte.container.orchestrator.bookkeeping.streamstatus
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.StreamStatusCreateRequestBody
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause
@@ -12,6 +11,7 @@ import io.airbyte.api.client.model.generated.StreamStatusJobType
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.api.client.model.generated.StreamStatusRead
 import io.airbyte.api.client.model.generated.StreamStatusUpdateRequestBody
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.container.orchestrator.worker.context.ReplicationContext
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
@@ -60,7 +60,7 @@ class StreamStatusCachingApiClient(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun buildCreateReq(
     streamNamespace: String?,
     streamName: String,
@@ -92,7 +92,7 @@ class StreamStatusCachingApiClient(
       metadata = metadata,
     )
 
-  @VisibleForTesting
+  @InternalForTesting
   fun buildUpdateReq(
     id: UUID,
     streamNamespace: String?,

@@ -5,7 +5,6 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
 import io.airbyte.oauth.BaseOAuthFlow
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
@@ -26,28 +25,25 @@ internal class TikTokMarketingOAuthFlowTest : BaseOAuthFlowTest() {
   override val oAuthParamConfig: JsonNode?
     get() =
       Jsons.jsonNode(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put("app_id", "app_id")
-          .put("secret", "secret")
-          .build(),
+        mapOf(
+          "app_id" to "app_id",
+          "secret" to "secret",
+        ),
       )
 
   override val oAuthConfigSpecification: OAuthConfigSpecification
     get() =
       getoAuthConfigSpecification() // change property types to induce json validation errors.
         .withCompleteOauthServerOutputSpecification(
-          BaseOAuthFlowTest.Companion.getJsonSchema(
-            java.util.Map.of<String, Any>(
-              "app_id",
-              java.util.Map.of<String, String>("type", "integer"),
+          getJsonSchema(
+            mapOf(
+              "app_id" to mapOf("type" to "integer"),
             ),
           ),
         ).withCompleteOauthOutputSpecification(
-          BaseOAuthFlowTest.Companion.getJsonSchema(
-            java.util.Map.of<String, Any>(
-              "access_token",
-              java.util.Map.of<String, String>("type", "integer"),
+          getJsonSchema(
+            mapOf(
+              "access_token" to mapOf("type" to "integer"),
             ),
           ),
         )
@@ -63,15 +59,14 @@ internal class TikTokMarketingOAuthFlowTest : BaseOAuthFlowTest() {
 
   override val completeOAuthOutputSpecification: JsonNode
     get() =
-      BaseOAuthFlowTest.Companion.getJsonSchema(
-        java.util.Map.of<String, Any>(
-          "access_token",
-          java.util.Map.of<String, String>("type", "string"),
+      getJsonSchema(
+        mapOf(
+          "access_token" to mapOf("type" to "string"),
         ),
       )
 
   override val expectedFilteredOutput: Map<String, String>
-    get() = java.util.Map.of("access_token", "access_token_response")
+    get() = mapOf("access_token" to "access_token_response")
 
   @Test
   override fun testDeprecatedCompleteDestinationOAuth() {

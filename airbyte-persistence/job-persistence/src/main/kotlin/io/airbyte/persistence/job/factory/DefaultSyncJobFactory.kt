@@ -4,7 +4,6 @@
 
 package io.airbyte.persistence.job.factory
 
-import com.google.common.collect.Lists
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.StandardSyncOperation
@@ -157,11 +156,7 @@ class DefaultSyncJobFactory(
     val destinationImageVersionDefault =
       actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, workspaceId)
 
-    val standardSyncOperations: MutableList<StandardSyncOperation> = Lists.newArrayList()
-    for (operationId in standardSync.operationIds) {
-      val standardSyncOperation = operationService.getStandardSyncOperation(operationId)
-      standardSyncOperations.add(standardSyncOperation)
-    }
+    val standardSyncOperations: List<StandardSyncOperation> = standardSync.operationIds.map { operationService.getStandardSyncOperation(it) }
 
     // for OSS users, make it possible to ignore default actor-level resource requirements
     if (!connectorSpecificResourceDefaultsEnabled) {

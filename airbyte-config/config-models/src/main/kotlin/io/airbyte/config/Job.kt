@@ -4,12 +4,10 @@
 
 package io.airbyte.config
 
-import com.google.common.base.Preconditions
 import io.airbyte.config.JobConfig.ConfigType
 import jakarta.annotation.Nullable
 import java.util.EnumSet
 import java.util.Optional
-import java.util.stream.Collectors
 
 /**
  * POJO / accessors for the job domain model.
@@ -32,35 +30,31 @@ data class Job(
   fun getSuccessfulAttempt(): Optional<Attempt> {
     val successfulAttempts =
       attempts
-        .stream()
         .filter { a: Attempt -> a.status == AttemptStatus.SUCCEEDED }
-        .collect(Collectors.toList())
+        .toList()
 
-    Preconditions.checkState(
-      successfulAttempts.size <= 1,
-      String.format("Job %s has multiple successful attempts.", id),
-    )
-    return successfulAttempts.stream().findFirst()
+    check(successfulAttempts.size <= 1) { "Job $id has multiple successful attempts." }
+    return Optional.ofNullable(successfulAttempts.firstOrNull())
   }
 
   fun getSuccessOutput(): Optional<JobOutput> = getSuccessfulAttempt().map { obj: Attempt -> obj.output }
 
   fun getLastFailedAttempt(): Optional<Attempt> =
-    attempts
-      .stream()
-      .filter { a: Attempt -> a.status == AttemptStatus.FAILED }
-      .max(Comparator.comparing { obj: Attempt -> obj.createdAtInSecond })
+    Optional.ofNullable(
+      attempts
+        .filter { a: Attempt -> a.status == AttemptStatus.FAILED }
+        .maxByOrNull({ obj: Attempt -> obj.createdAtInSecond }),
+    )
 
-  fun getLastAttempt(): Optional<Attempt> =
-    attempts
-      .stream()
-      .max(Comparator.comparing { obj: Attempt -> obj.createdAtInSecond })
+  fun getLastAttempt(): Optional<Attempt> = Optional.ofNullable(attempts.maxByOrNull { obj: Attempt -> obj.createdAtInSecond })
 
   fun getAttemptByNumber(attemptNumber: Int): Optional<Attempt> =
-    attempts
-      .stream()
-      .filter { a: Attempt -> a.attemptNumber == attemptNumber }
-      .findFirst()
+    Optional.ofNullable(
+      attempts.firstOrNull { a: Attempt ->
+        a.attemptNumber ==
+          attemptNumber
+      },
+    )
 
   fun hasRunningAttempt(): Boolean = attempts.stream().anyMatch { a: Attempt -> !Attempt.isAttemptInTerminalState(a) }
 
@@ -69,13 +63,7 @@ data class Job(
   fun validateStatusTransition(newStatus: JobStatus) {
     val validNewStatuses = JobStatus.VALID_STATUS_CHANGES[status]!!
     check(validNewStatuses.contains(newStatus)) {
-      String.format(
-        "Transitioning Job %d from JobStatus %s to %s is not allowed. Valid transitions: %s",
-        id,
-        status,
-        newStatus,
-        validNewStatuses,
-      )
+      "Transitioning Job $id from JobStatus $status to $newStatus is not allowed. Valid transitions: $validNewStatuses"
     }
   }
 

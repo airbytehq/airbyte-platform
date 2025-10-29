@@ -4,11 +4,11 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.api.problems.model.generated.ProblemLicenseEntitlementData
 import io.airbyte.api.problems.throwable.generated.EmbeddedEndpointMovedProblem
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
@@ -63,7 +63,7 @@ open class ConfigTemplatesPublicController(
       createConfigTemplate(configTemplateCreateRequestBody).ok()
     }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun createConfigTemplate(configTemplateCreateRequestBody: ConfigTemplateCreateRequestBody): ConfigTemplateCreateResponse {
     val organizationId = configTemplateCreateRequestBody.organizationId
 
@@ -95,7 +95,7 @@ open class ConfigTemplatesPublicController(
       getConfigTemplate(configTemplateId).ok()
     }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getConfigTemplate(configTemplateId: UUID): ConfigTemplatePublicRead {
     val user = currentUserService.getCurrentUser()
     val userId: UUID = user.userId
@@ -119,7 +119,7 @@ open class ConfigTemplatesPublicController(
       listConfigTemplate(organizationId).ok()
     }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun listConfigTemplate(organizationId: String): ConfigTemplateListResponse {
     licenseEntitlementChecker.checkEntitlements(
       UUID.fromString(organizationId),
@@ -147,7 +147,7 @@ open class ConfigTemplatesPublicController(
       updateConfigTemplate(configTemplateId, configTemplateUpdateRequestBody).ok()
     }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun updateConfigTemplate(
     configTemplateId: UUID,
     configTemplateUpdateRequestBody: ConfigTemplateUpdateRequestBody,

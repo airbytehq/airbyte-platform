@@ -5,18 +5,23 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.DestinationOAuthParameter
 import io.airbyte.config.SourceOAuthParameter
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.data.services.OAuthService
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuthFlow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.oauth.MoreOAuthParameters
+import io.airbyte.oauth.REFRESH_TOKEN_KEY
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
 import io.airbyte.validation.json.JsonValidationException
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
@@ -86,13 +91,10 @@ abstract class BaseOAuthFlowTest {
      * variables
      */
     get() =
-      java.util.Map.of(
-        REFRESH_TOKEN,
-        "refresh_token_response",
-        CLIENT_ID,
-        MoreOAuthParameters.SECRET_MASK,
-        "client_secret",
-        MoreOAuthParameters.SECRET_MASK,
+      mapOf(
+        REFRESH_TOKEN_KEY to "refresh_token_response",
+        CLIENT_ID_KEY to MoreOAuthParameters.SECRET_MASK,
+        CLIENT_SECRET_KEY to MoreOAuthParameters.SECRET_MASK,
       )
 
   protected open val completeOAuthOutputSpecification: JsonNode
@@ -104,9 +106,8 @@ abstract class BaseOAuthFlowTest {
      */
     get() =
       getJsonSchema(
-        java.util.Map.of<String, Any>(
-          REFRESH_TOKEN,
-          java.util.Map.of(TYPE, "string"),
+        mapOf(
+          REFRESH_TOKEN_KEY to mapOf(TYPE to "string"),
         ),
       )
 
@@ -118,11 +119,9 @@ abstract class BaseOAuthFlowTest {
      * @return the filtered outputs once it is filtered by the output specifications
      */
     get() =
-      java.util.Map.of(
-        REFRESH_TOKEN,
-        "refresh_token_response",
-        CLIENT_ID,
-        MoreOAuthParameters.SECRET_MASK,
+      mapOf(
+        REFRESH_TOKEN_KEY to "refresh_token_response",
+        CLIENT_ID_KEY to MoreOAuthParameters.SECRET_MASK,
       )
 
   protected val completeOAuthServerOutputSpecification: JsonNode
@@ -131,9 +130,8 @@ abstract class BaseOAuthFlowTest {
          */
     get() =
       getJsonSchema(
-        java.util.Map.of<String, Any>(
-          CLIENT_ID,
-          java.util.Map.of(TYPE, "string"),
+        mapOf(
+          CLIENT_ID_KEY to mapOf(TYPE to "string"),
         ),
       )
 
@@ -166,7 +164,7 @@ abstract class BaseOAuthFlowTest {
      *
      * @return the input configuration sent to oauth flow (values from connector config)
      */
-    get() = getJsonSchema(java.util.Map.of())
+    get() = getJsonSchema(emptyMap())
 
   protected open val oAuthParamConfig: JsonNode?
         /*
@@ -174,11 +172,10 @@ abstract class BaseOAuthFlowTest {
          */
     get() =
       Jsons.jsonNode(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(CLIENT_ID, "test_client_id")
-          .put("client_secret", "test_client_secret")
-          .build(),
+        mapOf(
+          CLIENT_ID_KEY to "test_client_id",
+          CLIENT_SECRET_KEY to "test_client_secret",
+        ),
       )
 
   protected fun getoAuthConfigSpecification(): OAuthConfigSpecification =
@@ -198,11 +195,9 @@ abstract class BaseOAuthFlowTest {
 
   protected open val queryParams: Map<String, Any>
     get() =
-      java.util.Map.of<String, Any>(
-        CODE,
-        TEST_CODE,
-        STATE,
-        constantState,
+      mapOf(
+        AUTH_CODE_KEY to TEST_CODE,
+        STATE to constantState,
       )
 
   protected open val mockedResponse: String
@@ -216,29 +211,27 @@ abstract class BaseOAuthFlowTest {
       getoAuthConfigSpecification() // change property types to induce json validation errors.
         .withCompleteOauthServerOutputSpecification(
           getJsonSchema(
-            java.util.Map.of<String, Any>(
-              CLIENT_ID,
-              java.util.Map.of(TYPE, "integer"),
+            mapOf(
+              CLIENT_ID_KEY to mapOf(TYPE to "integer"),
             ),
           ),
         ).withCompleteOauthOutputSpecification(
           getJsonSchema(
-            java.util.Map.of<String, Any>(
-              REFRESH_TOKEN,
-              java.util.Map.of(TYPE, "integer"),
+            mapOf(
+              REFRESH_TOKEN_KEY to mapOf(TYPE to "integer"),
             ),
           ),
         )
 
   @Test
   fun testGetDefaultOutputPath() {
-    Assertions.assertEquals(expectedOutputPath, oauthFlow.getDefaultOAuthOutputPath())
+    assertEquals(expectedOutputPath, oauthFlow.getDefaultOAuthOutputPath())
   }
 
   @Test
   fun testValidateInputOAuthConfigurationFailure() {
-    val invalidInputOAuthConfiguration = Jsons.jsonNode(java.util.Map.of("UnexpectedRandomField", 42))
-    Assertions.assertThrows(
+    val invalidInputOAuthConfiguration = Jsons.jsonNode(mapOf("UnexpectedRandomField" to 42))
+    assertThrows(
       JsonValidationException::class.java,
     ) {
       oauthFlow.getSourceConsentUrl(
@@ -250,7 +243,7 @@ abstract class BaseOAuthFlowTest {
         Jsons.emptyObject(),
       )
     }
-    Assertions.assertThrows(
+    assertThrows(
       JsonValidationException::class.java,
     ) {
       oauthFlow.getDestinationConsentUrl(
@@ -262,26 +255,26 @@ abstract class BaseOAuthFlowTest {
         Jsons.emptyObject(),
       )
     }
-    Assertions.assertThrows(
+    assertThrows(
       JsonValidationException::class.java,
     ) {
       oauthFlow.completeSourceOAuth(
         workspaceId,
         definitionId,
-        java.util.Map.of(),
+        emptyMap(),
         REDIRECT_URL,
         invalidInputOAuthConfiguration,
         getoAuthConfigSpecification(),
         sourceOAuthParameter.configuration,
       )
     }
-    Assertions.assertThrows(
+    assertThrows(
       JsonValidationException::class.java,
     ) {
       oauthFlow.completeDestinationOAuth(
         workspaceId,
         definitionId,
-        java.util.Map.of(),
+        emptyMap(),
         REDIRECT_URL,
         invalidInputOAuthConfiguration,
         getoAuthConfigSpecification(),
@@ -299,7 +292,7 @@ abstract class BaseOAuthFlowTest {
     Mockito
       .`when`(oAuthService.getDestinationOAuthParameterOptional(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull()))
       .thenReturn(Optional.empty())
-    Assertions.assertThrows(
+    assertThrows(
       ResourceNotFoundProblem::class.java,
     ) {
       oauthFlow.getSourceConsentUrl(
@@ -311,7 +304,7 @@ abstract class BaseOAuthFlowTest {
         null,
       )
     }
-    Assertions.assertThrows(
+    assertThrows(
       ResourceNotFoundProblem::class.java,
     ) {
       oauthFlow.getDestinationConsentUrl(
@@ -343,7 +336,7 @@ abstract class BaseOAuthFlowTest {
     Mockito
       .`when`(oAuthService.getDestinationOAuthParameterOptional(org.mockito.kotlin.anyOrNull(), org.mockito.kotlin.anyOrNull()))
       .thenReturn(Optional.of(destinationOAuthParameter))
-    Assertions.assertThrows(
+    assertThrows(
       IllegalArgumentException::class.java,
     ) {
       oauthFlow.getSourceConsentUrl(
@@ -355,7 +348,7 @@ abstract class BaseOAuthFlowTest {
         sourceOAuthParameter.configuration,
       )
     }
-    Assertions.assertThrows(
+    assertThrows(
       IllegalArgumentException::class.java,
     ) {
       oauthFlow.getDestinationConsentUrl(
@@ -372,7 +365,7 @@ abstract class BaseOAuthFlowTest {
   @Test
   open fun testGetSourceConsentUrlEmptyOAuthSpec() {
     if (hasDependencyOnConnectorConfigValues()) {
-      Assertions.assertThrows(
+      assertThrows(
         IOException::class.java,
         {
           oauthFlow.getSourceConsentUrl(
@@ -396,14 +389,14 @@ abstract class BaseOAuthFlowTest {
           null,
           sourceOAuthParameter.configuration,
         )
-      Assertions.assertEquals(expectedConsentUrl, consentUrl)
+      assertEquals(expectedConsentUrl, consentUrl)
     }
   }
 
   @Test
   open fun testGetDestinationConsentUrlEmptyOAuthSpec() {
     if (hasDependencyOnConnectorConfigValues()) {
-      Assertions.assertThrows(
+      assertThrows(
         IOException::class.java,
         {
           oauthFlow.getDestinationConsentUrl(
@@ -427,7 +420,7 @@ abstract class BaseOAuthFlowTest {
           null,
           destinationOAuthParameter.configuration,
         )
-      Assertions.assertEquals(expectedConsentUrl, consentUrl)
+      assertEquals(expectedConsentUrl, consentUrl)
     }
   }
 
@@ -442,7 +435,7 @@ abstract class BaseOAuthFlowTest {
         getoAuthConfigSpecification(),
         sourceOAuthParameter.configuration,
       )
-    Assertions.assertEquals(expectedConsentUrl, consentUrl)
+    assertEquals(expectedConsentUrl, consentUrl)
   }
 
   @Test
@@ -456,13 +449,13 @@ abstract class BaseOAuthFlowTest {
         getoAuthConfigSpecification(),
         destinationOAuthParameter.configuration,
       )
-    Assertions.assertEquals(expectedConsentUrl, consentUrl)
+    assertEquals(expectedConsentUrl, consentUrl)
   }
 
   @Test
   fun testCompleteOAuthMissingCode() {
-    val queryParams = java.util.Map.of<String, Any>()
-    Assertions.assertThrows(
+    val queryParams = emptyMap<String, Any>()
+    assertThrows(
       IOException::class.java,
     ) {
       oauthFlow.completeSourceOAuth(
@@ -484,7 +477,7 @@ abstract class BaseOAuthFlowTest {
     val queryParams = queryParams
 
     if (hasDependencyOnConnectorConfigValues()) {
-      Assertions.assertThrows(
+      assertThrows(
         IOException::class.java,
         { oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL, sourceOAuthParameter.configuration) },
         "OAuth Flow Implementations with dependencies on connector config can't be supported in the deprecated APIs",
@@ -493,18 +486,18 @@ abstract class BaseOAuthFlowTest {
       var actualRawQueryParams: Map<String, Any> =
         oauthFlow.completeSourceOAuth(workspaceId, definitionId, queryParams, REDIRECT_URL, sourceOAuthParameter.configuration)
       for (node in expectedOutputPath) {
-        Assertions.assertNotNull(actualRawQueryParams[node])
+        assertNotNull(actualRawQueryParams[node])
         actualRawQueryParams = actualRawQueryParams[node] as Map<String, Any>
       }
       val expectedOutput = returnedCredentials
       val actualQueryParams = actualRawQueryParams
-      Assertions.assertEquals(
+      assertEquals(
         expectedOutput.size,
         actualQueryParams.size,
         String.format(EXPECTED_BUT_GOT, expectedOutput.size, actualQueryParams, expectedOutput),
       )
       expectedOutput.forEach { (key: String?, value: String?) ->
-        Assertions.assertEquals(
+        assertEquals(
           value,
           actualQueryParams[key],
         )
@@ -521,7 +514,7 @@ abstract class BaseOAuthFlowTest {
     val queryParams = queryParams
 
     if (hasDependencyOnConnectorConfigValues()) {
-      Assertions.assertThrows(
+      assertThrows(
         IOException::class.java,
         {
           oauthFlow.completeDestinationOAuth(
@@ -544,18 +537,18 @@ abstract class BaseOAuthFlowTest {
           destinationOAuthParameter.configuration,
         )
       for (node in expectedOutputPath) {
-        Assertions.assertNotNull(actualRawQueryParams[node])
+        assertNotNull(actualRawQueryParams[node])
         actualRawQueryParams = actualRawQueryParams[node] as Map<String, Any>
       }
       val expectedOutput = returnedCredentials
       val actualQueryParams = actualRawQueryParams
-      Assertions.assertEquals(
+      assertEquals(
         expectedOutput.size,
         actualQueryParams.size,
         String.format(EXPECTED_BUT_GOT, expectedOutput.size, actualQueryParams, expectedOutput),
       )
       expectedOutput.forEach { (key: String?, value: String?) ->
-        Assertions.assertEquals(
+        assertEquals(
           value,
           actualQueryParams[key],
         )
@@ -579,7 +572,7 @@ abstract class BaseOAuthFlowTest {
         emptyOAuthConfigSpecification,
         sourceOAuthParameter.configuration,
       )
-    Assertions.assertEquals(
+    assertEquals(
       0,
       actualQueryParams.size,
       String.format("Expected no values but got %s", actualQueryParams),
@@ -602,7 +595,7 @@ abstract class BaseOAuthFlowTest {
         emptyOAuthConfigSpecification,
         destinationOAuthParameter.configuration,
       )
-    Assertions.assertEquals(
+    assertEquals(
       0,
       actualQueryParams.size,
       String.format("Expected no values but got %s", actualQueryParams),
@@ -626,13 +619,13 @@ abstract class BaseOAuthFlowTest {
         sourceOAuthParameter.configuration,
       )
     val expectedOutput = expectedFilteredOutput
-    Assertions.assertEquals(
+    assertEquals(
       expectedOutput.size,
       actualQueryParams.size,
       String.format(EXPECTED_BUT_GOT, expectedOutput.size, actualQueryParams, expectedOutput),
     )
     expectedOutput.forEach { (key: String?, value: String?) ->
-      Assertions.assertEquals(
+      assertEquals(
         value,
         actualQueryParams[key],
       )
@@ -656,13 +649,13 @@ abstract class BaseOAuthFlowTest {
         destinationOAuthParameter.configuration,
       )
     val expectedOutput = expectedFilteredOutput
-    Assertions.assertEquals(
+    assertEquals(
       expectedOutput.size,
       actualQueryParams.size,
       String.format(EXPECTED_BUT_GOT, expectedOutput.size, actualQueryParams, expectedOutput),
     )
     expectedOutput.forEach { (key: String?, value: String?) ->
-      Assertions.assertEquals(
+      assertEquals(
         value,
         actualQueryParams[key],
       )
@@ -686,13 +679,13 @@ abstract class BaseOAuthFlowTest {
         sourceOAuthParameter.configuration,
       )
     val expectedOutput = expectedFilteredOutput
-    Assertions.assertEquals(
+    assertEquals(
       expectedOutput.size,
       actualQueryParams.size,
       String.format(EXPECTED_BUT_GOT, expectedOutput.size, actualQueryParams, expectedOutput),
     )
     expectedOutput.forEach { (key: String?, value: String?) ->
-      Assertions.assertEquals(
+      assertEquals(
         value,
         actualQueryParams[key],
       )
@@ -716,13 +709,13 @@ abstract class BaseOAuthFlowTest {
         destinationOAuthParameter.configuration,
       )
     val expectedOutput = expectedFilteredOutput
-    Assertions.assertEquals(
+    assertEquals(
       expectedOutput.size,
       actualQueryParams.size,
       String.format(EXPECTED_BUT_GOT, expectedOutput.size, actualQueryParams, expectedOutput),
     )
     expectedOutput.forEach { (key: String?, value: String?) ->
-      Assertions.assertEquals(
+      assertEquals(
         value,
         actualQueryParams[key],
       )
@@ -736,7 +729,7 @@ abstract class BaseOAuthFlowTest {
     Mockito.`when`(httpClient.send(ArgumentMatchers.any(), ArgumentMatchers.any<HttpResponse.BodyHandler<*>>())).thenReturn(response)
     val queryParams = queryParams
     val oAuthConfigSpecification = oAuthConfigSpecification
-    Assertions.assertThrows(
+    assertThrows(
       JsonValidationException::class.java,
     ) {
       oauthFlow.completeSourceOAuth(
@@ -749,7 +742,7 @@ abstract class BaseOAuthFlowTest {
         sourceOAuthParameter.configuration,
       )
     }
-    Assertions.assertThrows(
+    assertThrows(
       JsonValidationException::class.java,
     ) {
       oauthFlow.completeDestinationOAuth(
@@ -766,23 +759,17 @@ abstract class BaseOAuthFlowTest {
 
   companion object {
     private const val REDIRECT_URL = "https://airbyte.io"
-    private const val REFRESH_TOKEN = "refresh_token"
-    private const val CLIENT_ID = "client_id"
     private const val TYPE = "type"
-    private const val CODE = "code"
     private const val TEST_CODE = "test_code"
     private const val STATE = "state"
     private const val EXPECTED_BUT_GOT = "Expected %s values but got\n\t%s\ninstead of\n\t%s"
 
     internal fun getJsonSchema(properties: Map<String, Any>): JsonNode =
       Jsons.jsonNode(
-        java.util.Map.of(
-          TYPE,
-          "object",
-          "additionalProperties",
-          "false",
-          "properties",
-          properties,
+        mapOf(
+          TYPE to "object",
+          "additionalProperties" to "false",
+          "properties" to properties,
         ),
       )
   }

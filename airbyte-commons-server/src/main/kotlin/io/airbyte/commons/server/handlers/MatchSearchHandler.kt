@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.collect.Lists
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionReadList
 import io.airbyte.api.model.generated.ConnectionSearch
@@ -63,7 +62,7 @@ open class MatchSearchHandler
     }
 
     fun searchConnections(connectionSearch: ConnectionSearch?): ConnectionReadList {
-      val reads: MutableList<ConnectionRead> = Lists.newArrayList()
+      val reads: MutableList<ConnectionRead> = mutableListOf()
       for (standardSync in connectionService.listStandardSyncs()) {
         if (standardSync.status != StandardSync.Status.DEPRECATED) {
           val connectionRead = apiPojoConverters.internalToConnectionRead(standardSync)

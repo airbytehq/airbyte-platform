@@ -6,13 +6,13 @@ package io.airbyte.notification
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.common.StreamDescriptorUtils.buildFieldName
 import io.airbyte.api.common.StreamDescriptorUtils.buildFullyQualifiedName
 import io.airbyte.api.model.generated.CatalogDiff
 import io.airbyte.api.model.generated.FieldTransform
 import io.airbyte.api.model.generated.StreamAttributeTransform
 import io.airbyte.api.model.generated.StreamTransform
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.resources.Resources
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorType
@@ -533,7 +533,7 @@ class SlackNotificationClient : NotificationClient {
     }
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun buildSummary(diff: CatalogDiff): String {
       val summaryBuilder = StringBuilder()
 

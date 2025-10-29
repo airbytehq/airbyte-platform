@@ -5,8 +5,15 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
+import io.airbyte.oauth.SCOPE_KEY
+import io.airbyte.oauth.STATE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -45,11 +52,11 @@ class AmazonAdsOAuthFlow : BaseOAuth2Flow {
           AUTHORIZE_URL
         }
       return URIBuilder(authorizeUrl)
-        .addParameter("client_id", clientId)
-        .addParameter("scope", "advertising::campaign_management")
-        .addParameter("response_type", "code")
-        .addParameter("redirect_uri", redirectUrl)
-        .addParameter("state", getState())
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(SCOPE_KEY, "advertising::campaign_management")
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
+        .addParameter(STATE_KEY, getState())
         .build()
         .toString()
     } catch (e: URISyntaxException) {
@@ -63,14 +70,13 @@ class AmazonAdsOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("client_id", clientId)
-      .put("redirect_uri", redirectUrl)
-      .put("client_secret", clientSecret)
-      .put("code", authCode)
-      .put("grant_type", "authorization_code")
-      .build()
+    mapOf(
+      CLIENT_ID_KEY to clientId,
+      REDIRECT_URI_KEY to redirectUrl,
+      CLIENT_SECRET_KEY to clientSecret,
+      AUTH_CODE_KEY to authCode,
+      GRANT_TYPE_KEY to "authorization_code",
+    )
 
   /**
    * Returns the URL where to retrieve the access token from.
@@ -85,13 +91,10 @@ class AmazonAdsOAuthFlow : BaseOAuth2Flow {
     private const val ACCESS_TOKEN_URL = "https://api.amazon.com/auth/o2/token"
 
     private val AUTHORIZE_URL_MAP: Map<String, String> =
-      ImmutableMap.of(
-        "NA",
-        AUTHORIZE_URL,
-        "EU",
-        AUTHORIZE_EU_URL,
-        "FE",
-        AUTHORIZE_FE_URL,
+      mapOf(
+        "NA" to AUTHORIZE_URL,
+        "EU" to AUTHORIZE_EU_URL,
+        "FE" to AUTHORIZE_FE_URL,
       )
   }
 }

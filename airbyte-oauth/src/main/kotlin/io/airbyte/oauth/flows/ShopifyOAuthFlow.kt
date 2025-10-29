@@ -5,9 +5,11 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
 import io.airbyte.validation.json.JsonValidationException
 import org.apache.http.client.utils.URIBuilder
@@ -113,12 +115,11 @@ class ShopifyOAuthFlow(
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>()
-      .put("client_id", clientId)
-      .put("client_secret", clientSecret)
-      .put("code", authCode)
-      .build()
+    mapOf(
+      CLIENT_ID_KEY to clientId,
+      CLIENT_SECRET_KEY to clientSecret,
+      AUTH_CODE_KEY to authCode,
+    )
 
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String = ""
 

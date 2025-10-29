@@ -5,9 +5,14 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URI
@@ -34,10 +39,10 @@ class PayPalTransactionOAuthFlow(
     try {
       return URIBuilder(AUTHORIZE_URL)
         .addParameter("flowEntry", "static")
-        .addParameter("client_id", clientId)
-        .addParameter("response_type", "code")
-        .addParameter("scope", SCOPES)
-        .addParameter("redirect_uri", redirectUrl)
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
+        .addParameter(SCOPE_KEY, SCOPES)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
         .addParameter("state", getState())
         .build()
         .toString()
@@ -91,11 +96,10 @@ class PayPalTransactionOAuthFlow(
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>()
-      .put("grant_type", "authorization_code")
-      .put("code", authCode)
-      .build()
+    mapOf(
+      GRANT_TYPE_KEY to "authorization_code",
+      AUTH_CODE_KEY to authCode,
+    )
 
   companion object {
     private const val AUTHORIZE_URL = "https://www.paypal.com/connect"

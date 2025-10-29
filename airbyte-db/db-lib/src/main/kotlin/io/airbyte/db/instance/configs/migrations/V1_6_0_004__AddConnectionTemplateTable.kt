@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.NamespaceDefinitionType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
@@ -24,7 +24,7 @@ class V1_6_0_004__AddConnectionTemplateTable : BaseJavaMigration() {
     doMigration(ctx)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun doMigration(ctx: DSLContext) {
     ctx
       .createTableIfNotExists(CONNECTION_TEMPLATE_TABLE)

@@ -4,7 +4,7 @@
 
 package io.airbyte.data.services.impls.jooq
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorDefinitionBreakingChange
@@ -583,7 +583,7 @@ class SourceServiceJooqImpl(
    * @param sourceDefinitionId to retrieve the default max seconds between messages for.
    * @return
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun retrieveDefaultMaxSecondsBetweenMessages(sourceDefinitionId: UUID): Long =
     featureFlagClient.stringVariation(HeartbeatMaxSecondsBetweenMessages, SourceDefinition(sourceDefinitionId)).toLong()
 

@@ -4,7 +4,7 @@
 
 package io.airbyte.data.services.impls.jooq
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
@@ -56,7 +56,7 @@ import java.util.stream.Stream
 
 @Singleton
 class DestinationServiceJooqImpl
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     @Named("configDatabase") database: Database,
     featureFlagClient: FeatureFlagClient,

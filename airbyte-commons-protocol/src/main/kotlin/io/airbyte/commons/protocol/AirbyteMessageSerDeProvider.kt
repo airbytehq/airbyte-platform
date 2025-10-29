@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.protocol
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.protocol.serde.AirbyteMessageDeserializer
 import io.airbyte.commons.protocol.serde.AirbyteMessageSerializer
 import io.airbyte.commons.version.Version
@@ -44,7 +44,7 @@ class AirbyteMessageSerDeProvider
      */
     fun getSerializer(version: Version): AirbyteMessageSerializer<*>? = serializers[version.getMajorVersion()]
 
-    @VisibleForTesting
+    @InternalForTesting
     fun registerDeserializer(deserializer: AirbyteMessageDeserializer<*>) {
       val key = deserializer.getTargetVersion().getMajorVersion()!!
       if (!deserializers.containsKey(key)) {
@@ -60,7 +60,7 @@ class AirbyteMessageSerDeProvider
       }
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun registerSerializer(serializer: AirbyteMessageSerializer<*>) {
       val key = serializer.getTargetVersion()!!.getMajorVersion()!!
       if (!serializers.containsKey(key)) {
@@ -76,12 +76,12 @@ class AirbyteMessageSerDeProvider
       }
     }
 
-    @get:VisibleForTesting
+    @get:InternalForTesting
     val deserializerKeys: Set<String>
       // Used for inspection of the injection
       get() = deserializers.keys
 
-    @get:VisibleForTesting
+    @get:InternalForTesting
     val serializerKeys: Set<String>
       // Used for inspection of the injection
       get() = serializers.keys

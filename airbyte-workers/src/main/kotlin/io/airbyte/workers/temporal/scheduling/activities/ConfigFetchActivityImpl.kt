@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.temporal.scheduling.activities
 
-import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ConnectionContextRead
@@ -15,6 +14,7 @@ import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule
 import io.airbyte.api.client.model.generated.ConnectionScheduleType
 import io.airbyte.api.client.model.generated.ConnectionStatus
 import io.airbyte.api.client.model.generated.GetWebhookConfigRequest
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.converters.toInternal
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.temporal.exception.RetryableException
@@ -71,7 +71,7 @@ import kotlin.math.max
  */
 @Singleton
 class ConfigFetchActivityImpl
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     private val airbyteApiClient: AirbyteApiClient,
     @param:Value("\${airbyte.worker.sync.max-attempts}") private val syncJobMaxAttempts: Int,

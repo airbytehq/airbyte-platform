@@ -5,12 +5,13 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.ImmutableMap
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.REDIRECT_URI_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URI
@@ -34,7 +35,7 @@ class TikTokMarketingOAuthFlow : BaseOAuth2Flow {
 
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier, TokenRequestContentType.JSON)
 
   override fun completeOAuthFlow(
@@ -78,7 +79,7 @@ class TikTokMarketingOAuthFlow : BaseOAuth2Flow {
         .setHost("ads.tiktok.com")
         .setPath("marketing_api/auth") // required
         .addParameter("app_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
         .addParameter("state", getState())
 
     try {
@@ -94,20 +95,19 @@ class TikTokMarketingOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("auth_code", authCode)
-      .put("app_id", clientId)
-      .put("secret", clientSecret)
-      .build()
+    mapOf(
+      "auth_code" to authCode,
+      "app_id" to clientId,
+      "secret" to clientSecret,
+    )
 
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String = ACCESS_TOKEN_URL
 
   override fun extractCodeParameter(queryParams: Map<String, Any>): String =
     if (queryParams.containsKey("auth_code")) {
       queryParams["auth_code"] as String
-    } else if (queryParams.containsKey("code")) {
-      queryParams["code"] as String
+    } else if (queryParams.containsKey(AUTH_CODE_KEY)) {
+      queryParams[AUTH_CODE_KEY] as String
     } else {
       throw IOException("Undefined 'auth_code'/'code' from consent redirected url.")
     }
@@ -116,7 +116,7 @@ class TikTokMarketingOAuthFlow : BaseOAuth2Flow {
     data: JsonNode,
     accessTokenUrl: String,
   ): Map<String, Any> {
-    val result: MutableMap<String, Any> = HashMap()
+    val result: MutableMap<String, Any> = mutableMapOf()
     // getting out access_token
     if ((data.has("data")) && (data["data"].has("access_token"))) {
       result["access_token"] = data["data"]["access_token"].asText()

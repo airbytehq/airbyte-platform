@@ -5,8 +5,15 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -18,7 +25,7 @@ import java.util.function.Supplier
 class MicrosoftOneDriveOAuthFlow : BaseOAuth2Flow {
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     httpClient: HttpClient,
     stateSupplier: Supplier<String>,
@@ -40,11 +47,11 @@ class MicrosoftOneDriveOAuthFlow : BaseOAuth2Flow {
         .setScheme("https")
         .setHost("login.microsoftonline.com")
         .setPath("$tenantId/oauth2/v2.0/authorize")
-        .addParameter("client_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
         .addParameter("state", getState())
-        .addParameter("scope", scopes)
-        .addParameter("response_type", "code")
+        .addParameter(SCOPE_KEY, scopes)
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
         .build()
         .toString()
     } catch (e: URISyntaxException) {
@@ -59,11 +66,11 @@ class MicrosoftOneDriveOAuthFlow : BaseOAuth2Flow {
     redirectUrl: String,
   ): Map<String, String> =
     mapOf(
-      "grant_type" to "authorization_code",
-      "code" to authCode,
-      "client_id" to clientId,
-      "client_secret" to clientSecret,
-      "redirect_uri" to redirectUrl,
+      GRANT_TYPE_KEY to "authorization_code",
+      AUTH_CODE_KEY to authCode,
+      CLIENT_ID_KEY to clientId,
+      CLIENT_SECRET_KEY to clientSecret,
+      REDIRECT_URI_KEY to redirectUrl,
     )
 
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String {

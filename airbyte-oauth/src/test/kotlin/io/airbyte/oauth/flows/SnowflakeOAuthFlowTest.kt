@@ -5,10 +5,12 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
 import io.airbyte.oauth.BaseOAuthFlow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.oauth.MoreOAuthParameters
+import io.airbyte.oauth.REFRESH_TOKEN_KEY
 import org.junit.jupiter.api.Test
 
 internal class SnowflakeOAuthFlowTest : BaseOAuthFlowTest() {
@@ -21,65 +23,53 @@ internal class SnowflakeOAuthFlowTest : BaseOAuthFlowTest() {
 
   override val expectedOutput: Map<String, String>
     get() =
-      java.util.Map.of(
-        "access_token",
-        "access_token_response",
-        "refresh_token",
-        "refresh_token_response",
-        "username",
-        "username",
+      mapOf(
+        "access_token" to "access_token_response",
+        REFRESH_TOKEN_KEY to "refresh_token_response",
+        "username" to "username",
       )
 
   override val completeOAuthOutputSpecification: JsonNode
     get() =
-      BaseOAuthFlowTest.Companion.getJsonSchema(
-        java.util.Map.of<String, Any>(
-          "access_token",
-          java.util.Map.of<String, String>(TYPE, STRING),
-          "refresh_token",
-          java.util.Map.of<String, String>(TYPE, STRING),
+      getJsonSchema(
+        mapOf(
+          "access_token" to mapOf(TYPE to STRING),
+          REFRESH_TOKEN_KEY to mapOf(TYPE to STRING),
         ),
       )
 
   override val expectedFilteredOutput: Map<String, String>
     get() =
-      java.util.Map.of(
-        "access_token",
-        "access_token_response",
-        "refresh_token",
-        "refresh_token_response",
-        "client_id",
-        MoreOAuthParameters.SECRET_MASK,
+      mapOf(
+        "access_token" to "access_token_response",
+        REFRESH_TOKEN_KEY to "refresh_token_response",
+        CLIENT_ID_KEY to MoreOAuthParameters.SECRET_MASK,
       )
 
   override val oAuthParamConfig: JsonNode?
     get() =
       Jsons.jsonNode(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put("client_id", "test_client_id")
-          .put("client_secret", "test_client_secret")
-          .build(),
+        mapOf(
+          CLIENT_ID_KEY to "test_client_id",
+          CLIENT_SECRET_KEY to "test_client_secret",
+        ),
       )
 
   override val inputOAuthConfiguration: JsonNode
     get() =
       Jsons.jsonNode(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put("host", "account.aws.snowflakecomputing.com")
-          .put("role", "some_role")
-          .build(),
+        mapOf(
+          "host" to "account.aws.snowflakecomputing.com",
+          "role" to "some_role",
+        ),
       )
 
   override val userInputFromConnectorConfigSpecification: JsonNode
     get() =
-      BaseOAuthFlowTest.Companion.getJsonSchema(
-        java.util.Map.of<String, Any>(
-          "host",
-          java.util.Map.of<String, String>(TYPE, STRING),
-          "role",
-          java.util.Map.of<String, String>(TYPE, STRING),
+      getJsonSchema(
+        mapOf(
+          "host" to mapOf(TYPE to STRING),
+          "role" to mapOf(TYPE to STRING),
         ),
       )
 

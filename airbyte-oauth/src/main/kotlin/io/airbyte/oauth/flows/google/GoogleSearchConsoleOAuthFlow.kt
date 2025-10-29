@@ -4,7 +4,7 @@
 
 package io.airbyte.oauth.flows.google
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import java.net.http.HttpClient
 import java.util.function.Supplier
 
@@ -14,7 +14,7 @@ import java.util.function.Supplier
 class GoogleSearchConsoleOAuthFlow : GoogleOAuthFlow {
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   internal constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
   override fun getScope(): String = SCOPE_URL
@@ -23,7 +23,7 @@ class GoogleSearchConsoleOAuthFlow : GoogleOAuthFlow {
   override fun getDefaultOAuthOutputPath(): List<String> = listOf("authorization")
 
   companion object {
-    @VisibleForTesting
+    @InternalForTesting
     const val SCOPE_URL: String = "https://www.googleapis.com/auth/webmasters.readonly"
   }
 }

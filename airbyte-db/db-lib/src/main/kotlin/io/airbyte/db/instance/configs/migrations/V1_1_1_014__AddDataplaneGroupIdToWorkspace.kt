@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.Configs.AirbyteEdition
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
@@ -34,7 +34,7 @@ class V1_1_1_014__AddDataplaneGroupIdToWorkspace : BaseJavaMigration() {
     private val DATAPLANE_GROUP_NAME = DSL.field("dataplane_group.name", SQLDataType.VARCHAR.nullable(false))
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun doMigration(ctx: DSLContext) {
       addColumn(ctx)
       populateDataplaneGroupIds(ctx)
@@ -42,7 +42,7 @@ class V1_1_1_014__AddDataplaneGroupIdToWorkspace : BaseJavaMigration() {
       updateGeographyColumnDropNotNullConstraintAndRename(ctx)
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun addColumn(ctx: DSLContext) {
       log.info { "Adding column dataplane_group_id to workspace table" }
       ctx
@@ -59,7 +59,7 @@ class V1_1_1_014__AddDataplaneGroupIdToWorkspace : BaseJavaMigration() {
         else -> null
       }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun populateDataplaneGroupIds(ctx: DSLContext) {
       log.info { "Updating workspaces with dataplane_group_id" }
       // Update workspace table with corresponding dataplane_group_id
@@ -82,7 +82,7 @@ class V1_1_1_014__AddDataplaneGroupIdToWorkspace : BaseJavaMigration() {
       }
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun addNotNullConstraint(ctx: DSLContext) {
       log.info { "Adding NOT NULL constraint to dataplane_group_id" }
       ctx
@@ -92,7 +92,7 @@ class V1_1_1_014__AddDataplaneGroupIdToWorkspace : BaseJavaMigration() {
         .execute()
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun updateGeographyColumnDropNotNullConstraintAndRename(ctx: DSLContext) {
       log.info { "Dropping NOT NULL constraint on geography" }
       ctx

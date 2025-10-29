@@ -20,7 +20,9 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.JobNotifier
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.persistence.job.tracker.JobTracker
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
@@ -81,28 +83,28 @@ internal class JobCreationAndStatusUpdateHelperTest {
       )
 
     val result1 = helper.findPreviousJob(jobs, 1)
-    Assertions.assertTrue(result1.isPresent())
-    Assertions.assertEquals(2, result1.get().id)
+    assertTrue(result1.isPresent)
+    assertEquals(2, result1.get().id)
     val result2 = helper.findPreviousJob(jobs, 2)
-    Assertions.assertTrue(result2.isPresent())
-    Assertions.assertEquals(3, result2.get().id)
+    assertTrue(result2.isPresent)
+    assertEquals(3, result2.get().id)
     val result3 = helper.findPreviousJob(jobs, 3)
-    Assertions.assertTrue(result3.isEmpty())
+    assertTrue(result3.isEmpty)
     val result4 = helper.findPreviousJob(jobs, 4)
-    Assertions.assertTrue(result4.isPresent())
-    Assertions.assertEquals(1, result4.get().id)
+    assertTrue(result4.isPresent)
+    assertEquals(1, result4.get().id)
     val result5 = helper.findPreviousJob(jobs, 5)
-    Assertions.assertTrue(result5.isPresent())
-    Assertions.assertEquals(4, result5.get().id)
+    assertTrue(result5.isPresent)
+    assertEquals(4, result5.get().id)
     val result6 = helper.findPreviousJob(jobs, 6)
-    Assertions.assertTrue(result6.isPresent())
-    Assertions.assertEquals(5, result6.get().id)
+    assertTrue(result6.isPresent)
+    assertEquals(5, result6.get().id)
     val result7 = helper.findPreviousJob(jobs, 7)
-    Assertions.assertTrue(result7.isEmpty())
+    assertTrue(result7.isEmpty)
     val result8 = helper.findPreviousJob(jobs, 8)
-    Assertions.assertTrue(result8.isEmpty())
+    assertTrue(result8.isEmpty)
     val result9 = helper.findPreviousJob(mutableListOf(), 1)
-    Assertions.assertTrue(result9.isEmpty())
+    assertTrue(result9.isEmpty)
   }
 
   @Test
@@ -114,12 +116,12 @@ internal class JobCreationAndStatusUpdateHelperTest {
     val job5 = Fixtures.job(JobStatus.SUCCEEDED)
     val job6 = Fixtures.job(JobStatus.CANCELLED)
 
-    Assertions.assertFalse(helper.didJobSucceed(job1))
-    Assertions.assertFalse(helper.didJobSucceed(job2))
-    Assertions.assertFalse(helper.didJobSucceed(job3))
-    Assertions.assertFalse(helper.didJobSucceed(job4))
-    Assertions.assertTrue(helper.didJobSucceed(job5))
-    Assertions.assertFalse(helper.didJobSucceed(job6))
+    assertFalse(helper.didJobSucceed(job1))
+    assertFalse(helper.didJobSucceed(job2))
+    assertFalse(helper.didJobSucceed(job3))
+    assertFalse(helper.didJobSucceed(job4))
+    assertTrue(helper.didJobSucceed(job5))
+    assertFalse(helper.didJobSucceed(job6))
   }
 
   @Test

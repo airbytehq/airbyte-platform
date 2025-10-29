@@ -118,8 +118,8 @@ internal class DeclarativeOAuthSpecHandlerTest {
    *
    * Examples:
    *
-   * Input: ["access_token", "refresh_token"] Output: {"access_token": "access_token_value",
-   * "refresh_token": "refresh_token_value"}
+   * Input: ["access_token", REFRESH_TOKEN] Output: {"access_token": "access_token_value",
+   * REFRESH_TOKEN: "refresh_token_value"}
    *
    * This test verifies that the processOAuthOutput method correctly extracts the access token from
    * the provided user configuration and data.
@@ -159,7 +159,7 @@ internal class DeclarativeOAuthSpecHandlerTest {
    * Examples:
    *
    * Input: ["main_data.nested_data.auth_data.access_token", "main_data.nested_data.refresh_token"]
-   * Output: {"access_token": "access_token_value", "refresh_token": "refresh_token_value"}
+   * Output: {"access_token": "access_token_value", REFRESH_TOKEN: "refresh_token_value"}
    *
    * The test constructs a JSON input with nested data, specifies the paths to the access token and
    * refresh token, and verifies that the processOAuthOutput method correctly extracts these tokens

@@ -6,7 +6,7 @@ package io.airbyte.commons.server.handlers.helpers
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException
 import io.airbyte.commons.server.handlers.helpers.OAuthHelper.extractOauthConfigurationPaths
@@ -48,7 +48,7 @@ object OAuthSecretHelper {
    * from both complete_oauth and the actor_oauth_params Returns a map of the property_name:
    * path_in_connector_config i.e. { client_id: ['credentials', 'client_id']}
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun getAdvancedAuthOAuthPaths(
     connectorSpecification: ConnectorSpecification,
     includeOutputPaths: Boolean,
@@ -144,7 +144,7 @@ object OAuthSecretHelper {
    * @throws JsonValidationException If there is no valid OauthConfig Specification.
    */
   @JvmStatic
-  @VisibleForTesting
+  @InternalForTesting
   fun validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(
     connectorSpecification: ConnectorSpecification,
     oauthParamConfiguration: JsonNode?,

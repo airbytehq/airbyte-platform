@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.converters
 
-import com.google.common.collect.Lists
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.client.model.generated.ConfiguredStreamMapper
 import io.airbyte.api.client.model.generated.StreamMapperType
@@ -73,7 +72,7 @@ private val CLIENT_DEFAULT_STREAM_CONFIGURATION =
 
 private val BASIC_MODEL_CATALOG =
   AirbyteCatalog().withStreams(
-    Lists.newArrayList(STREAM),
+    listOf(STREAM),
   )
 
 private val EXPECTED_CLIENT_CATALOG =
@@ -147,7 +146,7 @@ class CatalogClientConvertersTest {
     val stream = configuredCatalog.streams.first()
     assertEquals(STREAM_NAME, stream.stream.name)
     assertEquals(1, stream.fields?.size)
-    assertEquals(1, stream.mappers?.size)
+    assertEquals(1, stream.mappers.size)
     assertEquals(
       fieldGenerator.getFieldsFromSchema(stream.stream.jsonSchema),
       stream.fields,

@@ -5,8 +5,14 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REFRESH_TOKEN_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -42,10 +48,10 @@ class SmartsheetsOAuthFlow : BaseOAuth2Flow {
   ): String {
     try {
       return URIBuilder(AUTHORIZE_URL)
-        .addParameter("client_id", clientId)
-        .addParameter("response_type", "code")
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
         .addParameter("state", getState())
-        .addParameter("scope", "READ_SHEETS")
+        .addParameter(SCOPE_KEY, "READ_SHEETS")
         .build()
         .toString()
     } catch (e: URISyntaxException) {
@@ -61,21 +67,20 @@ class SmartsheetsOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("grant_type", "authorization_code")
-      .put("client_id", clientId)
-      .put("client_secret", clientSecret)
-      .put("code", authCode)
-      .build()
+    mapOf(
+      GRANT_TYPE_KEY to "authorization_code",
+      CLIENT_ID_KEY to clientId,
+      CLIENT_SECRET_KEY to clientSecret,
+      AUTH_CODE_KEY to authCode,
+    )
 
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,
   ): Map<String, Any> {
-    val result: MutableMap<String, Any> = HashMap()
-    if (data.has("refresh_token")) {
-      result["refresh_token"] = data["refresh_token"].asText()
+    val result: MutableMap<String, Any> = mutableMapOf()
+    if (data.has(REFRESH_TOKEN_KEY)) {
+      result[REFRESH_TOKEN_KEY] = data[REFRESH_TOKEN_KEY].asText()
     } else {
       throw IOException(String.format("Missing 'refresh_token' in query params from %s", accessTokenUrl))
     }

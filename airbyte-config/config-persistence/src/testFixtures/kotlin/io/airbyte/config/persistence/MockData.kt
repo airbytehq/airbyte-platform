@@ -7,7 +7,6 @@ package io.airbyte.config.persistence
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.common.collect.Lists
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.commons.json.Jsons.emptyObject
@@ -912,7 +911,7 @@ object MockData {
     get() {
       val catalog =
         AirbyteCatalog().withStreams(
-          List.of<AirbyteStream?>(
+          listOf(
             CatalogHelpers
               .createAirbyteStream(
                 "models",
@@ -921,13 +920,13 @@ object MockData {
                 Field.of("make_id", JsonSchemaType.NUMBER),
                 Field.of("model", JsonSchemaType.STRING),
               ).withSupportedSyncModes(
-                Lists.newArrayList<SyncMode?>(
+                listOf(
                   SyncMode.FULL_REFRESH,
                   SyncMode.INCREMENTAL,
                 ),
               ).withSourceDefinedPrimaryKey(
-                List.of<MutableList<String?>?>(
-                  mutableListOf<String?>(
+                listOf(
+                  listOf<String?>(
                     "id",
                   ),
                 ),
@@ -957,7 +956,7 @@ object MockData {
       StandardSyncState()
         .withConnectionId(CONNECTION_ID_4)
         .withState(State().withState(jsonNode<String?>(CONNECTION_SPECIFICATION)))
-    return Arrays.asList<StandardSyncState?>(standardSyncState1, standardSyncState2, standardSyncState3, standardSyncState4)
+    return mutableListOf(standardSyncState1, standardSyncState2, standardSyncState3, standardSyncState4)
   }
 
   fun actorCatalogs(): MutableList<ActorCatalog?> {
@@ -979,7 +978,7 @@ object MockData {
         .withCatalog(deserialize("{}"))
         .withCatalogType(CatalogType.SOURCE_CATALOG)
         .withCatalogHash("SomeOtherHash")
-    return Arrays.asList<ActorCatalog?>(actorCatalog1, actorCatalog2, actorCatalog3)
+    return mutableListOf(actorCatalog1, actorCatalog2, actorCatalog3)
   }
 
   fun actorCatalogFetchEvents(): MutableList<ActorCatalogFetchEvent?> {
@@ -997,7 +996,7 @@ object MockData {
         .withActorId(SOURCE_ID_2)
         .withConfigHash("1395")
         .withConnectorVersion("1.42.0")
-    return Arrays.asList<ActorCatalogFetchEvent?>(actorCatalogFetchEvent1, actorCatalogFetchEvent2)
+    return mutableListOf(actorCatalogFetchEvent1, actorCatalogFetchEvent2)
   }
 
   fun actorCatalogFetchEventsSameSource(): MutableList<ActorCatalogFetchEvent?> {
@@ -1015,7 +1014,7 @@ object MockData {
         .withActorId(SOURCE_ID_1)
         .withConfigHash(CONFIG_HASH)
         .withConnectorVersion(CONNECTOR_VERSION)
-    return Arrays.asList<ActorCatalogFetchEvent?>(actorCatalogFetchEvent1, actorCatalogFetchEvent2)
+    return mutableListOf(actorCatalogFetchEvent1, actorCatalogFetchEvent2)
   }
 
   fun defaultOrganization(): Organization =
@@ -1056,7 +1055,7 @@ object MockData {
         .withActorId(SOURCE_ID_3)
         .withConfigHash(CONFIG_HASH)
         .withConnectorVersion(CONNECTOR_VERSION)
-    return Arrays.asList<ActorCatalogFetchEventWithCreationDate?>(
+    return mutableListOf(
       ActorCatalogFetchEventWithCreationDate(actorCatalogFetchEvent1, now),
       ActorCatalogFetchEventWithCreationDate(actorCatalogFetchEvent2, yesterday),
       ActorCatalogFetchEventWithCreationDate(actorCatalogFetchEvent3, now),
@@ -1073,7 +1072,7 @@ object MockData {
         .withServiceAccountEmail("a1e5ac98-7531-48e1-943b-b46636@random-gcp-project.abc.abcdefghijklmno.com")
         .withJsonCredential(deserialize(MOCK_SERVICE_ACCOUNT_1))
 
-    return mutableListOf<WorkspaceServiceAccount?>(workspaceServiceAccount)
+    return mutableListOf(workspaceServiceAccount)
   }
 
   fun declarativeManifest(): DeclarativeManifest? {

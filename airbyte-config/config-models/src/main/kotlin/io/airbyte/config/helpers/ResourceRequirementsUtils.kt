@@ -4,7 +4,6 @@
 
 package io.airbyte.config.helpers
 
-import com.google.common.base.Preconditions
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.JobTypeResourceLimit
 import io.airbyte.config.ResourceRequirements
@@ -142,7 +141,7 @@ object ResourceRequirementsUtils {
         .filter { jobSpecific: JobTypeResourceLimit -> jobSpecific.jobType == jobType }
         .map { obj: JobTypeResourceLimit -> obj.resourceRequirements }
         .toList()
-    Preconditions.checkArgument(jobTypeResourceRequirement.size <= 1, "Should only have one resource requirement per job type.")
+    require(jobTypeResourceRequirement.size <= 1) { "Should only have one resource requirement per job type." }
     return if (jobTypeResourceRequirement.isEmpty()) null else jobTypeResourceRequirement[0]
   }
 

@@ -8,6 +8,11 @@ import io.airbyte.commons.io.IOs.writeFile
 import io.airbyte.commons.json.Jsons.deserialize
 import io.airbyte.validation.json.JsonSchemaValidator.Companion.getSchema
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.function.Executable
 import java.io.IOException
@@ -21,12 +26,12 @@ internal class JsonSchemaValidatorTest {
     val validator = JsonSchemaValidator()
 
     val object1 = deserialize("{\"host\":\"abc\"}")
-    Assertions.assertTrue(validator.validate(VALID_SCHEMA, object1).isEmpty())
-    Assertions.assertDoesNotThrow(Executable { validator.ensure(VALID_SCHEMA, object1) })
+    assertTrue(validator.validate(VALID_SCHEMA, object1).isEmpty())
+    assertDoesNotThrow({ validator.ensure(VALID_SCHEMA, object1) })
 
     val object2 = deserialize("{\"host\":\"abc\", \"port\":1}")
-    Assertions.assertTrue(validator.validate(VALID_SCHEMA, object2).isEmpty())
-    Assertions.assertDoesNotThrow(Executable { validator.ensure(VALID_SCHEMA, object2) })
+    assertTrue(validator.validate(VALID_SCHEMA, object2).isEmpty())
+    assertDoesNotThrow({ validator.ensure(VALID_SCHEMA, object2) })
   }
 
   @Test
@@ -34,12 +39,12 @@ internal class JsonSchemaValidatorTest {
     val validator = JsonSchemaValidator()
 
     val object1 = deserialize("{}")
-    Assertions.assertFalse(validator.validate(VALID_SCHEMA, object1).isEmpty())
-    Assertions.assertThrows<JsonValidationException?>(JsonValidationException::class.java, Executable { validator.ensure(VALID_SCHEMA, object1) })
+    assertFalse(validator.validate(VALID_SCHEMA, object1).isEmpty())
+    assertThrows(JsonValidationException::class.java, { validator.ensure(VALID_SCHEMA, object1) })
 
     val object2 = deserialize("{\"host\":\"abc\", \"port\":9999999}")
-    Assertions.assertFalse(validator.validate(VALID_SCHEMA, object2).isEmpty())
-    Assertions.assertThrows<JsonValidationException?>(JsonValidationException::class.java, Executable { validator.ensure(VALID_SCHEMA, object2) })
+    assertFalse(validator.validate(VALID_SCHEMA, object2).isEmpty())
+    assertThrows(JsonValidationException::class.java, { validator.ensure(VALID_SCHEMA, object2) })
   }
 
   @Test
@@ -71,15 +76,15 @@ internal class JsonSchemaValidatorTest {
     writeFile(schemaFile, schema)
 
     // outer object
-    Assertions.assertTrue(getSchema(schemaFile.toFile()).get(PROPERTIES).has("field1"))
-    Assertions.assertFalse(getSchema(schemaFile.toFile()).get(PROPERTIES).has("field2"))
+    assertTrue(getSchema(schemaFile.toFile()).get(PROPERTIES).has("field1"))
+    assertFalse(getSchema(schemaFile.toFile()).get(PROPERTIES).has("field2"))
     // inner object
-    Assertions.assertTrue(getSchema(schemaFile.toFile(), "InnerObject").get(PROPERTIES).has("field2"))
-    Assertions.assertFalse(getSchema(schemaFile.toFile(), "InnerObject").get(PROPERTIES).has("field1"))
+    assertTrue(getSchema(schemaFile.toFile(), "InnerObject").get(PROPERTIES).has("field2"))
+    assertFalse(getSchema(schemaFile.toFile(), "InnerObject").get(PROPERTIES).has("field1"))
     // non-existent object
-    Assertions.assertThrows<IllegalArgumentException?>(
+    assertThrows(
       IllegalArgumentException::class.java,
-      Executable { getSchema(schemaFile.toFile(), "NonExistentObject") },
+      { getSchema(schemaFile.toFile(), "NonExistentObject") },
     )
   }
 
@@ -125,20 +130,20 @@ internal class JsonSchemaValidatorTest {
         ),
       )
 
-    Assertions.assertEquals(setOf("$.prop2: string found, boolean expected"), validationResult)
+    assertEquals(setOf("$.prop2: string found, boolean expected"), validationResult)
   }
 
   @Test
   fun testIntializedMethodsShouldErrorIfNotInitialised() {
     val validator = JsonSchemaValidator()
 
-    Assertions.assertThrows<NullPointerException?>(
-      NullPointerException::class.java,
-      Executable { validator.testInitializedSchema("uninitialised", deserialize("{}")) },
+    assertThrows(
+      IllegalArgumentException::class.java,
+      { validator.testInitializedSchema("uninitialised", deserialize("{}")) },
     )
-    Assertions.assertThrows<NullPointerException?>(
-      NullPointerException::class.java,
-      Executable { validator.validateInitializedSchema("uninitialised", deserialize("{}")) },
+    assertThrows(
+      IllegalArgumentException::class.java,
+      { validator.validateInitializedSchema("uninitialised", deserialize("{}")) },
     )
   }
 
@@ -150,11 +155,11 @@ internal class JsonSchemaValidatorTest {
 
     validator.initializeSchemaValidator(schemaName, VALID_SCHEMA)
 
-    Assertions.assertTrue(validator.testInitializedSchema(schemaName, goodJson))
-    Assertions.assertDoesNotThrow(Executable { validator.validateInitializedSchema(schemaName, goodJson) })
+    assertTrue(validator.testInitializedSchema(schemaName, goodJson))
+    assertDoesNotThrow({ validator.validateInitializedSchema(schemaName, goodJson) })
 
     val badJson = deserialize("{\"host\":1}")
-    Assertions.assertFalse(validator.testInitializedSchema(schemaName, badJson))
+    assertFalse(validator.testInitializedSchema(schemaName, badJson))
 
     val errorMessages: Set<String> = validator.validateInitializedSchema(schemaName, badJson)
     assert(!errorMessages.isEmpty())

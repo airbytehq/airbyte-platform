@@ -5,7 +5,6 @@
 package io.airbyte.db.instance.configs.migrations
 
 import com.fasterxml.jackson.core.type.TypeReference
-import com.google.common.collect.Iterators
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Notification
 import io.airbyte.config.NotificationItem
@@ -51,7 +50,7 @@ class V0_44_5_004__BackFillNotificationSettingsColumn : BaseJavaMigration() {
 
       workspaceWithNotificationSettings.forEach { workspaceRecord: Record2<UUID, JSONB?> ->
         val workspaceId = workspaceRecord.getValue(ID_COLUMN)
-        if (workspaceRecord.get<JSONB?>(NOTIFICATION_COLUMN) == null) {
+        if (workspaceRecord.get(NOTIFICATION_COLUMN) == null) {
           // This case does not exist in prod, but adding check to satisfy testing requirements.
           log.warn { "Workspace $workspaceId does not have notification column" }
           return@forEach
@@ -64,7 +63,7 @@ class V0_44_5_004__BackFillNotificationSettingsColumn : BaseJavaMigration() {
           )
         val notificationSettings = NotificationSettings()
         if (originalNotificationList.isNotEmpty()) {
-          val originalNotification = Iterators.getOnlyElement(originalNotificationList.listIterator())
+          val originalNotification = originalNotificationList.first()
           val notificationType = originalNotification.notificationType
           val slackConfiguration = originalNotification.slackConfiguration
 

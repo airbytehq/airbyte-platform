@@ -60,10 +60,9 @@ dependencies {
 
   // Third-party dependencies
   implementation("org.kohsuke:github-api:1.327")
-  implementation("org.yaml:snakeyaml:2.2")
+  implementation(libs.snakeyaml)
   implementation("io.pebbletemplates:pebble:3.2.4")
 
-  runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.bundles.logback)
 
   testRuntimeOnly(libs.junit.jupiter.engine)

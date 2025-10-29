@@ -6,7 +6,6 @@ package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.google.common.collect.Lists
 import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.model.generated.ActorListFilters
 import io.airbyte.api.model.generated.ActorStatus
@@ -1126,7 +1125,7 @@ internal class SourceHandlerTest {
 
     every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
     every { sourceService.listSourcesForDefinition(sourceConnection.sourceDefinitionId) } returns
-      Lists.newArrayList<SourceConnection>(sourceConnection)
+      listOf(sourceConnection)
     every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
     every {
       actorDefinitionVersionHelper.getSourceVersion(
@@ -1186,7 +1185,7 @@ internal class SourceHandlerTest {
       )
 
     every { sourceService.getSourceConnection(sourceConnection.sourceId) } returns sourceConnection
-    every { sourceService.listSourceConnection() } returns Lists.newArrayList<SourceConnection>(sourceConnection)
+    every { sourceService.listSourceConnection() } returns listOf(sourceConnection)
     every { sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.sourceDefinitionId) } returns standardSourceDefinition
     every {
       actorDefinitionVersionHelper.getSourceVersion(
@@ -1335,18 +1334,18 @@ internal class SourceHandlerTest {
 
     val airbyteCatalogWithOneStream =
       AirbyteCatalog().withStreams(
-        Lists.newArrayList<AirbyteStream?>(CatalogHelpers.createAirbyteStream("streamA", Field.of(SKU, JsonSchemaType.STRING))),
+        listOf(CatalogHelpers.createAirbyteStream("streamA", Field.of(SKU, JsonSchemaType.STRING))),
       )
     val airbyteCatalogWithTwoUnsuggestedStreams =
       AirbyteCatalog().withStreams(
-        Lists.newArrayList<AirbyteStream?>(
+        listOf(
           CatalogHelpers.createAirbyteStream("streamA", Field.of(SKU, JsonSchemaType.STRING)),
           CatalogHelpers.createAirbyteStream("streamB", Field.of(SKU, JsonSchemaType.STRING)),
         ),
       )
     val airbyteCatalogWithOneSuggestedAndOneUnsuggestedStream =
       AirbyteCatalog().withStreams(
-        Lists.newArrayList<AirbyteStream?>(
+        listOf(
           CatalogHelpers.createAirbyteStream("streamA", Field.of(SKU, JsonSchemaType.STRING)),
           CatalogHelpers.createAirbyteStream("streamB", Field.of(SKU, JsonSchemaType.STRING)),
         ),

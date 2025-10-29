@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
@@ -27,7 +27,7 @@ class V1_1_1_029__DropAndRecreateRolloutIndexWithTag : BaseJavaMigration() {
     private const val NEW_INDEX = "actor_definition_id_state_tag_unique_idx"
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun doMigration(ctx: DSLContext) {
       addTagField(ctx)
       dropOldIndex(ctx)

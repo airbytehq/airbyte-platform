@@ -5,7 +5,6 @@
 package io.airbyte.container.orchestrator.worker.io
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.Lists
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AirbyteStream
 import io.airbyte.config.ConfiguredAirbyteCatalog
@@ -40,7 +39,7 @@ private fun getAirbyteStream(name: String): AirbyteStream =
 private val AIRBYTE_CATALOG: ConfiguredAirbyteCatalog =
   ConfiguredAirbyteCatalog()
     .withStreams(
-      Lists.newArrayList<ConfiguredAirbyteStream>(
+      listOf(
         ConfiguredAirbyteStream(getAirbyteStream("a"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
         ConfiguredAirbyteStream(getAirbyteStream("b"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),
         ConfiguredAirbyteStream(getAirbyteStream("c"), SyncMode.INCREMENTAL, DestinationSyncMode.APPEND),

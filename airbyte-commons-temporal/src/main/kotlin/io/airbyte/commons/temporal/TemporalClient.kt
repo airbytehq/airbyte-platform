@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.temporal
 
-import com.google.common.annotations.VisibleForTesting
 import com.google.protobuf.ByteString
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.temporal.config.TemporalQueueConfiguration
@@ -559,7 +558,7 @@ class TemporalClient(
       "%02d:%02d:%02d.%03d".format(hours, minutes, seconds, nano / 1_000_000)
     }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun <T : Any> execute(
     jobRunConfig: JobRunConfig,
     executor: Supplier<T>,

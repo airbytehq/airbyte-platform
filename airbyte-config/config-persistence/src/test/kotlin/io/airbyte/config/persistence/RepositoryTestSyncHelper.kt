@@ -4,7 +4,6 @@
 
 package io.airbyte.config.persistence
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons.serialize
 import io.airbyte.config.ConfiguredAirbyteCatalog
@@ -242,7 +241,6 @@ class RepositoryTestSyncHelper(
     /**
      * Fetch if a notification is enabled in a standard sync based on the notification type.
      */
-    @VisibleForTesting
     fun getNotificationEnabled(
       standardSync: StandardSync,
       notificationType: NotificationType,

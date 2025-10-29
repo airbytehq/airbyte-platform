@@ -5,7 +5,7 @@
 package io.airbyte.data.services.impls.jooq
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActiveDeclarativeManifest
 import io.airbyte.config.ActorDefinitionConfigInjection
@@ -39,7 +39,7 @@ import java.util.stream.Stream
 
 @Singleton
 class ConnectorBuilderServiceJooqImpl
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     @Named("configDatabase") database: Database?,
   ) : ConnectorBuilderService {

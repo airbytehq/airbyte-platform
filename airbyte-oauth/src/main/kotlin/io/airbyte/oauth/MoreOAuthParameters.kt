@@ -7,7 +7,6 @@ package io.airbyte.oauth
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeType
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.google.common.base.Strings
 import io.airbyte.commons.json.Jsons
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.function.Consumer
@@ -95,5 +94,5 @@ object MoreOAuthParameters {
     return mainConfig
   }
 
-  private fun isSecretMask(input: String): Boolean = Strings.isNullOrEmpty(input.replace("\\*".toRegex(), ""))
+  private fun isSecretMask(input: String): Boolean = input.replace("\\*".toRegex(), "").isBlank()
 }

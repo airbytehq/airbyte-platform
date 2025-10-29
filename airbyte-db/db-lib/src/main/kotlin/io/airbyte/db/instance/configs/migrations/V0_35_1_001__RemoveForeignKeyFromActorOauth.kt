@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.DestinationOAuthParameter
 import io.airbyte.config.SourceOAuthParameter
@@ -38,7 +38,7 @@ class V0_35_1_001__RemoveForeignKeyFromActorOauth : BaseJavaMigration() {
 
   companion object {
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun migrate(ctx: DSLContext) {
       dropForeignKeyConstraintFromActorOauthTable(ctx)
       populateActorOauthParameter(ctx)

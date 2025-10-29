@@ -5,7 +5,7 @@
 package io.airbyte.persistence.job
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConfiguredAirbyteCatalog
@@ -196,7 +196,7 @@ class DefaultJobCreator(
     return jobPersistence.enqueueJob(standardSync.connectionId.toString(), jobConfig, false)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getResumableFullRefresh(
     standardSync: StandardSync,
     supportResumableFullRefresh: Boolean,

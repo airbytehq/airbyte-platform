@@ -5,8 +5,13 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -20,7 +25,7 @@ import java.util.function.Supplier
 class AsanaOAuthFlow : BaseOAuth2Flow {
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   internal constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
   override fun formatConsentUrl(
@@ -31,9 +36,9 @@ class AsanaOAuthFlow : BaseOAuth2Flow {
   ): String {
     try {
       return URIBuilder(AUTHORIZE_URL)
-        .addParameter("client_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
-        .addParameter("response_type", "code")
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
         .addParameter("state", getState())
         .build()
         .toString()
@@ -50,7 +55,7 @@ class AsanaOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    mapOf("grant_type" to "authorization_code") +
+    mapOf(GRANT_TYPE_KEY to "authorization_code") +
       super.getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl)
 
   companion object {

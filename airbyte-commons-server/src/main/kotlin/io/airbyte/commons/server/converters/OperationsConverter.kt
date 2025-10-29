@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.converters
 
-import com.google.common.base.Preconditions
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.model.generated.OperationRead
 import io.airbyte.api.model.generated.OperatorConfiguration
 import io.airbyte.api.model.generated.OperatorType
@@ -34,11 +34,11 @@ object OperationsConverter {
   ) {
     standardSyncOperation.withOperatorType(operatorConfig.operatorType?.convertTo<StandardSyncOperation.OperatorType>())
     if (Objects.requireNonNull(operatorConfig.operatorType) == OperatorType.WEBHOOK) {
-      Preconditions.checkArgument(operatorConfig.webhook != null)
+      requireNotNull(operatorConfig.webhook)
       // TODO(mfsiega-airbyte): check that the webhook config id references a real webhook config.
       val webhookConfigs =
-        standardWorkspace.webhookOperationConfigs?.let {
-          Jsons.`object`(it, WebhookOperationConfigs::class.java)
+        standardWorkspace.webhookOperationConfigs?.let { node: JsonNode ->
+          Jsons.`object`(node, WebhookOperationConfigs::class.java)
         }
       var customDbtHost = Optional.empty<String>()
       if (webhookConfigs != null && webhookConfigs.webhookConfigs != null) {
@@ -68,7 +68,7 @@ object OperationsConverter {
     if (Objects.requireNonNull<StandardSyncOperation.OperatorType>(standardSyncOperation.operatorType) ==
       StandardSyncOperation.OperatorType.WEBHOOK
     ) {
-      Preconditions.checkArgument(standardSyncOperation.operatorWebhook != null)
+      require(standardSyncOperation.operatorWebhook != null)
       operatorConfiguration.webhook(webhookOperatorFromPersistence(standardSyncOperation.operatorWebhook))
     }
     return OperationRead()

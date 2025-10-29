@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.collect.Lists
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
@@ -64,6 +63,10 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.validation.json.JsonValidationException
 import jakarta.validation.Valid
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -357,7 +360,7 @@ internal class WorkspacesHandlerTest {
         .organizationId(ORGANIZATION_ID)
         .tombstone(false)
 
-    Assertions.assertEquals(expectedRead, actualRead)
+    assertEquals(expectedRead, actualRead)
   }
 
   @ParameterizedTest
@@ -423,8 +426,8 @@ internal class WorkspacesHandlerTest {
         .organizationId(ORGANIZATION_ID)
         .tombstone(false)
 
-    Assertions.assertEquals(expectedRead, actualRead)
-    Assertions.assertEquals(expectedRead, secondActualRead)
+    assertEquals(expectedRead, actualRead)
+    assertEquals(expectedRead, secondActualRead)
   }
 
   @ParameterizedTest
@@ -456,11 +459,11 @@ internal class WorkspacesHandlerTest {
 
     val expectedRead =
       WorkspaceRead()
-        .workspaceId(actualRead.getWorkspaceId())
-        .customerId(actualRead.getCustomerId())
+        .workspaceId(actualRead.workspaceId)
+        .customerId(actualRead.customerId)
         .email(TEST_EMAIL)
         .name(NEW_WORKSPACE)
-        .slug(actualRead.getSlug())
+        .slug(actualRead.slug)
         .initialSetupComplete(false)
         .displaySetupWizard(false)
         .news(false)
@@ -473,7 +476,7 @@ internal class WorkspacesHandlerTest {
         .tombstone(false)
         .organizationId(ORGANIZATION_ID)
 
-    Assertions.assertEquals(expectedRead, actualRead)
+    assertEquals(expectedRead, actualRead)
   }
 
   @ParameterizedTest
@@ -508,7 +511,7 @@ internal class WorkspacesHandlerTest {
 
     val workspaceCreate =
       WorkspaceCreate()
-        .name(workspace.getName())
+        .name(workspace.name)
         .email(TEST_EMAIL)
         .news(false)
         .anonymousDataCollection(false)
@@ -522,8 +525,8 @@ internal class WorkspacesHandlerTest {
         .workspaceId(uuid)
         .customerId(uuid)
         .email(TEST_EMAIL)
-        .name(workspace.getName())
-        .slug(workspace.getSlug())
+        .name(workspace.name)
+        .slug(workspace.slug)
         .initialSetupComplete(false)
         .displaySetupWizard(false)
         .news(false)
@@ -536,27 +539,27 @@ internal class WorkspacesHandlerTest {
         .tombstone(false)
         .organizationId(ORGANIZATION_ID)
 
-    Assertions.assertTrue(actualRead.getSlug().startsWith(workspace.getSlug()))
-    Assertions.assertNotEquals(workspace.getSlug(), actualRead.getSlug())
-    Assertions.assertEquals(clone<WorkspaceRead>(expectedRead).slug(null), clone(actualRead).slug(null))
+    assertTrue(actualRead.slug.startsWith(workspace.slug))
+    assertNotEquals(workspace.slug, actualRead.slug)
+    assertEquals(clone<WorkspaceRead>(expectedRead).slug(null), clone(actualRead).slug(null))
     val slugCaptor = argumentCaptor<String>()
     Mockito.verify(workspaceService, Mockito.times(3)).getWorkspaceBySlugOptional(slugCaptor.capture(), eq(true))
-    Assertions.assertEquals(3, slugCaptor.allValues.size)
-    Assertions.assertEquals(workspace.getSlug(), slugCaptor.allValues[0])
-    Assertions.assertTrue(slugCaptor.allValues[1].startsWith(workspace.getSlug()))
-    Assertions.assertTrue(slugCaptor.allValues[2].startsWith(workspace.getSlug()))
+    assertEquals(3, slugCaptor.allValues.size)
+    assertEquals(workspace.slug, slugCaptor.allValues[0])
+    assertTrue(slugCaptor.allValues[1].startsWith(workspace.slug))
+    assertTrue(slugCaptor.allValues[2].startsWith(workspace.slug))
   }
 
   @Test
   fun testDeleteWorkspace() {
-    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.getWorkspaceId())
+    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.workspaceId)
 
     val connection = ConnectionRead().connectionId(UUID.randomUUID())
     val destination = DestinationRead()
     val source = SourceRead()
 
     Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
       .thenReturn(workspace)
 
     Mockito.`when`(workspaceService.listStandardWorkspaces(false)).thenReturn(
@@ -572,21 +575,21 @@ internal class WorkspacesHandlerTest {
     Mockito
       .`when`(
         destinationHandler
-          .listDestinationsForWorkspace(ActorListCursorPaginatedRequestBody().workspaceId(workspaceIdRequestBody.getWorkspaceId())),
+          .listDestinationsForWorkspace(ActorListCursorPaginatedRequestBody().workspaceId(workspaceIdRequestBody.workspaceId)),
       ).thenReturn(DestinationReadList().destinations(mutableListOf<@Valid DestinationRead?>(destination)))
 
     Mockito
       .`when`(
         sourceHandler.listSourcesForWorkspace(
           ActorListCursorPaginatedRequestBody().workspaceId(
-            workspaceIdRequestBody.getWorkspaceId(),
+            workspaceIdRequestBody.workspaceId,
           ),
         ),
       ).thenReturn(SourceReadList().sources(mutableListOf<@Valid SourceRead?>(source)))
 
     getWorkspacesHandler(AirbyteEdition.COMMUNITY).deleteWorkspace(workspaceIdRequestBody)
 
-    Mockito.verify(connectionsHandler).deleteConnection(connection.getConnectionId())
+    Mockito.verify(connectionsHandler).deleteConnection(connection.connectionId)
     Mockito.verify(destinationHandler).deleteDestination(destination)
     Mockito.verify(sourceHandler).deleteSource(source)
   }
@@ -596,7 +599,7 @@ internal class WorkspacesHandlerTest {
     val workspace2 = generateWorkspace()
 
     Mockito.`when`(workspaceService.listStandardWorkspaces(false)).thenReturn(
-      Lists.newArrayList(
+      listOf(
         workspace,
         workspace2,
       ),
@@ -604,16 +607,16 @@ internal class WorkspacesHandlerTest {
 
     val expectedWorkspaceRead1 =
       WorkspaceRead()
-        .workspaceId(workspace.getWorkspaceId())
-        .customerId(workspace.getCustomerId())
-        .email(workspace.getEmail())
-        .name(workspace.getName())
-        .slug(workspace.getSlug())
-        .initialSetupComplete(workspace.getInitialSetupComplete())
-        .displaySetupWizard(workspace.getDisplaySetupWizard())
-        .news(workspace.getNews())
-        .anonymousDataCollection(workspace.getAnonymousDataCollection())
-        .securityUpdates(workspace.getSecurityUpdates())
+        .workspaceId(workspace.workspaceId)
+        .customerId(workspace.customerId)
+        .email(workspace.email)
+        .name(workspace.name)
+        .slug(workspace.slug)
+        .initialSetupComplete(workspace.initialSetupComplete)
+        .displaySetupWizard(workspace.displaySetupWizard)
+        .news(workspace.news)
+        .anonymousDataCollection(workspace.anonymousDataCollection)
+        .securityUpdates(workspace.securityUpdates)
         .notifications(listOf<@Valid io.airbyte.api.model.generated.Notification?>(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
         .dataplaneGroupId(DATAPLANE_GROUP_ID_1)
@@ -622,16 +625,16 @@ internal class WorkspacesHandlerTest {
 
     val expectedWorkspaceRead2 =
       WorkspaceRead()
-        .workspaceId(workspace2.getWorkspaceId())
-        .customerId(workspace2.getCustomerId())
-        .email(workspace2.getEmail())
-        .name(workspace2.getName())
-        .slug(workspace2.getSlug())
-        .initialSetupComplete(workspace2.getInitialSetupComplete())
-        .displaySetupWizard(workspace2.getDisplaySetupWizard())
-        .news(workspace2.getNews())
-        .anonymousDataCollection(workspace2.getAnonymousDataCollection())
-        .securityUpdates(workspace2.getSecurityUpdates())
+        .workspaceId(workspace2.workspaceId)
+        .customerId(workspace2.customerId)
+        .email(workspace2.email)
+        .name(workspace2.name)
+        .slug(workspace2.slug)
+        .initialSetupComplete(workspace2.initialSetupComplete)
+        .displaySetupWizard(workspace2.displaySetupWizard)
+        .news(workspace2.news)
+        .anonymousDataCollection(workspace2.anonymousDataCollection)
+        .securityUpdates(workspace2.securityUpdates)
         .notifications(listOf<@Valid io.airbyte.api.model.generated.Notification?>(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
         .dataplaneGroupId(DATAPLANE_GROUP_ID_1)
@@ -640,9 +643,9 @@ internal class WorkspacesHandlerTest {
 
     val actualWorkspaceReadList = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspaces()
 
-    Assertions.assertEquals(
-      Lists.newArrayList<WorkspaceRead?>(expectedWorkspaceRead1, expectedWorkspaceRead2),
-      actualWorkspaceReadList.getWorkspaces(),
+    assertEquals(
+      listOf<WorkspaceRead?>(expectedWorkspaceRead1, expectedWorkspaceRead2),
+      actualWorkspaceReadList.workspaces,
     )
   }
 
@@ -650,15 +653,15 @@ internal class WorkspacesHandlerTest {
   fun testGetWorkspace() {
     workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
     Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
       .thenReturn(workspace)
 
-    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.getWorkspaceId())
+    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.workspaceId)
 
     val workspaceRead =
       WorkspaceRead()
-        .workspaceId(workspace.getWorkspaceId())
-        .customerId(workspace.getCustomerId())
+        .workspaceId(workspace.workspaceId)
+        .customerId(workspace.customerId)
         .email(TEST_EMAIL)
         .name(TEST_WORKSPACE_NAME)
         .slug(TEST_WORKSPACE_SLUG)
@@ -674,7 +677,7 @@ internal class WorkspacesHandlerTest {
         .organizationId(ORGANIZATION_ID)
         .tombstone(false)
 
-    Assertions.assertEquals(workspaceRead, getWorkspacesHandler(AirbyteEdition.COMMUNITY).getWorkspace(workspaceIdRequestBody))
+    assertEquals(workspaceRead, getWorkspacesHandler(AirbyteEdition.COMMUNITY).getWorkspace(workspaceIdRequestBody))
   }
 
   @Test
@@ -684,7 +687,7 @@ internal class WorkspacesHandlerTest {
     val slugRequestBody = SlugRequestBody().slug("default")
     val workspaceRead = getWorkspaceReadPerWorkspace(workspace)
 
-    Assertions.assertEquals(workspaceRead, getWorkspacesHandler(AirbyteEdition.COMMUNITY).getWorkspaceBySlug(slugRequestBody))
+    assertEquals(workspaceRead, getWorkspacesHandler(AirbyteEdition.COMMUNITY).getWorkspaceBySlug(slugRequestBody))
   }
 
   @Test
@@ -694,7 +697,7 @@ internal class WorkspacesHandlerTest {
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
     val workspaceRead = getWorkspaceReadPerWorkspace(workspace)
 
-    Assertions.assertEquals(
+    assertEquals(
       workspaceRead,
       getWorkspacesHandler(AirbyteEdition.COMMUNITY).getWorkspaceByConnectionId(connectionIdRequestBody, false),
     )
@@ -702,21 +705,21 @@ internal class WorkspacesHandlerTest {
 
   private fun getWorkspaceReadPerWorkspace(workspace: StandardWorkspace): WorkspaceRead =
     WorkspaceRead()
-      .workspaceId(workspace.getWorkspaceId())
-      .customerId(workspace.getCustomerId())
+      .workspaceId(workspace.workspaceId)
+      .customerId(workspace.customerId)
       .email(TEST_EMAIL)
-      .name(workspace.getName())
-      .slug(workspace.getSlug())
-      .initialSetupComplete(workspace.getInitialSetupComplete())
-      .displaySetupWizard(workspace.getDisplaySetupWizard())
-      .news(workspace.getNews())
-      .anonymousDataCollection(workspace.getAnonymousDataCollection())
-      .securityUpdates(workspace.getSecurityUpdates())
-      .notifications(toApiList(workspace.getNotifications()))
-      .notificationSettings(toApi(workspace.getNotificationSettings()))
+      .name(workspace.name)
+      .slug(workspace.slug)
+      .initialSetupComplete(workspace.initialSetupComplete)
+      .displaySetupWizard(workspace.displaySetupWizard)
+      .news(workspace.news)
+      .anonymousDataCollection(workspace.anonymousDataCollection)
+      .securityUpdates(workspace.securityUpdates)
+      .notifications(toApiList(workspace.notifications))
+      .notificationSettings(toApi(workspace.notificationSettings))
       .dataplaneGroupId(DATAPLANE_GROUP_ID_1)
       .organizationId(ORGANIZATION_ID)
-      .tombstone(workspace.getTombstone())
+      .tombstone(workspace.tombstone)
 
   @Test
   fun testGetWorkspaceByConnectionIdOnConfigNotFound() {
@@ -725,7 +728,7 @@ internal class WorkspacesHandlerTest {
       .`when`(workspaceService.getStandardWorkspaceFromConnection(connectionId, false))
       .thenAnswer { throw ConfigNotFoundException("something", connectionId.toString()) }
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
-    Assertions.assertThrows(
+    assertThrows(
       ConfigNotFoundException::class.java,
     ) { getWorkspacesHandler(AirbyteEdition.COMMUNITY).getWorkspaceByConnectionId(connectionIdRequestBody, false) }
   }
@@ -734,7 +737,7 @@ internal class WorkspacesHandlerTest {
   @CsvSource("true", "false")
   fun testGetWorkspaceOrganizationInfo(isSso: Boolean) {
     val organization = generateOrganization(if (isSso) "test-realm" else null)
-    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.getWorkspaceId())
+    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.workspaceId)
 
     Mockito.`when`(organizationService.getOrganizationForWorkspaceId(workspace.getWorkspaceId())).thenReturn(
       Optional.of<Organization>(organization),
@@ -743,20 +746,20 @@ internal class WorkspacesHandlerTest {
     val orgInfo =
       getWorkspacesHandler(AirbyteEdition.COMMUNITY).getWorkspaceOrganizationInfo(workspaceIdRequestBody)
 
-    Assertions.assertEquals(organization.getOrganizationId(), orgInfo.getOrganizationId())
-    Assertions.assertEquals(organization.getName(), orgInfo.getOrganizationName())
-    Assertions.assertEquals(isSso, orgInfo.getSso()) // sso is true if ssoRealm is set
+    assertEquals(organization.organizationId, orgInfo.organizationId)
+    assertEquals(organization.name, orgInfo.organizationName)
+    assertEquals(isSso, orgInfo.sso) // sso is true if ssoRealm is set
   }
 
   @Test
   fun testGerWorkspaceOrganizationInfoConfigNotFound() {
-    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.getWorkspaceId())
+    val workspaceIdRequestBody = WorkspaceIdRequestBody().workspaceId(workspace.workspaceId)
 
     Mockito.`when`(organizationService.getOrganizationForWorkspaceId(workspace.getWorkspaceId())).thenReturn(
       Optional.empty<Organization>(),
     )
 
-    Assertions.assertThrows(
+    assertThrows(
       ConfigNotFoundException::class.java,
     ) { getWorkspacesHandler(AirbyteEdition.COMMUNITY).getWorkspaceOrganizationInfo(workspaceIdRequestBody) }
   }
@@ -768,7 +771,7 @@ internal class WorkspacesHandlerTest {
     apiNotification.getSlackConfiguration().webhook(UPDATED)
     val workspaceUpdate =
       WorkspaceUpdate()
-        .workspaceId(workspace.getWorkspaceId())
+        .workspaceId(workspace.workspaceId)
         .anonymousDataCollection(true)
         .securityUpdates(false)
         .news(false)
@@ -785,8 +788,8 @@ internal class WorkspacesHandlerTest {
 
     val expectedWorkspace =
       StandardWorkspace()
-        .withWorkspaceId(workspace.getWorkspaceId())
-        .withCustomerId(workspace.getCustomerId())
+        .withWorkspaceId(workspace.workspaceId)
+        .withCustomerId(workspace.customerId)
         .withEmail(TEST_EMAIL)
         .withName(NEW_WORKSPACE)
         .withSlug(NEW_WORKSPACE_SLUG)
@@ -812,7 +815,7 @@ internal class WorkspacesHandlerTest {
     Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
 
     Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
       .thenReturn(workspace)
       .thenReturn(expectedWorkspace)
 
@@ -825,8 +828,8 @@ internal class WorkspacesHandlerTest {
 
     val expectedWorkspaceRead =
       WorkspaceRead()
-        .workspaceId(workspace.getWorkspaceId())
-        .customerId(workspace.getCustomerId())
+        .workspaceId(workspace.workspaceId)
+        .customerId(workspace.customerId)
         .email(TEST_EMAIL)
         .name(NEW_WORKSPACE)
         .slug(NEW_WORKSPACE_SLUG)
@@ -844,8 +847,8 @@ internal class WorkspacesHandlerTest {
 
     val expectedWorkspaceWithSecrets =
       StandardWorkspace()
-        .withWorkspaceId(workspace.getWorkspaceId())
-        .withCustomerId(workspace.getCustomerId())
+        .withWorkspaceId(workspace.workspaceId)
+        .withCustomerId(workspace.customerId)
         .withEmail(TEST_EMAIL)
         .withName(NEW_WORKSPACE)
         .withSlug(NEW_WORKSPACE_SLUG)
@@ -864,25 +867,25 @@ internal class WorkspacesHandlerTest {
 
     Mockito.verify(workspaceService).writeWorkspaceWithSecrets(expectedWorkspaceWithSecrets)
 
-    Assertions.assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
+    assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
   }
 
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
   fun testUpdateWorkspaceWithoutWebhookConfigs(airbyteEdition: AirbyteEdition?) {
     val apiNotification = generateApiNotification()
-    apiNotification.getSlackConfiguration().webhook(UPDATED)
+    apiNotification.slackConfiguration.webhook(UPDATED)
     val workspaceUpdate =
       WorkspaceUpdate()
-        .workspaceId(workspace.getWorkspaceId())
+        .workspaceId(workspace.workspaceId)
         .anonymousDataCollection(false)
 
     val expectedNotification = generateNotification()
-    expectedNotification.getSlackConfiguration().withWebhook(UPDATED)
+    expectedNotification.slackConfiguration.withWebhook(UPDATED)
     val expectedWorkspace =
       StandardWorkspace()
-        .withWorkspaceId(workspace.getWorkspaceId())
-        .withCustomerId(workspace.getCustomerId())
+        .withWorkspaceId(workspace.workspaceId)
+        .withCustomerId(workspace.customerId)
         .withEmail(TEST_EMAIL)
         .withName(TEST_WORKSPACE_NAME)
         .withSlug(TEST_WORKSPACE_SLUG)
@@ -899,7 +902,7 @@ internal class WorkspacesHandlerTest {
     Mockito.`when`(uuidSupplier.get()).thenReturn(WEBHOOK_CONFIG_ID)
 
     Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
       .thenReturn(expectedWorkspace)
       .thenReturn(expectedWorkspace.withAnonymousDataCollection(false))
 
@@ -913,29 +916,29 @@ internal class WorkspacesHandlerTest {
   fun testUpdateWorkspaceNoNameUpdate() {
     val workspaceUpdate =
       WorkspaceUpdateName()
-        .workspaceId(workspace.getWorkspaceId())
+        .workspaceId(workspace.workspaceId)
         .name("New Workspace Name")
 
     val expectedWorkspace =
       StandardWorkspace()
-        .withWorkspaceId(workspace.getWorkspaceId())
-        .withCustomerId(workspace.getCustomerId())
+        .withWorkspaceId(workspace.workspaceId)
+        .withCustomerId(workspace.customerId)
         .withEmail(TEST_EMAIL)
         .withName("New Workspace Name")
         .withSlug("new-workspace-name")
-        .withAnonymousDataCollection(workspace.getAnonymousDataCollection())
-        .withSecurityUpdates(workspace.getSecurityUpdates())
-        .withNews(workspace.getNews())
-        .withInitialSetupComplete(workspace.getInitialSetupComplete())
-        .withDisplaySetupWizard(workspace.getDisplaySetupWizard())
+        .withAnonymousDataCollection(workspace.anonymousDataCollection)
+        .withSecurityUpdates(workspace.securityUpdates)
+        .withNews(workspace.news)
+        .withInitialSetupComplete(workspace.initialSetupComplete)
+        .withDisplaySetupWizard(workspace.displaySetupWizard)
         .withTombstone(false)
-        .withNotifications(workspace.getNotifications())
-        .withNotificationSettings(workspace.getNotificationSettings())
+        .withNotifications(workspace.notifications)
+        .withNotificationSettings(workspace.notificationSettings)
         .withDataplaneGroupId(DATAPLANE_GROUP_ID_1)
         .withOrganizationId(ORGANIZATION_ID)
 
     Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
       .thenReturn(workspace)
       .thenReturn(expectedWorkspace)
 
@@ -943,16 +946,16 @@ internal class WorkspacesHandlerTest {
 
     val expectedWorkspaceRead =
       WorkspaceRead()
-        .workspaceId(workspace.getWorkspaceId())
-        .customerId(workspace.getCustomerId())
+        .workspaceId(workspace.workspaceId)
+        .customerId(workspace.customerId)
         .email(TEST_EMAIL)
         .name("New Workspace Name")
         .slug("new-workspace-name")
-        .initialSetupComplete(workspace.getInitialSetupComplete())
-        .displaySetupWizard(workspace.getDisplaySetupWizard())
-        .news(workspace.getNews())
-        .anonymousDataCollection(workspace.getAnonymousDataCollection())
-        .securityUpdates(workspace.getSecurityUpdates())
+        .initialSetupComplete(workspace.initialSetupComplete)
+        .displaySetupWizard(workspace.displaySetupWizard)
+        .news(workspace.news)
+        .anonymousDataCollection(workspace.anonymousDataCollection)
+        .securityUpdates(workspace.securityUpdates)
         .notifications(listOf<@Valid io.airbyte.api.model.generated.Notification?>(generateApiNotification()))
         .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
         .dataplaneGroupId(DATAPLANE_GROUP_ID_1)
@@ -961,7 +964,7 @@ internal class WorkspacesHandlerTest {
 
     Mockito.verify(workspaceService).writeStandardWorkspaceNoSecrets(expectedWorkspace)
 
-    Assertions.assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
+    assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
   }
 
   @Test
@@ -970,30 +973,30 @@ internal class WorkspacesHandlerTest {
     val newOrgId = UUID.randomUUID()
     val workspaceUpdateOrganization =
       WorkspaceUpdateOrganization()
-        .workspaceId(workspace.getWorkspaceId())
+        .workspaceId(workspace.workspaceId)
         .organizationId(newOrgId)
     val expectedWorkspace = clone(workspace).withOrganizationId(newOrgId)
     Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
       .thenReturn(expectedWorkspace)
     Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
       .thenReturn(expectedWorkspace)
     // The same as the original workspace, with only the organization ID updated.
     val expectedWorkspaceRead =
       WorkspaceRead()
-        .workspaceId(workspace.getWorkspaceId())
-        .customerId(workspace.getCustomerId())
-        .email(workspace.getEmail())
-        .name(workspace.getName())
-        .slug(workspace.getSlug())
-        .initialSetupComplete(workspace.getInitialSetupComplete())
-        .displaySetupWizard(workspace.getDisplaySetupWizard())
-        .news(workspace.getNews())
+        .workspaceId(workspace.workspaceId)
+        .customerId(workspace.customerId)
+        .email(workspace.email)
+        .name(workspace.name)
+        .slug(workspace.slug)
+        .initialSetupComplete(workspace.initialSetupComplete)
+        .displaySetupWizard(workspace.displaySetupWizard)
+        .news(workspace.news)
         .anonymousDataCollection(false)
-        .securityUpdates(workspace.getSecurityUpdates())
-        .notifications(toApiList(workspace.getNotifications()))
-        .notificationSettings(toApi(workspace.getNotificationSettings()))
+        .securityUpdates(workspace.securityUpdates)
+        .notifications(toApiList(workspace.notifications))
+        .notificationSettings(toApi(workspace.notificationSettings))
         .dataplaneGroupId(DATAPLANE_GROUP_ID_1)
         .organizationId(newOrgId)
         .tombstone(false)
@@ -1001,7 +1004,7 @@ internal class WorkspacesHandlerTest {
     val actualWorkspaceRead =
       getWorkspacesHandler(AirbyteEdition.COMMUNITY).updateWorkspaceOrganization(workspaceUpdateOrganization)
     Mockito.verify(workspaceService).writeStandardWorkspaceNoSecrets(expectedWorkspace)
-    Assertions.assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
+    assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
   }
 
   @ParameterizedTest
@@ -1011,7 +1014,7 @@ internal class WorkspacesHandlerTest {
     val expectedNewEmail = "expected-new-email@example.com"
     val workspaceUpdate =
       WorkspaceUpdate()
-        .workspaceId(workspace.getWorkspaceId())
+        .workspaceId(workspace.workspaceId)
         .anonymousDataCollection(true) // originally was DATAPLANE_GROUP_ID_1
         .dataplaneGroupId(DATAPLANE_GROUP_ID_2)
         .email(expectedNewEmail)
@@ -1036,25 +1039,25 @@ internal class WorkspacesHandlerTest {
         )
 
     Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
       .thenReturn(workspace)
       .thenReturn(expectedWorkspace)
 
     // The same as the original workspace, with only the email and data collection flags changed.
     val expectedWorkspaceRead =
       WorkspaceRead()
-        .workspaceId(workspace.getWorkspaceId())
-        .customerId(workspace.getCustomerId())
+        .workspaceId(workspace.workspaceId)
+        .customerId(workspace.customerId)
         .email(expectedNewEmail)
-        .name(workspace.getName())
-        .slug(workspace.getSlug())
-        .initialSetupComplete(workspace.getInitialSetupComplete())
-        .displaySetupWizard(workspace.getDisplaySetupWizard())
-        .news(workspace.getNews())
+        .name(workspace.name)
+        .slug(workspace.slug)
+        .initialSetupComplete(workspace.initialSetupComplete)
+        .displaySetupWizard(workspace.displaySetupWizard)
+        .news(workspace.news)
         .anonymousDataCollection(true)
-        .securityUpdates(workspace.getSecurityUpdates())
-        .notifications(toApiList(workspace.getNotifications()))
-        .notificationSettings(toApi(workspace.getNotificationSettings()))
+        .securityUpdates(workspace.securityUpdates)
+        .notifications(toApiList(workspace.notifications))
+        .notificationSettings(toApi(workspace.notificationSettings))
         .dataplaneGroupId(DATAPLANE_GROUP_ID_2)
         .organizationId(ORGANIZATION_ID)
         .webhookConfigs(mutableListOf<@Valid WebhookConfigRead?>())
@@ -1062,7 +1065,7 @@ internal class WorkspacesHandlerTest {
 
     val actualWorkspaceRead = getWorkspacesHandler(airbyteEdition).updateWorkspace(workspaceUpdate)
     Mockito.verify(workspaceService).writeStandardWorkspaceNoSecrets(expectedWorkspace)
-    Assertions.assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
+    assertEquals(expectedWorkspaceRead, actualWorkspaceRead)
   }
 
   @Test
@@ -1074,7 +1077,7 @@ internal class WorkspacesHandlerTest {
 
     val existingWorkspace = clone(workspace)
     existingWorkspace
-      .getNotificationSettings()
+      .notificationSettings
       .withSendOnSuccess(
         NotificationItem()
           .withCustomerioConfiguration(CustomerioNotificationConfiguration())
@@ -1099,7 +1102,7 @@ internal class WorkspacesHandlerTest {
     // and disables the webhook ("slack") notification for failure.
     val workspaceUpdate =
       WorkspaceUpdate()
-        .workspaceId(existingWorkspace.getWorkspaceId())
+        .workspaceId(existingWorkspace.workspaceId)
         .notificationsConfig(
           NotificationsConfig()
             .success(
@@ -1113,7 +1116,7 @@ internal class WorkspacesHandlerTest {
 
     val expectedWorkspace = clone(existingWorkspace)
     expectedWorkspace
-      .getNotificationSettings()
+      .notificationSettings
       .withSendOnSuccess(
         NotificationItem()
           .withSlackConfiguration(SlackNotificationConfiguration().withWebhook("http://foo.bar/success"))
@@ -1139,7 +1142,7 @@ internal class WorkspacesHandlerTest {
     )
 
     Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
       .thenReturn(existingWorkspace)
       .thenReturn(expectedWorkspace)
 
@@ -1155,7 +1158,7 @@ internal class WorkspacesHandlerTest {
 
     getWorkspacesHandler(AirbyteEdition.COMMUNITY).setFeedbackDone(workspaceGiveFeedback)
 
-    Mockito.verify(workspaceService).setFeedback(workspaceGiveFeedback.getWorkspaceId())
+    Mockito.verify(workspaceService).setFeedback(workspaceGiveFeedback.workspaceId)
   }
 
   @ParameterizedTest
@@ -1222,7 +1225,7 @@ internal class WorkspacesHandlerTest {
         .tombstone(false)
         .organizationId(ORGANIZATION_ID)
 
-    Assertions.assertEquals(expectedRead, actualRead)
+    assertEquals(expectedRead, actualRead)
     Mockito.verify(workspaceService, Mockito.times(1)).writeWorkspaceWithSecrets(anyOrNull())
   }
 
@@ -1240,7 +1243,7 @@ internal class WorkspacesHandlerTest {
         ),
       ).thenReturn(expectedWorkspaces)
     val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganization(request)
-    Assertions.assertEquals(2, result.getWorkspaces().size)
+    assertEquals(2, result.getWorkspaces().size)
   }
 
   @Test
@@ -1260,7 +1263,7 @@ internal class WorkspacesHandlerTest {
         ),
       ).thenReturn(expectedWorkspaces)
     val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganization(request)
-    Assertions.assertEquals(2, result.getWorkspaces().size)
+    assertEquals(2, result.getWorkspaces().size)
   }
 
   @Test
@@ -1278,7 +1281,7 @@ internal class WorkspacesHandlerTest {
         ),
       ).thenReturn(expectedWorkspaces)
     val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganizationForUser(userId, request)
-    Assertions.assertEquals(2, result.getWorkspaces().size)
+    assertEquals(2, result.getWorkspaces().size)
   }
 
   @Test
@@ -1299,7 +1302,7 @@ internal class WorkspacesHandlerTest {
         ),
       ).thenReturn(expectedWorkspaces)
     val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganizationForUser(userId, request)
-    Assertions.assertEquals(1, result.getWorkspaces().size)
+    assertEquals(1, result.getWorkspaces().size)
   }
 
   @Test
@@ -1316,7 +1319,7 @@ internal class WorkspacesHandlerTest {
         ),
       ).thenReturn(expectedWorkspaces)
     val result = getWorkspacesHandler(AirbyteEdition.COMMUNITY).listWorkspacesInOrganizationForUser(userId, request)
-    Assertions.assertEquals(2, result.getWorkspaces().size)
+    assertEquals(2, result.getWorkspaces().size)
   }
 
   @ParameterizedTest
@@ -1389,7 +1392,7 @@ internal class WorkspacesHandlerTest {
 
     val workspaceUpdate =
       WorkspaceUpdate()
-        .workspaceId(workspace.getWorkspaceId())
+        .workspaceId(workspace.workspaceId)
         .dataplaneGroupId(DATAPLANE_GROUP_ID_2) // Changing dataplane group
 
     val expectedWorkspace =
@@ -1403,7 +1406,7 @@ internal class WorkspacesHandlerTest {
         )
 
     Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
       .thenReturn(workspace)
       .thenReturn(expectedWorkspace)
 
@@ -1529,7 +1532,7 @@ internal class WorkspacesHandlerTest {
 
     val workspaceUpdate =
       WorkspaceUpdate()
-        .workspaceId(workspace.getWorkspaceId())
+        .workspaceId(workspace.workspaceId)
         .dataplaneGroupId(DATAPLANE_GROUP_ID_2) // This is a default group
 
     val expectedWorkspace =
@@ -1543,7 +1546,7 @@ internal class WorkspacesHandlerTest {
         )
 
     Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
       .thenReturn(workspace)
       .thenReturn(expectedWorkspace)
 
@@ -1575,11 +1578,11 @@ internal class WorkspacesHandlerTest {
 
     val workspaceUpdate =
       WorkspaceUpdate()
-        .workspaceId(workspace.getWorkspaceId())
+        .workspaceId(workspace.workspaceId)
         .dataplaneGroupId(DATAPLANE_GROUP_ID_2) // This belongs to wrong org
 
     Mockito
-      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.getWorkspaceId(), false))
+      .`when`(workspaceService.getStandardWorkspaceNoSecrets(workspace.workspaceId, false))
       .thenReturn(workspace)
 
     // Should throw ForbiddenProblem

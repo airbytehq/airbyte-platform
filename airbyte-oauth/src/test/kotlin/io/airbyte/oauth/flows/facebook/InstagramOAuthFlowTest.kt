@@ -6,6 +6,8 @@ package io.airbyte.oauth.flows.facebook
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.oauth.BaseOAuthFlow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.oauth.MoreOAuthParameters
 import io.airbyte.oauth.flows.BaseOAuthFlowTest
 
@@ -22,13 +24,10 @@ class InstagramOAuthFlowTest : BaseOAuthFlowTest() {
 
   override val expectedOutput: Map<String, String>
     get() =
-      java.util.Map.of(
-        "access_token",
-        "access_token_response",
-        "client_id",
-        MoreOAuthParameters.SECRET_MASK,
-        "client_secret",
-        MoreOAuthParameters.SECRET_MASK,
+      mapOf(
+        "access_token" to "access_token_response",
+        CLIENT_ID_KEY to MoreOAuthParameters.SECRET_MASK,
+        CLIENT_SECRET_KEY to MoreOAuthParameters.SECRET_MASK,
       )
 
   override val completeOAuthOutputSpecification: JsonNode
@@ -36,10 +35,8 @@ class InstagramOAuthFlowTest : BaseOAuthFlowTest() {
 
   override val expectedFilteredOutput: Map<String, String>
     get() =
-      java.util.Map.of(
-        "access_token",
-        "access_token_response",
-        "client_id",
-        MoreOAuthParameters.SECRET_MASK,
+      mapOf(
+        "access_token" to "access_token_response",
+        CLIENT_ID_KEY to MoreOAuthParameters.SECRET_MASK,
       )
 }

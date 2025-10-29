@@ -4,9 +4,6 @@
 
 package io.airbyte.persistence.job
 
-import com.google.common.collect.ImmutableMap
-import com.google.common.collect.Lists
-import com.google.common.collect.Sets
 import io.airbyte.commons.json.Jsons.canonicalJsonSerialize
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.version.AirbyteProtocolVersion
@@ -48,7 +45,14 @@ import org.jooq.SQLDialect
 import org.jooq.TruncateIdentityStep
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -65,7 +69,6 @@ import java.sql.SQLException
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
@@ -152,7 +155,7 @@ internal class DefaultJobPersistenceTest {
     )
 
     val persistedAttempt = jobPersistence.getAttemptForJob(jobId, attemptNumber).get()
-    Assertions.assertEquals(
+    assertEquals(
       // Note that we stripped the literal null characters, but preserved the literal `u0000`s.
       """Here are some weird characters: , \, \\, u0000, \u0000, \\u0000, \\\u0000.""",
       persistedAttempt.failureSummary!!
@@ -179,7 +182,7 @@ internal class DefaultJobPersistenceTest {
         listOf(createAttempt(0, jobId, AttemptStatus.FAILED, LOG_PATH)),
         NOW.epochSecond,
       )
-    Assertions.assertEquals(expected, actual)
+    assertEquals(expected, actual)
   }
 
   @Test
@@ -199,7 +202,7 @@ internal class DefaultJobPersistenceTest {
         listOf(createAttempt(0, jobId, AttemptStatus.SUCCEEDED, LOG_PATH)),
         NOW.epochSecond,
       )
-    Assertions.assertEquals(expected, actual)
+    assertEquals(expected, actual)
   }
 
   @Test
@@ -245,30 +248,30 @@ internal class DefaultJobPersistenceTest {
 
     val updated = jobPersistence.getJob(jobId)
 
-    Assertions.assertEquals(Optional.of(jobOutput), updated.attempts[0].getOutput())
-    Assertions.assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
+    assertEquals(Optional.of(jobOutput), updated.attempts[0].getOutput())
+    assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
 
     val attemptStats = jobPersistence.getAttemptStats(jobId, attemptNumber)
 
     val storedSyncStats = attemptStats.combinedStats
-    Assertions.assertEquals(100L, storedSyncStats!!.bytesEmitted)
-    Assertions.assertEquals(9L, storedSyncStats.recordsEmitted)
-    Assertions.assertEquals(10L, storedSyncStats.recordsCommitted)
-    Assertions.assertEquals(4L, storedSyncStats.sourceStateMessagesEmitted)
-    Assertions.assertEquals(1L, storedSyncStats.destinationStateMessagesEmitted)
-    Assertions.assertEquals(5L, storedSyncStats.maxSecondsBeforeSourceStateMessageEmitted)
-    Assertions.assertEquals(2L, storedSyncStats.meanSecondsBeforeSourceStateMessageEmitted)
-    Assertions.assertEquals(10L, storedSyncStats.maxSecondsBetweenStateMessageEmittedandCommitted)
-    Assertions.assertEquals(3L, storedSyncStats.meanSecondsBetweenStateMessageEmittedandCommitted)
+    assertEquals(100L, storedSyncStats!!.bytesEmitted)
+    assertEquals(9L, storedSyncStats.recordsEmitted)
+    assertEquals(10L, storedSyncStats.recordsCommitted)
+    assertEquals(4L, storedSyncStats.sourceStateMessagesEmitted)
+    assertEquals(1L, storedSyncStats.destinationStateMessagesEmitted)
+    assertEquals(5L, storedSyncStats.maxSecondsBeforeSourceStateMessageEmitted)
+    assertEquals(2L, storedSyncStats.meanSecondsBeforeSourceStateMessageEmitted)
+    assertEquals(10L, storedSyncStats.maxSecondsBetweenStateMessageEmittedandCommitted)
+    assertEquals(3L, storedSyncStats.meanSecondsBetweenStateMessageEmittedandCommitted)
 
     val storedStreamSyncStats = attemptStats.perStreamStats
-    Assertions.assertEquals(1, storedStreamSyncStats.size)
-    Assertions.assertEquals(streamName, storedStreamSyncStats[0].streamName)
-    Assertions.assertEquals(streamNamespace, storedStreamSyncStats[0].streamNamespace)
-    Assertions.assertEquals(streamSyncStats.stats.bytesEmitted, storedStreamSyncStats[0].stats.bytesEmitted)
-    Assertions.assertEquals(streamSyncStats.stats.recordsEmitted, storedStreamSyncStats[0].stats.recordsEmitted)
-    Assertions.assertEquals(streamSyncStats.stats.estimatedRecords, storedStreamSyncStats[0].stats.estimatedRecords)
-    Assertions.assertEquals(streamSyncStats.stats.estimatedBytes, storedStreamSyncStats[0].stats.estimatedBytes)
+    assertEquals(1, storedStreamSyncStats.size)
+    assertEquals(streamName, storedStreamSyncStats[0].streamName)
+    assertEquals(streamNamespace, storedStreamSyncStats[0].streamNamespace)
+    assertEquals(streamSyncStats.stats.bytesEmitted, storedStreamSyncStats[0].stats.bytesEmitted)
+    assertEquals(streamSyncStats.stats.recordsEmitted, storedStreamSyncStats[0].stats.recordsEmitted)
+    assertEquals(streamSyncStats.stats.estimatedRecords, storedStreamSyncStats[0].stats.estimatedRecords)
+    assertEquals(streamSyncStats.stats.estimatedBytes, storedStreamSyncStats[0].stats.estimatedBytes)
   }
 
   @Test
@@ -279,16 +282,16 @@ internal class DefaultJobPersistenceTest {
     val created = jobPersistence.getJob(jobId)
     val attemptSyncConfig =
       AttemptSyncConfig()
-        .withSourceConfiguration(jsonNode<MutableMap<String?, String?>?>(Map.of<String?, String?>("source", "s_config_value")))
-        .withDestinationConfiguration(jsonNode<MutableMap<String?, String?>?>(Map.of<String?, String?>("destination", "d_config_value")))
-        .withState(State().withState(jsonNode<ImmutableMap<String, String>>(ImmutableMap.of<String, String>("state_key", "state_value"))))
+        .withSourceConfiguration(jsonNode(mapOf("source" to "s_config_value")))
+        .withDestinationConfiguration(jsonNode(mapOf("destination" to "d_config_value")))
+        .withState(State().withState(jsonNode(mapOf("state_key" to "state_value"))))
 
     whenever(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242))
     jobPersistence.writeAttemptSyncConfig(jobId, attemptNumber, attemptSyncConfig)
 
     val updated = jobPersistence.getJob(jobId)
-    Assertions.assertEquals(Optional.of<AttemptSyncConfig?>(attemptSyncConfig), updated.attempts[0].getSyncConfig())
-    Assertions.assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
+    assertEquals(Optional.of<AttemptSyncConfig?>(attemptSyncConfig), updated.attempts[0].getSyncConfig())
+    assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
   }
 
   @Test
@@ -306,8 +309,8 @@ internal class DefaultJobPersistenceTest {
     jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummary)
 
     val updated = jobPersistence.getJob(jobId)
-    Assertions.assertEquals(Optional.of(failureSummary), updated.attempts[0].getFailureSummary())
-    Assertions.assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
+    assertEquals(Optional.of(failureSummary), updated.attempts[0].getFailureSummary())
+    assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
   }
 
   @Test
@@ -329,15 +332,15 @@ internal class DefaultJobPersistenceTest {
     whenever(timeSupplier.get()).thenReturn(Instant.ofEpochMilli(4242))
     jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummary)
 
-    Assertions.assertDoesNotThrow {
+    assertDoesNotThrow {
       val updated = jobPersistence.getJob(jobId)
-      Assertions.assertTrue(
+      assertTrue(
         updated.attempts
           [0]
           .getFailureSummary()
           .isPresent(),
       )
-      Assertions.assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
+      assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
     }
   }
 
@@ -362,7 +365,7 @@ internal class DefaultJobPersistenceTest {
         NOW.epochSecond,
       )
 
-    Assertions.assertEquals(Optional.of(expected), actual)
+    assertEquals(Optional.of(expected), actual)
   }
 
   @Test
@@ -375,7 +378,7 @@ internal class DefaultJobPersistenceTest {
 
     val actual = jobPersistence.getLastReplicationJobWithCancel(UUID.fromString(SCOPE))
 
-    Assertions.assertEquals(Optional.empty<Any?>(), actual)
+    assertEquals(Optional.empty<Any?>(), actual)
   }
 
   @Test
@@ -400,7 +403,7 @@ internal class DefaultJobPersistenceTest {
         NOW.epochSecond,
         true,
       )
-    Assertions.assertEquals(Optional.of(expected), actual)
+    assertEquals(Optional.of(expected), actual)
   }
 
   @ParameterizedTest
@@ -412,7 +415,7 @@ internal class DefaultJobPersistenceTest {
     val actual = DefaultJobPersistence.getJobFromResult(getJobRecord(jobId))
 
     val expected = createJob(jobId, SPEC_JOB_CONFIG, JobStatus.PENDING, emptyList(), NOW.epochSecond, isScheduled)
-    Assertions.assertEquals(Optional.of(expected), actual)
+    assertEquals(Optional.of(expected), actual)
   }
 
   @Test
@@ -423,7 +426,7 @@ internal class DefaultJobPersistenceTest {
     val actual = DefaultJobPersistence.getJobFromResult(getJobRecord(jobId))
 
     val expected = createJob(jobId, SPEC_JOB_CONFIG, JobStatus.PENDING, emptyList(), NOW.epochSecond, true)
-    Assertions.assertEquals(Optional.of(expected), actual)
+    assertEquals(Optional.of(expected), actual)
   }
 
   @Test
@@ -450,10 +453,10 @@ internal class DefaultJobPersistenceTest {
     jobPersistence.succeedAttempt(specJobId, specJobAttemptNumber1)
 
     val jobs = jobPersistence.listJobs(ConfigType.SYNC, Instant.EPOCH)
-    Assertions.assertEquals(jobs.size, 1)
-    Assertions.assertEquals(jobs[0].id, syncJobId)
-    Assertions.assertEquals(jobs[0].attempts.size, 2)
-    Assertions.assertEquals(
+    assertEquals(jobs.size, 1)
+    assertEquals(jobs[0].id, syncJobId)
+    assertEquals(jobs[0].attempts.size, 2)
+    assertEquals(
       jobs
         [0]
         .attempts
@@ -461,7 +464,7 @@ internal class DefaultJobPersistenceTest {
         .getAttemptNumber(),
       0,
     )
-    Assertions.assertEquals(
+    assertEquals(
       jobs[0]
         .attempts[1]
         .getAttemptNumber(),
@@ -493,10 +496,10 @@ internal class DefaultJobPersistenceTest {
         ).orElseThrow()
 
     val secondQueryJobs = jobPersistence.listJobs(ConfigType.SYNC, Instant.ofEpochSecond(maxEndedAtTimestamp))
-    Assertions.assertEquals(secondQueryJobs.size, 2)
-    Assertions.assertEquals(secondQueryJobs[0].id, syncJobId)
-    Assertions.assertEquals(secondQueryJobs[0].attempts.size, 1)
-    Assertions.assertEquals(
+    assertEquals(secondQueryJobs.size, 2)
+    assertEquals(secondQueryJobs[0].id, syncJobId)
+    assertEquals(secondQueryJobs[0].attempts.size, 1)
+    assertEquals(
       secondQueryJobs
         [0]
         .attempts
@@ -505,9 +508,9 @@ internal class DefaultJobPersistenceTest {
       2,
     )
 
-    Assertions.assertEquals(secondQueryJobs[1].id, newSyncJobId)
-    Assertions.assertEquals(secondQueryJobs[1].attempts.size, 2)
-    Assertions.assertEquals(
+    assertEquals(secondQueryJobs[1].id, newSyncJobId)
+    assertEquals(secondQueryJobs[1].attempts.size, 2)
+    assertEquals(
       secondQueryJobs
         [1]
         .attempts
@@ -515,7 +518,7 @@ internal class DefaultJobPersistenceTest {
         .getAttemptNumber(),
       0,
     )
-    Assertions.assertEquals(
+    assertEquals(
       secondQueryJobs
         [1]
         .attempts
@@ -538,37 +541,37 @@ internal class DefaultJobPersistenceTest {
       }
     }
 
-    Assertions.assertEquals(0, jobPersistence.listJobs(ConfigType.SYNC, Instant.ofEpochSecond(maxEndedAtTimestampAfterSecondQuery)).size)
+    assertEquals(0, jobPersistence.listJobs(ConfigType.SYNC, Instant.ofEpochSecond(maxEndedAtTimestampAfterSecondQuery)).size)
   }
 
   @Test
   fun testAirbyteProtocolVersionMaxMetadata() {
-    Assertions.assertTrue(jobPersistence.getAirbyteProtocolVersionMax().isEmpty)
+    assertTrue(jobPersistence.getAirbyteProtocolVersionMax().isEmpty)
 
     val maxVersion1 = Version("0.1.0")
     jobPersistence.setAirbyteProtocolVersionMax(maxVersion1)
     val maxVersion1read = jobPersistence.getAirbyteProtocolVersionMax()
-    Assertions.assertEquals(maxVersion1, maxVersion1read.orElseThrow())
+    assertEquals(maxVersion1, maxVersion1read.orElseThrow())
 
     val maxVersion2 = Version("1.2.1")
     jobPersistence.setAirbyteProtocolVersionMax(maxVersion2)
     val maxVersion2read = jobPersistence.getAirbyteProtocolVersionMax()
-    Assertions.assertEquals(maxVersion2, maxVersion2read.orElseThrow())
+    assertEquals(maxVersion2, maxVersion2read.orElseThrow())
   }
 
   @Test
   fun testAirbyteProtocolVersionMinMetadata() {
-    Assertions.assertTrue(jobPersistence.getAirbyteProtocolVersionMin().isEmpty)
+    assertTrue(jobPersistence.getAirbyteProtocolVersionMin().isEmpty)
 
     val minVersion1 = Version("1.1.0")
     jobPersistence.setAirbyteProtocolVersionMin(minVersion1)
     val minVersion1read = jobPersistence.getAirbyteProtocolVersionMin()
-    Assertions.assertEquals(minVersion1, minVersion1read.orElseThrow())
+    assertEquals(minVersion1, minVersion1read.orElseThrow())
 
     val minVersion2 = Version("3.0.1")
     jobPersistence.setAirbyteProtocolVersionMin(minVersion2)
     val minVersion2read = jobPersistence.getAirbyteProtocolVersionMin()
-    Assertions.assertEquals(minVersion2, minVersion2read.orElseThrow())
+    assertEquals(minVersion2, minVersion2read.orElseThrow())
   }
 
   @Test
@@ -576,11 +579,11 @@ internal class DefaultJobPersistenceTest {
     val v1 = Version("1.5.0")
     val v2 = Version("2.5.0")
     val range = jobPersistence.getCurrentProtocolVersionRange()
-    Assertions.assertEquals(Optional.empty<Any?>(), range)
+    assertEquals(Optional.empty<Any?>(), range)
 
     jobPersistence.setAirbyteProtocolVersionMax(v2)
     val range2 = jobPersistence.getCurrentProtocolVersionRange()
-    Assertions.assertEquals(
+    assertEquals(
       Optional.of<AirbyteProtocolVersionRange?>(
         AirbyteProtocolVersionRange(
           AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION,
@@ -592,7 +595,7 @@ internal class DefaultJobPersistenceTest {
 
     jobPersistence.setAirbyteProtocolVersionMin(v1)
     val range3 = jobPersistence.getCurrentProtocolVersionRange()
-    Assertions.assertEquals(Optional.of<AirbyteProtocolVersionRange?>(AirbyteProtocolVersionRange(v1, v2)), range3)
+    assertEquals(Optional.of<AirbyteProtocolVersionRange?>(AirbyteProtocolVersionRange(v1, v2)), range3)
   }
 
   @Nested
@@ -649,20 +652,20 @@ internal class DefaultJobPersistenceTest {
 
       val stats = jobPersistence.getAttemptStats(jobId, attemptNumber)
       val combined = stats.combinedStats
-      Assertions.assertEquals(bytesEmitted, combined!!.bytesEmitted)
-      Assertions.assertEquals(recordsEmitted, combined.recordsEmitted)
-      Assertions.assertEquals(estimatedBytes, combined.estimatedBytes)
-      Assertions.assertEquals(estimatedRecords, combined.estimatedRecords)
-      Assertions.assertEquals(recordsCommitted, combined.recordsCommitted)
-      Assertions.assertEquals(bytesCommitted, combined.bytesCommitted)
-      Assertions.assertEquals(recordsRejected, combined.recordsRejected)
+      assertEquals(bytesEmitted, combined!!.bytesEmitted)
+      assertEquals(recordsEmitted, combined.recordsEmitted)
+      assertEquals(estimatedBytes, combined.estimatedBytes)
+      assertEquals(estimatedRecords, combined.estimatedRecords)
+      assertEquals(recordsCommitted, combined.recordsCommitted)
+      assertEquals(bytesCommitted, combined.bytesCommitted)
+      assertEquals(recordsRejected, combined.recordsRejected)
 
       // As of this writing, committed and state messages are not expected.
-      Assertions.assertNull(combined.destinationStateMessagesEmitted)
+      assertNull(combined.destinationStateMessagesEmitted)
 
       val actStreamStats = stats.perStreamStats
-      Assertions.assertEquals(2, actStreamStats.size)
-      Assertions.assertEquals(streamStats, actStreamStats)
+      assertEquals(2, actStreamStats.size)
+      assertEquals(streamStats, actStreamStats)
     }
 
     @Test
@@ -719,8 +722,8 @@ internal class DefaultJobPersistenceTest {
       val stats = jobPersistence.getAttemptStatsWithStreamMetadata(jobId, attemptNumber)
 
       val actStreamStats = stats.perStreamStats
-      Assertions.assertEquals(2, actStreamStats.size)
-      Assertions.assertEquals(streamStats, actStreamStats)
+      assertEquals(2, actStreamStats.size)
+      assertEquals(streamStats, actStreamStats)
     }
 
     @ParameterizedTest
@@ -806,8 +809,8 @@ internal class DefaultJobPersistenceTest {
       val stats = jobPersistence.getAttemptStatsWithStreamMetadata(jobId, attemptNumber)
 
       val actStreamStats = stats.perStreamStats
-      Assertions.assertEquals(2, actStreamStats.size)
-      Assertions.assertEquals(streamStats, actStreamStats)
+      assertEquals(2, actStreamStats.size)
+      assertEquals(streamStats, actStreamStats)
     }
 
     @Test
@@ -851,15 +854,15 @@ internal class DefaultJobPersistenceTest {
 
       val stats = jobPersistence.getAttemptStats(jobId, attemptNumber)
       val combined = stats.combinedStats
-      Assertions.assertEquals(2000, combined!!.bytesEmitted)
-      Assertions.assertEquals(2000, combined.recordsEmitted)
-      Assertions.assertEquals(2000, combined.estimatedBytes)
-      Assertions.assertEquals(2000, combined.estimatedRecords)
-      Assertions.assertEquals(2000, combined.recordsRejected)
+      assertEquals(2000, combined!!.bytesEmitted)
+      assertEquals(2000, combined.recordsEmitted)
+      assertEquals(2000, combined.estimatedBytes)
+      assertEquals(2000, combined.estimatedRecords)
+      assertEquals(2000, combined.recordsRejected)
 
       val actStreamStats = stats.perStreamStats
-      Assertions.assertEquals(1, actStreamStats.size)
-      Assertions.assertEquals(streamStats, actStreamStats)
+      assertEquals(1, actStreamStats.size)
+      assertEquals(streamStats, actStreamStats)
     }
 
     @Test
@@ -914,7 +917,7 @@ internal class DefaultJobPersistenceTest {
         )!!
 
       // Check time stamps to confirm upsert.
-      Assertions.assertNotEquals(
+      assertNotEquals(
         syncStatsRec.get<OffsetDateTime?>(Tables.SYNC_STATS.CREATED_AT),
         syncStatsRec.get<OffsetDateTime?>(Tables.SYNC_STATS.UPDATED_AT),
       )
@@ -931,7 +934,7 @@ internal class DefaultJobPersistenceTest {
           },
         )!!
       // Check time stamps to confirm upsert.
-      Assertions.assertNotEquals(
+      assertNotEquals(
         streamStatsRec.get<OffsetDateTime?>(Tables.STREAM_STATS.CREATED_AT),
         streamStatsRec.get<OffsetDateTime?>(Tables.STREAM_STATS.UPDATED_AT),
       )
@@ -976,14 +979,14 @@ internal class DefaultJobPersistenceTest {
 
       val stats = jobPersistence.getAttemptStats(jobId, attemptNumber)
       val combined = stats.combinedStats
-      Assertions.assertEquals(2000, combined!!.bytesEmitted)
-      Assertions.assertEquals(2000, combined.recordsEmitted)
-      Assertions.assertEquals(2000, combined.estimatedBytes)
-      Assertions.assertEquals(2000, combined.estimatedRecords)
+      assertEquals(2000, combined!!.bytesEmitted)
+      assertEquals(2000, combined.recordsEmitted)
+      assertEquals(2000, combined.estimatedBytes)
+      assertEquals(2000, combined.estimatedRecords)
 
       val actStreamStats = stats.perStreamStats
-      Assertions.assertEquals(1, actStreamStats.size)
-      Assertions.assertEquals(streamStats, actStreamStats)
+      assertEquals(1, actStreamStats.size)
+      assertEquals(streamStats, actStreamStats)
     }
 
     @Test
@@ -993,8 +996,8 @@ internal class DefaultJobPersistenceTest {
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
 
       val stats = jobPersistence.getAttemptStats(jobId, attemptNumber)
-      Assertions.assertNull(stats.combinedStats)
-      Assertions.assertEquals(0, stats.perStreamStats.size)
+      assertNull(stats.combinedStats)
+      assertEquals(0, stats.perStreamStats.size)
     }
 
     @Test
@@ -1287,7 +1290,7 @@ internal class DefaultJobPersistenceTest {
             ),
         )
 
-      Assertions.assertEquals(canonicalJsonSerialize(exp), canonicalJsonSerialize(stats))
+      assertEquals(canonicalJsonSerialize(exp), canonicalJsonSerialize(stats))
     }
 
     @Test
@@ -1369,11 +1372,11 @@ internal class DefaultJobPersistenceTest {
       val attempt1Stats: JobPersistence.AttemptStats = stats[JobAttemptPair(jobOneId, jobOneAttemptNumberOne)]!!
 
       val actualStreamSyncStats1 = getStreamSyncStats(attempt1Stats, stream1, namespace1)
-      Assertions.assertEquals(streamStatsUpdate1, actualStreamSyncStats1)
+      assertEquals(streamStatsUpdate1, actualStreamSyncStats1)
       val actualStreamSyncStats2 = getStreamSyncStats(attempt1Stats, stream2, namespace2)
-      Assertions.assertEquals(streamStatsUpdate2, actualStreamSyncStats2)
+      assertEquals(streamStatsUpdate2, actualStreamSyncStats2)
       val actualStreamSyncStats3 = getStreamSyncStats(attempt1Stats, stream3, namespace3)
-      Assertions.assertEquals(streamStatsUpdate3, actualStreamSyncStats3)
+      assertEquals(streamStatsUpdate3, actualStreamSyncStats3)
     }
 
     private fun getStreamSyncStats(
@@ -1389,13 +1392,13 @@ internal class DefaultJobPersistenceTest {
     @Test
     @DisplayName("Retrieving stats for an empty list should not cause an exception.")
     fun testGetStatsForEmptyJobList() {
-      Assertions.assertNotNull(jobPersistence.getAttemptStats(mutableListOf()))
+      assertNotNull(jobPersistence.getAttemptStats(mutableListOf()))
     }
 
     @Test
     @DisplayName("Retrieving stats for a bad job attempt input should not cause an exception.")
     fun testGetStatsForBadJobAttemptInput() {
-      Assertions.assertNotNull(jobPersistence.getAttemptStats(-1, -1))
+      assertNotNull(jobPersistence.getAttemptStats(-1, -1))
     }
 
     @Test
@@ -1439,13 +1442,13 @@ internal class DefaultJobPersistenceTest {
       )
 
       val stats = jobPersistence.getAttemptCombinedStats(jobId, attemptNumber)
-      Assertions.assertEquals(estimatedRecords, stats!!.estimatedRecords)
-      Assertions.assertEquals(estimatedBytes, stats.estimatedBytes)
-      Assertions.assertEquals(recordsEmitted, stats.recordsEmitted)
-      Assertions.assertEquals(bytesEmitted, stats.bytesEmitted)
-      Assertions.assertEquals(recordsCommitted, stats.recordsCommitted)
-      Assertions.assertEquals(bytesCommitted, stats.bytesCommitted)
-      Assertions.assertEquals(recordsRejected, stats.recordsRejected)
+      assertEquals(estimatedRecords, stats!!.estimatedRecords)
+      assertEquals(estimatedBytes, stats.estimatedBytes)
+      assertEquals(recordsEmitted, stats.recordsEmitted)
+      assertEquals(bytesEmitted, stats.bytesEmitted)
+      assertEquals(recordsCommitted, stats.recordsCommitted)
+      assertEquals(bytesCommitted, stats.bytesCommitted)
+      assertEquals(recordsRejected, stats.recordsRejected)
     }
   }
 
@@ -1455,7 +1458,7 @@ internal class DefaultJobPersistenceTest {
     fun testSetVersion() {
       val version = UUID.randomUUID().toString()
       jobPersistence.setVersion(version)
-      Assertions.assertEquals(version, jobPersistence.getVersion().orElseThrow())
+      assertEquals(version, jobPersistence.getVersion().orElseThrow())
     }
 
     @Test
@@ -1464,7 +1467,7 @@ internal class DefaultJobPersistenceTest {
       val deploymentId2 = UUID.randomUUID().toString()
       jobPersistence.setVersion(deploymentId1)
       jobPersistence.setVersion(deploymentId2)
-      Assertions.assertEquals(deploymentId2, jobPersistence.getVersion().orElseThrow())
+      assertEquals(deploymentId2, jobPersistence.getVersion().orElseThrow())
     }
   }
 
@@ -1474,7 +1477,7 @@ internal class DefaultJobPersistenceTest {
     fun testSetDeployment() {
       val deploymentId = UUID.randomUUID()
       jobPersistence.setDeployment(deploymentId)
-      Assertions.assertEquals(deploymentId, jobPersistence.getDeployment().orElseThrow())
+      assertEquals(deploymentId, jobPersistence.getDeployment().orElseThrow())
     }
 
     @Test
@@ -1483,7 +1486,7 @@ internal class DefaultJobPersistenceTest {
       val deploymentId2 = UUID.randomUUID()
       jobPersistence.setDeployment(deploymentId1)
       jobPersistence.setDeployment(deploymentId2)
-      Assertions.assertEquals(deploymentId1, jobPersistence.getDeployment().orElseThrow())
+      assertEquals(deploymentId1, jobPersistence.getDeployment().orElseThrow())
     }
   }
 
@@ -1500,8 +1503,8 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.cancelJob(jobId)
 
       val updated = jobPersistence.getJob(jobId)
-      Assertions.assertEquals(JobStatus.CANCELLED, updated.status)
-      Assertions.assertNotEquals(created.updatedAtInSecond, updated.updatedAtInSecond)
+      assertEquals(JobStatus.CANCELLED, updated.status)
+      assertNotEquals(created.updatedAtInSecond, updated.updatedAtInSecond)
     }
 
     @Test
@@ -1511,10 +1514,10 @@ internal class DefaultJobPersistenceTest {
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
       jobPersistence.succeedAttempt(jobId, attemptNumber)
 
-      Assertions.assertDoesNotThrow { jobPersistence.cancelJob(jobId) }
+      assertDoesNotThrow { jobPersistence.cancelJob(jobId) }
 
       val updated = jobPersistence.getJob(jobId)
-      Assertions.assertEquals(JobStatus.SUCCEEDED, updated.status)
+      assertEquals(JobStatus.SUCCEEDED, updated.status)
     }
   }
 
@@ -1536,7 +1539,7 @@ internal class DefaultJobPersistenceTest {
           listOf(createUnfinishedAttempt(0, jobId, AttemptStatus.RUNNING, LOG_PATH)),
           NOW.epochSecond,
         )
-      Assertions.assertEquals(expected, actual)
+      assertEquals(expected, actual)
     }
 
     @Test
@@ -1547,14 +1550,14 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.failAttempt(jobId, attemptNumber1)
 
       val jobAfterOneAttempts = jobPersistence.getJob(jobId)
-      Assertions.assertEquals(0, attemptNumber1)
-      Assertions.assertEquals(0, jobAfterOneAttempts.attempts[0].getAttemptNumber())
+      assertEquals(0, attemptNumber1)
+      assertEquals(0, jobAfterOneAttempts.attempts[0].getAttemptNumber())
 
       val attemptNumber2 = jobPersistence.createAttempt(jobId, LOG_PATH)
       val jobAfterTwoAttempts = jobPersistence.getJob(jobId)
-      Assertions.assertEquals(1, attemptNumber2)
-      Assertions.assertEquals(
-        Sets.newHashSet<Int?>(0, 1),
+      assertEquals(1, attemptNumber2)
+      assertEquals(
+        setOf(0, 1),
         jobAfterTwoAttempts.attempts.stream().map { obj: Attempt? -> obj!!.getAttemptNumber() }.collect(
           Collectors.toSet(),
         ),
@@ -1567,7 +1570,7 @@ internal class DefaultJobPersistenceTest {
       val jobId = jobPersistence.enqueueJob(SCOPE, SPEC_JOB_CONFIG, true).orElseThrow()
       jobPersistence.createAttempt(jobId, LOG_PATH)
 
-      Assertions.assertThrows(
+      assertThrows(
         IllegalStateException::class.java,
       ) { jobPersistence.createAttempt(jobId, LOG_PATH) }
 
@@ -1580,7 +1583,7 @@ internal class DefaultJobPersistenceTest {
           listOf(createUnfinishedAttempt(0, jobId, AttemptStatus.RUNNING, LOG_PATH)),
           NOW.epochSecond,
         )
-      Assertions.assertEquals(expected, actual)
+      assertEquals(expected, actual)
     }
 
     @Test
@@ -1590,7 +1593,7 @@ internal class DefaultJobPersistenceTest {
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
       jobPersistence.succeedAttempt(jobId, attemptNumber)
 
-      Assertions.assertThrows(
+      assertThrows(
         IllegalStateException::class.java,
       ) { jobPersistence.createAttempt(jobId, LOG_PATH) }
 
@@ -1603,7 +1606,7 @@ internal class DefaultJobPersistenceTest {
           listOf(createAttempt(0, jobId, AttemptStatus.SUCCEEDED, LOG_PATH)),
           NOW.epochSecond,
         )
-      Assertions.assertEquals(expected, actual)
+      assertEquals(expected, actual)
     }
   }
 
@@ -1619,7 +1622,7 @@ internal class DefaultJobPersistenceTest {
       val actual = jobPersistence.getAttemptForJob(jobId, 0).get()
       val expected: Attempt = createUnfinishedAttempt(num, jobId, AttemptStatus.RUNNING, LOG_PATH)
 
-      Assertions.assertEquals(expected, actual)
+      assertEquals(expected, actual)
     }
 
     @Test
@@ -1629,30 +1632,30 @@ internal class DefaultJobPersistenceTest {
 
       for (i in 0..9) {
         val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
-        Assertions.assertEquals(attemptNumber, i)
+        assertEquals(attemptNumber, i)
 
         val running = jobPersistence.getAttemptForJob(jobId, attemptNumber).get()
         val expectedRunning: Attempt = createUnfinishedAttempt(attemptNumber, jobId, AttemptStatus.RUNNING, LOG_PATH)
-        Assertions.assertEquals(expectedRunning, running)
+        assertEquals(expectedRunning, running)
 
         jobPersistence.failAttempt(jobId, attemptNumber)
 
         val failed = jobPersistence.getAttemptForJob(jobId, attemptNumber).get()
         val expectedFailed: Attempt = createAttempt(attemptNumber, jobId, AttemptStatus.FAILED, LOG_PATH)
-        Assertions.assertEquals(expectedFailed, failed)
+        assertEquals(expectedFailed, failed)
       }
 
       val last = jobPersistence.createAttempt(jobId, LOG_PATH)
 
       val running = jobPersistence.getAttemptForJob(jobId, last).get()
       val expectedRunning: Attempt = createUnfinishedAttempt(last, jobId, AttemptStatus.RUNNING, LOG_PATH)
-      Assertions.assertEquals(expectedRunning, running)
+      assertEquals(expectedRunning, running)
 
       jobPersistence.succeedAttempt(jobId, last)
 
       val succeeded = jobPersistence.getAttemptForJob(jobId, last).get()
       val expectedFailed: Attempt = createAttempt(last, jobId, AttemptStatus.SUCCEEDED, LOG_PATH)
-      Assertions.assertEquals(expectedFailed, succeeded)
+      assertEquals(expectedFailed, succeeded)
     }
   }
 
@@ -1685,9 +1688,9 @@ internal class DefaultJobPersistenceTest {
           afterNow,
         )
 
-      Assertions.assertEquals(2, attempts.size)
-      Assertions.assertEquals(jobId2, attempts[0].jobInfo.id)
-      Assertions.assertEquals(jobId3, attempts[1].jobInfo.id)
+      assertEquals(2, attempts.size)
+      assertEquals(jobId2, attempts[0].jobInfo.id)
+      assertEquals(jobId3, attempts[1].jobInfo.id)
     }
   }
 
@@ -1701,7 +1704,7 @@ internal class DefaultJobPersistenceTest {
 
       val actual = jobPersistence.getJob(jobId)
       val expected = createJob(jobId, SPEC_JOB_CONFIG, JobStatus.PENDING, emptyList(), NOW.epochSecond)
-      Assertions.assertEquals(expected, actual)
+      assertEquals(expected, actual)
     }
 
     @Test
@@ -1710,27 +1713,27 @@ internal class DefaultJobPersistenceTest {
       val jobId1 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true)
       val jobId2 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true)
 
-      Assertions.assertTrue(jobId1.isPresent)
-      Assertions.assertTrue(jobId2.isEmpty)
+      assertTrue(jobId1.isPresent)
+      assertTrue(jobId2.isEmpty)
 
       val actual = jobPersistence.getJob(jobId1.get())
       val expected = createJob(jobId1.get(), SYNC_JOB_CONFIG, JobStatus.PENDING, emptyList(), NOW.epochSecond)
-      Assertions.assertEquals(expected, actual)
+      assertEquals(expected, actual)
     }
 
     @Test
     @DisplayName("Should create a second job if a previous job under the same scope has failed")
     fun testCreateJobIfPrevJobFailed() {
       val jobId1 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true)
-      Assertions.assertTrue(jobId1.isPresent)
+      assertTrue(jobId1.isPresent)
 
       jobPersistence.failJob(jobId1.get())
       val jobId2 = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true)
-      Assertions.assertTrue(jobId2.isPresent)
+      assertTrue(jobId2.isPresent)
 
       val actual = jobPersistence.getJob(jobId2.get())
       val expected = createJob(jobId2.get(), SYNC_JOB_CONFIG, JobStatus.PENDING, emptyList(), NOW.epochSecond)
-      Assertions.assertEquals(expected, actual)
+      assertEquals(expected, actual)
     }
   }
 
@@ -1747,8 +1750,8 @@ internal class DefaultJobPersistenceTest {
       jobPersistence.failJob(jobId)
 
       val updated = jobPersistence.getJob(jobId)
-      Assertions.assertEquals(JobStatus.FAILED, updated.status)
-      Assertions.assertNotEquals(created.updatedAtInSecond, updated.updatedAtInSecond)
+      assertEquals(JobStatus.FAILED, updated.status)
+      assertNotEquals(created.updatedAtInSecond, updated.updatedAtInSecond)
     }
 
     @Test
@@ -1758,10 +1761,10 @@ internal class DefaultJobPersistenceTest {
       val attemptNumber = jobPersistence.createAttempt(jobId, LOG_PATH)
       jobPersistence.succeedAttempt(jobId, attemptNumber)
 
-      Assertions.assertDoesNotThrow { jobPersistence.failJob(jobId) }
+      assertDoesNotThrow { jobPersistence.failJob(jobId) }
 
       val updated = jobPersistence.getJob(jobId)
-      Assertions.assertEquals(JobStatus.SUCCEEDED, updated.status)
+      assertEquals(JobStatus.SUCCEEDED, updated.status)
     }
   }
 
@@ -1773,7 +1776,7 @@ internal class DefaultJobPersistenceTest {
     fun testGetLastReplicationJobForConnectionIdEmpty() {
       val actual = jobPersistence.getLastReplicationJob(CONNECTION_ID)
 
-      Assertions.assertTrue(actual.isEmpty)
+      assertTrue(actual.isEmpty)
     }
 
     @Test
@@ -1789,7 +1792,7 @@ internal class DefaultJobPersistenceTest {
       val actual = jobPersistence.getLastReplicationJob(CONNECTION_ID)
       val expected = createJob(jobId2, SYNC_JOB_CONFIG, JobStatus.PENDING, emptyList(), afterNow.epochSecond)
 
-      Assertions.assertEquals(Optional.of(expected), actual)
+      assertEquals(Optional.of(expected), actual)
     }
 
     @Test
@@ -1805,7 +1808,7 @@ internal class DefaultJobPersistenceTest {
       val actual = jobPersistence.getLastReplicationJob(CONNECTION_ID)
       val expected = createJob(jobId2, RESET_JOB_CONFIG, JobStatus.PENDING, emptyList(), afterNow.epochSecond)
 
-      Assertions.assertEquals(Optional.of(expected), actual)
+      assertEquals(Optional.of(expected), actual)
     }
   }
 
@@ -1817,7 +1820,7 @@ internal class DefaultJobPersistenceTest {
     fun testGetLastSyncJobForConnectionIdEmpty() {
       val actual = jobPersistence.getLastSyncJob(CONNECTION_ID)
 
-      Assertions.assertTrue(actual.isEmpty)
+      assertTrue(actual.isEmpty)
     }
 
     @Test
@@ -1845,7 +1848,7 @@ internal class DefaultJobPersistenceTest {
       val actual = jobPersistence.getLastSyncJob(CONNECTION_ID)
       val expected = createJob(jobId2, SYNC_JOB_CONFIG, JobStatus.FAILED, listOf(attempt), afterNow.epochSecond)
 
-      Assertions.assertEquals(Optional.of(expected), actual)
+      assertEquals(Optional.of(expected), actual)
     }
 
     @Test
@@ -1859,7 +1862,7 @@ internal class DefaultJobPersistenceTest {
 
       val actual = jobPersistence.getLastSyncJob(CONNECTION_ID)
 
-      Assertions.assertTrue(actual.isEmpty)
+      assertTrue(actual.isEmpty)
     }
   }
 
@@ -1871,7 +1874,7 @@ internal class DefaultJobPersistenceTest {
     fun testGetLastSyncJobsForConnectionsEmpty() {
       val actual = jobPersistence.getLastSyncJobForConnections(CONNECTION_IDS)
 
-      Assertions.assertTrue(actual.isEmpty())
+      assertTrue(actual.isEmpty())
     }
 
     @Test
@@ -1905,7 +1908,7 @@ internal class DefaultJobPersistenceTest {
       expected.add(JobStatusSummary(CONNECTION_ID_2, afterNow.epochSecond, JobStatus.RUNNING))
       expected.add(JobStatusSummary(CONNECTION_ID_3, NOW.epochSecond, JobStatus.PENDING))
 
-      Assertions.assertTrue(expected.size == actual.size && expected.containsAll(actual) && actual.containsAll(expected))
+      assertTrue(expected.size == actual.size && expected.containsAll(actual) && actual.containsAll(expected))
     }
 
     @Test
@@ -1919,7 +1922,7 @@ internal class DefaultJobPersistenceTest {
 
       val actual = jobPersistence.getLastSyncJobForConnections(CONNECTION_IDS)
 
-      Assertions.assertTrue(actual.isEmpty())
+      assertTrue(actual.isEmpty())
     }
   }
 
@@ -1931,7 +1934,7 @@ internal class DefaultJobPersistenceTest {
     fun testGetRunningSyncJobsForConnectionsEmpty() {
       val actual = jobPersistence.getRunningSyncJobForConnections(CONNECTION_IDS)
 
-      Assertions.assertTrue(actual.isEmpty())
+      assertTrue(actual.isEmpty())
     }
 
     @Test
@@ -1979,7 +1982,7 @@ internal class DefaultJobPersistenceTest {
       expected.add(createJob(scope3Job1, SYNC_JOB_CONFIG, JobStatus.PENDING, emptyList(), NOW.epochSecond, SCOPE_3, true))
 
       val actual = jobPersistence.getRunningSyncJobForConnections(CONNECTION_IDS)
-      Assertions.assertTrue(expected.size == actual.size && expected.containsAll(actual) && actual.containsAll(expected))
+      assertTrue(expected.size == actual.size && expected.containsAll(actual) && actual.containsAll(expected))
     }
 
     @Test
@@ -1993,7 +1996,7 @@ internal class DefaultJobPersistenceTest {
 
       val actual = jobPersistence.getRunningSyncJobForConnections(CONNECTION_IDS)
 
-      Assertions.assertTrue(actual.isEmpty())
+      assertTrue(actual.isEmpty())
     }
   }
 
@@ -2005,7 +2008,7 @@ internal class DefaultJobPersistenceTest {
     fun testGetRunningSyncJobsForConnectionsEmpty() {
       val actual = jobPersistence.getRunningJobForConnection(CONNECTION_ID_1)
 
-      Assertions.assertTrue(actual.isEmpty())
+      assertTrue(actual.isEmpty())
     }
 
     @Test
@@ -2038,7 +2041,7 @@ internal class DefaultJobPersistenceTest {
       )
 
       val actual = jobPersistence.getRunningJobForConnection(CONNECTION_ID_1)
-      Assertions.assertTrue(expected.size == actual.size && expected.containsAll(actual) && actual.containsAll(expected))
+      assertTrue(expected.size == actual.size && expected.containsAll(actual) && actual.containsAll(expected))
     }
 
     @Test
@@ -2072,7 +2075,7 @@ internal class DefaultJobPersistenceTest {
 
       val actual = jobPersistence.getRunningJobForConnection(CONNECTION_ID_1)
 
-      Assertions.assertTrue(expected.size == actual.size && expected.containsAll(actual) && actual.containsAll(expected))
+      assertTrue(expected.size == actual.size && expected.containsAll(actual) && actual.containsAll(expected))
     }
   }
 
@@ -2084,7 +2087,7 @@ internal class DefaultJobPersistenceTest {
     fun testGetFirstSyncJobForConnectionIdEmpty() {
       val actual = jobPersistence.getFirstReplicationJob(CONNECTION_ID)
 
-      Assertions.assertTrue(actual.isEmpty)
+      assertTrue(actual.isEmpty)
     }
 
     @Test
@@ -2102,7 +2105,7 @@ internal class DefaultJobPersistenceTest {
       val actual = jobPersistence.getFirstReplicationJob(CONNECTION_ID)
       val expected = createJob(jobId1, SYNC_JOB_CONFIG, JobStatus.SUCCEEDED, attempts, NOW.epochSecond)
 
-      Assertions.assertEquals(Optional.of(expected), actual)
+      assertEquals(Optional.of(expected), actual)
     }
   }
 
@@ -2134,7 +2137,7 @@ internal class DefaultJobPersistenceTest {
       val actualJobCount =
         jobPersistence.getJobCount(setOf(SPEC_JOB_CONFIG.configType), null, null, null, null, null, null)
 
-      Assertions.assertEquals(numJobsToCreate.toLong(), actualJobCount)
+      assertEquals(numJobsToCreate.toLong(), actualJobCount)
     }
 
     @Test
@@ -2156,7 +2159,7 @@ internal class DefaultJobPersistenceTest {
           null,
         )
 
-      Assertions.assertEquals(numJobsToCreate.toLong(), actualJobCount)
+      assertEquals(numJobsToCreate.toLong(), actualJobCount)
     }
 
     @Test
@@ -2184,7 +2187,7 @@ internal class DefaultJobPersistenceTest {
           null,
         )
 
-      Assertions.assertEquals(numFailedJobsToCreate.toLong(), actualJobCount)
+      assertEquals(numFailedJobsToCreate.toLong(), actualJobCount)
     }
 
     @Test
@@ -2209,7 +2212,7 @@ internal class DefaultJobPersistenceTest {
           null,
         )
 
-      Assertions.assertEquals(2, actualJobCount)
+      assertEquals(2, actualJobCount)
     }
 
     @Test
@@ -2227,8 +2230,8 @@ internal class DefaultJobPersistenceTest {
       val numJobsCreatedAtStartOneHourLater =
         jobPersistence.getJobCount(setOf(CHECK_JOB_CONFIG.configType), SCOPE, null, oneHourLater, null, null, null)
 
-      Assertions.assertEquals(1, numJobsCreatedAtStartOneHourEarlier)
-      Assertions.assertEquals(0, numJobsCreatedAtStartOneHourLater)
+      assertEquals(1, numJobsCreatedAtStartOneHourEarlier)
+      assertEquals(0, numJobsCreatedAtStartOneHourLater)
     }
 
     @Test
@@ -2246,8 +2249,8 @@ internal class DefaultJobPersistenceTest {
       val numJobsCreatedAtEndOneHourLater =
         jobPersistence.getJobCount(setOf(CHECK_JOB_CONFIG.configType), SCOPE, null, null, oneHourLater, null, null)
 
-      Assertions.assertEquals(0, numJobsCreatedAtEndOneHourEarlier)
-      Assertions.assertEquals(1, numJobsCreatedAtEndOneHourLater)
+      assertEquals(0, numJobsCreatedAtEndOneHourEarlier)
+      assertEquals(1, numJobsCreatedAtEndOneHourLater)
     }
 
     @Test
@@ -2265,8 +2268,8 @@ internal class DefaultJobPersistenceTest {
       val numJobsUpdatedAtStartOneDayLater =
         jobPersistence.getJobCount(setOf(CHECK_JOB_CONFIG.configType), SCOPE, null, null, null, oneHourLater, null)
 
-      Assertions.assertEquals(1, numJobsUpdatedAtStartOneHourEarlier)
-      Assertions.assertEquals(0, numJobsUpdatedAtStartOneDayLater)
+      assertEquals(1, numJobsUpdatedAtStartOneHourEarlier)
+      assertEquals(0, numJobsUpdatedAtStartOneDayLater)
     }
 
     @Test
@@ -2284,8 +2287,8 @@ internal class DefaultJobPersistenceTest {
       val numJobsUpdatedAtEndOneHourLater =
         jobPersistence.getJobCount(setOf(CHECK_JOB_CONFIG.configType), SCOPE, null, null, null, null, oneHourLater)
 
-      Assertions.assertEquals(0, numJobsUpdatedAtEndOneHourEarlier)
-      Assertions.assertEquals(1, numJobsUpdatedAtEndOneHourLater)
+      assertEquals(0, numJobsUpdatedAtEndOneHourEarlier)
+      assertEquals(1, numJobsUpdatedAtEndOneHourLater)
     }
 
     @Test
@@ -2308,7 +2311,7 @@ internal class DefaultJobPersistenceTest {
           null,
         )
 
-      Assertions.assertEquals(0, actualJobCount)
+      assertEquals(0, actualJobCount)
     }
   }
 
@@ -2336,8 +2339,8 @@ internal class DefaultJobPersistenceTest {
       val pagesize = 10
       val actualList =
         jobPersistence.listJobs(setOf(SPEC_JOB_CONFIG.configType), CONNECTION_ID.toString(), pagesize)
-      Assertions.assertEquals(pagesize, actualList.size)
-      Assertions.assertEquals(ids[ids.size - 1], actualList[0].id)
+      assertEquals(pagesize, actualList.size)
+      assertEquals(ids[ids.size - 1], actualList[0].id)
     }
 
     @Test
@@ -2354,7 +2357,7 @@ internal class DefaultJobPersistenceTest {
       val actualList =
         jobPersistence.listJobs(setOf(SPEC_JOB_CONFIG.configType), CONNECTION_ID.toString(), pagesize)
       for (i in 0..99) {
-        Assertions.assertEquals(ids[ids.size - (i + 1)], actualList[i].id, "Job ids should have been in order but weren't.")
+        assertEquals(ids[ids.size - (i + 1)], actualList[i].id, "Job ids should have been in order but weren't.")
       }
     }
 
@@ -2369,8 +2372,8 @@ internal class DefaultJobPersistenceTest {
       val actual = actualList[0]
       val expected = createJob(jobId, SPEC_JOB_CONFIG, JobStatus.PENDING, emptyList(), NOW.epochSecond)
 
-      Assertions.assertEquals(1, actualList.size)
-      Assertions.assertEquals(expected, actual)
+      assertEquals(1, actualList.size)
+      assertEquals(expected, actual)
     }
 
     @Test
@@ -2395,7 +2398,7 @@ internal class DefaultJobPersistenceTest {
           createJob(specJobId, SPEC_JOB_CONFIG, JobStatus.PENDING, emptyList(), NOW.epochSecond),
         )
 
-      Assertions.assertEquals(expectedList, actualList)
+      assertEquals(expectedList, actualList)
     }
 
     @Test
@@ -2427,8 +2430,8 @@ internal class DefaultJobPersistenceTest {
           NOW.epochSecond,
         )
 
-      Assertions.assertEquals(1, actualList.size)
-      Assertions.assertEquals(expected, actual)
+      assertEquals(1, actualList.size)
+      assertEquals(expected, actual)
     }
 
     @Test
@@ -2460,8 +2463,8 @@ internal class DefaultJobPersistenceTest {
           NOW.epochSecond,
         )
 
-      Assertions.assertEquals(1, actualList.size)
-      Assertions.assertEquals(expected, actual)
+      assertEquals(1, actualList.size)
+      assertEquals(expected, actual)
     }
 
     @Test
@@ -2486,8 +2489,8 @@ internal class DefaultJobPersistenceTest {
       val actualList =
         jobPersistence.listJobs(setOf(SPEC_JOB_CONFIG.configType), CONNECTION_ID.toString(), 9999)
 
-      Assertions.assertEquals(2, actualList.size)
-      Assertions.assertEquals(jobId2, actualList[0].id)
+      assertEquals(2, actualList.size)
+      assertEquals(jobId2, actualList[0].id)
     }
 
     @Test
@@ -2522,8 +2525,8 @@ internal class DefaultJobPersistenceTest {
           "updatedAt",
           "ASC",
         )
-      Assertions.assertEquals(1, updatedAtJobs.size)
-      Assertions.assertEquals(jobId2, updatedAtJobs[0].id)
+      assertEquals(1, updatedAtJobs.size)
+      assertEquals(jobId2, updatedAtJobs[0].id)
       val createdAtJobs =
         jobPersistence.listJobs(
           setOf(SPEC_JOB_CONFIG.configType),
@@ -2538,8 +2541,8 @@ internal class DefaultJobPersistenceTest {
           "createdAt",
           "ASC",
         )
-      Assertions.assertEquals(1, createdAtJobs.size)
-      Assertions.assertEquals(jobId1, createdAtJobs[0].id)
+      assertEquals(1, createdAtJobs.size)
+      assertEquals(jobId1, createdAtJobs[0].id)
     }
 
     @Test
@@ -2578,7 +2581,7 @@ internal class DefaultJobPersistenceTest {
           null,
         )
 
-      Assertions.assertEquals(HashSet(ids), jobs.stream().map { j: Job? -> j!!.id }.collect(Collectors.toSet()))
+      assertEquals(HashSet(ids), jobs.stream().map { j: Job? -> j!!.id }.collect(Collectors.toSet()))
     }
 
     @Test
@@ -2610,7 +2613,7 @@ internal class DefaultJobPersistenceTest {
           null,
         )
 
-      Assertions.assertEquals(idsConnection1, jobs.stream().map { j: Job? -> j!!.id }.collect(Collectors.toSet()))
+      assertEquals(idsConnection1, jobs.stream().map { j: Job? -> j!!.id }.collect(Collectors.toSet()))
     }
 
     @Test
@@ -2641,10 +2644,10 @@ internal class DefaultJobPersistenceTest {
           ).toMutableList()
 
       val actualIds = jobs.stream().map { j: Job? -> j!!.id }.collect(Collectors.toSet())
-      Assertions.assertEquals(2, actualIds.size)
-      Assertions.assertFalse(actualIds.contains(jobId3))
-      Assertions.assertTrue(actualIds.contains(jobId1))
-      Assertions.assertTrue(actualIds.contains(jobId2))
+      assertEquals(2, actualIds.size)
+      assertFalse(actualIds.contains(jobId3))
+      assertTrue(actualIds.contains(jobId1))
+      assertTrue(actualIds.contains(jobId2))
     }
 
     @Test
@@ -2675,14 +2678,14 @@ internal class DefaultJobPersistenceTest {
             ids[includingIdIndex]!!,
             pageSize,
           ).toMutableList()
-      val expectedJobIds = Lists.reverse(ids.subList(ids.size - pageSize, ids.size))
-      Assertions.assertEquals(expectedJobIds, actualList.stream().map { j: Job? -> j!!.id }.toList())
+      val expectedJobIds = ids.subList(ids.size - pageSize, ids.size).reversed()
+      assertEquals(expectedJobIds, actualList.stream().map { j: Job? -> j!!.id }.toList())
     }
 
     @Test
     @DisplayName("Should list jobs including the specified job")
     fun testListJobsIncludingIdWithConnectionFilter() {
-      val ids: MutableList<Long?> = ArrayList()
+      val ids: MutableList<Long?> = mutableListOf()
       for (i in 0..99) {
         // This makes each enqueued job have an increasingly higher createdAt time
         whenever(timeSupplier.get()).thenReturn(Instant.ofEpochSecond(i.toLong()))
@@ -2705,8 +2708,8 @@ internal class DefaultJobPersistenceTest {
             ids[includingIdIndex]!!,
             pageSize,
           ).toMutableList()
-      val expectedJobIds = Lists.reverse(ids.subList(ids.size - pageSize, ids.size))
-      Assertions.assertEquals(expectedJobIds, actualList.stream().map { j: Job? -> j!!.id }.toList())
+      val expectedJobIds = ids.subList(ids.size - pageSize, ids.size).reversed()
+      assertEquals(expectedJobIds, actualList.stream().map { j: Job? -> j!!.id }.toList())
     }
 
     @Test
@@ -2736,8 +2739,8 @@ internal class DefaultJobPersistenceTest {
             ids[includingIdIndex]!!,
             pageSize,
           ).toMutableList()
-      val expectedJobIds = Lists.reverse(ids.subList(ids.size - (pageSize * 2), ids.size))
-      Assertions.assertEquals(expectedJobIds, actualList.stream().map { j: Job? -> j!!.id }.toList())
+      val expectedJobIds = ids.subList(ids.size - (pageSize * 2), ids.size).reversed()
+      assertEquals(expectedJobIds, actualList.stream().map { j: Job? -> j!!.id }.toList())
     }
 
     @Test
@@ -2757,7 +2760,7 @@ internal class DefaultJobPersistenceTest {
             otherConnectionJobId,
             25,
           ).toMutableList()
-      Assertions.assertEquals(mutableListOf<Any?>(), actualList)
+      assertEquals(mutableListOf<Any?>(), actualList)
     }
   }
 
@@ -2835,9 +2838,9 @@ internal class DefaultJobPersistenceTest {
           true,
         )
 
-      Assertions.assertEquals(
-        Sets.newHashSet<Job?>(expectedDesiredJob1, expectedDesiredJob2, expectedDesiredJob3, expectedDesiredJob4),
-        Sets.newHashSet<Job?>(actualJobs),
+      assertEquals(
+        setOf(expectedDesiredJob1, expectedDesiredJob2, expectedDesiredJob3, expectedDesiredJob4),
+        actualJobs.toSet(),
       )
     }
   }

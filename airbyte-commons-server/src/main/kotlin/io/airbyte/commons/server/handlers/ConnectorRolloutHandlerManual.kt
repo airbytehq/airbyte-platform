@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo
 import io.airbyte.api.model.generated.ConnectorRolloutFilters
 import io.airbyte.api.model.generated.ConnectorRolloutManualFinalizeRequestBody
@@ -17,6 +16,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutStrategy
 import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.server.handlers.helpers.ConnectorRolloutHelper
 import io.airbyte.config.AttributeName
 import io.airbyte.config.ConnectorEnumRolloutState
@@ -441,7 +441,7 @@ open class ConnectorRolloutHandlerManual
       }
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun extractAirbyteApiClientException(e: WorkflowUpdateException): String {
       val exc = getAirbyteApiClientException(e) as ApplicationFailure
       logger.error { "AirbyteApiClientException: $exc" }

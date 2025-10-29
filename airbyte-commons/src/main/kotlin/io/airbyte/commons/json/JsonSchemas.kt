@@ -6,10 +6,7 @@ package io.airbyte.commons.json
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.google.common.base.Preconditions
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import java.lang.invoke.MethodHandles
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.Optional
 import java.util.function.BiConsumer
 import java.util.function.BiFunction
@@ -19,12 +16,12 @@ import java.util.function.Predicate
 // todo (cgardens) - we need the ability to identify jsonschemas that Airbyte considers invalid for
 // a connector (e.g. "not" keyword).
 
+private val logger = KotlinLogging.logger {}
+
 /**
  * Shared code for interacting with JSONSchema.
  */
 object JsonSchemas {
-  private val log: Logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
-
   private const val JSON_SCHEMA_ENUM_KEY = "enum"
   private const val JSON_SCHEMA_TYPE_KEY = "type"
   private const val JSON_SCHEMA_PROPERTIES_KEY = "properties"
@@ -156,7 +153,7 @@ object JsonSchemas {
             // hit every node.
             traverseJsonSchemaInternal(jsonSchemaNode.get(JSON_SCHEMA_ITEMS_KEY), newPath, consumer)
           } else {
-            log.warn("The array is missing an items field. The traversal is silently stopped. Current schema: " + jsonSchemaNode)
+            logger.warn { "The array is missing an items field. The traversal is silently stopped. Current schema: $jsonSchemaNode" }
           }
         }
 
@@ -179,9 +176,7 @@ object JsonSchemas {
               traverseJsonSchemaInternal(arrayItem, path, consumer)
             }
           } else {
-            log.warn(
-              "The object is a properties key or a combo keyword. The traversal is silently stopped. Current schema: " + jsonSchemaNode,
-            )
+            logger.warn { "The object is a properties key or a combo keyword. The traversal is silently stopped. Current schema: $jsonSchemaNode" }
           }
         }
 
@@ -294,8 +289,8 @@ object JsonSchemas {
     private val fieldName: String?,
   ) {
     fun getFieldName(): String {
-      Preconditions.checkState(fieldName != null, "cannot return field name, is list node")
-      return fieldName!!
+      check(fieldName != null) { "cannot return field name, is list node" }
+      return fieldName
     }
 
     fun isList(): Boolean = fieldName == null

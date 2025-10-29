@@ -5,8 +5,10 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -23,7 +25,7 @@ class GithubOAuthFlow : BaseOAuth2Flow {
 
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   internal constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
   override fun formatConsentUrl(
@@ -34,9 +36,9 @@ class GithubOAuthFlow : BaseOAuth2Flow {
   ): String {
     try {
       return URIBuilder(AUTHORIZE_URL)
-        .addParameter("client_id", clientId)
+        .addParameter(CLIENT_ID_KEY, clientId)
         .addParameter(
-          "redirect_uri",
+          REDIRECT_URI_KEY,
           redirectUrl,
         ) // we add `scopes` and `state` after we've already built the url, to prevent url encoding for scopes
         // https://docs.github.com/en/developers/apps/building-oauth-apps/scopes-for-oauth-apps#available-scopes

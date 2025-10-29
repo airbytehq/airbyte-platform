@@ -12,7 +12,7 @@ import com.google.api.services.sqladmin.model.Database
 import com.google.api.services.sqladmin.model.Operation
 import com.google.auth.http.HttpCredentialsAdapter
 import com.google.auth.oauth2.GoogleCredentials
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.http.HttpStatus
 import java.io.IOException
@@ -26,7 +26,7 @@ class CloudSqlDatabaseProvisioner {
   private val maxPollAttempts: Int
   private val maxApiCallAttempts: Int
 
-  @VisibleForTesting
+  @InternalForTesting
   internal constructor(sqlAdmin: SQLAdmin, maxPollAttempts: Int, maxApiCallAttempts: Int) {
     this.sqlAdmin = sqlAdmin
     this.maxPollAttempts = maxPollAttempts
@@ -79,7 +79,7 @@ class CloudSqlDatabaseProvisioner {
   /**
    * Database operations are asynchronous. This method polls the operation until it is done.
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun pollOperation(
     projectId: String?,
     operationName: String,
@@ -101,7 +101,7 @@ class CloudSqlDatabaseProvisioner {
    * If there's another operation already in progress in one same cloudsql instance then the api will
    * return a 409 error. This method will retry api calls that return a 409 error.
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun runWithRetry(callable: Callable<Operation>): Operation {
     var attempts = 0
     while (attempts < maxApiCallAttempts) {

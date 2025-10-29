@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
@@ -27,7 +27,7 @@ class V0_50_5_004__AddActorDefinitionBreakingChangeTable : BaseJavaMigration() {
 
   companion object {
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun createBreakingChangesTable(ctx: DSLContext) {
       val actorDefinitionId = DSL.field("actor_definition_id", SQLDataType.UUID.nullable(false))
       val version = DSL.field("version", SQLDataType.VARCHAR(256).nullable(false))

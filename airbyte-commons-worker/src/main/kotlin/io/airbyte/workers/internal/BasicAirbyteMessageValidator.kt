@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.internal
 
-import com.google.common.collect.Iterables
 import io.airbyte.commons.protocol.CatalogDiffHelpers.isDedup
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.SyncMode
@@ -91,26 +90,12 @@ object BasicAirbyteMessageValidator {
               )
             }
 
-            val containsAtLeastOneNonNullPk =
-              Iterables
-                .tryFind(
-                  pksList,
-                ) { pks: List<String> ->
-                  containsNonNullPK(
-                    pks,
-                    record.data,
-                  )
-                }.isPresent
-
+            val containsAtLeastOneNonNullPk = pksList.find { pks -> containsNonNullPK(pks, record.data) } != null
             if (!containsAtLeastOneNonNullPk) {
               throw SourceException(
-                String.format(
-                  "All the defined primary keys are null, the primary keys are: %s",
-                  java.lang.String.join(
-                    ", ",
-                    pksList.stream().map { pks: List<String?>? -> java.lang.String.join(".", pks) }.toList(),
-                  ),
-                ),
+                "All the defined primary keys are null, the primary keys are: ${pksList.stream().map { pks: List<String?>? ->
+                  java.lang.String.join(".", pks)
+                }.toList().joinToString(", ")}",
               )
             }
           }

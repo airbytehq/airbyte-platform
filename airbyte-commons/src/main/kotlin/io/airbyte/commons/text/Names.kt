@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.text
 
-import com.google.common.base.Preconditions
 import java.text.Normalizer
 
 /**
@@ -42,17 +41,17 @@ object Names {
     value: String,
     quoteChar: Char,
   ): String {
-    Preconditions.checkNotNull(value)
+    requireNotNull(value)
 
     val startsWithChar = value[0] == quoteChar
     val endsWithChar = value[value.length - 1] == quoteChar
 
-    Preconditions.checkState(startsWithChar == endsWithChar, "Invalid value: %s", value)
+    check(startsWithChar == endsWithChar) { "Invalid value: $value" }
 
     return if (startsWithChar) {
       value
     } else {
-      String.format("%c%s%c", quoteChar, value, quoteChar)
+      "$quoteChar$value$quoteChar"
     }
   }
 }

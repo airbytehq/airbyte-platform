@@ -21,7 +21,6 @@ import com.amazonaws.services.secretsmanager.model.Tag
 import com.amazonaws.services.secretsmanager.model.UpdateSecretRequest
 import com.amazonaws.services.secretsmanager.model.UpdateSecretResult
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
-import com.google.common.base.Preconditions
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AwsAccessKeySecretPersistenceConfig
 import io.airbyte.config.AwsRoleSecretPersistenceConfig
@@ -74,7 +73,7 @@ class AwsSecretManagerPersistence(
     coordinate: AirbyteManagedSecretCoordinate,
     payload: String,
   ) {
-    Preconditions.checkArgument(payload.isNotEmpty(), "Payload shouldn't be empty")
+    require(payload.isNotEmpty()) { "Payload shouldn't be empty" }
     val existingSecret =
       try {
         read(coordinate)

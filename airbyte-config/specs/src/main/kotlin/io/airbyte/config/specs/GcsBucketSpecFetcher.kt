@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.google.api.client.util.Preconditions
 import com.google.cloud.storage.Blob
 import com.google.cloud.storage.Storage
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.protocol.models.AirbyteProtocolSchema
@@ -58,7 +58,7 @@ class GcsBucketSpecFetcher {
    */
   fun attemptFetch(dockerImage: String): Optional<ConnectorSpecification> {
     val dockerImageComponents = dockerImage.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-    Preconditions.checkArgument(dockerImageComponents.size == 2, "Invalidate docker image: $dockerImage")
+    require(dockerImageComponents.size == 2) { "Invalidate docker image: $dockerImage" }
     val dockerImageName = dockerImageComponents[0]
     val dockerImageTag = dockerImageComponents[1]
 
@@ -84,7 +84,7 @@ class GcsBucketSpecFetcher {
     )
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getSpecAsBlob(
     dockerImageName: String,
     dockerImageTag: String,
@@ -99,7 +99,7 @@ class GcsBucketSpecFetcher {
     return getSpecAsBlob(dockerImageName, dockerImageTag, DEFAULT_SPEC_FILE, AirbyteEdition.COMMUNITY)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getSpecAsBlob(
     dockerImageName: String,
     dockerImageTag: String,

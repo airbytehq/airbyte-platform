@@ -15,5 +15,6 @@ dependencies {
   implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-persistence:job-persistence"))
 
+
   testImplementation(libs.mockk)
 }

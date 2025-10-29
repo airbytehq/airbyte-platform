@@ -5,10 +5,11 @@
 package io.airbyte.oauth.declarative
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
 import com.hubspot.jinjava.Jinjava
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.JsonPaths
 import io.airbyte.commons.json.Jsons
+import io.airbyte.oauth.REFRESH_TOKEN_KEY
 import java.io.IOException
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -31,7 +32,7 @@ class DeclarativeOAuthSpecHandler {
    *
    * @param clock the Clock instance to set
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun setClock(clock: Clock) {
     this.clock = clock
   }
@@ -318,7 +319,7 @@ class DeclarativeOAuthSpecHandler {
    * present, it retrieves the value as a list of strings.
    *
    * If the retrieved list is not empty, it returns the list. Otherwise, it returns a default list
-   * containing "refresh_token".
+   * containing REFRESH_TOKEN.
    *
    * @param userConfig the JSON node containing the OAuth configuration.
    * @return a list of strings representing the configuration extract output.
@@ -329,7 +330,7 @@ class DeclarativeOAuthSpecHandler {
         Jsons.getNodeOrEmptyObject(userConfig, EXTRACT_OUTPUT_KEY),
       )
 
-    // match the default BaseOAuth2Flow behaviour, returning ["refresh_token"] by default.
+    // match the default BaseOAuth2Flow behaviour, returning [REFRESH_TOKEN] by default.
     return if (!extractOutputConfig.isEmpty()) extractOutputConfig else listOf(REFRESH_TOKEN)
   }
 
@@ -420,8 +421,8 @@ class DeclarativeOAuthSpecHandler {
 
         oauthOutput[key] = value
       } else {
-        val message = "Missing '%s' field in the `OAuth Output`. Expected fields: %s. Response data: %s"
-        throw IOException(String.format(message, key, expectedOAuthOutputFields, data))
+        val message = "Missing '$key' field in the `OAuth Output`. Expected fields: $expectedOAuthOutputFields. Response data: $data"
+        throw IOException(message)
       }
     }
 
@@ -446,7 +447,7 @@ class DeclarativeOAuthSpecHandler {
   private fun makeParameter(
     key: String?,
     value: String?,
-  ): String = String.format("%s=%s", key, value)
+  ): String = "$key=$value"
 
   companion object {
     /**
@@ -459,11 +460,11 @@ class DeclarativeOAuthSpecHandler {
     const val ACCESS_TOKEN_URL: String = "access_token_url"
     const val AUTH_CODE_KEY: String = "auth_code_key"
     const val AUTH_CODE_PARAM: String = "auth_code_param"
-    const val AUTH_CODE_VALUE: String = "code"
+    const val AUTH_CODE_VALUE: String = AUTH_CODE_KEY
     const val AUTH_CODE_VALUE_KEY: String = "auth_code_value"
     const val CLIENT_ID_KEY: String = "client_id_key"
     const val CLIENT_ID_PARAM: String = "client_id_param"
-    const val CLIENT_ID_VALUE: String = "client_id"
+    const val CLIENT_ID_VALUE: String = io.airbyte.oauth.CLIENT_ID_KEY
     const val CLIENT_ID_VALUE_KEY: String = "client_id_value"
     const val CLIENT_SECRET_KEY: String = "client_secret_key"
     const val CLIENT_SECRET_PARAM: String = "client_secret_param"
@@ -473,16 +474,16 @@ class DeclarativeOAuthSpecHandler {
     const val EXTRACT_OUTPUT_KEY: String = "extract_output"
     const val REDIRECT_URI_KEY: String = "redirect_uri_key"
     const val REDIRECT_URI_PARAM: String = "redirect_uri_param"
-    const val REDIRECT_URI_VALUE: String = "redirect_uri"
+    const val REDIRECT_URI_VALUE: String = REDIRECT_URI_KEY
     const val REDIRECT_URI_VALUE_KEY: String = "redirect_uri_value"
-    const val REFRESH_TOKEN: String = "refresh_token"
+    const val REFRESH_TOKEN: String = REFRESH_TOKEN_KEY
     const val SCOPE_KEY: String = "scope_key"
     const val SCOPE_PARAM: String = "scope_param"
-    const val SCOPE_VALUE: String = "scope"
+    const val SCOPE_VALUE: String = io.airbyte.oauth.SCOPE_KEY
     const val SCOPE_VALUE_KEY: String = "scope_value"
     const val STATE_KEY: String = "state_key"
     const val STATE_PARAM: String = "state_param"
-    const val STATE_VALUE: String = "state"
+    const val STATE_VALUE: String = io.airbyte.oauth.STATE_KEY
     const val STATE_VALUE_KEY: String = "state_value"
     const val STATE_PARAM_KEY: String = STATE_VALUE
     const val STATE_PARAM_MIN_KEY: String = "min"
@@ -510,19 +511,13 @@ class DeclarativeOAuthSpecHandler {
      *
      */
     private val MANDATORY_DEFAULT_KEYS: Map<String, String> =
-      java.util.Map.of(
-        AUTH_CODE_KEY,
-        AUTH_CODE_VALUE,
-        CLIENT_ID_KEY,
-        CLIENT_ID_VALUE,
-        CLIENT_SECRET_KEY,
-        CLIENT_SECRET_VALUE,
-        REDIRECT_URI_KEY,
-        REDIRECT_URI_VALUE,
-        SCOPE_KEY,
-        SCOPE_VALUE,
-        STATE_KEY,
-        STATE_VALUE,
+      mapOf(
+        AUTH_CODE_KEY to AUTH_CODE_VALUE,
+        CLIENT_ID_KEY to CLIENT_ID_VALUE,
+        CLIENT_SECRET_KEY to CLIENT_SECRET_VALUE,
+        REDIRECT_URI_KEY to REDIRECT_URI_VALUE,
+        SCOPE_KEY to SCOPE_VALUE,
+        STATE_KEY to STATE_VALUE,
       )
 
     /**

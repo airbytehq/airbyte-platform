@@ -4,10 +4,9 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Preconditions
 import io.airbyte.api.model.generated.JobFailureRequest
 import io.airbyte.api.model.generated.JobSuccessWithAttemptNumberRequest
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.JobStatus
 import io.airbyte.config.ActorDefinitionVersion
@@ -257,7 +256,7 @@ class JobCreationAndStatusUpdateHelper(
 
     try {
       emitAttemptEvent(OssMetricsRegistry.ATTEMPTS_COMPLETED, job, attempt.getAttemptNumber(), additionalAttributes)
-    } catch (e: IOException) {
+    } catch (_: IOException) {
       log.info { "Failed to record attempt completed metric for attempt ${attempt.getAttemptNumber()} of job ${job.id}" }
     }
   }
@@ -319,7 +318,7 @@ class JobCreationAndStatusUpdateHelper(
     return attrs
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getJobToReleaseStages(job: Job?): List<ReleaseStage> {
     if (job?.config == null || job.config.configType == null) {
       return emptyList()
@@ -418,10 +417,11 @@ class JobCreationAndStatusUpdateHelper(
 
     for (stage in releaseStages) {
       if (stage != null) {
-        val attributes: MutableList<MetricAttribute> = ArrayList()
-        attributes.add(MetricAttribute(MetricTags.RELEASE_STAGE, getReleaseStage(stage)))
-        attributes.addAll(additionalAttributes)
-
+        val attributes: List<MetricAttribute> =
+          buildList {
+            add(MetricAttribute(MetricTags.RELEASE_STAGE, getReleaseStage(stage)))
+            addAll(additionalAttributes)
+          }
         metricClient.count(metric, 1L, *attributes.toTypedArray<MetricAttribute>())
       }
     }
@@ -574,7 +574,7 @@ class JobCreationAndStatusUpdateHelper(
     val SYNC_CONFIG_SET: Set<ConfigType> = java.util.Set.of(ConfigType.SYNC, ConfigType.REFRESH)
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun orderByReleaseStageAsc(releaseStages: List<ReleaseStage>): List<ReleaseStage> =
       releaseStages
         .stream()
@@ -608,7 +608,7 @@ class JobCreationAndStatusUpdateHelper(
       list: List<T>,
       index: Int,
     ): T? {
-      Preconditions.checkNotNull(list)
+      requireNotNull(list)
       return if (list.size > index) {
         list[index]
       } else {

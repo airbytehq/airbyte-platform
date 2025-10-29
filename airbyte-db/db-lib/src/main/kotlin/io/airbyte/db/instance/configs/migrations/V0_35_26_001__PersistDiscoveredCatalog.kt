@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
@@ -30,7 +30,7 @@ class V0_35_26_001__PersistDiscoveredCatalog : BaseJavaMigration() {
     private const val ACTOR_CATALOG = "actor_catalog"
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun migrate(ctx: DSLContext) {
       createActorCatalog(ctx)
       createCatalogFetchEvent(ctx)

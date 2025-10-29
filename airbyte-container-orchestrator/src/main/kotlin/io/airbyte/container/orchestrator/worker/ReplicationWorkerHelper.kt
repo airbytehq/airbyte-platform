@@ -6,7 +6,7 @@ package io.airbyte.container.orchestrator.worker
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.io.LineGobbler
 import io.airbyte.config.FailureReason
 import io.airbyte.config.MapperConfig
@@ -255,7 +255,7 @@ class ReplicationWorkerHelper(
     return output
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun internalProcessMessageFromSource(sourceRawMessage: AirbyteMessage): AirbyteMessage? {
     updateRecordsCount()
     fieldSelector?.filterSelectedFields(sourceRawMessage)
@@ -305,7 +305,7 @@ class ReplicationWorkerHelper(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun internalProcessMessageFromDestination(destinationRawMessage: AirbyteMessage) {
     streamStatusTracker.track(destinationRawMessage)
     logger.debug { "State from destination: $destinationRawMessage" }

@@ -4,11 +4,11 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.ScopedConfigurationContextRequestBody
 import io.airbyte.api.model.generated.ScopedConfigurationContextResponse
 import io.airbyte.api.model.generated.ScopedConfigurationCreateRequestBody
 import io.airbyte.api.model.generated.ScopedConfigurationRead
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.handlers.helpers.ScopedConfigurationRelationshipResolver
 import io.airbyte.config.ConfigOriginType
@@ -117,7 +117,7 @@ open class ScopedConfigurationHandler
         ConfigScopeType.ACTOR -> resolveActorName(scopeId)
       }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun assertCreateRelatedRecordsExist(scopedConfigurationCreate: ScopedConfigurationCreateRequestBody) {
       try {
         getResourceName(ConfigResourceType.fromValue(scopedConfigurationCreate.resourceType), UUID.fromString(scopedConfigurationCreate.resourceId))
@@ -136,7 +136,7 @@ open class ScopedConfigurationHandler
       }
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun buildScopedConfigurationRead(scopedConfiguration: ScopedConfiguration): ScopedConfigurationRead =
       ScopedConfigurationRead()
         .id(scopedConfiguration.id.toString())
@@ -158,7 +158,7 @@ open class ScopedConfigurationHandler
         .createdAt(scopedConfiguration.createdAt?.let { unixTimestampToOffsetDateTime(it) })
         .expiresAt(scopedConfiguration.expiresAt?.let { LocalDate.parse(it) })
 
-    @VisibleForTesting
+    @InternalForTesting
     fun buildScopedConfiguration(scopedConfigurationCreate: ScopedConfigurationCreateRequestBody): ScopedConfiguration =
       ScopedConfiguration()
         .withId(uuidGenerator.get())

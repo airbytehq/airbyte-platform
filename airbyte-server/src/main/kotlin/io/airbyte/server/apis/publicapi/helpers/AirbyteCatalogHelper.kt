@@ -12,7 +12,6 @@ import com.cronutils.parser.CronParser
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.AirbyteCatalog
 import io.airbyte.api.model.generated.AirbyteStream
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
@@ -22,6 +21,7 @@ import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.helpers.CatalogConfigDiffHelper
 import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
@@ -101,7 +101,7 @@ object AirbyteCatalogHelper {
    * @param streamConfiguration The configuration input of a specific stream provided by the caller.
    * @param sourceStream The immutable schema defined by the source
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun validateFieldSelection(
     streamConfiguration: StreamConfiguration,
     sourceStream: AirbyteStream,

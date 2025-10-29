@@ -4,7 +4,7 @@
 
 package io.airbyte.workload.launcher
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
@@ -26,7 +26,7 @@ class StartupApplicationEventListener(
   private val launcherShutdownHelper: LauncherShutdownHelper,
   private val identityService: DataplaneIdentityService,
 ) : ApplicationEventListener<ServiceReadyEvent> {
-  @VisibleForTesting
+  @InternalForTesting
   var processorThread: Thread? = null
   var trackerThread: Thread? = null
 

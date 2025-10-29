@@ -4,7 +4,7 @@
 
 package io.airbyte.oauth.flows.facebook
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import java.net.http.HttpClient
 import java.util.function.Supplier
 
@@ -14,7 +14,7 @@ import java.util.function.Supplier
 class FacebookPagesOAuthFlow : FacebookOAuthFlow {
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   internal constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
   override fun getScopes(): String = SCOPES

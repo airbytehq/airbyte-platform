@@ -19,8 +19,6 @@ import io.micronaut.http.HttpStatus
 import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
 import java.io.IOException
-import java.util.Map
-import java.util.UUID
 
 /**
  * AutoDisableConnectionActivityImpl.

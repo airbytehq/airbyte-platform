@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import java.util.Map
 import java.util.Optional
 
 internal class GcsBucketSpecFetcherTest {
@@ -24,10 +23,10 @@ internal class GcsBucketSpecFetcherTest {
   lateinit var cloudSpecBlob: Blob
   private val defaultSpec: ConnectorSpecification =
     ConnectorSpecification()
-      .withConnectionSpecification(Jsons.jsonNode(Map.of("foo", "bar", "mode", "oss")))
+      .withConnectionSpecification(Jsons.jsonNode(mapOf("foo" to "bar", "mode" to "oss")))
   private val cloudSpec: ConnectorSpecification =
     ConnectorSpecification()
-      .withConnectionSpecification(Jsons.jsonNode(Map.of("foo", "bar", "mode", "cloud")))
+      .withConnectionSpecification(Jsons.jsonNode(mapOf("foo" to "bar", "mode" to "cloud")))
 
   @BeforeEach
   fun setup() {

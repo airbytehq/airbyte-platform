@@ -5,9 +5,14 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.REFRESH_TOKEN_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URI
@@ -34,9 +39,9 @@ class DestinationSnowflakeOAuthFlow(
     try {
       return URIBuilder(
         String.format(AUTHORIZE_URL, extractAuthorizeUrl(inputOAuthConfiguration)),
-      ).addParameter("client_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
-        .addParameter("response_type", "code")
+      ).addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
         .addParameter("state", getState())
         .build()
         .toString()
@@ -56,12 +61,11 @@ class DestinationSnowflakeOAuthFlow(
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("grant_type", "authorization_code")
-      .put("code", authCode)
-      .put("redirect_uri", redirectUrl)
-      .build()
+    mapOf(
+      GRANT_TYPE_KEY to "authorization_code",
+      AUTH_CODE_KEY to authCode,
+      REDIRECT_URI_KEY to redirectUrl,
+    )
 
   // --------------------------------------------
   override fun completeOAuthFlow(
@@ -127,8 +131,8 @@ class DestinationSnowflakeOAuthFlow(
       )
     }
 
-    if (data.has("refresh_token")) {
-      result["refresh_token"] = data["refresh_token"].asText()
+    if (data.has(REFRESH_TOKEN_KEY)) {
+      result[REFRESH_TOKEN_KEY] = data[REFRESH_TOKEN_KEY].asText()
     } else {
       throw IOException(
         String.format(

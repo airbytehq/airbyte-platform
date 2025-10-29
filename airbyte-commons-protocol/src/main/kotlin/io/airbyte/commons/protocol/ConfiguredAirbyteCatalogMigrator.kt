@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.protocol
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.protocol.migrations.ConfiguredAirbyteCatalogMigration
 import io.airbyte.commons.protocol.migrations.MigrationContainer
 import io.airbyte.commons.version.Version
@@ -67,7 +67,7 @@ class ConfiguredAirbyteCatalogMigrator(
   val mostRecentVersion: Version
     get() = migrationContainer.mostRecentVersion
 
-  @get:VisibleForTesting
+  @get:InternalForTesting
   val migrationKeys: Set<String>
     // Used for inspection of the injection
     get() = migrationContainer.migrationKeys

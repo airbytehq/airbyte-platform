@@ -38,6 +38,7 @@ dependencies {
   implementation(libs.bundles.keycloak.client)
   implementation(libs.micronaut.security.jwt)
 
+
   testImplementation(libs.assertj.core)
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.postgresql)

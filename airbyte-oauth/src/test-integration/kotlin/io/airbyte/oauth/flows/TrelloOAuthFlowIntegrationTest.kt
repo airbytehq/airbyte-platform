@@ -4,7 +4,6 @@
 
 package io.airbyte.oauth.flows
 
-import com.google.common.collect.ImmutableMap
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
@@ -12,10 +11,12 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.SourceOAuthParameter
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.data.services.OAuthService
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -61,7 +62,7 @@ class TrelloOAuthFlowIntegrationTest {
     val definitionId = UUID.randomUUID()
     val fullConfigAsString = Files.readString(CREDENTIALS_PATH)
     val credentialsJson = Jsons.deserialize(fullConfigAsString)
-    val clientId = credentialsJson["client_id"].asText()
+    val clientId = credentialsJson[CLIENT_ID_KEY].asText()
     val sourceOAuthParameter =
       SourceOAuthParameter()
         .withOauthParameterId(UUID.randomUUID())
@@ -69,11 +70,10 @@ class TrelloOAuthFlowIntegrationTest {
         .withWorkspaceId(workspaceId)
         .withConfiguration(
           Jsons.jsonNode(
-            ImmutableMap
-              .builder<Any, Any>()
-              .put("client_id", clientId)
-              .put("client_secret", credentialsJson["client_secret"].asText())
-              .build(),
+            mapOf(
+              CLIENT_ID_KEY to clientId,
+              CLIENT_SECRET_KEY to credentialsJson[CLIENT_SECRET_KEY].asText(),
+            ),
           ),
         )
     Mockito
@@ -95,7 +95,7 @@ class TrelloOAuthFlowIntegrationTest {
       Thread.sleep(1000)
       limit -= 1
     }
-    Assertions.assertTrue(serverHandler.isSucceeded, "Failed to get User consent on time")
+    assertTrue(serverHandler.isSucceeded, "Failed to get User consent on time")
     val params =
       trelloOAuthFlow.completeSourceOAuth(
         workspaceId,
@@ -108,9 +108,9 @@ class TrelloOAuthFlowIntegrationTest {
         sourceOAuthParameter.configuration,
       )
     log.info { "Response from completing OAuth Flow is: $params" }
-    Assertions.assertTrue(params.containsKey("token"))
-    Assertions.assertTrue(params.containsKey("key"))
-    Assertions.assertTrue(params["token"].toString().length > 0)
+    assertTrue(params.containsKey("token"))
+    assertTrue(params.containsKey("key"))
+    assertTrue(params["token"].toString().isNotEmpty())
   }
 
   internal class ServerHandler(

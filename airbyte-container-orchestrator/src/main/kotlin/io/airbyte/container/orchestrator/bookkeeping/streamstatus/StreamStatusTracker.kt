@@ -4,9 +4,9 @@
 
 package io.airbyte.container.orchestrator.bookkeeping.streamstatus
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.api.client.model.generated.StreamStatusRead
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.container.orchestrator.RateLimitedMessageHelper
 import io.airbyte.container.orchestrator.bookkeeping.events.StreamStatusUpdateEvent
 import io.airbyte.container.orchestrator.worker.ReplicationContextProvider
@@ -56,7 +56,7 @@ class StreamStatusTracker(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun trackStream(
     stream: StreamDescriptor,
     msg: AirbyteMessage,
@@ -100,7 +100,7 @@ class StreamStatusTracker(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun trackEvent(
     key: StreamStatusKey,
     msg: AirbyteTraceMessage,
@@ -124,7 +124,7 @@ class StreamStatusTracker(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun trackRecord(key: StreamStatusKey): StreamStatusValue {
     if (store.isRateLimited(key)) {
       store.setMetadata(key, null)
@@ -134,7 +134,7 @@ class StreamStatusTracker(
     return store.markStreamNotEmpty(key)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun trackStreamState(
     key: StreamStatusKey,
     msg: AirbyteStateMessage,
@@ -150,7 +150,7 @@ class StreamStatusTracker(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun trackGlobal(msg: AirbyteMessage) {
     if (msg.type == AirbyteMessage.Type.STATE && msg.state.type == AirbyteStateType.GLOBAL) {
       trackGlobalState(msg.state)
@@ -159,7 +159,7 @@ class StreamStatusTracker(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun trackGlobalState(msg: AirbyteStateMessage) {
     val id = getIdFromStateMessage(msg)
     logger.debug { "STATE with id $id for GLOBAL" }

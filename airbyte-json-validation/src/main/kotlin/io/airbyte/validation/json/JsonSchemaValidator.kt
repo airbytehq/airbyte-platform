@@ -5,8 +5,6 @@
 package io.airbyte.validation.json
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Preconditions
 import com.networknt.schema.JsonMetaSchema
 import com.networknt.schema.JsonNodePath
 import com.networknt.schema.JsonSchema
@@ -17,6 +15,7 @@ import com.networknt.schema.SchemaValidatorsConfig
 import com.networknt.schema.SpecVersion
 import com.networknt.schema.ValidationContext
 import com.networknt.schema.ValidationMessage
+import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import me.andrz.jackson.JsonContext
@@ -35,7 +34,7 @@ private val log = KotlinLogging.logger {}
  */
 @Singleton
 class JsonSchemaValidator
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     private val baseUri: URI?,
   ) {
@@ -64,12 +63,9 @@ class JsonSchemaValidator
       objectJson: JsonNode?,
     ): Boolean {
       val schema = schemaToValidators[schemaName]
-      Preconditions.checkNotNull(
-        schema,
-        "$schemaName needs to be initialised before calling this method",
-      )
+      requireNotNull(schema) { "$schemaName needs to be initialised before calling this method" }
 
-      val validate = schema!!.validate(objectJson)
+      val validate = schema.validate(objectJson)
       return validate.isEmpty()
     }
 
@@ -82,12 +78,9 @@ class JsonSchemaValidator
       objectNode: JsonNode?,
     ): Set<String> {
       val schema = schemaToValidators[schemaName]
-      Preconditions.checkNotNull(
-        schema,
-        "$schemaName needs to be initialised before calling this method",
-      )
+      requireNotNull(schema) { "$schemaName needs to be initialised before calling this method" }
 
-      val validationMessages = schema!!.validate(objectNode)
+      val validationMessages = schema.validate(objectNode)
       return validationMessages.stream().map { obj: ValidationMessage -> obj.message }.collect(Collectors.toSet())
     }
 
@@ -189,15 +182,15 @@ class JsonSchemaValidator
       schemaJson: JsonNode,
       objectJson: JsonNode,
     ): Set<ValidationMessage?> {
-      Preconditions.checkNotNull(schemaJson)
-      Preconditions.checkNotNull(objectJson)
+      requireNotNull(schemaJson)
+      requireNotNull(objectJson)
 
       val schema = getSchemaValidator(schemaJson)
       return schema.validate(objectJson)
     }
 
     /**
-     * Return a schema validator for a json schema, defaulting to the V7 Json schema.
+     * Return a schema validator for a json schema) { defaulting to the V7 Json schema.
      */
     private fun getSchemaValidator(schemaJson: JsonNode): JsonSchema {
       // Default to draft-07, but have handling for the other metaschemas that networknt supports

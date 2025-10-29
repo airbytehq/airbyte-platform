@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.development
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.db.Database
 import io.airbyte.db.factory.DSLContextFactory.create
 import io.airbyte.db.factory.DataSourceFactory.close
@@ -108,7 +108,7 @@ abstract class MigrationDevCenter protected constructor(
    * @param persistToFile file to persist to
    * @return schema
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun dumpSchema(persistToFile: Boolean = false): String {
     try {
       createContainer().use { container ->

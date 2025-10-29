@@ -4,7 +4,6 @@
 
 package io.airbyte.workload.launcher.pods
 
-import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
@@ -297,7 +296,7 @@ class KubePodClient(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun waitForPodInitComplete(
     pod: Pod,
     podLogLabel: String,

@@ -4,12 +4,12 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo
 import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo
 import io.airbyte.api.model.generated.ConnectorRolloutRead
 import io.airbyte.api.model.generated.ConnectorRolloutState
 import io.airbyte.api.model.generated.ConnectorRolloutStrategy
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.persistence.UserPersistence
@@ -39,7 +39,7 @@ open class ConnectorRolloutHelper
     private val userPersistence: UserPersistence,
     private val rolloutActorFinder: RolloutActorFinder,
   ) {
-    @VisibleForTesting
+    @InternalForTesting
     open fun buildConnectorRolloutRead(
       connectorRollout: ConnectorRollout,
       withActorSyncAndSelectionInfo: Boolean,

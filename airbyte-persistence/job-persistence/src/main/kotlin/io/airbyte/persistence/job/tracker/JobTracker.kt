@@ -7,9 +7,8 @@ package io.airbyte.persistence.job.tracker
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Preconditions
 import io.airbyte.analytics.TrackingClient
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.lang.Exceptions
 import io.airbyte.config.ActorDefinitionVersion
@@ -59,7 +58,7 @@ import java.util.stream.Collectors
  */
 @Singleton
 class JobTracker
-  @VisibleForTesting
+  @InternalForTesting
   internal constructor(
     private val jobPersistence: JobPersistence,
     private val workspaceHelper: WorkspaceHelper,
@@ -206,7 +205,7 @@ class JobTracker
         val jobConfig = JobConfigProxy(job.config)
         val configType = job.configType
         val allowedJob = Job.REPLICATION_TYPES.contains(configType)
-        Preconditions.checkArgument(allowedJob, "Job type $configType is not allowed!")
+        require(allowedJob) { "Job type $configType is not allowed!" }
         val jobId = job.id
         val lastAttempt = job.getLastAttempt()
         val attemptSyncConfig =
@@ -500,7 +499,7 @@ class JobTracker
       configType: ConfigType,
     ): Map<String, Any?> = generateJobMetadata(jobId, configType, 0, Optional.empty())
 
-    @VisibleForTesting
+    @InternalForTesting
     fun generateJobMetadata(
       jobId: String?,
       configType: ConfigType?,

@@ -6,7 +6,6 @@ package io.airbyte.commons.json
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
-import com.google.api.client.util.Preconditions
 import com.jayway.jsonpath.Configuration
 import com.jayway.jsonpath.JsonPath
 import com.jayway.jsonpath.Option
@@ -116,20 +115,17 @@ object JsonPaths {
    * @param jsonPath - path to validate
    */
   private fun assertIsJsonPath(jsonPath: String) {
-    Preconditions.checkArgument(jsonPath.startsWith("$"))
+    require(jsonPath.startsWith("$"))
   }
 
   /**
    * Attempt to detect if a JSONPath query could return more than 1 value. This assertion does NOT
-   * handle all cases, but at least a common on. We can add to it as we detect others.
+   * handle all cases) { but at least a common on. We can add to it as we detect others.
    *
    * @param jsonPath - path to validate
    */
   private fun assertIsSingleReturnQuery(jsonPath: String) {
-    Preconditions.checkArgument(
-      JsonPath.isPathDefinite(jsonPath),
-      "Cannot accept paths with wildcards because they may return more than one item.",
-    )
+    require(JsonPath.isPathDefinite(jsonPath)) { "Cannot accept paths with wildcards because they may return more than one item." }
   }
 
   /**
@@ -196,8 +192,8 @@ object JsonPaths {
 
     val jsonNodes = getValues(json, jsonPath)
 
-    Preconditions.checkState(jsonNodes.size <= 1, String.format("Path returned more than one item. path: %s items: %s", jsonPath, jsonNodes))
-    return if (jsonNodes.isEmpty()) Optional.empty<JsonNode>() else Optional.of<JsonNode>(jsonNodes.get(0)!!)
+    check(jsonNodes.size <= 1) { "Path returned more than one item. path: $jsonPath items: $jsonNodes" }
+    return if (jsonNodes.isEmpty()) Optional.empty<JsonNode>() else Optional.of<JsonNode>(jsonNodes.get(0))
   }
 
   /**
@@ -222,7 +218,7 @@ object JsonPaths {
    * dots, the method splits the string by dots and returns the last segment. If the input string does
    * not contain any dots, the method returns the input string itself.
    *
-   * @param string the input string to process
+   * @param jsonPath the input string to process
    * @return the final segment of the dot-separated string, or the input string if no dots are present
    */
   @JvmStatic
@@ -339,7 +335,7 @@ object JsonPaths {
         .parse(json)
         .read(jsonPath, ArrayNode::class.java)
         .toList()
-    } catch (e: PathNotFoundException) {
+    } catch (_: PathNotFoundException) {
       listOf()
     }
   }

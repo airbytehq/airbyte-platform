@@ -4,7 +4,7 @@
 
 package io.airbyte.config.init
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorType
 import io.airbyte.config.Notification
@@ -57,7 +57,7 @@ class BreakingChangeNotificationHelper {
     this.notificationClient = CustomerioNotificationClient(metricClient = metricClient)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   internal constructor(
     workspaceService: WorkspaceService,
     featureFlagClient: FeatureFlagClient,

@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.db.instance.DatabaseConstants.WORKSPACE_TABLE
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -36,7 +36,7 @@ class V0_50_24_002__BackfillBreakingChangeNotificationSettings : BaseJavaMigrati
     private const val CUSTOMERIO_NOTIFICATION_ITEM_VALUE = "customerio"
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun backfillNotificationSettings(ctx: DSLContext) {
       enableEmailNotificationsForUnsetSetting(ctx, BC_SYNC_DISABLED_NOTIFICATION_KEY)
       enableEmailNotificationsForUnsetSetting(ctx, BC_WARNING_NOTIFICATION_KEY)

@@ -5,9 +5,10 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
 import io.airbyte.oauth.BaseOAuthFlow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.oauth.MoreOAuthParameters
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -25,43 +26,36 @@ internal class SurveymonkeyOAuthFlowTest : BaseOAuthFlowTest() {
 
   override val expectedOutput: Map<String, String>
     get() =
-      java.util.Map.of(
-        "access_token",
-        "access_token_response",
-        "client_id",
-        MoreOAuthParameters.SECRET_MASK,
-        "client_secret",
-        MoreOAuthParameters.SECRET_MASK,
+      mapOf(
+        "access_token" to "access_token_response",
+        CLIENT_ID_KEY to MoreOAuthParameters.SECRET_MASK,
+        CLIENT_SECRET_KEY to MoreOAuthParameters.SECRET_MASK,
       )
 
   override val inputOAuthConfiguration: JsonNode
     get() =
       Jsons.jsonNode(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put("origin", "USA")
-          .build(),
+        mapOf(
+          "origin" to "USA",
+        ),
       )
 
   override val userInputFromConnectorConfigSpecification: JsonNode
-    get() = BaseOAuthFlowTest.Companion.getJsonSchema(java.util.Map.of<String, Any>("origin", "USA"))
+    get() = getJsonSchema(mapOf("origin" to "USA"))
 
   override val completeOAuthOutputSpecification: JsonNode
     get() =
-      BaseOAuthFlowTest.Companion.getJsonSchema(
-        java.util.Map.of<String, Any>(
-          "access_token",
-          java.util.Map.of<String, String>("type", "string"),
+      getJsonSchema(
+        mapOf(
+          "access_token" to mapOf(TYPE to STRING),
         ),
       )
 
   override val expectedFilteredOutput: Map<String, String>
     get() =
-      java.util.Map.of(
-        "access_token",
-        "access_token_response",
-        "client_id",
-        MoreOAuthParameters.SECRET_MASK,
+      mapOf(
+        "access_token" to "access_token_response",
+        CLIENT_ID_KEY to MoreOAuthParameters.SECRET_MASK,
       )
 
   @Test

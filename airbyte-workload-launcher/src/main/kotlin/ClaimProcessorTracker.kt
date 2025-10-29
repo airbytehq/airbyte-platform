@@ -4,7 +4,7 @@
 
 package io.airbyte.workload.launcher
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.micronaut.runtime.AirbyteWorkloadLauncherConfig
 import jakarta.inject.Singleton
 import java.util.concurrent.CountDownLatch
@@ -27,8 +27,8 @@ class ClaimProcessorTracker(
   // if we CountDownLatch provided an increment, we wouldn't need this.
   private val overflowCount = AtomicInteger(0)
 
-  @VisibleForTesting
   val count: Int
+    @InternalForTesting
     get() = latch.count.toInt() + overflowCount.get()
 
   fun trackNumberOfClaimsToResume(n: Int) {

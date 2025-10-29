@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.base.Preconditions
 import datadog.trace.api.Trace
 import io.airbyte.api.model.generated.AttemptInfoRead
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
@@ -95,8 +94,8 @@ class JobHistoryHandler(
 
   @Trace
   fun listJobsFor(request: JobListRequestBody): JobReadList {
-    Preconditions.checkNotNull(request.configTypes, "configType cannot be null.")
-    Preconditions.checkState(!request.configTypes.isEmpty(), "Must include at least one configType.")
+    requireNotNull(request.configTypes) { "configType cannot be null." }
+    check(!request.configTypes.isEmpty()) { "Must include at least one configType." }
 
     val configTypes =
       request.configTypes
@@ -167,8 +166,8 @@ class JobHistoryHandler(
   }
 
   fun listJobsForLight(request: JobListRequestBody): JobReadList {
-    Preconditions.checkNotNull(request.configTypes, "configType cannot be null.")
-    Preconditions.checkState(!request.configTypes.isEmpty(), "Must include at least one configType.")
+    requireNotNull(request.configTypes) { "configType cannot be null." }
+    check(!request.configTypes.isEmpty()) { "Must include at least one configType." }
 
     val configTypes =
       request.configTypes
@@ -239,8 +238,8 @@ class JobHistoryHandler(
   }
 
   fun listJobsForWorkspaces(request: JobListForWorkspacesRequestBody): JobReadList {
-    Preconditions.checkNotNull(request.configTypes, "configType cannot be null.")
-    Preconditions.checkState(!request.configTypes.isEmpty(), "Must include at least one configType.")
+    requireNotNull(request.configTypes) { "configType cannot be null." }
+    check(!request.configTypes.isEmpty()) { "Must include at least one configType." }
 
     val configTypes =
       request.configTypes

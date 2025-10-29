@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.temporal
 
-import com.google.common.collect.Sets
 import io.airbyte.commons.json.Jsons.emptyObject
 import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
 import io.airbyte.commons.temporal.config.TemporalQueueConfiguration
@@ -163,11 +162,11 @@ class TemporalClientTest {
 
       Mockito
         .doReturn(workflowIds)
-        .`when`<TemporalClient?>(temporalClient)
+        .`when`(temporalClient)
         .fetchClosedWorkflowsByStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED)
       Mockito
         .doReturn(workflowIds)
-        .`when`<TemporalClient?>(temporalClient)
+        .`when`(temporalClient)
         .filterOutRunningWorkspaceId(workflowIds)
       mockWorkflowStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED)
       temporalClient.restartClosedWorkflowByStatus(WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED)
@@ -355,7 +354,7 @@ class TemporalClientTest {
         .`when`(temporalClient)
         .submitConnectionUpdaterAsync(nonMigratedId)
 
-      temporalClient.migrateSyncIfNeeded(Sets.newHashSet(nonMigratedId, migratedId))
+      temporalClient.migrateSyncIfNeeded(setOf(nonMigratedId, migratedId))
 
       Mockito.verify(temporalClient, Mockito.times(1)).submitConnectionUpdaterAsync(nonMigratedId)
       Mockito.verify(temporalClient, Mockito.times(0)).submitConnectionUpdaterAsync(migratedId)

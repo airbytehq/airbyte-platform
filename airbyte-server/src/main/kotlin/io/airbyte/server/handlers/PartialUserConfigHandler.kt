@@ -4,7 +4,6 @@
 
 package io.airbyte.server.handlers
 
-import com.cronutils.utils.VisibleForTesting
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -24,6 +23,7 @@ import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SyncMode
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.handlers.SourceHandler
@@ -340,7 +340,7 @@ class PartialUserConfigHandler(
    * @param configTemplateRead The ConfigTemplateRead containing the user config specification
    * @return A JsonNode with only the properties specified in the template spec
    */
-  @VisibleForTesting
+  @InternalForTesting
   internal fun filterConnectionConfigurationBySpec(
     sourceRead: SourceRead,
     configTemplateRead: ConfigTemplateWithActorDetails,
@@ -359,7 +359,7 @@ class PartialUserConfigHandler(
   /**
    * Recursively filters a JsonNode according to a JSON schema
    */
-  @VisibleForTesting
+  @InternalForTesting
   internal fun filterJsonNodeBySchema(
     node: JsonNode,
     schema: JsonNode,

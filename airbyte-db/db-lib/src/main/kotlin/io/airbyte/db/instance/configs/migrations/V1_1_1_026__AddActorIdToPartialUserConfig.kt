@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
@@ -29,7 +29,7 @@ class V1_1_1_026__AddActorIdToPartialUserConfig : BaseJavaMigration() {
     const val ACTOR_TABLE: String = "actor"
     const val ACTOR_ID_FIELD: String = "actor_id"
 
-    @VisibleForTesting
+    @InternalForTesting
     fun addActorIdFieldAndForeignKeyConstraint(ctx: DSLContext) {
       ctx
         .alterTable(PARTIAL_USER_CONFIG_TABLE_NAME)

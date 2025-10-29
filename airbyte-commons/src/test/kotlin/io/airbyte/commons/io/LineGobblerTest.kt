@@ -4,10 +4,10 @@
 
 package io.airbyte.commons.io
 
-import com.google.common.collect.ImmutableMap
 import com.google.common.util.concurrent.MoreExecutors
 import io.airbyte.commons.logging.MdcScope
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.function.Executable
 import org.mockito.ArgumentMatchers
@@ -26,7 +26,7 @@ internal class LineGobblerTest {
     val `is`: InputStream = ByteArrayInputStream("test\ntest2\n".toByteArray(StandardCharsets.UTF_8))
     val executor: ExecutorService = Mockito.spy(MoreExecutors.newDirectExecutorService())
 
-    executor.submit<Void?>(LineGobbler(`is`, consumer, executor, ImmutableMap.of<String, String>()))
+    executor.submit<Void?>(LineGobbler(`is`, consumer, executor, emptyMap()))
 
     Mockito.verify(consumer).accept("test")
     Mockito.verify(consumer).accept("test2")
@@ -39,7 +39,7 @@ internal class LineGobblerTest {
     val `is`: InputStream = ByteArrayInputStream("test\ntest2\n".toByteArray(StandardCharsets.UTF_8))
     val executor: ExecutorService = Mockito.spy(MoreExecutors.newDirectExecutorService())
 
-    executor.submit<Void?>(LineGobbler(`is`, consumer, executor, ImmutableMap.of<String, String>()))
+    executor.submit<Void?>(LineGobbler(`is`, consumer, executor, emptyMap()))
 
     Mockito.verify(consumer, Mockito.times(2)).accept(ArgumentMatchers.anyString())
     Mockito.verify(executor).shutdown()
@@ -52,7 +52,7 @@ internal class LineGobblerTest {
     val `is`: InputStream = ByteArrayInputStream("test\ntest2\n".toByteArray(StandardCharsets.UTF_8))
     val executor: ExecutorService = Mockito.spy(MoreExecutors.newDirectExecutorService())
 
-    executor.submit<Void?>(LineGobbler(`is`, consumer, executor, ImmutableMap.of<String, String>()))
+    executor.submit<Void?>(LineGobbler(`is`, consumer, executor, emptyMap()))
 
     Mockito.verify(consumer).accept(ArgumentMatchers.anyString())
     Mockito.verify(executor).shutdown()
@@ -64,8 +64,8 @@ internal class LineGobblerTest {
     val mdcBuilder = Mockito.mock(MdcScope.Builder::class.java)
     val `is`: InputStream? = null
 
-    Assertions.assertDoesNotThrow(
-      Executable {
+    assertDoesNotThrow(
+      {
         LineGobbler.gobble(`is`, consumer, "test", mdcBuilder, Executors.newSingleThreadExecutor())
       },
     )

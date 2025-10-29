@@ -4,7 +4,7 @@
 
 package io.airbyte.config.init
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
@@ -98,7 +98,7 @@ class SupportStateUpdater(
    * @param actorDefinitionVersions - the actor definition versions for a specific actor definition.
    * @return SupportStateUpdate
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun getSupportStateUpdate(
     currentDefaultVersion: Version,
     referenceDate: LocalDate?,
@@ -168,7 +168,7 @@ class SupportStateUpdater(
    * Updates the version support states for all source and destination definitions based on a
    * reference date, and disables syncs with unsupported versions.
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun updateSupportStates(referenceDate: LocalDate?) {
     log.info { "Updating support states for all definitions" }
     val sourceDefinitions = sourceService.listPublicSourceDefinitions(false)
@@ -262,7 +262,7 @@ class SupportStateUpdater(
     log.info { "Finished updating support states for all definitions" }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun buildSourceNotificationData(
     sourceDefinition: StandardSourceDefinition,
     breakingChange: ActorDefinitionBreakingChange,
@@ -285,7 +285,7 @@ class SupportStateUpdater(
     )
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun buildDestinationNotificationData(
     destinationDefinition: StandardDestinationDefinition,
     breakingChange: ActorDefinitionBreakingChange,

@@ -5,7 +5,6 @@
 package io.airbyte.workers
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.function.CheckedSupplier
@@ -19,6 +18,7 @@ import io.airbyte.api.client.model.generated.ConnectionStateType
 import io.airbyte.api.client.model.generated.SaveStreamAttemptMetadataRequestBody
 import io.airbyte.api.client.model.generated.StreamAttemptMetadata
 import io.airbyte.api.client.model.generated.SyncInput
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.converters.ApiClientConverters.Companion.toInternal
 import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.converters.StateConverter.fromClientToApi
@@ -206,7 +206,7 @@ class ReplicationInputHydrator(
       .withDestinationSupportsRefreshes(replicationActivityInput.supportsRefreshes)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun trackBackfillAndResume(
     jobId: Long,
     attemptNumber: Long,

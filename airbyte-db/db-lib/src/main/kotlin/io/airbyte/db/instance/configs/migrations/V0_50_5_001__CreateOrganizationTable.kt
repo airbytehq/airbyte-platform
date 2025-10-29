@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
@@ -28,7 +28,7 @@ class V0_50_5_001__CreateOrganizationTable : BaseJavaMigration() {
 
   companion object {
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun createOrganization(ctx: DSLContext) {
       val id = DSL.field("id", SQLDataType.UUID.nullable(false))
       val name = DSL.field("name", SQLDataType.VARCHAR(256).nullable(false))

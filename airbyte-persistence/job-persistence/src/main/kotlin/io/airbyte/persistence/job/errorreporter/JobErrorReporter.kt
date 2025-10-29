@@ -4,7 +4,6 @@
 
 package io.airbyte.persistence.job.errorreporter
 
-import com.google.common.collect.ImmutableSet
 import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.commons.lang.Exceptions
 import io.airbyte.config.ActorType
@@ -421,7 +420,7 @@ class JobErrorReporter(
     const val ORGANIZATION_ID_META_KEY = "organization_id"
 
     private val UNSUPPORTED_FAILURETYPES: Set<FailureReason.FailureType> =
-      ImmutableSet.of(
+      setOf(
         FailureReason.FailureType.CONFIG_ERROR,
         FailureReason.FailureType.MANUAL_CANCELLATION,
         FailureReason.FailureType.TRANSIENT_ERROR,

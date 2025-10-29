@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.temporal
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput
 import io.airbyte.micronaut.runtime.AirbyteTemporalConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -139,7 +139,7 @@ object TemporalWorkflowUtils {
    * @param airbyteTemporalConfig The Airbyte Temporal configuration
    * @return temporal service client
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun getAirbyteTemporalOptions(airbyteTemporalConfig: AirbyteTemporalConfig): WorkflowServiceStubsOptions =
     WorkflowServiceStubsOptions
       .newBuilder()

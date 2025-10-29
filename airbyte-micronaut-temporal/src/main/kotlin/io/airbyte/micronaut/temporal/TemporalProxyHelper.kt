@@ -4,7 +4,7 @@
 
 package io.airbyte.micronaut.temporal
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.BeanRegistration
 import io.temporal.activity.ActivityOptions
@@ -135,7 +135,7 @@ class TemporalProxyHelper(
     return interceptor
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun setActivityStubGenerator(activityStubGenerator: TemporalActivityStubGeneratorFunction<Class<*>, ActivityOptions, Any>) {
     this.activityStubGenerator = Optional.ofNullable(activityStubGenerator)
   }

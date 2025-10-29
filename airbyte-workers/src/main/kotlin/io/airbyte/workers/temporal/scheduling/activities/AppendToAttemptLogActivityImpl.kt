@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.temporal.scheduling.activities
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.logging.MdcScope
@@ -26,7 +26,7 @@ class AppendToAttemptLogActivityImpl(
   @param:Named("workspaceRoot") private val workspaceRoot: Path,
 ) : AppendToAttemptLogActivity {
   @JvmField
-  @VisibleForTesting
+  @InternalForTesting
   var logger: Logger = LoggerFactory.getLogger(AppendToAttemptLogActivityImpl::class.java)
 
   override fun log(input: LogInput): LogOutput {

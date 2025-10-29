@@ -4,8 +4,7 @@
 
 package io.airbyte.data.services.impls.jooq
 
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.Sets
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfigNotFoundType
@@ -33,7 +32,7 @@ import java.util.stream.Stream
 
 @Singleton
 class OperationServiceJooqImpl
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     @Named("configDatabase") database: Database?,
   ) : OperationService {
@@ -97,12 +96,10 @@ class OperationServiceJooqImpl
             .selectFrom(Tables.CONNECTION_OPERATION)
             .where(Tables.CONNECTION_OPERATION.CONNECTION_ID.eq(connectionId))
             .fetchSet(Tables.CONNECTION_OPERATION.OPERATION_ID)
-        val existingOperationIdsToKeep: Set<UUID?> =
-          Sets.intersection(existingOperationIds, newOperationIds)
+        val existingOperationIdsToKeep: Set<UUID?> = existingOperationIds.intersect(newOperationIds)
 
         // DELETE existing connection_operation records that aren't in the input list
-        val operationIdsToDelete: Set<UUID?> =
-          Sets.difference(existingOperationIds, existingOperationIdsToKeep)
+        val operationIdsToDelete: Set<UUID?> = existingOperationIds - existingOperationIdsToKeep
 
         ctx
           .deleteFrom(Tables.CONNECTION_OPERATION)
@@ -111,8 +108,7 @@ class OperationServiceJooqImpl
           .execute()
 
         // INSERT connection_operation records that are in the input list and don't yet exist
-        val operationIdsToAdd: Set<UUID> =
-          Sets.difference(newOperationIds, existingOperationIdsToKeep)
+        val operationIdsToAdd: Set<UUID?> = newOperationIds - existingOperationIdsToKeep
 
         operationIdsToAdd.forEach(
           Consumer { operationId: UUID ->

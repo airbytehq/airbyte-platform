@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.AdvancedAuth
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead
@@ -12,6 +11,7 @@ import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId
 import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead
 import io.airbyte.api.model.generated.SourceIdRequestBody
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.converters.OauthModelConverter.getAdvancedAuth
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata.Companion.mock
@@ -146,7 +146,7 @@ open class ConnectorDefinitionSpecificationHandler(
     )
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getSourceSpecificationRead(
     sourceDefinition: StandardSourceDefinition,
     entitledConnectorSpec: EntitledConnectorSpec,
@@ -177,7 +177,7 @@ open class ConnectorDefinitionSpecificationHandler(
     return specRead
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getDestinationSpecificationRead(
     destinationDefinition: StandardDestinationDefinition,
     entitledConnectorSpec: EntitledConnectorSpec,

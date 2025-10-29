@@ -4,13 +4,13 @@
 
 package io.airbyte.config.helpers
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.Permission
 import java.util.EnumSet
 
 object PermissionHelper {
   @JvmField
-  @VisibleForTesting
+  @InternalForTesting
   val GRANTED_PERMISSION_TYPES_BY_DEFINED_PERMISSION_TYPE: Map<Permission.PermissionType, Set<Permission.PermissionType>> =
     mapOf(
       // Instance admin grants access to all permissions.

@@ -5,10 +5,9 @@
 package io.airbyte.data.services.impls.jooq
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Charsets
 import com.google.common.hash.Hashing
 import datadog.trace.api.Trace
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ActorCatalog.CatalogType
@@ -38,7 +37,7 @@ import java.util.stream.Collectors
 
 @Singleton
 class CatalogServiceJooqImpl
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     @Named("configDatabase") database: Database?,
   ) : CatalogService {

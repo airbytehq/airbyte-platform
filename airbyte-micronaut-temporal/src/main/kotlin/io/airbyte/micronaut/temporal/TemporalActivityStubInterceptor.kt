@@ -4,7 +4,7 @@
 
 package io.airbyte.micronaut.temporal
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.BeanRegistration
@@ -174,7 +174,7 @@ class TemporalActivityStubInterceptor<T : Any>(
     activityOptions: ActivityOptions,
   ): Any = activityStubGenerator.apply(activityStubField.type, activityOptions)
 
-  @VisibleForTesting
+  @InternalForTesting
   fun setActivityStubGenerator(activityStubGenerator: TemporalActivityStubGeneratorFunction<Class<*>, ActivityOptions, Any>) {
     this.activityStubGenerator = activityStubGenerator
   }

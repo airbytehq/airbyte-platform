@@ -5,9 +5,14 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URI
@@ -40,10 +45,10 @@ class OktaOAuthFlow(
         .setScheme("https")
         .setHost("$domain.okta.com")
         .setPath("oauth2/v1/authorize") // required
-        .addParameter("client_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
-        .addParameter("scope", "okta.users.read okta.logs.read okta.groups.read okta.roles.read offline_access")
-        .addParameter("response_type", "code")
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
+        .addParameter(SCOPE_KEY, "okta.users.read okta.logs.read okta.groups.read okta.roles.read offline_access")
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
         .addParameter("state", getState())
 
     try {
@@ -59,12 +64,11 @@ class OktaOAuthFlow(
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("code", authCode)
-      .put("redirect_uri", redirectUrl)
-      .put("grant_type", "authorization_code")
-      .build()
+    mapOf(
+      AUTH_CODE_KEY to authCode,
+      REDIRECT_URI_KEY to redirectUrl,
+      GRANT_TYPE_KEY to "authorization_code",
+    )
 
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String {
     // getting domain value from user's config

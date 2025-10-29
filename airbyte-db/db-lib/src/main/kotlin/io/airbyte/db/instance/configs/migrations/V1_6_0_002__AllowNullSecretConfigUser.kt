@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
@@ -29,7 +29,7 @@ class V1_6_0_002__AllowNullSecretConfigUser : BaseJavaMigration() {
   companion object {
     private const val SECRET_CONFIG_TABLE_NAME = "secret_config"
 
-    @VisibleForTesting
+    @InternalForTesting
     fun dropExtraForeignKeyConstraint(ctx: DSLContext) {
       // This duplicate constraint was added in a previous migration.
       ctx
@@ -38,7 +38,7 @@ class V1_6_0_002__AllowNullSecretConfigUser : BaseJavaMigration() {
         .execute()
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun dropNotNullFromSecretConfigUserColumns(ctx: DSLContext) {
       ctx
         .alterTable(SECRET_CONFIG_TABLE_NAME)

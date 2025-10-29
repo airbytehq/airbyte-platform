@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.ConfigNotFoundException
@@ -77,7 +77,7 @@ class ScopedConfigurationRelationshipResolver
     /**
      * Returns the parent scope of the given type for the given scope.
      */
-    @VisibleForTesting
+    @InternalForTesting
     fun getParentScopeId(
       scopeType: ConfigScopeType,
       parentType: ConfigScopeType,
@@ -92,7 +92,7 @@ class ScopedConfigurationRelationshipResolver
     /**
      * Returns the child scopes of the given type for the given scope.
      */
-    @VisibleForTesting
+    @InternalForTesting
     fun getChildScopeIds(
       scopeType: ConfigScopeType,
       childType: ConfigScopeType,

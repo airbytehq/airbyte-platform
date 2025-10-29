@@ -4,7 +4,6 @@
 
 package io.airbyte.data.helpers
 
-import com.google.common.base.Preconditions
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
@@ -140,7 +139,7 @@ class WorkspaceHelper(
     val sourceWorkspace = getWorkspaceForSourceId(sourceId)
     val destinationWorkspace = getWorkspaceForDestinationId(destinationId)
 
-    Preconditions.checkArgument(sourceWorkspace == destinationWorkspace, "Source and destination must be from the same workspace!")
+    require(sourceWorkspace == destinationWorkspace) { "Source and destination must be from the same workspace!" }
     return sourceWorkspace
   }
 
@@ -163,7 +162,7 @@ class WorkspaceHelper(
     val sourceWorkspace = getWorkspaceForSourceIdIgnoreExceptions(sourceId)
     val destinationWorkspace = getWorkspaceForDestinationIdIgnoreExceptions(destinationId)
 
-    Preconditions.checkArgument(sourceWorkspace == destinationWorkspace, "Source and destination must be from the same workspace!")
+    require(sourceWorkspace == destinationWorkspace) { "Source and destination must be from the same workspace!" }
     return sourceWorkspace
   }
 

@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.version.Version
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.Nullable
@@ -29,7 +29,7 @@ class V0_50_41_012__BreakingChangePinDataMigration : BaseJavaMigration() {
     migrateBreakingChangePins(ctx)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun migrateBreakingChangePins(ctx: DSLContext) {
     getActorDefinitions(ctx).forEach {
       migrateBreakingChangePinsForDefinition(ctx, it)

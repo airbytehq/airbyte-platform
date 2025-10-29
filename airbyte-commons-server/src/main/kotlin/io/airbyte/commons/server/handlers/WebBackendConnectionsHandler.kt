@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.Lists
 import datadog.trace.api.Trace
 import io.airbyte.api.model.generated.AirbyteCatalog
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
@@ -45,6 +43,7 @@ import io.airbyte.api.model.generated.WebBackendOperationCreateOrUpdate
 import io.airbyte.api.model.generated.WebBackendWorkspaceState
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.converters.ApiConverters.Companion.toInternal
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
@@ -196,7 +195,7 @@ class WebBackendConnectionsHandler(
     val newestFetchEventsByActorId =
       catalogService.getMostRecentActorCatalogFetchEventForSources(sourceIds)
 
-    val connectionItems: MutableList<WebBackendConnectionListItem> = Lists.newArrayList()
+    val connectionItems: MutableList<WebBackendConnectionListItem> = mutableListOf()
 
     for (connectionWithJobInfo in connectionsWithJobInfo) {
       connectionItems.add(
@@ -498,7 +497,7 @@ class WebBackendConnectionsHandler(
    * @return merged catalog, most up-to-date schema with most up-to-date configurations from old
    * catalog
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun updateSchemaWithRefreshedDiscoveredCatalog(
     originalConfigured: AirbyteCatalog,
     originalDiscovered: AirbyteCatalog,
@@ -865,7 +864,7 @@ class WebBackendConnectionsHandler(
          * refresh, so if the most recent ActorCatalogFetchEvent has a different actor catalog than the
          * existing actor catalog, there is a schema change.
          */
-    @VisibleForTesting
+    @InternalForTesting
     @JvmStatic
     fun getSchemaChange(
       connectionRead: ConnectionRead?,
@@ -922,7 +921,7 @@ class WebBackendConnectionsHandler(
         .backfillPreference(connectionRead.backfillPreference)
         .tags(connectionRead.tags)
 
-    @VisibleForTesting
+    @InternalForTesting
     protected fun toOperationCreate(operationCreateOrUpdate: WebBackendOperationCreateOrUpdate): OperationCreate {
       val operationCreate = OperationCreate()
 
@@ -934,7 +933,7 @@ class WebBackendConnectionsHandler(
     }
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun toOperationUpdate(operationCreateOrUpdate: WebBackendOperationCreateOrUpdate): OperationUpdate {
       val operationUpdate = OperationUpdate()
 
@@ -945,7 +944,7 @@ class WebBackendConnectionsHandler(
       return operationUpdate
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     @JvmStatic
     fun toConnectionCreate(
       webBackendConnectionCreate: WebBackendConnectionCreate,
@@ -985,7 +984,7 @@ class WebBackendConnectionsHandler(
      *
      * The return value is used as a patch -- a field set to null means that it should not be modified.
      */
-    @VisibleForTesting
+    @InternalForTesting
     @JvmStatic
     fun toConnectionPatch(
       webBackendConnectionPatch: WebBackendConnectionUpdate,
@@ -1021,7 +1020,7 @@ class WebBackendConnectionsHandler(
     }
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun getStreamsToReset(catalogDiff: CatalogDiff): List<StreamDescriptor> =
       catalogDiff.transforms
         .stream()

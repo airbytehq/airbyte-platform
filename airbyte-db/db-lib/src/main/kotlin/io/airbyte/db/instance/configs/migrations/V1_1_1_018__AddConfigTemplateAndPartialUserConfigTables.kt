@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
@@ -54,13 +54,13 @@ class V1_1_1_018__AddConfigTemplateAndPartialUserConfigTables : BaseJavaMigratio
     const val ORGANIZATION_TABLE: String = "organization"
     const val ACTOR_DEFINITION_VERSION_TABLE: String = "actor_definition_version"
 
-    @VisibleForTesting
+    @InternalForTesting
     fun doMigration(ctx: DSLContext) {
       createConfigTemplateTable(ctx)
       createPartialUserConfigTable(ctx)
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun createConfigTemplateTable(ctx: DSLContext) {
       // Create config_template table
       ctx
@@ -98,7 +98,7 @@ class V1_1_1_018__AddConfigTemplateAndPartialUserConfigTables : BaseJavaMigratio
         ).execute()
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun createPartialUserConfigTable(ctx: DSLContext) {
       // Create partial_user_config table
       ctx

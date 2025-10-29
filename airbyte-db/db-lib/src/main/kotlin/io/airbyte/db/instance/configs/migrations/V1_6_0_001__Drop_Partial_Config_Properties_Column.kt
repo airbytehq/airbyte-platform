@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
@@ -25,7 +25,7 @@ class V1_6_0_001__Drop_Partial_Config_Properties_Column : BaseJavaMigration() {
     private const val PARTIAL_USER_CONFIG_TABLE_NAME: String = "partial_user_config"
     private const val PARTIAL_USER_CONFIG_CONFIGURATION_COLUMN_NAME: String = "partial_user_config_properties"
 
-    @VisibleForTesting
+    @InternalForTesting
     fun dropConfigurationColumn(ctx: DSLContext) {
       ctx
         .alterTable(PARTIAL_USER_CONFIG_TABLE_NAME)

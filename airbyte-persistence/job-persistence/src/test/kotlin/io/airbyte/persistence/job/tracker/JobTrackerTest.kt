@@ -7,7 +7,6 @@ package io.airbyte.persistence.job.tracker
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.common.base.Preconditions
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.commons.json.Jsons.arrayNode
 import io.airbyte.commons.json.Jsons.deserialize
@@ -78,7 +77,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import java.io.IOException
-import java.util.Arrays
 import java.util.List
 import java.util.Map
 import java.util.Optional
@@ -1294,7 +1292,7 @@ internal class JobTrackerTest {
       val outputMap: MutableMap<K?, V?> = HashMap()
 
       for (map in maps) {
-        Preconditions.checkNotNull(map!!)
+        requireNotNull(map!!)
         outputMap.putAll(map)
       }
 

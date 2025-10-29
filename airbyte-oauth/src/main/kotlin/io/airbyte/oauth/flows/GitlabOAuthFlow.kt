@@ -5,8 +5,15 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.REFRESH_TOKEN_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -34,11 +41,11 @@ class GitlabOAuthFlow : BaseOAuth2Flow {
         .setScheme("https")
         .setHost(getDomain(inputOAuthConfiguration))
         .setPath("oauth/authorize")
-        .addParameter("client_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
         .addParameter("state", getState())
-        .addParameter("response_type", "code")
-        .addParameter("scope", "read_api")
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
+        .addParameter(SCOPE_KEY, "read_api")
     try {
       return builder.build().toString()
     } catch (e: URISyntaxException) {
@@ -57,22 +64,21 @@ class GitlabOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>()
-      .put("client_id", clientId)
-      .put("client_secret", clientSecret)
-      .put("code", authCode)
-      .put("grant_type", "authorization_code")
-      .put("redirect_uri", redirectUrl)
-      .build()
+    mapOf(
+      CLIENT_ID_KEY to clientId,
+      CLIENT_SECRET_KEY to clientSecret,
+      AUTH_CODE_KEY to authCode,
+      GRANT_TYPE_KEY to "authorization_code",
+      REDIRECT_URI_KEY to redirectUrl,
+    )
 
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,
   ): Map<String, Any> {
-    val result: MutableMap<String, Any> = HashMap()
-    if (data.has("refresh_token")) {
-      result["refresh_token"] = data["refresh_token"].asText()
+    val result: MutableMap<String, Any> = mutableMapOf()
+    if (data.has(REFRESH_TOKEN_KEY)) {
+      result[REFRESH_TOKEN_KEY] = data[REFRESH_TOKEN_KEY].asText()
     } else {
       throw IOException(String.format("Missing 'refresh_token' in query params from %s", accessTokenUrl))
     }

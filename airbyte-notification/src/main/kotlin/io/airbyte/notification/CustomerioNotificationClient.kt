@@ -9,12 +9,12 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.common.StreamDescriptorUtils.buildFieldName
 import io.airbyte.api.common.StreamDescriptorUtils.buildFullyQualifiedName
 import io.airbyte.api.model.generated.FieldTransform
 import io.airbyte.api.model.generated.StreamAttributeTransform
 import io.airbyte.api.model.generated.StreamTransform
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.lang.Exceptions
@@ -351,7 +351,7 @@ class CustomerioNotificationClient(
     workspaceId: UUID?,
   ): Boolean = sendNotifyRequest(CUSTOMERIO_EMAIL_API_ENDPOINT, requestPayload, workspaceId)
 
-  @VisibleForTesting
+  @InternalForTesting
   fun notifyByEmailBroadcast(
     broadcastId: String?,
     emails: List<String>,
@@ -383,7 +383,7 @@ class CustomerioNotificationClient(
     return sendNotifyRequest(broadcastTriggerUrl, payload, null)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun sendNotifyRequest(
     urlEndpoint: String,
     payload: String,
@@ -527,7 +527,7 @@ class CustomerioNotificationClient(
     }
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun buildSchemaChangeJson(
       notification: SchemaUpdateNotification,
       recipient: String,

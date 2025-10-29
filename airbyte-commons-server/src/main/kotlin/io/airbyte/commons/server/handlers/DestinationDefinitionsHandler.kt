@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.ActorDefinitionIdWithScope
 import io.airbyte.api.model.generated.CustomDestinationDefinitionCreate
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId
@@ -19,6 +18,7 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.lang.Exceptions
@@ -64,7 +64,7 @@ import java.util.stream.Stream
  */
 @Singleton
 open class DestinationDefinitionsHandler
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     private val actorDefinitionService: ActorDefinitionService,
     @param:Named("uuidGenerator") private val uuidSupplier: Supplier<UUID>,
@@ -90,7 +90,7 @@ open class DestinationDefinitionsHandler
       return buildDestinationDefinitionRead(destinationDefinition, destinationVersion)
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun buildDestinationDefinitionRead(
       standardDestinationDefinition: StandardDestinationDefinition,
       destinationVersion: ActorDefinitionVersion,
@@ -446,7 +446,7 @@ open class DestinationDefinitionsHandler
       return updatedDestinationDefinition
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun buildDestinationDefinitionUpdate(
       currentDestination: StandardDestinationDefinition,
       name: String?,

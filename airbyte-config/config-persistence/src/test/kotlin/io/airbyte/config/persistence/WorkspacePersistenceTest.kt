@@ -54,7 +54,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.mockito.Mockito
-import org.testcontainers.shaded.com.google.common.collect.ImmutableMap
 import java.io.IOException
 import java.util.Optional
 import java.util.Set
@@ -1270,7 +1269,7 @@ internal class WorkspacePersistenceTest : BaseConfigDatabaseTest() {
     private val SOURCE_ID: UUID = UUID.randomUUID()
     private val DESTINATION_DEFINITION_ID: UUID = UUID.randomUUID()
     private val DESTINATION_ID: UUID = UUID.randomUUID()
-    private val CONFIG = jsonNode<ImmutableMap<String?, String?>?>(ImmutableMap.of<String?, String?>("key-a", "value-a"))
+    private val CONFIG = jsonNode(mapOf("key-a" to "value-a"))
 
     private fun createBaseStandardWorkspace(): StandardWorkspace =
       StandardWorkspace()

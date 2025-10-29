@@ -21,6 +21,7 @@ dependencies {
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
 
+
   testImplementation(libs.mockk)
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)

@@ -20,6 +20,8 @@ dependencies {
 
   implementation(project(":oss:airbyte-commons-temporal-core"))
 
+  compileOnly(project(":oss:airbyte-commons"))
+
   testImplementation(libs.assertj.core)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.junit.pioneer)

@@ -5,9 +5,12 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Preconditions
+import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -21,7 +24,7 @@ import java.util.function.Supplier
 class IntercomOAuthFlow : BaseOAuth2Flow {
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
   override fun formatConsentUrl(
@@ -32,9 +35,9 @@ class IntercomOAuthFlow : BaseOAuth2Flow {
   ): String {
     try {
       return URIBuilder(AUTHORIZE_URL)
-        .addParameter("client_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
-        .addParameter("response_type", "code")
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
         .addParameter("state", getState())
         .build()
         .toString()
@@ -51,8 +54,8 @@ class IntercomOAuthFlow : BaseOAuth2Flow {
   ): Map<String, Any> {
     // Intercom does not have refresh token but calls it "long lived access token" instead:
     // see https://developers.intercom.com/building-apps/docs/setting-up-oauth
-    Preconditions.checkArgument(data.has("access_token"), "Missing 'access_token' in query params from %s", ACCESS_TOKEN_URL)
-    return java.util.Map.of<String, Any>("access_token", data["access_token"].asText())
+    require(data.has("access_token")) { "Missing 'access_token' in query params from $ACCESS_TOKEN_URL" }
+    return mapOf("access_token" to data["access_token"].asText())
   }
 
   override fun getDefaultOAuthOutputPath(): List<String> = listOf()

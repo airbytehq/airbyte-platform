@@ -7,7 +7,7 @@ package io.airbyte.data.services.impls.data
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.google.cloud.storage.Blob
 import com.google.cloud.storage.Storage
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.CustomerTier
 import io.airbyte.data.config.OrganizationCustomerAttributesServiceConfig
 import io.airbyte.data.services.OrganizationCustomerAttributesService
@@ -51,7 +51,7 @@ open class OrganizationCustomerAttributesServiceDataImpl(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun getMostRecentFile(storage: Storage): Blob? {
     val blobs = storage.list(airbyteConnectorRolloutConfig.gcs.bucketName)?.iterateAll()
     return if (blobs == null) {
@@ -63,7 +63,7 @@ open class OrganizationCustomerAttributesServiceDataImpl(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun extractTimestamp(fileName: String): Long {
     logger.info { "OrganizationCustomerAttributesServiceDataImpl.extractTimestamp fileName=$fileName" }
     return try {
@@ -75,7 +75,7 @@ open class OrganizationCustomerAttributesServiceDataImpl(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun readFileContent(blob: Blob): Map<UUID, CustomerTier?> =
     try {
       val content = blob.getContent()
@@ -88,7 +88,7 @@ open class OrganizationCustomerAttributesServiceDataImpl(
       emptyMap()
     }
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun parseJsonLine(line: String): OrganizationCustomerTierMapping? {
     val jsonObject = jacksonObjectMapper().readTree(line)
     val organizationIdString = jsonObject["_airbyte_data"]?.get("organization_id")?.asText() ?: return null

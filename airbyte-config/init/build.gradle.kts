@@ -29,6 +29,7 @@ dependencies {
   implementation(libs.semver4j)
   implementation(libs.kotlin.logging)
 
+
   testImplementation(project(":oss:airbyte-test-utils"))
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)

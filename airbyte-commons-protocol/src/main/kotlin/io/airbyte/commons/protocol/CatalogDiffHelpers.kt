@@ -5,8 +5,7 @@
 package io.airbyte.commons.protocol
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.Sets
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.protocol.transformmodels.FieldTransform
 import io.airbyte.commons.protocol.transformmodels.FieldTransform.Companion.createAddFieldTransform
 import io.airbyte.commons.protocol.transformmodels.FieldTransform.Companion.createRemoveFieldTransform
@@ -47,7 +46,7 @@ object CatalogDiffHelpers {
    * @return a set of all keys for all objects within the node
    */
   @JvmStatic
-  @VisibleForTesting
+  @InternalForTesting
   fun getAllFieldNames(jsonSchema: JsonNode): Set<String?> =
     getFullyQualifiedFieldNamesWithTypes(jsonSchema)
       .asSequence()
@@ -77,7 +76,7 @@ object CatalogDiffHelpers {
    * preorder.
    */
   @JvmStatic
-  @VisibleForTesting
+  @InternalForTesting
   fun getFullyQualifiedFieldNamesWithTypes(jsonSchema: JsonNode): List<Pair<List<String>, JsonNode>> {
     // if this were ever a performance issue, it could be replaced with a trie. this seems unlikely,
     // however.
@@ -156,7 +155,7 @@ object CatalogDiffHelpers {
       .withNamespace(airbyteStream.namespace)
 
   /**
-   * Returns difference between two provided catalogs.
+   * Returns the difference between two provided catalogs.
    *
    * @param oldCatalog - old catalog
    * @param newCatalog - new catalog
@@ -168,7 +167,7 @@ object CatalogDiffHelpers {
     newCatalog: AirbyteCatalog,
     configuredCatalog: ConfiguredAirbyteCatalog,
   ): Set<StreamTransform> {
-    val streamTransforms: MutableSet<StreamTransform> = HashSet()
+    val streamTransforms: MutableSet<StreamTransform> = mutableSetOf()
 
     val descriptorToStreamOld =
       streamDescriptorToMap(
@@ -179,49 +178,41 @@ object CatalogDiffHelpers {
         newCatalog,
       )
 
-    Sets
-      .difference(descriptorToStreamOld.keys, descriptorToStreamNew.keys)
-      .forEach(
-        Consumer { descriptor: StreamDescriptor? ->
-          streamTransforms.add(
-            createRemoveStreamTransform(descriptor!!),
-          )
-        },
-      )
-    Sets
-      .difference(descriptorToStreamNew.keys, descriptorToStreamOld.keys)
-      .forEach(
-        Consumer { descriptor: StreamDescriptor? ->
-          streamTransforms.add(
-            createAddStreamTransform(descriptor!!),
-          )
-        },
-      )
-    Sets
-      .intersection(descriptorToStreamOld.keys, descriptorToStreamNew.keys)
-      .forEach(
-        Consumer { descriptor: StreamDescriptor? ->
-          val streamOld = descriptorToStreamOld[descriptor]
-          val streamNew = descriptorToStreamNew[descriptor]
-
-          val stream =
-            configuredCatalog.streams
-              .stream()
-              .filter { s: ConfiguredAirbyteStream ->
-                s.stream.namespace == descriptor!!.namespace &&
-                  s.stream.name == descriptor.name
-              }.findFirst()
-          if (streamOld != streamNew && stream.isPresent) {
-            // getStreamDiff only checks for differences in the stream's field name or field type
-            // but there are a number of reasons the streams might be different (such as a source-defined
-            // primary key or cursor changing). These should not be expressed as "stream updates".
-            val streamTransform = getStreamDiff(streamOld!!, streamNew!!, stream)
-            if (!streamTransform.fieldTransforms.isEmpty() || !streamTransform.attributeTransforms.isEmpty()) {
-              streamTransforms.add(createUpdateStreamTransform(descriptor!!, streamTransform))
+    streamTransforms.addAll(
+      descriptorToStreamOld.keys
+        .minus(
+          descriptorToStreamNew.keys,
+        ).map { descriptor: StreamDescriptor -> createRemoveStreamTransform(descriptor) }
+        .toList(),
+    )
+    streamTransforms.addAll(
+      descriptorToStreamNew.keys
+        .minus(descriptorToStreamOld.keys)
+        .map { descriptor: StreamDescriptor ->
+          createAddStreamTransform(descriptor)
+        }.toList(),
+    )
+    descriptorToStreamOld.keys
+      .intersect(descriptorToStreamNew.keys)
+      .forEach { streamDescriptor: StreamDescriptor ->
+        configuredCatalog.streams
+          .find { s: ConfiguredAirbyteStream ->
+            s.stream.namespace == streamDescriptor.namespace &&
+              s.stream.name == streamDescriptor.name
+          }?.let { stream ->
+            val streamOld = descriptorToStreamOld[streamDescriptor]
+            val streamNew = descriptorToStreamNew[streamDescriptor]
+            if (streamOld != streamNew && streamOld != null && streamNew != null) {
+              // getStreamDiff only checks for differences in the stream's field name or field type
+              // but there are a number of reasons the streams might be different (such as a source-defined
+              // primary key or cursor changing). These should not be expressed as "stream updates".
+              val streamTransform = getStreamDiff(streamOld, streamNew, stream)
+              if (streamTransform.fieldTransforms.isNotEmpty() || streamTransform.attributeTransforms.isNotEmpty()) {
+                streamTransforms.add(createUpdateStreamTransform(streamDescriptor, streamTransform))
+              }
             }
           }
-        },
-      )
+      }
 
     return streamTransforms
   }
@@ -229,7 +220,7 @@ object CatalogDiffHelpers {
   private fun getStreamDiff(
     streamOld: AirbyteStream,
     streamNew: AirbyteStream,
-    configuredStream: Optional<ConfiguredAirbyteStream>,
+    configuredStream: ConfiguredAirbyteStream,
   ): UpdateStreamTransform {
     val attributeTransforms: MutableSet<StreamAttributeTransform> = HashSet()
     if (streamOld.sourceDefinedPrimaryKey != streamNew.sourceDefinedPrimaryKey) {
@@ -257,30 +248,25 @@ object CatalogDiffHelpers {
           acc
         }
 
-    Sets
-      .difference(fieldNameToTypeOld.keys, fieldNameToTypeNew.keys)
-      .forEach(
-        Consumer { fieldName: List<String> ->
-          fieldTransforms.add(
-            createRemoveFieldTransform(
-              fieldName,
-              fieldNameToTypeOld[fieldName]!!,
-              fieldTransformBreaksConnection(configuredStream, fieldName),
-            ),
+    fieldTransforms.addAll(
+      fieldNameToTypeOld.keys
+        .minus(
+          fieldNameToTypeNew.keys,
+        ).map { fieldName: List<String> ->
+          createRemoveFieldTransform(
+            fieldName = fieldName,
+            schema = fieldNameToTypeOld[fieldName]!!,
+            breaking = fieldTransformBreaksConnection(configuredStream, fieldName),
           )
         },
-      )
-    Sets
-      .difference(fieldNameToTypeNew.keys, fieldNameToTypeOld.keys)
-      .forEach(
-        Consumer { fieldName: List<String> ->
-          fieldTransforms.add(
-            createAddFieldTransform(fieldName, fieldNameToTypeNew[fieldName]!!),
-          )
-        },
-      )
-    Sets
-      .intersection(fieldNameToTypeOld.keys, fieldNameToTypeNew.keys)
+    )
+    fieldTransforms.addAll(
+      fieldNameToTypeNew.keys.minus(fieldNameToTypeOld.keys).map { fieldName: List<String> ->
+        createAddFieldTransform(fieldName, fieldNameToTypeNew[fieldName]!!)
+      },
+    )
+    fieldNameToTypeOld.keys
+      .intersect(fieldNameToTypeNew.keys)
       .forEach(
         Consumer { fieldName: List<String>? ->
           val oldType = fieldNameToTypeOld[fieldName]
@@ -300,10 +286,10 @@ object CatalogDiffHelpers {
   }
 
   @JvmField
-  @VisibleForTesting
+  @InternalForTesting
   val DUPLICATED_SCHEMA: JsonNode = Jsons.jsonNode("Duplicated Schema")
 
-  @VisibleForTesting
+  @InternalForTesting
   @JvmStatic
   fun collectInHashMap(
     accumulator: MutableMap<List<String>, JsonNode>,
@@ -316,7 +302,7 @@ object CatalogDiffHelpers {
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   @JvmStatic
   fun combineAccumulator(
     accumulatorLeft: MutableMap<List<String>, JsonNode>,
@@ -332,32 +318,27 @@ object CatalogDiffHelpers {
   }
 
   fun primaryKeyTransformBreaksConnection(
-    configuredStream: Optional<ConfiguredAirbyteStream>,
+    configuredStream: ConfiguredAirbyteStream,
     newSourceDefinedPK: List<List<String?>?>,
   ): Boolean {
-    if (configuredStream.isEmpty || newSourceDefinedPK.isEmpty()) {
+    if (newSourceDefinedPK.isEmpty()) {
       return false
     }
 
-    val streamConfig = configuredStream.get()
-    val destinationSyncMode = streamConfig.destinationSyncMode
+    val destinationSyncMode = configuredStream.destinationSyncMode
 
     // Change is breaking if deduping and new source-defined PK was not the previously defined PK
     // Sets are used to compare the PKs in a way that ignores order
-    val oldPKSet = java.util.Set.copyOf(streamConfig.primaryKey)
-    val newPKSet = java.util.Set.copyOf(newSourceDefinedPK)
+    val oldPKSet = configuredStream.primaryKey?.toSet()
+    val newPKSet = newSourceDefinedPK.toSet()
     return isDedup(destinationSyncMode) && oldPKSet != newPKSet
   }
 
   fun fieldTransformBreaksConnection(
-    configuredStream: Optional<ConfiguredAirbyteStream>,
+    configuredStream: ConfiguredAirbyteStream,
     fieldName: List<String>?,
   ): Boolean {
-    if (configuredStream.isEmpty) {
-      return false
-    }
-
-    val streamConfig = configuredStream.get()
+    val streamConfig = configuredStream
 
     val syncMode = streamConfig.syncMode
     if (SyncMode.INCREMENTAL == syncMode && streamConfig.cursorField == fieldName) {

@@ -4,7 +4,7 @@
 
 package io.airbyte.container.orchestrator
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.logging.MdcScope
 import io.airbyte.container.orchestrator.worker.ReplicationJobOrchestrator
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -53,7 +53,7 @@ class Application(
    * the initialization as possible should go in here, so it's logged properly and the state storage
    * is updated appropriately.
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun run(): Int =
     // set mdc scope for the remaining execution
     replicationLogMdcBuilder.build().use { _ ->

@@ -4,15 +4,18 @@
 
 package io.airbyte.oauth.flows
 
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.SourceOAuthParameter
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.data.services.OAuthService
+import io.airbyte.oauth.AUTH_CODE_KEY
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.oauth.OAuthFlowImplementation
+import io.airbyte.oauth.REFRESH_TOKEN_KEY
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
@@ -52,13 +55,12 @@ class QuickbooksOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
         .withWorkspaceId(workspaceId)
         .withConfiguration(
           Jsons.jsonNode(
-            java.util.Map.of(
-              "credentials",
-              ImmutableMap
-                .builder<Any, Any>()
-                .put("client_id", credentialsJson["client_id"].asText())
-                .put("client_secret", credentialsJson["client_secret"].asText())
-                .build(),
+            mapOf(
+              "credentials" to
+                mapOf(
+                  CLIENT_ID_KEY to credentialsJson[CLIENT_ID_KEY].asText(),
+                  CLIENT_SECRET_KEY to credentialsJson[CLIENT_SECRET_KEY].asText(),
+                ),
             ),
           ),
         )
@@ -81,28 +83,28 @@ class QuickbooksOAuthFlowIntegrationTest : OAuthFlowIntegrationTest() {
       Thread.sleep(1000)
       limit -= 1
     }
-    Assertions.assertTrue(serverHandler.isSucceeded, "Failed to get User consent on time")
+    assertTrue(serverHandler.isSucceeded, "Failed to get User consent on time")
     val params =
       flow.completeSourceOAuth(
         workspaceId,
         definitionId,
-        mapOf("code" to serverHandler.paramValue),
+        mapOf(AUTH_CODE_KEY to serverHandler.paramValue),
         REDIRECT_URL,
         sourceOAuthParameter.configuration,
       )
 
     log.info { "Response from completing OAuth Flow is: $params" }
-    Assertions.assertTrue(params.containsKey("credentials"))
+    assertTrue(params.containsKey("credentials"))
     val credentials =
       Collections.unmodifiableMap(params["credentials"] as Map<String, Any>?)
-    Assertions.assertTrue(credentials.containsKey("refresh_token"))
-    Assertions.assertTrue(credentials["refresh_token"].toString().length > 0)
-    Assertions.assertTrue(credentials.containsKey("access_token"))
-    Assertions.assertTrue(credentials["access_token"].toString().length > 0)
-    Assertions.assertTrue(credentials.containsKey("token_expiry_date"))
-    Assertions.assertTrue(credentials["token_expiry_date"].toString().length > 0)
-    Assertions.assertTrue(credentials.containsKey("realm_id"))
-    Assertions.assertTrue(credentials["realm_id"].toString().length > 0)
+    assertTrue(credentials.containsKey(REFRESH_TOKEN_KEY))
+    assertTrue(credentials[REFRESH_TOKEN_KEY].toString().isNotEmpty())
+    assertTrue(credentials.containsKey("access_token"))
+    assertTrue(credentials["access_token"].toString().isNotEmpty())
+    assertTrue(credentials.containsKey("token_expiry_date"))
+    assertTrue(credentials["token_expiry_date"].toString().isNotEmpty())
+    assertTrue(credentials.containsKey("realm_id"))
+    assertTrue(credentials["realm_id"].toString().isNotEmpty())
   }
 
   companion object {

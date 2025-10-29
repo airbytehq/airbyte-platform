@@ -4,9 +4,9 @@
 
 package io.airbyte.container.orchestrator.worker.io
 
-import com.google.common.annotations.VisibleForTesting
 import dev.failsafe.Failsafe
 import dev.failsafe.function.CheckedRunnable
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.io.IOs
 import io.airbyte.commons.io.LineGobbler
 import io.airbyte.commons.logging.MdcScope
@@ -144,7 +144,7 @@ class LocalContainerAirbyteDestination(
     setInputHasEnded(newValue = true)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun setInputHasEnded(newValue: Boolean) {
     inputHasEnded.set(newValue)
   }

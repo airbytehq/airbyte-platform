@@ -8,6 +8,7 @@ import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
 import io.airbyte.data.services.OAuthService
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.OAuthFlowImplementation
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.AfterEach
@@ -44,7 +45,7 @@ abstract class OAuthFlowIntegrationTest {
     server = HttpServer.create(InetSocketAddress(getServerListeningPort()), 0)
     server.setExecutor(null) // creates a default executor
     server.start()
-    serverHandler = ServerHandler("code")
+    serverHandler = ServerHandler(AUTH_CODE_KEY)
     // Same endpoint as we use for airbyte instance
     server.createContext(getCallBackServerPath(), serverHandler)
   }

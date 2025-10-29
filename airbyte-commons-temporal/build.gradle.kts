@@ -34,6 +34,7 @@ dependencies {
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-json-validation"))
 
+
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 

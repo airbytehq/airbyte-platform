@@ -5,7 +5,6 @@
 package io.airbyte.oauth
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import io.airbyte.api.problems.model.generated.ProblemResourceData
@@ -199,7 +198,7 @@ abstract class BaseOAuth2Flow
         completeOAuthFlow(
           getClientIdUnsafe(oauthParamConfig),
           getClientSecretUnsafe(oauthParamConfig),
-          extractCodeParameter(queryParams)!!,
+          extractCodeParameter(queryParams),
           redirectUrl,
           Jsons.emptyObject(),
           oauthParamConfig,
@@ -245,7 +244,7 @@ abstract class BaseOAuth2Flow
         completeOAuthFlow(
           getClientIdUnsafe(oauthParamConfig),
           getClientSecretUnsafe(oauthParamConfig),
-          extractCodeParameter(queryParams)!!,
+          extractCodeParameter(queryParams),
           redirectUrl,
           oauthConfigurationMerged,
           oauthParamConfig,
@@ -271,7 +270,7 @@ abstract class BaseOAuth2Flow
         completeOAuthFlow(
           getClientIdUnsafe(oauthParamConfig),
           getClientSecretUnsafe(oauthParamConfig),
-          extractCodeParameter(queryParams)!!,
+          extractCodeParameter(queryParams),
           redirectUrl,
           Jsons.emptyObject(),
           oauthParamConfig,
@@ -317,7 +316,7 @@ abstract class BaseOAuth2Flow
         completeOAuthFlow(
           getClientIdUnsafe(oauthParamConfig),
           getClientSecretUnsafe(oauthParamConfig),
-          extractCodeParameter(queryParams)!!,
+          extractCodeParameter(queryParams),
           redirectUrl,
           oauthConfigurationMerged,
           oauthParamConfig,
@@ -466,10 +465,10 @@ abstract class BaseOAuth2Flow
       redirectUrl: String,
     ): Map<String, String> =
       mapOf(
-        "code" to authCode,
-        "client_id" to clientId,
-        "client_secret" to clientSecret,
-        "redirect_uri" to redirectUrl,
+        AUTH_CODE_KEY to authCode,
+        CLIENT_ID_KEY to clientId,
+        CLIENT_SECRET_KEY to clientSecret,
+        REDIRECT_URI_KEY to redirectUrl,
       )
 
     /**
@@ -478,8 +477,8 @@ abstract class BaseOAuth2Flow
      * code from these query parameters in order to continue the OAuth Flow.
      */
     protected open fun extractCodeParameter(queryParams: Map<String, Any>): String {
-      if (queryParams.containsKey("code")) {
-        return queryParams["code"] as String
+      if (queryParams.containsKey(AUTH_CODE_KEY)) {
+        return queryParams[AUTH_CODE_KEY] as String
       } else {
         throw IOException("Undefined 'code' from consent redirected url.")
       }
@@ -575,8 +574,8 @@ abstract class BaseOAuth2Flow
       accessTokenUrl: String,
     ): Map<String, Any> {
       val result: MutableMap<String, Any> = HashMap()
-      if (data.has("refresh_token")) {
-        result["refresh_token"] = data["refresh_token"].asText()
+      if (data.has(REFRESH_TOKEN_KEY)) {
+        result[REFRESH_TOKEN_KEY] = data[REFRESH_TOKEN_KEY].asText()
       } else {
         throw IOException(String.format("Missing 'refresh_token' in query params from %s", accessTokenUrl))
       }

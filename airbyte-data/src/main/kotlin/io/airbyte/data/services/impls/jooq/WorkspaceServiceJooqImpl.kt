@@ -5,7 +5,7 @@
 package io.airbyte.data.services.impls.jooq
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.resources.Resources
 import io.airbyte.commons.yaml.Yamls
@@ -56,7 +56,7 @@ private val log = KotlinLogging.logger {}
 
 @Singleton
 class WorkspaceServiceJooqImpl
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     @Named("configDatabase") database: Database?,
     private val featureFlagClient: FeatureFlagClient,
@@ -605,7 +605,7 @@ class WorkspaceServiceJooqImpl
      * @throws IOException - you never know when you IO
      * @throws ConfigNotFoundException - throws if no source with that id can be found.
      */
-    @VisibleForTesting
+    @InternalForTesting
     fun getSourceConnection(sourceId: UUID): SourceConnection =
       listSourceQuery(Optional.of(sourceId))
         .findFirst()

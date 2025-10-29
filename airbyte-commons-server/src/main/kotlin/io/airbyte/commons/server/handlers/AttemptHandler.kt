@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.AttemptStats
 import io.airbyte.api.model.generated.AttemptStreamStats
 import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse
@@ -13,6 +12,7 @@ import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody
 import io.airbyte.api.model.generated.SaveStatsRequestBody
 import io.airbyte.api.model.generated.SaveStreamAttemptMetadataRequestBody
 import io.airbyte.api.model.generated.StreamAttemptMetadata
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
 import io.airbyte.commons.server.converters.ApiPojoConverters
@@ -115,7 +115,7 @@ open class AttemptHandler(
     return CreateNewAttemptNumberResponse().attemptNumber(persistedAttemptNumber)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun updateGenerationAndStateForSubsequentAttempts(
     job: Job,
     supportRefreshes: Boolean,
@@ -137,7 +137,7 @@ open class AttemptHandler(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun updateGenerationAndStateForFirstAttempt(
     job: Job,
     connectionId: UUID,
@@ -168,7 +168,7 @@ open class AttemptHandler(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getFullRefresh(
     catalog: ConfiguredAirbyteCatalog,
     supportResumableFullRefresh: Boolean,
@@ -187,7 +187,7 @@ open class AttemptHandler(
       }.collect(Collectors.toSet())
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getFullRefreshStreamsToClear(
     catalog: ConfiguredAirbyteCatalog,
     id: Long,

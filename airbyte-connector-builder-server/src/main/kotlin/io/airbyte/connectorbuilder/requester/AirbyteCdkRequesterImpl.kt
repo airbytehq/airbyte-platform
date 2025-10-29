@@ -10,9 +10,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.ObjectWriter
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.google.common.annotations.VisibleForTesting
 import com.google.common.hash.Hashing
 import datadog.trace.api.Trace
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.connectorbuilder.TracingHelper
 import io.airbyte.connectorbuilder.api.model.generated.AuxiliaryRequest
@@ -180,7 +180,7 @@ class AirbyteCdkRequesterImpl(
 
   private fun adaptCatalog(stream: String): String = String.format(CATALOG_TEMPLATE, stream)
 
-  @VisibleForTesting
+  @InternalForTesting
   fun adaptState(state: List<JsonNode>?): String =
     if (state == null || state.isEmpty()) {
       OBJECT_WRITER.writeValueAsString(emptyList<Any>())

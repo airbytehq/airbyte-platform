@@ -5,9 +5,13 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Preconditions
+import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -21,7 +25,7 @@ import java.util.function.Supplier
 class SurveymonkeyOAuthFlow : BaseOAuth2Flow {
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   internal constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
   protected fun getBaseURLByOrigin(inputOAuthConfiguration: JsonNode): String {
@@ -47,9 +51,9 @@ class SurveymonkeyOAuthFlow : BaseOAuth2Flow {
       val baseUrl = getBaseURLByOrigin(inputOAuthConfiguration)
       return URIBuilder(baseUrl)
         .setPath(AUTHORIZE_URL)
-        .addParameter("client_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
-        .addParameter("response_type", "code")
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
         .addParameter("state", getState())
         .build()
         .toString()
@@ -69,14 +73,14 @@ class SurveymonkeyOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    mapOf("grant_type" to "authorization_code") +
+    mapOf(GRANT_TYPE_KEY to "authorization_code") +
       super.getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl)
 
   override fun extractOAuthOutput(
     data: JsonNode,
     accessTokenUrl: String,
   ): Map<String, Any> {
-    Preconditions.checkArgument(data.has("access_token"), "Missing 'access_token' in query params from %s", ACCESS_TOKEN_URL)
+    require(data.has("access_token")) { "Missing 'access_token' in query params from $ACCESS_TOKEN_URL" }
     return mapOf("access_token" to data["access_token"].asText())
   }
 

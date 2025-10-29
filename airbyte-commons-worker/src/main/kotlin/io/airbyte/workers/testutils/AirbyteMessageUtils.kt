@@ -5,7 +5,6 @@
 package io.airbyte.workers.testutils
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
 import io.airbyte.protocol.models.v0.AirbyteAnalyticsTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteControlConnectorConfigMessage
@@ -51,25 +50,25 @@ object AirbyteMessageUtils {
     tableName: String?,
     key: String,
     value: String,
-  ): AirbyteMessage = createRecordMessage(tableName, ImmutableMap.of(key, value))
+  ): AirbyteMessage = createRecordMessage(tableName, mapOf(key to value))
 
   fun createRecordMessage(
     tableName: String?,
     key: String,
     value: Int,
-  ): AirbyteMessage = createRecordMessage(tableName, ImmutableMap.of(key, value))
+  ): AirbyteMessage = createRecordMessage(tableName, mapOf(key to value))
 
   fun createRecordMessage(
     tableName: String?,
     key: String,
     value: BigInteger,
-  ): AirbyteMessage = createRecordMessage(tableName, ImmutableMap.of(key, value))
+  ): AirbyteMessage = createRecordMessage(tableName, mapOf(key to value))
 
   fun createRecordMessage(
     tableName: String?,
     key: String,
     value: BigDecimal,
-  ): AirbyteMessage = createRecordMessage(tableName, ImmutableMap.of(key, value))
+  ): AirbyteMessage = createRecordMessage(tableName, mapOf(key to value))
 
   fun createRecordMessage(
     tableName: String?,
@@ -112,7 +111,7 @@ object AirbyteMessageUtils {
       .withState(
         AirbyteStateMessage()
           .withStream(createStreamState(streamName))
-          .withData(Jsons.jsonNode(ImmutableMap.of(key, value))),
+          .withData(Jsons.jsonNode(mapOf(key to value))),
       )
 
   fun createStreamStateMessage(

@@ -4,7 +4,7 @@
 
 package io.airbyte.workload.launcher.pods
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.workload.launcher.constants.PodConstants.CPU_RESOURCE_KEY
 import io.airbyte.workload.launcher.constants.PodConstants.EPHEMERAL_STORAGE_RESOURCE_KEY
 import io.airbyte.workload.launcher.constants.PodConstants.MEMORY_RESOURCE_KEY
@@ -92,7 +92,7 @@ object ResourceConversionUtils {
    * Kube has a specific string DSL for specifying 'quantities' of bytes (e.g. 5G vs 5Gi vs 10m, vs 10K, etc.)
    * This parses those values and sums them and returns them in the same DSL format.
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun sum(
     quantityStr1: String?,
     quantityStr2: String?,

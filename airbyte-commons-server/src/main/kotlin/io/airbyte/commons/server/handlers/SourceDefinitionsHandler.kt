@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.ActorDefinitionIdWithScope
 import io.airbyte.api.model.generated.CustomSourceDefinitionCreate
 import io.airbyte.api.model.generated.PrivateSourceDefinitionRead
@@ -20,6 +19,7 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.lang.Exceptions
@@ -90,7 +90,7 @@ open class SourceDefinitionsHandler
       return buildSourceDefinitionRead(sourceDefinition, sourceVersion)
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun buildSourceDefinitionRead(
       standardSourceDefinition: StandardSourceDefinition,
       sourceVersion: ActorDefinitionVersion,
@@ -424,7 +424,7 @@ open class SourceDefinitionsHandler
       return updatedSourceDefinition
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun buildSourceDefinitionUpdate(
       currentSourceDefinition: StandardSourceDefinition,
       name: String?,

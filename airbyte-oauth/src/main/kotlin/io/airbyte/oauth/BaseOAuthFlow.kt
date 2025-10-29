@@ -22,7 +22,7 @@ abstract class BaseOAuthFlow : OAuthFlowImplementation {
    *
    * @return The configured Client ID used for this oauth flow
    */
-  protected open fun getClientIdUnsafe(oauthConfig: JsonNode): String = getConfigValueUnsafe(oauthConfig, "client_id")
+  protected open fun getClientIdUnsafe(oauthConfig: JsonNode): String = getConfigValueUnsafe(oauthConfig, CLIENT_ID_KEY)
 
   /**
    * Throws an exception if the client secret cannot be extracted. Subclasses should override this to
@@ -30,7 +30,7 @@ abstract class BaseOAuthFlow : OAuthFlowImplementation {
    *
    * @return The configured client secret for this OAuthFlow
    */
-  protected open fun getClientSecretUnsafe(oauthConfig: JsonNode): String = getConfigValueUnsafe(oauthConfig, "client_secret")
+  protected open fun getClientSecretUnsafe(oauthConfig: JsonNode): String = getConfigValueUnsafe(oauthConfig, CLIENT_SECRET_KEY)
 
   /**
    * completeOAuth calls should output a flat map of fields produced by the oauth flow to be forwarded
@@ -45,12 +45,16 @@ abstract class BaseOAuthFlow : OAuthFlowImplementation {
     oauthOutput: Map<String, Any>,
     outputPath: List<String>,
   ): Map<String, Any> {
-    var result: MutableMap<String, Any> = HashMap(oauthOutput)
-    for (key in Jsons.keys(oauthParamConfig)) {
-      result[key] = MoreOAuthParameters.SECRET_MASK
-    }
+    var result =
+      buildMap {
+        putAll(oauthOutput)
+        for (key in Jsons.keys(oauthParamConfig)) {
+          put(key, MoreOAuthParameters.SECRET_MASK)
+        }
+      }
+
     for (node in outputPath) {
-      result = java.util.Map.of(node, result)
+      result = mapOf(node to result)
     }
     return result
   }
@@ -72,14 +76,14 @@ abstract class BaseOAuthFlow : OAuthFlowImplementation {
         validator,
         oauthConfigSpecification.completeOauthOutputSpecification,
         completeOAuthFlow.keys,
-      ) { resultMap, key -> resultMap.put(key, completeOAuthFlow[key]!!) }
+      ) { resultMap, key -> resultMap[key] = completeOAuthFlow[key]!! }
 
     val oAuthServerOutputs: Map<String, Any> =
       formatOAuthOutput(
         validator,
         oauthConfigSpecification.completeOauthServerOutputSpecification,
         Jsons.keys(oauthParamConfig),
-      ) { resultMap, key -> resultMap.put(key, MoreOAuthParameters.SECRET_MASK) }
+      ) { resultMap, key -> resultMap[key] = MoreOAuthParameters.SECRET_MASK }
 
     return oAuthServerOutputs + oAuthOutputs
   }
@@ -126,8 +130,8 @@ abstract class BaseOAuthFlow : OAuthFlowImplementation {
       if (pathNode != null && pathNode.isArray && pathNode.size() > 0) {
         extractOutput.add(Jsons.stringListToJoinedString(pathNode, "."))
       } else {
-        val msg = "The '%s' parameter for the '%s' in `complete_oauth_output_specification` is missing or empty."
-        throw IllegalArgumentException(String.format(msg, PATH_IN_OAUTH_RESPONSE, entry.key))
+        val msg = "The '$PATH_IN_OAUTH_RESPONSE' parameter for the '${entry.key}' in `complete_oauth_output_specification` is missing or empty."
+        throw IllegalArgumentException(msg)
       }
     }
 
@@ -182,7 +186,7 @@ abstract class BaseOAuthFlow : OAuthFlowImplementation {
       if (oauthConfig != null && oauthConfig[fieldName] != null) {
         return oauthConfig[fieldName].asText()
       } else {
-        throw IllegalArgumentException(String.format("Undefined parameter '%s' necessary for the OAuth Flow.", fieldName))
+        throw IllegalArgumentException("Undefined parameter '$fieldName' necessary for the OAuth Flow.")
       }
     }
 
@@ -203,15 +207,13 @@ abstract class BaseOAuthFlow : OAuthFlowImplementation {
       keys: Collection<String>,
       replacement: BiConsumer<MutableMap<String, Any>, String>,
     ): Map<String, Any> {
-      var result = java.util.Map.of<String, Any>()
+      val result = mutableMapOf<String, Any>()
       if (outputSchema != null && outputSchema.has(PROPERTIES)) {
-        val mapBuilder = mutableMapOf<String, Any>()
         for (key in keys) {
           if (outputSchema[PROPERTIES].has(key)) {
-            replacement.accept(mapBuilder, key)
+            replacement.accept(result, key)
           }
         }
-        result = mapBuilder.toMap()
         validator.ensure(outputSchema, Jsons.jsonNode(result))
       }
       return result

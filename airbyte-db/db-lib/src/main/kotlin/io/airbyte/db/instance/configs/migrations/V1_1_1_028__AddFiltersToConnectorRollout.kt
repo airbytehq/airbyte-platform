@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.CustomerTier
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
@@ -27,7 +27,7 @@ class V1_1_1_028__AddFiltersToConnectorRollout : BaseJavaMigration() {
     private const val FILTERS = "filters"
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun doMigration(ctx: DSLContext) {
       addFiltersToConnectorRollout(ctx)
       backfillFilters(ctx)

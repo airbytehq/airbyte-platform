@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.AirbyteCatalog
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.CatalogDiff
@@ -16,6 +15,7 @@ import io.airbyte.api.model.generated.SelectedFieldInfo
 import io.airbyte.api.model.generated.StreamAttributeTransform
 import io.airbyte.api.model.generated.StreamDescriptor
 import io.airbyte.api.model.generated.StreamTransform
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import jakarta.inject.Singleton
 import jakarta.validation.Valid
@@ -49,7 +49,7 @@ class ApplySchemaChangeHelper(
    * @param transform the transformation to be applied to the destination
    * @return a string describing the changes that will be applied to the destination.
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun formatDiff(transform: StreamTransform): String {
     val namespace = transform.streamDescriptor.namespace
     val nsPrefix = if (namespace != null) String.format("%s.", namespace) else ""
@@ -208,7 +208,7 @@ class ApplySchemaChangeHelper(
     )
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun extractStreamAndConfigPerStreamDescriptor(catalog: AirbyteCatalog): Map<StreamDescriptor, AirbyteStreamAndConfiguration> =
     catalog.streams.associateBy { streamAndConfig ->
       StreamDescriptor()

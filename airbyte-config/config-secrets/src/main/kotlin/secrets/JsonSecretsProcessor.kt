@@ -7,8 +7,7 @@ package io.airbyte.config.secrets
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Preconditions
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDINATE_PREFIX
 import io.airbyte.commons.json.JsonPaths
@@ -51,12 +50,11 @@ class JsonSecretsProcessor(
               .fields()
               .asSequence()
               .any { (key): Map.Entry<String, JsonNode> -> AirbyteSecretConstants.AIRBYTE_SECRET_FIELD == key }
-          }.stream()
-          .map { jsonSchemaPath: List<JsonSchemas.FieldNameOrList> ->
+          }.map { jsonSchemaPath: List<JsonSchemas.FieldNameOrList> ->
             JsonPaths.mapJsonSchemaPathToJsonPath(
               jsonSchemaPath,
             )
-          }.collect(Collectors.toSet())
+          }.toSet()
       var copy = Jsons.clone(json)
       for (path in pathsWithSecrets) {
         copy = JsonPaths.replaceAtString(copy, path, AirbyteSecretConstants.SECRETS_MASK)
@@ -68,7 +66,7 @@ class JsonSecretsProcessor(
      * Given a JSONSchema object and an object that conforms to that schema, return the coordinates of the secrets only
      *
      * @param configWithSecretReferences - config object with secret references
-     * @param schema - jsonschema object
+     * @param showCoordinatesFromDefaultSecretStorage -
      * @return json object with only the secret coordinates returned.
      *
      */
@@ -105,7 +103,7 @@ class JsonSecretsProcessor(
       return Optional.empty()
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun isValidJsonSchema(schema: JsonNode): Boolean =
       schema.isObject &&
         (
@@ -182,8 +180,8 @@ class JsonSecretsProcessor(
       if (!isValidJsonSchema(schema)) {
         return dst
       }
-      Preconditions.checkArgument(dst.isObject)
-      Preconditions.checkArgument(src.isObject)
+      require(dst.isObject)
+      require(src.isObject)
       val dstCopy = dst.deepCopy<ObjectNode>()
       return copySecretsRecursive(src, dstCopy, schema)
     }
@@ -200,15 +198,15 @@ class JsonSecretsProcessor(
     if (!isValidJsonSchema(schema)) {
       return dstCopy
     }
-    Preconditions.checkArgument(dstCopy.isObject)
-    Preconditions.checkArgument(src.isObject)
+    require(dstCopy.isObject)
+    require(src.isObject)
     val combinationKey = findJsonCombinationNode(schema)
     if (combinationKey.isPresent) {
       val arrayNode = schema[combinationKey.get()] as ArrayNode
       for (i in 0 until arrayNode.size()) {
         val childSchema = arrayNode[i]
                 /*
-                 * when traversing a oneOf or anyOf if multiple schema in the oneOf or anyOf have the SAME key, but
+                 * when traversing a oneOf or anyOf if multiple schema in the oneOf or anyOf have the SAME key) { but
                  * a different type, then, without this test, we can try to apply the wrong schema to the object
                  * resulting in errors because of type mismatches.
                  */

@@ -4,10 +4,10 @@
 
 package io.airbyte.workers.tracing
 
-import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.DDTags
 import datadog.trace.api.interceptor.MutableSpan
 import datadog.trace.api.interceptor.TraceInterceptor
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.metrics.lib.ApmTraceConstants.WORKFLOW_TRACE_OPERATION_NAME
 
 /**
@@ -44,7 +44,7 @@ class TemporalSdkInterceptor : TraceInterceptor {
    * @return `true` if the [MutableSpan] contains a Temporal workflow exit error or
    * `false` otherwise.
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun isExitTrace(trace: MutableSpan?): Boolean {
     if (trace == null) {
       return false
@@ -68,7 +68,7 @@ class TemporalSdkInterceptor : TraceInterceptor {
    * @return `true` if the [MutableSpan] contains a Temporal destroy thread error or
    * `false` otherwise.
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun isDestroyThreadTrace(trace: MutableSpan?): Boolean {
     if (trace == null) {
       return false

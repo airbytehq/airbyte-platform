@@ -6,7 +6,12 @@ package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URI
@@ -41,9 +46,9 @@ class NotionOAuthFlow(
   ): String {
     try {
       return URIBuilder(AUTHORIZE_URL)
-        .addParameter("client_id", clientId)
-        .addParameter("response_type", "code")
-        .addParameter("redirect_uri", redirectUrl)
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
         .addParameter("state", getState())
         .build()
         .toString()
@@ -59,9 +64,9 @@ class NotionOAuthFlow(
     redirectUrl: String,
   ): Map<String, String> =
     mapOf(
-      "grant_type" to "authorization_code",
-      "code" to authCode,
-      "redirect_uri" to redirectUrl,
+      GRANT_TYPE_KEY to "authorization_code",
+      AUTH_CODE_KEY to authCode,
+      REDIRECT_URI_KEY to redirectUrl,
     )
 
   /**

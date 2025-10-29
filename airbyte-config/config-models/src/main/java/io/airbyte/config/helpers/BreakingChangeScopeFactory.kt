@@ -4,7 +4,6 @@
 
 package io.airbyte.config.helpers
 
-import com.google.common.base.Preconditions
 import io.airbyte.config.BreakingChangeScope
 
 object BreakingChangeScopeFactory {
@@ -22,10 +21,7 @@ object BreakingChangeScopeFactory {
   fun validateBreakingChangeScope(breakingChangeScope: BreakingChangeScope) {
     when (breakingChangeScope.scopeType) {
       BreakingChangeScope.ScopeType.STREAM ->
-        Preconditions.checkArgument(
-          breakingChangeScope.impactedScopes.all { it is String },
-          "All elements in the impactedScopes array must be strings.",
-        )
+        require(breakingChangeScope.impactedScopes.all { it is String }) { "All elements in the impactedScopes array must be strings." }
 
       else -> throw IllegalArgumentException(
         "Invalid scopeType: ${breakingChangeScope.scopeType} is not supported. Expected types: ${BreakingChangeScope.ScopeType.entries.joinToString()}",

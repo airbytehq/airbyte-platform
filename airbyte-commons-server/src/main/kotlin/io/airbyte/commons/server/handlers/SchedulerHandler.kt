@@ -4,9 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Charsets
-import com.google.common.collect.ImmutableSet
 import com.google.common.hash.HashFunction
 import com.google.common.hash.Hashing
 import io.airbyte.api.model.generated.AttemptInfoReadLogs
@@ -30,6 +27,7 @@ import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceUpdate
 import io.airbyte.api.model.generated.SynchronousJobRead
 import io.airbyte.api.model.generated.WorkloadPriority
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ConfigurationUpdate
@@ -81,6 +79,7 @@ import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.io.IOException
+import java.nio.charset.StandardCharsets
 import java.util.UUID
 
 private val log = KotlinLogging.logger {}
@@ -90,7 +89,7 @@ private val log = KotlinLogging.logger {}
  */
 @Singleton
 open class SchedulerHandler
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     actorDefinitionService: ActorDefinitionService,
     private val catalogService: CatalogService,
@@ -310,7 +309,7 @@ open class SchedulerHandler
         HASH_FUNCTION
           .hashBytes(
             Jsons.serialize(source.configuration).toByteArray(
-              Charsets.UTF_8,
+              StandardCharsets.UTF_8,
             ),
           ).toString()
       val connectorVersion = sourceVersion.dockerImageTag
@@ -640,6 +639,6 @@ open class SchedulerHandler
     companion object {
       private val HASH_FUNCTION: HashFunction = Hashing.md5()
 
-      private val VALUE_CONFLICT_EXCEPTION_ERROR_CODE_SET: Set<ErrorCode?> = ImmutableSet.of(ErrorCode.WORKFLOW_DELETED, ErrorCode.WORKFLOW_RUNNING)
+      private val VALUE_CONFLICT_EXCEPTION_ERROR_CODE_SET: Set<ErrorCode?> = setOf(ErrorCode.WORKFLOW_DELETED, ErrorCode.WORKFLOW_RUNNING)
     }
   }

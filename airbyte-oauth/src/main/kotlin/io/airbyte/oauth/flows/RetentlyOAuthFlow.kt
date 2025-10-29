@@ -5,8 +5,13 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -39,9 +44,9 @@ class RetentlyOAuthFlow : BaseOAuth2Flow {
   ): String {
     try {
       return URIBuilder(AUTHORIZE_URL)
-        .addParameter("client_id", clientId)
-        .addParameter("response_type", "code")
-        .addParameter("redirect_uri", redirectUrl)
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
         .addParameter("state", getState())
         .build()
         .toString()
@@ -56,14 +61,13 @@ class RetentlyOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("client_id", clientId)
-      .put("redirect_uri", redirectUrl)
-      .put("client_secret", clientSecret)
-      .put("code", authCode)
-      .put("grant_type", "authorization_code")
-      .build()
+    mapOf(
+      CLIENT_ID_KEY to clientId,
+      REDIRECT_URI_KEY to redirectUrl,
+      CLIENT_SECRET_KEY to clientSecret,
+      AUTH_CODE_KEY to authCode,
+      GRANT_TYPE_KEY to "authorization_code",
+    )
 
   /**
    * Returns the URL where to retrieve the access token from.

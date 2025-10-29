@@ -4,12 +4,12 @@
 
 package io.airbyte.workload.launcher
 
-import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.function.CheckedSupplier
 import io.airbyte.api.client.ApiException
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -63,7 +63,7 @@ class ClaimedProcessor(
     processMessages(msgs)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun processMessages(msgs: List<LauncherInput>) {
     msgs
       .map { runOnClaimedScheduler(it) }

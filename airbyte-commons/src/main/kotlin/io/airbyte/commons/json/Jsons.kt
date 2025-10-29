@@ -17,8 +17,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
-import com.google.common.base.Charsets
-import com.google.common.base.Preconditions
 import io.airbyte.commons.jackson.MoreMappers.initMapper
 import java.io.File
 import java.io.IOException
@@ -192,7 +190,7 @@ object Jsons {
   fun tryDeserialize(jsonString: String): Optional<JsonNode> {
     try {
       return Optional.of(OBJECT_MAPPER.readTree(jsonString))
-    } catch (e: Throwable) {
+    } catch (_: Throwable) {
       return Optional.empty<JsonNode>()
     }
   }
@@ -212,7 +210,7 @@ object Jsons {
   ): Optional<T> {
     try {
       return Optional.of<T>(OBJECT_MAPPER_EXACT.readValue<T>(jsonString, klass))
-    } catch (e: Throwable) {
+    } catch (_: Throwable) {
       return Optional.empty<T>()
     }
   }
@@ -300,7 +298,7 @@ object Jsons {
   ): Optional<T> {
     try {
       return Optional.of<T>(OBJECT_MAPPER.convertValue<T>(jsonNode, klass))
-    } catch (e: Exception) {
+    } catch (_: Exception) {
       return Optional.empty<T>()
     }
   }
@@ -320,7 +318,7 @@ object Jsons {
   ): Optional<T> {
     try {
       return Optional.of<T>(OBJECT_MAPPER.convertValue<T>(jsonNode, typeReference))
-    } catch (e: Exception) {
+    } catch (_: Exception) {
       return Optional.empty<T>()
     }
   }
@@ -366,7 +364,7 @@ object Jsons {
       return `object`(
         jsonNode,
         object : TypeReference<MutableMap<String, Any?>>() {},
-      )?.keys ?: mutableSetOf()
+      ).keys
     } else {
       return HashSet()
     }
@@ -434,7 +432,7 @@ object Jsons {
     keys: List<String>,
     replacement: JsonNode?,
   ) {
-    replaceNested(json, keys) { node: ObjectNode, finalKey: String -> node.put(finalKey, replacement) }
+    replaceNested(json, keys) { node: ObjectNode, finalKey: String -> node.replace(finalKey, replacement) }
   }
 
   /**
@@ -450,7 +448,7 @@ object Jsons {
     keys: List<String>,
     typedReplacement: BiConsumer<ObjectNode, String>,
   ) {
-    Preconditions.checkArgument(!keys.isEmpty(), "Must pass at least one key")
+    require(!keys.isEmpty()) { "Must pass at least one key" }
     val nodeContainingFinalKey = navigateTo(json, keys.subList(0, keys.size - 1))
     typedReplacement.accept(nodeContainingFinalKey as ObjectNode, keys.get(keys.size - 1))
   }
@@ -526,7 +524,7 @@ object Jsons {
       val output: MutableMap<String?, Any?> = HashMap()
       val arrayLen = node.size()
       for (i in 0..<arrayLen) {
-        val field = String.format("[%d]", i)
+        val field = "[$i]"
         val value = node.get(i)
         mergeMaps(output, field, flatten(value, applyFlattenToArray).toMutableMap())
       }
@@ -687,7 +685,7 @@ object Jsons {
     keys: List<String>,
     typedValue: BiConsumer<ObjectNode, String>,
   ) {
-    Preconditions.checkArgument(!keys.isEmpty(), "Must pass at least one key")
+    require(!keys.isEmpty()) { "Must pass at least one key" }
     val nodeContainingFinalKey = navigateToAndCreate(json, keys.subList(0, keys.size - 1))
     typedValue.accept(nodeContainingFinalKey as ObjectNode, keys.get(keys.size - 1))
   }

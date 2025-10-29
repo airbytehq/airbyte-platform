@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.internal
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType
@@ -143,7 +143,7 @@ class NamespacingMapper(
     }
 }
 
-@VisibleForTesting
+@InternalForTesting
 data class NamespaceStreamName(
   val namespace: String?,
   val streamName: String,

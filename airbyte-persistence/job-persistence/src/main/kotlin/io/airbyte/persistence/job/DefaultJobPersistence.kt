@@ -4,9 +4,8 @@
 
 package io.airbyte.persistence.job
 
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.Lists
 import datadog.trace.api.Trace
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.text.Names
@@ -71,7 +70,7 @@ import java.util.stream.StreamSupport
  * Encapsulates jobs db interactions for the Jobs / Attempts domain models.
  */
 class DefaultJobPersistence
-  @VisibleForTesting
+  @InternalForTesting
   internal constructor(
     jobDatabase: Database?,
     private val timeSupplier: Supplier<Instant>,
@@ -835,7 +834,7 @@ class DefaultJobPersistence
         getJobsFromResult(ctx.fetch(jobSelectAndJoin(jobsSubquery) + ORDER_BY_JOB_TIME_ATTEMPT_TIME))
       }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun listJobs(
       configTypes: Set<ConfigType>,
       configId: String?,
@@ -924,7 +923,7 @@ class DefaultJobPersistence
       }
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun listJobs(
       configType: ConfigType,
       attemptEndedAtTimestamp: Instant,
@@ -1569,7 +1568,7 @@ class DefaultJobPersistence
      * @param value A string that may contain unsupported unicode values.
      * @return The modified string with any unsupported unicode values removed.
      */
-    @VisibleForTesting
+    @InternalForTesting
     internal fun removeUnsupportedUnicodeFromSerializedJson(value: String?): String? =
       value
         // Strip literal nulls. Frankly, this should never happen in a JSON-serialized string,
@@ -1679,7 +1678,7 @@ class DefaultJobPersistence
         """.trimIndent()
 
       @JvmField
-      @VisibleForTesting
+      @InternalForTesting
       val BASE_JOB_SELECT_AND_JOIN: String = jobSelectAndJoin("jobs")
       private val ATTEMPT_SELECT = "SELECT job_id," + ATTEMPT_FIELDS + "FROM attempts WHERE job_id = ? AND attempt_number = ?"
 
@@ -1865,7 +1864,7 @@ class DefaultJobPersistence
                 .withRecordsCommitted(r.get(Tables.SYNC_STATS.RECORDS_COMMITTED))
                 .withRecordsRejected(r.get(Tables.SYNC_STATS.RECORDS_REJECTED))
             attemptStats[key] =
-              JobPersistence.AttemptStats(syncStats, Lists.newArrayList())
+              JobPersistence.AttemptStats(syncStats, mutableListOf())
           },
         )
         return attemptStats
@@ -2021,7 +2020,7 @@ class DefaultJobPersistence
       ): Boolean = if (r.get(field) == null) false else r.get(field)
 
       @JvmStatic
-      @VisibleForTesting
+      @InternalForTesting
       fun getAttemptId(
         jobId: Long,
         attemptNumber: Int,
@@ -2285,14 +2284,14 @@ class DefaultJobPersistence
           .map { value: String -> Names.singleQuote(value) }
           .collect(Collectors.joining(",", "(", ")"))
 
-      @VisibleForTesting
+      @InternalForTesting
       @JvmStatic
       fun <T : Enum<T>> toSqlName(value: T): String = value.name.lowercase(Locale.getDefault())
 
       private fun configTypeSqlNames(configTypes: Set<ConfigType>): Set<String> =
         configTypes.stream().map { value: ConfigType -> toSqlName(value) }.collect(Collectors.toSet())
 
-      @VisibleForTesting
+      @InternalForTesting
       @JvmStatic
       fun getJobFromResult(result: Result<Record>): Optional<Job> = getJobsFromResult(result).stream().findFirst()
 

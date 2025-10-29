@@ -4,7 +4,7 @@
 
 package io.airbyte.workload.repository.domain
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.micronaut.context.annotation.Factory
 import io.micronaut.core.annotation.Nullable
 import io.micronaut.core.convert.ConversionContext
@@ -70,7 +70,7 @@ data class Workload(
   @Nullable
   var priority: Int? = null,
 ) {
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     id: String,
     dataplaneId: String?,

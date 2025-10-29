@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutRead
 import io.airbyte.api.model.generated.ConnectorRolloutRequestBody
@@ -15,6 +14,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutNotEnoughActorsProblem
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.server.handlers.helpers.ConnectorRolloutHelper
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
@@ -52,7 +52,7 @@ open class ConnectorRolloutHandler
     private val rolloutActorFinder: RolloutActorFinder,
     private val connectorRolloutHelper: ConnectorRolloutHelper,
   ) {
-    @VisibleForTesting
+    @InternalForTesting
     open fun validateRolloutActorDefinitionId(
       dockerRepository: String,
       dockerImageTag: String,
@@ -78,7 +78,7 @@ open class ConnectorRolloutHandler
       }
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     open fun getAndValidateStartRequest(connectorRolloutStart: ConnectorRolloutStartRequestBody): ConnectorRollout {
       // We expect to hit this code path under 2 different circumstances:
       // 1. When a rollout is being started for the first time
@@ -98,7 +98,7 @@ open class ConnectorRolloutHandler
       return connectorRollout
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     open fun getAndRollOutConnectorRollout(connectorRolloutRequest: ConnectorRolloutRequestBody): ConnectorRollout {
       val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutRequest.id)
 
@@ -219,7 +219,7 @@ open class ConnectorRolloutHandler
       ).toInt()
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     open fun getAndValidateFinalizeRequest(connectorRolloutFinalize: ConnectorRolloutFinalizeRequestBody): ConnectorRollout {
       val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutFinalize.id)
       val invalidFinalizeStates = ConnectorRolloutFinalState.entries.map { ConnectorEnumRolloutState.fromValue(it.toString()) }
@@ -252,7 +252,7 @@ open class ConnectorRolloutHandler
       return connectorRollout
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     open fun getAndValidateUpdateStateRequest(
       id: UUID,
       state: ConnectorEnumRolloutState,

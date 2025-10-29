@@ -5,8 +5,6 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.Lists
 import datadog.trace.api.Trace
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges
@@ -28,6 +26,7 @@ import io.airbyte.api.model.generated.SourceSearch
 import io.airbyte.api.model.generated.SourceSnippetRead
 import io.airbyte.api.model.generated.SourceUpdate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.json.Jsons
@@ -92,7 +91,7 @@ import java.util.function.Supplier
  */
 @Singleton
 class SourceHandler
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     private val catalogService: CatalogService,
     private val secretsRepositoryReader: SecretsRepositoryReader,
@@ -175,7 +174,7 @@ class SourceHandler
       return partialUpdateSource(partialSourceUpdate)
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun createSource(sourceCreate: SourceCreate): SourceRead {
       if (sourceCreate.resourceAllocation != null && airbyteEdition == AirbyteEdition.CLOUD) {
         throw BadRequestException(String.format("Setting resource allocation is not permitted on %s", airbyteEdition))
@@ -346,7 +345,7 @@ class SourceHandler
       val sourceConnectionsWithCount =
         sourceService.listWorkspaceSourceConnectionsWithCounts(actorListCursorPaginatedRequestBody.workspaceId, cursorPagination)
 
-      val sourceReads: MutableList<SourceRead> = Lists.newArrayList()
+      val sourceReads: MutableList<SourceRead> = mutableListOf()
 
       for ((source, _, connectionCount, lastSync, connectionJobStatuses, isActive) in sourceConnectionsWithCount) {
         val sourceRead = buildSourceRead(source)
@@ -391,7 +390,7 @@ class SourceHandler
           ),
         )
 
-      val reads: MutableList<SourceRead> = Lists.newArrayList()
+      val reads: MutableList<SourceRead> = mutableListOf()
       for (sc in sourceConnections) {
         reads.add(buildSourceReadWithStatus(sc))
       }
@@ -400,7 +399,7 @@ class SourceHandler
     }
 
     fun listSourcesForSourceDefinition(sourceDefinitionId: UUID): SourceReadList {
-      val reads: MutableList<SourceRead> = Lists.newArrayList()
+      val reads: MutableList<SourceRead> = mutableListOf()
       for (sourceConnection in sourceService.listSourcesForDefinition(sourceDefinitionId)) {
         reads.add(buildSourceRead(sourceConnection))
       }
@@ -409,7 +408,7 @@ class SourceHandler
     }
 
     fun searchSources(sourceSearch: SourceSearch?): SourceReadList {
-      val reads: MutableList<SourceRead> = Lists.newArrayList()
+      val reads: MutableList<SourceRead> = mutableListOf()
 
       for (sci in sourceService.listSourceConnection()) {
         if (!sci.tombstone) {
@@ -763,7 +762,7 @@ class SourceHandler
         .sourceName(sourceDefinition.name)
         .icon(sourceDefinition.iconUrl)
 
-    @VisibleForTesting
+    @InternalForTesting
     fun hydrateOAuthResponseSecret(
       secretId: String,
       workspaceId: UUID,

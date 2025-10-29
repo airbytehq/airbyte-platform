@@ -5,9 +5,15 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.REFRESH_TOKEN_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
 import io.airbyte.validation.json.JsonValidationException
 import org.apache.http.client.utils.URIBuilder
@@ -38,7 +44,7 @@ class AirtableOAuthFlow(
   val scopes: String
     get() = // More info and additional scopes could be found here:
       // https://airtable.com/developers/web/api/scopes
-      // should be space-delimitered
+      // should be space-delimited
       java.lang.String.join(" ", SCOPES)
 
   val codeVerifier: String
@@ -86,10 +92,10 @@ class AirtableOAuthFlow(
         .setScheme("https")
         .setHost("airtable.com")
         .setPath("oauth2/v1/authorize") // required
-        .addParameter("redirect_uri", redirectUrl)
-        .addParameter("client_id", clientId)
-        .addParameter("response_type", "code")
-        .addParameter("scope", scopes)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
+        .addParameter(SCOPE_KEY, scopes)
         .addParameter("code_challenge", getCodeChallenge(codeVerifier))
         .addParameter("code_challenge_method", "S256")
         .addParameter("state", codeVerifier)
@@ -110,15 +116,14 @@ class AirtableOAuthFlow(
     state: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("code", authCode)
-      .put("redirect_uri", redirectUrl)
-      .put("grant_type", "authorization_code")
-      .put("client_id", clientId)
-      .put("code_verifier", state)
-      .put("code_challenge_method", "S256")
-      .build()
+    mapOf(
+      AUTH_CODE_KEY to authCode,
+      REDIRECT_URI_KEY to redirectUrl,
+      GRANT_TYPE_KEY to "authorization_code",
+      CLIENT_ID_KEY to clientId,
+      "code_verifier" to state,
+      "code_challenge_method" to "S256",
+    )
 
   override fun completeSourceOAuth(
     workspaceId: UUID,
@@ -193,9 +198,9 @@ class AirtableOAuthFlow(
     data: JsonNode,
     accessTokenUrl: String,
   ): Map<String, Any> {
-    val result: MutableMap<String, Any> = HashMap()
-    if (data.has("refresh_token")) {
-      result["refresh_token"] = data["refresh_token"].asText()
+    val result: MutableMap<String, Any> = mutableMapOf()
+    if (data.has(REFRESH_TOKEN_KEY)) {
+      result[REFRESH_TOKEN_KEY] = data[REFRESH_TOKEN_KEY].asText()
     } else {
       throw IOException(String.format("Missing 'refresh_token' in query params from %s", accessTokenUrl))
     }

@@ -10,19 +10,19 @@ import com.google.api.client.http.LowLevelHttpResponse
 import com.google.api.client.testing.http.MockHttpTransport
 import com.google.api.client.testing.http.MockLowLevelHttpRequest
 import com.google.api.client.testing.http.MockLowLevelHttpResponse
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.SourceOAuthParameter
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.data.services.OAuthService
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.oauth.MoreOAuthParameters
 import io.airbyte.validation.json.JsonValidationException
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.io.IOException
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 
@@ -62,11 +62,10 @@ internal class TrelloOAuthFlowTest {
         .withSourceDefinitionId(definitionId)
         .withConfiguration(
           Jsons.jsonNode(
-            ImmutableMap
-              .builder<Any, Any>()
-              .put("client_id", "test_client_id")
-              .put("client_secret", "test_client_secret")
-              .build(),
+            mapOf(
+              CLIENT_ID_KEY to "test_client_id",
+              CLIENT_SECRET_KEY to "test_client_secret",
+            ),
           ),
         )
     Mockito
@@ -86,33 +85,29 @@ internal class TrelloOAuthFlowTest {
         null,
         sourceOAuthParameter!!.configuration,
       )
-    Assertions.assertEquals("https://trello.com/1/OAuthAuthorizeToken?oauth_token=test_token&expiration=never", consentUrl)
+    assertEquals("https://trello.com/1/OAuthAuthorizeToken?oauth_token=test_token&expiration=never", consentUrl)
   }
 
   @Test
   fun testCompleteSourceAuth() {
     val expectedParams =
-      Map.of(
-        "key",
-        "test_client_id",
-        "token",
-        "test_token",
-        "client_id",
-        MoreOAuthParameters.SECRET_MASK,
-        "client_secret",
-        MoreOAuthParameters.SECRET_MASK,
+      mapOf(
+        "key" to "test_client_id",
+        "token" to "test_token",
+        CLIENT_ID_KEY to MoreOAuthParameters.SECRET_MASK,
+        CLIENT_SECRET_KEY to MoreOAuthParameters.SECRET_MASK,
       )
-    val queryParams = Map.of<String, Any>("oauth_token", "token", "oauth_verifier", "verifier")
+    val queryParams = mapOf("oauth_token" to "token", "oauth_verifier" to "verifier")
     val actualParams =
       trelloOAuthFlow!!.completeSourceOAuth(workspaceId!!, definitionId, queryParams, REDIRECT_URL, sourceOAuthParameter!!.configuration)
-    Assertions.assertEquals(actualParams, expectedParams)
-    Assertions.assertEquals(
+    assertEquals(actualParams, expectedParams)
+    assertEquals(
       expectedParams.size,
       actualParams.size,
       String.format("Expected %s values but got %s", expectedParams.size, actualParams),
     )
     expectedParams.forEach { (key: String?, value: String?) ->
-      Assertions.assertEquals(
+      assertEquals(
         value,
         actualParams[key],
       )

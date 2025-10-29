@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.AuthConfiguration
 import io.airbyte.api.model.generated.InstanceConfigurationResponse
 import io.airbyte.api.model.generated.InstanceConfigurationResponse.EditionEnum
@@ -13,6 +12,7 @@ import io.airbyte.api.model.generated.InstanceConfigurationSetupRequestBody
 import io.airbyte.api.model.generated.LicenseInfoResponse
 import io.airbyte.api.model.generated.LicenseStatus
 import io.airbyte.api.model.generated.WorkspaceUpdate
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.auth.config.AuthConfigs
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.commons.enums.convertTo
@@ -236,7 +236,7 @@ open class InstanceConfigurationHandler(
 
   private fun editorsUsage(): Int = permissionHandler.countInstanceEditors()
 
-  @VisibleForTesting
+  @InternalForTesting
   fun currentLicenseStatus(): LicenseStatus? {
     if (activeAirbyteLicense.isEmpty) {
       return null

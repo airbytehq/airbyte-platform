@@ -4,7 +4,7 @@
 
 package io.airbyte.data.services.impls.jooq
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.constants.AirbyteCatalogConstants
 import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.version.AirbyteProtocolVersion
@@ -43,7 +43,7 @@ import java.util.stream.Stream
 
 @Singleton
 class ActorDefinitionServiceJooqImpl
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     @Named("configDatabase") database: Database?,
   ) : ActorDefinitionService {

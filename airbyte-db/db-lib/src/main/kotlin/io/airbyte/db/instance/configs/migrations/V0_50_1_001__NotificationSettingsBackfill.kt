@@ -5,7 +5,6 @@
 package io.airbyte.db.instance.configs.migrations
 
 import com.fasterxml.jackson.core.type.TypeReference
-import com.google.common.collect.Iterators
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Notification
 import io.airbyte.config.NotificationItem
@@ -80,7 +79,7 @@ class V0_50_1_001__NotificationSettingsBackfill : BaseJavaMigration() {
         notificationSettings.sendOnFailure = NotificationItem().withNotificationType(listOf())
 
         if (!originalNotificationList.isEmpty()) {
-          val originalNotification = Iterators.getOnlyElement(originalNotificationList.listIterator())
+          val originalNotification = originalNotificationList.first()
           val notificationType = originalNotification.notificationType
           val slackConfiguration = originalNotification.slackConfiguration
 
@@ -89,7 +88,7 @@ class V0_50_1_001__NotificationSettingsBackfill : BaseJavaMigration() {
               .withSendOnFailure(
                 NotificationItem()
                   .withNotificationType(
-                    java.util.List.of(
+                    listOf(
                       notificationType,
                     ),
                   ).withSlackConfiguration(slackConfiguration),
@@ -100,7 +99,7 @@ class V0_50_1_001__NotificationSettingsBackfill : BaseJavaMigration() {
               .withSendOnSuccess(
                 NotificationItem()
                   .withNotificationType(
-                    java.util.List.of(
+                    listOf(
                       notificationType,
                     ),
                   ).withSlackConfiguration(slackConfiguration),

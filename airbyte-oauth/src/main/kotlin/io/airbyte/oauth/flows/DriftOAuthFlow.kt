@@ -5,9 +5,15 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.ImmutableMap
+import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.REFRESH_TOKEN_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -22,7 +28,7 @@ import java.util.function.Supplier
 class DriftOAuthFlow : BaseOAuth2Flow {
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   internal constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
   override fun formatConsentUrl(
@@ -36,9 +42,9 @@ class DriftOAuthFlow : BaseOAuth2Flow {
         .setScheme("https")
         .setHost("dev.drift.com")
         .setPath("authorize")
-        .addParameter("response_type", CODE)
-        .addParameter("client_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
         .addParameter("state", getState())
     try {
       return builder.build().toString()
@@ -48,8 +54,8 @@ class DriftOAuthFlow : BaseOAuth2Flow {
   }
 
   override fun extractCodeParameter(queryParams: Map<String, Any>): String {
-    if (queryParams.containsKey(CODE)) {
-      return queryParams[CODE] as String
+    if (queryParams.containsKey(AUTH_CODE_KEY)) {
+      return queryParams[AUTH_CODE_KEY] as String
     } else {
       throw IOException("Undefined 'code' from consent redirected url.")
     }
@@ -63,13 +69,11 @@ class DriftOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>()
-      .put("client_id", clientId)
-      .put("client_secret", clientSecret)
-      .put(CODE, authCode)
-      .put("grant_type", "authorization_code")
-      .build()
+    mapOf(
+      CLIENT_ID_KEY to clientId,
+      CLIENT_SECRET_KEY to clientSecret,
+      GRANT_TYPE_KEY to "authorization_code",
+    )
 
   override fun extractOAuthOutput(
     data: JsonNode,
@@ -81,8 +85,8 @@ class DriftOAuthFlow : BaseOAuth2Flow {
     } else {
       throw IOException(String.format("Missing 'access_token' in query params from %s", accessTokenUrl))
     }
-    if (data.has("refresh_token")) {
-      result["refresh_token"] = data["refresh_token"].asText()
+    if (data.has(REFRESH_TOKEN_KEY)) {
+      result[REFRESH_TOKEN_KEY] = data[REFRESH_TOKEN_KEY].asText()
     } else {
       throw IOException(String.format("Missing 'refresh_token' in query params from %s", accessTokenUrl))
     }
@@ -91,6 +95,5 @@ class DriftOAuthFlow : BaseOAuth2Flow {
 
   companion object {
     private const val ACCESS_TOKEN_URL = "https://driftapi.com/oauth2/token"
-    private const val CODE = "code"
   }
 }

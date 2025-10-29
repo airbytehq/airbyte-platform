@@ -5,7 +5,7 @@
 package io.airbyte.config.specs
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.constants.AirbyteCatalogConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.version.AirbyteProtocolVersion
@@ -164,7 +164,7 @@ open class RemoteDefinitionsProvider(
 
   override fun getDestinationDefinitions(): List<ConnectorRegistryDestinationDefinition> = ArrayList(getDestinationDefinitionsMap().values)
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getRemoteRegistryUrlForPath(path: String): URL {
     try {
       return remoteRegistryBaseUrl.resolve(path).toURL()
@@ -173,11 +173,11 @@ open class RemoteDefinitionsProvider(
     }
   }
 
-  @get:VisibleForTesting
+  @get:InternalForTesting
   val registryPath: String
     get() = String.format("registries/v0/%s_registry.json", getRegistryName(airbyteEdition))
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getRegistryEntryPath(
     connectorRepository: String?,
     version: String?,
@@ -213,7 +213,7 @@ open class RemoteDefinitionsProvider(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getConnectorRegistryEntryJson(
     connectorName: String?,
     version: String?,
@@ -414,20 +414,20 @@ open class RemoteDefinitionsProvider(
       }
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun getDocPath(
       connectorRepository: String?,
       version: String?,
     ): String = String.format("metadata/%s/%s/doc.md", connectorRepository, version)
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun getManifestPath(
       connectorRepository: String?,
       version: String?,
     ): String = String.format("metadata/%s/%s/manifest.yaml", connectorRepository, version)
 
-    @VisibleForTesting
+    @InternalForTesting
     fun getComponentsZipPath(
       connectorRepository: String?,
       version: String?,

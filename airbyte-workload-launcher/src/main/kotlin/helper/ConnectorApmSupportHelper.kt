@@ -4,7 +4,7 @@
 
 package io.airbyte.workload.launcher.helper
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.constants.WorkerConstants
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -64,7 +64,7 @@ class ConnectorApmSupportHelper {
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getEnv(): MutableMap<String?, String?> = System.getenv()
 
   /**

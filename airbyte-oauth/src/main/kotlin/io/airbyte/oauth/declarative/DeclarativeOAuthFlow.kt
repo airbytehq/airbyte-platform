@@ -5,9 +5,9 @@
 package io.airbyte.oauth.declarative
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.oauth.BaseOAuth2Flow
@@ -26,7 +26,7 @@ class DeclarativeOAuthFlow : BaseOAuth2Flow {
 
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
   /**

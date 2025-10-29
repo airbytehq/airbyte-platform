@@ -5,9 +5,15 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.ImmutableMap
+import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -22,7 +28,7 @@ import java.util.function.Supplier
 class ZendeskSunshineOAuthFlow : BaseOAuth2Flow {
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
   override fun formatConsentUrl(
@@ -40,10 +46,10 @@ class ZendeskSunshineOAuthFlow : BaseOAuth2Flow {
         .setScheme("https")
         .setHost(String.format("%s.zendesk.com", subdomain))
         .setPath("oauth/authorizations/new") // required
-        .addParameter("response_type", "code")
-        .addParameter("redirect_uri", redirectUrl)
-        .addParameter("client_id", clientId)
-        .addParameter("scope", "read")
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(SCOPE_KEY, "read")
         .addParameter("state", getState())
 
     try {
@@ -59,15 +65,14 @@ class ZendeskSunshineOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("grant_type", "authorization_code")
-      .put("code", authCode)
-      .put("client_id", clientId)
-      .put("client_secret", clientSecret)
-      .put("redirect_uri", redirectUrl)
-      .put("scope", "read")
-      .build()
+    mapOf(
+      GRANT_TYPE_KEY to "authorization_code",
+      AUTH_CODE_KEY to authCode,
+      CLIENT_ID_KEY to clientId,
+      CLIENT_SECRET_KEY to clientSecret,
+      REDIRECT_URI_KEY to redirectUrl,
+      SCOPE_KEY to "read",
+    )
 
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String {
     // getting subdomain value from user's config
@@ -80,12 +85,12 @@ class ZendeskSunshineOAuthFlow : BaseOAuth2Flow {
     data: JsonNode,
     accessTokenUrl: String,
   ): Map<String, Any> {
-    val result: MutableMap<String, Any> = HashMap()
+    val result: MutableMap<String, Any> = mutableMapOf()
     // getting out access_token
     if (data.has("access_token")) {
       result["access_token"] = data["access_token"].asText()
     } else {
-      throw IOException(String.format("Missing 'access_token' in query params from %s", accessTokenUrl))
+      throw IOException("Missing 'access_token' in query params from $accessTokenUrl")
     }
     return result
   }

@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
@@ -39,7 +39,7 @@ class V1_6_0_003__ConfigTemplateInstanceDefaults : BaseJavaMigration() {
     private const val UNIQUE_ACTOR_DEF_VERSION_CONSTRAINT = "config_template_actor_definition_version_id_unique"
     private const val VALID_REFERENCE_CHECK_CONSTRAINT = "config_template_valid_reference_check"
 
-    @VisibleForTesting
+    @InternalForTesting
     fun updateConfigTemplateTable(ctx: DSLContext) {
       log.info { "Updating $TABLE_NAME table" }
 

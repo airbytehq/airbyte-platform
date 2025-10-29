@@ -30,14 +30,15 @@ import io.airbyte.protocol.models.Jsons
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.AirbyteStream
 import org.assertj.core.api.Condition
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.IOException
 import java.nio.charset.StandardCharsets
-import java.util.stream.Stream
 
 internal class CatalogDiffHelpersTest {
   private fun readResource(name: String): String {
@@ -70,7 +71,7 @@ internal class CatalogDiffHelpersTest {
       )
 
     // sort so that the diff is easier to read.
-    Assertions.assertEquals(expectedFieldNames.stream().sorted().toList(), actualFieldNames.stream().sorted().toList())
+    assertEquals(expectedFieldNames.stream().sorted().toList(), actualFieldNames.stream().sorted().toList())
   }
 
   @Test
@@ -110,72 +111,69 @@ internal class CatalogDiffHelpersTest {
 
     val actualDiff = getCatalogDiff(catalog1, catalog2, configuredAirbyteCatalog)
     val expectedDiff =
-      Stream
-        .of(
-          createAddStreamTransform(StreamDescriptor().withName(SALES)),
-          createRemoveStreamTransform(StreamDescriptor().withName("accounts")),
-          createUpdateStreamTransform(
-            StreamDescriptor().withName(USERS),
-            UpdateStreamTransform(
-              setOf(
-                createAddFieldTransform(
-                  listOf("COD"),
-                  schema2[PROPERTIES]["COD"],
-                ),
-                createAddFieldTransform(
-                  listOf("somePreviouslyInvalidField"),
-                  schema2[PROPERTIES]["somePreviouslyInvalidField"],
-                ),
-                createRemoveFieldTransform(
-                  listOf("something2"),
-                  schema1[PROPERTIES]["something2"],
-                  false,
-                ),
-                createRemoveFieldTransform(
-                  listOf("HKD"),
-                  schema1[PROPERTIES]["HKD"],
-                  false,
-                ),
-                createUpdateFieldTransform(
-                  listOf(CAD),
-                  UpdateFieldSchemaTransform(
-                    schema1[PROPERTIES][CAD],
-                    schema2[PROPERTIES][CAD],
-                  ),
-                ),
-                createUpdateFieldTransform(
-                  listOf(SOME_ARRAY),
-                  UpdateFieldSchemaTransform(
-                    schema1[PROPERTIES][SOME_ARRAY],
-                    schema2[PROPERTIES][SOME_ARRAY],
-                  ),
-                ),
-                createUpdateFieldTransform(
-                  listOf(SOME_ARRAY, ITEMS),
-                  UpdateFieldSchemaTransform(
-                    schema1[PROPERTIES][SOME_ARRAY][ITEMS],
-                    schema2[PROPERTIES][SOME_ARRAY][ITEMS],
-                  ),
-                ),
-                createRemoveFieldTransform(
-                  listOf(SOME_ARRAY, ITEMS, "oldName"),
-                  schema1[PROPERTIES][SOME_ARRAY][ITEMS][PROPERTIES]["oldName"],
-                  false,
-                ),
-                createAddFieldTransform(
-                  listOf(SOME_ARRAY, ITEMS, "newName"),
-                  schema2[PROPERTIES][SOME_ARRAY][ITEMS][PROPERTIES]["newName"],
+      listOf(
+        createAddStreamTransform(StreamDescriptor().withName(SALES)),
+        createRemoveStreamTransform(StreamDescriptor().withName("accounts")),
+        createUpdateStreamTransform(
+          StreamDescriptor().withName(USERS),
+          UpdateStreamTransform(
+            setOf(
+              createAddFieldTransform(
+                listOf("COD"),
+                schema2[PROPERTIES]["COD"],
+              ),
+              createAddFieldTransform(
+                listOf("somePreviouslyInvalidField"),
+                schema2[PROPERTIES]["somePreviouslyInvalidField"],
+              ),
+              createRemoveFieldTransform(
+                listOf("something2"),
+                schema1[PROPERTIES]["something2"],
+                false,
+              ),
+              createRemoveFieldTransform(
+                listOf("HKD"),
+                schema1[PROPERTIES]["HKD"],
+                false,
+              ),
+              createUpdateFieldTransform(
+                listOf(CAD),
+                UpdateFieldSchemaTransform(
+                  schema1[PROPERTIES][CAD],
+                  schema2[PROPERTIES][CAD],
                 ),
               ),
-              setOf(),
+              createUpdateFieldTransform(
+                listOf(SOME_ARRAY),
+                UpdateFieldSchemaTransform(
+                  schema1[PROPERTIES][SOME_ARRAY],
+                  schema2[PROPERTIES][SOME_ARRAY],
+                ),
+              ),
+              createUpdateFieldTransform(
+                listOf(SOME_ARRAY, ITEMS),
+                UpdateFieldSchemaTransform(
+                  schema1[PROPERTIES][SOME_ARRAY][ITEMS],
+                  schema2[PROPERTIES][SOME_ARRAY][ITEMS],
+                ),
+              ),
+              createRemoveFieldTransform(
+                listOf(SOME_ARRAY, ITEMS, "oldName"),
+                schema1[PROPERTIES][SOME_ARRAY][ITEMS][PROPERTIES]["oldName"],
+                false,
+              ),
+              createAddFieldTransform(
+                listOf(SOME_ARRAY, ITEMS, "newName"),
+                schema2[PROPERTIES][SOME_ARRAY][ITEMS][PROPERTIES]["newName"],
+              ),
             ),
+            setOf(),
           ),
-        ).sorted(STREAM_TRANSFORM_COMPARATOR)
-        .toList()
+        ),
+      ).sortedWith(STREAM_TRANSFORM_COMPARATOR)
 
-    org.assertj.core.api.Assertions
-      .assertThat(actualDiff)
-      .containsAll(expectedDiff)
+    assertTrue(expectedDiff.containsAll(actualDiff))
+    assertEquals(expectedDiff.size, actualDiff.size)
   }
 
   @Test
@@ -202,8 +200,8 @@ internal class CatalogDiffHelpersTest {
           CatalogDiffHelpers::combineAccumulator,
         )
 
-    Assertions.assertTrue(resultField.containsKey(listOf("tags", "tags", "items")))
-    Assertions.assertEquals(CatalogDiffHelpers.DUPLICATED_SCHEMA, resultField.get(listOf("tags", "tags", "items")))
+    assertTrue(resultField.containsKey(listOf("tags", "tags", "items")))
+    assertEquals(CatalogDiffHelpers.DUPLICATED_SCHEMA, resultField.get(listOf("tags", "tags", "items")))
   }
 
   @Test
@@ -241,18 +239,8 @@ internal class CatalogDiffHelpersTest {
 
     val actualDiff = getCatalogDiff(catalog1, catalog2, configuredAirbyteCatalog)
 
-    org.assertj.core.api.Assertions
-      .assertThat(actualDiff)
-      .hasSize(1)
-    org.assertj.core.api.Assertions
-      .assertThat(actualDiff)
-      .first()
-      .has(
-        Condition(
-          { streamTransform: StreamTransform -> streamTransform.transformType == StreamTransformType.UPDATE_STREAM },
-          "Check update",
-        ),
-      )
+    assertEquals(1, actualDiff.size)
+    assertNotNull(actualDiff.find { streamTransform -> streamTransform.transformType == StreamTransformType.UPDATE_STREAM })
   }
 
   @Test
@@ -290,9 +278,7 @@ internal class CatalogDiffHelpersTest {
 
     val actualDiff = getCatalogDiff(catalog1, catalog2, configuredAirbyteCatalog)
 
-    org.assertj.core.api.Assertions
-      .assertThat(actualDiff)
-      .hasSize(0)
+    assertEquals(0, actualDiff.size)
   }
 
   @Test
@@ -327,31 +313,29 @@ internal class CatalogDiffHelpersTest {
     val diff = getCatalogDiff(catalog1, catalog2, configuredAirbyteCatalog)
 
     val expectedDiff =
-      Stream
-        .of(
-          createUpdateStreamTransform(
-            StreamDescriptor().withName(USERS),
-            UpdateStreamTransform(
-              setOf(
-                createRemoveFieldTransform(
-                  listOf(DATE),
-                  schema1[PROPERTIES][DATE],
-                  true,
-                ),
-                createRemoveFieldTransform(
-                  listOf("id"),
-                  schema1[PROPERTIES]["id"],
-                  true,
-                ),
+      listOf(
+        createUpdateStreamTransform(
+          StreamDescriptor().withName(USERS),
+          UpdateStreamTransform(
+            setOf(
+              createRemoveFieldTransform(
+                listOf(DATE),
+                schema1[PROPERTIES][DATE],
+                true,
               ),
-              setOf(),
+              createRemoveFieldTransform(
+                listOf("id"),
+                schema1[PROPERTIES]["id"],
+                true,
+              ),
             ),
+            setOf(),
           ),
-        ).toList()
+        ),
+      )
 
-    org.assertj.core.api.Assertions
-      .assertThat(diff)
-      .containsAll(expectedDiff)
+    assertTrue(expectedDiff.containsAll(diff))
+    assertEquals(expectedDiff.size, diff.size)
   }
 
   @Test
@@ -386,9 +370,7 @@ internal class CatalogDiffHelpersTest {
     val diff = getCatalogDiff(catalog1, catalog2, configuredAirbyteCatalog)
 
     // configuredCatalog is for a different stream, so no diff should be found
-    org.assertj.core.api.Assertions
-      .assertThat(diff)
-      .hasSize(0)
+    assertEquals(0, diff.size)
   }
 
   @Test
@@ -437,14 +419,12 @@ internal class CatalogDiffHelpersTest {
     val actualDiff = getCatalogDiff(catalog1, catalog2, configuredAirbyteCatalog)
 
     val expectedDiff =
-      Stream
-        .of(
-          createRemoveStreamTransform(StreamDescriptor().withName(SALES)),
-        ).toList()
+      listOf(
+        createRemoveStreamTransform(StreamDescriptor().withName(SALES)),
+      )
 
-    org.assertj.core.api.Assertions
-      .assertThat(actualDiff)
-      .containsExactlyElementsOf(expectedDiff)
+    assertTrue(expectedDiff.containsAll(actualDiff))
+    assertEquals(expectedDiff.size, actualDiff.size)
   }
 
   @ParameterizedTest
@@ -490,9 +470,8 @@ internal class CatalogDiffHelpersTest {
         ),
       )
 
-    org.assertj.core.api.Assertions
-      .assertThat(actualDiff)
-      .containsExactlyElementsOf(expectedDiff)
+    assertTrue(expectedDiff.containsAll(actualDiff))
+    assertEquals(expectedDiff.size, actualDiff.size)
   }
 
   companion object {
@@ -513,8 +492,8 @@ internal class CatalogDiffHelpersTest {
     private const val VALID_SCHEMA_JSON = "diffs/valid_schema.json"
 
     @JvmStatic
-    private fun testCatalogDiffWithSourceDefinedPrimaryKeyChangeMethodSource(): Stream<Arguments> =
-      Stream.of( // Should be breaking in DE-DUP mode if the previous PK is not the new source-defined PK
+    private fun testCatalogDiffWithSourceDefinedPrimaryKeyChangeMethodSource(): List<Arguments> =
+      listOf( // Should be breaking in DE-DUP mode if the previous PK is not the new source-defined PK
         Arguments.of(DestinationSyncMode.APPEND_DEDUP, ID_PK, ID_PK, DATE_PK, true),
         Arguments.of(DestinationSyncMode.APPEND_DEDUP, ID_PK, listOf<Any>(), DATE_PK, true),
         Arguments.of(DestinationSyncMode.APPEND_DEDUP, COMPOSITE_PK, COMPOSITE_PK, ID_PK, true),

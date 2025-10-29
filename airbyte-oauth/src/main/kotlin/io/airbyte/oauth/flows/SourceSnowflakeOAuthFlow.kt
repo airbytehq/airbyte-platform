@@ -5,10 +5,16 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.ImmutableMap
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.REFRESH_TOKEN_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URI
@@ -27,7 +33,7 @@ import java.util.function.Supplier
 class SourceSnowflakeOAuthFlow : BaseOAuth2Flow {
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
   override fun formatConsentUrl(
@@ -39,9 +45,9 @@ class SourceSnowflakeOAuthFlow : BaseOAuth2Flow {
     try {
       val consentUrl =
         URIBuilder(String.format(AUTHORIZE_URL, extractUrl(inputOAuthConfiguration)))
-          .addParameter("client_id", clientId)
-          .addParameter("redirect_uri", redirectUrl)
-          .addParameter("response_type", "code")
+          .addParameter(CLIENT_ID_KEY, clientId)
+          .addParameter(REDIRECT_URI_KEY, redirectUrl)
+          .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
           .addParameter("state", getState())
           .build()
           .toString()
@@ -66,12 +72,11 @@ class SourceSnowflakeOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("grant_type", "authorization_code")
-      .put("code", authCode)
-      .put("redirect_uri", redirectUrl)
-      .build()
+    mapOf(
+      GRANT_TYPE_KEY to "authorization_code",
+      AUTH_CODE_KEY to authCode,
+      REDIRECT_URI_KEY to redirectUrl,
+    )
 
   override fun completeOAuthFlow(
     clientId: String,
@@ -119,7 +124,7 @@ class SourceSnowflakeOAuthFlow : BaseOAuth2Flow {
     data: JsonNode,
     accessTokenUrl: String,
   ): Map<String, Any> {
-    val result: MutableMap<String, Any> = HashMap()
+    val result: MutableMap<String, Any> = mutableMapOf()
     // access_token is valid for only 10 minutes
     if (data.has("access_token")) {
       result["access_token"] = data["access_token"].asText()
@@ -132,8 +137,8 @@ class SourceSnowflakeOAuthFlow : BaseOAuth2Flow {
       )
     }
 
-    if (data.has("refresh_token")) {
-      result["refresh_token"] = data["refresh_token"].asText()
+    if (data.has(REFRESH_TOKEN_KEY)) {
+      result[REFRESH_TOKEN_KEY] = data[REFRESH_TOKEN_KEY].asText()
     } else {
       throw IOException(
         String.format(
@@ -174,7 +179,7 @@ class SourceSnowflakeOAuthFlow : BaseOAuth2Flow {
       providedRole: String,
     ): String =
       URIBuilder(consentUrl)
-        .addParameter("scope", "session:role:$providedRole")
+        .addParameter(SCOPE_KEY, "session:role:$providedRole")
         .build()
         .toString()
   }

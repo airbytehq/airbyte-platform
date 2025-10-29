@@ -5,8 +5,11 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -20,7 +23,7 @@ import java.util.function.Supplier
 class SlackOAuthFlow : BaseOAuth2Flow {
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
   /**
@@ -36,10 +39,10 @@ class SlackOAuthFlow : BaseOAuth2Flow {
   ): String {
     try {
       return URIBuilder(AUTHORIZE_URL)
-        .addParameter("client_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
         .addParameter("state", getState())
-        .addParameter("scope", scopes)
+        .addParameter(SCOPE_KEY, scopes)
         .build()
         .toString()
     } catch (e: URISyntaxException) {
@@ -57,16 +60,15 @@ class SlackOAuthFlow : BaseOAuth2Flow {
     accessTokenUrl: String,
   ): Map<String, Any> {
     if (data.has("access_token")) {
-      return java.util.Map.of<String, Any>("access_token", data["access_token"].asText())
+      return mapOf("access_token" to data["access_token"].asText())
     } else {
-      throw IOException(String.format("Missing 'access_token' in query params from %s", ACCESS_TOKEN_URL))
+      throw IOException("Missing 'access_token' in query params from $ACCESS_TOKEN_URL")
     }
   }
 
   private val scopes: String
     get() =
-      java.lang.String.join(
-        ",",
+      listOf(
         "channels:history",
         "channels:join",
         "channels:read",
@@ -77,7 +79,7 @@ class SlackOAuthFlow : BaseOAuth2Flow {
         "mpim:history",
         "im:read",
         "mpim:read",
-      )
+      ).joinToString(",")
 
   companion object {
     private const val AUTHORIZE_URL = "https://slack.com/oauth/v2/authorize"

@@ -4,9 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Preconditions
-import com.google.common.collect.Lists
 import io.airbyte.api.model.generated.CheckOperationRead
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.OperationCreate
@@ -16,6 +13,7 @@ import io.airbyte.api.model.generated.OperationReadList
 import io.airbyte.api.model.generated.OperationUpdate
 import io.airbyte.api.model.generated.OperatorConfiguration
 import io.airbyte.api.model.generated.OperatorType
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.server.converters.OperationsConverter.operationReadFromPersistedOperation
 import io.airbyte.commons.server.converters.OperationsConverter.populateOperatorConfigFromApi
@@ -40,7 +38,7 @@ import java.util.function.Supplier
  */
 @Singleton
 open class OperationsHandler
-  @VisibleForTesting
+  @InternalForTesting
   internal constructor(
     private val workspaceService: WorkspaceService,
     @param:Named("uuidGenerator") private val uuidGenerator: Supplier<UUID>,
@@ -95,7 +93,7 @@ open class OperationsHandler
 
     private fun validateOperation(operatorConfiguration: OperatorConfiguration) {
       if (OperatorType.WEBHOOK == operatorConfiguration.operatorType) {
-        Preconditions.checkArgument(operatorConfiguration.webhook != null)
+        require(operatorConfiguration.webhook != null)
       }
     }
 
@@ -116,7 +114,7 @@ open class OperationsHandler
     }
 
     fun listOperationsForConnection(connectionIdRequestBody: ConnectionIdRequestBody): OperationReadList {
-      val operationReads: MutableList<OperationRead> = Lists.newArrayList()
+      val operationReads: MutableList<OperationRead> = mutableListOf()
       val standardSync = connectionService.getStandardSync(connectionIdRequestBody.connectionId)
       for (operationId in standardSync.operationIds) {
         val standardSyncOperation = operationService.getStandardSyncOperation(operationId)

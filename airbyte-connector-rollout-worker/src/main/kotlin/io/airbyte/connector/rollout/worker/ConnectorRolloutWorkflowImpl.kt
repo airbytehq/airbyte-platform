@@ -4,7 +4,7 @@
 
 package io.airbyte.connector.rollout.worker
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRolloutFinalState
@@ -170,7 +170,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun runManual(workflowId: String): ConnectorEnumRolloutState {
     // End the workflow if we were unable to start the rollout, or we've reached a terminal state
     Workflow.await { rolloutStateIsTerminal() }
@@ -179,7 +179,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     return getRolloutState()
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun runAutomated(
     workflowId: String,
     input: ConnectorRolloutWorkflowInput,
@@ -402,7 +402,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
 
   private fun rolloutStateIsTerminal(): Boolean = ConnectorRolloutFinalState.entries.any { it.value() == getRolloutState().value() }
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun startRollout(input: ConnectorRolloutActivityInputStart): ConnectorRolloutOutput {
     logger.info { "startRollout: calling startRolloutActivity" }
     val workflowRunId = Workflow.getInfo().firstExecutionRunId

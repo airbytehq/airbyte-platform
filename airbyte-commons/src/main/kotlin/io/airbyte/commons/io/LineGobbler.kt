@@ -37,8 +37,8 @@ class LineGobbler
       try {
         var line = inputStream.readLine()
         while (line != null) {
-          containerLogMdcBuilder.build().use { mdcScope ->
-            consumer.accept(line!!)
+          containerLogMdcBuilder.build().use { _ ->
+            consumer.accept(line)
           }
           line = inputStream.readLine()
         }

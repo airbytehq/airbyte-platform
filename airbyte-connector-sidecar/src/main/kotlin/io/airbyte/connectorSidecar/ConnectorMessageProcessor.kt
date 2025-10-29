@@ -5,10 +5,10 @@
 package io.airbyte.connectorSidecar
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.DestinationDiscoverSchemaWriteRequestBody
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaWriteRequestBody
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.converters.ConnectorConfigUpdater
 import io.airbyte.commons.converters.toClientApi
@@ -158,7 +158,7 @@ class ConnectorMessageProcessor(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun setOutput(
     operationType: OperationType,
     result: OperationResult,
@@ -270,7 +270,7 @@ class ConnectorMessageProcessor(
       configurationHash = discoverSchemaInput.configHash,
     )
 
-  @VisibleForTesting
+  @InternalForTesting
   fun updateConfigFromControlMessage(
     actorId: UUID?,
     actorType: ActorType,

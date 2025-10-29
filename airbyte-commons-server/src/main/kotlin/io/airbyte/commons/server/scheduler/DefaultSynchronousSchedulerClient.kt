@@ -4,10 +4,9 @@
 
 package io.airbyte.commons.server.scheduler
 
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Charsets
 import com.google.common.hash.HashFunction
 import com.google.common.hash.Hashing
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.lang.Exceptions
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder
@@ -329,7 +328,7 @@ class DefaultSynchronousSchedulerClient(
     )
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun <T> execute(
     configType: ConfigType,
     jobContext: ConnectorJobReportingContext,

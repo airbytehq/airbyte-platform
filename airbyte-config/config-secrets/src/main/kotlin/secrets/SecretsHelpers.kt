@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.JsonPaths
@@ -168,7 +167,7 @@ object SecretsHelpers {
    * Identical to [SecretsHelpers.splitAndUpdateConfig] with UUID supplier for testing.
    */
   @Deprecated("Use splitAndUpdateConfig() that takes in ConfigWithSecretReferences instead.")
-  @VisibleForTesting
+  @InternalForTesting
   fun splitAndUpdateConfig(
     uuidSupplier: Supplier<UUID>,
     secretBaseId: UUID,
@@ -251,7 +250,7 @@ object SecretsHelpers {
    * This returns all the unique path to the airbyte secrets based on a schema spec. The path will be
    * return in an ascending alphabetical order.
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun getSortedSecretPaths(spec: JsonNode): List<String> =
     JsonSchemas
       .collectPathsThatMeetCondition(
@@ -453,7 +452,7 @@ object SecretsHelpers {
    * previous config
    * @return a coordinate (versioned reference to where the secret is stored in the persistence)
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun createNewAirbyteManagedSecretCoordinate(
     secretBasePrefix: String,
     secretReader: ReadOnlySecretPersistence,

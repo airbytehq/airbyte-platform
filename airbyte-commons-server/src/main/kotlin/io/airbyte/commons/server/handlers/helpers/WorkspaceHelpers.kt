@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import com.google.common.base.Strings
 import io.airbyte.api.model.generated.WorkspaceCreateWithId
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.NotificationMissingUrlProblem
@@ -120,9 +119,9 @@ private fun validateNotificationItem(
   }
 
   if (item.notificationType != null && item.notificationType.contains(Notification.NotificationType.SLACK)) {
-    if (item.slackConfiguration == null || Strings.isNullOrEmpty(item.slackConfiguration.webhook)) {
+    if (item.slackConfiguration == null || item.slackConfiguration.webhook.isNullOrBlank()) {
       throw NotificationMissingUrlProblem(
-        ProblemMessageData().message(String.format("The '%s' notification is enabled but is missing a URL.", notificationName)),
+        ProblemMessageData().message("The '$notificationName' notification is enabled but is missing a URL."),
       )
     }
   }

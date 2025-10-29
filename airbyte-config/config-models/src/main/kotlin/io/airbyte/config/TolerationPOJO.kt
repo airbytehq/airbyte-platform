@@ -4,12 +4,8 @@
 
 package io.airbyte.config
 
-import com.google.common.base.Splitter
-import com.google.common.base.Strings
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.Objects
-import java.util.stream.Collectors
-import java.util.stream.Stream
 
 /**
  * Represents a minimal [io.fabric8.kubernetes.api.model.Toleration].
@@ -44,33 +40,28 @@ data class TolerationPOJO(
     @JvmStatic
     fun getJobKubeTolerations(tolerationsStr: String?): List<TolerationPOJO> {
       val tolerations =
-        if (Strings.isNullOrEmpty(tolerationsStr)) {
-          Stream.of()
+        if (tolerationsStr.isNullOrBlank()) {
+          emptyList()
         } else {
-          Splitter
-            .on(";")
-            .splitToStream(tolerationsStr as CharSequence)
-            .filter { tolerationStr: String? -> !Strings.isNullOrEmpty(tolerationStr) }
+          tolerationsStr
+            .split(";")
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .toList()
         }
 
       return tolerations
         .map { singleTolerationStr: String -> parseToleration(singleTolerationStr) }
         .filter { obj: TolerationPOJO? -> Objects.nonNull(obj) }
-        .collect(Collectors.toList()) as List<TolerationPOJO>
+        .toList() as List<TolerationPOJO>
     }
 
     private fun parseToleration(singleTolerationStr: String): TolerationPOJO? {
       val tolerationMap =
-        Splitter
-          .on(",")
-          .splitToStream(singleTolerationStr)
-          .map { s: String -> s.split("=".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray() }
-          .collect(
-            Collectors.toMap(
-              { s: Array<String> -> s[0] },
-              { s: Array<String> -> s[1] },
-            ),
-          )
+        singleTolerationStr
+          .split(",")
+          .map { s: String -> s.split("=".toRegex()).dropLastWhile { it.isEmpty() } }
+          .associate { s -> s[0] to s[1] }
 
       if (tolerationMap.containsKey("key") && tolerationMap.containsKey("effect") && tolerationMap.containsKey("operator")) {
         return TolerationPOJO(

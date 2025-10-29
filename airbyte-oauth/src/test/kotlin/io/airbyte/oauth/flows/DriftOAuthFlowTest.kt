@@ -6,7 +6,10 @@ package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.oauth.BaseOAuthFlow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
 import io.airbyte.oauth.MoreOAuthParameters
+import io.airbyte.oauth.REFRESH_TOKEN_KEY
 
 class DriftOAuthFlowTest : BaseOAuthFlowTest() {
   override val oAuthFlow: BaseOAuthFlow
@@ -18,36 +21,27 @@ class DriftOAuthFlowTest : BaseOAuthFlowTest() {
 
   override val expectedOutput: Map<String, String>
     get() =
-      java.util.Map.of(
-        "access_token",
-        "access_token_response",
-        "refresh_token",
-        "refresh_token_response",
-        "client_id",
-        MoreOAuthParameters.SECRET_MASK,
-        "client_secret",
-        MoreOAuthParameters.SECRET_MASK,
+      mapOf(
+        "access_token" to "access_token_response",
+        REFRESH_TOKEN_KEY to "refresh_token_response",
+        CLIENT_ID_KEY to MoreOAuthParameters.SECRET_MASK,
+        CLIENT_SECRET_KEY to MoreOAuthParameters.SECRET_MASK,
       )
 
   override val completeOAuthOutputSpecification: JsonNode
     get() =
-      BaseOAuthFlowTest.Companion.getJsonSchema(
-        java.util.Map.of<String, Any>(
-          "access_token",
-          java.util.Map.of<String, String>("type", "string"),
-          "refresh_token",
-          java.util.Map.of<String, String>("type", "string"),
+      getJsonSchema(
+        mapOf(
+          "access_token" to mapOf("type" to "string"),
+          REFRESH_TOKEN_KEY to mapOf("type" to "string"),
         ),
       )
 
   override val expectedFilteredOutput: Map<String, String>
     get() =
-      java.util.Map.of(
-        "access_token",
-        "access_token_response",
-        "refresh_token",
-        "refresh_token_response",
-        "client_id",
-        MoreOAuthParameters.SECRET_MASK,
+      mapOf(
+        "access_token" to "access_token_response",
+        REFRESH_TOKEN_KEY to "refresh_token_response",
+        CLIENT_ID_KEY to MoreOAuthParameters.SECRET_MASK,
       )
 }

@@ -5,9 +5,13 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.ImmutableMap
+import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -16,7 +20,6 @@ import java.net.http.HttpClient
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 import java.util.function.Supplier
-import java.util.stream.Collectors
 
 /**
  * Square OAuth.
@@ -24,7 +27,7 @@ import java.util.stream.Collectors
 class SquareOAuthFlow : BaseOAuth2Flow {
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     httpClient: HttpClient,
     stateSupplier: Supplier<String>,
@@ -40,8 +43,8 @@ class SquareOAuthFlow : BaseOAuth2Flow {
       // Need to have decoded format, otherwise square fails saying that scope is incorrect
       return URLDecoder.decode(
         URIBuilder(AUTHORIZE_URL)
-          .addParameter("client_id", clientId)
-          .addParameter("scope", java.lang.String.join("+", SCOPES))
+          .addParameter(CLIENT_ID_KEY, clientId)
+          .addParameter(SCOPE_KEY, SCOPES.joinToString("+"))
           .addParameter("session", "False")
           .addParameter("state", getState())
           .build()
@@ -61,26 +64,20 @@ class SquareOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> {
-    var scopes =
-      SCOPES
-        .stream()
-        .map { name: String -> ('"'.toString() + name + '"') }
-        .collect(Collectors.joining(","))
-    scopes = "[$scopes]"
+    val scopes = SCOPES.joinToString(separator = ",", prefix = "[", postfix = "]") { name: String -> "\"$name\"" }
 
-    return ImmutableMap
-      .builder<String, String>() // required
-      .put("client_id", clientId)
-      .put("client_secret", clientSecret)
-      .put("code", authCode)
-      .put("grant_type", "authorization_code")
-      .put("scopes", scopes)
-      .build()
+    return mapOf(
+      CLIENT_ID_KEY to clientId,
+      CLIENT_SECRET_KEY to clientSecret,
+      AUTH_CODE_KEY to authCode,
+      GRANT_TYPE_KEY to "authorization_code",
+      io.airbyte.oauth.SCOPES_KEY to scopes,
+    )
   }
 
   companion object {
     private val SCOPES: List<String> =
-      mutableListOf(
+      listOf(
         "CUSTOMERS_READ",
         "EMPLOYEES_READ",
         "ITEMS_READ",

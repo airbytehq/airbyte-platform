@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
@@ -31,7 +31,7 @@ class V1_6_0_017__MigrateDataplaneCredentialsToServiceAccounts : BaseJavaMigrati
     val createdAt: OffsetDateTime,
   )
 
-  @VisibleForTesting
+  @InternalForTesting
   enum class PermissionType(
     private val literal: String,
   ) : EnumType {

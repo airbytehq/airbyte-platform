@@ -4,8 +4,8 @@
 
 package io.airbyte.container.orchestrator.worker
 
-import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
 import io.airbyte.config.ReplicationAttemptSummary
@@ -41,16 +41,16 @@ import java.util.function.ToDoubleFunction
 
 private val logger = KotlinLogging.logger {}
 
-@VisibleForTesting
+@InternalForTesting
 internal val BYTES_TO_GB: Double = (1024 * 1024 * 1024).toDouble()
 
-@VisibleForTesting
+@InternalForTesting
 internal const val STATUS_ATTRIBUTE: String = "status"
 
-@VisibleForTesting
+@InternalForTesting
 internal const val FAILED_STATUS: String = "failed"
 
-@VisibleForTesting
+@InternalForTesting
 internal const val SUCCESS_STATUS: String = "success"
 
 private val BYTES_GAUGE_FUNCTION =
@@ -154,7 +154,7 @@ class ReplicationJobOrchestrator(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun updateStatusInWorkloadApi(
     replicationOutput: ReplicationOutput?,
     workloadId: String,
@@ -209,7 +209,7 @@ class ReplicationJobOrchestrator(
     workloadApiClient.workloadSuccess(WorkloadSuccessRequest(workloadId))
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun buildMetricAttributes(
     replicationInput: ReplicationInput,
     jobId: Long,

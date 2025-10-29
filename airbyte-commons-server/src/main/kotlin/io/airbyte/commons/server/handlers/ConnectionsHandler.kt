@@ -4,10 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Preconditions
-import com.google.common.collect.ImmutableMap
-import com.google.common.collect.Lists
 import datadog.trace.api.Trace
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.common.StreamDescriptorUtils.buildFullyQualifiedName
@@ -88,6 +84,7 @@ import io.airbyte.api.problems.throwable.generated.DestinationCatalogRequiredPro
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem
 import io.airbyte.api.problems.throwable.generated.StreamDoesNotSupportFileTransfersProblem
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.converters.ApiConverters.Companion.toInternal
 import io.airbyte.commons.converters.toServerApi
 import io.airbyte.commons.entitlements.Entitlement
@@ -167,7 +164,6 @@ import io.airbyte.data.services.shared.FailedEvent
 import io.airbyte.data.services.shared.FinalStatusEvent
 import io.airbyte.featureflag.CheckWithCatalog
 import io.airbyte.featureflag.Connection
-import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.EnableDestinationCatalogValidation
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Multi
@@ -256,7 +252,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
      * Modifies the given StandardSync by applying changes from a partially-filled ConnectionUpdate
      * patch. Any fields that are null in the patch will be left unchanged.
      */
-    @VisibleForTesting
+    @InternalForTesting
     fun applyPatchToStandardSync(
       sync: StandardSync,
       patch: ConnectionUpdate,
@@ -416,7 +412,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       val organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId)
 
       addTagsToTrace(
-        java.util.List.of(
+        listOf(
           MetricAttribute(ApmTraceConstants.Tags.ORGANIZATION_ID_KEY, organizationId.toString()),
           MetricAttribute(ApmTraceConstants.Tags.DESTINATION_ID_KEY, destinationId.toString()),
         ),
@@ -679,8 +675,8 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     private fun trackNewConnection(standardSync: StandardSync) {
       try {
         val workspaceId = workspaceHelper.getWorkspaceForConnectionIdIgnoreExceptions(standardSync.connectionId)
-        val metadataBuilder = generateMetadata(standardSync)
-        trackingClient.track(workspaceId, ScopeType.WORKSPACE, "New Connection - Backend", metadataBuilder.build())
+        val metadata = generateMetadata(standardSync)
+        trackingClient.track(workspaceId, ScopeType.WORKSPACE, "New Connection - Backend", metadata)
       } catch (e: Exception) {
         log.error(e) { "failed while reporting usage." }
       }
@@ -689,53 +685,51 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     private fun trackUpdateConnection(standardSync: StandardSync) {
       try {
         val workspaceId = workspaceHelper.getWorkspaceForConnectionIdIgnoreExceptions(standardSync.connectionId)
-        val metadataBuilder = generateMetadata(standardSync)
-        trackingClient.track(workspaceId, ScopeType.WORKSPACE, "Updated Connection - Backend", metadataBuilder.build())
+        val metadata = generateMetadata(standardSync)
+        trackingClient.track(workspaceId, ScopeType.WORKSPACE, "Updated Connection - Backend", metadata)
       } catch (e: Exception) {
         log.error(e) { "failed while reporting usage." }
       }
     }
 
-    private fun generateMetadata(standardSync: StandardSync): ImmutableMap.Builder<String, Any> {
-      val metadata = ImmutableMap.builder<String, Any>()
+    private fun generateMetadata(standardSync: StandardSync): Map<String, Any> =
+      buildMap {
+        val connectionId = standardSync.connectionId
+        val sourceDefinition =
+          sourceService
+            .getSourceDefinitionFromConnection(connectionId)
+        val destinationDefinition =
+          destinationService
+            .getDestinationDefinitionFromConnection(connectionId)
 
-      val connectionId = standardSync.connectionId
-      val sourceDefinition =
-        sourceService
-          .getSourceDefinitionFromConnection(connectionId)
-      val destinationDefinition =
-        destinationService
-          .getDestinationDefinitionFromConnection(connectionId)
+        put("connector_source", sourceDefinition.name)
+        put("connector_source_definition_id", sourceDefinition.sourceDefinitionId)
+        put("connector_destination", destinationDefinition.name)
+        put("connector_destination_definition_id", destinationDefinition.destinationDefinitionId)
+        put("connection_id", standardSync.connectionId)
+        put("source_id", standardSync.sourceId)
+        put("destination_id", standardSync.destinationId)
 
-      metadata.put("connector_source", sourceDefinition.name)
-      metadata.put("connector_source_definition_id", sourceDefinition.sourceDefinitionId)
-      metadata.put("connector_destination", destinationDefinition.name)
-      metadata.put("connector_destination_definition_id", destinationDefinition.destinationDefinitionId)
-      metadata.put("connection_id", standardSync.connectionId)
-      metadata.put("source_id", standardSync.sourceId)
-      metadata.put("destination_id", standardSync.destinationId)
-
-      val frequencyString: String
-      if (standardSync.scheduleType != null && standardSync.scheduleData != null) {
-        frequencyString = getFrequencyStringFromScheduleType(standardSync.scheduleType, standardSync.scheduleData)
-      } else if (standardSync.manual) {
-        frequencyString = "manual"
-      } else {
-        val intervalInMinutes = TimeUnit.SECONDS.toMinutes(getIntervalInSecond(standardSync.schedule))
-        frequencyString = "$intervalInMinutes min"
+        val frequencyString: String
+        if (standardSync.scheduleType != null && standardSync.scheduleData != null) {
+          frequencyString = getFrequencyStringFromScheduleType(standardSync.scheduleType, standardSync.scheduleData)
+        } else if (standardSync.manual) {
+          frequencyString = "manual"
+        } else {
+          val intervalInMinutes = TimeUnit.SECONDS.toMinutes(getIntervalInSecond(standardSync.schedule))
+          frequencyString = "$intervalInMinutes min"
+        }
+        var fieldSelectionEnabled = false
+        if (standardSync.fieldSelectionData != null && standardSync.fieldSelectionData.additionalProperties != null) {
+          fieldSelectionEnabled =
+            standardSync.fieldSelectionData.additionalProperties
+              .entries
+              .stream()
+              .anyMatch { obj: Map.Entry<String?, Boolean?> -> obj.value!! }
+        }
+        put("field_selection_active", fieldSelectionEnabled)
+        put("frequency", frequencyString)
       }
-      var fieldSelectionEnabled = false
-      if (standardSync.fieldSelectionData != null && standardSync.fieldSelectionData.additionalProperties != null) {
-        fieldSelectionEnabled =
-          standardSync.fieldSelectionData.additionalProperties
-            .entries
-            .stream()
-            .anyMatch { obj: Map.Entry<String?, Boolean?> -> obj.value!! }
-      }
-      metadata.put("field_selection_active", fieldSelectionEnabled)
-      metadata.put("frequency", frequencyString)
-      return metadata
-    }
 
     private fun isPatchRelevantForDestinationValidation(connectionPatch: ConnectionUpdate): Boolean =
       connectionPatch.syncCatalog != null ||
@@ -784,15 +778,10 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
 
         if (featureFlagClient.boolVariation(
             EnableDestinationCatalogValidation,
-            Multi(java.util.List.of<Context>(Workspace(workspaceId), Connection(sync.connectionId))),
+            Multi(listOf(Workspace(workspaceId), Connection(sync.connectionId))),
           )
         ) {
-          val destCatalogId =
-            if (connectionPatch.destinationCatalogId != null) {
-              connectionPatch.destinationCatalogId
-            } else {
-              sync.destinationCatalogId
-            }
+          val destCatalogId = connectionPatch.destinationCatalogId ?: sync.destinationCatalogId
           val hasDestinationCatalog = destCatalogId != null
 
           if (destinationVersion.supportsDataActivation && !hasDestinationCatalog) {
@@ -944,7 +933,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
                     .namespace(streamAndConfig.stream.namespace)
                 },
                 { streamAndConfig: ConfiguredAirbyteStream ->
-                  streamAndConfig.syncMode?.convertTo<SyncMode>()
+                  streamAndConfig.syncMode.convertTo<SyncMode>()
                 },
               ),
             )
@@ -1019,7 +1008,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       }
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun validateCatalogWithDestinationCatalog(
       catalog: AirbyteCatalog,
       destinationCatalog: DestinationCatalog,
@@ -1140,7 +1129,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       patch: ConnectionUpdate,
     ) {
       // sanity check that we're updating the right connection
-      Preconditions.checkArgument(persistedSync.connectionId == patch.connectionId)
+      require(persistedSync.connectionId == patch.connectionId)
 
       // make sure all operationIds belong to the same workspace as the connection
       validateWorkspace(
@@ -1153,35 +1142,24 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       // make sure the incoming schedule update is sensible. Note that schedule details are further
       // validated in ConnectionScheduleHelper, this just
       // sanity checks that fields are populated when they should be.
-      Preconditions.checkArgument(
-        patch.schedule == null,
-        "ConnectionUpdate should only make changes to the schedule by setting scheduleType and scheduleData. 'schedule' is no longer supported.",
-      )
+      require(patch.schedule == null) {
+        "ConnectionUpdate should only make changes to the schedule by setting scheduleType and scheduleData. 'schedule' is no longer supported."
+      }
 
       if (patch.scheduleType == null) {
-        Preconditions.checkArgument(
-          patch.scheduleData == null,
-          "ConnectionUpdate should not include any scheduleData without also specifying a valid scheduleType.",
-        )
+        require(patch.scheduleData == null) { "ConnectionUpdate should not include any scheduleData without also specifying a valid scheduleType." }
       } else {
         when (patch.scheduleType) {
           ConnectionScheduleType.MANUAL ->
-            Preconditions.checkArgument(
+            require(
               patch.scheduleData == null,
-              "ConnectionUpdate should not include any scheduleData when setting the Connection scheduleType to MANUAL.",
-            )
+            ) { "ConnectionUpdate should not include any scheduleData when setting the Connection scheduleType to MANUAL." }
 
           ConnectionScheduleType.BASIC ->
-            Preconditions.checkArgument(
-              patch.scheduleData != null,
-              "ConnectionUpdate should include scheduleData when setting the Connection scheduleType to BASIC.",
-            )
+            requireNotNull(patch.scheduleData) { "ConnectionUpdate should include scheduleData when setting the Connection scheduleType to BASIC." }
 
           ConnectionScheduleType.CRON ->
-            Preconditions.checkArgument(
-              patch.scheduleData != null,
-              "ConnectionUpdate should include scheduleData when setting the Connection scheduleType to CRON.",
-            )
+            requireNotNull(patch.scheduleData) { "ConnectionUpdate should include scheduleData when setting the Connection scheduleType to CRON." }
 
           else -> throw RuntimeException("Unrecognized scheduleType!")
         }
@@ -1190,7 +1168,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
 
     @Trace
     fun listConnectionsForWorkspace(workspaceIdRequestBody: WorkspaceIdRequestBody): ConnectionReadList {
-      addTagsToTrace(java.util.Map.of(MetricTags.WORKSPACE_ID, workspaceIdRequestBody.workspaceId.toString()))
+      addTagsToTrace(mapOf(MetricTags.WORKSPACE_ID to workspaceIdRequestBody.workspaceId.toString()))
       return listConnectionsForWorkspace(workspaceIdRequestBody, false)
     }
 
@@ -1199,11 +1177,14 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       workspaceIdRequestBody: WorkspaceIdRequestBody,
       includeDeleted: Boolean,
     ): ConnectionReadList {
-      val connectionReads: MutableList<ConnectionRead> = Lists.newArrayList()
-
-      for (standardSync in connectionService.listWorkspaceStandardSyncs(workspaceIdRequestBody.workspaceId, includeDeleted)) {
-        connectionReads.add(apiPojoConverters.internalToConnectionRead(standardSync))
-      }
+      val connectionReads: List<ConnectionRead> =
+        connectionService
+          .listWorkspaceStandardSyncs(
+            workspaceIdRequestBody.workspaceId,
+            includeDeleted,
+          ).map { connection ->
+            apiPojoConverters.internalToConnectionRead(connection)
+          }.toList()
 
       return ConnectionReadList().connections(connectionReads)
     }
@@ -1215,23 +1196,24 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       sourceId: UUID,
       includeDeleted: Boolean,
     ): ConnectionReadList {
-      val connectionReads: MutableList<ConnectionRead> = Lists.newArrayList()
-      for (standardSync in connectionService.listConnectionsBySource(sourceId, includeDeleted)) {
-        connectionReads.add(apiPojoConverters.internalToConnectionRead(standardSync))
-      }
+      val connectionReads: List<ConnectionRead> =
+        connectionService
+          .listConnectionsBySource(sourceId, includeDeleted)
+          .map {
+            apiPojoConverters.internalToConnectionRead(it)
+          }.toList()
       return ConnectionReadList().connections(connectionReads)
     }
 
     fun listConnections(): ConnectionReadList {
-      val connectionReads: MutableList<ConnectionRead> = Lists.newArrayList()
-
-      for (standardSync in connectionService.listStandardSyncs()) {
-        if (standardSync.status == StandardSync.Status.DEPRECATED) {
-          continue
-        }
-        connectionReads.add(apiPojoConverters.internalToConnectionRead(standardSync))
-      }
-
+      val connectionReads: List<ConnectionRead> =
+        connectionService
+          .listStandardSyncs()
+          .filter { standardSync ->
+            standardSync.status !=
+              StandardSync.Status.DEPRECATED
+          }.map { connection -> apiPojoConverters.internalToConnectionRead(connection) }
+          .toList()
       return ConnectionReadList().connections(connectionReads)
     }
 
@@ -1429,7 +1411,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
     }
 
     fun listConnectionsForWorkspaces(listConnectionsForWorkspacesRequestBody: ListConnectionsForWorkspacesRequestBody): ConnectionReadList {
-      val connectionReads: MutableList<ConnectionRead> = Lists.newArrayList()
+      val connectionReads: MutableList<ConnectionRead> = mutableListOf()
 
       val workspaceIdToStandardSyncsMap =
         connectionService.listWorkspaceStandardSyncsLimitOffsetPaginated(
@@ -1484,7 +1466,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
 
     @Trace
     fun getConnectionStatuses(connectionStatusesRequestBody: ConnectionStatusesRequestBody): List<ConnectionStatusRead> {
-      addTagsToTrace(java.util.Map.of(MetricTags.CONNECTION_IDS, connectionStatusesRequestBody.connectionIds.toString()))
+      addTagsToTrace(mapOf(MetricTags.CONNECTION_IDS to connectionStatusesRequestBody.connectionIds.toString()))
       val connectionIds = connectionStatusesRequestBody.connectionIds
       val result: MutableList<ConnectionStatusRead> = ArrayList()
       for (connectionId in connectionIds) {
@@ -1699,15 +1681,14 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
      *
      */
     fun backfillConnectionEvents(connectionEventsBackfillRequestBody: ConnectionEventsBackfillRequestBody) {
-      val connectionId = connectionEventsBackfillRequestBody.connectionId
       val startTime = connectionEventsBackfillRequestBody.createdAtStart
       val endTime = connectionEventsBackfillRequestBody.createdAtEnd
       log.info { "Backfilled events from {} to {} for connection $startTime, endTime, connectionId" }
       // 1. list all jobs within a given time window
       val allJobsToMigrate =
         jobPersistence.listJobsForConvertingToEvents(
-          java.util.Set.of(ConfigType.SYNC, ConfigType.REFRESH, ConfigType.RESET_CONNECTION),
-          java.util.Set.of(JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.INCOMPLETE, JobStatus.CANCELLED),
+          setOf(ConfigType.SYNC, ConfigType.REFRESH, ConfigType.RESET_CONNECTION),
+          setOf(JobStatus.SUCCEEDED, JobStatus.FAILED, JobStatus.INCOMPLETE, JobStatus.CANCELLED),
           startTime,
           endTime,
         )
@@ -1726,11 +1707,11 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
                 job.updatedAtInSecond,
                 jobRead.attempts
                   .stream()
-                  .mapToLong { attempt: AttemptRead -> if (attempt.bytesSynced != null) attempt.bytesSynced else 0 }
+                  .mapToLong { attempt: AttemptRead -> attempt.bytesSynced ?: 0 }
                   .sum(),
                 jobRead.attempts
                   .stream()
-                  .mapToLong { attempt: AttemptRead -> if (attempt.recordsSynced != null) attempt.recordsSynced else 0 }
+                  .mapToLong { attempt: AttemptRead -> attempt.recordsSynced ?: 0 }
                   .sum(),
                 null,
                 job.getAttemptsCount(),
@@ -2130,7 +2111,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
 
     @Trace
     fun getConnectionLastJobPerStream(req: ConnectionLastJobPerStreamRequestBody): List<ConnectionLastJobPerStreamReadItem> {
-      addTagsToTrace(java.util.Map.of(MetricTags.CONNECTION_ID, req.connectionId.toString()))
+      addTagsToTrace(mapOf(MetricTags.CONNECTION_ID to req.connectionId.toString()))
 
       // determine the latest job ID with stats for each stream by calling the streamStatsService
       val streamToLastJobIdWithStats =
@@ -2331,7 +2312,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
      * Mainly here to apply includeFiles default logic — this can be deleted once we default to
      * includesFiles to true from the UI. Mutates!
      */
-    @VisibleForTesting
+    @InternalForTesting
     fun applyDefaultIncludeFiles(
       catalog: AirbyteCatalog,
       sourceVersion: ActorDefinitionVersion,

@@ -9,7 +9,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.DestinationConnection
@@ -166,7 +166,7 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization : BaseJavaMigration() {
 
   companion object {
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun migrate(ctx: DSLContext) {
       createEnums(ctx)
       createAndPopulateWorkspace(ctx)
@@ -461,7 +461,7 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization : BaseJavaMigration() {
     }
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun workspaceDoesNotExist(
       workspaceId: UUID?,
       ctx: DSLContext,
@@ -476,7 +476,7 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization : BaseJavaMigration() {
     }
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun actorDefinitionDoesNotExist(
       definitionId: UUID,
       ctx: DSLContext,
@@ -491,7 +491,7 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization : BaseJavaMigration() {
     }
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun actorDoesNotExist(
       actorId: UUID,
       ctx: DSLContext,
@@ -506,7 +506,7 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization : BaseJavaMigration() {
     }
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun connectionDoesNotExist(
       connectionId: UUID,
       ctx: DSLContext,
@@ -521,7 +521,7 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization : BaseJavaMigration() {
     }
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun operationDoesNotExist(
       operationId: UUID,
       ctx: DSLContext,

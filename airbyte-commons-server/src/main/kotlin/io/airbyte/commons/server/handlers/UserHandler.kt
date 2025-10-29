@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody
 import io.airbyte.api.model.generated.OrganizationIdRequestBody
 import io.airbyte.api.model.generated.OrganizationUserRead
@@ -29,6 +28,7 @@ import io.airbyte.api.problems.model.generated.ProblemEmailData
 import io.airbyte.api.problems.throwable.generated.SSORequiredProblem
 import io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem
 import io.airbyte.commons.DEFAULT_USER_ID
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.auth.config.InitialUserConfig
 import io.airbyte.commons.auth.support.UserAuthenticationResolver
 import io.airbyte.commons.enums.convertTo
@@ -81,7 +81,7 @@ import java.util.stream.Collectors
  */
 @Singleton
 open class UserHandler
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     private val userPersistence: UserPersistence,
     private val externalUserService: ExternalUserService,

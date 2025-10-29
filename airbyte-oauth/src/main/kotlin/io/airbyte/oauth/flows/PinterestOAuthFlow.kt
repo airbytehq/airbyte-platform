@@ -5,10 +5,17 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.ImmutableMap
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.REFRESH_TOKEN_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URI
@@ -27,7 +34,7 @@ import java.util.function.Supplier
 class PinterestOAuthFlow : BaseOAuth2Flow {
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
   override fun formatConsentUrl(
@@ -41,10 +48,10 @@ class PinterestOAuthFlow : BaseOAuth2Flow {
         .setScheme("https")
         .setHost("pinterest.com")
         .setPath("oauth") // required
-        .addParameter("client_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
-        .addParameter("response_type", "code")
-        .addParameter("scope", "ads:read,boards:read,boards:read_secret,catalogs:read,pins:read,pins:read_secret,user_accounts:read")
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
+        .addParameter(SCOPE_KEY, "ads:read,boards:read,boards:read_secret,catalogs:read,pins:read,pins:read_secret,user_accounts:read")
         .addParameter("state", getState())
 
     try {
@@ -97,16 +104,15 @@ class PinterestOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("grant_type", "authorization_code")
-      .put("code", authCode)
-      .put("client_id", clientId)
-      .put("client_secret", clientSecret)
-      .put("redirect_uri", redirectUrl)
-      .put("continuous_refresh", "true")
-      .put("scope", "read")
-      .build()
+    mapOf(
+      GRANT_TYPE_KEY to "authorization_code",
+      AUTH_CODE_KEY to authCode,
+      CLIENT_ID_KEY to clientId,
+      CLIENT_SECRET_KEY to clientSecret,
+      REDIRECT_URI_KEY to redirectUrl,
+      "continuous_refresh" to "true",
+      SCOPE_KEY to "read",
+    )
 
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String = ACCESS_TOKEN_URL
 
@@ -122,8 +128,8 @@ class PinterestOAuthFlow : BaseOAuth2Flow {
       throw IOException(String.format("Missing 'access_token' in query params from %s", accessTokenUrl))
     }
     // getting out refresh_token
-    if (data.has("refresh_token")) {
-      result["refresh_token"] = data["refresh_token"].asText()
+    if (data.has(REFRESH_TOKEN_KEY)) {
+      result[REFRESH_TOKEN_KEY] = data[REFRESH_TOKEN_KEY].asText()
     } else {
       throw IOException(String.format("Missing 'refresh_token' in query params from %s", accessTokenUrl))
     }

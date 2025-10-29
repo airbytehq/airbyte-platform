@@ -5,7 +5,14 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -34,10 +41,10 @@ class ZendeskSupportOAuthFlow(
         .setScheme("https")
         .setHost("$subdomain.zendesk.com")
         .setPath("oauth/authorizations/new") // required
-        .addParameter("client_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
-        .addParameter("response_type", "code")
-        .addParameter("scope", "read")
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
+        .addParameter(SCOPE_KEY, "read")
         .addParameter("state", getState())
 
     try {
@@ -54,12 +61,12 @@ class ZendeskSupportOAuthFlow(
     redirectUrl: String,
   ): Map<String, String> =
     mapOf(
-      "grant_type" to "authorization_code",
-      "code" to authCode,
-      "client_id" to clientId,
-      "client_secret" to clientSecret,
-      "redirect_uri" to redirectUrl,
-      "scope" to "read",
+      GRANT_TYPE_KEY to "authorization_code",
+      AUTH_CODE_KEY to authCode,
+      CLIENT_ID_KEY to clientId,
+      CLIENT_SECRET_KEY to clientSecret,
+      REDIRECT_URI_KEY to redirectUrl,
+      SCOPE_KEY to "read",
     )
 
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String {
@@ -72,7 +79,7 @@ class ZendeskSupportOAuthFlow(
     data: JsonNode,
     accessTokenUrl: String,
   ): Map<String, Any> {
-    val result: MutableMap<String, Any> = HashMap()
+    val result: MutableMap<String, Any> = mutableMapOf()
     // getting out access_token
     if (data.has("access_token")) {
       result["access_token"] = data["access_token"].asText()

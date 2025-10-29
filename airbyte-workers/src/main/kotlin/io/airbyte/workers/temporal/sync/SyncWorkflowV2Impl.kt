@@ -4,8 +4,8 @@
 
 package io.airbyte.workers.temporal.sync
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.client.model.generated.ConnectionStatus
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.temporal.TemporalJobType
 import io.airbyte.commons.temporal.TemporalTaskQueueUtils.getTaskQueue
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub
@@ -43,7 +43,7 @@ open class SyncWorkflowV2Impl : SyncWorkflowV2 {
 
   constructor() {}
 
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     configFetchActivity: ConfigFetchActivity,
     discoverCatalogHelperActivity: DiscoverCatalogHelperActivity,
@@ -98,7 +98,7 @@ open class SyncWorkflowV2Impl : SyncWorkflowV2 {
     return output.replicate
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun runDiscoverCommand(
     actorId: UUID,
     jobId: String,
@@ -128,7 +128,7 @@ open class SyncWorkflowV2Impl : SyncWorkflowV2 {
     )
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun runReplicationCommand(
     connectionId: UUID,
     jobId: String,

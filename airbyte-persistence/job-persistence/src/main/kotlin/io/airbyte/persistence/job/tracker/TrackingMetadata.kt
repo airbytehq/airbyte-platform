@@ -6,8 +6,6 @@ package io.airbyte.persistence.job.tracker
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
-import com.google.common.base.Strings
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.Attempt
@@ -36,50 +34,49 @@ object TrackingMetadata {
    * @return metadata / stats as a string-to-object map.
    */
   @JvmStatic
-  fun generateSyncMetadata(standardSync: StandardSync): Map<String, Any> {
-    val metadata = ImmutableMap.builder<String, Any>()
-    metadata.put("connection_id", standardSync.connectionId)
-    metadata.put("source_id", standardSync.sourceId)
-    metadata.put("destination_id", standardSync.destinationId)
+  fun generateSyncMetadata(standardSync: StandardSync): Map<String, Any> =
+    buildMap {
+      put("connection_id", standardSync.connectionId)
+      put("source_id", standardSync.sourceId)
+      put("destination_id", standardSync.destinationId)
 
-    val frequencyString: String
-    if (standardSync.scheduleType != null) {
-      frequencyString = getFrequencyStringFromScheduleType(standardSync.scheduleType, standardSync.scheduleData)
-    } else if (standardSync.manual) {
-      frequencyString = "manual"
-    } else {
-      val intervalInMinutes = TimeUnit.SECONDS.toMinutes(getIntervalInSecond(standardSync.schedule))
-      frequencyString = "$intervalInMinutes min"
+      val frequencyString: String =
+        if (standardSync.scheduleType != null) {
+          getFrequencyStringFromScheduleType(standardSync.scheduleType, standardSync.scheduleData)
+        } else if (standardSync.manual) {
+          "manual"
+        } else {
+          val intervalInMinutes = TimeUnit.SECONDS.toMinutes(getIntervalInSecond(standardSync.schedule))
+          "$intervalInMinutes min"
+        }
+      put("frequency", frequencyString)
+
+      val operationCount = if (standardSync.operationIds != null) standardSync.operationIds.size else 0
+      put("operation_count", operationCount)
+      if (standardSync.namespaceDefinition != null) {
+        put("namespace_definition", standardSync.namespaceDefinition)
+      }
+
+      val isUsingPrefix = standardSync.prefix != null && !standardSync.prefix.isBlank()
+      put("table_prefix", isUsingPrefix)
+
+      val resourceRequirements = standardSync.resourceRequirements
+
+      if (resourceRequirements != null) {
+        if (!resourceRequirements.cpuRequest.isNullOrBlank()) {
+          put("sync_cpu_request", resourceRequirements.cpuRequest)
+        }
+        if (!resourceRequirements.cpuLimit.isNullOrBlank()) {
+          put("sync_cpu_limit", resourceRequirements.cpuLimit)
+        }
+        if (!resourceRequirements.memoryRequest.isNullOrBlank()) {
+          put("sync_memory_request", resourceRequirements.memoryRequest)
+        }
+        if (!resourceRequirements.memoryLimit.isNullOrBlank()) {
+          put("sync_memory_limit", resourceRequirements.memoryLimit)
+        }
+      }
     }
-    metadata.put("frequency", frequencyString)
-
-    val operationCount = if (standardSync.operationIds != null) standardSync.operationIds.size else 0
-    metadata.put("operation_count", operationCount)
-    if (standardSync.namespaceDefinition != null) {
-      metadata.put("namespace_definition", standardSync.namespaceDefinition)
-    }
-
-    val isUsingPrefix = standardSync.prefix != null && !standardSync.prefix.isBlank()
-    metadata.put("table_prefix", isUsingPrefix)
-
-    val resourceRequirements = standardSync.resourceRequirements
-
-    if (resourceRequirements != null) {
-      if (!Strings.isNullOrEmpty(resourceRequirements.cpuRequest)) {
-        metadata.put("sync_cpu_request", resourceRequirements.cpuRequest)
-      }
-      if (!Strings.isNullOrEmpty(resourceRequirements.cpuLimit)) {
-        metadata.put("sync_cpu_limit", resourceRequirements.cpuLimit)
-      }
-      if (!Strings.isNullOrEmpty(resourceRequirements.memoryRequest)) {
-        metadata.put("sync_memory_request", resourceRequirements.memoryRequest)
-      }
-      if (!Strings.isNullOrEmpty(resourceRequirements.memoryLimit)) {
-        metadata.put("sync_memory_limit", resourceRequirements.memoryLimit)
-      }
-    }
-    return metadata.build()
-  }
 
   /**
    * Map destination definition metadata / stats to a string-to-object map so it can be attached to
@@ -92,13 +89,12 @@ object TrackingMetadata {
   fun generateDestinationDefinitionMetadata(
     destinationDefinition: StandardDestinationDefinition,
     destinationVersion: ActorDefinitionVersion,
-  ): Map<String, Any> {
-    val metadata = ImmutableMap.builder<String, Any>()
-    metadata.put("connector_destination", destinationDefinition.name)
-    metadata.put("connector_destination_definition_id", destinationDefinition.destinationDefinitionId)
-    metadata.putAll(generateActorDefinitionVersionMetadata("connector_destination_", destinationVersion))
-    return metadata.build()
-  }
+  ): Map<String, Any> =
+    buildMap {
+      put("connector_destination", destinationDefinition.name)
+      put("connector_destination_definition_id", destinationDefinition.destinationDefinitionId)
+      putAll(generateActorDefinitionVersionMetadata("connector_destination_", destinationVersion))
+    }
 
   /**
    * Map source definition metadata / stats to a string-to-object map so it can be attached to
@@ -111,26 +107,24 @@ object TrackingMetadata {
   fun generateSourceDefinitionMetadata(
     sourceDefinition: StandardSourceDefinition,
     sourceVersion: ActorDefinitionVersion,
-  ): Map<String, Any> {
-    val metadata = ImmutableMap.builder<String, Any>()
-    metadata.put("connector_source", sourceDefinition.name)
-    metadata.put("connector_source_definition_id", sourceDefinition.sourceDefinitionId)
-    metadata.putAll(generateActorDefinitionVersionMetadata("connector_source_", sourceVersion))
-    return metadata.build()
-  }
+  ): Map<String, Any> =
+    buildMap {
+      put("connector_source", sourceDefinition.name)
+      put("connector_source_definition_id", sourceDefinition.sourceDefinitionId)
+      putAll(generateActorDefinitionVersionMetadata("connector_source_", sourceVersion))
+    }
 
   private fun generateActorDefinitionVersionMetadata(
     metaPrefix: String,
     sourceVersion: ActorDefinitionVersion,
-  ): Map<String, Any> {
-    val metadata = ImmutableMap.builder<String, Any>()
-    metadata.put(metaPrefix + "docker_repository", sourceVersion.dockerRepository)
-    val imageTag = sourceVersion.dockerImageTag
-    if (!StringUtils.isEmpty(imageTag)) {
-      metadata.put(metaPrefix + "version", imageTag)
+  ): Map<String, Any> =
+    buildMap {
+      put(metaPrefix + "docker_repository", sourceVersion.dockerRepository)
+      val imageTag = sourceVersion.dockerImageTag
+      if (!StringUtils.isEmpty(imageTag)) {
+        put(metaPrefix + "version", imageTag)
+      }
     }
-    return metadata.build()
-  }
 
   /**
    * Map job metadata / stats to a string-to-object map so it can be attached to telemetry calls.
@@ -139,97 +133,96 @@ object TrackingMetadata {
    * @return metadata / stats as a string-to-object map.
    */
   @JvmStatic
-  fun generateJobAttemptMetadata(job: Job?): Map<String, Any> {
-    val metadata = ImmutableMap.builder<String, Any>()
-    // Early returns in case we're missing the relevant stats.
-    if (job == null) {
-      return metadata.build()
-    }
-    val attempts = job.attempts
-    if (attempts == null || attempts.isEmpty()) {
-      return metadata.build()
-    }
-    val lastAttempt: Attempt = attempts.last()
-    if (lastAttempt.getOutput() == null || lastAttempt.getOutput().isEmpty) {
-      return metadata.build()
-    }
-    val jobOutput = lastAttempt.getOutput().get()
-    if (jobOutput.sync == null) {
-      return metadata.build()
-    }
-    val syncSummary = jobOutput.sync.standardSyncSummary
-    val totalStats = syncSummary.totalStats
-    if (syncSummary.startTime != null) {
-      metadata.put("sync_start_time", syncSummary.startTime)
-    }
-    if (syncSummary.endTime != null && syncSummary.startTime != null) {
-      metadata.put("duration", ((syncSummary.endTime - syncSummary.startTime) / 1000.0).roundToInt())
-    }
-    if (syncSummary.bytesSynced != null) {
-      metadata.put("volume_mb", syncSummary.bytesSynced)
-    }
-    if (syncSummary.recordsSynced != null) {
-      metadata.put("volume_rows", syncSummary.recordsSynced)
-    }
-    totalStats?.let {
-      if (totalStats.sourceStateMessagesEmitted != null) {
-        metadata.put("count_state_messages_from_source", totalStats.sourceStateMessagesEmitted)
+  fun generateJobAttemptMetadata(job: Job?): Map<String, Any> =
+    buildMap {
+      // Early returns in case we're missing the relevant stats.
+      if (job == null) {
+        return@buildMap
       }
-      if (totalStats.destinationStateMessagesEmitted != null) {
-        metadata.put("count_state_messages_from_destination", totalStats.destinationStateMessagesEmitted)
+      val attempts = job.attempts
+      if (attempts.isEmpty()) {
+        return@buildMap
       }
-      if (totalStats.maxSecondsBeforeSourceStateMessageEmitted != null) {
-        metadata.put(
-          "max_seconds_before_source_state_message_emitted",
-          totalStats.maxSecondsBeforeSourceStateMessageEmitted,
-        )
+      val lastAttempt: Attempt = attempts.last()
+      if (lastAttempt.getOutput() == null || lastAttempt.getOutput().isEmpty) {
+        return@buildMap
       }
-      if (totalStats.meanSecondsBeforeSourceStateMessageEmitted != null) {
-        metadata.put(
-          "mean_seconds_before_source_state_message_emitted",
-          totalStats.meanSecondsBeforeSourceStateMessageEmitted,
-        )
+      val jobOutput = lastAttempt.getOutput().get()
+      if (jobOutput.sync == null) {
+        return@buildMap
       }
-      if (totalStats.maxSecondsBetweenStateMessageEmittedandCommitted != null) {
-        metadata.put(
-          "max_seconds_between_state_message_emit_and_commit",
-          totalStats.maxSecondsBetweenStateMessageEmittedandCommitted,
-        )
+      val syncSummary = jobOutput.sync.standardSyncSummary
+      val totalStats = syncSummary.totalStats
+      if (syncSummary.startTime != null) {
+        put("sync_start_time", syncSummary.startTime)
       }
-      if (totalStats.meanSecondsBetweenStateMessageEmittedandCommitted != null) {
-        metadata.put(
-          "mean_seconds_between_state_message_emit_and_commit",
-          totalStats.meanSecondsBetweenStateMessageEmittedandCommitted,
-        )
+      if (syncSummary.endTime != null && syncSummary.startTime != null) {
+        put("duration", ((syncSummary.endTime - syncSummary.startTime) / 1000.0).roundToInt())
+      }
+      if (syncSummary.bytesSynced != null) {
+        put("volume_mb", syncSummary.bytesSynced)
+      }
+      if (syncSummary.recordsSynced != null) {
+        put("volume_rows", syncSummary.recordsSynced)
+      }
+      totalStats?.let {
+        if (totalStats.sourceStateMessagesEmitted != null) {
+          put("count_state_messages_from_source", totalStats.sourceStateMessagesEmitted)
+        }
+        if (totalStats.destinationStateMessagesEmitted != null) {
+          put("count_state_messages_from_destination", totalStats.destinationStateMessagesEmitted)
+        }
+        if (totalStats.maxSecondsBeforeSourceStateMessageEmitted != null) {
+          put(
+            "max_seconds_before_source_state_message_emitted",
+            totalStats.maxSecondsBeforeSourceStateMessageEmitted,
+          )
+        }
+        if (totalStats.meanSecondsBeforeSourceStateMessageEmitted != null) {
+          put(
+            "mean_seconds_before_source_state_message_emitted",
+            totalStats.meanSecondsBeforeSourceStateMessageEmitted,
+          )
+        }
+        if (totalStats.maxSecondsBetweenStateMessageEmittedandCommitted != null) {
+          put(
+            "max_seconds_between_state_message_emit_and_commit",
+            totalStats.maxSecondsBetweenStateMessageEmittedandCommitted,
+          )
+        }
+        if (totalStats.meanSecondsBetweenStateMessageEmittedandCommitted != null) {
+          put(
+            "mean_seconds_between_state_message_emit_and_commit",
+            totalStats.meanSecondsBetweenStateMessageEmittedandCommitted,
+          )
+        }
+
+        if (totalStats.replicationStartTime != null) {
+          put("replication_start_time", totalStats.replicationStartTime)
+        }
+        if (totalStats.replicationEndTime != null) {
+          put("replication_end_time", totalStats.replicationEndTime)
+        }
+        if (totalStats.sourceReadStartTime != null) {
+          put("source_read_start_time", totalStats.sourceReadStartTime)
+        }
+        if (totalStats.sourceReadEndTime != null) {
+          put("source_read_end_time", totalStats.sourceReadEndTime)
+        }
+        if (totalStats.destinationWriteStartTime != null) {
+          put("destination_write_start_time", totalStats.destinationWriteStartTime)
+        }
+        if (totalStats.destinationWriteEndTime != null) {
+          put("destination_write_end_time", totalStats.destinationWriteEndTime)
+        }
       }
 
-      if (totalStats.replicationStartTime != null) {
-        metadata.put("replication_start_time", totalStats.replicationStartTime)
-      }
-      if (totalStats.replicationEndTime != null) {
-        metadata.put("replication_end_time", totalStats.replicationEndTime)
-      }
-      if (totalStats.sourceReadStartTime != null) {
-        metadata.put("source_read_start_time", totalStats.sourceReadStartTime)
-      }
-      if (totalStats.sourceReadEndTime != null) {
-        metadata.put("source_read_end_time", totalStats.sourceReadEndTime)
-      }
-      if (totalStats.destinationWriteStartTime != null) {
-        metadata.put("destination_write_start_time", totalStats.destinationWriteStartTime)
-      }
-      if (totalStats.destinationWriteEndTime != null) {
-        metadata.put("destination_write_end_time", totalStats.destinationWriteEndTime)
+      val failureReasons = failureReasonsList(attempts)
+      if (!failureReasons.isEmpty()) {
+        put("failure_reasons", failureReasonsListAsJson(failureReasons).toString())
+        put("main_failure_reason", failureReasonAsJson(failureReasons.first()).toString())
       }
     }
-
-    val failureReasons = failureReasonsList(attempts)
-    if (!failureReasons.isEmpty()) {
-      metadata.put("failure_reasons", failureReasonsListAsJson(failureReasons).toString())
-      metadata.put("main_failure_reason", failureReasonAsJson(failureReasons.first()).toString())
-    }
-    return metadata.build()
-  }
 
   private fun failureReasonsList(attempts: List<Attempt>): List<FailureReason> =
     attempts

@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead
@@ -13,6 +12,7 @@ import io.airbyte.api.model.generated.GetActorDefinitionVersionDefaultRequestBod
 import io.airbyte.api.model.generated.ResolveActorDefinitionVersionRequestBody
 import io.airbyte.api.model.generated.ResolveActorDefinitionVersionResponse
 import io.airbyte.api.model.generated.SourceIdRequestBody
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.errors.NotFoundException
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper
@@ -130,7 +130,7 @@ open class ActorDefinitionVersionHandler
       return createActorDefinitionVersionRead(versionWithOverrideStatus)
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun createActorDefinitionVersionRead(versionWithOverrideStatus: ActorDefinitionVersionWithOverrideStatus): ActorDefinitionVersionRead {
       val actorDefinitionVersion = versionWithOverrideStatus.actorDefinitionVersion
       val advRead =

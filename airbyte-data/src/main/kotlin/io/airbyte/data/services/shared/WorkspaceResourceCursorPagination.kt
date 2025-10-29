@@ -4,13 +4,13 @@
 
 package io.airbyte.data.services.shared
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.ActorListFilters
 import io.airbyte.api.model.generated.ActorListSortKey
 import io.airbyte.api.model.generated.ActorStatus
 import io.airbyte.api.model.generated.ActorType
 import io.airbyte.api.model.generated.WebBackendConnectionListFilters
 import io.airbyte.api.model.generated.WebBackendConnectionListSortKey
+import io.airbyte.commons.annotation.InternalForTesting
 import java.util.UUID
 import java.util.stream.Collectors
 
@@ -167,7 +167,7 @@ data class WorkspaceResourceCursorPagination(
 /**
  * Helper record to hold parsed sort key information.
  */
-@VisibleForTesting
+@InternalForTesting
 @JvmRecord
 data class SortKeyInfo(
   val sortKey: SortKey,
@@ -238,7 +238,7 @@ fun parseSortKey(
 /**
  * Converts WebBackendConnectionListFilters to Filters for internal use.
  */
-@VisibleForTesting
+@InternalForTesting
 fun buildFilters(filters: WebBackendConnectionListFilters?): Filters? {
   if (filters == null) {
     return null
@@ -271,7 +271,7 @@ fun buildFilters(filters: WebBackendConnectionListFilters?): Filters? {
 /**
  * Converts ActorListFilters to Filters for internal use.
  */
-@VisibleForTesting
+@InternalForTesting
 fun buildFilters(filters: ActorListFilters?): Filters? {
   if (filters == null) {
     return null

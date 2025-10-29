@@ -4,9 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Preconditions
-import com.google.common.base.Strings
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
@@ -28,6 +25,7 @@ import io.airbyte.api.model.generated.WorkspaceUpdateName
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.random.randomAlpha
 import io.airbyte.commons.server.authorization.RoleResolver
@@ -81,7 +79,7 @@ import java.util.stream.Collectors
  */
 @Singleton
 class WorkspacesHandler
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     private val workspacePersistence: WorkspacePersistence,
     private val organizationService: OrganizationService,
@@ -195,7 +193,7 @@ class WorkspacesHandler
           .withWebhookOperationConfigs(toPersistenceWrite(workspaceCreateWithId.webhookConfigs, uuidSupplier))
           .withOrganizationId(workspaceCreateWithId.organizationId)
 
-      if (!Strings.isNullOrEmpty(email)) {
+      if (email.isNotBlank()) {
         workspace.withEmail(email)
       }
 
@@ -514,7 +512,7 @@ class WorkspacesHandler
       persistedWorkspace: StandardWorkspace,
       workspacePatch: WorkspaceUpdate,
     ) {
-      Preconditions.checkArgument(persistedWorkspace.workspaceId == workspacePatch.workspaceId)
+      require(persistedWorkspace.workspaceId == workspacePatch.workspaceId)
     }
 
     private fun applyPatchToStandardWorkspace(
@@ -533,7 +531,7 @@ class WorkspacesHandler
       if (workspacePatch.securityUpdates != null) {
         workspace.securityUpdates = workspacePatch.securityUpdates
       }
-      if (!Strings.isNullOrEmpty(workspacePatch.email)) {
+      if (workspacePatch.email != null && workspacePatch.email.isNotBlank()) {
         workspace.email = workspacePatch.email
       }
       if (workspacePatch.initialSetupComplete != null) {

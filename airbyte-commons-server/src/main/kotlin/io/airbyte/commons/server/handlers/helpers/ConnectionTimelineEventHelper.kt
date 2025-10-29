@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.AirbyteCatalogDiff
 import io.airbyte.api.model.generated.CatalogDiff
 import io.airbyte.api.model.generated.ConnectionRead
@@ -12,6 +11,7 @@ import io.airbyte.api.model.generated.ConnectionStatus
 import io.airbyte.api.model.generated.ConnectionUpdate
 import io.airbyte.api.model.generated.JobInfoRead
 import io.airbyte.api.model.generated.UserReadInConnectionEvent
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.server.JobStatus
 import io.airbyte.commons.server.converters.JobConverter.Companion.getStreamsAssociatedWithJob
 import io.airbyte.commons.server.handlers.PermissionHandler
@@ -138,7 +138,7 @@ class ConnectionTimelineEventHelper
       @JvmField val rejectedRecords: Long,
     )
 
-    @VisibleForTesting
+    @InternalForTesting
     fun buildTimelineJobStats(
       job: Job,
       attemptStats: List<JobPersistence.AttemptStats>,

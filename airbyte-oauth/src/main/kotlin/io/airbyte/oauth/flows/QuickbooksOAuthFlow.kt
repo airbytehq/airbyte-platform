@@ -5,9 +5,16 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.REFRESH_TOKEN_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
 import io.airbyte.validation.json.JsonValidationException
 import org.apache.http.client.utils.URIBuilder
@@ -62,10 +69,10 @@ class QuickbooksOAuthFlow : BaseOAuth2Flow {
     try {
       return (
         URIBuilder(CONSENT_URL)
-          .addParameter("client_id", clientId)
-          .addParameter("scope", scopes)
-          .addParameter("redirect_uri", redirectUrl)
-          .addParameter("response_type", "code")
+          .addParameter(CLIENT_ID_KEY, clientId)
+          .addParameter(SCOPE_KEY, scopes)
+          .addParameter(REDIRECT_URI_KEY, redirectUrl)
+          .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
           .addParameter("state", getState())
           .build()
       ).toString()
@@ -80,14 +87,13 @@ class QuickbooksOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("redirect_uri", redirectUrl)
-      .put("grant_type", "authorization_code")
-      .put("code", authCode)
-      .put("client_id", clientId)
-      .put("client_secret", clientSecret)
-      .build()
+    mapOf(
+      REDIRECT_URI_KEY to redirectUrl,
+      GRANT_TYPE_KEY to "authorization_code",
+      AUTH_CODE_KEY to authCode,
+      CLIENT_ID_KEY to clientId,
+      CLIENT_SECRET_KEY to clientSecret,
+    )
 
   /**
    * Returns the URL where to retrieve the access token from.
@@ -190,9 +196,9 @@ class QuickbooksOAuthFlow : BaseOAuth2Flow {
     accessTokenUrl: String?,
     realmId: String?,
   ): Map<String, Any> {
-    val result: MutableMap<String, Any> = HashMap()
-    if (data.has("refresh_token")) {
-      result["refresh_token"] = data["refresh_token"].asText()
+    val result: MutableMap<String, Any> = mutableMapOf()
+    if (data.has(REFRESH_TOKEN_KEY)) {
+      result[REFRESH_TOKEN_KEY] = data[REFRESH_TOKEN_KEY].asText()
     } else {
       throw IOException(String.format("Missing 'refresh_token' in query params from %s", accessTokenUrl))
     }
@@ -225,7 +231,7 @@ class QuickbooksOAuthFlow : BaseOAuth2Flow {
         .encodeToString(("$clientId:$clientSecret").toByteArray(StandardCharsets.UTF_8))
     val requestBody: MutableMap<String, String> = HashMap()
     val credentials = hydratedSourceConnectionConfiguration["credentials"]
-    requestBody["token"] = getConfigValueUnsafe(credentials, "refresh_token")
+    requestBody["token"] = getConfigValueUnsafe(credentials, REFRESH_TOKEN_KEY)
 
     val request =
       HttpRequest

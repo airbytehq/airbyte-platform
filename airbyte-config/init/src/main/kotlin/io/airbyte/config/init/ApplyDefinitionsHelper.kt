@@ -4,7 +4,7 @@
 
 package io.airbyte.config.init
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.version.AirbyteProtocolVersion
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.config.ActorDefinitionBreakingChange
@@ -194,7 +194,7 @@ class ApplyDefinitionsHelper(
     applyReleaseCandidates(rcDefinitions)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun <T> applyReleaseCandidates(rcDefinitions: List<T>) {
     if (airbyteEdition != Configs.AirbyteEdition.CLOUD) {
       return
@@ -338,7 +338,7 @@ class ApplyDefinitionsHelper(
     return reImportVersionInUse && definitionIsInUse
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun getShouldUpdateActorDefinitionDefaultVersion(
     currentDefaultADV: ActorDefinitionVersion,
     newADV: ActorDefinitionVersion,

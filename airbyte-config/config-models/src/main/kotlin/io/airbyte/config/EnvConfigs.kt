@@ -4,9 +4,6 @@
 
 package io.airbyte.config
 
-import com.google.common.base.Preconditions
-import com.google.common.base.Splitter
-import com.google.common.base.Strings
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.TolerationPOJO.Companion.getJobKubeTolerations
@@ -102,19 +99,16 @@ class EnvConfigs
       if (input == null) {
         input = ""
       }
+      println(input)
       val map =
-        Splitter
-          .on(",")
-          .splitToStream(input)
-          .filter { s: String -> !Strings.isNullOrEmpty(s) && s.contains("=") }
-          .map { s: String -> s.split("=".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray() }
-          .collect(
-            Collectors.toMap(
-              Function { s: Array<String> -> s[0].trim { it <= ' ' } },
-              Function { s: Array<String> -> s[1].trim { it <= ' ' } },
-            ),
-          )
-      return if (map.isEmpty()) null else map
+        input
+          .split(",")
+          .filter { s: String -> s.isNotBlank() && s.contains("=") }
+          .associate { kvPair ->
+            val (key, value) = kvPair.split("=")
+            key.trim { it <= ' ' } to value.trim { it <= ' ' }
+          }.ifEmpty { null }
+      return map
     }
 
     override fun getJobKubeMainContainerImagePullPolicy(): String =
@@ -193,9 +187,8 @@ class EnvConfigs
      */
     private fun getEnsureEnv(name: String): String {
       val value = getEnv(name)
-      Preconditions.checkArgument(value != null, "'%s' environment variable cannot be null", name)
-
-      return value!!
+      requireNotNull(value) { "'$name' environment variable cannot be null" }
+      return value
     }
 
     private fun getEnsureEnv(envVar: EnvVar): String = getEnsureEnv(envVar.name)

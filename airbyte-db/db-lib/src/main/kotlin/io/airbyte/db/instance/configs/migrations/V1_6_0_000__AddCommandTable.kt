@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
@@ -41,14 +41,14 @@ class V1_6_0_000__AddCommandTable : BaseJavaMigration() {
     private const val WORKSPACE_TABLE = "workspace"
     private const val ORGANIZATION_TABLE = "organization"
 
-    @VisibleForTesting
+    @InternalForTesting
     fun doMigration(ctx: DSLContext) {
       // Call the function to create the command table
       createCommandTable(ctx)
       // Add other migration steps here if needed in the future
     }
 
-    @VisibleForTesting
+    @InternalForTesting
     fun createCommandTable(ctx: DSLContext) {
       // Create the command table
       ctx

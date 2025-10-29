@@ -4,7 +4,7 @@
 
 package io.airbyte.workload.launcher.pods
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.workers.config.WorkerConfigs
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
@@ -50,7 +50,7 @@ class KubeNodeSelector(
     }
 }
 
-@VisibleForTesting
+@InternalForTesting
 internal fun String.toNodeSelectorMap(): Map<String, String> =
   split(";")
     .associate {

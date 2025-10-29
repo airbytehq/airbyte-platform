@@ -5,9 +5,13 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.ImmutableMap
+import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -22,7 +26,7 @@ import java.util.function.Supplier
 class SalesforceOAuthFlow : BaseOAuth2Flow {
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   internal constructor(httpClient: HttpClient, stateSupplier: Supplier<String>) : super(httpClient, stateSupplier)
 
   override fun formatConsentUrl(
@@ -34,9 +38,9 @@ class SalesforceOAuthFlow : BaseOAuth2Flow {
     try {
       return URIBuilder(
         String.format(io.airbyte.oauth.flows.SalesforceOAuthFlow.Companion.AUTHORIZE_URL, getEnvironment(inputOAuthConfiguration)),
-      ).addParameter("client_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
-        .addParameter("response_type", "code")
+      ).addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
         .addParameter("state", getState())
         .build()
         .toString()
@@ -54,17 +58,14 @@ class SalesforceOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>()
-      .putAll(super.getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl))
-      .put("grant_type", "authorization_code")
-      .build()
+    super.getAccessTokenQueryParameters(clientId, clientSecret, authCode, redirectUrl) +
+      mapOf(GRANT_TYPE_KEY to "authorization_code")
 
   override fun getDefaultOAuthOutputPath(): List<String> = listOf()
 
   private fun getEnvironment(inputOAuthConfiguration: JsonNode): String {
     val isSandbox = inputOAuthConfiguration["is_sandbox"] ?: return "login"
-    return if (isSandbox.asBoolean() == true) "test" else "login"
+    return if (isSandbox.asBoolean()) "test" else "login"
   }
 
   companion object {

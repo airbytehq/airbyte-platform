@@ -5,8 +5,14 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -49,11 +55,11 @@ class MicrosoftTeamsOAuthFlow : BaseOAuth2Flow {
         .setScheme("https")
         .setHost("login.microsoftonline.com")
         .setPath("$tenantId/oauth2/v2.0/authorize")
-        .addParameter("client_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
         .addParameter("state", getState())
-        .addParameter("scope", scopes)
-        .addParameter("response_type", "code")
+        .addParameter(SCOPE_KEY, scopes)
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
         .build()
         .toString()
     } catch (e: URISyntaxException) {
@@ -67,19 +73,17 @@ class MicrosoftTeamsOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("client_id", clientId)
-      .put("redirect_uri", redirectUrl)
-      .put("client_secret", clientSecret)
-      .put("code", authCode)
-      .put("grant_type", "authorization_code")
-      .build()
+    mapOf(
+      CLIENT_ID_KEY to clientId,
+      REDIRECT_URI_KEY to redirectUrl,
+      CLIENT_SECRET_KEY to clientSecret,
+      AUTH_CODE_KEY to authCode,
+      GRANT_TYPE_KEY to "authorization_code",
+    )
 
   private val scopes: String
     get() =
-      java.lang.String.join(
-        " ",
+      listOf(
         "offline_access",
         "Application.Read.All",
         "Channel.ReadBasic.All",
@@ -101,7 +105,7 @@ class MicrosoftTeamsOAuthFlow : BaseOAuth2Flow {
         "TeamsTab.ReadWrite.All",
         "User.Read.All",
         "User.ReadWrite.All",
-      )
+      ).joinToString(" ")
 
   @Deprecated("")
   override fun completeSourceOAuth(

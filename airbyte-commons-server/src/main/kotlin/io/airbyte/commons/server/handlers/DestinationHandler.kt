@@ -5,8 +5,6 @@
 package io.airbyte.commons.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.Lists
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges
 import io.airbyte.api.model.generated.ActorListCursorPaginatedRequestBody
 import io.airbyte.api.model.generated.ActorStatus
@@ -22,6 +20,7 @@ import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.model.generated.PartialDestinationUpdate
 import io.airbyte.api.model.generated.ScopedResourceRequirements
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.json.Jsons
@@ -76,7 +75,7 @@ import java.util.function.Supplier
  */
 @Singleton
 class DestinationHandler
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     private val validator: JsonSchemaValidator,
     private val connectionsHandler: ConnectionsHandler,
@@ -311,7 +310,7 @@ class DestinationHandler
       val destinationConnectionsWithCount =
         destinationService.listWorkspaceDestinationConnectionsWithCounts(actorListCursorPaginatedRequestBody.workspaceId, cursorPagination)
 
-      val destinationReads: MutableList<DestinationRead> = Lists.newArrayList()
+      val destinationReads: MutableList<DestinationRead> = mutableListOf()
 
       for ((destination, _, connectionCount, lastSync, connectionJobStatuses, isActive) in destinationConnectionsWithCount) {
         val destinationRead = buildDestinationRead(destination)
@@ -356,7 +355,7 @@ class DestinationHandler
     }
 
     fun listDestinationsForWorkspaces(listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody): DestinationReadList {
-      val reads: MutableList<DestinationRead> = Lists.newArrayList()
+      val reads: MutableList<DestinationRead> = mutableListOf()
       val destinationConnections =
         destinationService.listWorkspacesDestinationConnections(
           ResourcesQueryPaginated(
@@ -374,7 +373,7 @@ class DestinationHandler
     }
 
     fun listDestinationsForDestinationDefinition(destinationDefinitionId: UUID): DestinationReadList {
-      val reads: MutableList<DestinationRead> = Lists.newArrayList()
+      val reads: MutableList<DestinationRead> = mutableListOf()
 
       for (destinationConnection in destinationService
         .listDestinationsForDefinition(destinationDefinitionId)) {
@@ -385,7 +384,7 @@ class DestinationHandler
     }
 
     fun searchDestinations(destinationSearch: DestinationSearch?): DestinationReadList {
-      val reads: MutableList<DestinationRead> = Lists.newArrayList()
+      val reads: MutableList<DestinationRead> = mutableListOf()
 
       for (dci in destinationService.listDestinationConnection()) {
         if (!dci.tombstone) {

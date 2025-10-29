@@ -17,6 +17,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
 
+
   testImplementation(libs.assertj.core)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.junit.pioneer)

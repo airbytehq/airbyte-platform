@@ -4,7 +4,7 @@
 
 package io.airbyte.data.helpers
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
@@ -95,7 +95,7 @@ class ActorDefinitionVersionUpdater(
     destination.name,
   )
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun upgradeActorVersion(
     actorId: UUID,
     actorDefinitionId: UUID,
@@ -146,7 +146,7 @@ class ActorDefinitionVersionUpdater(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun updateDefaultVersion(
     actorDefinitionId: UUID,
     newDefaultVersion: ActorDefinitionVersion,
@@ -176,7 +176,7 @@ class ActorDefinitionVersionUpdater(
   }
 
   @Trace
-  @VisibleForTesting
+  @InternalForTesting
   fun getConfigScopeMaps(actorDefinitionId: UUID): Collection<ConfigScopeMapWithId> {
     val actorScopes = actorDefinitionService.getActorIdsForDefinition(actorDefinitionId)
     return actorScopes.map {
@@ -205,7 +205,7 @@ class ActorDefinitionVersionUpdater(
     return getActorsAffectedByBreakingChange(upgradeCandidates, breakingChange)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun processBreakingChangesForUpgrade(
     currentDefaultVersion: ActorDefinitionVersion,
     breakingChangesForUpgrade: List<ActorDefinitionBreakingChange>,
@@ -227,7 +227,7 @@ class ActorDefinitionVersionUpdater(
    * For breaking changes that have been rolled back, clear old pins that may have been created.
    * Removing the pins will cause the actors to use the new default version.
    */
-  @VisibleForTesting
+  @InternalForTesting
   internal fun processBreakingChangePinRollbacks(
     actorDefinitionId: UUID,
     newDefaultVersion: ActorDefinitionVersion,
@@ -255,7 +255,7 @@ class ActorDefinitionVersionUpdater(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getUpgradeCandidates(
     actorDefinitionId: UUID,
     configScopeMaps: Collection<ConfigScopeMapWithId>,
@@ -276,7 +276,7 @@ class ActorDefinitionVersionUpdater(
       .collect(Collectors.toSet())
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun createBreakingChangePinsForActors(
     actorIds: Set<UUID>,
     currentVersion: ActorDefinitionVersion,
@@ -299,7 +299,7 @@ class ActorDefinitionVersionUpdater(
     scopedConfigurationService.insertScopedConfigurations(scopedConfigurationsToCreate)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun createReleaseCandidatePinsForActors(
     actorIds: Set<UUID>,
     actorDefinitionId: UUID,
@@ -352,7 +352,7 @@ class ActorDefinitionVersionUpdater(
     )
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun removeReleaseCandidatePinsForVersion(
     actorDefinitionId: UUID,
     releaseCandidateVersionId: UUID,
@@ -372,7 +372,7 @@ class ActorDefinitionVersionUpdater(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getActorsAffectedByBreakingChange(
     actorIds: Set<UUID>,
     breakingChange: ActorDefinitionBreakingChange,
@@ -433,7 +433,7 @@ class ActorDefinitionVersionUpdater(
    * @param breakingChangesForDef a list of breaking changes to check
    * @return list of applicable breaking changes
    */
-  @VisibleForTesting
+  @InternalForTesting
   internal fun getBreakingChangesForUpgrade(
     currentDockerImageTag: String,
     dockerImageTagForUpgrade: String,
@@ -469,7 +469,7 @@ class ActorDefinitionVersionUpdater(
    * Given a new image tag, and a list of breaking changes, determine which breaking changes, if any,
    * are after the new version (i.e. are not applicable to the new version).
    */
-  @VisibleForTesting
+  @InternalForTesting
   internal fun getBreakingChangesAfterVersion(
     newImageTag: String,
     breakingChangesForDef: List<ActorDefinitionBreakingChange>,

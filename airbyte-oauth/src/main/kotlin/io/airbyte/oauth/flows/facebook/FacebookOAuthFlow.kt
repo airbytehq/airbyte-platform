@@ -5,9 +5,13 @@
 package io.airbyte.oauth.flows.facebook
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.base.Preconditions
 import io.airbyte.commons.json.Jsons
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URI
@@ -37,10 +41,10 @@ abstract class FacebookOAuthFlow : BaseOAuth2Flow {
   ): String {
     try {
       return URIBuilder(AUTH_CODE_TOKEN_URL)
-        .addParameter("client_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
         .addParameter("state", getState())
-        .addParameter("scope", getScopes())
+        .addParameter(SCOPE_KEY, getScopes())
         .build()
         .toString()
     } catch (e: URISyntaxException) {
@@ -56,7 +60,7 @@ abstract class FacebookOAuthFlow : BaseOAuth2Flow {
   ): Map<String, Any> {
     // Facebook does not have refresh token but calls it "long lived access token" instead:
     // see https://developers.facebook.com/docs/facebook-login/access-tokens/refreshing
-    Preconditions.checkArgument(data.has(ACCESS_TOKEN), "Missing 'access_token' in query params from %s", ACCESS_TOKEN_URL)
+    require(data.has(ACCESS_TOKEN)) { "Missing 'access_token' in query params from $ACCESS_TOKEN_URL" }
     return java.util.Map.of<String, Any>(ACCESS_TOKEN, data[ACCESS_TOKEN].asText())
   }
 
@@ -77,7 +81,7 @@ abstract class FacebookOAuthFlow : BaseOAuth2Flow {
 
     val data =
       super.completeOAuthFlow(clientId, clientSecret, authCode, redirectUrl, inputOAuthConfiguration, oauthParamConfig, state)
-    Preconditions.checkArgument(data.containsKey(ACCESS_TOKEN))
+    require(data.containsKey(ACCESS_TOKEN))
     val shortLivedAccessToken = data[ACCESS_TOKEN] as String?
     val longLivedAccessToken = getLongLivedAccessToken(clientId, clientSecret, shortLivedAccessToken)
     return java.util.Map.of<String, Any>(ACCESS_TOKEN, longLivedAccessToken)
@@ -95,9 +99,9 @@ abstract class FacebookOAuthFlow : BaseOAuth2Flow {
     // the person will have to go through the login flow again to get a new
     // token.
     return URIBuilder(ACCESS_TOKEN_URL)
-      .addParameter("client_secret", clientSecret)
-      .addParameter("client_id", clientId)
-      .addParameter("grant_type", "fb_exchange_token")
+      .addParameter(CLIENT_SECRET_KEY, clientSecret)
+      .addParameter(CLIENT_ID_KEY, clientId)
+      .addParameter(GRANT_TYPE_KEY, "fb_exchange_token")
       .addParameter("fb_exchange_token", shortLivedAccessToken)
       .build()
   }
@@ -117,7 +121,7 @@ abstract class FacebookOAuthFlow : BaseOAuth2Flow {
           .build()
       val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
       val responseJson = Jsons.deserialize(response.body())
-      Preconditions.checkArgument(responseJson.hasNonNull(ACCESS_TOKEN), "%s response should have access_token", responseJson)
+      require(responseJson.hasNonNull(ACCESS_TOKEN)) { "$responseJson response should have access_token" }
       return responseJson[ACCESS_TOKEN].asText()
     } catch (e: InterruptedException) {
       throw IOException("Failed to complete OAuth flow", e)

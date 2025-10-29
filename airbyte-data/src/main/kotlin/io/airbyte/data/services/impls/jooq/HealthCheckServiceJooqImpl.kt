@@ -4,7 +4,7 @@
 
 package io.airbyte.data.services.impls.jooq
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.data.services.HealthCheckService
 import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
@@ -15,7 +15,7 @@ import org.jooq.DSLContext
 
 @Singleton
 class HealthCheckServiceJooqImpl
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     @Named("configDatabase") database: Database?,
   ) : HealthCheckService {

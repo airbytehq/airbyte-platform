@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.converters
 
-import com.google.common.base.Preconditions
 import io.airbyte.api.model.generated.AirbyteCatalog
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
@@ -149,35 +148,22 @@ class ConnectionHelper(
       val sourceWorkspace = workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(sourceId)
       val destinationWorkspace = workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(destinationId)
 
-      Preconditions.checkArgument(
-        sourceWorkspace == destinationWorkspace,
-        String.format(
-          (
-            "Source and destination do not belong to the same workspace. " +
-              "Source id: %s, " +
-              "Source workspace id: %s, " +
-              "Destination id: %s, " +
-              "Destination workspace id: %s"
-          ),
-          sourceId,
-          sourceWorkspace,
-          destinationId,
-          destinationWorkspace,
-        ),
-      )
+      require(sourceWorkspace == destinationWorkspace) {
+        """
+        Source and destination do not belong to the same workspace.
+          Source id: $sourceId, 
+          Source workspace id: $sourceWorkspace, 
+          Destination id: $destinationId, 
+          Destination workspace id: $destinationWorkspace
+        """.trimIndent()
+      }
 
       if (operationIds != null) {
         for (operationId in operationIds) {
           val operationWorkspace = workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(operationId)
-          Preconditions.checkArgument(
-            sourceWorkspace == operationWorkspace,
-            String.format(
-              "Operation and connection do not belong to the same workspace. Workspace id: %s, Operation id: %s, Operation workspace id: %s",
-              sourceWorkspace,
-              operationId,
-              operationWorkspace,
-            ),
-          )
+          require(sourceWorkspace == operationWorkspace) {
+            "Operation and connection do not belong to the same workspace. Workspace id: $sourceWorkspace, Operation id: $operationId, Operation workspace id: $operationWorkspace"
+          }
         }
       }
     }

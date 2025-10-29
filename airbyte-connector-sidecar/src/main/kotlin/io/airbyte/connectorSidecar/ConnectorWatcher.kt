@@ -4,8 +4,7 @@
 
 package io.airbyte.connectorSidecar
 
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.base.Stopwatch
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.io.IOs
 import io.airbyte.commons.io.LineGobbler
 import io.airbyte.commons.logging.LogSource
@@ -35,7 +34,6 @@ import io.airbyte.workload.api.domain.WorkloadFailureRequest
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.github.oshai.kotlinlogging.withLoggingContext
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.io.InputStream
@@ -44,6 +42,8 @@ import java.nio.file.Path
 import java.time.Duration
 import java.util.Optional
 import kotlin.system.exitProcess
+import kotlin.time.TimeSource
+import kotlin.time.toJavaDuration
 
 private val logger = KotlinLogging.logger {}
 
@@ -93,7 +93,7 @@ class ConnectorWatcher(
   }
 
   private fun waitForConnectorOutput(input: SidecarInput) {
-    val stopwatch = Stopwatch.createStarted()
+    val stopwatch = TimeSource.Monotonic
     while (!areNeededFilesPresent()) {
       Thread.sleep(100)
       if (heartbeatMonitor.shouldAbort()) {
@@ -223,14 +223,14 @@ class ConnectorWatcher(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun readFile(fileName: String): String = Files.readString(Path.of(airbyteConnectorConfig.configDir, fileName))
 
-  @VisibleForTesting
+  @InternalForTesting
   fun areNeededFilesPresent(): Boolean =
     Files.exists(outputPath) && Files.exists(Path.of(airbyteConnectorConfig.configDir, FileConstants.EXIT_CODE_FILE))
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getStreamFactory(integrationLauncherConfig: IntegrationLauncherConfig): AirbyteStreamFactory {
     val protocolVersion =
       integrationLauncherConfig.protocolVersion
@@ -247,33 +247,33 @@ class ConnectorWatcher(
     )
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun exitProperly() {
     logger.info { "Deliberately exiting process with code 0." }
     exitProcess(0)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun exitInternalError() {
     logger.info { "Deliberately exiting process with code 1." }
     exitProcess(1)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun exitFileNotFound() {
     logger.info { "Deliberately exiting process with code 2." }
     exitProcess(2)
   }
 
   fun hasFileTimeoutReached(
-    stopwatch: Stopwatch,
+    stopwatch: TimeSource.Monotonic,
     withinSync: Boolean,
   ): Boolean {
     val timeoutMinutes = if (withinSync) airbyteSidecarConfig.fileTimeoutMinutesWithinSync else airbyteSidecarConfig.fileTimeoutMinutes
-    return stopwatch.elapsed() > Duration.ofMinutes(timeoutMinutes.toLong())
+    return stopwatch.markNow().elapsedNow().toJavaDuration() > Duration.ofMinutes(timeoutMinutes.toLong())
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getFailedOutput(
     input: StandardCheckConnectionInput?,
     e: Exception,
@@ -303,7 +303,7 @@ class ConnectorWatcher(
       .withFailureReason(failureReason)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getFailedOutput(
     input: StandardDiscoverCatalogInput?,
     e: Exception,
@@ -321,7 +321,7 @@ class ConnectorWatcher(
       .withFailureReason(failureReason)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getFailedOutput(
     dockerImage: String,
     e: Exception,

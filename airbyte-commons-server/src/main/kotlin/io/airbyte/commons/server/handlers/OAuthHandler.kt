@@ -8,7 +8,6 @@ import com.amazonaws.util.json.Jackson
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.client.model.generated.ActorType
 import io.airbyte.api.client.model.generated.WorkspaceOverrideOauthParamsRequestBody
@@ -22,6 +21,7 @@ import io.airbyte.api.model.generated.RevokeSourceOauthTokensRequest
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody
 import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBody
 import io.airbyte.api.model.generated.SourceOauthConsentRequest
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.JsonPaths
 import io.airbyte.commons.json.Jsons
@@ -324,7 +324,7 @@ open class OAuthHandler(
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun completeSourceOAuth(completeSourceOauthRequest: CompleteSourceOauthRequest): CompleteOAuthResponse {
     val traceTags =
       java.util.Map.of<String?, Any?>(
@@ -601,11 +601,11 @@ open class OAuthHandler(
     return getOauthFromDBIfNeeded(oAuthInputConfigurationFromDB, oAuthInputConfiguration)
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun buildJsonPathFromOAuthFlowInitParameters(oAuthFlowInitParameters: Map<String, List<String>>): Map<String, String> =
     oAuthFlowInitParameters.mapValues { (_, value) -> "$." + value.joinToString(".") }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getOauthFromDBIfNeeded(
     oAuthInputConfigurationFromDB: JsonNode,
     oAuthInputConfigurationFromInput: JsonNode,
@@ -631,7 +631,7 @@ open class OAuthHandler(
     return result
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getOAuthInputConfiguration(
     hydratedSourceConnectionConfiguration: JsonNode,
     pathsToGet: Map<String, String>,

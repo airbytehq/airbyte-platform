@@ -4,8 +4,8 @@
 
 package io.airbyte.connector.rollout.shared
 
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.connector.rollout.shared.Constants.DEFAULT_PERCENTAGE_OF_ACTORS_WITH_COMPLETED_SYNCS_REQUIRED
 import io.airbyte.connector.rollout.shared.Constants.DEFAULT_SUCCESS_THRESHOLD_PERCENTAGE
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
@@ -87,14 +87,14 @@ class RolloutProgressionDecider {
     }
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun hasEnoughPinned(
     nActorsPinned: Int,
     nActorsEligibleOrAlreadyPinned: Int,
     finalPercentageToPin: Int,
   ): Boolean = (nActorsPinned.toFloat() / nActorsEligibleOrAlreadyPinned) * 100 >= finalPercentageToPin
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun hasEnoughFinishedSyncs(
     actorSyncs: Map<UUID, ConnectorRolloutActorSyncInfo>,
     nActorsPinned: Int,
@@ -115,7 +115,7 @@ class RolloutProgressionDecider {
     return percentageActorsWithCompletedSyncs >= percentageRequired
   }
 
-  @VisibleForTesting
+  @InternalForTesting
   internal fun isSuccessful(
     actorSyncs: Map<UUID, ConnectorRolloutActorSyncInfo>,
     thresholdPercentage: Int,

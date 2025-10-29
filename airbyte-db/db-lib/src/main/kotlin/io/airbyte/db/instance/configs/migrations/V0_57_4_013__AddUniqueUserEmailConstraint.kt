@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
@@ -50,7 +50,7 @@ class V0_57_4_013__AddUniqueUserEmailConstraint : BaseJavaMigration() {
     private val EMAIL = DSL.field("email", SQLDataType.VARCHAR)
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun deleteDuplicateUsers(ctx: DSLContext) {
       val duplicateEmails = getDuplicateEmails(ctx)
       val ssoOrganizationIds = getSsoOrganizationIds(ctx)
@@ -206,7 +206,7 @@ class V0_57_4_013__AddUniqueUserEmailConstraint : BaseJavaMigration() {
         }
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun addUniqueUserEmailConstraint(ctx: DSLContext) {
       ctx
         .createUniqueIndex("user_email_unique_key")

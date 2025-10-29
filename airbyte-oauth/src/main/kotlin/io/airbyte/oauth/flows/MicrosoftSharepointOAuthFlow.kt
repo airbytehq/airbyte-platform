@@ -5,9 +5,15 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.ImmutableMap
+import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -19,7 +25,7 @@ import java.util.function.Supplier
 class MicrosoftSharepointOAuthFlow : BaseOAuth2Flow {
   constructor(httpClient: HttpClient) : super(httpClient)
 
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     httpClient: HttpClient,
     stateSupplier: Supplier<String>,
@@ -41,11 +47,11 @@ class MicrosoftSharepointOAuthFlow : BaseOAuth2Flow {
         .setScheme("https")
         .setHost("login.microsoftonline.com")
         .setPath("$tenantId/oauth2/v2.0/authorize")
-        .addParameter("client_id", clientId)
-        .addParameter("redirect_uri", redirectUrl)
+        .addParameter(CLIENT_ID_KEY, clientId)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
         .addParameter("state", getState())
-        .addParameter("scope", scopes)
-        .addParameter("response_type", "code")
+        .addParameter(SCOPE_KEY, scopes)
+        .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
         .build()
         .toString()
     } catch (e: URISyntaxException) {
@@ -59,14 +65,13 @@ class MicrosoftSharepointOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>()
-      .put("client_id", clientId)
-      .put("code", authCode)
-      .put("redirect_uri", redirectUrl)
-      .put("client_secret", clientSecret)
-      .put("grant_type", "authorization_code")
-      .build()
+    mapOf(
+      CLIENT_ID_KEY to clientId,
+      AUTH_CODE_KEY to authCode,
+      REDIRECT_URI_KEY to redirectUrl,
+      CLIENT_SECRET_KEY to clientSecret,
+      GRANT_TYPE_KEY to "authorization_code",
+    )
 
   override fun getAccessTokenUrl(inputOAuthConfiguration: JsonNode): String {
     val tenantId = getConfigValueUnsafe(inputOAuthConfiguration, FIELD_NAME)

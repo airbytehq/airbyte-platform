@@ -4,10 +4,9 @@
 
 package io.airbyte.data.services.impls.jooq
 
-import com.google.common.annotations.VisibleForTesting
-import com.google.common.collect.Sets
 import datadog.trace.api.Trace
 import io.airbyte.api.model.generated.ActorStatus
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfigNotFoundType
@@ -81,7 +80,7 @@ import java.util.stream.Collectors
 
 @Singleton
 class ConnectionServiceJooqImpl
-  @VisibleForTesting
+  @InternalForTesting
   constructor(
     @Named("configDatabase") database: Database?,
   ) : ConnectionService {
@@ -236,7 +235,6 @@ class ConnectionServiceJooqImpl
       statusReason: String?,
     ) {
       database.transaction { ctx: DSLContext ->
-        val statusType = StatusType.valueOf(status.value())
         val rowsUpdated =
           ctx.execute(
             "UPDATE connection SET status = CAST(? AS status_type), status_reason = ? WHERE id = ?",
@@ -1986,8 +1984,8 @@ class ConnectionServiceJooqImpl
             .fetchSet(Tables.CONNECTION_TAG.TAG_ID),
         )
 
-      val tagsToDelete: Set<UUID?> = Sets.difference(existingTagIds, newTagIds)
-      val tagsToInsert: Set<UUID?> = Sets.difference(newTagIds, existingTagIds)
+      val tagsToDelete: Set<UUID?> = existingTagIds - newTagIds
+      val tagsToInsert: Set<UUID?> = newTagIds - existingTagIds
 
       // Bulk delete any removed tags
       if (!tagsToDelete.isEmpty()) {
@@ -2308,7 +2306,7 @@ class ConnectionServiceJooqImpl
           .computeIfAbsent(
             record.get(Tables.ACTOR.WORKSPACE_ID),
           ) { v: UUID? -> ArrayList() }
-          .add(DbConverter.buildStandardSync(record, operationIds, notificationConfigurationsForConnection, tagsByConnectionId[connectionId]!!))
+          .add(buildStandardSync(record, operationIds, notificationConfigurationsForConnection, tagsByConnectionId[connectionId]!!))
       }
 
       return workspaceIdToStandardSync
@@ -2476,7 +2474,7 @@ class ConnectionServiceJooqImpl
       /**
        * Fetch if a notification is enabled in a standard sync based on the notification type.
        */
-      @VisibleForTesting
+      @InternalForTesting
       fun getNotificationEnabled(
         standardSync: StandardSync,
         notificationType: NotificationType,

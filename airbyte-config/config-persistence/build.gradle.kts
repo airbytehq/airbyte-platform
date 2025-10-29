@@ -35,6 +35,7 @@ dependencies {
   implementation(libs.bundles.micronaut.kotlin)
   implementation(libs.bundles.datadog)
 
+
   testImplementation(libs.hamcrest.all)
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.bundles.flyway)

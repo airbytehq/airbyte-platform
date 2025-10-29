@@ -4,8 +4,6 @@
 
 package io.airbyte.config
 
-import com.google.common.collect.Sets
-
 /**
  * The statuses of an attempt.
  */
@@ -16,6 +14,6 @@ enum class AttemptStatus {
   ;
 
   companion object {
-    val TERMINAL_STATUSES: Set<AttemptStatus> = Sets.newHashSet(FAILED, SUCCEEDED)
+    val TERMINAL_STATUSES: Set<AttemptStatus> = setOf(FAILED, SUCCEEDED)
   }
 }

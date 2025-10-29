@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
@@ -57,7 +57,7 @@ open class ConnectionTemplatesController(
       createConnectionTemplate(connectionTemplateCreateRequestBody).ok()
     }
 
-  @VisibleForTesting
+  @InternalForTesting
   fun createConnectionTemplate(connectionTemplateCreateRequestBody: ConnectionTemplateCreateRequestBody): ConnectionTemplateCreateResponse {
     // FIXME: we should optionally create the destinations and connections in existing workspaces https://github.com/airbytehq/airbyte-internal-issues/issues/12813
     val organizationId = OrganizationId(connectionTemplateCreateRequestBody.organizationId)

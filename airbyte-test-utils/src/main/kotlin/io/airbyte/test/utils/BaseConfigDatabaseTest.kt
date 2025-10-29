@@ -4,7 +4,7 @@
 
 package io.airbyte.test.utils
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.Permission
 import io.airbyte.config.persistence.PermissionPersistenceHelper
 import io.airbyte.db.Database
@@ -72,7 +72,7 @@ import javax.sql.DataSource
 open class BaseConfigDatabaseTest {
   companion object {
     @JvmField
-    @get:VisibleForTesting
+    @get:InternalForTesting
     var database: Database? = null
 
     // keep these private, do not expose outside this class!

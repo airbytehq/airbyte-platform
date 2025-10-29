@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.validation
 
-import com.google.common.collect.Iterators
 import io.airbyte.api.model.generated.AirbyteCatalog
 import io.airbyte.commons.server.runtime.AirbyteServerConfiguration
 import io.airbyte.commons.server.validation.CatalogValidator.Constants.FIELD_COUNT_LIMIT_KEY
@@ -47,7 +46,7 @@ class CatalogValidator(
               } else {
                 emptyList<String>().iterator()
               }
-            Iterators.size(fieldNames)
+            fieldNames.asSequence().count()
           }
         }
 

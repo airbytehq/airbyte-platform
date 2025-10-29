@@ -4,7 +4,7 @@
 
 package io.airbyte.container.orchestrator.bookkeeping
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.SyncStats
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum
@@ -173,10 +173,10 @@ class ParallelStreamStatsTracker(
       .mapValues { StreamStatsView(it.value, hasEstimatesErrors) }
 
   // ForCurrentState methods are used for "backfilling" StateStats when not present on state messages sent from the source
-  @VisibleForTesting
+  @InternalForTesting
   fun getEmittedCountForCurrentState(desc: AirbyteStreamNameNamespacePair) = streamTrackers[desc]?.getEmittedRecordCountForCurrentState()
 
-  @VisibleForTesting
+  @InternalForTesting
   fun getFilteredCountForCurrentState(desc: AirbyteStreamNameNamespacePair) = streamTrackers[desc]?.getFilteredRecordCountForCurrentState()
 
   fun getEmittedCountForCurrentState(state: AirbyteStateMessage) =
@@ -339,7 +339,7 @@ class ParallelStreamStatsTracker(
       null
     } else {
       computeMean(
-        getMean = { it.streamStats.meanSecondsBetweenStateEmittedAndCommitted.get() },
+        getMean = { it.streamStats.meanSecondsBetweenStateEmittedAndCommittedAsDouble() },
         getCount = { it.streamStats.destinationStateCount.get() },
       )
     }

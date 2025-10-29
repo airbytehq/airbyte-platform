@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.logging
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.micronaut.runtime.AirbyteLoggingConfig
 import jakarta.inject.Singleton
 import java.io.IOException
@@ -51,7 +51,7 @@ class LogClientManager(
   /**
    * Primarily to clean up logs after testing. Only valid for Kube logs.
    */
-  @VisibleForTesting
+  @InternalForTesting
   fun deleteLogs(logPath: String) {
     if (logPath.isNotEmpty()) {
       logClient.deleteLogs(logPath = logPath)

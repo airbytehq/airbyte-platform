@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.scheduler
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder
 import io.airbyte.commons.temporal.JobMetadata
@@ -42,7 +41,12 @@ import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -141,13 +145,13 @@ internal class DefaultSynchronousSchedulerClientTest {
             ActorType.SOURCE,
           )
 
-      Assertions.assertNotNull(response)
-      Assertions.assertEquals(discoveredCatalogId, response.output)
-      Assertions.assertEquals(ConfigType.DISCOVER_SCHEMA, response.metadata.configType)
-      Assertions.assertNotNull(response.metadata.getConfigId())
-      Assertions.assertEquals(sourceDefinitionId, response.metadata.getConfigId().get())
-      Assertions.assertTrue(response.metadata.isSucceeded)
-      Assertions.assertEquals(LOG_PATH, response.metadata.logPath)
+      assertNotNull(response)
+      assertEquals(discoveredCatalogId, response.output)
+      assertEquals(ConfigType.DISCOVER_SCHEMA, response.metadata.configType)
+      assertNotNull(response.metadata.getConfigId())
+      assertEquals(sourceDefinitionId, response.metadata.getConfigId().get())
+      assertTrue(response.metadata.isSucceeded)
+      assertEquals(LOG_PATH, response.metadata.logPath)
 
       verify {
         jobTracker.trackDiscover(
@@ -198,13 +202,13 @@ internal class DefaultSynchronousSchedulerClientTest {
             ActorType.SOURCE,
           )
 
-      Assertions.assertNotNull(response)
-      Assertions.assertNull(response.output)
-      Assertions.assertEquals(ConfigType.DISCOVER_SCHEMA, response.metadata.configType)
-      Assertions.assertNotNull(response.metadata.getConfigId())
-      Assertions.assertEquals(sourceDefinitionId, response.metadata.getConfigId().get())
-      Assertions.assertFalse(response.metadata.isSucceeded)
-      Assertions.assertEquals(LOG_PATH, response.metadata.logPath)
+      assertNotNull(response)
+      assertNull(response.output)
+      assertEquals(ConfigType.DISCOVER_SCHEMA, response.metadata.configType)
+      assertNotNull(response.metadata.getConfigId())
+      assertEquals(sourceDefinitionId, response.metadata.getConfigId().get())
+      assertFalse(response.metadata.isSucceeded)
+      assertEquals(LOG_PATH, response.metadata.logPath)
 
       verify {
         jobTracker.trackDiscover(
@@ -239,7 +243,7 @@ internal class DefaultSynchronousSchedulerClientTest {
       every { function.get() } throws RuntimeException()
       val jobContext =
         ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL)
-      Assertions.assertThrows(RuntimeException::class.java) {
+      assertThrows(RuntimeException::class.java) {
         schedulerClient.execute(
           ConfigType.DISCOVER_SCHEMA,
           jobContext,
@@ -306,7 +310,7 @@ internal class DefaultSynchronousSchedulerClientTest {
       } returns TemporalResponse(jobOutput, createMetadata(true))
       val response: SynchronousResponse<StandardCheckConnectionOutput> =
         schedulerClient.createSourceCheckConnectionJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false, null)
-      Assertions.assertEquals(mockOutput, response.output)
+      assertEquals(mockOutput, response.output)
       verify {
         configInjector.injectConfig(
           any(),
@@ -353,7 +357,7 @@ internal class DefaultSynchronousSchedulerClientTest {
       } returns TemporalResponse(jobOutput, createMetadata(true))
       val response: SynchronousResponse<StandardCheckConnectionOutput> =
         schedulerClient.createSourceCheckConnectionJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false, null)
-      Assertions.assertEquals(mockOutput, response.output)
+      assertEquals(mockOutput, response.output)
     }
 
     @Test
@@ -381,7 +385,7 @@ internal class DefaultSynchronousSchedulerClientTest {
       } returns TemporalResponse(jobOutput, createMetadata(true))
       val response: SynchronousResponse<StandardCheckConnectionOutput> =
         schedulerClient.createDestinationCheckConnectionJob(DESTINATION_CONNECTION, ACTOR_DEFINITION_VERSION, false, null)
-      Assertions.assertEquals(mockOutput, response.output)
+      assertEquals(mockOutput, response.output)
       verify {
         configInjector.injectConfig(
           any(),
@@ -407,7 +411,7 @@ internal class DefaultSynchronousSchedulerClientTest {
       } returns TemporalResponse(jobOutput, createMetadata(true))
       val response: SynchronousResponse<UUID> =
         schedulerClient.createDiscoverSchemaJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false, null, WorkloadPriority.HIGH)
-      Assertions.assertEquals(expectedCatalogId, response.output)
+      assertEquals(expectedCatalogId, response.output)
       verify {
         configInjector.injectConfig(
           any(),
@@ -433,7 +437,7 @@ internal class DefaultSynchronousSchedulerClientTest {
       } returns TemporalResponse(jobOutput, createMetadata(true))
       val response: SynchronousResponse<UUID> =
         schedulerClient.createDestinationDiscoverJob(DESTINATION_CONNECTION, DESTINATION_DEFINITION, ACTOR_DEFINITION_VERSION)
-      Assertions.assertEquals(expectedCatalogId, response.output)
+      assertEquals(expectedCatalogId, response.output)
     }
 
     @Test
@@ -451,7 +455,7 @@ internal class DefaultSynchronousSchedulerClientTest {
         )
       } returns TemporalResponse(jobOutput, createMetadata(true))
       val response: SynchronousResponse<ConnectorSpecification> = schedulerClient.createGetSpecJob(DOCKER_IMAGE, false, WORKSPACE_ID)
-      Assertions.assertEquals(mockOutput, response.output)
+      assertEquals(mockOutput, response.output)
       verify(exactly = 0) {
         configInjector.injectConfig(
           any(),
@@ -476,11 +480,10 @@ internal class DefaultSynchronousSchedulerClientTest {
     private val DISCOVER_TASK_QUEUE = DEFAULT_DISCOVER_TASK_QUEUE
     private val CONFIGURATION =
       jsonNode(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put("username", "airbyte")
-          .put("password", "abc")
-          .build(),
+        mapOf(
+          "username" to "airbyte",
+          "password" to "abc",
+        ),
       )
 
     private val CONFIG_WITH_REFS = ConfigWithSecretReferences(CONFIGURATION, mapOf<String, SecretReferenceConfig>())

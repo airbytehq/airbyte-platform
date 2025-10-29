@@ -5,7 +5,7 @@
 package io.airbyte.workers.helper
 
 import com.fasterxml.jackson.annotation.JsonValue
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.temporal.exception.SizeLimitException
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow
 import io.airbyte.config.AttemptFailureSummary
@@ -484,7 +484,7 @@ object FailureHelper {
   @JvmStatic
   fun orderedFailures(failures: Collection<FailureReason>): List<FailureReason> = failures.sortedBy { it.timestamp }
 
-  @VisibleForTesting
+  @InternalForTesting
   @JvmStatic
   fun exceptionChainContains(
     t: Throwable?,

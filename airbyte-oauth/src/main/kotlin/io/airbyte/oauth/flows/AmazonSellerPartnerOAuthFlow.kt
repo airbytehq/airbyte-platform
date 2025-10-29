@@ -5,11 +5,15 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.config.ConfigNotFoundType
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
 import io.airbyte.validation.json.JsonValidationException
 import org.apache.http.client.utils.URIBuilder
@@ -70,7 +74,7 @@ class AmazonSellerPartnerOAuthFlow : BaseOAuth2Flow {
       return URIBuilder("$consentUrl/apps/authorize/consent")
         // get the `app_id` parameter from instance-wide params
         .addParameter("application_id", getConfigValueUnsafe(sourceOAuthParamConfig, "app_id"))
-        .addParameter("redirect_uri", redirectUrl)
+        .addParameter(REDIRECT_URI_KEY, redirectUrl)
         .addParameter("state", getState())
             /*
              * Use `version=beta` for OAuth tests only, or when the OAuth App is in `draft` status
@@ -98,14 +102,13 @@ class AmazonSellerPartnerOAuthFlow : BaseOAuth2Flow {
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("client_id", clientId)
-      .put("redirect_uri", redirectUrl)
-      .put("client_secret", clientSecret)
-      .put("code", authCode)
-      .put("grant_type", "authorization_code")
-      .build()
+    mapOf(
+      CLIENT_ID_KEY to clientId,
+      REDIRECT_URI_KEY to redirectUrl,
+      CLIENT_SECRET_KEY to clientSecret,
+      AUTH_CODE_KEY to authCode,
+      GRANT_TYPE_KEY to "authorization_code",
+    )
 
   /**
    * Returns the URL where to retrieve the access token from.
@@ -129,59 +132,57 @@ class AmazonSellerPartnerOAuthFlow : BaseOAuth2Flow {
     private const val ACCESS_TOKEN_URL = "https://api.amazon.com/auth/o2/token"
     private const val SELLER_EUROPE_URL = "https://sellercentral-europe.amazon.com"
     private val VENDOR_CENTRAL_URLS: Map<String, String> =
-      ImmutableMap
-        .builder<String, String>()
-        .put("CA", "https://vendorcentral.amazon.ca")
-        .put("US", "https://vendorcentral.amazon.com")
-        .put("DE", "https://vendorcentral.amazon.de")
-        .put("MX", "https://vendorcentral.amazon.com.mx")
-        .put("JP", "https://vendorcentral.amazon.co.jp")
-        .put("IT", "https://vendorcentral.amazon.it")
-        .put("AU", "https://vendorcentral.amazon.com.au")
-        .put("BR", "https://vendorcentral.amazon.com.br")
-        .put("BE", "https://vendorcentral.amazon.com.be")
-        .put("ES", "https://vendorcentral.amazon.es")
-        .put("UK", "https://vendorcentral.amazon.co.uk")
-        .put("GB", "https://vendorcentral.amazon.co.uk")
-        .put("NL", "https://vendorcentral.amazon.nl")
-        .put("PL", "https://vendorcentral.amazon.pl")
-        .put("FR", "https://vendorcentral.amazon.fr")
-        .put("IN", "https://www.vendorcentral.in")
-        .put("SE", "https://vendorcentral.amazon.se")
-        .put("SG", "https://vendorcentral.amazon.com.sg")
-        .put("AE", "https://vendorcentral.amazon.me")
-        .put("TR", "https://vendorcentral.amazon.com.tr")
-        .put("SA", "https://vendorcentral.amazon.me")
-        .put("EG", "https://vendorcentral.amazon.me")
-        .put("ZA", "https://vendorcentral.amazon.co.za")
-        .build()
+      mapOf(
+        "CA" to "https://vendorcentral.amazon.ca",
+        "US" to "https://vendorcentral.amazon.com",
+        "DE" to "https://vendorcentral.amazon.de",
+        "MX" to "https://vendorcentral.amazon.com.mx",
+        "JP" to "https://vendorcentral.amazon.co.jp",
+        "IT" to "https://vendorcentral.amazon.it",
+        "AU" to "https://vendorcentral.amazon.com.au",
+        "BR" to "https://vendorcentral.amazon.com.br",
+        "BE" to "https://vendorcentral.amazon.com.be",
+        "ES" to "https://vendorcentral.amazon.es",
+        "UK" to "https://vendorcentral.amazon.co.uk",
+        "GB" to "https://vendorcentral.amazon.co.uk",
+        "NL" to "https://vendorcentral.amazon.nl",
+        "PL" to "https://vendorcentral.amazon.pl",
+        "FR" to "https://vendorcentral.amazon.fr",
+        "IN" to "https://www.vendorcentral.in",
+        "SE" to "https://vendorcentral.amazon.se",
+        "SG" to "https://vendorcentral.amazon.com.sg",
+        "AE" to "https://vendorcentral.amazon.me",
+        "TR" to "https://vendorcentral.amazon.com.tr",
+        "SA" to "https://vendorcentral.amazon.me",
+        "EG" to "https://vendorcentral.amazon.me",
+        "ZA" to "https://vendorcentral.amazon.co.za",
+      )
 
     private val SELLER_CENTRAL_URLS: Map<String, String> =
-      ImmutableMap
-        .builder<String, String>()
-        .put("CA", "https://sellercentral.amazon.ca")
-        .put("US", "https://sellercentral.amazon.com")
-        .put("MX", "https://sellercentral.amazon.com.mx")
-        .put("BR", "https://sellercentral.amazon.com.br")
-        .put("ES", SELLER_EUROPE_URL)
-        .put("UK", SELLER_EUROPE_URL)
-        .put("GB", SELLER_EUROPE_URL)
-        .put("FR", SELLER_EUROPE_URL)
-        .put("NL", "https://sellercentral.amazon.nl")
-        .put("DE", SELLER_EUROPE_URL)
-        .put("IT", SELLER_EUROPE_URL)
-        .put("SE", "https://sellercentral.amazon.se")
-        .put("ZA", "https://sellercentral.amazon.co.za")
-        .put("PL", "https://sellercentral.amazon.pl")
-        .put("EG", "https://sellercentral.amazon.eg")
-        .put("TR", "https://sellercentral.amazon.com.tr")
-        .put("SA", "https://sellercentral.amazon.sa")
-        .put("AE", "https://sellercentral.amazon.ae")
-        .put("IN", "https://sellercentral.amazon.in")
-        .put("BE", "https://sellercentral.amazon.com.be")
-        .put("SG", "https://sellercentral.amazon.sg")
-        .put("AU", "https://sellercentral.amazon.com.au")
-        .put("JP", "https://sellercentral.amazon.co.jp")
-        .build()
+      mapOf(
+        "CA" to "https://sellercentral.amazon.ca",
+        "US" to "https://sellercentral.amazon.com",
+        "MX" to "https://sellercentral.amazon.com.mx",
+        "BR" to "https://sellercentral.amazon.com.br",
+        "ES" to SELLER_EUROPE_URL,
+        "UK" to SELLER_EUROPE_URL,
+        "GB" to SELLER_EUROPE_URL,
+        "FR" to SELLER_EUROPE_URL,
+        "NL" to "https://sellercentral.amazon.nl",
+        "DE" to SELLER_EUROPE_URL,
+        "IT" to SELLER_EUROPE_URL,
+        "SE" to "https://sellercentral.amazon.se",
+        "ZA" to "https://sellercentral.amazon.co.za",
+        "PL" to "https://sellercentral.amazon.pl",
+        "EG" to "https://sellercentral.amazon.eg",
+        "TR" to "https://sellercentral.amazon.com.tr",
+        "SA" to "https://sellercentral.amazon.sa",
+        "AE" to "https://sellercentral.amazon.ae",
+        "IN" to "https://sellercentral.amazon.in",
+        "BE" to "https://sellercentral.amazon.com.be",
+        "SG" to "https://sellercentral.amazon.sg",
+        "AU" to "https://sellercentral.amazon.com.au",
+        "JP" to "https://sellercentral.amazon.co.jp",
+      )
   }
 }

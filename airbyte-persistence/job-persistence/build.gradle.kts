@@ -47,6 +47,7 @@ dependencies {
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.micronaut.kotlin)
 
+
   testImplementation(project(":oss:airbyte-config:config-persistence"))
   testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.platform.testcontainers.postgresql)

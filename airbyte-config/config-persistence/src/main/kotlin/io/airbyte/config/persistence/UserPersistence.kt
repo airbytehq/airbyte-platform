@@ -5,8 +5,8 @@
 package io.airbyte.config.persistence
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.DEFAULT_USER_ID
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AuthProvider
@@ -479,7 +479,7 @@ open class UserPersistence(
   // to figure out why, but I could not. This method allows me to at least test
   // that the right users are being returned in our CI tests, while leaving out
   // the problematic enum value mapping that isn't as critical to test.
-  @VisibleForTesting
+  @InternalForTesting
   fun listJustUsersForWorkspaceUserAccessInfo(workspaceId: UUID): List<UUID> =
     queryWorkspaceUserAccessInfo(workspaceId)
       .stream()

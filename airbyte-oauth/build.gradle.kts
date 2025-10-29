@@ -19,6 +19,7 @@ dependencies {
   implementation(project(":oss:airbyte-json-validation"))
   implementation(libs.airbyte.protocol)
 
+
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)

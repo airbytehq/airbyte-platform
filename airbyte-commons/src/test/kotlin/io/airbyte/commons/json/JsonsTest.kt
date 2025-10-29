@@ -10,8 +10,6 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.BinaryNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.TextNode
-import com.google.common.collect.Lists
-import com.google.common.collect.Sets
 import io.airbyte.commons.json.Jsons.arrayNode
 import io.airbyte.commons.json.Jsons.canonicalJsonSerialize
 import io.airbyte.commons.json.Jsons.clone
@@ -163,10 +161,10 @@ internal class JsonsTest {
     )
 
     assertEquals(
-      Lists.newArrayList<ToClass?>(expected),
+      listOf(expected),
       `object`(
-        jsonNode<ArrayList<ToClass?>?>(Lists.newArrayList(expected)),
-        object : TypeReference<MutableList<ToClass?>?>() {},
+        jsonNode(listOf(expected)),
+        object : TypeReference<List<ToClass?>?>() {},
       ),
     )
 
@@ -219,14 +217,14 @@ internal class JsonsTest {
   fun testKeys() {
     // test object json node
     val jsonNode = jsonNode(mapOf(TEST to ABC, TEST2 to DEF))
-    assertEquals(Sets.newHashSet<String?>(TEST, TEST2), keys(jsonNode))
+    assertEquals(setOf(TEST, TEST2), keys(jsonNode))
 
     // test literal jsonNode
     assertEquals(mutableSetOf<Any?>(), keys(jsonNode.get("test")))
 
     // test nested object json node. should only return top-level keys.
     val nestedJsonNode = jsonNode(mapOf(TEST to ABC, TEST2 to mapOf("test3" to "def")))
-    assertEquals(Sets.newHashSet<String?>(TEST, TEST2), keys(nestedJsonNode))
+    assertEquals(setOf<String?>(TEST, TEST2), keys(nestedJsonNode))
 
     // test array json node
     val arrayJsonNode = jsonNode(listOf(mapOf(TEST to ABC), mapOf(TEST2 to DEF)))

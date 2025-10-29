@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
@@ -38,7 +38,7 @@ class V0_50_33_003__ConstraintPreventMultiplePermissionsForSameResource : BaseJa
     private const val UNIQUE_CONSTRAINT_NAME_ORG = "permission_unique_user_organization"
 
     @JvmStatic
-    @VisibleForTesting
+    @InternalForTesting
     fun migrate(ctx: DSLContext) {
       addUniqueConstraints(ctx)
     }

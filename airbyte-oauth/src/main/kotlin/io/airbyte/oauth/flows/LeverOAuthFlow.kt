@@ -5,8 +5,14 @@
 package io.airbyte.oauth.flows
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
+import io.airbyte.oauth.AUTH_CODE_KEY
 import io.airbyte.oauth.BaseOAuth2Flow
+import io.airbyte.oauth.CLIENT_ID_KEY
+import io.airbyte.oauth.CLIENT_SECRET_KEY
+import io.airbyte.oauth.GRANT_TYPE_KEY
+import io.airbyte.oauth.REDIRECT_URI_KEY
+import io.airbyte.oauth.RESPONSE_TYPE_KEY
+import io.airbyte.oauth.SCOPE_KEY
 import org.apache.http.client.utils.URIBuilder
 import java.io.IOException
 import java.net.URISyntaxException
@@ -29,14 +35,13 @@ class LeverOAuthFlow(
     authCode: String,
     redirectUrl: String,
   ): Map<String, String> =
-    ImmutableMap
-      .builder<String, String>() // required
-      .put("client_id", clientId)
-      .put("redirect_uri", redirectUrl)
-      .put("client_secret", clientSecret)
-      .put("grant_type", "authorization_code")
-      .put("code", authCode)
-      .build()
+    mapOf(
+      CLIENT_ID_KEY to clientId,
+      REDIRECT_URI_KEY to redirectUrl,
+      CLIENT_SECRET_KEY to clientSecret,
+      GRANT_TYPE_KEY to "authorization_code",
+      AUTH_CODE_KEY to authCode,
+    )
 
   /**
    * Returns the URL where to retrieve the access token from.
@@ -53,11 +58,11 @@ class LeverOAuthFlow(
       return URLDecoder.decode(
         (
           URIBuilder(String.format(AUTHORIZE_URL, getBaseAuthUrl(inputOAuthConfiguration)))
-            .addParameter("client_id", clientId)
-            .addParameter("redirect_uri", redirectUrl)
+            .addParameter(CLIENT_ID_KEY, clientId)
+            .addParameter(REDIRECT_URI_KEY, redirectUrl)
             .addParameter("state", getState())
-            .addParameter("response_type", "code")
-            .addParameter("scope", SCOPES)
+            .addParameter(RESPONSE_TYPE_KEY, AUTH_CODE_KEY)
+            .addParameter(SCOPE_KEY, SCOPES)
             .addParameter("audience", getAudience(inputOAuthConfiguration))
             .addParameter("prompt", "consent")
             .build()
@@ -95,8 +100,7 @@ class LeverOAuthFlow(
     private const val ACCESS_TOKEN_URL = "%s/oauth/token"
 
     private val SCOPES: String =
-      java.lang.String.join(
-        "+",
+      listOf(
         "applications:read:admin",
         "applications:read:admin",
         "interviews:read:admin",
@@ -107,6 +111,6 @@ class LeverOAuthFlow(
         "resumes:read:admin",
         "users:read:admin",
         "offline_access",
-      )
+      ).joinToString("+")
   }
 }

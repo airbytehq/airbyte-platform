@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.converters
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.json.Jsons.clone
 import io.airbyte.commons.json.Jsons.jsonNode
 import io.airbyte.config.ActorDefinitionVersion
@@ -84,7 +83,7 @@ internal class ConfigurationUpdateTest {
     val actual = configurationUpdate.destination(UUID1, ORIGINAL_DESTINATION_CONNECTION.getName(), NEW_CONFIGURATION)
 
     Assertions.assertEquals(NEW_DESTINATION_CONNECTION, actual)
-    Mockito.verify<ActorDefinitionVersionHelper?>(actorDefinitionVersionHelper).getDestinationVersion(DESTINATION_DEFINITION, WORKSPACE_ID, UUID1)
+    Mockito.verify(actorDefinitionVersionHelper).getDestinationVersion(DESTINATION_DEFINITION, WORKSPACE_ID, UUID1)
   }
 
   @Test
@@ -130,11 +129,10 @@ internal class ConfigurationUpdateTest {
     val partialConfig = jsonNode(mapOf(JdbcUtils.PASSWORD_KEY to "123"))
     val expectedConfiguration =
       jsonNode(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(JdbcUtils.USERNAME_KEY, "airbyte")
-          .put(JdbcUtils.PASSWORD_KEY, "123")
-          .build(),
+        mapOf(
+          JdbcUtils.USERNAME_KEY to "airbyte",
+          JdbcUtils.PASSWORD_KEY to "123",
+        ),
       )
     val partialUpdateConfiguration = configurationUpdate.partialSource(UUID1, null, partialConfig)
     Assertions.assertEquals(clone(NEW_SOURCE_CONNECTION).withConfiguration(expectedConfiguration), partialUpdateConfiguration)
@@ -153,20 +151,18 @@ internal class ConfigurationUpdateTest {
       )
     private val CONNECTOR_SPECIFICATION: ConnectorSpecification? = ConnectorSpecification().withConnectionSpecification(SPEC)
     private val ORIGINAL_CONFIGURATION =
-      jsonNode<ImmutableMap<Any, Any>?>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(JdbcUtils.USERNAME_KEY, "airbyte")
-          .put(JdbcUtils.PASSWORD_KEY, "abc")
-          .build(),
+      jsonNode(
+        mapOf(
+          JdbcUtils.USERNAME_KEY to "airbyte",
+          JdbcUtils.PASSWORD_KEY to "abc",
+        ),
       )
     private val NEW_CONFIGURATION =
-      jsonNode<ImmutableMap<Any, Any>?>(
-        ImmutableMap
-          .builder<Any, Any>()
-          .put(JdbcUtils.USERNAME_KEY, "airbyte")
-          .put(JdbcUtils.PASSWORD_KEY, "xyz")
-          .build(),
+      jsonNode(
+        mapOf(
+          JdbcUtils.USERNAME_KEY to "airbyte",
+          JdbcUtils.PASSWORD_KEY to "xyz",
+        ),
       )
     private val SOURCE_DEFINITION = StandardSourceDefinition()
     private val DEFINITION_VERSION: ActorDefinitionVersion? =
