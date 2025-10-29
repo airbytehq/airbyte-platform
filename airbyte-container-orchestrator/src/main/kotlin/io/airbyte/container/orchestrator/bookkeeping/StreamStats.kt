@@ -4,6 +4,8 @@
 
 package io.airbyte.container.orchestrator.bookkeeping
 
+import java.math.BigDecimal
+
 interface StreamStats {
   val bytesCommitted: Long
   val bytesEmitted: Long
@@ -14,6 +16,7 @@ interface StreamStats {
   val recordsEstimated: Long?
   val recordsFilteredOut: Long
   val recordsRejected: Long
+  val additionalStats: Map<String, BigDecimal>
 }
 
 class StreamStatsView(
@@ -52,4 +55,7 @@ class StreamStatsView(
 
   override val recordsFilteredOut: Long
     get() = streamStatsTracker.streamStats.filteredOutRecords.get()
+
+  override val additionalStats: Map<String, BigDecimal>
+    get() = streamStatsTracker.streamStats.additionalStats
 }

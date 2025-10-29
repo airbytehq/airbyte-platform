@@ -29,6 +29,7 @@ fun SyncStatsTracker.getPerStreamStats(hasReplicationCompleted: Boolean): List<S
           .withRecordsEmitted(stats.recordsEmitted)
           .withRecordsFilteredOut(stats.recordsFilteredOut)
           .withRecordsRejected(stats.recordsRejected.takeIf { it > 0 })
+          .withAdditionalStats(stats.additionalStats)
           .apply {
             if (hasReplicationCompleted) {
               bytesCommitted = stats.bytesEmitted - stats.bytesFilteredOut

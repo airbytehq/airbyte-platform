@@ -299,4 +299,5 @@ private fun SyncStats.toAttemptStats(): AttemptStats =
     bytesCommitted = bytesCommitted,
     recordsCommitted = recordsCommitted,
     recordsRejected = recordsRejected,
+    additionalStats = additionalStats.takeIf { it.isNotEmpty() },
   )

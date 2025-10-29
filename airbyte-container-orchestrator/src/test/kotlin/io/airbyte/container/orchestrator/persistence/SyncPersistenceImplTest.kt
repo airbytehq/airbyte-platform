@@ -242,6 +242,8 @@ internal class SyncPersistenceImplTest {
 
     val sd1 = AirbyteStreamNameNamespacePair("s1", "ns1")
     val sd2 = AirbyteStreamNameNamespacePair("s2", "ns1")
+    val stream1AdditionalStats = mapOf("test-stat" to 123L.toBigDecimal())
+    val stream2AdditionalStats = mapOf("test-stat" to 321L.toBigDecimal())
 
     every { syncStatsTracker.getStats() } returns
       mapOf(
@@ -252,6 +254,7 @@ internal class SyncPersistenceImplTest {
             every { recordsCommitted } returns 1
             every { recordsEmitted } returns 3
             every { recordsRejected } returns 2
+            every { additionalStats } returns stream1AdditionalStats
           },
         sd2 to
           mockk(relaxed = true) {
@@ -260,6 +263,7 @@ internal class SyncPersistenceImplTest {
             every { recordsCommitted } returns 100
             every { recordsEmitted } returns 300
             every { recordsRejected } returns 200
+            every { additionalStats } returns stream2AdditionalStats
           },
       )
 
@@ -291,6 +295,7 @@ internal class SyncPersistenceImplTest {
                   recordsCommitted = 1,
                   recordsEmitted = 3,
                   recordsRejected = 2,
+                  additionalStats = stream1AdditionalStats,
                 ),
             ),
             AttemptStreamStats(
@@ -305,6 +310,7 @@ internal class SyncPersistenceImplTest {
                   recordsCommitted = 100,
                   recordsEmitted = 300,
                   recordsRejected = 200,
+                  additionalStats = stream2AdditionalStats,
                 ),
             ),
           ),

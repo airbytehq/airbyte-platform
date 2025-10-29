@@ -19,9 +19,9 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test
 
-class StatsTrackerTest {
+internal class StatsTrackerTest {
   @Test
-  internal fun `test that state hash code generation ignores state stats fields`() {
+  fun `test that state hash code generation ignores state stats fields`() {
     val hashFunction = Hashing.murmur3_32_fixed()
     val destinationStats = AirbyteStateStats().withRecordCount(14.0)
     val sourceStats = AirbyteStateStats().withRecordCount(24.0)
@@ -78,7 +78,7 @@ class StatsTrackerTest {
   }
 
   @Test
-  internal fun `test file reference transfer stats`() {
+  fun `test file reference transfer stats`() {
     val streamStatsTracker =
       StreamStatsTracker(
         mockk(),
@@ -109,7 +109,7 @@ class StatsTrackerTest {
   }
 
   @Test
-  internal fun `test file transfer stats`() {
+  fun `test file transfer stats`() {
     val streamStatsTracker =
       StreamStatsTracker(
         mockk(),
@@ -133,7 +133,7 @@ class StatsTrackerTest {
   }
 
   @Test
-  internal fun `test not file transfer stats`() {
+  fun `test not file transfer stats`() {
     val streamStatsTracker =
       StreamStatsTracker(
         mockk(),
@@ -153,5 +153,27 @@ class StatsTrackerTest {
     streamStatsTracker.trackRecord(record)
 
     assertNotEquals(size, streamStatsTracker.streamStats.emittedBytesCount.get())
+  }
+
+  // Test written by Claude Code
+  @Test
+  fun testMergingAdditionalStats() {
+    val streamStatsTracker =
+      StreamStatsTracker(
+        mockk(),
+        mockk(relaxed = true),
+        false,
+      )
+
+    // Test that additional stats are properly accumulated
+    val additionalStats1 = mapOf("stat1" to 100.toBigDecimal())
+    val additionalStats2 = mapOf("stat1" to 50.toBigDecimal(), "stat2" to 200.toBigDecimal())
+
+    streamStatsTracker.streamStats.mergeAdditionalStats(additionalStats1)
+    streamStatsTracker.streamStats.mergeAdditionalStats(additionalStats2)
+
+    // Verify that stat1 was accumulated (100 + 50 = 150) and stat2 was added
+    assertEquals(150.toBigDecimal(), streamStatsTracker.streamStats.additionalStats["stat1"])
+    assertEquals(200.toBigDecimal(), streamStatsTracker.streamStats.additionalStats["stat2"])
   }
 }

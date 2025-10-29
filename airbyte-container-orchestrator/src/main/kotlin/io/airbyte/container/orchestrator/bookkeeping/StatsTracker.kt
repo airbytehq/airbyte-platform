@@ -15,6 +15,7 @@ import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.github.oshai.kotlinlogging.KotlinLogging
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentHashMap
@@ -57,7 +58,22 @@ data class StreamStatsCounters(
   val meanSecondsBetweenStateEmittedAndCommitted: AtomicLong = AtomicLong(),
   val unreliableStateOperations: AtomicBoolean = AtomicBoolean(false),
   val rejectedRecordsCount: AtomicLong = AtomicLong(),
+  val additionalStats: MutableMap<String, BigDecimal> = ConcurrentHashMap(),
 ) {
+  /**
+   * Merges the incoming additional statistics associated with the stream with
+   * accumulated additional statistics by summing values associated with the same key.
+   * If a key is not present in the accumulated additional statistics, it is added
+   * using the value associated with the key in the incoming statistics.
+   *
+   * @param additionalStats The incoming additional statistics for the stream.
+   */
+  fun mergeAdditionalStats(additionalStats: Map<String, BigDecimal>) {
+    additionalStats.forEach { (key, value) ->
+      this.additionalStats.merge(key, value, BigDecimal::add)
+    }
+  }
+
   /**
    * Returns the [meanSecondsToReceiveState] as a [Double] by converting the underlying
    * [AtomicLong] to a [Double].  This is necessary as Java/Kotlin do not provide a native
@@ -392,6 +408,9 @@ class StreamStatsTracker(
               streamStats.rejectedRecordsCount.addAndGet(rejectedCountLong)
               streamStats.committedRecordsCount.addAndGet(0 - rejectedCountLong)
             }
+          }
+          stateMessage.destinationStats?.additionalStats?.let { additionalStats ->
+            streamStats.mergeAdditionalStats(additionalStats.additionalProperties.mapValues { it.value.toBigDecimal() })
           }
         }
       }
