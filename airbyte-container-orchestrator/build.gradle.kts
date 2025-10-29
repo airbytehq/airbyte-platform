@@ -27,8 +27,6 @@ plugins {
 val airbyteProtocol: Configuration by configurations.creating
 
 dependencies {
-  annotationProcessor(platform(libs.micronaut.platform))
-  annotationProcessor(libs.bundles.micronaut.annotation.processor)
   ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(platform(libs.micronaut.platform))
@@ -71,9 +69,6 @@ dependencies {
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.bundles.logback)
-
-  testAnnotationProcessor(platform(libs.micronaut.platform))
-  testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(libs.bundles.junit)
   testImplementation(libs.bundles.micronaut.test)

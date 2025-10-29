@@ -8,7 +8,6 @@ plugins {
 }
 
 dependencies {
-  annotationProcessor(libs.micronaut.openapi)
 
   ksp(libs.micronaut.openapi)
   ksp(platform(libs.micronaut.platform))

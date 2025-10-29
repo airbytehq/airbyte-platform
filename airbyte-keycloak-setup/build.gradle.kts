@@ -5,8 +5,6 @@ plugins {
 }
 
 dependencies {
-  annotationProcessor(platform(libs.micronaut.platform))
-  annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
@@ -27,8 +25,6 @@ dependencies {
 
   runtimeOnly(libs.bundles.logback)
 
-  testAnnotationProcessor(platform(libs.micronaut.platform))
-  testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.bundles.junit)

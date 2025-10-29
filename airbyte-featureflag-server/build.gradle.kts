@@ -8,9 +8,6 @@ dependencies {
   ksp(libs.v3.swagger.annotations)
   ksp(platform(libs.micronaut.platform))
 
-  annotationProcessor(libs.bundles.micronaut.annotation.processor)
-  annotationProcessor(libs.micronaut.jaxrs.processor)
-  annotationProcessor(platform(libs.micronaut.platform))
 
   compileOnly(libs.v3.swagger.annotations)
   compileOnly(libs.micronaut.openapi.annotations)

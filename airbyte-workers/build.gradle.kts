@@ -34,9 +34,6 @@ configurations.all {
 }
 
 dependencies {
-  annotationProcessor(platform(libs.micronaut.platform))
-  annotationProcessor(libs.bundles.micronaut.annotation.processor)
-
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
   ksp(project(":oss:airbyte-configuration-processor"))
@@ -100,10 +97,6 @@ dependencies {
   runtimeOnly(libs.javax.databind)
   runtimeOnly(libs.bundles.logback)
 
-  testAnnotationProcessor(platform(libs.micronaut.platform))
-  testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
-  testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
-
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.annotation.processor)
   kspTest(libs.bundles.micronaut.test.annotation.processor)
@@ -131,8 +124,6 @@ dependencies {
   kspIntegrationTest(platform(libs.micronaut.platform))
   kspIntegrationTest(libs.bundles.micronaut.test.annotation.processor)
 
-  integrationTestAnnotationProcessor(platform(libs.micronaut.platform))
-  integrationTestAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
   integrationTestImplementation(libs.bundles.junit)
   integrationTestImplementation(libs.junit.pioneer)
   integrationTestImplementation(libs.bundles.micronaut.test)

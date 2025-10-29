@@ -9,10 +9,6 @@ dependencies {
   ksp(libs.bundles.micronaut.annotation.processor)
   ksp(libs.micronaut.openapi)
 
-  annotationProcessor(platform(libs.micronaut.platform))
-  annotationProcessor(libs.bundles.micronaut.annotation.processor)
-  annotationProcessor(libs.micronaut.jaxrs.processor)
-  annotationProcessor(libs.micronaut.openapi)
 
   implementation(libs.bundles.jackson)
   implementation(platform(libs.micronaut.platform))
@@ -58,8 +54,6 @@ dependencies {
 
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.test.annotation.processor)
-  testAnnotationProcessor(platform(libs.micronaut.platform))
-  testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(project(":oss:airbyte-test-utils"))
   testImplementation(libs.bundles.micronaut.test)

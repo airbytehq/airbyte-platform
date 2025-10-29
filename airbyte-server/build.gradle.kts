@@ -6,10 +6,6 @@ plugins {
 }
 
 dependencies {
-  annotationProcessor(platform(libs.micronaut.platform))
-  annotationProcessor(libs.bundles.micronaut.annotation.processor)
-  annotationProcessor(libs.micronaut.jaxrs.processor)
-
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
   ksp(libs.micronaut.jaxrs.processor)
@@ -94,11 +90,6 @@ dependencies {
   // Required for local database secret hydration)
   runtimeOnly(libs.hikaricp)
   runtimeOnly(libs.h2.database)
-
-  testAnnotationProcessor(platform(libs.micronaut.platform))
-  testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
-  testAnnotationProcessor(libs.micronaut.jaxrs.processor)
-  testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.annotation.processor)

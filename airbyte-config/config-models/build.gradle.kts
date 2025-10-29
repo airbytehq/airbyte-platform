@@ -6,7 +6,6 @@ plugins {
 }
 
 dependencies {
-  annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
   ksp(libs.bundles.micronaut.annotation.processor)
 
