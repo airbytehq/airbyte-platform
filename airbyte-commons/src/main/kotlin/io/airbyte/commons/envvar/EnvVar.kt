@@ -14,7 +14,6 @@ package io.airbyte.commons.envvar
 enum class EnvVar {
   AIRBYTE_EDITION,
   AIRBYTE_ENABLE_UNSAFE_CODE,
-  AIRBYTE_ROLE,
   AIRBYTE_URL,
   AIRBYTE_VERSION,
   ATTEMPT_ID,

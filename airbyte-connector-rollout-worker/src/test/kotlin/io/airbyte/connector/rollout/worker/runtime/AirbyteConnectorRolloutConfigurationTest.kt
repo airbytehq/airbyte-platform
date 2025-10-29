@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test
 
 @MicronautTest(environments = [Environment.TEST])
 @Property(name = "INTERNAL_API_HOST", value = "http://localhost:8080")
+@Property(name = "micronaut.server.port", value = "-1")
 internal class AirbyteConnectorRolloutConfigurationDefaultTest {
   @Inject
   private lateinit var airbyteConnectorRolloutConfig: AirbyteConnectorRolloutConfig
@@ -26,6 +27,7 @@ internal class AirbyteConnectorRolloutConfigurationDefaultTest {
 
 @MicronautTest(propertySources = ["classpath:application-connector-rollout.yml"])
 @Property(name = "INTERNAL_API_HOST", value = "http://localhost:8080")
+@Property(name = "micronaut.server.port", value = "-1")
 internal class AirbyteControlPlanerConfigurationOverridesTest {
   @Inject
   private lateinit var airbyteConnectorRolloutConfig: AirbyteConnectorRolloutConfig

@@ -597,7 +597,6 @@ class EnvVarConfigBeanFactory {
     mapOf(
       EnvVarConstants.AIRBYTE_EDITION_ENV_VAR to airbyteConfig.edition.name,
       EnvVarConstants.AIRBYTE_VERSION_ENV_VAR to version.serialize(),
-      EnvVarConstants.AIRBYTE_ROLE_ENV_VAR to airbyteConfig.role,
     )
 
   @Singleton

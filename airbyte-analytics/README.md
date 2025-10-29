@@ -16,10 +16,9 @@ for this environment variable include:
 * `LOGGING`
 * `SEGMENT`
 
-If the `SEGMENT` tracking strategy type is enabled, the write key must also be provided using the `SEGMENT_WRITE_KEY` 
+If the `SEGMENT` tracking strategy type is enabled, the write key must also be provided using the `SEGMENT_WRITE_KEY`
 environment variable. In addition to the type of analytics tracker, the following environment variables must also be set:
 
-* `AIRBYTE_ROLE`
 * `AIRBYTE_EDITION`
 * `AIRBYTE_VERSION`
 
@@ -41,7 +40,6 @@ micronaut:
       
 airbyte:
   edition: ${AIRBYTE_EDITION:COMMUNITY}
-  role: ${AIRBYTE_ROLE:dev}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}

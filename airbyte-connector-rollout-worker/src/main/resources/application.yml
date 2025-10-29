@@ -44,7 +44,6 @@ airbyte:
       type: INTERNAL_CLIENT_TOKEN
       signature-secret: ${AB_JWT_SIGNATURE_SECRET:}
   acceptance-test-enabled: ${ACCEPTANCE_TEST_ENABLED:false}
-  role: ${AIRBYTE_ROLE:dev}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}

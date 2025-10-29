@@ -30,15 +30,6 @@ internal class EnvConfigsTest {
   }
 
   @Test
-  fun testAirbyteRole() {
-    envMap[EnvVar.AIRBYTE_ROLE.name] = null
-    assertNull(config.getAirbyteRole())
-
-    envMap[EnvVar.AIRBYTE_ROLE.name] = DEV
-    assertEquals(DEV, config.getAirbyteRole())
-  }
-
-  @Test
   fun testAirbyteVersion() {
     envMap[EnvVar.AIRBYTE_VERSION.name] = null
     assertThrows<IllegalArgumentException?>(IllegalArgumentException::class.java, { config.getAirbyteVersion() })

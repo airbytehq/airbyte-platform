@@ -46,7 +46,6 @@ airbyte:
     workload-id: ${WORKLOAD_ID:}
     workspace-id: ${WORKSPACE_ID:}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
-  role: ${AIRBYTE_ROLE:dev}
   version: ${AIRBYTE_VERSION:dev}
   acceptance:
     test:

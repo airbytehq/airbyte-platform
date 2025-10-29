@@ -67,7 +67,6 @@ const val WORKLOAD_API_PREFIX = "$AIRBYTE_PREFIX.workload-api"
 const val WORKLOAD_LAUNCHER_PREFIX = "$AIRBYTE_PREFIX.workload-launcher"
 
 // Default values for configuration properties
-internal const val DEFAULT_AIRBYTE_ROLE = "dev"
 internal const val DEFAULT_AIRBYTE_VERSION = "dev"
 internal const val DEFAULT_AIRBYTE_DEPLOYMENT_ENVIRONMENT = "local"
 internal const val DEFAULT_AIRBYTE_PROTOCOL_MAXIMUM_VERSION = "0.3.0"
@@ -386,7 +385,6 @@ data class AirbyteConfig(
   val licenseKey: String = "",
   val edition: Configs.AirbyteEdition = Configs.AirbyteEdition.COMMUNITY,
   val protocol: AirbyteProtocolConfiguration = AirbyteProtocolConfiguration(),
-  val role: String = DEFAULT_AIRBYTE_ROLE,
   val version: String = DEFAULT_AIRBYTE_VERSION,
   val workspaceRoot: String = DEFAULT_AIRBYTE_WORKSPACE_ROOT,
 ) {

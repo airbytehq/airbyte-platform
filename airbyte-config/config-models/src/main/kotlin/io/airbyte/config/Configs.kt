@@ -21,9 +21,6 @@ interface Configs {
   // CORE
   // General
 
-  /** Distinguishes internal Airbyte deployments. Internal-use only. */
-  fun getAirbyteRole(): String?
-
   /** Defines the deployed edition of Airbyte. */
   fun getAirbyteEdition(): String?
 

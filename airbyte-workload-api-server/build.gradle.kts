@@ -77,7 +77,6 @@ airbyte {
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     localEnvVars.putAll(
       mapOf(
-        "AIRBYTE_ROLE" to "undefined",
         "AIRBYTE_VERSION" to "dev",
         "MICRONAUT_ENVIRONMENTS" to "control-plane",
         "SERVICE_NAME" to project.name,

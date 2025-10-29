@@ -57,10 +57,7 @@ internal class SegmentTrackingClientTest {
     every { trackingIdentityFetcher.apply(any(), any()) } returns identity
     every { segmentAnalyticsClient.analyticsClient } returns analytics
 
-    airbyteConfig =
-      AirbyteConfig(
-        role = AIRBYTE_ROLE,
-      )
+    airbyteConfig = AirbyteConfig()
 
     segmentTrackingClient =
       SegmentTrackingClient(
@@ -89,7 +86,6 @@ internal class SegmentTrackingClientTest {
         EMAIL_KEY to identity.email!!,
         "subscribed_newsletter" to identity.news!!,
         "subscribed_security" to identity.securityUpdates!!,
-        "airbyte_role" to AIRBYTE_ROLE,
       )
     Assertions.assertEquals(identity.customerId.toString(), actual.userId())
     Assertions.assertEquals(expectedTraits, actual.traits())
@@ -113,7 +109,6 @@ internal class SegmentTrackingClientTest {
     val actual = builderSlot.captured.build()
     val expectedTraits: Map<String, Any?> =
       mapOf(
-        "airbyte_role" to AIRBYTE_ROLE,
         SegmentTrackingClient.AIRBYTE_VERSION_KEY to airbyteVersion.serialize(),
         "anonymized" to identity.anonymousDataCollection!!,
         "deployment_mode" to deploymentMetadata.mode,
@@ -132,7 +127,6 @@ internal class SegmentTrackingClientTest {
     val airbyteConfig =
       AirbyteConfig(
         installationId = installationId,
-        role = "role",
       )
 
     segmentTrackingClient =
@@ -151,7 +145,6 @@ internal class SegmentTrackingClientTest {
     val actual = builderSlot.captured.build()
     val expectedTraits: Map<String, Any?> =
       mapOf(
-        "airbyte_role" to "role",
         SegmentTrackingClient.AIRBYTE_VERSION_KEY to airbyteVersion.serialize(),
         "anonymized" to identity.anonymousDataCollection!!,
         "deployment_mode" to deploymentMetadata.mode,
@@ -217,7 +210,6 @@ internal class SegmentTrackingClientTest {
     val airbyteConfig =
       AirbyteConfig(
         installationId = installationId,
-        role = "role",
       )
 
     segmentTrackingClient =
@@ -289,7 +281,6 @@ internal class SegmentTrackingClientTest {
   }
 
   companion object {
-    const val AIRBYTE_ROLE = "dev"
     const val EMAIL = "a@airbyte.io"
     const val EMAIL_KEY = "email"
     const val JUMP = "jump"

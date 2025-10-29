@@ -175,7 +175,6 @@ airbyte:
   container.orchestrator:
     enable-unsafe-code: ${AIRBYTE_ENABLE_UNSAFE_CODE:false}
     java-opts: ${CONTAINER_ORCHESTRATOR_JAVA_OPTS:}
-  role: ${AIRBYTE_ROLE:}
   worker:
     job:
       error-reporting:

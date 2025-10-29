@@ -4,7 +4,6 @@ micronaut:
 
 airbyte:
   edition: COMMUNITY
-  role: ${AIRBYTE_ROLE:dev}
   version: 0.4128173.0
   acceptance:
     test:

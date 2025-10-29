@@ -79,7 +79,6 @@ interface TrackingClient {
   )
 }
 
-const val AIRBYTE_ROLE = "airbyte_role"
 const val INSTALLATION_ID = "installation_id"
 const val UNKNOWN = "unknown"
 
@@ -132,7 +131,6 @@ class SegmentTrackingClient(
         trackingIdentity.email?.let { put("email", it) }
 
         // other
-        airbyteConfig.role.takeIf { it.isNotBlank() }?.let { put(AIRBYTE_ROLE, it) }
         airbyteConfig.installationId?.let { put(INSTALLATION_ID, it) }
       }
 
@@ -201,7 +199,6 @@ class SegmentTrackingClient(
     internal const val AIRBYTE_ANALYTIC_SOURCE_HEADER = "X-Airbyte-Analytic-Source"
     internal const val AIRBYTE_DEPLOYMENT_ID = "deployment_id"
     internal const val AIRBYTE_DEPLOYMENT_MODE = "deployment_mode"
-    internal const val AIRBYTE_ROLE = "airbyte_role"
     internal const val AIRBYTE_SOURCE = "airbyte_source"
     internal const val AIRBYTE_TRACKED_AT = "tracked_at"
     internal const val AIRBYTE_VERSION_KEY = "airbyte_version"

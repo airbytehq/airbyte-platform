@@ -34,7 +34,6 @@ airbyte:
       type: INTERNAL_CLIENT_TOKEN
       signature-secret: ${AB_JWT_SIGNATURE_SECRET:}
   acceptance-test-enabled: ${ACCEPTANCE_TEST_ENABLED:false}
-  role: ${AIRBYTE_ROLE:dev}
   temporal:
     cloud:
       client:

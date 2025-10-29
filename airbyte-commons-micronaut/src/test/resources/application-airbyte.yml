@@ -4,7 +4,6 @@ airbyte:
   deployment-environment: "test"
   license-key: "test-license-key"
   edition: "enterprise"
-  role: "test-user"
   version: "dev-test"
   workspace-root: "/workspace-test"
   protocol:

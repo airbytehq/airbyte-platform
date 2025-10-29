@@ -260,7 +260,6 @@ airbyte:
         client-id: ${AB_AZURE_KEY_VAULT_CLIENT_ID:}
         client-secret: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET:}
         tags: ${AB_AZURE_KEY_VAULT_TAGS:}
-  role: ${AIRBYTE_ROLE:dev}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}

@@ -244,7 +244,6 @@ airbyte {
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     localEnvVars.putAll(
       mapOf(
-        "AIRBYTE_ROLE" to "undefined",
         "AIRBYTE_VERSION" to "dev",
         "DATABASE_USER" to "docker",
         "DATABASE_PASSWORD" to "docker",

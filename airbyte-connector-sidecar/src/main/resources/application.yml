@@ -20,7 +20,6 @@ micronaut:
     enabled: false
 airbyte:
   edition: ${AIRBYTE_EDITION:COMMUNITY}
-  role: ${AIRBYTE_ROLE:dev}
   version: ${AIRBYTE_VERSION:dev}
   acceptance:
     test:

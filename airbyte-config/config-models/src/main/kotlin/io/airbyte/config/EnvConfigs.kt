@@ -31,8 +31,6 @@ class EnvConfigs
 
     // CORE
     // General
-    override fun getAirbyteRole(): String? = getEnv(EnvVar.AIRBYTE_ROLE)
-
     override fun getAirbyteEdition(): String? = getEnv(EnvVar.AIRBYTE_EDITION)
 
     override fun getAirbyteVersion(): AirbyteVersion = AirbyteVersion(getEnsureEnv(EnvVar.AIRBYTE_VERSION))

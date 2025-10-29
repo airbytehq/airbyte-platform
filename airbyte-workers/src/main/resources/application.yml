@@ -171,7 +171,6 @@ airbyte:
     notify:
       enabled: ${SHOULD_RUN_NOTIFY_WORKFLOWS:true}
       max-workers: ${MAX_NOTIFY_WORKERS:5}
-  role: ${AIRBYTE_ROLE:dev}
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
