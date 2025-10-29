@@ -96,7 +96,6 @@ spec:
         {{- include "airbyte.tracking.envs" . | nindent 8 }}
         {{- include "airbyte.worker.envs" . | nindent 8 }}
         {{- include "airbyte.workloads.resources.envs" . | nindent 8 }}
-        {{- include "airbyte.connectorBuilder.envs" . | nindent 8 }}
 
         {{- if .Values.global.datadog.enabled }}
         - name: DD_SERVICE 

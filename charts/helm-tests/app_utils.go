@@ -9,7 +9,7 @@ import (
 var AllApps = []string{
 	"server",
 	"webapp",
-	"connector-builder-server",
+	"manifest-server",
 	"worker",
 	"cron",
 	"keycloak",

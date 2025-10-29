@@ -32,10 +32,6 @@ common:
       key: auth.enabled
       defaultValueExp: (ternary "true" "false" (eq .Values.global.edition "enterprise"))
 
-    - env: CONNECTOR_BUILDER_SERVER_API_HOST
-      key: connectorBuilderServer.apiHost
-      valueExp: (printf "http://%s-airbyte-connector-builder-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.connectorBuilderServer.service.port))
-
     - env: MANIFEST_SERVER_API_HOST
       key: manifestServer.apiHost
       valueExp: (printf "http://%s-airbyte-manifest-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.manifestServer.service.port))
@@ -318,16 +314,6 @@ connector:
     - env: ENTERPRISE_SOURCE_STUBS_URL
       key: enterpriseSourceStubsUrl
       defaultValue: https://connectors.airbyte.com/files/resources/connector_stubs/v1/connector_stubs.json
-
-connectorBuilder:
-  keyBasePath: connectorBuilderServer
-  config:
-    - env: AI_ASSIST_URL_BASE
-      key: aiAssistUrlBase
-
-    - env: BUILDER_GITHUB_AIRBYTE_PAT_TOKEN
-      key: githubToken
-      sensitive: true
 
 connectorRollout:
   keyBasePath: global.connectorRollout
@@ -1036,6 +1022,13 @@ server:
     - env: SCHEDULER_TASK_EXECUTOR_THREADS
       key: scheduler.numThreads
 
+    - env: AI_ASSIST_URL_BASE
+      key: connectorBuilder.aiAssistUrlBase
+
+    - env: BUILDER_GITHUB_AIRBYTE_PAT_TOKEN
+      key: connectorBuilder.githubToken
+      sensitive: true
+
     - env: WEBAPP_DATADOG_APPLICATION_ID
       key: webapp.datadogApplicationId
 
@@ -1411,11 +1404,6 @@ webapp:
     - env: API_URL
       key: api.url
       value: /api/v1
-
-    # NOTE: This must NOT include the scheme (http://)
-    - env: CONNECTOR_BUILDER_API_HOST
-      key: connectorBuilderServer.host
-      valueExp: (printf "%s-airbyte-connector-builder-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.connectorBuilderServer.service.port))
 
 worker:
   config:

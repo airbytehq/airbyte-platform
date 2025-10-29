@@ -226,6 +226,49 @@ Renders the server.scheduler.numThreads environment variable
 {{- end }}
 
 {{/*
+Renders the server.connectorBuilder.aiAssistUrlBase value
+*/}}
+{{- define "airbyte.server.connectorBuilder.aiAssistUrlBase" }}
+    {{- .Values.server.connectorBuilder.aiAssistUrlBase }}
+{{- end }}
+
+{{/*
+Renders the server.connectorBuilder.aiAssistUrlBase environment variable
+*/}}
+{{- define "airbyte.server.connectorBuilder.aiAssistUrlBase.env" }}
+- name: AI_ASSIST_URL_BASE
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AI_ASSIST_URL_BASE
+{{- end }}
+
+{{/*
+Renders the server.connectorBuilder.githubToken value
+*/}}
+{{- define "airbyte.server.connectorBuilder.githubToken" }}
+    {{- .Values.server.connectorBuilder.githubToken }}
+{{- end }}
+
+{{/*
+Renders the server.connectorBuilder.githubToken secret key
+*/}}
+{{- define "airbyte.server.connectorBuilder.githubToken.secretKey" }}
+	{{- .Values.server.connectorBuilder.githubTokenSecretKey | default "BUILDER_GITHUB_AIRBYTE_PAT_TOKEN" }}
+{{- end }}
+
+{{/*
+Renders the server.connectorBuilder.githubToken environment variable
+*/}}
+{{- define "airbyte.server.connectorBuilder.githubToken.env" }}
+- name: BUILDER_GITHUB_AIRBYTE_PAT_TOKEN
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "airbyte.server.secretName" . }}
+      key: {{ include "airbyte.server.connectorBuilder.githubToken.secretKey" . }}
+{{- end }}
+
+{{/*
 Renders the server.webapp.datadogApplicationId value
 */}}
 {{- define "airbyte.server.webapp.datadogApplicationId" }}
@@ -476,6 +519,8 @@ Renders the set of all server environment variables
 {{- include "airbyte.server.publicApiExecutor.numThreads.env" . }}
 {{- include "airbyte.server.ioExecutor.numThreads.env" . }}
 {{- include "airbyte.server.scheduler.numThreads.env" . }}
+{{- include "airbyte.server.connectorBuilder.aiAssistUrlBase.env" . }}
+{{- include "airbyte.server.connectorBuilder.githubToken.env" . }}
 {{- include "airbyte.server.webapp.datadogApplicationId.env" . }}
 {{- include "airbyte.server.webapp.datadogClientToken.env" . }}
 {{- include "airbyte.server.webapp.datadogEnv.env" . }}
@@ -507,6 +552,7 @@ HTTP_IDLE_TIMEOUT: {{ include "airbyte.server.httpIdleTimeout" . | quote }}
 PUBLIC_API_EXECUTOR_THREADS: {{ include "airbyte.server.publicApiExecutor.numThreads" . | quote }}
 IO_TASK_EXECUTOR_THREADS: {{ include "airbyte.server.ioExecutor.numThreads" . | quote }}
 SCHEDULER_TASK_EXECUTOR_THREADS: {{ include "airbyte.server.scheduler.numThreads" . | quote }}
+AI_ASSIST_URL_BASE: {{ include "airbyte.server.connectorBuilder.aiAssistUrlBase" . | quote }}
 WEBAPP_DATADOG_APPLICATION_ID: {{ include "airbyte.server.webapp.datadogApplicationId" . | quote }}
 WEBAPP_DATADOG_CLIENT_TOKEN: {{ include "airbyte.server.webapp.datadogClientToken" . | quote }}
 WEBAPP_DATADOG_ENV: {{ include "airbyte.server.webapp.datadogEnv" . | quote }}
@@ -527,4 +573,5 @@ Renders the set of all server secret variables
 */}}
 {{- define "airbyte.server.secrets" }}
 OPENAI_API_KEY_PROJ_FAILED_SYNC_ASSISTANT: {{ include "airbyte.server.openai.syncAssistantApiKey" . | quote }}
+BUILDER_GITHUB_AIRBYTE_PAT_TOKEN: {{ include "airbyte.server.connectorBuilder.githubToken" . | quote }}
 {{- end }}

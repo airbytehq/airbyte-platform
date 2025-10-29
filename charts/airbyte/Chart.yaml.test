@@ -68,10 +68,6 @@ dependencies:
     name: cron
     repository: "file://../airbyte-cron"
     version: "*"
-  - condition: connector-builder-server.enabled
-    name: connector-builder-server
-    repository: "file://../airbyte-connector-builder-server"
-    version: "*"
   - condition: connector-rollout-worker.enabled
     name: connector-rollout-worker
     repository: "file://../airbyte-connector-rollout-worker"

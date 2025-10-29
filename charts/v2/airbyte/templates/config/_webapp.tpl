@@ -24,29 +24,10 @@ Renders the webapp.api.url environment variable
 {{- end }}
 
 {{/*
-Renders the webapp.connectorBuilderServer.host value
-*/}}
-{{- define "airbyte.webapp.connectorBuilderServer.host" }}
-    {{- (printf "%s-airbyte-connector-builder-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.connectorBuilderServer.service.port)) }}
-{{- end }}
-
-{{/*
-Renders the webapp.connectorBuilderServer.host environment variable
-*/}}
-{{- define "airbyte.webapp.connectorBuilderServer.host.env" }}
-- name: CONNECTOR_BUILDER_API_HOST
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: CONNECTOR_BUILDER_API_HOST
-{{- end }}
-
-{{/*
 Renders the set of all webapp environment variables
 */}}
 {{- define "airbyte.webapp.envs" }}
 {{- include "airbyte.webapp.api.url.env" . }}
-{{- include "airbyte.webapp.connectorBuilderServer.host.env" . }}
 {{- end }}
 
 {{/*
@@ -54,5 +35,4 @@ Renders the set of all webapp config map variables
 */}}
 {{- define "airbyte.webapp.configVars" }}
 API_URL: {{ include "airbyte.webapp.api.url" . | quote }}
-CONNECTOR_BUILDER_API_HOST: {{ include "airbyte.webapp.connectorBuilderServer.host" . | quote }}
 {{- end }}

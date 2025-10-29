@@ -16,7 +16,7 @@ var apps = []struct {
 	kind string
 }{
 	{name: "bootloader", kind: "Pod"},
-	{name: "connector-builder-server", kind: "Deployment"},
+	{name: "manifest-server", kind: "Deployment"},
 	{name: "connector-rollout-worker", kind: "Deployment"},
 	{name: "cron", kind: "Deployment"},
 	{name: "featureflag-server", kind: "Deployment"},

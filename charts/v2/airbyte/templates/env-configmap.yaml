@@ -16,7 +16,6 @@ data:
   {{- include "airbyte.cluster.configVars" . | nindent 2 }}
   {{- include "airbyte.common.configVars" . | nindent 2 }}
   {{- include "airbyte.connector.configVars" . | nindent 2 }}
-  {{- include "airbyte.connectorBuilder.configVars" . | nindent 2 }}
   {{- include "airbyte.connectorRollout.configVars" . | nindent 2 }}
   {{- include "airbyte.cron.configVars" . | nindent 2 }}
   {{- include "airbyte.database.configVars" . | nindent 2 }}

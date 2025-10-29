@@ -18,7 +18,6 @@ func TestImages_Default(t *testing.T) {
 	chart := helmtests.RenderChart(t, opts, chartPath)
 	images := findAllImages(chart)
 	assert.ElementsMatch(t, images, []string{
-		"airbyte/connector-builder-server:dev",
 		"airbyte/cron:dev",
 		"airbyte/server:dev",
 		"airbyte/airbyte-base-java-image:3.3.7",
@@ -43,7 +42,6 @@ func TestImages_DefaultAllEnabled(t *testing.T) {
 	chart := helmtests.RenderChart(t, opts, chartPath)
 	images := findAllImages(chart)
 	assert.ElementsMatch(t, images, []string{
-		"airbyte/connector-builder-server:dev",
 		"airbyte/cron:dev",
 		"airbyte/server:dev",
 		"temporalio/auto-setup:1.27.2",
@@ -74,7 +72,6 @@ func TestImages_GlobalTag(t *testing.T) {
 	chart := helmtests.RenderChart(t, opts, chartPath)
 	images := findAllImages(chart)
 	assert.ElementsMatch(t, images, []string{
-		"airbyte/connector-builder-server:test-tag",
 		"airbyte/cron:test-tag",
 		"airbyte/server:test-tag",
 		"temporalio/auto-setup:1.27.2",
@@ -158,7 +155,6 @@ func TestImages_AppTag(t *testing.T) {
 	chart := helmtests.RenderChart(t, opts, chartPath)
 	images := findAllImages(chart)
 	assert.ElementsMatch(t, images, []string{
-		"airbyte/connector-builder-server:app-tag",
 		"airbyte/cron:app-tag",
 		"airbyte/server:app-tag",
 		"temporalio/auto-setup:app-tag",
