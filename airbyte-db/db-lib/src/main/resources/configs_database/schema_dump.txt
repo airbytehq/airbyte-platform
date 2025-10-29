@@ -312,6 +312,9 @@ create table "public"."data_worker_usage" (
   "orchestrator_cpu_request" real not null,
   "bucket_start" timestamp(6) with time zone not null,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "max_source_cpu_request" real not null default 0.0,
+  "max_destination_cpu_request" real not null default 0.0,
+  "max_orchestrator_cpu_request" real not null default 0.0,
   constraint "data_worker_usage_pkey" primary key ("organization_id", "bucket_start", "workspace_id", "dataplane_group_id")
 );
 create table "public"."dataplane" (
