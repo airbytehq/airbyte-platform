@@ -9,6 +9,9 @@ import io.micronaut.data.annotation.Embeddable
 import io.micronaut.data.annotation.EmbeddedId
 import io.micronaut.data.annotation.MappedEntity
 import io.micronaut.data.annotation.MappedProperty
+import io.micronaut.data.annotation.TypeDef
+import io.micronaut.data.model.DataType
+import java.math.BigDecimal
 
 @Embeddable
 data class ObsStreamStatsId(
@@ -30,4 +33,6 @@ data class ObsStreamStats(
   var recordsRejected: Long,
   var wasBackfilled: Boolean,
   var wasResumed: Boolean,
+  @field:TypeDef(type = DataType.JSON)
+  var additionalStats: Map<String, BigDecimal>? = null,
 )

@@ -163,6 +163,7 @@ class JobObservabilityServiceTest {
     assertEquals(10, streamStat.recordsRejected)
     assertEquals(true, streamStat.wasBackfilled)
     assertEquals(false, streamStat.wasResumed)
+    assertEquals(mapOf("metric1" to BigDecimal("1.5")), streamStat.additionalStats)
   }
 
   @Test
@@ -223,12 +224,14 @@ class JobObservabilityServiceTest {
     assertEquals(90, usersStat.recordsLoaded)
     assertEquals(true, usersStat.wasBackfilled)
     assertEquals(false, usersStat.wasResumed)
+    assertEquals(emptyMap<String, BigDecimal>(), usersStat.additionalStats)
 
     val ordersStat = savedStreamStats.find { it.id.streamName == "orders" }!!
     assertEquals(1900, ordersStat.bytesLoaded)
     assertEquals(190, ordersStat.recordsLoaded)
     assertEquals(false, ordersStat.wasBackfilled)
     assertEquals(true, ordersStat.wasResumed)
+    assertEquals(emptyMap<String, BigDecimal>(), ordersStat.additionalStats)
   }
 
   @Test

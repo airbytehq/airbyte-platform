@@ -144,6 +144,7 @@ class JobObservabilityService(
           recordsRejected = it.recordsRejected,
           wasBackfilled = it.wasBackfilled,
           wasResumed = it.wasResumed,
+          additionalStats = it.additionalStats,
         )
       }
     obsStatsService.saveStreamStats(streamStatsList)
