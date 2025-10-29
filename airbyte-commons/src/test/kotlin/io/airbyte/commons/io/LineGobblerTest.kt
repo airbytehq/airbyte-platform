@@ -6,10 +6,8 @@ package io.airbyte.commons.io
 
 import com.google.common.util.concurrent.MoreExecutors
 import io.airbyte.commons.logging.MdcScope
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.function.Executable
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import java.io.ByteArrayInputStream

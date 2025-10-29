@@ -43,7 +43,6 @@ import io.airbyte.persistence.job.tracker.JobTracker
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.annotation.Nullable
-import java.io.IOException
 import java.time.Instant
 import java.util.UUID
 import java.util.function.Function

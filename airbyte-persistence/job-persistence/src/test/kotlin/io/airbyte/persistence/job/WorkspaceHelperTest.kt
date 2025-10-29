@@ -24,8 +24,8 @@ import io.airbyte.data.services.JobService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.validation.json.JsonValidationException
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -34,7 +34,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.io.IOException
 import java.util.UUID
 
 internal class WorkspaceHelperTest {
@@ -80,28 +79,28 @@ internal class WorkspaceHelperTest {
 
   @Test
   fun testMissingObjectsRuntimeException() {
-    Assertions.assertThrows(
+    assertThrows(
       RuntimeException::class.java,
     ) {
       workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(
         UUID.randomUUID(),
       )
     }
-    Assertions.assertThrows(
+    assertThrows(
       RuntimeException::class.java,
     ) {
       workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(
         UUID.randomUUID(),
       )
     }
-    Assertions.assertThrows(
+    assertThrows(
       RuntimeException::class.java,
     ) {
       workspaceHelper.getWorkspaceForConnectionIdIgnoreExceptions(
         UUID.randomUUID(),
       )
     }
-    Assertions.assertThrows(
+    assertThrows(
       RuntimeException::class.java,
     ) {
       workspaceHelper.getWorkspaceForConnectionIgnoreExceptions(
@@ -109,42 +108,42 @@ internal class WorkspaceHelperTest {
         UUID.randomUUID(),
       )
     }
-    Assertions.assertThrows(
+    assertThrows(
       RuntimeException::class.java,
     ) {
       workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(
         UUID.randomUUID(),
       )
     }
-    Assertions.assertThrows(
+    assertThrows(
       RuntimeException::class.java,
     ) { workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(0L) }
   }
 
   @Test
   fun testMissingObjectsProperException() {
-    Assertions.assertThrows(
+    assertThrows(
       ConfigNotFoundException::class.java,
     ) {
       workspaceHelper.getWorkspaceForSourceId(
         UUID.randomUUID(),
       )
     }
-    Assertions.assertThrows(
+    assertThrows(
       ConfigNotFoundException::class.java,
     ) {
       workspaceHelper.getWorkspaceForDestinationId(
         UUID.randomUUID(),
       )
     }
-    Assertions.assertThrows(
+    assertThrows(
       ConfigNotFoundException::class.java,
     ) {
       workspaceHelper.getWorkspaceForConnectionId(
         UUID.randomUUID(),
       )
     }
-    Assertions.assertThrows(
+    assertThrows(
       ConfigNotFoundException::class.java,
     ) {
       workspaceHelper.getWorkspaceForConnection(
@@ -152,14 +151,14 @@ internal class WorkspaceHelperTest {
         UUID.randomUUID(),
       )
     }
-    Assertions.assertThrows(
+    assertThrows(
       ConfigNotFoundException::class.java,
     ) {
       workspaceHelper.getWorkspaceForOperationId(
         UUID.randomUUID(),
       )
     }
-    Assertions.assertThrows(
+    assertThrows(
       ConfigNotFoundException::class.java,
     ) { workspaceHelper.getWorkspaceForJobId(0L) }
   }
@@ -168,7 +167,7 @@ internal class WorkspaceHelperTest {
   @DisplayName("Validate that source caching is working")
   fun testSource() {
     val retrievedWorkspace = workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(SOURCE_ID)
-    Assertions.assertEquals(WORKSPACE_ID, retrievedWorkspace)
+    assertEquals(WORKSPACE_ID, retrievedWorkspace)
     verify(sourceService, times(1)).getSourceConnection(SOURCE_ID)
 
     workspaceHelper.getWorkspaceForSourceIdIgnoreExceptions(SOURCE_ID)
@@ -180,7 +179,7 @@ internal class WorkspaceHelperTest {
   @DisplayName("Validate that destination caching is working")
   fun testDestination() {
     val retrievedWorkspace = workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DEST_ID)
-    Assertions.assertEquals(WORKSPACE_ID, retrievedWorkspace)
+    assertEquals(WORKSPACE_ID, retrievedWorkspace)
     verify(destinationService, times(1)).getDestinationConnection(DEST_ID)
 
     workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DEST_ID)
@@ -192,11 +191,11 @@ internal class WorkspaceHelperTest {
   fun testConnection() {
     // test retrieving by connection id
     val retrievedWorkspace = workspaceHelper.getWorkspaceForConnectionIdIgnoreExceptions(CONNECTION_ID)
-    Assertions.assertEquals(WORKSPACE_ID, retrievedWorkspace)
+    assertEquals(WORKSPACE_ID, retrievedWorkspace)
 
     // test retrieving by source and destination ids
     val retrievedWorkspaceBySourceAndDestination = workspaceHelper.getWorkspaceForConnectionIdIgnoreExceptions(CONNECTION_ID)
-    Assertions.assertEquals(WORKSPACE_ID, retrievedWorkspaceBySourceAndDestination)
+    assertEquals(WORKSPACE_ID, retrievedWorkspaceBySourceAndDestination)
     verify(connectionService, times(1)).getStandardSync(CONNECTION_ID)
 
     workspaceHelper.getWorkspaceForDestinationIdIgnoreExceptions(DEST_ID)
@@ -208,7 +207,7 @@ internal class WorkspaceHelperTest {
   fun testOperation() {
     // test retrieving by connection id
     val retrievedWorkspace = workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(OPERATION_ID)
-    Assertions.assertEquals(WORKSPACE_ID, retrievedWorkspace)
+    assertEquals(WORKSPACE_ID, retrievedWorkspace)
     verify(operationService, times(1)).getStandardSyncOperation(OPERATION_ID)
 
     workspaceHelper.getWorkspaceForOperationIdIgnoreExceptions(OPERATION_ID)
@@ -235,7 +234,7 @@ internal class WorkspaceHelperTest {
     whenever(jobService.findById(jobId)).thenReturn(job)
 
     val jobWorkspace = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId)
-    Assertions.assertEquals(WORKSPACE_ID, jobWorkspace)
+    assertEquals(WORKSPACE_ID, jobWorkspace)
   }
 
   companion object {

@@ -29,7 +29,6 @@ import io.airbyte.config.helpers.ProtocolConverters.Companion.toProtocol
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.AirbyteStream
-import org.assertj.core.api.Condition
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -37,7 +36,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import java.io.IOException
 import java.nio.charset.StandardCharsets
 
 internal class CatalogDiffHelpersTest {

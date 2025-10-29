@@ -38,7 +38,6 @@ import io.airbyte.config.helpers.ResourceRequirementsUtils
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.ConfigInjector
 import io.airbyte.config.secrets.InlinedConfigWithSecretRefs
-import io.airbyte.config.secrets.SecretsHelpers
 import io.airbyte.config.secrets.toInlined
 import io.airbyte.data.repositories.ActorDefinitionRepository
 import io.airbyte.data.repositories.ActorRepository

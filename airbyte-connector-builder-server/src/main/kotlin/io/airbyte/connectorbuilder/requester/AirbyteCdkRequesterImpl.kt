@@ -22,12 +22,10 @@ import io.airbyte.connectorbuilder.api.model.generated.StreamReadLogsInner
 import io.airbyte.connectorbuilder.api.model.generated.StreamReadSlicesInner
 import io.airbyte.connectorbuilder.commandrunner.SynchronousCdkCommandRunner
 import io.airbyte.connectorbuilder.exceptions.AirbyteCdkInvalidInputException
-import io.airbyte.connectorbuilder.exceptions.CdkProcessException
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import org.apache.commons.lang3.StringUtils
-import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.util.Collections
 

@@ -4,10 +4,11 @@
 
 package io.airbyte.data.helpers
 
-import com.google.common.cache.CacheBuilder
-import com.google.common.cache.CacheLoader
-import com.google.common.cache.LoadingCache
+import com.github.benmanes.caffeine.cache.CacheLoader
+import com.github.benmanes.caffeine.cache.Caffeine
+import com.github.benmanes.caffeine.cache.LoadingCache
 import io.airbyte.config.Job
+import io.airbyte.config.Job.Companion.REPLICATION_TYPES
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
@@ -18,9 +19,8 @@ import io.airbyte.data.services.WorkspaceService
 import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.util.UUID
-import java.util.concurrent.ExecutionException
+import java.util.concurrent.CompletionException
 import java.util.function.Supplier
 
 /**
@@ -36,65 +36,30 @@ class WorkspaceHelper(
   workspaceService: WorkspaceService,
 ) {
   private val sourceToWorkspaceCache: LoadingCache<UUID, UUID> =
-    getExpiringCache(
-      object : CacheLoader<UUID, UUID>() {
-        override fun load(sourceId: UUID): UUID {
-          val source = sourceService.getSourceConnection(sourceId)
-          return source.workspaceId
-        }
-      },
-    )
+    getExpiringCache { sourceId -> sourceService.getSourceConnection(sourceId).workspaceId }
   private val destinationToWorkspaceCache: LoadingCache<UUID, UUID> =
-    getExpiringCache(
-      object : CacheLoader<UUID, UUID>() {
-        override fun load(destinationId: UUID): UUID {
-          val destination = destinationService.getDestinationConnection(destinationId)
-          return destination.workspaceId
-        }
-      },
-    )
+    getExpiringCache { destinationId -> destinationService.getDestinationConnection(destinationId).workspaceId }
   private val connectionToWorkspaceCache: LoadingCache<UUID, UUID> =
-    getExpiringCache(
-      object : CacheLoader<UUID, UUID>() {
-        override fun load(connectionId: UUID): UUID {
-          val connection = connectionService.getStandardSync(connectionId)
-          return getWorkspaceForConnectionIgnoreExceptions(connection.sourceId, connection.destinationId)
-        }
-      },
-    )
+    getExpiringCache { connectionId ->
+      val connection = connectionService.getStandardSync(connectionId)
+      getWorkspaceForConnectionIgnoreExceptions(connection.sourceId, connection.destinationId)
+    }
   private val operationToWorkspaceCache: LoadingCache<UUID, UUID> =
-    getExpiringCache(
-      object : CacheLoader<UUID, UUID>() {
-        override fun load(operationId: UUID): UUID {
-          val operation = operationService.getStandardSyncOperation(operationId)
-          return operation.workspaceId
-        }
-      },
-    )
+    getExpiringCache { operationId -> operationService.getStandardSyncOperation(operationId).workspaceId }
   private val jobToWorkspaceCache: LoadingCache<Long, UUID> =
-    getExpiringCache(
-      object : CacheLoader<Long, UUID>() {
-        override fun load(jobId: Long): UUID {
-          val job =
-            jobService.findById(jobId)
-              ?: throw ConfigNotFoundException(Job::class.java.toString(), jobId.toString())
-          if (Job.Companion.REPLICATION_TYPES.contains(job.configType)) {
-            return getWorkspaceForConnectionIdIgnoreExceptions(UUID.fromString(job.scope))
-          } else {
-            throw IllegalArgumentException("Only sync/reset jobs are associated with workspaces! A " + job.configType + " job was requested!")
-          }
-        }
-      },
-    )
+    getExpiringCache { jobId ->
+      val job =
+        jobService.findById(jobId)
+          ?: throw ConfigNotFoundException(Job::class.java.toString(), jobId.toString())
+      if (REPLICATION_TYPES.contains(job.configType)) {
+        getWorkspaceForConnectionIdIgnoreExceptions(UUID.fromString(job.scope))
+      } else {
+        throw IllegalArgumentException("Only sync/reset jobs are associated with workspaces! A ${job.configType} job was requested!")
+      }
+    }
 
   private val workspaceToOrganizationCache: LoadingCache<UUID, UUID> =
-    getExpiringCache(
-      object : CacheLoader<UUID, UUID>() {
-        override fun load(workspaceId: UUID): UUID = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).organizationId
-      },
-    )
-
-  // SOURCE ID
+    getExpiringCache { workspaceId -> workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).organizationId }
 
   /**
    * There are generally two kinds of helper methods present here. The first kind propagate exceptions
@@ -104,23 +69,25 @@ class WorkspaceHelper(
    *
    * In API calls, distinguishing between various exceptions helps return the correct status code.
    */
-  fun getWorkspaceForSourceId(sourceId: UUID): UUID = handleCacheExceptions { sourceToWorkspaceCache[sourceId] }
+  fun getWorkspaceForSourceId(sourceId: UUID): UUID = handleCacheExceptions { sourceToWorkspaceCache.get(sourceId) }
 
   fun getWorkspaceForSourceIdIgnoreExceptions(sourceId: UUID): UUID = swallowExecutionException { getWorkspaceForSourceId(sourceId) }
 
   // DESTINATION ID
-  fun getWorkspaceForDestinationId(destinationId: UUID): UUID = handleCacheExceptions { destinationToWorkspaceCache[destinationId] }
+  fun getWorkspaceForDestinationId(destinationId: UUID): UUID = handleCacheExceptions { destinationToWorkspaceCache.get(destinationId) }
 
   fun getWorkspaceForDestinationIdIgnoreExceptions(destinationId: UUID): UUID =
-    swallowExecutionException { destinationToWorkspaceCache[destinationId] }
+    swallowExecutionException {
+      destinationToWorkspaceCache.get(destinationId)
+    }
 
   // JOB ID
-  fun getWorkspaceForJobId(jobId: Long): UUID = handleCacheExceptions { jobToWorkspaceCache[jobId] }
+  fun getWorkspaceForJobId(jobId: Long): UUID = handleCacheExceptions { jobToWorkspaceCache.get(jobId) }
 
-  fun getWorkspaceForJobIdIgnoreExceptions(jobId: Long): UUID = swallowExecutionException { jobToWorkspaceCache[jobId] }
+  fun getWorkspaceForJobIdIgnoreExceptions(jobId: Long): UUID = swallowExecutionException { jobToWorkspaceCache.get(jobId) }
 
   // ORGANIZATION ID
-  fun getOrganizationForWorkspace(workspaceId: UUID): UUID = swallowExecutionException { workspaceToOrganizationCache[workspaceId] }
+  fun getOrganizationForWorkspace(workspaceId: UUID): UUID = swallowExecutionException { workspaceToOrganizationCache.get(workspaceId) }
 
   // CONNECTION ID
 
@@ -166,14 +133,15 @@ class WorkspaceHelper(
     return sourceWorkspace
   }
 
-  fun getWorkspaceForConnectionId(connectionId: UUID): UUID = handleCacheExceptions { connectionToWorkspaceCache[connectionId] }
+  fun getWorkspaceForConnectionId(connectionId: UUID): UUID = handleCacheExceptions { connectionToWorkspaceCache.get(connectionId) }
 
-  fun getWorkspaceForConnectionIdIgnoreExceptions(connectionId: UUID): UUID = swallowExecutionException { connectionToWorkspaceCache[connectionId] }
+  fun getWorkspaceForConnectionIdIgnoreExceptions(connectionId: UUID): UUID =
+    swallowExecutionException { connectionToWorkspaceCache.get(connectionId) }
 
   // OPERATION ID
-  fun getWorkspaceForOperationId(operationId: UUID): UUID = handleCacheExceptions { operationToWorkspaceCache[operationId] }
+  fun getWorkspaceForOperationId(operationId: UUID): UUID = handleCacheExceptions { operationToWorkspaceCache.get(operationId) }
 
-  fun getWorkspaceForOperationIdIgnoreExceptions(operationId: UUID): UUID = swallowExecutionException { operationToWorkspaceCache[operationId] }
+  fun getWorkspaceForOperationIdIgnoreExceptions(operationId: UUID): UUID = swallowExecutionException { operationToWorkspaceCache.get(operationId) }
 
   companion object {
     private val log = KotlinLogging.logger {}
@@ -181,7 +149,7 @@ class WorkspaceHelper(
     private fun handleCacheExceptions(supplier: () -> UUID): UUID {
       try {
         return supplier()
-      } catch (e: ExecutionException) {
+      } catch (e: CompletionException) {
         log.error(e.cause) { "Error retrieving cache:" }
         if (e.cause is ConfigNotFoundException) {
           throw (e.cause as ConfigNotFoundException?)!!
@@ -205,7 +173,7 @@ class WorkspaceHelper(
     }
 
     private fun <K : Any, V : Any> getExpiringCache(cacheLoader: CacheLoader<K, V>): LoadingCache<K, V> =
-      CacheBuilder
+      Caffeine
         .newBuilder()
         .maximumSize(20000)
         .build(cacheLoader)

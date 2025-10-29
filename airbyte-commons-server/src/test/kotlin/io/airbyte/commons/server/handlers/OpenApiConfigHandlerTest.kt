@@ -7,7 +7,6 @@ package io.airbyte.commons.server.handlers
 import com.google.common.io.Files
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import java.io.IOException
 import java.nio.charset.Charset
 
 internal class OpenApiConfigHandlerTest {
