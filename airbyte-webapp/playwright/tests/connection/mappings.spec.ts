@@ -33,6 +33,7 @@ test.describe("Connection Mappings", () => {
     // Create connection once and reuse across tests (reduces schema discovery calls)
     connection = await connectionAPI.create(request, postgresSource, postgresDestination, {
       enableAllStreams: true,
+      useMockSchemaDiscovery: true,
     });
   });
 

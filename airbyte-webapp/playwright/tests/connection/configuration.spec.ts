@@ -78,7 +78,9 @@ test.describe("Connection Configuration", () => {
     let context: BrowserContext;
 
     test.beforeAll(async ({ browser, request }) => {
-      testData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres");
+      testData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres", {
+        useMockSchemaDiscovery: true,
+      });
       context = await browser.newContext();
       page = await context.newPage();
     });

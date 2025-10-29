@@ -106,6 +106,8 @@ export const connectionAPI = {
       streams = typedCatalog.streams.map((stream) => ({
         ...stream,
         config: {
+          // When using mocks, preserve the config from the mock catalog (includes primaryKey, aliasName, etc.)
+          ...(options.useMockSchemaDiscovery ? stream.config : {}),
           syncMode: SyncMode.full_refresh,
           destinationSyncMode: DestinationSyncMode.overwrite,
           selected: true,
@@ -116,6 +118,8 @@ export const connectionAPI = {
       streams = typedCatalog.streams.map((stream) => ({
         ...stream,
         config: {
+          // When using mocks, preserve the config from the mock catalog (includes primaryKey, aliasName, etc.)
+          ...(options.useMockSchemaDiscovery ? stream.config : {}),
           syncMode: SyncMode.full_refresh,
           destinationSyncMode: DestinationSyncMode.overwrite,
           selected: false,

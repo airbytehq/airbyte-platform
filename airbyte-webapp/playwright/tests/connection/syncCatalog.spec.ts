@@ -42,6 +42,7 @@ test.describe.serial("Sync Catalog - Stream state tests", () => {
     // Uses existing tables from postgres-test-data.sql (users, cities, cars)
     const baseTestData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres", {
       enableAllStreams: true,
+      useMockSchemaDiscovery: true,
     });
 
     // Navigate to replication page once for all tests
@@ -318,6 +319,7 @@ test.describe.serial("Sync Catalog - Feature flag tests", () => {
     // Create connection with all streams enabled
     const baseTestData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres", {
       enableAllStreams: true,
+      useMockSchemaDiscovery: true,
     });
 
     // Navigate to replication page
@@ -396,7 +398,9 @@ test.describe.serial("Sync Catalog - Sync Modes", () => {
     const request = context.request;
 
     // Create Postgres → Postgres connection (no streams enabled by default)
-    const baseTestData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres");
+    const baseTestData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres", {
+      useMockSchemaDiscovery: true,
+    });
 
     // Navigate to replication page
     await navigateToReplicationPage(page, workspaceId, baseTestData.connection.connectionId);
@@ -925,6 +929,8 @@ test.describe.serial("Sync Catalog - Diff Styles", () => {
     const request = context.request;
 
     // Create Postgres → Postgres connection with all streams enabled by default
+    // NOTE: This test suite tests diff styles which require proper backend catalog state management.
+    // Mocking is intentionally disabled here as it doesn't preserve state correctly through updates.
     const baseTestData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres");
 
     // Navigate to replication page
@@ -1207,7 +1213,9 @@ test.describe.serial("Sync Catalog - Deleted Connection", () => {
     const request = context.request;
 
     // Create Postgres → Postgres connection
-    const baseTestData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres");
+    const baseTestData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres", {
+      useMockSchemaDiscovery: true,
+    });
 
     // Configure the users stream via API (incremental/append_dedup with PK and cursor)
     const connectionId = baseTestData.connection.connectionId;
@@ -1376,6 +1384,8 @@ test.describe.serial("Sync Catalog - Tab Filters", () => {
     const request = context.request;
 
     // Create Postgres → Postgres connection (explicitly disable all streams to start)
+    // NOTE: This test suite toggles stream states and expects them to persist across tests.
+    // Mocking is intentionally disabled here as it doesn't preserve state correctly through updates.
     const baseTestData = await connectionTestScaffold.setupConnection(request, workspaceId, "postgres-postgres", {
       enableAllStreams: false,
     });
