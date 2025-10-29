@@ -4,7 +4,6 @@
 
 package io.airbyte.ksp.config
 
-import com.google.common.base.CaseFormat
 import com.google.devtools.ksp.getConstructors
 import com.google.devtools.ksp.getDeclaredProperties
 import com.google.devtools.ksp.processing.CodeGenerator
@@ -51,6 +50,11 @@ private val FIELD_TOKENS = setOf('_', '.')
 private val GENERATED_ANNOTATIONS = setOf(MicronautGenerated::class.java.name, JakartaGenerated::class.java.name, JavaxGenerated::class.java.name)
 internal const val YAML_EXTENSION = "yml"
 internal const val YAML_PATH = "airbyte-configuration"
+
+fun String.lowerCamelToLowerHyphen(): String =
+  this.replace("([A-Z])".toRegex()) { matchResult ->
+    "-${matchResult.groupValues[1].lowercase()}"
+  }
 
 class AirbyteConfigurationProcessor(
   val codeGenerator: CodeGenerator,
@@ -197,7 +201,7 @@ class AirbyteConfigurationProcessor(
    * @param propertyName The name of a property defined in a Kotlin class.
    * @return The lower-hyphen formatted representation of the property name.
    */
-  private fun formatPropertyName(propertyName: String) = CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_HYPHEN, propertyName)
+  private fun formatPropertyName(propertyName: String) = propertyName.lowerCamelToLowerHyphen()
 
   /**
    * Scans the class for any parameters present in a constructor that has a default value for the provided property.  This is necessary

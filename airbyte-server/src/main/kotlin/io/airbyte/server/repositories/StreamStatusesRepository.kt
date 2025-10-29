@@ -4,7 +4,7 @@
 
 package io.airbyte.server.repositories
 
-import com.google.common.base.CaseFormat
+import io.airbyte.commons.text.lowerUnderscoreToLowerCamel
 import io.airbyte.db.instance.jobs.jooq.generated.Tables
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStreamStatusJobType
 import io.airbyte.server.repositories.domain.StreamStatus
@@ -179,7 +179,7 @@ abstract class StreamStatusesRepository :
      * Jooq holds onto the names of the columns in snake_case, so we have to convert to lower camelCase
      * for the JpaSpecificationExecutor to do predicate filtering.
      */
-    fun formatJooqColumnName(jooqColumn: TableField<*, *>): String = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, jooqColumn.name)
+    fun formatJooqColumnName(jooqColumn: TableField<*, *>): String = jooqColumn.name.lowerUnderscoreToLowerCamel()
 
     fun <U> columnEquals(
       columnName: String,

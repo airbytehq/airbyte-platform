@@ -4,7 +4,6 @@
 
 package io.airbyte.ksp.config
 
-import com.google.common.base.CaseFormat
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
@@ -39,7 +38,7 @@ import javax.annotation.processing.Generated as JavaxGenerated
  * @param fieldName The name of the data class field to convert to a property key
  * @returns The property key representation of the field name.
  */
-private fun convertFieldNameToPropertyName(fieldName: String) = CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_HYPHEN, fieldName)
+private fun convertFieldNameToPropertyName(fieldName: String) = fieldName.lowerCamelToLowerHyphen()
 
 internal class AirbyteConfigurationProcessorTest {
   @Test

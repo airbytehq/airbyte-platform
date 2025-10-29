@@ -4,7 +4,7 @@
 
 package io.airbyte.api.client.interceptor
 
-import com.google.common.base.CaseFormat
+import io.airbyte.commons.text.lowerHyphenToUpperCamel
 import io.micronaut.http.HttpHeaders
 import okhttp3.Interceptor
 import okhttp3.Request
@@ -18,7 +18,7 @@ class UserAgentInterceptor(
     val builder: Request.Builder = originalRequest.newBuilder()
 
     if (originalRequest.header(HttpHeaders.USER_AGENT) == null) {
-      val value = CaseFormat.LOWER_HYPHEN.to(CaseFormat.UPPER_CAMEL, userAgent)
+      val value = userAgent.lowerHyphenToUpperCamel()
       builder.addHeader(HttpHeaders.USER_AGENT, value)
     }
 
