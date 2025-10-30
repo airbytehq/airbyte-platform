@@ -27,7 +27,6 @@ paths:
           description: "Not found"
       operationId: "listDestinations"
       x-speakeasy-alias: "listDestinations"
-      x-speakeasy-entity-operation: "Destination#list"
       x-speakeasy-group: "Destinations"
       summary: "List destinations"
       parameters:
@@ -420,6 +419,7 @@ components:
       - "field-renaming"
       - "row-filtering"
       - "encryption"
+      - "field-filtering"
       x-speakeasy-component: true
     ConfiguredStreamMapper:
       type: "object"
@@ -440,6 +440,7 @@ components:
       description: "The values required to configure the mapper."
       oneOf:
       - $ref: "#/components/schemas/HashingMapperConfiguration"
+      - $ref: "#/components/schemas/FieldFilteringMapperConfiguration"
       - $ref: "#/components/schemas/FieldRenamingMapperConfiguration"
       - $ref: "#/components/schemas/RowFilteringMapperConfiguration"
       - $ref: "#/components/schemas/EncryptionMapperConfiguration"
@@ -471,6 +472,17 @@ components:
       required:
       - "fieldNameSuffix"
       - "method"
+      - "targetField"
+      x-speakeasy-component: true
+    FieldFilteringMapperConfiguration:
+      title: "Field Filtering"
+      type: "object"
+      properties:
+        targetField:
+          type: "string"
+          title: "The Field to Filter"
+          description: "The name of the field to filter."
+      required:
       - "targetField"
       x-speakeasy-component: true
     FieldRenamingMapperConfiguration:
@@ -626,6 +638,7 @@ components:
     SelectedFields:
       description: "Paths to the fields that will be included in the configured catalog."
       type: "array"
+      format: "set"
       items:
         $ref: "#/components/schemas/SelectedFieldInfo"
       x-speakeasy-component: true
@@ -1147,6 +1160,8 @@ components:
           type: "array"
           items:
             $ref: "#/components/schemas/Tag"
+        statusReason:
+          type: "string"
       x-speakeasy-entity: "Connection"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -1195,6 +1210,7 @@ components:
       - "active"
       - "inactive"
       - "deprecated"
+      - "locked"
       x-speakeasy-component: true
     NamespaceDefinitionEnum:
       type: "string"
@@ -2297,6 +2313,23 @@ components:
         token:
           type: "string"
       x-speakeasy-component: true
+    EmbeddedScopedTokenRequest:
+      type: "object"
+      required:
+      - "workspaceId"
+      properties:
+        workspaceId:
+          type: "string"
+          format: "uuid"
+      x-speakeasy-component: true
+    EmbeddedScopedTokenResponse:
+      type: "object"
+      required:
+      - "token"
+      properties:
+        token:
+          type: "string"
+      x-speakeasy-component: true
     ConnectionTemplateCreateRequestBody:
       type: "object"
       required:
@@ -2368,6 +2401,12 @@ components:
           type: "string"
         permission:
           $ref: "#/components/schemas/PermissionType"
+      x-speakeasy-component: true
+    SSOConfigStatus:
+      type: "string"
+      enum:
+      - "draft"
+      - "active"
       x-speakeasy-component: true
     destination-hubspot:
       properties:
@@ -5421,96 +5460,78 @@ components:
       title: "DynamoDB Destination Spec"
       type: "object"
     destination-snowflake:
+      groups:
+      - id: "connection"
+        title: "Connection"
+      - id: "sync_behavior"
+        title: "Sync Behavior"
+      - id: "advanced"
+        title: "Advanced"
       properties:
+        cdc_deletion_mode:
+          always_show: true
+          default: "Hard delete"
+          description: "Whether to execute CDC deletions as hard deletes (i.e. propagate\
+            \ source deletions to the destination), or soft deletes (i.e. leave a\
+            \ tombstone record in the destination). Defaults to hard deletes."
+          enum:
+          - "Hard delete"
+          - "Soft delete"
+          group: "sync_behavior"
+          order: 5
+          title: "CDC deletion mode"
+          type: "string"
         credentials:
-          description: ""
+          description: "Determines the type of authentication that should be used."
+          group: "connection"
           oneOf:
-          - order: 0
+          - additionalProperties: true
+            description: "Configuration details for the Key Pair Authentication."
             properties:
               auth_type:
-                const: "Key Pair Authentication"
                 default: "Key Pair Authentication"
                 enum:
                 - "Key Pair Authentication"
-                order: 0
                 type: "string"
               private_key:
                 airbyte_secret: true
                 description: "RSA Private key to use for Snowflake connection. See\
-                  \ the <a href=\"https://docs.airbyte.com/integrations/destinations/snowflake\"\
-                  >docs</a> for more information on how to obtain this key."
+                  \ the <a\n href=\"https://docs.airbyte.com/integrations/destinations/snowflake\"\
+                  >docs</a> for more\n information on how to obtain this key."
                 multiline: true
+                order: 0
                 title: "Private Key"
                 type: "string"
                 x-speakeasy-param-sensitive: true
               private_key_password:
-                airbyte_secret: true
                 description: "Passphrase for private key"
+                order: 0
                 title: "Passphrase"
                 type: "string"
-                x-speakeasy-param-sensitive: true
             required:
+            - "auth_type"
             - "private_key"
             title: "Key Pair Authentication"
             type: "object"
-          - order: 1
+          - additionalProperties: true
+            description: "Configuration details for the Username and Password Authentication."
             properties:
               auth_type:
-                const: "Username and Password"
                 default: "Username and Password"
                 enum:
                 - "Username and Password"
-                order: 0
                 type: "string"
               password:
                 airbyte_secret: true
                 description: "Enter the password associated with the username."
-                order: 1
+                order: 0
                 title: "Password"
                 type: "string"
                 x-speakeasy-param-sensitive: true
             required:
+            - "auth_type"
             - "password"
             title: "Username and Password"
-            type: "object"
-          - airbyte_hidden: true
-            order: 2
-            properties:
-              access_token:
-                airbyte_secret: true
-                description: "Enter you application's Access Token"
-                title: "Access Token"
-                type: "string"
-                x-speakeasy-param-sensitive: true
-              auth_type:
-                const: "OAuth2.0"
-                default: "OAuth2.0"
-                enum:
-                - "OAuth2.0"
-                order: 0
-                type: "string"
-              client_id:
-                airbyte_secret: true
-                description: "Enter your application's Client ID"
-                title: "Client ID"
-                type: "string"
-                x-speakeasy-param-sensitive: true
-              client_secret:
-                airbyte_secret: true
-                description: "Enter your application's Client secret"
-                title: "Client Secret"
-                type: "string"
-                x-speakeasy-param-sensitive: true
-              refresh_token:
-                airbyte_secret: true
-                description: "Enter your application's Refresh Token"
-                title: "Refresh Token"
-                type: "string"
-                x-speakeasy-param-sensitive: true
-            required:
-            - "access_token"
-            - "refresh_token"
-            title: "OAuth2.0"
             type: "object"
           order: 6
           title: "Authorization Method"
@@ -5520,17 +5541,16 @@ components:
             >database</a> you want to sync data into"
           examples:
           - "AIRBYTE_DATABASE"
+          group: "connection"
           order: 3
           title: "Database"
           type: "string"
         disable_type_dedupe:
-          default: false
-          description: "Disable Writing Final Tables. WARNING! The data format in\
-            \ _airbyte_data is likely stable but there are no guarantees that other\
-            \ metadata columns will remain the same in future versions"
-          order: 11
-          title: "Disable Final Tables. (WARNING! Unstable option; Columns in raw\
-            \ table schema might change between versions)"
+          description: "Write the legacy \"raw tables\" format, to enable backwards\
+            \ compatibility with older versions of this connector."
+          group: "advanced"
+          order: 7
+          title: "Legacy raw tables"
           type: "boolean"
         host:
           description: "Enter your Snowflake account's <a href=\"https://docs.snowflake.com/en/user-guide/admin-account-identifier.html#using-an-account-locator-as-an-identifier\"\
@@ -5538,6 +5558,7 @@ components:
           examples:
           - "accountname.us-east-2.aws.snowflakecomputing.com"
           - "accountname.snowflakecomputing.com"
+          group: "connection"
           order: 0
           pattern: "^(http(s)?:\\/\\/)?([^./?#]+\\.)?([^./?#]+\\.)?([^./?#]+\\.)?([^./?#]+\\\
             .(snowflakecomputing\\.com|localstack\\.cloud))$"
@@ -5548,21 +5569,25 @@ components:
           description: "Enter the additional properties to pass to the JDBC URL string\
             \ when connecting to the database (formatted as key=value pairs separated\
             \ by the symbol &). Example: key1=value1&key2=value2&key3=value3"
-          order: 7
+          group: "advanced"
+          order: 9
           title: "JDBC URL Params"
           type: "string"
         raw_data_schema:
-          description: "The schema to write raw tables into (default: airbyte_internal)"
-          order: 10
-          title: "Raw Table Schema Name"
+          description: "Airbyte will use this dataset for various internal tables.\
+            \ In legacy raw tables mode, the raw tables will be stored in this dataset.\
+            \ Defaults to \"airbyte_internal\"."
+          group: "advanced"
+          order: 8
+          title: "Airbyte Internal Table Dataset Name"
           type: "string"
         retention_period_days:
-          default: 1
           description: "The number of days of Snowflake Time Travel to enable on the\
             \ tables. See <a href=\"https://docs.snowflake.com/en/user-guide/data-time-travel#data-retention-period\"\
             >Snowflake's documentation</a> for more information. Setting a nonzero\
             \ value will incur increased storage costs in your Snowflake instance."
-          order: 13
+          group: "advanced"
+          order: 10
           title: "Data Retention Period (days)"
           type: "integer"
         role:
@@ -5570,6 +5595,7 @@ components:
             >role</a> that you want to use to access Snowflake"
           examples:
           - "AIRBYTE_ROLE"
+          group: "connection"
           order: 1
           title: "Role"
           type: "string"
@@ -5578,20 +5604,15 @@ components:
             >schema</a>"
           examples:
           - "AIRBYTE_SCHEMA"
+          group: "connection"
           order: 4
           title: "Default Schema"
           type: "string"
-        use_merge_for_upsert:
-          default: false
-          description: "Use MERGE for de-duplication of final tables. This option\
-            \ no effect if Final tables are disabled or Sync mode is not DEDUPE"
-          order: 14
-          title: "Use MERGE for De-duplication of final tables"
-          type: "boolean"
         username:
           description: "Enter the name of the user you want to use to access the database"
           examples:
           - "AIRBYTE_USER"
+          group: "connection"
           order: 5
           title: "Username"
           type: "string"
@@ -5600,6 +5621,7 @@ components:
             >warehouse</a> that you want to use as a compute cluster"
           examples:
           - "AIRBYTE_WAREHOUSE"
+          group: "connection"
           order: 2
           title: "Warehouse"
           type: "string"
@@ -5618,92 +5640,79 @@ components:
       - "schema"
       - "username"
       - "destinationType"
-      title: "Snowflake Destination Spec"
+      title: "Snowflake Specification"
       type: "object"
     destination-snowflake-update:
+      groups:
+      - id: "connection"
+        title: "Connection"
+      - id: "sync_behavior"
+        title: "Sync Behavior"
+      - id: "advanced"
+        title: "Advanced"
       properties:
+        cdc_deletion_mode:
+          always_show: true
+          default: "Hard delete"
+          description: "Whether to execute CDC deletions as hard deletes (i.e. propagate\
+            \ source deletions to the destination), or soft deletes (i.e. leave a\
+            \ tombstone record in the destination). Defaults to hard deletes."
+          enum:
+          - "Hard delete"
+          - "Soft delete"
+          group: "sync_behavior"
+          order: 5
+          title: "CDC deletion mode"
+          type: "string"
         credentials:
-          description: ""
+          description: "Determines the type of authentication that should be used."
+          group: "connection"
           oneOf:
-          - order: 0
+          - additionalProperties: true
+            description: "Configuration details for the Key Pair Authentication."
             properties:
               auth_type:
-                const: "Key Pair Authentication"
                 default: "Key Pair Authentication"
                 enum:
                 - "Key Pair Authentication"
-                order: 0
                 type: "string"
               private_key:
                 airbyte_secret: true
                 description: "RSA Private key to use for Snowflake connection. See\
-                  \ the <a href=\"https://docs.airbyte.com/integrations/destinations/snowflake\"\
-                  >docs</a> for more information on how to obtain this key."
+                  \ the <a\n href=\"https://docs.airbyte.com/integrations/destinations/snowflake\"\
+                  >docs</a> for more\n information on how to obtain this key."
                 multiline: true
+                order: 0
                 title: "Private Key"
                 type: "string"
               private_key_password:
-                airbyte_secret: true
                 description: "Passphrase for private key"
+                order: 0
                 title: "Passphrase"
                 type: "string"
             required:
+            - "auth_type"
             - "private_key"
             title: "Key Pair Authentication"
             type: "object"
-          - order: 1
+          - additionalProperties: true
+            description: "Configuration details for the Username and Password Authentication."
             properties:
               auth_type:
-                const: "Username and Password"
                 default: "Username and Password"
                 enum:
                 - "Username and Password"
-                order: 0
                 type: "string"
               password:
                 airbyte_secret: true
                 description: "Enter the password associated with the username."
-                order: 1
+                order: 0
                 title: "Password"
                 type: "string"
             required:
+            - "auth_type"
             - "password"
             title: "Username and Password"
-            type: "object"
-          - airbyte_hidden: true
-            order: 2
-            properties:
-              access_token:
-                airbyte_secret: true
-                description: "Enter you application's Access Token"
-                title: "Access Token"
-                type: "string"
-              auth_type:
-                const: "OAuth2.0"
-                default: "OAuth2.0"
-                enum:
-                - "OAuth2.0"
-                order: 0
-                type: "string"
-              client_id:
-                airbyte_secret: true
-                description: "Enter your application's Client ID"
-                title: "Client ID"
-                type: "string"
-              client_secret:
-                airbyte_secret: true
-                description: "Enter your application's Client secret"
-                title: "Client Secret"
-                type: "string"
-              refresh_token:
-                airbyte_secret: true
-                description: "Enter your application's Refresh Token"
-                title: "Refresh Token"
-                type: "string"
-            required:
-            - "access_token"
-            - "refresh_token"
-            title: "OAuth2.0"
             type: "object"
           order: 6
           title: "Authorization Method"
@@ -5713,17 +5722,16 @@ components:
             >database</a> you want to sync data into"
           examples:
           - "AIRBYTE_DATABASE"
+          group: "connection"
           order: 3
           title: "Database"
           type: "string"
         disable_type_dedupe:
-          default: false
-          description: "Disable Writing Final Tables. WARNING! The data format in\
-            \ _airbyte_data is likely stable but there are no guarantees that other\
-            \ metadata columns will remain the same in future versions"
-          order: 11
-          title: "Disable Final Tables. (WARNING! Unstable option; Columns in raw\
-            \ table schema might change between versions)"
+          description: "Write the legacy \"raw tables\" format, to enable backwards\
+            \ compatibility with older versions of this connector."
+          group: "advanced"
+          order: 7
+          title: "Legacy raw tables"
           type: "boolean"
         host:
           description: "Enter your Snowflake account's <a href=\"https://docs.snowflake.com/en/user-guide/admin-account-identifier.html#using-an-account-locator-as-an-identifier\"\
@@ -5731,6 +5739,7 @@ components:
           examples:
           - "accountname.us-east-2.aws.snowflakecomputing.com"
           - "accountname.snowflakecomputing.com"
+          group: "connection"
           order: 0
           pattern: "^(http(s)?:\\/\\/)?([^./?#]+\\.)?([^./?#]+\\.)?([^./?#]+\\.)?([^./?#]+\\\
             .(snowflakecomputing\\.com|localstack\\.cloud))$"
@@ -5741,21 +5750,25 @@ components:
           description: "Enter the additional properties to pass to the JDBC URL string\
             \ when connecting to the database (formatted as key=value pairs separated\
             \ by the symbol &). Example: key1=value1&key2=value2&key3=value3"
-          order: 7
+          group: "advanced"
+          order: 9
           title: "JDBC URL Params"
           type: "string"
         raw_data_schema:
-          description: "The schema to write raw tables into (default: airbyte_internal)"
-          order: 10
-          title: "Raw Table Schema Name"
+          description: "Airbyte will use this dataset for various internal tables.\
+            \ In legacy raw tables mode, the raw tables will be stored in this dataset.\
+            \ Defaults to \"airbyte_internal\"."
+          group: "advanced"
+          order: 8
+          title: "Airbyte Internal Table Dataset Name"
           type: "string"
         retention_period_days:
-          default: 1
           description: "The number of days of Snowflake Time Travel to enable on the\
             \ tables. See <a href=\"https://docs.snowflake.com/en/user-guide/data-time-travel#data-retention-period\"\
             >Snowflake's documentation</a> for more information. Setting a nonzero\
             \ value will incur increased storage costs in your Snowflake instance."
-          order: 13
+          group: "advanced"
+          order: 10
           title: "Data Retention Period (days)"
           type: "integer"
         role:
@@ -5763,6 +5776,7 @@ components:
             >role</a> that you want to use to access Snowflake"
           examples:
           - "AIRBYTE_ROLE"
+          group: "connection"
           order: 1
           title: "Role"
           type: "string"
@@ -5771,20 +5785,15 @@ components:
             >schema</a>"
           examples:
           - "AIRBYTE_SCHEMA"
+          group: "connection"
           order: 4
           title: "Default Schema"
           type: "string"
-        use_merge_for_upsert:
-          default: false
-          description: "Use MERGE for de-duplication of final tables. This option\
-            \ no effect if Final tables are disabled or Sync mode is not DEDUPE"
-          order: 14
-          title: "Use MERGE for De-duplication of final tables"
-          type: "boolean"
         username:
           description: "Enter the name of the user you want to use to access the database"
           examples:
           - "AIRBYTE_USER"
+          group: "connection"
           order: 5
           title: "Username"
           type: "string"
@@ -5793,6 +5802,7 @@ components:
             >warehouse</a> that you want to use as a compute cluster"
           examples:
           - "AIRBYTE_WAREHOUSE"
+          group: "connection"
           order: 2
           title: "Warehouse"
           type: "string"
@@ -5803,7 +5813,7 @@ components:
       - "database"
       - "schema"
       - "username"
-      title: "Snowflake Destination Spec"
+      title: "Snowflake Specification"
       type: "object"
     destination-oracle:
       properties:
@@ -10429,11 +10439,12 @@ components:
         azure_blob_storage_account_key:
           airbyte_secret: true
           always_show: true
-          description: "The Azure blob storage account key. If you set this value,\
-            \ you must not set the Shared Access Signature."
+          description: "The Azure Blob Storage account key. If you set this value,\
+            \ you must not set the \"Shared Access Signature\", \"Azure Tenant ID\"\
+            , \"Azure Client ID\", or \"Azure Client Secret\" fields."
           examples:
           - "Z8ZkZpteggFx394vm+PJHnGTvdRncaYS+JhLKdj789YNmD+iyGTnG+PV+POiuYNhBg/ACS+LKjd%4FG3FHGN12Nd=="
-          title: "Azure Blob Storage account key"
+          title: "Azure Blob Storage Account Key"
           type: "string"
           x-speakeasy-param-sensitive: true
         azure_blob_storage_account_name:
@@ -10463,8 +10474,36 @@ components:
           description: "The amount of megabytes after which the connector should spill\
             \ the records in a new blob object. Make sure to configure size greater\
             \ than individual records. Enter 0 if not applicable."
-          title: "Azure Blob Storage target blob size (Megabytes)"
+          title: "Azure Blob Storage Target Blob Size (MB)"
           type: "integer"
+        azure_client_id:
+          airbyte_secret: false
+          description: "The Azure Active Directory (Entra ID) client ID. Required\
+            \ for Entra ID authentication."
+          examples:
+          - "87654321-4321-4321-4321-210987654321"
+          title: "Azure Client ID"
+          type: "string"
+          x-speakeasy-param-sensitive: true
+        azure_client_secret:
+          airbyte_secret: true
+          always_show: true
+          description: "The Azure Active Directory (Entra ID) client secret. Required\
+            \ for Entra ID authentication."
+          examples:
+          - "your-client-secret"
+          title: "Azure Client Secret"
+          type: "string"
+          x-speakeasy-param-sensitive: true
+        azure_tenant_id:
+          airbyte_secret: false
+          description: "The Azure Active Directory (Entra ID) tenant ID. Required\
+            \ for Entra ID authentication."
+          examples:
+          - "12345678-1234-1234-1234-123456789012"
+          title: "Azure Tenant ID"
+          type: "string"
+          x-speakeasy-param-sensitive: true
         format:
           description: "Format of the data output."
           oneOf:
@@ -10512,7 +10551,9 @@ components:
           always_show: true
           description: "A shared access signature (SAS) provides secure delegated\
             \ access to resources in your storage account. Read more <a href=\"https://learn.microsoft.com/en-gb/azure/storage/common/storage-sas-overview?toc=%2Fazure%2Fstorage%2Fblobs%2Ftoc.json&bc=%2Fazure%2Fstorage%2Fblobs%2Fbreadcrumb%2Ftoc.json\"\
-            >here</a>. If you set this value, you must not set the account key."
+            >here</a>. If you set this value, you must not set the \"Azure Blob Storage\
+            \ Account Key\", \"Azure Tenant ID\", \"Azure Client ID\", or \"Azure\
+            \ Client Secret\" fields."
           examples:
           - "sv=2021-08-06&st=2025-04-11T00%3A00%3A00Z&se=2025-04-12T00%3A00%3A00Z&sr=b&sp=rw&sig=abcdefghijklmnopqrstuvwxyz1234567890%2Fabcdefg%3D"
           title: "Shared Access Signature"
@@ -10537,11 +10578,12 @@ components:
         azure_blob_storage_account_key:
           airbyte_secret: true
           always_show: true
-          description: "The Azure blob storage account key. If you set this value,\
-            \ you must not set the Shared Access Signature."
+          description: "The Azure Blob Storage account key. If you set this value,\
+            \ you must not set the \"Shared Access Signature\", \"Azure Tenant ID\"\
+            , \"Azure Client ID\", or \"Azure Client Secret\" fields."
           examples:
           - "Z8ZkZpteggFx394vm+PJHnGTvdRncaYS+JhLKdj789YNmD+iyGTnG+PV+POiuYNhBg/ACS+LKjd%4FG3FHGN12Nd=="
-          title: "Azure Blob Storage account key"
+          title: "Azure Blob Storage Account Key"
           type: "string"
         azure_blob_storage_account_name:
           description: "The name of the Azure Blob Storage Account. Read more <a href=\"\
@@ -10570,8 +10612,33 @@ components:
           description: "The amount of megabytes after which the connector should spill\
             \ the records in a new blob object. Make sure to configure size greater\
             \ than individual records. Enter 0 if not applicable."
-          title: "Azure Blob Storage target blob size (Megabytes)"
+          title: "Azure Blob Storage Target Blob Size (MB)"
           type: "integer"
+        azure_client_id:
+          airbyte_secret: false
+          description: "The Azure Active Directory (Entra ID) client ID. Required\
+            \ for Entra ID authentication."
+          examples:
+          - "87654321-4321-4321-4321-210987654321"
+          title: "Azure Client ID"
+          type: "string"
+        azure_client_secret:
+          airbyte_secret: true
+          always_show: true
+          description: "The Azure Active Directory (Entra ID) client secret. Required\
+            \ for Entra ID authentication."
+          examples:
+          - "your-client-secret"
+          title: "Azure Client Secret"
+          type: "string"
+        azure_tenant_id:
+          airbyte_secret: false
+          description: "The Azure Active Directory (Entra ID) tenant ID. Required\
+            \ for Entra ID authentication."
+          examples:
+          - "12345678-1234-1234-1234-123456789012"
+          title: "Azure Tenant ID"
+          type: "string"
         format:
           description: "Format of the data output."
           oneOf:
@@ -10619,7 +10686,9 @@ components:
           always_show: true
           description: "A shared access signature (SAS) provides secure delegated\
             \ access to resources in your storage account. Read more <a href=\"https://learn.microsoft.com/en-gb/azure/storage/common/storage-sas-overview?toc=%2Fazure%2Fstorage%2Fblobs%2Ftoc.json&bc=%2Fazure%2Fstorage%2Fblobs%2Fbreadcrumb%2Ftoc.json\"\
-            >here</a>. If you set this value, you must not set the account key."
+            >here</a>. If you set this value, you must not set the \"Azure Blob Storage\
+            \ Account Key\", \"Azure Tenant ID\", \"Azure Client ID\", or \"Azure\
+            \ Client Secret\" fields."
           examples:
           - "sv=2021-08-06&st=2025-04-11T00%3A00%3A00Z&se=2025-04-12T00%3A00%3A00Z&sr=b&sp=rw&sig=abcdefghijklmnopqrstuvwxyz1234567890%2Fabcdefg%3D"
           title: "Shared Access Signature"
@@ -12001,7 +12070,7 @@ components:
         catalog_type:
           always_show: true
           description: "Specifies the type of Iceberg catalog (e.g., NESSIE, GLUE,\
-            \ REST) and its associated configuration."
+            \ REST, POLARIS) and its associated configuration."
           oneOf:
           - additionalProperties: true
             description: "Configuration details for connecting to a Nessie-based Iceberg\
@@ -12098,6 +12167,64 @@ components:
             - "server_uri"
             - "namespace"
             title: "Rest Catalog"
+            type: "object"
+          - additionalProperties: true
+            description: "Configuration details for connecting to an Apache Polaris-based\
+              \ Iceberg catalog."
+            properties:
+              catalog_name:
+                description: "The name of the catalog in Polaris. This corresponds\
+                  \ to the catalog name created via the Polaris Management API."
+                order: 2
+                title: "Polaris Catalog Name"
+                type: "string"
+              catalog_type:
+                default: "POLARIS"
+                enum:
+                - "POLARIS"
+                type: "string"
+              client_id:
+                airbyte_secret: true
+                description: "The OAuth Client ID for authenticating with the Polaris\
+                  \ server."
+                examples:
+                - "abc123clientid"
+                order: 3
+                title: "Client ID"
+                type: "string"
+                x-speakeasy-param-sensitive: true
+              client_secret:
+                airbyte_secret: true
+                description: "The OAuth Client Secret for authenticating with the\
+                  \ Polaris server."
+                examples:
+                - "secretkey123"
+                order: 4
+                title: "Client Secret"
+                type: "string"
+                x-speakeasy-param-sensitive: true
+              namespace:
+                description: "The Polaris namespace to be used in the Table identifier.\n\
+                  \           This will ONLY be used if the `Destination Namespace`\
+                  \ setting for the connection is set to\n           `Destination-defined`\
+                  \ or `Source-defined`"
+                order: 5
+                title: "Default namespace"
+                type: "string"
+              server_uri:
+                description: "The base URL of the Polaris server used to connect to\
+                  \ the Polaris catalog."
+                order: 1
+                title: "Polaris Server URI"
+                type: "string"
+            required:
+            - "catalog_type"
+            - "server_uri"
+            - "catalog_name"
+            - "client_id"
+            - "client_secret"
+            - "namespace"
+            title: "Polaris Catalog"
             type: "object"
           order: 7
           title: "Catalog Type"
@@ -12217,7 +12344,7 @@ components:
         catalog_type:
           always_show: true
           description: "Specifies the type of Iceberg catalog (e.g., NESSIE, GLUE,\
-            \ REST) and its associated configuration."
+            \ REST, POLARIS) and its associated configuration."
           oneOf:
           - additionalProperties: true
             description: "Configuration details for connecting to a Nessie-based Iceberg\
@@ -12313,6 +12440,62 @@ components:
             - "server_uri"
             - "namespace"
             title: "Rest Catalog"
+            type: "object"
+          - additionalProperties: true
+            description: "Configuration details for connecting to an Apache Polaris-based\
+              \ Iceberg catalog."
+            properties:
+              catalog_name:
+                description: "The name of the catalog in Polaris. This corresponds\
+                  \ to the catalog name created via the Polaris Management API."
+                order: 2
+                title: "Polaris Catalog Name"
+                type: "string"
+              catalog_type:
+                default: "POLARIS"
+                enum:
+                - "POLARIS"
+                type: "string"
+              client_id:
+                airbyte_secret: true
+                description: "The OAuth Client ID for authenticating with the Polaris\
+                  \ server."
+                examples:
+                - "abc123clientid"
+                order: 3
+                title: "Client ID"
+                type: "string"
+              client_secret:
+                airbyte_secret: true
+                description: "The OAuth Client Secret for authenticating with the\
+                  \ Polaris server."
+                examples:
+                - "secretkey123"
+                order: 4
+                title: "Client Secret"
+                type: "string"
+              namespace:
+                description: "The Polaris namespace to be used in the Table identifier.\n\
+                  \           This will ONLY be used if the `Destination Namespace`\
+                  \ setting for the connection is set to\n           `Destination-defined`\
+                  \ or `Source-defined`"
+                order: 5
+                title: "Default namespace"
+                type: "string"
+              server_uri:
+                description: "The base URL of the Polaris server used to connect to\
+                  \ the Polaris catalog."
+                order: 1
+                title: "Polaris Server URI"
+                type: "string"
+            required:
+            - "catalog_type"
+            - "server_uri"
+            - "catalog_name"
+            - "client_id"
+            - "client_secret"
+            - "namespace"
+            title: "Polaris Catalog"
             type: "object"
           order: 7
           title: "Catalog Type"
@@ -18579,7 +18762,7 @@ components:
             - "format"
             title: "S3"
             type: "object"
-          title: "Object Storage Configuration"
+          title: "Object Storage Spec"
           type: "object"
         destinationType:
           title: "customer-io"
@@ -18747,7 +18930,7 @@ components:
             - "format"
             title: "S3"
             type: "object"
-          title: "Object Storage Configuration"
+          title: "Object Storage Spec"
           type: "object"
       required:
       - "credentials"
@@ -19684,7 +19867,7 @@ components:
             - "format"
             title: "S3"
             type: "object"
-          title: "Object Storage Configuration"
+          title: "Object Storage Spec"
           type: "object"
         refresh_token:
           airbyte_secret: true
@@ -19864,7 +20047,7 @@ components:
             - "format"
             title: "S3"
             type: "object"
-          title: "Object Storage Configuration"
+          title: "Object Storage Spec"
           type: "object"
         refresh_token:
           airbyte_secret: true

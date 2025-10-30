@@ -156,6 +156,7 @@ components:
         - "field-renaming"
         - "row-filtering"
         - "encryption"
+        - "field-filtering"
       x-speakeasy-component: true
     ConfiguredStreamMapper:
       type: "object"
@@ -176,6 +177,7 @@ components:
       description: "The values required to configure the mapper."
       oneOf:
         - $ref: "#/components/schemas/HashingMapperConfiguration"
+        - $ref: "#/components/schemas/FieldFilteringMapperConfiguration"
         - $ref: "#/components/schemas/FieldRenamingMapperConfiguration"
         - $ref: "#/components/schemas/RowFilteringMapperConfiguration"
         - $ref: "#/components/schemas/EncryptionMapperConfiguration"
@@ -207,6 +209,17 @@ components:
       required:
         - "fieldNameSuffix"
         - "method"
+        - "targetField"
+      x-speakeasy-component: true
+    FieldFilteringMapperConfiguration:
+      title: "Field Filtering"
+      type: "object"
+      properties:
+        targetField:
+          type: "string"
+          title: "The Field to Filter"
+          description: "The name of the field to filter."
+      required:
         - "targetField"
       x-speakeasy-component: true
     FieldRenamingMapperConfiguration:
@@ -362,6 +375,7 @@ components:
     SelectedFields:
       description: "Paths to the fields that will be included in the configured catalog."
       type: "array"
+      format: "set"
       items:
         $ref: "#/components/schemas/SelectedFieldInfo"
       x-speakeasy-component: true
@@ -897,6 +911,8 @@ components:
           type: "array"
           items:
             $ref: "#/components/schemas/Tag"
+        statusReason:
+          type: "string"
       x-speakeasy-entity: "Connection"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -947,6 +963,7 @@ components:
         - "active"
         - "inactive"
         - "deprecated"
+        - "locked"
       x-speakeasy-component: true
     NamespaceDefinitionEnum:
       type: "string"
@@ -2058,6 +2075,23 @@ components:
         token:
           type: "string"
       x-speakeasy-component: true
+    EmbeddedScopedTokenRequest:
+      type: "object"
+      required:
+        - "workspaceId"
+      properties:
+        workspaceId:
+          type: "string"
+          format: "uuid"
+      x-speakeasy-component: true
+    EmbeddedScopedTokenResponse:
+      type: "object"
+      required:
+        - "token"
+      properties:
+        token:
+          type: "string"
+      x-speakeasy-component: true
     ConnectionTemplateCreateRequestBody:
       type: "object"
       required:
@@ -2131,6 +2165,12 @@ components:
           type: "string"
         permission:
           $ref: "#/components/schemas/PermissionType"
+      x-speakeasy-component: true
+    SSOConfigStatus:
+      type: "string"
+      enum:
+        - "draft"
+        - "active"
       x-speakeasy-component: true
 
     SourceConfiguration:
@@ -2226,6 +2266,7 @@ components:
         - smartsheets
         - snapchat-marketing
         - surveymonkey
+        - ticktick
         - tiktok-marketing
         - trello
         - typeform
