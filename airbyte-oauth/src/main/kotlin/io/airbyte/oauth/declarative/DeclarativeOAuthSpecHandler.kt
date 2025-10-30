@@ -460,7 +460,7 @@ class DeclarativeOAuthSpecHandler {
     const val ACCESS_TOKEN_URL: String = "access_token_url"
     const val AUTH_CODE_KEY: String = "auth_code_key"
     const val AUTH_CODE_PARAM: String = "auth_code_param"
-    const val AUTH_CODE_VALUE: String = AUTH_CODE_KEY
+    const val AUTH_CODE_VALUE: String = io.airbyte.oauth.AUTH_CODE_KEY
     const val AUTH_CODE_VALUE_KEY: String = "auth_code_value"
     const val CLIENT_ID_KEY: String = "client_id_key"
     const val CLIENT_ID_PARAM: String = "client_id_param"
@@ -474,9 +474,9 @@ class DeclarativeOAuthSpecHandler {
     const val EXTRACT_OUTPUT_KEY: String = "extract_output"
     const val REDIRECT_URI_KEY: String = "redirect_uri_key"
     const val REDIRECT_URI_PARAM: String = "redirect_uri_param"
-    const val REDIRECT_URI_VALUE: String = REDIRECT_URI_KEY
+    const val REDIRECT_URI_VALUE: String = io.airbyte.oauth.REDIRECT_URI_KEY
     const val REDIRECT_URI_VALUE_KEY: String = "redirect_uri_value"
-    const val REFRESH_TOKEN: String = REFRESH_TOKEN_KEY
+    const val REFRESH_TOKEN: String = io.airbyte.oauth.REFRESH_TOKEN_KEY
     const val SCOPE_KEY: String = "scope_key"
     const val SCOPE_PARAM: String = "scope_param"
     const val SCOPE_VALUE: String = io.airbyte.oauth.SCOPE_KEY
