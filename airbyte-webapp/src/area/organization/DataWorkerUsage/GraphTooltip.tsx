@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { FormattedDate, FormattedMessage } from "react-intl";
 import { ContentType } from "recharts/types/component/Tooltip";
 
@@ -22,18 +23,19 @@ export const GraphTooltip: ContentType<number, string> = ({ active, payload }) =
   const workspacesSortedByUsage = [...(payload ?? [])].sort((a, b) => {
     return (b.value ?? 0) - (a.value ?? 0);
   });
+
+  // Parse the date string as a local calendar date
+  const dateString = payload?.[0]?.payload?.formattedDate;
+  const localDate = dateString ? dayjs(dateString).toDate() : undefined;
+
   return (
     <Card noPadding>
       <Box p="md">
         <FlexContainer direction="column">
           <Text bold>
-            <FormattedDate
-              value={payload?.[0]?.payload?.date}
-              year="numeric"
-              month="short"
-              day="numeric"
-              weekday="short"
-            />
+            {localDate && (
+              <FormattedDate value={localDate} year="numeric" month="short" day="numeric" weekday="short" />
+            )}
           </Text>
           <Text>
             <FormattedMessage

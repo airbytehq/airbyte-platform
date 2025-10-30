@@ -1,5 +1,3 @@
-import dayjs from "dayjs";
-
 import { RegionDataWorkerUsage } from "core/api/types/AirbyteClient";
 
 import { calculateGraphData } from "./calculateGraphData";
@@ -41,14 +39,6 @@ describe(`${calculateGraphData.name}`, () => {
       expect(result).toHaveLength(31);
       expect(result[0].formattedDate).toBe("2025-01-01");
       expect(result[30].formattedDate).toBe("2025-01-31");
-    });
-
-    it("includes dayjs objects with correct dates", () => {
-      const dateRange: [string, string] = ["2025-01-15", "2025-01-15"];
-      const result = calculateGraphData(dateRange, undefined);
-
-      expect(result[0].date.format("YYYY-MM-DD")).toBe("2025-01-15");
-      expect(dayjs.isDayjs(result[0].date)).toBe(true);
     });
   });
 

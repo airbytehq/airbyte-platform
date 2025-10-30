@@ -3,7 +3,6 @@ import dayjs from "dayjs";
 import { RegionDataWorkerUsage } from "core/api/types/AirbyteClient";
 
 export interface RegionDataBar {
-  date: dayjs.Dayjs;
   formattedDate: string;
   workspaceUsage: Record<string, number>;
 }
@@ -32,7 +31,6 @@ export const calculateGraphData = (
   while (cursor.isBefore(lastDay)) {
     const formattedDate = cursor.format(DATE_FORMAT);
     days.set(formattedDate, {
-      date: cursor,
       formattedDate,
       workspaceUsage: {},
     });
