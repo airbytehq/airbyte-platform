@@ -145,6 +145,7 @@ open class BaseConfigDatabaseTest {
               dataplane,
               dataplane_client_credentials,
               dataplane_group,
+              dataplane_heartbeat_log,
               data_worker_usage,
               declarative_manifest,
               "group",

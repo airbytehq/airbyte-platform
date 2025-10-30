@@ -51,6 +51,7 @@ import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider
 import io.airbyte.db.instance.configs.migrations.V2_1_0_008__DropWorkloadPendingStatusByDataplaneGroupIdx
 import io.airbyte.db.instance.configs.migrations.V2_1_0_010__CreateOrganizationDomainVerificationTable
 import io.airbyte.db.instance.configs.migrations.V2_1_0_011__AddMaxResourceColumnsToDataWorkerUsage
+import io.airbyte.db.instance.configs.migrations.V2_1_0_012__CreateDataplaneHeartbeatLogTable
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider
 import io.airbyte.db.instance.jobs.migrations.V2_1_0_001__AddStreamStatsAdditionalStats
@@ -826,7 +827,7 @@ internal class BootloaderTest {
 
     // ⚠️ This line should change with every new migration to show that you meant to make a new
     // migration to the prod database
-    private val CURRENT_CONFIGS_MIGRATION = V2_1_0_011__AddMaxResourceColumnsToDataWorkerUsage::class.java
+    private val CURRENT_CONFIGS_MIGRATION = V2_1_0_012__CreateDataplaneHeartbeatLogTable::class.java
     private val CURRENT_JOBS_MIGRATION = V2_1_0_001__AddStreamStatsAdditionalStats::class.java
 
     private fun getMigrationVersion(cls: Class<*>): String =
