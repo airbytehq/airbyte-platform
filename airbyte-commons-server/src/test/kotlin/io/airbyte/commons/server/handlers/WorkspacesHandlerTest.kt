@@ -60,9 +60,7 @@ import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.TestClient
-import io.airbyte.validation.json.JsonValidationException
 import jakarta.validation.Valid
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -79,7 +77,6 @@ import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
-import java.io.IOException
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
@@ -412,6 +409,140 @@ internal class WorkspacesHandlerTest {
         .workspaceId(notSuppliedUUID)
         .customerId(uuid)
         .email(TEST_EMAIL)
+        .name(NEW_WORKSPACE)
+        .slug(NEW_WORKSPACE_SLUG)
+        .initialSetupComplete(false)
+        .displaySetupWizard(false)
+        .news(false)
+        .anonymousDataCollection(false)
+        .securityUpdates(false)
+        .notifications(listOf<@Valid io.airbyte.api.model.generated.Notification?>(generateApiNotification()))
+        .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
+        .dataplaneGroupId(DATAPLANE_GROUP_ID_1)
+        .webhookConfigs(listOf<@Valid WebhookConfigRead?>(WebhookConfigRead().id(uuid).name(TEST_NAME)))
+        .organizationId(ORGANIZATION_ID)
+        .tombstone(false)
+
+    assertEquals(expectedRead, actualRead)
+    assertEquals(expectedRead, secondActualRead)
+  }
+
+  @ParameterizedTest
+  @EnumSource(AirbyteEdition::class)
+  fun testCreateWorkspaceIfNotExistWithBlankEmail(airbyteEdition: AirbyteEdition) {
+    workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
+    Mockito
+      .`when`(
+        workspaceService.getStandardWorkspaceNoSecrets(
+          anyOrNull(),
+          eq(false),
+        ),
+      ).thenReturn(workspace)
+
+    val uuid = UUID.randomUUID()
+    Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+
+    // Mock dataplane group service for DATAPLANE_GROUP_ID_1
+    val defaultDataplaneGroups =
+      listOf(
+        DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
+      )
+    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace)
+
+    val notSuppliedUUID = UUID.randomUUID()
+
+    val workspaceCreateWithId =
+      WorkspaceCreateWithId()
+        .id(notSuppliedUUID)
+        .name(NEW_WORKSPACE)
+        .email("")
+        .news(false)
+        .anonymousDataCollection(false)
+        .securityUpdates(false)
+        .notifications(listOf<@Valid io.airbyte.api.model.generated.Notification?>(generateApiNotification()))
+        .notificationSettings(generateApiNotificationSettings())
+        .dataplaneGroupId(DATAPLANE_GROUP_ID_1)
+        .webhookConfigs(listOf<@Valid WebhookConfigWrite?>(WebhookConfigWrite().name(TEST_NAME).authToken(TEST_AUTH_TOKEN)))
+        .organizationId(ORGANIZATION_ID)
+
+    Mockito.`when`(secretPersistence.read(anyOrNull())).thenReturn("")
+
+    val actualRead = getWorkspacesHandler(airbyteEdition).createWorkspaceIfNotExist(workspaceCreateWithId)
+    val secondActualRead = getWorkspacesHandler(airbyteEdition).createWorkspaceIfNotExist(workspaceCreateWithId)
+    val expectedRead =
+      WorkspaceRead()
+        .workspaceId(notSuppliedUUID)
+        .customerId(uuid)
+        .email(null)
+        .name(NEW_WORKSPACE)
+        .slug(NEW_WORKSPACE_SLUG)
+        .initialSetupComplete(false)
+        .displaySetupWizard(false)
+        .news(false)
+        .anonymousDataCollection(false)
+        .securityUpdates(false)
+        .notifications(listOf<@Valid io.airbyte.api.model.generated.Notification?>(generateApiNotification()))
+        .notificationSettings(generateApiNotificationSettingsWithDefaultValue())
+        .dataplaneGroupId(DATAPLANE_GROUP_ID_1)
+        .webhookConfigs(listOf<@Valid WebhookConfigRead?>(WebhookConfigRead().id(uuid).name(TEST_NAME)))
+        .organizationId(ORGANIZATION_ID)
+        .tombstone(false)
+
+    assertEquals(expectedRead, actualRead)
+    assertEquals(expectedRead, secondActualRead)
+  }
+
+  @ParameterizedTest
+  @EnumSource(AirbyteEdition::class)
+  fun testCreateWorkspaceIfNotExistWithNullEmail(airbyteEdition: AirbyteEdition) {
+    workspace.withWebhookOperationConfigs(PERSISTED_WEBHOOK_CONFIGS)
+    Mockito
+      .`when`(
+        workspaceService.getStandardWorkspaceNoSecrets(
+          anyOrNull(),
+          eq(false),
+        ),
+      ).thenReturn(workspace)
+
+    val uuid = UUID.randomUUID()
+    Mockito.`when`(uuidSupplier.get()).thenReturn(uuid)
+
+    // Mock dataplane group service for DATAPLANE_GROUP_ID_1
+    val defaultDataplaneGroups =
+      listOf(
+        DataplaneGroup().withId(DATAPLANE_GROUP_ID_1).withOrganizationId(io.airbyte.commons.DEFAULT_ORGANIZATION_ID),
+      )
+    Mockito.`when`(dataplaneGroupService.listDefaultDataplaneGroups()).thenReturn(defaultDataplaneGroups)
+
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace)
+
+    val notSuppliedUUID = UUID.randomUUID()
+
+    val workspaceCreateWithId =
+      WorkspaceCreateWithId()
+        .id(notSuppliedUUID)
+        .name(NEW_WORKSPACE)
+        .email(null)
+        .news(false)
+        .anonymousDataCollection(false)
+        .securityUpdates(false)
+        .notifications(listOf<@Valid io.airbyte.api.model.generated.Notification?>(generateApiNotification()))
+        .notificationSettings(generateApiNotificationSettings())
+        .dataplaneGroupId(DATAPLANE_GROUP_ID_1)
+        .webhookConfigs(listOf<@Valid WebhookConfigWrite?>(WebhookConfigWrite().name(TEST_NAME).authToken(TEST_AUTH_TOKEN)))
+        .organizationId(ORGANIZATION_ID)
+
+    Mockito.`when`(secretPersistence.read(anyOrNull())).thenReturn("")
+
+    val actualRead = getWorkspacesHandler(airbyteEdition).createWorkspaceIfNotExist(workspaceCreateWithId)
+    val secondActualRead = getWorkspacesHandler(airbyteEdition).createWorkspaceIfNotExist(workspaceCreateWithId)
+    val expectedRead =
+      WorkspaceRead()
+        .workspaceId(notSuppliedUUID)
+        .customerId(uuid)
+        .email(null)
         .name(NEW_WORKSPACE)
         .slug(NEW_WORKSPACE_SLUG)
         .initialSetupComplete(false)
@@ -872,7 +1003,7 @@ internal class WorkspacesHandlerTest {
 
   @ParameterizedTest
   @EnumSource(AirbyteEdition::class)
-  fun testUpdateWorkspaceWithoutWebhookConfigs(airbyteEdition: AirbyteEdition?) {
+  fun testUpdateWorkspaceWithoutWebhookConfigs(airbyteEdition: AirbyteEdition) {
     val apiNotification = generateApiNotification()
     apiNotification.slackConfiguration.webhook(UPDATED)
     val workspaceUpdate =
@@ -906,7 +1037,7 @@ internal class WorkspacesHandlerTest {
       .thenReturn(expectedWorkspace)
       .thenReturn(expectedWorkspace.withAnonymousDataCollection(false))
 
-    getWorkspacesHandler(AirbyteEdition.COMMUNITY).updateWorkspace(workspaceUpdate)
+    getWorkspacesHandler(airbyteEdition).updateWorkspace(workspaceUpdate)
 
     Mockito.verify(workspaceService).writeStandardWorkspaceNoSecrets(expectedWorkspace)
   }
