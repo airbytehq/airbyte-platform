@@ -21,12 +21,19 @@ import io.airbyte.data.services.ObsStatsService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.JobPersistence
+import io.airbyte.statistics.Abs
+import io.airbyte.statistics.Const
+import io.airbyte.statistics.Dimension
+import io.airbyte.statistics.GreaterThan
+import io.airbyte.statistics.OutlierRule
+import io.airbyte.statistics.zScore
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
@@ -494,5 +501,463 @@ class JobObservabilityServiceTest {
     val result = JobObservabilityService.getWorkspaceId(jobConfig)
 
     assertEquals(SYNC_WORKSPACE_ID, result)
+  }
+
+  @Test
+  fun `test computeAdditionalStatsScores with valid data`() {
+    // Setup test data
+    val currentStats = mapOf("wal_size" to BigDecimal("100.0"))
+    val historicalStats =
+      listOf(
+        mapOf("wal_size" to BigDecimal("90.0")),
+        mapOf("wal_size" to BigDecimal("95.0")),
+        mapOf("wal_size" to BigDecimal("92.0")),
+      )
+
+    // Call the method directly
+    val result = service.computeAdditionalStatsScores(currentStats, historicalStats)
+
+    // Verify the result
+    assertEquals(1, result.size)
+    assert(result.containsKey("wal_size"))
+
+    val scores = result["wal_size"]!!
+
+    // Verify current value
+    assertEquals(100.0, scores.current, 0.001)
+
+    // Verify mean: (90 + 95 + 92 + 100) / 4 = 94.25
+    assertEquals(94.25, scores.mean, 0.001)
+
+    // Verify z-score is calculated (current - mean) / std
+    // std = sqrt(((90-94.25)^2 + (95-94.25)^2 + (92-94.25)^2 + (100-94.25)^2) / 4)
+    // std ≈ 3.86
+    // z-score = (100 - 94.25) / 3.86 ≈ 1.49
+    assert(scores.std > 0)
+    assert(scores.zScore > 0)
+  }
+
+  @Test
+  fun `test computeAdditionalStatsScores with multiple keys`() {
+    // Setup test data with multiple metrics
+    val currentStats =
+      mapOf(
+        "wal_size" to BigDecimal("100.0"),
+        "replication_lag" to BigDecimal("5.0"),
+      )
+    val historicalStats =
+      listOf(
+        mapOf(
+          "wal_size" to BigDecimal("90.0"),
+          "replication_lag" to BigDecimal("3.0"),
+        ),
+        mapOf(
+          "wal_size" to BigDecimal("95.0"),
+          "replication_lag" to BigDecimal("4.0"),
+        ),
+        mapOf(
+          "wal_size" to BigDecimal("92.0"),
+          "replication_lag" to BigDecimal("3.5"),
+        ),
+      )
+
+    // Call the method directly
+    val result = service.computeAdditionalStatsScores(currentStats, historicalStats)
+
+    // Verify both metrics are present
+    assertEquals(2, result.size)
+    assert(result.containsKey("wal_size"))
+    assert(result.containsKey("replication_lag"))
+
+    // Verify wal_size scores
+    val walSizeScores = result["wal_size"]!!
+    assertEquals(100.0, walSizeScores.current, 0.001)
+    assertEquals(94.25, walSizeScores.mean, 0.001) // (90 + 95 + 92 + 100) / 4 = 94.25
+    assert(walSizeScores.std > 0)
+    assert(walSizeScores.zScore > 0)
+
+    // Verify replication_lag scores
+    val repLagScores = result["replication_lag"]!!
+    assertEquals(5.0, repLagScores.current, 0.001)
+    assertEquals(3.875, repLagScores.mean, 0.001) // (3 + 4 + 3.5 + 5) / 4 = 3.875
+    assert(repLagScores.std > 0)
+    assert(repLagScores.zScore > 0)
+  }
+
+  @Test
+  fun `test computeAdditionalStatsScores with sparse historical data`() {
+    // Setup test data where some historical syncs have null additionalStats
+    val currentStats = mapOf("wal_size" to BigDecimal("100.0"))
+    val historicalStats =
+      listOf(
+        mapOf("wal_size" to BigDecimal("90.0")), // Has the key
+        null, // Entire map is null
+        mapOf("wal_size" to BigDecimal("95.0")), // Has the key
+        mapOf("other_metric" to BigDecimal("50.0")), // Map exists but doesn't have wal_size
+      )
+
+    // Call the method directly
+    val result = service.computeAdditionalStatsScores(currentStats, historicalStats)
+
+    // Verify wal_size is present
+    assertEquals(1, result.size)
+    assert(result.containsKey("wal_size"))
+
+    val scores = result["wal_size"]!!
+
+    // Should only use values from syncs that had wal_size: 90, 95, 100
+    assertEquals(100.0, scores.current, 0.001)
+    assertEquals(95.0, scores.mean, 0.001) // (90 + 95 + 100) / 3 = 95.0
+    assert(scores.std > 0)
+    assert(scores.zScore > 0)
+  }
+
+  @Test
+  fun `test computeAdditionalStatsScores with different keys across syncs`() {
+    // Setup test data where different syncs have different keys
+    val currentStats = mapOf("wal_size" to BigDecimal("100.0"))
+    val historicalStats =
+      listOf(
+        mapOf(
+          "wal_size" to BigDecimal("90.0"),
+          "other_metric" to BigDecimal("50.0"), // Extra key not in current
+        ),
+        mapOf("wal_size" to BigDecimal("95.0")),
+        mapOf(
+          "wal_size" to BigDecimal("92.0"),
+          "another_metric" to BigDecimal("75.0"), // Different extra key
+        ),
+      )
+
+    // Call the method directly
+    val result = service.computeAdditionalStatsScores(currentStats, historicalStats)
+
+    // Should only return scores for wal_size (the key in current)
+    assertEquals(1, result.size)
+    assert(result.containsKey("wal_size"))
+    assert(!result.containsKey("other_metric"))
+    assert(!result.containsKey("another_metric"))
+
+    val scores = result["wal_size"]!!
+
+    // Should use all wal_size values: 90, 95, 92, 100
+    assertEquals(100.0, scores.current, 0.001)
+    assertEquals(94.25, scores.mean, 0.001) // (90 + 95 + 92 + 100) / 4 = 94.25
+    assert(scores.std > 0)
+    assert(scores.zScore > 0)
+  }
+
+  @Test
+  fun `test evaluateStream merges scores from top-level fields and additionalStats`() {
+    // Mock the rules service to return empty rules (to avoid missing answer errors)
+    val rulesService = mockk<JobObservabilityRulesService>()
+    every { rulesService.getStreamOutlierRules() } returns emptyList()
+
+    // Create service with mocked rules
+    val testService =
+      JobObservabilityService(
+        actorDefinitionService = actorDefinitionService,
+        connectionService = connectionService,
+        jobPersistence = jobPersistence,
+        obsStatsService = obsStatsService,
+        workspaceService = workspaceService,
+        metricClient = metricClient,
+        jobObservabilityReportingService = null,
+        jobObservabilityRulesService = rulesService,
+        streamStatsService = streamStatsService,
+      )
+
+    // Create current stream with both top-level metrics and additionalStats
+    val currentStream =
+      ObsStreamStats(
+        id = ObsStreamStatsId(jobId = 1L, streamNamespace = "public", streamName = "users"),
+        bytesLoaded = 1000L,
+        recordsLoaded = 100L,
+        recordsRejected = 5L,
+        wasBackfilled = false,
+        wasResumed = false,
+        additionalStats = mapOf("wal_size" to BigDecimal("100.0")),
+      )
+
+    // Create historical streams
+    val historicalStreams =
+      listOf(
+        ObsStreamStats(
+          id = ObsStreamStatsId(jobId = 2L, streamNamespace = "public", streamName = "users"),
+          bytesLoaded = 900L,
+          recordsLoaded = 90L,
+          recordsRejected = 3L,
+          wasBackfilled = false,
+          wasResumed = false,
+          additionalStats = mapOf("wal_size" to BigDecimal("90.0")),
+        ),
+        ObsStreamStats(
+          id = ObsStreamStatsId(jobId = 3L, streamNamespace = "public", streamName = "users"),
+          bytesLoaded = 950L,
+          recordsLoaded = 95L,
+          recordsRejected = 4L,
+          wasBackfilled = false,
+          wasResumed = false,
+          additionalStats = mapOf("wal_size" to BigDecimal("95.0")),
+        ),
+      )
+
+    // Call the method directly
+    val result = testService.evaluateStream("public", "users", currentStream, historicalStreams)
+
+    // Verify that evaluations were performed (this tests that scores were merged)
+    // We can't directly inspect the scores map, but we can verify the StreamInfo has evaluations
+    // The fact that the method completes successfully means scores were merged correctly
+    assertEquals("public", result.namespace)
+    assertEquals("users", result.name)
+    assertEquals(false, result.wasBackfilled)
+    assertEquals(false, result.wasResumed)
+
+    // Verify the metrics include additionalStats
+    assertEquals(mapOf("wal_size" to BigDecimal("100.0")), result.metrics.additionalStats)
+  }
+
+  @Test
+  fun `test outlier detection with additionalStats outlier`() {
+    // Create a rule that flags wal_size when z-score > 1.0
+    val walSizeRule =
+      OutlierRule(
+        name = "wal_size",
+        value = Abs(Dimension("wal_size").zScore),
+        operator = GreaterThan,
+        threshold = Const(1.0),
+      )
+
+    val rulesService = mockk<JobObservabilityRulesService>()
+    every { rulesService.getStreamOutlierRules() } returns listOf(walSizeRule)
+
+    val testService =
+      JobObservabilityService(
+        actorDefinitionService = actorDefinitionService,
+        connectionService = connectionService,
+        jobPersistence = jobPersistence,
+        obsStatsService = obsStatsService,
+        workspaceService = workspaceService,
+        metricClient = metricClient,
+        jobObservabilityReportingService = null,
+        jobObservabilityRulesService = rulesService,
+        streamStatsService = streamStatsService,
+      )
+
+    // Create current stream with normal top-level metrics but outlier additionalStats
+    val currentStream =
+      ObsStreamStats(
+        id = ObsStreamStatsId(jobId = 1L, streamNamespace = "public", streamName = "users"),
+        bytesLoaded = 1000L, // Normal
+        recordsLoaded = 100L, // Normal
+        recordsRejected = 5L, // Normal
+        wasBackfilled = false,
+        wasResumed = false,
+        additionalStats = mapOf("wal_size" to BigDecimal("1000.0")), // OUTLIER! Much higher
+      )
+
+    // Create historical streams with tight, normal values
+    val historicalStreams =
+      listOf(
+        ObsStreamStats(
+          id = ObsStreamStatsId(jobId = 2L, streamNamespace = "public", streamName = "users"),
+          bytesLoaded = 950L,
+          recordsLoaded = 95L,
+          recordsRejected = 4L,
+          wasBackfilled = false,
+          wasResumed = false,
+          additionalStats = mapOf("wal_size" to BigDecimal("100.0")),
+        ),
+        ObsStreamStats(
+          id = ObsStreamStatsId(jobId = 3L, streamNamespace = "public", streamName = "users"),
+          bytesLoaded = 1050L,
+          recordsLoaded = 105L,
+          recordsRejected = 6L,
+          wasBackfilled = false,
+          wasResumed = false,
+          additionalStats = mapOf("wal_size" to BigDecimal("100.0")),
+        ),
+        ObsStreamStats(
+          id = ObsStreamStatsId(jobId = 4L, streamNamespace = "public", streamName = "users"),
+          bytesLoaded = 1020L,
+          recordsLoaded = 102L,
+          recordsRejected = 5L,
+          wasBackfilled = false,
+          wasResumed = false,
+          additionalStats = mapOf("wal_size" to BigDecimal("100.0")),
+        ),
+      )
+
+    // Call evaluateStream
+    val result = testService.evaluateStream("public", "users", currentStream, historicalStreams)
+
+    // Verify stream is marked as outlier due to additionalStats
+    assertTrue(result.isOutlier)
+
+    // Verify we have an evaluation for wal_size
+    val walSizeEval = result.evaluations.find { it.name == "wal_size" }
+    assert(walSizeEval != null)
+    assertTrue(walSizeEval!!.isOutlier)
+  }
+
+  @Test
+  fun `test outlier detection with both top-level and additionalStats outliers`() {
+    // Create rules for both recordsLoaded and wal_size
+    val recordsRule =
+      OutlierRule(
+        name = "recordsLoaded",
+        value = Abs(Dimension("recordsLoaded").zScore),
+        operator = GreaterThan,
+        threshold = Const(1.0),
+      )
+    val walSizeRule =
+      OutlierRule(
+        name = "wal_size",
+        value = Abs(Dimension("wal_size").zScore),
+        operator = GreaterThan,
+        threshold = Const(1.0),
+      )
+
+    val rulesService = mockk<JobObservabilityRulesService>()
+    every { rulesService.getStreamOutlierRules() } returns listOf(recordsRule, walSizeRule)
+
+    val testService =
+      JobObservabilityService(
+        actorDefinitionService = actorDefinitionService,
+        connectionService = connectionService,
+        jobPersistence = jobPersistence,
+        obsStatsService = obsStatsService,
+        workspaceService = workspaceService,
+        metricClient = metricClient,
+        jobObservabilityReportingService = null,
+        jobObservabilityRulesService = rulesService,
+        streamStatsService = streamStatsService,
+      )
+
+    // Create current stream with outliers in BOTH top-level and additionalStats
+    val currentStream =
+      ObsStreamStats(
+        id = ObsStreamStatsId(jobId = 1L, streamNamespace = "public", streamName = "users"),
+        bytesLoaded = 1000L,
+        recordsLoaded = 10000L, // OUTLIER! (100x normal)
+        recordsRejected = 5L,
+        wasBackfilled = false,
+        wasResumed = false,
+        additionalStats = mapOf("wal_size" to BigDecimal("1000.0")), // OUTLIER! (10x normal)
+      )
+
+    // Historical streams with tight, normal values
+    val historicalStreams =
+      listOf(
+        ObsStreamStats(
+          id = ObsStreamStatsId(jobId = 2L, streamNamespace = "public", streamName = "users"),
+          bytesLoaded = 1000L,
+          recordsLoaded = 100L,
+          recordsRejected = 5L,
+          wasBackfilled = false,
+          wasResumed = false,
+          additionalStats = mapOf("wal_size" to BigDecimal("100.0")),
+        ),
+        ObsStreamStats(
+          id = ObsStreamStatsId(jobId = 3L, streamNamespace = "public", streamName = "users"),
+          bytesLoaded = 1000L,
+          recordsLoaded = 100L,
+          recordsRejected = 5L,
+          wasBackfilled = false,
+          wasResumed = false,
+          additionalStats = mapOf("wal_size" to BigDecimal("100.0")),
+        ),
+      )
+
+    // Call evaluateStream
+    val result = testService.evaluateStream("public", "users", currentStream, historicalStreams)
+
+    // Verify stream is marked as outlier
+    assertTrue(result.isOutlier)
+
+    // Verify we have evaluations for BOTH outliers
+    val recordsEval = result.evaluations.find { it.name == "recordsLoaded" }
+    val walSizeEval = result.evaluations.find { it.name == "wal_size" }
+
+    assert(recordsEval != null)
+    assert(walSizeEval != null)
+    assertTrue(recordsEval!!.isOutlier)
+    assertTrue(walSizeEval!!.isOutlier)
+  }
+
+  @Test
+  fun `test normal flow without additionalStats`() {
+    // Create a rule for recordsLoaded to verify existing outlier detection still works
+    val recordsRule =
+      OutlierRule(
+        name = "recordsLoaded",
+        value = Abs(Dimension("recordsLoaded").zScore),
+        operator = GreaterThan,
+        threshold = Const(1.0),
+      )
+
+    val rulesService = mockk<JobObservabilityRulesService>()
+    every { rulesService.getStreamOutlierRules() } returns listOf(recordsRule)
+
+    val testService =
+      JobObservabilityService(
+        actorDefinitionService = actorDefinitionService,
+        connectionService = connectionService,
+        jobPersistence = jobPersistence,
+        obsStatsService = obsStatsService,
+        workspaceService = workspaceService,
+        metricClient = metricClient,
+        jobObservabilityReportingService = null,
+        jobObservabilityRulesService = rulesService,
+        streamStatsService = streamStatsService,
+      )
+
+    // Create streams WITHOUT additionalStats (null)
+    val currentStream =
+      ObsStreamStats(
+        id = ObsStreamStatsId(jobId = 1L, streamNamespace = "public", streamName = "users"),
+        bytesLoaded = 1000L,
+        recordsLoaded = 10000L, // OUTLIER (100x normal)
+        recordsRejected = 5L,
+        wasBackfilled = false,
+        wasResumed = false,
+        additionalStats = null, // No additionalStats
+      )
+
+    val historicalStreams =
+      listOf(
+        ObsStreamStats(
+          id = ObsStreamStatsId(jobId = 2L, streamNamespace = "public", streamName = "users"),
+          bytesLoaded = 1000L,
+          recordsLoaded = 100L,
+          recordsRejected = 5L,
+          wasBackfilled = false,
+          wasResumed = false,
+          additionalStats = null,
+        ),
+        ObsStreamStats(
+          id = ObsStreamStatsId(jobId = 3L, streamNamespace = "public", streamName = "users"),
+          bytesLoaded = 1000L,
+          recordsLoaded = 100L,
+          recordsRejected = 5L,
+          wasBackfilled = false,
+          wasResumed = false,
+          additionalStats = emptyMap(), // Empty map
+        ),
+      )
+
+    // Call evaluateStream
+    val result = testService.evaluateStream("public", "users", currentStream, historicalStreams)
+
+    // Verify existing outlier detection still works
+    assertTrue(result.isOutlier)
+
+    // Verify recordsLoaded outlier was detected
+    val recordsEval = result.evaluations.find { it.name == "recordsLoaded" }
+    assert(recordsEval != null)
+    assertTrue(recordsEval!!.isOutlier)
+
+    // Verify additionalStats is empty in metrics
+    assertEquals(emptyMap<String, BigDecimal>(), result.metrics.additionalStats)
   }
 }

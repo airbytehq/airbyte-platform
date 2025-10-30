@@ -28,6 +28,7 @@ import io.airbyte.statistics.Outliers
 import io.airbyte.statistics.Scores
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
+import java.math.BigDecimal
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -243,15 +244,29 @@ class JobObservabilityService(
     )
   }
 
-  private fun evaluateStream(
+  @InternalForTesting
+  internal fun evaluateStream(
     namespace: String?,
     name: String,
     currentStream: ObsStreamStats,
     streamHistory: List<ObsStreamStats>,
   ): StreamInfo {
     val currentStreamMetrics = currentStream.toStreamMetrics()
+
+    // Get scores for top-level fields (bytesLoaded, recordsLoaded, etc.)
     val streamScore = outliers.getScores(streamHistory.map { it.toStreamMetrics() }, currentStreamMetrics)
-    val streamEvaluations = evaluateStreamOutliers(streamScore)
+
+    // Get scores for additionalStats
+    val additionalStatsScores =
+      computeAdditionalStatsScores(
+        currentStream.additionalStats,
+        streamHistory.map { it.additionalStats },
+      )
+
+    // Merge the two score maps
+    val allScores = streamScore + additionalStatsScores
+
+    val streamEvaluations = evaluateStreamOutliers(allScores)
     return StreamInfo(
       namespace = namespace,
       name = name,
@@ -400,7 +415,44 @@ class JobObservabilityService(
       bytesLoaded = bytesLoaded,
       recordsLoaded = recordsLoaded,
       recordsRejected = recordsRejected,
+      additionalStats = additionalStats ?: emptyMap(),
     )
+
+  /**
+   * Compute outlier scores for additionalStats by calling getScores per metric key.
+   */
+  @InternalForTesting
+  internal fun computeAdditionalStatsScores(
+    currentStats: Map<String, BigDecimal>?,
+    historicalStats: List<Map<String, BigDecimal>?>,
+  ): Map<String, Scores> {
+    if (currentStats == null || currentStats.isEmpty()) return emptyMap()
+
+    return currentStats
+      .mapNotNull { (key, currentValue) ->
+        // Collect historical values for this key
+        val historicalValues = historicalStats.mapNotNull { it?.get(key)?.toDouble() }
+
+        if (historicalValues.isEmpty()) {
+          null
+        } else {
+          // Combine all values and wrap in anonymous objects in one expression
+          val allValues = historicalValues + currentValue.toDouble()
+          val wrappers =
+            allValues.map { v ->
+              object {
+                val value = v
+              }
+            }
+
+          // Call getScores with historical and current
+          val scores = outliers.getScores(wrappers.dropLast(1), wrappers.last())
+
+          // Map directly to the key -> score pair
+          scores["value"]?.let { key to it }
+        }
+      }.toMap()
+  }
 
   private fun evaluateJobOutliers(scores: Map<String, Scores>): List<OutlierEvaluation> =
     jobObservabilityRulesService

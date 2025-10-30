@@ -17,6 +17,7 @@ import io.airbyte.statistics.plus
 import io.airbyte.statistics.times
 import io.airbyte.statistics.zScore
 import jakarta.inject.Singleton
+import java.math.BigDecimal
 
 /**
  * The Job metrics to consider for outlier detection.
@@ -33,6 +34,7 @@ data class StreamMetrics(
   var bytesLoaded: Long,
   var recordsLoaded: Long,
   var recordsRejected: Long,
+  var additionalStats: Map<String, BigDecimal> = emptyMap(),
 )
 
 /**
