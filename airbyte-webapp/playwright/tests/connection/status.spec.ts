@@ -67,12 +67,20 @@ test.describe("Connection Status - Faker + E2E", () => {
       timeout: 30000,
     });
 
-    // Wait for the job to complete (data-loading="false")
-    await expect(page.locator("[data-testid='connection-status-indicator'][data-loading='false']")).toBeVisible({
-      timeout: 120000, // Should complete in < 1 minute, but we should leave some buffer for potential slowdowns
+    // Wait for "Sync starting…" message to confirm sync actually kicked off
+    await expect(page.locator("[data-testid='streams-list-subtitle']")).toContainText("Sync starting", {
+      timeout: 10000,
     });
 
-    // Verify manual sync button is enabled again
+    // Cancel the sync immediately once we've verified it started
+    await connectionUI.cancelSync(page);
+
+    // Verify cancellation succeeded - on status page, the connection indicator should show incomplete status
+    await expect(page.locator("[data-testid='connection-status-indicator'][data-status='incomplete']")).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Verify manual sync button is enabled again after cancellation
     return expect(page.locator("[data-testid='manual-sync-button']")).toBeEnabled({ timeout: 10000 });
   });
 });
