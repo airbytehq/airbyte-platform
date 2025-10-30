@@ -11,6 +11,7 @@ import io.airbyte.data.repositories.entities.ObsStreamStatsId
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import java.math.BigDecimal
 import java.time.Duration
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -154,6 +155,43 @@ class ObsStatsServiceTest : AbstractConfigRepositoryTest() {
         jobTypes = listOf(JobConfigType.reset_connection, JobConfigType.refresh),
       )
     assertEquals(setOf(54L, 52L, 51L), stats.map { it.id.jobId }.toSet())
+  }
+
+  @Test
+  fun `update of streamStats with additionalStats`() {
+    // Save initial stream stats with additionalStats
+    val initialStats = mapOf("wal_size" to BigDecimal("100.0"), "replication_lag" to BigDecimal("5.0"))
+    val stream =
+      Fixtures.defaultObsStreamStats.copy(
+        id = ObsStreamStatsId(jobId = 100L, streamNamespace = "public", streamName = "users"),
+        additionalStats = initialStats,
+      )
+
+    obsStatsService.saveStreamStats(listOf(stream))
+    val savedStats = obsStatsService.getJobStreamStats(100L)
+    assertEquals(1, savedStats.size)
+    assertEquals(initialStats, savedStats.first().additionalStats)
+
+    // Update with different additionalStats
+    val updatedAdditionalStats =
+      mapOf(
+        "wal_size" to BigDecimal("200.0"),
+        "replication_lag" to BigDecimal("10.0"),
+        "connections" to BigDecimal("50.0"), // New key
+      )
+    val updatedStream =
+      stream.copy(
+        bytesLoaded = 500,
+        additionalStats = updatedAdditionalStats,
+      )
+
+    obsStatsService.saveStreamStats(listOf(updatedStream))
+
+    // Verify additionalStats was updated
+    val actualUpdatedStats = obsStatsService.getJobStreamStats(100L)
+    assertEquals(1, actualUpdatedStats.size)
+    assertEquals(500L, actualUpdatedStats.first().bytesLoaded)
+    assertEquals(updatedAdditionalStats, actualUpdatedStats.first().additionalStats)
   }
 
   private fun ObsJobsStats.filterCreatedAtForTest(): ObsJobsStats = copy(createdAt = OffsetDateTime.MIN)

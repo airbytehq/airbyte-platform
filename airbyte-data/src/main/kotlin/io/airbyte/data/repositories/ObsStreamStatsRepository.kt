@@ -53,7 +53,8 @@ interface ObsStreamStatsRepository : PageableRepository<ObsStreamStats, ObsStrea
         records_loaded = :recordsLoaded,
         records_rejected = :recordsRejected,
         was_backfilled = :wasBackfilled,
-        was_resumed = :wasResumed
+        was_resumed = :wasResumed,
+        additional_stats = :additionalStats::jsonb
     WHERE
         job_id = :jobId AND
         stream_name = :streamName AND
