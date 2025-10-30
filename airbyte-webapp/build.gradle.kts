@@ -40,8 +40,7 @@ val outsideWebappDependencies =
 listOf(
     project(":oss:airbyte-api:server-api").file("src/main/openapi/config.yaml").path,
     project(":oss:airbyte-api:problems-api").file("src/main/openapi/api-problems.yaml").path,
-    project(":oss:airbyte-connector-builder-server").file("src/main/openapi/openapi.yaml").path,
-    project(":oss:airbyte-connector-builder-server").file("CDK_VERSION").path,
+    file("../airbyte-connector-builder-resources/CDK_VERSION").path,
 )
 
 configure<NodeExtension> {

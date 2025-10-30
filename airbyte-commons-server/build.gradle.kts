@@ -37,7 +37,6 @@ dependencies {
   implementation("io.pebbletemplates:pebble:3.2.4")
 
   implementation(project(":oss:airbyte-analytics"))
-  implementation(project(":oss:airbyte-api:connector-builder-api"))
   implementation(project(":oss:airbyte-api:manifest-server-api"))
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-api:server-api"))
