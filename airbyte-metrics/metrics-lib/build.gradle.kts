@@ -15,7 +15,6 @@ dependencies {
   implementation(project(":oss:airbyte-db:jooq"))
   implementation(project(":oss:airbyte-db:db-lib"))
 
-  implementation(libs.guava)
   implementation(libs.google.cloud.storage)
   implementation(libs.bundles.micronaut.kotlin)
   implementation(libs.otel.sdk)

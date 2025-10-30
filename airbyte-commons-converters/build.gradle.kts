@@ -19,7 +19,6 @@ dependencies {
   implementation(project(":oss:airbyte-json-validation"))
   implementation(project(":oss:airbyte-mappers"))
   implementation(libs.airbyte.protocol)
-  implementation(libs.guava)
   implementation(libs.slf4j.api)
   implementation(libs.bundles.datadog)
 

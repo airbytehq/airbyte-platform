@@ -29,7 +29,6 @@ dependencies {
   implementation(libs.reactor.core)
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.kubernetes.client)
-  implementation(libs.guava)
   implementation(libs.cron.utils)
 
   // CBServer dependencies - should probably move to deps.toml

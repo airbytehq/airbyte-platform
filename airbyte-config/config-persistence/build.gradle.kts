@@ -55,7 +55,6 @@ dependencies {
   integrationTestImplementation(project(":oss:airbyte-config:config-persistence"))
 
   testFixturesApi(libs.jackson.databind)
-  testFixturesApi(libs.guava)
   testFixturesApi(project(":oss:airbyte-json-validation"))
   testFixturesApi(project(":oss:airbyte-commons"))
   testFixturesApi(project(":oss:airbyte-config:config-models"))

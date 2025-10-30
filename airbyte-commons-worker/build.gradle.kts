@@ -20,7 +20,6 @@ dependencies {
   implementation(libs.bundles.kubernetes.client)
   implementation(libs.java.jwt)
   implementation(libs.gson)
-  implementation(libs.guava)
   implementation(libs.temporal.sdk) {
     exclude(module = "guava")
   }

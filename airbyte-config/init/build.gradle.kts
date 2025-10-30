@@ -23,7 +23,6 @@ dependencies {
   implementation(libs.airbyte.protocol)
   implementation(project(":oss:airbyte-json-validation"))
   implementation(libs.failsafe.okhttp)
-  implementation(libs.guava)
   implementation(libs.okhttp)
   implementation(libs.bundles.jackson)
   implementation(libs.semver4j)

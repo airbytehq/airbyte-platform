@@ -6,7 +6,6 @@ plugins {
 dependencies {
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
-  implementation(libs.guava)
   implementation(libs.google.cloud.storage)
   implementation(libs.aws.java.sdk.s3)
   implementation(libs.aws.java.sdk.sts)

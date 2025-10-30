@@ -23,7 +23,6 @@ dependencies {
   implementation(libs.kotlin.logging)
   implementation(libs.bundles.micronaut.metrics)
   implementation(libs.bundles.datadog)
-  implementation(libs.guava)  // Explicitly needed for @VisibleForTesting annotation
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-micronaut"))

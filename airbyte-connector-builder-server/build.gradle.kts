@@ -24,7 +24,6 @@ dependencies {
   implementation(libs.bundles.datadog)
   // implementation(libs.bundles.temporal)  uncomment this when we start using temporal to invoke connector commands
   implementation(libs.sentry.java)
-  implementation(libs.guava)
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.micronaut.cache)

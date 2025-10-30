@@ -17,10 +17,8 @@ dependencies {
   implementation(libs.kotlin.logging)
   implementation("org.commonmark:commonmark:0.21.0")
 
-  implementation(libs.guava)
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
-
 
   testImplementation(libs.mockk)
   testRuntimeOnly(libs.junit.jupiter.engine)

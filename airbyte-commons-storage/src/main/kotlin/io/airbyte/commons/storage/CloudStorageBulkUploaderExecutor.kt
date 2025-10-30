@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.storage
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder
+import io.airbyte.commons.concurrent.ThreadFactoryBuilder
 import io.airbyte.commons.envvar.EnvVar
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
@@ -21,7 +21,7 @@ object CloudStorageBulkUploaderExecutor {
   private val executorService =
     Executors.newScheduledThreadPool(
       EnvVar.CLOUD_STORAGE_APPENDER_THREADS.fetch(default = "20")!!.toInt(),
-      ThreadFactoryBuilder().setNameFormat("airbyte-cloud-storage-appender-%d").build(),
+      ThreadFactoryBuilder().withThreadNameFormat("airbyte-cloud-storage-appender-%d").build(),
     )
 
   /**

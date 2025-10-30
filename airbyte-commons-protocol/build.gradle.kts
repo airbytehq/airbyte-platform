@@ -12,9 +12,7 @@ dependencies {
 
   implementation(libs.bundles.micronaut.annotation)
   implementation(libs.airbyte.protocol)
-  implementation(libs.guava)
   implementation(libs.bundles.jackson)
-
 
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.bundles.junit)

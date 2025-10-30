@@ -53,7 +53,6 @@ dependencies {
   implementation(libs.java.jwt)
   implementation(libs.kotlin.logging)
   implementation(libs.kubernetes.client)
-  implementation(libs.guava)
   implementation(libs.retrofit)
   implementation(libs.temporal.sdk) {
     exclude(module = "guava")

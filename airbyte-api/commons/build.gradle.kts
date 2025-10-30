@@ -16,7 +16,6 @@ dependencies {
   api(libs.failsafe.okhttp)
   api(libs.failsafe.retrofit)
   api(libs.okhttp)
-  api(libs.guava)
   api(libs.java.jwt)
   api(libs.google.auth.library.oauth2.http)
   api(libs.kotlin.logging)

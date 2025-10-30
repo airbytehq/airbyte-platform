@@ -4,62 +4,86 @@
 
 package io.airbyte.commons.io
 
-import com.google.common.util.concurrent.MoreExecutors
+import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.logging.MdcScope
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers
-import org.mockito.Mockito
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import java.util.function.Consumer
 
 internal class LineGobblerTest {
   @Test
   fun readAllLines() {
-    val consumer: Consumer<String> = Mockito.mock()
+    val consumer: Consumer<String> = mockk(relaxed = true)
     val `is`: InputStream = ByteArrayInputStream("test\ntest2\n".toByteArray(StandardCharsets.UTF_8))
-    val executor: ExecutorService = Mockito.spy(MoreExecutors.newDirectExecutorService())
+    val executor: ExecutorService =
+      mockk<ExecutorService> {
+        every { submit(any<VoidCallable>()) } answers {
+          (firstArg() as VoidCallable).call()
+          mockk<Future<Void?>>()
+        }
+        every { shutdown() } returns Unit
+      }
 
     executor.submit<Void?>(LineGobbler(`is`, consumer, executor, emptyMap()))
 
-    Mockito.verify(consumer).accept("test")
-    Mockito.verify(consumer).accept("test2")
-    Mockito.verify(executor).shutdown()
+    verify(exactly = 1) { consumer.accept("test") }
+    verify(exactly = 1) { consumer.accept("test2") }
+    verify(exactly = 1) { executor.shutdown() }
   }
 
   @Test
   fun shutdownOnSuccess() {
-    val consumer: Consumer<String> = Mockito.mock()
+    val consumer: Consumer<String> = mockk(relaxed = true)
     val `is`: InputStream = ByteArrayInputStream("test\ntest2\n".toByteArray(StandardCharsets.UTF_8))
-    val executor: ExecutorService = Mockito.spy(MoreExecutors.newDirectExecutorService())
+    val executor: ExecutorService =
+      mockk<ExecutorService> {
+        every { submit(any<VoidCallable>()) } answers {
+          (firstArg() as VoidCallable).call()
+          mockk<Future<Void?>>()
+        }
+        every { shutdown() } returns Unit
+      }
 
     executor.submit<Void?>(LineGobbler(`is`, consumer, executor, emptyMap()))
 
-    Mockito.verify(consumer, Mockito.times(2)).accept(ArgumentMatchers.anyString())
-    Mockito.verify(executor).shutdown()
+    verify(exactly = 2) { consumer.accept(any()) }
+    verify(exactly = 1) { executor.shutdown() }
   }
 
   @Test
   fun shutdownOnError() {
-    val consumer: Consumer<String> = Mockito.mock()
-    Mockito.doAnswer { throw RuntimeException() }.`when`(consumer).accept(ArgumentMatchers.anyString())
+    val consumer: Consumer<String> =
+      mockk(relaxed = true) {
+        every { accept(any()) } throws RuntimeException()
+      }
     val `is`: InputStream = ByteArrayInputStream("test\ntest2\n".toByteArray(StandardCharsets.UTF_8))
-    val executor: ExecutorService = Mockito.spy(MoreExecutors.newDirectExecutorService())
-
+    val executor: ExecutorService =
+      mockk<ExecutorService> {
+        every { submit(any<VoidCallable>()) } answers {
+          (firstArg() as VoidCallable).call()
+          mockk<Future<Void?>>()
+        }
+        every { shutdown() } returns Unit
+      }
     executor.submit<Void?>(LineGobbler(`is`, consumer, executor, emptyMap()))
 
-    Mockito.verify(consumer).accept(ArgumentMatchers.anyString())
-    Mockito.verify(executor).shutdown()
+    verify(exactly = 1) { consumer.accept(any()) }
+    verify(exactly = 1) { executor.shutdown() }
   }
 
   @Test
   fun readFromNullInputStream() {
-    val consumer: Consumer<String> = Mockito.mock()
-    val mdcBuilder = Mockito.mock(MdcScope.Builder::class.java)
+    val consumer: Consumer<String> = mockk(relaxed = true)
+    val mdcBuilder = mockk<MdcScope.Builder>()
     val `is`: InputStream? = null
 
     assertDoesNotThrow(
@@ -68,6 +92,6 @@ internal class LineGobblerTest {
       },
     )
 
-    Mockito.verify(consumer, Mockito.times(0)).accept(ArgumentMatchers.anyString())
+    verify(exactly = 0) { consumer.accept(any()) }
   }
 }

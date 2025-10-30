@@ -4,10 +4,10 @@
 
 package io.airbyte.config.specs
 
-import com.google.common.io.Resources
 import io.airbyte.commons.constants.AirbyteCatalogConstants
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.resources.Resources
 import io.airbyte.commons.version.AirbyteProtocolVersion
 import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorRegistry
@@ -38,10 +38,8 @@ class LocalDefinitionsProvider : DefinitionsProvider {
    */
   fun getLocalConnectorRegistry(): ConnectorRegistry {
     try {
-      val url = Resources.getResource(LOCAL_CONNECTOR_REGISTRY_PATH)
-      logger.info { "Loading $LOCAL_CONNECTOR_REGISTRY_PATH definitions from local connector registry $url" }
-
-      val jsonString = Resources.toString(url, StandardCharsets.UTF_8)
+      val jsonString = Resources.read(LOCAL_CONNECTOR_REGISTRY_PATH)
+      logger.info { "Loading $LOCAL_CONNECTOR_REGISTRY_PATH definitions from local connector registry" }
       return Jsons.deserialize(jsonString, ConnectorRegistry::class.java)
     } catch (e: Exception) {
       throw RuntimeException("Failed to fetch local connector registry", e)

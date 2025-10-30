@@ -15,7 +15,6 @@ dependencies {
   implementation(libs.micronaut.jackson.databind)
   implementation(libs.google.cloud.storage)
   implementation(libs.micronaut.jooq)
-  implementation(libs.guava)
   api(libs.bundles.secret.hydration)  // Keep: secret hydration types may be in public API
   api(libs.airbyte.protocol)  // Keep: protocol types in public API
   implementation(libs.jakarta.transaction.api)

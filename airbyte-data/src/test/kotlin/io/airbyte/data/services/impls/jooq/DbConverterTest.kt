@@ -4,10 +4,10 @@
 
 package io.airbyte.data.services.impls.jooq
 
-import com.google.common.io.Resources
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.protocol.DefaultProtocolSerializer
 import io.airbyte.commons.protocol.SerializationTarget
+import io.airbyte.commons.resources.Resources
 import io.airbyte.config.Notification
 import io.airbyte.config.Notification.NotificationType
 import io.airbyte.config.NotificationSettings
@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import java.nio.charset.Charset
 import java.time.OffsetDateTime
 import java.util.UUID
 import io.airbyte.config.ConfiguredAirbyteCatalog as InternalConfiguredAirbyteCatalog
@@ -39,7 +38,7 @@ internal class DbConverterTest {
   )
   @ParameterizedTest
   fun testConfiguredAirbyteCatalogDeserNonReg(resourceName: String) {
-    val rawCatalog = Resources.toString(Resources.getResource(resourceName), Charset.defaultCharset())
+    val rawCatalog = Resources.read(resourceName)
 
     val protocolCatalog = parseConfiguredAirbyteCatalogAsProtocol(rawCatalog)
     val internalCatalog = parseConfiguredAirbyteCatalog(rawCatalog)

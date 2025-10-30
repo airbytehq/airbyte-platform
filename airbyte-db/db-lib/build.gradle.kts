@@ -30,7 +30,6 @@ dependencies {
   implementation(project(":oss:airbyte-json-validation"))
   api(project(":oss:airbyte-config:config-models"))  // Exposed in ConfigSchema
   implementation(libs.bundles.flyway)
-  implementation(libs.guava)
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
   implementation(libs.kotlin.logging)

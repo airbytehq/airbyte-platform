@@ -18,7 +18,6 @@ dependencies {
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.datadog)
   implementation(libs.bundles.jackson)
-  implementation(libs.guava)
   implementation(libs.micronaut.kotlin.extension.functions)
   implementation(libs.airbyte.protocol)
   implementation(libs.kotlin.logging)

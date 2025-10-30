@@ -17,7 +17,6 @@ dependencies {
   implementation(libs.kubernetes.client)
   implementation(libs.kubernetes.httpclient.okhttp)
   implementation(libs.google.cloud.storage)
-  implementation(libs.guava)
   implementation(libs.kotlin.logging)
   implementation(libs.micronaut.cache.caffeine)
   implementation(libs.micronaut.jackson.databind)

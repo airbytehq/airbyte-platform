@@ -33,7 +33,6 @@ dependencies {
     isTransitive = false
   }
   jooqGenerator(libs.bundles.flyway)
-  jooqGenerator(libs.guava)
   jooqGenerator(libs.hikaricp)
   jooqGenerator(libs.jackson.datatype)
   jooqGenerator(libs.jackson.jdk.datatype)

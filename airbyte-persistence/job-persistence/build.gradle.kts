@@ -10,7 +10,6 @@ dependencies {
 
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
-  implementation(libs.guava)
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-commons"))

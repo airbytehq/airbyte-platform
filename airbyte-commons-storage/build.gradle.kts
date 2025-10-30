@@ -21,7 +21,6 @@ dependencies {
   implementation(libs.aws.java.sdk.sts)       // Hidden: AWS STS SDK
   implementation(libs.s3)                     // Hidden: S3 SDK
   implementation(libs.google.cloud.storage)   // Hidden: GCS SDK (still used in StorageClient.kt)
-  implementation(libs.guava)
   implementation(libs.slf4j.api)
   implementation(libs.jackson.kotlin)
   implementation(project(":oss:airbyte-metrics:metrics-lib"))

@@ -4,15 +4,14 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.io.Files
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.nio.charset.Charset
 
 internal class OpenApiConfigHandlerTest {
   @Test
   fun testGetFile() {
-    val lines: MutableList<String> = Files.readLines(OpenApiConfigHandler().file, Charset.defaultCharset())
-    Assertions.assertTrue(lines.get(0).contains("openapi"))
+    val lines: List<String> = OpenApiConfigHandler().file.readLines(Charset.defaultCharset())
+    assertTrue(lines[0].contains("openapi"))
   }
 }

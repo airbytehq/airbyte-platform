@@ -10,7 +10,6 @@ dependencies {
   implementation(libs.bundles.micronaut.annotation)
 
   implementation(libs.bundles.jackson)
-  implementation(libs.guava)
   implementation(libs.bundles.slf4j)
   implementation(libs.kotlin.logging)
   implementation(libs.google.cloud.storage)
@@ -21,7 +20,7 @@ dependencies {
   implementation(libs.json.path)
   implementation(libs.json.smart)
 
-
+  testImplementation(libs.mockk)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)

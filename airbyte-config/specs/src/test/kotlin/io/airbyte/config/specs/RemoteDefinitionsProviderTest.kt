@@ -5,8 +5,8 @@
 package io.airbyte.config.specs
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.io.Resources
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.resources.Resources
 import io.airbyte.commons.yaml.Yamls
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.ConnectorRegistryDestinationDefinition
@@ -30,7 +30,6 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.URI
-import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -50,8 +49,7 @@ internal class RemoteDefinitionsProviderTest {
     webServer = MockWebServer()
     baseUrl = webServer!!.url("/").toString()
 
-    val testCatalog = Resources.getResource("connector_catalog.json")
-    val jsonBody = Resources.toString(testCatalog, Charset.defaultCharset())
+    val jsonBody = Resources.read("connector_catalog.json")
     jsonCatalog = Jsons.deserialize(jsonBody)
     validCatalogResponse =
       MockResponse()

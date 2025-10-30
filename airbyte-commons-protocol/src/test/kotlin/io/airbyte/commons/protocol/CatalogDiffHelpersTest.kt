@@ -5,7 +5,6 @@
 package io.airbyte.commons.protocol
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.io.Resources
 import io.airbyte.commons.protocol.CatalogDiffHelpers.getAllFieldNames
 import io.airbyte.commons.protocol.CatalogDiffHelpers.getCatalogDiff
 import io.airbyte.commons.protocol.CatalogDiffHelpers.getFullyQualifiedFieldNamesWithTypes
@@ -20,6 +19,7 @@ import io.airbyte.commons.protocol.transformmodels.StreamTransform.Companion.cre
 import io.airbyte.commons.protocol.transformmodels.StreamTransformType
 import io.airbyte.commons.protocol.transformmodels.UpdateFieldSchemaTransform
 import io.airbyte.commons.protocol.transformmodels.UpdateStreamTransform
+import io.airbyte.commons.resources.Resources
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.DestinationSyncMode
@@ -36,13 +36,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import java.nio.charset.StandardCharsets
 
 internal class CatalogDiffHelpersTest {
-  private fun readResource(name: String): String {
-    val resource = Resources.getResource(name)
-    return Resources.toString(resource, StandardCharsets.UTF_8)
-  }
+  private fun readResource(name: String): String = Resources.read(name)
 
   @Test
   fun testGetFieldNames() {

@@ -16,7 +16,6 @@ dependencies {
   implementation(libs.aws.java.sdk.sts)
   implementation(libs.s3)
   implementation(libs.google.cloud.storage)
-  implementation(libs.guava)
   implementation(libs.slf4j.api)
   implementation(libs.jackson.kotlin)
 
