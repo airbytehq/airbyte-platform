@@ -158,7 +158,10 @@ class ReplicationCommand(
     syncSummary.totalStats = replicationAttemptSummary.totalStats
     syncSummary.streamStats = replicationAttemptSummary.streamStats
     syncSummary.performanceMetrics = replicationAttemptSummary?.performanceMetrics
-    syncSummary.streamCount = catalog?. let { it.streams.size.toLong() } ?: 0L
+    // Prefer streamCount from worker output; fallback to calculating from catalog for backwards compatibility
+    syncSummary.streamCount = replicationAttemptSummary.streamCount
+      ?: catalog?.let { it.streams.size.toLong() }
+      ?: 0L
     standardSyncOutput.standardSyncSummary = syncSummary
     standardSyncOutput.failures = failures
 

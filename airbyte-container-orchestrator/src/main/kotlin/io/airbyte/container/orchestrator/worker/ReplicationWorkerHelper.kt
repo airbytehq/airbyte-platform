@@ -229,6 +229,10 @@ class ReplicationWorkerHelper(
         .withStartTime(timeTracker.replicationStartTime)
         .withEndTime(System.currentTimeMillis())
         .withPerformanceMetrics(buildPerformanceMetrics(performanceMetrics))
+        .withStreamCount(
+          destinationConfig.catalog.streams.size
+            .toLong(),
+        )
 
     val output =
       ReplicationOutput()
