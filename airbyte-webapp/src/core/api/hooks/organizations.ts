@@ -20,11 +20,7 @@ import {
   getOrganizationDataWorkerUsage,
 } from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
-import {
-  listInternalAccountOrganizations,
-  getEmbeddedOrganizationsCurrentScoped,
-  createInternalAccountOrganizationsIdOnboardingProgress,
-} from "../generated/SonarClient";
+import { listInternalAccountOrganizations, getEmbeddedOrganizationsCurrentScoped } from "../generated/SonarClient";
 import { SCOPE_ORGANIZATION, SCOPE_USER } from "../scopes";
 import {
   ConsumptionTimeWindow,
@@ -40,7 +36,6 @@ import {
   WorkspaceRead,
   OrganizationDataWorkerUsageRequestBody,
 } from "../types/AirbyteClient";
-import { OnboardingStatusEnum, Organization } from "../types/SonarClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 export const organizationKeys = {
@@ -390,32 +385,4 @@ export const useGetScopedOrganization = () => {
 export const useListEmbeddedOrganizations = () => {
   const requestOptions = useRequestOptions();
   return useSuspenseQuery(organizationKeys.list(["embedded"]), () => listInternalAccountOrganizations(requestOptions));
-};
-
-export const useUpdateEmbeddedOnboardingStatus = () => {
-  const requestOptions = useRequestOptions();
-  const queryClient = useQueryClient();
-
-  return useMutation(
-    ({ organizationId, status }: { organizationId: string; status: OnboardingStatusEnum }) => {
-      return createInternalAccountOrganizationsIdOnboardingProgress(
-        organizationId,
-        { onboarding_status: status },
-        requestOptions
-      );
-    },
-    {
-      onSuccess: (data) => {
-        queryClient.setQueryData<Organization | undefined>(organizationKeys.detail(data.organization_id), (old) => {
-          if (!old) {
-            return undefined;
-          }
-          return {
-            ...old,
-            onboarding_status: data.onboarding_progress ?? old.onboarding_status,
-          };
-        });
-      },
-    }
-  );
 };

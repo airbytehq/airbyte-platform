@@ -597,7 +597,6 @@ internal class ConnectionsHandlerTest {
         secretStorageService,
         secretReferenceService,
         currentUserService,
-        mock(),
       )
 
     matchSearchHandler =
