@@ -8969,7 +8969,6 @@ paths:
       operationId: listSources
       x-sdk-alias: listSources
       x-sdk-group: Sources
-      x-sdk-entity-operation: Source#list
       summary: List sources
       parameters:
         - name: workspaceIds
@@ -9213,7 +9212,6 @@ paths:
           description: Not found
       operationId: listDestinations
       x-sdk-alias: listDestinations
-      x-sdk-entity-operation: Destination#list
       x-sdk-group: Destinations
       summary: List destinations
       parameters:
@@ -9778,7 +9776,6 @@ paths:
       x-sdk-alias: listWorkspaces
       x-sdk-group: Workspaces
       summary: List workspaces
-      x-sdk-entity-operation: Workspace#list
       parameters:
         - name: workspaceIds
           description: The UUIDs of the workspaces you wish to fetch. Empty list will retrieve all allowed workspaces.
