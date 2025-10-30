@@ -25,9 +25,9 @@ kotlinx-coroutine = "1.10.2"
 kubernetes-client = "7.3.1"
 logback = "1.5.19"
 micrometer = "1.15.1"
-micronaut = "4.10.0"
+micronaut = "4.10.1"
 micronaut-cache = "5.3.0"
-micronaut-core = "4.10.7"
+micronaut-core = "4.10.8"
 micronaut-data = "4.14.0"
 micronaut-email = "2.10.0"
 micronaut-jaxrs = "4.10.0"
@@ -35,9 +35,9 @@ micronaut-jdbc = "6.3.1"
 micronaut-kotlin = "4.7.0"
 micronaut-kubernetes = "7.1.1"
 micronaut-micrometer = "5.13.1"
-micronaut-openapi = "6.19.1"
+micronaut-openapi = "6.19.2"
 micronaut-security = "4.15.0"
-micronaut-test = "4.10.1"
+micronaut-test = "4.10.2"
 moshi = "1.15.0"
 mockito = "5.18.0"
 mockito-kotlin = "5.2.1"
@@ -224,7 +224,7 @@ micronaut-data-model = { module = "io.micronaut.data:micronaut-data-model", vers
 micronaut-data-tx = { module = "io.micronaut.data:micronaut-data-tx", version.ref = "micronaut-data" }
 micronaut-email = { module = "io.micronaut.email:micronaut-email", version.ref = "micronaut-email" }
 micronaut-email-sendgrid = { module = "io.micronaut.email:micronaut-email-sendgrid", version.ref = "micronaut-email" }
-micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway", version = "7.9.0" }
+micronaut-flyway = { module = "io.micronaut.flyway:micronaut-flyway", version = "7.9.1" }
 micronaut-inject = { module = "io.micronaut:micronaut-inject", version.ref = "micronaut-core" }
 micronaut-http = { module = "io.micronaut:micronaut-http", version.ref = "micronaut-core" }
 micronaut-http-client = { module = "io.micronaut:micronaut-http-client", version.ref = "micronaut-core" }
