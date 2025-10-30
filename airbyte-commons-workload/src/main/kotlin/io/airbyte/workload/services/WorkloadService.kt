@@ -341,6 +341,19 @@ class WorkloadService(
     }
   }
 
+  /**
+   * Get all non-terminal workloads for a specific connection.
+   * Used for administrative operations like force cleanup.
+   *
+   * Filters at the database level using both the legacy workloadLabels table
+   * and the new labels JSONB column for compatibility during migration.
+   */
+  fun getNonTerminalWorkloadsByConnection(connectionId: UUID): List<Workload> =
+    workloadRepository.findByConnectionIdAndStatuses(
+      connectionId = connectionId.toString(),
+      statuses = ACTIVE_STATUSES,
+    )
+
   private fun emitTimeToTransitionMetric(
     workload: Workload,
     status: WorkloadStatus,

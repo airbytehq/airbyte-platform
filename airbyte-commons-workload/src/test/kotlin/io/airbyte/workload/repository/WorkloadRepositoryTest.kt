@@ -815,6 +815,76 @@ class WorkloadRepositoryTest {
     assertEquals(workload2.id, resultSearch[1].id)
   }
 
+  @Test
+  fun `findByConnectionIdAndStatuses returns workloads matching connection_id in JSONB labels`() {
+    val connectionId1 = UUID.randomUUID()
+    val connectionId2 = UUID.randomUUID()
+
+    // Workloads for connection 1 with various statuses
+    val workload1Pending =
+      Fixtures.workload(
+        id = "conn1-pending-${Fixtures.newWorkloadId()}",
+        status = WorkloadStatus.PENDING,
+        labels = mapOf("connection_id" to connectionId1.toString()),
+      )
+    val workload1Running =
+      Fixtures.workload(
+        id = "conn1-running-${Fixtures.newWorkloadId()}",
+        status = WorkloadStatus.RUNNING,
+        labels = mapOf("connection_id" to connectionId1.toString()),
+      )
+    val workload1Success =
+      Fixtures.workload(
+        id = "conn1-success-${Fixtures.newWorkloadId()}",
+        status = WorkloadStatus.SUCCESS,
+        labels = mapOf("connection_id" to connectionId1.toString()),
+      )
+
+    // Workload for connection 2
+    val workload2Running =
+      Fixtures.workload(
+        id = "conn2-running-${Fixtures.newWorkloadId()}",
+        status = WorkloadStatus.RUNNING,
+        labels = mapOf("connection_id" to connectionId2.toString()),
+      )
+
+    workloadRepo.save(workload1Pending)
+    workloadRepo.save(workload1Running)
+    workloadRepo.save(workload1Success)
+    workloadRepo.save(workload2Running)
+
+    // Test 1: Find all non-terminal workloads for connection 1
+    val activeStatuses = listOf(WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING)
+    val result1 = workloadRepo.findByConnectionIdAndStatuses(connectionId1.toString(), activeStatuses).sortedBy { it.id }
+
+    assertEquals(2, result1.size)
+    assertEquals(workload1Pending.id, result1[0].id)
+    assertEquals(workload1Running.id, result1[1].id)
+
+    // Test 2: Verify connection isolation - connection 2 returns different workloads
+    val result2 = workloadRepo.findByConnectionIdAndStatuses(connectionId2.toString(), activeStatuses)
+
+    assertEquals(1, result2.size)
+    assertEquals(workload2Running.id, result2[0].id)
+
+    // Test 3: Find only RUNNING workloads for connection 1
+    val result3 = workloadRepo.findByConnectionIdAndStatuses(connectionId1.toString(), listOf(WorkloadStatus.RUNNING))
+
+    assertEquals(1, result3.size)
+    assertEquals(workload1Running.id, result3[0].id)
+
+    // Test 4: Terminal statuses should be excluded
+    val result4 = workloadRepo.findByConnectionIdAndStatuses(connectionId1.toString(), listOf(WorkloadStatus.SUCCESS))
+
+    assertEquals(1, result4.size)
+    assertEquals(workload1Success.id, result4[0].id)
+
+    // Test 5: Non-existent connection returns empty
+    val result5 = workloadRepo.findByConnectionIdAndStatuses(UUID.randomUUID().toString(), activeStatuses)
+
+    assertEquals(0, result5.size)
+  }
+
   object Fixtures {
     fun newWorkloadId() = "${UUID.randomUUID()}_test"
 
@@ -825,6 +895,7 @@ class WorkloadRepositoryTest {
       dataplaneId: String? = null,
       status: WorkloadStatus = WorkloadStatus.PENDING,
       workloadLabels: List<WorkloadLabel>? = null,
+      labels: Map<String, String>? = null,
       inputPayload: String = "",
       workspaceId: UUID? = UUID.randomUUID(),
       organizationId: UUID? = UUID.randomUUID(),
@@ -842,6 +913,7 @@ class WorkloadRepositoryTest {
         dataplaneId = dataplaneId,
         status = status,
         workloadLabels = workloadLabels,
+        labels = labels,
         inputPayload = inputPayload,
         workspaceId = workspaceId,
         organizationId = organizationId,

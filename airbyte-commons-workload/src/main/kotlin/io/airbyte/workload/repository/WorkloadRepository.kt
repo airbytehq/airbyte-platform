@@ -124,6 +124,31 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
   ): List<Workload>
 
   /**
+   * Find workloads by connection ID and statuses.
+   * Filters using the labels JSONB column or legacy workload_label table.
+   * Used for administrative operations like force cleanup.
+   *
+   * IMPORTANT: This method is NOT optimized for high-frequency production use.
+   * The connection_id filtering is not indexed (no GIN index on labels JSONB column),
+   * which means queries will perform JSONB extraction on all rows matching the status filter.
+   * This is acceptable for infrequent administrative/break-glass operations but would
+   * degrade performance if used in high-volume production code paths.
+   */
+  @Query(
+    """
+      SELECT DISTINCT w.* FROM workload w
+      LEFT JOIN workload_label wl ON w.id = wl.workload_id
+      WHERE ((:statuses) IS NULL OR w.status = ANY(CAST(ARRAY[:statuses] AS workload_status[])))
+      AND (w.labels->>'connection_id' = :connectionId
+           OR (wl.key = 'connection_id' AND wl.value = :connectionId))
+    """,
+  )
+  fun findByConnectionIdAndStatuses(
+    connectionId: String,
+    @Expandable statuses: List<WorkloadStatus>?,
+  ): List<Workload>
+
+  /**
    * Cancel transitions a workload into a cancelled state if the workload was non-terminal.
    * Cancel returns the workload if the status was just updated to cancelled.
    */
