@@ -4,11 +4,10 @@
 
 package io.airbyte.commons.server.scheduler
 
-import com.google.common.hash.HashFunction
-import com.google.common.hash.Hashing
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.lang.Exceptions
+import io.airbyte.commons.security.md5
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder
 import io.airbyte.commons.temporal.TemporalClient
 import io.airbyte.commons.temporal.TemporalJobType
@@ -47,6 +46,8 @@ import java.time.Instant
 import java.util.UUID
 import java.util.function.Function
 import java.util.function.Supplier
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Temporal job client for synchronous jobs (i.e. spec, check, discover).
@@ -202,14 +203,8 @@ class DefaultSynchronousSchedulerClient(
         .withDockerImage(dockerImage)
         .withProtocolVersion(Version(sourceVersion.protocolVersion))
         .withSourceId(source.sourceId.toString())
-        .withConfigHash(
-          HASH_FUNCTION
-            .hashBytes(
-              Jsons.serialize(source.configuration).toByteArray(
-                Charsets.UTF_8,
-              ),
-            ).toString(),
-        ).withConnectorVersion(sourceVersion.dockerImageTag)
+        .withConfigHash(Jsons.serialize(source.configuration).toByteArray(Charsets.UTF_8).md5())
+        .withConnectorVersion(sourceVersion.dockerImageTag)
         .withIsCustomConnector(isCustomConnector)
         .withResourceRequirements(actorDefinitionResourceRequirements)
 
@@ -264,14 +259,8 @@ class DefaultSynchronousSchedulerClient(
         .withDockerImage(dockerImage)
         .withProtocolVersion(Version(destinationVersion.protocolVersion))
         .withSourceId(destination.destinationId.toString())
-        .withConfigHash(
-          HASH_FUNCTION
-            .hashBytes(
-              Jsons.serialize(destination.configuration).toByteArray(
-                Charsets.UTF_8,
-              ),
-            ).toString(),
-        ).withConnectorVersion(destinationVersion.dockerImageTag)
+        .withConfigHash(Jsons.serialize(destination.configuration).toByteArray(Charsets.UTF_8).md5())
+        .withConnectorVersion(destinationVersion.dockerImageTag)
         .withIsCustomConnector(destinationDefinition.custom)
         .withResourceRequirements(actorDefResourceRequirements)
 
@@ -467,11 +456,5 @@ class DefaultSynchronousSchedulerClient(
           log.error { "Tried to report job failure for type $configType, but this job type is not supported" }
       }
     }
-  }
-
-  companion object {
-    private val log = KotlinLogging.logger {}
-
-    private val HASH_FUNCTION: HashFunction = Hashing.md5()
   }
 }

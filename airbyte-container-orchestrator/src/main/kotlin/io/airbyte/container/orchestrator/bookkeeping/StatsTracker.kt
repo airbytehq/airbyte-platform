@@ -4,8 +4,8 @@
 
 package io.airbyte.container.orchestrator.bookkeeping
 
-import com.google.common.hash.HashFunction
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.security.murmur332
 import io.airbyte.config.FileTransferInformations
 import io.airbyte.container.orchestrator.worker.state.getIdFromStateMessage
 import io.airbyte.metrics.MetricClient
@@ -502,12 +502,27 @@ class StreamStatsTracker(
   fun areStreamStatsReliable(): Boolean = !streamStats.unreliableStateOperations.get()
 }
 
-fun AirbyteStateMessage.getStateHashCode(hashFunction: HashFunction): Int =
+fun AirbyteStateMessage.getStateHashCode(): Int =
   when (type) {
-    AirbyteStateMessage.AirbyteStateType.GLOBAL -> hashFunction.hashBytes(Jsons.serialize(global).toByteArray()).hashCode()
-    AirbyteStateMessage.AirbyteStateType.STREAM -> hashFunction.hashBytes(Jsons.serialize(stream.streamState).toByteArray()).hashCode()
+    AirbyteStateMessage.AirbyteStateType.GLOBAL ->
+      Jsons
+        .serialize(global)
+        .toByteArray()
+        .murmur332()
+        .hashCode()
+    AirbyteStateMessage.AirbyteStateType.STREAM ->
+      Jsons
+        .serialize(stream.streamState)
+        .toByteArray()
+        .murmur332()
+        .hashCode()
     // state type is legacy
-    else -> hashFunction.hashBytes(Jsons.serialize(data).toByteArray()).hashCode()
+    else ->
+      Jsons
+        .serialize(data)
+        .toByteArray()
+        .murmur332()
+        .hashCode()
   }
 
 fun AirbyteStateMessage.getStateIdForStatsTracking(): Int = getIdFromStateMessage(this)

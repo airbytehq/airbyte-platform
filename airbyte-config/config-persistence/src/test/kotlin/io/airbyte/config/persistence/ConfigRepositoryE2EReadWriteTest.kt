@@ -19,14 +19,18 @@ import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.StandardSync
-import io.airbyte.config.StandardWorkspace
-import io.airbyte.config.persistence.MockData.ActorCatalogFetchEventWithCreationDate
+import io.airbyte.config.persistence.MockData.ACTOR_CATALOG_ID_1
+import io.airbyte.config.persistence.MockData.ACTOR_CATALOG_ID_3
+import io.airbyte.config.persistence.MockData.DESTINATION_ID_1
+import io.airbyte.config.persistence.MockData.SOURCE_ID_1
+import io.airbyte.config.persistence.MockData.SOURCE_ID_2
 import io.airbyte.config.persistence.MockData.actorCatalogFetchEventsForAggregationTest
 import io.airbyte.config.persistence.MockData.actorCatalogFetchEventsSameSource
 import io.airbyte.config.persistence.MockData.actorCatalogs
 import io.airbyte.config.persistence.MockData.actorDefinitionVersion
 import io.airbyte.config.persistence.MockData.customDestinationDefinition
 import io.airbyte.config.persistence.MockData.customSourceDefinition
+import io.airbyte.config.persistence.MockData.defaultOrganization
 import io.airbyte.config.persistence.MockData.destinationConnections
 import io.airbyte.config.persistence.MockData.destinationOauthParameters
 import io.airbyte.config.persistence.MockData.grantableDestinationDefinition1
@@ -44,7 +48,6 @@ import io.airbyte.config.persistence.MockData.standardSyncs
 import io.airbyte.config.persistence.MockData.standardWorkspaces
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.SecretsRepositoryWriter
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.CatalogService
@@ -71,13 +74,10 @@ import io.airbyte.data.services.shared.ActorServicePaginationHelper
 import io.airbyte.data.services.shared.DestinationAndDefinition
 import io.airbyte.data.services.shared.SourceAndDefinition
 import io.airbyte.data.services.shared.StandardSyncQuery
-import io.airbyte.db.ContextQueryFunction
 import io.airbyte.db.Database
 import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorCatalogType
-import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorCatalogFetchEventRecord
-import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorCatalogRecord
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages
 import io.airbyte.featureflag.SourceDefinition
 import io.airbyte.featureflag.TestClient
@@ -90,17 +90,19 @@ import io.airbyte.protocol.models.v0.DestinationOperation
 import io.airbyte.protocol.models.v0.DestinationSyncMode
 import io.airbyte.protocol.models.v0.Field
 import io.airbyte.test.utils.BaseConfigDatabaseTest
-import io.airbyte.validation.json.JsonValidationException
+import org.assertj.core.api.Assertions.assertThat
 import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.impl.DSL
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.spy
-import java.io.IOException
-import java.sql.SQLException
 import java.time.OffsetDateTime
 import java.util.Map
 import java.util.Optional
@@ -111,7 +113,7 @@ import org.mockito.Mockito.`when` as whenever
 
 /**
  * The tests in this class should be moved into separate test suites grouped by resource. Do NOT add
- * new tests here. Add them to resource based test suites (e.g. WorkspacePersistenceTest). If one
+ * new tests here. Add them to resource-based test suites (e.g. WorkspacePersistenceTest). If one
  * does not exist yet for that resource yet, create one and follow the pattern.
  */
 @Deprecated("")
@@ -145,7 +147,7 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     val actorPaginationServiceHelper = mock(ActorServicePaginationHelper::class.java)
 
     val organizationService = OrganizationServiceJooqImpl(database!!)
-    val defaultOrg = MockData.defaultOrganization()
+    val defaultOrg = defaultOrganization()
     organizationService.writeOrganization(defaultOrg)
 
     val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(database!!)
@@ -222,11 +224,11 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
 
     operationService = spy(OperationServiceJooqImpl(database!!))
 
-    for (workspace in MockData.standardWorkspaces()) {
+    for (workspace in standardWorkspaces()) {
       workspaceService.writeStandardWorkspaceNoSecrets(workspace!!)
     }
 
-    for (sourceDefinition in MockData.standardSourceDefinitions()) {
+    for (sourceDefinition in standardSourceDefinitions()) {
       val actorDefinitionVersion =
         MockData
           .actorDefinitionVersion()!!
@@ -235,7 +237,7 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
       sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, emptyList())
     }
 
-    for (destinationDefinition in MockData.standardDestinationDefinitions()) {
+    for (destinationDefinition in standardDestinationDefinitions()) {
       val actorDefinitionVersion =
         MockData
           .actorDefinitionVersion()!!
@@ -244,32 +246,32 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
       destinationService.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion, emptyList())
     }
 
-    for (source in MockData.sourceConnections()) {
+    for (source in sourceConnections()) {
       sourceService.writeSourceConnectionNoSecrets(source!!)
     }
 
-    for (destination in MockData.destinationConnections()) {
+    for (destination in destinationConnections()) {
       destinationService.writeDestinationConnectionNoSecrets(destination!!)
     }
 
-    for (operation in MockData.standardSyncOperations()) {
+    for (operation in standardSyncOperations()) {
       operationService.writeStandardSyncOperation(operation!!)
     }
 
-    for (sync in MockData.standardSyncs()) {
+    for (sync in standardSyncs()) {
       connectionService.writeStandardSync(sync!!)
     }
 
-    for (oAuthParameter in MockData.sourceOauthParameters()) {
+    for (oAuthParameter in sourceOauthParameters()) {
       oauthService.writeSourceOAuthParam(oAuthParameter!!)
     }
 
-    for (oAuthParameter in MockData.destinationOauthParameters()) {
+    for (oAuthParameter in destinationOauthParameters()) {
       oauthService.writeDestinationOAuthParam(oAuthParameter!!)
     }
 
     database?.transaction(
-      ContextQueryFunction { ctx: DSLContext ->
+      { ctx: DSLContext ->
         ctx.truncate(ACTOR_DEFINITION_WORKSPACE_GRANT).execute()
       },
     )
@@ -277,23 +279,23 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
 
   @Test
   fun testWorkspaceCountConnections() {
-    val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
-    Assertions.assertEquals(3, workspaceService.countConnectionsForWorkspace(workspaceId))
-    Assertions.assertEquals(2, workspaceService.countDestinationsForWorkspace(workspaceId))
-    Assertions.assertEquals(2, workspaceService.countSourcesForWorkspace(workspaceId))
+    val workspaceId = standardWorkspaces().get(0)!!.workspaceId
+    assertEquals(3, workspaceService.countConnectionsForWorkspace(workspaceId))
+    assertEquals(2, workspaceService.countDestinationsForWorkspace(workspaceId))
+    assertEquals(2, workspaceService.countSourcesForWorkspace(workspaceId))
   }
 
   @Test
   fun testWorkspaceCountConnectionsDeprecated() {
-    val workspaceId = standardWorkspaces().get(1)!!.getWorkspaceId()
+    val workspaceId = standardWorkspaces().get(1)!!.workspaceId
     // One connection is active and one is locked
-    Assertions.assertEquals(2, workspaceService.countConnectionsForWorkspace(workspaceId))
+    assertEquals(2, workspaceService.countConnectionsForWorkspace(workspaceId))
   }
 
   @Test
   fun testFetchActorsUsingDefinition() {
-    val destinationDefinitionId = publicDestinationDefinition()!!.getDestinationDefinitionId()
-    val sourceDefinitionId = publicSourceDefinition()!!.getSourceDefinitionId()
+    val destinationDefinitionId = publicDestinationDefinition()!!.destinationDefinitionId
+    val sourceDefinitionId = publicSourceDefinition()!!.sourceDefinitionId
     val destinationConnections =
       destinationService
         .listDestinationsForDefinition(
@@ -308,39 +310,31 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     val nullCreatedAtDestinationConnections =
       destinationConnections
         .map { destinationConnection ->
-          destinationConnection!!.withCreatedAt(null).withUpdatedAt(null)
+          destinationConnection.withCreatedAt(null).withUpdatedAt(null)
         }
 
     val nullCreatedAtSourceConnections =
       sourceConnections
-        .map { sourceConnection -> sourceConnection!!.withCreatedAt(null).withUpdatedAt(null) }
+        .map { sourceConnection -> sourceConnection.withCreatedAt(null).withUpdatedAt(null) }
 
-    org.assertj.core.api.Assertions
-      .assertThat<DestinationConnection?>(nullCreatedAtDestinationConnections)
+    assertThat(nullCreatedAtDestinationConnections)
       .containsExactlyElementsOf(
         destinationConnections()
-          .stream()
-          .filter { d: DestinationConnection? -> d!!.getDestinationDefinitionId() == destinationDefinitionId && !d.getTombstone() }
-          .collect(
-            Collectors.toList(),
-          ),
+          .filter { d: DestinationConnection? -> d!!.destinationDefinitionId == destinationDefinitionId && !d.getTombstone() }
+          .toList(),
       )
-    org.assertj.core.api.Assertions
-      .assertThat<SourceConnection?>(nullCreatedAtSourceConnections)
+    assertThat(nullCreatedAtSourceConnections)
       .containsExactlyElementsOf(
         sourceConnections()
-          .stream()
-          .filter { d: SourceConnection? -> d!!.getSourceDefinitionId() == sourceDefinitionId && !d.getTombstone() }
-          .collect(
-            Collectors.toList(),
-          ),
+          .filter { d: SourceConnection? -> d!!.sourceDefinitionId == sourceDefinitionId && !d.getTombstone() }
+          .toList(),
       )
   }
 
   @Test
   fun testReadActorCatalog() {
     val otherConfigHash = "OtherConfigHash"
-    val workspace = standardWorkspaces().get(0)
+    val workspace = standardWorkspaces()[0]
 
     val sourceDefinition =
       StandardSourceDefinition()
@@ -349,16 +343,16 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
         .withName("sourceDefinition")
     val actorDefinitionVersion =
       actorDefinitionVersion()!!
-        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
-        .withVersionId(sourceDefinition.getDefaultVersionId())
+        .withActorDefinitionId(sourceDefinition.sourceDefinitionId)
+        .withVersionId(sourceDefinition.defaultVersionId)
     sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, mutableListOf<ActorDefinitionBreakingChange>())
 
     val source =
       SourceConnection()
-        .withSourceDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .withSourceDefinitionId(sourceDefinition.sourceDefinitionId)
         .withSourceId(UUID.randomUUID())
         .withName("SomeConnector")
-        .withWorkspaceId(workspace!!.getWorkspaceId())
+        .withWorkspaceId(workspace!!.workspaceId)
         .withConfiguration(deserialize("{}"))
     sourceService.writeSourceConnectionNoSecrets(source)
 
@@ -370,7 +364,7 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
         Field.of("color", JsonSchemaType.STRING),
         Field.of("price", JsonSchemaType.NUMBER),
       )
-    catalogService.writeActorCatalogWithFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH)
+    catalogService.writeActorCatalogWithFetchEvent(firstCatalog, source.sourceId, DOCKER_IMAGE_TAG, CONFIG_HASH)
 
     val secondCatalog =
       CatalogHelpers.createAirbyteCatalog(
@@ -380,7 +374,7 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
         Field.of("color", JsonSchemaType.STRING),
         Field.of("price", JsonSchemaType.NUMBER),
       )
-    catalogService.writeActorCatalogWithFetchEvent(secondCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash)
+    catalogService.writeActorCatalogWithFetchEvent(secondCatalog, source.sourceId, DOCKER_IMAGE_TAG, otherConfigHash)
 
     val expectedCatalog =
       (
@@ -405,18 +399,18 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
           "}"
       )
 
-    val catalogResult = catalogService.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH)
-    Assertions.assertTrue(catalogResult.isPresent())
-    Assertions.assertEquals(
-      Jsons.deserialize(expectedCatalog, AirbyteCatalog::class.java),
-      Jsons.`object`(catalogResult.get()!!.getCatalog(), AirbyteCatalog::class.java),
+    val catalogResult = catalogService.getActorCatalog(source.sourceId, DOCKER_IMAGE_TAG, CONFIG_HASH)
+    assertTrue(catalogResult.isPresent)
+    assertEquals(
+      deserialize(expectedCatalog, AirbyteCatalog::class.java),
+      Jsons.`object`(catalogResult.get().catalog, AirbyteCatalog::class.java),
     )
   }
 
   @Test
   fun testWriteCanonicalHashActorCatalog() {
-    val canonicalConfigHash = "8ad32981"
-    val workspace = standardWorkspaces().get(0)
+    val canonicalConfigHash = "8129d38a"
+    val workspace = standardWorkspaces()[0]
 
     val sourceDefinition =
       StandardSourceDefinition()
@@ -425,16 +419,16 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
         .withName("sourceDefinition")
     val actorDefinitionVersion =
       actorDefinitionVersion()!!
-        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
-        .withVersionId(sourceDefinition.getDefaultVersionId())
-    sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, mutableListOf<ActorDefinitionBreakingChange>())
+        .withActorDefinitionId(sourceDefinition.sourceDefinitionId)
+        .withVersionId(sourceDefinition.defaultVersionId)
+    sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, mutableListOf())
 
     val source =
       SourceConnection()
-        .withSourceDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .withSourceDefinitionId(sourceDefinition.sourceDefinitionId)
         .withSourceId(UUID.randomUUID())
         .withName("SomeConnector")
-        .withWorkspaceId(workspace!!.getWorkspaceId())
+        .withWorkspaceId(workspace!!.workspaceId)
         .withConfiguration(deserialize("{}"))
     sourceService.writeSourceConnectionNoSecrets(source)
 
@@ -446,7 +440,7 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
         Field.of("color", JsonSchemaType.STRING),
         Field.of("price", JsonSchemaType.NUMBER),
       )
-    catalogService.writeActorCatalogWithFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH)
+    catalogService.writeActorCatalogWithFetchEvent(firstCatalog, source.sourceId, DOCKER_IMAGE_TAG, CONFIG_HASH)
 
     val expectedCatalog =
       (
@@ -471,16 +465,16 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
           "}"
       )
 
-    val catalogResult = catalogService.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH)
-    Assertions.assertTrue(catalogResult.isPresent())
-    Assertions.assertEquals(catalogResult.get().getCatalogHash(), canonicalConfigHash)
-    Assertions.assertEquals(expectedCatalog, canonicalJsonSerialize(catalogResult.get().getCatalog()))
+    val catalogResult = catalogService.getActorCatalog(source.sourceId, DOCKER_IMAGE_TAG, CONFIG_HASH)
+    assertTrue(catalogResult.isPresent)
+    assertEquals(canonicalConfigHash, catalogResult.get().catalogHash)
+    assertEquals(expectedCatalog, canonicalJsonSerialize(catalogResult.get().catalog))
   }
 
   @Test
   fun testSimpleInsertActorCatalog() {
     val otherConfigHash = "OtherConfigHash"
-    val workspace = standardWorkspaces().get(0)
+    val workspace = standardWorkspaces()[0]
 
     val sourceDefinition =
       StandardSourceDefinition()
@@ -489,16 +483,16 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
         .withName("sourceDefinition")
     val actorDefinitionVersion =
       actorDefinitionVersion()!!
-        .withActorDefinitionId(sourceDefinition.getSourceDefinitionId())
-        .withVersionId(sourceDefinition.getDefaultVersionId())
-    sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, mutableListOf<ActorDefinitionBreakingChange>())
+        .withActorDefinitionId(sourceDefinition.sourceDefinitionId)
+        .withVersionId(sourceDefinition.defaultVersionId)
+    sourceService.writeConnectorMetadata(sourceDefinition, actorDefinitionVersion, mutableListOf())
 
     val source =
       SourceConnection()
-        .withSourceDefinitionId(sourceDefinition.getSourceDefinitionId())
+        .withSourceDefinitionId(sourceDefinition.sourceDefinitionId)
         .withSourceId(UUID.randomUUID())
         .withName("SomeConnector")
-        .withWorkspaceId(workspace!!.getWorkspaceId())
+        .withWorkspaceId(workspace!!.workspaceId)
         .withConfiguration(deserialize("{}"))
     sourceService.writeSourceConnectionNoSecrets(source)
 
@@ -506,75 +500,75 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     val expectedActorCatalog = CatalogHelpers.createAirbyteCatalog("clothes", Field.of("name", JsonSchemaType.STRING))
     catalogService.writeActorCatalogWithFetchEvent(
       actorCatalog,
-      source.getSourceId(),
+      source.sourceId,
       DOCKER_IMAGE_TAG,
       CONFIG_HASH,
     )
 
     val catalog =
-      catalogService.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH)
-    Assertions.assertTrue(catalog.isPresent())
-    Assertions.assertEquals(expectedActorCatalog, Jsons.`object`(catalog.get()!!.getCatalog(), AirbyteCatalog::class.java))
-    Assertions.assertFalse(catalogService.getActorCatalog(source.getSourceId(), OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH).isPresent())
-    Assertions.assertFalse(catalogService.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash).isPresent())
+      catalogService.getActorCatalog(source.sourceId, DOCKER_IMAGE_TAG, CONFIG_HASH)
+    assertTrue(catalog.isPresent)
+    assertEquals(expectedActorCatalog, Jsons.`object`(catalog.get().catalog, AirbyteCatalog::class.java))
+    assertFalse(catalogService.getActorCatalog(source.sourceId, OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH).isPresent)
+    assertFalse(catalogService.getActorCatalog(source.sourceId, DOCKER_IMAGE_TAG, otherConfigHash).isPresent)
 
-    catalogService.writeActorCatalogWithFetchEvent(actorCatalog, source.getSourceId(), OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH)
+    catalogService.writeActorCatalogWithFetchEvent(actorCatalog, source.sourceId, OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH)
     val catalogNewConnectorVersion =
-      catalogService.getActorCatalog(source.getSourceId(), OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH)
-    Assertions.assertTrue(catalogNewConnectorVersion.isPresent())
-    Assertions.assertEquals(
+      catalogService.getActorCatalog(source.sourceId, OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH)
+    assertTrue(catalogNewConnectorVersion.isPresent)
+    assertEquals(
       expectedActorCatalog,
-      Jsons.`object`(catalogNewConnectorVersion.get()!!.getCatalog(), AirbyteCatalog::class.java),
+      Jsons.`object`(catalogNewConnectorVersion.get().catalog, AirbyteCatalog::class.java),
     )
 
-    catalogService.writeActorCatalogWithFetchEvent(actorCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash)
+    catalogService.writeActorCatalogWithFetchEvent(actorCatalog, source.sourceId, DOCKER_IMAGE_TAG, otherConfigHash)
     val catalogNewConfig =
-      catalogService.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash)
-    Assertions.assertTrue(catalogNewConfig.isPresent())
-    Assertions.assertEquals(
+      catalogService.getActorCatalog(source.sourceId, DOCKER_IMAGE_TAG, otherConfigHash)
+    assertTrue(catalogNewConfig.isPresent)
+    assertEquals(
       expectedActorCatalog,
-      Jsons.`object`(catalogNewConfig.get()!!.getCatalog(), AirbyteCatalog::class.java),
+      Jsons.`object`(catalogNewConfig.get().catalog, AirbyteCatalog::class.java),
     )
 
     val catalogDbEntry =
       database
         ?.query(
-          ContextQueryFunction { ctx: org.jooq.DSLContext ->
-            ctx.selectCount().from(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG)
+          { ctx: DSLContext ->
+            ctx.selectCount().from(Tables.ACTOR_CATALOG)
           },
         )?.fetchOne()!!
         .into(Int::class.javaPrimitiveType)
-    Assertions.assertEquals(1, catalogDbEntry)
+    assertEquals(1, catalogDbEntry)
 
     // Writing the previous catalog with v1 data types
-    catalogService.writeActorCatalogWithFetchEvent(expectedActorCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash)
+    catalogService.writeActorCatalogWithFetchEvent(expectedActorCatalog, source.sourceId, DOCKER_IMAGE_TAG, otherConfigHash)
     val catalogV1NewConfig =
-      catalogService.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash)
-    Assertions.assertTrue(catalogV1NewConfig.isPresent())
-    Assertions.assertEquals(
+      catalogService.getActorCatalog(source.sourceId, DOCKER_IMAGE_TAG, otherConfigHash)
+    assertTrue(catalogV1NewConfig.isPresent)
+    assertEquals(
       expectedActorCatalog,
-      Jsons.`object`(catalogNewConfig.get()!!.getCatalog(), AirbyteCatalog::class.java),
+      Jsons.`object`(catalogNewConfig.get().catalog, AirbyteCatalog::class.java),
     )
 
-    catalogService.writeActorCatalogWithFetchEvent(expectedActorCatalog, source.getSourceId(), "1.4.0", otherConfigHash)
+    catalogService.writeActorCatalogWithFetchEvent(expectedActorCatalog, source.sourceId, "1.4.0", otherConfigHash)
     val catalogV1again =
-      catalogService.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash)
-    Assertions.assertTrue(catalogV1again.isPresent())
-    Assertions.assertEquals(
+      catalogService.getActorCatalog(source.sourceId, DOCKER_IMAGE_TAG, otherConfigHash)
+    assertTrue(catalogV1again.isPresent)
+    assertEquals(
       expectedActorCatalog,
-      Jsons.`object`(catalogNewConfig.get()!!.getCatalog(), AirbyteCatalog::class.java),
+      Jsons.`object`(catalogNewConfig.get().catalog, AirbyteCatalog::class.java),
     )
 
     val catalogDbEntry2 =
       database
         ?.query(
-          ContextQueryFunction { ctx: org.jooq.DSLContext ->
-            ctx.selectCount().from(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG)
+          { ctx: DSLContext ->
+            ctx.selectCount().from(Tables.ACTOR_CATALOG)
           },
         )?.fetchOne()!!
         .into(Int::class.javaPrimitiveType)
     // TODO this should be 2 once we re-enable datatypes v1
-    Assertions.assertEquals(1, catalogDbEntry2)
+    assertEquals(1, catalogDbEntry2)
   }
 
   @Test
@@ -588,16 +582,16 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
         .withName("destinationDefinition")
     val actorDefinitionVersion =
       actorDefinitionVersion()!!
-        .withActorDefinitionId(destinationDefinition.getDestinationDefinitionId())
-        .withVersionId(destinationDefinition.getDefaultVersionId())
-    destinationService.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion, mutableListOf<ActorDefinitionBreakingChange>())
+        .withActorDefinitionId(destinationDefinition.destinationDefinitionId)
+        .withVersionId(destinationDefinition.defaultVersionId)
+    destinationService.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion, mutableListOf())
 
     val destination =
       DestinationConnection()
-        .withDestinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
+        .withDestinationDefinitionId(destinationDefinition.destinationDefinitionId)
         .withDestinationId(UUID.randomUUID())
         .withName("SomeDestinationConnector")
-        .withWorkspaceId(workspace!!.getWorkspaceId())
+        .withWorkspaceId(workspace!!.workspaceId)
         .withConfiguration(deserialize("{}"))
     destinationService.writeDestinationConnectionNoSecrets(destination)
 
@@ -607,42 +601,42 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
           DestinationOperation().withObjectName("test_object").withSyncMode(DestinationSyncMode.APPEND).withJsonSchema(emptyObject()),
         ),
       )
-    catalogService.writeActorCatalogWithFetchEvent(destinationCatalog, destination.getDestinationId(), DOCKER_IMAGE_TAG, CONFIG_HASH)
+    catalogService.writeActorCatalogWithFetchEvent(destinationCatalog, destination.destinationId, DOCKER_IMAGE_TAG, CONFIG_HASH)
 
     val catalog =
-      catalogService.getActorCatalog(destination.getDestinationId(), DOCKER_IMAGE_TAG, CONFIG_HASH)
-    Assertions.assertTrue(catalog.isPresent())
-    Assertions.assertEquals(destinationCatalog, Jsons.`object`(catalog.get()!!.getCatalog(), DestinationCatalog::class.java))
-    Assertions.assertFalse(catalogService.getActorCatalog(destination.getDestinationId(), OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH).isPresent())
-    Assertions.assertFalse(catalogService.getActorCatalog(destination.getDestinationId(), DOCKER_IMAGE_TAG, otherConfigHash).isPresent())
+      catalogService.getActorCatalog(destination.destinationId, DOCKER_IMAGE_TAG, CONFIG_HASH)
+    assertTrue(catalog.isPresent)
+    assertEquals(destinationCatalog, Jsons.`object`(catalog.get().catalog, DestinationCatalog::class.java))
+    assertFalse(catalogService.getActorCatalog(destination.destinationId, OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH).isPresent)
+    assertFalse(catalogService.getActorCatalog(destination.destinationId, DOCKER_IMAGE_TAG, otherConfigHash).isPresent)
 
-    catalogService.writeActorCatalogWithFetchEvent(destinationCatalog, destination.getDestinationId(), OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH)
+    catalogService.writeActorCatalogWithFetchEvent(destinationCatalog, destination.destinationId, OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH)
     val catalogNewConnectorVersion =
-      catalogService.getActorCatalog(destination.getDestinationId(), OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH)
-    Assertions.assertTrue(catalogNewConnectorVersion.isPresent())
-    Assertions.assertEquals(
+      catalogService.getActorCatalog(destination.destinationId, OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH)
+    assertTrue(catalogNewConnectorVersion.isPresent)
+    assertEquals(
       destinationCatalog,
-      Jsons.`object`(catalogNewConnectorVersion.get()!!.getCatalog(), DestinationCatalog::class.java),
+      Jsons.`object`(catalogNewConnectorVersion.get().catalog, DestinationCatalog::class.java),
     )
 
-    catalogService.writeActorCatalogWithFetchEvent(destinationCatalog, destination.getDestinationId(), DOCKER_IMAGE_TAG, otherConfigHash)
+    catalogService.writeActorCatalogWithFetchEvent(destinationCatalog, destination.destinationId, DOCKER_IMAGE_TAG, otherConfigHash)
     val catalogNewConfig =
-      catalogService.getActorCatalog(destination.getDestinationId(), DOCKER_IMAGE_TAG, otherConfigHash)
-    Assertions.assertTrue(catalogNewConfig.isPresent())
-    Assertions.assertEquals(
+      catalogService.getActorCatalog(destination.destinationId, DOCKER_IMAGE_TAG, otherConfigHash)
+    assertTrue(catalogNewConfig.isPresent)
+    assertEquals(
       destinationCatalog,
-      Jsons.`object`(catalogNewConfig.get()!!.getCatalog(), DestinationCatalog::class.java),
+      Jsons.`object`(catalogNewConfig.get().catalog, DestinationCatalog::class.java),
     )
 
     val catalogDbEntry =
       database
         ?.query(
-          ContextQueryFunction { ctx: org.jooq.DSLContext ->
-            ctx.selectCount().from(io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG)
+          { ctx: DSLContext ->
+            ctx.selectCount().from(Tables.ACTOR_CATALOG)
           },
         )?.fetchOne()!!
         .into(Int::class.javaPrimitiveType)
-    Assertions.assertEquals(1, catalogDbEntry)
+    assertEquals(1, catalogDbEntry)
   }
 
   @Test
@@ -651,62 +645,59 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     val actualSyncs =
       connectionService
         .listWorkspaceStandardSyncs(
-          standardWorkspaces().get(0)!!.getWorkspaceId(),
+          standardWorkspaces()[0]!!.workspaceId,
           true,
-        ).filterNotNull()
-        .toMutableList()
+        ).toMutableList()
 
     assertSyncsMatch(expectedSyncs, actualSyncs)
   }
 
   @Test
   fun testListWorkspaceStandardSyncWithAllFiltering() {
-    val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
-    val query = StandardSyncQuery(workspaceId, listOf(MockData.SOURCE_ID_1), listOf(MockData.DESTINATION_ID_1), false)
+    val workspaceId = standardWorkspaces()[0]!!.workspaceId
+    val query = StandardSyncQuery(workspaceId, listOf(SOURCE_ID_1), listOf(DESTINATION_ID_1), false)
     val expectedSyncs =
       standardSyncs()
         .subList(0, 3)
         .stream()
-        .filter { sync: StandardSync? -> query.destinationId!!.contains(sync!!.getDestinationId()) }
-        .filter { sync: StandardSync? -> query.sourceId!!.contains(sync!!.getSourceId()) }
+        .filter { sync: StandardSync? -> query.destinationId!!.contains(sync!!.destinationId) }
+        .filter { sync: StandardSync? -> query.sourceId!!.contains(sync!!.sourceId) }
         .toList()
         .filterNotNull()
         .toMutableList()
-    val actualSyncs = connectionService.listWorkspaceStandardSyncs(query).filterNotNull().toMutableList()
+    val actualSyncs = connectionService.listWorkspaceStandardSyncs(query).toMutableList()
 
     assertSyncsMatch(expectedSyncs, actualSyncs)
   }
 
   @Test
   fun testListWorkspaceStandardSyncDestinationFiltering() {
-    val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
-    val query = StandardSyncQuery(workspaceId, null, listOf(MockData.DESTINATION_ID_1), false)
+    val workspaceId = standardWorkspaces()[0]!!.workspaceId
+    val query = StandardSyncQuery(workspaceId, null, listOf(DESTINATION_ID_1), false)
     val expectedSyncs =
       standardSyncs()
         .subList(0, 3)
-        .stream()
-        .filter { sync: StandardSync? -> query.destinationId!!.contains(sync!!.getDestinationId()) }
+        .filter { sync: StandardSync? -> query.destinationId!!.contains(sync!!.destinationId) }
         .toList()
         .filterNotNull()
         .toMutableList()
-    val actualSyncs = connectionService.listWorkspaceStandardSyncs(query).filterNotNull().toMutableList()
+    val actualSyncs = connectionService.listWorkspaceStandardSyncs(query).toMutableList()
 
     assertSyncsMatch(expectedSyncs, actualSyncs)
   }
 
   @Test
   fun testListWorkspaceStandardSyncSourceFiltering() {
-    val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
-    val query = StandardSyncQuery(workspaceId, listOf(MockData.SOURCE_ID_2), null, false)
+    val workspaceId = standardWorkspaces().get(0)!!.workspaceId
+    val query = StandardSyncQuery(workspaceId, listOf(SOURCE_ID_2), null, false)
     val expectedSyncs =
       standardSyncs()
         .subList(0, 3)
-        .stream()
-        .filter { sync: StandardSync? -> query.sourceId!!.contains(sync!!.getSourceId()) }
+        .filter { sync: StandardSync? -> query.sourceId!!.contains(sync!!.sourceId) }
         .toList()
         .filterNotNull()
         .toMutableList()
-    val actualSyncs = connectionService.listWorkspaceStandardSyncs(query).filterNotNull().toMutableList()
+    val actualSyncs = connectionService.listWorkspaceStandardSyncs(query).toMutableList()
 
     assertSyncsMatch(expectedSyncs, actualSyncs)
   }
@@ -716,12 +707,11 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     val expectedSyncs =
       standardSyncs()
         .subList(0, 3)
-        .stream()
         .toList()
         .filterNotNull()
         .toMutableList()
     val actualSyncs =
-      connectionService.listWorkspaceStandardSyncs(standardWorkspaces().get(0)!!.getWorkspaceId(), false).filterNotNull().toMutableList()
+      connectionService.listWorkspaceStandardSyncs(standardWorkspaces().get(0)!!.workspaceId, false).toMutableList()
 
     assertSyncsMatch(expectedSyncs, actualSyncs)
   }
@@ -729,29 +719,27 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   @Test
   fun testGetWorkspaceBySlug() {
     val workspace =
-      standardWorkspaces().get(0)
+      standardWorkspaces()[0]
 
     val tombstonedWorkspace =
-      standardWorkspaces().get(2)
-    val retrievedWorkspace = workspaceService.getWorkspaceBySlugOptional(workspace!!.getSlug(), false)
+      standardWorkspaces()[2]
+    val retrievedWorkspace = workspaceService.getWorkspaceBySlugOptional(workspace!!.slug, false)
     val retrievedTombstonedWorkspaceNoTombstone =
-      workspaceService.getWorkspaceBySlugOptional(tombstonedWorkspace!!.getSlug(), false)
+      workspaceService.getWorkspaceBySlugOptional(tombstonedWorkspace!!.slug, false)
     val retrievedTombstonedWorkspace =
-      workspaceService.getWorkspaceBySlugOptional(tombstonedWorkspace.getSlug(), true)
+      workspaceService.getWorkspaceBySlugOptional(tombstonedWorkspace.slug, true)
 
-    Assertions.assertTrue(retrievedWorkspace.isPresent())
+    assertTrue(retrievedWorkspace.isPresent)
 
-    org.assertj.core.api.Assertions
-      .assertThat<StandardWorkspace?>(retrievedWorkspace.get())
+    assertThat(retrievedWorkspace.get())
       .usingRecursiveComparison()
       .ignoringFields("createdAt", "updatedAt")
       .isEqualTo(workspace)
 
-    Assertions.assertFalse(retrievedTombstonedWorkspaceNoTombstone.isPresent())
-    Assertions.assertTrue(retrievedTombstonedWorkspace.isPresent())
+    assertFalse(retrievedTombstonedWorkspaceNoTombstone.isPresent)
+    assertTrue(retrievedTombstonedWorkspace.isPresent)
 
-    org.assertj.core.api.Assertions
-      .assertThat<StandardWorkspace?>(retrievedTombstonedWorkspace.get())
+    assertThat(retrievedTombstonedWorkspace.get())
       .usingRecursiveComparison()
       .ignoringFields("createdAt", "updatedAt")
       .isEqualTo(tombstonedWorkspace)
@@ -759,24 +747,24 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
 
   @Test
   fun testUpdateConnectionOperationIds() {
-    val sync = standardSyncs().get(0)
-    val existingOperationIds = sync!!.getOperationIds()
-    val connectionId = sync.getConnectionId()
+    val sync = standardSyncs()[0]
+    val existingOperationIds = sync!!.operationIds
+    val connectionId = sync.connectionId
 
     // this test only works as intended when there are multiple operationIds
-    Assertions.assertTrue(existingOperationIds.size > 1)
+    assertTrue(existingOperationIds.size > 1)
 
     // first, remove all associated operations
     var expectedOperationIds = mutableSetOf<UUID>()
     operationService.updateConnectionOperationIds(connectionId, expectedOperationIds)
     var actualOperationIds = fetchOperationIdsForConnectionId(connectionId)
-    Assertions.assertEquals(expectedOperationIds, actualOperationIds)
+    assertEquals(expectedOperationIds, actualOperationIds)
 
     // now, add back one operation
-    expectedOperationIds = mutableSetOf<UUID>(existingOperationIds.get(0))
+    expectedOperationIds = mutableSetOf(existingOperationIds.get(0))
     operationService.updateConnectionOperationIds(connectionId, expectedOperationIds)
     actualOperationIds = fetchOperationIdsForConnectionId(connectionId)
-    Assertions.assertEquals(expectedOperationIds, actualOperationIds)
+    assertEquals(expectedOperationIds, actualOperationIds)
 
     // finally, remove the first operation while adding back in the rest
     expectedOperationIds =
@@ -787,13 +775,13 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
         .toMutableSet()
     operationService.updateConnectionOperationIds(connectionId, expectedOperationIds)
     actualOperationIds = fetchOperationIdsForConnectionId(connectionId)
-    Assertions.assertEquals(expectedOperationIds, actualOperationIds)
+    assertEquals(expectedOperationIds, actualOperationIds)
   }
 
   private fun fetchOperationIdsForConnectionId(connectionId: UUID?): MutableSet<UUID> =
     database
       ?.query(
-        ContextQueryFunction { ctx: DSLContext ->
+        { ctx: DSLContext ->
           ctx
             .selectFrom(Tables.CONNECTION_OPERATION)
             .where(Tables.CONNECTION_OPERATION.CONNECTION_ID.eq(connectionId))
@@ -803,74 +791,70 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
 
   @Test
   fun testActorDefinitionWorkspaceGrantExists() {
-    val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
-    val definitionId = standardSourceDefinitions().get(0)!!.getSourceDefinitionId()
+    val workspaceId = standardWorkspaces()[0]!!.workspaceId
+    val definitionId = standardSourceDefinitions()[0]!!.sourceDefinitionId
 
-    Assertions.assertFalse(actorDefinitionService.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId, ScopeType.WORKSPACE))
+    assertFalse(actorDefinitionService.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId, ScopeType.WORKSPACE))
 
     actorDefinitionService.writeActorDefinitionWorkspaceGrant(definitionId, workspaceId, ScopeType.WORKSPACE)
-    Assertions.assertTrue(actorDefinitionService.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId, ScopeType.WORKSPACE))
+    assertTrue(actorDefinitionService.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId, ScopeType.WORKSPACE))
 
     actorDefinitionService.deleteActorDefinitionWorkspaceGrant(definitionId, workspaceId, ScopeType.WORKSPACE)
-    Assertions.assertFalse(actorDefinitionService.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId, ScopeType.WORKSPACE))
+    assertFalse(actorDefinitionService.actorDefinitionWorkspaceGrantExists(definitionId, workspaceId, ScopeType.WORKSPACE))
   }
 
   @Test
   fun testListPublicSourceDefinitions() {
     val actualDefinitions = sourceService.listPublicSourceDefinitions(false)
-    Assertions.assertEquals(listOf<StandardSourceDefinition?>(publicSourceDefinition()), actualDefinitions)
+    assertEquals(listOf(publicSourceDefinition()), actualDefinitions)
   }
 
   @Test
   fun testListWorkspaceSources() {
-    val workspaceId = standardWorkspaces().get(1)!!.getWorkspaceId()
+    val workspaceId = standardWorkspaces()[1]!!.workspaceId
     val expectedSources =
       sourceConnections()
-        .filter { source: SourceConnection? -> source!!.getWorkspaceId() == workspaceId }
+        .filter { source: SourceConnection? -> source!!.workspaceId == workspaceId }
         .toList()
     val sources = sourceService.listWorkspaceSourceConnection(workspaceId)
     val nullCreatedAtSources =
       sources
-        .stream()
-        .map<SourceConnection?> { sourceConnection: SourceConnection? -> sourceConnection!!.withCreatedAt(null).withUpdatedAt(null) }
+        .map { sourceConnection: SourceConnection? -> sourceConnection!!.withCreatedAt(null).withUpdatedAt(null) }
         .toList()
-    org.assertj.core.api.Assertions
-      .assertThat<SourceConnection?>(nullCreatedAtSources)
+    assertThat(nullCreatedAtSources)
       .hasSameElementsAs(expectedSources)
   }
 
   @Test
   fun testListWorkspaceDestinations() {
-    val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
+    val workspaceId = standardWorkspaces()[0]!!.workspaceId
     val expectedDestinations =
       destinationConnections()
-        .filter { destination: DestinationConnection? -> destination!!.getWorkspaceId() == workspaceId }
+        .filter { destination: DestinationConnection? -> destination!!.workspaceId == workspaceId }
         .toList()
     val destinations = destinationService.listWorkspaceDestinationConnection(workspaceId)
     val nullCreatedAtDestinations =
       destinations
-        .stream()
-        .map<DestinationConnection?> { destinationConnection: DestinationConnection? ->
+        .map { destinationConnection: DestinationConnection? ->
           destinationConnection!!.withCreatedAt(null).withUpdatedAt(null)
         }.toList()
-    org.assertj.core.api.Assertions
-      .assertThat<DestinationConnection?>(nullCreatedAtDestinations)
+    assertThat(nullCreatedAtDestinations)
       .hasSameElementsAs(expectedDestinations)
   }
 
   @Test
   fun testSourceDefinitionGrants() {
-    val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
+    val workspaceId = standardWorkspaces()[0]!!.workspaceId
     val grantableDefinition1 = grantableSourceDefinition1()
     val grantableDefinition2 = grantableSourceDefinition2()
     val customDefinition = customSourceDefinition()
 
-    actorDefinitionService.writeActorDefinitionWorkspaceGrant(customDefinition!!.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE)
-    actorDefinitionService.writeActorDefinitionWorkspaceGrant(grantableDefinition1!!.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE)
+    actorDefinitionService.writeActorDefinitionWorkspaceGrant(customDefinition!!.sourceDefinitionId, workspaceId, ScopeType.WORKSPACE)
+    actorDefinitionService.writeActorDefinitionWorkspaceGrant(grantableDefinition1!!.sourceDefinitionId, workspaceId, ScopeType.WORKSPACE)
     val actualGrantedDefinitions =
       sourceService
         .listGrantedSourceDefinitions(workspaceId, false)
-    org.assertj.core.api.Assertions.assertThat<StandardSourceDefinition?>(actualGrantedDefinitions).hasSameElementsAs(
+    assertThat<StandardSourceDefinition?>(actualGrantedDefinitions).hasSameElementsAs(
       listOf<StandardSourceDefinition?>(grantableDefinition1, customDefinition),
     )
 
@@ -882,8 +866,7 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
         Map.entry(grantableDefinition1, true),
         Map.entry(grantableDefinition2, false),
       )
-    org.assertj.core.api.Assertions
-      .assertThat(actualGrantableDefinitions.toList())
+    assertThat(actualGrantableDefinitions.toList())
       .hasSameElementsAs(expectedEntries)
   }
 
@@ -891,27 +874,26 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   @Test
   fun testListPublicDestinationDefinitions() {
     val actualDefinitions = destinationService.listPublicDestinationDefinitions(false)
-    Assertions.assertEquals(listOf(publicDestinationDefinition()), actualDefinitions)
+    assertEquals(listOf(publicDestinationDefinition()), actualDefinitions)
   }
 
   @Test
   fun testDestinationDefinitionGrants() {
-    val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
+    val workspaceId = standardWorkspaces()[0]!!.workspaceId
     val grantableDefinition1 = grantableDestinationDefinition1()
     val grantableDefinition2 = grantableDestinationDefinition2()
     val customDefinition = customDestinationDefinition()
 
-    actorDefinitionService.writeActorDefinitionWorkspaceGrant(customDefinition!!.getDestinationDefinitionId(), workspaceId, ScopeType.WORKSPACE)
+    actorDefinitionService.writeActorDefinitionWorkspaceGrant(customDefinition!!.destinationDefinitionId, workspaceId, ScopeType.WORKSPACE)
     actorDefinitionService.writeActorDefinitionWorkspaceGrant(
-      grantableDefinition1!!.getDestinationDefinitionId(),
+      grantableDefinition1!!.destinationDefinitionId,
       workspaceId,
       ScopeType.WORKSPACE,
     )
     val actualGrantedDefinitions =
       destinationService
         .listGrantedDestinationDefinitions(workspaceId, false)
-    org.assertj.core.api.Assertions
-      .assertThat<StandardDestinationDefinition?>(actualGrantedDefinitions)
+    assertThat<StandardDestinationDefinition?>(actualGrantedDefinitions)
       .hasSameElementsAs(
         listOf<StandardDestinationDefinition?>(grantableDefinition1, customDefinition),
       )
@@ -932,35 +914,35 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
   // todo: testDestinationDefinitionGrants for organization
   @Test
   fun testWorkspaceCanUseDefinition() {
-    val workspaceId = standardWorkspaces().get(0)!!.getWorkspaceId()
-    val otherWorkspaceId = standardWorkspaces().get(1)!!.getWorkspaceId()
-    val publicDefinitionId = publicSourceDefinition()!!.getSourceDefinitionId()
-    val grantableDefinition1Id = grantableSourceDefinition1()!!.getSourceDefinitionId()
-    val grantableDefinition2Id = grantableSourceDefinition2()!!.getSourceDefinitionId()
-    val customDefinitionId = customSourceDefinition()!!.getSourceDefinitionId()
+    val workspaceId = standardWorkspaces()[0]!!.workspaceId
+    val otherWorkspaceId = standardWorkspaces()[1]!!.workspaceId
+    val publicDefinitionId = publicSourceDefinition()!!.sourceDefinitionId
+    val grantableDefinition1Id = grantableSourceDefinition1()!!.sourceDefinitionId
+    val grantableDefinition2Id = grantableSourceDefinition2()!!.sourceDefinitionId
+    val customDefinitionId = customSourceDefinition()!!.sourceDefinitionId
 
     // Can use public definitions
-    Assertions.assertTrue(workspaceService.workspaceCanUseDefinition(publicDefinitionId, workspaceId))
+    assertTrue(workspaceService.workspaceCanUseDefinition(publicDefinitionId, workspaceId))
 
     // Can use granted definitions
     actorDefinitionService.writeActorDefinitionWorkspaceGrant(grantableDefinition1Id, workspaceId, ScopeType.WORKSPACE)
-    Assertions.assertTrue(workspaceService.workspaceCanUseDefinition(grantableDefinition1Id, workspaceId))
+    assertTrue(workspaceService.workspaceCanUseDefinition(grantableDefinition1Id, workspaceId))
     actorDefinitionService.writeActorDefinitionWorkspaceGrant(customDefinitionId, workspaceId, ScopeType.WORKSPACE)
-    Assertions.assertTrue(workspaceService.workspaceCanUseDefinition(customDefinitionId, workspaceId))
+    assertTrue(workspaceService.workspaceCanUseDefinition(customDefinitionId, workspaceId))
 
     // Cannot use private definitions without grant
-    Assertions.assertFalse(workspaceService.workspaceCanUseDefinition(grantableDefinition2Id, workspaceId))
+    assertFalse(workspaceService.workspaceCanUseDefinition(grantableDefinition2Id, workspaceId))
 
     // Cannot use other workspace's grants
     actorDefinitionService.writeActorDefinitionWorkspaceGrant(grantableDefinition2Id, otherWorkspaceId, ScopeType.WORKSPACE)
-    Assertions.assertFalse(workspaceService.workspaceCanUseDefinition(grantableDefinition2Id, workspaceId))
+    assertFalse(workspaceService.workspaceCanUseDefinition(grantableDefinition2Id, workspaceId))
 
     // Passing invalid IDs returns false
-    Assertions.assertFalse(workspaceService.workspaceCanUseDefinition(UUID(0L, 0L), workspaceId))
+    assertFalse(workspaceService.workspaceCanUseDefinition(UUID(0L, 0L), workspaceId))
 
     // workspaceCanUseCustomDefinition can only be true for custom definitions
-    Assertions.assertTrue(workspaceService.workspaceCanUseCustomDefinition(customDefinitionId, workspaceId))
-    Assertions.assertFalse(workspaceService.workspaceCanUseCustomDefinition(grantableDefinition1Id, workspaceId))
+    assertTrue(workspaceService.workspaceCanUseCustomDefinition(customDefinitionId, workspaceId))
+    assertFalse(workspaceService.workspaceCanUseCustomDefinition(grantableDefinition1Id, workspaceId))
 
     // todo: add tests for organizations
     // to test orgs, need to somehow link org to workspace
@@ -968,127 +950,127 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
 
   @Test
   fun testGetDestinationOAuthByDefinitionIdAndWorkspaceId() {
-    val destinationOAuthParameter = destinationOauthParameters().get(0)
+    val destinationOAuthParameter = destinationOauthParameters()[0]
     val result =
       oauthService.getDestinationOAuthParamByDefinitionIdOptional(
-        Optional.of<UUID>(destinationOAuthParameter!!.getWorkspaceId()),
+        Optional.of(destinationOAuthParameter!!.workspaceId),
         Optional.empty<UUID>(),
-        destinationOAuthParameter.getDestinationDefinitionId(),
+        destinationOAuthParameter.destinationDefinitionId,
       )
-    Assertions.assertTrue(result.isPresent())
-    Assertions.assertEquals(destinationOAuthParameter, result.get())
+    assertTrue(result.isPresent)
+    assertEquals(destinationOAuthParameter, result.get())
   }
 
   @Test
   fun testGetDestinationOAuthByDefinitionIdAndOrganizationId() {
-    val destinationOAuthParameter = destinationOauthParameters().get(2)
+    val destinationOAuthParameter = destinationOauthParameters()[2]
     val result =
       oauthService.getDestinationOAuthParamByDefinitionIdOptional(
         Optional.empty<UUID>(),
-        Optional.of<UUID>(destinationOAuthParameter!!.getOrganizationId()),
-        destinationOAuthParameter.getDestinationDefinitionId(),
+        Optional.of(destinationOAuthParameter!!.organizationId),
+        destinationOAuthParameter.destinationDefinitionId,
       )
-    Assertions.assertTrue(result.isPresent())
-    Assertions.assertEquals(destinationOAuthParameter, result.get())
+    assertTrue(result.isPresent)
+    assertEquals(destinationOAuthParameter, result.get())
   }
 
   @Test
   fun testGetDestinationOAuthByDefinitionIdAndNullWorkspaceIdOrganizationId() {
-    val destinationOAuthParameter = destinationOauthParameters().get(3)
+    val destinationOAuthParameter = destinationOauthParameters()[3]
     val result =
       oauthService.getDestinationOAuthParamByDefinitionIdOptional(
         Optional.empty<UUID>(),
         Optional.empty<UUID>(),
-        destinationOAuthParameter!!.getDestinationDefinitionId(),
+        destinationOAuthParameter!!.destinationDefinitionId,
       )
-    Assertions.assertTrue(result.isPresent())
-    Assertions.assertEquals(destinationOAuthParameter, result.get())
+    assertTrue(result.isPresent)
+    assertEquals(destinationOAuthParameter, result.get())
   }
 
   @Test
   fun testMissingDestinationOAuthByDefinitionId() {
     val missingId = UUID.fromString("fc59cfa0-06de-4c8b-850b-46d4cfb65629")
-    val destinationOAuthParameter = destinationOauthParameters().get(0)
+    val destinationOAuthParameter = destinationOauthParameters()[0]
     var result =
       oauthService.getDestinationOAuthParamByDefinitionIdOptional(
-        Optional.of<UUID>(destinationOAuthParameter!!.getWorkspaceId()),
+        Optional.of(destinationOAuthParameter!!.workspaceId),
         Optional.empty<UUID>(),
         missingId,
       )
-    Assertions.assertFalse(result.isPresent())
+    assertFalse(result.isPresent)
 
     result =
       oauthService.getDestinationOAuthParamByDefinitionIdOptional(
-        Optional.of<UUID>(missingId),
+        Optional.of(missingId),
         Optional.empty<UUID>(),
-        destinationOAuthParameter.getDestinationDefinitionId(),
+        destinationOAuthParameter.destinationDefinitionId,
       )
-    Assertions.assertFalse(result.isPresent())
+    assertFalse(result.isPresent)
   }
 
   @Test
   fun testGetSourceOAuthByDefinitionIdAndWorkspaceId() {
-    val sourceOAuthParameter = sourceOauthParameters().get(0)
+    val sourceOAuthParameter = sourceOauthParameters()[0]
     val result =
       oauthService.getSourceOAuthParamByDefinitionIdOptional(
-        Optional.of<UUID>(sourceOAuthParameter!!.getWorkspaceId()),
+        Optional.of(sourceOAuthParameter!!.workspaceId),
         Optional.empty<UUID>(),
-        sourceOAuthParameter.getSourceDefinitionId(),
+        sourceOAuthParameter.sourceDefinitionId,
       )
-    Assertions.assertTrue(result.isPresent())
-    Assertions.assertEquals(sourceOAuthParameter, result.get())
+    assertTrue(result.isPresent)
+    assertEquals(sourceOAuthParameter, result.get())
   }
 
   @Test
   fun testGetSourceOAuthByDefinitionIdAndOrganizationId() {
-    val sourceOAuthParameter = sourceOauthParameters().get(2)
+    val sourceOAuthParameter = sourceOauthParameters()[2]
     val result =
       oauthService.getSourceOAuthParamByDefinitionIdOptional(
         Optional.empty<UUID>(),
-        Optional.of<UUID>(sourceOAuthParameter!!.getOrganizationId()),
-        sourceOAuthParameter.getSourceDefinitionId(),
+        Optional.of(sourceOAuthParameter!!.organizationId),
+        sourceOAuthParameter.sourceDefinitionId,
       )
-    Assertions.assertTrue(result.isPresent())
-    Assertions.assertEquals(sourceOAuthParameter, result.get())
+    assertTrue(result.isPresent)
+    assertEquals(sourceOAuthParameter, result.get())
   }
 
   @Test
   fun testGetSourceOAuthByDefinitionIdAndNullWorkspaceIdAndOrganizationId() {
-    val sourceOAuthParameter = sourceOauthParameters().get(3)
+    val sourceOAuthParameter = sourceOauthParameters()[3]
     val result =
       oauthService.getSourceOAuthParamByDefinitionIdOptional(
         Optional.empty<UUID>(),
         Optional.empty<UUID>(),
-        sourceOAuthParameter!!.getSourceDefinitionId(),
+        sourceOAuthParameter!!.sourceDefinitionId,
       )
-    Assertions.assertTrue(result.isPresent())
-    Assertions.assertEquals(sourceOAuthParameter, result.get())
+    assertTrue(result.isPresent)
+    assertEquals(sourceOAuthParameter, result.get())
   }
 
   @Test
   fun testMissingSourceOAuthByDefinitionId() {
     val missingId = UUID.fromString("fc59cfa0-06de-4c8b-850b-46d4cfb65629")
-    val sourceOAuthParameter = sourceOauthParameters().get(0)
+    val sourceOAuthParameter = sourceOauthParameters()[0]
     var result =
       oauthService.getSourceOAuthParamByDefinitionIdOptional(
-        Optional.of<UUID>(sourceOAuthParameter!!.getWorkspaceId()),
+        Optional.of(sourceOAuthParameter!!.workspaceId),
         Optional.empty<UUID>(),
         missingId,
       )
-    Assertions.assertFalse(result.isPresent())
+    assertFalse(result.isPresent)
 
     result =
       oauthService.getSourceOAuthParamByDefinitionIdOptional(
-        Optional.of<UUID>(missingId),
+        Optional.of(missingId),
         Optional.empty<UUID>(),
-        sourceOAuthParameter.getSourceDefinitionId(),
+        sourceOAuthParameter.sourceDefinitionId,
       )
-    Assertions.assertFalse(result.isPresent())
+    assertFalse(result.isPresent)
   }
 
   @Test
   fun testGetStandardSyncUsingOperation() {
-    val operationId = standardSyncOperations().get(0)!!.getOperationId()
+    val operationId = standardSyncOperations()[0]!!.operationId
     val expectedSyncs =
       standardSyncs()
         .subList(0, 3)
@@ -1096,7 +1078,7 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
         .toList()
         .filterNotNull()
         .toMutableList()
-    val actualSyncs = connectionService.listStandardSyncsUsingOperation(operationId).filterNotNull().toMutableList()
+    val actualSyncs = connectionService.listStandardSyncsUsingOperation(operationId).toMutableList()
 
     assertSyncsMatch(expectedSyncs, actualSyncs)
   }
@@ -1105,18 +1087,16 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     expectedSyncs: MutableList<StandardSync>,
     actualSyncs: MutableList<StandardSync>,
   ) {
-    Assertions.assertEquals(expectedSyncs.size, actualSyncs.size)
+    assertEquals(expectedSyncs.size, actualSyncs.size)
 
     for (expected in expectedSyncs) {
       val maybeActual =
-        actualSyncs.stream().filter { s: StandardSync -> s.getConnectionId() == expected.getConnectionId() }.findFirst()
-      if (maybeActual.isEmpty()) {
-        Assertions.fail<Any?>(
-          String.format(
-            "Expected to find connectionId %s in result, but actual connectionIds are %s",
-            expected.getConnectionId(),
-            actualSyncs.stream().map<UUID?> { obj: StandardSync -> obj.getConnectionId() }.collect(Collectors.toList()),
-          ),
+        actualSyncs.stream().filter { s: StandardSync -> s.connectionId == expected.connectionId }.findFirst()
+      if (maybeActual.isEmpty) {
+        fail<Any?>(
+          "Expected to find connectionId ${expected.connectionId} in result, but actual connectionIds are ${actualSyncs.map { obj: StandardSync ->
+            obj.connectionId
+          }}",
         )
       }
       val actual = maybeActual.get()
@@ -1124,35 +1104,32 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
       // operationIds can be ordered differently in the query result than in the mock data, so they need
       // to be verified separately
       // from the rest of the sync.
-      org.assertj.core.api.Assertions
-        .assertThat<UUID?>(actual.getOperationIds())
-        .hasSameElementsAs(expected.getOperationIds())
+      assertThat(actual.operationIds)
+        .hasSameElementsAs(expected.operationIds)
 
       // now, clear operationIds so the rest of the sync can be compared
-      expected.setOperationIds(null)
-      actual.setOperationIds(null)
-      expected.setCreatedAt(null)
-      actual.setCreatedAt(null)
-      Assertions.assertEquals(expected, actual)
+      expected.operationIds = null
+      actual.operationIds = null
+      expected.createdAt = null
+      actual.createdAt = null
+      assertEquals(expected, actual)
     }
   }
 
   @Test
   fun testDeleteStandardSyncOperation() {
-    val deletedOperationId = standardSyncOperations().get(0)!!.getOperationId()
+    val deletedOperationId = standardSyncOperations()[0]!!.operationId
     val syncs = standardSyncs()
     operationService.deleteStandardSyncOperation(deletedOperationId)
 
     for (sync in syncs) {
-      val retrievedSync = connectionService.getStandardSync(sync!!.getConnectionId())
-      for (operationId in sync.getOperationIds()) {
+      val retrievedSync = connectionService.getStandardSync(sync!!.connectionId)
+      for (operationId in sync.operationIds) {
         if (operationId == deletedOperationId) {
-          org.assertj.core.api.Assertions
-            .assertThat<UUID?>(retrievedSync.getOperationIds())
+          assertThat(retrievedSync.operationIds)
             .doesNotContain(deletedOperationId)
         } else {
-          org.assertj.core.api.Assertions
-            .assertThat<UUID?>(retrievedSync.getOperationIds())
+          assertThat(retrievedSync.operationIds)
             .contains(operationId)
         }
       }
@@ -1164,29 +1141,26 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     val sourceIds =
       sourceConnections()
         .subList(0, 2)
-        .stream()
-        .map<UUID?> { obj: SourceConnection? -> obj!!.getSourceId() }
+        .map { obj: SourceConnection? -> obj!!.sourceId }
         .toList()
 
     val expected =
       listOf<SourceAndDefinition?>(
-        SourceAndDefinition(sourceConnections().get(0)!!, standardSourceDefinitions().get(0)!!),
-        SourceAndDefinition(sourceConnections().get(1)!!, standardSourceDefinitions().get(1)!!),
+        SourceAndDefinition(sourceConnections()[0]!!, standardSourceDefinitions()[0]!!),
+        SourceAndDefinition(sourceConnections()[1]!!, standardSourceDefinitions()[1]!!),
       )
 
     val actual = sourceService.getSourceAndDefinitionsFromSourceIds(sourceIds)
     val result =
       actual
-        .stream()
-        .map<SourceAndDefinition?> { sourceAndDefinition: SourceAndDefinition? ->
+        .map { sourceAndDefinition: SourceAndDefinition? ->
           val copy = SourceAndDefinition(sourceAndDefinition!!.source, sourceAndDefinition.definition)
           copy.source.setCreatedAt(null)
           copy.source.setUpdatedAt(null)
           copy
         }.toList()
 
-    org.assertj.core.api.Assertions
-      .assertThat<SourceAndDefinition?>(result)
+    assertThat(result)
       .hasSameElementsAs(expected)
   }
 
@@ -1195,67 +1169,64 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     val destinationIds =
       destinationConnections()
         .subList(0, 2)
-        .stream()
-        .map<UUID?> { obj: DestinationConnection? -> obj!!.getDestinationId() }
+        .map { obj: DestinationConnection? -> obj!!.destinationId }
         .toList()
 
     val actual = destinationService.getDestinationAndDefinitionsFromDestinationIds(destinationIds)
 
     val expected =
       listOf<DestinationAndDefinition?>(
-        DestinationAndDefinition(destinationConnections().get(0)!!, standardDestinationDefinitions().get(0)!!),
-        DestinationAndDefinition(destinationConnections().get(1)!!, standardDestinationDefinitions().get(1)!!),
+        DestinationAndDefinition(destinationConnections()[0]!!, standardDestinationDefinitions()[0]!!),
+        DestinationAndDefinition(destinationConnections()[1]!!, standardDestinationDefinitions()[1]!!),
       )
 
     val result =
       actual
-        .stream()
-        .map<DestinationAndDefinition?> { destinationAndDefinition: DestinationAndDefinition? ->
+        .map { destinationAndDefinition: DestinationAndDefinition? ->
           val copy =
             DestinationAndDefinition(destinationAndDefinition!!.destination, destinationAndDefinition.definition)
-          copy.destination.setCreatedAt(null)
-          copy.destination.setUpdatedAt(null)
+          copy.destination.createdAt = null
+          copy.destination.updatedAt = null
           copy
         }.toList()
 
-    org.assertj.core.api.Assertions
-      .assertThat<DestinationAndDefinition?>(result)
+    assertThat(result)
       .hasSameElementsAs(expected)
   }
 
   @Test
   fun testGetMostRecentActorCatalogFetchEventForSource() {
     for (actorCatalog in actorCatalogs()) {
-      Companion.writeActorCatalog(database!!, mutableListOf<ActorCatalog?>(actorCatalog))
+      writeActorCatalog(database!!, mutableListOf<ActorCatalog?>(actorCatalog))
     }
 
     val now = OffsetDateTime.now()
     val yesterday = now.minusDays(1L)
 
     val fetchEvents = actorCatalogFetchEventsSameSource()
-    val fetchEvent1 = fetchEvents.get(0)
-    val fetchEvent2 = fetchEvents.get(1)
+    val fetchEvent1 = fetchEvents[0]
+    val fetchEvent2 = fetchEvents[1]
 
     database!!.transaction(
-      ContextQueryFunction { ctx: DSLContext ->
+      { ctx: DSLContext ->
         insertCatalogFetchEvent(
           ctx,
-          fetchEvent1!!.getActorId(),
-          fetchEvent1.getActorCatalogId(),
+          fetchEvent1!!.actorId,
+          fetchEvent1.actorCatalogId,
           yesterday,
         )
         insertCatalogFetchEvent(
           ctx,
-          fetchEvent2!!.getActorId(),
-          fetchEvent2!!.getActorCatalogId(),
+          fetchEvent2!!.actorId,
+          fetchEvent2.actorCatalogId,
           now,
         )
         // Insert a second identical copy to verify that the query can handle duplicates since the records
         // are not guaranteed to be unique.
         insertCatalogFetchEvent(
           ctx,
-          fetchEvent2!!.getActorId(),
-          fetchEvent2!!.getActorCatalogId(),
+          fetchEvent2.actorId,
+          fetchEvent2.actorCatalogId,
           now,
         )
         null
@@ -1263,9 +1234,9 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     )
 
     val result =
-      catalogService.getMostRecentActorCatalogFetchEventForSource(fetchEvent1!!.getActorId())
+      catalogService.getMostRecentActorCatalogFetchEventForSource(fetchEvent1!!.actorId)
 
-    Assertions.assertEquals(fetchEvent2!!.getActorCatalogId(), result.get().getActorCatalogId())
+    assertEquals(fetchEvent2!!.actorCatalogId, result.get().actorCatalogId)
   }
 
   @Test
@@ -1275,13 +1246,13 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     }
 
     database!!.transaction(
-      ContextQueryFunction { ctx: DSLContext ->
+      { ctx: DSLContext ->
         actorCatalogFetchEventsForAggregationTest().forEach(
-          Consumer { actorCatalogFetchEvent: ActorCatalogFetchEventWithCreationDate? ->
+          Consumer { actorCatalogFetchEvent: MockData.ActorCatalogFetchEventWithCreationDate? ->
             insertCatalogFetchEvent(
               ctx,
-              actorCatalogFetchEvent!!.actorCatalogFetchEvent!!.getActorId(),
-              actorCatalogFetchEvent.actorCatalogFetchEvent.getActorCatalogId(),
+              actorCatalogFetchEvent!!.actorCatalogFetchEvent!!.actorId,
+              actorCatalogFetchEvent.actorCatalogFetchEvent.actorCatalogId,
               actorCatalogFetchEvent.createdAt,
             )
           },
@@ -1293,14 +1264,14 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     val result =
       catalogService.getMostRecentActorCatalogFetchEventForSources(
         listOf(
-          MockData.SOURCE_ID_1,
-          MockData.SOURCE_ID_2,
+          SOURCE_ID_1,
+          SOURCE_ID_2,
         ),
       )
 
-    Assertions.assertEquals(MockData.ACTOR_CATALOG_ID_1, result.get(MockData.SOURCE_ID_1)!!.getActorCatalogId())
-    Assertions.assertEquals(MockData.ACTOR_CATALOG_ID_3, result.get(MockData.SOURCE_ID_2)!!.getActorCatalogId())
-    Assertions.assertEquals(0, catalogService.getMostRecentActorCatalogFetchEventForSources(mutableListOf<UUID>()).size)
+    assertEquals(ACTOR_CATALOG_ID_1, result.get(SOURCE_ID_1)!!.actorCatalogId)
+    assertEquals(ACTOR_CATALOG_ID_3, result.get(SOURCE_ID_2)!!.actorCatalogId)
+    assertEquals(0, catalogService.getMostRecentActorCatalogFetchEventForSources(mutableListOf()).size)
   }
 
   @Test
@@ -1312,20 +1283,20 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     }
 
     database!!.transaction(
-      ContextQueryFunction { ctx: DSLContext ->
+      { ctx: DSLContext ->
         // Insert the fetch events twice.
         actorCatalogFetchEventsForAggregationTest().forEach(
-          Consumer { actorCatalogFetchEvent: ActorCatalogFetchEventWithCreationDate? ->
+          Consumer { actorCatalogFetchEvent: MockData.ActorCatalogFetchEventWithCreationDate? ->
             insertCatalogFetchEvent(
               ctx,
-              actorCatalogFetchEvent!!.actorCatalogFetchEvent!!.getActorId(),
-              actorCatalogFetchEvent.actorCatalogFetchEvent.getActorCatalogId(),
+              actorCatalogFetchEvent!!.actorCatalogFetchEvent!!.actorId,
+              actorCatalogFetchEvent.actorCatalogFetchEvent.actorCatalogId,
               actorCatalogFetchEvent.createdAt,
             )
             insertCatalogFetchEvent(
               ctx,
-              actorCatalogFetchEvent.actorCatalogFetchEvent.getActorId(),
-              actorCatalogFetchEvent.actorCatalogFetchEvent.getActorCatalogId(),
+              actorCatalogFetchEvent.actorCatalogFetchEvent.actorId,
+              actorCatalogFetchEvent.actorCatalogFetchEvent.actorCatalogId,
               actorCatalogFetchEvent.createdAt,
             )
           },
@@ -1337,26 +1308,25 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     val result =
       catalogService.getMostRecentActorCatalogFetchEventForSources(
         listOf(
-          MockData.SOURCE_ID_1,
-          MockData.SOURCE_ID_2,
+          SOURCE_ID_1,
+          SOURCE_ID_2,
         ),
       )
 
-    Assertions.assertEquals(MockData.ACTOR_CATALOG_ID_1, result.get(MockData.SOURCE_ID_1)!!.getActorCatalogId())
-    Assertions.assertEquals(MockData.ACTOR_CATALOG_ID_3, result.get(MockData.SOURCE_ID_2)!!.getActorCatalogId())
+    assertEquals(ACTOR_CATALOG_ID_1, result.get(SOURCE_ID_1)!!.actorCatalogId)
+    assertEquals(ACTOR_CATALOG_ID_3, result.get(SOURCE_ID_2)!!.actorCatalogId)
   }
 
   @Test
   fun testGetActorDefinitionsInUseToProtocolVersion() {
-    val actorDefinitionIds: MutableSet<UUID?> = HashSet<UUID?>()
-    actorDefinitionIds.addAll(sourceConnections().stream().map<UUID?> { obj: SourceConnection? -> obj!!.getSourceDefinitionId() }.toList())
+    val actorDefinitionIds: MutableSet<UUID?> = HashSet()
+    actorDefinitionIds.addAll(sourceConnections().map { obj: SourceConnection? -> obj!!.sourceDefinitionId }.toList())
     actorDefinitionIds.addAll(
       destinationConnections()
-        .stream()
-        .map<UUID?> { obj: DestinationConnection? -> obj!!.getDestinationDefinitionId() }
+        .map { obj: DestinationConnection? -> obj!!.destinationDefinitionId }
         .toList(),
     )
-    Assertions.assertEquals(actorDefinitionIds, actorDefinitionService.getActorDefinitionToProtocolVersionMap().keys)
+    assertEquals(actorDefinitionIds, actorDefinitionService.getActorDefinitionToProtocolVersionMap().keys)
   }
 
   private fun insertCatalogFetchEvent(
@@ -1366,8 +1336,8 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     creationDate: OffsetDateTime?,
   ) {
     ctx
-      .insertInto<ActorCatalogFetchEventRecord?>(Tables.ACTOR_CATALOG_FETCH_EVENT)
-      .columns<UUID?, UUID?, UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?>(
+      .insertInto(Tables.ACTOR_CATALOG_FETCH_EVENT)
+      .columns(
         Tables.ACTOR_CATALOG_FETCH_EVENT.ID,
         Tables.ACTOR_CATALOG_FETCH_EVENT.ACTOR_ID,
         Tables.ACTOR_CATALOG_FETCH_EVENT.ACTOR_CATALOG_ID,
@@ -1384,7 +1354,7 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
     // This test just verifies that the query can be run against configAPI DB.
     // The query has been tested locally against prod DB to verify the outputs.
     val earlySyncJobs = connectionService.listEarlySyncJobs(7, 30)
-    Assertions.assertNotNull(earlySyncJobs)
+    assertNotNull(earlySyncJobs)
   }
 
   companion object {
@@ -1397,9 +1367,9 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
       database: Database,
       configs: MutableList<ActorCatalog?>,
     ) {
-      database!!.transaction(
-        ContextQueryFunction { ctx: DSLContext ->
-          Companion.writeActorCatalog(configs, ctx!!)
+      database.transaction(
+        { ctx: DSLContext ->
+          Companion.writeActorCatalog(configs, ctx)
           null
         },
       )
@@ -1417,30 +1387,30 @@ internal class ConfigRepositoryE2EReadWriteTest : BaseConfigDatabaseTest() {
               DSL
                 .select()
                 .from(Tables.ACTOR_CATALOG)
-                .where(Tables.ACTOR_CATALOG.ID.eq(actorCatalog!!.getId())),
+                .where(Tables.ACTOR_CATALOG.ID.eq(actorCatalog!!.id)),
             )
           if (isExistingConfig) {
             ctx
-              .update<ActorCatalogRecord?>(Tables.ACTOR_CATALOG)
-              .set<JSONB?>(Tables.ACTOR_CATALOG.CATALOG, JSONB.valueOf(serialize<JsonNode?>(actorCatalog.getCatalog())))
-              .set<String?>(Tables.ACTOR_CATALOG.CATALOG_HASH, actorCatalog.getCatalogHash())
-              .set<ActorCatalogType?>(
+              .update(Tables.ACTOR_CATALOG)
+              .set(Tables.ACTOR_CATALOG.CATALOG, JSONB.valueOf(serialize<JsonNode?>(actorCatalog.catalog)))
+              .set(Tables.ACTOR_CATALOG.CATALOG_HASH, actorCatalog.catalogHash)
+              .set(
                 Tables.ACTOR_CATALOG.CATALOG_TYPE,
-                ActorCatalogType.valueOf(actorCatalog.getCatalogType().toString()),
-              ).set<OffsetDateTime?>(Tables.ACTOR_CATALOG.MODIFIED_AT, timestamp)
-              .where(Tables.ACTOR_CATALOG.ID.eq(actorCatalog.getId()))
+                ActorCatalogType.valueOf(actorCatalog.catalogType.toString()),
+              ).set(Tables.ACTOR_CATALOG.MODIFIED_AT, timestamp)
+              .where(Tables.ACTOR_CATALOG.ID.eq(actorCatalog.id))
               .execute()
           } else {
             ctx
-              .insertInto<ActorCatalogRecord?>(Tables.ACTOR_CATALOG)
-              .set<UUID?>(Tables.ACTOR_CATALOG.ID, actorCatalog.getId())
-              .set<JSONB?>(Tables.ACTOR_CATALOG.CATALOG, JSONB.valueOf(serialize<JsonNode?>(actorCatalog.getCatalog())))
-              .set<String?>(Tables.ACTOR_CATALOG.CATALOG_HASH, actorCatalog.getCatalogHash())
-              .set<ActorCatalogType?>(
+              .insertInto(Tables.ACTOR_CATALOG)
+              .set(Tables.ACTOR_CATALOG.ID, actorCatalog.id)
+              .set(Tables.ACTOR_CATALOG.CATALOG, JSONB.valueOf(serialize<JsonNode?>(actorCatalog.catalog)))
+              .set(Tables.ACTOR_CATALOG.CATALOG_HASH, actorCatalog.catalogHash)
+              .set(
                 Tables.ACTOR_CATALOG.CATALOG_TYPE,
-                ActorCatalogType.valueOf(actorCatalog.getCatalogType().toString()),
-              ).set<OffsetDateTime?>(Tables.ACTOR_CATALOG.CREATED_AT, timestamp)
-              .set<OffsetDateTime?>(Tables.ACTOR_CATALOG.MODIFIED_AT, timestamp)
+                ActorCatalogType.valueOf(actorCatalog.catalogType.toString()),
+              ).set(Tables.ACTOR_CATALOG.CREATED_AT, timestamp)
+              .set(Tables.ACTOR_CATALOG.MODIFIED_AT, timestamp)
               .execute()
           }
         },

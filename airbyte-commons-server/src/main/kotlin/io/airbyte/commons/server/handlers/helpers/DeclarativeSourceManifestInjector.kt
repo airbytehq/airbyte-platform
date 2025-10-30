@@ -9,8 +9,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.github.javaparser.utils.StringEscapeUtils
-import com.google.common.hash.Hashing
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.security.md5
 import io.airbyte.commons.version.AirbyteProtocolVersion
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionConfigInjection
@@ -184,7 +184,7 @@ class DeclarativeSourceManifestInjector {
      */
     private fun computeMD5Hash(content: String?): String {
       val unescapedContentString = StringEscapeUtils.unescapeJava(content)
-      return Hashing.md5().hashBytes(unescapedContentString.toByteArray()).toString()
+      return unescapedContentString.toByteArray().md5()
     }
   }
 }

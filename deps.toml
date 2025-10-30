@@ -57,6 +57,7 @@ v3-swagger = "2.2.21"
 
 [libraries]
 airbyte-protocol = { module = "io.airbyte.airbyte-protocol:protocol-models", version.ref = "airbyte-protocol" }
+apache-commons-codec = { module = "commons-codec:commons-codec", version = "1.19.0" }
 apache-mime4j-core = { module = "org.apache.james:apache-mime4j-core", version = "0.8.12" } # Transitive dependency of keycloak. Forced upgrade to 0.8.10 from 0.8.9. Also patches commons-io GHSA-78wr-2p64-hpwj
 apollo-runtime = { module = "com.apollographql.apollo3:apollo-runtime", version.ref = "apollo" }
 apollo-api-jvm = { module = "com.apollographql.apollo3:apollo-api-jvm", version.ref = "apollo" }

@@ -4,8 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 
-import com.google.common.hash.HashFunction
-import com.google.common.hash.Hashing
 import io.airbyte.api.model.generated.AttemptInfoReadLogs
 import io.airbyte.api.model.generated.CheckConnectionRead
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
@@ -30,6 +28,7 @@ import io.airbyte.api.model.generated.WorkloadPriority
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.security.md5
 import io.airbyte.commons.server.converters.ConfigurationUpdate
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.errors.NotFoundException
@@ -56,7 +55,6 @@ import io.airbyte.config.WorkloadPriority.Companion.fromValue
 import io.airbyte.config.helpers.ResourceRequirementsUtils.getResourceRequirementsForJobType
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.StreamResetPersistence
-import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
@@ -76,10 +74,8 @@ import io.airbyte.persistence.job.factory.SyncJobFactory
 import io.airbyte.persistence.job.tracker.JobTracker
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.validation.json.JsonSchemaValidator
-import io.airbyte.validation.json.JsonValidationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 
@@ -311,13 +307,7 @@ open class SchedulerHandler
       }
 
       // Check cache.
-      val configHash =
-        HASH_FUNCTION
-          .hashBytes(
-            Jsons.serialize(source.configuration).toByteArray(
-              StandardCharsets.UTF_8,
-            ),
-          ).toString()
+      val configHash = Jsons.serialize(source.configuration).toByteArray(StandardCharsets.UTF_8).md5()
       val connectorVersion = sourceVersion.dockerImageTag
 
       val existingCatalog =
@@ -648,8 +638,6 @@ open class SchedulerHandler
     }
 
     companion object {
-      private val HASH_FUNCTION: HashFunction = Hashing.md5()
-
       private val VALUE_CONFLICT_EXCEPTION_ERROR_CODE_SET: Set<ErrorCode?> = setOf(ErrorCode.WORKFLOW_DELETED, ErrorCode.WORKFLOW_RUNNING)
     }
   }

@@ -5,10 +5,10 @@
 package io.airbyte.server.services
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.hash.Hashing
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.converters.ConfigReplacer
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.security.md5
 import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
@@ -94,10 +94,6 @@ class JobInputService(
   private val featureFlagClient: FeatureFlagClient,
   private val attemptService: AttemptService,
 ) {
-  companion object {
-    private val HASH_FUNCTION = Hashing.md5()
-  }
-
   fun getSpecInput(
     dockerImage: String,
     dockerImageTag: String,
@@ -803,7 +799,7 @@ class JobInputService(
         source.workspaceId,
         source.configuration,
       )
-    val hashedConfiguration = HASH_FUNCTION.hashBytes(Jsons.serialize(source.configuration).toByteArray(Charsets.UTF_8)).toString()
+    val hashedConfiguration = Jsons.serialize(source.configuration).toByteArray(Charsets.UTF_8).md5()
 
     return buildJobDiscoverConfig(
       actorType = ConfigActorType.SOURCE,
@@ -844,7 +840,7 @@ class JobInputService(
         destination.workspaceId,
         destination.configuration,
       )
-    val hashedConfiguration = HASH_FUNCTION.hashBytes(Jsons.serialize(destination.configuration).toByteArray(Charsets.UTF_8)).toString()
+    val hashedConfiguration = Jsons.serialize(destination.configuration).toByteArray(Charsets.UTF_8).md5()
 
     return buildJobDiscoverConfig(
       actorType = ConfigActorType.DESTINATION,

@@ -10,10 +10,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.ObjectWriter
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.google.common.hash.Hashing
 import datadog.trace.api.Trace
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.security.md5
 import io.airbyte.connectorbuilder.TracingHelper
 import io.airbyte.connectorbuilder.api.model.generated.AuxiliaryRequest
 import io.airbyte.connectorbuilder.api.model.generated.ResolveManifest
@@ -28,6 +28,8 @@ import jakarta.inject.Singleton
 import org.apache.commons.lang3.StringUtils
 import java.nio.charset.StandardCharsets
 import java.util.Collections
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Construct and send requests to the CDK's Connector Builder handler.
@@ -196,8 +198,7 @@ class AirbyteCdkRequesterImpl(
    * @return a JsonNode containing the checksum(s)
    */
   private fun calculateChecksums(customComponentsCode: String?): JsonNode {
-    val hashFunction = Hashing.md5()
-    val md5Checksum = hashFunction.hashString(customComponentsCode ?: "", StandardCharsets.UTF_8).toString()
+    val md5Checksum = (customComponentsCode ?: "").toByteArray(StandardCharsets.UTF_8).md5()
     return Jsons.jsonNode(Collections.singletonMap("md5", md5Checksum))
   }
 
@@ -381,6 +382,5 @@ class AirbyteCdkRequesterImpl(
       """.trimIndent()
     private val OBJECT_WRITER: ObjectWriter = ObjectMapper().writer().withDefaultPrettyPrinter()
     private val CONFIG_NODE: ObjectNode = ObjectMapper().createObjectNode()
-    private val log = KotlinLogging.logger {}
   }
 }

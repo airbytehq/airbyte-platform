@@ -4,7 +4,6 @@
 
 package io.airbyte.container.orchestrator.bookkeeping
 
-import com.google.common.hash.Hashing
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FileTransferInformations
 import io.airbyte.protocol.models.v0.AirbyteGlobalState
@@ -22,7 +21,6 @@ import org.junit.jupiter.api.Test
 internal class StatsTrackerTest {
   @Test
   fun `test that state hash code generation ignores state stats fields`() {
-    val hashFunction = Hashing.murmur3_32_fixed()
     val destinationStats = AirbyteStateStats().withRecordCount(14.0)
     val sourceStats = AirbyteStateStats().withRecordCount(24.0)
     val streamDescriptor = StreamDescriptor().withName("name").withNamespace("namespace")
@@ -64,16 +62,16 @@ internal class StatsTrackerTest {
         )
 
     assertEquals(
-      globalStateMessageWithoutStats.getStateHashCode(hashFunction),
-      globalStateMessageWithStats.getStateHashCode(hashFunction),
+      globalStateMessageWithoutStats.getStateHashCode(),
+      globalStateMessageWithStats.getStateHashCode(),
     )
     assertEquals(
-      legacyStateMessageWithoutStats.getStateHashCode(hashFunction),
-      legacyStateMessageWithStats.getStateHashCode(hashFunction),
+      legacyStateMessageWithoutStats.getStateHashCode(),
+      legacyStateMessageWithStats.getStateHashCode(),
     )
     assertEquals(
-      perStreamStateMessageWithoutStats.getStateHashCode(hashFunction),
-      perStreamStateMessageWithStats.getStateHashCode(hashFunction),
+      perStreamStateMessageWithoutStats.getStateHashCode(),
+      perStreamStateMessageWithStats.getStateHashCode(),
     )
   }
 

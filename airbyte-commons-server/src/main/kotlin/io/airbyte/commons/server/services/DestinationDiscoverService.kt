@@ -4,12 +4,12 @@
 
 package io.airbyte.commons.server.services
 
-import com.google.common.hash.Hashing
 import io.airbyte.api.problems.model.generated.ProblemDestinationCatalogNotFoundData
 import io.airbyte.api.problems.model.generated.ProblemDestinationDiscoverData
 import io.airbyte.api.problems.throwable.generated.DestinationCatalogNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.DestinationDiscoverNotSupportedProblem
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.security.md5
 import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient
 import io.airbyte.config.ActorCatalog
 import io.airbyte.config.DestinationCatalog
@@ -70,7 +70,7 @@ class DestinationDiscoverService(
       )
     }
 
-    val configHash = Hashing.md5().hashBytes(Jsons.serialize(destination.configuration).toByteArray()).toString()
+    val configHash = Jsons.serialize(destination.configuration).toByteArray().md5()
 
     if (!skipCache) {
       val cachedCatalog = catalogService.getActorCatalog(destinationId.value, destinationVersion.dockerImageTag, configHash).getOrNull()

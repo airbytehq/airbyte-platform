@@ -5,8 +5,8 @@
 package io.airbyte.server.services
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.hash.Hashing
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.security.md5
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorContext
@@ -498,7 +498,7 @@ class JobInputServiceTest {
     assertEquals(false, actual.integrationLauncherConfig.isCustomConnector)
     assertEquals(0L, actual.integrationLauncherConfig.attemptId)
 
-    val expectedConfigHash = Hashing.md5().hashBytes(Jsons.serialize(configuration).toByteArray(Charsets.UTF_8)).toString()
+    val expectedConfigHash = Jsons.serialize(configuration).toByteArray(Charsets.UTF_8).md5()
     assertEquals(expectedConfigHash, actual.discoverCatalogInput.configHash)
   }
 
@@ -620,7 +620,7 @@ class JobInputServiceTest {
     assertEquals(true, actual.integrationLauncherConfig.isCustomConnector)
     assertEquals(0L, actual.integrationLauncherConfig.attemptId)
 
-    val expectedConfigHash = Hashing.md5().hashBytes(Jsons.serialize(configuration).toByteArray(Charsets.UTF_8)).toString()
+    val expectedConfigHash = Jsons.serialize(configuration).toByteArray(Charsets.UTF_8).md5()
     assertEquals(expectedConfigHash, actual.discoverCatalogInput.configHash)
   }
 

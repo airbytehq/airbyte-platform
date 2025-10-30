@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.converters
 
-import com.google.common.hash.Hashing
 import datadog.trace.api.Trace
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody
@@ -12,6 +11,7 @@ import io.airbyte.api.client.model.generated.DestinationUpdate
 import io.airbyte.api.client.model.generated.SourceIdRequestBody
 import io.airbyte.api.client.model.generated.SourceUpdate
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.security.sha256
 import io.airbyte.protocol.models.v0.Config
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
@@ -53,7 +53,11 @@ class ConnectorConfigUpdater(
       )
 
     log.info {
-      val hash = Hashing.sha256().hashString(updatedSource.connectionConfiguration.asText(), StandardCharsets.UTF_8)
+      val hash =
+        updatedSource.connectionConfiguration
+          .asText()
+          .toByteArray(StandardCharsets.UTF_8)
+          .sha256()
       "Persisted updated configuration for source $sourceId. New config hash: $hash."
     }
   }
@@ -79,7 +83,11 @@ class ConnectorConfigUpdater(
       )
 
     log.info {
-      val hash = Hashing.sha256().hashString(updatedDestination.connectionConfiguration.asText(), StandardCharsets.UTF_8)
+      val hash =
+        updatedDestination.connectionConfiguration
+          .asText()
+          .toByteArray(StandardCharsets.UTF_8)
+          .sha256()
       "Persisted updated configuration for destination $destinationId. New config hash: $hash."
     }
   }

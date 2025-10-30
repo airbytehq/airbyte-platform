@@ -4,7 +4,6 @@
 
 package io.airbyte.container.orchestrator.bookkeeping
 
-import com.google.common.hash.Hashing
 import io.airbyte.analytics.Deployment
 import io.airbyte.analytics.DeploymentFetcher
 import io.airbyte.analytics.TrackingIdentity
@@ -579,7 +578,7 @@ internal class StateCheckSumCountEventHandlerTest {
       idSupplier.get().toString(),
       jobId,
       recordCount.toLong(),
-      stateMessage.getStateHashCode(Hashing.murmur3_32_fixed()).toString(),
+      stateMessage.getStateHashCode().toString(),
       stateMessage.getStateIdForStatsTracking().toString(),
       stateOrigin.name,
       stateMessage.type.toString(),

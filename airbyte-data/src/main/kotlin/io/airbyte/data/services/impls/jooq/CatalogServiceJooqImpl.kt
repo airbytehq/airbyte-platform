@@ -5,10 +5,10 @@
 package io.airbyte.data.services.impls.jooq
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.google.common.hash.Hashing
 import datadog.trace.api.Trace
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.security.murmur332
 import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ActorCatalog.CatalogType
 import io.airbyte.config.ActorCatalogFetchEvent
@@ -335,14 +335,8 @@ class CatalogServiceJooqImpl
     }
 
     private fun generateCanonicalHash(airbyteCatalog: AirbyteCatalog): String? {
-      val hashFunction = Hashing.murmur3_32_fixed()
       try {
-        return hashFunction
-          .hashBytes(
-            Jsons
-              .canonicalJsonSerialize(airbyteCatalog)
-              .toByteArray(Charsets.UTF_8),
-          ).toString()
+        return Jsons.canonicalJsonSerialize(airbyteCatalog).toByteArray(Charsets.UTF_8).murmur332()
       } catch (e: IOException) {
         log.error(e) { "Failed to serialize AirbyteCatalog to canonical JSON" }
         return null
@@ -350,14 +344,8 @@ class CatalogServiceJooqImpl
     }
 
     private fun generateCanonicalHash(destinationCatalog: DestinationCatalog): String? {
-      val hashFunction = Hashing.murmur3_32_fixed()
       try {
-        return hashFunction
-          .hashBytes(
-            Jsons
-              .canonicalJsonSerialize(destinationCatalog)
-              .toByteArray(Charsets.UTF_8),
-          ).toString()
+        return Jsons.canonicalJsonSerialize(destinationCatalog).toByteArray(Charsets.UTF_8).murmur332()
       } catch (e: IOException) {
         log.error(e) { "Failed to serialize DestinationCatalog to canonical JSON" }
         return null
@@ -375,10 +363,8 @@ class CatalogServiceJooqImpl
       return findAndReturnCatalogId(catalogHash, catalog, context)
     }
 
-    private fun generateOldHash(airbyteCatalog: AirbyteCatalog): String {
-      val hashFunction = Hashing.murmur3_32_fixed()
-      return hashFunction.hashBytes(Jsons.serialize(airbyteCatalog).toByteArray(Charsets.UTF_8)).toString()
-    }
+    private fun generateOldHash(airbyteCatalog: AirbyteCatalog): String =
+      Jsons.canonicalJsonSerialize(airbyteCatalog).toByteArray(Charsets.UTF_8).murmur332()
 
     private fun insertCatalog(
       catalog: JsonNode,

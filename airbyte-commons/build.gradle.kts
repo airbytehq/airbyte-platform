@@ -15,6 +15,7 @@ dependencies {
   implementation(libs.kotlin.logging)
   implementation(libs.google.cloud.storage)
   implementation(libs.airbyte.protocol)
+  implementation(libs.apache.commons.codec)
 
   // this dependency is an exception to the above rule because it is only used INTERNALLY to the Commons library.
   implementation(libs.json.path)

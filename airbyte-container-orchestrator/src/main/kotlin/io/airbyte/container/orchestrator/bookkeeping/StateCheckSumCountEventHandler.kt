@@ -4,7 +4,6 @@
 
 package io.airbyte.container.orchestrator.bookkeeping
 
-import com.google.common.hash.Hashing
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.function.CheckedSupplier
@@ -187,7 +186,7 @@ class StateCheckSumCountEventHandler(
         idSupplier.get().toString(),
         airbyteContextConfig.jobId,
         recordCount.toLong(),
-        stateMessage.getStateHashCode(Hashing.murmur3_32_fixed()).toString(),
+        stateMessage.getStateHashCode().toString(),
         stateMessage.getStateIdForStatsTracking().toString(),
         stateOrigin,
         stateMessage.type.toString(),
