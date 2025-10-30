@@ -16634,6 +16634,7 @@ components:
     SelectedFields:
       description: Paths to the fields that will be included in the configured catalog.
       type: array
+      format: set
       items:
         $ref: "#/components/schemas/SelectedFieldInfo"
       x-sdk-component: true
