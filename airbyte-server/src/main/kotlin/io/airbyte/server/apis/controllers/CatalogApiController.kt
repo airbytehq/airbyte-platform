@@ -28,7 +28,7 @@ import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import java.util.UUID
 
-@Controller("/api/v1/catalogs")
+@Controller("/api/v1/catalogs/diff")
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class CatalogApiController(
@@ -38,7 +38,7 @@ class CatalogApiController(
   private val connectionService: ConnectionService,
   private val sourceService: SourceService,
 ) : CatalogApi {
-  @Post("/diff")
+  @Post
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun diffCatalogs(
     @Body diffCatalogsRequest: DiffCatalogsRequest,

@@ -335,6 +335,8 @@ internal class ConnectionsHandlerTest {
   private lateinit var secretStorageService: SecretStorageService
   private lateinit var secretReferenceService: SecretReferenceService
   private lateinit var currentUserService: CurrentUserService
+  private lateinit var fieldGenerator: FieldGenerator
+  private lateinit var catalogMergeHelper: io.airbyte.commons.server.handlers.helpers.CatalogMergeHelper
 
   @Suppress("UNCHECKED_CAST")
   @BeforeEach
@@ -487,11 +489,17 @@ internal class ConnectionsHandlerTest {
     catalogValidator = mock()
     notificationHelper = mock()
     destinationCatalogGenerator = mock()
+    fieldGenerator = mock()
+    catalogMergeHelper =
+      io.airbyte.commons.server.handlers.helpers
+        .CatalogMergeHelper(fieldGenerator)
     catalogDiffService =
       CatalogDiffService(
         catalogService,
         connectionService,
         applySchemaChangeHelper,
+        catalogConverter,
+        catalogMergeHelper,
       )
 
     connectionSchedulerHelper =

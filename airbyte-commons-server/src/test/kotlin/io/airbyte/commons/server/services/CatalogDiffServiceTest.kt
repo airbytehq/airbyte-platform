@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.util.UUID
@@ -41,6 +42,16 @@ internal class CatalogDiffServiceTest {
   private lateinit var currentCatalogId: UUID
   private lateinit var newCatalogId: UUID
 
+  private val fieldGenerator =
+    io.airbyte.config.helpers
+      .FieldGenerator()
+  private val catalogConverter =
+    io.airbyte.commons.server.handlers.helpers
+      .CatalogConverter(fieldGenerator, listOf())
+  private val catalogMergeHelper =
+    io.airbyte.commons.server.handlers.helpers
+      .CatalogMergeHelper(fieldGenerator)
+
   @BeforeEach
   fun setUp() {
     catalogService = mock()
@@ -52,6 +63,8 @@ internal class CatalogDiffServiceTest {
         catalogService,
         connectionService,
         applySchemaChangeHelper,
+        catalogConverter,
+        catalogMergeHelper,
       )
 
     workspaceId = UUID.randomUUID()
@@ -207,5 +220,73 @@ internal class CatalogDiffServiceTest {
   private fun convertToConfigCatalog(protocolCatalog: ProtocolConfiguredAirbyteCatalog): ConfiguredAirbyteCatalog {
     // Simple conversion for test purposes
     return Jsons.`object`(Jsons.jsonNode(protocolCatalog), ConfiguredAirbyteCatalog::class.java)
+  }
+
+  @Test
+  fun `diffCatalogs should return merged catalog when connectionId is provided`() {
+    // Setup
+    val currentCatalog = createAirbyteCatalog("users", listOf("id", "name"))
+    val newCatalog = createAirbyteCatalog("users", listOf("id", "name", "email"))
+    val configuredCatalog = createConfiguredCatalog("users", listOf("id", "name"))
+
+    setupMocks(currentCatalog, newCatalog, configuredCatalog)
+    whenever(applySchemaChangeHelper.containsBreakingChange(any())).thenReturn(false)
+
+    // catalogConverter is a real instance, so no need to mock it
+
+    val request =
+      DiffCatalogsRequest()
+        .currentCatalogId(currentCatalogId)
+        .newCatalogId(newCatalogId)
+        .connectionId(connectionId)
+
+    // Execute
+    val result = catalogDiffService.diffCatalogs(request)
+
+    // Assert
+    assertEquals(SchemaChange.NON_BREAKING, result.schemaChange)
+    assertTrue(result.catalogDiff.transforms.isNotEmpty())
+
+    // Verify merged catalog is returned
+    assertTrue(result.mergedCatalog != null, "Merged catalog should be present when connectionId is provided")
+    assertEquals(1, result.mergedCatalog!!.streams.size)
+
+    // The merged catalog should preserve the 'selected' state from the configured catalog
+    // but have the fields from the new catalog
+    val mergedStream = result.mergedCatalog!!.streams[0]
+    assertTrue(mergedStream.config.selected, "Stream should remain selected from configured catalog")
+  }
+
+  @Test
+  fun `diffCatalogs should not return merged catalog when connectionId is not provided`() {
+    // Setup
+    val currentCatalog = createAirbyteCatalog("users", listOf("id", "name"))
+    val newCatalog = createAirbyteCatalog("users", listOf("id", "name", "email"))
+
+    // Mock catalogs without connection
+    val currentActorCatalog =
+      ActorCatalog()
+        .withId(currentCatalogId)
+        .withCatalog(Jsons.jsonNode(currentCatalog))
+
+    val newActorCatalog =
+      ActorCatalog()
+        .withId(newCatalogId)
+        .withCatalog(Jsons.jsonNode(newCatalog))
+
+    whenever(catalogService.getActorCatalogById(currentCatalogId)).thenReturn(currentActorCatalog)
+    whenever(catalogService.getActorCatalogById(newCatalogId)).thenReturn(newActorCatalog)
+
+    val request =
+      DiffCatalogsRequest()
+        .currentCatalogId(currentCatalogId)
+        .newCatalogId(newCatalogId)
+    // No connectionId
+
+    // Execute
+    val result = catalogDiffService.diffCatalogs(request)
+
+    // Assert
+    assertTrue(result.mergedCatalog == null, "Merged catalog should be null when connectionId is not provided")
   }
 }

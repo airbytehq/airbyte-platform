@@ -6670,6 +6670,9 @@ paths:
                     $ref: "#/components/schemas/CatalogDiff"
                   schema_change:
                     $ref: "#/components/schemas/SchemaChange"
+                  merged_catalog:
+                    $ref: "#/components/schemas/AirbyteCatalog"
+                    description: The new catalog merged with the connection's configuration. Only included when connection_id is provided in the request.
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":

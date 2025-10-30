@@ -23,7 +23,6 @@ import io.airbyte.api.model.generated.OperationCreate
 import io.airbyte.api.model.generated.OperationReadList
 import io.airbyte.api.model.generated.OperationUpdate
 import io.airbyte.api.model.generated.SchemaChange
-import io.airbyte.api.model.generated.SelectedFieldInfo
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody
 import io.airbyte.api.model.generated.SourceIdRequestBody
@@ -50,12 +49,12 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.converters.ApiPojoConverters
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
+import io.airbyte.commons.server.handlers.helpers.CatalogMergeHelper
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
 import io.airbyte.commons.server.helpers.CatalogConfigDiffHelper
 import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.config.ActorCatalogFetchEvent
 import io.airbyte.config.ConfiguredAirbyteCatalog
-import io.airbyte.config.Field
 import io.airbyte.config.RefreshStream
 import io.airbyte.config.Tag
 import io.airbyte.config.helpers.FieldGenerator
@@ -114,6 +113,7 @@ class WebBackendConnectionsHandler(
   private val sourceService: SourceService,
   private val workspaceService: WorkspaceService,
   private val catalogConverter: CatalogConverter,
+  private val catalogMergeHelper: CatalogMergeHelper,
   private val applySchemaChangeHelper: ApplySchemaChangeHelper,
   private val apiPojoConverters: ApiPojoConverters,
   private val destinationCatalogGenerator: DestinationCatalogGenerator,
@@ -421,7 +421,7 @@ class WebBackendConnectionsHandler(
              * confusing. We need to figure out why source_catalog_id is not always populated in the db.
              */
       syncCatalog =
-        updateSchemaWithRefreshedDiscoveredCatalog(
+        catalogMergeHelper.mergeCatalogWithConfiguration(
           configuredCatalog,
           catalogUsedToMakeConfiguredCatalog.orElse(configuredCatalog),
           refreshedCatalog.get().catalog,
@@ -451,7 +451,7 @@ class WebBackendConnectionsHandler(
     originalDiscoveredCatalog: AirbyteCatalog,
   ): AirbyteCatalog {
     // We pass the original discovered catalog in as the "new" discovered catalog.
-    return updateSchemaWithRefreshedDiscoveredCatalog(configuredCatalog, originalDiscoveredCatalog, originalDiscoveredCatalog)
+    return catalogMergeHelper.mergeCatalogWithConfiguration(configuredCatalog, originalDiscoveredCatalog, originalDiscoveredCatalog)
   }
 
   private fun getRefreshedSchema(
@@ -465,160 +465,6 @@ class WebBackendConnectionsHandler(
         .connectionId(connectionId)
     val schemaRead = schedulerHandler.discoverSchemaForSourceFromSourceId(discoverSchemaReadReq)
     return Optional.ofNullable(schemaRead)
-  }
-
-  /**
-   *Creates a map from stream descriptors to StreamAndConfiguration objects.
-   */
-  private fun buildStreamDescriptionMap(original: AirbyteCatalog): MutableMap<Stream, AirbyteStreamAndConfiguration?> =
-    original.streams
-      .stream()
-      .collect(
-        Collectors.toMap<@Valid AirbyteStreamAndConfiguration?, Stream, AirbyteStreamAndConfiguration?>(
-          { s: AirbyteStreamAndConfiguration? ->
-            Stream(
-              s!!.stream.name,
-              s.stream.namespace,
-            )
-          },
-          { s: AirbyteStreamAndConfiguration? -> s },
-        ),
-      )
-
-  /**
-   * Applies existing configurations to a newly discovered catalog. For example, if the users stream
-   * is in the old and new catalog, any configuration that was previously set for users, we add to the
-   * new catalog.
-   *
-   * @param originalConfigured fully configured, original catalog
-   * @param originalDiscovered the original discovered catalog used to make the original configured
-   * catalog
-   * @param discovered newly discovered catalog, no configurations set
-   * @return merged catalog, most up-to-date schema with most up-to-date configurations from old
-   * catalog
-   */
-  @InternalForTesting
-  fun updateSchemaWithRefreshedDiscoveredCatalog(
-    originalConfigured: AirbyteCatalog,
-    originalDiscovered: AirbyteCatalog,
-    discovered: AirbyteCatalog,
-  ): AirbyteCatalog {
-        /*
-         * We can't directly use s.getStream() as the key, because it contains a bunch of other fields, so
-         * we just define a quick-and-dirty record class.
-         */
-    val streamDescriptorToOriginalStream =
-      buildStreamDescriptionMap(originalConfigured)
-    val streamDescriptorToOriginalDiscoveredStream =
-      buildStreamDescriptionMap(originalDiscovered)
-
-    val streams: MutableList<AirbyteStreamAndConfiguration> = ArrayList()
-
-    for (discoveredStream in discovered.streams) {
-      val stream = discoveredStream.stream
-      val originalConfiguredStream =
-        streamDescriptorToOriginalStream[Stream(stream.name, stream.namespace)]
-      val originalDiscoveredStream =
-        streamDescriptorToOriginalDiscoveredStream[Stream(stream.name, stream.namespace)]
-      val outputStreamConfig: AirbyteStreamConfiguration
-
-      if (originalConfiguredStream != null) {
-        val originalStreamConfig = originalConfiguredStream.config
-        val discoveredStreamConfig = discoveredStream.config
-        outputStreamConfig = AirbyteStreamConfiguration()
-
-        if (stream.supportedSyncModes.contains(originalStreamConfig.syncMode)) {
-          outputStreamConfig.syncMode = originalStreamConfig.syncMode
-        } else {
-          outputStreamConfig.syncMode = discoveredStreamConfig.syncMode
-        }
-
-        if (!originalStreamConfig.cursorField.isEmpty()) {
-          outputStreamConfig.cursorField = originalStreamConfig.cursorField
-        } else {
-          outputStreamConfig.cursorField = discoveredStreamConfig.cursorField
-        }
-
-        outputStreamConfig.destinationSyncMode = originalStreamConfig.destinationSyncMode
-
-        val hasSourceDefinedPK = stream.sourceDefinedPrimaryKey != null && !stream.sourceDefinedPrimaryKey.isEmpty()
-        if (hasSourceDefinedPK) {
-          outputStreamConfig.primaryKey = stream.sourceDefinedPrimaryKey
-        } else if (!originalStreamConfig.primaryKey.isEmpty()) {
-          outputStreamConfig.primaryKey = originalStreamConfig.primaryKey
-        } else {
-          outputStreamConfig.primaryKey = discoveredStreamConfig.primaryKey
-        }
-
-        outputStreamConfig.aliasName = originalStreamConfig.aliasName
-        outputStreamConfig.selected = originalConfiguredStream.config.selected
-        outputStreamConfig.suggested = originalConfiguredStream.config.suggested
-        outputStreamConfig.includeFiles = originalConfiguredStream.config.includeFiles
-        outputStreamConfig.fieldSelectionEnabled = originalStreamConfig.fieldSelectionEnabled
-        outputStreamConfig.mappers = originalStreamConfig.mappers
-        outputStreamConfig.destinationObjectName = originalStreamConfig.destinationObjectName
-
-        // TODO(pedro): Handle other mappers that are no longer valid
-        // Add hashed field configs that are still present in the schema
-        if (originalStreamConfig.hashedFields != null && !originalStreamConfig.hashedFields.isEmpty()) {
-          val discoveredFields =
-            fieldGenerator
-              .getFieldsFromSchema(stream.jsonSchema)
-              .stream()
-              .map(Field::name)
-              .toList()
-          for (hashedField in originalStreamConfig.hashedFields) {
-            if (discoveredFields.contains(hashedField.fieldPath.first())) {
-              outputStreamConfig.addHashedFieldsItem(hashedField)
-            }
-          }
-        }
-
-        if (outputStreamConfig.fieldSelectionEnabled) {
-          // TODO(mfsiega-airbyte): support nested fields.
-          // If field selection is enabled, populate the selected fields.
-          val originallyDiscovered: MutableSet<String> = HashSet()
-          val refreshDiscovered: MutableSet<String> = HashSet()
-          // NOTE: by only taking the first element of the path, we're restricting to top-level fields.
-          val originallySelected: Set<String> =
-            HashSet(
-              originalConfiguredStream.config.selectedFields
-                .stream()
-                .map { field: SelectedFieldInfo -> field.fieldPath[0] }
-                .toList(),
-            )
-          originalDiscoveredStream!!
-            .stream.jsonSchema
-            .findPath("properties")
-            .fieldNames()
-            .forEachRemaining { e: String -> originallyDiscovered.add(e) }
-          stream.jsonSchema
-            .findPath("properties")
-            .fieldNames()
-            .forEachRemaining { e: String -> refreshDiscovered.add(e) }
-          // We include a selected field if it:
-          // (is in the newly discovered schema) AND (it was either originally selected OR not in the
-          // originally discovered schema at all)
-          // NOTE: this implies that the default behaviour for newly-discovered columns is to add them.
-          for (discoveredField in refreshDiscovered) {
-            if (originallySelected.contains(discoveredField) || !originallyDiscovered.contains(discoveredField)) {
-              outputStreamConfig.addSelectedFieldsItem(SelectedFieldInfo().addFieldPathItem(discoveredField))
-            }
-          }
-        } else {
-          outputStreamConfig.selectedFields = listOf<@Valid SelectedFieldInfo?>()
-        }
-      } else {
-        outputStreamConfig = discoveredStream.config
-        outputStreamConfig.selected = false
-      }
-      val outputStream =
-        AirbyteStreamAndConfiguration()
-          .stream(Jsons.clone(stream))
-          .config(outputStreamConfig)
-      streams.add(outputStream)
-    }
-    return AirbyteCatalog().streams(streams)
   }
 
   fun webBackendCreateConnection(webBackendConnectionCreate: WebBackendConnectionCreate): WebBackendConnectionRead {
@@ -717,7 +563,7 @@ class WebBackendConnectionsHandler(
     if (catalogUsedToMakeConfiguredCatalog.isPresent) {
       // Update the Catalog returned to include all streams, including disabled ones
       val syncCatalog =
-        updateSchemaWithRefreshedDiscoveredCatalog(
+        catalogMergeHelper.mergeCatalogWithConfiguration(
           updatedConnectionRead.syncCatalog,
           catalogUsedToMakeConfiguredCatalog.get(),
           catalogUsedToMakeConfiguredCatalog.get(),
@@ -843,17 +689,6 @@ class WebBackendConnectionsHandler(
     operationsHandler.deleteOperationsForConnection(connectionRead.connectionId, originalOperationIds)
     return finalOperationIds
   }
-
-  /**
-   * Equivalent to {@see io.airbyte.integrations.base.AirbyteStreamNameNamespacePair}. Intentionally
-   * not using that class because it doesn't make sense for airbyte-server to depend on
-   * base-java-integration.
-   */
-  @JvmRecord
-  private data class Stream(
-    val name: String,
-    val namespace: String?,
-  )
 
   companion object {
         /*

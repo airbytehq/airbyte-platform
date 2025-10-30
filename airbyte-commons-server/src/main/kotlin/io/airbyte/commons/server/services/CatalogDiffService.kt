@@ -4,17 +4,22 @@
 
 package io.airbyte.commons.server.services
 
+import io.airbyte.api.model.generated.AirbyteCatalog
+import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
+import io.airbyte.api.model.generated.AirbyteStreamConfiguration
 import io.airbyte.api.model.generated.CatalogDiff
 import io.airbyte.api.model.generated.DiffCatalogsRequest
 import io.airbyte.api.model.generated.DiffCatalogsResponse
 import io.airbyte.api.model.generated.SchemaChange
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.protocol.CatalogDiffHelpers.getCatalogDiff
 import io.airbyte.commons.server.converters.CatalogDiffConverters.streamTransformToApi
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper
+import io.airbyte.commons.server.handlers.helpers.CatalogConverter
+import io.airbyte.commons.server.handlers.helpers.CatalogMergeHelper
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.ConnectionService
-import io.airbyte.protocol.models.Jsons
 import jakarta.inject.Singleton
 import java.util.UUID
 import io.airbyte.protocol.models.v0.AirbyteCatalog as ProtocolAirbyteCatalog
@@ -24,6 +29,8 @@ class CatalogDiffService(
   private val catalogService: CatalogService,
   private val connectionService: ConnectionService,
   private val applySchemaChangeHelper: ApplySchemaChangeHelper,
+  private val catalogConverter: CatalogConverter,
+  private val catalogMergeHelper: CatalogMergeHelper,
 ) {
   fun diffCatalogs(request: DiffCatalogsRequest): DiffCatalogsResponse {
     val currentCatalogId = request.currentCatalogId
@@ -65,9 +72,27 @@ class CatalogDiffService(
         SchemaChange.NON_BREAKING
       }
 
+    // Compute merged catalog if connection ID is provided
+    val mergedCatalog: AirbyteCatalog? =
+      if (connectionId != null && configuredCatalog != null) {
+        // Convert catalogs to API format
+        // originalConfigured: the configured catalog with user selections (converted from internal model)
+        val originalConfiguredApiCatalog = catalogConverter.toApi(configuredCatalog, null)
+        // originalDiscovered: the current/old discovered catalog (from protocol)
+        val originalDiscoveredApiCatalog = catalogConverter.toApi(currentCatalog, null)
+        // discovered: the new discovered catalog (from protocol)
+        val newDiscoveredApiCatalog = catalogConverter.toApi(newCatalog, null)
+
+        // Merge the new catalog with the connection's configured catalog
+        catalogMergeHelper.mergeCatalogWithConfiguration(originalConfiguredApiCatalog, originalDiscoveredApiCatalog, newDiscoveredApiCatalog)
+      } else {
+        null
+      }
+
     return DiffCatalogsResponse()
       .catalogDiff(catalogDiff)
       .schemaChange(schemaChange)
+      .mergedCatalog(mergedCatalog)
   }
 
   /**
