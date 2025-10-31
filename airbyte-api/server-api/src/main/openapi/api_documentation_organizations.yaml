@@ -2124,6 +2124,14 @@ components:
           type: "string"
           format: "uuid"
       x-speakeasy-component: true
+    EmbeddedWidgetResponse:
+      type: "object"
+      required:
+        - "token"
+      properties:
+        token:
+          type: "string"
+      x-speakeasy-component: true
     EmbeddedScopedTokenRequest:
       type: "object"
       required:

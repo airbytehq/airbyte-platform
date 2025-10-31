@@ -1,0 +1,65 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.button {
+  border: variables.$border-thin solid colors.$grey-300;
+  display: grid;
+  padding: 8px 12px;
+  background-color: colors.$foreground;
+  border-radius: variables.$border-radius-md;
+  cursor: pointer;
+  transition: box-shadow variables.$transition ease;
+  text-align: center;
+  color: colors.$dark-blue;
+  width: 145px;
+  height: 130px;
+  position: relative;
+
+  &:hover {
+    background-color: colors.$blue-30;
+  }
+
+  &:focus {
+    background-color: colors.$blue-30;
+  }
+
+  &:active {
+    background-color: colors.$blue-100;
+  }
+}
+
+.configuredIcon {
+  position: absolute;
+  top: 10px;
+  right: 11px;
+}
+
+.buttonContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.iconContainer {
+  height: 56px;
+  width: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: variables.$spacing-md;
+}
+
+.label {
+  text-align: center;
+  width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}

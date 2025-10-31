@@ -93,6 +93,10 @@ tags:
     description: Scoped configuration store specific configuration for a given entity. e.g. Overriding a workspaces connector version.
   - name: public
     description: Public resources that are considered stable and are intended to be consumed as API by end users.
+  - name: config_templates
+    description: Interactions with config templates, used in conjunction with partial_user_configs to generate sources.
+  - name: partial_user_configs
+    description: Interactions with partial user configs, used in conjunction with config_templates to generate sources.
   - name: embedded
     description: Endpoints specific to workflows for Airbyte operators and their end-users.
   - name: dataplanes
@@ -7415,6 +7419,158 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/config_templates/list:
+    post:
+      summary: List all config templates available to a workspace
+      tags:
+        - config_template
+        - embedded
+      operationId: listConfigTemplates
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListConfigTemplatesRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved config template list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+        "403":
+          description: Not allowed
+  /v1/config_templates/get:
+    post:
+      summary: Get details of a specific config template
+      tags:
+        - config_template
+        - embedded
+      operationId: getConfigTemplate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigTemplateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved config template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/partial_user_configs/get:
+    post:
+      summary: Get details of a specific partial user config
+      tags:
+        - partial_user_configs
+        - embedded
+      operationId: getPartialUserConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialUserConfigRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved partial user config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartialUserConfigRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/partial_user_configs/create:
+    post:
+      summary: Create a partial user config
+      tags:
+        - partial_user_configs
+        - embedded
+      operationId: createPartialUserConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialUserConfigCreate"
+        required: true
+      responses:
+        "200":
+          description: Successfully created partial user config + source
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/partial_user_configs/list:
+    post:
+      summary: List partial user configs
+      tags:
+        - partial_user_configs
+        - embedded
+      operationId: listPartialUserConfigs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListPartialUserConfigsRequest"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved partial user configs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartialUserConfigReadList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/partial_user_configs/update:
+    post:
+      summary: Update a partial user config
+      tags:
+        - partial_user_configs
+        - embedded
+      operationId: updatePartialUserConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialUserConfigUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successfully updated partial user config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/partial_user_configs/delete:
+    post:
+      summary: Tombstone a partial user config
+      tags:
+        - partial_user_configs
+        - embedded
+      operationId: deletePartialUserConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialUserConfigRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The resource was deleted successfully.
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/sso_config/get:
     post:
       summary: Retrieve the sso config for an organization
@@ -7554,6 +7710,150 @@ paths:
       security: []
       x-sdk-alias: getHealthCheck
       x-sdk-group: Health
+  /public/v1/config_templates/sources:
+    get:
+      description: List all config templates available to a workspace. This endpoint is only available when Airbyte Embedded is enabled.
+      tags:
+        - public_config_templates
+        - public
+        - ConfigTemplates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateListResponse"
+          description: List all config templates a User has permission to view.
+        "403":
+          description: Not allowed
+      operationId: publicListConfigTemplate
+      summary: List config templates
+      x-sdk-alias: listConfigTemplates
+      x-sdk-group: ConfigTemplates
+      parameters:
+        - name: organizationId
+          description: ID of the organization
+          schema:
+            format: UUID
+            type: string
+          in: query
+          required: true
+    post:
+      description: Create a config template for an organization. This endpoint is only available when Airbyte Embedded is enabled.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigTemplateCreateRequestBody"
+        required: true
+      tags:
+        - public_config_templates
+        - public
+        - ConfigTemplates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateCreateResponse"
+          description: Created a config template.
+        "403":
+          description: Not allowed
+      operationId: publicCreateConfigTemplate
+      summary: Create config template
+      x-sdk-alias: createConfigTemplate
+      x-sdk-group: ConfigTemplates
+  /public/v1/config_templates/connections:
+    post:
+      description: Create a connection template for an organization. This endpoint is only available when Airbyte Embedded is enabled.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionTemplateCreateRequestBody"
+        required: true
+      tags:
+        - public_connection_templates
+        - public
+        - ConnectionTemplates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionTemplateCreateResponse"
+          description: Created a connection template.
+        "403":
+          description: Not allowed
+      operationId: publicCreateConnectionTemplate
+      summary: Create connection template
+      x-sdk-alias: createConnectionTemplate
+      x-sdk-group: ConnectionTemplates
+  /public/v1/config_templates/sources/{configTemplateId}:
+    patch:
+      description: Edit a config template for an organization. This endpoint is only available when Airbyte Embedded is enabled.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigTemplateUpdateRequestBody"
+        required: true
+      tags:
+        - public_config_templates
+        - public
+        - ConfigTemplates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateUpdateResponse"
+          description: Successfully updated config template
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicUpdateConfigTemplate
+      x-sdk-alias: updateConfigTemplate
+      x-sdk-group: ConfigTemplates
+      summary: Update a config template
+      parameters:
+        - name: configTemplateId
+          schema:
+            type: string
+            format: uuid
+          in: path
+          required: true
+    get:
+      description: Get a config template. This endpoint is only available when Airbyte Embedded is enabled.
+      tags:
+        - public_config_templates
+        - public
+        - ConfigTemplates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplatePublicRead"
+          description: Get a Config Template by id.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetConfigTemplate
+      x-sdk-alias: getConfigTemplate
+      x-sdk-group: ConfigTemplates
+      summary: Get a Config Template by id.
+      parameters:
+        - name: configTemplateId
+          schema:
+            type: string
+            format: uuid
+          in: path
+          required: true
   /public/v1/applications:
     get:
       tags:
@@ -10073,6 +10373,30 @@ paths:
       operationId: publicUpdateTag
       x-sdk-alias: updateTag
       x-sdk-group: Tags
+
+  /public/v1/embedded/widget_token:
+    post:
+      description: "Get a token for the embedded widget. This endpoint is only available when Airbyte Embedded is enabled."
+      operationId: getEmbeddedWidget
+      x-sdk-alias: getEmbeddedWidget
+      x-sdk-group: EmbeddedWidget
+      summary: Get a widget token for Airbyte Embedded
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmbeddedWidgetRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmbeddedWidgetResponse"
+          description: Success
+      tags:
+        - public
+        - embedded_widget
 
   /public/v1/embedded/scoped_token:
     post:
@@ -21074,6 +21398,367 @@ components:
             $ref: "#/components/schemas/DataplaneResponse"
       x-sdk-component: true
 
+    # CONFIG TEMPLATES
+    ConfigTemplateListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigTemplateListItem"
+      x-sdk-component: true
+    ConfigTemplateList:
+      type: object
+      required:
+        - configTemplates
+      properties:
+        configTemplates:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigTemplateListItem"
+    ConfigTemplateListItem:
+      type: object
+      required:
+        - id
+        - name
+        - icon
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        icon:
+          type: string
+      x-sdk-component: true
+    ConfigTemplateRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - configTemplateId
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+        configTemplateId:
+          type: string
+          format: uuid
+    ConfigTemplateRead:
+      type: object
+      required:
+        - id
+        - name
+        - icon
+        - sourceDefinitionId
+        - configTemplateSpec
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Name of the associated actor definition
+        icon:
+          type: string
+          description: url to icon in connector asset (svg) registry
+        sourceDefinitionId:
+          type: string
+          format: uuid
+        configTemplateSpec:
+          $ref: "#/components/schemas/SourceDefinitionSpecification"
+        advancedAuth:
+          $ref: "#/components/schemas/AdvancedAuth"
+        advancedAuthGlobalCredentialsAvailable:
+          type: boolean
+    ConfigTemplatePublicRead:
+      type: object
+      required:
+        - id
+        - name
+        - icon
+        - sourceDefinitionId
+        - configTemplateSpec
+        - partialDefaultConfig
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Name of the associated actor definition
+        icon:
+          type: string
+          description: url to icon in connector asset (svg) registry
+        sourceDefinitionId:
+          type: string
+          format: uuid
+        configTemplateSpec:
+          $ref: "#/components/schemas/SourceDefinitionSpecification"
+        partialDefaultConfig:
+          type: object
+      x-sdk-component: true
+    ListConfigTemplatesRequestBody:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+    ConfigTemplateCreateRequestBody:
+      type: object
+      required:
+        - actorDefinitionId
+        - partialDefaultConfig
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        partialDefaultConfig:
+          $ref: "#/components/schemas/SourceConfiguration"
+        partialUserConfigSpec:
+          $ref: "#/components/schemas/SourceConfiguration"
+      x-sdk-component: true
+    ConfigTemplateSpec:
+      type: object
+    ConfigTemplateCreateResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+      x-sdk-component: true
+    ConfigTemplateUpdateRequestBody:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        partialDefaultConfig:
+          $ref: "#/components/schemas/SourceConfiguration"
+        partialUserConfigSpec:
+          $ref: "#/components/schemas/SourceConfiguration"
+      x-sdk-component: true
+    ConfigTemplateUpdateResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+      x-sdk-component: true
+
+    # PARTIAL USER CONFIGS
+    PartialUserConfigRequestBody:
+      type: object
+      required:
+        - partialUserConfigId
+        - workspaceId
+      properties:
+        partialUserConfigId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+    PartialUserConfigRead:
+      type: object
+      required:
+        - id
+        - connectionConfiguration
+        - configTemplate
+        - actorId
+      properties:
+        id:
+          type: string
+          format: uuid
+        configTemplate:
+          $ref: "#/components/schemas/ConfigTemplateRead"
+        actorId:
+          description: the actor that this partial user config is for
+          type: string
+          format: uuid
+        connectionConfiguration:
+          $ref: "#/components/schemas/SourceConfiguration"
+    PartialUserConfigCreate:
+      type: object
+      required:
+        - configTemplateId
+        - connectionConfiguration
+        - workspaceId
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+        configTemplateId:
+          description: the template that this user config is connected with
+          type: string
+          format: uuid
+        connectionConfiguration:
+          $ref: "#/components/schemas/SourceConfiguration"
+    PartialUserConfigWithSource:
+      type: object
+      description: the partial user config and its associated source
+      required:
+        - partialUserConfig
+        - source
+      properties:
+        partialUserConfig:
+          $ref: "#/components/schemas/PartialUserConfigRead"
+        source:
+          $ref: "#/components/schemas/SourceRead"
+    ListPartialUserConfigsRequest:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+    PartialUserConfigUpdate:
+      type: object
+      required:
+        - partialUserConfigId
+        - workspaceId
+        - connectionConfiguration
+      properties:
+        partialUserConfigId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        connectionConfiguration:
+          $ref: "#/components/schemas/SourceConfiguration"
+    PartialUserConfigReadList:
+      type: object
+      required:
+        - partialUserConfigs
+      properties:
+        partialUserConfigs:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartialUserConfigListItem"
+    PartialUserConfigListItem:
+      type: object
+      required:
+        - partialUserConfigId
+        - configTemplateName
+        - configTemplateIcon
+        - configTemplateId
+      properties:
+        partialUserConfigId:
+          type: string
+          format: uuid
+        configTemplateName:
+          type: string
+          description: the display name for the template
+        configTemplateIcon:
+          type: string
+          description: url to icon in connector asset (svg) registry
+        configTemplateId:
+          type: string
+          format: uuid
+          description: config template corresponding to this partial config
+    EmbeddedWidgetRequest:
+      type: object
+      required:
+        - allowedOrigin
+        - externalUserId
+        - organizationId
+      properties:
+        allowedOrigin:
+          type: string
+        externalUserId:
+          type: string
+        organizationId:
+          type: string
+          format: uuid
+      x-sdk-component: true
+    EmbeddedWidgetResponse:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+      x-sdk-component: true
+
+    EmbeddedScopedTokenRequest:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+      x-sdk-component: true
+
+    EmbeddedScopedTokenResponse:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+      x-sdk-component: true
+
+    ConnectionTemplateCreateRequestBody:
+      type: object
+      required:
+        - destinationConfiguration
+        - organizationId
+        - destinationName
+        - destinationActorDefinitionId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        destinationName:
+          type: string
+        destinationConfiguration:
+          $ref: "#/components/schemas/DestinationConfiguration"
+        destinationActorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        namespaceDefinitionType:
+          $ref: "#/components/schemas/NamespaceDefinitionType"
+          description: The namespace definition type for the connection. This is used to determine how the namespace is defined for the connection. If none is provided, the namespace will be set to ${WORKSPACE_NAME}.
+        namespaceFormat:
+          type: string
+          default: null
+        prefix:
+          type: string
+        schedule:
+          $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
+          description: The schedule for connections. If none is provided, syncs will run every hour.
+        resourceRequirements:
+          $ref: "#/components/schemas/ResourceRequirements"
+        nonBreakingChangesPreference:
+          $ref: "#/components/schemas/NonBreakingChangesPreference"
+        syncOnCreate:
+          type: boolean
+          default: true
+      x-sdk-component: true
+    ConnectionTemplateCreateResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+      x-sdk-component: true
+
     ServiceAccountTokenRequestBody:
       required:
         - service_account_id
@@ -21110,25 +21795,6 @@ components:
           type: string
         permission:
           $ref: "#/components/schemas/PermissionType"
-      x-sdk-component: true
-
-    EmbeddedScopedTokenRequest:
-      type: object
-      required:
-        - workspaceId
-      properties:
-        workspaceId:
-          type: string
-          format: uuid
-      x-sdk-component: true
-
-    EmbeddedScopedTokenResponse:
-      type: object
-      required:
-        - token
-      properties:
-        token:
-          type: string
       x-sdk-component: true
 
     GetSSOConfigRequestBody:

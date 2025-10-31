@@ -1,0 +1,16 @@
+@use "scss/variables";
+
+.content {
+  width: 550px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.envContent {
+  line-height: 1.5;
+  padding: variables.$spacing-lg variables.$spacing-xs;
+}
+
+.viewDocsLink {
+  width: 100%;
+}

@@ -9,6 +9,7 @@ export enum RoutePaths {
   Settings = "settings",
   ConnectorBuilder = "connector-builder",
   EmbeddedWidget = "embedded-widget",
+  EmbeddedOnboarding = "embedded",
   Organization = "organization",
   Onboarding = "onboarding",
 }

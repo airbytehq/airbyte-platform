@@ -27,6 +27,8 @@ export interface Experiments {
   "connectorBuilder.declarativeOauth": boolean;
   "connectorBuilder.dynamicStreams": boolean;
   "connectorBuilder.generateConnectorFromParams": boolean;
+  "embedded.operatorOnboarding.destinations": string;
+  "embedded.operatorOnboarding": boolean;
   "embedded.templateCreateButton": boolean;
   "embedded.useSonarServer": boolean;
   "onboarding.surveyEnabled": boolean;
@@ -78,6 +80,8 @@ export const defaultExperimentValues: Experiments = {
   "connectorBuilder.declarativeOauth": true,
   "connectorBuilder.dynamicStreams": false,
   "connectorBuilder.generateConnectorFromParams": false,
+  "embedded.operatorOnboarding": false,
+  "embedded.operatorOnboarding.destinations": "ConnectorIds.Destinations.S3",
   "embedded.templateCreateButton": false,
   "embedded.useSonarServer": false,
   "onboarding.surveyEnabled": false,

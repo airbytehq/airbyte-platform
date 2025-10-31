@@ -6,8 +6,9 @@ import { useCurrentOrganizationId } from "area/organization/utils";
 import { UserSettingsRoutes } from "area/settings/UserSettingsRoutes";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
-import { useExperimentContext } from "hooks/services/Experiment";
+import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
 import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
+import { EmbeddedOnboardingPage } from "pages/embedded/EmbeddedOnboardingPage/EmbeddedOnboardingPage";
 import { OrganizationSettingsPage } from "pages/SettingsPage/OrganizationSettingsPage";
 import { DestinationsPage, SourcesPage } from "pages/SettingsPage/pages/ConnectorsPage";
 import { LicenseSettingsPage } from "pages/SettingsPage/pages/LicenseDetailsPage/LicenseSettingsPage";
@@ -26,11 +27,13 @@ export const OrganizationRoutes: React.FC = () => {
   const canViewOrgSettings = useGeneratedIntent(Intent.ViewOrganizationSettings, { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
+  const isEmbedded = useExperiment("platform.allow-config-template-endpoints");
 
   useExperimentContext("organization", organizationId);
 
   return (
     <Routes>
+      {isEmbedded && <Route path={RoutePaths.EmbeddedOnboarding} element={<EmbeddedOnboardingPage />} />}
       <Route path={`${SettingsRoutePaths.User}/*`} element={<UserSettingsRoutes />} />
       <Route element={<OrganizationSettingsLayout />}>
         <Route path={RoutePaths.Workspaces} element={<OrganizationWorkspacesPage />} />

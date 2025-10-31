@@ -8,6 +8,8 @@ import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.EntitlementService
 import io.airbyte.commons.entitlements.models.ConfigTemplateEntitlement
+import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.server.handlers.EmbeddedWorkspacesHandler
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -15,21 +17,27 @@ import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.data.auth.TokenType
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.micronaut.runtime.AirbyteAuthConfig
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.publicApi.server.generated.apis.EmbeddedWidgetApi
 import io.airbyte.publicApi.server.generated.models.EmbeddedOrganizationListItem
 import io.airbyte.publicApi.server.generated.models.EmbeddedOrganizationsList
 import io.airbyte.publicApi.server.generated.models.EmbeddedScopedTokenRequest
+import io.airbyte.publicApi.server.generated.models.EmbeddedWidgetRequest
 import io.airbyte.publicApi.server.generated.models.PermissionType
 import io.airbyte.server.auth.TokenScopeClaim
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.annotation.Controller
+import io.micronaut.http.context.ServerRequestContext
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
 import jakarta.ws.rs.core.Response
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.time.Clock
 import java.time.temporal.ChronoUnit
+import java.util.Base64
+import java.util.UUID
 
 // Airbyte Embedded and token generation requires auth,
 // so if auth isn't enabled, then this controller is not available.
@@ -39,10 +47,12 @@ import java.time.temporal.ChronoUnit
 @Controller
 class EmbeddedController(
   val jwtTokenGenerator: JwtTokenGenerator,
+  val airbyteConfig: AirbyteConfig,
   val airbyteAuthConfig: AirbyteAuthConfig,
   val currentUserService: CurrentUserService,
   private val organizationsHandler: OrganizationsHandler,
   val permissionHandler: PermissionHandler,
+  val embeddedWorkspacesHandler: EmbeddedWorkspacesHandler,
   val entitlementService: EntitlementService,
 ) : EmbeddedWidgetApi {
   var clock: Clock = Clock.systemUTC()
@@ -124,6 +134,58 @@ class EmbeddedController(
     return mapOf("token" to generateToken(workspaceId, currentUser.authUserId, workspaceId))
       .ok()
   }
+
+  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getEmbeddedWidget(req: EmbeddedWidgetRequest): Response {
+    val organizationId = OrganizationId(req.organizationId)
+
+    entitlementService.ensureEntitled(
+      organizationId,
+      ConfigTemplateEntitlement,
+    )
+
+    val currentUser = currentUserService.getCurrentUser()
+    val externalUserId = req.externalUserId ?: UUID.randomUUID().toString()
+
+    val workspaceId =
+      embeddedWorkspacesHandler.getOrCreate(
+        organizationId,
+        req.externalUserId,
+      )
+
+    val widgetUrl =
+      airbyteConfig.airbyteUrl
+        .toHttpUrlOrNull()!!
+        .newBuilder()
+        .encodedPath("/embedded-widget")
+        .addQueryParameter("workspaceId", workspaceId.value.toString())
+        .addQueryParameter("allowedOrigin", req.allowedOrigin)
+        .toString()
+
+    val data =
+      mapOf(
+        "token" to generateToken(workspaceId.value.toString(), currentUser.authUserId, externalUserId),
+        "widgetUrl" to widgetUrl,
+      )
+    val json = Jsons.serialize(data)
+
+    // For debugging/dev, it's sometimes easier to just have the raw JSON
+    // instead of the base64-encoded string. That's available by passing "?debug" in the URL.
+    if (isDebug()) {
+      return json.ok()
+    }
+
+    // This endpoint is different from most – it returns an "opaque" base64-encoded string,
+    // which decodes to a JSON object. This is because there is an intermediate party (Operator)
+    // which needs to pass this value to the Embedded widget code.
+    // All fields passed to the EmbeddedWidget should be included in the encoded string.
+    // We still return a json object in case we ever need to return additional information that should not be encoded.
+    val encoded = Base64.getEncoder().encodeToString(json.toByteArray())
+    return mapOf("token" to encoded).ok()
+  }
+
+  private fun isDebug(): Boolean = ServerRequestContext.currentRequest<Any>().map { it.parameters.contains("debug") }.orElse(false)
 
   private fun generateToken(
     workspaceId: String,

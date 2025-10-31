@@ -1,0 +1,21 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.logo {
+  height: 28px;
+}
+
+.upsellContainer {
+  width: 800px;
+  margin: auto;
+  margin-top: variables.$spacing-2xl;
+}
+
+.header {
+  background-color: colors.$foreground;
+  border-bottom: variables.$border-thin solid colors.$dark-blue-40;
+  padding: variables.$spacing-md;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
