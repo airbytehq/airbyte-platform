@@ -24,7 +24,6 @@ import io.airbyte.config.helpers.log
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.workers.helper.TRACE_MESSAGE_METADATA_KEY
 import io.airbyte.workers.models.ReplicationApiInput
-import io.airbyte.workers.storage.activities.OutputStorageClient
 import jakarta.inject.Singleton
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
@@ -33,7 +32,6 @@ import kotlin.time.Duration.Companion.minutes
 class ReplicationCommand(
   airbyteApiClient: AirbyteApiClient,
   private val featureFlagClient: FeatureFlagClient,
-  private val catalogStorageClient: OutputStorageClient<ConfiguredAirbyteCatalog>,
   private val failureConverter: FailureConverter,
   private val catalogClientConverters: CatalogClientConverters,
 ) : ApiCommandBase<ReplicationApiInput>(airbyteApiClient) {
@@ -121,20 +119,6 @@ class ReplicationCommand(
     failures: List<FailureReason>?,
   ): StandardSyncOutput {
     val standardSyncOutput: StandardSyncOutput = reduceReplicationOutput(replicationAttemptSummary, catalog, failures)
-
-    val commandInput = airbyteApiClient.commandApi.getCommand(CommandGetRequest(commandId)).commandInput
-
-    val replicationApiInput = Jsons.deserialize(commandInput.toString(), ReplicationCommandApiInput.ReplicationApiInput::class.java)
-
-    val uri =
-      catalogStorageClient.persist(
-        catalog,
-        replicationApiInput.connectionId,
-        replicationApiInput.jobId.toLong(),
-        replicationApiInput.attemptId.toInt(),
-        emptyArray(),
-      )
-    standardSyncOutput.catalogUri = uri
 
     val standardSyncOutputString = standardSyncOutput.toString()
     log.debug { "sync summary: $standardSyncOutputString" }

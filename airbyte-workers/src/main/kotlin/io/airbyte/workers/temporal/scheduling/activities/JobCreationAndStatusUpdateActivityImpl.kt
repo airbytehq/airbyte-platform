@@ -19,7 +19,6 @@ import io.airbyte.api.client.model.generated.PersistCancelJobRequestBody
 import io.airbyte.api.client.model.generated.ReportJobStartRequest
 import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.commons.temporal.exception.RetryableException
-import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.State
 import io.airbyte.featureflag.AlwaysRunCheckBeforeSync
 import io.airbyte.featureflag.Connection
@@ -62,7 +61,6 @@ class JobCreationAndStatusUpdateActivityImpl(
   private val airbyteApiClient: AirbyteApiClient,
   private val featureFlagClient: FeatureFlagClient,
   @param:Named("outputStateClient") private val stateClient: OutputStorageClient<State>?,
-  @param:Named("outputCatalogClient") private val catalogClient: OutputStorageClient<ConfiguredAirbyteCatalog>?,
 ) : JobCreationAndStatusUpdateActivity {
   @Trace(operationName = ACTIVITY_TRACE_OPERATION_NAME)
   override fun createNewJob(input: JobCreationInput): JobCreationOutput {

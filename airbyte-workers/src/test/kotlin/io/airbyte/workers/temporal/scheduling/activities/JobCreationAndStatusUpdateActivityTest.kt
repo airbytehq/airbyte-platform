@@ -87,9 +87,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
   @Mock
   private lateinit var outputStateStorageClient: OutputStorageClient<State>
 
-  @Mock
-  private lateinit var outputCatalogStorageClient: OutputStorageClient<ConfiguredAirbyteCatalog>
-
   private lateinit var jobCreationAndStatusUpdateActivity: JobCreationAndStatusUpdateActivityImpl
 
   @BeforeEach
@@ -99,7 +96,6 @@ internal class JobCreationAndStatusUpdateActivityTest {
         airbyteApiClient,
         featureFlagClient,
         outputStateStorageClient,
-        outputCatalogStorageClient,
       )
   }
 

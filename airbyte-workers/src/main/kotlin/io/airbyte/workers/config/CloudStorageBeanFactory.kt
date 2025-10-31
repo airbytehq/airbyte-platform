@@ -8,7 +8,6 @@ import io.airbyte.commons.json.JsonSerde
 import io.airbyte.commons.storage.DocumentType
 import io.airbyte.commons.storage.StorageClient
 import io.airbyte.commons.storage.StorageClientFactory
-import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.State
 import io.airbyte.metrics.MetricClient
 import io.airbyte.workers.storage.activities.ActivityPayloadStorageClient
@@ -68,18 +67,5 @@ class CloudStorageBeanFactory {
       metricClient,
       "output-state",
       State::class.java,
-    )
-
-  @Singleton
-  @Named("outputCatalogClient")
-  fun outputCatalogClient(
-    payloadStorageClient: ActivityPayloadStorageClient,
-    metricClient: MetricClient,
-  ): OutputStorageClient<ConfiguredAirbyteCatalog> =
-    OutputStorageClient(
-      payloadStorageClient,
-      metricClient,
-      "output-catalog",
-      ConfiguredAirbyteCatalog::class.java,
     )
 }

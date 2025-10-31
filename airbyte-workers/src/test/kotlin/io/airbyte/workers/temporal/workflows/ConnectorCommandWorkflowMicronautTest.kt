@@ -57,11 +57,6 @@ class ConnectorCommandWorkflowMicronautTest {
   @Replaces(StorageClientFactory::class)
   var storageClientFactory: StorageClientFactory = mockk()
 
-  @Bean
-  @Replaces(OutputStorageClient::class)
-  @Named("outputCatalogClient")
-  var outputStorageClient: OutputStorageClient<ConfiguredAirbyteCatalog> = mockk()
-
   @Inject
   lateinit var checkCommand: CheckCommand
 
