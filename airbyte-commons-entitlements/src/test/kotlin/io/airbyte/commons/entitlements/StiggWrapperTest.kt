@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.entitlements
 
+import com.apollographql.apollo3.exception.ApolloException
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.FeatureEntitlement
 import io.airbyte.domain.models.EntitlementPlan
@@ -12,6 +13,10 @@ import io.airbyte.metrics.MetricClient
 import io.mockk.every
 import io.mockk.mockk
 import io.stigg.api.operations.GetPaywallQuery
+import io.stigg.sidecar.proto.v1.AccessDeniedReason
+import io.stigg.sidecar.proto.v1.EnumEntitlement
+import io.stigg.sidecar.proto.v1.GetEnumEntitlementRequest
+import io.stigg.sidecar.proto.v1.GetEnumEntitlementResponse
 import io.stigg.sidecar.sdk.Stigg
 import io.stigg.sidecar.sdk.offline.CustomerEntitlements
 import io.stigg.sidecar.sdk.offline.Entitlement
@@ -19,7 +24,9 @@ import io.stigg.sidecar.sdk.offline.EntitlementType
 import io.stigg.sidecar.sdk.offline.OfflineEntitlements
 import io.stigg.sidecar.sdk.offline.OfflineStiggConfig
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.util.UUID
 
 internal class StiggWrapperTest {
@@ -110,6 +117,135 @@ internal class StiggWrapperTest {
 
     assertEquals(emptyList<io.airbyte.commons.entitlements.models.Entitlement>(), unifiedTrialResult)
     assertEquals(emptyList<io.airbyte.commons.entitlements.models.Entitlement>(), standardTrialResult)
+  }
+
+  @Test
+  fun `getPlans returns single plan successfully`() {
+    val stigg = mockk<Stigg>(relaxed = true)
+    val planId = EntitlementPlan.PRO.id
+
+    val response =
+      GetEnumEntitlementResponse
+        .newBuilder()
+        .setEntitlement(
+          EnumEntitlement
+            .newBuilder()
+            .addEnumValues(planId)
+            .build(),
+        ).build()
+
+    every { stigg.getEnumEntitlement(any<GetEnumEntitlementRequest>()) } returns response
+
+    val stiggWrapper = StiggWrapper(stigg, metricClient)
+    val result = stiggWrapper.getPlans(organizationId)
+
+    assertEquals(1, result.size)
+    assertEquals(EntitlementPlan.PRO, result[0].planEnum)
+    assertEquals(planId, result[0].planId)
+    assertEquals(EntitlementPlan.PRO.displayName, result[0].planName)
+  }
+
+  @Test
+  fun `getPlans returns multiple plans and logs warning`() {
+    val stigg = mockk<Stigg>(relaxed = true)
+    val planId1 = EntitlementPlan.PRO.id
+    val planId2 = EntitlementPlan.UNIFIED_TRIAL.id
+
+    val response =
+      GetEnumEntitlementResponse
+        .newBuilder()
+        .setEntitlement(
+          EnumEntitlement
+            .newBuilder()
+            .addEnumValues(planId1)
+            .addEnumValues(planId2)
+            .build(),
+        ).build()
+
+    every { stigg.getEnumEntitlement(any<GetEnumEntitlementRequest>()) } returns response
+
+    val stiggWrapper = StiggWrapper(stigg, metricClient)
+    val result = stiggWrapper.getPlans(organizationId)
+
+    // Should still return all plans even though it logs an error
+    assertEquals(2, result.size)
+    assertEquals(EntitlementPlan.PRO, result[0].planEnum)
+    assertEquals(EntitlementPlan.UNIFIED_TRIAL, result[1].planEnum)
+  }
+
+  @Test
+  fun `getPlans returns empty list when no plans found`() {
+    val stigg = mockk<Stigg>(relaxed = true)
+
+    val response =
+      GetEnumEntitlementResponse
+        .newBuilder()
+        .setEntitlement(
+          EnumEntitlement
+            .newBuilder()
+            .build(),
+        ).build()
+
+    every { stigg.getEnumEntitlement(any<GetEnumEntitlementRequest>()) } returns response
+
+    val stiggWrapper = StiggWrapper(stigg, metricClient)
+    val result = stiggWrapper.getPlans(organizationId)
+
+    assertEquals(emptyList<EntitlementPlanResponse>(), result)
+  }
+
+  @Test
+  fun `getPlans returns empty list on Customer not found exception`() {
+    val stigg = mockk<Stigg>(relaxed = true)
+
+    every { stigg.getEnumEntitlement(any<GetEnumEntitlementRequest>()) } throws
+      ApolloException("Customer not found")
+
+    val stiggWrapper = StiggWrapper(stigg, metricClient)
+    val result = stiggWrapper.getPlans(organizationId)
+
+    // Should gracefully return empty list for "Customer not found"
+    assertEquals(emptyList<EntitlementPlanResponse>(), result)
+  }
+
+  @Test
+  fun `getPlans propagates exception for non-customer-not-found errors`() {
+    val stigg = mockk<Stigg>(relaxed = true)
+
+    every { stigg.getEnumEntitlement(any<GetEnumEntitlementRequest>()) } throws
+      ApolloException("Internal server error")
+
+    val stiggWrapper = StiggWrapper(stigg, metricClient)
+
+    // Should throw exception for other errors
+    assertThrows<ApolloException> {
+      stiggWrapper.getPlans(organizationId)
+    }
+  }
+
+  @Test
+  fun `getPlans uses correct feature ID and customer ID`() {
+    val stigg = mockk<Stigg>(relaxed = true)
+    val planId = EntitlementPlan.STANDARD_TRIAL.id
+
+    val response =
+      GetEnumEntitlementResponse
+        .newBuilder()
+        .setEntitlement(
+          EnumEntitlement
+            .newBuilder()
+            .addEnumValues(planId)
+            .build(),
+        ).build()
+
+    every { stigg.getEnumEntitlement(any<GetEnumEntitlementRequest>()) } returns response
+
+    val stiggWrapper = StiggWrapper(stigg, metricClient)
+    val result = stiggWrapper.getPlans(organizationId)
+
+    // Verify the result contains the expected plan
+    assertEquals(1, result.size)
+    assertEquals(EntitlementPlan.STANDARD_TRIAL, result[0].planEnum)
   }
 
   private fun createOfflineStigg(vararg entitlements: Pair<String, String>): Stigg {

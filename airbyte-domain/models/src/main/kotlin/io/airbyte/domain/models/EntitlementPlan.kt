@@ -20,29 +20,30 @@ package io.airbyte.domain.models
 //   OrbSubscriptionService.subscribeToSelfServePlanAndStartTrialIfNeeded
 enum class EntitlementPlan(
   val id: String,
+  val displayName: String,
 ) {
-  CORE("plan-airbyte-core"),
-  SME("plan-airbyte-sme"),
+  CORE("plan-airbyte-core", displayName = "Core"),
+  SME("plan-airbyte-sme", displayName = "Self Managed Enterprise"),
 
   // Cloud plans
   // Self-serve
-  STANDARD("plan-airbyte-standard"),
-  STANDARD_TRIAL("plan-airbyte-standard-trial"),
+  STANDARD("plan-airbyte-standard", displayName = "Standard"),
+  STANDARD_TRIAL("plan-airbyte-standard-trial", displayName = "Standard Trial"),
 
   // fka TEAMS
-  PRO("plan-airbyte-pro"),
-  UNIFIED_TRIAL("plan-airbyte-unified-trial"),
+  PRO("plan-airbyte-pro", displayName = "Pro"),
+  UNIFIED_TRIAL("plan-airbyte-unified-trial", displayName = "Unified Trial"),
 
   // Partners who get Airbyte free, forever
-  PARTNER("plan-airbyte-partner"),
-  POV("plan-airbyte-pov"),
+  PARTNER("plan-airbyte-partner", displayName = "Partner"),
+  POV("plan-airbyte-pov", displayName = "POV"),
 
   // fka Cloud Enterprise
-  FLEX("plan-airbyte-flex"),
+  FLEX("plan-airbyte-flex", displayName = "Enterprise Flex"),
 
   // Sonar
-  EMBEDDED_PAYG("plan-airbyte-embedded-payg"),
-  EMBEDDED_ANNUAL_COMMITMENT("plan-airbyte-embedded-annual-commitment"),
+  EMBEDDED_PAYG("plan-airbyte-embedded-payg", displayName = "Embedded PAYG"),
+  EMBEDDED_ANNUAL_COMMITMENT("plan-airbyte-embedded-annual-commitment", displayName = "Embedded Annual Commitment"),
   ;
 
   companion object {

@@ -26,6 +26,7 @@ import io.stigg.api.operations.type.ProvisionCustomerSubscriptionInput
 import io.stigg.api.operations.type.ProvisionSubscriptionInput
 import io.stigg.sidecar.proto.v1.GetBooleanEntitlementRequest
 import io.stigg.sidecar.proto.v1.GetEntitlementsRequest
+import io.stigg.sidecar.proto.v1.GetEnumEntitlementRequest
 import io.stigg.sidecar.sdk.Stigg
 
 private val logger = KotlinLogging.logger {}
@@ -53,23 +54,29 @@ internal class StiggWrapper(
 ) {
   fun getPlans(organizationId: OrganizationId): List<EntitlementPlanResponse> {
     try {
-      val resp =
-        stigg.api().query(
-          GetActiveSubscriptionsListQuery
-            .builder()
-            .input(
-              GetActiveSubscriptionsInput
-                .builder()
-                .customerId(organizationId.value.toString())
-                .build(),
-            ).build(),
+      val result =
+        stigg.getEnumEntitlement(
+          GetEnumEntitlementRequest
+            .newBuilder()
+            .setCustomerId(organizationId.value.toString())
+            .setFeatureId("feature-plan-name")
+            .build(),
         )
-      return resp.getActiveSubscriptions
+
+      if (result.entitlement.enumValuesList.size > 1) {
+        logger.error {
+          "More than one entitlement Plan was found. This is unexpected. " +
+            "organizationId=$organizationId entitlementPlans=${result.entitlement.enumValuesList}"
+        }
+      }
+
+      return result.entitlement.enumValuesList
         .map {
+          val planEnum = EntitlementPlan.fromId(it)
           EntitlementPlanResponse(
-            planEnum = EntitlementPlan.fromId(it.slimSubscriptionFragmentV2.plan.planId),
-            planId = it.slimSubscriptionFragmentV2.plan.planId,
-            planName = it.slimSubscriptionFragmentV2.plan.displayName,
+            planEnum = planEnum,
+            planId = it,
+            planName = planEnum.displayName,
           )
         }.toList()
     } catch (e: ApolloException) {

@@ -197,8 +197,8 @@ slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 snakeyaml = { module = "org.yaml:snakeyaml", version = "2.4" }
 spring-core = { module = "org.springframework:spring-core", version = "6.2.5" }
-stigg-api-client = { module = "io.stigg:stigg-api-client", version = "3.27.1" }
-stigg-sidecar = { module = "io.stigg:stigg-sidecar-sdk", version = "3.29.1" }
+stigg-api-client = { module = "io.stigg:stigg-api-client", version = "3.101.0" }
+stigg-sidecar = { module = "io.stigg:stigg-sidecar-sdk", version = "3.101.0" }
 stripe = { module = "com.stripe:stripe-java", version = "26.7.0" }
 swagger-annotations = { module = "io.swagger:swagger-annotations", version.ref = "swagger" }
 v3-swagger-annotations = { module = "io.swagger.core.v3:swagger-annotations", version.ref = "v3-swagger" }
