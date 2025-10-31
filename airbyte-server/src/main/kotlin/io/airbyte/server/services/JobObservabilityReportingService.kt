@@ -4,6 +4,7 @@
 
 package io.airbyte.server.services
 
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.statistics.OutlierEvaluation
@@ -128,7 +129,8 @@ class JobObservabilityReportingService(
       "number_of_streams" to event.streams.size,
     )
 
-  private fun buildStreamSummary(stream: StreamInfo): Map<String, Any> {
+  @InternalForTesting
+  internal fun buildStreamSummary(stream: StreamInfo): Map<String, Any> {
     val context =
       mutableMapOf<String, Any>(
         "bytes_loaded" to stream.metrics.bytesLoaded,
@@ -137,6 +139,12 @@ class JobObservabilityReportingService(
         "was_backfilled" to stream.wasBackfilled,
         "was_resumed" to stream.wasResumed,
       )
+
+    // Add additionalStats if present
+    if (stream.metrics.additionalStats.isNotEmpty()) {
+      context["additional_stats"] = stream.metrics.additionalStats
+    }
+
     stream.evaluations.addToContextMap(context)
     return context
   }
