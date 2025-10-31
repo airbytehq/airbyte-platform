@@ -47,8 +47,6 @@ object MetricTags {
   const val IMPLEMENTATION: String = "implementation"
   const val IS_CUSTOM_CONNECTOR_SYNC: String = "is_custom_connector_sync"
   const val IS_RESET: String = "is_reset"
-  const val IS_FRESHNESS_OUTLIER: String = "is_freshness_outlier"
-  const val IS_CORRECTNESS_OUTLIER: String = "is_correctness_outlier"
   const val JOB_ID: String = "job_id"
   const val JOB_STATUS: String = "job_status"
   const val KILLED: String = "killed"
