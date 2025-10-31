@@ -14,7 +14,7 @@ import io.airbyte.config.State
  * @param destinationConfig destination configuration used for the attempt
  * @param state state during the attempt
  */
-@JvmRecord
+
 data class AttemptConfigReportingContext(
   val sourceConfig: JsonNode?,
   val destinationConfig: JsonNode?,

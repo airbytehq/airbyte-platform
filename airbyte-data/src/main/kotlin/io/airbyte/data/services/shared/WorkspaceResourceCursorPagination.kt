@@ -168,7 +168,6 @@ data class WorkspaceResourceCursorPagination(
  * Helper record to hold parsed sort key information.
  */
 @InternalForTesting
-@JvmRecord
 data class SortKeyInfo(
   val sortKey: SortKey,
   val ascending: Boolean,

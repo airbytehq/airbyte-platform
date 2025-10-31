@@ -314,7 +314,6 @@ object StatsAggregationHelper {
     }
   }
 
-  @JvmRecord
   data class StreamStatsRecord(
     val streamName: String,
     val streamNamespace: String?,

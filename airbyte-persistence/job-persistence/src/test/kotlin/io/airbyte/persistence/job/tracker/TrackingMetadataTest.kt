@@ -106,14 +106,14 @@ internal class TrackingMetadataTest {
 
     // There is a job, and it has an attempt, but the attempt has null output.
     val mockAttemptWithNullOutput = mock<Attempt>()
-    whenever(mockAttemptWithNullOutput.getOutput()).thenReturn(null)
+    whenever(mockAttemptWithNullOutput.output).thenReturn(null)
     val jobWithNullOutput =
       Job(1, ConfigType.SYNC, UNUSED, JobConfig(), listOf(mockAttemptWithNullOutput), JobStatus.PENDING, 0L, 0, 0, true)
     assertTrue(generateJobAttemptMetadata(jobWithNullOutput).isEmpty())
 
     // There is a job, and it has an attempt, but the attempt has empty output.
     val mockAttemptWithEmptyOutput = mock<Attempt>()
-    whenever(mockAttemptWithEmptyOutput.getOutput()).thenReturn(Optional.empty<JobOutput>())
+    whenever(mockAttemptWithEmptyOutput.output).thenReturn(null)
     val jobWithEmptyOutput =
       Job(1, ConfigType.SYNC, UNUSED, JobConfig(), listOf(mockAttemptWithNullOutput), JobStatus.PENDING, 0L, 0, 0, true)
     assertTrue(generateJobAttemptMetadata(jobWithEmptyOutput).isEmpty())
@@ -122,8 +122,9 @@ internal class TrackingMetadataTest {
     // info.
     val mockAttemptWithOutput = mock<Attempt>()
     val mockJobOutputWithoutSync = mock<JobOutput>()
-    whenever(mockAttemptWithOutput.getOutput()).thenReturn(Optional.of<JobOutput>(mockJobOutputWithoutSync))
+    whenever(mockAttemptWithOutput.output).thenReturn(mockJobOutputWithoutSync)
     whenever(mockJobOutputWithoutSync.sync).thenReturn(null)
+
     val jobWithoutSyncInfo =
       Job(1, ConfigType.SYNC, UNUSED, JobConfig(), listOf(mockAttemptWithOutput), JobStatus.PENDING, 0L, 0, 0, true)
     assertTrue(generateJobAttemptMetadata(jobWithoutSyncInfo).isEmpty())

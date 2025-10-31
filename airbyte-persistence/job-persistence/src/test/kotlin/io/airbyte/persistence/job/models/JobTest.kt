@@ -61,21 +61,21 @@ internal class JobTest {
 
     val job: Job = jobWithAttemptWithStatus(AttemptStatus.FAILED, AttemptStatus.FAILED)
     assertTrue(job.getLastFailedAttempt().isPresent)
-    assertEquals(2, job.getLastFailedAttempt().get().getAttemptNumber())
+    assertEquals(2, job.getLastFailedAttempt().get().attemptNumber)
   }
 
   @Test
   fun testGetLastAttempt() {
     val job: Job = jobWithAttemptWithStatus(AttemptStatus.FAILED, AttemptStatus.FAILED, AttemptStatus.SUCCEEDED)
     assertTrue(job.getLastAttempt().isPresent)
-    assertEquals(3, job.getLastAttempt().get().getAttemptNumber())
+    assertEquals(3, job.getLastAttempt().get().attemptNumber)
   }
 
   @Test
   fun testGetAttemptByNumber() {
     val job: Job = jobWithAttemptWithStatus(AttemptStatus.FAILED, AttemptStatus.FAILED, AttemptStatus.SUCCEEDED)
     assertTrue(job.getAttemptByNumber(2).isPresent)
-    assertEquals(2, job.getAttemptByNumber(2).get().getAttemptNumber())
+    assertEquals(2, job.getAttemptByNumber(2).get().attemptNumber)
   }
 
   @Test

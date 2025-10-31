@@ -13,7 +13,7 @@ import java.util.UUID
  * @param workspaceId - workspace ID
  * @param organizationId - organization ID
  */
-@JvmRecord
+
 data class ActorWorkspaceOrganizationIds(
   val actorId: UUID,
   val workspaceId: UUID,

@@ -35,7 +35,6 @@ class BreakingChangesHelper(
   private val destinationService: DestinationService,
   private val sourceService: SourceService,
 ) {
-  @JvmRecord
   data class WorkspaceBreakingChangeInfo(
     val workspaceId: UUID,
     val connectionId: List<UUID>,

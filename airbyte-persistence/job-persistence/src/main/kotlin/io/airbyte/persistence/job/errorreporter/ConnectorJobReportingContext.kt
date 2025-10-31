@@ -16,7 +16,7 @@ import java.util.UUID
  * @param releaseStage connector release stage - can be null in the case of Spec jobs, since they
  * can run on arbitrary images.
  */
-@JvmRecord
+
 data class ConnectorJobReportingContext(
   @JvmField val jobId: UUID,
   val dockerImage: String,

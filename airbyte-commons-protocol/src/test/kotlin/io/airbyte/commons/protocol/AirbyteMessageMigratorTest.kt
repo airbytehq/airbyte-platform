@@ -13,17 +13,14 @@ import org.junit.jupiter.api.Test
 import java.util.Optional
 
 internal class AirbyteMessageMigratorTest {
-  @JvmRecord
   internal data class ObjectV0(
     val name0: String,
   )
 
-  @JvmRecord
   internal data class ObjectV1(
     val name1: String,
   )
 
-  @JvmRecord
   internal data class ObjectV2(
     val name2: String,
   )

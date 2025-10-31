@@ -405,7 +405,7 @@ interface JobPersistence {
    * @param combinedStats stats for the job
    * @param perStreamStats stats for each stream
    */
-  @JvmRecord
+
   data class AttemptStats(
     val combinedStats: SyncStats?,
     val perStreamStats: List<StreamSyncStats>,
@@ -417,7 +417,7 @@ interface JobPersistence {
    * @param id job id
    * @param attemptNumber attempt number
    */
-  @JvmRecord
+
   data class JobAttemptPair(
     val id: Long,
     val attemptNumber: Int,

@@ -17,7 +17,7 @@ import java.util.UUID
  * @param pageSize limit
  * @param rowOffset offset
  */
-@JvmRecord
+
 data class StandardSyncsQueryPaginated(
   @field:Nonnull @param:Nonnull val workspaceIds: List<UUID>,
   val tagIds: List<UUID>,

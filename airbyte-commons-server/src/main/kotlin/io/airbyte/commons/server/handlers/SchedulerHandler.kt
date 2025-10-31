@@ -577,7 +577,7 @@ open class SchedulerHandler
       // log connection timeline event (job cancellation).
       val attemptStats: MutableList<JobPersistence.AttemptStats> = ArrayList()
       for (attempt in job.attempts) {
-        attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()))
+        attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.attemptNumber))
       }
       log.info { "Adding connection timeline event for job $jobId attemptStats=$attemptStats" }
       connectionTimelineEventHelper.logJobCancellationEventInConnectionTimeline(job, attemptStats)

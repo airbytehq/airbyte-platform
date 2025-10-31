@@ -35,7 +35,7 @@ class ApplySchemaChangeHelper(
    * Return value for `getUpdatedSchema` method. Returns the updated catalog and a description of the
    * changes
    */
-  @JvmRecord
+
   data class UpdateSchemaResult(
     @JvmField val catalog: AirbyteCatalog,
     @JvmField val appliedDiff: CatalogDiff,

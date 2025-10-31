@@ -52,6 +52,7 @@ import java.util.Optional
 import java.util.Set
 import java.util.UUID
 import java.util.stream.Collectors
+import kotlin.jvm.optionals.getOrNull
 
 /**
  * Tracking calls to each job type.
@@ -208,8 +209,7 @@ class JobTracker
         require(allowedJob) { "Job type $configType is not allowed!" }
         val jobId = job.id
         val lastAttempt = job.getLastAttempt()
-        val attemptSyncConfig =
-          lastAttempt.flatMap { obj: Attempt -> obj.getSyncConfig() }
+        val attemptSyncConfig = lastAttempt.getOrNull()?.syncConfig
 
         val connectionId = UUID.fromString(job.scope)
         val workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId)
@@ -253,7 +253,7 @@ class JobTracker
         val syncConfigMetadata =
           generateSyncConfigMetadata(
             jobConfig,
-            attemptSyncConfig.orElse(null),
+            attemptSyncConfig,
             sourceVersion.spec.connectionSpecification,
             destinationVersion.spec.connectionSpecification,
           )

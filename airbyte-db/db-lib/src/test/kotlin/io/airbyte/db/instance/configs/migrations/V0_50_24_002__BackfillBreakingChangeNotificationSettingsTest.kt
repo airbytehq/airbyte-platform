@@ -144,13 +144,11 @@ internal class V0_50_24_002__BackfillBreakingChangeNotificationSettingsTest : Ab
     webhook,
   }
 
-  @JvmRecord
   private data class NotificationItem(
     val notificationType: List<NotificationType>,
   )
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  @JvmRecord
   private data class NotificationSettings(
     val sendOnSyncDisabled: NotificationItem,
     val sendOnConnectionUpdate: NotificationItem,

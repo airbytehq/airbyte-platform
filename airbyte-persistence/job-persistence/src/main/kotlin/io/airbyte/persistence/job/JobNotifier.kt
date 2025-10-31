@@ -43,6 +43,7 @@ import io.airbyte.persistence.job.tracker.TrackingMetadata
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.core.util.functional.ThrowingFunction
 import java.time.Instant
+import java.util.Optional
 import java.util.UUID
 import java.util.stream.Collectors
 
@@ -273,7 +274,7 @@ class JobNotifier(
     val firstFailure =
       job
         .getLastAttempt()
-        .flatMap { obj: Attempt -> obj.getFailureSummary() }
+        .flatMap { obj: Attempt -> Optional.ofNullable(obj.failureSummary) }
         .flatMap { s: AttemptFailureSummary -> s.failures.stream().findFirst() }
 
     val failureMessage =

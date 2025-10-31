@@ -13,7 +13,7 @@ import java.util.UUID
  * @param sourceVersionId source definition version id. Can be null in the case of resets.
  * @param destinationVersionId destination definition version id.
  */
-@JvmRecord
+
 data class SyncJobReportingContext(
   val jobId: Long,
   val sourceVersionId: UUID?,

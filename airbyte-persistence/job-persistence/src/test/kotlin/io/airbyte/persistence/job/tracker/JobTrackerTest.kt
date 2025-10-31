@@ -856,7 +856,7 @@ internal class JobTrackerTest {
       whenever(syncOutput.standardSyncSummary).thenReturn(syncSummary)
       whenever(syncSummary.totalStats).thenReturn(syncStats)
       whenever(jobOutput.sync).thenReturn(syncOutput)
-      whenever(attempt.getOutput()).thenReturn(Optional.of(jobOutput))
+      whenever(attempt.output).thenReturn(jobOutput)
       whenever(syncStats.sourceStateMessagesEmitted).thenReturn(3L)
       whenever(syncStats.destinationStateMessagesEmitted).thenReturn(1L)
       whenever(syncStats.maxSecondsBeforeSourceStateMessageEmitted).thenReturn(5L)
@@ -928,19 +928,19 @@ internal class JobTrackerTest {
       val singleFailureSummary = mock<AttemptFailureSummary>()
       whenever(singleFailureSummary.failures)
         .thenReturn(listOf(this.configFailureReasonMock))
-      whenever(attemptWithSingleFailure.getFailureSummary())
-        .thenReturn(Optional.of<AttemptFailureSummary>(singleFailureSummary))
+      whenever(attemptWithSingleFailure.failureSummary)
+        .thenReturn(singleFailureSummary)
 
       val attemptWithMultipleFailures = this.attemptMock
       val multipleFailuresSummary = mock<AttemptFailureSummary>()
       whenever(multipleFailuresSummary.failures)
         .thenReturn(listOf(this.systemFailureReasonMock, this.unknownFailureReasonMock))
-      whenever(attemptWithMultipleFailures.getFailureSummary())
-        .thenReturn(Optional.of<AttemptFailureSummary>(multipleFailuresSummary))
+      whenever(attemptWithMultipleFailures.failureSummary)
+        .thenReturn(multipleFailuresSummary)
 
       val attemptWithNoFailures = this.attemptMock
-      whenever(attemptWithNoFailures.getFailureSummary())
-        .thenReturn(Optional.empty<AttemptFailureSummary>())
+      whenever(attemptWithNoFailures.failureSummary)
+        .thenReturn(null)
 
       // in non-test cases we shouldn't actually get failures out of order chronologically
       // this is to verify that we are explicitly sorting the results with tracking failure metadata

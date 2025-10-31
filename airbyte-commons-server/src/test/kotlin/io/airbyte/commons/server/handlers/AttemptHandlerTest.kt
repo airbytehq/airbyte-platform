@@ -262,7 +262,7 @@ internal class AttemptHandlerTest {
       ).thenReturn(ActorDefinitionVersion().withSupportsRefreshes(enableRfr))
     val output = handler.createNewAttemptNumber(JOB_ID)
     org.assertj.core.api.Assertions
-      .assertThat(output.getAttemptNumber())
+      .assertThat(output.attemptNumber)
       .isEqualTo(attemptNumber)
     if (enableRfr) {
       Mockito.verify(generationBumper).updateGenerationForStreams(
@@ -355,7 +355,7 @@ internal class AttemptHandlerTest {
       ).thenReturn(ActorDefinitionVersion().withSupportsRefreshes(true))
     val output = handler.createNewAttemptNumber(JOB_ID)
     org.assertj.core.api.Assertions
-      .assertThat(output.getAttemptNumber())
+      .assertThat(output.attemptNumber)
       .isEqualTo(attemptNumber)
     Mockito.verify(generationBumper).updateGenerationForStreams(
       connId,
@@ -453,7 +453,7 @@ internal class AttemptHandlerTest {
       ).thenReturn(ActorDefinitionVersion().withSupportsRefreshes(true))
     val output = handler.createNewAttemptNumber(JOB_ID)
     org.assertj.core.api.Assertions
-      .assertThat(output.getAttemptNumber())
+      .assertThat(output.attemptNumber)
       .isEqualTo(attemptNumber)
     if (attemptNumber == 0) {
       Mockito.verify(generationBumper).updateGenerationForStreams(
@@ -630,7 +630,7 @@ internal class AttemptHandlerTest {
 
       val output = handler.createNewAttemptNumber(JOB_ID)
       org.assertj.core.api.Assertions
-        .assertThat(output.getAttemptNumber())
+        .assertThat(output.attemptNumber)
         .isEqualTo(attemptNumber)
 
       val captor1 = argumentCaptor<UUID>()

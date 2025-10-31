@@ -29,7 +29,7 @@ class Stopwatch {
    * Represents an instance of stopwatch start/stop. This record log the start time, and will report
    * it back upon close.
    */
-  @JvmRecord
+
   data class StopwatchInstance(
     val parent: Stopwatch,
     val startTime: Long,

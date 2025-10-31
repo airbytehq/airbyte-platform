@@ -19,7 +19,7 @@ import java.time.OffsetDateTime
  * @param isActive Whether the source has any active connections
  * status.
  */
-@JvmRecord
+
 data class SourceConnectionWithCount(
   @JvmField val source: SourceConnection,
   @JvmField val sourceDefinitionName: String,

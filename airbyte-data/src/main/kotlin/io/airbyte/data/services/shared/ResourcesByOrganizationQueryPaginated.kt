@@ -15,7 +15,7 @@ import java.util.UUID
  * @param pageSize limit
  * @param rowOffset offset
  */
-@JvmRecord
+
 data class ResourcesByOrganizationQueryPaginated(
   @JvmField @field:Nonnull @param:Nonnull val organizationId: UUID,
   @JvmField val includeDeleted: Boolean,

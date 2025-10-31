@@ -506,7 +506,6 @@ class JobHistoryHandler(
           .valueOf(apiJobStatus.toString().uppercase(Locale.getDefault()))
       }.collect(Collectors.toList())
 
-  @JvmRecord
   data class StreamNameAndNamespace(
     val name: String,
     val namespace: String?,

@@ -253,20 +253,17 @@ class V0_50_41_012__BreakingChangePinDataMigration : BaseJavaMigration() {
       }
   }
 
-  @JvmRecord
   internal data class ActorDefinition(
     val actorDefinitionId: UUID,
     val defaultVersionId: UUID?,
   )
 
-  @JvmRecord
   internal data class ActorDefinitionVersion(
     val versionId: UUID,
     val actorDefinitionId: UUID,
     val dockerImageTag: String,
   )
 
-  @JvmRecord
   internal data class Actor(
     val actorId: UUID,
     val workspaceId: UUID,

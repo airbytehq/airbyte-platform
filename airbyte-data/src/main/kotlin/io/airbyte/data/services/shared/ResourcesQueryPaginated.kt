@@ -16,7 +16,7 @@ import java.util.UUID
  * @param rowOffset offset
  * @param nameContains string to search name contains by
  */
-@JvmRecord
+
 data class ResourcesQueryPaginated(
   @field:Nonnull @param:Nonnull val workspaceIds: List<UUID>,
   val includeDeleted: Boolean = false,

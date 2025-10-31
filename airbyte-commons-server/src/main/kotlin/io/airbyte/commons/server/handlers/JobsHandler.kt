@@ -70,9 +70,9 @@ open class JobsHandler(
             Connection(input.connectionId),
           )
         if (mergeStatsWithStreamMetadata) {
-          attemptStats.add(jobPersistence.getAttemptStatsWithStreamMetadata(jobId, attempt.getAttemptNumber()))
+          attemptStats.add(jobPersistence.getAttemptStatsWithStreamMetadata(jobId, attempt.attemptNumber))
         } else {
-          attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()))
+          attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.attemptNumber))
         }
       }
       if (job.configType == JobConfig.ConfigType.SYNC) {
@@ -130,20 +130,18 @@ open class JobsHandler(
     val lastFailedAttempt = job.getLastFailedAttempt()
     if (lastFailedAttempt.isPresent) {
       val attempt = lastFailedAttempt.get()
-      val failureSummaryOpt = attempt.getFailureSummary()
+      val failureSummaryOpt = attempt.failureSummary
 
-      if (failureSummaryOpt.isPresent) {
-        val failureSummary = failureSummaryOpt.get()
+      if (failureSummaryOpt != null) {
+        val failureSummary = failureSummaryOpt
         var attemptConfig: AttemptConfigReportingContext? = null
 
-        val syncConfigOpt = attempt.getSyncConfig()
-        if (syncConfigOpt.isPresent) {
-          val syncConfig = syncConfigOpt.get()
+        attempt.syncConfig?.let {
           attemptConfig =
             AttemptConfigReportingContext(
-              syncConfig.sourceConfiguration,
-              syncConfig.destinationConfiguration,
-              syncConfig.state,
+              it.sourceConfiguration,
+              it.destinationConfiguration,
+              it.state,
             )
         }
 
@@ -189,9 +187,9 @@ open class JobsHandler(
             Connection(input.connectionId),
           )
         if (mergeStatsWithStreamMetadata) {
-          attemptStats.add(jobPersistence.getAttemptStatsWithStreamMetadata(jobId, attempt.getAttemptNumber()))
+          attemptStats.add(jobPersistence.getAttemptStatsWithStreamMetadata(jobId, attempt.attemptNumber))
         } else {
-          attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()))
+          attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.attemptNumber))
         }
       }
       if (job.configType == JobConfig.ConfigType.SYNC) {
@@ -296,7 +294,7 @@ open class JobsHandler(
       val job = jobPersistence.getJob(jobId)
       val attemptStats: MutableList<JobPersistence.AttemptStats> = ArrayList()
       for (attempt in job.attempts) {
-        attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()))
+        attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.attemptNumber))
       }
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CANCELLED_BY_RELEASE_STAGE, job)
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.FAILED)

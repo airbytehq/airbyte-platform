@@ -15,7 +15,6 @@ internal class PayloadCheckerTest {
 
   var payloadChecker: PayloadChecker = PayloadChecker(mMetricClient)
 
-  @JvmRecord
   internal data class Payload(
     val data: String,
   )

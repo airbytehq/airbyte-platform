@@ -12,7 +12,7 @@ import java.util.Optional
  *
  * @param <T> type of the output if it were a success.
 </T> */
-@JvmRecord
+
 data class TemporalResponse<T : Any>(
   val output: T?,
   val metadata: JobMetadata,

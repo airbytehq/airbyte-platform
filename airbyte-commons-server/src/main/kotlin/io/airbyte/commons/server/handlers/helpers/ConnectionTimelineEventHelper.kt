@@ -44,6 +44,7 @@ import jakarta.inject.Inject
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.io.IOException
+import java.util.Optional
 import java.util.UUID
 import java.util.stream.Collectors
 
@@ -131,7 +132,6 @@ class ConnectionTimelineEventHelper
       return orgEmail == null || !isUserEmailFromAirbyteSupport(orgEmail)
     }
 
-    @JvmRecord
     data class TimelineJobStats(
       @JvmField val loadedBytes: Long,
       @JvmField val loadedRecords: Long,
@@ -210,7 +210,7 @@ class ConnectionTimelineEventHelper
       try {
         val stats = buildTimelineJobStats(job, attemptStats)
 
-        val lastAttemptFailureSummary = job.getLastAttempt().flatMap { obj: Attempt -> obj.getFailureSummary() }
+        val lastAttemptFailureSummary = job.getLastAttempt().flatMap { obj: Attempt -> Optional.ofNullable(obj.failureSummary) }
         val firstFailureReasonOfLastAttempt =
           lastAttemptFailureSummary.flatMap { summary: AttemptFailureSummary ->
             summary.failures.stream().findFirst()

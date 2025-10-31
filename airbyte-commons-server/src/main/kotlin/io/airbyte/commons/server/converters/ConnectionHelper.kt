@@ -54,7 +54,6 @@ class ConnectionHelper(
     return newConnection
   }
 
-  @JvmRecord
   data class StreamName(
     val namespace: String?,
     val name: String,

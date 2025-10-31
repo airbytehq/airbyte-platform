@@ -444,8 +444,8 @@ open class ConnectionManagerWorkflowImpl : ConnectionManagerWorkflow {
       ),
     )
 
-    // ATTENTION: connectionUpdaterInput.getAttemptNumber() is 1-based (usually)
-    // this differs from workflowInternalState.getAttemptNumber() being 0-based.
+    // ATTENTION: connectionUpdaterInput.attemptNumber is 1-based (usually)
+    // this differs from workflowInternalState.attemptNumber being 0-based.
     // TODO: Don't mix these bases. Bug filed https://github.com/airbytehq/airbyte/issues/27808
     val attemptNumber: Int = connectionUpdaterInput.attemptNumber!!
     ApmTraceUtils.addTagsToTrace(Map.of<String?, Int?>(ATTEMPT_NUMBER_KEY, attemptNumber))

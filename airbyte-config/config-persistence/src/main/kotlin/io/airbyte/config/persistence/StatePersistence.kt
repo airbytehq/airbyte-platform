@@ -223,7 +223,6 @@ class StatePersistence(
     }
   }
 
-  @JvmRecord
   private data class StateRecord(
     val type: StateType,
     val streamName: String?,

@@ -42,6 +42,7 @@ import java.util.Objects
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
+import kotlin.jvm.optionals.getOrNull
 
 /**
  * Helper class to handle and track job creation and status updates.
@@ -95,7 +96,7 @@ class JobCreationAndStatusUpdateHelper(
           continue
         }
 
-        val attemptNumber = attempt.getAttemptNumber()
+        val attemptNumber = attempt.attemptNumber
         log.info { "Failing non-terminal attempt $attemptNumber for non-terminal job $jobId" }
         jobPersistence.failAttempt(jobId, attemptNumber)
         jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummaryForTemporalCleaningJobState(jobId, attemptNumber))
@@ -106,7 +107,7 @@ class JobCreationAndStatusUpdateHelper(
 
       val attemptStats: MutableList<JobPersistence.AttemptStats> = ArrayList()
       for (attempt in attempts) {
-        attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()))
+        attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.attemptNumber))
       }
       val failedJob = jobPersistence.getJob(jobId)
       jobNotifier.failJob(failedJob, attemptStats)
@@ -175,50 +176,37 @@ class JobCreationAndStatusUpdateHelper(
     attempt: Attempt,
   ) {
     val failureOrigin =
-      attempt.getFailureSummary().flatMap { summary: AttemptFailureSummary ->
-        summary.failures
-          .stream()
-          .map { obj: FailureReason -> obj.failureOrigin }
-          .filter { obj: FailureReason.FailureOrigin? -> Objects.nonNull(obj) }
-          .map { obj: FailureReason.FailureOrigin -> obj.name }
-          .findFirst()
-      }
+      attempt.failureSummary
+        ?.failures
+        ?.mapNotNull { it.failureOrigin }
+        ?.map { it.name }
+        ?.firstOrNull()
 
     val failureType =
-      attempt.getFailureSummary().flatMap<String> { summary: AttemptFailureSummary ->
-        summary.failures
-          .stream()
-          .map<FailureReason.FailureType> { obj: FailureReason -> obj.failureType }
-          .filter { obj: FailureReason.FailureType? -> Objects.nonNull(obj) }
-          .map<String> { obj: FailureReason.FailureType -> getFailureType(obj) }
-          .findFirst()
-      }
+      attempt.failureSummary
+        ?.failures
+        ?.mapNotNull { it.failureType }
+        ?.map { getFailureType(it) }
+        ?.firstOrNull()
 
     val externalMsg =
-      attempt.getFailureSummary().flatMap { summary: AttemptFailureSummary ->
-        summary.failures
-          .stream()
-          .map { obj: FailureReason -> obj.externalMessage }
-          // For DD, we get 200 characters between the key and value, so we keep it relatively short here.
-          .filter { obj: String? -> Objects.nonNull(obj) }
-          .map { s: String? -> this.abbreviate(s) }
-          .findFirst()
-      }
+      attempt.failureSummary
+        ?.failures
+        ?.mapNotNull { it.externalMessage }
+        // For DD, we get 200 characters between the key and value, so we keep it relatively short here.
+        ?.map { this.abbreviate(it) }
+        ?.firstOrNull()
 
     val internalMsg =
-      attempt.getFailureSummary().flatMap { summary: AttemptFailureSummary ->
-        summary.failures
-          .stream()
-          .map { obj: FailureReason -> obj.internalMessage }
-          // For DD, we get 200 characters between the key and value, so we keep it relatively short here.
-          .filter { obj: String? -> Objects.nonNull(obj) }
-          .map { s: String? -> this.abbreviate(s) }
-          .findFirst()
-      }
+      attempt.failureSummary
+        ?.failures
+        ?.mapNotNull { it.internalMessage }
+        ?.map { this.abbreviate(it) }
+        ?.firstOrNull()
 
     val additionalAttributes: MutableList<MetricAttribute> = ArrayList()
     additionalAttributes.add(MetricAttribute(MetricTags.ATTEMPT_OUTCOME, attempt.status.toString()))
-    failureOrigin.ifPresent { o: String? ->
+    failureOrigin?.let { o: String ->
       additionalAttributes.add(
         MetricAttribute(
           MetricTags.FAILURE_ORIGIN,
@@ -226,7 +214,7 @@ class JobCreationAndStatusUpdateHelper(
         ),
       )
     }
-    failureType.ifPresent { t: String? ->
+    failureType?.let { t: String ->
       additionalAttributes.add(
         MetricAttribute(
           MetricTags.FAILURE_TYPE,
@@ -237,7 +225,7 @@ class JobCreationAndStatusUpdateHelper(
     if (attempt.processingTaskQueue != null) {
       additionalAttributes.add(MetricAttribute(MetricTags.ATTEMPT_QUEUE, attempt.processingTaskQueue!!))
     }
-    externalMsg.ifPresent { e: String? ->
+    externalMsg?.let { e: String ->
       additionalAttributes.add(
         MetricAttribute(
           MetricTags.EXTERNAL_MESSAGE,
@@ -245,7 +233,7 @@ class JobCreationAndStatusUpdateHelper(
         ),
       )
     }
-    internalMsg.ifPresent { i: String? ->
+    internalMsg?.let { i: String ->
       additionalAttributes.add(
         MetricAttribute(
           MetricTags.INTERNAL_MESSAGE,
@@ -255,9 +243,9 @@ class JobCreationAndStatusUpdateHelper(
     }
 
     try {
-      emitAttemptEvent(OssMetricsRegistry.ATTEMPTS_COMPLETED, job, attempt.getAttemptNumber(), additionalAttributes)
+      emitAttemptEvent(OssMetricsRegistry.ATTEMPTS_COMPLETED, job, attempt.attemptNumber, additionalAttributes)
     } catch (_: IOException) {
-      log.info { "Failed to record attempt completed metric for attempt ${attempt.getAttemptNumber()} of job ${job.id}" }
+      log.info { "Failed to record attempt completed metric for attempt ${attempt.attemptNumber} of job ${job.id}" }
     }
   }
 
@@ -386,7 +374,7 @@ class JobCreationAndStatusUpdateHelper(
       additionalAttributes.addAll(imageAttrsFromJob(job))
       job
         .getLastAttempt()
-        .flatMap { obj: Attempt -> obj.getFailureSummary() }
+        .flatMap { obj: Attempt -> Optional.ofNullable(obj.failureSummary) }
         .ifPresent { attemptFailureSummary: AttemptFailureSummary ->
           for (failureReason in attemptFailureSummary.failures) {
             val metricTag = getFailureType(failureReason.failureType)

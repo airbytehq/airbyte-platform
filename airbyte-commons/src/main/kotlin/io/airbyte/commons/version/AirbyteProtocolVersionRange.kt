@@ -10,7 +10,7 @@ package io.airbyte.commons.version
  * @param min version
  * @param max version
  */
-@JvmRecord
+
 data class AirbyteProtocolVersionRange(
   val min: Version,
   val max: Version,

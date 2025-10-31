@@ -4,7 +4,6 @@
 
 package io.airbyte.metrics.reporter.model
 
-@JvmRecord
 data class LongRunningJobMetadata(
   @JvmField val sourceDockerImage: String,
   @JvmField val destinationDockerImage: String,

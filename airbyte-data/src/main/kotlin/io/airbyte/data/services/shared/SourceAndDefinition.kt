@@ -19,7 +19,7 @@ import io.airbyte.config.StandardSourceDefinition
  * @param source source
  * @param definition its corresponding definition
  */
-@JvmRecord
+
 data class SourceAndDefinition(
   @JvmField val source: SourceConnection,
   @JvmField val definition: StandardSourceDefinition,

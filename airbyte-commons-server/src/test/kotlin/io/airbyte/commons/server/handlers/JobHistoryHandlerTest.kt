@@ -1186,7 +1186,7 @@ internal class JobHistoryHandlerTest {
       .`when`(jobPersistence.getAttemptStats(listOf(JOB_ID)))
       .thenReturn(
         mapOf(
-          JobAttemptPair(JOB_ID, testJobAttempt.getAttemptNumber()) to FIRST_ATTEMPT_STATS,
+          JobAttemptPair(JOB_ID, testJobAttempt.attemptNumber) to FIRST_ATTEMPT_STATS,
         ),
       )
 
@@ -1440,13 +1440,13 @@ internal class JobHistoryHandlerTest {
 
     private fun toAttemptRead(a: Attempt): AttemptRead =
       AttemptRead()
-        .id(a.getAttemptNumber().toLong())
+        .id(a.attemptNumber.toLong())
         .status(
           a.status.convertTo<io.airbyte.api.model.generated.AttemptStatus>(),
         ).streamStats(null)
         .createdAt(a.createdAtInSecond)
         .updatedAt(a.updatedAtInSecond)
-        .endedAt(a.getEndedAtInSecond().orElse(null))
+        .endedAt(a.endedAtInSecond)
 
     private fun createAttempt(
       attemptNumber: Int,

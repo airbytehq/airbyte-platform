@@ -141,7 +141,6 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization : BaseJavaMigration() {
     override fun getLiteral(): String = literal
   }
 
-  @JvmRecord
   data class StandardSourceDefinition(
     @JvmField val sourceDefinitionId: UUID,
     val name: String,
@@ -153,7 +152,6 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization : BaseJavaMigration() {
     val spec: ConnectorSpecification?,
   )
 
-  @JvmRecord
   data class StandardDestinationDefinition(
     @JvmField val destinationDefinitionId: UUID,
     val name: String,

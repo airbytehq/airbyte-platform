@@ -25,7 +25,7 @@ class SentryExceptionHelper {
    * @param platform platform
    * @param exceptions exceptions to send
    */
-  @JvmRecord
+
   data class SentryParsedException(
     @JvmField val platform: SentryExceptionPlatform,
     @JvmField val exceptions: List<SentryException>,

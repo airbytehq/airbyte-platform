@@ -11,7 +11,7 @@ import java.util.Optional
 /**
  * POJO / accessors for the attempt domain model.
  */
-@JvmRecord
+
 data class Attempt(
   val attemptNumber: Int,
   val jobId: Long,
@@ -25,18 +25,7 @@ data class Attempt(
   val updatedAtInSecond: Long,
   val endedAtInSecond: Long?,
 ) {
-  fun getAttemptNumber(): Int = attemptNumber
-
-  fun getSyncConfig(): Optional<AttemptSyncConfig> = Optional.ofNullable(syncConfig)
-
-  fun getOutput(): Optional<JobOutput> = Optional.ofNullable(output)
-
-  fun getFailureSummary(): Optional<AttemptFailureSummary> = Optional.ofNullable(failureSummary)
-
-  fun getEndedAtInSecond(): Optional<Long> = Optional.ofNullable(endedAtInSecond)
-
   companion object {
-    @JvmStatic
     fun isAttemptInTerminalState(attempt: Attempt): Boolean = AttemptStatus.TERMINAL_STATUSES.contains(attempt.status)
   }
 }

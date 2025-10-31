@@ -88,7 +88,6 @@ class VersionedAirbyteStreamFactory<T>(
   private val metricClient: MetricClient,
   private val logger: KLogger = KotlinLogging.logger { },
 ) : AirbyteStreamFactory {
-  @JvmRecord
   data class InvalidLineFailureConfiguration(
     val printLongRecordPks: Boolean,
   )

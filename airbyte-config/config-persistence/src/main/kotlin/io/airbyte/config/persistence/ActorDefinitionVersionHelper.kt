@@ -37,7 +37,7 @@ class ActorDefinitionVersionHelper(
    * @param isOverrideApplied - true if the version is the result of an override being applied,
    * otherwise false
    */
-  @JvmRecord
+
   data class ActorDefinitionVersionWithOverrideStatus(
     val actorDefinitionVersion: ActorDefinitionVersion,
     val isOverrideApplied: Boolean,

@@ -144,10 +144,7 @@ object TrackingMetadata {
         return@buildMap
       }
       val lastAttempt: Attempt = attempts.last()
-      if (lastAttempt.getOutput() == null || lastAttempt.getOutput().isEmpty) {
-        return@buildMap
-      }
-      val jobOutput = lastAttempt.getOutput().get()
+      val jobOutput = lastAttempt.output ?: return@buildMap
       if (jobOutput.sync == null) {
         return@buildMap
       }
@@ -227,7 +224,7 @@ object TrackingMetadata {
   private fun failureReasonsList(attempts: List<Attempt>): List<FailureReason> =
     attempts
       .stream()
-      .map { obj: Attempt -> obj.getFailureSummary() }
+      .map { obj: Attempt -> Optional.ofNullable(obj.failureSummary) }
       .flatMap { obj: Optional<AttemptFailureSummary> -> obj.stream() }
       .map { obj: AttemptFailureSummary -> obj.failures }
       .flatMap { obj: List<FailureReason> -> obj.stream() }

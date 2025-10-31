@@ -1509,12 +1509,12 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
         if (lastSucceededOrFailedJob.isPresent) {
           connectionStatus.lastSyncJobId(lastSucceededOrFailedJob.get().id)
           val lastAttempt = lastSucceededOrFailedJob.get().getLastAttempt()
-          lastAttempt.ifPresent { attempt: Attempt -> connectionStatus.lastSyncAttemptNumber(attempt.getAttemptNumber()) }
+          lastAttempt.ifPresent { attempt: Attempt -> connectionStatus.lastSyncAttemptNumber(attempt.attemptNumber) }
         }
         val failureReason =
           lastSucceededOrFailedJob
             .flatMap { obj: Job -> obj.getLastFailedAttempt() }
-            .flatMap { obj: Attempt -> obj.getFailureSummary() }
+            .flatMap { obj: Attempt -> Optional.ofNullable(obj.failureSummary) }
             .flatMap { s: AttemptFailureSummary -> s.failures.stream().findFirst() }
             .map { data: FailureReason -> this.mapFailureReason(data) }
         if (failureReason.isPresent && lastSucceededOrFailedJob.get().status == JobStatus.FAILED) {
@@ -1526,7 +1526,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
           val failureReasons =
             lastSucceededOrFailedJob
               .flatMap { obj: Job -> obj.getLastFailedAttempt() }
-              .flatMap { obj: Attempt -> obj.getFailureSummary() }
+              .flatMap { obj: Attempt -> Optional.ofNullable(obj.failureSummary) }
               .map { s: AttemptFailureSummary ->
                 s.failures
                   .stream()
@@ -1721,7 +1721,7 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
                 null,
                 job
                   .getLastAttempt()
-                  .flatMap { obj: Attempt -> obj.getFailureSummary() }
+                  .flatMap { obj: Attempt -> Optional.ofNullable(obj.failureSummary) }
                   .flatMap { summary: AttemptFailureSummary ->
                     summary.failures.stream().findFirst()
                   },
@@ -1880,23 +1880,20 @@ class ConnectionsHandler // TODO: Worth considering how we might refactor this. 
       }
 
       for (attempt in attempts) {
-        val endedAtOptional = attempt.attempt.getEndedAtInSecond()
+        val endedAtOptional = attempt.attempt.endedAtInSecond
 
-        if (endedAtOptional.isPresent) {
+        if (endedAtOptional != null) {
           // Convert the endedAt timestamp from the database to the designated timezone
-          val attemptEndedAt = Instant.ofEpochSecond(endedAtOptional.get())
+          val attemptEndedAt = Instant.ofEpochSecond(endedAtOptional)
           val attemptDateInUserTimeZone =
             attemptEndedAt
               .atZone(ZoneId.of(connectionStreamHistoryRequestBody.timezone))
               .toLocalDate()
 
           // Merge it with the records synced from the attempt
-          val attemptOutput = attempt.attempt.getOutput()
-          if (attemptOutput.isPresent) {
-            val streamSyncStats =
-              attemptOutput
-                .get()
-                .sync.standardSyncSummary.streamStats
+          val attemptOutput = attempt.attempt.output
+          if (attemptOutput != null) {
+            val streamSyncStats = attemptOutput.sync.standardSyncSummary.streamStats
             for (streamSyncStat in streamSyncStats) {
               val streamName = streamSyncStat.streamName
               val streamNamespace = streamSyncStat.streamNamespace

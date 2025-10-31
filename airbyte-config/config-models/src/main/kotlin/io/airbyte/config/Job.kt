@@ -12,7 +12,7 @@ import java.util.Optional
 /**
  * POJO / accessors for the job domain model.
  */
-@JvmRecord
+
 data class Job(
   val id: Long,
   val configType: ConfigType,
@@ -36,8 +36,6 @@ data class Job(
     check(successfulAttempts.size <= 1) { "Job $id has multiple successful attempts." }
     return Optional.ofNullable(successfulAttempts.firstOrNull())
   }
-
-  fun getSuccessOutput(): Optional<JobOutput> = getSuccessfulAttempt().map { obj: Attempt -> obj.output }
 
   fun getLastFailedAttempt(): Optional<Attempt> =
     Optional.ofNullable(

@@ -15,7 +15,7 @@ import java.util.UUID
  * @param destinationId fetch connections with this destination id
  * @param includeDeleted include tombstoned connections
  */
-@JvmRecord
+
 data class StandardSyncQuery(
   @field:Nonnull @param:Nonnull val workspaceId: UUID,
   @JvmField val sourceId: List<UUID>?,

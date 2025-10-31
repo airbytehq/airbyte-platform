@@ -163,7 +163,7 @@ class JobConverter(
         .attempts(
           job.attempts
             .stream()
-            .sorted(Comparator.comparingInt { obj: Attempt -> obj.getAttemptNumber() })
+            .sorted(Comparator.comparingInt { obj: Attempt -> obj.attemptNumber })
             .map { attempt: Attempt -> getAttemptRead(attempt) }
             .toList(),
         )
@@ -280,37 +280,33 @@ class JobConverter(
 
     fun getAttemptRead(attempt: Attempt): AttemptRead =
       AttemptRead()
-        .id(attempt.getAttemptNumber().toLong())
+        .id(attempt.attemptNumber.toLong())
         .status(attempt.status?.convertTo<AttemptStatus>())
         .bytesSynced(
-          attempt
-            .getOutput() // TODO (parker) remove after frontend switches to totalStats
-            .map { obj: JobOutput -> obj.sync }
-            .map { obj: StandardSyncOutput -> obj.standardSyncSummary }
-            .map { obj: StandardSyncSummary -> obj.bytesSynced }
-            .orElse(null),
+          // TODO (parker) remove after frontend switches to totalStats
+          attempt.output
+            ?.sync
+            ?.standardSyncSummary
+            ?.bytesSynced,
         ).recordsSynced(
-          attempt
-            .getOutput() // TODO (parker) remove after frontend switches to totalStats
-            .map { obj: JobOutput -> obj.sync }
-            .map { obj: StandardSyncOutput -> obj.standardSyncSummary }
-            .map { obj: StandardSyncSummary -> obj.recordsSynced }
-            .orElse(null),
+          // TODO (parker) remove after frontend switches to totalStats
+          attempt.output
+            ?.sync
+            ?.standardSyncSummary
+            ?.recordsSynced,
         ).totalStats(getTotalAttemptStats(attempt))
         .streamStats(getAttemptStreamStats(attempt))
         .createdAt(attempt.createdAtInSecond)
         .updatedAt(attempt.updatedAtInSecond)
-        .endedAt(attempt.getEndedAtInSecond().orElse(null))
+        .endedAt(attempt.endedAtInSecond)
         .failureSummary(getAttemptFailureSummary(attempt))
 
     private fun getTotalAttemptStats(attempt: Attempt): AttemptStats? {
       val totalStats =
-        attempt
-          .getOutput()
-          .map { obj: JobOutput -> obj.sync }
-          .map { obj: StandardSyncOutput -> obj.standardSyncSummary }
-          .map { obj: StandardSyncSummary -> obj.totalStats }
-          .orElse(null)
+        attempt.output
+          ?.sync
+          ?.standardSyncSummary
+          ?.totalStats
 
       if (totalStats == null) {
         return null
@@ -325,12 +321,10 @@ class JobConverter(
 
     private fun getAttemptStreamStats(attempt: Attempt): List<AttemptStreamStats>? {
       val streamStats =
-        attempt
-          .getOutput()
-          .map { obj: JobOutput -> obj.sync }
-          .map { obj: StandardSyncOutput -> obj.standardSyncSummary }
-          .map { obj: StandardSyncSummary -> obj.streamStats }
-          .orElse(null)
+        attempt.output
+          ?.sync
+          ?.standardSyncSummary
+          ?.streamStats
 
       if (streamStats == null) {
         return null
@@ -352,7 +346,7 @@ class JobConverter(
     }
 
     private fun getAttemptFailureSummary(attempt: Attempt): AttemptFailureSummary? {
-      val failureSummary = attempt.getFailureSummary().orElse(null) ?: return null
+      val failureSummary = attempt.failureSummary ?: return null
 
       return AttemptFailureSummary()
         .failures(

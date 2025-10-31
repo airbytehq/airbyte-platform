@@ -28,7 +28,6 @@ class V0_57_4_013__AddUniqueUserEmailConstraint : BaseJavaMigration() {
     addUniqueUserEmailConstraint(ctx)
   }
 
-  @JvmRecord
   internal data class User(
     val id: UUID,
     val email: String,

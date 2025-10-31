@@ -13,7 +13,7 @@ import io.airbyte.config.StandardDestinationDefinition
  * @param destination Destination.
  * @param definition Destination definition.
  */
-@JvmRecord
+
 data class DestinationAndDefinition(
   @JvmField val destination: DestinationConnection,
   @JvmField val definition: StandardDestinationDefinition,

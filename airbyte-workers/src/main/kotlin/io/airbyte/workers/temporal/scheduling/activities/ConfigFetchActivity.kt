@@ -102,6 +102,8 @@ interface ConfigFetchActivity {
 
   /**
    * GetMaxAttemptOutput.
+   *
+   * Note: For some reason this needs to remain a @JvmRecord. Attempting to remove this causes tests to fail in unexpected ways
    */
   @JvmRecord
   data class GetMaxAttemptOutput(

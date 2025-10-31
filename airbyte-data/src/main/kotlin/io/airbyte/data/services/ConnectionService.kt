@@ -171,7 +171,7 @@ interface ConnectionService {
   /**
    * Record representing connection status counts for a workspace.
    */
-  @JvmRecord
+
   data class ConnectionStatusCounts(
     val running: Int,
     val healthy: Int,

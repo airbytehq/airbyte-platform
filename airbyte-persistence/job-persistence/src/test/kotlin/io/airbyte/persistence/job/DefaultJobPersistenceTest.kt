@@ -249,7 +249,7 @@ internal class DefaultJobPersistenceTest {
 
     val updated = jobPersistence.getJob(jobId)
 
-    assertEquals(Optional.of(jobOutput), updated.attempts[0].getOutput())
+    assertEquals(jobOutput, updated.attempts[0].output)
     assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
 
     val attemptStats = jobPersistence.getAttemptStats(jobId, attemptNumber)
@@ -340,7 +340,7 @@ internal class DefaultJobPersistenceTest {
 
     val updated = jobPersistence.getJob(jobId)
 
-    assertEquals(Optional.of(jobOutput2), updated.attempts[0].getOutput())
+    assertEquals(jobOutput2, updated.attempts[0].output)
     assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
 
     val attemptStats = jobPersistence.getAttemptStats(jobId, attemptNumber)
@@ -431,7 +431,7 @@ internal class DefaultJobPersistenceTest {
 
     val updated = jobPersistence.getJob(jobId)
 
-    assertEquals(Optional.of(jobOutput2), updated.attempts[0].getOutput())
+    assertEquals(jobOutput2, updated.attempts[0].output)
     assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
 
     val attemptStats = jobPersistence.getAttemptStats(jobId, attemptNumber)
@@ -522,7 +522,7 @@ internal class DefaultJobPersistenceTest {
 
     val updated = jobPersistence.getJob(jobId)
 
-    assertEquals(Optional.of(jobOutput2), updated.attempts[0].getOutput())
+    assertEquals(jobOutput2, updated.attempts[0].output)
     assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
 
     val attemptStats = jobPersistence.getAttemptStats(jobId, attemptNumber)
@@ -566,7 +566,7 @@ internal class DefaultJobPersistenceTest {
     jobPersistence.writeAttemptSyncConfig(jobId, attemptNumber, attemptSyncConfig)
 
     val updated = jobPersistence.getJob(jobId)
-    assertEquals(Optional.of<AttemptSyncConfig?>(attemptSyncConfig), updated.attempts[0].getSyncConfig())
+    assertEquals(attemptSyncConfig, updated.attempts[0].syncConfig)
     assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
   }
 
@@ -585,7 +585,7 @@ internal class DefaultJobPersistenceTest {
     jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummary)
 
     val updated = jobPersistence.getJob(jobId)
-    assertEquals(Optional.of(failureSummary), updated.attempts[0].getFailureSummary())
+    assertEquals(failureSummary, updated.attempts[0].failureSummary)
     assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
   }
 
@@ -610,12 +610,7 @@ internal class DefaultJobPersistenceTest {
 
     assertDoesNotThrow {
       val updated = jobPersistence.getJob(jobId)
-      assertTrue(
-        updated.attempts
-          [0]
-          .getFailureSummary()
-          .isPresent(),
-      )
+      assertNotNull(updated.attempts[0].failureSummary)
       assertNotEquals(created.attempts[0].updatedAtInSecond, updated.attempts[0].updatedAtInSecond)
     }
   }
@@ -737,13 +732,13 @@ internal class DefaultJobPersistenceTest {
         [0]
         .attempts
         [0]
-        .getAttemptNumber(),
+        .attemptNumber,
       0,
     )
     assertEquals(
       jobs[0]
         .attempts[1]
-        .getAttemptNumber(),
+        .attemptNumber,
       1,
     )
 
@@ -762,7 +757,7 @@ internal class DefaultJobPersistenceTest {
       jobs[0]
         .attempts
         .stream()
-        .map { c: Attempt? -> c!!.getEndedAtInSecond().orElseThrow() }
+        .map { c: Attempt? -> c!!.endedAtInSecond ?: throw IllegalStateException() }
         .max(
           Comparator { obj: Long?, anotherLong: Long? ->
             obj!!.compareTo(
@@ -780,7 +775,7 @@ internal class DefaultJobPersistenceTest {
         [0]
         .attempts
         [0]
-        .getAttemptNumber(),
+        .attemptNumber,
       2,
     )
 
@@ -791,7 +786,7 @@ internal class DefaultJobPersistenceTest {
         [1]
         .attempts
         [0]
-        .getAttemptNumber(),
+        .attemptNumber,
       0,
     )
     assertEquals(
@@ -799,7 +794,7 @@ internal class DefaultJobPersistenceTest {
         [1]
         .attempts
         [1]
-        .getAttemptNumber(),
+        .attemptNumber,
       1,
     )
 
@@ -809,7 +804,7 @@ internal class DefaultJobPersistenceTest {
       val maxEndedAtTimestampForJob =
         attempts
           .stream()
-          .map { attempt: Attempt? -> attempt!!.getEndedAtInSecond().orElseThrow() }
+          .map { attempt: Attempt? -> attempt!!.endedAtInSecond ?: throw IllegalStateException() }
           .max(Comparator { obj: Long?, anotherLong: Long? -> obj!!.compareTo(anotherLong!!) })
           .orElseThrow()
       if (maxEndedAtTimestampForJob > maxEndedAtTimestampAfterSecondQuery) {
@@ -1858,16 +1853,14 @@ internal class DefaultJobPersistenceTest {
 
       val jobAfterOneAttempts = jobPersistence.getJob(jobId)
       assertEquals(0, attemptNumber1)
-      assertEquals(0, jobAfterOneAttempts.attempts[0].getAttemptNumber())
+      assertEquals(0, jobAfterOneAttempts.attempts[0].attemptNumber)
 
       val attemptNumber2 = jobPersistence.createAttempt(jobId, LOG_PATH)
       val jobAfterTwoAttempts = jobPersistence.getJob(jobId)
       assertEquals(1, attemptNumber2)
       assertEquals(
         setOf(0, 1),
-        jobAfterTwoAttempts.attempts.stream().map { obj: Attempt? -> obj!!.getAttemptNumber() }.collect(
-          Collectors.toSet(),
-        ),
+        jobAfterTwoAttempts.attempts.map { it.attemptNumber }.toSet(),
       )
     }
 

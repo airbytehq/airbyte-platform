@@ -18,7 +18,7 @@ import java.time.OffsetDateTime
  * @param lastSync Timestamp of the most recent sync for any connection using this actor.
  * @param connectionJobStatuses Map of most recent job status to count of connections with that job status.
  */
-@JvmRecord
+
 data class ActorConnectionWithCount(
   @JvmField val actorDefinitionName: String,
   @JvmField val sourceConnection: SourceConnection?,

@@ -19,7 +19,7 @@ import java.time.OffsetDateTime
  * @param isActive Whether the destination has any active connections
  * status.
  */
-@JvmRecord
+
 data class DestinationConnectionWithCount(
   @JvmField val destination: DestinationConnection,
   @JvmField val destinationDefinitionName: String,
