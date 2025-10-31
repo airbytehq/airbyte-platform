@@ -9,7 +9,13 @@ if [ -z "$NAMESPACE" ]; then
     exit 1
 fi
 
+if [ -z "$RELEASE_NAME" ]; then
+    echo "❌ Error: RELEASE_NAME environment variable is required"
+    exit 1
+fi
+
 echo "🚀 Setting up Postgres test environment in Kubernetes namespace: $NAMESPACE"
+echo "   Release name: $RELEASE_NAME"
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -55,8 +61,21 @@ kubectl delete pod postgres-test --namespace="$NAMESPACE" --ignore-not-found=tru
 kubectl wait --for=delete pod/postgres-test --namespace="$NAMESPACE" --timeout=30s || true
 kubectl delete service postgres-test-svc --namespace="$NAMESPACE" --ignore-not-found=true
 
-# 2. Deploy Postgres pod
-echo "🐘 Deploying Postgres pod..."
+# 2. Deploy Postgres pod with single-node support
+echo "🐘 Deploying Postgres pod with single-node overrides..."
+
+# Create overrides for single-node environment using RELEASE_NAME as hostname
+node_overrides=$(cat <<EOF
+{
+  "spec": {
+    "nodeSelector": {
+      "airbyte/release-name": "$RELEASE_NAME"
+    }
+  }
+}
+EOF
+)
+
 retry_kubectl kubectl run postgres-test \
     --image=postgres:13 \
     --restart=Never \
@@ -64,7 +83,8 @@ retry_kubectl kubectl run postgres-test \
     --env="POSTGRES_USER=postgres" \
     --env="POSTGRES_PASSWORD=secret_password" \
     --env="POSTGRES_DB=postgres" \
-    --port=5432
+    --port=5432 \
+    --overrides="${node_overrides}"
 
 # 3. Expose Postgres as a service
 echo "🌐 Exposing Postgres service..."
