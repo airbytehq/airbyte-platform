@@ -647,6 +647,14 @@ enum class OssMetricsRegistry(
     metricName = "data_obs_outlier_check",
     metricDescription = "outcome of the outlier check",
   ),
+  DATA_OBS_OUTLIER_CHECK_FRESHNESS(
+    metricName = "data_obs_outlier_check_freshness",
+    metricDescription = "outcome of the freshness outlier check (job-level metrics)",
+  ),
+  DATA_OBS_OUTLIER_CHECK_CORRECTNESS(
+    metricName = "data_obs_outlier_check_correctness",
+    metricDescription = "outcome of the correctness outlier check (stream-level metrics)",
+  ),
   DATA_OBS_OUTLIER_CHECK_ERRORS(
     metricName = "data_obs_outlier_check_errors",
     metricDescription = "number of errors encountered during the outlier check",

@@ -279,6 +279,21 @@ class JobObservabilityService(
   }
 
   private fun reportOutlierMetric(outlierOutcome: OutlierOutcome) {
+    val isFreshnessOutlier = outlierOutcome.job.isOutlier
+    val isCorrectnessOutlier = outlierOutcome.numberOfOutlierStreams > 0
+
+    val commonTags =
+      listOf(
+        MetricAttribute(MetricTags.CONNECTION_ID, outlierOutcome.job.connectionId.toString()),
+        MetricAttribute(MetricTags.WORKSPACE_ID, outlierOutcome.job.workspaceId.toString()),
+        MetricAttribute(MetricTags.SOURCE_DEFINITION_ID, outlierOutcome.job.sourceDefinitionId.toString()),
+        MetricAttribute(MetricTags.SOURCE_IMAGE, outlierOutcome.job.sourceImageName),
+        MetricAttribute(MetricTags.SOURCE_IMAGE_TAG, outlierOutcome.job.sourceImageTag),
+        MetricAttribute(MetricTags.DESTINATION_DEFINITION_ID, outlierOutcome.job.destinationDefinitionId.toString()),
+        MetricAttribute(MetricTags.DESTINATION_IMAGE, outlierOutcome.job.destinationImageName),
+        MetricAttribute(MetricTags.DESTINATION_IMAGE_TAG, outlierOutcome.job.destinationImageTag),
+      )
+
     metricClient.count(
       OssMetricsRegistry.DATA_OBS_OUTLIER_CHECK,
       1,
@@ -291,8 +306,22 @@ class JobObservabilityService(
       MetricAttribute(MetricTags.DESTINATION_DEFINITION_ID, outlierOutcome.job.destinationDefinitionId.toString()),
       MetricAttribute(MetricTags.DESTINATION_IMAGE, outlierOutcome.job.destinationImageName),
       MetricAttribute(MetricTags.DESTINATION_IMAGE_TAG, outlierOutcome.job.destinationImageTag),
-      MetricAttribute(MetricTags.IS_CORRECTNESS_OUTLIER, (outlierOutcome.numberOfOutlierStreams > 0).toString()),
-      MetricAttribute(MetricTags.IS_FRESHNESS_OUTLIER, outlierOutcome.job.isOutlier.toString()),
+      MetricAttribute(MetricTags.IS_CORRECTNESS_OUTLIER, isCorrectnessOutlier.toString()),
+      MetricAttribute(MetricTags.IS_FRESHNESS_OUTLIER, isFreshnessOutlier.toString()),
+    )
+
+    metricClient.count(
+      OssMetricsRegistry.DATA_OBS_OUTLIER_CHECK_FRESHNESS,
+      1,
+      MetricAttribute(MetricTags.STATUS_TAG, isFreshnessOutlier.toString()),
+      *commonTags.toTypedArray(),
+    )
+
+    metricClient.count(
+      OssMetricsRegistry.DATA_OBS_OUTLIER_CHECK_CORRECTNESS,
+      1,
+      MetricAttribute(MetricTags.STATUS_TAG, isCorrectnessOutlier.toString()),
+      *commonTags.toTypedArray(),
     )
   }
 
