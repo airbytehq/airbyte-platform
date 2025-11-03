@@ -30,6 +30,7 @@ import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.WorkloadConstants.Companion.PUBLIC_ORG_ID
 import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.data.services.DataplaneHealthService
 import io.airbyte.data.services.ServiceAccountNotFound
 import io.airbyte.domain.models.DataplaneGroupId
 import io.airbyte.domain.models.DataplaneId
@@ -38,6 +39,7 @@ import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.server.services.DataplaneService
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
@@ -59,9 +61,11 @@ import java.util.stream.Collectors
 open class DataplaneController(
   private val dataplaneService: DataplaneService,
   private val dataplaneGroupService: DataplaneGroupService,
+  private val dataplaneHealthService: DataplaneHealthService,
   private val roleResolver: RoleResolver,
   private val entitlementService: EntitlementService,
   private val metricClient: MetricClient,
+  private val airbyteConfig: AirbyteConfig,
 ) : DataplaneApi {
   @Post("/create")
   @RequiresIntent(Intent.ManageDataplanes)
@@ -220,6 +224,12 @@ open class DataplaneController(
     // TODO implement version based gating of dataplane based on airbyte version here
 
     reportDataplaneMetric(OssMetricsRegistry.DATAPLANE_HEARTBEAT, dataplane, dataplaneGroup, dataplaneVersion = xAirbyteVersion)
+
+    dataplaneHealthService.recordHeartbeat(
+      dataplaneId = dataplane.id,
+      controlPlaneVersion = airbyteConfig.version,
+      dataplaneVersion = xAirbyteVersion,
+    )
 
     return DataplaneHeartbeatResponse().apply {
       dataplaneName = dataplane.name

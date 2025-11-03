@@ -18,9 +18,11 @@ import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.data.services.DataplaneHealthService
 import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -34,21 +36,29 @@ import io.airbyte.server.services.DataplaneService as ServerDataplaneService
 
 class DataplaneControllerTest {
   companion object {
+    private const val TEST_DATAPLANE_VERSION = "test-123"
+    private const val TEST_CONTROL_PLANE_VERSION = "1.0.0"
+
     private val dataplaneService = mockk<ServerDataplaneService>()
     private val dataplaneGroupService = mockk<DataplaneGroupService>()
+    private val dataplaneHealthService = mockk<DataplaneHealthService>(relaxed = true)
     private val roleResolver = mockk<RoleResolver>(relaxed = true)
     private val entitlementService = mockk<EntitlementService>(relaxed = true)
+    private val airbyteConfig =
+      mockk<AirbyteConfig>().apply {
+        every { version } returns TEST_CONTROL_PLANE_VERSION
+      }
     private val dataplaneController =
       DataplaneController(
         dataplaneService,
         dataplaneGroupService,
+        dataplaneHealthService,
         roleResolver,
         entitlementService,
         mockk(relaxed = true),
+        airbyteConfig,
       )
     private val MOCK_DATAPLANE_GROUP_ID = UUID.randomUUID()
-
-    private const val TEST_AIRBYTE_VERSION = "test-123"
   }
 
   @Test
@@ -146,7 +156,7 @@ class DataplaneControllerTest {
     val req = DataplaneHeartbeatRequestBody()
     req.clientId = clientId
 
-    val result = dataplaneController.heartbeatDataplane(req, TEST_AIRBYTE_VERSION)
+    val result = dataplaneController.heartbeatDataplane(req, TEST_DATAPLANE_VERSION)
 
     val expected = DataplaneHeartbeatResponse()
     expected.dataplaneName = dataplane.name
@@ -157,6 +167,14 @@ class DataplaneControllerTest {
     expected.organizationId = dataplaneGroup.organizationId
 
     Assertions.assertEquals(expected, result)
+
+    verify {
+      dataplaneHealthService.recordHeartbeat(
+        dataplaneId = dataplaneId,
+        controlPlaneVersion = TEST_CONTROL_PLANE_VERSION,
+        dataplaneVersion = TEST_DATAPLANE_VERSION,
+      )
+    }
   }
 
   @Test
@@ -172,7 +190,7 @@ class DataplaneControllerTest {
     val req = DataplaneInitRequestBody()
     req.clientId = clientId
 
-    val result = dataplaneController.initializeDataplane(req, TEST_AIRBYTE_VERSION)
+    val result = dataplaneController.initializeDataplane(req, TEST_DATAPLANE_VERSION)
 
     val expected = DataplaneInitResponse()
     expected.dataplaneName = dataplane.name
@@ -210,7 +228,7 @@ class DataplaneControllerTest {
     val req = DataplaneInitRequestBody()
     req.clientId = clientId
 
-    val result = dataplaneController.initializeDataplane(req, TEST_AIRBYTE_VERSION)
+    val result = dataplaneController.initializeDataplane(req, TEST_DATAPLANE_VERSION)
 
     Assertions.assertEquals(result.dataplaneEnabled, expected)
   }
@@ -240,9 +258,17 @@ class DataplaneControllerTest {
     val req = DataplaneHeartbeatRequestBody()
     req.clientId = clientId
 
-    val result = dataplaneController.heartbeatDataplane(req, TEST_AIRBYTE_VERSION)
+    val result = dataplaneController.heartbeatDataplane(req, TEST_DATAPLANE_VERSION)
 
     Assertions.assertEquals(result.dataplaneEnabled, expected)
+
+    verify {
+      dataplaneHealthService.recordHeartbeat(
+        dataplaneId = dataplaneId,
+        controlPlaneVersion = TEST_CONTROL_PLANE_VERSION,
+        dataplaneVersion = TEST_DATAPLANE_VERSION,
+      )
+    }
   }
 
   private fun createDataplane(
