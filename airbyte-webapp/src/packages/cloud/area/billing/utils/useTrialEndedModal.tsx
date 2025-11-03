@@ -8,8 +8,8 @@ export const useTrialEndedModal = (): void => {
 
   useOrganizationSubscriptionStatus({
     refetchWithInterval: true,
-    onSuccessGetTrialStatusClb: (isTrialEnded: boolean) => {
-      if (isTrialEnded) {
+    onSuccessGetTrialStatusClb: (isTrialEndedAndLockedOrDisabled: boolean) => {
+      if (isTrialEndedAndLockedOrDisabled) {
         openModal({
           content: TrialEndedModal,
         });

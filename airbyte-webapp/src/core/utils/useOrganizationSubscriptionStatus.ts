@@ -47,7 +47,7 @@ export interface UseOrganizationSubscriptionStatusReturn {
  */
 export const useOrganizationSubscriptionStatus = (options?: {
   refetchWithInterval?: boolean;
-  onSuccessGetTrialStatusClb?: (isTrialEnded: boolean) => void;
+  onSuccessGetTrialStatusClb?: (isTrialEndedAndLockedOrDisabled: boolean) => void;
 }): UseOrganizationSubscriptionStatusReturn => {
   const organizationInfo = useCurrentOrganizationInfo();
   const organizationId = organizationInfo?.organizationId;
@@ -65,8 +65,14 @@ export const useOrganizationSubscriptionStatus = (options?: {
   const isFlexPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.FLEX;
   const isProPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.PRO;
 
-  // Conditional trial status fetching - only when user has permissions and organization's plan is a unified trial plan
-  const shouldFetchTrialStatus = canViewTrialStatus && isUnifiedTrialPlan;
+  // Conditional trial status fetching - only when payment status allows it, user has permissions, and organization's plan is a unified trial plan
+  const shouldFetchTrialStatus =
+    (billing?.paymentStatus === "uninitialized" ||
+      billing?.paymentStatus === "okay" ||
+      billing?.paymentStatus === "disabled" ||
+      billing?.paymentStatus === "locked") &&
+    canViewTrialStatus &&
+    isUnifiedTrialPlan;
 
   const trialStatus = useOrganizationTrialStatus(organizationId, {
     enabled: shouldFetchTrialStatus,
@@ -75,7 +81,10 @@ export const useOrganizationSubscriptionStatus = (options?: {
     }),
     ...(options?.onSuccessGetTrialStatusClb && {
       onSuccess: (data: OrganizationTrialStatusRead) => {
-        options?.onSuccessGetTrialStatusClb?.(data.trialStatus === "post_trial");
+        const isTrialEndedAndLockedOrDisabled =
+          data.trialStatus === "post_trial" &&
+          (billing?.paymentStatus === "locked" || billing?.paymentStatus === "disabled");
+        options?.onSuccessGetTrialStatusClb?.(isTrialEndedAndLockedOrDisabled);
       },
     }),
   });
