@@ -60,6 +60,31 @@ Renders the stigg.apiKey environment variable
 {{- end }}
 
 {{/*
+Renders the global.stigg.webhookSecret value
+*/}}
+{{- define "airbyte.stigg.webhookSecret" }}
+    {{- .Values.global.stigg.webhookSecret }}
+{{- end }}
+
+{{/*
+Renders the stigg.webhookSecret secret key
+*/}}
+{{- define "airbyte.stigg.webhookSecret.secretKey" }}
+	{{- .Values.global.stigg.webhookSecretSecretKey | default "STIGG_WEBHOOK_SECRET" }}
+{{- end }}
+
+{{/*
+Renders the stigg.webhookSecret environment variable
+*/}}
+{{- define "airbyte.stigg.webhookSecret.env" }}
+- name: STIGG_WEBHOOK_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "airbyte.stigg.secretName" . }}
+      key: {{ include "airbyte.stigg.webhookSecret.secretKey" . }}
+{{- end }}
+
+{{/*
 Renders the global.stigg.host value
 */}}
 {{- define "airbyte.stigg.host" }}
@@ -101,6 +126,7 @@ Renders the set of all stigg environment variables
 {{- define "airbyte.stigg.envs" }}
 {{- include "airbyte.stigg.enabled.env" . }}
 {{- include "airbyte.stigg.apiKey.env" . }}
+{{- include "airbyte.stigg.webhookSecret.env" . }}
 {{- if .Values.stiggSidecar.enabled }}
 {{- include "airbyte.stigg.host.env" . }}
 {{- end }}
@@ -127,4 +153,5 @@ Renders the set of all stigg secret variables
 */}}
 {{- define "airbyte.stigg.secrets" }}
 STIGG_API_KEY: {{ include "airbyte.stigg.apiKey" . | quote }}
+STIGG_WEBHOOK_SECRET: {{ include "airbyte.stigg.webhookSecret" . | quote }}
 {{- end }}

@@ -1092,6 +1092,10 @@ stigg:
       key: apiKey
       sensitive: true
 
+    - env: STIGG_WEBHOOK_SECRET
+      key: webhookSecret
+      sensitive: true
+
     - env: STIGG_SIDECAR_HOST
       key: host
       valueExp: (printf "%s-stigg-sidecar-svc.%s" .Release.Name .Release.Namespace)

@@ -19,11 +19,9 @@ import io.airbyte.config.Permission.PermissionType.WORKSPACE_EDITOR
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_READER
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_RUNNER
 import io.airbyte.config.StatusReason
-import io.airbyte.config.helpers.CronExpressionHelper
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.PermissionService
-import io.airbyte.data.services.shared.ConnectionCronSchedule
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.EntitlementPlan.STANDARD
 import io.airbyte.domain.models.EntitlementPlan.UNIFIED_TRIAL
@@ -40,7 +38,7 @@ internal class FeatureDegradationService(
   private val entitlementClient: EntitlementClient,
   private val connectionService: ConnectionService,
   private val workspacePersistence: WorkspacePersistence,
-  private val cronExpressionHelper: CronExpressionHelper,
+  private val entitlementHelper: EntitlementHelper,
 ) {
   internal fun downgradeFeaturesIfRequired(
     organizationId: OrganizationId,
@@ -88,7 +86,7 @@ internal class FeatureDegradationService(
           MappersEntitlement.featureId ->
             connectionsToDowngrade.addAll(connectionService.listConnectionIdsForOrganizationWithMappers(organizationId.value))
           FasterSyncFrequencyEntitlement.featureId ->
-            connectionsToDowngrade.addAll(findSubHourSyncIds(organizationId))
+            connectionsToDowngrade.addAll(entitlementHelper.findSubHourSyncIds(organizationId))
           else -> logger.debug { "No downgrade flow defined for $entitlementToDowngrade" }
         }
       }
@@ -159,23 +157,5 @@ internal class FeatureDegradationService(
       }
     }
     permissionService.updatePermissions(orgLevelPermissions)
-  }
-
-  fun findSubHourSyncIds(organizationId: OrganizationId): Collection<UUID> {
-    val fastBasicSyncIds = connectionService.listSubHourConnectionIdsForOrganization(organizationId.value)
-    val cronSchedules = connectionService.listConnectionCronSchedulesForOrganization(organizationId.value)
-
-    val fastCronSyncIds =
-      cronSchedules
-        .filter {
-          try {
-            cronExpressionHelper.executesMoreThanOncePerHour(it.scheduleData.cron.cronExpression)
-          } catch (e: IllegalArgumentException) {
-            logger.warn { "Invalid cron expression for connection id=${it.id}, ${e.message}" }
-            false
-          }
-        }.map(ConnectionCronSchedule::id)
-
-    return fastBasicSyncIds + fastCronSyncIds
   }
 }

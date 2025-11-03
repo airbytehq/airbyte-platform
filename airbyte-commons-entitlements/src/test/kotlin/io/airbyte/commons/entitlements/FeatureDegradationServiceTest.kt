@@ -12,7 +12,6 @@ import io.airbyte.commons.entitlements.models.RbacRolesEntitlement
 import io.airbyte.commons.entitlements.models.SourceNetsuiteEnterpriseConnector
 import io.airbyte.commons.entitlements.models.SourceOracleEnterpriseConnector
 import io.airbyte.config.ActorType
-import io.airbyte.config.Cron
 import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType.ORGANIZATION_ADMIN
 import io.airbyte.config.Permission.PermissionType.ORGANIZATION_EDITOR
@@ -20,14 +19,11 @@ import io.airbyte.config.Permission.PermissionType.ORGANIZATION_MEMBER
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_ADMIN
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_EDITOR
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_READER
-import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.StatusReason
-import io.airbyte.config.helpers.CronExpressionHelper
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.PermissionService
-import io.airbyte.data.services.shared.ConnectionCronSchedule
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
 import io.mockk.Called
@@ -38,7 +34,6 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.spyk
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
@@ -47,9 +42,9 @@ class FeatureDegradationServiceTest {
   private val entitlementClient = mockk<EntitlementClient>()
   private val connectionService = mockk<ConnectionService>(relaxed = true)
   private val workspacePersistence = mockk<WorkspacePersistence>()
-  private val cronExpressionHelper = CronExpressionHelper()
+  private val connectionEntitlementHelper = mockk<EntitlementHelper>()
   private val featureDegradationService =
-    FeatureDegradationService(permissionService, entitlementClient, connectionService, workspacePersistence, cronExpressionHelper)
+    FeatureDegradationService(permissionService, entitlementClient, connectionService, workspacePersistence, connectionEntitlementHelper)
   private val featureDegradationServiceStubbed = spyk(featureDegradationService)
 
   private val cronTimezoneUtc = "UTC"
@@ -69,9 +64,25 @@ class FeatureDegradationServiceTest {
         EntitlementResult(DestinationSalesforceEnterpriseConnector.featureId, true),
       )
     every { entitlementClient.getEntitlementsForPlan(EntitlementPlan.STANDARD) } returns emptyList()
-    every { entitlementClient.updateOrganization(orgId, EntitlementPlan.STANDARD) } just runs
-    every { featureDegradationServiceStubbed.downgradeRBACRoles(orgId) } just runs
-    every { connectionService.listSubHourConnectionIdsForOrganization(orgId.value) } returns listOf(connectionId)
+    every { entitlementClient.updateOrganization(orgId, EntitlementPlan.STANDARD) } just Runs
+    every { featureDegradationServiceStubbed.downgradeRBACRoles(orgId) } just Runs
+    every { connectionService.listConnectionIdsForOrganizationWithMappers(orgId.value) } returns emptyList()
+    every { connectionEntitlementHelper.findSubHourSyncIds(orgId) } returns listOf(connectionId)
+    every {
+      connectionService.listConnectionIdsForOrganizationAndActorDefinitions(
+        orgId.value,
+        any(),
+        ActorType.SOURCE,
+      )
+    } returns emptyList()
+    every {
+      connectionService.listConnectionIdsForOrganizationAndActorDefinitions(
+        orgId.value,
+        any(),
+        ActorType.DESTINATION,
+      )
+    } returns emptyList()
+    every { connectionService.lockConnectionsById(any(), any()) } returns setOf(connectionId)
 
     featureDegradationServiceStubbed.downgradeFeaturesIfRequired(orgId, EntitlementPlan.UNIFIED_TRIAL, EntitlementPlan.STANDARD)
 
@@ -92,8 +103,7 @@ class FeatureDegradationServiceTest {
         ActorType.DESTINATION,
       )
     }
-    verify { connectionService.listSubHourConnectionIdsForOrganization(orgId.value) }
-    verify { connectionService.listConnectionCronSchedulesForOrganization(orgId.value) }
+    verify { connectionEntitlementHelper.findSubHourSyncIds(orgId) }
     verify {
       connectionService.lockConnectionsById(
         match { it.contains(connectionId) },
@@ -139,7 +149,7 @@ class FeatureDegradationServiceTest {
 
     val connectionIds = listOf(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())
     every { connectionService.listConnectionIdsForOrganizationWithMappers(orgId.value) } returns listOf(connectionIds[0], connectionIds[1])
-    every { featureDegradationServiceStubbed.findSubHourSyncIds(orgId) } returns listOf(connectionIds[1], connectionIds[2])
+    every { connectionEntitlementHelper.findSubHourSyncIds(orgId) } returns listOf(connectionIds[1], connectionIds[2])
     every {
       connectionService.listConnectionIdsForOrganizationAndActorDefinitions(
         orgId.value,
@@ -210,32 +220,5 @@ class FeatureDegradationServiceTest {
         ),
       )
     }
-  }
-
-  @Test
-  fun findSubHourSyncIds() {
-    val orgId = OrganizationId(UUID.randomUUID())
-
-    val cronSlow = "0 0 */4 * * ?"
-    val cronSlow2 = "0 0 */2 * * ?"
-    val cronFast = "0 */30 * * * ?"
-    val cronFast2 = "0 */14 * * * ?"
-    val invalidCron = "0 0 0 0"
-
-    val connectionIds =
-      listOf(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())
-    every { connectionService.listSubHourConnectionIdsForOrganization(orgId.value) } returns listOf(connectionIds[0], connectionIds[1])
-    every { connectionService.listConnectionCronSchedulesForOrganization(orgId.value) } returns
-      listOf(
-        ConnectionCronSchedule(connectionIds[2], ScheduleData().withCron(Cron().withCronExpression(cronSlow).withCronTimeZone(cronTimezoneUtc))),
-        ConnectionCronSchedule(connectionIds[3], ScheduleData().withCron(Cron().withCronExpression(cronFast).withCronTimeZone(cronTimezoneUtc))),
-        ConnectionCronSchedule(connectionIds[4], ScheduleData().withCron(Cron().withCronExpression(cronSlow2).withCronTimeZone(cronTimezoneUtc))),
-        ConnectionCronSchedule(connectionIds[5], ScheduleData().withCron(Cron().withCronExpression(cronFast2).withCronTimeZone(cronTimezoneUtc))),
-        ConnectionCronSchedule(connectionIds[6], ScheduleData().withCron(Cron().withCronExpression(invalidCron).withCronTimeZone(cronTimezoneUtc))),
-      )
-
-    val result = featureDegradationService.findSubHourSyncIds(orgId)
-
-    Assertions.assertTrue(result.containsAll(listOf(connectionIds[0], connectionIds[1], connectionIds[3], connectionIds[5])))
   }
 }
