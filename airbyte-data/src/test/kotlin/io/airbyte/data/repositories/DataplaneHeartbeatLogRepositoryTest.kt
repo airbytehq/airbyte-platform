@@ -9,6 +9,7 @@ import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -28,6 +29,13 @@ class DataplaneHeartbeatLogRepositoryTest : AbstractConfigRepositoryTest() {
         ).dropForeignKey(Keys.DATAPLANE_HEARTBEAT_LOG__DATAPLANE_HEARTBEAT_LOG_DATAPLANE_ID_FKEY.constraint())
         .execute()
     }
+  }
+
+  @AfterEach
+  fun cleanup() {
+    jooqDslContext
+      .deleteFrom(Tables.DATAPLANE_HEARTBEAT_LOG)
+      .execute()
   }
 
   @Test
@@ -230,5 +238,178 @@ class DataplaneHeartbeatLogRepositoryTest : AbstractConfigRepositoryTest() {
     val latest = dataplaneHeartbeatLogRepository.findLatestHeartbeatsByDataplaneIds(listOf(dataplaneId))
 
     assertEquals(0, latest.size)
+  }
+
+  @Test
+  fun `deleteOldHeartbeatsExceptLatest deletes records older than cutoff`() {
+    val dataplaneId = UUID.randomUUID()
+
+    // Insert old log with manual timestamp
+    jooqDslContext
+      .insertInto(Tables.DATAPLANE_HEARTBEAT_LOG)
+      .columns(
+        Tables.DATAPLANE_HEARTBEAT_LOG.ID,
+        Tables.DATAPLANE_HEARTBEAT_LOG.DATAPLANE_ID,
+        Tables.DATAPLANE_HEARTBEAT_LOG.CONTROL_PLANE_VERSION,
+        Tables.DATAPLANE_HEARTBEAT_LOG.DATAPLANE_VERSION,
+        Tables.DATAPLANE_HEARTBEAT_LOG.CREATED_AT,
+      ).values(
+        UUID.randomUUID(),
+        dataplaneId,
+        "1.0.0",
+        "2.0.0",
+        OffsetDateTime.now().minusHours(25),
+      ).execute()
+
+    // Insert recent log
+    val recentLog =
+      dataplaneHeartbeatLogRepository.save(
+        DataplaneHeartbeatLog(
+          dataplaneId = dataplaneId,
+          controlPlaneVersion = "1.0.1",
+          dataplaneVersion = "2.0.1",
+        ),
+      )
+
+    val cutoffTime = OffsetDateTime.now().minusHours(24)
+    val deletedCount = dataplaneHeartbeatLogRepository.deleteOldHeartbeatsExceptLatest(cutoffTime)
+
+    assertEquals(1, deletedCount)
+
+    val remainingLogs = dataplaneHeartbeatLogRepository.findAll().toList()
+    assertEquals(1, remainingLogs.size)
+    assertEquals(recentLog.id, remainingLogs[0].id)
+  }
+
+  @Test
+  fun `deleteOldHeartbeatsExceptLatest preserves most recent log even if older than cutoff`() {
+    val dataplaneId = UUID.randomUUID()
+
+    // Insert very old log with manual timestamp
+    jooqDslContext
+      .insertInto(Tables.DATAPLANE_HEARTBEAT_LOG)
+      .columns(
+        Tables.DATAPLANE_HEARTBEAT_LOG.ID,
+        Tables.DATAPLANE_HEARTBEAT_LOG.DATAPLANE_ID,
+        Tables.DATAPLANE_HEARTBEAT_LOG.CONTROL_PLANE_VERSION,
+        Tables.DATAPLANE_HEARTBEAT_LOG.DATAPLANE_VERSION,
+        Tables.DATAPLANE_HEARTBEAT_LOG.CREATED_AT,
+      ).values(
+        UUID.randomUUID(),
+        dataplaneId,
+        "1.0.0",
+        "2.0.0",
+        OffsetDateTime.now().minusDays(30),
+      ).execute()
+
+    val cutoffTime = OffsetDateTime.now().minusHours(24)
+    val deletedCount = dataplaneHeartbeatLogRepository.deleteOldHeartbeatsExceptLatest(cutoffTime)
+
+    assertEquals(0, deletedCount)
+
+    val remainingLogs = dataplaneHeartbeatLogRepository.findAll().toList()
+    assertEquals(1, remainingLogs.size)
+    assertEquals(dataplaneId, remainingLogs[0].dataplaneId)
+  }
+
+  @Test
+  fun `deleteOldHeartbeatsExceptLatest handles multiple dataplanes correctly`() {
+    val dataplane1 = UUID.randomUUID()
+    val dataplane2 = UUID.randomUUID()
+
+    // Insert old logs with manual timestamps
+    jooqDslContext
+      .insertInto(Tables.DATAPLANE_HEARTBEAT_LOG)
+      .columns(
+        Tables.DATAPLANE_HEARTBEAT_LOG.ID,
+        Tables.DATAPLANE_HEARTBEAT_LOG.DATAPLANE_ID,
+        Tables.DATAPLANE_HEARTBEAT_LOG.CONTROL_PLANE_VERSION,
+        Tables.DATAPLANE_HEARTBEAT_LOG.DATAPLANE_VERSION,
+        Tables.DATAPLANE_HEARTBEAT_LOG.CREATED_AT,
+      ).values(
+        UUID.randomUUID(),
+        dataplane1,
+        "1.0.0",
+        "2.0.0",
+        OffsetDateTime.now().minusHours(30),
+      ).values(
+        UUID.randomUUID(),
+        dataplane1,
+        "1.0.1",
+        "2.0.1",
+        OffsetDateTime.now().minusHours(26),
+      ).values(
+        UUID.randomUUID(),
+        dataplane2,
+        "1.0.0",
+        "2.0.0",
+        OffsetDateTime.now().minusDays(60),
+      ).values(
+        UUID.randomUUID(),
+        dataplane2,
+        "1.0.1",
+        "2.0.1",
+        OffsetDateTime.now().minusDays(50),
+      ).execute()
+
+    // Insert recent log for dataplane1
+    val dataplane1Latest =
+      dataplaneHeartbeatLogRepository.save(
+        DataplaneHeartbeatLog(
+          dataplaneId = dataplane1,
+          controlPlaneVersion = "1.0.2",
+          dataplaneVersion = "2.0.2",
+        ),
+      )
+
+    val cutoffTime = OffsetDateTime.now().minusHours(24)
+    val deletedCount = dataplaneHeartbeatLogRepository.deleteOldHeartbeatsExceptLatest(cutoffTime)
+
+    assertEquals(3, deletedCount)
+
+    val remainingLogs = dataplaneHeartbeatLogRepository.findAll().toList()
+    assertEquals(2, remainingLogs.size)
+
+    val remainingIds = remainingLogs.map { it.id }.toSet()
+    assertThat(remainingIds).contains(dataplane1Latest.id)
+    // dataplane2 has no recent records, but its most recent (50 days old) should be kept
+    assertThat(remainingLogs.any { it.dataplaneId == dataplane2 }).isTrue()
+  }
+
+  @Test
+  fun `deleteOldHeartbeatsExceptLatest returns zero when no logs exist`() {
+    val cutoffTime = OffsetDateTime.now().minusHours(24)
+    val deletedCount = dataplaneHeartbeatLogRepository.deleteOldHeartbeatsExceptLatest(cutoffTime)
+
+    assertEquals(0, deletedCount)
+  }
+
+  @Test
+  fun `deleteOldHeartbeatsExceptLatest returns zero when all logs are recent`() {
+    val dataplaneId = UUID.randomUUID()
+
+    dataplaneHeartbeatLogRepository.save(
+      DataplaneHeartbeatLog(
+        dataplaneId = dataplaneId,
+        controlPlaneVersion = "1.0.0",
+        dataplaneVersion = "2.0.0",
+      ),
+    )
+
+    dataplaneHeartbeatLogRepository.save(
+      DataplaneHeartbeatLog(
+        dataplaneId = dataplaneId,
+        controlPlaneVersion = "1.0.1",
+        dataplaneVersion = "2.0.1",
+      ),
+    )
+
+    val cutoffTime = OffsetDateTime.now().minusHours(24)
+    val deletedCount = dataplaneHeartbeatLogRepository.deleteOldHeartbeatsExceptLatest(cutoffTime)
+
+    assertEquals(0, deletedCount)
+
+    val remainingLogs = dataplaneHeartbeatLogRepository.findAll().toList()
+    assertEquals(2, remainingLogs.size)
   }
 }

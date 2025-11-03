@@ -8,6 +8,8 @@ import io.airbyte.data.repositories.DataplaneHeartbeatLogRepository
 import io.airbyte.data.repositories.entities.DataplaneHeartbeatLog
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
+import java.time.Duration
+import java.time.OffsetDateTime
 import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
@@ -21,6 +23,7 @@ class DataplaneHealthService(
 ) {
   companion object {
     const val UNKNOWN_VERSION = "unknown"
+    val RETENTION_PERIOD: Duration = Duration.ofHours(24)
   }
 
   /**
@@ -41,5 +44,17 @@ class DataplaneHealthService(
 
     heartbeatLogRepository.save(log)
     logger.debug { "Recorded heartbeat for dataplane $dataplaneId" }
+  }
+
+  /**
+   * Deletes heartbeat logs older than the retention period,
+   * while preserving the most recent log for each dataplane.
+   * Returns the number of deleted records.
+   */
+  fun cleanupOldHeartbeats(): Int {
+    val cutoffTime = OffsetDateTime.now().minus(RETENTION_PERIOD)
+    val deletedCount = heartbeatLogRepository.deleteOldHeartbeatsExceptLatest(cutoffTime)
+    logger.info { "Cleaned up $deletedCount old heartbeat logs (cutoff: $cutoffTime)" }
+    return deletedCount
   }
 }

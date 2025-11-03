@@ -6,12 +6,15 @@ package io.airbyte.data.services
 
 import io.airbyte.data.repositories.DataplaneHeartbeatLogRepository
 import io.airbyte.data.repositories.entities.DataplaneHeartbeatLog
+import io.airbyte.data.services.DataplaneHealthService.Companion.RETENTION_PERIOD
 import io.airbyte.data.services.DataplaneHealthService.Companion.UNKNOWN_VERSION
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import java.time.OffsetDateTime
 import java.util.UUID
 
 internal class DataplaneHealthServiceTest {
@@ -74,5 +77,44 @@ internal class DataplaneHealthServiceTest {
     )
 
     verify(exactly = 2) { heartbeatLogRepository.save(any()) }
+  }
+
+  @Test
+  fun `cleanupOldHeartbeats calls repository with correct cutoff time`() {
+    val deletedCount = 5
+    every { heartbeatLogRepository.deleteOldHeartbeatsExceptLatest(any()) } returns deletedCount
+
+    val result = dataplaneHealthService.cleanupOldHeartbeats()
+
+    assertEquals(deletedCount, result)
+    verify(exactly = 1) {
+      heartbeatLogRepository.deleteOldHeartbeatsExceptLatest(
+        match {
+          // Verify cutoff time is approximately now minus retention period (within 1 second tolerance)
+          val expectedCutoff = OffsetDateTime.now().minus(RETENTION_PERIOD)
+          it.isAfter(expectedCutoff.minusSeconds(1)) && it.isBefore(expectedCutoff.plusSeconds(1))
+        },
+      )
+    }
+  }
+
+  @Test
+  fun `cleanupOldHeartbeats returns zero when no records deleted`() {
+    every { heartbeatLogRepository.deleteOldHeartbeatsExceptLatest(any()) } returns 0
+
+    val result = dataplaneHealthService.cleanupOldHeartbeats()
+
+    assertEquals(0, result)
+    verify(exactly = 1) { heartbeatLogRepository.deleteOldHeartbeatsExceptLatest(any()) }
+  }
+
+  @Test
+  fun `cleanupOldHeartbeats returns deleted count`() {
+    val deletedCount = 42
+    every { heartbeatLogRepository.deleteOldHeartbeatsExceptLatest(any()) } returns deletedCount
+
+    val result = dataplaneHealthService.cleanupOldHeartbeats()
+
+    assertEquals(deletedCount, result)
   }
 }

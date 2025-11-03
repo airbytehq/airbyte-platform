@@ -40,4 +40,20 @@ interface DataplaneHeartbeatLogRepository : PageableRepository<DataplaneHeartbea
     startTime: OffsetDateTime,
     endTime: OffsetDateTime,
   ): List<DataplaneHeartbeatLog>
+
+  @Query(
+    """
+    WITH latest_heartbeats AS (
+      SELECT DISTINCT ON (dataplane_id) id
+      FROM dataplane_heartbeat_log
+      ORDER BY dataplane_id, created_at DESC
+    )
+    DELETE FROM dataplane_heartbeat_log dhl
+    WHERE dhl.created_at < :cutoffTime
+      AND NOT EXISTS (
+        SELECT 1 FROM latest_heartbeats lh WHERE lh.id = dhl.id
+      )
+    """,
+  )
+  fun deleteOldHeartbeatsExceptLatest(cutoffTime: OffsetDateTime): Int
 }
