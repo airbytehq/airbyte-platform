@@ -26,6 +26,7 @@ import java.util.Objects;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
+  "additionalStats",
   "bytesCommitted",
   "bytesEmitted",
   "destinationStateMessagesEmitted",
@@ -784,6 +785,10 @@ public class SyncStats implements Serializable {
     sb.append('=');
     sb.append(((this.recordsRejected == null) ? "<null>" : this.recordsRejected));
     sb.append(',');
+    sb.append("additionalStats");
+    sb.append('=');
+    sb.append(((this.additionalStats == null) ? "<null>" : this.additionalStats));
+    sb.append(',');
     sb.append("additionalProperties");
     sb.append('=');
     sb.append(((this.additionalProperties == null) ? "<null>" : this.additionalProperties));
@@ -826,6 +831,7 @@ public class SyncStats implements Serializable {
     result = ((result * 31) + ((this.discoverSchemaStartTime == null) ? 0 : this.discoverSchemaStartTime.hashCode()));
     result = ((result * 31) + ((this.bytesFilteredOut == null) ? 0 : this.bytesFilteredOut.hashCode()));
     result = ((result * 31) + ((this.replicationStartTime == null) ? 0 : this.replicationStartTime.hashCode()));
+    result = ((result * 31) + ((this.additionalStats == null) ? 0 : this.additionalStats.hashCode()));
     result = ((result * 31) + ((this.additionalProperties == null) ? 0 : this.additionalProperties.hashCode()));
     return result;
   }
@@ -887,6 +893,7 @@ public class SyncStats implements Serializable {
             || ((this.bytesFilteredOut != null) && this.bytesFilteredOut.equals(rhs.bytesFilteredOut))))
         && ((Objects.equals(this.replicationStartTime, rhs.replicationStartTime))
             || ((this.replicationStartTime != null) && this.replicationStartTime.equals(rhs.replicationStartTime))))
+        && (Objects.equals(this.additionalStats, rhs.additionalStats))
         && (Objects.equals(this.additionalProperties, rhs.additionalProperties)));
   }
 
