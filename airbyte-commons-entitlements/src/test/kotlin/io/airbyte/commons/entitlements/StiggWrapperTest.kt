@@ -9,9 +9,13 @@ import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.FeatureEntitlement
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.featureflag.BypassStiggEntitlementChecks
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Organization
 import io.airbyte.metrics.MetricClient
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import io.stigg.api.operations.GetPaywallQuery
 import io.stigg.sidecar.proto.v1.AccessDeniedReason
 import io.stigg.sidecar.proto.v1.EnumEntitlement
@@ -246,6 +250,101 @@ internal class StiggWrapperTest {
     // Verify the result contains the expected plan
     assertEquals(1, result.size)
     assertEquals(EntitlementPlan.STANDARD_TRIAL, result[0].planEnum)
+  }
+
+  @Test
+  fun `checkEntitlement bypasses Stigg when feature flag is enabled`() {
+    val featureFlagClient = mockk<FeatureFlagClient>()
+    val stigg = mockk<Stigg>(relaxed = true)
+    val entitlement = FeatureEntitlement("test-feature")
+
+    // Feature flag is enabled
+    every { featureFlagClient.boolVariation(BypassStiggEntitlementChecks, Organization(organizationId.value)) } returns true
+
+    val stiggWrapper = StiggWrapper(stigg, metricClient, featureFlagClient)
+    val result = stiggWrapper.checkEntitlement(organizationId, entitlement)
+
+    // Should return false without calling Stigg
+    assertEquals("test-feature", result.featureId)
+    assertEquals(false, result.isEntitled)
+    assertEquals("BYPASSED_BY_FEATURE_FLAG", result.reason)
+
+    // Verify Stigg was never called
+    verify(exactly = 0) { stigg.getBooleanEntitlement(any()) }
+  }
+
+  @Test
+  fun `checkEntitlement calls Stigg when feature flag is disabled`() {
+    val featureFlagClient = mockk<FeatureFlagClient>()
+    val entitlement = FeatureEntitlement("test-feature")
+
+    // Feature flag is disabled
+    every { featureFlagClient.boolVariation(BypassStiggEntitlementChecks, Organization(organizationId.value)) } returns false
+
+    // Create a working offline Stigg instance with the entitlement
+    val stigg = createOfflineStigg(organizationId.value.toString() to "test-feature")
+    val stiggWrapper = StiggWrapper(stigg, metricClient, featureFlagClient)
+
+    val result = stiggWrapper.checkEntitlement(organizationId, entitlement)
+
+    // Should call Stigg and return the real result
+    assertEquals("test-feature", result.featureId)
+    assertEquals(true, result.isEntitled)
+  }
+
+  @Test
+  fun `getEntitlements bypasses Stigg when feature flag is enabled`() {
+    val featureFlagClient = mockk<FeatureFlagClient>()
+    val stigg = mockk<Stigg>(relaxed = true)
+
+    // Feature flag is enabled
+    every { featureFlagClient.boolVariation(BypassStiggEntitlementChecks, Organization(organizationId.value)) } returns true
+
+    val stiggWrapper = StiggWrapper(stigg, metricClient, featureFlagClient)
+    val result = stiggWrapper.getEntitlements(organizationId)
+
+    // Should return empty list without calling Stigg
+    assertEquals(emptyList<EntitlementResult>(), result)
+
+    // Verify Stigg was never called
+    verify(exactly = 0) { stigg.getEntitlements(any()) }
+  }
+
+  @Test
+  fun `getEntitlements calls Stigg when feature flag is disabled`() {
+    val featureFlagClient = mockk<FeatureFlagClient>()
+
+    // Feature flag is disabled
+    every { featureFlagClient.boolVariation(BypassStiggEntitlementChecks, Organization(organizationId.value)) } returns false
+
+    val stigg =
+      createOfflineStigg(
+        organizationId.value.toString() to "feature-a",
+        organizationId.value.toString() to "feature-b",
+      )
+    val stiggWrapper = StiggWrapper(stigg, metricClient, featureFlagClient)
+
+    val result = stiggWrapper.getEntitlements(organizationId)
+
+    // Should call Stigg and return the real result
+    assertEquals(2, result.size)
+    assertEquals(listOf("feature-a", "feature-b"), result.map { it.featureId }.sorted())
+  }
+
+  @Test
+  fun `checkEntitlement calls Stigg when feature flag client is null`() {
+    val entitlement = FeatureEntitlement("test-feature")
+
+    // Create a working offline Stigg instance with the entitlement
+    val stigg = createOfflineStigg(organizationId.value.toString() to "test-feature")
+    // No feature flag client provided
+    val stiggWrapper = StiggWrapper(stigg, metricClient, null)
+
+    val result = stiggWrapper.checkEntitlement(organizationId, entitlement)
+
+    // Should call Stigg and return the real result
+    assertEquals("test-feature", result.featureId)
+    assertEquals(true, result.isEntitled)
   }
 
   private fun createOfflineStigg(vararg entitlements: Pair<String, String>): Stigg {

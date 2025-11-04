@@ -10,6 +10,9 @@ import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.Entitlements
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.featureflag.BypassStiggEntitlementChecks
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Organization
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -78,6 +81,7 @@ data class EntitlementPlanResponse(
 internal class StiggWrapper(
   private val stigg: Stigg,
   private val metricClient: MetricClient? = null,
+  private val featureFlagClient: FeatureFlagClient? = null,
 ) {
   fun getPlans(organizationId: OrganizationId): List<EntitlementPlanResponse> {
     try {
@@ -162,6 +166,15 @@ internal class StiggWrapper(
   ): EntitlementResult {
     logger.debug { "Checking entitlement organizationId=$organizationId entitlement=$entitlement" }
 
+    if (featureFlagClient?.boolVariation(BypassStiggEntitlementChecks, Organization(organizationId.value)) == true) {
+      logger.info { "Bypassing Stigg entitlement check for organizationId=$organizationId entitlement=${entitlement.featureId}" }
+      return EntitlementResult(
+        featureId = entitlement.featureId,
+        isEntitled = false,
+        reason = "BYPASSED_BY_FEATURE_FLAG",
+      )
+    }
+
     val result =
       withStiggTimeout("checkEntitlement(organizationId=$organizationId, entitlement=${entitlement.featureId})") {
         stigg.getBooleanEntitlement(
@@ -198,6 +211,11 @@ internal class StiggWrapper(
 
   fun getEntitlements(organizationId: OrganizationId): List<EntitlementResult> {
     logger.debug { "Getting entitlements organizationId=$organizationId" }
+
+    if (featureFlagClient?.boolVariation(BypassStiggEntitlementChecks, Organization(organizationId.value)) == true) {
+      logger.info { "Bypassing Stigg entitlements retrieval for organizationId=$organizationId" }
+      return emptyList()
+    }
 
     val result =
       withStiggTimeout("getEntitlements(organizationId=$organizationId)") {

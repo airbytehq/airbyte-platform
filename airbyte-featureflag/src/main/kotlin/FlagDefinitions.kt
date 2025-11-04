@@ -249,4 +249,6 @@ object UnifiedTrial : Temporary<Boolean>(key = "platform.unified-trial", default
 
 object SkipStiggPlanLookup : Temporary<Boolean>(key = "platform.skip-stigg-plan-lookup", default = false)
 
+object BypassStiggEntitlementChecks : Permanent<Boolean>(key = "platform.bypass-stigg-entitlement-checks", default = false)
+
 object EnableDataWorkerUsage : Temporary<Boolean>(key = "platform.enable-data-worker-usage", default = false)

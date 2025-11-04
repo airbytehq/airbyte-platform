@@ -8,6 +8,8 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.license.ActiveAirbyteLicense
 import io.airbyte.config.Configs
 import io.airbyte.data.services.OrganizationService
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.metrics.MetricClient
 import io.airbyte.micronaut.runtime.AirbyteConfig
 import io.airbyte.micronaut.runtime.AirbyteStiggClientConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -34,6 +36,8 @@ internal class EntitlementClientFactory(
   private val airbyteStiggClientConfig: AirbyteStiggClientConfig,
   private val activeLicense: ActiveAirbyteLicense? = null,
   private val organizationService: OrganizationService? = null,
+  private val metricClient: MetricClient? = null,
+  private val featureFlagClient: FeatureFlagClient? = null,
 ) {
   @Singleton
   fun entitlementClient(): EntitlementClient =
@@ -68,14 +72,17 @@ internal class EntitlementClientFactory(
 
     return StiggCloudEntitlementClient(
       StiggWrapper(
-        Stigg.init(
-          StiggConfig
-            .builder()
-            .apiConfig(ApiConfig.newBuilder().setApiKey(airbyteStiggClientConfig.apiKey).build())
-            .remoteSidecarHost(airbyteStiggClientConfig.sidecarHost)
-            .remoteSidecarPort(airbyteStiggClientConfig.sidecarPort)
-            .build(),
-        ),
+        stigg =
+          Stigg.init(
+            StiggConfig
+              .builder()
+              .apiConfig(ApiConfig.newBuilder().setApiKey(airbyteStiggClientConfig.apiKey).build())
+              .remoteSidecarHost(airbyteStiggClientConfig.sidecarHost)
+              .remoteSidecarPort(airbyteStiggClientConfig.sidecarPort)
+              .build(),
+          ),
+        metricClient = metricClient,
+        featureFlagClient = featureFlagClient,
       ),
       organizationService,
     )
