@@ -10,7 +10,8 @@ import { ConnectionConfiguration } from "area/connector/types";
 import { useGetDestinationDefinitionSpecificationAsync } from "core/api";
 import { DestinationDefinitionRead } from "core/api/types/AirbyteClient";
 import { Connector } from "core/domain/connector";
-import { ConnectorCard } from "views/Connector/ConnectorCard";
+import { useExperiment } from "hooks/services/Experiment";
+import { ConnectorCard, NextConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm";
 
 export interface DestinationFormValues {
@@ -42,6 +43,8 @@ export const DestinationForm: React.FC<DestinationFormProps> = ({
   leftFooterSlot = null,
 }) => {
   const location = useLocation();
+  const useNextConnectorCard = useExperiment("connector.updatedSetupUx");
+  const CardComponent = useNextConnectorCard ? NextConnectorCard : ConnectorCard;
 
   const destinationDefinitionId =
     selectedDestinationDefinitionId ??
@@ -78,7 +81,7 @@ export const DestinationForm: React.FC<DestinationFormProps> = ({
   };
 
   return (
-    <ConnectorCard
+    <CardComponent
       formType="destination"
       headerBlock={<HeaderBlock />}
       description={<FormattedMessage id="destinations.description" />}

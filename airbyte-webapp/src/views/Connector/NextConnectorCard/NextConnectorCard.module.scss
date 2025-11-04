@@ -1,0 +1,23 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.loaderContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: variables.$spacing-2xl 0;
+}
+
+.loadingMessage {
+  margin-top: variables.$spacing-md;
+  margin-left: variables.$spacing-lg;
+}
+
+.header:not(:empty) {
+  padding-bottom: variables.$spacing-lg;
+}
+
+.collapsibleIpAddresses {
+  gap: variables.$spacing-md;
+  font-size: variables.$font-size-md;
+}

@@ -19,8 +19,9 @@ export interface Experiments {
   "connections.connectionsStatusesEnabled": boolean;
   "connector.airbyteCloudIpAddressesByDataplane": Record<string, string[]>;
   "connector.allowSavingWithoutTesting": boolean;
-  "connector.suggestedSourceConnectors": string;
   "connector.suggestedDestinationConnectors": string;
+  "connector.suggestedSourceConnectors": string;
+  "connector.updatedSetupUx": boolean;
   "connectorBuilder.aiAssist.enabled": boolean;
   "connectorBuilder.customComponents": boolean;
   "connectorBuilder.contributeEditsToMarketplace": boolean;
@@ -74,6 +75,7 @@ export const defaultExperimentValues: Experiments = {
   "connector.allowSavingWithoutTesting": false,
   "connector.suggestedDestinationConnectors": "",
   "connector.suggestedSourceConnectors": "",
+  "connector.updatedSetupUx": false,
   "connectorBuilder.aiAssist.enabled": false,
   "connectorBuilder.contributeEditsToMarketplace": true,
   "connectorBuilder.customComponents": false,

@@ -16,9 +16,10 @@ import {
 } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { trackTiming } from "core/utils/datadog";
+import { useExperiment } from "hooks/services/Experiment";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 import { useDeleteModal } from "hooks/useDeleteModal";
-import { ConnectorCard } from "views/Connector/ConnectorCard";
+import { ConnectorCard, NextConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm/types";
 
 import styles from "./DestinationSettings.module.scss";
@@ -29,6 +30,8 @@ export const DestinationSettingsPage: React.FC = () => {
   const destinationDefinition = useDestinationDefinition(destination.destinationDefinitionId);
   const destinationDefinitionVersion = useDestinationDefinitionVersion(destination.destinationId);
   const destinationSpecification = useGetDestinationDefinitionSpecification(destination.destinationId);
+  const useNextConnectorCard = useExperiment("connector.updatedSetupUx");
+  const CardComponent = useNextConnectorCard ? NextConnectorCard : ConnectorCard;
   const reloadDestination = useInvalidateDestination(destination.destinationId);
   const { mutateAsync: updateDestination } = useUpdateDestination();
   const { mutateAsync: deleteDestination } = useDeleteDestination();
@@ -68,7 +71,7 @@ export const DestinationSettingsPage: React.FC = () => {
 
   return (
     <div className={styles.content}>
-      <ConnectorCard
+      <CardComponent
         formType="destination"
         title={formatMessage({ id: "destination.destinationSettings" })}
         isEditMode

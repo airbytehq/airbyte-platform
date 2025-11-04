@@ -16,9 +16,10 @@ import {
 } from "core/api";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 import { trackTiming } from "core/utils/datadog";
+import { useExperiment } from "hooks/services/Experiment";
 import { useFormChangeTrackerService, useUniqueFormId } from "hooks/services/FormChangeTracker";
 import { useDeleteModal } from "hooks/useDeleteModal";
-import { ConnectorCard } from "views/Connector/ConnectorCard";
+import { ConnectorCard, NextConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorCardValues } from "views/Connector/ConnectorForm";
 
 import styles from "./SourceSettingsPage.module.scss";
@@ -29,6 +30,8 @@ export const SourceSettingsPage: React.FC = () => {
   const sourceDefinition = useSourceDefinition(source.sourceDefinitionId);
   const sourceDefinitionVersion = useSourceDefinitionVersion(source.sourceId);
   const sourceDefinitionSpecification = useGetSourceDefinitionSpecification(source.sourceId);
+  const useNextConnectorCard = useExperiment("connector.updatedSetupUx");
+  const CardComponent = useNextConnectorCard ? NextConnectorCard : ConnectorCard;
 
   const reloadSource = useInvalidateSource(source.sourceId);
   const { mutateAsync: updateSource } = useUpdateSource();
@@ -67,7 +70,7 @@ export const SourceSettingsPage: React.FC = () => {
 
   return (
     <div className={styles.content}>
-      <ConnectorCard
+      <CardComponent
         formType="source"
         title={formatMessage({ id: "sources.sourceSettings" })}
         isEditMode
