@@ -136,13 +136,13 @@ private val logger = KotlinLogging.logger { }
 
 private const val DEST_EMITTED_BYTES_COUNT = "emittedBytesCount"
 
-private const val DEST_COMMITTED_RECORDS_COUNT = "committedRecordsCount"
+internal const val DEST_COMMITTED_RECORDS_COUNT = "committedRecordsCount"
 
 private const val DEST_EMITTED_RECORDS_COUNT = "emittedRecordsCount"
 
 private const val DEST_COMMITTED_BYTES_COUNT = "committedBytesCount"
 
-private const val DEST_REJECTED_RECORDS_COUNT = "rejectedRecordsCount"
+internal const val DEST_REJECTED_RECORDS_COUNT = "rejectedRecordsCount"
 
 /**
  * Track Stats for a specific stream.
@@ -398,7 +398,7 @@ class StreamStatsTracker(
         )
 
         // If rejected records, we should decrement the record count and increment rejected
-        // The destinationStats contains the recordCount however we're continuing to the "record" count from the platform for
+        // The destinationStats contains the recordCount.  However, we're continuing to the "record" count from the platform for
         // checksum purpose. Otherwise, it would be the same as just trusting counts from the destination.
         // RejectedRecords is an edge case because the counter is the only way for the platform to be aware of record rejection.
         if (stagedStats.stateId == stateId) {
@@ -409,15 +409,18 @@ class StreamStatsTracker(
               streamStats.committedRecordsCount.addAndGet(0 - rejectedCountLong)
             }
           }
-          stateMessage.destinationStats?.additionalStats?.let { additionalStats ->
-            streamStats.mergeAdditionalStats(additionalStats.additionalProperties.mapValues { it.value.toBigDecimal() })
-          }
         }
       }
 
       if (stagedStats.stateId == stateId) {
         break
       }
+    }
+
+    // Merge in the incoming additional stats to the tracked additional stats.  This logic is the same
+    // whether the service is in bookkeeper mode or not.
+    stateMessage.destinationStats?.additionalStats?.let { additionalStats ->
+      streamStats.mergeAdditionalStats(additionalStats.additionalProperties.mapValues { it.value.toBigDecimal() })
     }
 
     // Updating state checkpointing metrics

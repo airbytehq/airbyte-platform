@@ -6,17 +6,23 @@ package io.airbyte.container.orchestrator.bookkeeping
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FileTransferInformations
+import io.airbyte.container.orchestrator.worker.state.ID
+import io.airbyte.protocol.models.v0.AdditionalStats
 import io.airbyte.protocol.models.v0.AirbyteGlobalState
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessageFileReference
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
+import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType
 import io.airbyte.protocol.models.v0.AirbyteStateStats
+import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 
 internal class StatsTrackerTest {
   @Test
@@ -173,5 +179,67 @@ internal class StatsTrackerTest {
     // Verify that stat1 was accumulated (100 + 50 = 150) and stat2 was added
     assertEquals(150.toBigDecimal(), streamStatsTracker.streamStats.additionalStats["stat1"])
     assertEquals(200.toBigDecimal(), streamStatsTracker.streamStats.additionalStats["stat2"])
+  }
+
+  @ParameterizedTest
+  @CsvSource(value = ["true", "false"])
+  fun testTrackingStateMessageFromDestination(isBookkeeperMode: Boolean) {
+    val stream = AirbyteStreamNameNamespacePair("stream", "namespace")
+    val tracker = StreamStatsTracker(stream, mockk(relaxed = true), isBookkeeperMode)
+    val destinationAdditionalStats =
+      mapOf(
+        "stat1" to 100.toBigDecimal(),
+        "stat2" to 200.toBigDecimal(),
+        "stat3" to 300.toBigDecimal(),
+      )
+    val additionalStats = AdditionalStats()
+    destinationAdditionalStats.forEach { (key, value) ->
+      additionalStats.withAdditionalProperty(key, value.toDouble())
+    }
+    val destinationStats =
+      AirbyteStateStats()
+        .withRecordCount(14.0)
+        .withRejectedRecordCount(20.0)
+        .withAdditionalStats(additionalStats)
+    val stateId = 1
+    val sourceStateMessage =
+      AirbyteStateMessage()
+        .withStream(
+          AirbyteStreamState()
+            .withStreamDescriptor(StreamDescriptor().withName(stream.name).withNamespace(stream.namespace)),
+        ).withType(AirbyteStateType.STREAM)
+        .withAdditionalProperty(ID, stateId)
+    val destinationStateMessage =
+      AirbyteStateMessage()
+        .withStream(
+          AirbyteStreamState()
+            .withStreamDescriptor(StreamDescriptor().withName(stream.name).withNamespace(stream.namespace)),
+        ).withType(AirbyteStateType.STREAM)
+        .withDestinationStats(destinationStats)
+        .withAdditionalProperty(ID, stateId)
+
+    if (isBookkeeperMode) {
+      destinationStateMessage.withAdditionalProperty(DEST_COMMITTED_RECORDS_COUNT, destinationStats.recordCount)
+      destinationStateMessage.withAdditionalProperty(DEST_REJECTED_RECORDS_COUNT, destinationStats.rejectedRecordCount)
+    }
+
+    // Call this first, otherwise it will fail due to the state ID not being saved to verify the matching state is received from the destination
+    tracker.trackStateFromSource(sourceStateMessage)
+    if (!isBookkeeperMode) {
+      val recordMessage = AirbyteRecordMessage().withStream(stream.name).withNamespace(stream.namespace).withData(Jsons.jsonNode(mapOf("id" to 1)))
+      @Suppress("UNUSED")
+      for (unused in 1..(destinationStats.recordCount.toInt())) {
+        tracker.trackRecord(recordMessage)
+      }
+    }
+    tracker.trackStateFromDestination(destinationStateMessage)
+
+    val expectedRecordCount = if (isBookkeeperMode) destinationStats.recordCount.toLong() else destinationStats.rejectedRecordCount.toLong() * -1
+    assertEquals(expectedRecordCount, tracker.streamStats.committedRecordsCount.toLong())
+    assertEquals(destinationStats.rejectedRecordCount.toLong(), tracker.streamStats.rejectedRecordsCount.toLong())
+    assertEquals(destinationStats.additionalStats.additionalProperties.size, tracker.streamStats.additionalStats.size)
+    assertEquals(destinationAdditionalStats["stat1"]?.toDouble(), tracker.streamStats.additionalStats["stat1"]?.toDouble())
+    assertEquals(destinationAdditionalStats["stat2"]?.toDouble(), tracker.streamStats.additionalStats["stat2"]?.toDouble())
+    assertEquals(destinationAdditionalStats["stat3"]?.toDouble(), tracker.streamStats.additionalStats["stat3"]?.toDouble())
   }
 }
