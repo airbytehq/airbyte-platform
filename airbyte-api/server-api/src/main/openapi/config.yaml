@@ -113,6 +113,8 @@ tags:
     description: Entitlement management endpoints
   - name: orchestration
     description: Orchestration related resources.
+  - name: domain_verifications
+    description: Organization domain verification endpoints.
 
 paths:
   /v1/workspaces/create:
@@ -10603,6 +10605,53 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  #domain_verifications
+  /v1/domain_verifications/create:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DomainVerificationCreateRequestBody"
+      responses:
+        "200":
+          description: Successfully created domain verification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomainVerificationResponse"
+        "400":
+          $ref: "#/components/responses/InvalidInputResponse"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+      tags:
+        - domain_verifications
+      summary: Create a new domain verification request for given org
+      operationId: createDomainVerification
+
+  /v1/domain_verifications/list:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+      responses:
+        "200":
+          description: Successfully retrieved domain verifications for given org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomainVerificationListResponse"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+      tags:
+        - domain_verifications
+      summary: List all domain verifications for an organization
+      operationId: listDomainVerifications
+
 components:
   securitySchemes:
     bearerAuth:
@@ -11390,6 +11439,72 @@ components:
           format: uuid
         plan_name:
           type: string
+
+    # DOMAIN_VERIFICATION
+    DomainVerificationCreateRequestBody:
+      type: object
+      required:
+        - organizationId
+        - domain
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        domain:
+          type: string
+
+    DomainVerificationResponse:
+      type: object
+      required:
+        - id
+        - organizationId
+        - domain
+        - verificationMethod
+        - status
+        - attempts
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        domain:
+          type: string
+        verificationMethod:
+          type: string
+          enum: [dns_txt, legacy]
+        status:
+          type: string
+          enum: [pending, verified, failed, expired]
+        dnsRecordName:
+          type: string
+          nullable: true
+        dnsRecordValue:
+          type: string
+          nullable: true
+        attempts:
+          type: integer
+        expiresAt:
+          type: integer
+          format: int64
+          nullable: true
+        verifiedAt:
+          type: integer
+          format: int64
+          nullable: true
+        createdAt:
+          type: integer
+          format: int64
+
+    DomainVerificationListResponse:
+      type: object
+      properties:
+        domainVerifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/DomainVerificationResponse"
 
     # WORKSPACE
     WorkspaceId:

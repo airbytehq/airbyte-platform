@@ -93,6 +93,13 @@ intents:
     roles:
       - ADMIN
 
+  ManageDomainVerification:
+    name: Manage domain verification
+    description: Manage domain verification request for an organization
+    roles:
+      - ORGANIZATION_ADMIN
+      - ADMIN
+
   RunAndCancelConnectionSyncAndRefresh:
     name: Run and cancel connection sync and refresh
     description: Allow user to run/cancel syncs and refreshes
