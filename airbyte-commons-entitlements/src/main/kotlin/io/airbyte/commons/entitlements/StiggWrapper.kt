@@ -15,11 +15,9 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.stigg.api.operations.GetActiveSubscriptionsListQuery
 import io.stigg.api.operations.GetPaywallQuery
 import io.stigg.api.operations.ProvisionCustomerMutation
 import io.stigg.api.operations.ProvisionSubscriptionMutation
-import io.stigg.api.operations.type.GetActiveSubscriptionsInput
 import io.stigg.api.operations.type.GetPaywallInput
 import io.stigg.api.operations.type.ProvisionCustomerInput
 import io.stigg.api.operations.type.ProvisionCustomerSubscriptionInput
@@ -28,8 +26,37 @@ import io.stigg.sidecar.proto.v1.GetBooleanEntitlementRequest
 import io.stigg.sidecar.proto.v1.GetEntitlementsRequest
 import io.stigg.sidecar.proto.v1.GetEnumEntitlementRequest
 import io.stigg.sidecar.sdk.Stigg
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import java.util.concurrent.TimeoutException
 
 private val logger = KotlinLogging.logger {}
+
+private const val STIGG_TIMEOUT_MS = 30_000L
+
+/**
+ * Executes a Stigg API call with a 30-second timeout.
+ * If the call takes longer than 30 seconds, a TimeoutException is thrown.
+ *
+ * @param operation A description of the operation being performed (for logging)
+ * @param block The Stigg API call to execute
+ * @return The result of the API call
+ * @throws TimeoutException if the call exceeds 30 seconds
+ */
+private fun <T> withStiggTimeout(
+  operation: String,
+  block: () -> T,
+): T =
+  try {
+    runBlocking {
+      withTimeout(STIGG_TIMEOUT_MS) {
+        block()
+      }
+    }
+  } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+    logger.error { "Stigg API call timed out after ${STIGG_TIMEOUT_MS}ms: $operation" }
+    throw TimeoutException("Stigg API call timed out after ${STIGG_TIMEOUT_MS}ms: $operation")
+  }
 
 data class EntitlementPlanResponse(
   val planEnum: EntitlementPlan,
@@ -55,13 +82,15 @@ internal class StiggWrapper(
   fun getPlans(organizationId: OrganizationId): List<EntitlementPlanResponse> {
     try {
       val result =
-        stigg.getEnumEntitlement(
-          GetEnumEntitlementRequest
-            .newBuilder()
-            .setCustomerId(organizationId.value.toString())
-            .setFeatureId("feature-plan-name")
-            .build(),
-        )
+        withStiggTimeout("getPlans(organizationId=$organizationId)") {
+          stigg.getEnumEntitlement(
+            GetEnumEntitlementRequest
+              .newBuilder()
+              .setCustomerId(organizationId.value.toString())
+              .setFeatureId("feature-plan-name")
+              .build(),
+          )
+        }
 
       if (result.entitlement.enumValuesList.size > 1) {
         logger.error {
@@ -93,34 +122,38 @@ internal class StiggWrapper(
     orgId: OrganizationId,
     plan: EntitlementPlan,
   ) {
-    stigg.api().mutation(
-      ProvisionCustomerMutation(
-        ProvisionCustomerInput
-          .builder()
-          .customerId(orgId.value.toString())
-          .subscriptionParams(
-            ProvisionCustomerSubscriptionInput
-              .builder()
-              .planId(plan.id)
-              .build(),
-          ).build(),
-      ),
-    )
+    withStiggTimeout("provisionCustomer(orgId=$orgId, plan=${plan.id})") {
+      stigg.api().mutation(
+        ProvisionCustomerMutation(
+          ProvisionCustomerInput
+            .builder()
+            .customerId(orgId.value.toString())
+            .subscriptionParams(
+              ProvisionCustomerSubscriptionInput
+                .builder()
+                .planId(plan.id)
+                .build(),
+            ).build(),
+        ),
+      )
+    }
   }
 
   fun updateCustomerPlan(
     orgId: OrganizationId,
     plan: EntitlementPlan,
   ) {
-    stigg.api().mutation(
-      ProvisionSubscriptionMutation(
-        ProvisionSubscriptionInput
-          .builder()
-          .customerId(orgId.value.toString())
-          .planId(plan.id)
-          .build(),
-      ),
-    )
+    withStiggTimeout("updateCustomerPlan(orgId=$orgId, plan=${plan.id})") {
+      stigg.api().mutation(
+        ProvisionSubscriptionMutation(
+          ProvisionSubscriptionInput
+            .builder()
+            .customerId(orgId.value.toString())
+            .planId(plan.id)
+            .build(),
+        ),
+      )
+    }
   }
 
   fun checkEntitlement(
@@ -130,13 +163,15 @@ internal class StiggWrapper(
     logger.debug { "Checking entitlement organizationId=$organizationId entitlement=$entitlement" }
 
     val result =
-      stigg.getBooleanEntitlement(
-        GetBooleanEntitlementRequest
-          .newBuilder()
-          .setCustomerId(organizationId.value.toString())
-          .setFeatureId(entitlement.featureId)
-          .build(),
-      )
+      withStiggTimeout("checkEntitlement(organizationId=$organizationId, entitlement=${entitlement.featureId})") {
+        stigg.getBooleanEntitlement(
+          GetBooleanEntitlementRequest
+            .newBuilder()
+            .setCustomerId(organizationId.value.toString())
+            .setFeatureId(entitlement.featureId)
+            .build(),
+        )
+      }
 
     logger
       .debug {
@@ -165,12 +200,14 @@ internal class StiggWrapper(
     logger.debug { "Getting entitlements organizationId=$organizationId" }
 
     val result =
-      stigg.getEntitlements(
-        GetEntitlementsRequest
-          .newBuilder()
-          .setCustomerId(organizationId.value.toString())
-          .build(),
-      )
+      withStiggTimeout("getEntitlements(organizationId=$organizationId)") {
+        stigg.getEntitlements(
+          GetEntitlementsRequest
+            .newBuilder()
+            .setCustomerId(organizationId.value.toString())
+            .build(),
+        )
+      }
 
     logger.debug {
       "Got entitlements organizationId=$organizationId result=$result"
@@ -211,17 +248,20 @@ internal class StiggWrapper(
     logger.debug { "Getting entitlements for plan=$plan" }
 
     try {
-      val query =
-        GetPaywallQuery
-          .builder()
-          .input(
-            GetPaywallInput
+      val result =
+        withStiggTimeout("getEntitlementsForPlan(plan=${plan.id})") {
+          val query =
+            GetPaywallQuery
               .builder()
-              .productId("product-airbyte")
-              .fetchAllCountriesPrices(true)
-              .build(),
-          ).build()
-      val result = stigg.api().query(query)
+              .input(
+                GetPaywallInput
+                  .builder()
+                  .productId("product-airbyte")
+                  .fetchAllCountriesPrices(true)
+                  .build(),
+              ).build()
+          stigg.api().query(query)
+        }
 
       logger.debug { "Paywall result for plan=$plan result=$result" }
 
