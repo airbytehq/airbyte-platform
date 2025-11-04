@@ -22,10 +22,13 @@ data class DataWorkerUsage(
   var orchestratorCpuRequest: Double,
   @field:Id
   var bucketStart: OffsetDateTime,
+  var maxSourceCpuRequest: Double,
+  var maxDestinationCpuRequest: Double,
+  var maxOrchestratorCpuRequest: Double,
   var createdAt: OffsetDateTime,
 ) {
   fun calculateDataWorkers(): Double {
-    val resources = sourceCpuRequest + destinationCpuRequest + orchestratorCpuRequest
+    val resources = maxSourceCpuRequest + maxDestinationCpuRequest + maxOrchestratorCpuRequest
     val dataWorkers = resources / DATA_WORKER_CPU_DIVISOR
     return dataWorkers
   }

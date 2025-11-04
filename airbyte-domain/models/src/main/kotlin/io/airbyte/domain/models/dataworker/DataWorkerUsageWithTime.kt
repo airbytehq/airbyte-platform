@@ -7,6 +7,7 @@ package io.airbyte.domain.models.dataworker
 import java.time.OffsetDateTime
 
 data class DataWorkerUsageWithTime(
-  val date: OffsetDateTime,
-  val usage: Double,
+  val usageStartTime: OffsetDateTime,
+  val dataWorkers: Double,
+  val currentUsage: Double,
 )

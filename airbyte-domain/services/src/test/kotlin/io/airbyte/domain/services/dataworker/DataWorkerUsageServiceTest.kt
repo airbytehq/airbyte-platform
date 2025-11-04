@@ -50,8 +50,8 @@ class DataWorkerUsageServiceTest {
     dataplaneGroupService = mockk()
     dataWorkerUsageDataService = mockk()
     workspaceService = mockk()
-    featureFlagClient = mockk()
-    entitlementService = mockk()
+    featureFlagClient = mockk(relaxed = true)
+    entitlementService = mockk(relaxed = true)
     service =
       DataWorkerUsageService(
         organizationService,
@@ -64,7 +64,7 @@ class DataWorkerUsageServiceTest {
   }
 
   @Test
-  fun `insertUsageForCompletedJob should insert usage when job has workspace id and organization exists`() {
+  fun `insertUsageForCompletedJob should insert a new usage record for a valid job when no current usage bucket exists`() {
     val workspaceId = UUID.randomUUID()
     val organizationId = UUID.randomUUID()
     val dataplaneGroupId = UUID.randomUUID()
@@ -85,14 +85,15 @@ class DataWorkerUsageServiceTest {
 
     every { organizationService.getOrganizationForWorkspaceId(workspaceId) } returns Optional.of(organization)
     every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns workspace
-    every { dataWorkerUsageDataService.insertDataWorkerUsage(any()) } returns mockk()
+    every { dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any()) } returns null
+    every { dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any()) } returns mockk()
     every { featureFlagClient.boolVariation(any(), any()) } returns true
     every { entitlementService.getCurrentPlanId(any()) } returns EntitlementPlan.PRO.id
 
-    service.insertUsageForCompletedJob(job)
+    service.insertUsageForCreatedJob(job)
 
     verify(exactly = 1) {
-      dataWorkerUsageDataService.insertDataWorkerUsage(
+      dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(
         match {
           it.organizationId == organizationId &&
             it.workspaceId == workspaceId &&
@@ -102,6 +103,74 @@ class DataWorkerUsageServiceTest {
             it.orchestratorCpuRequest == 1.0
         },
       )
+    }
+  }
+
+  @Test
+  fun `insertUsageForCompletedJob should update existing bucket when most recent bucket exists within one hour`() {
+    val workspaceId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
+    val jobId = 123L
+
+    val organization =
+      Organization()
+        .withOrganizationId(organizationId)
+        .withEmail("test@example.com")
+        .withName("Test Org")
+
+    val workspace =
+      StandardWorkspace()
+        .withWorkspaceId(workspaceId)
+        .withDataplaneGroupId(dataplaneGroupId)
+
+    val job = buildTestJob(jobId, workspaceId, "2.0", "3.0", "1.0")
+
+    val bucketStartTime = OffsetDateTime.now().minusMinutes(30)
+    val existingBucket =
+      DataWorkerUsage(
+        organizationId = organizationId,
+        workspaceId = workspaceId,
+        dataplaneGroupId = dataplaneGroupId,
+        sourceCpuRequest = 1.0,
+        destinationCpuRequest = 1.5,
+        orchestratorCpuRequest = 0.5,
+        bucketStart = bucketStartTime,
+        createdAt = OffsetDateTime.now(),
+        maxSourceCpuRequest = 1.0,
+        maxDestinationCpuRequest = 1.5,
+        maxOrchestratorCpuRequest = 0.5,
+      )
+
+    every { organizationService.getOrganizationForWorkspaceId(workspaceId) } returns Optional.of(organization)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns workspace
+    every { dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any()) } returns existingBucket
+    every { dataWorkerUsageDataService.incrementExistingDataWorkerUsageBucket(any()) } returns mockk()
+    every { featureFlagClient.boolVariation(any(), any()) } returns true
+    every { entitlementService.getCurrentPlanId(any()) } returns EntitlementPlan.PRO.id
+
+    service.insertUsageForCreatedJob(job)
+
+    // note that we expect the same values for current and max here, because the
+    // query itself will perform the max calculation at insertion time.
+    verify(exactly = 1) {
+      dataWorkerUsageDataService.incrementExistingDataWorkerUsageBucket(
+        match {
+          it.organizationId == organizationId &&
+            it.workspaceId == workspaceId &&
+            it.dataplaneGroupId == dataplaneGroupId &&
+            it.sourceCpuRequest == 2.0 &&
+            it.destinationCpuRequest == 3.0 &&
+            it.orchestratorCpuRequest == 1.0 &&
+            it.maxSourceCpuRequest == 2.0 &&
+            it.maxDestinationCpuRequest == 3.0 &&
+            it.maxOrchestratorCpuRequest == 1.0
+        },
+      )
+    }
+
+    verify(exactly = 0) {
+      dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any())
     }
   }
 
@@ -127,10 +196,12 @@ class DataWorkerUsageServiceTest {
         false,
       )
 
-    service.insertUsageForCompletedJob(job)
+    service.insertUsageForCreatedJob(job)
 
     verify(exactly = 0) {
-      dataWorkerUsageDataService.insertDataWorkerUsage(any())
+      dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any())
+      dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any())
+      dataWorkerUsageDataService.incrementExistingDataWorkerUsageBucket(any())
     }
   }
 
@@ -143,52 +214,12 @@ class DataWorkerUsageServiceTest {
 
     every { organizationService.getOrganizationForWorkspaceId(workspaceId) } returns Optional.empty()
 
-    service.insertUsageForCompletedJob(job)
+    service.insertUsageForCreatedJob(job)
 
     verify(exactly = 0) {
-      dataWorkerUsageDataService.insertDataWorkerUsage(any())
-    }
-  }
-
-  @Test
-  fun `insertUsageForCompletedJob should correctly parse cpu request values`() {
-    val workspaceId = UUID.randomUUID()
-    val organizationId = UUID.randomUUID()
-    val dataplaneGroupId = UUID.randomUUID()
-    val jobId = 456L
-
-    val organization =
-      Organization()
-        .withOrganizationId(organizationId)
-        .withEmail("test@example.com")
-        .withName("Test Org")
-
-    val workspace =
-      StandardWorkspace()
-        .withWorkspaceId(workspaceId)
-        .withDataplaneGroupId(dataplaneGroupId)
-
-    val job = buildTestJob(jobId, workspaceId, "1.5", "2.5", "0.5")
-
-    every { organizationService.getOrganizationForWorkspaceId(workspaceId) } returns Optional.of(organization)
-    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns workspace
-    every { dataWorkerUsageDataService.insertDataWorkerUsage(any()) } returns mockk()
-    every { featureFlagClient.boolVariation(any(), any()) } returns true
-    every { entitlementService.getCurrentPlanId(any()) } returns EntitlementPlan.PRO.id
-
-    service.insertUsageForCompletedJob(job)
-
-    verify(exactly = 1) {
-      dataWorkerUsageDataService.insertDataWorkerUsage(
-        match {
-          it.organizationId == organizationId &&
-            it.workspaceId == workspaceId &&
-            it.dataplaneGroupId == dataplaneGroupId &&
-            it.sourceCpuRequest == 1.5 &&
-            it.destinationCpuRequest == 2.5 &&
-            it.orchestratorCpuRequest == 0.5
-        },
-      )
+      dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any())
+      dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any())
+      dataWorkerUsageDataService.incrementExistingDataWorkerUsageBucket(any())
     }
   }
 
@@ -215,10 +246,12 @@ class DataWorkerUsageServiceTest {
         false,
       )
 
-    service.insertUsageForCompletedJob(job)
+    service.insertUsageForCreatedJob(job)
 
     verify(exactly = 0) {
-      dataWorkerUsageDataService.insertDataWorkerUsage(any())
+      dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any())
+      dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any())
+      dataWorkerUsageDataService.incrementExistingDataWorkerUsageBucket(any())
     }
   }
 
@@ -226,6 +259,7 @@ class DataWorkerUsageServiceTest {
   fun `insertUsageForCompletedJob should not insert usage when feature flag is disabled`() {
     val workspaceId = UUID.randomUUID()
     val organizationId = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
     val jobId = 123L
 
     val organization =
@@ -234,17 +268,25 @@ class DataWorkerUsageServiceTest {
         .withEmail("test@example.com")
         .withName("Test Org")
 
+    val workspace =
+      StandardWorkspace()
+        .withWorkspaceId(workspaceId)
+        .withDataplaneGroupId(dataplaneGroupId)
+
     val job = buildTestJob(jobId, workspaceId, "2.0", "3.0", "1.0")
 
     every { organizationService.getOrganizationForWorkspaceId(workspaceId) } returns Optional.of(organization)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns workspace
     every { featureFlagClient.boolVariation(any(), any()) } returns false
     // valid entitlement, but flag is off so we should still not call the insert method.
     every { entitlementService.getCurrentPlanId(any()) } returns EntitlementPlan.PRO.id
 
-    service.insertUsageForCompletedJob(job)
+    service.insertUsageForCreatedJob(job)
 
     verify(exactly = 0) {
-      dataWorkerUsageDataService.insertDataWorkerUsage(any())
+      dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any())
+      dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any())
+      dataWorkerUsageDataService.incrementExistingDataWorkerUsageBucket(any())
     }
   }
 
@@ -273,10 +315,173 @@ class DataWorkerUsageServiceTest {
     every { featureFlagClient.boolVariation(any(), any()) } returns true
     every { entitlementService.getCurrentPlanId(any()) } returns EntitlementPlan.CORE.id
 
-    service.insertUsageForCompletedJob(job)
+    service.insertUsageForCreatedJob(job)
 
     verify(exactly = 0) {
-      dataWorkerUsageDataService.insertDataWorkerUsage(any())
+      dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any())
+      dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any())
+      dataWorkerUsageDataService.incrementExistingDataWorkerUsageBucket(any())
+    }
+  }
+
+  @Test
+  fun `subtractUsageForCompletedJob should not subtract usage when no recent bucket exists`() {
+    val workspaceId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
+    val jobId = 123L
+
+    val organization =
+      Organization()
+        .withOrganizationId(organizationId)
+        .withEmail("test@example.com")
+        .withName("Test Org")
+
+    val workspace =
+      StandardWorkspace()
+        .withWorkspaceId(workspaceId)
+        .withDataplaneGroupId(dataplaneGroupId)
+
+    val job = buildTestJob(jobId, workspaceId, "2.0", "3.0", "1.0")
+
+    every { organizationService.getOrganizationForWorkspaceId(workspaceId) } returns Optional.of(organization)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns workspace
+    every { dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any()) } returns null
+
+    service.subtractUsageForCompletedJob(job)
+
+    verify(exactly = 0) {
+      dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any())
+      dataWorkerUsageDataService.decrementExistingDataWorkerUsageBucket(any())
+    }
+  }
+
+  @Test
+  fun `subtractUsageForCompletedJob should subtract from existing bucket when most recent bucket exists within one hour`() {
+    val workspaceId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
+    val jobId = 123L
+
+    val organization =
+      Organization()
+        .withOrganizationId(organizationId)
+        .withEmail("test@example.com")
+        .withName("Test Org")
+
+    val workspace =
+      StandardWorkspace()
+        .withWorkspaceId(workspaceId)
+        .withDataplaneGroupId(dataplaneGroupId)
+
+    val job = buildTestJob(jobId, workspaceId, "2.0", "3.0", "1.0")
+
+    val bucketStartTime = OffsetDateTime.now().minusMinutes(30)
+    val existingBucket =
+      DataWorkerUsage(
+        organizationId = organizationId,
+        workspaceId = workspaceId,
+        dataplaneGroupId = dataplaneGroupId,
+        sourceCpuRequest = 5.0,
+        destinationCpuRequest = 6.0,
+        orchestratorCpuRequest = 3.0,
+        bucketStart = bucketStartTime,
+        createdAt = OffsetDateTime.now(),
+        maxSourceCpuRequest = 5.0,
+        maxDestinationCpuRequest = 6.0,
+        maxOrchestratorCpuRequest = 3.0,
+      )
+
+    every { organizationService.getOrganizationForWorkspaceId(workspaceId) } returns Optional.of(organization)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns workspace
+    every { dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any()) } returns existingBucket
+    every { dataWorkerUsageDataService.decrementExistingDataWorkerUsageBucket(any()) } returns mockk()
+    every { featureFlagClient.boolVariation(any(), any()) } returns true
+    every { entitlementService.getCurrentPlanId(any()) } returns EntitlementPlan.PRO.id
+
+    service.subtractUsageForCompletedJob(job)
+
+    verify(exactly = 1) {
+      dataWorkerUsageDataService.decrementExistingDataWorkerUsageBucket(
+        match {
+          it.organizationId == organizationId &&
+            it.workspaceId == workspaceId &&
+            it.dataplaneGroupId == dataplaneGroupId &&
+            it.sourceCpuRequest == 2.0 &&
+            it.destinationCpuRequest == 3.0 &&
+            it.orchestratorCpuRequest == 1.0
+        },
+      )
+    }
+
+    verify(exactly = 0) {
+      dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any())
+    }
+  }
+
+  @Test
+  fun `subtractUsageForCompletedJob should create new bucket with subtracted values when most recent bucket is older than one hour`() {
+    val workspaceId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
+    val jobId = 123L
+
+    val organization =
+      Organization()
+        .withOrganizationId(organizationId)
+        .withEmail("test@example.com")
+        .withName("Test Org")
+
+    val workspace =
+      StandardWorkspace()
+        .withWorkspaceId(workspaceId)
+        .withDataplaneGroupId(dataplaneGroupId)
+
+    val job = buildTestJob(jobId, workspaceId, "2.0", "3.0", "1.0")
+
+    val bucketStartTime = OffsetDateTime.now().minusHours(2)
+    val existingBucket =
+      DataWorkerUsage(
+        organizationId = organizationId,
+        workspaceId = workspaceId,
+        dataplaneGroupId = dataplaneGroupId,
+        sourceCpuRequest = 5.0,
+        destinationCpuRequest = 6.0,
+        orchestratorCpuRequest = 3.0,
+        bucketStart = bucketStartTime,
+        createdAt = OffsetDateTime.now(),
+        maxSourceCpuRequest = 5.0,
+        maxDestinationCpuRequest = 6.0,
+        maxOrchestratorCpuRequest = 3.0,
+      )
+
+    every { organizationService.getOrganizationForWorkspaceId(workspaceId) } returns Optional.of(organization)
+    every { workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false) } returns workspace
+    every { dataWorkerUsageDataService.findMostRecentUsageBucket(any(), any(), any(), any()) } returns existingBucket
+    every { dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(any()) } returns mockk()
+    every { featureFlagClient.boolVariation(any(), any()) } returns true
+    every { entitlementService.getCurrentPlanId(any()) } returns EntitlementPlan.PRO.id
+
+    service.subtractUsageForCompletedJob(job)
+
+    verify(exactly = 1) {
+      dataWorkerUsageDataService.insertNewDataWorkerUsageBucket(
+        match {
+          it.organizationId == organizationId &&
+            it.workspaceId == workspaceId &&
+            it.dataplaneGroupId == dataplaneGroupId &&
+            it.sourceCpuRequest == 3.0 && // 5.0 - 2.0
+            it.destinationCpuRequest == 3.0 && // 6.0 - 3.0
+            it.orchestratorCpuRequest == 2.0 && // 3.0 - 1.0
+            it.maxSourceCpuRequest == 3.0 &&
+            it.maxDestinationCpuRequest == 3.0 &&
+            it.maxOrchestratorCpuRequest == 2.0
+        },
+      )
+    }
+
+    verify(exactly = 0) {
+      dataWorkerUsageDataService.decrementExistingDataWorkerUsageBucket(any())
     }
   }
 
@@ -292,6 +497,9 @@ class DataWorkerUsageServiceTest {
         orchestratorCpuRequest = 1.0,
         bucketStart = OffsetDateTime.now(),
         createdAt = OffsetDateTime.now(),
+        maxSourceCpuRequest = 2.0,
+        maxDestinationCpuRequest = 3.0,
+        maxOrchestratorCpuRequest = 1.0,
       )
 
     val result = dataWorkerUsage.calculateDataWorkers()
@@ -322,6 +530,9 @@ class DataWorkerUsageServiceTest {
           orchestratorCpuRequest = 1.0,
           bucketStart = hour1,
           createdAt = OffsetDateTime.now(),
+          maxSourceCpuRequest = 2.0,
+          maxDestinationCpuRequest = 3.0,
+          maxOrchestratorCpuRequest = 1.0,
         ),
         DataWorkerUsage(
           organizationId = organizationId,
@@ -332,6 +543,9 @@ class DataWorkerUsageServiceTest {
           orchestratorCpuRequest = 2.0,
           bucketStart = hour2,
           createdAt = OffsetDateTime.now(),
+          maxSourceCpuRequest = 4.0,
+          maxDestinationCpuRequest = 2.0,
+          maxOrchestratorCpuRequest = 2.0,
         ),
         DataWorkerUsage(
           organizationId = organizationId,
@@ -342,6 +556,9 @@ class DataWorkerUsageServiceTest {
           orchestratorCpuRequest = 1.0,
           bucketStart = hour1,
           createdAt = OffsetDateTime.now(),
+          maxSourceCpuRequest = 1.0,
+          maxDestinationCpuRequest = 1.0,
+          maxOrchestratorCpuRequest = 1.0,
         ),
       )
 
@@ -399,8 +616,8 @@ class DataWorkerUsageServiceTest {
     assertEquals(workspaceId1, dp1.workspaces[0].workspaceId.value)
     assertEquals("Workspace 1", dp1.workspaces[0].workspaceName)
     assertEquals(2, dp1.workspaces[0].dataWorkers.size)
-    assertEquals(0.75, dp1.workspaces[0].dataWorkers[0].usage, 0.001)
-    assertEquals(1.0, dp1.workspaces[0].dataWorkers[1].usage, 0.001)
+    assertEquals(0.75, dp1.workspaces[0].dataWorkers[0].dataWorkers, 0.001)
+    assertEquals(1.0, dp1.workspaces[0].dataWorkers[1].dataWorkers, 0.001)
 
     val dp2 = result.dataplaneGroups.find { it.dataplaneGroupId.value == dataplaneGroupId2 }!!
     assertEquals("Dataplane Group 2", dp2.dataplaneGroupName)
@@ -408,7 +625,7 @@ class DataWorkerUsageServiceTest {
     assertEquals(workspaceId2, dp2.workspaces[0].workspaceId.value)
     assertEquals("Workspace 2", dp2.workspaces[0].workspaceName)
     assertEquals(1, dp2.workspaces[0].dataWorkers.size)
-    assertEquals(0.375, dp2.workspaces[0].dataWorkers[0].usage, 0.001)
+    assertEquals(0.375, dp2.workspaces[0].dataWorkers[0].dataWorkers, 0.001)
   }
 
   @Test
@@ -433,6 +650,9 @@ class DataWorkerUsageServiceTest {
           orchestratorCpuRequest = 1.0,
           bucketStart = hour1,
           createdAt = OffsetDateTime.now(),
+          maxSourceCpuRequest = 2.0,
+          maxDestinationCpuRequest = 3.0,
+          maxOrchestratorCpuRequest = 1.0,
         ),
         DataWorkerUsage(
           organizationId = organizationId,
@@ -443,6 +663,9 @@ class DataWorkerUsageServiceTest {
           orchestratorCpuRequest = 2.0,
           bucketStart = hour1,
           createdAt = OffsetDateTime.now(),
+          maxSourceCpuRequest = 4.0,
+          maxDestinationCpuRequest = 2.0,
+          maxOrchestratorCpuRequest = 2.0,
         ),
       )
 
@@ -484,7 +707,142 @@ class DataWorkerUsageServiceTest {
     assertEquals(workspaceId1, dp.workspaces[0].workspaceId.value)
     assertEquals("Workspace 1", dp.workspaces[0].workspaceName)
     assertEquals(1, dp.workspaces[0].dataWorkers.size)
-    assertEquals(0.75, dp.workspaces[0].dataWorkers[0].usage, 0.001)
+    assertEquals(0.75, dp.workspaces[0].dataWorkers[0].dataWorkers, 0.001)
+  }
+
+  @Test
+  fun `fillGapsInHourlyUsage should fill gaps with correct usage values when gaps exist`() {
+    val hour1 = OffsetDateTime.of(2025, 1, 1, 10, 0, 0, 0, ZoneOffset.UTC)
+    val hour4 = OffsetDateTime.of(2025, 1, 1, 13, 0, 0, 0, ZoneOffset.UTC)
+    val hour5 = OffsetDateTime.of(2025, 1, 1, 14, 0, 0, 0, ZoneOffset.UTC)
+
+    val hourlyUsage =
+      listOf(
+        io.airbyte.domain.models.dataworker.DataWorkerUsageWithTime(
+          usageStartTime = hour1,
+          currentUsage = 8.0,
+          dataWorkers = 1.0,
+        ),
+        io.airbyte.domain.models.dataworker.DataWorkerUsageWithTime(
+          usageStartTime = hour4,
+          currentUsage = 16.0,
+          dataWorkers = 2.0,
+        ),
+        io.airbyte.domain.models.dataworker.DataWorkerUsageWithTime(
+          usageStartTime = hour5,
+          currentUsage = 12.0,
+          dataWorkers = 1.5,
+        ),
+      )
+
+    val result = service.fillGapsInHourlyUsage(hourlyUsage)
+
+    // Should have 5 entries: original 3 plus 2 gap-filling entries (hours 11 and 12)
+    assertEquals(5, result.size)
+
+    // Verify original entry at hour 10
+    assertEquals(hour1, result[0].usageStartTime)
+    assertEquals(8.0, result[0].currentUsage, 0.001)
+    assertEquals(1.0, result[0].dataWorkers, 0.001)
+
+    // Verify gap-filled entry at hour 11
+    assertEquals(hour1.plusHours(1), result[1].usageStartTime)
+    assertEquals(8.0, result[1].currentUsage, 0.001)
+    assertEquals(1.0, result[1].dataWorkers, 0.001)
+
+    // Verify gap-filled entry at hour 12
+    assertEquals(hour1.plusHours(2), result[2].usageStartTime)
+    assertEquals(8.0, result[2].currentUsage, 0.001)
+    assertEquals(1.0, result[2].dataWorkers, 0.001)
+
+    // Verify original entry at hour 13
+    assertEquals(hour4, result[3].usageStartTime)
+    assertEquals(16.0, result[3].currentUsage, 0.001)
+    assertEquals(2.0, result[3].dataWorkers, 0.001)
+
+    // Verify original entry at hour 14
+    assertEquals(hour5, result[4].usageStartTime)
+    assertEquals(12.0, result[4].currentUsage, 0.001)
+    assertEquals(1.5, result[4].dataWorkers, 0.001)
+  }
+
+  @Test
+  fun `fillGapsInHourlyUsage should return correct array when no gaps exist`() {
+    val hour1 = OffsetDateTime.of(2025, 1, 1, 10, 0, 0, 0, ZoneOffset.UTC)
+    val hour2 = OffsetDateTime.of(2025, 1, 1, 11, 0, 0, 0, ZoneOffset.UTC)
+    val hour3 = OffsetDateTime.of(2025, 1, 1, 12, 0, 0, 0, ZoneOffset.UTC)
+
+    val hourlyUsage =
+      listOf(
+        io.airbyte.domain.models.dataworker.DataWorkerUsageWithTime(
+          usageStartTime = hour1,
+          currentUsage = 8.0,
+          dataWorkers = 1.0,
+        ),
+        io.airbyte.domain.models.dataworker.DataWorkerUsageWithTime(
+          usageStartTime = hour2,
+          currentUsage = 16.0,
+          dataWorkers = 2.0,
+        ),
+        io.airbyte.domain.models.dataworker.DataWorkerUsageWithTime(
+          usageStartTime = hour3,
+          currentUsage = 12.0,
+          dataWorkers = 1.5,
+        ),
+      )
+
+    val result = service.fillGapsInHourlyUsage(hourlyUsage)
+
+    // Should have the same 3 entries, no gaps to fill
+    assertEquals(3, result.size)
+
+    // Verify all entries are unchanged
+    assertEquals(hour1, result[0].usageStartTime)
+    assertEquals(8.0, result[0].currentUsage, 0.001)
+    assertEquals(1.0, result[0].dataWorkers, 0.001)
+
+    assertEquals(hour2, result[1].usageStartTime)
+    assertEquals(16.0, result[1].currentUsage, 0.001)
+    assertEquals(2.0, result[1].dataWorkers, 0.001)
+
+    assertEquals(hour3, result[2].usageStartTime)
+    assertEquals(12.0, result[2].currentUsage, 0.001)
+    assertEquals(1.5, result[2].dataWorkers, 0.001)
+  }
+
+  @Test
+  fun `fillGapsInHourlyUsage should not fill gaps when previous hour has zero currentUsage`() {
+    val hour1 = OffsetDateTime.of(2025, 1, 1, 10, 0, 0, 0, ZoneOffset.UTC)
+    val hour4 = OffsetDateTime.of(2025, 1, 1, 13, 0, 0, 0, ZoneOffset.UTC)
+
+    val hourlyUsage =
+      listOf(
+        io.airbyte.domain.models.dataworker.DataWorkerUsageWithTime(
+          usageStartTime = hour1,
+          currentUsage = 0.0,
+          dataWorkers = 0.0,
+        ),
+        io.airbyte.domain.models.dataworker.DataWorkerUsageWithTime(
+          usageStartTime = hour4,
+          currentUsage = 8.0,
+          dataWorkers = 1.0,
+        ),
+      )
+
+    val result = service.fillGapsInHourlyUsage(hourlyUsage)
+
+    // Should have only 2 entries, no gap-filling because currentUsage was 0
+    assertEquals(2, result.size)
+
+    // Verify original entry at hour 10
+    assertEquals(hour1, result[0].usageStartTime)
+    assertEquals(0.0, result[0].currentUsage, 0.001)
+    assertEquals(0.0, result[0].dataWorkers, 0.001)
+
+    // Verify original entry at hour 13 (no intermediate hours should be filled)
+    assertEquals(hour4, result[1].usageStartTime)
+    assertEquals(8.0, result[1].currentUsage, 0.001)
+    assertEquals(1.0, result[1].dataWorkers, 0.001)
   }
 
   private fun buildTestJob(

@@ -108,6 +108,7 @@ import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.db.instance.configs.jooq.generated.enums.RefreshType
+import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.domain.services.secrets.SecretPersistenceService
 import io.airbyte.domain.services.secrets.SecretStorageService
 import io.airbyte.featureflag.FeatureFlagClient
@@ -190,6 +191,7 @@ internal class SchedulerHandlerTest {
   private lateinit var metricClient: MetricClient
   private lateinit var secretStorageService: SecretStorageService
   private lateinit var secretSanitizer: SecretSanitizer
+  private lateinit var dataWorkerUsageService: DataWorkerUsageService
 
   @BeforeEach
   fun setup() {
@@ -282,6 +284,8 @@ internal class SchedulerHandlerTest {
         secretStorageService,
       )
 
+    dataWorkerUsageService = mock()
+
     schedulerHandler =
       SchedulerHandler(
         actorDefinitionService,
@@ -310,6 +314,7 @@ internal class SchedulerHandlerTest {
         catalogConverter,
         metricClient,
         secretSanitizer,
+        dataWorkerUsageService,
       )
   }
 
@@ -1423,7 +1428,7 @@ internal class SchedulerHandlerTest {
   @Test
   @DisplayName("Test enum compatibility")
   fun testEnumCompatibility() {
-    Assertions.assertThat(isCompatible<ConfigType, io.airbyte.api.model.generated.JobConfigType>()).isTrue()
+    Assertions.assertThat(isCompatible<ConfigType, JobConfigType>()).isTrue()
   }
 
   @Test

@@ -7,9 +7,7 @@ package io.airbyte.data.services.impls.data
 import io.airbyte.data.repositories.DataWorkerUsageRepository
 import io.airbyte.data.repositories.entities.DataWorkerUsage
 import io.airbyte.data.services.DataWorkerUsageDataService
-import io.micronaut.data.exceptions.DataAccessException
 import jakarta.inject.Singleton
-import java.io.IOException
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -17,8 +15,42 @@ import java.util.UUID
 class DataWorkerUsageServiceDataImpl(
   private val repository: DataWorkerUsageRepository,
 ) : DataWorkerUsageDataService {
-  override fun insertDataWorkerUsage(dataWorkerUsage: DataWorkerUsage) {
-    repository.insert(
+  override fun findMostRecentUsageBucket(
+    organizationId: UUID,
+    workspaceId: UUID,
+    dataplaneGroupID: UUID,
+    bucketStart: OffsetDateTime,
+  ): DataWorkerUsage? = repository.findMostRecentUsageBucket(organizationId, workspaceId, dataplaneGroupID, bucketStart)
+
+  override fun insertNewDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage) {
+    repository.insertNewDataWorkerUsageBucket(
+      dataWorkerUsage.organizationId,
+      dataWorkerUsage.workspaceId,
+      dataWorkerUsage.dataplaneGroupId,
+      dataWorkerUsage.bucketStart,
+      dataWorkerUsage.sourceCpuRequest,
+      dataWorkerUsage.destinationCpuRequest,
+      dataWorkerUsage.orchestratorCpuRequest,
+      dataWorkerUsage.maxSourceCpuRequest,
+      dataWorkerUsage.maxDestinationCpuRequest,
+      dataWorkerUsage.maxOrchestratorCpuRequest,
+    )
+  }
+
+  override fun incrementExistingDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage) {
+    repository.incrementExistingDataWorkerUsageBucket(
+      dataWorkerUsage.organizationId,
+      dataWorkerUsage.workspaceId,
+      dataWorkerUsage.dataplaneGroupId,
+      dataWorkerUsage.bucketStart,
+      dataWorkerUsage.sourceCpuRequest,
+      dataWorkerUsage.destinationCpuRequest,
+      dataWorkerUsage.orchestratorCpuRequest,
+    )
+  }
+
+  override fun decrementExistingDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage) {
+    repository.decrementExistingDataWorkerUsageBucket(
       dataWorkerUsage.organizationId,
       dataWorkerUsage.workspaceId,
       dataWorkerUsage.dataplaneGroupId,

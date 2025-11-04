@@ -48,7 +48,6 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.doAnswer
-import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -165,7 +164,7 @@ class JobsHandlerTest {
     verify(jobNotifier).successJob(anyOrNull(), anyOrNull())
     verify(helper).trackCompletion(anyOrNull(), eq(io.airbyte.commons.server.JobStatus.SUCCEEDED))
     verify(connectionTimelineEventHelper).logJobSuccessEventInConnectionTimeline(job, connectionId, listOf(attemptStats))
-    verify(dataWorkerUsageService).insertUsageForCompletedJob(any())
+    verify(dataWorkerUsageService).subtractUsageForCompletedJob(any())
   }
 
   @Test
@@ -246,7 +245,7 @@ class JobsHandlerTest {
     verify(jobPersistence).writeAttemptFailureSummary(jobId, attemptNumber, failureSummary)
     verify(jobPersistence).cancelJob(jobId)
     verify(helper).trackCompletion(anyOrNull(), eq(io.airbyte.commons.server.JobStatus.FAILED))
-    verify(dataWorkerUsageService).insertUsageForCompletedJob(any())
+    verify(dataWorkerUsageService).subtractUsageForCompletedJob(any())
   }
 
   @Test

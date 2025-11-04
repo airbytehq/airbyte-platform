@@ -9,7 +9,18 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 interface DataWorkerUsageDataService {
-  fun insertDataWorkerUsage(dataWorkerUsage: DataWorkerUsage)
+  fun findMostRecentUsageBucket(
+    organizationId: UUID,
+    workspaceId: UUID,
+    dataplaneGroupID: UUID,
+    bucketStart: OffsetDateTime,
+  ): DataWorkerUsage?
+
+  fun insertNewDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage)
+
+  fun incrementExistingDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage)
+
+  fun decrementExistingDataWorkerUsageBucket(dataWorkerUsage: DataWorkerUsage)
 
   fun getDataWorkerUsageByOrganizationAndTimeRange(
     organizationId: UUID,

@@ -38,9 +38,6 @@ import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
-import java.time.LocalDate
-import java.util.UUID
-import kotlin.random.Random
 
 @Controller("/api/v1/organizations")
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -143,8 +140,8 @@ open class OrganizationApiController(
                     .dataWorkers(
                       usageByWorkspace.dataWorkers.map { usageByTime ->
                         DataWorkerUsage()
-                          .date(usageByTime.date)
-                          .used(usageByTime.usage)
+                          .date(usageByTime.usageStartTime)
+                          .used(usageByTime.dataWorkers)
                       },
                     )
                 },

@@ -61,6 +61,7 @@ import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.domain.services.dataworker.DataWorkerUsageService
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
@@ -114,6 +115,7 @@ open class SchedulerHandler
     private val catalogConverter: CatalogConverter,
     private val metricClient: MetricClient,
     private val secretSanitizer: SecretSanitizer,
+    private val dataWorkerUsageService: DataWorkerUsageService,
   ) {
     private val jobCreationAndStatusUpdateHelper =
       JobCreationAndStatusUpdateHelper(
@@ -543,6 +545,11 @@ open class SchedulerHandler
         log.info { "New job created, with id: $jobId" }
         val job = jobPersistence.getJob(jobId)
         jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CREATED_BY_RELEASE_STAGE, job)
+        try {
+          dataWorkerUsageService.insertUsageForCreatedJob(job)
+        } catch (e: Exception) {
+          log.error(e) { "Failed to insert usage for job ${job.id}" }
+        }
 
         return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId))
       }

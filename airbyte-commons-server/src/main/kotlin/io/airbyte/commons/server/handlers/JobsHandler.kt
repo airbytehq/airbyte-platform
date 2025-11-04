@@ -104,9 +104,9 @@ open class JobsHandler(
       reportIfLastFailedAttempt(job, connectionId, jobContext)
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.FAILED)
       try {
-        dataWorkerUsageService.insertUsageForCompletedJob(job)
+        dataWorkerUsageService.subtractUsageForCompletedJob(job)
       } catch (e: Exception) {
-        logger.error(e) { "Failed to insert usage for job ${job.id}" }
+        logger.error(e) { "Failed to update usage for job ${job.id}" }
       }
 
       return InternalOperationResult().succeeded(true)
@@ -200,9 +200,9 @@ open class JobsHandler(
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.SUCCEEDED)
 
       try {
-        dataWorkerUsageService.insertUsageForCompletedJob(job)
+        dataWorkerUsageService.subtractUsageForCompletedJob(job)
       } catch (e: Exception) {
-        logger.error(e) { "Failed to insert usage for job ${job.id}" }
+        logger.error(e) { "Failed to update usage for job ${job.id}" }
       }
 
       return InternalOperationResult().succeeded(true)
@@ -300,9 +300,9 @@ open class JobsHandler(
       jobCreationAndStatusUpdateHelper.trackCompletion(job, JobStatus.FAILED)
 
       try {
-        dataWorkerUsageService.insertUsageForCompletedJob(job)
+        dataWorkerUsageService.subtractUsageForCompletedJob(job)
       } catch (e: Exception) {
-        logger.error(e) { "Failed to insert usage for job ${job.id}" }
+        logger.error(e) { "Failed to update usage for job ${job.id}" }
       }
     } catch (e: IOException) {
       jobCreationAndStatusUpdateHelper.trackCompletionForInternalFailure(

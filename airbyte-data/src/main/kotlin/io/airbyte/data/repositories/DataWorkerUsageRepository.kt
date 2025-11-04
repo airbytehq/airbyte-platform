@@ -16,9 +16,9 @@ import java.util.UUID
 interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, UUID> {
   @Query(
     """
-    SELECT * from data_worker_usage
-    WHERE organization_id = :organizationId
-    AND bucket_start >= :startDate AND bucket_start <= :endDate
+      SELECT * from data_worker_usage
+      WHERE organization_id = :organizationId
+      AND bucket_start >= :startDate AND bucket_start <= :endDate
     """,
   )
   fun findByOrganizationIdAndJobStartBetween(
@@ -29,34 +29,106 @@ interface DataWorkerUsageRepository : PageableRepository<DataWorkerUsage, UUID> 
 
   @Query(
     """
-    INSERT INTO data_worker_usage (
+      SELECT * FROM data_worker_usage
+      WHERE organization_id = :organizationId
+        AND workspace_id = :workspaceId
+        AND dataplane_group_id = :dataplaneGroupId
+        AND bucket_start <= :bucketStart::TIMESTAMP
+      ORDER BY bucket_start DESC
+      LIMIT 1
+    """,
+  )
+  fun findMostRecentUsageBucket(
+    organizationId: UUID,
+    workspaceId: UUID,
+    dataplaneGroupId: UUID,
+    bucketStart: OffsetDateTime,
+  ): DataWorkerUsage?
+
+  @Query(
+    """
+    UPDATE data_worker_usage
+    SET
+      source_cpu_request = source_cpu_request + :sourceCpuRequest,
+      destination_cpu_request = destination_cpu_request + :destinationCpuRequest,
+      orchestrator_cpu_request = orchestrator_cpu_request + :orchestratorCpuRequest,
+      max_source_cpu_request = GREATEST(max_source_cpu_request, source_cpu_request + :sourceCpuRequest),
+      max_destination_cpu_request = GREATEST(max_destination_cpu_request, destination_cpu_request + :destinationCpuRequest),
+      max_orchestrator_cpu_request = GREATEST(max_orchestrator_cpu_request, orchestrator_cpu_request + :orchestratorCpuRequest)
+    WHERE organization_id = :organizationId
+      AND workspace_id = :workspaceId
+      AND dataplane_group_id = :dataplaneGroupId
+      AND bucket_start = DATE_TRUNC('hour', :bucketStart::TIMESTAMP)
+    """,
+  )
+  fun incrementExistingDataWorkerUsageBucket(
+    organizationId: UUID,
+    workspaceId: UUID,
+    dataplaneGroupId: UUID,
+    bucketStart: OffsetDateTime,
+    sourceCpuRequest: Double,
+    destinationCpuRequest: Double,
+    orchestratorCpuRequest: Double,
+  )
+
+  @Query(
+    """
+      INSERT INTO data_worker_usage (
       organization_id,
       workspace_id,
       dataplane_group_id,
       bucket_start,
       source_cpu_request,
       destination_cpu_request,
-      orchestrator_cpu_request
+      orchestrator_cpu_request,
+      max_source_cpu_request,
+      max_destination_cpu_request,
+      max_orchestrator_cpu_request
     ) VALUES (
-      :organizationId,
-      :workspaceId,
-      :dataplaneGroupId,
-      DATE_TRUNC('hour', :jobStart::TIMESTAMP),
-      :sourceCpuRequest,
-      :destinationCpuRequest,
-      :orchestratorCpuRequest
-    ) ON CONFLICT (organization_id, bucket_start, workspace_id, dataplane_group_id) DO UPDATE
-    SET 
-    source_cpu_request = data_worker_usage.source_cpu_request + EXCLUDED.source_cpu_request,
-    destination_cpu_request = data_worker_usage.destination_cpu_request + EXCLUDED.destination_cpu_request,
-    orchestrator_cpu_request = data_worker_usage.orchestrator_cpu_request + EXCLUDED.orchestrator_cpu_request
+    :organizationId,
+    :workspaceId,
+    :dataplaneGroupId,
+    DATE_TRUNC('hour', :bucketStart::TIMESTAMP),
+    :sourceCpuRequest,
+    :destinationCpuRequest,
+    :orchestratorCpuRequest,
+    :maxSourceCpuRequest,
+    :maxDestinationCpuRequest,
+    :maxOrchestratorCpuRequest
+    )
     """,
   )
-  fun insert(
+  fun insertNewDataWorkerUsageBucket(
     organizationId: UUID,
     workspaceId: UUID,
     dataplaneGroupId: UUID,
-    jobStart: OffsetDateTime,
+    bucketStart: OffsetDateTime,
+    sourceCpuRequest: Double,
+    destinationCpuRequest: Double,
+    orchestratorCpuRequest: Double,
+    maxSourceCpuRequest: Double,
+    maxDestinationCpuRequest: Double,
+    maxOrchestratorCpuRequest: Double,
+  )
+
+  @Query(
+    """
+    UPDATE data_worker_usage
+    SET
+      source_cpu_request = GREATEST(0.0, data_worker_usage.source_cpu_request - :sourceCpuRequest),
+      destination_cpu_request = GREATEST(0.0, data_worker_usage.destination_cpu_request - :destinationCpuRequest),
+      orchestrator_cpu_request = GREATEST(0.0, data_worker_usage.orchestrator_cpu_request - :orchestratorCpuRequest)
+    WHERE organization_id = :organizationId
+      AND workspace_id = :workspaceId
+      AND dataplane_group_id = :dataplaneGroupId
+      AND bucket_start = DATE_TRUNC('hour', :bucketStart::TIMESTAMP)
+    """,
+  )
+  fun decrementExistingDataWorkerUsageBucket(
+    organizationId: UUID,
+    workspaceId: UUID,
+    dataplaneGroupId: UUID,
+    bucketStart: OffsetDateTime,
     sourceCpuRequest: Double,
     destinationCpuRequest: Double,
     orchestratorCpuRequest: Double,
