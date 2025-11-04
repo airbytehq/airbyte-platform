@@ -9,7 +9,7 @@ import { RadioButtonTiles } from "components/connection/CreateConnection/RadioBu
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-import { Modal } from "components/ui/Modal";
+import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Pre } from "components/ui/Pre";
 import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
@@ -158,48 +158,64 @@ const SharedValueModal = ({
     <Modal
       title={formatMessage({ id: "form.linkComponentsToggle.confirmationTitle" }, { fieldName: fieldDisplayName })}
       onCancel={onCancel}
-      size="sm"
+      size="md"
     >
-      <FlexContainer className={styles.modalContent} direction="column" gap="xl">
-        <Text>
-          {formatMessage({ id: "form.linkComponentsToggle.confirmationText" }, { fieldName: fieldDisplayName })}
-        </Text>
-        <RadioButtonTiles<SharedValueOption>
-          name="sharedValueOption"
-          options={[
-            {
-              value: "useTargetValue",
-              label: formatMessage({ id: "form.linkComponentsToggle.useTargetValue" }, { fieldName: fieldDisplayName }),
-              description: <Pre>{JSON.stringify(targetValue, null, 2)}</Pre>,
-            },
-            {
-              value: "useFieldValue",
-              label: formatMessage({ id: "form.linkComponentsToggle.useFieldValue" }, { fieldName: fieldDisplayName }),
-              description: <Pre>{JSON.stringify(fieldValue, null, 2)}</Pre>,
-            },
-          ]}
-          selectedValue={selectedOption}
-          onSelectRadioButton={setSelectedOption}
-          direction="column"
-        />
-        <FlexContainer justifyContent="flex-end">
-          <Button type="button" variant="secondary" onClick={onCancel}>
-            {formatMessage({ id: "form.cancel" })}
-          </Button>
-          <Button
-            type="button"
-            onClick={() => {
-              if (selectedOption === "useFieldValue") {
-                selectFieldValue();
-              } else {
-                selectTargetValue();
-              }
-            }}
-          >
-            {formatMessage({ id: "form.confirm" })}
-          </Button>
+      <ModalBody>
+        <FlexContainer direction="column" gap="xl">
+          <Text>
+            {formatMessage({ id: "form.linkComponentsToggle.confirmationText" }, { fieldName: fieldDisplayName })}
+          </Text>
+          <RadioButtonTiles<SharedValueOption>
+            name="sharedValueOption"
+            options={[
+              {
+                value: "useTargetValue",
+                label: formatMessage(
+                  { id: "form.linkComponentsToggle.useTargetValue" },
+                  { fieldName: fieldDisplayName }
+                ),
+                description: (
+                  <Pre className={styles.jsonPreview} wrapText>
+                    {JSON.stringify(targetValue, null, 2)}
+                  </Pre>
+                ),
+              },
+              {
+                value: "useFieldValue",
+                label: formatMessage(
+                  { id: "form.linkComponentsToggle.useFieldValue" },
+                  { fieldName: fieldDisplayName }
+                ),
+                description: (
+                  <Pre className={styles.jsonPreview} wrapText>
+                    {JSON.stringify(fieldValue, null, 2)}
+                  </Pre>
+                ),
+              },
+            ]}
+            selectedValue={selectedOption}
+            onSelectRadioButton={setSelectedOption}
+            direction="column"
+          />
         </FlexContainer>
-      </FlexContainer>
+      </ModalBody>
+      <ModalFooter>
+        <Button type="button" variant="secondary" onClick={onCancel}>
+          {formatMessage({ id: "form.cancel" })}
+        </Button>
+        <Button
+          type="button"
+          onClick={() => {
+            if (selectedOption === "useFieldValue") {
+              selectFieldValue();
+            } else {
+              selectTargetValue();
+            }
+          }}
+        >
+          {formatMessage({ id: "form.confirm" })}
+        </Button>
+      </ModalFooter>
     </Modal>
   );
 };

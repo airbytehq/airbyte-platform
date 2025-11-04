@@ -6,8 +6,11 @@
   align-items: center;
 }
 
-.modalContent {
-  padding: 0 variables.$spacing-xl variables.$spacing-xl variables.$spacing-xl;
+.jsonPreview {
+  // No overflow or max-height.
+  // The parent modalContent will handle scrolling
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .toggleContainer {
