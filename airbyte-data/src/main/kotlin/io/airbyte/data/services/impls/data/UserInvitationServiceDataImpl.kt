@@ -132,6 +132,10 @@ open class UserInvitationServiceDataImpl(
     return updatedInvitation.toConfigModel()
   }
 
+  override fun updateUserInvitations(invitations: List<UserInvitation>) {
+    userInvitationRepository.updateAll(invitations.map { it.toEntity() })
+  }
+
   private fun throwIfNotPending(invitation: EntityUserInvitation) {
     if (invitation.status != EntityInvitationStatus.pending) {
       throw InvitationStatusUnexpectedException(

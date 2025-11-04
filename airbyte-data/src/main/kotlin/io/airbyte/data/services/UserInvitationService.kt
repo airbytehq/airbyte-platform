@@ -50,6 +50,8 @@ interface UserInvitationService {
    * Cancel a user invitation.
    */
   fun cancelUserInvitation(inviteCode: String): UserInvitation
+
+  fun updateUserInvitations(invitations: List<UserInvitation>)
 }
 
 /**

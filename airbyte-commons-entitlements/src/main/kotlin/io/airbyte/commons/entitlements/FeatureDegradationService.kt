@@ -18,10 +18,13 @@ import io.airbyte.config.Permission.PermissionType.WORKSPACE_ADMIN
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_EDITOR
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_READER
 import io.airbyte.config.Permission.PermissionType.WORKSPACE_RUNNER
+import io.airbyte.config.ScopeType
+import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.StatusReason
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.PermissionService
+import io.airbyte.data.services.UserInvitationService
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.domain.models.EntitlementPlan.STANDARD
 import io.airbyte.domain.models.EntitlementPlan.UNIFIED_TRIAL
@@ -38,6 +41,7 @@ internal class FeatureDegradationService(
   private val entitlementClient: EntitlementClient,
   private val connectionService: ConnectionService,
   private val workspacePersistence: WorkspacePersistence,
+  private val userInvitationService: UserInvitationService,
   private val entitlementHelper: EntitlementHelper,
 ) {
   internal fun downgradeFeaturesIfRequired(
@@ -82,7 +86,7 @@ internal class FeatureDegradationService(
           "Downgrading access to featureId=$entitlementToDowngrade organizationId=$organizationId"
         }
         when (entitlementToDowngrade) {
-          RbacRolesEntitlement.featureId -> downgradeRBACRoles(organizationId)
+          RbacRolesEntitlement.featureId -> downgradeRBAC(organizationId)
           MappersEntitlement.featureId ->
             connectionsToDowngrade.addAll(connectionService.listConnectionIdsForOrganizationWithMappers(organizationId.value))
           FasterSyncFrequencyEntitlement.featureId ->
@@ -124,12 +128,21 @@ internal class FeatureDegradationService(
     }
   }
 
-  fun downgradeRBACRoles(
+  fun downgradeRBAC(
     organizationId: OrganizationId,
     targetPermissionType: Permission.PermissionType = WORKSPACE_ADMIN,
   ) {
     val defaultWorkspace = workspacePersistence.getDefaultWorkspaceForOrganization(organizationId.value)
 
+    downgradePermissions(organizationId, defaultWorkspace, targetPermissionType)
+    downgradeUserInvites(organizationId, defaultWorkspace, targetPermissionType)
+  }
+
+  fun downgradePermissions(
+    organizationId: OrganizationId,
+    defaultWorkspace: StandardWorkspace,
+    targetPermissionType: Permission.PermissionType = WORKSPACE_ADMIN,
+  ) {
     val workspaceLevelPermissions = permissionService.getPermissionsByWorkspaceId(defaultWorkspace.workspaceId)
     workspaceLevelPermissions.forEach {
       when (it.permissionType) {
@@ -157,5 +170,39 @@ internal class FeatureDegradationService(
       }
     }
     permissionService.updatePermissions(orgLevelPermissions)
+  }
+
+  fun downgradeUserInvites(
+    organizationId: OrganizationId,
+    defaultWorkspace: StandardWorkspace,
+    targetPermissionType: Permission.PermissionType = WORKSPACE_ADMIN,
+  ) {
+    val workspaceLevelInvitations = userInvitationService.getPendingInvitations(ScopeType.WORKSPACE, defaultWorkspace.workspaceId)
+    workspaceLevelInvitations.forEach {
+      when (it.permissionType) {
+        WORKSPACE_EDITOR, WORKSPACE_RUNNER, WORKSPACE_READER -> {
+          logger.debug { "Degrading user invitation id ${it.id} from permission type ${it.permissionType} to $targetPermissionType" }
+          it.permissionType = targetPermissionType
+        }
+        else -> logger.debug { "No degradation needed for user invitation id ${it.id} with permission type ${it.permissionType}" }
+      }
+    }
+    userInvitationService.updateUserInvitations(workspaceLevelInvitations)
+
+    val orgLevelInvitations = userInvitationService.getPendingInvitations(ScopeType.ORGANIZATION, organizationId.value)
+    orgLevelInvitations.forEach {
+      when (it.permissionType) {
+        ORGANIZATION_EDITOR, ORGANIZATION_RUNNER, ORGANIZATION_READER, ORGANIZATION_MEMBER -> {
+          logger.debug {
+            "Degrading user invitation id ${it.id} from permission type ${it.permissionType} to $targetPermissionType for workspace ${defaultWorkspace.workspaceId}"
+          }
+          it.scopeType = ScopeType.WORKSPACE
+          it.scopeId = defaultWorkspace.workspaceId
+          it.permissionType = targetPermissionType
+        }
+        else -> logger.debug { "No degradation needed for user invitation id ${it.id} with permission type ${it.permissionType}" }
+      }
+    }
+    userInvitationService.updateUserInvitations(orgLevelInvitations)
   }
 }
