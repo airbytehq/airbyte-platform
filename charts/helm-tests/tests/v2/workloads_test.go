@@ -45,3 +45,24 @@ func TestOverrideConnectorImageRegistry(t *testing.T) {
 	assert.NotNil(t, pod, "unable to extract pod spec from %s: %s", rapp.Kind, rapp.FQN())
 	chartYaml.VerifyEnvVarsForApp(t, rapp.Kind, rapp.FQN(), expectedEnvVars)
 }
+
+func TestOverrideConnectorImageRegistryWithWorkloadLauncherSpecific(t *testing.T) {
+	opts := helmtests.BaseHelmOptions()
+	opts.SetValues["global.image.registry"] = "global-registry"
+	opts.SetValues["workloadLauncher.connector.image.registry"] = "connector-specific-registry"
+	chartYaml, err := helmtests.RenderHelmChart(t, opts, chartPath, "airbyte", nil)
+	assert.NoError(t, err)
+
+	expectedEnvVars := []helmtests.ExpectedEnvVar{
+		helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("JOB_KUBE_CONNECTOR_IMAGE_REGISTRY").Value("connector-specific-registry"),
+	}
+
+	releaseApps := appsForRelease("airbyte")
+	rapp := releaseApps["workload-launcher"]
+	app := chartYaml.GetResourceByKindAndName(rapp.Kind, rapp.FQN())
+	assert.NotNil(t, app, "unable to find %s named '%s'", rapp.Kind, rapp.FQN())
+
+	pod := helmtests.GetPodSpec(app)
+	assert.NotNil(t, pod, "unable to extract pod spec from %s: %s", rapp.Kind, rapp.FQN())
+	chartYaml.VerifyEnvVarsForApp(t, rapp.Kind, rapp.FQN(), expectedEnvVars)
+}

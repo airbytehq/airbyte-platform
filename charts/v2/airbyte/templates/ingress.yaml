@@ -51,7 +51,7 @@ spec:
                 {{- if eq .backend "server" }}
                 name: {{ $.Release.Name }}-airbyte-server-svc
                 port:
-                  number: {{ $.Values.server.service.port }}
+                  name: http
                 {{- else }}
                 {{- fail (printf "Invalid backend service: %s. Must be 'server'" .backend) }}
                 {{- end }}

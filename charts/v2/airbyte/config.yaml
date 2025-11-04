@@ -1564,9 +1564,9 @@ workloadLauncher.dataPlane:
 workloadLauncher.images:
   keyBasePath: workloadLauncher
   config:
-    - env: JOB_KUBE_CONNECTOR_IMAGE_REGISTRY 
-      keyBasePath: global.image
-      key: registry
+    - env: JOB_KUBE_CONNECTOR_IMAGE_REGISTRY
+      key: connector.image.registry
+      valueExp: ternary (dig "connector" "image" "registry" "" .Values.workloadLauncher) .Values.global.image.registry (hasKey (dig "connector" "image" dict .Values.workloadLauncher) "registry")
 
     - env: CONNECTOR_PROFILER_IMAGE
       key: connectorProfiler.image

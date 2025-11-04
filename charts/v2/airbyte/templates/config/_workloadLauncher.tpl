@@ -245,16 +245,16 @@ DATAPLANE_CLIENT_SECRET: {{ include "airbyte.workloadLauncher.dataPlane.clientSe
 {{- end }}
 
 {{/*
-Renders the global.image.registry value
+Renders the workloadLauncher.connector.image.registry value
 */}}
-{{- define "airbyte.workloadLauncher.images.registry" }}
-    {{- .Values.global.image.registry }}
+{{- define "airbyte.workloadLauncher.images.connector.image.registry" }}
+    {{- ternary (dig "connector" "image" "registry" "" .Values.workloadLauncher) .Values.global.image.registry (hasKey (dig "connector" "image" dict .Values.workloadLauncher) "registry") }}
 {{- end }}
 
 {{/*
-Renders the workloadLauncher.images.registry environment variable
+Renders the workloadLauncher.images.connector.image.registry environment variable
 */}}
-{{- define "airbyte.workloadLauncher.images.registry.env" }}
+{{- define "airbyte.workloadLauncher.images.connector.image.registry.env" }}
 - name: JOB_KUBE_CONNECTOR_IMAGE_REGISTRY
   valueFrom:
     configMapKeyRef:
@@ -356,7 +356,7 @@ Renders the workloadLauncher.images.workloadInit.image environment variable
 Renders the set of all workloadLauncher.images environment variables
 */}}
 {{- define "airbyte.workloadLauncher.images.envs" }}
-{{- include "airbyte.workloadLauncher.images.registry.env" . }}
+{{- include "airbyte.workloadLauncher.images.connector.image.registry.env" . }}
 {{- include "airbyte.workloadLauncher.images.connectorProfiler.image.env" . }}
 {{- include "airbyte.workloadLauncher.images.connectorSidecar.image.env" . }}
 {{- include "airbyte.workloadLauncher.images.containerOrchestrator.enabled.env" . }}
@@ -368,7 +368,7 @@ Renders the set of all workloadLauncher.images environment variables
 Renders the set of all workloadLauncher.images config map variables
 */}}
 {{- define "airbyte.workloadLauncher.images.configVars" }}
-JOB_KUBE_CONNECTOR_IMAGE_REGISTRY: {{ include "airbyte.workloadLauncher.images.registry" . | quote }}
+JOB_KUBE_CONNECTOR_IMAGE_REGISTRY: {{ include "airbyte.workloadLauncher.images.connector.image.registry" . | quote }}
 CONNECTOR_PROFILER_IMAGE: {{ include "airbyte.workloadLauncher.images.connectorProfiler.image" . | quote }}
 CONNECTOR_SIDECAR_IMAGE: {{ include "airbyte.workloadLauncher.images.connectorSidecar.image" . | quote }}
 CONTAINER_ORCHESTRATOR_ENABLED: {{ include "airbyte.workloadLauncher.images.containerOrchestrator.enabled" . | quote }}
