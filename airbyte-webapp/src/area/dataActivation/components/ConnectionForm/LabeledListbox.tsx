@@ -21,6 +21,7 @@ interface LabeledListboxProps<T> {
   hasError: boolean;
   iconType?: IconType;
   fieldName: string;
+  disabled?: boolean;
 }
 
 export const LabeledListbox = <T,>({
@@ -31,22 +32,25 @@ export const LabeledListbox = <T,>({
   options,
   label,
   value,
+  disabled,
 }: LabeledListboxProps<T>) => {
+  const iconColor = disabled ? "disabled" : hasError ? "error" : undefined;
+  const textColor = disabled ? "grey300" : hasError ? "red" : undefined;
+  const labelTextColor = disabled ? "grey300" : hasError ? "red" : "grey";
+
   return (
     <FlexContainer direction="column" gap="xs" className={styles.labeledListbox}>
-      <Listbox value={value} onChange={onChange}>
+      <Listbox value={value} onChange={onChange} disabled={disabled} by={isEqual}>
         <FloatLayout adaptiveWidth>
-          <ListboxButton hasError={hasError} className={styles.labeledListbox__button}>
-            {iconType && (
-              <Icon type={iconType} className={styles.labeledListbox__icon} color={hasError ? "error" : undefined} />
-            )}
+          <ListboxButton hasError={hasError} className={styles.labeledListbox__button} disabled={disabled}>
+            {iconType && <Icon type={iconType} className={styles.labeledListbox__icon} color={iconColor} />}
             {!!value && (
-              <Text className={styles.labeledListbox__value} color={hasError ? "red" : undefined}>
+              <Text className={styles.labeledListbox__value} color={textColor}>
                 {options.find((option) => isEqual(option.value, value))?.label}
               </Text>
             )}
 
-            <Text className={styles.labeledListbox__label} color={hasError ? "red" : "grey"}>
+            <Text className={styles.labeledListbox__label} color={labelTextColor}>
               {label}
             </Text>
           </ListboxButton>

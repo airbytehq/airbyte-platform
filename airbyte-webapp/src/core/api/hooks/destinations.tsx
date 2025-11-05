@@ -213,6 +213,15 @@ export const useUpdateDestination = () => {
   );
 };
 
+export const useDiscoverDestinationSchemaMutation = () => {
+  const requestOptions = useRequestOptions();
+
+  return useMutation({
+    mutationFn: ({ destinationId }: { destinationId: string }) =>
+      discoverCatalogForDestination({ destinationId, disableCache: true }, requestOptions),
+  });
+};
+
 export const useDiscoverDestination = (destinationId: string) => {
   const requestOptions = useRequestOptions();
 

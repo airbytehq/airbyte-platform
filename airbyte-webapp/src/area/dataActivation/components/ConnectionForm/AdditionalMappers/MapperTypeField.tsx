@@ -10,9 +10,10 @@ import { FilterCondition } from "pages/connections/ConnectionMappingsPage/RowFil
 
 interface MapperTypeFieldProps {
   name: `streams.${number}.fields.${number}.additionalMappers.${number}`;
+  disabled?: boolean;
 }
 
-export const MapperTypeField: React.FC<MapperTypeFieldProps> = ({ name }) => {
+export const MapperTypeField: React.FC<MapperTypeFieldProps> = ({ name, disabled }) => {
   const { control } = useFormContext<DataActivationConnectionFormValues>();
   const { formatMessage } = useIntl();
 
@@ -32,6 +33,7 @@ export const MapperTypeField: React.FC<MapperTypeFieldProps> = ({ name }) => {
       render={({ field }) => (
         <ListBox
           options={options}
+          isDisabled={disabled}
           selectedValue={field.value.type}
           onSelect={(value) => {
             // Note: we are manually using typeof field.value here, because field.onChange does not have a strict type

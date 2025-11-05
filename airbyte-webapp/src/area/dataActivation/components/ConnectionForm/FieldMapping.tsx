@@ -26,6 +26,7 @@ interface FieldMappingProps {
   removeField?: () => void;
   sourceCatalog: AirbyteCatalog;
   streamIndex: number;
+  disabled?: boolean;
 }
 
 export const FieldMapping: React.FC<FieldMappingProps> = ({
@@ -34,6 +35,7 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
   removeField,
   sourceCatalog,
   destinationCatalog,
+  disabled,
 }) => {
   const { formatMessage } = useIntl();
   const sourceStreamDescriptor = useWatch<
@@ -129,6 +131,7 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
           render={({ field, fieldState }) => (
             <FlexContainer direction="column" gap="xs">
               <ComboBox
+                disabled={disabled}
                 error={!!fieldState.error}
                 value={field.value}
                 onChange={field.onChange}
@@ -155,7 +158,7 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
                     render={({ field, fieldState }) => (
                       <FlexContainer direction="column" gap="xs">
                         <ComboBox
-                          disabled={isRequired}
+                          disabled={isRequired || disabled}
                           error={!!fieldState.error}
                           value={field.value}
                           onChange={field.onChange}
@@ -184,7 +187,7 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
               disabled={!isRequired}
               control={
                 <Button
-                  disabled={isRequired}
+                  disabled={isRequired || disabled}
                   variant="clear"
                   icon="trash"
                   type="button"
@@ -200,7 +203,7 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
         )}
       </FlexContainer>
       <div className={styles.fieldMapping__additionalMappers}>
-        <AdditionalMappers streamIndex={streamIndex} fieldIndex={fieldIndex} />
+        <AdditionalMappers streamIndex={streamIndex} fieldIndex={fieldIndex} disabled={disabled} />
       </div>
     </div>
   );

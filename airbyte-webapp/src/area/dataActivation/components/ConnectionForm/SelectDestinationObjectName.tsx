@@ -18,11 +18,13 @@ interface SelectDestinationObjectNameProps {
   destination: DestinationRead;
   destinationCatalog: DestinationCatalog;
   streamIndex: number;
+  disabled?: boolean;
 }
 export const SelectDestinationObjectName: React.FC<SelectDestinationObjectNameProps> = ({
   destination,
   destinationCatalog,
   streamIndex,
+  disabled,
 }) => {
   const { formatMessage } = useIntl();
   const { control, getValues, setValue } = useFormContext<DataActivationConnectionFormValues>();
@@ -68,6 +70,7 @@ export const SelectDestinationObjectName: React.FC<SelectDestinationObjectNamePr
         render={({ field, fieldState }) => (
           <FlexContainer direction="column" gap="xs">
             <DACombobox
+              disabled={disabled}
               error={!!fieldState.error}
               placeholder={formatMessage({ id: "connection.create.selectDestinationObject" })}
               icon={<ConnectorIcon icon={destination.icon} className={styles.selectDestinationObjectName__icon} />}

@@ -29,5 +29,14 @@
     &:hover {
       color: colors.$blue;
     }
+
+    &--disabled {
+      color: colors.$grey-300;
+
+      &:hover {
+        cursor: not-allowed;
+        color: colors.$grey-300;
+      }
+    }
   }
 }

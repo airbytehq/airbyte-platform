@@ -10,19 +10,22 @@ import { useSelectedSourceStream } from "./StreamMappings";
 interface SelectCursorFieldProps {
   sourceCatalog: AirbyteCatalog;
   streamIndex: number;
+  disabled?: boolean;
 }
 
-export const SelectCursorField: React.FC<SelectCursorFieldProps> = ({ sourceCatalog, streamIndex }) => {
+export const SelectCursorField: React.FC<SelectCursorFieldProps> = ({ sourceCatalog, streamIndex, disabled }) => {
   const { control } = useFormContext<DataActivationConnectionFormValues>();
   const { formatMessage } = useIntl();
 
   const selectedSourceStream = useSelectedSourceStream(sourceCatalog, streamIndex);
+
   return (
     <Controller
       control={control}
       name={`streams.${streamIndex}.cursorField`}
       render={({ field, fieldState }) => (
         <LabeledListbox
+          disabled={disabled}
           fieldName={field.name}
           iconType="cursor"
           value={field.value}

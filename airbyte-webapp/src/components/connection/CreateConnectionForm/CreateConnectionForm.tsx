@@ -17,7 +17,7 @@ import {
   useCreateConnection,
   useDestinationDefinitionVersion,
   useDiscoverSchemaQuery,
-  useDiscoverSchemaMutation,
+  useDiscoverSourceSchemaMutation,
 } from "core/api";
 import { AirbyteCatalog, ConnectionScheduleType } from "core/api/types/AirbyteClient";
 import { FormModeProvider, useFormMode } from "core/services/ui/FormModeContext";
@@ -196,7 +196,7 @@ export const CreateConnectionForm: React.FC = () => {
   const asyncSchemaDiscoveryEnabled = useExperiment("asyncSchemaDiscovery");
 
   const { data, error, isFetching, refetch } = useDiscoverSchemaQuery(source, { useErrorBoundary: false });
-  const { mutateAsync: discoverSchemaMutation, isLoading: isMutationLoading } = useDiscoverSchemaMutation(source);
+  const { mutateAsync: discoverSchemaMutation, isLoading: isMutationLoading } = useDiscoverSourceSchemaMutation(source);
   const [refreshedSchema, setRefreshedSchema] = useState<{ catalog: AirbyteCatalog; catalogId: string } | null>(null);
 
   const schema = refreshedSchema?.catalog ?? data?.catalog;

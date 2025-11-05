@@ -222,7 +222,7 @@ const COMMAND_STATUS_POLLING_INTERVAL = 2000;
 
 type SourceDiscoverOutput = GetDiscoverCommandOutput200 & { catalog: AirbyteCatalog; catalogId: string };
 
-export const useDiscoverSchemaMutation = (source: SourceRead) => {
+export const useDiscoverSourceSchemaMutation = (source: SourceRead) => {
   const requestOptions = useRequestOptions();
   const { mutateAsync: cancelCommand } = useCancelCommand();
   const commandIdRef = useRef<string | null>(null);

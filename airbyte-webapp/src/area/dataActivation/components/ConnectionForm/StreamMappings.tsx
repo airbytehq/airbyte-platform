@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
@@ -27,6 +27,9 @@ interface StreamMappingsProps {
   destinationCatalog: DestinationCatalog;
   source: SourceRead;
   sourceCatalog: AirbyteCatalog;
+  onRefreshSourceSchema?: () => Promise<void>;
+  onRefreshDestinationCatalog?: () => Promise<void>;
+  disabled?: boolean;
 }
 
 export const StreamMappings: React.FC<StreamMappingsProps> = ({
@@ -34,6 +37,9 @@ export const StreamMappings: React.FC<StreamMappingsProps> = ({
   destinationCatalog,
   source,
   sourceCatalog,
+  onRefreshSourceSchema,
+  onRefreshDestinationCatalog,
+  disabled,
 }) => {
   const { control } = useFormContext<DataActivationConnectionFormValues>();
   const { fields: streams } = useFieldArray<DataActivationConnectionFormValues>({
@@ -54,6 +60,9 @@ export const StreamMappings: React.FC<StreamMappingsProps> = ({
                   destinationCatalog={destinationCatalog}
                   source={source}
                   sourceCatalog={sourceCatalog}
+                  onRefreshSourceSchema={onRefreshSourceSchema}
+                  onRefreshDestinationCatalog={onRefreshDestinationCatalog}
+                  disabled={disabled}
                 />
               </FlexItem>
             </FlexContainer>
@@ -71,6 +80,9 @@ interface StreamMappingProps {
   destinationCatalog: DestinationCatalog;
   source: SourceRead;
   sourceCatalog: AirbyteCatalog;
+  onRefreshSourceSchema?: () => Promise<void>;
+  onRefreshDestinationCatalog?: () => Promise<void>;
+  disabled?: boolean;
 }
 
 const StreamMapping: React.FC<StreamMappingProps> = ({
@@ -79,6 +91,9 @@ const StreamMapping: React.FC<StreamMappingProps> = ({
   destinationCatalog,
   source,
   sourceCatalog,
+  onRefreshSourceSchema,
+  onRefreshDestinationCatalog,
+  disabled,
 }) => {
   const {
     fields,
@@ -123,30 +138,48 @@ const StreamMapping: React.FC<StreamMappingProps> = ({
             <FormattedMessage id="connection.create.map" />
           </Text>
         </FlexContainer>
-        <SelectSourceStream index={index} source={source} sourceCatalog={sourceCatalog} />
+        <FlexContainer className={styles.streamMappings__source} alignItems="center">
+          <FlexItem grow>
+            <SelectSourceStream index={index} source={source} sourceCatalog={sourceCatalog} disabled={disabled} />
+          </FlexItem>
+          {onRefreshSourceSchema && <RefreshSchemaButton onClick={onRefreshSourceSchema} disabled={!!disabled} />}
+        </FlexContainer>
         <div className={styles.streamMappings__arrow}>
           <Icon type="arrowRight" size="lg" color="action" />
         </div>
-        <SelectDestinationObjectName
-          destination={destination}
-          destinationCatalog={destinationCatalog}
-          streamIndex={index}
-        />
+        <FlexContainer className={styles.streamMappings__destination} alignItems="center">
+          <FlexItem grow>
+            <SelectDestinationObjectName
+              destination={destination}
+              destinationCatalog={destinationCatalog}
+              streamIndex={index}
+              disabled={disabled}
+            />
+          </FlexItem>
+          {onRefreshDestinationCatalog && (
+            <RefreshSchemaButton onClick={onRefreshDestinationCatalog} disabled={!!disabled} />
+          )}
+        </FlexContainer>
 
         {isSourceStreamSelected && (
           <div className={styles.streamMappings__sourceSettings}>
-            <SelectSourceSyncMode streamIndex={index} sourceCatalog={sourceCatalog} />
+            <SelectSourceSyncMode streamIndex={index} sourceCatalog={sourceCatalog} disabled={disabled} />
             {sourceSyncMode === "incremental" && (
-              <SelectCursorField sourceCatalog={sourceCatalog} streamIndex={index} />
+              <SelectCursorField sourceCatalog={sourceCatalog} streamIndex={index} disabled={disabled} />
             )}
           </div>
         )}
 
         {isDestinationObjectSelected && (
           <div className={styles.streamMappings__destinationSettings}>
-            <SelectDestinationSyncMode streamIndex={index} destinationCatalog={destinationCatalog} />
+            <SelectDestinationSyncMode
+              streamIndex={index}
+              destinationCatalog={destinationCatalog}
+              disabled={disabled}
+            />
             {selectedDestinationOperation?.matchingKeys && selectedDestinationOperation.matchingKeys.length > 0 && (
               <SelectMatchingKey
+                disabled={disabled}
                 destinationCatalog={destinationCatalog}
                 streamIndex={index}
                 appendField={appendField}
@@ -160,6 +193,7 @@ const StreamMapping: React.FC<StreamMappingProps> = ({
             <div className={styles.streamMappings__divider} />
             {fields.map((field, fieldIndex) => (
               <FieldMapping
+                disabled={disabled}
                 destinationCatalog={destinationCatalog}
                 sourceCatalog={sourceCatalog}
                 key={field.id}
@@ -170,6 +204,7 @@ const StreamMapping: React.FC<StreamMappingProps> = ({
             ))}
             <Box py="sm" className={styles.streamMappings__addField}>
               <Button
+                disabled={disabled}
                 icon="plus"
                 variant="secondary"
                 type="button"
@@ -200,5 +235,32 @@ export const useSelectedSourceStream = (sourceCatalog: AirbyteCatalog, streamInd
           stream.stream?.namespace === sourceStreamDescriptor.namespace
       ),
     [sourceCatalog, sourceStreamDescriptor]
+  );
+};
+
+const RefreshSchemaButton: React.FC<{ onClick: () => Promise<void>; disabled: boolean }> = ({ onClick, disabled }) => {
+  const [loading, setLoading] = useState(false);
+
+  const onClickHandler = async () => {
+    setLoading(true);
+    try {
+      await onClick();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      size="xs"
+      variant="secondary"
+      type="button"
+      onClick={onClickHandler}
+      isLoading={loading}
+      disabled={disabled}
+      data-testid="refreshSchemaButton"
+    >
+      <FormattedMessage id="connection.dataActivation.refresh" />
+    </Button>
   );
 };

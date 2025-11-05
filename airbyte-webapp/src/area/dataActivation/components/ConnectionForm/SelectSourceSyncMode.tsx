@@ -19,11 +19,12 @@ import { AirbyteCatalog, SyncMode } from "core/api/types/AirbyteClient";
 interface SelectSourceSyncModeProps {
   streamIndex: number;
   sourceCatalog: AirbyteCatalog;
+  disabled?: boolean;
 }
 
 const DATA_ACTIVATION_SUPPORTED_SYNC_MODES = [SyncMode.incremental, SyncMode.full_refresh];
 
-export const SelectSourceSyncMode: React.FC<SelectSourceSyncModeProps> = ({ streamIndex, sourceCatalog }) => {
+export const SelectSourceSyncMode: React.FC<SelectSourceSyncModeProps> = ({ streamIndex, sourceCatalog, disabled }) => {
   const sourceStreamDescriptor = useWatch<
     DataActivationConnectionFormValues,
     `streams.${number}.sourceStreamDescriptor`
@@ -54,6 +55,7 @@ export const SelectSourceSyncMode: React.FC<SelectSourceSyncModeProps> = ({ stre
         <FlexContainer direction="column" gap="xs">
           <Listbox
             value={field.value}
+            disabled={disabled}
             onChange={(value) => {
               if (value === field.value) {
                 return;
@@ -71,13 +73,15 @@ export const SelectSourceSyncMode: React.FC<SelectSourceSyncModeProps> = ({ stre
               <ListboxButton hasError={!!fieldState.error}>
                 {field.value ? (
                   <FlexContainer as="span">
-                    <Text>{sourceSyncModeOptions.find((option) => option.value === field.value)?.label}</Text>
-                    <Text color="grey">
+                    <Text color={disabled ? "grey" : undefined}>
+                      {sourceSyncModeOptions.find((option) => option.value === field.value)?.label}
+                    </Text>
+                    <Text color={disabled ? "grey300" : "grey"}>
                       <FormattedMessage id="connection.syncMode" />
                     </Text>
                   </FlexContainer>
                 ) : (
-                  <Text color="grey">
+                  <Text color={disabled ? "grey300" : "grey"}>
                     <FormattedMessage id="connection.selectSyncMode" />
                   </Text>
                 )}

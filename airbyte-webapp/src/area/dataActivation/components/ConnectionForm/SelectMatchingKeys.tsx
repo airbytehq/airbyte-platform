@@ -11,12 +11,14 @@ interface SelectMatchingKeyProps {
   appendField: UseFieldArrayAppend<DataActivationConnectionFormValues, `streams.${number}.fields`>;
   destinationCatalog: DestinationCatalog;
   streamIndex: number;
+  disabled?: boolean;
 }
 
 export const SelectMatchingKey: React.FC<SelectMatchingKeyProps> = ({
   appendField,
   destinationCatalog,
   streamIndex,
+  disabled,
 }) => {
   const { control } = useFormContext<DataActivationConnectionFormValues>();
   const { formatMessage } = useIntl();
@@ -34,6 +36,7 @@ export const SelectMatchingKey: React.FC<SelectMatchingKeyProps> = ({
       name={`streams.${streamIndex}.matchingKeys`}
       render={({ field, fieldState }) => (
         <LabeledListbox
+          disabled={disabled}
           fieldName={field.name}
           iconType="infoOutline"
           value={field.value}

@@ -21,9 +21,18 @@ interface DAComboboxProps<T> {
   onChange: (value: T | null) => void;
   placeholder?: string;
   error: boolean;
+  disabled?: boolean;
 }
 
-export const DACombobox = <T,>({ icon, options, selectedValue, onChange, placeholder, error }: DAComboboxProps<T>) => {
+export const DACombobox = <T,>({
+  icon,
+  options,
+  selectedValue,
+  onChange,
+  placeholder,
+  error,
+  disabled,
+}: DAComboboxProps<T>) => {
   const [query, setQuery] = useState("");
 
   const filteredOptions =
@@ -48,6 +57,7 @@ export const DACombobox = <T,>({ icon, options, selectedValue, onChange, placeho
       className={styles.combobox}
       value={selectedOption}
       virtual={{ options: filteredOptions }}
+      disabled={disabled}
       onChange={(option) => {
         onChange(option?.value ?? null);
       }}

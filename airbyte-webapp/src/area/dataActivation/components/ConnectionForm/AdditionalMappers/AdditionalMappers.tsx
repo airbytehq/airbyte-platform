@@ -1,3 +1,4 @@
+import classnames from "classnames";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -18,9 +19,10 @@ import { RowItem } from "./RowItem";
 interface AdditionalMappersProps {
   streamIndex: number;
   fieldIndex: number;
+  disabled?: boolean;
 }
 
-export const AdditionalMappers: React.FC<AdditionalMappersProps> = ({ streamIndex, fieldIndex }) => {
+export const AdditionalMappers: React.FC<AdditionalMappersProps> = ({ streamIndex, fieldIndex, disabled }) => {
   const {
     fields: additionalMappers,
     append: appendAdditionalMapper,
@@ -38,12 +40,16 @@ export const AdditionalMappers: React.FC<AdditionalMappersProps> = ({ streamInde
           fieldIndex={fieldIndex}
           additionalMapperIndex={index}
           removeAdditionalMapper={() => removeAdditionalMapper(index)}
+          disabled={disabled}
         />
       ))}
       <div className={styles.additionalMappers__addButtonContainer}>
         <button
-          className={styles.additionalMappers__addButton}
+          className={classnames(styles.additionalMappers__addButton, {
+            [styles["additionalMappers__addButton--disabled"]]: disabled,
+          })}
           type="button"
+          disabled={disabled}
           onClick={() =>
             appendAdditionalMapper({
               type: "hashing",
@@ -64,6 +70,7 @@ interface AdditionalMapperProps {
   fieldIndex: number;
   additionalMapperIndex: number;
   removeAdditionalMapper: () => void;
+  disabled?: boolean;
 }
 
 const AdditionalMapper: React.FC<AdditionalMapperProps> = ({
@@ -71,6 +78,7 @@ const AdditionalMapper: React.FC<AdditionalMapperProps> = ({
   fieldIndex,
   additionalMapperIndex,
   removeAdditionalMapper,
+  disabled,
 }) => {
   const { formatMessage } = useIntl();
   const { control } = useFormContext<DataActivationConnectionFormValues>();
@@ -89,6 +97,7 @@ const AdditionalMapper: React.FC<AdditionalMapperProps> = ({
       <FlexContainer gap="sm" alignItems="flex-start" wrap="wrap">
         <RowItem>
           <MapperTypeField
+            disabled={disabled}
             name={`streams.${streamIndex}.fields.${fieldIndex}.additionalMappers.${additionalMapperIndex}`}
           />
         </RowItem>
@@ -101,6 +110,7 @@ const AdditionalMapper: React.FC<AdditionalMapperProps> = ({
             </RowItem>
             <RowItem>
               <FormControl
+                disabled={disabled}
                 reserveSpaceForError={false}
                 name={`streams.${streamIndex}.fields.${fieldIndex}.additionalMappers.${additionalMapperIndex}.method`}
                 fieldType="dropdown"
@@ -174,7 +184,7 @@ const AdditionalMapper: React.FC<AdditionalMapperProps> = ({
           </>
         )}
         <RowItem>
-          <Button variant="clear" onClick={removeAdditionalMapper} icon="trash" />
+          <Button variant="clear" onClick={removeAdditionalMapper} icon="trash" disabled={disabled} />
         </RowItem>
       </FlexContainer>
     </>

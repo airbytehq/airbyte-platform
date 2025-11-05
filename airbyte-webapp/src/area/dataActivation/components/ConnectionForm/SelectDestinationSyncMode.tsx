@@ -20,11 +20,13 @@ import { DestinationCatalog, DestinationSyncMode } from "core/api/types/AirbyteC
 interface SelectDestinationSyncModeProps {
   streamIndex: number;
   destinationCatalog: DestinationCatalog;
+  disabled?: boolean;
 }
 
 export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps> = ({
   destinationCatalog,
   streamIndex,
+  disabled,
 }) => {
   const { control, getValues } = useFormContext<DataActivationConnectionFormValues>();
   const { formatMessage } = useIntl();
@@ -83,6 +85,7 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
       render={({ field, fieldState }) => (
         <FlexContainer direction="column" gap="xs">
           <Listbox
+            disabled={disabled}
             value={field.value}
             onChange={(value) => {
               if (value === field.value) {
@@ -96,13 +99,15 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
               <ListboxButton hasError={!!fieldState.error} data-testid="selected-destination-sync-mode-label">
                 {field.value ? (
                   <FlexContainer as="span">
-                    <Text>{destinationSyncModeOptions.find((option) => option.value === field.value)?.label}</Text>
-                    <Text color="grey">
+                    <Text color={disabled ? "grey300" : undefined}>
+                      {destinationSyncModeOptions.find((option) => option.value === field.value)?.label}
+                    </Text>
+                    <Text color={disabled ? "grey300" : "grey"}>
                       <FormattedMessage id="connection.dataActivation.destinationSyncMode" />
                     </Text>
                   </FlexContainer>
                 ) : (
-                  <Text color="grey">
+                  <Text color={disabled ? "grey300" : "grey"}>
                     <FormattedMessage id="connection.dataActivation.selectDestinationSyncMode" />
                   </Text>
                 )}

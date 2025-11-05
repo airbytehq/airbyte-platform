@@ -50,7 +50,7 @@ jest.mock("core/api", () => ({
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
   useSourceDefinition: () => mockSourceDefinition,
   useDestinationDefinition: () => mockDestinationDefinition,
-  useDiscoverSchemaMutation: jest.fn(() => ({
+  useDiscoverSourceSchemaMutation: jest.fn(() => ({
     mutateAsync: jest.fn(),
     isLoading: false,
   })),

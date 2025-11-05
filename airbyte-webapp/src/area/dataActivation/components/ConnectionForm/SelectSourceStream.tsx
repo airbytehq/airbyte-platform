@@ -18,9 +18,10 @@ interface SelectSourceStreamProps {
   index: number;
   source: SourceRead;
   sourceCatalog: AirbyteCatalog;
+  disabled?: boolean;
 }
 
-export const SelectSourceStream: React.FC<SelectSourceStreamProps> = ({ sourceCatalog, source, index }) => {
+export const SelectSourceStream: React.FC<SelectSourceStreamProps> = ({ sourceCatalog, source, index, disabled }) => {
   const { control, getValues, setValue } = useFormContext<DataActivationConnectionFormValues>();
   const { formatMessage } = useIntl();
   const sourceStreams = useMemo(() => sourceCatalog.streams ?? [], [sourceCatalog]);
@@ -102,6 +103,7 @@ export const SelectSourceStream: React.FC<SelectSourceStreamProps> = ({ sourceCa
               placeholder={formatMessage({ id: "connection.create.selectSourceStream" })}
               icon={<ConnectorIcon icon={source.icon} className={styles.selectSourceStream__icon} />}
               options={sourceStreamOptions}
+              disabled={disabled}
               onChange={(value) => {
                 if (isEqual(value, field.value)) {
                   return;
