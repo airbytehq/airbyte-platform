@@ -9,7 +9,6 @@ import {
   OrganizationPaymentConfigReadPaymentStatus,
   OrganizationPaymentConfigReadSubscriptionStatus,
   ISO8601DateTime,
-  OrganizationTrialStatusRead,
 } from "core/api/types/AirbyteClient";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
@@ -46,8 +45,7 @@ export interface UseOrganizationSubscriptionStatusReturn {
  * Follows the same logic as useBillingStatusBanner but focuses on data retrieval.
  */
 export const useOrganizationSubscriptionStatus = (options?: {
-  refetchWithInterval?: boolean;
-  onSuccessGetTrialStatusClb?: (isTrialEndedAndLockedOrDisabled: boolean) => void;
+  refetchWithInterval?: number;
 }): UseOrganizationSubscriptionStatusReturn => {
   const organizationInfo = useCurrentOrganizationInfo();
   const organizationId = organizationInfo?.organizationId;
@@ -65,27 +63,13 @@ export const useOrganizationSubscriptionStatus = (options?: {
   const isFlexPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.FLEX;
   const isProPlan = organizationInfo?.organizationPlanId === ORG_PLAN_IDS.PRO;
 
-  // Conditional trial status fetching - only when payment status allows it, user has permissions, and organization's plan is a unified trial plan
-  const shouldFetchTrialStatus =
-    (billing?.paymentStatus === "uninitialized" ||
-      billing?.paymentStatus === "okay" ||
-      billing?.paymentStatus === "disabled" ||
-      billing?.paymentStatus === "locked") &&
-    canViewTrialStatus &&
-    isUnifiedTrialPlan;
+  // Conditional trial status fetching - only when user has permissions and organization's plan is a unified trial plan
+  const shouldFetchTrialStatus = canViewTrialStatus && isUnifiedTrialPlan;
 
   const trialStatus = useOrganizationTrialStatus(organizationId, {
     enabled: shouldFetchTrialStatus,
     ...(options?.refetchWithInterval && {
       refetchInterval: options?.refetchWithInterval,
-    }),
-    ...(options?.onSuccessGetTrialStatusClb && {
-      onSuccess: (data: OrganizationTrialStatusRead) => {
-        const isTrialEndedAndLockedOrDisabled =
-          data.trialStatus === "post_trial" &&
-          (billing?.paymentStatus === "locked" || billing?.paymentStatus === "disabled");
-        options?.onSuccessGetTrialStatusClb?.(isTrialEndedAndLockedOrDisabled);
-      },
     }),
   });
 

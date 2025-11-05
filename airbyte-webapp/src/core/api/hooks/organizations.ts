@@ -147,11 +147,12 @@ export const useListUsersInOrganization = (organizationId?: string): Organizatio
   );
 };
 
-const TRIAL_STATUS_REFETCH_INTERVAL = 60 * 60 * 1000; // 1 hour in milliseconds
-
 export const useOrganizationTrialStatus = (
   organizationId: string,
-  options?: { refetchInterval?: boolean; enabled?: boolean; onSuccess?: (data: OrganizationTrialStatusRead) => void }
+  options?: {
+    enabled?: boolean;
+    refetchInterval?: number;
+  }
 ): OrganizationTrialStatusRead | undefined => {
   const requestOptions = useRequestOptions();
   return useSuspenseQuery(
@@ -167,8 +168,7 @@ export const useOrganizationTrialStatus = (
     },
     {
       enabled: options?.enabled,
-      refetchInterval: options?.refetchInterval ? TRIAL_STATUS_REFETCH_INTERVAL : undefined,
-      onSuccess: options?.onSuccess,
+      refetchInterval: options?.refetchInterval,
     }
   );
 };
