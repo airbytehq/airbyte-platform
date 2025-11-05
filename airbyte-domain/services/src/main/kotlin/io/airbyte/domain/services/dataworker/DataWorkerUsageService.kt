@@ -26,6 +26,10 @@ import io.airbyte.domain.models.dataworker.WorkspaceDataWorkerUsage
 import io.airbyte.featureflag.EnableDataWorkerUsage
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.Organization
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
@@ -45,6 +49,7 @@ open class DataWorkerUsageService(
   private val workspaceService: WorkspaceService,
   private val featureFlagClient: FeatureFlagClient,
   private val entitlementService: EntitlementService,
+  private val metricClient: MetricClient,
 ) {
   /**
    * Records data worker usage when a job is created by tracking CPU resource requirements.
@@ -71,7 +76,7 @@ open class DataWorkerUsageService(
   fun insertUsageForCreatedJob(job: Job) {
     // We return early here if we cannot build a dataWorkerUsage object.
     // Errors, logging, and metrics are handled inside the buildDataWorkerUsageOrNull method.
-    val dataWorkerUsage = buildDataWorkerUsageOrNull(job) ?: return
+    val dataWorkerUsage = buildDataWorkerUsageOrNull(job, INCREMENT_OPERATION) ?: return
 
     // In this function, we check the following:
     // 1. is the job a sync
@@ -83,7 +88,29 @@ open class DataWorkerUsageService(
       return
     }
 
-    performUsageInsertion(dataWorkerUsage)
+    try {
+      performUsageInsertion(dataWorkerUsage)
+    } catch (e: Exception) {
+      logger.error(e) { "${e.message}: failed to insert $dataWorkerUsage" }
+      sendRecordMetric(
+        job.id,
+        false,
+        INCREMENT_OPERATION,
+        dataWorkerUsage.organizationId,
+        dataWorkerUsage.workspaceId,
+        dataWorkerUsage.dataplaneGroupId,
+      )
+      return
+    }
+
+    sendRecordMetric(
+      job.id,
+      true,
+      INCREMENT_OPERATION,
+      dataWorkerUsage.organizationId,
+      dataWorkerUsage.workspaceId,
+      dataWorkerUsage.dataplaneGroupId,
+    )
   }
 
   @Transactional("config")
@@ -145,8 +172,31 @@ open class DataWorkerUsageService(
    *            requirements will be subtracted from the current usage bucket.
    */
   fun subtractUsageForCompletedJob(job: Job) {
-    val dataWorkerUsage = buildDataWorkerUsageOrNull(job) ?: return
-    performUsageSubtraction(dataWorkerUsage, job.id)
+    val dataWorkerUsage = buildDataWorkerUsageOrNull(job, DECREMENT_OPERATION) ?: return
+
+    try {
+      performUsageSubtraction(dataWorkerUsage, job.id)
+    } catch (e: Exception) {
+      logger.error(e) { "${e.message}: failed to subtract $dataWorkerUsage" }
+      sendRecordMetric(
+        job.id,
+        false,
+        DECREMENT_OPERATION,
+        dataWorkerUsage.organizationId,
+        dataWorkerUsage.workspaceId,
+        dataWorkerUsage.dataplaneGroupId,
+      )
+      return
+    }
+
+    sendRecordMetric(
+      job.id,
+      true,
+      DECREMENT_OPERATION,
+      dataWorkerUsage.organizationId,
+      dataWorkerUsage.workspaceId,
+      dataWorkerUsage.dataplaneGroupId,
+    )
   }
 
   @Transactional("config")
@@ -167,8 +217,15 @@ open class DataWorkerUsageService(
       // that data is either missing or we've deleted a previous bucket.
       // In this case, we should not subtract the usage values, because we could
       // end up with negative values, which could be carried over to subsequent hours
-      // TODO: metrics and alerting
       logger.error { "Found a completed job $jobId with no prior usage recorded, skipping data worker usage" }
+      sendRecordMetric(
+        jobId,
+        false,
+        DECREMENT_OPERATION,
+        dataWorkerUsage.organizationId,
+        dataWorkerUsage.workspaceId,
+        dataWorkerUsage.dataplaneGroupId,
+      )
       return
     } else if (dataWorkerUsage.bucketStart.isAfter(mostRecentUsageBucket.bucketStart.plusHours(1))) {
       // If the most recent usage is older than one hour,
@@ -283,18 +340,21 @@ open class DataWorkerUsageService(
     )
   }
 
-  private fun buildDataWorkerUsageOrNull(job: Job): DataWorkerUsage? {
+  private fun buildDataWorkerUsageOrNull(
+    job: Job,
+    operation: String,
+  ): DataWorkerUsage? {
     val workspaceId = job.config.sync?.workspaceId
     if (workspaceId == null) {
-      // TODO: metrics and alerting
       logger.error { "Workspace ID is null for job ${job.id}, skipping data worker usage insertion." }
+      sendRecordMetric(job.id, false, operation)
       return null
     }
 
     val organization = organizationService.getOrganizationForWorkspaceId(workspaceId).orElse(null)
     if (organization == null) {
-      // TODO: metrics and alerting
       logger.error { "Organization not found for workspace $workspaceId (job ${job.id}), skipping data worker usage insertion." }
+      sendRecordMetric(job.id, false, operation, workspaceId = workspaceId)
       return null
     }
 
@@ -302,8 +362,8 @@ open class DataWorkerUsageService(
     val workspace = retrieveWorkspaceOrNull(workspaceId) ?: return null
     val dataplaneGroupId =
       workspace.dataplaneGroupId ?: run {
-        // TODO: metrics and alerting
         logger.error { "Dataplane group is null for workspace $workspaceId (job ${job.id}), skipping data worker usage insertion." }
+        sendRecordMetric(job.id, false, operation, organizationId, workspaceId)
         return null
       }
 
@@ -311,10 +371,10 @@ open class DataWorkerUsageService(
     val destCpu = job.config.sync.syncResourceRequirements.destination.cpuRequest
     val orchCpu = job.config.sync.syncResourceRequirements.orchestrator.cpuRequest
     if (!areJobResourceRequirementsValid(sourceCpu, destCpu, orchCpu)) {
-      // TODO: metrics and alerting
       logger.error {
         "Found invalid resource requirements in job configuration: ${job.config.sync.syncResourceRequirements}, skipping data worker usage insertion."
       }
+      sendRecordMetric(job.id, false, operation, organizationId, workspaceId, dataplaneGroupId)
       return null
     }
 
@@ -441,7 +501,38 @@ open class DataWorkerUsageService(
     return result
   }
 
+  /**
+   * We sometimes call this function before org/workspace/dataplaneGroup ID's
+   * are available, for example, when retrieving any of those values fails.
+   * Therefore, those parameters are optional.
+   */
+  private fun sendRecordMetric(
+    jobId: Long,
+    wasSuccess: Boolean,
+    operation: String,
+    organizationId: UUID? = null,
+    workspaceId: UUID? = null,
+    dataplaneGroupId: UUID? = null,
+  ) {
+    val attributes =
+      listOfNotNull(
+        MetricAttribute(MetricTags.JOB_ID, jobId.toString()),
+        MetricAttribute(MetricTags.SUCCESS, wasSuccess.toString()),
+        MetricAttribute(MetricTags.DATA_WORKER_USAGE_OPERATION, operation),
+        organizationId?.let { MetricAttribute(MetricTags.ORGANIZATION_ID, it.toString()) },
+        workspaceId?.let { MetricAttribute(MetricTags.WORKSPACE_ID, it.toString()) },
+        dataplaneGroupId?.let { MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, it.toString()) },
+      )
+
+    metricClient.count(
+      OssMetricsRegistry.DATA_WORKER_USAGE_RECORDED,
+      attributes = attributes.toTypedArray(),
+    )
+  }
+
   companion object {
     val VALID_PLANS = setOf(EntitlementPlan.PRO.id, EntitlementPlan.FLEX.id, EntitlementPlan.SME.id)
+    const val INCREMENT_OPERATION = "INCREMENT"
+    const val DECREMENT_OPERATION = "DECREMENT"
   }
 }

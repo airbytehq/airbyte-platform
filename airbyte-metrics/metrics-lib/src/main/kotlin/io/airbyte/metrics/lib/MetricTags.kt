@@ -53,6 +53,7 @@ object MetricTags {
   const val MADE_PROGRESS: String = "made_progress"
   const val PRIVATE: String = "private"
   const val PUBLIC: String = "public"
+  const val DATA_WORKER_USAGE_OPERATION: String = "data_worker_usage_operation"
 
   // the release stage of the highest release connector in the sync (GA > Beta > Alpha)
   const val MAX_CONNECTOR_RELEASE_STATE: String = "max_connector_release_stage"

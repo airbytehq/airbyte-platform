@@ -692,6 +692,10 @@ enum class OssMetricsRegistry(
     metricName = "entitlement_plan_retrieval",
     metricDescription = "a request was made to retrieve all entitlement plans for a customer",
   ),
+  DATA_WORKER_USAGE_RECORDED(
+    metricName = "data_worker_usage_recorded",
+    metricDescription = "a sync was recorded in the data_worker_usage table",
+  ),
   DOMAIN_VERIFICATION_RUN(
     metricName = "domain_verification_run",
     metricDescription = "number of cron runs for the domain verification cron",

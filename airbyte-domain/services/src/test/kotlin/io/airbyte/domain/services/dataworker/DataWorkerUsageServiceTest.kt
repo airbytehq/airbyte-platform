@@ -22,6 +22,7 @@ import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfigModel
 import io.airbyte.domain.models.EntitlementPlan
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.metrics.MetricClient
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -41,6 +42,7 @@ class DataWorkerUsageServiceTest {
   private lateinit var workspaceService: WorkspaceService
   private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var entitlementService: EntitlementService
+  private lateinit var metricClient: MetricClient
 
   private lateinit var service: DataWorkerUsageService
 
@@ -52,6 +54,7 @@ class DataWorkerUsageServiceTest {
     workspaceService = mockk()
     featureFlagClient = mockk(relaxed = true)
     entitlementService = mockk(relaxed = true)
+    metricClient = mockk(relaxed = true)
     service =
       DataWorkerUsageService(
         organizationService,
@@ -60,6 +63,7 @@ class DataWorkerUsageServiceTest {
         workspaceService,
         featureFlagClient,
         entitlementService,
+        metricClient,
       )
   }
 
