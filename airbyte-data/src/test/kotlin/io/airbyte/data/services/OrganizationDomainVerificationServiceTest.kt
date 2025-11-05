@@ -4,6 +4,9 @@
 
 package io.airbyte.data.services
 
+import io.airbyte.config.OrganizationEmailDomain
+import io.airbyte.config.SsoConfig
+import io.airbyte.config.SsoConfigStatus
 import io.airbyte.data.repositories.OrganizationDomainVerificationRepository
 import io.airbyte.data.services.impls.data.mappers.EntityDomainVerificationMethod
 import io.airbyte.data.services.impls.data.mappers.EntityDomainVerificationStatus
@@ -13,8 +16,10 @@ import io.airbyte.domain.models.DomainVerificationStatus
 import io.airbyte.domain.models.OrganizationDomainVerification
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.OffsetDateTime
@@ -23,6 +28,9 @@ import java.util.UUID
 
 class OrganizationDomainVerificationServiceTest {
   private val organizationDomainVerificationRepository: OrganizationDomainVerificationRepository = mockk()
+  private val dnsVerificationService: DnsVerificationService = mockk()
+  private val ssoConfigService: SsoConfigService = mockk()
+  private val organizationEmailDomainService: OrganizationEmailDomainService = mockk()
   private lateinit var organizationDomainVerificationService: OrganizationDomainVerificationService
 
   private val testOrgId = UUID.randomUUID()
@@ -32,7 +40,13 @@ class OrganizationDomainVerificationServiceTest {
 
   @BeforeEach
   fun setup() {
-    organizationDomainVerificationService = OrganizationDomainVerificationService(organizationDomainVerificationRepository)
+    organizationDomainVerificationService =
+      OrganizationDomainVerificationService(
+        organizationDomainVerificationRepository,
+        dnsVerificationService,
+        ssoConfigService,
+        organizationEmailDomainService,
+      )
   }
 
   @Test
@@ -177,13 +191,145 @@ class OrganizationDomainVerificationServiceTest {
       )
 
     every { organizationDomainVerificationRepository.findById(testId) } returns Optional.of(entity)
-    every { organizationDomainVerificationRepository.save(any()) } returns updatedEntity
+    every { organizationDomainVerificationRepository.update(any()) } returns updatedEntity
 
     val result = organizationDomainVerificationService.updateVerificationStatus(testId, DomainVerificationStatus.VERIFIED)
 
     assert(result.status == DomainVerificationStatus.VERIFIED)
     assert(result.attempts == 6)
-    verify { organizationDomainVerificationRepository.save(any()) }
+    verify { organizationDomainVerificationRepository.update(any()) }
+  }
+
+  @Nested
+  inner class CheckAndUpdateVerification {
+    @Test
+    fun `should update to VERIFIED when DNS matches`() {
+      val entity = createEntityFromDomain(createValidDomainModel()).copy(id = testId, attempts = 3)
+      val updatedEntity = entity.copy(status = EntityDomainVerificationStatus.verified, attempts = 4)
+
+      every { organizationDomainVerificationRepository.findById(testId) } returns Optional.of(entity)
+      every { dnsVerificationService.checkDomainVerification(any(), any()) } returns DnsVerificationResult.Verified
+      every { organizationDomainVerificationRepository.update(any()) } returns updatedEntity
+      every { ssoConfigService.getSsoConfig(testOrgId) } returns null
+
+      val result = organizationDomainVerificationService.checkAndUpdateVerification(testId)
+
+      assert(result.status == DomainVerificationStatus.VERIFIED)
+      verify { dnsVerificationService.checkDomainVerification("_airbyte-verification.$testDomain", "airbyte-domain-verification=$testToken") }
+      verify { organizationDomainVerificationRepository.update(any()) }
+    }
+
+    @Test
+    fun `should update to FAILED when DNS misconfigured`() {
+      val entity = createEntityFromDomain(createValidDomainModel()).copy(id = testId, attempts = 3)
+      val updatedEntity = entity.copy(status = EntityDomainVerificationStatus.failed, attempts = 4)
+
+      every { organizationDomainVerificationRepository.findById(testId) } returns Optional.of(entity)
+      every { dnsVerificationService.checkDomainVerification(any(), any()) } returns
+        DnsVerificationResult.Misconfigured(listOf("wrong-value"))
+      every { organizationDomainVerificationRepository.update(any()) } returns updatedEntity
+
+      val result = organizationDomainVerificationService.checkAndUpdateVerification(testId)
+
+      assert(result.status == DomainVerificationStatus.FAILED)
+      verify { organizationDomainVerificationRepository.update(any()) }
+    }
+
+    @Test
+    fun `should stay PENDING when DNS not found and not expired`() {
+      val entity =
+        createEntityFromDomain(createValidDomainModel()).copy(
+          id = testId,
+          attempts = 3,
+          expiresAt = OffsetDateTime.now().plusDays(7),
+        )
+      val updatedEntity = entity.copy(attempts = 4)
+
+      every { organizationDomainVerificationRepository.findById(testId) } returns Optional.of(entity)
+      every { dnsVerificationService.checkDomainVerification(any(), any()) } returns DnsVerificationResult.NotFound
+      every { organizationDomainVerificationRepository.update(any()) } returns updatedEntity
+
+      val result = organizationDomainVerificationService.checkAndUpdateVerification(testId)
+
+      assert(result.status == DomainVerificationStatus.PENDING)
+      assert(result.attempts == 4)
+    }
+
+    @Test
+    fun `should update to EXPIRED when DNS not found and past expiration`() {
+      val entity =
+        createEntityFromDomain(createValidDomainModel()).copy(
+          id = testId,
+          attempts = 3,
+          expiresAt = OffsetDateTime.now().minusDays(1),
+        )
+      val updatedEntity = entity.copy(status = EntityDomainVerificationStatus.expired, attempts = 4)
+
+      every { organizationDomainVerificationRepository.findById(testId) } returns Optional.of(entity)
+      every { dnsVerificationService.checkDomainVerification(any(), any()) } returns DnsVerificationResult.NotFound
+      every { organizationDomainVerificationRepository.update(any()) } returns updatedEntity
+
+      val result = organizationDomainVerificationService.checkAndUpdateVerification(testId)
+
+      assert(result.status == DomainVerificationStatus.EXPIRED)
+    }
+
+    @Test
+    fun `should create email domain enforcement when verified with active SSO`() {
+      val entity = createEntityFromDomain(createValidDomainModel()).copy(id = testId)
+      val updatedEntity = entity.copy(status = EntityDomainVerificationStatus.verified)
+      val ssoConfig = mockk<SsoConfig>()
+
+      every { organizationDomainVerificationRepository.findById(testId) } returns Optional.of(entity)
+      every { dnsVerificationService.checkDomainVerification(any(), any()) } returns DnsVerificationResult.Verified
+      every { organizationDomainVerificationRepository.update(any()) } returns updatedEntity
+      every { ssoConfigService.getSsoConfig(testOrgId) } returns ssoConfig
+      every { ssoConfig.status } returns SsoConfigStatus.ACTIVE
+      every { organizationEmailDomainService.existsByOrganizationIdAndDomain(testOrgId, testDomain) } returns false
+      every { organizationEmailDomainService.createEmailDomain(any()) } returns Unit
+
+      val result = organizationDomainVerificationService.checkAndUpdateVerification(testId)
+
+      assert(result.status == DomainVerificationStatus.VERIFIED)
+      verify { organizationEmailDomainService.createEmailDomain(any()) }
+    }
+
+    @Test
+    fun `should not create duplicate email domain enforcement`() {
+      val entity = createEntityFromDomain(createValidDomainModel()).copy(id = testId)
+      val updatedEntity = entity.copy(status = EntityDomainVerificationStatus.verified)
+      val ssoConfig = mockk<SsoConfig>()
+
+      every { organizationDomainVerificationRepository.findById(testId) } returns Optional.of(entity)
+      every { dnsVerificationService.checkDomainVerification(any(), any()) } returns DnsVerificationResult.Verified
+      every { organizationDomainVerificationRepository.update(any()) } returns updatedEntity
+      every { ssoConfigService.getSsoConfig(testOrgId) } returns ssoConfig
+      every { ssoConfig.status } returns SsoConfigStatus.ACTIVE
+      every { organizationEmailDomainService.existsByOrganizationIdAndDomain(testOrgId, testDomain) } returns true
+
+      val result = organizationDomainVerificationService.checkAndUpdateVerification(testId)
+
+      assert(result.status == DomainVerificationStatus.VERIFIED)
+      verify(exactly = 0) { organizationEmailDomainService.createEmailDomain(any()) }
+    }
+
+    @Test
+    fun `should throw when dnsRecordName is null`() {
+      val entity =
+        createEntityFromDomain(createValidDomainModel()).copy(
+          id = testId,
+          dnsRecordName = null,
+        )
+
+      every { organizationDomainVerificationRepository.findById(testId) } returns Optional.of(entity)
+
+      val exception =
+        assertThrows<IllegalStateException> {
+          organizationDomainVerificationService.checkAndUpdateVerification(testId)
+        }
+
+      assert(exception.message?.contains("no DNS record name") == true)
+    }
   }
 
   private fun createValidDomainModel(): OrganizationDomainVerification =

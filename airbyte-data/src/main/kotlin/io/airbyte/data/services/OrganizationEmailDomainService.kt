@@ -15,4 +15,9 @@ interface OrganizationEmailDomainService {
   fun deleteAllEmailDomains(organizationId: UUID)
 
   fun findByOrganizationId(organizationId: UUID): List<OrganizationEmailDomain>
+
+  fun existsByOrganizationIdAndDomain(
+    organizationId: UUID,
+    domain: String,
+  ): Boolean
 }

@@ -26,7 +26,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 class DomainVerificationApiControllerTest {
-  private lateinit var domainVerificationService: OrganizationDomainVerificationService
+  private lateinit var organizationDomainVerificationService: OrganizationDomainVerificationService
   private lateinit var roleResolver: RoleResolver
   private lateinit var currentUserService: CurrentUserService
   private lateinit var domainVerificationApiController: DomainVerificationApiController
@@ -39,14 +39,15 @@ class DomainVerificationApiControllerTest {
 
   @BeforeEach
   fun setup() {
-    domainVerificationService = mockk()
+    organizationDomainVerificationService = mockk()
     roleResolver = mockk(relaxed = true)
     currentUserService = mockk()
 
     domainVerificationApiController =
       DomainVerificationApiController(
-        domainVerificationService,
+        organizationDomainVerificationService,
         currentUserService,
+        roleResolver,
       )
 
     every { currentUserService.getCurrentUser() } returns
@@ -71,7 +72,7 @@ class DomainVerificationApiControllerTest {
       )
 
     every {
-      domainVerificationService.createDomainVerification(
+      organizationDomainVerificationService.createDomainVerification(
         organizationId = testOrgId,
         domain = testDomain,
         createdBy = any(),
@@ -93,7 +94,7 @@ class DomainVerificationApiControllerTest {
 
     verify(exactly = 1) { currentUserService.getCurrentUser() }
     verify(exactly = 1) {
-      domainVerificationService.createDomainVerification(
+      organizationDomainVerificationService.createDomainVerification(
         organizationId = testOrgId,
         domain = testDomain,
         createdBy = any(),
@@ -110,7 +111,7 @@ class DomainVerificationApiControllerTest {
       )
 
     every {
-      domainVerificationService.createDomainVerification(
+      organizationDomainVerificationService.createDomainVerification(
         organizationId = testOrgId,
         domain = testDomain,
         createdBy = any(),
@@ -125,7 +126,7 @@ class DomainVerificationApiControllerTest {
 
     assertEquals("Domain '$testDomain' is already verified for this organization.", exception.problem.getDetail())
     verify(exactly = 1) {
-      domainVerificationService.createDomainVerification(
+      organizationDomainVerificationService.createDomainVerification(
         organizationId = testOrgId,
         domain = testDomain,
         createdBy = any(),
@@ -151,7 +152,7 @@ class DomainVerificationApiControllerTest {
         status = DomainVerificationStatus.PENDING,
       )
 
-    every { domainVerificationService.findByOrganizationId(testOrgId) } returns listOf(domain1, domain2)
+    every { organizationDomainVerificationService.findByOrganizationId(testOrgId) } returns listOf(domain1, domain2)
 
     val result = domainVerificationApiController.listDomainVerifications(requestBody)
 
@@ -165,14 +166,14 @@ class DomainVerificationApiControllerTest {
     assertEquals("example2.com", verifications[1].domain)
     assertEquals(DomainVerificationResponse.Status.PENDING, verifications[1].status)
 
-    verify { domainVerificationService.findByOrganizationId(testOrgId) }
+    verify { organizationDomainVerificationService.findByOrganizationId(testOrgId) }
   }
 
   @Test
   fun `listDomainVerifications - returns empty list when no verifications`() {
     val requestBody = OrganizationIdRequestBody(organizationId = testOrgId)
 
-    every { domainVerificationService.findByOrganizationId(testOrgId) } returns emptyList()
+    every { organizationDomainVerificationService.findByOrganizationId(testOrgId) } returns emptyList()
 
     val result = domainVerificationApiController.listDomainVerifications(requestBody)
 
@@ -180,7 +181,7 @@ class DomainVerificationApiControllerTest {
     assertNotNull(verifications)
     assertEquals(0, verifications.size)
 
-    verify { domainVerificationService.findByOrganizationId(testOrgId) }
+    verify { organizationDomainVerificationService.findByOrganizationId(testOrgId) }
   }
 
   private fun createDomainModel(

@@ -84,8 +84,8 @@ airbyte:
       deletion-batch-size: ${WORKLOAD_QUEUE_DELETION_BATCH_SIZE:40000}
       deletion-cron: 0 15 * * * ?
   internal-api:
+    base-path: ${INTERNAL_API_HOST}/api
     auth:
-      type: INTERNAL_CLIENT_TOKEN
       signature-secret: ${AB_JWT_SIGNATURE_SECRET:}
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}

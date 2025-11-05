@@ -137,7 +137,8 @@ enum class OssMetricsRegistry(
     metricName = "cron_jobs_run",
     metricDescription = "number of cron runs by cron type",
   ),
-  CONNECTOR_REGISTRY_DEFINITION_PROCESSED( // Actually `cron` or `bootloader` based on which metric client calls the code
+  CONNECTOR_REGISTRY_DEFINITION_PROCESSED(
+    // Actually `cron` or `bootloader` based on which metric client calls the code
     metricName = "connector_registry_definition_processed",
     metricDescription = "increments when a connector registry definition is processed by the ApplyDefinitionsHelper",
   ),
@@ -687,10 +688,21 @@ enum class OssMetricsRegistry(
     metricName = "stigg_fallback",
     metricDescription = "stigg entitlement check returned a fallback value",
   ),
-
   ENTITLEMENT_PLAN_RETRIEVAL(
     metricName = "entitlement_plan_retrieval",
     metricDescription = "a request was made to retrieve all entitlement plans for a customer",
+  ),
+  DOMAIN_VERIFICATION_RUN(
+    metricName = "domain_verification_run",
+    metricDescription = "number of cron runs for the domain verification cron",
+  ),
+  DOMAIN_VERIFICATION_DONE(
+    metricName = "domain_verification_done",
+    metricDescription = "number of cron runs completed run for the domain verification cron",
+  ),
+  DOMAIN_VERIFICATION_DURATION(
+    metricName = "domain_verification_duration",
+    metricDescription = "duration of a run of the domain verification cron",
   ),
   ;
 

@@ -5764,6 +5764,48 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/domain_verifications/list_pending:
+    post:
+      tags:
+        - domain_verifications
+        - internal
+      summary: Get all pending domain verifications
+      description: Internal endpoint to fetch all pending domain verifications for cron processing.
+      operationId: listPendingDomainVerifications
+      responses:
+        "200":
+          description: List of pending domain verifications.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomainVerificationListResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/domain_verifications/check:
+    post:
+      tags:
+        - domain_verifications
+        - internal
+      summary: Check domain verification
+      description: Perform DNS lookup and update verification status.
+      operationId: checkDomainVerification
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DomainVerificationIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Domain verification check completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DomainVerificationResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/deployment/metadata:
     post:
       summary: Provides the Airbyte deployment metadata.
@@ -11863,10 +11905,10 @@ components:
           type: string
         verificationMethod:
           type: string
-          enum: [dns_txt, legacy]
+          enum: [DNS_TXT, LEGACY]
         status:
           type: string
-          enum: [pending, verified, failed, expired]
+          enum: [PENDING, VERIFIED, FAILED, EXPIRED]
         dnsRecordName:
           type: string
           nullable: true
@@ -11883,12 +11925,18 @@ components:
           type: integer
           format: int64
           nullable: true
+        lastCheckedAt:
+          type: integer
+          format: int64
+          nullable: true
         createdAt:
           type: integer
           format: int64
 
     DomainVerificationListResponse:
       type: object
+      required:
+        - domainVerifications
       properties:
         domainVerifications:
           type: array
@@ -16480,6 +16528,16 @@ components:
               type: boolean
         usage:
           $ref: "#/components/schemas/UsageBucket"
+
+    # DOMAIN VERIFICATION
+    DomainVerificationIdRequestBody:
+      type: object
+      required:
+        - domainVerificationId
+      properties:
+        domainVerificationId:
+          type: string
+          format: uuid
 
     # PERMISSIONS
     PermissionIdRequestBody:

@@ -33,4 +33,9 @@ class OrganizationEmailDomainServiceDataImpl(
     repository.findByOrganizationId(organizationId).map {
       it.toConfigModel()
     }
+
+  override fun existsByOrganizationIdAndDomain(
+    organizationId: UUID,
+    domain: String,
+  ): Boolean = repository.existsByOrganizationIdAndEmailDomain(organizationId, domain)
 }
