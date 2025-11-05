@@ -2776,4 +2776,107 @@ internal class ConnectionServiceJooqImplTest : BaseConfigDatabaseTest() {
     Assertions.assertEquals(result2.status, StandardSync.Status.LOCKED)
     Assertions.assertEquals(result2.statusReason, StatusReason.SUBSCRIPTION_DOWNGRADED_ACCESS_REVOKED.value)
   }
+
+  @Test
+  fun testCountConnectionsForOrganization() {
+    val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
+    jooqTestDbSetupHelper.setupForVersionUpgradeTest()
+
+    val organization = jooqTestDbSetupHelper.organization
+    val destination = jooqTestDbSetupHelper.destination
+    val source = jooqTestDbSetupHelper.source
+
+    // Create multiple connections for the organization
+    val connection1 =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection 1")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source!!.sourceId)
+        .withDestinationId(destination!!.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.MANUAL)
+        .withManual(true)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(connection1)
+
+    val connection2 =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection 2")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source.sourceId)
+        .withDestinationId(destination.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.ACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.MANUAL)
+        .withManual(true)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(connection2)
+
+    val connection3 =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("test connection 3")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source.sourceId)
+        .withDestinationId(destination.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.INACTIVE)
+        .withScheduleType(StandardSync.ScheduleType.MANUAL)
+        .withManual(true)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(connection3)
+
+    // Create a deprecated connection (should not be counted)
+    val deprecatedConnection =
+      StandardSync()
+        .withConnectionId(UUID.randomUUID())
+        .withName("deprecated connection")
+        .withNamespaceDefinition(JobSyncConfig.NamespaceDefinitionType.SOURCE)
+        .withSourceId(source.sourceId)
+        .withDestinationId(destination.destinationId)
+        .withOperationIds(mutableListOf())
+        .withCatalog(ConfiguredAirbyteCatalog().withStreams(mutableListOf()))
+        .withStatus(StandardSync.Status.DEPRECATED)
+        .withScheduleType(StandardSync.ScheduleType.MANUAL)
+        .withManual(true)
+        .withBreakingChange(false)
+
+    connectionServiceJooqImpl.writeStandardSync(deprecatedConnection)
+
+    // Count connections for the organization
+    val count = connectionServiceJooqImpl.countConnectionsForOrganization(organization!!.organizationId)
+
+    // Should count 3 non-deprecated connections
+    Assertions.assertEquals(3, count)
+  }
+
+  @Test
+  fun testCountConnectionsForOrganizationEmpty() {
+    val jooqTestDbSetupHelper = JooqTestDbSetupHelper()
+    jooqTestDbSetupHelper.setupForVersionUpgradeTest()
+
+    val organization = jooqTestDbSetupHelper.organization
+
+    // Count connections for organization with no connections
+    val count = connectionServiceJooqImpl.countConnectionsForOrganization(organization!!.organizationId)
+
+    Assertions.assertEquals(0, count)
+  }
+
+  @Test
+  fun testCountConnectionsForNonExistentOrganization() {
+    // Count connections for a non-existent organization
+    val count = connectionServiceJooqImpl.countConnectionsForOrganization(UUID.randomUUID())
+
+    Assertions.assertEquals(0, count)
+  }
 }

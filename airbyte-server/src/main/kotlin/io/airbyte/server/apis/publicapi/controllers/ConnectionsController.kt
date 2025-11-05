@@ -11,12 +11,17 @@ import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.problems.model.generated.ProblemConnectionLockedData
 import io.airbyte.api.problems.throwable.generated.ConnectionLockedProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.entitlements.EntitlementService
+import io.airbyte.commons.entitlements.models.UnimitedConnectionsEntitlement
 import io.airbyte.commons.server.authorization.RoleResolver
+import io.airbyte.commons.server.errors.ApplicationErrorKnownException
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.services.DestinationDiscoverService
 import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.data.helpers.WorkspaceHelper
 import io.airbyte.domain.models.ActorId
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.publicApi.server.generated.apis.PublicConnectionsApi
 import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionPatchRequest
@@ -57,6 +62,9 @@ open class ConnectionsController(
   private val trackingHelper: TrackingHelper,
   private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
+  private val workspaceHelper: WorkspaceHelper,
+  private val entitlementService: EntitlementService,
+  private val connectionDataService: io.airbyte.data.services.ConnectionService,
 ) : PublicConnectionsApi {
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
@@ -90,6 +98,19 @@ open class ConnectionsController(
         POST,
         userId,
       )
+
+    // Check connection limit entitlement
+    val organizationId = OrganizationId(workspaceHelper.getOrganizationForWorkspace(destinationRead.workspaceId))
+    val entitlementResult = entitlementService.checkEntitlement(organizationId, UnimitedConnectionsEntitlement)
+    if (!entitlementResult.isEntitled) {
+      val nConnections = connectionDataService.countConnectionsForOrganization(organizationId.value)
+      if (nConnections >= CONNECTION_LIMIT) {
+        throw ApplicationErrorKnownException(
+          "Cannot create connection: organization has reached the maximum limit of $CONNECTION_LIMIT connections." +
+            "organizationId=${organizationId.value} nConnections=$nConnections.",
+        )
+      }
+    }
 
     // get source schema for catalog id and airbyte catalog
     val schemaResponse: SourceDiscoverSchemaRead =
@@ -402,5 +423,9 @@ open class ConnectionsController(
       .status(Response.Status.OK.statusCode)
       .entity(connectionResponse)
       .build()
+  }
+
+  companion object {
+    const val CONNECTION_LIMIT = 100
   }
 }

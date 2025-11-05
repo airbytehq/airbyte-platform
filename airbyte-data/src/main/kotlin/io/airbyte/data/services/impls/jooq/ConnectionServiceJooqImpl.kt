@@ -1622,6 +1622,20 @@ class ConnectionServiceJooqImpl
           .fetchInto(UUID::class.java)
       }
 
+    override fun countConnectionsForOrganization(organizationId: UUID): Int =
+      database.query { ctx: DSLContext ->
+        ctx
+          .selectCount()
+          .from(Tables.CONNECTION)
+          .join(Tables.ACTOR)
+          .on(Tables.ACTOR.ID.eq(Tables.CONNECTION.SOURCE_ID))
+          .join(Tables.WORKSPACE)
+          .on(Tables.WORKSPACE.ID.eq(Tables.ACTOR.WORKSPACE_ID))
+          .where(Tables.WORKSPACE.ORGANIZATION_ID.eq(organizationId))
+          .and(Tables.CONNECTION.STATUS.ne(StatusType.deprecated))
+          .fetchOne(0, Int::class.java) ?: 0
+      }
+
     override fun listConnectionIdsForOrganizationAndActorDefinitions(
       organizationId: UUID,
       actorDefinitionIds: Collection<UUID>,
