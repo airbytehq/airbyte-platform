@@ -17,6 +17,7 @@ private const val ACTION_PAYMENT_SETUP_COMPLETED = "payment_setup_completed"
 private const val ACTION_SUBSCRIPTION_CANCELED = "subscription_canceled"
 private const val ACTION_SUBSCRIPTION_CANCELLATION_UNSCHEDULED = "subscription_cancellation_unscheduled"
 private const val ACTION_PLAN_PHASE_CHANGE = "plan_phase_change"
+private const val ACTION_ENTITLEMENT_PLAN_CHANGED = "entitlement_plan_changed"
 
 private const val METADATA_GRACE_PERIOD_END_AT_SECONDS = "grace_period_end_at_seconds"
 private const val METADATA_REASON = "reason"
@@ -26,6 +27,8 @@ private const val METADATA_PLAN_NAME = "plan_name"
 private const val METADATA_PLAN_ID = "plan_id"
 private const val METADATA_ORIGINAL_PHASE = "original_phase"
 private const val METADATA_NEW_PHASE = "new_phase"
+private const val METADATA_FROM_PLAN = "from_plan"
+private const val METADATA_TO_PLAN = "to_plan"
 
 /**
  * This helper provides convenience wrappers around the tracking client for billing-related events.
@@ -162,6 +165,22 @@ class BillingTrackingHelper(
         METADATA_PLAN_ID to planId,
         METADATA_ORIGINAL_PHASE to originalPhase.toString(),
         METADATA_NEW_PHASE to newPhase.toString(),
+      ),
+    )
+  }
+
+  fun trackEntitlementPlanChanged(
+    organizationId: UUID,
+    fromPlan: String,
+    toPlan: String,
+  ) {
+    trackingClient.track(
+      organizationId,
+      ScopeType.ORGANIZATION,
+      ACTION_ENTITLEMENT_PLAN_CHANGED,
+      mapOf(
+        METADATA_FROM_PLAN to fromPlan,
+        METADATA_TO_PLAN to toPlan,
       ),
     )
   }

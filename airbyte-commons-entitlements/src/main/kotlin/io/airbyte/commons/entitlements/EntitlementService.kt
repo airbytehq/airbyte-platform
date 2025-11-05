@@ -117,6 +117,7 @@ internal class EntitlementServiceImpl(
   private val entitlementProvider: EntitlementProvider,
   private val metricClient: MetricClient,
   private val featureDegradationService: FeatureDegradationService,
+  private val billingTrackingHelper: io.airbyte.analytics.BillingTrackingHelper,
 ) : EntitlementService {
   /**
    * Checks if an organization is entitled to a specific feature or capability.
@@ -208,6 +209,13 @@ internal class EntitlementServiceImpl(
 
         // Update with preserved add-ons
         entitlementClient.updateOrganization(organizationId, plan)
+
+        // Track the entitlement plan change
+        billingTrackingHelper.trackEntitlementPlanChanged(
+          organizationId.value,
+          currentPlan.id,
+          plan.id,
+        )
       }
     } else {
       sendCountMetric(OssMetricsRegistry.ENTITLEMENT_ORGANIZATION_ENROLMENT, organizationId, true)

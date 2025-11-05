@@ -37,7 +37,9 @@ class EntitlementServiceTest {
   private val entitlementProvider = mockk<EntitlementProvider>()
   private val metricClient = mockk<MetricClient>(relaxed = true)
   private val featureDegradationService = mockk<FeatureDegradationService>()
-  private val entitlementService = EntitlementServiceImpl(entitlementClient, entitlementProvider, metricClient, featureDegradationService)
+  private val billingTrackingHelper = mockk<io.airbyte.analytics.BillingTrackingHelper>(relaxed = true)
+  private val entitlementService =
+    EntitlementServiceImpl(entitlementClient, entitlementProvider, metricClient, featureDegradationService, billingTrackingHelper)
 
   @Test
   fun `checkEntitlement delegates to entitlementClient`() {
@@ -270,6 +272,21 @@ class EntitlementServiceTest {
   }
 
   @Test
+  fun `addOrUpdateOrganization tracks plan change analytics event`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    every { entitlementClient.getPlans(orgId) } returns
+      listOf(EntitlementPlanResponse(EntitlementPlan.STANDARD, EntitlementPlan.STANDARD.id, EntitlementPlan.STANDARD.name))
+    every { entitlementClient.getEntitlements(orgId) } returns emptyList()
+    every { entitlementClient.updateOrganization(orgId, EntitlementPlan.PRO) } just runs
+    every { featureDegradationService.downgradeFeaturesIfRequired(orgId, EntitlementPlan.STANDARD, EntitlementPlan.PRO) } just runs
+
+    entitlementService.addOrUpdateOrganization(orgId, EntitlementPlan.PRO)
+
+    verify { billingTrackingHelper.trackEntitlementPlanChanged(orgId.value, EntitlementPlan.STANDARD.id, EntitlementPlan.PRO.id) }
+  }
+
+  @Test
   fun `addOrUpdateOrganization returns early when already on same plan`() {
     val orgId = OrganizationId(UUID.randomUUID())
 
@@ -281,6 +298,30 @@ class EntitlementServiceTest {
     verify { entitlementClient.getPlans(orgId) }
     verify(exactly = 0) { entitlementClient.updateOrganization(any(), any()) }
     verify(exactly = 0) { entitlementClient.addOrganization(any(), any()) }
+  }
+
+  @Test
+  fun `addOrUpdateOrganization does not track analytics event when already on same plan`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    every { entitlementClient.getPlans(orgId) } returns
+      listOf(EntitlementPlanResponse(EntitlementPlan.STANDARD, EntitlementPlan.STANDARD.id, EntitlementPlan.STANDARD.name))
+
+    entitlementService.addOrUpdateOrganization(orgId, EntitlementPlan.STANDARD)
+
+    verify(exactly = 0) { billingTrackingHelper.trackEntitlementPlanChanged(any(), any(), any()) }
+  }
+
+  @Test
+  fun `addOrUpdateOrganization does not track analytics event when adding new organization`() {
+    val orgId = OrganizationId(UUID.randomUUID())
+
+    every { entitlementClient.getPlans(orgId) } returns emptyList()
+    every { entitlementClient.addOrganization(orgId, EntitlementPlan.STANDARD) } just runs
+
+    entitlementService.addOrUpdateOrganization(orgId, EntitlementPlan.STANDARD)
+
+    verify(exactly = 0) { billingTrackingHelper.trackEntitlementPlanChanged(any(), any(), any()) }
   }
 
   @Test

@@ -16,6 +16,7 @@ dependencies {
   api(project(":oss:airbyte-commons-micronaut"))
   api(project(":oss:airbyte-config:config-models"))
 
+  implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-commons-license"))
   implementation(project(":oss:airbyte-data"))
