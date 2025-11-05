@@ -586,6 +586,27 @@ components:
               default: Syncs
             data:
               $ref: "#/components/schemas/ProblemCronExpressionData"
+    BasicScheduleValidationUnderOneHourNotAllowedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:basic-schedule-validation/under-one-hour-not-allowed
+            title:
+              type: string
+              default: Basic sync schedules more frequent than once per hour are not allowed
+            detail:
+              type: string
+              default: Syncs more frequent than once per hour require an entitlement
+            data:
+              $ref: "#/components/schemas/ProblemBasicScheduleData"
     MapperValidationProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -1186,6 +1207,18 @@ components:
       properties:
         cronExpression:
           type: string
+        validationErrorMessage:
+          type: string
+    ProblemBasicScheduleData:
+      type: object
+      required:
+        - timeUnit
+        - units
+      properties:
+        timeUnit:
+          type: string
+        units:
+          type: integer
         validationErrorMessage:
           type: string
     ProblemCronTimezoneData:

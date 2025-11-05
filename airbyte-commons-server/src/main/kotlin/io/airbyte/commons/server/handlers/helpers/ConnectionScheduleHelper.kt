@@ -7,9 +7,11 @@ package io.airbyte.commons.server.handlers.helpers
 import com.cronutils.model.Cron
 import io.airbyte.api.model.generated.ConnectionScheduleData
 import io.airbyte.api.model.generated.ConnectionScheduleType
+import io.airbyte.api.problems.model.generated.ProblemBasicScheduleData
 import io.airbyte.api.problems.model.generated.ProblemCronData
 import io.airbyte.api.problems.model.generated.ProblemCronExpressionData
 import io.airbyte.api.problems.model.generated.ProblemCronTimezoneData
+import io.airbyte.api.problems.throwable.generated.BasicScheduleValidationUnderOneHourNotAllowedProblem
 import io.airbyte.api.problems.throwable.generated.CronValidationInvalidExpressionProblem
 import io.airbyte.api.problems.throwable.generated.CronValidationInvalidTimezoneProblem
 import io.airbyte.api.problems.throwable.generated.CronValidationMissingComponentProblem
@@ -79,6 +81,33 @@ class ConnectionScheduleHelper(
         if (scheduleData?.basicSchedule == null) {
           throw JsonValidationException("if schedule type is basic, then scheduleData.basic must be populated")
         }
+
+        val isSubHourSchedule =
+          scheduleData.basicSchedule.timeUnit == io.airbyte.api.model.generated.ConnectionScheduleDataBasicSchedule.TimeUnitEnum.MINUTES &&
+            scheduleData.basicSchedule.units < 60
+
+        if (isSubHourSchedule) {
+          val workspaceId = workspaceHelper.getWorkspaceForSourceId(standardSync.sourceId)
+          val organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId)
+          val canSyncUnderOneHour =
+            featureFlagClient.boolVariation(
+              SubOneHourSyncSchedules,
+              Multi(
+                List.of(Organization(organizationId), Workspace(workspaceId)),
+              ),
+            ) ||
+              entitlementService.checkEntitlement(OrganizationId(organizationId), FasterSyncFrequencyEntitlement).isEntitled
+
+          if (!canSyncUnderOneHour) {
+            throw BasicScheduleValidationUnderOneHourNotAllowedProblem(
+              ProblemBasicScheduleData()
+                .timeUnit(scheduleData.basicSchedule.timeUnit.toString())
+                .units(scheduleData.basicSchedule.units.toInt())
+                .validationErrorMessage("Basic schedules must be at least 1 hour apart"),
+            )
+          }
+        }
+
         standardSync
           .withScheduleType(StandardSync.ScheduleType.BASIC_SCHEDULE)
           .withScheduleData(

@@ -8,6 +8,7 @@ import io.airbyte.api.model.generated.ConnectionScheduleData
 import io.airbyte.api.model.generated.ConnectionScheduleDataBasicSchedule
 import io.airbyte.api.model.generated.ConnectionScheduleDataCron
 import io.airbyte.api.model.generated.ConnectionScheduleType
+import io.airbyte.api.problems.throwable.generated.BasicScheduleValidationUnderOneHourNotAllowedProblem
 import io.airbyte.api.problems.throwable.generated.CronValidationInvalidExpressionProblem
 import io.airbyte.api.problems.throwable.generated.CronValidationInvalidTimezoneProblem
 import io.airbyte.api.problems.throwable.generated.CronValidationMissingComponentProblem
@@ -784,6 +785,99 @@ internal class ConnectionSchedulerHelperTest {
         ).initCause(e) as RuntimeException
       }
     }
+  }
+
+  @Test
+  fun testBasicScheduleSubHourWithEntitlement() {
+    Mockito
+      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement))
+      .thenReturn(EntitlementResult(FasterSyncFrequencyEntitlement.featureId, true, null))
+
+    val actual = StandardSync().withSourceId(UUID.randomUUID())
+    connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
+      actual,
+      ConnectionScheduleType.BASIC,
+      ConnectionScheduleData()
+        .basicSchedule(
+          ConnectionScheduleDataBasicSchedule()
+            .timeUnit(ConnectionScheduleDataBasicSchedule.TimeUnitEnum.MINUTES)
+            .units(30L),
+        ),
+    )
+    Assertions.assertFalse(actual.getManual())
+    Assertions.assertEquals(StandardSync.ScheduleType.BASIC_SCHEDULE, actual.getScheduleType())
+    Assertions.assertEquals(BasicSchedule.TimeUnit.MINUTES, actual.getScheduleData().getBasicSchedule().getTimeUnit())
+    Assertions.assertEquals(30L, actual.getScheduleData().getBasicSchedule().getUnits())
+  }
+
+  @Test
+  fun testBasicScheduleSubHourWithoutEntitlement() {
+    Mockito
+      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement))
+      .thenReturn(EntitlementResult(FasterSyncFrequencyEntitlement.featureId, false, null))
+
+    val actual = StandardSync().withSourceId(UUID.randomUUID())
+    Assertions.assertThrows(BasicScheduleValidationUnderOneHourNotAllowedProblem::class.java) {
+      connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
+        actual,
+        ConnectionScheduleType.BASIC,
+        ConnectionScheduleData()
+          .basicSchedule(
+            ConnectionScheduleDataBasicSchedule()
+              .timeUnit(ConnectionScheduleDataBasicSchedule.TimeUnitEnum.MINUTES)
+              .units(30L),
+          ),
+      )
+    }
+  }
+
+  @Test
+  fun testBasicScheduleOneHourOrMoreWithoutEntitlement() {
+    Mockito
+      .`when`(entitlementService.checkEntitlement(TEST_ORG_ID, FasterSyncFrequencyEntitlement))
+      .thenReturn(EntitlementResult(FasterSyncFrequencyEntitlement.featureId, false, null))
+
+    // Test 60 minutes (exactly 1 hour) - should work without entitlement
+    val actual1 = StandardSync().withSourceId(UUID.randomUUID())
+    connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
+      actual1,
+      ConnectionScheduleType.BASIC,
+      ConnectionScheduleData()
+        .basicSchedule(
+          ConnectionScheduleDataBasicSchedule()
+            .timeUnit(ConnectionScheduleDataBasicSchedule.TimeUnitEnum.MINUTES)
+            .units(60L),
+        ),
+    )
+    Assertions.assertEquals(StandardSync.ScheduleType.BASIC_SCHEDULE, actual1.getScheduleType())
+
+    // Test 1 hour - should work without entitlement
+    val actual2 = StandardSync().withSourceId(UUID.randomUUID())
+    connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
+      actual2,
+      ConnectionScheduleType.BASIC,
+      ConnectionScheduleData()
+        .basicSchedule(
+          ConnectionScheduleDataBasicSchedule()
+            .timeUnit(ConnectionScheduleDataBasicSchedule.TimeUnitEnum.HOURS)
+            .units(1L),
+        ),
+    )
+    Assertions.assertEquals(StandardSync.ScheduleType.BASIC_SCHEDULE, actual2.getScheduleType())
+
+    // Test 24 hours - should work without entitlement
+    val actual3 = StandardSync().withSourceId(UUID.randomUUID())
+    connectionScheduleHelper!!.populateSyncFromScheduleTypeAndData(
+      actual3,
+      ConnectionScheduleType.BASIC,
+      ConnectionScheduleData()
+        .basicSchedule(
+          ConnectionScheduleDataBasicSchedule()
+            .timeUnit(ConnectionScheduleDataBasicSchedule.TimeUnitEnum.HOURS)
+            .units(24L),
+        ),
+    )
+    Assertions.assertEquals(StandardSync.ScheduleType.BASIC_SCHEDULE, actual3.getScheduleType())
   }
 
   companion object {
