@@ -37,7 +37,7 @@ export const links = {
   connectorBuilderAssist: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/ai-assist`,
   connectorBuilderCustomComponents: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/custom-components`,
   connectorBuilderStreamTemplates: `${BASE_DOCS_LINK}/platform/next/connector-development/connector-builder-ui/stream-templates`,
-  contributeNewConnectorGitHubToken: `${BASE_DOCS_LINK}/contributing-to-airbyte/submit-new-connector#obtaining-your-github-access-token`,
+  contributeNewConnectorGitHubToken: `${BASE_DOCS_LINK}/platform/connector-development/submit-new-connector#obtaining-your-github-access-token`,
   creditDescription: `${BASE_DOCS_LINK}/cloud/managing-airbyte-cloud/manage-credits#what-are-credits`,
   pricingPage: "https://airbyte.com/pricing",
   usingCustomConnectors: `${BASE_DOCS_LINK}/operator-guides/using-custom-connectors/`,
