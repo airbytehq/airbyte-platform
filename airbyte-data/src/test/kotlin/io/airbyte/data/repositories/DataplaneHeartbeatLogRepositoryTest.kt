@@ -232,6 +232,238 @@ class DataplaneHeartbeatLogRepositoryTest : AbstractConfigRepositoryTest() {
   }
 
   @Test
+  fun `findHeartbeatHistoryForDataplanes returns heartbeats for multiple dataplanes`() {
+    val dataplaneId1 = UUID.randomUUID()
+    val dataplaneId2 = UUID.randomUUID()
+    val dataplaneId3 = UUID.randomUUID()
+    val now = OffsetDateTime.now()
+
+    // Create heartbeats for dataplane 1
+    val log1a =
+      dataplaneHeartbeatLogRepository.save(
+        DataplaneHeartbeatLog(
+          dataplaneId = dataplaneId1,
+          controlPlaneVersion = "1.0.0",
+          dataplaneVersion = "2.0.0",
+        ),
+      )
+
+    Thread.sleep(10)
+
+    val log1b =
+      dataplaneHeartbeatLogRepository.save(
+        DataplaneHeartbeatLog(
+          dataplaneId = dataplaneId1,
+          controlPlaneVersion = "1.0.1",
+          dataplaneVersion = "2.0.1",
+        ),
+      )
+
+    // Create heartbeats for dataplane 2
+    val log2a =
+      dataplaneHeartbeatLogRepository.save(
+        DataplaneHeartbeatLog(
+          dataplaneId = dataplaneId2,
+          controlPlaneVersion = "1.1.0",
+          dataplaneVersion = "2.1.0",
+        ),
+      )
+
+    Thread.sleep(10)
+
+    val log2b =
+      dataplaneHeartbeatLogRepository.save(
+        DataplaneHeartbeatLog(
+          dataplaneId = dataplaneId2,
+          controlPlaneVersion = "1.1.1",
+          dataplaneVersion = "2.1.1",
+        ),
+      )
+
+    // Create heartbeat for dataplane 3
+    val log3 =
+      dataplaneHeartbeatLogRepository.save(
+        DataplaneHeartbeatLog(
+          dataplaneId = dataplaneId3,
+          controlPlaneVersion = "1.2.0",
+          dataplaneVersion = "2.2.0",
+        ),
+      )
+
+    // Query for all three dataplanes
+    val allHistory =
+      dataplaneHeartbeatLogRepository.findHeartbeatHistoryForDataplanes(
+        dataplaneIds = listOf(dataplaneId1, dataplaneId2, dataplaneId3),
+        startTime = now.minusMinutes(1),
+        endTime = now.plusMinutes(1),
+      )
+
+    assertEquals(5, allHistory.size)
+
+    // Group by dataplane and verify each has expected logs
+    val historyByDataplane = allHistory.groupBy { it.dataplaneId }
+
+    assertEquals(2, historyByDataplane[dataplaneId1]?.size)
+    assertThat(historyByDataplane[dataplaneId1]?.map { it.id })
+      .containsExactlyInAnyOrder(log1a.id, log1b.id)
+
+    assertEquals(2, historyByDataplane[dataplaneId2]?.size)
+    assertThat(historyByDataplane[dataplaneId2]?.map { it.id })
+      .containsExactlyInAnyOrder(log2a.id, log2b.id)
+
+    assertEquals(1, historyByDataplane[dataplaneId3]?.size)
+    assertEquals(log3.id, historyByDataplane[dataplaneId3]?.get(0)?.id)
+  }
+
+  @Test
+  fun `findHeartbeatHistoryForDataplanes returns results ordered by created_at desc within each dataplane`() {
+    val dataplaneId1 = UUID.randomUUID()
+    val dataplaneId2 = UUID.randomUUID()
+    val now = OffsetDateTime.now()
+
+    // Create heartbeats for dataplane 1
+    val log1a =
+      dataplaneHeartbeatLogRepository.save(
+        DataplaneHeartbeatLog(
+          dataplaneId = dataplaneId1,
+          controlPlaneVersion = "1.0.0",
+          dataplaneVersion = "2.0.0",
+        ),
+      )
+
+    Thread.sleep(10)
+
+    val log1b =
+      dataplaneHeartbeatLogRepository.save(
+        DataplaneHeartbeatLog(
+          dataplaneId = dataplaneId1,
+          controlPlaneVersion = "1.0.1",
+          dataplaneVersion = "2.0.1",
+        ),
+      )
+
+    // Create heartbeats for dataplane 2
+    val log2a =
+      dataplaneHeartbeatLogRepository.save(
+        DataplaneHeartbeatLog(
+          dataplaneId = dataplaneId2,
+          controlPlaneVersion = "1.1.0",
+          dataplaneVersion = "2.1.0",
+        ),
+      )
+
+    Thread.sleep(10)
+
+    val log2b =
+      dataplaneHeartbeatLogRepository.save(
+        DataplaneHeartbeatLog(
+          dataplaneId = dataplaneId2,
+          controlPlaneVersion = "1.1.1",
+          dataplaneVersion = "2.1.1",
+        ),
+      )
+
+    val history =
+      dataplaneHeartbeatLogRepository.findHeartbeatHistoryForDataplanes(
+        dataplaneIds = listOf(dataplaneId1, dataplaneId2),
+        startTime = now.minusMinutes(1),
+        endTime = now.plusMinutes(1),
+      )
+
+    assertEquals(4, history.size)
+
+    // Group by dataplane to verify ordering within each group
+    val historyByDataplane = history.groupBy { it.dataplaneId }
+
+    // Within each dataplane, should be ordered by created_at DESC (newest first)
+    val dataplane1History = historyByDataplane[dataplaneId1]!!
+    assertEquals(log1b.id, dataplane1History[0].id)
+    assertEquals(log1a.id, dataplane1History[1].id)
+
+    val dataplane2History = historyByDataplane[dataplaneId2]!!
+    assertEquals(log2b.id, dataplane2History[0].id)
+    assertEquals(log2a.id, dataplane2History[1].id)
+  }
+
+  @Test
+  fun `findHeartbeatHistoryForDataplanes respects time range filter`() {
+    val dataplaneId1 = UUID.randomUUID()
+    val dataplaneId2 = UUID.randomUUID()
+    val now = OffsetDateTime.now()
+
+    // Create an old heartbeat for dataplane 1
+    jooqDslContext
+      .insertInto(Tables.DATAPLANE_HEARTBEAT_LOG)
+      .columns(
+        Tables.DATAPLANE_HEARTBEAT_LOG.ID,
+        Tables.DATAPLANE_HEARTBEAT_LOG.DATAPLANE_ID,
+        Tables.DATAPLANE_HEARTBEAT_LOG.CONTROL_PLANE_VERSION,
+        Tables.DATAPLANE_HEARTBEAT_LOG.DATAPLANE_VERSION,
+        Tables.DATAPLANE_HEARTBEAT_LOG.CREATED_AT,
+      ).values(
+        UUID.randomUUID(),
+        dataplaneId1,
+        "1.0.0",
+        "2.0.0",
+        now.minusMinutes(10),
+      ).execute()
+
+    // Create recent heartbeats
+    val log1 =
+      dataplaneHeartbeatLogRepository.save(
+        DataplaneHeartbeatLog(
+          dataplaneId = dataplaneId1,
+          controlPlaneVersion = "1.0.1",
+          dataplaneVersion = "2.0.1",
+        ),
+      )
+
+    val log2 =
+      dataplaneHeartbeatLogRepository.save(
+        DataplaneHeartbeatLog(
+          dataplaneId = dataplaneId2,
+          controlPlaneVersion = "1.1.0",
+          dataplaneVersion = "2.1.0",
+        ),
+      )
+
+    // Query for only recent heartbeats (last 5 minutes)
+    val recentHistory =
+      dataplaneHeartbeatLogRepository.findHeartbeatHistoryForDataplanes(
+        dataplaneIds = listOf(dataplaneId1, dataplaneId2),
+        startTime = now.minusMinutes(5),
+        endTime = now.plusMinutes(1),
+      )
+
+    assertEquals(2, recentHistory.size)
+    assertThat(recentHistory.map { it.id }).containsExactlyInAnyOrder(log1.id, log2.id)
+  }
+
+  @Test
+  fun `findHeartbeatHistoryForDataplanes returns empty list when no heartbeats in time range`() {
+    val dataplaneId = UUID.randomUUID()
+    val now = OffsetDateTime.now()
+
+    dataplaneHeartbeatLogRepository.save(
+      DataplaneHeartbeatLog(
+        dataplaneId = dataplaneId,
+        controlPlaneVersion = "1.0.0",
+        dataplaneVersion = "2.0.0",
+      ),
+    )
+
+    // Query for heartbeats in the future
+    val history =
+      dataplaneHeartbeatLogRepository.findHeartbeatHistoryForDataplanes(
+        dataplaneIds = listOf(dataplaneId),
+        startTime = now.plusMinutes(10),
+        endTime = now.plusMinutes(20),
+      )
+
+    assertEquals(0, history.size)
+  }
+
+  @Test
   fun `findLatestHeartbeatsByDataplaneIds returns empty list when no heartbeats exist`() {
     val dataplaneId = UUID.randomUUID()
 

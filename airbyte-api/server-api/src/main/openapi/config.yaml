@@ -7397,6 +7397,28 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/dataplanes/health:
+    post:
+      summary: Get health status for dataplanes
+      tags:
+        - dataplanes
+      operationId: listDataplaneHealth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved dataplane health statuses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneHealthListResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/dataplanes/initialize:
     post:
       summary: Returns information needed for dataplane startup and initialization (groups, queues, AuthN identify, etc.)
@@ -21932,6 +21954,61 @@ components:
         organization_id:
           type: string
           format: uuid
+    DataplaneHealthListResponse:
+      type: object
+      required:
+        - dataplanes
+      properties:
+        dataplanes:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataplaneHealthRead"
+    DataplaneHealthRead:
+      type: object
+      required:
+        - dataplane_id
+        - dataplane_name
+        - dataplane_group_id
+        - organization_id
+        - status
+      properties:
+        dataplane_id:
+          type: string
+          format: uuid
+        dataplane_name:
+          type: string
+        dataplane_group_id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - HEALTHY
+            - DEGRADED
+            - UNHEALTHY
+            - UNKNOWN
+        last_heartbeat_timestamp:
+          type: string
+          format: date-time
+        recent_heartbeats:
+          type: array
+          items:
+            $ref: "#/components/schemas/HeartbeatRecord"
+        control_plane_version:
+          type: string
+        dataplane_version:
+          type: string
+    HeartbeatRecord:
+      type: object
+      required:
+        - timestamp
+      properties:
+        timestamp:
+          type: string
+          format: date-time
     DataplaneInitRequestBody:
       required:
         - client_id

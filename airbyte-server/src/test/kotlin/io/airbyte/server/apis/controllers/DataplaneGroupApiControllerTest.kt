@@ -42,7 +42,7 @@ class DataplaneGroupApiControllerTest {
   fun `createDataplaneGroup returns the dataplane group`() {
     every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), SelfManagedRegionsEntitlement) } returns Unit
     every { dataplaneGroupService.writeDataplaneGroup(any()) } returns createDataplaneGroup()
-    every { dataplaneService.listDataplanes(any()) } returns emptyList()
+    every { dataplaneService.listDataplanes(any<UUID>()) } returns emptyList()
 
     val dataplaneGroup = dataplaneGroupApiController.createDataplaneGroup(DataplaneGroupCreateRequestBody().organizationId(MOCK_ORGANIZATION_ID))
     val responseDataplaneGroups = dataplaneGroup!!
@@ -76,7 +76,7 @@ class DataplaneGroupApiControllerTest {
         name = newName
         enabled = newEnabled
       }
-    every { dataplaneService.listDataplanes(any()) } returns emptyList()
+    every { dataplaneService.listDataplanes(any<UUID>()) } returns emptyList()
 
     val updatedDataplaneGroup =
       dataplaneGroupApiController.updateDataplaneGroup(
@@ -119,7 +119,7 @@ class DataplaneGroupApiControllerTest {
     every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), SelfManagedRegionsEntitlement) } returns Unit
     every { dataplaneGroupService.getDataplaneGroup(mockDataplaneGroup.id) } returns mockDataplaneGroup
     every { dataplaneGroupService.writeDataplaneGroup(any()) } answers { firstArg() }
-    every { dataplaneService.listDataplanes(any()) } returns emptyList()
+    every { dataplaneService.listDataplanes(any<UUID>()) } returns emptyList()
 
     val updated =
       dataplaneGroupApiController.updateDataplaneGroup(
@@ -145,7 +145,7 @@ class DataplaneGroupApiControllerTest {
     every { entitlementService.ensureEntitled(OrganizationId(MOCK_ORGANIZATION_ID), SelfManagedRegionsEntitlement) } returns Unit
     every { dataplaneGroupService.getDataplaneGroup(mockDataplaneGroup.id) } returns mockDataplaneGroup
     every { dataplaneGroupService.writeDataplaneGroup(any()) } answers { firstArg() }
-    every { dataplaneService.listDataplanes(any()) } returns emptyList()
+    every { dataplaneService.listDataplanes(any<UUID>()) } returns emptyList()
 
     val updated =
       dataplaneGroupApiController.updateDataplaneGroup(
@@ -176,7 +176,7 @@ class DataplaneGroupApiControllerTest {
     every { dataplaneGroupService.getDataplaneGroup(any()) } returns mockDataplaneGroup
     every { dataplaneGroupService.writeDataplaneGroup(mockDataplaneGroup.apply { tombstone = true }) } returns
       mockDataplaneGroup.apply { tombstone = true }
-    every { dataplaneService.listDataplanes(any()) } returns listOf(mockDataplane)
+    every { dataplaneService.listDataplanes(any<UUID>()) } returns listOf(mockDataplane)
     every { dataplaneService.deleteDataplane(any()) } returns mockDataplane
 
     val dataplaneGroupDeleteRequestBody =
@@ -200,7 +200,7 @@ class DataplaneGroupApiControllerTest {
         createDataplaneGroup(dataplaneGroupId1),
         createDataplaneGroup(dataplaneGroupId2),
       )
-    every { dataplaneService.listDataplanes(any()) } returns emptyList()
+    every { dataplaneService.listDataplanes(any<UUID>()) } returns emptyList()
 
     val dataplaneGroups = dataplaneGroupApiController.listDataplaneGroups(DataplaneGroupListRequestBody().organizationId(MOCK_ORGANIZATION_ID))
 

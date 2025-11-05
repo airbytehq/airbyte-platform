@@ -9,6 +9,8 @@ import io.airbyte.api.model.generated.AccessToken
 import io.airbyte.api.model.generated.DataplaneCreateRequestBody
 import io.airbyte.api.model.generated.DataplaneCreateResponse
 import io.airbyte.api.model.generated.DataplaneDeleteRequestBody
+import io.airbyte.api.model.generated.DataplaneHealthListResponse
+import io.airbyte.api.model.generated.DataplaneHealthRead
 import io.airbyte.api.model.generated.DataplaneHeartbeatRequestBody
 import io.airbyte.api.model.generated.DataplaneHeartbeatResponse
 import io.airbyte.api.model.generated.DataplaneInitRequestBody
@@ -18,6 +20,8 @@ import io.airbyte.api.model.generated.DataplaneListResponse
 import io.airbyte.api.model.generated.DataplaneRead
 import io.airbyte.api.model.generated.DataplaneTokenRequestBody
 import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
+import io.airbyte.api.model.generated.HeartbeatRecord
+import io.airbyte.api.model.generated.OrganizationIdRequestBody
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.auth.roles.AuthRoleConstants.DATAPLANE
@@ -272,5 +276,45 @@ open class DataplaneController(
     val dataplaneGroupId = dataplaneService.getDataplane(dataplaneId.value.toString()).dataplaneGroupId
     val orgId = OrganizationId(dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplaneGroupId))
     entitlementService.ensureEntitled(orgId, SelfManagedRegionsEntitlement)
+  }
+
+  @Post("/health")
+  @RequiresIntent(Intent.ManageDataplanes)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  fun listDataplaneHealth(
+    @Body request: OrganizationIdRequestBody,
+  ): DataplaneHealthListResponse {
+    entitlementService.ensureEntitled(OrganizationId(request.organizationId), SelfManagedRegionsEntitlement)
+
+    val dataplaneGroups = dataplaneGroupService.listDataplaneGroups(listOf(request.organizationId), false)
+    val dataplaneGroupMap = dataplaneGroups.associateBy { it.id }
+
+    val dataplanes = dataplaneService.listDataplanes(dataplaneGroups.map { it.id })
+    val dataplaneMap = dataplanes.associateBy { it.id }
+
+    val healthInfos = dataplaneHealthService.getDataplaneHealthInfos(dataplanes.map { it.id })
+
+    val dataplaneHealthReads =
+      healthInfos.map { healthInfo ->
+        val dataplane = dataplaneMap[healthInfo.dataplaneId]!!
+        val dataplaneGroup = dataplaneGroupMap[dataplane.dataplaneGroupId]!!
+
+        DataplaneHealthRead()
+          .dataplaneId(healthInfo.dataplaneId)
+          .dataplaneName(dataplane.name)
+          .dataplaneGroupId(dataplane.dataplaneGroupId)
+          .organizationId(dataplaneGroup.organizationId)
+          .status(DataplaneHealthRead.StatusEnum.fromValue(healthInfo.status.name))
+          .lastHeartbeatTimestamp(healthInfo.lastHeartbeatTimestamp)
+          .recentHeartbeats(
+            healthInfo.recentHeartbeats.map { hb ->
+              HeartbeatRecord()
+                .timestamp(hb.timestamp)
+            },
+          ).controlPlaneVersion(healthInfo.controlPlaneVersion)
+          .dataplaneVersion(healthInfo.dataplaneVersion)
+      }
+
+    return DataplaneHealthListResponse().dataplanes(dataplaneHealthReads)
   }
 }

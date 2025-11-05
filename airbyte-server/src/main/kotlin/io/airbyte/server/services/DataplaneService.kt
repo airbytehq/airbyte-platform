@@ -23,6 +23,8 @@ open class DataplaneService(
 ) {
   fun listDataplanes(dataplaneGroupId: UUID): List<Dataplane> = dataplaneDataService.listDataplanes(dataplaneGroupId, false)
 
+  fun listDataplanes(dataplaneGroupIds: List<UUID>): List<Dataplane> = dataplaneDataService.listDataplanes(dataplaneGroupIds, false)
+
   fun updateDataplane(
     dataplaneId: UUID,
     updatedName: String?,

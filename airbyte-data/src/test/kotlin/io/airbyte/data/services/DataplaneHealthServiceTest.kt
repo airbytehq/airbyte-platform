@@ -6,13 +6,15 @@ package io.airbyte.data.services
 
 import io.airbyte.data.repositories.DataplaneHeartbeatLogRepository
 import io.airbyte.data.repositories.entities.DataplaneHeartbeatLog
-import io.airbyte.data.services.DataplaneHealthService.Companion.RETENTION_PERIOD
+import io.airbyte.data.services.DataplaneHealthService.Companion.RETENTION_PERIOD_DURATION
 import io.airbyte.data.services.DataplaneHealthService.Companion.UNKNOWN_VERSION
+import io.airbyte.domain.models.DataplaneHealthInfo.HealthStatus
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -80,6 +82,51 @@ internal class DataplaneHealthServiceTest {
   }
 
   @Test
+  fun `getDataplaneHealthInfos returns health for multiple dataplanes`() {
+    val dataplane1 = UUID.randomUUID()
+    val dataplane2 = UUID.randomUUID()
+    val dataplane3 = UUID.randomUUID()
+
+    val heartbeat1 =
+      DataplaneHeartbeatLog(
+        id = UUID.randomUUID(),
+        dataplaneId = dataplane1,
+        controlPlaneVersion = "1.0.0",
+        dataplaneVersion = "2.0.0",
+        createdAt = OffsetDateTime.now().minusSeconds(30),
+      )
+
+    val heartbeat2 =
+      DataplaneHeartbeatLog(
+        id = UUID.randomUUID(),
+        dataplaneId = dataplane2,
+        controlPlaneVersion = "1.0.1",
+        dataplaneVersion = "2.0.1",
+        createdAt = OffsetDateTime.now().minusMinutes(10),
+      )
+
+    every {
+      heartbeatLogRepository.findLatestHeartbeatsByDataplaneIds(
+        listOf(dataplane1, dataplane2, dataplane3),
+      )
+    } returns listOf(heartbeat1, heartbeat2)
+
+    val healthStatuses = dataplaneHealthService.getDataplaneHealthInfos(listOf(dataplane1, dataplane2, dataplane3))
+
+    assertEquals(3, healthStatuses.size)
+    assertEquals(HealthStatus.HEALTHY, healthStatuses[0].status)
+    assertEquals(HealthStatus.UNHEALTHY, healthStatuses[1].status)
+    assertEquals(HealthStatus.UNKNOWN, healthStatuses[2].status)
+  }
+
+  @Test
+  fun `getDataplaneHealthStatuses returns empty list for empty input`() {
+    val healthStatuses = dataplaneHealthService.getDataplaneHealthInfos(emptyList())
+
+    assertEquals(0, healthStatuses.size)
+  }
+
+  @Test
   fun `cleanupOldHeartbeats calls repository with correct cutoff time`() {
     val deletedCount = 5
     every { heartbeatLogRepository.deleteOldHeartbeatsExceptLatest(any()) } returns deletedCount
@@ -91,7 +138,7 @@ internal class DataplaneHealthServiceTest {
       heartbeatLogRepository.deleteOldHeartbeatsExceptLatest(
         match {
           // Verify cutoff time is approximately now minus retention period (within 1 second tolerance)
-          val expectedCutoff = OffsetDateTime.now().minus(RETENTION_PERIOD)
+          val expectedCutoff = OffsetDateTime.now().minus(RETENTION_PERIOD_DURATION)
           it.isAfter(expectedCutoff.minusSeconds(1)) && it.isBefore(expectedCutoff.plusSeconds(1))
         },
       )

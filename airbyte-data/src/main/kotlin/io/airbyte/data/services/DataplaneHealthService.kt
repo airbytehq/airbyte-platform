@@ -6,6 +6,8 @@ package io.airbyte.data.services
 
 import io.airbyte.data.repositories.DataplaneHeartbeatLogRepository
 import io.airbyte.data.repositories.entities.DataplaneHeartbeatLog
+import io.airbyte.domain.models.DataplaneHealthInfo
+import io.airbyte.domain.models.HeartbeatData
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.time.Duration
@@ -23,7 +25,9 @@ class DataplaneHealthService(
 ) {
   companion object {
     const val UNKNOWN_VERSION = "unknown"
-    val RETENTION_PERIOD: Duration = Duration.ofHours(24)
+    val HEALTHY_THRESHOLD_DURATION: Duration = Duration.ofSeconds(60)
+    val DEGRADED_THRESHOLD_DURATION: Duration = Duration.ofMinutes(5)
+    val RETENTION_PERIOD_DURATION: Duration = Duration.ofHours(24)
   }
 
   /**
@@ -47,12 +51,82 @@ class DataplaneHealthService(
   }
 
   /**
+   * Get health info for multiple dataplanes based on their latest heartbeats.
+   */
+  fun getDataplaneHealthInfos(dataplaneIds: List<UUID>): List<DataplaneHealthInfo> {
+    if (dataplaneIds.isEmpty()) {
+      return emptyList()
+    }
+
+    val now = OffsetDateTime.now()
+    val recentHeartbeatStart = now.minus(DEGRADED_THRESHOLD_DURATION)
+
+    val latestHeartbeats = heartbeatLogRepository.findLatestHeartbeatsByDataplaneIds(dataplaneIds)
+    val heartbeatMap = latestHeartbeats.associateBy { it.dataplaneId }
+
+    val recentHeartbeatLogs = heartbeatLogRepository.findHeartbeatHistoryForDataplanes(dataplaneIds, recentHeartbeatStart, now)
+    val recentHeartbeatsByDataplane = recentHeartbeatLogs.groupBy { it.dataplaneId }
+
+    return dataplaneIds.map { dataplaneId ->
+      val heartbeat = heartbeatMap[dataplaneId]
+      val recentLogs = recentHeartbeatsByDataplane[dataplaneId] ?: emptyList()
+      calculateHealthStatus(dataplaneId, heartbeat, recentLogs, now)
+    }
+  }
+
+  private fun calculateHealthStatus(
+    dataplaneId: UUID,
+    heartbeat: DataplaneHeartbeatLog?,
+    recentHeartbeatLogs: List<DataplaneHeartbeatLog>,
+    now: OffsetDateTime,
+  ): DataplaneHealthInfo {
+    if (heartbeat == null || heartbeat.createdAt == null) {
+      return DataplaneHealthInfo(
+        dataplaneId = dataplaneId,
+        status = DataplaneHealthInfo.HealthStatus.UNKNOWN,
+        lastHeartbeatTimestamp = null,
+        secondsSinceLastHeartbeat = null,
+        recentHeartbeats = emptyList(),
+        controlPlaneVersion = null,
+        dataplaneVersion = null,
+      )
+    }
+
+    val timeSinceHeartbeat = Duration.between(heartbeat.createdAt, now)
+    val secondsSince = timeSinceHeartbeat.seconds
+
+    val status =
+      when {
+        timeSinceHeartbeat <= HEALTHY_THRESHOLD_DURATION -> DataplaneHealthInfo.HealthStatus.HEALTHY
+        timeSinceHeartbeat <= DEGRADED_THRESHOLD_DURATION -> DataplaneHealthInfo.HealthStatus.DEGRADED
+        else -> DataplaneHealthInfo.HealthStatus.UNHEALTHY
+      }
+
+    val recentHeartbeats =
+      recentHeartbeatLogs.mapNotNull { log ->
+        log.createdAt?.let { timestamp ->
+          HeartbeatData(timestamp = timestamp)
+        }
+      }
+
+    return DataplaneHealthInfo(
+      dataplaneId = dataplaneId,
+      status = status,
+      lastHeartbeatTimestamp = heartbeat.createdAt,
+      secondsSinceLastHeartbeat = secondsSince,
+      recentHeartbeats = recentHeartbeats,
+      controlPlaneVersion = heartbeat.controlPlaneVersion,
+      dataplaneVersion = heartbeat.dataplaneVersion,
+    )
+  }
+
+  /**
    * Deletes heartbeat logs older than the retention period,
    * while preserving the most recent log for each dataplane.
    * Returns the number of deleted records.
    */
   fun cleanupOldHeartbeats(): Int {
-    val cutoffTime = OffsetDateTime.now().minus(RETENTION_PERIOD)
+    val cutoffTime = OffsetDateTime.now().minus(RETENTION_PERIOD_DURATION)
     val deletedCount = heartbeatLogRepository.deleteOldHeartbeatsExceptLatest(cutoffTime)
     logger.info { "Cleaned up $deletedCount old heartbeat logs (cutoff: $cutoffTime)" }
     return deletedCount
