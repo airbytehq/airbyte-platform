@@ -4,6 +4,7 @@
 
 package io.airbyte.container.orchestrator.bookkeeping
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.security.murmur332
 import io.airbyte.config.FileTransferInformations
@@ -23,6 +24,8 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.LongAccumulator
+
+internal const val SOURCE_FIELDS_POPULATED_METRIC_NAME = "sourceFieldsPopulated"
 
 /**
  * Track Stats for a specific stream.
@@ -233,7 +236,30 @@ class StreamStatsTracker(
     with(streamStats) {
       emittedRecordsCount.incrementAndGet()
       emittedBytesCount.addAndGet(bytesToTrack)
+
+      // Count and track fields with defined values
+      recordMessage.data?.let { data ->
+        val fieldsPopulated = countFieldsWithValues(data)
+        mergeAdditionalStats(mapOf(SOURCE_FIELDS_POPULATED_METRIC_NAME to fieldsPopulated.toBigDecimal()))
+      }
     }
+  }
+
+  /**
+   * Counts the number of fields with non-null values in the record data.
+   *
+   * @param data The JsonNode containing the record data
+   * @return The count of fields with defined (non-null) values
+   */
+  private fun countFieldsWithValues(data: JsonNode): Long {
+    var count = 0L
+    data.fieldNames().forEach { fieldName ->
+      val field = data.get(fieldName)
+      if (field != null && !field.isNull) {
+        count++
+      }
+    }
+    return count
   }
 
   private fun getFileSize(recordMessage: AirbyteRecordMessage): Long? =

@@ -181,6 +181,114 @@ internal class StatsTrackerTest {
     assertEquals(200.toBigDecimal(), streamStatsTracker.streamStats.additionalStats["stat2"])
   }
 
+  @Test
+  fun `test sourceFieldsPopulated counts fields with values`() {
+    val streamStatsTracker =
+      StreamStatsTracker(
+        mockk(),
+        mockk(relaxed = true),
+        false,
+      )
+
+    val name = "name"
+    val namespace = "namespace"
+
+    // Record with 3 fields, all populated
+    val recordWithAllFields =
+      AirbyteRecordMessage()
+        .withStream(name)
+        .withNamespace(namespace)
+        .withData(Jsons.jsonNode(mapOf("id" to 1, "name" to "test", "email" to "test@example.com")))
+
+    streamStatsTracker.trackRecord(recordWithAllFields)
+
+    // Should count 3 fields
+    assertEquals(3.toBigDecimal(), streamStatsTracker.streamStats.additionalStats["sourceFieldsPopulated"])
+  }
+
+  @Test
+  fun `test sourceFieldsPopulated ignores null fields`() {
+    val streamStatsTracker =
+      StreamStatsTracker(
+        mockk(),
+        mockk(relaxed = true),
+        false,
+      )
+
+    val name = "name"
+    val namespace = "namespace"
+
+    // Record with 3 fields, one is null
+    val recordWithNullField =
+      AirbyteRecordMessage()
+        .withStream(name)
+        .withNamespace(namespace)
+        .withData(Jsons.jsonNode(mapOf("id" to 1, "name" to "test", "email" to null)))
+
+    streamStatsTracker.trackRecord(recordWithNullField)
+
+    // Should count only 2 fields (null field is excluded)
+    assertEquals(2.toBigDecimal(), streamStatsTracker.streamStats.additionalStats["sourceFieldsPopulated"])
+  }
+
+  @Test
+  fun `test sourceFieldsPopulated accumulates across records`() {
+    val streamStatsTracker =
+      StreamStatsTracker(
+        mockk(),
+        mockk(relaxed = true),
+        false,
+      )
+
+    val name = "name"
+    val namespace = "namespace"
+
+    // First record with 2 fields
+    val record1 =
+      AirbyteRecordMessage()
+        .withStream(name)
+        .withNamespace(namespace)
+        .withData(Jsons.jsonNode(mapOf("id" to 1, "name" to "test")))
+
+    // Second record with 3 fields
+    val record2 =
+      AirbyteRecordMessage()
+        .withStream(name)
+        .withNamespace(namespace)
+        .withData(Jsons.jsonNode(mapOf("id" to 2, "name" to "test2", "email" to "test2@example.com")))
+
+    streamStatsTracker.trackRecord(record1)
+    streamStatsTracker.trackRecord(record2)
+
+    // Should accumulate: 2 + 3 = 5
+    assertEquals(5.toBigDecimal(), streamStatsTracker.streamStats.additionalStats["sourceFieldsPopulated"])
+  }
+
+  @Test
+  fun `test sourceFieldsPopulated with empty record`() {
+    val streamStatsTracker =
+      StreamStatsTracker(
+        mockk(),
+        mockk(relaxed = true),
+        false,
+      )
+
+    val name = "name"
+    val namespace = "namespace"
+
+    // Record with no fields
+    val emptyRecord =
+      AirbyteRecordMessage()
+        .withStream(name)
+        .withNamespace(namespace)
+        .withData(Jsons.jsonNode(mapOf<String, Any>()))
+
+    streamStatsTracker.trackRecord(emptyRecord)
+
+    // Should count 0 fields
+    assertEquals(0.toBigDecimal(), streamStatsTracker.streamStats.additionalStats["sourceFieldsPopulated"])
+  }
+
   @ParameterizedTest
   @CsvSource(value = ["true", "false"])
   fun testTrackingStateMessageFromDestination(isBookkeeperMode: Boolean) {
@@ -234,12 +342,22 @@ internal class StatsTrackerTest {
     }
     tracker.trackStateFromDestination(destinationStateMessage)
 
+    val expectedAdditionalStats =
+      if (isBookkeeperMode) {
+        destinationStats.additionalStats.additionalProperties.size
+      } else {
+        destinationStats.additionalStats.additionalProperties.size +
+          1
+      }
     val expectedRecordCount = if (isBookkeeperMode) destinationStats.recordCount.toLong() else destinationStats.rejectedRecordCount.toLong() * -1
     assertEquals(expectedRecordCount, tracker.streamStats.committedRecordsCount.toLong())
     assertEquals(destinationStats.rejectedRecordCount.toLong(), tracker.streamStats.rejectedRecordsCount.toLong())
-    assertEquals(destinationStats.additionalStats.additionalProperties.size, tracker.streamStats.additionalStats.size)
+    assertEquals(expectedAdditionalStats, tracker.streamStats.additionalStats.size)
     assertEquals(destinationAdditionalStats["stat1"]?.toDouble(), tracker.streamStats.additionalStats["stat1"]?.toDouble())
     assertEquals(destinationAdditionalStats["stat2"]?.toDouble(), tracker.streamStats.additionalStats["stat2"]?.toDouble())
     assertEquals(destinationAdditionalStats["stat3"]?.toDouble(), tracker.streamStats.additionalStats["stat3"]?.toDouble())
+    if (!isBookkeeperMode) {
+      assertEquals(14, tracker.streamStats.additionalStats[SOURCE_FIELDS_POPULATED_METRIC_NAME]?.toInt())
+    }
   }
 }
