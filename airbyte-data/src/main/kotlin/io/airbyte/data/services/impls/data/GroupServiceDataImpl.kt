@@ -7,7 +7,9 @@ package io.airbyte.data.services.impls.data
 import io.airbyte.config.Group
 import io.airbyte.config.GroupMember
 import io.airbyte.data.repositories.GroupMemberRepository
+import io.airbyte.data.repositories.GroupMemberWithUserInfoRepository
 import io.airbyte.data.repositories.GroupRepository
+import io.airbyte.data.repositories.GroupWithMemberCountRepository
 import io.airbyte.data.services.AlreadyGroupMemberException
 import io.airbyte.data.services.GroupNameNotUniqueException
 import io.airbyte.data.services.GroupService
@@ -18,25 +20,34 @@ import io.airbyte.domain.models.GroupId
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.domain.models.UserId
 import io.micronaut.data.exceptions.DataAccessException
-import io.micronaut.data.model.Pageable
+import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
 import java.sql.SQLException
 import java.util.UUID
+import io.airbyte.data.repositories.entities.GroupMember as EntityGroupMember
 
 /**
  * Data implementation of GroupService using JDBC repositories.
  */
 @Singleton
-class GroupServiceDataImpl(
+open class GroupServiceDataImpl(
   private val groupRepository: GroupRepository,
+  private val groupWithMemberCountRepository: GroupWithMemberCountRepository,
   private val groupMemberRepository: GroupMemberRepository,
+  private val groupMemberWithUserInfoRepository: GroupMemberWithUserInfoRepository,
 ) : GroupService {
+  @Transactional("config")
   override fun createGroup(group: Group): Group {
     // This will check if group name is unique within the organization
     val entity = group.toEntity()
     try {
       val saved = groupRepository.save(entity)
-      return saved.toConfigModel()
+      val savedId = saved.id ?: throw IllegalStateException("Group did not save with an ID: $saved")
+      // Fetch back with member count
+      return groupWithMemberCountRepository
+        .findById(savedId)
+        .map { it.toConfigModel() }
+        .orElseThrow { IllegalStateException("Failed to retrieve saved group") }
     } catch (e: DataAccessException) {
       // Handle race condition: unique constraint violation from database
       if (isUniqueConstraintViolation(e)) {
@@ -48,15 +59,17 @@ class GroupServiceDataImpl(
     }
   }
 
+  @Transactional("config")
   override fun getGroup(groupId: GroupId): Group? =
-    groupRepository
+    groupWithMemberCountRepository
       .findById(groupId.value)
       .map { it.toConfigModel() }
       .orElse(null)
 
+  @Transactional("config")
   override fun updateGroup(group: Group): Group {
     // Check if the group exists
-    if (!groupRepository.existsById(group.groupId)) {
+    if (!groupRepository.existsById(group.groupId.value)) {
       throw IllegalArgumentException("Group with id ${group.groupId} does not exist")
     }
 
@@ -64,7 +77,12 @@ class GroupServiceDataImpl(
     val entity = group.toEntity()
     try {
       val updated = groupRepository.update(entity)
-      return updated.toConfigModel()
+      val updatedId = updated.id ?: throw IllegalStateException("Group update did not return an ID: $updated")
+      // Fetch back with member count
+      return groupWithMemberCountRepository
+        .findById(updatedId)
+        .map { it.toConfigModel() }
+        .orElseThrow { IllegalStateException("Failed to retrieve updated group") }
     } catch (e: DataAccessException) {
       // Handle race condition: unique constraint violation from database
       if (isUniqueConstraintViolation(e)) {
@@ -76,6 +94,7 @@ class GroupServiceDataImpl(
     }
   }
 
+  @Transactional("config")
   override fun deleteGroup(groupId: GroupId) {
     // Delete all group memberships first (though CASCADE should handle this)
     groupMemberRepository.deleteByGroupId(groupId.value)
@@ -83,51 +102,44 @@ class GroupServiceDataImpl(
     groupRepository.deleteById(groupId.value)
   }
 
+  @Transactional("config")
   override fun getGroupsForOrganization(
     organizationId: OrganizationId,
     paginationParams: PaginationParams?,
   ): List<Group> {
     if (paginationParams != null) {
-      return groupRepository
-        .findByOrganizationId(
+      return groupWithMemberCountRepository
+        .findByOrganizationIdWithMemberCount(
           organizationId.value,
-          Pageable.from(
-            calculatePageNumber(
-              paginationParams.limit,
-              paginationParams.offset,
-            ),
-            paginationParams.limit,
-          ),
-        ).content
-        .map { it.toConfigModel() }
+          paginationParams.limit,
+          paginationParams.offset,
+        ).map { it.toConfigModel() }
     }
 
-    return groupRepository.findByOrganizationId(organizationId.value).map { it.toConfigModel() }
+    return groupWithMemberCountRepository.findByOrganizationId(organizationId.value).map { it.toConfigModel() }
   }
 
-  private fun calculatePageNumber(
-    limit: Int,
-    offset: Int,
-  ): Int = Math.floor(offset.toDouble() / limit.toDouble()).toInt()
-
+  @Transactional("config")
   override fun addGroupMember(
     groupId: GroupId,
     userId: UserId,
   ): GroupMember {
-    // Create the membership
-    // This will check if user is already in the group
-    val member =
-      GroupMember(
+    // Create the membership entity
+    val entity =
+      EntityGroupMember(
         id = UUID.randomUUID(),
         groupId = groupId.value,
         userId = userId.value,
-        createdAt = java.time.OffsetDateTime.now(),
       )
 
-    val entity = member.toEntity()
     try {
-      val saved = groupMemberRepository.save(entity)
-      return saved.toConfigModel()
+      groupMemberRepository.save(entity)
+      // Fetch back with user info from join query
+      return (
+        groupMemberWithUserInfoRepository
+          .findByGroupIdAndUserId(groupId.value, userId.value)
+          ?: throw IllegalStateException("Failed to retrieve saved group member")
+      ).toConfigModel()
     } catch (e: DataAccessException) {
       // Handle race condition: unique constraint violation from database
       if (isUniqueConstraintViolation(e)) {
@@ -139,6 +151,7 @@ class GroupServiceDataImpl(
     }
   }
 
+  @Transactional("config")
   override fun removeGroupMember(
     groupId: GroupId,
     userId: UserId,
@@ -146,15 +159,42 @@ class GroupServiceDataImpl(
     groupMemberRepository.deleteByGroupIdAndUserId(groupId.value, userId.value)
   }
 
-  override fun getGroupMembers(groupId: GroupId): List<GroupMember> = groupMemberRepository.findByGroupId(groupId.value).map { it.toConfigModel() }
+  @Transactional("config")
+  override fun getGroupMembers(groupId: GroupId): List<GroupMember> =
+    groupMemberWithUserInfoRepository.findByGroupId(groupId.value).map {
+      it.toConfigModel()
+    }
 
-  override fun getGroupsForUser(userId: UserId): List<Group> = groupRepository.findGroupsByUserId(userId.value).map { it.toConfigModel() }
+  @Transactional("config")
+  override fun getGroupMembers(
+    groupId: GroupId,
+    paginationParams: PaginationParams?,
+  ): List<GroupMember> {
+    if (paginationParams != null) {
+      return groupMemberWithUserInfoRepository
+        .findByGroupIdWithPagination(
+          groupId.value,
+          paginationParams.limit,
+          paginationParams.offset,
+        ).map { it.toConfigModel() }
+    }
 
+    return groupMemberWithUserInfoRepository.findByGroupId(groupId.value).map { it.toConfigModel() }
+  }
+
+  @Transactional("config")
+  override fun getGroupsForUser(userId: UserId): List<Group> =
+    groupWithMemberCountRepository.findGroupsByUserId(userId.value).map {
+      it.toConfigModel()
+    }
+
+  @Transactional("config")
   override fun isGroupMember(
     groupId: GroupId,
     userId: UserId,
   ): Boolean = groupMemberRepository.existsByGroupIdAndUserId(groupId.value, userId.value)
 
+  @Transactional("config")
   override fun isGroupNameUnique(
     organizationId: OrganizationId,
     name: String,

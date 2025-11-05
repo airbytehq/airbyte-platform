@@ -32,6 +32,8 @@ interface PermissionRepository : PageableRepository<Permission, UUID> {
 
   fun findByWorkspaceId(workspaceId: UUID): List<Permission>
 
+  fun findByGroupId(groupId: UUID): List<Permission>
+
   fun deleteByIdIn(permissionIds: List<UUID>)
 
   @Query(

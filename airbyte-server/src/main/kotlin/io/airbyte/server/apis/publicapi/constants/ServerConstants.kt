@@ -35,6 +35,12 @@ const val PERMISSIONS_WITH_ID_PATH = "$PERMISSIONS_PATH/{permissionId}"
 const val USERS_PATH = "$ROOT_PATH/v1/users"
 const val ORGANIZATIONS_PATH = "$ROOT_PATH/v1/organizations"
 const val TAGS_PATH = "$ROOT_PATH/v1/tags"
+const val GROUPS_PATH = "$ROOT_PATH/v1/groups"
+const val GROUPS_WITH_ID_PATH = "$GROUPS_PATH/{groupId}"
+const val GROUP_MEMBERS_PATH = "$GROUPS_WITH_ID_PATH/members"
+const val GROUP_MEMBERS_WITH_ID_PATH = "$GROUP_MEMBERS_PATH/{userId}"
+const val GROUP_PERMISSIONS_PATH = "$GROUPS_WITH_ID_PATH/permissions"
+const val GROUP_PERMISSIONS_WITH_ID_PATH = "$GROUP_PERMISSIONS_PATH/{permissionId}"
 
 val POST = io.micronaut.http.HttpMethod.POST.name
 val GET = io.micronaut.http.HttpMethod.GET.name

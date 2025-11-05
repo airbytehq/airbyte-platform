@@ -130,7 +130,7 @@ class GroupMemberRepositoryTest : AbstractConfigRepositoryTest() {
   }
 
   @Test
-  fun `findByGroupId returns all members of group`() {
+  fun `countByGroupId returns correct count of members`() {
     val org = createTestOrganization()
     val group1 = createTestGroup(org.id!!, "Group 1")
     val group2 = createTestGroup(org.id!!, "Group 2")
@@ -138,95 +138,54 @@ class GroupMemberRepositoryTest : AbstractConfigRepositoryTest() {
     val user2 = UUID.randomUUID()
     val user3 = UUID.randomUUID()
 
-    val member1 = groupMemberRepository.save(GroupMember(groupId = group1.id!!, userId = user1))
-    val member2 = groupMemberRepository.save(GroupMember(groupId = group1.id!!, userId = user2))
-    val member3 = groupMemberRepository.save(GroupMember(groupId = group2.id!!, userId = user3))
+    groupMemberRepository.save(GroupMember(groupId = group1.id!!, userId = user1))
+    groupMemberRepository.save(GroupMember(groupId = group1.id!!, userId = user2))
+    groupMemberRepository.save(GroupMember(groupId = group2.id!!, userId = user3))
 
-    val group1Members = groupMemberRepository.findByGroupId(group1.id!!)
-    assertEquals(2, group1Members.size)
-    assertTrue(group1Members.any { it.id == member1.id })
-    assertTrue(group1Members.any { it.id == member2.id })
-
-    val group2Members = groupMemberRepository.findByGroupId(group2.id!!)
-    assertEquals(1, group2Members.size)
-    assertEquals(member3.id, group2Members[0].id)
+    assertEquals(2, groupMemberRepository.countByGroupId(group1.id!!))
+    assertEquals(1, groupMemberRepository.countByGroupId(group2.id!!))
   }
 
   @Test
-  fun `findByGroupId returns empty list when group has no members`() {
+  fun `countByGroupId returns zero when group has no members`() {
     val org = createTestOrganization()
     val group = createTestGroup(org.id!!)
 
-    val members = groupMemberRepository.findByGroupId(group.id!!)
-    assertTrue(members.isEmpty())
+    assertEquals(0, groupMemberRepository.countByGroupId(group.id!!))
   }
 
   @Test
-  fun `findByUserId returns all groups user belongs to`() {
+  fun `countByUserId returns correct count of groups`() {
     val org = createTestOrganization()
     val group1 = createTestGroup(org.id!!, "Group 1")
     val group2 = createTestGroup(org.id!!, "Group 2")
     val user1 = UUID.randomUUID()
     val user2 = UUID.randomUUID()
 
-    val member1 = groupMemberRepository.save(GroupMember(groupId = group1.id!!, userId = user1))
-    val member2 = groupMemberRepository.save(GroupMember(groupId = group2.id!!, userId = user1))
-    val member3 = groupMemberRepository.save(GroupMember(groupId = group1.id!!, userId = user2))
+    groupMemberRepository.save(GroupMember(groupId = group1.id!!, userId = user1))
+    groupMemberRepository.save(GroupMember(groupId = group2.id!!, userId = user1))
+    groupMemberRepository.save(GroupMember(groupId = group1.id!!, userId = user2))
 
-    val user1Memberships = groupMemberRepository.findByUserId(user1)
-    assertEquals(2, user1Memberships.size)
-    assertTrue(user1Memberships.any { it.id == member1.id })
-    assertTrue(user1Memberships.any { it.id == member2.id })
-
-    val user2Memberships = groupMemberRepository.findByUserId(user2)
-    assertEquals(1, user2Memberships.size)
-    assertEquals(member3.id, user2Memberships[0].id)
+    assertEquals(2, groupMemberRepository.countByUserId(user1))
+    assertEquals(1, groupMemberRepository.countByUserId(user2))
   }
 
   @Test
-  fun `findByUserId returns empty list when user has no memberships`() {
+  fun `countByUserId returns zero when user has no memberships`() {
     val user = UUID.randomUUID()
 
-    val memberships = groupMemberRepository.findByUserId(user)
-    assertTrue(memberships.isEmpty())
+    assertEquals(0, groupMemberRepository.countByUserId(user))
   }
 
   @Test
-  fun `findByGroupIdAndUserId finds specific membership`() {
-    val org = createTestOrganization()
-    val group = createTestGroup(org.id!!)
-    val userId = UUID.randomUUID()
-
-    val member = groupMemberRepository.save(GroupMember(groupId = group.id!!, userId = userId))
-
-    val result = groupMemberRepository.findByGroupIdAndUserId(group.id!!, userId)
-    assertTrue(result.isPresent)
-    assertThat(result.get())
-      .usingRecursiveComparison()
-      .ignoringFields("createdAt")
-      .isEqualTo(member)
-  }
-
-  @Test
-  fun `findByGroupIdAndUserId returns empty when membership does not exist`() {
-    val org = createTestOrganization()
-    val group = createTestGroup(org.id!!)
-    val userId = UUID.randomUUID()
-
-    val result = groupMemberRepository.findByGroupIdAndUserId(group.id!!, userId)
-    assertTrue(result.isEmpty)
-  }
-
-  @Test
-  fun `existsByGroupIdAndUserId returns true when membership exists`() {
+  fun `existsByGroupIdAndUserId returns true for existing membership`() {
     val org = createTestOrganization()
     val group = createTestGroup(org.id!!)
     val userId = UUID.randomUUID()
 
     groupMemberRepository.save(GroupMember(groupId = group.id!!, userId = userId))
 
-    val exists = groupMemberRepository.existsByGroupIdAndUserId(group.id!!, userId)
-    assertTrue(exists)
+    assertTrue(groupMemberRepository.existsByGroupIdAndUserId(group.id!!, userId))
   }
 
   @Test
@@ -235,8 +194,7 @@ class GroupMemberRepositoryTest : AbstractConfigRepositoryTest() {
     val group = createTestGroup(org.id!!)
     val userId = UUID.randomUUID()
 
-    val exists = groupMemberRepository.existsByGroupIdAndUserId(group.id!!, userId)
-    assertFalse(exists)
+    assertFalse(groupMemberRepository.existsByGroupIdAndUserId(group.id!!, userId))
   }
 
   @Test

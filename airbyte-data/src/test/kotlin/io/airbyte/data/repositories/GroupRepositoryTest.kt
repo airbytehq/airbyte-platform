@@ -46,6 +46,7 @@ class GroupRepositoryTest : AbstractConfigRepositoryTest() {
   }
 
   private val groupRepository = context.getBean(GroupRepository::class.java)!!
+  private val groupWithMemberCountRepository = context.getBean(GroupWithMemberCountRepository::class.java)!!
   private val groupMemberRepository = context.getBean(GroupMemberRepository::class.java)!!
 
   private fun createTestOrganization(name: String = "Test Org"): Organization {
@@ -208,41 +209,14 @@ class GroupRepositoryTest : AbstractConfigRepositoryTest() {
     groupRepository.save(group2)
     groupRepository.save(group3)
 
-    val org1Groups = groupRepository.findByOrganizationId(org1.id!!)
+    val org1Groups = groupWithMemberCountRepository.findByOrganizationId(org1.id!!)
     assertEquals(2, org1Groups.size)
     assertTrue(org1Groups.any { it.id == group1.id })
     assertTrue(org1Groups.any { it.id == group2.id })
 
-    val org2Groups = groupRepository.findByOrganizationId(org2.id!!)
+    val org2Groups = groupWithMemberCountRepository.findByOrganizationId(org2.id!!)
     assertEquals(1, org2Groups.size)
     assertEquals(group3.id, org2Groups[0].id)
-  }
-
-  @Test
-  fun `findByOrganizationId with pagination`() {
-    val org = createTestOrganization()
-
-    // Create 5 groups
-    repeat(5) { i ->
-      groupRepository.save(
-        Group(
-          name = "Group $i",
-          organizationId = org.id!!,
-        ),
-      )
-    }
-
-    val page1 = groupRepository.findByOrganizationId(org.id!!, Pageable.from(0, 2))
-    assertEquals(2, page1.content.size)
-    assertEquals(5, page1.totalSize)
-    assertEquals(0, page1.pageNumber)
-
-    val page2 = groupRepository.findByOrganizationId(org.id!!, Pageable.from(1, 2))
-    assertEquals(2, page2.content.size)
-    assertEquals(1, page2.pageNumber)
-
-    val page3 = groupRepository.findByOrganizationId(org.id!!, Pageable.from(2, 2))
-    assertEquals(1, page3.content.size)
   }
 
   @Test
@@ -252,7 +226,7 @@ class GroupRepositoryTest : AbstractConfigRepositoryTest() {
     val group2 = groupRepository.save(Group(name = "Group 2", organizationId = org.id!!))
     val group3 = groupRepository.save(Group(name = "Group 3", organizationId = org.id!!))
 
-    val result = groupRepository.findByIdIn(setOf(group1.id!!, group3.id!!))
+    val result = groupWithMemberCountRepository.findByIdIn(setOf(group1.id!!, group3.id!!))
     assertEquals(2, result.size)
     assertTrue(result.any { it.id == group1.id })
     assertTrue(result.any { it.id == group3.id })
@@ -261,7 +235,7 @@ class GroupRepositoryTest : AbstractConfigRepositoryTest() {
 
   @Test
   fun `findByIdIn returns empty list when no matches`() {
-    val result = groupRepository.findByIdIn(setOf(UUID.randomUUID(), UUID.randomUUID()))
+    val result = groupWithMemberCountRepository.findByIdIn(setOf(UUID.randomUUID(), UUID.randomUUID()))
     assertTrue(result.isEmpty())
   }
 
@@ -324,12 +298,12 @@ class GroupRepositoryTest : AbstractConfigRepositoryTest() {
     // User 2 is in group 3
     groupMemberRepository.save(GroupMember(groupId = group3.id!!, userId = userId2))
 
-    val user1Groups = groupRepository.findGroupsByUserId(userId1)
+    val user1Groups = groupWithMemberCountRepository.findGroupsByUserId(userId1)
     assertEquals(2, user1Groups.size)
     assertTrue(user1Groups.any { it.id == group1.id })
     assertTrue(user1Groups.any { it.id == group2.id })
 
-    val user2Groups = groupRepository.findGroupsByUserId(userId2)
+    val user2Groups = groupWithMemberCountRepository.findGroupsByUserId(userId2)
     assertEquals(1, user2Groups.size)
     assertEquals(group3.id, user2Groups[0].id)
   }
@@ -338,7 +312,7 @@ class GroupRepositoryTest : AbstractConfigRepositoryTest() {
   fun `findGroupsByUserId returns empty list when user has no groups`() {
     val userId = UUID.randomUUID()
 
-    val groups = groupRepository.findGroupsByUserId(userId)
+    val groups = groupWithMemberCountRepository.findGroupsByUserId(userId)
     assertTrue(groups.isEmpty())
   }
 }

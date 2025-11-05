@@ -2556,6 +2556,366 @@ paths:
       operationId: listUsersWithinAnOrganization
       x-speakeasy-alias: listUsersWithinAnOrganization
       x-speakeasy-group: Users
+  /groups:
+    get:
+      tags:
+      - public_groups
+      - public
+      - Groups
+      summary: List groups
+      description: List all groups within the specified organization
+      parameters:
+      - name: organizationId
+        in: query
+        description: Filter groups by organization ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: limit
+        description: Set the limit on the number of Groups returned. The default is 20 Groups.
+        schema:
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+          type: integer
+        in: query
+      - name: offset
+        description: Set the offset to start at when returning Groups. The default is 0.
+        schema:
+          format: int32
+          default: 0
+          minimum: 0
+          type: integer
+        in: query
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupsResponse'
+          description: List Groups.
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: listGroups
+      x-speakeasy-alias: listGroups
+      x-speakeasy-group: Groups
+    post:
+      tags:
+      - public_groups
+      - public
+      - Groups
+      summary: Create group
+      description: Create a new group within an organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupCreateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResponse'
+          description: Group created successfully.
+        '400':
+          description: Invalid input
+        '403':
+          description: Not allowed
+        '409':
+          description: Group with this name already exists in the organization
+      operationId: createGroup
+      x-speakeasy-alias: createGroup
+      x-speakeasy-group: Groups
+  /groups/{groupId}:
+    parameters:
+    - name: groupId
+      in: path
+      required: true
+      description: Group identifier
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - public_groups
+      - public
+      - Groups
+      summary: Get group details
+      description: Get a specific group by ID
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResponse'
+          description: Get a Group by the id in the path.
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: getGroup
+      x-speakeasy-alias: getGroup
+      x-speakeasy-group: Groups
+    patch:
+      tags:
+      - public_groups
+      - public
+      - Groups
+      summary: Update group
+      description: Update an existing group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupUpdateRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupResponse'
+          description: Group updated successfully.
+        '400':
+          description: Invalid input
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+        '409':
+          description: Group name conflict
+      operationId: updateGroup
+      x-speakeasy-alias: updateGroup
+      x-speakeasy-group: Groups
+    delete:
+      tags:
+      - public_groups
+      - public
+      - Groups
+      summary: Delete group
+      description: Delete a group and remove all associated memberships
+      responses:
+        '204':
+          description: Group deleted successfully
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: deleteGroup
+      x-speakeasy-alias: deleteGroup
+      x-speakeasy-group: Groups
+  /groups/{groupId}/members:
+    parameters:
+    - name: groupId
+      in: path
+      required: true
+      description: Group identifier
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - public_group_members
+      - public
+      - Groups
+      summary: List group members
+      description: Get all members of a specific group
+      parameters:
+      - name: limit
+        description: Set the limit on the number of members returned. The default is 20.
+        schema:
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+          type: integer
+        in: query
+      - name: offset
+        description: Set the offset to start at when returning members. The default is 0.
+        schema:
+          format: int32
+          default: 0
+          minimum: 0
+          type: integer
+        in: query
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupMembersResponse'
+          description: List Group members.
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: listGroupMembers
+      x-speakeasy-alias: listGroupMembers
+      x-speakeasy-group: Groups
+    post:
+      tags:
+      - public_group_members
+      - public
+      - Groups
+      summary: Add member to group
+      description: Add a user to a group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupMemberAddRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupMemberResponse'
+          description: Member added successfully.
+        '400':
+          description: Invalid input
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+        '409':
+          description: User is already a member of this group
+      operationId: addGroupMember
+      x-speakeasy-alias: addGroupMember
+      x-speakeasy-group: Groups
+  /groups/{groupId}/members/{userId}:
+    parameters:
+    - name: groupId
+      in: path
+      required: true
+      description: Group identifier
+      schema:
+        type: string
+        format: uuid
+    - name: userId
+      in: path
+      required: true
+      description: User identifier
+      schema:
+        type: string
+        format: uuid
+    delete:
+      tags:
+      - public_group_members
+      - public
+      - Groups
+      summary: Remove member from group
+      description: Remove a user from a group
+      responses:
+        '204':
+          description: Member removed successfully
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: removeGroupMember
+      x-speakeasy-alias: removeGroupMember
+      x-speakeasy-group: Groups
+  /groups/{groupId}/permissions:
+    parameters:
+    - name: groupId
+      in: path
+      required: true
+      description: Group identifier
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - public_group_permissions
+      - public
+      - Groups
+      summary: List group permissions
+      description: Get all permissions assigned to a group
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupPermissionsResponse'
+          description: List Group permissions.
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: listGroupPermissions
+      x-speakeasy-alias: listGroupPermissions
+      x-speakeasy-group: Groups
+    post:
+      tags:
+      - public_group_permissions
+      - public
+      - Groups
+      summary: Create group permission
+      description: Assign a permission to a group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupPermissionCreateRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupPermissionResponse'
+          description: Permission created successfully.
+        '400':
+          description: Invalid input
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+        '409':
+          description: Permission already exists for this group
+      operationId: createGroupPermission
+      x-speakeasy-alias: createGroupPermission
+      x-speakeasy-group: Groups
+  /groups/{groupId}/permissions/{permissionId}:
+    parameters:
+    - name: groupId
+      in: path
+      required: true
+      description: Group identifier
+      schema:
+        type: string
+        format: uuid
+    - name: permissionId
+      in: path
+      required: true
+      description: Permission identifier
+      schema:
+        type: string
+        format: uuid
+    delete:
+      tags:
+      - public_group_permissions
+      - public
+      - Groups
+      summary: Delete group permission
+      description: Remove a permission from a group
+      responses:
+        '204':
+          description: Permission deleted successfully
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: deleteGroupPermission
+      x-speakeasy-alias: deleteGroupPermission
+      x-speakeasy-group: Groups
   /tags:
     get:
       tags:
@@ -4132,6 +4492,239 @@ components:
             $ref: '#/components/schemas/UserResponse'
       x-speakeasy-component: true
       x-speakeasy-entity: User
+      x-speakeasy-param-suppress-computed-diff: true
+    GroupResponse:
+      title: Root Type for GroupResponse
+      description: Provides details of a single group
+      type: object
+      required:
+      - groupId
+      - name
+      - organizationId
+      - memberCount
+      properties:
+        groupId:
+          type: string
+          format: uuid
+          description: The ID of the group
+        name:
+          type: string
+          description: The name of the group
+        description:
+          type: string
+          nullable: true
+          description: Optional description of the group
+        organizationId:
+          type: string
+          format: uuid
+          description: The ID of the organization the group belongs to
+        memberCount:
+          type: integer
+          format: int64
+          description: The number of members in the group
+      x-speakeasy-component: true
+      x-speakeasy-entity: Group
+      x-speakeasy-param-suppress-computed-diff: true
+    GroupsResponse:
+      title: Root Type for GroupsResponse
+      description: List/Array of multiple groups
+      required:
+      - data
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupResponse'
+        next:
+          type: string
+          description: Link to the next page of results
+          nullable: true
+        previous:
+          type: string
+          description: Link to the previous page of results
+          nullable: true
+      x-speakeasy-component: true
+      x-speakeasy-entity: Group
+      x-speakeasy-param-suppress-computed-diff: true
+    GroupCreateRequest:
+      title: Root Type for GroupCreateRequest
+      description: Request body for creating a group
+      required:
+      - name
+      - organizationId
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of the group
+        description:
+          type: string
+          nullable: true
+          description: Optional description of the group
+        organizationId:
+          type: string
+          format: uuid
+          description: The ID of the organization the group belongs to
+      x-speakeasy-component: true
+      x-speakeasy-entity: Group
+      x-speakeasy-param-suppress-computed-diff: true
+    GroupUpdateRequest:
+      title: Root Type for GroupUpdateRequest
+      description: Request body for updating a group
+      type: object
+      properties:
+        name:
+          type: string
+          description: The updated name of the group
+        description:
+          type: string
+          nullable: true
+          description: The updated description of the group
+      x-speakeasy-component: true
+      x-speakeasy-entity: Group
+      x-speakeasy-param-suppress-computed-diff: true
+    GroupMemberResponse:
+      title: Root Type for GroupMemberResponse
+      description: Provides details of a single group member
+      type: object
+      required:
+      - memberId
+      - groupId
+      - userId
+      - userEmail
+      - userName
+      properties:
+        memberId:
+          type: string
+          format: uuid
+          description: The ID of the group membership
+        groupId:
+          type: string
+          format: uuid
+          description: The ID of the group
+        userId:
+          type: string
+          format: uuid
+          description: The ID of the user
+        userEmail:
+          type: string
+          format: email
+          description: The email of the user
+        userName:
+          type: string
+          description: The name of the user
+      x-speakeasy-component: true
+      x-speakeasy-entity: GroupMember
+      x-speakeasy-param-suppress-computed-diff: true
+    GroupMembersResponse:
+      title: Root Type for GroupMembersResponse
+      description: List/Array of group members
+      required:
+      - data
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupMemberResponse'
+        next:
+          type: string
+          description: Link to the next page of results
+          nullable: true
+        previous:
+          type: string
+          description: Link to the previous page of results
+          nullable: true
+      x-speakeasy-component: true
+      x-speakeasy-entity: GroupMember
+      x-speakeasy-param-suppress-computed-diff: true
+    GroupMemberAddRequest:
+      title: Root Type for GroupMemberAddRequest
+      description: Request body for adding a member to a group
+      required:
+      - userId
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: The ID of the user to add to the group
+      x-speakeasy-component: true
+      x-speakeasy-entity: GroupMember
+      x-speakeasy-param-suppress-computed-diff: true
+    GroupPermissionResponse:
+      title: Root Type for GroupPermissionResponse
+      description: Provides details of a single group permission
+      type: object
+      required:
+      - permissionId
+      - groupId
+      - permissionType
+      properties:
+        permissionId:
+          type: string
+          format: uuid
+          description: The ID of the permission
+        groupId:
+          type: string
+          format: uuid
+          description: The ID of the group
+        permissionType:
+          $ref: '#/components/schemas/PermissionType'
+        workspaceId:
+          type: string
+          format: uuid
+          nullable: true
+          description: The workspace ID for workspace-scoped permissions
+        organizationId:
+          type: string
+          format: uuid
+          nullable: true
+          description: The organization ID for organization-scoped permissions
+      x-speakeasy-component: true
+      x-speakeasy-entity: GroupPermission
+      x-speakeasy-param-suppress-computed-diff: true
+    GroupPermissionsResponse:
+      title: Root Type for GroupPermissionsResponse
+      description: List/Array of group permissions
+      required:
+      - data
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupPermissionResponse'
+      x-speakeasy-component: true
+      x-speakeasy-entity: GroupPermission
+      x-speakeasy-param-suppress-computed-diff: true
+    GroupPermissionCreateRequest:
+      title: Root Type for GroupPermissionCreateRequest
+      description: Request body for creating a group permission
+      required:
+      - permissionType
+      type: object
+      properties:
+        permissionType:
+          $ref: '#/components/schemas/PermissionType'
+        workspaceId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required for workspace-scoped permissions
+        organizationId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required for organization-scoped permissions
+      oneOf:
+      - required:
+        - workspaceId
+      - required:
+        - organizationId
+      x-speakeasy-component: true
+      x-speakeasy-entity: GroupPermission
       x-speakeasy-param-suppress-computed-diff: true
     PermissionCreateRequest:
       required:

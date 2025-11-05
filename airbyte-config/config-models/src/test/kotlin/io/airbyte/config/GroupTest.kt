@@ -4,6 +4,8 @@
 
 package io.airbyte.config
 
+import io.airbyte.domain.models.GroupId
+import io.airbyte.domain.models.OrganizationId
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -20,18 +22,20 @@ class GroupTest {
   fun `should create valid group with all fields`() {
     val group =
       Group(
-        groupId = testGroupId,
+        groupId = GroupId(testGroupId),
         name = "Engineering",
         description = "Engineering team",
-        organizationId = testOrgId,
+        organizationId = OrganizationId(testOrgId),
+        memberCount = 5,
         createdAt = testTime,
         updatedAt = testTime,
       )
 
-    assertEquals(testGroupId, group.groupId)
+    assertEquals(testGroupId, group.groupId.value)
     assertEquals("Engineering", group.name)
     assertEquals("Engineering team", group.description)
-    assertEquals(testOrgId, group.organizationId)
+    assertEquals(testOrgId, group.organizationId.value)
+    assertEquals(5, group.memberCount)
     assertEquals(testTime, group.createdAt)
     assertEquals(testTime, group.updatedAt)
   }
@@ -40,15 +44,16 @@ class GroupTest {
   fun `should create valid group with null description`() {
     val group =
       Group(
-        groupId = testGroupId,
+        groupId = GroupId(testGroupId),
         name = "Engineering",
         description = null,
-        organizationId = testOrgId,
+        organizationId = OrganizationId(testOrgId),
+        memberCount = 0,
         createdAt = testTime,
         updatedAt = testTime,
       )
 
-    assertEquals(testGroupId, group.groupId)
+    assertEquals(testGroupId, group.groupId.value)
     assertEquals("Engineering", group.name)
     assertEquals(null, group.description)
   }
@@ -58,10 +63,11 @@ class GroupTest {
     val exception =
       assertThrows<IllegalArgumentException> {
         Group(
-          groupId = testGroupId,
+          groupId = GroupId(testGroupId),
           name = "",
           description = "Test",
-          organizationId = testOrgId,
+          organizationId = OrganizationId(testOrgId),
+          memberCount = 0,
           createdAt = testTime,
           updatedAt = testTime,
         )
@@ -74,10 +80,11 @@ class GroupTest {
     val exception =
       assertThrows<IllegalArgumentException> {
         Group(
-          groupId = testGroupId,
+          groupId = GroupId(testGroupId),
           name = "   ",
           description = "Test",
-          organizationId = testOrgId,
+          organizationId = OrganizationId(testOrgId),
+          memberCount = 0,
           createdAt = testTime,
           updatedAt = testTime,
         )
@@ -91,10 +98,11 @@ class GroupTest {
     val exception =
       assertThrows<IllegalArgumentException> {
         Group(
-          groupId = testGroupId,
+          groupId = GroupId(testGroupId),
           name = longName,
           description = "Test",
-          organizationId = testOrgId,
+          organizationId = OrganizationId(testOrgId),
+          memberCount = 0,
           createdAt = testTime,
           updatedAt = testTime,
         )
@@ -107,10 +115,11 @@ class GroupTest {
     val maxLengthName = "a".repeat(256)
     val group =
       Group(
-        groupId = testGroupId,
+        groupId = GroupId(testGroupId),
         name = maxLengthName,
         description = "Test",
-        organizationId = testOrgId,
+        organizationId = OrganizationId(testOrgId),
+        memberCount = 0,
         createdAt = testTime,
         updatedAt = testTime,
       )
@@ -123,10 +132,11 @@ class GroupTest {
     val exception =
       assertThrows<IllegalArgumentException> {
         Group(
-          groupId = testGroupId,
+          groupId = GroupId(testGroupId),
           name = "Test",
           description = longDescription,
-          organizationId = testOrgId,
+          organizationId = OrganizationId(testOrgId),
+          memberCount = 0,
           createdAt = testTime,
           updatedAt = testTime,
         )
@@ -139,10 +149,11 @@ class GroupTest {
     val maxLengthDescription = "a".repeat(1024)
     val group =
       Group(
-        groupId = testGroupId,
+        groupId = GroupId(testGroupId),
         name = "Test",
         description = maxLengthDescription,
-        organizationId = testOrgId,
+        organizationId = OrganizationId(testOrgId),
+        memberCount = 0,
         createdAt = testTime,
         updatedAt = testTime,
       )

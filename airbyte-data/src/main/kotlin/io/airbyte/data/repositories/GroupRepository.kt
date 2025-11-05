@@ -5,18 +5,16 @@
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.Group
-import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
-import io.micronaut.data.model.Page
-import io.micronaut.data.model.Pageable
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.repository.PageableRepository
-import java.util.Optional
 import java.util.UUID
 
 /**
  * Repository for managing Group entities.
- * Provides CRUD operations and custom queries for group management.
+ * Handles write operations (save, update, delete) and simple queries.
+ * For read operations that need computed fields like member counts,
+ * use GroupWithMemberCountRepository instead.
  */
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface GroupRepository : PageableRepository<Group, UUID> {
@@ -25,40 +23,12 @@ interface GroupRepository : PageableRepository<Group, UUID> {
    *
    * @param name The group name
    * @param organizationId The organization ID
-   * @return Optional containing the group if found
+   * @return Group if found, null otherwise
    */
   fun findByNameAndOrganizationId(
     name: String,
     organizationId: UUID,
   ): Group?
-
-  /**
-   * Find all groups for a specific organization.
-   *
-   * @param organizationId The organization ID
-   * @return List of groups in the organization
-   */
-  fun findByOrganizationId(organizationId: UUID): List<Group>
-
-  /**
-   * Find all groups for a specific organization with pagination.
-   *
-   * @param organizationId The organization ID
-   * @param pageable Pagination parameters
-   * @return Page of groups in the organization
-   */
-  fun findByOrganizationId(
-    organizationId: UUID,
-    pageable: Pageable,
-  ): Page<Group>
-
-  /**
-   * Find groups by their IDs.
-   *
-   * @param ids Set of group IDs
-   * @return List of groups matching the IDs
-   */
-  fun findByIdIn(ids: Set<UUID>): List<Group>
 
   /**
    * Check if a group name already exists within an organization.
@@ -79,19 +49,4 @@ interface GroupRepository : PageableRepository<Group, UUID> {
    * @return Number of groups in the organization
    */
   fun countByOrganizationId(organizationId: UUID): Long
-
-  /**
-   * Find all groups that a user belongs to.
-   *
-   * @param userId The user ID
-   * @return List of groups the user is a member of
-   */
-  @Query(
-    """
-    SELECT g.* FROM "group" g
-    INNER JOIN group_member gm ON g.id = gm.group_id
-    WHERE gm.user_id = :userId
-    """,
-  )
-  fun findGroupsByUserId(userId: UUID): List<Group>
 }

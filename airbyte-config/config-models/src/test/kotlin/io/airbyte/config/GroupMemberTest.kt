@@ -23,12 +23,16 @@ class GroupMemberTest {
         id = testMemberId,
         groupId = testGroupId,
         userId = testUserId,
+        email = "test@example.com",
+        name = "Test User",
         createdAt = testTime,
       )
 
     assertEquals(testMemberId, member.id)
     assertEquals(testGroupId, member.groupId)
     assertEquals(testUserId, member.userId)
+    assertEquals("test@example.com", member.email)
+    assertEquals("Test User", member.name)
     assertEquals(testTime, member.createdAt)
   }
 
@@ -42,6 +46,8 @@ class GroupMemberTest {
         id = UUID.randomUUID(),
         groupId = testGroupId,
         userId = user1,
+        email = "user1@example.com",
+        name = "User One",
         createdAt = testTime,
       )
     val member2 =
@@ -49,6 +55,8 @@ class GroupMemberTest {
         id = UUID.randomUUID(),
         groupId = testGroupId,
         userId = user2,
+        email = "user2@example.com",
+        name = "User Two",
         createdAt = testTime,
       )
 
@@ -68,6 +76,8 @@ class GroupMemberTest {
         id = UUID.randomUUID(),
         groupId = group1,
         userId = testUserId,
+        email = "test@example.com",
+        name = "Test User",
         createdAt = testTime,
       )
     val member2 =
@@ -75,6 +85,8 @@ class GroupMemberTest {
         id = UUID.randomUUID(),
         groupId = group2,
         userId = testUserId,
+        email = "test@example.com",
+        name = "Test User",
         createdAt = testTime,
       )
 

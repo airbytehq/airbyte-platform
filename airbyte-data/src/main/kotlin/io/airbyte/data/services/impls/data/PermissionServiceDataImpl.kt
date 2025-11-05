@@ -11,6 +11,7 @@ import io.airbyte.config.Permission
 import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.OrgMemberCount
 import io.airbyte.data.repositories.PermissionRepository
+import io.airbyte.data.services.InvalidGroupPermissionRequestException
 import io.airbyte.data.services.InvalidServiceAccountPermissionRequestException
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.PermissionService
@@ -127,6 +128,47 @@ open class PermissionServiceDataImpl(
   }
 
   @Transactional("config")
+  override fun createGroupPermission(permission: Permission): Permission {
+    if (permission.userId != null) {
+      throw InvalidGroupPermissionRequestException(
+        "Group permission cannot be created when given a user id. Provide a group id instead.",
+      )
+    }
+
+    if (permission.serviceAccountId != null) {
+      throw InvalidGroupPermissionRequestException(
+        "Group permission cannot be created when given a service account id. Provide a group id instead.",
+      )
+    }
+
+    if (permission.groupId == null) {
+      throw InvalidGroupPermissionRequestException(
+        "Missing group id from request: $permission",
+      )
+    }
+
+    // Group permissions are simpler - just save without redundancy checks
+    // since groups don't have the same hierarchical permission model as users
+    return permissionRepository.save(permission.toEntity()).toConfigModel()
+  }
+
+  @Transactional("config")
+  override fun deleteGroupPermission(permissionId: UUID) {
+    val permission =
+      permissionRepository
+        .findById(permissionId)
+        .orElseThrow { ConfigNotFoundException(ConfigNotFoundType.PERMISSION, "Permission not found: $permissionId") }
+
+    // Verify this is actually a group permission
+    if (permission.groupId == null) {
+      throw IllegalArgumentException("Permission $permissionId is not a group permission")
+    }
+
+    // Simple deletion - no cascade logic needed for group permissions
+    permissionRepository.deleteById(permissionId)
+  }
+
+  @Transactional("config")
   override fun updatePermission(permission: Permission) {
     // throw early if the update would remove the last org admin
     throwIfUpdateWouldRemoveLastOrgAdmin(permission)
@@ -154,6 +196,11 @@ open class PermissionServiceDataImpl(
 
   override fun getPermissionsByWorkspaceId(workspaceId: UUID): List<Permission> =
     permissionRepository.findByWorkspaceId(workspaceId).map {
+      it.toConfigModel()
+    }
+
+  override fun getPermissionsByGroupId(groupId: UUID): List<Permission> =
+    permissionRepository.findByGroupId(groupId).map {
       it.toConfigModel()
     }
 

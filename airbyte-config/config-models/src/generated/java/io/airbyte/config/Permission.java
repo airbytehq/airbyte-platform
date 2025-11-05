@@ -58,6 +58,8 @@ public class Permission implements Serializable {
   private UUID organizationId;
   @JsonProperty("serviceAccountId")
   private UUID serviceAccountId;
+  @JsonProperty("groupId")
+  private UUID groupId;
   private final static long serialVersionUID = -1382855757141512537L;
 
   /**
@@ -169,6 +171,21 @@ public class Permission implements Serializable {
 
   public Permission withServiceAccountId(UUID serviceAccountId) {
     this.serviceAccountId = serviceAccountId;
+    return this;
+  }
+
+  @JsonProperty("groupId")
+  public UUID getGroupId() {
+    return groupId;
+  }
+
+  @JsonProperty("groupId")
+  public void setGroupId(UUID groupId) {
+    this.groupId = groupId;
+  }
+
+  public Permission withGroupId(UUID groupId) {
+    this.groupId = groupId;
     return this;
   }
 

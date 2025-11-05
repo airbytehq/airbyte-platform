@@ -78,6 +78,15 @@ interface GroupService {
   fun getGroupMembers(groupId: GroupId): List<GroupMember>
 
   /**
+   * Lists all members of a group with pagination.
+   * @throws IOException if there's an error retrieving members
+   */
+  fun getGroupMembers(
+    groupId: GroupId,
+    paginationParams: PaginationParams?,
+  ): List<GroupMember>
+
+  /**
    * Lists all groups that a user belongs to.
    * @throws IOException if there's an error retrieving groups
    */

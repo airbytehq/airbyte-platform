@@ -4,8 +4,9 @@
 
 package io.airbyte.config
 
+import io.airbyte.domain.models.GroupId
+import io.airbyte.domain.models.OrganizationId
 import java.time.OffsetDateTime
-import java.util.UUID
 
 /**
  * Domain model representing a user group within an organization.
@@ -14,10 +15,11 @@ import java.util.UUID
  */
 
 data class Group(
-  val groupId: UUID,
+  val groupId: GroupId,
   val name: String,
   val description: String?,
-  val organizationId: UUID,
+  val organizationId: OrganizationId,
+  val memberCount: Long?,
   val createdAt: OffsetDateTime,
   val updatedAt: OffsetDateTime,
 ) {

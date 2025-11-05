@@ -5,47 +5,19 @@
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.GroupMember
-import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.repository.PageableRepository
-import java.util.Optional
 import java.util.UUID
 
 /**
  * Repository for managing GroupMember entities.
- * Provides operations for managing user-group membership relationships.
+ * Handles write operations (save, delete) and simple queries without user information.
+ * For read operations that need user email and name,
+ * use GroupMemberWithUserInfoRepository instead.
  */
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface GroupMemberRepository : PageableRepository<GroupMember, UUID> {
-  /**
-   * Find all members of a specific group.
-   *
-   * @param groupId The group ID
-   * @return List of group memberships for the group
-   */
-  fun findByGroupId(groupId: UUID): List<GroupMember>
-
-  /**
-   * Find all groups that a user belongs to.
-   *
-   * @param userId The user ID
-   * @return List of group memberships for the user
-   */
-  fun findByUserId(userId: UUID): List<GroupMember>
-
-  /**
-   * Find a specific group membership.
-   *
-   * @param groupId The group ID
-   * @param userId The user ID
-   * @return Optional containing the membership if it exists
-   */
-  fun findByGroupIdAndUserId(
-    groupId: UUID,
-    userId: UUID,
-  ): Optional<GroupMember>
-
   /**
    * Check if a user is a member of a group.
    *

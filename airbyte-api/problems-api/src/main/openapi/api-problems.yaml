@@ -1111,6 +1111,48 @@ components:
               default: A tag with this name already exists in this workspace.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    GroupAlreadyExistsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:group-already-exists
+            title:
+              type: string
+              default: Group already exists
+            detail:
+              type: string
+              default: A group with this name already exists in this organization.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
+    GroupMemberAlreadyExistsProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 409
+            type:
+              type: string
+              default: error:group-member-already-exists
+            title:
+              type: string
+              default: Group member already exists
+            detail:
+              type: string
+              default: This user is already a member of this group.
+            data:
+              $ref: "#/components/schemas/ProblemMessageData"
     TagInvalidHexColorProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object

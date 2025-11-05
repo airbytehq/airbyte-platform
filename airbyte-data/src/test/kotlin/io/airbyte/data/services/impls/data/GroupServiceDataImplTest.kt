@@ -7,7 +7,9 @@ package io.airbyte.data.services.impls.data
 import io.airbyte.config.Group
 import io.airbyte.config.GroupMember
 import io.airbyte.data.repositories.GroupMemberRepository
+import io.airbyte.data.repositories.GroupMemberWithUserInfoRepository
 import io.airbyte.data.repositories.GroupRepository
+import io.airbyte.data.repositories.GroupWithMemberCountRepository
 import io.airbyte.data.services.AlreadyGroupMemberException
 import io.airbyte.data.services.GroupNameNotUniqueException
 import io.airbyte.data.services.impls.data.mappers.toEntity
@@ -34,7 +36,9 @@ import java.util.UUID
 class GroupServiceDataImplTest {
   private lateinit var groupService: GroupServiceDataImpl
   private val groupRepository: GroupRepository = mockk()
+  private val groupWithMemberCountRepository: GroupWithMemberCountRepository = mockk()
   private val groupMemberRepository: GroupMemberRepository = mockk()
+  private val groupMemberWithUserInfoRepository: GroupMemberWithUserInfoRepository = mockk()
 
   private val testGroupId = UUID.randomUUID()
   private val testOrgId = UUID.randomUUID()
@@ -43,10 +47,11 @@ class GroupServiceDataImplTest {
 
   private val testGroup =
     Group(
-      groupId = testGroupId,
+      groupId = GroupId(testGroupId),
       name = "Engineering",
       description = "Engineering team",
-      organizationId = testOrgId,
+      organizationId = OrganizationId(testOrgId),
+      memberCount = 0,
       createdAt = testTime,
       updatedAt = testTime,
     )
@@ -56,20 +61,41 @@ class GroupServiceDataImplTest {
       id = UUID.randomUUID(),
       groupId = testGroupId,
       userId = testUserId,
+      email = "test@example.com",
+      name = "Test User",
       createdAt = testTime,
     )
 
   @BeforeEach
   fun setUp() {
-    groupService = GroupServiceDataImpl(groupRepository, groupMemberRepository)
+    groupService =
+      GroupServiceDataImpl(
+        groupRepository,
+        groupWithMemberCountRepository,
+        groupMemberRepository,
+        groupMemberWithUserInfoRepository,
+      )
   }
 
   // ========== createGroup tests ==========
 
   @Test
   fun `createGroup creates new group`() {
-    val newGroup = testGroup.copy(groupId = UUID.randomUUID())
-    every { groupRepository.save(any()) } returns newGroup.toEntity()
+    val newGroup = testGroup.copy(groupId = GroupId(UUID.randomUUID()))
+    val savedEntity = newGroup.toEntity()
+    every { groupRepository.save(any()) } returns savedEntity
+    every { groupWithMemberCountRepository.findById(savedEntity.id!!) } returns
+      Optional.of(
+        io.airbyte.data.repositories.entities.GroupWithMemberCount(
+          id = savedEntity.id,
+          name = savedEntity.name,
+          description = savedEntity.description,
+          organizationId = savedEntity.organizationId,
+          createdAt = savedEntity.createdAt,
+          updatedAt = savedEntity.updatedAt,
+          memberCount = 0L,
+        ),
+      )
 
     val result = groupService.createGroup(newGroup)
 
@@ -98,7 +124,18 @@ class GroupServiceDataImplTest {
 
   @Test
   fun `getGroup returns group when it exists`() {
-    every { groupRepository.findById(testGroupId) } returns Optional.of(testGroup.toEntity())
+    every { groupWithMemberCountRepository.findById(testGroupId) } returns
+      Optional.of(
+        io.airbyte.data.repositories.entities.GroupWithMemberCount(
+          id = testGroup.groupId.value,
+          name = testGroup.name,
+          description = testGroup.description,
+          organizationId = testGroup.organizationId.value,
+          createdAt = testGroup.createdAt,
+          updatedAt = testGroup.updatedAt,
+          memberCount = testGroup.memberCount,
+        ),
+      )
 
     val result = groupService.getGroup(GroupId(testGroupId))
 
@@ -109,7 +146,7 @@ class GroupServiceDataImplTest {
 
   @Test
   fun `getGroup returns empty when group does not exist`() {
-    every { groupRepository.findById(testGroupId) } returns Optional.empty()
+    every { groupWithMemberCountRepository.findById(testGroupId) } returns Optional.empty()
 
     val result = groupService.getGroup(GroupId(testGroupId))
 
@@ -121,8 +158,21 @@ class GroupServiceDataImplTest {
   @Test
   fun `updateGroup updates group`() {
     val updatedGroup = testGroup.copy(name = "Senior Engineering")
+    val updatedEntity = updatedGroup.toEntity()
     every { groupRepository.existsById(testGroupId) } returns true
-    every { groupRepository.update(any()) } returns updatedGroup.toEntity()
+    every { groupRepository.update(any()) } returns updatedEntity
+    every { groupWithMemberCountRepository.findById(updatedEntity.id!!) } returns
+      Optional.of(
+        io.airbyte.data.repositories.entities.GroupWithMemberCount(
+          id = updatedEntity.id,
+          name = updatedEntity.name,
+          description = updatedEntity.description,
+          organizationId = updatedEntity.organizationId,
+          createdAt = updatedEntity.createdAt,
+          updatedAt = updatedEntity.updatedAt,
+          memberCount = 0L,
+        ),
+      )
 
     val result = groupService.updateGroup(updatedGroup)
 
@@ -176,9 +226,29 @@ class GroupServiceDataImplTest {
   @Test
   fun `listGroupsByOrganization returns all groups in organization`() {
     val group1 = testGroup
-    val group2 = testGroup.copy(groupId = UUID.randomUUID(), name = "Product")
+    val group2 = testGroup.copy(groupId = GroupId(UUID.randomUUID()), name = "Product")
 
-    every { groupRepository.findByOrganizationId(testOrgId) } returns listOf(group1.toEntity(), group2.toEntity())
+    every { groupWithMemberCountRepository.findByOrganizationId(testOrgId) } returns
+      listOf(
+        io.airbyte.data.repositories.entities.GroupWithMemberCount(
+          id = group1.groupId.value,
+          name = group1.name,
+          description = group1.description,
+          organizationId = group1.organizationId.value,
+          createdAt = group1.createdAt,
+          updatedAt = group1.updatedAt,
+          memberCount = group1.memberCount,
+        ),
+        io.airbyte.data.repositories.entities.GroupWithMemberCount(
+          id = group2.groupId.value,
+          name = group2.name,
+          description = group2.description,
+          organizationId = group2.organizationId.value,
+          createdAt = group2.createdAt,
+          updatedAt = group2.updatedAt,
+          memberCount = group2.memberCount,
+        ),
+      )
 
     val result = groupService.getGroupsForOrganization(OrganizationId(testOrgId), null)
 
@@ -189,7 +259,7 @@ class GroupServiceDataImplTest {
 
   @Test
   fun `listGroupsByOrganization returns empty list when no groups exist`() {
-    every { groupRepository.findByOrganizationId(testOrgId) } returns emptyList()
+    every { groupWithMemberCountRepository.findByOrganizationId(testOrgId) } returns emptyList()
 
     val result = groupService.getGroupsForOrganization(OrganizationId(testOrgId), null)
 
@@ -201,6 +271,15 @@ class GroupServiceDataImplTest {
   @Test
   fun `addUserToGroup adds user to group`() {
     every { groupMemberRepository.save(any()) } returns testGroupMember.toEntity()
+    every { groupMemberWithUserInfoRepository.findByGroupIdAndUserId(testGroupId, testUserId) } returns
+      io.airbyte.data.repositories.entities.GroupMemberWithUserInfo(
+        id = testGroupMember.id,
+        groupId = testGroupMember.groupId,
+        userId = testGroupMember.userId,
+        createdAt = testGroupMember.createdAt,
+        email = testGroupMember.email,
+        name = testGroupMember.name,
+      )
 
     val result = groupService.addGroupMember(GroupId(testGroupId), UserId(testUserId))
 
@@ -243,7 +322,25 @@ class GroupServiceDataImplTest {
     val member1 = testGroupMember
     val member2 = testGroupMember.copy(id = UUID.randomUUID(), userId = UUID.randomUUID())
 
-    every { groupMemberRepository.findByGroupId(testGroupId) } returns listOf(member1.toEntity(), member2.toEntity())
+    every { groupMemberWithUserInfoRepository.findByGroupId(testGroupId) } returns
+      listOf(
+        io.airbyte.data.repositories.entities.GroupMemberWithUserInfo(
+          id = member1.id,
+          groupId = member1.groupId,
+          userId = member1.userId,
+          createdAt = member1.createdAt,
+          email = member1.email,
+          name = member1.name,
+        ),
+        io.airbyte.data.repositories.entities.GroupMemberWithUserInfo(
+          id = member2.id,
+          groupId = member2.groupId,
+          userId = member2.userId,
+          createdAt = member2.createdAt,
+          email = member2.email,
+          name = member2.name,
+        ),
+      )
 
     val result = groupService.getGroupMembers(GroupId(testGroupId))
 
@@ -254,7 +351,7 @@ class GroupServiceDataImplTest {
 
   @Test
   fun `listGroupMembers returns empty list when group has no members`() {
-    every { groupMemberRepository.findByGroupId(testGroupId) } returns emptyList()
+    every { groupMemberWithUserInfoRepository.findByGroupId(testGroupId) } returns emptyList()
 
     val result = groupService.getGroupMembers(GroupId(testGroupId))
 
@@ -266,9 +363,29 @@ class GroupServiceDataImplTest {
   @Test
   fun `listUserGroups returns all groups user belongs to`() {
     val group1 = testGroup
-    val group2 = testGroup.copy(groupId = UUID.randomUUID(), name = "Product")
+    val group2 = testGroup.copy(groupId = GroupId(UUID.randomUUID()), name = "Product")
 
-    every { groupRepository.findGroupsByUserId(testUserId) } returns listOf(group1.toEntity(), group2.toEntity())
+    every { groupWithMemberCountRepository.findGroupsByUserId(testUserId) } returns
+      listOf(
+        io.airbyte.data.repositories.entities.GroupWithMemberCount(
+          id = group1.groupId.value,
+          name = group1.name,
+          description = group1.description,
+          organizationId = group1.organizationId.value,
+          createdAt = group1.createdAt,
+          updatedAt = group1.updatedAt,
+          memberCount = group1.memberCount,
+        ),
+        io.airbyte.data.repositories.entities.GroupWithMemberCount(
+          id = group2.groupId.value,
+          name = group2.name,
+          description = group2.description,
+          organizationId = group2.organizationId.value,
+          createdAt = group2.createdAt,
+          updatedAt = group2.updatedAt,
+          memberCount = group2.memberCount,
+        ),
+      )
 
     val result = groupService.getGroupsForUser(UserId(testUserId))
 
@@ -279,7 +396,7 @@ class GroupServiceDataImplTest {
 
   @Test
   fun `listUserGroups returns empty list when user belongs to no groups`() {
-    every { groupRepository.findGroupsByUserId(testUserId) } returns emptyList()
+    every { groupWithMemberCountRepository.findGroupsByUserId(testUserId) } returns emptyList()
 
     val result = groupService.getGroupsForUser(UserId(testUserId))
 

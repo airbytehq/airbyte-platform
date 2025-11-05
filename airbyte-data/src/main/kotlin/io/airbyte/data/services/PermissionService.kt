@@ -59,6 +59,16 @@ interface PermissionService {
   fun createServiceAccountPermission(permission: Permission): Permission
 
   /**
+   * Create a permissions for a group.
+   */
+  fun createGroupPermission(permission: Permission): Permission
+
+  /**
+   * Delete a group permission by its unique id.
+   */
+  fun deleteGroupPermission(permissionId: UUID)
+
+  /**
    * Update a permission
    */
   fun updatePermission(permission: Permission)
@@ -70,7 +80,15 @@ interface PermissionService {
    */
   fun getPermissionsByOrganizationId(organizationId: UUID): List<Permission>
 
+  /**
+   * Get all permissions for a given workspace by id
+   */
   fun getPermissionsByWorkspaceId(workspaceId: UUID): List<Permission>
+
+  /**
+   * Get all permissions for a given group by id
+   */
+  fun getPermissionsByGroupId(groupId: UUID): List<Permission>
 
   fun updatePermissions(permissions: List<Permission>)
 }
@@ -90,5 +108,9 @@ class RemoveLastOrgAdminPermissionException(
 ) : Exception(message)
 
 class InvalidServiceAccountPermissionRequestException(
+  message: String,
+) : Exception(message)
+
+class InvalidGroupPermissionRequestException(
   message: String,
 ) : Exception(message)

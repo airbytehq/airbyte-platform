@@ -10240,6 +10240,373 @@ paths:
       x-sdk-alias: listUsersWithinAnOrganization
       x-sdk-group: Users
 
+  # Public APIs - Groups
+  /public/v1/groups:
+    get:
+      tags:
+        - public_groups
+        - public
+        - Groups
+      summary: List groups
+      description: List all groups, optionally filtered by organization
+      parameters:
+        - in: query
+          name: organizationId
+          schema:
+            type: string
+            format: uuid
+          description: Filter groups by organization ID
+          required: false
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            format: int32
+            default: 20
+            minimum: 1
+            maximum: 100
+          description: Set the limit on the number of Groups returned. The default is 20 Groups.
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            format: int32
+            default: 0
+            minimum: 0
+          description: Set the offset to start at when returning Groups. The default is 0.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupsResponse"
+          description: List Groups.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicListGroups
+      x-sdk-alias: listGroups
+      x-sdk-group: Groups
+    post:
+      tags:
+        - public_groups
+        - public
+        - Groups
+      summary: Create group
+      description: Create a new group within an organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupCreateRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupResponse"
+          description: Group created successfully.
+        "400":
+          description: Invalid input
+        "403":
+          description: Not allowed
+        "409":
+          description: Group with this name already exists in the organization
+      operationId: publicCreateGroup
+      x-sdk-alias: createGroup
+      x-sdk-group: Groups
+
+  /public/v1/groups/{groupId}:
+    parameters:
+      - in: path
+        name: groupId
+        schema:
+          type: string
+          format: uuid
+        required: true
+        description: Group identifier
+    get:
+      tags:
+        - public_groups
+        - public
+        - Groups
+      summary: Get group details
+      description: Get a specific group by ID
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupResponse"
+          description: Get a Group by the id in the path.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetGroup
+      x-sdk-alias: getGroup
+      x-sdk-group: Groups
+    patch:
+      tags:
+        - public_groups
+        - public
+        - Groups
+      summary: Update group
+      description: Update an existing group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupUpdateRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupResponse"
+          description: Group updated successfully.
+        "400":
+          description: Invalid input
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+        "409":
+          description: Group name conflict
+      operationId: publicUpdateGroup
+      x-sdk-alias: updateGroup
+      x-sdk-group: Groups
+    delete:
+      tags:
+        - public_groups
+        - public
+        - Groups
+      summary: Delete group
+      description: Delete a group and remove all associated memberships
+      responses:
+        "204":
+          description: Group deleted successfully
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteGroup
+      x-sdk-alias: deleteGroup
+      x-sdk-group: Groups
+
+  /public/v1/groups/{groupId}/members:
+    parameters:
+      - in: path
+        name: groupId
+        schema:
+          type: string
+          format: uuid
+        required: true
+        description: Group identifier
+    get:
+      tags:
+        - public_group_members
+        - public
+        - Groups
+      summary: List group members
+      description: Get all members of a specific group
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            format: int32
+            default: 20
+            minimum: 1
+            maximum: 100
+          description: Set the limit on the number of members returned. The default is 20.
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            format: int32
+            default: 0
+            minimum: 0
+          description: Set the offset to start at when returning members. The default is 0.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupMembersResponse"
+          description: List Group members.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicListGroupMembers
+      x-sdk-alias: listGroupMembers
+      x-sdk-group: Groups
+    post:
+      tags:
+        - public_group_members
+        - public
+        - Groups
+      summary: Add member to group
+      description: Add a user to a group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupMemberAddRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupMemberResponse"
+          description: Member added successfully.
+        "400":
+          description: Invalid input
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+        "409":
+          description: User is already a member of this group
+      operationId: publicAddGroupMember
+      x-sdk-alias: addGroupMember
+      x-sdk-group: Groups
+
+  /public/v1/groups/{groupId}/members/{userId}:
+    parameters:
+      - in: path
+        name: groupId
+        schema:
+          type: string
+          format: uuid
+        required: true
+        description: Group identifier
+      - in: path
+        name: userId
+        schema:
+          type: string
+          format: uuid
+        required: true
+        description: User identifier
+    delete:
+      tags:
+        - public_group_members
+        - public
+        - Groups
+      summary: Remove member from group
+      description: Remove a user from a group
+      responses:
+        "204":
+          description: Member removed successfully
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicRemoveGroupMember
+      x-sdk-alias: removeGroupMember
+      x-sdk-group: Groups
+
+  /public/v1/groups/{groupId}/permissions:
+    parameters:
+      - in: path
+        name: groupId
+        schema:
+          type: string
+          format: uuid
+        required: true
+        description: Group identifier
+    get:
+      tags:
+        - public_group_permissions
+        - public
+        - Groups
+      summary: List group permissions
+      description: Get all permissions assigned to a group
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupPermissionsResponse"
+          description: List Group permissions.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicListGroupPermissions
+      x-sdk-alias: listGroupPermissions
+      x-sdk-group: Groups
+    post:
+      tags:
+        - public_group_permissions
+        - public
+        - Groups
+      summary: Create group permission
+      description: Assign a permission to a group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GroupPermissionCreateRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GroupPermissionResponse"
+          description: Permission created successfully.
+        "400":
+          description: Invalid input
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+        "409":
+          description: Permission already exists for this group
+      operationId: publicCreateGroupPermission
+      x-sdk-alias: createGroupPermission
+      x-sdk-group: Groups
+
+  /public/v1/groups/{groupId}/permissions/{permissionId}:
+    parameters:
+      - in: path
+        name: groupId
+        schema:
+          type: string
+          format: uuid
+        required: true
+        description: Group identifier
+      - in: path
+        name: permissionId
+        schema:
+          type: string
+          format: uuid
+        required: true
+        description: Permission identifier
+    delete:
+      tags:
+        - public_group_permissions
+        - public
+        - Groups
+      summary: Delete group permission
+      description: Remove a permission from a group
+      responses:
+        "204":
+          description: Permission deleted successfully
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteGroupPermission
+      x-sdk-alias: deleteGroupPermission
+      x-sdk-group: Groups
+
   # Public APIs - Tags
   /public/v1/tags:
     get:
@@ -20687,6 +21054,245 @@ components:
           items:
             $ref: "#/components/schemas/PermissionResponseRead"
       x-sdk-component: true
+
+    # Public APIs - Groups
+    GroupResponse:
+      title: Root Type for GroupResponse
+      description: Provides details of a single group
+      type: object
+      required:
+        - groupId
+        - name
+        - organizationId
+        - memberCount
+      properties:
+        groupId:
+          type: string
+          format: uuid
+          description: The ID of the group
+        name:
+          type: string
+          description: The name of the group
+        description:
+          type: string
+          nullable: true
+          description: Optional description of the group
+        organizationId:
+          type: string
+          format: uuid
+          description: The ID of the organization the group belongs to
+        memberCount:
+          type: integer
+          format: int64
+          description: The number of members in the group
+      x-sdk-component: true
+      x-sdk-entity: Group
+      x-sdk-param-suppress-computed-diff: true
+
+    GroupsResponse:
+      title: Root Type for GroupsResponse
+      description: List/Array of multiple groups
+      required:
+        - data
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupResponse"
+        next:
+          type: string
+          description: Link to the next page of results
+          nullable: true
+        previous:
+          type: string
+          description: Link to the previous page of results
+          nullable: true
+      x-sdk-component: true
+      x-sdk-entity: Group
+      x-sdk-param-suppress-computed-diff: true
+
+    GroupCreateRequest:
+      title: Root Type for GroupCreateRequest
+      description: Request body for creating a group
+      required:
+        - name
+        - organizationId
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of the group
+        description:
+          type: string
+          nullable: true
+          description: Optional description of the group
+        organizationId:
+          type: string
+          format: uuid
+          description: The ID of the organization the group belongs to
+      x-sdk-component: true
+      x-sdk-entity: Group
+      x-sdk-param-suppress-computed-diff: true
+
+    GroupUpdateRequest:
+      title: Root Type for GroupUpdateRequest
+      description: Request body for updating a group
+      type: object
+      properties:
+        name:
+          type: string
+          description: The updated name of the group
+        description:
+          type: string
+          nullable: true
+          description: The updated description of the group
+      x-sdk-component: true
+      x-sdk-entity: Group
+      x-sdk-param-suppress-computed-diff: true
+
+    GroupMemberResponse:
+      title: Root Type for GroupMemberResponse
+      description: Provides details of a single group member
+      type: object
+      required:
+        - memberId
+        - groupId
+        - userId
+        - userEmail
+        - userName
+      properties:
+        memberId:
+          type: string
+          format: uuid
+          description: The ID of the group membership
+        groupId:
+          type: string
+          format: uuid
+          description: The ID of the group
+        userId:
+          type: string
+          format: uuid
+          description: The ID of the user
+        userEmail:
+          type: string
+          format: email
+          description: The email of the user
+        userName:
+          type: string
+          description: The name of the user
+      x-sdk-component: true
+      x-sdk-entity: GroupMember
+      x-sdk-param-suppress-computed-diff: true
+
+    GroupMembersResponse:
+      title: Root Type for GroupMembersResponse
+      description: List/Array of group members
+      required:
+        - data
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupMemberResponse"
+        next:
+          type: string
+          description: Link to the next page of results
+          nullable: true
+        previous:
+          type: string
+          description: Link to the previous page of results
+          nullable: true
+      x-sdk-component: true
+      x-sdk-entity: GroupMember
+      x-sdk-param-suppress-computed-diff: true
+
+    GroupMemberAddRequest:
+      title: Root Type for GroupMemberAddRequest
+      description: Request body for adding a member to a group
+      required:
+        - userId
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: The ID of the user to add to the group
+      x-sdk-component: true
+      x-sdk-entity: GroupMember
+      x-sdk-param-suppress-computed-diff: true
+
+    GroupPermissionResponse:
+      title: Root Type for GroupPermissionResponse
+      description: Provides details of a single group permission
+      type: object
+      required:
+        - permissionId
+        - groupId
+        - permissionType
+      properties:
+        permissionId:
+          type: string
+          format: uuid
+          description: The ID of the permission
+        groupId:
+          type: string
+          format: uuid
+          description: The ID of the group
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        workspaceId:
+          type: string
+          format: uuid
+          nullable: true
+          description: The workspace ID for workspace-scoped permissions
+        organizationId:
+          type: string
+          format: uuid
+          nullable: true
+          description: The organization ID for organization-scoped permissions
+      x-sdk-component: true
+      x-sdk-entity: GroupPermission
+      x-sdk-param-suppress-computed-diff: true
+
+    GroupPermissionsResponse:
+      title: Root Type for GroupPermissionsResponse
+      description: List/Array of group permissions
+      required:
+        - data
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupPermissionResponse"
+      x-sdk-component: true
+      x-sdk-entity: GroupPermission
+      x-sdk-param-suppress-computed-diff: true
+
+    GroupPermissionCreateRequest:
+      title: Root Type for GroupPermissionCreateRequest
+      description: Request body for creating a group permission
+      required:
+        - permissionType
+      type: object
+      properties:
+        permissionType:
+          $ref: "#/components/schemas/PermissionType"
+        workspaceId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required for workspace-scoped permissions
+        organizationId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required for organization-scoped permissions
+      x-sdk-component: true
+      x-sdk-entity: GroupPermission
+      x-sdk-param-suppress-computed-diff: true
 
     # Public APIs - Organizations
     OrganizationResponse:

@@ -16,5 +16,7 @@ data class GroupMember(
   val id: UUID,
   val groupId: UUID,
   val userId: UUID,
+  val email: String?,
+  val name: String?,
   val createdAt: OffsetDateTime,
 )

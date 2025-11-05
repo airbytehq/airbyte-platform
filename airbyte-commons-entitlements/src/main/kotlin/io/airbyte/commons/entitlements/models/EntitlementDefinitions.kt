@@ -102,6 +102,10 @@ object SourceDb2EnterpriseConnector : ConnectorEntitlement(
   override val name: String = "source-db2"
 }
 
+object GroupsEntitlement : FeatureEntitlement(
+  featureId = "feature-groups",
+)
+
 object Entitlements {
   private val ALL: List<Entitlement> =
     listOf(
@@ -125,6 +129,7 @@ object Entitlements {
       SourceSharepointEnterpriseConnector,
       SourceWorkdayEnterpriseConnector,
       SourceDb2EnterpriseConnector,
+      GroupsEntitlement,
     )
 
   private val BY_FEATURE_ID: Map<String, Entitlement> =

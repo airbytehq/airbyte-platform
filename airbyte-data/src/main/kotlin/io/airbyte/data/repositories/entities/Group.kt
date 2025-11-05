@@ -9,7 +9,6 @@ import io.micronaut.data.annotation.DateUpdated
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import io.micronaut.data.annotation.event.PrePersist
-import io.micronaut.data.model.naming.NamingStrategies
 import java.time.OffsetDateTime
 import java.util.UUID
 

@@ -17,6 +17,7 @@ fun EntityPermission.toConfigModel(): ModelPermission =
     .withOrganizationId(this.organizationId)
     .withPermissionType(this.permissionType.toConfigModel())
     .withServiceAccountId(this.serviceAccountId)
+    .withGroupId(this.groupId)
 
 fun ModelPermission.toEntity(): EntityPermission =
   EntityPermission(
@@ -26,4 +27,5 @@ fun ModelPermission.toEntity(): EntityPermission =
     organizationId = this.organizationId,
     permissionType = this.permissionType.toEntity(),
     serviceAccountId = this.serviceAccountId,
+    groupId = this.groupId,
   )
