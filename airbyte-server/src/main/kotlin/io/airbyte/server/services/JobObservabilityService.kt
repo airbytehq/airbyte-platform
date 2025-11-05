@@ -251,16 +251,18 @@ class JobObservabilityService(
     currentStream: ObsStreamStats,
     streamHistory: List<ObsStreamStats>,
   ): StreamInfo {
-    val currentStreamMetrics = currentStream.toStreamMetrics()
+    // Compute derived stats for current and historical streams
+    val currentStreamMetrics = computeStreamDerivedStats(currentStream.toStreamMetrics())
+    val historicalStreamMetrics = streamHistory.map { computeStreamDerivedStats(it.toStreamMetrics()) }
 
     // Get scores for top-level fields (bytesLoaded, recordsLoaded, etc.)
-    val streamScore = outliers.getScores(streamHistory.map { it.toStreamMetrics() }, currentStreamMetrics)
+    val streamScore = outliers.getScores(historicalStreamMetrics, currentStreamMetrics)
 
-    // Get scores for additionalStats
+    // Get scores for additionalStats (which now includes derived stats)
     val additionalStatsScores =
       computeAdditionalStatsScores(
-        currentStream.additionalStats,
-        streamHistory.map { it.additionalStats },
+        currentStreamMetrics.additionalStats,
+        historicalStreamMetrics.map { it.additionalStats },
       )
 
     // Merge the two score maps
@@ -494,5 +496,57 @@ class JobObservabilityService(
       metricClient.count(OssMetricsRegistry.DATA_OBS_OUTLIER_CHECK_ERRORS, value = 1)
     }
     return eval
+  }
+
+  /**
+   * Compute derived stats from stream metrics and add them to additionalStats.
+   *
+   * This evaluates all DerivedStatRules, checking if all necessary dimensions are present
+   * before computing each derived stat.
+   *
+   * @param metrics The stream metrics to augment
+   * @return A copy of the metrics with derived stats added to additionalStats
+   */
+  fun computeStreamDerivedStats(metrics: StreamMetrics): StreamMetrics {
+    val derivedRules = jobObservabilityRulesService.getDerivedStreamStatRules()
+    if (derivedRules.isEmpty()) {
+      return metrics
+    }
+
+    // Create a raw scoring context from the current metrics
+    val rawContext = metrics.toRawScoringContext()
+
+    // Compute all derived stats
+    val derivedStats =
+      derivedRules
+        .mapNotNull { rule ->
+          rule.compute(rawContext)?.let { rule.name to it }
+        }.toMap()
+
+    // Return new metrics with derived stats added to additionalStats
+    return metrics.copy(
+      additionalStats = metrics.additionalStats + derivedStats,
+    )
+  }
+
+  /**
+   * Convert StreamMetrics to a raw ScoringContext (before statistical scoring).
+   * This allows DerivedStatRules to evaluate expressions against current metric values.
+   */
+  private fun StreamMetrics.toRawScoringContext(): Map<String, Scores> {
+    val baseContext =
+      mapOf(
+        "bytesLoaded" to Scores(current = bytesLoaded.toDouble(), mean = 0.0, std = 0.0, zScore = 0.0),
+        "recordsLoaded" to Scores(current = recordsLoaded.toDouble(), mean = 0.0, std = 0.0, zScore = 0.0),
+        "recordsRejected" to Scores(current = recordsRejected.toDouble(), mean = 0.0, std = 0.0, zScore = 0.0),
+      )
+
+    // Include existing additionalStats so derived stats can reference them
+    val additionalContext =
+      additionalStats.mapValues { (_, value) ->
+        Scores(current = value.toDouble(), mean = 0.0, std = 0.0, zScore = 0.0)
+      }
+
+    return baseContext + additionalContext
   }
 }

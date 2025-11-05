@@ -4,6 +4,7 @@
 
 package io.airbyte.statistics
 
+import java.math.BigDecimal
 import kotlin.math.absoluteValue
 import kotlin.math.sqrt
 
@@ -47,6 +48,34 @@ data class OutlierRule(
     } else {
       null
     }
+  }
+}
+
+/**
+ * Define a rule to compute a derived statistic from existing metrics.
+ *
+ * Derived stats are computed before statistical scoring and can be used in outlier rules.
+ *
+ * @param name the name of the derived stat (will be added to additionalStats)
+ * @param value the expression to compute the derived value
+ */
+data class DerivedStatRule(
+  val name: String,
+  val value: Expression,
+) {
+  /**
+   * Compute the derived stat from a raw value context.
+   * Returns null if the condition is false or if the value cannot be computed.
+   *
+   * @param context A ScoringContext containing raw metric values (before statistical scoring)
+   * @return The computed derived stat value, or null if it cannot be computed
+   */
+  fun compute(context: ScoringContext): BigDecimal? {
+    // Compute the derived value
+    val result = value.getValue(context) ?: return null
+    // Return null if the result is not finite (infinity or NaN)
+    if (!result.isFinite()) return null
+    return BigDecimal.valueOf(result)
   }
 }
 

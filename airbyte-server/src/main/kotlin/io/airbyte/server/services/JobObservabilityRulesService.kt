@@ -6,6 +6,7 @@ package io.airbyte.server.services
 
 import io.airbyte.statistics.Abs
 import io.airbyte.statistics.Const
+import io.airbyte.statistics.DerivedStatRule
 import io.airbyte.statistics.Dimension
 import io.airbyte.statistics.GreaterThan
 import io.airbyte.statistics.OutlierRule
@@ -48,6 +49,8 @@ class JobObservabilityRulesService {
 
   fun getStreamOutlierRules() = streamOutlierRules
 
+  fun getDerivedStreamStatRules() = derivedStreamStatRules
+
   /**
    * The dimensions that can be used for outlier detection.
    *
@@ -63,6 +66,7 @@ class JobObservabilityRulesService {
       val bytesLoaded = Dimension("bytesLoaded")
       val recordsLoaded = Dimension("recordsLoaded")
       val recordsRejected = Dimension("recordsRejected")
+      val averageRecordSize = Dimension("averageRecordSize")
     }
   }
 
@@ -117,6 +121,24 @@ class JobObservabilityRulesService {
         // RejectedRecords have their own deviation, mostly because they are more isolated events and shouldn't be tied to the same trend as the
         // "positive" amount of data loaded.
         threshold = dataStdDevThreshold * ReciprocalSqrt(Dim.Stream.recordsRejected.mean),
+      ),
+    )
+
+  /**
+   * Derived stat rules for stream metrics.
+   *
+   * Add your DerivedStatRule instances here to compute new stats from existing stream metrics.
+   * Example:
+   *   DerivedStatRule(
+   *     name = "bytesPerRecord",
+   *     value = Dim.Stream.bytesLoaded / Dim.Stream.recordsLoaded,
+   *   )
+   */
+  private val derivedStreamStatRules =
+    listOf(
+      DerivedStatRule(
+        name = Dim.Stream.averageRecordSize.name,
+        value = Dim.Stream.bytesLoaded / Dim.Stream.recordsLoaded,
       ),
     )
 }

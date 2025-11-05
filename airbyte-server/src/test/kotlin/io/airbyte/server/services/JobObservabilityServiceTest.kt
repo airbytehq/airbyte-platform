@@ -23,6 +23,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.statistics.Abs
 import io.airbyte.statistics.Const
+import io.airbyte.statistics.DerivedStatRule
 import io.airbyte.statistics.Dimension
 import io.airbyte.statistics.GreaterThan
 import io.airbyte.statistics.OutlierRule
@@ -32,6 +33,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -652,6 +654,7 @@ class JobObservabilityServiceTest {
     // Mock the rules service to return empty rules (to avoid missing answer errors)
     val rulesService = mockk<JobObservabilityRulesService>()
     every { rulesService.getStreamOutlierRules() } returns emptyList()
+    every { rulesService.getDerivedStreamStatRules() } returns emptyList()
 
     // Create service with mocked rules
     val testService =
@@ -730,6 +733,7 @@ class JobObservabilityServiceTest {
 
     val rulesService = mockk<JobObservabilityRulesService>()
     every { rulesService.getStreamOutlierRules() } returns listOf(walSizeRule)
+    every { rulesService.getDerivedStreamStatRules() } returns emptyList()
 
     val testService =
       JobObservabilityService(
@@ -820,6 +824,7 @@ class JobObservabilityServiceTest {
 
     val rulesService = mockk<JobObservabilityRulesService>()
     every { rulesService.getStreamOutlierRules() } returns listOf(recordsRule, walSizeRule)
+    every { rulesService.getDerivedStreamStatRules() } returns emptyList()
 
     val testService =
       JobObservabilityService(
@@ -898,6 +903,7 @@ class JobObservabilityServiceTest {
 
     val rulesService = mockk<JobObservabilityRulesService>()
     every { rulesService.getStreamOutlierRules() } returns listOf(recordsRule)
+    every { rulesService.getDerivedStreamStatRules() } returns emptyList()
 
     val testService =
       JobObservabilityService(
@@ -959,5 +965,145 @@ class JobObservabilityServiceTest {
 
     // Verify additionalStats is empty in metrics
     assertEquals(emptyMap<String, BigDecimal>(), result.metrics.additionalStats)
+  }
+
+  @Test
+  fun `computeStreamDerivedStats computes averageRecordSize`() {
+    val rulesService = JobObservabilityRulesService()
+    val testService =
+      JobObservabilityService(
+        actorDefinitionService = actorDefinitionService,
+        connectionService = connectionService,
+        jobPersistence = jobPersistence,
+        obsStatsService = obsStatsService,
+        workspaceService = workspaceService,
+        metricClient = metricClient,
+        jobObservabilityReportingService = null,
+        jobObservabilityRulesService = rulesService,
+        streamStatsService = streamStatsService,
+      )
+
+    val metrics =
+      StreamMetrics(
+        bytesLoaded = 1000L,
+        recordsLoaded = 10L,
+        recordsRejected = 0L,
+      )
+
+    val enriched = testService.computeStreamDerivedStats(metrics)
+
+    assertEquals(BigDecimal.valueOf(100.0), enriched.additionalStats["averageRecordSize"])
+  }
+
+  @Test
+  fun `computeStreamDerivedStats returns original metrics when recordsLoaded is zero`() {
+    val rulesService = JobObservabilityRulesService()
+    val testService =
+      JobObservabilityService(
+        actorDefinitionService = actorDefinitionService,
+        connectionService = connectionService,
+        jobPersistence = jobPersistence,
+        obsStatsService = obsStatsService,
+        workspaceService = workspaceService,
+        metricClient = metricClient,
+        jobObservabilityReportingService = null,
+        jobObservabilityRulesService = rulesService,
+        streamStatsService = streamStatsService,
+      )
+
+    val metrics =
+      StreamMetrics(
+        bytesLoaded = 1000L,
+        recordsLoaded = 0L,
+        recordsRejected = 0L,
+      )
+
+    val enriched = testService.computeStreamDerivedStats(metrics)
+
+    // Should not add averageRecordSize when recordsLoaded is 0 (division by zero returns null)
+    assertFalse(enriched.additionalStats.containsKey("averageRecordSize"))
+  }
+
+  @Test
+  fun `computeStreamDerivedStats returns original metrics when no rules defined`() {
+    val rulesService = mockk<JobObservabilityRulesService>()
+    every { rulesService.getDerivedStreamStatRules() } returns emptyList()
+
+    val testService =
+      JobObservabilityService(
+        actorDefinitionService = actorDefinitionService,
+        connectionService = connectionService,
+        jobPersistence = jobPersistence,
+        obsStatsService = obsStatsService,
+        workspaceService = workspaceService,
+        metricClient = metricClient,
+        jobObservabilityReportingService = null,
+        jobObservabilityRulesService = rulesService,
+        streamStatsService = streamStatsService,
+      )
+
+    val metrics =
+      StreamMetrics(
+        bytesLoaded = 1000L,
+        recordsLoaded = 10L,
+        recordsRejected = 0L,
+      )
+
+    val enriched = testService.computeStreamDerivedStats(metrics)
+
+    assertEquals(metrics, enriched)
+  }
+
+  @Test
+  fun `evaluateStream includes derived stats in evaluation`() {
+    val rulesService = JobObservabilityRulesService()
+
+    val testService =
+      JobObservabilityService(
+        actorDefinitionService = actorDefinitionService,
+        connectionService = connectionService,
+        jobPersistence = jobPersistence,
+        obsStatsService = obsStatsService,
+        workspaceService = workspaceService,
+        metricClient = metricClient,
+        jobObservabilityReportingService = null,
+        jobObservabilityRulesService = rulesService,
+        streamStatsService = streamStatsService,
+      )
+
+    val currentStream =
+      ObsStreamStats(
+        id = ObsStreamStatsId(jobId = 1L, streamNamespace = "ns", streamName = "stream"),
+        bytesLoaded = 1000L,
+        recordsLoaded = 10L,
+        recordsRejected = 0L,
+        wasBackfilled = false,
+        wasResumed = false,
+      )
+
+    val historicalStreams =
+      listOf(
+        ObsStreamStats(
+          id = ObsStreamStatsId(jobId = 2L, streamNamespace = "ns", streamName = "stream"),
+          bytesLoaded = 900L,
+          recordsLoaded = 10L,
+          recordsRejected = 0L,
+          wasBackfilled = false,
+          wasResumed = false,
+        ),
+        ObsStreamStats(
+          id = ObsStreamStatsId(jobId = 3L, streamNamespace = "ns", streamName = "stream"),
+          bytesLoaded = 950L,
+          recordsLoaded = 10L,
+          recordsRejected = 0L,
+          wasBackfilled = false,
+          wasResumed = false,
+        ),
+      )
+
+    val result = testService.evaluateStream("ns", "stream", currentStream, historicalStreams)
+
+    // Verify derived stat was computed and included in metrics
+    assertEquals(BigDecimal.valueOf(100.0), result.metrics.additionalStats["averageRecordSize"])
   }
 }

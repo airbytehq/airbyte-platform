@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNull
+import java.math.BigDecimal
 
 class OutlierEvaluationsTest {
   @Test
@@ -129,6 +130,102 @@ class OutlierEvaluationsTest {
       )
     val outlierEval = rule.evaluate(emptyMap())
     assertNull(outlierEval)
+  }
+
+  @Test
+  fun `DerivedStatRule computes simple division`() {
+    val rule =
+      DerivedStatRule(
+        name = "bytesPerRecord",
+        value = Dimension("bytesLoaded") / Dimension("recordsLoaded"),
+      )
+
+    val context =
+      mapOf(
+        "bytesLoaded" to Scores(current = 1000.0, mean = 0.0, std = 0.0, zScore = 0.0),
+        "recordsLoaded" to Scores(current = 10.0, mean = 0.0, std = 0.0, zScore = 0.0),
+      )
+
+    val result = rule.compute(context)
+    assertEquals(100.0, result?.toDouble())
+  }
+
+  @Test
+  fun `DerivedStatRule returns null when dimension is missing`() {
+    val rule =
+      DerivedStatRule(
+        name = "bytesPerRecord",
+        value = Dimension("bytesLoaded") / Dimension("recordsLoaded"),
+      )
+
+    val context =
+      mapOf(
+        "bytesLoaded" to Scores(current = 1000.0, mean = 0.0, std = 0.0, zScore = 0.0),
+        // recordsLoaded is missing
+      )
+
+    val result = rule.compute(context)
+    assertNull(result)
+  }
+
+  @Test
+  fun `DerivedStatRule handles division by zero`() {
+    val rule =
+      DerivedStatRule(
+        name = "bytesPerRecord",
+        value = Dimension("bytesLoaded") / Dimension("recordsLoaded"),
+      )
+
+    val context =
+      mapOf(
+        "bytesLoaded" to Scores(current = 1000.0, mean = 0.0, std = 0.0, zScore = 0.0),
+        "recordsLoaded" to Scores(current = 0.0, mean = 0.0, std = 0.0, zScore = 0.0),
+      )
+
+    val result = rule.compute(context)
+    // Division by zero results in null (infinity is not a valid BigDecimal)
+    assertNull(result)
+  }
+
+  @Test
+  fun `DerivedStatRule can reference custom dimensions`() {
+    val rule =
+      DerivedStatRule(
+        name = "recordsPerApiCall",
+        value = Dimension("recordsLoaded") / Dimension("api_calls"),
+      )
+
+    val context =
+      mapOf(
+        "recordsLoaded" to Scores(current = 100.0, mean = 0.0, std = 0.0, zScore = 0.0),
+        "api_calls" to Scores(current = 5.0, mean = 0.0, std = 0.0, zScore = 0.0),
+      )
+
+    val result = rule.compute(context)
+    assertEquals(20.0, result?.toDouble())
+  }
+
+  @Test
+  fun `DerivedStatRule supports complex expressions`() {
+    val rule =
+      DerivedStatRule(
+        name = "rejectionRatePercent",
+        value =
+          (
+            Dimension("recordsRejected") /
+              (Dimension("recordsLoaded") + Dimension("recordsRejected"))
+          ) * Const(100.0),
+      )
+
+    val context =
+      mapOf(
+        "recordsLoaded" to Scores(current = 90.0, mean = 0.0, std = 0.0, zScore = 0.0),
+        "recordsRejected" to Scores(current = 10.0, mean = 0.0, std = 0.0, zScore = 0.0),
+      )
+
+    val result = rule.compute(context)
+    assert(result != null)
+    assertEquals(10.0, result!!.toDouble(), 0.001)
   }
 
   companion object {
