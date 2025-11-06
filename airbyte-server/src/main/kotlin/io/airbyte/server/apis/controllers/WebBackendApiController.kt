@@ -196,6 +196,7 @@ open class WebBackendApiController(
       osanoKey = airbyteWebappConfig.osanoKey
       segmentToken = airbyteWebappConfig.segmentToken
       sonarApiUrl = airbyteWebappConfig.sonarApiUrl
+      coralAgentsApiUrl = airbyteWebappConfig.coralAgentsApiUrl
       zendeskKey = airbyteWebappConfig.zendeskKey
       posthogApiKey = airbyteWebappConfig.posthogApiKey
       posthogHost = airbyteWebappConfig.posthogHost

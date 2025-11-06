@@ -1127,6 +1127,7 @@ data class AirbyteWebappConfig(
   val posthogHost: String = "",
   val segmentToken: String = "",
   val sonarApiUrl: String = "",
+  val coralAgentsApiUrl: String = "",
   val url: String = "",
   val zendeskKey: String = "",
 )

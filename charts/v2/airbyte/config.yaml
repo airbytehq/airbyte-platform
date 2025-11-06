@@ -1067,6 +1067,9 @@ server:
     - env: WEBAPP_SONAR_API_URL
       key: webapp.sonarApiUrl
 
+    - env: WEBAPP_CORAL_AGENTS_API_URL
+      key: webapp.coralAgentsApiUrl
+
     - env: WEBAPP_ZENDESK_KEY
       key: webapp.zendeskKey
 

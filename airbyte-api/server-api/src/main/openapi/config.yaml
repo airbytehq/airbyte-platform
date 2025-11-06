@@ -19504,6 +19504,8 @@ components:
           type: string
         sonarApiUrl:
           type: string
+        coralAgentsApiUrl:
+          type: string
         zendeskKey:
           type: string
         posthogApiKey:

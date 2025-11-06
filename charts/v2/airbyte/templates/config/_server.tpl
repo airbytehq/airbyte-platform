@@ -485,6 +485,24 @@ Renders the server.webapp.sonarApiUrl environment variable
 {{- end }}
 
 {{/*
+Renders the server.webapp.coralAgentsApiUrl value
+*/}}
+{{- define "airbyte.server.webapp.coralAgentsApiUrl" }}
+    {{- .Values.server.webapp.coralAgentsApiUrl }}
+{{- end }}
+
+{{/*
+Renders the server.webapp.coralAgentsApiUrl environment variable
+*/}}
+{{- define "airbyte.server.webapp.coralAgentsApiUrl.env" }}
+- name: WEBAPP_CORAL_AGENTS_API_URL
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: WEBAPP_CORAL_AGENTS_API_URL
+{{- end }}
+
+{{/*
 Renders the server.webapp.zendeskKey value
 */}}
 {{- define "airbyte.server.webapp.zendeskKey" }}
@@ -533,6 +551,7 @@ Renders the set of all server environment variables
 {{- include "airbyte.server.webapp.osanoKey.env" . }}
 {{- include "airbyte.server.webapp.segmentToken.env" . }}
 {{- include "airbyte.server.webapp.sonarApiUrl.env" . }}
+{{- include "airbyte.server.webapp.coralAgentsApiUrl.env" . }}
 {{- include "airbyte.server.webapp.zendeskKey.env" . }}
 {{- end }}
 
@@ -565,6 +584,7 @@ WEBAPP_LAUNCHDARKLY_KEY: {{ include "airbyte.server.webapp.launchdarklyKey" . | 
 WEBAPP_OSANO_KEY: {{ include "airbyte.server.webapp.osanoKey" . | quote }}
 WEBAPP_SEGMENT_TOKEN: {{ include "airbyte.server.webapp.segmentToken" . | quote }}
 WEBAPP_SONAR_API_URL: {{ include "airbyte.server.webapp.sonarApiUrl" . | quote }}
+WEBAPP_CORAL_AGENTS_API_URL: {{ include "airbyte.server.webapp.coralAgentsApiUrl" . | quote }}
 WEBAPP_ZENDESK_KEY: {{ include "airbyte.server.webapp.zendeskKey" . | quote }}
 {{- end }}
 
