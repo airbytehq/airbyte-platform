@@ -5,7 +5,7 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.kotlin.dsl.assign
 import java.io.FileOutputStream
 
-val airbyteGradleVersion = "0.75.0"
+val airbyteGradleVersion = "0.76.0"
 // uncomment for testing plugin locally
 // val airbyteGradleVersion = "local-test"
 
@@ -37,12 +37,12 @@ plugins {
   id("base")
   id("com.dorongold.task-tree") version "2.1.1"
 
-  id("io.airbyte.gradle.jvm") version "0.75.0" apply false
-  id("io.airbyte.gradle.jvm.app") version "0.75.0" apply false
-  id("io.airbyte.gradle.jvm.lib") version "0.75.0" apply false
-  id("io.airbyte.gradle.docker") version "0.75.0" apply false
-  id("io.airbyte.gradle.publish") version "0.75.0" apply false
-  id("io.airbyte.gradle.kube-reload") version "0.75.0" apply false
+  id("io.airbyte.gradle.jvm") version "0.76.0" apply false
+  id("io.airbyte.gradle.jvm.app") version "0.76.0" apply false
+  id("io.airbyte.gradle.jvm.lib") version "0.76.0" apply false
+  id("io.airbyte.gradle.docker") version "0.76.0" apply false
+  id("io.airbyte.gradle.publish") version "0.76.0" apply false
+  id("io.airbyte.gradle.kube-reload") version "0.76.0" apply false
 
   id("com.github.eirnym.js2p") version "1.0" apply false
   id("org.openapi.generator") version "7.10.0" apply false
